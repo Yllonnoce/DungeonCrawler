@@ -16,6 +16,7 @@ FloorColor = Color(0.18,0.24,0.34,1)
 WallColor = Color(0.28,0.3,0.34,1)
 CeilingColor = Color(0.12,0.1,0.09,1)
 MetersPerTile = 2.0
+Vault = "catenary"
 AmbientColor = Color(0.18,0.3,0.4,1)
 AmbientEnergy = 0.35
 FogColor = Color(0.02,0.04,0.06,1)

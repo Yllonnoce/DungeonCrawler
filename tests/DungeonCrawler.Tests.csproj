@@ -24,6 +24,7 @@
     <Compile Include="../src/Dungeon/TierProfile.cs" Link="Game/Dungeon/TierProfile.cs" />
     <Compile Include="../src/Adventure/Core/**/*.cs" Link="Game/Adventure/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../src/Dungeon/TrapRules.cs" Link="Game/Dungeon/TrapRules.cs" />
+    <Compile Include="../src/Dungeon/VaultRules.cs" Link="Game/Dungeon/VaultRules.cs" />
     <Compile Include="../src/Enemies/Core/**/*.cs" Link="Game/Enemies/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../src/Save/Core/**/*.cs" Link="Game/Save/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../src/Party/Core/**/*.cs" Link="Game/Party/%(RecursiveDir)%(Filename)%(Extension)" />

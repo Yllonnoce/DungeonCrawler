@@ -26,6 +26,8 @@ public partial class DungeonBuilder : Node3D
     private const int ItemChamferBase = 11; // 11..14: a 45° wall piece per open diagonal
     // 15 is free: water cells get no floor item at all; WaterSurface builds their sunken bed
     private const int ItemBuckledBase = 16; // 16..19: floor slabs heaved into ridges and domes
+    private const int ItemVaultBase = 20; // 20..22: vaulted ceiling pieces, see VaultPiece (barrel along X, barrel along Z, groin)
+    private const int ItemVaultBrokenBase = 23; // 23..25: the same pieces with the crown fallen in (a ruin's collapse)
     private const int BuckledVariants = 4;
     /// <summary>Floor cells whose slab is tilted or heaved this floor; picked from the seed before the grid is built.</summary>
     private readonly Dictionary<GridPos, int> _buckled = new();
@@ -116,7 +118,7 @@ public partial class DungeonBuilder : Node3D
         if (_grid == null) return;
         _grid.SetCellItem(new Vector3I(cell.X, level, cell.Y), ItemFloor);
         var above = new Vector3I(cell.X, level + 1, cell.Y);
-        if (_grid.GetCellItem(above) == GridMap.InvalidCellItem) _grid.SetCellItem(above, ItemCeiling);
+        if (_grid.GetCellItem(above) == GridMap.InvalidCellItem) _grid.SetCellItem(above, Layout != null ? CeilingFor(Layout, cell, level, asOpen: true) : ItemCeiling);
     }
 
     public TierDef? TierFor(int floor) => _tiers.Count == 0 ? null : _tiers[Math.Min(_tiers.Count - 1, TierRules.TierIndex(floor))];
@@ -230,7 +232,8 @@ public partial class DungeonBuilder : Node3D
 
     private GridMap BuildGridMap(FloorLayout layout, ThemeDef? theme)
     {
-        var key = theme?.Id ?? "default";
+        _vaultKind = VaultRules.Parse(DebugTools.Instance?.ForcedVault ?? theme?.Vault, theme?.TierIndex ?? 0);
+        var key = (theme?.Id ?? "default") + ":" + _vaultKind;
         if (!_libraries.TryGetValue(key, out var lib))
         {
             lib = BuildLibrary(theme);
@@ -249,27 +252,28 @@ public partial class DungeonBuilder : Node3D
                 switch (layout[p])
                 {
                     case Cell.Floor or Cell.Door:
-                        if (!layout.IsWater(p)) grid.SetCellItem(new Vector3I(x, level, y), _buckled.TryGetValue(p, out var variant) ? ItemBuckledBase + variant : ItemFloor);
+                        // the down-stairs cell is a well the stairs prop floors itself
+                        if (!layout.IsWater(p) && p != layout.DownStairs) grid.SetCellItem(new Vector3I(x, level, y), _buckled.TryGetValue(p, out var variant) ? ItemBuckledBase + variant : ItemFloor);
                         // a low cell beside an upper floor gets a wall cube above it (its ceiling doubles as the upper room's side);
                         // ledges are the exception, they are meant to overlook the room below
                         var besideUpper = level == 0 && Neighbours4(p).Any(n => layout[n] is Cell.Floor or Cell.Door && layout.LevelOf(n) == 1 && !layout.Ledges.Any(l => l.Cells.Contains(n)));
-                        grid.SetCellItem(new Vector3I(x, level + 1, y), besideUpper ? ItemWall : ItemCeiling);
+                        grid.SetCellItem(new Vector3I(x, level + 1, y), besideUpper ? ItemWall : CeilingFor(layout, p, level));
                         // an upper floor stands on a solid plinth unless a cellar or tunnel runs beneath it
-                        if (level == 1 && !under) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
+                        if (level == 1 && !under && p != layout.DownStairs) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
                         break;
                     case Cell.Pit:
-                        grid.SetCellItem(new Vector3I(x, level + 1, y), ItemCeiling);
+                        grid.SetCellItem(new Vector3I(x, level + 1, y), CeilingFor(layout, p, level));
                         break;
                     case Cell.Ramp:
                         var ramp = layout.Ramps[p];
                         var dirIndex = Array.IndexOf(RampDirs, ramp.Dir);
                         grid.SetCellItem(new Vector3I(x, level, y), ItemRampBase + dirIndex * 2 + (ramp.LowHeight % 4 == 2 ? 1 : 0));
-                        grid.SetCellItem(new Vector3I(x, level + 2, y), ItemCeiling);
+                        grid.SetCellItem(new Vector3I(x, level + 2, y), CeilingFor(layout, p, level));
                         break;
                     case Cell.Wall when layout.IsChamfer(p, out var open):
                         // a corner cut at 45°: the solid half faces away from the floors, the open half gets its own floor
                         grid.SetCellItem(new Vector3I(x, 0, y), ItemChamferBase + ChamferIndex(open));
-                        grid.SetCellItem(new Vector3I(x, 1, y), ItemCeiling);
+                        grid.SetCellItem(new Vector3I(x, 1, y), CeilingFor(layout, p, 0));
                         break;
                     case Cell.Wall or Cell.Secret:
                         if (!under) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
@@ -281,7 +285,7 @@ public partial class DungeonBuilder : Node3D
                     grid.SetCellItem(new Vector3I(x, 0, y), ItemFloor);
                     // a tunnel is roofed by a full cube (nothing can walk on it); a cellar under an upper room is roofed by that room's floor
                     if (layout[p] is not (Cell.Floor or Cell.Door or Cell.Pit)) grid.SetCellItem(new Vector3I(x, 1, y), ItemWall);
-                    else if (level != 1) grid.SetCellItem(new Vector3I(x, 1, y), ItemCeiling);
+                    else if (level != 1) grid.SetCellItem(new Vector3I(x, 1, y), CeilingFor(layout, p, 0));
                 }
             }
         // enclose the under layer: cells beside a cellar/tunnel that are open at ground level get a low wall cube
@@ -345,6 +349,34 @@ public partial class DungeonBuilder : Node3D
         return Layout.IsWater(cell) && world.Y < WaterLevel(cell) + 0.12f;
     }
 
+    /// <summary>
+    /// The ceiling piece over a cell: the flat slab where the theme wants none, else a barrel vault along a corridor's
+    /// run and a groin bay over rooms, corners and junctions. A side is open when the next cell is floor at the same
+    /// level (ramps always count, so the vault runs on up a climb).
+    /// </summary>
+    private int CeilingFor(FloorLayout layout, GridPos p, int level, bool asOpen = false)
+    {
+        if (_vaultKind == ArchKind.Flat) return ItemCeiling;
+        bool Open(GridPos n)
+        {
+            if (!layout.InBounds(n.X, n.Y)) return false;
+            var c = layout[n];
+            if (c == Cell.Ramp || layout[p] == Cell.Ramp) return c is Cell.Floor or Cell.Door or Cell.Pit or Cell.Ramp;
+            if (c == Cell.Secret && _openSecrets.Contains(n)) return true;
+            if (c is not (Cell.Floor or Cell.Door or Cell.Pit)) return false;
+            return asOpen || layout.LevelOf(n) == layout.LevelOf(p);
+        }
+        var piece = VaultRules.PieceFor(Open(new GridPos(p.X - 1, p.Y)), Open(new GridPos(p.X + 1, p.Y)), Open(new GridPos(p.X, p.Y - 1)), Open(new GridPos(p.X, p.Y + 1)));
+        return ItemVaultBase + (int)piece;
+    }
+
+    private ArchKind _vaultKind = ArchKind.Semicircular;
+
+    /// <summary>How far above the wall tops the ceiling sits at a cell's centre: a vault's apex, or just under a flat slab.</summary>
+    public float CeilingRise => _vaultKind == ArchKind.Flat ? -0.2f : VaultRules.Rise(_vaultKind, CellSize / 2f);
+    /// <summary>Height of the ceiling above a cell's floor surface, at the cell's centre.</summary>
+    public float CeilingAbove => LevelHeight + CeilingRise;
+
     private static IEnumerable<GridPos> Neighbours4(GridPos p)
     {
         yield return new GridPos(p.X + 1, p.Y);
@@ -386,6 +418,7 @@ public partial class DungeonBuilder : Node3D
         AddBoxItem(lib, ItemFloor, "Floor", new Vector3(CellSize, 0.2f, CellSize), slabOffset, floorMat);
         AddBoxItem(lib, ItemWall, "Wall", new Vector3(CellSize, CellSize, CellSize), Vector3.Zero, wallMat);
         AddBoxItem(lib, ItemCeiling, "Ceiling", new Vector3(CellSize, 0.2f, CellSize), slabOffset, ceilMat);
+        AddVaultItems(lib, VaultRules.Parse(DebugTools.Instance?.ForcedVault ?? tier?.Vault, tier?.TierIndex ?? 0), ceilMat);
 
         // ramps: a slab rising 2 m over one cell, in four directions, for the lower and upper half of a climb
         var rampMat = Material(tier?.FloorTexture ?? "", (tier?.FloorColor ?? new Color(0.32f, 0.30f, 0.28f)).Lerp(new Color(0.9f, 0.7f, 0.4f), 0.5f), tile); // warmer tint marks a ramp
@@ -523,6 +556,55 @@ public partial class DungeonBuilder : Node3D
         return lib;
     }
 
+    /// <summary>
+    /// Vaulted ceiling pieces: the vault springs from the top of the walls (the bottom of the ceiling layer) and rises
+    /// into the layer, where the taller wall cubes beside a corridor close its sides. A barrel keeps one profile along
+    /// its run; a groin bay is two barrels crossing, the ceiling following whichever is higher, so each of its four
+    /// edges is an arch that meets the next bay's (or a wall cube) without a seam. Faces wind clockwise seen from below.
+    /// </summary>
+    private static void AddVaultItems(MeshLibrary lib, ArchKind kind, Material material)
+    {
+        const int n = 12;
+        var half = CellSize / 2f;
+        var spring = -CellSize / 2f;
+        foreach (var (piece, broken) in new[] { VaultPiece.BarrelX, VaultPiece.BarrelZ, VaultPiece.Groin }.SelectMany(p => new[] { (p, false), (p, true) }))
+        {
+            var id = (broken ? ItemVaultBrokenBase : ItemVaultBase) + (int)piece;
+            const float holeRadius = 1.25f; // a broken piece has its crown missing: a ruin's collapse hangs its throat over the gap
+            float Height(float u, float w) => kind == ArchKind.Flat ? 0.1f : piece switch
+            {
+                VaultPiece.BarrelX => VaultRules.Height(kind, w, half),
+                VaultPiece.BarrelZ => VaultRules.Height(kind, u, half),
+                _ => VaultRules.GroinHeight(kind, u, w, half),
+            };
+            var st = new SurfaceTool();
+            st.Begin(Mesh.PrimitiveType.Triangles);
+            for (var i = 0; i < n; i++)
+                for (var j = 0; j < n; j++)
+                {
+                    float u0 = -1f + 2f * i / n, u1 = -1f + 2f * (i + 1) / n, w0 = -1f + 2f * j / n, w1 = -1f + 2f * (j + 1) / n;
+                    // each web of a groin is its own smoothing group so the crossing shows a crisp edge
+                    var uc = (u0 + u1) / 2f; var wc = (w0 + w1) / 2f;
+                    if (broken && (uc * uc + wc * wc) * half * half < holeRadius * holeRadius) continue;
+                    st.SetSmoothGroup(piece == VaultPiece.Groin && VaultRules.Height(kind, uc, half) < VaultRules.Height(kind, wc, half) ? 2u : 1u);
+                    var a = new Vector3(u0 * half, spring + Height(u0, w0), w0 * half);
+                    var b = new Vector3(u1 * half, spring + Height(u1, w0), w0 * half);
+                    var c = new Vector3(u1 * half, spring + Height(u1, w1), w1 * half);
+                    var d = new Vector3(u0 * half, spring + Height(u0, w1), w1 * half);
+                    st.AddVertex(a); st.AddVertex(c); st.AddVertex(b); // clockwise from below: front faces
+                    st.AddVertex(a); st.AddVertex(d); st.AddVertex(c);
+                }
+            st.GenerateNormals();
+            var mesh = st.Commit();
+            mesh.SurfaceSetMaterial(0, material);
+            lib.CreateItem(id);
+            lib.SetItemName(id, broken ? $"Vault{piece}Broken" : $"Vault{piece}");
+            lib.SetItemMesh(id, mesh);
+            lib.SetItemMeshTransform(id, Transform3D.Identity);
+            lib.SetItemShapes(id, new Godot.Collections.Array { mesh.CreateTrimeshShape(), Transform3D.Identity });
+        }
+    }
+
     private static void AddBoxItem(MeshLibrary lib, int id, string name, Vector3 size, Vector3 offset, Material material)
     {
         var mesh = new BoxMesh { Size = size, Material = material };
@@ -542,14 +624,25 @@ public partial class DungeonBuilder : Node3D
         up.Direction = -1;
         up.Name = "UpStairs";
         root.AddChild(up);
-        up.GlobalPosition = Surface(layout.UpStairs);
+        up.GlobalTransform = StairsTransform(layout, layout.UpStairs);
 
         var down = _stairsScene.Instantiate<Stairs>();
         down.Direction = 1;
         down.Name = "DownStairs";
         down.Locked = TierRules.IsBossFloor(floor);
         root.AddChild(down);
-        down.GlobalPosition = Surface(layout.DownStairs);
+        down.GlobalTransform = StairsTransform(layout, layout.DownStairs);
+        // the flights are walled: nothing paths through them
+        _propCells.Add(layout.UpStairs);
+        _propCells.Add(layout.DownStairs);
+    }
+
+    /// <summary>Stairs open toward the cell the party spawns on (the first walkable neighbour), their back to the far side.</summary>
+    private Transform3D StairsTransform(FloorLayout layout, GridPos cell)
+    {
+        var front = WalkableNeighbor(layout, cell);
+        var back = front == cell ? new Vector3(0, 0, -1) : (CellToWorld(cell) - CellToWorld(front)) with { Y = 0 };
+        return new Transform3D(Basis.LookingAt(back.Normalized(), Vector3.Up), Surface(cell));
     }
 
     public CollectiveRegistry? Collectives { get; private set; }
@@ -844,7 +937,19 @@ public partial class DungeonBuilder : Node3D
             var ruin = layout.RoomAt(cell) is { } r && layout.StructureAt(r)?.Kind == StructureKind.Ruin;
             Rubble.Mound(rubbleRoot, Surface(cell), wallMat, rng, ruin ? 1.15f : 1f);
             _propCells.Add(cell);
-            if (ruin && rng.Next(2) == 0) Rubble.Collapse(rubbleRoot, Surface(cell), LevelHeight - 0.2f, wallMat, rng);
+            if (ruin && rng.Next(2) == 0)
+            {
+                // under a vault the crown really falls in: the cell's ceiling piece becomes the holed variant and the
+                // prop hangs a dark throat over the gap; under a flat slab the old black disc stands in for the hole
+                var vaulted = false;
+                if (_grid != null)
+                {
+                    var above = new Vector3I(cell.X, layout.LevelOf(cell) + 1, cell.Y);
+                    var item = _grid.GetCellItem(above);
+                    if (item >= ItemVaultBase && item < ItemVaultBase + 3) { _grid.SetCellItem(above, item - ItemVaultBase + ItemVaultBrokenBase); vaulted = true; }
+                }
+                Rubble.Collapse(rubbleRoot, Surface(cell), vaulted ? CeilingAbove : LevelHeight - 0.2f, wallMat, rng, vaulted);
+            }
         }
         var scatterWant = 8 + rng.Next(6);
         for (var attempt = 0; attempt < 200 && scatterWant > 0; attempt++)
@@ -899,7 +1004,7 @@ public partial class DungeonBuilder : Node3D
     private void BuildRuin(FloorLayout layout, Node3D node, Structure ruin, Random rng, Material stone)
     {
         var along = new Vector3(ruin.Facing.X, 0, ruin.Facing.Y);
-        var ceiling = LevelHeight - 0.2f;
+        var ceiling = CeilingAbove - 0.05f; // capitals meet the crown of the vault above each cell
         var fallenCount = Math.Max(1, ruin.Cells.Count / 3);
         var fallen = ruin.Cells.OrderBy(_ => rng.Next()).Take(fallenCount).ToHashSet();
         foreach (var cell in ruin.Cells)

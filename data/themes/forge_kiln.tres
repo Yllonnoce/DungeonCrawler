@@ -16,6 +16,7 @@ FloorColor = Color(0.34,0.28,0.24,1)
 WallColor = Color(0.48,0.26,0.2,1)
 CeilingColor = Color(0.18,0.1,0.08,1)
 MetersPerTile = 2.0
+Vault = "semicircular"
 AmbientColor = Color(0.5,0.22,0.12,1)
 AmbientEnergy = 0.4
 FogColor = Color(0.1,0.03,0.02,1)

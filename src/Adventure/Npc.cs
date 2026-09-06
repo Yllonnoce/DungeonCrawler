@@ -148,7 +148,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     {
         if (Main.Instance?.Builder is not { Layout: { } layout } builder) return;
         var stairs = builder.Surface(layout.DownStairs);
-        if (new Vector2(stairs.X - GlobalPosition.X, stairs.Z - GlobalPosition.Z).Length() > 3f) return;
+        if (new Vector2(stairs.X - GlobalPosition.X, stairs.Z - GlobalPosition.Z).Length() > 4.5f) return; // the foot of the flight counts
         Rescued = true;
         Escorting = false;
         _label.Text = $"{NpcName} (safe)";

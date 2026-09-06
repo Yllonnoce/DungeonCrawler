@@ -37,6 +37,7 @@ public partial class Hud : Control
     private DialogueScreen _dialogue = null!;
     public DialogueScreen Dialogue => _dialogue;
     private QuestLogScreen _questLog = null!;
+    private StairsPrompt _stairsPrompt = null!;
     private Label _objective = null!;
     private Label _subtitle = null!;
     private float _subtitleTimer;
@@ -111,6 +112,9 @@ public partial class Hud : Control
         _dialogue = new DialogueScreen { Name = "Dialogue", Visible = false };
         _dialogue.Closed += UpdateModalState;
         AddChild(_dialogue);
+        _stairsPrompt = new StairsPrompt { Name = "StairsPrompt" };
+        _stairsPrompt.Closed += UpdateModalState;
+        AddChild(_stairsPrompt);
         _questLog = new QuestLogScreen { Name = "QuestLog", Visible = false };
         AddChild(_questLog);
         _questLog.SetAnchorsPreset(LayoutPreset.CenterTop);
@@ -190,7 +194,7 @@ public partial class Hud : Control
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (_dialogue.Visible) return; // the dialogue owns input while open
+        if (_dialogue.Visible || _stairsPrompt.Visible) return; // the dialogue / stair question owns input while open
         if (@event.IsActionPressed("quest_log"))
         {
             ToggleQuestLog();
@@ -296,9 +300,24 @@ public partial class Hud : Control
         UpdateModalState();
     }
 
+    /// <summary>A landing was reached: ask whether to take the stairs.</summary>
+    public void AskStairs(Dungeon.Stairs stairs, Adventurer actor)
+    {
+        if (_pause.Visible || _dialogue.Visible || _victory != null) return;
+        _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
+        _prompt.Text = "";
+        _stairsPrompt.Open(stairs, actor);
+        UpdateModalState();
+    }
+
+    /// <summary>The player stepped off the landing: the question goes away.</summary>
+    public void DismissStairs(Dungeon.Stairs stairs) => _stairsPrompt.Dismiss(stairs);
+
+    public bool StairsPromptOpen => _stairsPrompt.Visible;
+
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }

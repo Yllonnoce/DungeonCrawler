@@ -31,6 +31,34 @@ the planner is shown each tier's theme ids and descriptions and can set `Floors[
 set into `assets/textures/<id>/` (`scripts/fetch_polyhaven.py <id>` downloads a CC0 texture set and `scripts/fetch_polyhaven_model.py <id>` a glTF
 model from Poly Haven, then run the import) and writing a `.tres`; `--theme=ID` forces every floor to it for screenshots.
 
+**Stairs you climb.** The up-stairs are a real flight: seven stone treads between brick parapets rising to a landing
+2 m up against the back wall; the down-stairs are a well sunk into the floor with the same flight descending to a
+landing 2 m below (the well replaces the cell's floor slab and plinth, so a level-1 room's stairs sink into its
+plinth). Both open toward the cell the party arrives on. Stepping onto the landing asks "Descend to floor N?" /
+"Climb back to floor N?" with Yes (E / Enter) and No (Esc, or just walk back off the landing); sealed boss-floor stairs
+only offer to turn back. Saying yes does what pressing E on the old stairs did, so servers, clients (an
+`InteractIntent`), the smoke test and the net script are unchanged. `--ask-stairs` opens the question directly for screenshots. A capsule cannot climb a quarter-metre riser, so
+each flight carries an invisible slope through the step nosings that the feet actually walk. Stair cells are blocked
+for pathing, so enemies and companions do not squeeze between the parapets. `--test-stairs` walks the up flight, declines,
+steps off and back, accepts, then walks the well down and descends.
+
+**Vaulted ceilings.** Ceilings are not flat slabs: the vault springs from the top of the walls and rises into the
+space above (the walls beside a corridor are 8 m tall, so nothing else changes). A corridor gets a barrel vault along
+its run (dead ends too), and every room cell, corner and junction gets a groin bay, two barrels crossing so each of
+its four edges is an arch that meets the next bay or a wall without a seam. The arch profile comes from the theme's
+`Vault` field (`semicircular`, `pointed`, `segmental`, `catenary`, or `flat` for the old slab); an empty field takes
+the tier default: round Crypt barrels, hanging Caves catenaries, low Forge segmentals, soaring pointed Abyss vaults. A
+few themes override that for variety (the ossuary and sandstone caves are segmental, the kiln is round, cold tiles and
+slate are catenary). Profiles and the piece rule are engine-free in `src/Dungeon/VaultRules.cs`; the meshes are built
+once per theme in `DungeonBuilder.AddVaultItems` (12×12 grids, each web of a groin in its own smoothing group so the
+ribs stay crisp, trimesh collision). `--vault=KIND` forces every ceiling to one profile; `--face-node=vault` stands at
+the end of the longest straight corridor looking up its barrel and `--face-node=groin` looks up across a room's bays.
+Everything that used to sit under the flat slab follows the vault: a ruin's columns rise to the crown of the bay above
+them, tremor rocks fall out of the vault, and where a ruin's ceiling gave way the cell's ceiling piece is swapped for
+a holed variant (items 23–25) so the crown is really missing, with a dark throat hung above the gap, broken voussoirs
+on its wall and stone still clinging to the rim (`Rubble.Collapse`; `--face-node=collapse:N` looks up at one). Under
+a `flat` theme the old black disc stands in for the hole.
+
 ## Assets
 
 Real materials and models are CC0: Poly Haven PBR textures per tier (triplanar on the GridMap boxes) and props
@@ -62,7 +90,8 @@ godot --headless --path . -- --test-save           # save, mutate, load, compare
 godot --path . -- --test-drag                      # synthetic inventory drag-and-drop through the GUI
 godot --headless --path . -- --test-depth          # traps, doors, levers, pathing, boss stairs, victory, endless
 godot --headless --path . -- --test-skills         # learn chains, upgrades, multishot, respec, save round trip
-godot --headless --path . -- --test-vertical --seed=5   # climb a ledge, fall into a cellar, open a secret, cross-level chase
+godot --headless --path . -- --test-vertical --seed=5
+godot --path . -- --seed=3 --test-stairs                                   # climb the up flight, get asked, decline, accept, then take the well down (needs a window: the question is HUD)   # climb a ledge, fall into a cellar, open a secret, cross-level chase
 godot --headless --path . -- --test-party          # companions follow, possession switch, companions kill an enemy, auto-revive
 godot --headless --path . -- --test-music          # exploration track plays, battle music on aggro, back to exploration after the kill, tavern tune in the menu
 godot --headless --path . -- --test-story          # Investigate clues, a Decide flag, a Betrayal that spawns the turncoat's creatures, a flag-gated NPC on the next floor
@@ -80,7 +109,7 @@ godot --headless --path . -- --replay-plans=DIR     # answer planning calls from
 godot --headless --path . -- --test-floors --seed=N # walk-off detector: steps from every surface of floors 1-6 (secrets opened) and reports any step onto nothing; --builtin for the shipped campaign
 godot --headless --path . -- --builtin --floor=N --inspect=X,Y   # print a cell's 7x7 neighbourhood: cell type, level, grid items, ray hits
 godot --headless --path . -- --test-structures                    # picks a seed whose floors 1-4 hold a gate, a camp, a pond and a stream; checks braziers, hut walls, bandits at the fire, water beds, 45° corners, wading
-godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   # stand N cells back from a node (Gate_, Camp_, Water_, Barrel0, Enemy...) and look at it; --face-cell=X,Y:N for a grid cell; --face-node=chamfer:N for the first cut corner, --face-node=buckled for a heaved tile, --face-node=bridge for a stream's bridge
+godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   # stand N cells back from a node (Gate_, Camp_, Water_, Barrel0, Enemy...) and look at it; --face-cell=X,Y:N for a grid cell; --face-node=chamfer:N for the first cut corner, --face-node=buckled for a heaved tile, --face-node=bridge for a stream's bridge, --face-node=vault / groin for the ceiling (add --vault=pointed etc. to force a profile)
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back
 godot --path . -- --test-horde --screenshot=out.png                 # floor 3 nest room: stream, kill, spent; the screenshot is taken mid-stream
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)

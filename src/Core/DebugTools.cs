@@ -62,6 +62,8 @@ public partial class DebugTools : Node
     /// <summary>No live text-to-speech in this run (automation without --ai).</summary>
     public bool NoVoice { get; private set; }
     public float? FakeAiDelay { get; private set; }
+    /// <summary>--vault=KIND forces every ceiling to that arch profile (flat, semicircular, pointed, segmental, catenary).</summary>
+    public string? ForcedVault { get; private set; }
     /// <summary>--theme=ID forces every floor to wear that theme (screenshots and checks).</summary>
     public string? ForcedTheme { get; private set; }
     private bool _testFloors;
@@ -137,6 +139,10 @@ public partial class DebugTools : Node
     private bool _testSkills;
     private int _skillStep;
     private bool _testVertical;
+    private bool _testStairs;
+    private bool _askStairs, _askedStairsDebug;
+    private int _stairsStep;
+    private double _stairsWalk;
     private int _vertStep;
     private bool _testParty;
     private int _partyStep;
@@ -179,6 +185,8 @@ public partial class DebugTools : Node
             else if (arg == "--test-path") { _testPath = true; _quitAfter = 8; }
             else if (arg == "--test-skills") { _testSkills = true; _faceEnemy = true; _quitAfter = 7; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
+            else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
+            else if (arg == "--ask-stairs") _askStairs = true;
             else if (arg == "--test-party") { _testParty = true; _faceEnemy = true; _quitAfter = 16; }
             else if (arg == "--face-boss") { _faceBoss = true; _faceEnemy = true; }
             else if (arg == "--face-ledge") _faceLedge = true;
@@ -217,6 +225,7 @@ public partial class DebugTools : Node
             else if (arg == "--tremor") { _tremor = true; _quitAfter = Math.Max(_quitAfter, 6); }
             else if (arg == "--test-tremor") { _testTremor = true; _tremor = true; TraceAi = false; _quitAfter = 12; }
             else if (arg.StartsWith("--theme=")) ForcedTheme = arg["--theme=".Length..];
+            else if (arg.StartsWith("--vault=")) ForcedVault = arg["--vault=".Length..];
             else if (arg.StartsWith("--inspect=")) { var xy = arg["--inspect=".Length..].Split(','); _inspect = (int.Parse(xy[0]), int.Parse(xy[1])); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--bake-voice=")) _bakeVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-voice=".Length..]);
             else if (arg.StartsWith("--voice-budget=")) CampaignBaker.VoiceBudgetLines = int.Parse(arg["--voice-budget=".Length..]);
@@ -289,6 +298,45 @@ public partial class DebugTools : Node
                 while (back > 1 && !faceLayout.IsWalkable(stand.Value)) { back--; stand = b + new GridPos(across.X * back, across.Y * back); }
                 if (!faceLayout.IsWalkable(stand.Value)) stand = b - new GridPos(across.X, across.Y);
             }
+            else if (_faceNode is "vault" or "groin")
+            {
+                // the ceiling: from one end of the longest straight corridor looking up its barrel, or from a room's
+                // edge looking up across its groin bays
+                bool Open(GridPos c) => faceLayout.IsWalkable(c) && faceLayout[c] != Dungeon.Generation.Cell.Ramp && faceLayout.LevelOf(c) == 0;
+                bool Corridor(GridPos c, GridPos d) => Open(c) && Open(c + d) && Open(c - d) && !Open(c + new GridPos(d.Y, d.X)) && !Open(c - new GridPos(d.Y, d.X));
+                GridPos? best = null; GridPos bestDir = default; var bestLen = 0;
+                if (_faceNode == "vault")
+                    foreach (var d in new[] { new GridPos(1, 0), new GridPos(0, 1) })
+                        for (var y = 0; y < faceLayout.Height; y++)
+                            for (var x = 0; x < faceLayout.Width; x++)
+                            {
+                                var start = new GridPos(x, y);
+                                if (!Corridor(start, d) || Corridor(start - d, d)) continue;
+                                var len = 0;
+                                while (Corridor(start + new GridPos(d.X * len, d.Y * len), d)) len++;
+                                if (len > bestLen) { bestLen = len; best = start; bestDir = d; }
+                            }
+                else
+                    foreach (var rm in faceLayout.Rooms.OrderByDescending(r => r.W * r.H))
+                    {
+                        var c = new GridPos(rm.X, rm.Y + rm.H / 2);
+                        if (!Open(c) || !Open(c + new GridPos(1, 0)) || !Open(c + new GridPos(2, 0))) continue;
+                        best = c; bestDir = new GridPos(1, 0); bestLen = rm.W; break;
+                    }
+                if (best is { } from)
+                {
+                    stand = from;
+                    var ahead = Math.Max(2, Math.Min(bestLen - 1, 4));
+                    look = Main.Instance.Builder.Surface(from + new GridPos(bestDir.X * ahead, bestDir.Y * ahead)) + Vector3.Up * 5.5f;
+                    GD.Print($"[face] {_faceNode} run of {bestLen} cells from {from} along {bestDir}");
+                }
+            }
+            else if (_faceNode == "collapse" && faceRoot.GetNodeOrNull("RubbleField")?.GetChildren().OfType<Node3D>().FirstOrDefault(n => n.Name.ToString().StartsWith("Collapse_")) is { } gap)
+            {
+                // a ruin's fallen crown, seen from a couple of cells away with the eye raised to it
+                look = gap.GlobalPosition;
+                GD.Print($"[face] collapse at {gap.GlobalPosition:0.0}");
+            }
             else if (_faceNode == "chamfer")
             {
                 // the first cut corner on the floor, seen from out on its open diagonal
@@ -315,7 +363,7 @@ public partial class DebugTools : Node
                     cell = new[] { new GridPos(1, 0), new GridPos(-1, 0), new GridPos(0, 1), new GridPos(0, -1) }.Select(d => targetCell + d).FirstOrDefault(faceLayout.IsWalkable, cell);
                 var dir = cell - targetCell;
                 if (stand == null) for (var i = 1; i < _faceBack; i++) { var next = cell + dir; if (!faceLayout.CanStep(cell, next) || next == faceLayout.UpStairs) break; cell = next; }
-                Main.Instance.Party.Teleport(b.Surface(cell) + Vector3.Up * 0.3f, at + Vector3.Up * 0.5f);
+                Main.Instance.Party.Teleport(b.Surface(cell) + Vector3.Up * 0.3f, at + Vector3.Up * (_faceNode is "vault" or "groin" ? 0f : 0.5f));
                 GD.Print($"[face] standing at cell {cell} ({b.Surface(cell):0.0}) looking at {at:0.0}");
             }
             else GD.Print($"[face] no node starting with {_faceNode}");
@@ -436,6 +484,7 @@ public partial class DebugTools : Node
         if (_testPath) RunPathTest();
         if (_testSkills) RunSkillsTest();
         if (_testVertical) RunVerticalTest();
+        if (_testStairs) RunStairsTest();
         if (_testParty) RunPartyTest();
         if (_testDrag) RunDragTest(delta);
 
@@ -453,6 +502,11 @@ public partial class DebugTools : Node
         if (_levelUp && Main.Instance != null) { _levelUp = false; Main.Instance.Party.AwardXp(150); }
         if (_possess >= 0 && Main.Instance?.InGame == true && _elapsed >= 0.8) { Main.Instance.Party.Possess(_possess); _possess = -1; }
         if (_swing && !_swung && Main.Instance?.InGame == true && _elapsed >= _after - 0.12) { _swung = true; Main.Instance.Party.Attack(Main.Instance.Party.LeadIndex, heavy: true); }
+        if (_askStairs && !_askedStairsDebug && _elapsed >= _after - 0.6 && Main.Instance?.InGame == true && Main.Instance.Builder.FloorRoot is { } askRoot)
+        {
+            _askedStairsDebug = true;
+            Main.Instance.Hud.AskStairs(askRoot.GetNode<Dungeon.Stairs>("DownStairs"), Main.Instance.Party.Lead); // the landing's question, for screenshots
+        }
         if (_lookBack && !_lookedBack && _elapsed >= _after - 0.4 && Main.Instance?.InGame == true)
         {
             _lookedBack = true;
@@ -644,7 +698,8 @@ public partial class DebugTools : Node
             var (cell, h) = frontier.Dequeue();
             probed++;
             // this surface itself must have ground just below where a body stands (a pit is open by design: its cellar is probed on its own)
-            if (layout[cell] != Cell.Pit && Ground(cell, h + 1.5f, h - 1.0f, inside: true) == null) { misses.Add($"{cell}@{h:0.0} has no ground ({layout[cell]}/L{layout.LevelOf(cell)})"); continue; }
+            // a pit is open by design (its cellar is probed on its own), and so is the down-stairs well
+            if (layout[cell] != Cell.Pit && cell != layout.DownStairs && Ground(cell, h + 1.5f, h - 1.0f, inside: true) == null) { misses.Add($"{cell}@{h:0.0} has no ground ({layout[cell]}/L{layout.LevelOf(cell)})"); continue; }
             if (layout[cell] == Cell.Pit) continue;
             foreach (var d in dirList)
             {
@@ -1612,6 +1667,90 @@ public partial class DebugTools : Node
     private double _vertLog;
     private float _vertHp;
     private Dungeon.Props.SecretWall? _vertSecret;
+
+    // Stairs: walk up the flight to the landing, get asked, decline, step off and back, accept, arrive; then the well down.
+    private void RunStairsTest()
+    {
+        var delta = GetProcessDeltaTime();
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || main.Hud == null) return;
+        var party = main.Party;
+        var lead = party.Lead;
+        var open = main.Hud.StairsPromptOpen;
+        void Press(string action) => Input.ParseInputEvent(new InputEventAction { Action = action, Pressed = true });
+        string Pos() => $"pos=({lead.GlobalPosition.X:0.0},{lead.GlobalPosition.Y:0.00},{lead.GlobalPosition.Z:0.0}) cell={DungeonBuilder.WorldToCell(lead.GlobalPosition)}";
+        switch (_stairsStep)
+        {
+            case 0 when _elapsed >= 0.5:
+                _stairsStep++;
+                Game.Instance.JumpToFloor(2);
+                break;
+            case 1 when _elapsed >= 2.0:
+                _stairsStep++;
+                GD.Print($"[stairs] floor {Game.Instance.CurrentFloor}, start {Pos()}, walking at the up-stairs");
+                _stairsWalk = 5.0;
+                break;
+            case 2 when open || _elapsed >= 8.0:
+                _stairsStep++;
+                _stairsWalk = open ? 0.4 : 0; if (!open) party.ForcedMoveInput = null;
+                GD.Print($"[stairs] up landing: prompt={open} {Pos()}");
+                if (!open) { GD.Print("[stairs] RESULT FAIL (no question on the up landing)"); _testStairs = false; return; }
+                break;
+            case 3 when _elapsed >= 9.0:
+                _stairsStep++;
+                GD.Print($"[stairs] on the landing, still asked: prompt={open} {Pos()}");
+                if (!open) { GD.Print("[stairs] RESULT FAIL (the question went away while standing on the landing)"); _testStairs = false; return; }
+                Press("ui_cancel"); // no thanks
+                break;
+            case 4 when _elapsed >= 9.6:
+                _stairsStep++;
+                GD.Print($"[stairs] after declining: prompt={open} floor={Game.Instance.CurrentFloor}");
+                if (open || Game.Instance.CurrentFloor != 2) { GD.Print("[stairs] RESULT FAIL (decline did not close the question)"); _testStairs = false; return; }
+                party.ForcedMoveInput = new Vector2(0, 1); // back down a little
+                break;
+            case 5 when _elapsed >= 10.4:
+                _stairsStep++;
+                GD.Print($"[stairs] stepped off: prompt={open} {Pos()}");
+                _stairsWalk = 3.0; // and back up
+                break;
+            case 6 when open || _elapsed >= 14.0:
+                _stairsStep++;
+                _stairsWalk = open ? 0.4 : 0; if (!open) party.ForcedMoveInput = null;
+                GD.Print($"[stairs] up landing again: prompt={open} {Pos()}");
+                if (!open) { GD.Print("[stairs] RESULT FAIL (no question the second time)"); _testStairs = false; return; }
+                Press("interact"); // yes
+                break;
+            case 7 when _elapsed >= 16.0:
+                _stairsStep++;
+                GD.Print($"[stairs] after accepting: floor={Game.Instance.CurrentFloor} prompt={open}");
+                if (Game.Instance.CurrentFloor != 1) { GD.Print("[stairs] RESULT FAIL (did not climb to floor 1)"); _testStairs = false; return; }
+                // now the well: stand before the down-stairs and walk in
+                var foot = DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs);
+                party.Teleport(main.Builder.Surface(foot) + Vector3.Up * 0.3f, main.Builder.Surface(layout.DownStairs));
+                _stairsWalk = 5.0;
+                break;
+            case 8 when open || _elapsed >= 22.5:
+                _stairsStep++;
+                _stairsWalk = open ? 0.4 : 0; if (!open) party.ForcedMoveInput = null;
+                GD.Print($"[stairs] down landing: prompt={open} {Pos()}");
+                if (!open) { GD.Print("[stairs] RESULT FAIL (no question at the bottom of the well)"); _testStairs = false; return; }
+                if (lead.GlobalPosition.Y > -1.0f) { GD.Print("[stairs] RESULT FAIL (asked before reaching the bottom)"); _testStairs = false; return; }
+                Press("interact");
+                break;
+            case 9 when _elapsed >= 25.0:
+                _stairsStep++;
+                GD.Print($"[stairs] after descending: floor={Game.Instance.CurrentFloor} {Pos()}");
+                GD.Print(Game.Instance.CurrentFloor == 2 ? "[stairs] RESULT ok" : "[stairs] RESULT FAIL (did not descend to floor 2)");
+                _testStairs = false;
+                break;
+        }
+        if (_stairsWalk > 0)
+        {
+            _stairsWalk -= delta;
+            party.ForcedMoveInput = new Vector2(0, -1);
+            if (_stairsWalk <= 0) party.ForcedMoveInput = null;
+        }
+    }
 
     // Party: companions follow, switch control, companions fight on their own, auto-revive.
     private void RunPartyTest()

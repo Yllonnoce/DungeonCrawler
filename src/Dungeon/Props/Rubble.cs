@@ -111,26 +111,52 @@ public static class Rubble
         return node;
     }
 
-    /// <summary>Where the ceiling gave way: a dark cavity over a mound with stone still hanging from its rim.</summary>
-    public static void Collapse(Node3D parent, Vector3 at, float ceiling, Material stone, Random rng)
+    /// <summary>
+    /// Where the ceiling gave way: over a mound, a dark cavity with stone still hanging from its rim. Under a vault the
+    /// crown of the cell's ceiling piece is really missing (the builder swaps in the holed piece), so this hangs a
+    /// dark throat above the gap, its walls seen from inside, capped in black; under a flat slab a black disc stands
+    /// in for the hole. <paramref name="ceiling"/> is the height of the crown above the floor.
+    /// </summary>
+    public static void Collapse(Node3D parent, Vector3 at, float ceiling, Material stone, Random rng, bool vaulted = false)
     {
         var node = new Node3D { Name = Unique("Collapse") };
         parent.AddChild(node);
         node.GlobalPosition = at with { Y = at.Y + ceiling - 0.03f };
-        node.AddChild(new MeshInstance3D
+        var dark = new StandardMaterial3D { AlbedoColor = new Color(0.02f, 0.02f, 0.025f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded };
+        if (vaulted)
         {
-            Mesh = new CylinderMesh { TopRadius = 1.4f, BottomRadius = 1.4f, Height = 0.02f, RadialSegments = 14 },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.01f, 0.01f, 0.01f), ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
-        });
+            // the throat: a shaft whose inside faces us, starting below the ragged rim so no gap shows, dead black at the top
+            var throat = new MeshInstance3D
+            {
+                Mesh = new CylinderMesh { TopRadius = 1.55f, BottomRadius = 1.55f, Height = 3.4f, RadialSegments = 16, CapTop = false, CapBottom = false },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.05f, 0.045f, 0.045f), CullMode = BaseMaterial3D.CullModeEnum.Front, Roughness = 1f },
+                Position = new Vector3(0, 0.9f, 0),
+            };
+            node.AddChild(throat);
+            node.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 1.6f, BottomRadius = 1.6f, Height = 0.02f, RadialSegments = 16 }, MaterialOverride = dark, Position = new Vector3(0, 2.6f, 0) });
+            // broken voussoirs left up the throat's wall
+            for (var i = 0; i < 5; i++)
+            {
+                var a = (float)rng.NextDouble() * Mathf.Tau;
+                var size = new Vector3(0.35f + (float)rng.NextDouble() * 0.3f, 0.3f + (float)rng.NextDouble() * 0.3f, 0.3f);
+                Block(node, size, new Vector3(Mathf.Cos(a) * 1.45f, 0.3f + (float)rng.NextDouble() * 1.6f, Mathf.Sin(a) * 1.45f), new Vector3(((float)rng.NextDouble() - 0.5f) * 0.5f, -a, 0), stone);
+            }
+        }
+        else
+        {
+            node.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 1.4f, BottomRadius = 1.4f, Height = 0.02f, RadialSegments = 14 }, MaterialOverride = dark });
+        }
         // a little grey light falls through the gap
         node.AddChild(new OmniLight3D { LightColor = new Color(0.7f, 0.78f, 0.9f), LightEnergy = 1.1f, OmniRange = 9f, OmniAttenuation = 1.4f, ShadowEnabled = false, Position = new Vector3(0, -0.6f, 0) });
-        var count = 6 + rng.Next(4);
+        // stone still hanging from the rim, straddling the edge of the gap
+        var count = 7 + rng.Next(4);
         for (var i = 0; i < count; i++)
         {
             var a = (float)rng.NextDouble() * Mathf.Tau;
-            var rad = 1.0f + (float)rng.NextDouble() * 0.5f;
+            var rad = (vaulted ? 1.1f : 1.0f) + (float)rng.NextDouble() * 0.5f;
             var size = new Vector3(0.3f + (float)rng.NextDouble() * 0.4f, 0.25f + (float)rng.NextDouble() * 0.5f, 0.3f + (float)rng.NextDouble() * 0.4f);
-            Block(node, size, new Vector3(Mathf.Cos(a) * rad, -size.Y * 0.4f, Mathf.Sin(a) * rad), new Vector3(((float)rng.NextDouble() - 0.5f) * 0.6f, a, ((float)rng.NextDouble() - 0.5f) * 0.6f), stone);
+            var drop = vaulted ? -0.25f - (float)rng.NextDouble() * 0.35f : -size.Y * 0.4f;
+            Block(node, size, new Vector3(Mathf.Cos(a) * rad, drop, Mathf.Sin(a) * rad), new Vector3(((float)rng.NextDouble() - 0.5f) * 0.6f, a, ((float)rng.NextDouble() - 0.5f) * 0.6f), stone);
         }
     }
 }

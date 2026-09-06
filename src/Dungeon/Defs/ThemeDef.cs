@@ -27,6 +27,8 @@ public partial class ThemeDef : Resource, IHasId
     [Export] public Color CeilingColor { get; set; } = new(0.18f, 0.17f, 0.17f);
     /// <summary>How many metres one texture tile covers; smaller repeats more.</summary>
     [Export] public float MetersPerTile { get; set; } = 2f;
+    /// <summary>Ceiling vault profile: flat, semicircular, pointed, segmental or catenary; empty = the tier's default (see VaultRules).</summary>
+    [Export] public string Vault { get; set; } = "";
 
     [ExportGroup("Light")]
     [Export] public Color AmbientColor { get; set; } = new(0.35f, 0.33f, 0.3f);
