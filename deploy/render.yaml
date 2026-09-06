@@ -1,0 +1,25 @@
+# Render blueprint: one Docker web service running the dedicated server behind the FastAPI front door.
+# Free instances sleep when idle and drop everyone; use a paid plan for a server that is always there.
+services:
+  - type: web
+    name: dungeoncrawler-server
+    runtime: docker
+    dockerfilePath: ./deploy/Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon        # pick the region nearest the players
+    healthCheckPath: /
+    autoDeploy: false     # redeploys restart the server; the persistent disk keeps the save
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: CAMPAIGN
+        value: builtin      # builtin | offline | ai
+      - key: MAX_PLAYERS
+        value: "4"
+      - key: SEED
+        sync: false         # optional: a fixed world seed
+      - key: CLAUDE_API_KEY
+        sync: false         # secret; only needed for CAMPAIGN=ai

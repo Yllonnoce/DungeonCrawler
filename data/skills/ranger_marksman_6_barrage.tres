@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.ranger.marksman.barrage"
+DisplayName = "Barrage"
+Description = "Multishot fires two more arrows and recovers faster."
+ClassId = "class.ranger"
+Branch = "Marksman"
+Tier = 6
+Prerequisites = PackedStringArray("skill.ranger.marksman.deadeye")
+Cost = 2
+Modifiers = PackedStringArray()
+GrantsAbility = ""
+UpgradeAbility = "ability.multishot"
+DamageMul = 1.0
+CooldownMul = 0.8
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 2
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+Trigger = "None"
+TriggerMagnitude = 0

@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.cave_shaman"
+DisplayName = "Cave Shaman"
+Kind = "Caster"
+MaxHp = 30
+MinDamage = 7
+MaxDamage = 12
+DamageType = "Fire"
+MoveSpeed = 2.5
+DetectRange = 16
+AttackRange = 1.6
+PreferredRange = 7
+WindupSeconds = 0.9
+RecoverSeconds = 1.5
+ProjectileSpeed = 15
+Xp = 36
+Accuracy = 64
+Evasion = 9
+Armor = 3
+ResistFire = 50
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 0
+OnHitStatus = "Burn"
+OnHitDuration = 4
+OnHitMagnitude = 2
+OnHitChance = 0.6
+Color = Color(0.8,0.45,0.2,1)
+Scale = 1.0
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.3
+Model = "MushroomKing"

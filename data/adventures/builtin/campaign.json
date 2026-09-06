@@ -1,0 +1,1234 @@
+{
+  "SchemaVersion": 1,
+  "Source": "fake",
+  "GameSeed": 20260905,
+  "Title": "The Pretend Descent",
+  "Synopsis": "A campaign written by a stand-in planner, for testing the flow without a key.",
+  "Antagonist": {
+    "Name": "The Hollow King",
+    "Epithet": "who was buried twice",
+    "VoiceId": null
+  },
+  "NarratorVoiceId": "Charon",
+  "Factions": [
+    {
+      "Id": "faction0",
+      "Name": "Hollow Vigil",
+      "EnemyIds": [
+        "enemy.ghoul",
+        "enemy.skeleton_archer",
+        "enemy.bone_priest"
+      ]
+    },
+    {
+      "Id": "faction1",
+      "Name": "Cold Brood",
+      "EnemyIds": [
+        "enemy.cave_spider",
+        "enemy.rock_thrower",
+        "enemy.cave_shaman"
+      ]
+    },
+    {
+      "Id": "faction2",
+      "Name": "Ringing Forge-Guard",
+      "EnemyIds": [
+        "enemy.forge_golem",
+        "enemy.ember_hound",
+        "enemy.forge_priest"
+      ]
+    },
+    {
+      "Id": "faction3",
+      "Name": "Bleeding Hunters",
+      "EnemyIds": [
+        "enemy.void_stalker",
+        "enemy.abyss_archer",
+        "enemy.void_caller"
+      ]
+    }
+  ],
+  "Tiers": [
+    {
+      "Index": 0,
+      "Theme": "Crypt",
+      "Beat": "",
+      "BossName": "",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "",
+        "VoiceId": null
+      }
+    },
+    {
+      "Index": 1,
+      "Theme": "Caves",
+      "Beat": "",
+      "BossName": "",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "",
+        "VoiceId": null
+      }
+    },
+    {
+      "Index": 2,
+      "Theme": "Forge",
+      "Beat": "",
+      "BossName": "",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "",
+        "VoiceId": null
+      }
+    },
+    {
+      "Index": 3,
+      "Theme": "Abyss",
+      "Beat": "",
+      "BossName": "",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Floors": [
+    {
+      "Floor": 1,
+      "Title": "",
+      "Mood": "",
+      "Theme": "crypt.brick",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 2,
+      "Title": "",
+      "Mood": "",
+      "Theme": "crypt.brick",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 3,
+      "Title": "",
+      "Mood": "",
+      "Theme": "crypt.brick",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 4,
+      "Title": "",
+      "Mood": "",
+      "Theme": "crypt.brick",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 5,
+      "Title": "",
+      "Mood": "",
+      "Theme": "crypt.brick",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 6,
+      "Title": "",
+      "Mood": "",
+      "Theme": "caves.sandstone",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 7,
+      "Title": "",
+      "Mood": "",
+      "Theme": "caves.boulder",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 8,
+      "Title": "",
+      "Mood": "",
+      "Theme": "caves.sandstone",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 9,
+      "Title": "",
+      "Mood": "",
+      "Theme": "caves.sandstone",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 10,
+      "Title": "",
+      "Mood": "",
+      "Theme": "caves.sandstone",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 11,
+      "Title": "",
+      "Mood": "",
+      "Theme": "forge.rust",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 12,
+      "Title": "",
+      "Mood": "",
+      "Theme": "forge.rust",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 13,
+      "Title": "",
+      "Mood": "",
+      "Theme": "forge.kiln",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 14,
+      "Title": "",
+      "Mood": "",
+      "Theme": "forge.iron",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 15,
+      "Title": "",
+      "Mood": "",
+      "Theme": "forge.plate",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 16,
+      "Title": "",
+      "Mood": "",
+      "Theme": "abyss.slate",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 17,
+      "Title": "",
+      "Mood": "",
+      "Theme": "abyss.palace",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 18,
+      "Title": "",
+      "Mood": "",
+      "Theme": "abyss.palace",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 19,
+      "Title": "",
+      "Mood": "",
+      "Theme": "abyss.stone",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 20,
+      "Title": "",
+      "Mood": "",
+      "Theme": "abyss.slate",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    }
+  ],
+  "Barks": [
+    {
+      "Member": "Brand",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Down.",
+            "VoiceId": "cc5cdd9eaf42504a"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Stay down.",
+            "VoiceId": "ede591f4f6a1e8ac"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "One less.",
+            "VoiceId": "dabc8efe8205b793"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Agh!",
+            "VoiceId": "3b4c38ab97bf5bb1"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "That one landed.",
+            "VoiceId": "91b31b8c7eb1dd88"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I\u0027m bleeding.",
+            "VoiceId": "bfd5cd883ea6ca16"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "This is worth carrying.",
+            "VoiceId": "f3f2bb23ba15630c"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Mine now.",
+            "VoiceId": "55d02a4df92a0923"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Something useful.",
+            "VoiceId": "bfe3eed5f607317f"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "I\u0027m getting the measure of this place.",
+            "VoiceId": "45e35e6cbc65b509"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Stronger. Good.",
+            "VoiceId": "02710cc01b27aae0"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "That felt like something clicked.",
+            "VoiceId": "b8488d0887c1fa0b"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "There. That\u0027s the one.",
+            "VoiceId": "45c8ddf0d98fc83e"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Steady. It\u0027s big.",
+            "VoiceId": "9343f02c91ca60fb"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Everyone, on me.",
+            "VoiceId": "dd921116f30a84e8"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Brand here.",
+            "VoiceId": "110d3ba6896b1e7e"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I have the lead.",
+            "VoiceId": "f82b4dc31ce1fe22"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Follow me.",
+            "VoiceId": "d87bc63b1c9c9ef5"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "I can\u0027t...",
+            "VoiceId": "26d0a5a18a0c3762"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Get me up...",
+            "VoiceId": "fdd3d79dd4d17d71"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Not like this.",
+            "VoiceId": "dd1b6b60429d6069"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Still here.",
+            "VoiceId": "ff5d895f538deb8c"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "I owe you one.",
+            "VoiceId": "bdccbf3f29e72042"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Back on my feet.",
+            "VoiceId": "c1529993674a07fa"
+          }
+        }
+      ]
+    },
+    {
+      "Member": "Sable",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Down.",
+            "VoiceId": "90121daaf12501b3"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Stay down.",
+            "VoiceId": "3cb2cc6d5a1bd62c"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "One less.",
+            "VoiceId": "f3f2b35001d4ddac"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Agh!",
+            "VoiceId": "f8c9c4805bc9a3d9"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "That one landed.",
+            "VoiceId": "fb87d695fd4b92fc"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I\u0027m bleeding.",
+            "VoiceId": "96a98961a896908f"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "This is worth carrying.",
+            "VoiceId": "d717bcc711d9fee3"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Mine now.",
+            "VoiceId": "de6ce7d10fa00e03"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Something useful.",
+            "VoiceId": "5d7bab9739e6c7ba"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "I\u0027m getting the measure of this place.",
+            "VoiceId": "757f0646a76f26b9"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Stronger. Good.",
+            "VoiceId": "80c79e444c5f00cf"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "That felt like something clicked.",
+            "VoiceId": "236fba115849fd36"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "There. That\u0027s the one.",
+            "VoiceId": "a9bd285f1f54be01"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Steady. It\u0027s big.",
+            "VoiceId": "010cbadfc7249d62"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Everyone, on me.",
+            "VoiceId": "9a36ec0a9a2a0309"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Sable here.",
+            "VoiceId": "0d4fdfe162167dfb"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I have the lead.",
+            "VoiceId": "13e36e533a5e0b43"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Follow me.",
+            "VoiceId": "cacc8c75610372e4"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "I can\u0027t...",
+            "VoiceId": "634366ce6b836eaa"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Get me up...",
+            "VoiceId": "b60cea8364a1a06d"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Not like this.",
+            "VoiceId": "dac85e4176f1dbe1"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Still here.",
+            "VoiceId": "45f4058fd99635e2"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "I owe you one.",
+            "VoiceId": "848d0ecfa74a6d55"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Back on my feet.",
+            "VoiceId": "cdda18ccc0465aa7"
+          }
+        }
+      ]
+    },
+    {
+      "Member": "Wren",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Down.",
+            "VoiceId": "d8166b958d68eb82"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Stay down.",
+            "VoiceId": "ba56e77df4b09cfc"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "One less.",
+            "VoiceId": "f99b418ef2bd81a2"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Agh!",
+            "VoiceId": "8cfe125d59b14e41"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "That one landed.",
+            "VoiceId": "f0dbc92f5aac9c04"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I\u0027m bleeding.",
+            "VoiceId": "e44dcf653993109d"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "This is worth carrying.",
+            "VoiceId": "4e827e91f9647279"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Mine now.",
+            "VoiceId": "7e0fc01b46883a49"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Something useful.",
+            "VoiceId": "86c7fdafd3f3b436"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "I\u0027m getting the measure of this place.",
+            "VoiceId": "7496bf76c3bd6ba4"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Stronger. Good.",
+            "VoiceId": "4dc5947bcd519671"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "That felt like something clicked.",
+            "VoiceId": "e882e1993f2f6be0"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "There. That\u0027s the one.",
+            "VoiceId": "665389f88f2d380f"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Steady. It\u0027s big.",
+            "VoiceId": "b3c8a9cbab3e5a0f"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Everyone, on me.",
+            "VoiceId": "5a176967eb0099ba"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Wren here.",
+            "VoiceId": "4156b6727f27c837"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I have the lead.",
+            "VoiceId": "f22e7c6812a0a715"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Follow me.",
+            "VoiceId": "994e3a44041fa76d"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "I can\u0027t...",
+            "VoiceId": "43a81440a6fee8e1"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Get me up...",
+            "VoiceId": "3665594896c46c3e"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Not like this.",
+            "VoiceId": "51a51002509fe105"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Still here.",
+            "VoiceId": "e667c3a7f26b0572"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "I owe you one.",
+            "VoiceId": "0421c09d63b6c5b2"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Back on my feet.",
+            "VoiceId": "cae724c7618d9aeb"
+          }
+        }
+      ]
+    },
+    {
+      "Member": "Ilex",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Down.",
+            "VoiceId": "17eb610344e9d21a"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Stay down.",
+            "VoiceId": "c94f6ce2cddb6307"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "One less.",
+            "VoiceId": "fa0220688a2f2736"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Agh!",
+            "VoiceId": "f05df60b06d34cdc"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "That one landed.",
+            "VoiceId": "ea12ef8c317727ad"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I\u0027m bleeding.",
+            "VoiceId": "ca32d946c308c73c"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "This is worth carrying.",
+            "VoiceId": "029e1950819b43cc"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Mine now.",
+            "VoiceId": "7016c312d31b4cd1"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Something useful.",
+            "VoiceId": "b000e3be2fa5ac20"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "I\u0027m getting the measure of this place.",
+            "VoiceId": "e96b1ee173cebeef"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Stronger. Good.",
+            "VoiceId": "c3749bafa07dbdfd"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "That felt like something clicked.",
+            "VoiceId": "b227c75e32f3f629"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "There. That\u0027s the one.",
+            "VoiceId": "e794a91e3315181c"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Steady. It\u0027s big.",
+            "VoiceId": "281a4c5ce5354e00"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Everyone, on me.",
+            "VoiceId": "b7e12dfe6d922d43"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Ilex here.",
+            "VoiceId": "198bd8f35f2b51fc"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I have the lead.",
+            "VoiceId": "7d8c068d09d8098c"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Follow me.",
+            "VoiceId": "ac2ba539c7bc1bd6"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "I can\u0027t...",
+            "VoiceId": "dd677d7fb0a93514"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Get me up...",
+            "VoiceId": "41869561ce7246fa"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Not like this.",
+            "VoiceId": "a11d0a3978531822"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Still here.",
+            "VoiceId": "32e9b2c7115d4161"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "I owe you one.",
+            "VoiceId": "b76c2588ae413d96"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Back on my feet.",
+            "VoiceId": "4f881633b1ed683e"
+          }
+        }
+      ]
+    }
+  ],
+  "ArcNotes": ""
+}

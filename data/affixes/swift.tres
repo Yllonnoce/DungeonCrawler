@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.swift"
+DisplayName = "Swift"
+IsPrefix = true
+Tags = PackedStringArray("weapon")
+Weight = 0.7
+Stat = "AttackSpeed"
+Op = "Mul"
+TierMinLevels = PackedInt32Array(2, 6)
+TierMins = PackedFloat32Array(5, 11)
+TierMaxes = PackedFloat32Array(10, 18)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

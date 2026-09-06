@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_frost_warding"
+DisplayName = "of Frost Warding"
+IsPrefix = false
+Tags = PackedStringArray("armor", "jewelry")
+Weight = 0.8
+Stat = "ResistFrost"
+Op = "Add"
+TierMinLevels = PackedInt32Array(2, 6)
+TierMins = PackedFloat32Array(8, 16)
+TierMaxes = PackedFloat32Array(15, 30)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

@@ -1,0 +1,272 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 1,
+  "Source": "fake",
+  "LayoutHash": 14861499581294361088,
+  "Title": "Shrouded Bastion",
+  "IntroLine": {
+    "Text": "Dust stirs as you descend into the Crypt. The Ditchmen keep their posts.",
+    "VoiceId": "a0209ebbe94d0b2e"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Passage",
+      "Name": "Shrouded Walk"
+    },
+    {
+      "Index": 1,
+      "Role": "Barracks",
+      "Name": "Broken Muster"
+    },
+    {
+      "Index": 2,
+      "Role": "Hall",
+      "Name": "Weeping Chamber"
+    },
+    {
+      "Index": 3,
+      "Role": "Hall",
+      "Name": "Forgotten Nave"
+    },
+    {
+      "Index": 4,
+      "Role": "Camp",
+      "Name": "Sunken Squat"
+    },
+    {
+      "Index": 5,
+      "Role": "Gate",
+      "Name": "Shrouded Bastion"
+    },
+    {
+      "Index": 6,
+      "Role": "Kennel",
+      "Name": "Sunken Den"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Shrouded Walk"
+    },
+    {
+      "Index": 8,
+      "Role": "Passage",
+      "Name": "Silent Gallery"
+    },
+    {
+      "Index": 9,
+      "Role": "Start",
+      "Name": "Weeping Threshold"
+    },
+    {
+      "Index": 10,
+      "Role": "Hall",
+      "Name": "Blackened Nave"
+    },
+    {
+      "Index": 11,
+      "Role": "Passage",
+      "Name": "Hollow Passage"
+    },
+    {
+      "Index": 12,
+      "Role": "Passage",
+      "Name": "Forgotten Passage"
+    },
+    {
+      "Index": 13,
+      "Role": "Exit",
+      "Name": "Weeping Stairwell"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Ditchmen",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Sunken Pack",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "5"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Tide",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Rot",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Crawl",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Rot",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Rot",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Gnawing",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 6
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 6,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 11,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 2,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Dust stirs as you descend into the Crypt. The Ditchmen keep their posts.",
+        "VoiceId": "a0209ebbe94d0b2e"
+      }
+    }
+  ],
+  "EnemyTotal": 5
+}

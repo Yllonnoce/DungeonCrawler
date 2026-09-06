@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.abyss_herald"
+DisplayName = "Abyss Herald"
+Kind = "Caster"
+MaxHp = 600
+MinDamage = 14
+MaxDamage = 22
+DamageType = "Arcane"
+MoveSpeed = 2.6
+DetectRange = 24
+AttackRange = 2.2
+PreferredRange = 8
+WindupSeconds = 0.8
+RecoverSeconds = 1.2
+ProjectileSpeed = 18
+Xp = 600
+Accuracy = 72
+Evasion = 8
+Armor = 14
+ResistFire = 30
+ResistFrost = 30
+ResistPoison = 30
+ResistArcane = 75
+OnHitStatus = "Slow"
+OnHitDuration = 3
+OnHitMagnitude = 0
+OnHitChance = 0.5
+Color = Color(0.35,0.1,0.5,1)
+Scale = 2.1
+IsBoss = true
+Signature = "Summon"
+SignatureCooldown = 12
+SummonId = "enemy.void_stalker"
+PackHunter = false
+FleeHpFraction = 0
+Model = "Demon"

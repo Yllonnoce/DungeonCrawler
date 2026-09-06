@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "abyss.slate"
+DisplayName = "Slate Abyss"
+TierIndex = 3
+Weight = 1.0
+Description = "slate floors, cracked concrete walls, black rock overhead, purple gloom"
+FloorTexture = "slate_floor"
+WallTexture = "cracked_concrete_wall"
+CeilingTexture = "dark_rock_02"
+FloorColor = Color(0.2,0.18,0.26,1)
+WallColor = Color(0.26,0.22,0.34,1)
+CeilingColor = Color(0.08,0.06,0.12,1)
+MetersPerTile = 2.0
+AmbientColor = Color(0.3,0.18,0.42,1)
+AmbientEnergy = 0.35
+FogColor = Color(0.04,0.02,0.06,1)
+FogDensity = 0.04
+TorchColor = Color(0.8,0.55,1,1)
+WallLightsPerRoom = 2

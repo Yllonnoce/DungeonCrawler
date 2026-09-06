@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.staff"
+DisplayName = "Oak Staff"
+Description = "A walking stick with ambitions."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "staff")
+ItemLevelMin = 1
+Stackable = false
+MaxStack = 1
+Color = Color(0.5,0.4,0.3,1)
+BaseModifiers = PackedStringArray("SpellPower+2")
+WeaponKind = "Staff"
+MinDamage = 2
+MaxDamage = 5
+DamageType = "Physical"
+Cooldown = 0.9
+StaminaCost = 6
+HeavyMultiplier = 1.5
+Range = 1.8
+TwoHanded = false
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

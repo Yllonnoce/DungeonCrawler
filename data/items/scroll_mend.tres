@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.scroll_mend"
+DisplayName = "Scroll of Mending"
+Description = "The party regenerates for 10s."
+Kind = "Consumable"
+Tags = PackedStringArray("consumable", "scroll")
+ItemLevelMin = 1
+Stackable = true
+MaxStack = 5
+Color = Color(0.6,0.9,0.6,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = ""
+MinDamage = 0
+MaxDamage = 0
+DamageType = "Physical"
+Cooldown = 0.8
+StaminaCost = 8
+HeavyMultiplier = 1.8
+Range = 1.8
+TwoHanded = false
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = "Regen"
+BuffDuration = 10
+BuffMagnitude = 3
+TargetsParty = true
+PlaceTrap = ""
+Respec = false

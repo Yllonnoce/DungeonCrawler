@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ClassDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/ClassDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "class.mage"
+DisplayName = "Mage"
+Description = "Spells only. Weak in melee, but fire, frost and party wards make up for it."
+Strength = 6
+Dexterity = 9
+Vitality = 8
+Intelligence = 17
+Willpower = 14
+Luck = 9
+HpPerLevel = 5.0
+StaminaPerLevel = 3.0
+ManaPerLevel = 8.0
+CanBlock = false
+AllowedWeapons = PackedStringArray("Staff")
+StartingAbilities = PackedStringArray("ability.fireball", "ability.frostbolt", "ability.frost_nova", "ability.arcane_shield", "ability.haste", "ability.mend")
+StartingWeapon = "item.staff"
+SneakAttackMultiplier = 1.5
+StealthBonus = 0.0
+PerceptionBonus = 15.0
+ArmorBonus = 0.0
+AllowedArmor = PackedStringArray("Cloth")
+AllowedOffhands = PackedStringArray("Focus")
+StartingItems = PackedStringArray("item.robe", "item.crystal_focus")

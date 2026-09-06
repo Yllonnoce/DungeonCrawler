@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.multishot"
+DisplayName = "Multishot"
+Description = "Three arrows in a spread."
+Kind = "Projectile"
+ManaCost = 0
+StaminaCost = 10
+ArrowCost = 3
+Cooldown = 6
+MinDamage = 5
+MaxDamage = 9
+DamageType = "Physical"
+AttackKind = "Ranged"
+CritBonus = 0.0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 40
+ProjectileCount = 3
+Color = Color(0.9, 0.85, 0.6, 1)

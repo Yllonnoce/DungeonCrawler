@@ -1,0 +1,325 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 7,
+  "Source": "fake",
+  "LayoutHash": 6761414061594579430,
+  "Title": "Narrow Gate",
+  "IntroLine": {
+    "Text": "The Caves swallows your torchlight. Something here has been waiting.",
+    "VoiceId": "bc0f5c19757f0f1f"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Passage",
+      "Name": "Dripping Walk"
+    },
+    {
+      "Index": 1,
+      "Role": "Gate",
+      "Name": "Narrow Gate"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "Echoing Passage"
+    },
+    {
+      "Index": 3,
+      "Role": "Camp",
+      "Name": "Crystal Hideout"
+    },
+    {
+      "Index": 4,
+      "Role": "Start",
+      "Name": "Fungal Descent"
+    },
+    {
+      "Index": 5,
+      "Role": "Barracks",
+      "Name": "Crystal Muster"
+    },
+    {
+      "Index": 6,
+      "Role": "Barracks",
+      "Name": "Crystal Barracks"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Fungal Crossing"
+    },
+    {
+      "Index": 8,
+      "Role": "Barracks",
+      "Name": "Yawning Muster"
+    },
+    {
+      "Index": 9,
+      "Role": "Hall",
+      "Name": "Glimmering Chamber"
+    },
+    {
+      "Index": 10,
+      "Role": "Barracks",
+      "Name": "Narrow Quarters"
+    },
+    {
+      "Index": 11,
+      "Role": "Barracks",
+      "Name": "Dripping Muster"
+    },
+    {
+      "Index": 12,
+      "Role": "Passage",
+      "Name": "Glimmering Gallery"
+    },
+    {
+      "Index": 13,
+      "Role": "Passage",
+      "Name": "Dripping Crossing"
+    },
+    {
+      "Index": 14,
+      "Role": "Exit",
+      "Name": "Glimmering Stairwell"
+    },
+    {
+      "Index": 15,
+      "Role": "Treasury",
+      "Name": "Glimmering Reliquary"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Saltless Men",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Glimmering Clutch",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 1,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "1"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Welter",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 16
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 23,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Gnawing",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 21,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Welter",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 13
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 20,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Scurry",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 13
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 20,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Gnawing",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 22,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Welter",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 22,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "The Caves swallows your torchlight. Something here has been waiting.",
+        "VoiceId": "bc0f5c19757f0f1f"
+      }
+    }
+  ],
+  "EnemyTotal": 6
+}

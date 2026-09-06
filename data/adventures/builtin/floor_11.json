@@ -1,0 +1,465 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 11,
+  "Source": "fake",
+  "LayoutHash": 12125810455763376344,
+  "Title": "Ringing Chamber",
+  "IntroLine": {
+    "Text": "Cold air rises from the Forge. Whatever guards the Soot-Black Reliquary does not sleep.",
+    "VoiceId": "2f7f0de1b274ab1c"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Kennel",
+      "Name": "Brazen Den"
+    },
+    {
+      "Index": 1,
+      "Role": "Ruin",
+      "Name": "Brazen Ruin"
+    },
+    {
+      "Index": 2,
+      "Role": "Hall",
+      "Name": "Smoldering Nave"
+    },
+    {
+      "Index": 3,
+      "Role": "Hall",
+      "Name": "Rusted Chamber"
+    },
+    {
+      "Index": 4,
+      "Role": "Start",
+      "Name": "Brazen Landing"
+    },
+    {
+      "Index": 5,
+      "Role": "Gate",
+      "Name": "Iron Bastion"
+    },
+    {
+      "Index": 6,
+      "Role": "Exit",
+      "Name": "Ringing Stairwell"
+    },
+    {
+      "Index": 7,
+      "Role": "Hall",
+      "Name": "Ringing Chamber"
+    },
+    {
+      "Index": 8,
+      "Role": "Hall",
+      "Name": "Soot-Black Chamber"
+    },
+    {
+      "Index": 9,
+      "Role": "Camp",
+      "Name": "Rusted Camp"
+    },
+    {
+      "Index": 10,
+      "Role": "Passage",
+      "Name": "Molten Walk"
+    },
+    {
+      "Index": 11,
+      "Role": "Hall",
+      "Name": "Soot-Black Hall"
+    },
+    {
+      "Index": 12,
+      "Role": "Treasury",
+      "Name": "Soot-Black Reliquary"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Gallows Company",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 9,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Soot-Black Foundry",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 7,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "4"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Seethe",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 34,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Gnawing",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 32,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Scurry",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 13
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 36,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Gnawing",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 32,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Tide",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Spill",
+      "Room": 11,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 34,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 3,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 5,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc1",
+      "Name": "Vesna Ashe",
+      "Room": 8,
+      "VoiceId": "Puck",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Hush. They do not know I am here. If you can help me, I can help you.",
+              "VoiceId": "95d78339c8243ecd"
+            },
+            "Choices": [
+              {
+                "Text": "What happened to you?",
+                "Next": "offer",
+                "Effect": "None"
+              },
+              {
+                "Text": "It is done.",
+                "Next": "done",
+                "Effect": "TurnIn"
+              },
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "offer",
+            "Line": {
+              "Text": "They know I am here. The Gallows Company come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
+              "VoiceId": "f780afb5bf53a6a4"
+            },
+            "Choices": [
+              {
+                "Text": "I will do it.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest"
+              },
+              {
+                "Text": "Not now.",
+                "Next": null,
+                "Effect": "DeclineQuest"
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Then here they come. Do not let them reach me.",
+              "VoiceId": "856a0eb89add4011"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
+              "VoiceId": "41b120dbcc16af1f"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest1"
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest1",
+      "Template": "HoldOut",
+      "Title": "Hold the Line",
+      "Objective": "Stand with Vesna Ashe against two waves of the Gallows Company.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": 2,
+        "WaveCollective": "band1"
+      },
+      "GiverNpc": "npc1",
+      "Reward": {
+        "Xp": 500,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "They know I am here. The Gallows Company come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
+          "VoiceId": "f780afb5bf53a6a4"
+        },
+        "Accept": {
+          "Text": "Then here they come. Do not let them reach me.",
+          "VoiceId": "856a0eb89add4011"
+        },
+        "Decline": {
+          "Text": "Then leave me. Others will come, or they will not.",
+          "VoiceId": "69e9ba07352c697c"
+        },
+        "Complete": {
+          "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
+          "VoiceId": "41b120dbcc16af1f"
+        },
+        "Fail": {
+          "Text": "You left me. I will not forget that.",
+          "VoiceId": "ab0cb1e235c60c0d"
+        }
+      }
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Cold air rises from the Forge. Whatever guards the Soot-Black Reliquary does not sleep.",
+        "VoiceId": "2f7f0de1b274ab1c"
+      }
+    }
+  ],
+  "EnemyTotal": 5
+}

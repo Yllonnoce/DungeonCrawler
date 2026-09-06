@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.fireball"
+DisplayName = "Fireball"
+Description = "A bolt of flame that sets the target burning."
+Kind = "Projectile"
+ManaCost = 12
+StaminaCost = 0
+ArrowCost = 0
+Cooldown = 1.5
+MinDamage = 8
+MaxDamage = 14
+DamageType = "Fire"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = "Burn"
+OnHitDuration = 5
+OnHitMagnitude = 3
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 20
+Color = Color(1, 0.45, 0.1, 1)
+ProjectileCount = 1

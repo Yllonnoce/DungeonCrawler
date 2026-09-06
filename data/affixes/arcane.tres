@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.arcane"
+DisplayName = "Arcane"
+IsPrefix = true
+Tags = PackedStringArray("staff", "focus", "jewelry")
+Weight = 1.0
+Stat = "SpellPower"
+Op = "Add"
+TierMinLevels = PackedInt32Array(1, 4, 8)
+TierMins = PackedFloat32Array(1, 3, 6)
+TierMaxes = PackedFloat32Array(3, 6, 10)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

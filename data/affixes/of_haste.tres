@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_haste"
+DisplayName = "of Haste"
+IsPrefix = false
+Tags = PackedStringArray("feet", "jewelry")
+Weight = 0.5
+Stat = "MoveSpeed"
+Op = "Mul"
+TierMinLevels = PackedInt32Array(3, 7)
+TierMins = PackedFloat32Array(5, 10)
+TierMaxes = PackedFloat32Array(9, 15)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

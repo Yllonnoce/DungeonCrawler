@@ -1,0 +1,279 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 5,
+  "Source": "fake",
+  "LayoutHash": 10013577963812421691,
+  "Title": "Silent Watch",
+  "IntroLine": {
+    "Text": "Cold air rises from the Crypt. Whatever guards the Silent Reliquary does not sleep.",
+    "VoiceId": "29265d21c6dc5cab"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Arena",
+      "Name": "Hollow Court"
+    },
+    {
+      "Index": 1,
+      "Role": "Start",
+      "Name": "Silent Descent"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "Silent Passage"
+    },
+    {
+      "Index": 3,
+      "Role": "Passage",
+      "Name": "Broken Crossing"
+    },
+    {
+      "Index": 4,
+      "Role": "Gate",
+      "Name": "Blackened Watch"
+    },
+    {
+      "Index": 5,
+      "Role": "Gate",
+      "Name": "Silent Watch"
+    },
+    {
+      "Index": 6,
+      "Role": "Ruin",
+      "Name": "Shrouded Colonnade"
+    },
+    {
+      "Index": 7,
+      "Role": "Hall",
+      "Name": "Hollow Chamber"
+    },
+    {
+      "Index": 8,
+      "Role": "Passage",
+      "Name": "Broken Passage"
+    },
+    {
+      "Index": 9,
+      "Role": "Treasury",
+      "Name": "Silent Reliquary"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "group1",
+      "Name": "Blackened Pack",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "5"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group2",
+      "Name": "Forgotten Wardens",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "group1",
+        "RallyRoom": 5
+      }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.ghoul",
+      "Room": 8
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Scurry",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 18,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Scurry",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 18,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Rot",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 15,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Seethe",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 17,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Spill",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 17,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Tide",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 15,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": {
+    "Name": "Crypt Lord",
+    "SignatureOverride": null,
+    "IntroLine": {
+      "Text": "\u0022So the thieves come at last.\u0022 Crypt Lord bars the way down.",
+      "VoiceId": "54fdbf58dff2c6d1"
+    },
+    "DeathLine": {
+      "Text": "\u0022Deeper... it waits... deeper...\u0022 Crypt Lord is still.",
+      "VoiceId": "d8afdfcd9ef89ff0"
+    }
+  },
+  "Chests": [],
+  "Traps": [],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Cold air rises from the Crypt. Whatever guards the Silent Reliquary does not sleep.",
+        "VoiceId": "29265d21c6dc5cab"
+      }
+    }
+  ],
+  "EnemyTotal": 6
+}

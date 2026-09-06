@@ -1,0 +1,502 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 19,
+  "Source": "fake",
+  "LayoutHash": 16009223416851939515,
+  "Title": "Unlit Gate",
+  "IntroLine": {
+    "Text": "The Abyss swallows your torchlight. Something here has been waiting.",
+    "VoiceId": "24a7261b30c878db"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Start",
+      "Name": "Screaming Descent"
+    },
+    {
+      "Index": 1,
+      "Role": "Barracks",
+      "Name": "Void-Touched Quarters"
+    },
+    {
+      "Index": 2,
+      "Role": "Kennel",
+      "Name": "Nameless Kennel"
+    },
+    {
+      "Index": 3,
+      "Role": "Ruin",
+      "Name": "Unlit Wreck"
+    },
+    {
+      "Index": 4,
+      "Role": "Hall",
+      "Name": "Whispering Hall"
+    },
+    {
+      "Index": 5,
+      "Role": "Passage",
+      "Name": "Nameless Crossing"
+    },
+    {
+      "Index": 6,
+      "Role": "Gate",
+      "Name": "Unlit Gate"
+    },
+    {
+      "Index": 7,
+      "Role": "Barracks",
+      "Name": "Bleeding Barracks"
+    },
+    {
+      "Index": 8,
+      "Role": "Exit",
+      "Name": "Screaming Way Down"
+    },
+    {
+      "Index": 9,
+      "Role": "Treasury",
+      "Name": "Whispering Reliquary"
+    },
+    {
+      "Index": 10,
+      "Role": "Treasury",
+      "Name": "Unlit Treasury"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "group1",
+      "Name": "Void-Touched Host",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 6,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "6"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group2",
+      "Name": "Bleeding Host",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group3",
+      "Name": "Bleeding Circle",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 4,
+        "Objective": null,
+        "Route": [
+          4,
+          5
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.void_stalker",
+      "Room": 2
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Scurry",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 29
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 18
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 52,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Spill",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 30
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 54,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Rot",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 31
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 56,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Rot",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 33
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 58,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Scurry",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 32
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 57,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Crawl",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 34
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 60,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 5,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 3,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc1",
+      "Name": "Nyx",
+      "Room": 1,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Hush. They do not know I am here. If you can help me, I can help you.",
+              "VoiceId": "fb3fc1aa4239c86c"
+            },
+            "Choices": [
+              {
+                "Text": "What happened to you?",
+                "Next": "offer",
+                "Effect": "None"
+              },
+              {
+                "Text": "It is done.",
+                "Next": "done",
+                "Effect": "TurnIn"
+              },
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "offer",
+            "Line": {
+              "Text": "They know I am here. The Void-Touched Host come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
+              "VoiceId": "a873ebbe202a3af9"
+            },
+            "Choices": [
+              {
+                "Text": "I will do it.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest"
+              },
+              {
+                "Text": "Not now.",
+                "Next": null,
+                "Effect": "DeclineQuest"
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Then here they come. Do not let them reach me.",
+              "VoiceId": "f3fdde1479168b15"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
+              "VoiceId": "2d54b9bf0167a0d3"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest1"
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest1",
+      "Template": "HoldOut",
+      "Title": "Hold the Line",
+      "Objective": "Stand with Nyx against two waves of the Void-Touched Host.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": 2,
+        "WaveCollective": "group1"
+      },
+      "GiverNpc": "npc1",
+      "Reward": {
+        "Xp": 820,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "They know I am here. The Void-Touched Host come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
+          "VoiceId": "a873ebbe202a3af9"
+        },
+        "Accept": {
+          "Text": "Then here they come. Do not let them reach me.",
+          "VoiceId": "f3fdde1479168b15"
+        },
+        "Decline": {
+          "Text": "Then leave me. Others will come, or they will not.",
+          "VoiceId": "f15eeed9a2164490"
+        },
+        "Complete": {
+          "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
+          "VoiceId": "2d54b9bf0167a0d3"
+        },
+        "Fail": {
+          "Text": "You left me. I will not forget that.",
+          "VoiceId": "9fd3c65b304e3ccc"
+        }
+      }
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "The Abyss swallows your torchlight. Something here has been waiting.",
+        "VoiceId": "24a7261b30c878db"
+      }
+    }
+  ],
+  "EnemyTotal": 7
+}

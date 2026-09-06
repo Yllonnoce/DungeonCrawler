@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.horde_husk_brute"
+DisplayName = "Husk Brute"
+Kind = "Melee"
+MaxHp = 34
+MinDamage = 5
+MaxDamage = 9
+DamageType = "Physical"
+MoveSpeed = 3.6
+DetectRange = 40
+AttackRange = 1.9
+PreferredRange = 0
+WindupSeconds = 0.5
+RecoverSeconds = 0.9
+ProjectileSpeed = 0
+Xp = 9
+Accuracy = 60
+Evasion = 3
+Armor = 4
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+Color = Color(0.5,0.42,0.32,1)
+Scale = 1.15
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+Model = "Orc_Skull"
+Faction = "horde"
+TierIndex = 0
+PackHunter = true
+FleeHpFraction = 0

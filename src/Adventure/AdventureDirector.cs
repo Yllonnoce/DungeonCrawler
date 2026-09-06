@@ -1,0 +1,541 @@
+using DungeonCrawler.Adventure.Ai;
+using DungeonCrawler.Adventure.AiClients;
+using DungeonCrawler.Adventure.Voice;
+using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Generation;
+using DungeonCrawler.Dungeon;
+using DungeonCrawler.Enemies;
+using DungeonCrawler.Save;
+using DungeonCrawler.Items;
+using Godot;
+
+namespace DungeonCrawler.Adventure;
+
+/// <summary>
+/// Autoload that runs the adventure at play time: registers a floor's quests when it is built, feeds game events to
+/// the quest machine, hands out rewards, starts hold-out waves, and keeps the HUD objective line current.
+/// Planning (offline now, Claude later) lives in Main/DungeonBuilder; this class only consumes finished plans.
+/// </summary>
+public partial class AdventureDirector : Node
+{
+    public static AdventureDirector Instance { get; private set; } = null!;
+
+    private int _currentFloor;
+    public Dictionary<string, QuestState> Quests => Game.Instance.Adventure.Quests;
+
+    // ---- planning ----------------------------------------------------------------------------
+    public IPlanner Planner { get; private set; } = new OfflinePlanner();
+    public string PlannerName { get; private set; } = "The offline designer";
+    /// <summary>True while a non-offline planner is in use and has not been switched off for this run.</summary>
+    public bool AiEnabled => Planner is not OfflinePlanner && Game.Instance.Adventure.AiStoppedReason == null;
+    public FakePlanner? Fake => Planner as FakePlanner;
+    private readonly Dictionary<int, CancellationTokenSource> _inFlight = new();
+    private readonly HashSet<int> _abandoned = new();
+    private CostMeter? _meter;
+
+    /// <summary>Pick the planner from settings and debug flags. Called at New Game and after a load.</summary>
+    public void ConfigurePlanner(bool offlineOnly = false)
+    {
+        foreach (var cts in _inFlight.Values) cts.Cancel();
+        _inFlight.Clear();
+        _abandoned.Clear();
+        var debug = DebugTools.Instance;
+        var spend = Game.Instance.Adventure.Spend;
+        _meter = new CostMeter(spend, Settings.SpendCapUsd);
+        if (offlineOnly || Game.Instance.Adventure.Mode == AdventureMode.Builtin)
+        {
+            Planner = new OfflinePlanner();
+            PlannerName = "The built-in campaign";
+        }
+        else if (debug?.FakeAiDelay is { } delay)
+        {
+            Planner = new FakePlanner(delay);
+            PlannerName = "A stand-in planner";
+        }
+        else if (debug?.ReplayDir is { } replay)
+        {
+            Planner = new ClaudePlanner(new ReplayClaudeClient(replay), _meter) { Log = LogPlanning };
+            PlannerName = "A recording of Claude";
+        }
+        else if (debug?.NoAi != true && (Settings.AiPlanning || debug?.ForceAi == true) && Settings.HasClaudeKey)
+        {
+            IClaudeClient client = new ClaudeSdkClient(Settings.ClaudeKey.Trim());
+            var logDir = ProjectSettings.GlobalizePath(debug?.RecordDir ?? "user://ai/log");
+            client = new RecordingClaudeClient(client, logDir);
+            Planner = new ClaudePlanner(client, _meter) { Log = LogPlanning };
+            PlannerName = "Claude";
+        }
+        else
+        {
+            Planner = new OfflinePlanner();
+            PlannerName = "The offline designer";
+        }
+        _voice.Configure();
+        GD.Print($"[Adventure] planner: {PlannerName}{(Settings.HasClaudeKey ? "" : " (no Claude key)")} cap=${Settings.SpendCapUsd:0.00}; voice {(_voice.Enabled ? "on" : "off")}");
+    }
+
+    // ---- voice ----------------------------------------------------------------------------------
+    private double _lastBark = -100;
+    private readonly Dictionary<(string, BarkTrigger), double> _barkCooldown = new();
+    private readonly Random _barkRng = new(11);
+
+    private static Characters.CharacterState? Member(int index)
+    {
+        var p = Main.Instance?.Party;
+        return p != null && index >= 0 && index < p.Members.Length ? p.Members[index] : null;
+    }
+
+    /// <summary>Queue every spoken line of a floor plan with the right voice; ids land on the lines so saves keep them.</summary>
+    public void EnqueueFloorVoice(FloorPlan plan)
+    {
+        var narrator = Game.Instance.Adventure.Campaign?.NarratorVoiceId ?? Voices.Narrator;
+        _voice.Enqueue(plan.IntroLine, narrator, Speaker.Narrator, VoicePriority.Narrator);
+        foreach (var n in plan.Narration) _voice.Enqueue(n.Line, narrator, Speaker.Narrator, VoicePriority.Narrator);
+        if (plan.Boss is { } boss)
+        {
+            _voice.Enqueue(boss.IntroLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
+            _voice.Enqueue(boss.DeathLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
+        }
+        foreach (var npc in plan.Npcs)
+        {
+            npc.VoiceId ??= Voices.ForNpc(npc.Name);
+            var major = npc.CastId != null; // the cast gets the main model; passers-by the minor one
+            foreach (var node in npc.Script.Nodes) _voice.Enqueue(node.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major);
+            var quest = plan.Quests.FirstOrDefault(q => q.GiverNpc == npc.Id);
+            if (quest != null) foreach (var l in new[] { quest.Lines.Offer, quest.Lines.Accept, quest.Lines.Decline, quest.Lines.Complete, quest.Lines.Fail }) _voice.Enqueue(l, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major);
+        }
+    }
+
+    public void EnqueueCampaignVoice(CampaignPlan campaign)
+    {
+        campaign.NarratorVoiceId ??= Voices.Narrator;
+        foreach (var t in campaign.Tiers) _voice.Enqueue(t.EnterLine, campaign.NarratorVoiceId, Speaker.Narrator, VoicePriority.Narrator);
+        EnqueueBarks(campaign);
+    }
+
+    private void EnqueueBarks(CampaignPlan campaign)
+    {
+        var party = Main.Instance?.Party;
+        foreach (var set in campaign.Barks)
+        {
+            var classId = party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
+                ? party.Members.FirstOrDefault(m => m.Name == set.Member)?.Class.Id
+                : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
+            var voice = Voices.ForClass(classId ?? "");
+            foreach (var b in set.Lines) _voice.Enqueue(b.Line, voice, Speaker.Companion, VoicePriority.Bark, major: false);
+        }
+    }
+
+    /// <summary>A short in-character line from the bark bank, rate limited, spoken if its audio exists.</summary>
+    private void Bark(Characters.CharacterState? m, BarkTrigger trigger)
+    {
+        if (m == null || !Game.Instance.InGame) return;
+        var campaign = Game.Instance.Adventure.Campaign;
+        var set = campaign?.Barks.FirstOrDefault(b => b.Member == m.Name);
+        if (set == null) return;
+        var now = Game.Instance.PlaySeconds;
+        if (now - _lastBark < 5) return;
+        if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < 25) return;
+        var lines = set.Lines.Where(l => l.Trigger == trigger && l.Line.Text != "").ToList();
+        if (lines.Count == 0) return;
+        var line = lines[_barkRng.Next(lines.Count)].Line;
+        _lastBark = now;
+        _barkCooldown[(m.Name, trigger)] = now;
+        EventBus.Instance.Log($"{m.Name}: \"{line.Text}\"");
+        EventBus.Instance.RaiseBark(m.Name, line);
+        _voice.PlayLine(line, interrupt: false);
+    }
+
+    /// <summary>A client voicing a bark the server chose.</summary>
+    public void PlayBark(Line line) => _voice.PlayLine(line, interrupt: false);
+
+    private void LogPlanning(string line)
+    {
+        GD.Print($"[Adventure] {line}");
+        if (Planner is ClaudePlanner { LastFailure: { } failure } && failure.Contains("cap"))
+            Game.Instance.Adventure.AiStoppedReason = failure;
+    }
+
+    public bool IsPlanning(int floor) => _inFlight.ContainsKey(floor);
+
+    /// <summary>The floor is being built without its AI plan; drop the result when it arrives.</summary>
+    public void AbandonPlanning(int floor, string why)
+    {
+        if (!_inFlight.Remove(floor, out var cts)) return;
+        _abandoned.Add(floor);
+        cts.Cancel();
+        GD.Print($"[Adventure] floor {floor}: plan abandoned ({why}); designed offline instead");
+    }
+
+    private static List<PartyMemberInfo> PartyInfo()
+        => Main.Instance?.Party?.Members.Select(m => new PartyMemberInfo(m.Name, m.Class.Name)).ToList() ?? new List<PartyMemberInfo>();
+
+    /// <summary>Outline + floor 1 on a worker thread; the callback runs on the main thread.</summary>
+    public void PrepareCampaign(Action<string> status, Action<CampaignPlan, FloorPlan?> done)
+    {
+        var game = Game.Instance;
+        var builder = Main.Instance!.Builder;
+        var seed1 = Rng.FloorSeed(game.GameSeed, 1);
+        var spec1 = builder.SpecFor(1);
+        var layout1 = FloorGenerator.Generate(spec1, seed1);
+        var tiers = game.TierProfiles();
+        var req = new OutlineRequest(game.GameSeed, tiers, builder.Roster, PartyInfo(), layout1, spec1, seed1, Main.Instance.Party.Snapshot(), builder.ThemeProfiles());
+        var planner = Planner;
+        var cts = new CancellationTokenSource();
+        _inFlight[1] = cts;
+        var started = Time.GetTicksMsec();
+        _ = Task.Run(async () =>
+        {
+            OutlineResult result;
+            try { result = await planner.OutlineAsync(req, cts.Token); }
+            catch (Exception e)
+            {
+                GD.PushWarning($"[Adventure] outline failed: {e.Message}");
+                result = await new OfflinePlanner().OutlineAsync(req, CancellationToken.None);
+            }
+            Callable.From(() =>
+            {
+                _inFlight.Remove(1);
+                var secs = (Time.GetTicksMsec() - started) / 1000f;
+                GD.Print($"[Adventure] campaign \"{result.Campaign.Title}\" ({result.Campaign.Source}) and floor 1 ({result.Floor1.Source}) ready in {secs:0.0} s; {result.Floor1Report}");
+                status($"Ready in {secs:0.0} s.");
+                done(result.Campaign, result.Floor1);
+                EnqueueCampaignVoice(result.Campaign);
+                if (planner is not OfflinePlanner) FetchBarks(result.Campaign);
+            }).CallDeferred();
+        });
+    }
+
+    /// <summary>Write (or rewrite) the bark bank for a campaign in the background; a resumed bake needs it.</summary>
+    public void RequestBarks(CampaignPlan campaign) => FetchBarks(campaign);
+
+    private void FetchBarks(CampaignPlan campaign)
+    {
+        var planner = Planner;
+        var party = PartyInfo();
+        _ = Task.Run(async () =>
+        {
+            List<BarkSet> barks;
+            try { barks = await planner.BarksAsync(campaign, party, CancellationToken.None); }
+            catch (Exception e) { GD.PushWarning($"[Adventure] barks failed: {e.Message}"); return; }
+            Callable.From(() => { if (Game.Instance.Adventure.Campaign == campaign) { campaign.Barks = barks; EnqueueBarks(campaign); GD.Print($"[Adventure] bark bank ready: {barks.Sum(b => b.Lines.Count)} lines"); } }).CallDeferred();
+        });
+    }
+
+    /// <summary>Start writing a floor's plan in the background if nothing is stored or running for it.</summary>
+    public void Prefetch(int floor)
+    {
+        var game = Game.Instance;
+        if (!AiEnabled || floor < 1 || floor > Dungeon.TierRules.FinalFloor) return;
+        if (game.Adventure.FloorPlans.ContainsKey(floor) || _inFlight.ContainsKey(floor) || game.Adventure.Campaign == null) return;
+        var builder = Main.Instance!.Builder;
+        var seed = Rng.FloorSeed(game.GameSeed, floor);
+        var spec = builder.SpecFor(floor);
+        var layout = FloorGenerator.Generate(spec, seed);
+        var req = new FloorRequest(game.Adventure.Campaign, layout, spec, builder.TierFor(floor)?.ToProfile(), builder.Roster, floor, seed, Main.Instance.Party.Snapshot(), MemorySummary(floor));
+        var planner = Planner;
+        var cts = new CancellationTokenSource();
+        _inFlight[floor] = cts;
+        _abandoned.Remove(floor);
+        var started = Time.GetTicksMsec();
+        GD.Print($"[Adventure] floor {floor}: planning started ({PlannerName})");
+        _ = Task.Run(async () =>
+        {
+            FloorResult? result = null;
+            string? error = null;
+            try { result = await planner.PlanFloorAsync(req, cts.Token); }
+            catch (OperationCanceledException) { error = "cancelled"; }
+            catch (Exception e) { error = e.Message; }
+            Callable.From(() =>
+            {
+                _inFlight.Remove(floor);
+                if (_abandoned.Remove(floor) || error == "cancelled") return;
+                if (result == null) { GD.PushWarning($"[Adventure] floor {floor}: planning failed: {error}"); return; }
+                if (game.Adventure.FloorPlans.ContainsKey(floor)) return;
+                game.Adventure.FloorPlans[floor] = result.Plan;
+                EnqueueFloorVoice(result.Plan);
+                if (result.Report.Repairs.Count > 0) _pendingRepairs[floor] = result.Report.Repairs.ToList();
+                GD.Print($"[Adventure] floor {floor}: plan ready ({result.Plan.Source}) in {(Time.GetTicksMsec() - started) / 1000f:0.0} s; {result.Report}");
+            }).CallDeferred();
+        });
+    }
+
+    // ---- campaign memory -----------------------------------------------------------------------
+    private CampaignMemoryDto Memory => Game.Instance.Adventure.Memory;
+    private FloorRecord? _record;
+    private double _floorStart;
+    private string _leadName = "";
+    private readonly Dictionary<int, List<string>> _pendingRepairs = new();
+
+    public string MemorySummary(int upToFloor) => Adventure.MemorySummary.Build(Memory, upToFloor);
+
+    private void OpenRecord(int floor)
+    {
+        _record = Memory.For(floor);
+        _floorStart = Game.Instance.PlaySeconds;
+        if (_pendingRepairs.Remove(floor, out var repairs)) _record.Repairs = repairs;
+        var party = Main.Instance?.Party;
+        _leadName = party != null && party.HasBodies ? party.Lead.State.Name : "";
+    }
+
+    private void CloseRecord()
+    {
+        if (_record == null) return;
+        var party = Main.Instance?.Party;
+        _record.Seconds += (float)(Game.Instance.PlaySeconds - _floorStart);
+        _floorStart = Game.Instance.PlaySeconds;
+        if (party != null && party.Members.Length > 0)
+            _record.ExitHpFraction = party.Members.Sum(m => m.Hp) / Math.Max(1f, party.Members.Sum(m => m.Stats[Characters.Stat.MaxHp]));
+        _record.Completed = true;
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_record == null || !Game.Instance.InGame || _leadName == "") return;
+        _record.PossessSeconds[_leadName] = _record.PossessSeconds.GetValueOrDefault(_leadName) + (float)delta;
+    }
+
+    /// <summary>Settings screen: a tiny structured request with the given key; the result text arrives on the main thread.</summary>
+    public void TestConnection(string key, Action<string> result)
+    {
+        if (key.Trim().Length < 10) { result("Paste a Claude API key first."); return; }
+        var client = new ClaudeSdkClient(key.Trim());
+        var request = new ClaudeRequest("ping", Pricing.DefaultModel, Array.Empty<PromptBlock>(), "Reply with a JSON object whose Reply field is the single word ok.", PlanSchemas.For<Ping>(), "low", 64);
+        _ = Task.Run(async () =>
+        {
+            var r = await client.CreateAsync(request, CancellationToken.None);
+            var text = r.Error != null ? $"Failed: {r.Error}" : r.StopReason == "refusal" ? "The request was refused." : $"Connected ({r.Usage.InputTokens} in / {r.Usage.OutputTokens} out tokens, {Pricing.Cost(r.Usage) * 100:0.00} cents).";
+            Callable.From(() => result(text)).CallDeferred();
+        });
+    }
+
+    public sealed class Ping { public string Reply { get; set; } = ""; }
+
+    private VoiceRenderer _voice = null!;
+
+    public override void _Ready()
+    {
+        Instance = this;
+        _voice = new VoiceRenderer { Name = "Voice" };
+        AddChild(_voice);
+        AddChild(new CampaignBaker { Name = "Baker" });
+        var bus = EventBus.Instance;
+        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); };
+        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.DeathLine.Text}", b.DeathLine.VoiceId); };
+        bus.MemberKill += m => Bark(m, BarkTrigger.Kill);
+        bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * 0.15f) Bark(m, BarkTrigger.Hurt); };
+        bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);
+        bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
+        bus.LeadChanged += i => Bark(Member(i), BarkTrigger.Possess);
+        bus.MemberDowned += i => Bark(Member(i), BarkTrigger.Downed);
+        bus.MemberRevived += i => Bark(Member(i), BarkTrigger.Revived);
+        bus.EnemyDied += OnEnemyDied;
+        bus.QuestItemPicked += id => Apply(new QuestItemPicked(QuestKeys.QuestOf(id))); // clue items carry an ordinal after the quest key
+        bus.NpcEvent += OnNpcEvent;
+        bus.DialogueEffectChosen += OnDialogueEffect;
+        bus.FloorChanged += OnFloorChanged;
+        bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; };
+        bus.MemberDamaged += (_, amount) => { if (_record != null) _record.DamageTaken += amount; };
+        bus.MemberDowned += _ => { if (_record != null) _record.Downs++; };
+        bus.PartyWiped += () => { if (_record != null) _record.Wipes++; };
+        bus.AbilityUsed += (_, kind) => { if (_record == null) return; if (kind is Combat.AbilityKind.WeaponAttack or Combat.AbilityKind.MeleeStrike) _record.WeaponAttacks++; else _record.SpellCasts++; };
+        bus.LeadChanged += index => { var p = Main.Instance?.Party; if (p != null && index < p.Members.Length) _leadName = p.Members[index].Name; };
+        bus.BossDefeated += _ => { if (_record != null) _record.BossSeconds = (float)(Game.Instance.PlaySeconds - _floorStart); };
+    }
+
+    private void OnFloorChanged(int floor, int delta)
+    {
+        if (_currentFloor > 0 && _currentFloor != floor && Game.Instance.InGame) { Apply(new FloorLeft(_currentFloor)); CloseRecord(); }
+        _currentFloor = floor;
+    }
+
+    /// <summary>Called by Main once a floor's nodes exist and saved state has been applied.</summary>
+    public void OnFloorBuilt(FloorContents contents, int floor, bool firstVisit)
+    {
+        _currentFloor = floor;
+        OpenRecord(floor);
+        if (contents.Plan is { } plan)
+        {
+            _record!.Title = plan.Title;
+            _record.Source = plan.Source;
+            EnqueueFloorVoice(plan);
+            foreach (var q in plan.Quests)
+            {
+                var key = QuestKeys.For(floor, q.Id);
+                if (Quests.ContainsKey(key)) continue;
+                if (!FlagRules.Allowed(q.RequiresFlag, q.ForbidsFlag, Memory.Flags)) continue;
+                if (!contents.Npcs.Any(n => n.Id == q.GiverNpc)) continue; // the giver stayed away (flag-gated)
+                var target = contents.Collectives.FirstOrDefault(c => c.Id == q.Params.TargetCollective);
+                var state = QuestMachine.Create(q, plan, floor, target?.MemberSpawnIndices.Count ?? 1);
+                state.Id = key;
+                Quests[key] = state;
+            }
+            if (firstVisit && plan.IntroLine.Text != "") EventBus.Instance.RaiseNarration(plan.IntroLine.Text, plan.IntroLine.VoiceId);
+            foreach (var q in Quests.Values.Where(q => q.Floor == floor && q.Status == QuestStatus.Active))
+            {
+                if (q.Template == QuestTemplate.Escort && FindNpc(q.EscortNpc) is { Escorting: false, Rescued: false, Dead: false } npc) npc.StartFollowing();
+                if (q.Template == QuestTemplate.HoldOut) StartWaves(q);
+            }
+        }
+        RefreshObjective();
+        Prefetch(floor + 1);
+    }
+
+    public QuestState? QuestGivenBy(string npcId) => Quests.Values.FirstOrDefault(q => q.Floor == _currentFloor && q.GiverNpc == npcId);
+
+    public void Apply(QuestEvent e)
+    {
+        foreach (var q in Quests.Values.ToList())
+        {
+            if (e is NpcDied or NpcReachedStairs && q.Floor != _currentFloor) continue; // NPC ids repeat per floor
+            var before = q.Status;
+            if (!QuestMachine.Apply(q, e)) continue;
+            if (q.Status != before) OnStatusChanged(q);
+            EventBus.Instance.RaiseQuestChanged(q);
+        }
+        RefreshObjective();
+    }
+
+    private void OnStatusChanged(QuestState q)
+    {
+        switch (q.Status)
+        {
+            case QuestStatus.Active:
+                EventBus.Instance.Log($"Quest accepted: {q.Title}.");
+                EventBus.Instance.PlaySfx("ui_open");
+                if (q.Template == QuestTemplate.Escort) FindNpc(q.EscortNpc)?.StartFollowing();
+                if (q.Template == QuestTemplate.HoldOut) StartWaves(q);
+                break;
+            case QuestStatus.ReadyToTurnIn:
+                EventBus.Instance.Log($"{q.Title}: return to {q.GiverName}.");
+                break;
+            case QuestStatus.Completed:
+                Memory.For(q.Floor).QuestOutcomes.Add($"{q.Title} completed");
+                EventBus.Instance.Log($"Quest complete: {q.Title}.");
+                EventBus.Instance.PlaySfx("level_up");
+                if (q.Template == QuestTemplate.Escort && q.CompleteLine != "") EventBus.Instance.RaiseNarration($"{q.GiverName}: {q.CompleteLine}", null);
+                GrantReward(q);
+                break;
+            case QuestStatus.Failed:
+                Memory.For(q.Floor).QuestOutcomes.Add($"{q.Title} failed");
+                EventBus.Instance.Log($"Quest failed: {q.Title}.{(q.FailLine != "" ? $" \"{q.FailLine}\"" : "")}");
+                break;
+        }
+    }
+
+    private void GrantReward(QuestState q)
+    {
+        if (q.RewardGranted) return;
+        q.RewardGranted = true;
+        var party = Main.Instance?.Party;
+        if (party == null) return;
+        if (q.RewardXp > 0) party.AwardXp(q.RewardXp);
+        var cat = Game.Instance.Catalog;
+        if (q.RewardTable != null && cat.Tables.TryGetValue(q.RewardTable, out var table))
+        {
+            var at = FindNpc(q.GiverNpc)?.GlobalPosition ?? party.Lead.GlobalPosition;
+            var drops = LootRoller.RollMany(cat, table with { DropChance = 1f }, TierRules.ItemLevel(q.Floor), party.Rng);
+            for (var i = 0; i < drops.Count; i++) party.SpawnLoot(drops[i], at + new Vector3(-0.5f + i * 0.5f, 0.4f, 1.0f));
+            if (drops.Count > 0) EventBus.Instance.Log($"{q.GiverName} hands over {drops.Count} item{(drops.Count == 1 ? "" : "s")}.");
+        }
+    }
+
+    private void StartWaves(QuestState q)
+    {
+        var builder = Main.Instance?.Builder;
+        if (builder?.FloorRoot is not { } root || builder.Contents == null) return;
+        if (root.GetChildren().OfType<WaveSpawner>().Any(w => !w.Done)) return;
+        var template = builder.Contents.Collectives.FirstOrDefault(c => c.Id == q.WaveCollective) ?? builder.Contents.Collectives.FirstOrDefault();
+        if (template == null) return;
+        var around = FindNpc(q.GiverNpc)?.GlobalPosition ?? Main.Instance!.Party.Lead.GlobalPosition;
+        var spawner = new WaveSpawner { Name = "Waves" };
+        root.AddChild(spawner);
+        spawner.Start(q, template, around, q.Progress);
+    }
+
+    private void OnEnemyDied(Enemy e)
+    {
+        if (_record != null && e.Floor == _currentFloor) _record.Kills++;
+        Apply(new EnemyDiedEvent(e.Group?.Id ?? e.QuestGroupId, e.Profile.Id, e.Floor));
+    }
+
+    private void OnNpcEvent(string npcId, NpcEventKind kind)
+    {
+        var name = FindNpc(npcId)?.NpcName ?? npcId;
+        if (kind == NpcEventKind.Died) _record?.NpcFates.Add($"{name} died");
+        if (kind == NpcEventKind.ReachedStairs) _record?.NpcFates.Add($"{name} rescued");
+        switch (kind)
+        {
+            case NpcEventKind.Died: Apply(new NpcDied(npcId)); break;
+            case NpcEventKind.ReachedStairs: Apply(new NpcReachedStairs(npcId)); break;
+        }
+    }
+
+    private void OnDialogueEffect(string npcId, DialogueEffect effect, string? flag)
+    {
+        var q = QuestGivenBy(npcId);
+        switch (effect)
+        {
+            case DialogueEffect.AcceptQuest: if (q != null) Apply(new QuestAccepted(q.Id)); break;
+            case DialogueEffect.DeclineQuest: if (q != null) Apply(new QuestDeclined(q.Id)); break;
+            case DialogueEffect.TurnIn: if (q != null) Apply(new QuestTurnedIn(q.Id)); break;
+            case DialogueEffect.Choose:
+                if (FlagRules.Clean(flag) is not { } f) break;
+                SetFlag(f, FindNpc(npcId)?.NpcName ?? npcId);
+                if (q is { Template: QuestTemplate.Decide }) Apply(new ChoiceMade(q.Id, f));
+                break;
+            case DialogueEffect.Betray: Betray(npcId, q); break;
+        }
+    }
+
+    /// <summary>A choice the run remembers: later NPCs, quests and lines gate on it, and the planner hears about it.</summary>
+    public void SetFlag(string flag, string byWhom)
+    {
+        if (Memory.Flags.Contains(flag)) return;
+        Memory.Flags.Add(flag);
+        _record?.Choices.Add($"{flag} (with {byWhom} on floor {_currentFloor})");
+        GD.Print($"[Adventure] flag set: {flag}");
+    }
+
+    /// <summary>The NPC turns: they vanish and their creatures stand where they stood, the first wearing their name.</summary>
+    private void Betray(string npcId, QuestState? quest)
+    {
+        var main = Main.Instance;
+        var npc = FindNpc(npcId);
+        var plan = main?.Builder.Contents?.Plan?.Npcs.FirstOrDefault(n => n.Id == npcId);
+        if (main == null || npc == null || npc.Turned || plan?.Betrayal is not { } b) return;
+        var at = npc.GlobalPosition;
+        npc.Turn();
+        _record?.NpcFates.Add($"{npc.NpcName} turned on the party");
+        EventBus.Instance.PlaySfx("boss");
+        for (var i = 0; i < b.Count; i++)
+        {
+            var offset = new Vector3(Mathf.Cos(i * 2.1f) * 0.9f * i, 0.2f, Mathf.Sin(i * 2.1f) * 0.9f * i);
+            var e = main.Builder.SpawnEnemy(b.EnemyId, at + offset, _currentFloor);
+            if (e == null) continue;
+            e.QuestGroupId = QuestMachine.BetrayalGroup(npcId);
+            if (i == 0) e.NameOverride = npc.NpcName;
+            e.ForceAggro();
+        }
+        if (quest is { Template: QuestTemplate.Betrayal }) Apply(new BetrayalStarted(quest.Id));
+        else EventBus.Instance.Log($"{npc.NpcName} was never on your side.");
+        RefreshObjective();
+    }
+
+    public Npc? FindNpc(string? id)
+    {
+        if (id == null || Main.Instance?.Builder.FloorRoot is not { } root) return null;
+        return root.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == id);
+    }
+
+    /// <summary>The HUD's one-line objective: the first open quest on this floor.</summary>
+    /// <summary>The objective line the HUD shows now (a joining client gets it in its Welcome).</summary>
+    public string CurrentObjective { get; private set; } = "";
+
+    public void RefreshObjective()
+    {
+        var q = Quests.Values.Where(q => q.Floor == _currentFloor && q.IsOpen).OrderBy(q => q.Status == QuestStatus.ReadyToTurnIn ? 0 : 1).FirstOrDefault();
+        CurrentObjective = q == null ? "" : $"{q.Title}: {q.ObjectiveText}";
+        EventBus.Instance.RaiseObjectiveChanged(CurrentObjective);
+    }
+}

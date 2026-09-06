@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.horde_cinder_brute"
+DisplayName = "Ember Ogre"
+Kind = "Melee"
+MaxHp = 34
+MinDamage = 5
+MaxDamage = 9
+DamageType = "Fire"
+MoveSpeed = 3.6
+DetectRange = 40
+AttackRange = 1.9
+PreferredRange = 0
+WindupSeconds = 0.5
+RecoverSeconds = 0.9
+ProjectileSpeed = 0
+Xp = 9
+Accuracy = 60
+Evasion = 3
+Armor = 4
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+Color = Color(0.95,0.35,0.1,1)
+Scale = 1.1
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+Model = "Cactoro"
+Faction = "horde"
+TierIndex = 2
+PackHunter = true
+FleeHpFraction = 0

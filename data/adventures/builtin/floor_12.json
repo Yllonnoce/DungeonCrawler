@@ -1,0 +1,342 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 12,
+  "Source": "fake",
+  "LayoutHash": 10855398722339417223,
+  "Title": "Molten Watch",
+  "IntroLine": {
+    "Text": "Cold air rises from the Forge. Whatever guards the Ringing Hoard does not sleep.",
+    "VoiceId": "f475eb329311e4f0"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Ruin",
+      "Name": "Ashen Colonnade"
+    },
+    {
+      "Index": 1,
+      "Role": "Hall",
+      "Name": "Smoldering Chamber"
+    },
+    {
+      "Index": 2,
+      "Role": "Gate",
+      "Name": "Molten Watch"
+    },
+    {
+      "Index": 3,
+      "Role": "Hall",
+      "Name": "Ashen Chamber"
+    },
+    {
+      "Index": 4,
+      "Role": "Hall",
+      "Name": "Smoldering Nave"
+    },
+    {
+      "Index": 5,
+      "Role": "Exit",
+      "Name": "Molten Stairwell"
+    },
+    {
+      "Index": 6,
+      "Role": "Hall",
+      "Name": "Soot-Black Chamber"
+    },
+    {
+      "Index": 7,
+      "Role": "Start",
+      "Name": "Rusted Landing"
+    },
+    {
+      "Index": 8,
+      "Role": "Hall",
+      "Name": "Ashen Hall"
+    },
+    {
+      "Index": 9,
+      "Role": "Kennel",
+      "Name": "Molten Warren"
+    },
+    {
+      "Index": 10,
+      "Role": "Treasury",
+      "Name": "Ringing Hoard"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "group1",
+      "Name": "Ashen Cohort",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 2,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "2"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group2",
+      "Name": "Ringing Forge-Guard",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "group1",
+        "RallyRoom": 2
+      }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.forge_priest",
+      "Room": 5
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Spill",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 18
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Spill",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 13
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 37,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Tide",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 18
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Spill",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 22
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 13
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 38,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Gnawing",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 18
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Scurry",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 34,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 6,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Cold air rises from the Forge. Whatever guards the Ringing Hoard does not sleep.",
+        "VoiceId": "f475eb329311e4f0"
+      }
+    }
+  ],
+  "EnemyTotal": 6
+}

@@ -1,0 +1,520 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 20,
+  "Source": "fake",
+  "LayoutHash": 9815155884356853185,
+  "Title": "Void-Touched Bastion",
+  "IntroLine": {
+    "Text": "Dust stirs as you descend into the Abyss. The Screaming Host keep their posts.",
+    "VoiceId": "147c1da71dde309c"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Arena",
+      "Name": "Nameless Court"
+    },
+    {
+      "Index": 1,
+      "Role": "Hall",
+      "Name": "Screaming Hall"
+    },
+    {
+      "Index": 2,
+      "Role": "Barracks",
+      "Name": "Screaming Quarters"
+    },
+    {
+      "Index": 3,
+      "Role": "Hall",
+      "Name": "Unlit Nave"
+    },
+    {
+      "Index": 4,
+      "Role": "Hall",
+      "Name": "Whispering Chamber"
+    },
+    {
+      "Index": 5,
+      "Role": "Hall",
+      "Name": "Bleeding Nave"
+    },
+    {
+      "Index": 6,
+      "Role": "Passage",
+      "Name": "Nameless Passage"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Faded Crossing"
+    },
+    {
+      "Index": 8,
+      "Role": "Ruin",
+      "Name": "Whispering Wreck"
+    },
+    {
+      "Index": 9,
+      "Role": "Start",
+      "Name": "Whispering Descent"
+    },
+    {
+      "Index": 10,
+      "Role": "Gate",
+      "Name": "Void-Touched Bastion"
+    },
+    {
+      "Index": 11,
+      "Role": "Passage",
+      "Name": "Nameless Passage"
+    },
+    {
+      "Index": 12,
+      "Role": "Treasury",
+      "Name": "Faded Reliquary"
+    },
+    {
+      "Index": 13,
+      "Role": "Treasury",
+      "Name": "Bleeding Reliquary"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "group1",
+      "Name": "Screaming Host",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 10,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "10"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group2",
+      "Name": "Unlit Choir",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 1,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "group1",
+        "RallyRoom": 10
+      }
+    },
+    {
+      "Id": "group3",
+      "Name": "Void-Touched Circle",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Gnawing",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 34
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 60,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Scurry",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 34
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 60,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Gnawing",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 34
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 60,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Crawl",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 34
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 60,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Gnawing",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 31
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 55,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Rot",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 31
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 4
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 56,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": {
+    "Name": "Abyss Herald",
+    "SignatureOverride": null,
+    "IntroLine": {
+      "Text": "Abyss Herald rises to meet you. \u0022You should have stayed above.\u0022",
+      "VoiceId": "0b8b86dd59254b05"
+    },
+    "DeathLine": {
+      "Text": "\u0022Deeper... it waits... deeper...\u0022 Abyss Herald is still.",
+      "VoiceId": "1bc169b0b4395259"
+    }
+  },
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 3,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 8,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc1",
+      "Name": "The Pale Pilgrim",
+      "Room": 11,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Another descent, another fool. Or perhaps a friend? Speak.",
+              "VoiceId": "3009a99ab25aa77f"
+            },
+            "Choices": [
+              {
+                "Text": "What happened to you?",
+                "Next": "offer",
+                "Effect": "None"
+              },
+              {
+                "Text": "It is done.",
+                "Next": "done",
+                "Effect": "TurnIn"
+              },
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "offer",
+            "Line": {
+              "Text": "I cannot go on alone; every corridor is watched. Take me as far as the stairs down and I will give you everything I carried out of the levels above.",
+              "VoiceId": "60fd0677b067c1b1"
+            },
+            "Choices": [
+              {
+                "Text": "I will do it.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest"
+              },
+              {
+                "Text": "Not now.",
+                "Next": null,
+                "Effect": "DeclineQuest"
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "I will stay close. Please, do not leave me behind.",
+              "VoiceId": "a03efd62b8080cf0"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "The stairs. I can manage from here. Thank you, stranger. Take this.",
+              "VoiceId": "147681b6b0c5eb25"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest1"
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest1",
+      "Template": "Escort",
+      "Title": "The Pale Pilgrim\u0027s Way Down",
+      "Objective": "Get The Pale Pilgrim to the stairs down alive.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": "npc1",
+        "Waves": null,
+        "WaveCollective": null
+      },
+      "GiverNpc": "npc1",
+      "Reward": {
+        "Xp": 860,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "I cannot go on alone; every corridor is watched. Take me as far as the stairs down and I will give you everything I carried out of the levels above.",
+          "VoiceId": "60fd0677b067c1b1"
+        },
+        "Accept": {
+          "Text": "I will stay close. Please, do not leave me behind.",
+          "VoiceId": "a03efd62b8080cf0"
+        },
+        "Decline": {
+          "Text": "Then leave me. Others will come, or they will not.",
+          "VoiceId": "f15eeed9a2164490"
+        },
+        "Complete": {
+          "Text": "The stairs. I can manage from here. Thank you, stranger. Take this.",
+          "VoiceId": "147681b6b0c5eb25"
+        },
+        "Fail": {
+          "Text": "...",
+          "VoiceId": "838c01e47a853b02"
+        }
+      }
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Dust stirs as you descend into the Abyss. The Screaming Host keep their posts.",
+        "VoiceId": "147c1da71dde309c"
+      }
+    }
+  ],
+  "EnemyTotal": 7
+}

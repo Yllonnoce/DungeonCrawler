@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "forge.plate"
+DisplayName = "Plated Vaults"
+TierIndex = 2
+Weight = 0.8
+Description = "cold steel plate, grey concrete, white-blue lamps"
+FloorTexture = "metal_plate_02"
+WallTexture = "concrete_wall_006"
+CeilingTexture = "metal_plate"
+FloorColor = Color(0.34,0.36,0.4,1)
+WallColor = Color(0.4,0.42,0.44,1)
+CeilingColor = Color(0.18,0.19,0.22,1)
+MetersPerTile = 2.0
+AmbientColor = Color(0.3,0.34,0.42,1)
+AmbientEnergy = 0.35
+FogColor = Color(0.04,0.05,0.07,1)
+FogDensity = 0.03
+TorchColor = Color(0.85,0.9,1,1)
+WallLightsPerRoom = 2

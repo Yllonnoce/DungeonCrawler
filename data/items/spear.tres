@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.spear"
+DisplayName = "Spear"
+Description = "Reach weapon. Can strike from the back rank."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "polearm")
+ItemLevelMin = 1
+Stackable = false
+MaxStack = 1
+Color = Color(0.6,0.55,0.5,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Polearm"
+MinDamage = 7
+MaxDamage = 12
+DamageType = "Physical"
+Cooldown = 1.0
+StaminaCost = 12
+HeavyMultiplier = 1.9
+Range = 2.4
+TwoHanded = true
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

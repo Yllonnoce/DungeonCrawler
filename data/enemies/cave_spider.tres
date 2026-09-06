@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.cave_spider"
+DisplayName = "Cave Spider"
+Kind = "Melee"
+MaxHp = 28
+MinDamage = 5
+MaxDamage = 8
+DamageType = "Physical"
+MoveSpeed = 4.2
+DetectRange = 13
+AttackRange = 1.7
+PreferredRange = 0
+WindupSeconds = 0.35
+RecoverSeconds = 0.7
+ProjectileSpeed = 0
+Xp = 26
+Accuracy = 64
+Evasion = 16
+Armor = 2
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 70
+ResistArcane = 0
+OnHitStatus = "Poison"
+OnHitDuration = 6
+OnHitMagnitude = 3
+OnHitChance = 0.5
+Color = Color(0.25,0.3,0.2,1)
+Scale = 0.8
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = true
+FleeHpFraction = 0
+Model = "Frog"

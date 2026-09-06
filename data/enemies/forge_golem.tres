@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.forge_golem"
+DisplayName = "Forge Golem"
+Kind = "Melee"
+MaxHp = 70
+MinDamage = 10
+MaxDamage = 16
+DamageType = "Physical"
+MoveSpeed = 2.0
+DetectRange = 12
+AttackRange = 2.1
+PreferredRange = 0
+WindupSeconds = 0.8
+RecoverSeconds = 1.3
+ProjectileSpeed = 0
+Xp = 45
+Accuracy = 60
+Evasion = 2
+Armor = 20
+ResistFire = 60
+ResistFrost = 0
+ResistPoison = 80
+ResistArcane = 0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1
+Color = Color(0.45,0.42,0.4,1)
+Scale = 1.3
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0
+Model = "Orc"

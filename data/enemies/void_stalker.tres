@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.void_stalker"
+DisplayName = "Void Stalker"
+Kind = "Melee"
+MaxHp = 60
+MinDamage = 11
+MaxDamage = 17
+DamageType = "Physical"
+MoveSpeed = 3.8
+DetectRange = 15
+AttackRange = 1.9
+PreferredRange = 0
+WindupSeconds = 0.4
+RecoverSeconds = 0.8
+ProjectileSpeed = 0
+Xp = 55
+Accuracy = 70
+Evasion = 18
+Armor = 8
+ResistFire = 0
+ResistFrost = 30
+ResistPoison = 30
+ResistArcane = 40
+OnHitStatus = "Bleed"
+OnHitDuration = 5
+OnHitMagnitude = 3
+OnHitChance = 0.5
+Color = Color(0.2,0.12,0.3,1)
+Scale = 1.0
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = true
+FleeHpFraction = 0
+Model = "Alien"

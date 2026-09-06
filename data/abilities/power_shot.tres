@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.power_shot"
+DisplayName = "Power Shot"
+Description = "A heavy draw. One arrow, much more damage, slows the target."
+Kind = "Projectile"
+ManaCost = 0
+StaminaCost = 12
+ArrowCost = 1
+Cooldown = 4.0
+MinDamage = 10
+MaxDamage = 16
+DamageType = "Physical"
+AttackKind = "Ranged"
+CritBonus = 0.15
+OnHitStatus = "Slow"
+OnHitDuration = 4
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 45
+Color = Color(0.9, 0.9, 0.7, 1)
+ProjectileCount = 1

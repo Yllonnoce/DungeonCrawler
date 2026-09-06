@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_will"
+DisplayName = "of Will"
+IsPrefix = false
+Tags = PackedStringArray("armor", "jewelry")
+Weight = 0.8
+Stat = "Willpower"
+Op = "Add"
+TierMinLevels = PackedInt32Array(1, 5)
+TierMins = PackedFloat32Array(1, 3)
+TierMaxes = PackedFloat32Array(2, 5)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

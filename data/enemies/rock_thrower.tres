@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.rock_thrower"
+DisplayName = "Rock Thrower"
+Kind = "Ranged"
+MaxHp = 40
+MinDamage = 8
+MaxDamage = 13
+DamageType = "Physical"
+MoveSpeed = 2.4
+DetectRange = 15
+AttackRange = 1.8
+PreferredRange = 7
+WindupSeconds = 0.8
+RecoverSeconds = 1.5
+ProjectileSpeed = 18
+Xp = 34
+Accuracy = 60
+Evasion = 6
+Armor = 8
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 0
+OnHitStatus = "Stun"
+OnHitDuration = 0.5
+OnHitMagnitude = 0
+OnHitChance = 0.2
+Color = Color(0.5,0.45,0.4,1)
+Scale = 1.15
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.2
+Model = "Yeti"

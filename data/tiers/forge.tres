@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="TierDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/TierDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "tier.forge"
+DisplayName = "Forge"
+Index = 2
+FloorColor = Color(0.30,0.22,0.20,1)
+WallColor = Color(0.42,0.28,0.24,1)
+CeilingColor = Color(0.16,0.10,0.09,1)
+AmbientColor = Color(0.45,0.25,0.15,1)
+AmbientEnergy = 0.40
+FogColor = Color(0.08,0.03,0.02,1)
+FogDensity = 0.030
+TorchColor = Color(1,0.6,0.3,1)
+Width = 48
+Height = 48
+MinRooms = 6
+MaxRooms = 12
+MinRoomSize = 6
+MaxRoomSize = 12
+ExtraEdgeChance = 0.10
+TrapCount = 5
+VaultCount = 1
+ChestCount = 3
+BreakableCount = 5
+EnemyPool = PackedStringArray("enemy.forge_golem", "enemy.ember_hound", "enemy.forge_priest")
+EnemyWeights = PackedFloat32Array(4, 4, 2)
+BaseEnemyCount = 5
+BossId = "enemy.iron_colossus"
+HighRoomChance = 0.4
+LedgeCount = 1
+PitCount = 1
+SecretCount = 1
+FloorTexture = "metal_plate"
+WallTexture = "dark_brick_wall"
+CeilingTexture = "rusty_metal"
+WallLightsPerRoom = 2

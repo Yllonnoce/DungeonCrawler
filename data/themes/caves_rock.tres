@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "caves.rock"
+DisplayName = "Dark Caves"
+TierIndex = 1
+Weight = 1.2
+Description = "dark rock, rough walls, earthy"
+FloorTexture = "dark_rock"
+WallTexture = "rock_wall_08"
+CeilingTexture = "rock_wall_05"
+FloorColor = Color(0.28,0.24,0.2,1)
+WallColor = Color(0.36,0.3,0.24,1)
+CeilingColor = Color(0.14,0.12,0.1,1)
+MetersPerTile = 2.0
+AmbientColor = Color(0.3,0.28,0.22,1)
+AmbientEnergy = 0.35
+FogColor = Color(0.04,0.04,0.03,1)
+FogDensity = 0.035
+TorchColor = Color(0.9,0.8,0.6,1)
+WallLightsPerRoom = 2

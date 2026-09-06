@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.meteor"
+DisplayName = "Meteor"
+Description = "A slow, devastating ball of fire."
+Kind = "Projectile"
+ManaCost = 30
+StaminaCost = 0
+ArrowCost = 0
+Cooldown = 8
+MinDamage = 20
+MaxDamage = 30
+DamageType = "Fire"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = "Burn"
+OnHitDuration = 6
+OnHitMagnitude = 4
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 14
+ProjectileCount = 1
+Color = Color(1, 0.3, 0.05, 1)

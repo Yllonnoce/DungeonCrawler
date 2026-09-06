@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.keen"
+DisplayName = "Keen"
+IsPrefix = true
+Tags = PackedStringArray("weapon")
+Weight = 0.7
+Stat = "CritChance"
+Op = "Add"
+TierMinLevels = PackedInt32Array(2, 6)
+TierMins = PackedFloat32Array(0.02, 0.05)
+TierMaxes = PackedFloat32Array(0.04, 0.08)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

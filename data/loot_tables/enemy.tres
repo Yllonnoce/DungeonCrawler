@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LootTableDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LootTableDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "table.enemy"
+Entries = PackedStringArray("tag:weapon=3", "tag:armor=4", "tag:offhand=1", "kind:Ring=1", "kind:Amulet=1", "kind:Consumable=5", "id:item.arrow=2")
+CommonWeight = 60
+MagicWeight = 28
+RareWeight = 10
+LegendaryWeight = 2
+Rolls = 1
+DropChance = 0.4

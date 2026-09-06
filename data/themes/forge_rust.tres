@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "forge.rust"
+DisplayName = "Rusted Works"
+TierIndex = 2
+Weight = 1.0
+Description = "rusted grates, coarse rust walls, corrugated iron ceilings, orange haze"
+FloorTexture = "metal_grate_rusty"
+WallTexture = "rust_coarse_01"
+CeilingTexture = "corrugated_iron"
+FloorColor = Color(0.36,0.22,0.14,1)
+WallColor = Color(0.42,0.26,0.16,1)
+CeilingColor = Color(0.2,0.12,0.08,1)
+MetersPerTile = 3.5
+AmbientColor = Color(0.45,0.28,0.14,1)
+AmbientEnergy = 0.4
+FogColor = Color(0.09,0.04,0.02,1)
+FogDensity = 0.04
+TorchColor = Color(1,0.55,0.25,1)
+WallLightsPerRoom = 3

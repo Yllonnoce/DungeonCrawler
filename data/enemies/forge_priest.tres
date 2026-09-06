@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.forge_priest"
+DisplayName = "Forge Priest"
+Kind = "Caster"
+MaxHp = 40
+MinDamage = 9
+MaxDamage = 14
+DamageType = "Fire"
+MoveSpeed = 2.4
+DetectRange = 16
+AttackRange = 1.6
+PreferredRange = 7
+WindupSeconds = 0.9
+RecoverSeconds = 1.4
+ProjectileSpeed = 16
+Xp = 48
+Accuracy = 66
+Evasion = 8
+Armor = 5
+ResistFire = 75
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 20
+OnHitStatus = "Burn"
+OnHitDuration = 4
+OnHitMagnitude = 3
+OnHitChance = 0.7
+Color = Color(0.7,0.3,0.15,1)
+Scale = 1.0
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.3
+Model = "Cactoro"

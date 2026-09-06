@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.frostbolt"
+DisplayName = "Frostbolt"
+Description = "A shard of ice that chills the target, slowing it."
+Kind = "Projectile"
+ManaCost = 10
+StaminaCost = 0
+ArrowCost = 0
+Cooldown = 1.5
+MinDamage = 6
+MaxDamage = 10
+DamageType = "Frost"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = "Frost"
+OnHitDuration = 5
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 22
+Color = Color(0.5, 0.8, 1, 1)
+ProjectileCount = 1

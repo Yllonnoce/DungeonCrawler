@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="TierDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/TierDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "tier.abyss"
+DisplayName = "Abyss"
+Index = 3
+FloorColor = Color(0.16,0.14,0.22,1)
+WallColor = Color(0.22,0.18,0.32,1)
+CeilingColor = Color(0.08,0.06,0.12,1)
+AmbientColor = Color(0.25,0.20,0.40,1)
+AmbientEnergy = 0.30
+FogColor = Color(0.03,0.02,0.06,1)
+FogDensity = 0.040
+TorchColor = Color(0.7,0.6,1,1)
+Width = 56
+Height = 56
+MinRooms = 8
+MaxRooms = 14
+MinRoomSize = 5
+MaxRoomSize = 11
+ExtraEdgeChance = 0.20
+TrapCount = 6
+VaultCount = 2
+ChestCount = 3
+BreakableCount = 6
+EnemyPool = PackedStringArray("enemy.void_stalker", "enemy.abyss_archer", "enemy.void_caller")
+EnemyWeights = PackedFloat32Array(4, 3, 3)
+BaseEnemyCount = 6
+BossId = "enemy.abyss_herald"
+HighRoomChance = 0.5
+LedgeCount = 2
+PitCount = 1
+SecretCount = 2
+FloorTexture = "dark_rock_02"
+WallTexture = "rustic_stone_wall_02"
+CeilingTexture = "black_painted_planks"
+WallLightsPerRoom = 2

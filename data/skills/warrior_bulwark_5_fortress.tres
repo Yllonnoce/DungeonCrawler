@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.warrior.bulwark.fortress"
+DisplayName = "Fortress"
+Description = "+10 armor, +10% to all resistances."
+ClassId = "class.warrior"
+Branch = "Bulwark"
+Tier = 5
+Prerequisites = PackedStringArray("skill.warrior.bulwark.riposte")
+Cost = 2
+Modifiers = PackedStringArray("Armor+10", "ResistFire+10", "ResistFrost+10", "ResistPoison+10", "ResistArcane+10")
+GrantsAbility = ""
+UpgradeAbility = ""
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+Trigger = "None"
+TriggerMagnitude = 0

@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.broodmother"
+DisplayName = "Broodmother"
+Kind = "Caster"
+MaxHp = 300
+MinDamage = 10
+MaxDamage = 16
+DamageType = "Poison"
+MoveSpeed = 3.0
+DetectRange = 22
+AttackRange = 2.2
+PreferredRange = 8
+WindupSeconds = 0.8
+RecoverSeconds = 1.3
+ProjectileSpeed = 16
+Xp = 260
+Accuracy = 68
+Evasion = 10
+Armor = 8
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 80
+ResistArcane = 0
+OnHitStatus = "Poison"
+OnHitDuration = 8
+OnHitMagnitude = 3
+OnHitChance = 0.7
+Color = Color(0.15,0.22,0.12,1)
+Scale = 1.9
+IsBoss = true
+Signature = "Volley"
+SignatureCooldown = 8
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0
+Model = "Dino"

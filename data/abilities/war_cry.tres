@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.war_cry"
+DisplayName = "War Cry"
+Description = "Haste for the whole party for 8s."
+Kind = "PartyBuff"
+ManaCost = 0
+StaminaCost = 12
+ArrowCost = 0
+Cooldown = 25
+MinDamage = 0
+MaxDamage = 0
+DamageType = "Physical"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = "Haste"
+BuffDuration = 8
+BuffMagnitude = 1
+Radius = 0
+ProjectileSpeed = 0
+ProjectileCount = 1
+Color = Color(1, 0.9, 0.5, 1)

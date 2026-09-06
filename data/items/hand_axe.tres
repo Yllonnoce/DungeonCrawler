@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.hand_axe"
+DisplayName = "Hand Axe"
+Description = "Chops."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "axe")
+ItemLevelMin = 2
+Stackable = false
+MaxStack = 1
+Color = Color(0.6,0.6,0.62,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Axe"
+MinDamage = 7
+MaxDamage = 12
+DamageType = "Physical"
+Cooldown = 0.9
+StaminaCost = 11
+HeavyMultiplier = 2.0
+Range = 1.8
+TwoHanded = false
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

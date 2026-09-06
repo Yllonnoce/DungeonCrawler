@@ -1,0 +1,20 @@
+# Godot
+.godot/
+*.import.tmp
+exports/
+
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+
+# Godot mono crash dumps
+mono_crash.*
+build/
+
+# bake in progress (resumed with --bake-resume)
+data/adventures/*.partial/

@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "crypt.brick"
+DisplayName = "Red Brick Crypt"
+TierIndex = 0
+Weight = 1.2
+Description = "red castle brick, worn cobbles, warm torches"
+FloorTexture = "cobblestone_floor_08"
+WallTexture = "castle_brick_02_red"
+CeilingTexture = "castle_brick_broken_06"
+FloorColor = Color(0.32,0.3,0.28,1)
+WallColor = Color(0.45,0.42,0.4,1)
+CeilingColor = Color(0.18,0.17,0.17,1)
+MetersPerTile = 2.0
+AmbientColor = Color(0.35,0.33,0.3,1)
+AmbientEnergy = 0.35
+FogColor = Color(0.05,0.05,0.06,1)
+FogDensity = 0.035
+TorchColor = Color(1,0.85,0.65,1)
+WallLightsPerRoom = 2

@@ -1,0 +1,350 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 15,
+  "Source": "fake",
+  "LayoutHash": 6295829375408993594,
+  "Title": "Soot-Black Gate",
+  "IntroLine": {
+    "Text": "The stair ends in the Forge. Footprints, none of them yours, lead toward the Soot-Black Treasury.",
+    "VoiceId": "672c6199a6cdd459"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Arena",
+      "Name": "Brazen Sanctum"
+    },
+    {
+      "Index": 1,
+      "Role": "Camp",
+      "Name": "Soot-Black Camp"
+    },
+    {
+      "Index": 2,
+      "Role": "Start",
+      "Name": "Smoldering Descent"
+    },
+    {
+      "Index": 3,
+      "Role": "Hall",
+      "Name": "Soot-Black Nave"
+    },
+    {
+      "Index": 4,
+      "Role": "Gate",
+      "Name": "Soot-Black Gate"
+    },
+    {
+      "Index": 5,
+      "Role": "Hall",
+      "Name": "Molten Nave"
+    },
+    {
+      "Index": 6,
+      "Role": "Hall",
+      "Name": "Ashen Hall"
+    },
+    {
+      "Index": 7,
+      "Role": "Hall",
+      "Name": "Molten Nave"
+    },
+    {
+      "Index": 8,
+      "Role": "Treasury",
+      "Name": "Soot-Black Treasury"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Ditchmen",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.bandit_chief",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 1,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Molten Stokers",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 4,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "4"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Spill",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 25
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 16
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 45,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Boil",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 23
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 41,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Seethe",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 27
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 17
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 48,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Spill",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 23
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 42,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Welter",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 25
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 16
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 45,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Crawl",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 24
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 43,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": {
+    "Name": "Iron Colossus",
+    "SignatureOverride": null,
+    "IntroLine": {
+      "Text": "\u0022So the thieves come at last.\u0022 Iron Colossus bars the way down.",
+      "VoiceId": "1a8c36dbdf036862"
+    },
+    "DeathLine": {
+      "Text": "Iron Colossus falls, and the way down opens.",
+      "VoiceId": "87b83e4361347c68"
+    }
+  },
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 6,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "The stair ends in the Forge. Footprints, none of them yours, lead toward the Soot-Black Treasury.",
+        "VoiceId": "672c6199a6cdd459"
+      }
+    }
+  ],
+  "EnemyTotal": 10
+}

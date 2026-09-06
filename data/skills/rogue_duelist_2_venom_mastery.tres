@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.rogue.duelist.venom_mastery"
+DisplayName = "Venom Mastery"
+Description = "Venom Strike recovers faster and also causes bleeding."
+ClassId = "class.rogue"
+Branch = "Duelist"
+Tier = 2
+Prerequisites = PackedStringArray("skill.rogue.duelist.flurry")
+Cost = 1
+Modifiers = PackedStringArray()
+GrantsAbility = ""
+UpgradeAbility = "ability.venom_strike"
+DamageMul = 1.0
+CooldownMul = 0.6
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = "Bleed"
+AddStatusDuration = 5
+AddStatusMagnitude = 2
+AddStatusChance = 1.0
+Trigger = "None"
+TriggerMagnitude = 0

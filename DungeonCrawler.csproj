@@ -1,0 +1,18 @@
+<Project Sdk="Godot.NET.Sdk/4.7.2">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>DungeonCrawler</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- tests/ has its own project; keep it out of the game assembly -->
+    <Compile Remove="tests/**" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Anthropic" Version="12.46.0" />
+  </ItemGroup>
+</Project>

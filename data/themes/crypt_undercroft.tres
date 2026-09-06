@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "crypt.undercroft"
+DisplayName = "Rotten Undercroft"
+TierIndex = 0
+Weight = 0.8
+Description = "rotten timber floors under heavy medieval blocks, brown and dim"
+FloorTexture = "weathered_planks"
+WallTexture = "medieval_blocks_05"
+CeilingTexture = "dark_wood"
+FloorColor = Color(0.36,0.28,0.2,1)
+WallColor = Color(0.42,0.38,0.33,1)
+CeilingColor = Color(0.2,0.15,0.11,1)
+MetersPerTile = 2.0
+AmbientColor = Color(0.32,0.28,0.22,1)
+AmbientEnergy = 0.3
+FogColor = Color(0.05,0.04,0.03,1)
+FogDensity = 0.04
+TorchColor = Color(1,0.8,0.55,1)
+WallLightsPerRoom = 2

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.whisperwind"
+DisplayName = "Whisperwind"
+BaseId = "item.longbow"
+Flavor = "It makes no sound when drawn."
+ItemLevelMin = 4
+Weight = 1.0
+Modifiers = PackedStringArray("RangedDamage+6", "Stealth+20", "AttackSpeed*1.15")
+OnHitStatus = "Slow"
+OnHitDuration = 3
+OnHitMagnitude = 0
+OnHitChance = 0.3

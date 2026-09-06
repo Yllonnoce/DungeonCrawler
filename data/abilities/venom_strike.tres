@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.venom_strike"
+DisplayName = "Venom Strike"
+Description = "A poisoned cut that also opens a bleeding wound."
+Kind = "MeleeStrike"
+ManaCost = 0
+StaminaCost = 14
+ArrowCost = 0
+Cooldown = 5.0
+MinDamage = 2
+MaxDamage = 4
+DamageType = "Physical"
+AttackKind = "Melee"
+CritBonus = 0.1
+OnHitStatus = "Poison"
+OnHitDuration = 8
+OnHitMagnitude = 2
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 0
+Color = Color(0.4, 0.9, 0.3, 1)
+ProjectileCount = 1

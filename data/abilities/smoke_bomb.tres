@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.smoke_bomb"
+DisplayName = "Smoke Bomb"
+Description = "Slows every enemy nearby for 5s."
+Kind = "Nova"
+ManaCost = 0
+StaminaCost = 10
+ArrowCost = 0
+Cooldown = 15
+MinDamage = 0
+MaxDamage = 1
+DamageType = "Physical"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = "Slow"
+OnHitDuration = 5
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 6
+ProjectileSpeed = 0
+ProjectileCount = 1
+Color = Color(0.6, 0.6, 0.6, 1)

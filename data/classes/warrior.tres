@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ClassDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/ClassDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "class.warrior"
+DisplayName = "Warrior"
+Description = "Heavy melee and a shield. Holds the line and blocks for the front rank."
+Strength = 16
+Dexterity = 9
+Vitality = 15
+Intelligence = 6
+Willpower = 9
+Luck = 8
+HpPerLevel = 12.0
+StaminaPerLevel = 7.0
+ManaPerLevel = 1.0
+CanBlock = true
+AllowedWeapons = PackedStringArray("Sword", "Axe", "Mace", "Polearm")
+StartingAbilities = PackedStringArray("ability.shield_bash")
+StartingWeapon = "item.longsword"
+SneakAttackMultiplier = 1.5
+StealthBonus = 0.0
+PerceptionBonus = 0.0
+ArmorBonus = 6.0
+AllowedArmor = PackedStringArray("Cloth", "Leather", "Plate")
+AllowedOffhands = PackedStringArray("Shield")
+StartingItems = PackedStringArray("item.chain_mail", "item.wooden_shield", "item.iron_helm")

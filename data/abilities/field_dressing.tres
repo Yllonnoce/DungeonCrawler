@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.field_dressing"
+DisplayName = "Field Dressing"
+Description = "The party regenerates 3 HP per second for 8s."
+Kind = "PartyBuff"
+ManaCost = 0
+StaminaCost = 15
+ArrowCost = 0
+Cooldown = 25
+MinDamage = 0
+MaxDamage = 0
+DamageType = "Physical"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = "Regen"
+BuffDuration = 8
+BuffMagnitude = 3
+Radius = 0
+ProjectileSpeed = 0
+ProjectileCount = 1
+Color = Color(0.7, 1, 0.7, 1)

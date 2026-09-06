@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "caves.sandstone"
+DisplayName = "Sandstone Warren"
+TierIndex = 1
+Weight = 1.0
+Description = "cracked sandstone floor, layered cliff walls, warm sand light"
+FloorTexture = "sandstone_cracks"
+WallTexture = "cliff_side"
+CeilingTexture = "rock_wall_10"
+FloorColor = Color(0.48,0.4,0.28,1)
+WallColor = Color(0.5,0.42,0.3,1)
+CeilingColor = Color(0.26,0.22,0.16,1)
+MetersPerTile = 3.0
+AmbientColor = Color(0.42,0.36,0.26,1)
+AmbientEnergy = 0.4
+FogColor = Color(0.06,0.05,0.03,1)
+FogDensity = 0.03
+TorchColor = Color(1,0.85,0.6,1)
+WallLightsPerRoom = 2

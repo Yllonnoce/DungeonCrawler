@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.mace"
+DisplayName = "Mace"
+Description = "Blunt and heavy; staggers."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "mace")
+ItemLevelMin = 2
+Stackable = false
+MaxStack = 1
+Color = Color(0.55,0.55,0.6,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Mace"
+MinDamage = 6
+MaxDamage = 13
+DamageType = "Physical"
+Cooldown = 1.0
+StaminaCost = 12
+HeavyMultiplier = 2.1
+Range = 1.8
+TwoHanded = false
+OnHitStatus = "Stun"
+OnHitDuration = 0.6
+OnHitMagnitude = 0
+OnHitChance = 0.15
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

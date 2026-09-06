@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.mage.frost.absolute_zero"
+DisplayName = "Absolute Zero"
+Description = "+8 spell power, +3 Intelligence."
+ClassId = "class.mage"
+Branch = "Frost"
+Tier = 6
+Prerequisites = PackedStringArray("skill.mage.frost.glacial")
+Cost = 2
+Modifiers = PackedStringArray("SpellPower+8", "Intelligence+3")
+GrantsAbility = ""
+UpgradeAbility = ""
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+Trigger = "None"
+TriggerMagnitude = 0

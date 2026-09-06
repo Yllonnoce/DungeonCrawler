@@ -1,0 +1,297 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 8,
+  "Source": "fake",
+  "LayoutHash": 8946649272292364037,
+  "Title": "Echoing Crossing",
+  "IntroLine": {
+    "Text": "Dust stirs as you descend into the Caves. The Knifegrinders keep their posts.",
+    "VoiceId": "a2719f749a70fa15"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Barracks",
+      "Name": "Dripping Quarters"
+    },
+    {
+      "Index": 1,
+      "Role": "Start",
+      "Name": "Cold Threshold"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "Echoing Crossing"
+    },
+    {
+      "Index": 3,
+      "Role": "Passage",
+      "Name": "Fungal Gallery"
+    },
+    {
+      "Index": 4,
+      "Role": "Barracks",
+      "Name": "Cold Barracks"
+    },
+    {
+      "Index": 5,
+      "Role": "Passage",
+      "Name": "Dripping Gallery"
+    },
+    {
+      "Index": 6,
+      "Role": "Kennel",
+      "Name": "Cold Warren"
+    },
+    {
+      "Index": 7,
+      "Role": "Exit",
+      "Name": "Narrow Way Down"
+    },
+    {
+      "Index": 8,
+      "Role": "Camp",
+      "Name": "Cold Hideout"
+    },
+    {
+      "Index": 9,
+      "Role": "Passage",
+      "Name": "Glimmering Passage"
+    },
+    {
+      "Index": 10,
+      "Role": "Passage",
+      "Name": "Echoing Walk"
+    },
+    {
+      "Index": 11,
+      "Role": "Ruin",
+      "Name": "Crystal Colonnade"
+    },
+    {
+      "Index": 12,
+      "Role": "Barracks",
+      "Name": "Cold Quarters"
+    },
+    {
+      "Index": 13,
+      "Role": "Treasury",
+      "Name": "Crystal Treasury"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Knifegrinders",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Fungal Clutch",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 2,
+        "Objective": null,
+        "Route": [
+          2,
+          12
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Tide",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 17
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 26,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Gnawing",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 17
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 26,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Boil",
+      "Room": 11,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 17
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 27,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Boil",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 24,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Seethe",
+      "Room": 12,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 24,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 6,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Dust stirs as you descend into the Caves. The Knifegrinders keep their posts.",
+        "VoiceId": "a2719f749a70fa15"
+      }
+    }
+  ],
+  "EnemyTotal": 7
+}

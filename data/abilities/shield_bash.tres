@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.shield_bash"
+DisplayName = "Shield Bash"
+Description = "A stunning blow with the shield. Adds damage to the weapon swing and stuns for 1.5s."
+Kind = "MeleeStrike"
+ManaCost = 0
+StaminaCost = 18
+ArrowCost = 0
+Cooldown = 6.0
+MinDamage = 4
+MaxDamage = 6
+DamageType = "Physical"
+AttackKind = "Melee"
+CritBonus = 0.0
+OnHitStatus = "Stun"
+OnHitDuration = 1.5
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+Radius = 0
+ProjectileSpeed = 0
+Color = Color(0.8, 0.8, 0.9, 1)
+ProjectileCount = 1

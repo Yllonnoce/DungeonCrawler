@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.crystal_focus"
+DisplayName = "Crystal Focus"
+Description = "Hums when held."
+Kind = "Offhand"
+Tags = PackedStringArray("offhand", "focus", "jewelry")
+ItemLevelMin = 1
+Stackable = false
+MaxStack = 1
+Color = Color(0.6,0.5,0.9,1)
+BaseModifiers = PackedStringArray("SpellPower+3", "ManaRegen+0.5")
+WeaponKind = ""
+MinDamage = 0
+MaxDamage = 0
+DamageType = "Physical"
+Cooldown = 0.8
+StaminaCost = 8
+HeavyMultiplier = 1.8
+Range = 1.8
+TwoHanded = false
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "Focus"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

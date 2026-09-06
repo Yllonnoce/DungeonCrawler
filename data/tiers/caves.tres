@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="TierDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/TierDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "tier.caves"
+DisplayName = "Caves"
+Index = 1
+FloorColor = Color(0.28,0.24,0.20,1)
+WallColor = Color(0.36,0.30,0.24,1)
+CeilingColor = Color(0.14,0.12,0.10,1)
+AmbientColor = Color(0.30,0.28,0.22,1)
+AmbientEnergy = 0.30
+FogColor = Color(0.04,0.04,0.03,1)
+FogDensity = 0.045
+TorchColor = Color(0.9,0.8,0.6,1)
+Width = 52
+Height = 52
+MinRooms = 10
+MaxRooms = 17
+MinRoomSize = 3
+MaxRoomSize = 8
+ExtraEdgeChance = 0.30
+TrapCount = 4
+VaultCount = 1
+ChestCount = 2
+BreakableCount = 8
+EnemyPool = PackedStringArray("enemy.cave_spider", "enemy.rock_thrower", "enemy.cave_shaman")
+EnemyWeights = PackedFloat32Array(5, 3, 2)
+BaseEnemyCount = 5
+BossId = "enemy.broodmother"
+HighRoomChance = 0.5
+LedgeCount = 1
+PitCount = 1
+WaterCount = 2
+SecretCount = 1
+FloorTexture = "dark_rock"
+WallTexture = "rock_wall_08"
+CeilingTexture = "rock_wall_05"
+WallLightsPerRoom = 2

@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ClassDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/ClassDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "class.ranger"
+DisplayName = "Ranger"
+Description = "Bow specialist. Arrows are finite but some can be recovered from corpses and floors."
+Strength = 11
+Dexterity = 15
+Vitality = 12
+Intelligence = 8
+Willpower = 10
+Luck = 10
+HpPerLevel = 9.0
+StaminaPerLevel = 6.0
+ManaPerLevel = 2.0
+CanBlock = false
+AllowedWeapons = PackedStringArray("Bow", "Sword", "Dagger", "Polearm")
+StartingAbilities = PackedStringArray("ability.power_shot")
+StartingWeapon = "item.shortbow"
+SneakAttackMultiplier = 2.0
+StealthBonus = 15.0
+PerceptionBonus = 40.0
+ArmorBonus = 0.0
+AllowedArmor = PackedStringArray("Cloth", "Leather")
+AllowedOffhands = PackedStringArray("Quiver")
+StartingItems = PackedStringArray("item.leather_armor", "item.quiver")

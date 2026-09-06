@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="LootTableDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LootTableDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "table.breakable"
+Entries = PackedStringArray("kind:Consumable=5", "id:item.arrow=3", "id:item.bone_shard=2", "tag:armor=1", "tag:weapon=1")
+CommonWeight = 80
+MagicWeight = 18
+RareWeight = 2
+LegendaryWeight = 0
+Rolls = 1
+DropChance = 0.5

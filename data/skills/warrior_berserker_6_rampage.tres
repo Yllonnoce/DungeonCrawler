@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.warrior.berserker.rampage"
+DisplayName = "Rampage"
+Description = "Kills grant Haste for 3 s."
+ClassId = "class.warrior"
+Branch = "Berserker"
+Tier = 6
+Prerequisites = PackedStringArray("skill.warrior.berserker.executioner")
+Cost = 2
+Modifiers = PackedStringArray()
+GrantsAbility = ""
+UpgradeAbility = ""
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+Trigger = "Momentum"
+TriggerMagnitude = 1

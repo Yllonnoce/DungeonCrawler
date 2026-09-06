@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "abyss.palace"
+DisplayName = "Drowned Palace"
+TierIndex = 3
+Weight = 1.0
+Description = "veined marble, grey tiles, blue tiled ceilings, deep blue light"
+FloorTexture = "marble_01"
+WallTexture = "large_grey_tiles"
+CeilingTexture = "blue_floor_tiles_01"
+FloorColor = Color(0.3,0.3,0.4,1)
+WallColor = Color(0.32,0.34,0.42,1)
+CeilingColor = Color(0.12,0.14,0.26,1)
+MetersPerTile = 2.0
+AmbientColor = Color(0.2,0.24,0.48,1)
+AmbientEnergy = 0.4
+FogColor = Color(0.02,0.03,0.08,1)
+FogDensity = 0.035
+TorchColor = Color(0.6,0.7,1,1)
+WallLightsPerRoom = 2

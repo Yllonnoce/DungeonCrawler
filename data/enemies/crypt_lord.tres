@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.crypt_lord"
+DisplayName = "Crypt Lord"
+Kind = "Melee"
+MaxHp = 220
+MinDamage = 12
+MaxDamage = 18
+DamageType = "Physical"
+MoveSpeed = 2.8
+DetectRange = 20
+AttackRange = 2.4
+PreferredRange = 0
+WindupSeconds = 0.6
+RecoverSeconds = 1.0
+ProjectileSpeed = 0
+Xp = 200
+Accuracy = 68
+Evasion = 6
+Armor = 12
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 60
+ResistArcane = 20
+OnHitStatus = "Bleed"
+OnHitDuration = 5
+OnHitMagnitude = 2
+OnHitChance = 0.4
+Color = Color(0.55,0.08,0.08,1)
+Scale = 1.7
+IsBoss = true
+Signature = "Slam"
+SignatureCooldown = 9
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0
+Model = "Demon"

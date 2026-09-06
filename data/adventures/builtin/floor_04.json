@@ -1,0 +1,291 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 4,
+  "Source": "fake",
+  "LayoutHash": 5543086668823967231,
+  "Title": "Weeping Gate",
+  "IntroLine": {
+    "Text": "The stair ends in the Crypt. Footprints, none of them yours, lead toward the Broken Reliquary.",
+    "VoiceId": "683e6764a66ef36c"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Hall",
+      "Name": "Silent Chamber"
+    },
+    {
+      "Index": 1,
+      "Role": "Hall",
+      "Name": "Sunken Hall"
+    },
+    {
+      "Index": 2,
+      "Role": "Gate",
+      "Name": "Weeping Gate"
+    },
+    {
+      "Index": 3,
+      "Role": "Passage",
+      "Name": "Blackened Walk"
+    },
+    {
+      "Index": 4,
+      "Role": "Passage",
+      "Name": "Broken Crossing"
+    },
+    {
+      "Index": 5,
+      "Role": "Barracks",
+      "Name": "Forgotten Barracks"
+    },
+    {
+      "Index": 6,
+      "Role": "Passage",
+      "Name": "Silent Passage"
+    },
+    {
+      "Index": 7,
+      "Role": "Kennel",
+      "Name": "Forgotten Kennel"
+    },
+    {
+      "Index": 8,
+      "Role": "Passage",
+      "Name": "Hollow Walk"
+    },
+    {
+      "Index": 9,
+      "Role": "Camp",
+      "Name": "Shrouded Hideout"
+    },
+    {
+      "Index": 10,
+      "Role": "Start",
+      "Name": "Silent Threshold"
+    },
+    {
+      "Index": 11,
+      "Role": "Exit",
+      "Name": "Hollow Way Down"
+    },
+    {
+      "Index": 12,
+      "Role": "Treasury",
+      "Name": "Broken Reliquary"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Cellar Rats",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 9,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Silent Wardens",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 2,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "2"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Boil",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Tide",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 13
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 15,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Tide",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Crawl",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 14,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Welter",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 12,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Gnawing",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 14,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 3,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "The stair ends in the Crypt. Footprints, none of them yours, lead toward the Broken Reliquary.",
+        "VoiceId": "683e6764a66ef36c"
+      }
+    }
+  ],
+  "EnemyTotal": 6
+}

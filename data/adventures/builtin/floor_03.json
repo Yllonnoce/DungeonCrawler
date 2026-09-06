@@ -1,0 +1,290 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 3,
+  "Source": "fake",
+  "LayoutHash": 7438264587986673691,
+  "Title": "Blackened Way Down",
+  "IntroLine": {
+    "Text": "The Crypt swallows your torchlight. Something here has been waiting.",
+    "VoiceId": "8bce09e7a161ea4b"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Gate",
+      "Name": "Silent Gate"
+    },
+    {
+      "Index": 1,
+      "Role": "Ruin",
+      "Name": "Silent Colonnade"
+    },
+    {
+      "Index": 2,
+      "Role": "Kennel",
+      "Name": "Broken Kennel"
+    },
+    {
+      "Index": 3,
+      "Role": "Barracks",
+      "Name": "Shrouded Muster"
+    },
+    {
+      "Index": 4,
+      "Role": "Hall",
+      "Name": "Sunken Nave"
+    },
+    {
+      "Index": 5,
+      "Role": "Passage",
+      "Name": "Shrouded Passage"
+    },
+    {
+      "Index": 6,
+      "Role": "Exit",
+      "Name": "Blackened Way Down"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Broken Walk"
+    },
+    {
+      "Index": 8,
+      "Role": "Start",
+      "Name": "Shrouded Descent"
+    },
+    {
+      "Index": 9,
+      "Role": "Barracks",
+      "Name": "Blackened Muster"
+    },
+    {
+      "Index": 10,
+      "Role": "Treasury",
+      "Name": "Weeping Hoard"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "group1",
+      "Name": "Blackened Wardens",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group2",
+      "Name": "Sunken Vigil",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 7,
+        "Objective": null,
+        "Route": [
+          7,
+          3,
+          0
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Boil",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 10,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Seethe",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 10,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Scurry",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 10,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Spill",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 10,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Crawl",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 10,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Spill",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 12,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 5,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "The Crypt swallows your torchlight. Something here has been waiting.",
+        "VoiceId": "8bce09e7a161ea4b"
+      }
+    }
+  ],
+  "EnemyTotal": 6
+}

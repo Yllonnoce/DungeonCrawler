@@ -1,0 +1,59 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/UI/Hud/PortraitPanel.cs" id="1_portrait"]
+
+[node name="PortraitPanel" type="PanelContainer"]
+custom_minimum_size = Vector2(230, 150)
+mouse_filter = 1
+script = ExtResource("1_portrait")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 6
+
+[node name="VBox" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 3
+
+[node name="Name" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Name"
+
+[node name="Hp" type="ProgressBar" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 16)
+value = 100.0
+show_percentage = false
+modulate = Color(0.9, 0.3, 0.3, 1)
+
+[node name="Stamina" type="ProgressBar" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 9)
+value = 100.0
+show_percentage = false
+modulate = Color(0.4, 0.85, 0.35, 1)
+
+[node name="Mana" type="ProgressBar" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 9)
+value = 100.0
+show_percentage = false
+modulate = Color(0.35, 0.5, 1, 1)
+
+[node name="Status" type="Label" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = ""
+
+[node name="Attack" type="Button" parent="Margin/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Attack"

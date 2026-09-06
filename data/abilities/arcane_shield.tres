@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="AbilityDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/AbilityDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "ability.arcane_shield"
+DisplayName = "Arcane Shield"
+Description = "Wards the whole party with a shield that absorbs 40 damage."
+Kind = "PartyBuff"
+ManaCost = 18
+StaminaCost = 0
+ArrowCost = 0
+Cooldown = 12.0
+MinDamage = 0
+MaxDamage = 0
+DamageType = "Arcane"
+AttackKind = "Spell"
+CritBonus = 0.0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+BuffStatus = "Shield"
+BuffDuration = 20
+BuffMagnitude = 40
+Radius = 0
+ProjectileSpeed = 0
+Color = Color(0.7, 0.5, 1, 1)
+ProjectileCount = 1

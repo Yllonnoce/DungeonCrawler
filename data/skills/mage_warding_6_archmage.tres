@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.mage.warding.archmage"
+DisplayName = "Archmage"
+Description = "+4 Intelligence, +3 Willpower, +30 max mana."
+ClassId = "class.mage"
+Branch = "Warding"
+Tier = 6
+Prerequisites = PackedStringArray("skill.mage.warding.mend_mastery")
+Cost = 2
+Modifiers = PackedStringArray("Intelligence+4", "Willpower+3", "MaxMana+30")
+GrantsAbility = ""
+UpgradeAbility = ""
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+Trigger = "None"
+TriggerMagnitude = 0

@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.greatsword"
+DisplayName = "Greatsword"
+Description = "Two hands, big arc."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "sword")
+ItemLevelMin = 5
+Stackable = false
+MaxStack = 1
+Color = Color(0.8,0.8,0.85,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Sword"
+MinDamage = 12
+MaxDamage = 20
+DamageType = "Physical"
+Cooldown = 1.2
+StaminaCost = 16
+HeavyMultiplier = 2.0
+Range = 2.2
+TwoHanded = true
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.mage.frost.deep_freeze"
+DisplayName = "Deep Freeze"
+Description = "Frostbolt can freeze targets solid for a moment."
+ClassId = "class.mage"
+Branch = "Frost"
+Tier = 3
+Prerequisites = PackedStringArray("skill.mage.frost.chain_frost")
+Cost = 1
+Modifiers = PackedStringArray()
+GrantsAbility = ""
+UpgradeAbility = "ability.frostbolt"
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = "Stun"
+AddStatusDuration = 0.7
+AddStatusMagnitude = 0
+AddStatusChance = 0.3
+Trigger = "None"
+TriggerMagnitude = 0

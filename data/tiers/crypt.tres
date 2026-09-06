@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="TierDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/TierDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "tier.crypt"
+DisplayName = "Crypt"
+Index = 0
+FloorColor = Color(0.32,0.30,0.28,1)
+WallColor = Color(0.45,0.42,0.40,1)
+CeilingColor = Color(0.18,0.17,0.17,1)
+AmbientColor = Color(0.35,0.33,0.30,1)
+AmbientEnergy = 0.35
+FogColor = Color(0.05,0.05,0.06,1)
+FogDensity = 0.035
+TorchColor = Color(1,0.85,0.65,1)
+Width = 48
+Height = 48
+MinRooms = 8
+MaxRooms = 15
+MinRoomSize = 4
+MaxRoomSize = 10
+ExtraEdgeChance = 0.15
+TrapCount = 3
+VaultCount = 1
+ChestCount = 2
+BreakableCount = 6
+EnemyPool = PackedStringArray("enemy.ghoul", "enemy.skeleton_archer", "enemy.bone_priest")
+EnemyWeights = PackedFloat32Array(5, 3, 2)
+BaseEnemyCount = 4
+BossId = "enemy.crypt_lord"
+HighRoomChance = 0.5
+LedgeCount = 1
+PitCount = 1
+SecretCount = 1
+FloorTexture = "cobblestone_floor_08"
+WallTexture = "castle_brick_02_red"
+CeilingTexture = "castle_brick_broken_06"
+WallLightsPerRoom = 2

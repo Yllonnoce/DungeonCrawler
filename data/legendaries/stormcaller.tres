@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.stormcaller"
+DisplayName = "Stormcaller"
+BaseId = "item.staff"
+Flavor = "The air crackles around it."
+ItemLevelMin = 2
+Weight = 1.0
+Modifiers = PackedStringArray("SpellPower+8", "ManaRegen+1.5", "MaxMana+20")
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

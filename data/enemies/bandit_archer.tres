@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.bandit_archer"
+DisplayName = "Bandit Archer"
+Kind = "Ranged"
+MaxHp = 22
+MinDamage = 5
+MaxDamage = 8
+DamageType = "Physical"
+MoveSpeed = 3.2
+DetectRange = 16
+AttackRange = 14
+PreferredRange = 8
+WindupSeconds = 0.45
+RecoverSeconds = 0.8
+ProjectileSpeed = 18
+Xp = 22
+Accuracy = 64
+Evasion = 14
+Armor = 1
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+Color = Color(0.4,0.4,0.32,1)
+Scale = 1.0
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+Model = "kaykit_adventurers/Rogue"
+Faction = "bandits"
+PackHunter = true
+FleeHpFraction = 0.3

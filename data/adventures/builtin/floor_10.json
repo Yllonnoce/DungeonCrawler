@@ -1,0 +1,338 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 10,
+  "Source": "fake",
+  "LayoutHash": 8861010250916629973,
+  "Title": "Dripping Gate",
+  "IntroLine": {
+    "Text": "Cold air rises from the Caves. Whatever guards the Dripping Treasury does not sleep.",
+    "VoiceId": "00aecde54bf197b8"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Arena",
+      "Name": "Echoing Pit"
+    },
+    {
+      "Index": 1,
+      "Role": "Start",
+      "Name": "Glimmering Threshold"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "Dripping Walk"
+    },
+    {
+      "Index": 3,
+      "Role": "Gate",
+      "Name": "Dripping Gate"
+    },
+    {
+      "Index": 4,
+      "Role": "Barracks",
+      "Name": "Narrow Barracks"
+    },
+    {
+      "Index": 5,
+      "Role": "Barracks",
+      "Name": "Fungal Barracks"
+    },
+    {
+      "Index": 6,
+      "Role": "Barracks",
+      "Name": "Yawning Muster"
+    },
+    {
+      "Index": 7,
+      "Role": "Barracks",
+      "Name": "Glimmering Quarters"
+    },
+    {
+      "Index": 8,
+      "Role": "Barracks",
+      "Name": "Dripping Barracks"
+    },
+    {
+      "Index": 9,
+      "Role": "Passage",
+      "Name": "Dripping Passage"
+    },
+    {
+      "Index": 10,
+      "Role": "Camp",
+      "Name": "Narrow Hideout"
+    },
+    {
+      "Index": 11,
+      "Role": "Treasury",
+      "Name": "Dripping Treasury"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Cellar Rats",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.bandit_chief",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 10,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Echoing Tribe",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 4
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 3,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "3"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.cave_spider",
+      "Room": 4
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Scurry",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 18
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 31,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Tide",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Rot",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 16
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 28,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Seethe",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 16
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 28,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Seethe",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 19
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 32,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Scurry",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 16
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 28,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": {
+    "Name": "Broodmother",
+    "SignatureOverride": null,
+    "IntroLine": {
+      "Text": "Broodmother rises to meet you. \u0022You should have stayed above.\u0022",
+      "VoiceId": "852468ccd74db846"
+    },
+    "DeathLine": {
+      "Text": "Broodmother falls, and the way down opens.",
+      "VoiceId": "6a4cb40abd3c01e4"
+    }
+  },
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 3,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Cold air rises from the Caves. Whatever guards the Dripping Treasury does not sleep.",
+        "VoiceId": "00aecde54bf197b8"
+      }
+    }
+  ],
+  "EnemyTotal": 9
+}

@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.skeleton_archer"
+DisplayName = "Skeleton Archer"
+Kind = "Ranged"
+MaxHp = 24
+MinDamage = 5
+MaxDamage = 9
+DamageType = "Physical"
+MoveSpeed = 2.6
+DetectRange = 16
+AttackRange = 1.6
+PreferredRange = 8
+WindupSeconds = 0.7
+RecoverSeconds = 1.2
+ProjectileSpeed = 22
+Xp = 28
+Accuracy = 66
+Evasion = 12
+Armor = 3
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 80
+ResistArcane = 0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1
+Color = Color(0.85,0.82,0.7,1)
+Scale = 0.9
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.25
+Model = "Ninja"

@@ -1,0 +1,388 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 2,
+  "Source": "fake",
+  "LayoutHash": 2320056569745528059,
+  "Title": "Broken Bastion",
+  "IntroLine": {
+    "Text": "The Crypt swallows your torchlight. Something here has been waiting.",
+    "VoiceId": "8bce09e7a161ea4b"
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Treasury",
+      "Name": "Sunken Treasury"
+    },
+    {
+      "Index": 1,
+      "Role": "Exit",
+      "Name": "Blackened Deepening"
+    },
+    {
+      "Index": 2,
+      "Role": "Gate",
+      "Name": "Broken Bastion"
+    },
+    {
+      "Index": 3,
+      "Role": "Hall",
+      "Name": "Shrouded Nave"
+    },
+    {
+      "Index": 4,
+      "Role": "Kennel",
+      "Name": "Sunken Kennel"
+    },
+    {
+      "Index": 5,
+      "Role": "Camp",
+      "Name": "Sunken Camp"
+    },
+    {
+      "Index": 6,
+      "Role": "Start",
+      "Name": "Silent Threshold"
+    },
+    {
+      "Index": 7,
+      "Role": "Gate",
+      "Name": "Weeping Gate"
+    },
+    {
+      "Index": 8,
+      "Role": "Hall",
+      "Name": "Blackened Hall"
+    },
+    {
+      "Index": 9,
+      "Role": "Passage",
+      "Name": "Weeping Crossing"
+    },
+    {
+      "Index": 10,
+      "Role": "Passage",
+      "Name": "Sunken Gallery"
+    },
+    {
+      "Index": 11,
+      "Role": "Passage",
+      "Name": "Sunken Gallery"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "band1",
+      "Name": "Knifegrinders",
+      "FactionId": "bandits",
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 5,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "group1",
+      "Name": "Forgotten Wardens",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 2,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "2"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde1",
+      "Name": "The Welter",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 7
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 7,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde2",
+      "Name": "The Spill",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 8
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 8,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde3",
+      "Name": "The Spill",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 9,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde4",
+      "Name": "The Welter",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 7
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 7,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde5",
+      "Name": "The Crawl",
+      "Room": 11,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 8
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 8,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde6",
+      "Name": "The Seethe",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 9
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 9,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "VoiceId": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 5,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 7,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc1",
+      "Name": "Sister Wren",
+      "Room": 11,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Hush. They do not know I am here. If you can help me, I can help you.",
+              "VoiceId": "f3a3d974f78e4e72"
+            },
+            "Choices": [
+              {
+                "Text": "What happened to you?",
+                "Next": "offer",
+                "Effect": "None"
+              },
+              {
+                "Text": "It is done.",
+                "Next": "done",
+                "Effect": "TurnIn"
+              },
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "offer",
+            "Line": {
+              "Text": "The Knifegrinders took everything I had and left me here to rot. Kill every last one of them in the Sunken Camp and I will make it worth your while.",
+              "VoiceId": "c747f63a0659215a"
+            },
+            "Choices": [
+              {
+                "Text": "I will do it.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest"
+              },
+              {
+                "Text": "Not now.",
+                "Next": null,
+                "Effect": "DeclineQuest"
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Then go. And do not be gentle.",
+              "VoiceId": "9f1ddb5002c2830d"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "They are dead? All of them? Then perhaps there is justice down here after all. Take this.",
+              "VoiceId": "6312c6a1c0e8e68e"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell"
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest1"
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest1",
+      "Template": "KillTarget",
+      "Title": "The Knifegrinders",
+      "Objective": "Slay the Knifegrinders in the Sunken Camp.",
+      "Params": {
+        "TargetCollective": "band1",
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null
+      },
+      "GiverNpc": "npc1",
+      "Reward": {
+        "Xp": 140,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "The Knifegrinders took everything I had and left me here to rot. Kill every last one of them in the Sunken Camp and I will make it worth your while.",
+          "VoiceId": "c747f63a0659215a"
+        },
+        "Accept": {
+          "Text": "Then go. And do not be gentle.",
+          "VoiceId": "9f1ddb5002c2830d"
+        },
+        "Decline": {
+          "Text": "Then leave me. Others will come, or they will not.",
+          "VoiceId": "bb1b2c2a3e167c5f"
+        },
+        "Complete": {
+          "Text": "They are dead? All of them? Then perhaps there is justice down here after all. Take this.",
+          "VoiceId": "6312c6a1c0e8e68e"
+        },
+        "Fail": {
+          "Text": "So they live on. Of course they do.",
+          "VoiceId": "a3a54fa637cc9c10"
+        }
+      }
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "The Crypt swallows your torchlight. Something here has been waiting.",
+        "VoiceId": "8bce09e7a161ea4b"
+      }
+    }
+  ],
+  "EnemyTotal": 6
+}

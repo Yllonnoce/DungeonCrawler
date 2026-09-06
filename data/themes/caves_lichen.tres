@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "caves.lichen"
+DisplayName = "Lichen Grottos"
+TierIndex = 1
+Weight = 1.0
+Description = "cracked mud underfoot, lichen-crusted rock, a sick green glow"
+FloorTexture = "mud_cracked_dry_03"
+WallTexture = "lichen_rock"
+CeilingTexture = "rock_face"
+FloorColor = Color(0.3,0.28,0.22,1)
+WallColor = Color(0.34,0.38,0.3,1)
+CeilingColor = Color(0.14,0.16,0.13,1)
+MetersPerTile = 2.5
+AmbientColor = Color(0.24,0.34,0.26,1)
+AmbientEnergy = 0.35
+FogColor = Color(0.03,0.05,0.04,1)
+FogDensity = 0.04
+TorchColor = Color(0.7,0.95,0.8,1)
+WallLightsPerRoom = 2

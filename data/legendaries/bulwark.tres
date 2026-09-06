@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.bulwark"
+DisplayName = "Bulwark of the Deep"
+BaseId = "item.iron_shield"
+Flavor = "Barnacles cling to its rim."
+ItemLevelMin = 3
+Weight = 1.0
+Modifiers = PackedStringArray("Armor+18", "MaxHp+30", "ResistFrost+25")
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

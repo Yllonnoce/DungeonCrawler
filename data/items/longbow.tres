@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.longbow"
+DisplayName = "Longbow"
+Description = "Slower, harder hitting."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "ranged", "bow")
+ItemLevelMin = 4
+Stackable = false
+MaxStack = 1
+Color = Color(0.55,0.4,0.25,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Bow"
+MinDamage = 8
+MaxDamage = 14
+DamageType = "Physical"
+Cooldown = 1.3
+StaminaCost = 5
+HeavyMultiplier = 1.0
+Range = 30
+TwoHanded = false
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

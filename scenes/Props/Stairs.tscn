@@ -1,0 +1,22 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Stairs.cs" id="1_stairs"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_use"]
+size = Vector3(2.5, 2.5, 2.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_step"]
+size = Vector3(2.2, 0.5, 2.2)
+
+[node name="Stairs" type="Area3D"]
+collision_layer = 8
+collision_mask = 0
+script = ExtResource("1_stairs")
+
+[node name="Collision" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BoxShape3D_use")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("BoxMesh_step")

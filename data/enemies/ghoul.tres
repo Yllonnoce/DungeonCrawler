@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.ghoul"
+DisplayName = "Ghoul"
+Kind = "Melee"
+MaxHp = 34
+MinDamage = 6
+MaxDamage = 10
+DamageType = "Physical"
+MoveSpeed = 3.0
+DetectRange = 14
+AttackRange = 1.9
+PreferredRange = 0
+WindupSeconds = 0.5
+RecoverSeconds = 0.9
+ProjectileSpeed = 0
+Xp = 25
+Accuracy = 62
+Evasion = 8
+Armor = 5
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 50
+ResistArcane = 0
+OnHitStatus = "Poison"
+OnHitDuration = 6
+OnHitMagnitude = 2
+OnHitChance = 0.3
+Color = Color(0.75,0.15,0.12,1)
+Scale = 1.0
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0
+Model = "Orc_Skull"

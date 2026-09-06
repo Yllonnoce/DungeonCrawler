@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.bone_priest"
+DisplayName = "Bone Priest"
+Kind = "Caster"
+MaxHp = 26
+MinDamage = 7
+MaxDamage = 11
+DamageType = "Arcane"
+MoveSpeed = 2.4
+DetectRange = 16
+AttackRange = 1.6
+PreferredRange = 7
+WindupSeconds = 0.9
+RecoverSeconds = 1.4
+ProjectileSpeed = 14
+Xp = 32
+Accuracy = 64
+Evasion = 8
+Armor = 2
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 80
+ResistArcane = 25
+OnHitStatus = "Slow"
+OnHitDuration = 3
+OnHitMagnitude = 0
+OnHitChance = 0.5
+Color = Color(0.55,0.5,0.75,1)
+Scale = 1.0
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.3
+Model = "Tribal"

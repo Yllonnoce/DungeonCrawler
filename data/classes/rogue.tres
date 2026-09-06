@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="ClassDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/ClassDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "class.rogue"
+DisplayName = "Rogue"
+Description = "Fast blades, poison, and devastating strikes on enemies that have not noticed the party."
+Strength = 10
+Dexterity = 16
+Vitality = 11
+Intelligence = 8
+Willpower = 8
+Luck = 12
+HpPerLevel = 8.0
+StaminaPerLevel = 8.0
+ManaPerLevel = 2.0
+CanBlock = false
+AllowedWeapons = PackedStringArray("Dagger", "Sword")
+StartingAbilities = PackedStringArray("ability.venom_strike")
+StartingWeapon = "item.dagger"
+SneakAttackMultiplier = 3.0
+StealthBonus = 30.0
+PerceptionBonus = 25.0
+ArmorBonus = 0.0
+AllowedArmor = PackedStringArray("Cloth", "Leather")
+AllowedOffhands = PackedStringArray()
+StartingItems = PackedStringArray("item.leather_armor", "item.leather_boots")

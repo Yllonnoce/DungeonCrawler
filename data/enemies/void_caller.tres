@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.void_caller"
+DisplayName = "Void Caller"
+Kind = "Caster"
+MaxHp = 50
+MinDamage = 10
+MaxDamage = 16
+DamageType = "Arcane"
+MoveSpeed = 2.4
+DetectRange = 17
+AttackRange = 1.6
+PreferredRange = 8
+WindupSeconds = 0.9
+RecoverSeconds = 1.3
+ProjectileSpeed = 16
+Xp = 62
+Accuracy = 68
+Evasion = 10
+Armor = 4
+ResistFire = 0
+ResistFrost = 30
+ResistPoison = 30
+ResistArcane = 75
+OnHitStatus = "Slow"
+OnHitDuration = 3
+OnHitMagnitude = 0
+OnHitChance = 0.6
+Color = Color(0.6,0.3,0.8,1)
+Scale = 1.05
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.3
+Model = "Ninja"

@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.iron_colossus"
+DisplayName = "Iron Colossus"
+Kind = "Melee"
+MaxHp = 420
+MinDamage = 16
+MaxDamage = 24
+DamageType = "Physical"
+MoveSpeed = 2.2
+DetectRange = 22
+AttackRange = 2.6
+PreferredRange = 0
+WindupSeconds = 0.7
+RecoverSeconds = 1.2
+ProjectileSpeed = 0
+Xp = 380
+Accuracy = 70
+Evasion = 2
+Armor = 30
+ResistFire = 70
+ResistFrost = 0
+ResistPoison = 80
+ResistArcane = 20
+OnHitStatus = "Stun"
+OnHitDuration = 1
+OnHitMagnitude = 0
+OnHitChance = 0.3
+Color = Color(0.35,0.33,0.35,1)
+Scale = 2.0
+IsBoss = true
+Signature = "Charge"
+SignatureCooldown = 10
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0
+Model = "Yeti"

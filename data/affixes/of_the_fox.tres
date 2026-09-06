@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_the_fox"
+DisplayName = "of the Fox"
+IsPrefix = false
+Tags = PackedStringArray("armor", "jewelry")
+Weight = 0.9
+Stat = "Evasion"
+Op = "Add"
+TierMinLevels = PackedInt32Array(1, 5)
+TierMins = PackedFloat32Array(3, 7)
+TierMaxes = PackedFloat32Array(6, 12)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

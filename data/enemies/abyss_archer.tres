@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.abyss_archer"
+DisplayName = "Abyss Archer"
+Kind = "Ranged"
+MaxHp = 45
+MinDamage = 9
+MaxDamage = 14
+DamageType = "Frost"
+MoveSpeed = 2.8
+DetectRange = 17
+AttackRange = 1.6
+PreferredRange = 9
+WindupSeconds = 0.7
+RecoverSeconds = 1.1
+ProjectileSpeed = 24
+Xp = 58
+Accuracy = 70
+Evasion = 14
+Armor = 5
+ResistFire = 0
+ResistFrost = 60
+ResistPoison = 0
+ResistArcane = 40
+OnHitStatus = "Frost"
+OnHitDuration = 3
+OnHitMagnitude = 0
+OnHitChance = 0.6
+Color = Color(0.4,0.5,0.8,1)
+Scale = 0.95
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+PackHunter = false
+FleeHpFraction = 0.25
+Model = "BlueDemon"
