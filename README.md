@@ -159,7 +159,7 @@ You possess one of the four characters at a time (the local body); the other thr
 | F5 / F9 | Quicksave / quickload |
 | F1 | Restore party (debug) |
 | F2 | Kill all enemies (debug) |
-| F3 / F4 | Next / previous floor (debug) |
+| F3 / F4 | Next / previous floor (debug; single player only, a client cannot leave the server's floor) |
 | F6 | Screenshot to `user://` (debug) |
 | F7 | Roll six chest items into the bag (debug) |
 | F8 | Give 20 arrows (debug) |
@@ -325,7 +325,7 @@ and narration as a subtitle above the portraits; J opens the journal. The party 
 
 ## Multiplayer (dedicated server)
 
-Co-op runs on a dedicated server: the game started headless with `--server`, which any copy of the game joins from the title screen (Join Server) with a name and a class. Each player controls one adventurer; there are no AI companions on a server. The server simulates the world and every combat roll; clients own their own movement and send intents (attack, interact, bag moves, stat points, skills, dialogue choices, chat). Floors are built identically on every machine from the seed and the plan the server sends, so only divergent state crosses the wire. Any player using unlocked stairs takes the whole party down at once.
+Co-op runs on a dedicated server: the game started headless with `--server`, which any copy of the game joins from the title screen (Join Server) with a name and a class. Each player controls one adventurer; there are no AI companions on a server. The server simulates the world and every combat roll; clients own their own movement and send intents (attack, interact, bag moves, stat points, skills, dialogue choices, chat). Floors are built identically on every machine from the seed and the plan the server sends, so only divergent state crosses the wire. Any player using unlocked stairs takes the whole party down at once. A client never changes floor on its own: `Game.ChangeFloor`, `ReloadFloor` and `JumpToFloor` refuse on a client (a log line says the server decides), so debug keys, scripts and stray calls cannot leave a machine on a floor the server is not simulating; the only client path is the server's `FloorChange`.
 
 ```
 godot --headless --path . -- --server --port=7777 --bind=0.0.0.0 --campaign=offline|builtin|ai --seed=N --save=server --max-players=4 --autosave=60 --status-file=PATH --quit-when-empty

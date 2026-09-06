@@ -15,6 +15,7 @@ namespace DungeonCrawler.Core;
 /// <summary>
 /// Developer cheats and automation. Autoload.
 /// Keys: F1 heal party, F2 kill all enemies, F3 next floor, F4 previous floor, F6 screenshot, F7 roll chest loot into the bag, F8 give arrows. (F5/F9 are quicksave/quickload.)
+/// On a multiplayer client only F6 works: the others would change this machine's world without the server.
 /// User args (after "--" on the command line):
 ///   --screenshot=PATH   save a PNG then quit      --after=SECONDS   delay before the screenshot / quit (default 2)
 ///   --face-enemy        teleport next to the nearest enemy at start
@@ -542,6 +543,12 @@ public partial class DebugTools : Node
     {
         if (@event is not InputEventKey { Pressed: true, Echo: false } key || Main.Instance == null) return;
         var party = Main.Instance.Party;
+        // on a client the world belongs to the server: a local floor jump or heal would only split this machine from it
+        if (Net.NetSession.IsClient && key.Keycode is Key.F1 or Key.F2 or Key.F3 or Key.F4 or Key.F7 or Key.F8)
+        {
+            EventBus.Instance.Log("[debug] not on a client: the server owns the world");
+            return;
+        }
         switch (key.Keycode)
         {
             case Key.F1:
@@ -1734,7 +1741,7 @@ public partial class DebugTools : Node
                 _stairsWalk = open ? 0.4 : 0; if (!open) party.ForcedMoveInput = null;
                 GD.Print($"[stairs] down landing: prompt={open} {Pos()}");
                 if (!open) { GD.Print("[stairs] RESULT FAIL (no question at the bottom of the well)"); _testStairs = false; return; }
-                if (lead.GlobalPosition.Y > -1.0f) { GD.Print("[stairs] RESULT FAIL (asked before reaching the bottom)"); _testStairs = false; return; }
+                if (lead.GlobalPosition.Y - main.Builder.Surface(layout.DownStairs).Y > -1.0f) { GD.Print("[stairs] RESULT FAIL (asked before reaching the bottom)"); _testStairs = false; return; }
                 Press("interact");
                 break;
             case 9 when _elapsed >= 25.0:

@@ -120,6 +120,7 @@ public partial class Game : Node
     /// <summary>Move to an adjacent floor. Returns false when the move is not allowed (e.g. up from floor 1).</summary>
     public bool ChangeFloor(int delta)
     {
+        if (!FloorIsOurs()) return false;
         var target = CurrentFloor + delta;
         if (target < 1)
         {
@@ -131,7 +132,20 @@ public partial class Game : Node
         return true;
     }
 
-    public void ReloadFloor() => EventBus.Instance.RaiseFloorChanged(CurrentFloor, 0);
+    public void ReloadFloor() { if (FloorIsOurs()) EventBus.Instance.RaiseFloorChanged(CurrentFloor, 0); }
+
+    /// <summary>
+    /// A client never changes floor on its own: the server decides, and <see cref="SetFloorFromServer"/> follows it.
+    /// Anything else (a debug key, a script, a stray call) would leave this machine on a floor the server is not
+    /// simulating, with enemies that are only scenery.
+    /// </summary>
+    private static bool FloorIsOurs()
+    {
+        if (!Net.NetSession.IsClient) return true;
+        EventBus.Instance.Log("The server decides when the party moves between floors.");
+        GD.PushWarning("[Game] floor change refused on a client");
+        return false;
+    }
 
     /// <summary>A client following the server down (or up): the floor is set, not raised, because Main rebuilds on request.</summary>
     public void SetFloorFromServer(int floor) => CurrentFloor = floor;
@@ -139,6 +153,7 @@ public partial class Game : Node
     /// <summary>Debug / testing: go straight to a floor.</summary>
     public void JumpToFloor(int floor)
     {
+        if (!FloorIsOurs()) return;
         var delta = Math.Sign(floor - CurrentFloor);
         CurrentFloor = Math.Max(1, floor);
         EventBus.Instance.RaiseFloorChanged(CurrentFloor, delta == 0 ? 0 : delta);
