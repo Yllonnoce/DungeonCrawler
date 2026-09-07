@@ -132,6 +132,7 @@ Exports (templates in `~/.local/share/godot/export_templates/4.7.2.stable.mono`;
 godot --headless --path . --export-release "Linux" build/linux/DungeonCrawler.x86_64
 godot --headless --path . --export-release "Windows" build/windows/DungeonCrawler.exe
 godot --headless --path . --export-release "macOS" build/macos/DungeonCrawler.zip   # universal, ad-hoc signed, not notarized
+scripts/export_all.sh            # all three of the above after a Release build (add --server for the dedicated server bundles too)
 godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered screenshot (--open-map for the full map)
 ```
 
