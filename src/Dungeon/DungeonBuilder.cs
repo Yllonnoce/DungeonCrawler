@@ -178,6 +178,9 @@ public partial class DungeonBuilder : Node3D
         PlaceStructures(layout, _floorRoot, seed);
         PlaceNestMouths(layout, _floorRoot, seed);
         PlaceHordes(layout, contents, floorIndex, Game.Instance?.SpentHordes(floorIndex) ?? Array.Empty<string>());
+        var floorState = Game.Instance != null && Game.Instance.Floors.TryGetValue(floorIndex, out var fs) ? fs : null;
+        PlaceAmbushes(layout, floorIndex, seed, floorState);
+        PlacePortals(layout, floorIndex, seed, floorState);
         if (layout.Water.Count > 0)
         {
             var tile = CurrentTheme?.MetersPerTile ?? 2f;
@@ -190,7 +193,7 @@ public partial class DungeonBuilder : Node3D
         tremor.SetStone(Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f));
         _floorRoot.AddChild(tremor);
 
-        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}) seed={seed} rooms={layout.Rooms.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} hordes={contents.Hordes.Count} hash={layout.ContentHash():X16}");
+        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}) seed={seed} rooms={layout.Rooms.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
         return layout;
     }
 
@@ -648,6 +651,33 @@ public partial class DungeonBuilder : Node3D
     public CollectiveRegistry? Collectives { get; private set; }
 
     /// <summary>Hordes waiting in the walls; spent ones (from a save) stay quiet.</summary>
+    /// <summary>The tier's ordinary creatures (its enemy pool, no boss): what ambushes and portals draw on.</summary>
+    public List<string> RegularEnemies(int floor)
+    {
+        var pool = TierFor(floor)?.ToProfile().EnemyPool ?? Array.Empty<string>();
+        var ids = pool.Where(id => _enemies.TryGetValue(id, out var p) && !p.IsBoss).Distinct().ToList();
+        if (ids.Count == 0) ids = _enemies.Values.Where(p => !p.IsBoss && p.Faction == "").Select(p => p.Id).OrderBy(id => id).ToList();
+        return ids;
+    }
+
+    /// <summary>Seeded ambushers along the corridors (see <see cref="AmbushRules"/>); none when the setting or a debug flag says so.</summary>
+    public void PlaceAmbushes(FloorLayout layout, int floor, int seed, Save.FloorStateDto? state)
+    {
+        var count = Settings.Ambushes && DebugTools.Instance?.NoAmbush != true ? AmbushRules.Count(floor) : 0;
+        var points = AmbushRules.Place(layout, RegularEnemies(floor), seed, count);
+        var spawner = new AmbushSpawner();
+        _floorRoot!.AddChild(spawner);
+        spawner.Setup(layout, floor, points, state?.SprungAmbushes);
+    }
+
+    /// <summary>The boss's reinforcement portals for this floor (see <see cref="PortalRules"/>), with the saved pressure clock.</summary>
+    public void PlacePortals(FloorLayout layout, int floor, int seed, Save.FloorStateDto? state)
+    {
+        var spawner = new PortalSpawner();
+        _floorRoot!.AddChild(spawner);
+        spawner.Setup(layout, floor, RegularEnemies(floor), seed, state?.PressureSeconds ?? 0f, state?.PortalWaves ?? 0);
+    }
+
     public void PlaceHordes(FloorLayout layout, FloorContents contents, int floor, IReadOnlyCollection<string> spent)
     {
         foreach (var h in contents.Hordes)

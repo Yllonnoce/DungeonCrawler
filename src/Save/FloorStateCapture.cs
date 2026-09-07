@@ -72,6 +72,8 @@ public static class FloorStateCapture
                 dto.Collectives.Add(new CollectiveDto { Id = c.Id, Alert = c.Alert.ToString(), AlarmRaised = c.AlarmRaised, Regrouped = c.Regrouped });
         foreach (var h in floorRoot.GetChildren().OfType<Adventure.HordeSpawner>())
             if (h.Triggered || h.Spent) dto.SpentHordes.Add(h.Horde.Id);
+        if (floorRoot.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault() is { } ambushes) dto.SprungAmbushes.AddRange(ambushes.Sprung.OrderBy(i => i));
+        if (floorRoot.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault() is { } portals) { dto.PressureSeconds = portals.PressureSeconds; dto.PortalWaves = portals.Waves; }
         dto.BossDefeated = Main.Instance?.BossDefeatedThisFloor == true || floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss && !e.IsAlive) || (layout.BossArena != null && !floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss));
         return dto;
     }
@@ -130,6 +132,8 @@ public static class FloorStateCapture
         }
         foreach (var h in floorRoot.GetChildren().OfType<Adventure.HordeSpawner>())
             if (dto.SpentHordes.Contains(h.Horde.Id)) h.MarkSpent();
+        floorRoot.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault()?.Restore(dto.SprungAmbushes);
+        floorRoot.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault()?.Restore(dto.PressureSeconds, dto.PortalWaves);
         if (floorRoot.GetNodeOrNull<CollectiveRegistry>("Collectives") is { } registry)
             foreach (var c in dto.Collectives)
                 registry.Find(c.Id)?.Restore(c.Alert, c.AlarmRaised, c.Regrouped);

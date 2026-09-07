@@ -75,6 +75,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
     public bool InWater { get; private set; }
     /// <summary>Swarm fodder from a nest: worth a little XP, drops almost nothing, never saved.</summary>
     public bool IsHorde { get; set; }
+    /// <summary>Came through a boss's portal: worth its XP, but rarely carries loot, so lingering never pays.</summary>
+    public bool IsReinforcement { get; set; }
     /// <summary>The horde this creature came out of (server bookkeeping for joiners).</summary>
     public string? HordeId { get; set; }
     private bool _animPaused;
@@ -723,6 +725,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         var cat = Game.Instance.Catalog;
         var level = TierRules.ItemLevel(Floor);
         if (IsHorde && _rng.NextDouble() > 0.04) return; // fifty of them would bury the floor in bones
+        if (IsReinforcement && _rng.NextDouble() > 0.15) return; // an endless stream must not be a loot farm
         if (!IsHorde && _rng.NextDouble() < 0.5 && cat.TryBase("item.bone_shard", out _)) Drop(cat.Create("item.bone_shard"), Vector3.Zero);
         var tableId = IsBoss ? "table.chest" : "table.enemy";
         if (cat.Tables.TryGetValue(tableId, out var table))

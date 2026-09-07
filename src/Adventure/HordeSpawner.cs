@@ -18,6 +18,8 @@ public partial class HordeSpawner : Node
     public const int MaxAliveOnFloor = 70;
     private static readonly List<HordeSpawner> Live = new();
     public static int AliveOnFloor => Live.Sum(s => s.Alive);
+    /// <summary>A horde is streaming or still being fought somewhere on the floor (it then owns the objective line).</summary>
+    public static bool AnyLoose => Live.Any(s => s.Triggered && !s.Spent);
 
     public HordeContents Horde { get; private set; } = null!;
     public bool Triggered { get; private set; }
@@ -147,7 +149,7 @@ public partial class HordeSpawner : Node
             _hudTimer = 0.4f;
             // one line for every horde loose on the floor
             var loose = Live.Where(s => s.Triggered && !s.Spent).ToList();
-            EventBus.Instance.RaiseObjectiveChanged(string.Join("   ", loose.Select(s => $"{s.Horde.Name}: {s.Count - s.Killed} remain")));
+            EventBus.Instance.RaiseObjectiveChanged(string.Join("   ", loose.Select(s => $"{s.Horde.Name}: {s.Count - s.Killed} remain")) + PortalSpawner.HudSuffix);
         }
         if (Spawned >= Count && _alive.Count == 0)
         {

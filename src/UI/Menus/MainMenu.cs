@@ -40,8 +40,9 @@ public partial class MainMenu : Control
         _buttons = new VBoxContainer();
         _buttons.AddThemeConstantOverride("separation", 8);
         v.AddChild(_buttons);
-        AddButton("New Game", () => Main.Instance.StartNewGame());
-        _builtinButton = AddButton("Built-in Campaign", () => { if (!Main.Instance.StartBuiltinCampaign()) _status.Text = "The built-in campaign could not be read."; });
+        // New Game never plans: it plays the campaign on disk (your rebake, else the shipped one). A fresh AI-written run is its own entry.
+        AddButton("New Game", () => Main.Instance.StartNewGameFromDisk());
+        _builtinButton = AddButton("New AI Campaign", () => Main.Instance.StartNewGame(aiCampaign: true));
         AddButton("Load Game", () => { _buttons.Visible = false; _slots.Show(SlotList.Mode.Load); });
         AddButton("Join Server", () => { _buttons.Visible = false; _join.Open(); EventBus.Instance.PlaySfx("ui_open"); });
         AddButton("Settings", () => { _buttons.Visible = false; _settings.Visible = true; EventBus.Instance.PlaySfx("ui_open"); });
@@ -78,10 +79,14 @@ public partial class MainMenu : Control
     private Button _builtinButton = null!;
     public void RefreshSubtitle()
     {
-        _subtitle.Text = Settings.AiPlanning && Settings.HasPlannerKey ? (Settings.PlannerViaRunware ? "Runware will write this descent" : "Claude will write this descent") : $"The built-in designer will write this descent (add a {Settings.PlannerLabel} key in Settings for an AI-authored run)";
+        var plays = BuiltinCampaign.IsUserCopy ? "your rebaked campaign" : BuiltinCampaign.Exists ? "the built-in campaign" : "a campaign from the offline designer";
+        var canPlan = Settings.HasPlannerKey && DebugTools.Instance?.NoAi != true;
+        _subtitle.Text = canPlan
+            ? $"New Game plays {plays}. New AI Campaign asks {Settings.PlannerLabel} for a fresh one (takes minutes and costs money)."
+            : $"New Game plays {plays}. Add a {Settings.PlannerLabel} key in Settings for a fresh AI-written campaign.";
         if (_builtinButton == null) return; // called once before the buttons exist
-        _builtinButton.Disabled = !BuiltinCampaign.Exists;
-        _builtinButton.Text = BuiltinCampaign.IsUserCopy ? "Built-in Campaign (your rebake)" : "Built-in Campaign";
+        _builtinButton.Disabled = !canPlan;
+        _builtinButton.Text = $"New AI Campaign ({Settings.PlannerLabel})";
     }
 
     public void ShowStatus(string text) => _status.Text = text;

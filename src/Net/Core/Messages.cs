@@ -99,6 +99,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.HordeTriggered)] public sealed record HordeTriggeredEvt(string Id) : NetMessage;
 [Msg(MsgKind.HordeSpent)] public sealed record HordeSpentEvt(string Id) : NetMessage;
 [Msg(MsgKind.BossDefeated)] public sealed record BossDefeatedEvt(int Floor) : NetMessage;
+[Msg(MsgKind.AmbushSprung)] public sealed record AmbushSprungEvt(int Index) : NetMessage;
+[Msg(MsgKind.PortalOpened)] public sealed record PortalOpenedEvt(float X, float Y, float Z) : NetMessage;
 [Msg(MsgKind.MemberDowned)] public sealed record MemberDownedEvt(int Index) : NetMessage;
 [Msg(MsgKind.MemberRevived)] public sealed record MemberRevivedEvt(int Index) : NetMessage;
 [Msg(MsgKind.PartyWiped)] public sealed record PartyWipedEvt : NetMessage;

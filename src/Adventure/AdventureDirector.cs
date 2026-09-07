@@ -34,7 +34,10 @@ public partial class AdventureDirector : Node
     private CostMeter? _meter;
 
     /// <summary>Pick the planner from settings and debug flags. Called at New Game and after a load.</summary>
-    public void ConfigurePlanner(bool offlineOnly = false)
+    /// <param name="offlineOnly">Play a campaign that is already written (the built-in one): no planner at all.</param>
+    /// <param name="forceAi">Use the live planner even when the Settings toggle is off (an explicit "New AI Campaign" or a rebake).</param>
+    /// <param name="noAi">Never call the planner (a plain New Game without a campaign on disk).</param>
+    public void ConfigurePlanner(bool offlineOnly = false, bool forceAi = false, bool noAi = false)
     {
         foreach (var cts in _inFlight.Values) cts.Cancel();
         _inFlight.Clear();
@@ -57,7 +60,7 @@ public partial class AdventureDirector : Node
             Planner = new ClaudePlanner(new ReplayClaudeClient(replay), _meter) { Log = LogPlanning };
             PlannerName = "A recording of Claude";
         }
-        else if (debug?.NoAi != true && (Settings.AiPlanning || debug?.ForceAi == true) && Settings.HasPlannerKey)
+        else if (!noAi && debug?.NoAi != true && (Settings.AiPlanning || debug?.ForceAi == true || forceAi) && Settings.HasPlannerKey)
         {
             var viaRunware = Settings.PlannerViaRunware;
             IClaudeClient client = viaRunware ? new RunwareTextClient(Settings.RunwareKey.Trim()) { Log = LogPlanning } : new ClaudeSdkClient(Settings.ClaudeKey.Trim());
@@ -143,7 +146,12 @@ public partial class AdventureDirector : Node
         if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < 25) return;
         var lines = set.Lines.Where(l => l.Trigger == trigger && l.Line.Text != "").ToList();
         if (lines.Count == 0) return;
-        var line = lines[_barkRng.Next(lines.Count)].Line;
+        // a line said in the last two floors stays quiet; when every line for this trigger is that recent, so does the companion
+        var said = Game.Instance.Adventure.BarksSaid;
+        var text = Voice.BarkRepeat.Choose(said, lines.Select(l => l.Line.Text).ToList(), _currentFloor, _barkRng);
+        if (text == null) return;
+        var line = lines.First(l => l.Line.Text == text).Line;
+        Voice.BarkRepeat.Said(said, text, _currentFloor);
         _lastBark = now;
         _barkCooldown[(m.Name, trigger)] = now;
         EventBus.Instance.Log($"{m.Name}: \"{line.Text}\"");

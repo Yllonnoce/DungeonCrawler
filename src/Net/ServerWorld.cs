@@ -71,6 +71,8 @@ public partial class ServerWorld : Node
         bus.EnemySpawned += e => { if (!Quiet) _spawned.Add(e); };
         bus.HordeTriggered += id => Broadcast(new HordeTriggeredEvt(id));
         bus.HordeSpent += id => Broadcast(new HordeSpentEvt(id));
+        bus.AmbushSprung += i => Broadcast(new AmbushSprungEvt(i));
+        bus.PortalOpened += at => Broadcast(new PortalOpenedEvt(at.X, at.Y, at.Z));
     }
 
     private readonly List<Enemy> _spawned = new();

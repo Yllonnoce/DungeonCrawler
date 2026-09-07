@@ -22,6 +22,11 @@ public static class Settings
     public static float Haze { get; set; } = 0.5f;
     public static Vector2I Resolution { get; set; } = new(1920, 1080);
 
+    // danger: ambushers along the corridors and the boss's reinforcement portals
+    public static bool Ambushes { get; set; } = true;
+    /// <summary>Reinforcement pressure: 0 off, 1 normal, 2 heavy (every wait halved, more through each portal).</summary>
+    public static float Reinforcements { get; set; } = 1f;
+
     // AI planner and voice
     public static bool AiPlanning { get; set; } = true;
     public static bool AiVoice { get; set; } = true;
@@ -108,6 +113,8 @@ public static class Settings
             VSync = cfg.GetValue("display", "vsync", VSync).AsBool();
             Haze = (float)cfg.GetValue("display", "haze", Haze).AsDouble();
             Resolution = cfg.GetValue("display", "resolution", Resolution).AsVector2I();
+            Ambushes = cfg.GetValue("danger", "ambushes", Ambushes).AsBool();
+            Reinforcements = (float)cfg.GetValue("danger", "reinforcements", Reinforcements).AsDouble();
             foreach (var (action, _) in Rebindable)
                 if (cfg.HasSectionKey("keys", action)) _binds[action] = (Key)cfg.GetValue("keys", action).AsInt64();
             AiPlanning = cfg.GetValue("ai", "planning", AiPlanning).AsBool();
@@ -158,6 +165,8 @@ public static class Settings
         cfg.SetValue("display", "vsync", VSync);
         cfg.SetValue("display", "haze", Haze);
         cfg.SetValue("display", "resolution", Resolution);
+        cfg.SetValue("danger", "ambushes", Ambushes);
+        cfg.SetValue("danger", "reinforcements", Reinforcements);
         foreach (var (action, key) in _binds) cfg.SetValue("keys", action, (long)key);
         cfg.SetValue("ai", "planning", AiPlanning);
         cfg.SetValue("ai", "voice", AiVoice);

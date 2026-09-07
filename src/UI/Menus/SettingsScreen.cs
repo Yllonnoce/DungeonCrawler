@@ -68,6 +68,13 @@ public partial class SettingsScreen : PanelContainer
         Check(v, "VSync", Settings.VSync, x => { Settings.VSync = x; Settings.Apply(); });
         Slider(v, "Haze in the air", 0f, 1f, Settings.Haze, x => { Settings.Haze = x; Settings.Apply(); }, "P0");
 
+        Header(v, "Danger");
+        var dangerNote = new Label { Text = "Ambushers hide in rubble and wall niches along the corridors and burst out as you pass (three on floor 1, ten by floor 20). After a minute and a half on a floor the boss starts sending reinforcements through portals behind you, faster the longer you stay; the stairs end it, and a dead tier boss silences its tier. Both apply from the next floor you enter.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
+        dangerNote.AddThemeFontSizeOverride("font_size", 12);
+        v.AddChild(dangerNote);
+        Check(v, "Ambushers along the corridors", Settings.Ambushes, x => Settings.Ambushes = x);
+        Slider(v, "Reinforcement pressure (0 off, 1 normal, 2 heavy)", 0f, 2f, Settings.Reinforcements, x => { Settings.Reinforcements = x; Adventure.PortalSpawner.Instance?.RefreshSilence(); }, "0.00", step: 0.25f);
+
         Header(v, "AI (optional)");
         var note = new Label { Text = "Keys stay in user://keys.cfg on this machine and are only ever sent to api.anthropic.com, generativelanguage.googleapis.com and api.runware.ai.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
         note.AddThemeFontSizeOverride("font_size", 12);
@@ -124,7 +131,7 @@ public partial class SettingsScreen : PanelContainer
         var runwareModels = new Label { Text = "Runware TTS models with mapped voices: " + string.Join("; ", Adventure.Voice.RunwareVoices.KnownModels.Select(m => $"{m.Model} ({m.Note})")) + ". Other models get the Gemini voice names as typed.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
         runwareModels.AddThemeFontSizeOverride("font_size", 12);
         v.AddChild(runwareModels);
-        Check(v, "Let the AI design the campaign and floors (needs the selected provider's key)", Settings.AiPlanning, x => Settings.AiPlanning = x);
+        Check(v, "In an AI campaign, keep the planner writing the floors ahead (off: the offline designer takes over; New Game itself never plans)", Settings.AiPlanning, x => { Settings.AiPlanning = x; Main.Instance?.Menu?.RefreshSubtitle(); });
         Check(v, "Voice narration (needs the selected provider's key)", Settings.AiVoice, x => { Settings.AiVoice = x; Adventure.VoiceRenderer.Instance?.Configure(); });
         Slider(v, "Voice volume", 0f, 1f, Settings.VoiceVolume, x => { Settings.VoiceVolume = x; Settings.Apply(); }, "P0");
         Text(v, "Gemini TTS model for the narrator, bosses and the cast", Settings.VoiceModel, x => { Settings.VoiceModel = x; Settings.Apply(); }, secret: false);

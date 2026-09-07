@@ -50,6 +50,8 @@ public sealed class AdventureDto
     public Adventure.Ai.SpendDto Spend { get; set; } = new();
     /// <summary>Set once the AI was switched off mid-run (cap, refusal, no key) so later floors are designed offline.</summary>
     public string? AiStoppedReason { get; set; }
+    /// <summary>Companion barks already said, by text, and the floor they were said on: a line waits two floors before it may repeat.</summary>
+    public Dictionary<string, int> BarksSaid { get; set; } = new();
 }
 
 public sealed class PartyDto
@@ -157,6 +159,11 @@ public sealed class FloorStateDto
     public List<int> OpenedSecrets { get; set; } = new();
     /// <summary>Hordes already let loose on this floor (they never come twice).</summary>
     public List<string> SpentHordes { get; set; } = new();
+    /// <summary>Ambush points (by index) that already went off on this floor.</summary>
+    public List<int> SprungAmbushes { get; set; } = new();
+    /// <summary>Seconds spent on the floor under the reinforcement clock, and portals opened so far.</summary>
+    public float PressureSeconds { get; set; }
+    public int PortalWaves { get; set; }
     /// <summary>Alert state per enemy collective (v6+).</summary>
     public List<CollectiveDto> Collectives { get; set; } = new();
     public List<NpcDto> NpcStates { get; set; } = new();

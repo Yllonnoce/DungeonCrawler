@@ -56,7 +56,7 @@ public partial class CampaignBaker : Node
         if (Main.Instance == null || Main.Instance.InGame) { Report("Available from the title screen only."); return false; }
         var director = AdventureDirector.Instance;
         Game.Instance.Adventure = new Save.AdventureDto();
-        director.ConfigurePlanner();
+        director.ConfigurePlanner(forceAi: true); // a rebake is an explicit ask, whatever the New Game toggle says
         if (director.Planner is OfflinePlanner) { Report(DebugTools.Instance?.NoAi == true ? "Live planning is off for this run (start without automation flags, or add --ai)." : $"Paste a {Settings.PlannerLabel} API key and enable the planner first."); return false; }
         _planner = director.Planner;
         _meter = new CostMeter(Game.Instance.Adventure.Spend, Settings.SpendCapUsd);

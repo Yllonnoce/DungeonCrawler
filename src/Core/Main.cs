@@ -215,13 +215,14 @@ public partial class Main : Node
     public LoadingOverlay Overlay { get; private set; } = null!;
     private (int floor, int delta, ulong sinceMs)? _waitingFor;
 
-    public void StartNewGame(ulong? seed = null)
+    /// <param name="aiCampaign">True: ask the live planner for a fresh campaign (the "New AI Campaign" entry); false: never plan, the offline designer writes it; null: follow the Settings toggle (automation).</param>
+    public void StartNewGame(ulong? seed = null, bool? aiCampaign = null)
     {
         CreateSession();
         var game = Game.Instance;
         game.PrepareNewGame(seed);
         var director = AdventureDirector.Instance;
-        director.ConfigurePlanner();
+        director.ConfigurePlanner(forceAi: aiCampaign == true, noAi: aiCampaign == false);
         if (!director.AiEnabled)
         {
             game.Adventure.Campaign = OfflineDesigner.Outline(game.GameSeed, game.TierProfiles(), Builder.ThemeProfiles());
@@ -249,6 +250,15 @@ public partial class Main : Node
                 game.BeginFloor();
             };
         });
+    }
+
+    /// <summary>
+    /// New Game: the campaign on disk (your rebake, else the shipped one), every floor already written, so nothing is
+    /// planned and nothing is spent. Without one, the offline designer writes a run on the spot.
+    /// </summary>
+    public void StartNewGameFromDisk()
+    {
+        if (!StartBuiltinCampaign()) StartNewGame(aiCampaign: false);
     }
 
     /// <summary>New Game on the shipped campaign: fixed seed, every floor plan already written.</summary>

@@ -113,6 +113,8 @@ godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back
 godot --path . -- --test-horde --screenshot=out.png                 # floor 3 nest room: stream, kill, spent; the screenshot is taken mid-stream
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)
+godot --headless --path . -- --test-ambush          # floor 2: the first corridor ambush springs when stood on, fights, saves as sprung
+godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-resume --ai ...   # pick up a bake that stopped (out of credit, a crash): the outline and floors already written are read from data/adventures/builtin.partial
@@ -193,8 +195,11 @@ Voice is budgeted: `Adventure/Core/Voice/VoiceBudget.cs` picks at most 80 lines 
 
 Practicalities learned baking with the real API: the plan schemas are large, so structured output is tried first and, when the API refuses the compiled grammar, the same request is repeated with the schema as text and the reply parsed leniently (unknown enum names fall back, malformed JSON gets one retry); the outline needs a 48k-token limit because adaptive thinking counts against it; a full twenty-floor bake with Opus 5 is roughly $4 to $6, and the API stops with "credit balance is too low" when the account runs dry, so the bake writes each floor to `<dir>.partial` as it lands and `--bake-resume` continues from there.
 
-Paste a Claude API key in Settings (it is stored in `user://keys.cfg` on this machine and only ever sent to
-`api.anthropic.com`) and New Game asks Claude Opus 5 for a twenty-floor campaign: title, synopsis, an antagonist,
+New Game never plans anything: it plays the campaign on disk (your rebake under `user://adventures/builtin` if you
+made one, else the shipped `data/adventures/builtin`), or, with neither, a run the offline designer writes on the spot.
+A fresh AI-written run is the separate "New AI Campaign" entry, enabled when the selected planner has a key. Paste a
+Claude API key in Settings (it is stored in `user://keys.cfg` on this machine and only ever sent to
+`api.anthropic.com`) and New AI Campaign asks Claude Opus 5 for a twenty-floor campaign: title, synopsis, an antagonist,
 a faction and a story beat per tier, a mood and generator knobs per floor, plus the full plan for floor 1. A loading
 card shows the title and synopsis while that call runs. From then on each floor is written in the background while
 you play the previous one (`AdventureDirector.Prefetch`); if you outrun it the game waits up to the "Wait for a floor
@@ -203,12 +208,12 @@ plan classes (`Adventure/Core/Ai/PlanSchemas.cs`), validated and repaired like a
 request under `user://ai/log`. A per-run spend cap (default $3) switches the run to the offline designer when reached.
 The planner also hears a memory summary of the run so far (play style, difficulty, quests and NPC fates) and a bark
 bank is written once per campaign. Without a key, or with the option off, the offline designer writes everything.
-The `Built-in Campaign` menu entry plays the shipped `data/adventures/builtin` campaign, produced with
+The New Game entry plays the shipped `data/adventures/builtin` campaign, produced with
 `--bake-campaign`; the copy in this repository was baked with the offline designer. Settings has two buttons under
 "Built-in campaign": "Rebuild campaign with Claude" plans a fresh twenty-floor campaign with your key (and renders
 its voice if a Gemini key is set), and "Render voice with Gemini" voices the current built-in campaign. Both work
 from the title screen only and write to `user://adventures/builtin` and `user://voice`, which the game prefers over
-the shipped copy (the menu entry then reads "your rebake"). To ship a rebake, copy those JSON files into
+the shipped copy (the title screen then says New Game plays "your rebaked campaign"). To ship a rebake, copy those JSON files into
 `data/adventures/builtin` and the wav files into `assets/voice/builtin`. `--test-bake-ui` exercises that path with
 stand-ins; `--open-settings` opens the panel for a screenshot.
 
@@ -270,11 +275,37 @@ Two TTS models are Settings: the main one (default `gemini-3.1-flash-tts-preview
 built-in campaign cost nothing. Playback is on its own Voice bus (volume in Settings); narration and dialogue
 interrupt barks, barks never interrupt anything. Lines without audio still show as subtitles. Companion barks fire on
 kills, heavy hits, loot, level-ups, seeing a boss, possession, going down and getting up, rate limited to one every
-five seconds; they also print in the message log. Without a key the game is silent apart from the shipped bank.
+five seconds; they also print in the message log. A line that has been said stays out of the draw until the party is
+two floors deeper (`Adventure/Core/Voice/BarkRepeat.cs`, the record travels in the save as `BarksSaid`); when every
+line for a trigger is that recent the companion says nothing rather than repeat itself. Without a key the game is silent apart from the shipped bank.
 When Gemini answers with a quota error (HTTP 429), rendering stops for the session rather than burning requests: a
 daily-quota error stops at once, a per-minute limit is retried after the delay Google suggests and stops after three
 in a row. Nothing is lost; the lines that were not rendered are queued again the next time you press "Render voice"
 or enter a floor that uses them. The reason is shown in the Settings status line and the message log.
+
+## Ambushes and the boss's reinforcements
+
+Two layers of pressure sit on top of every floor's planned population (Settings, "Danger"; flags `--no-ambush`,
+`--no-portals`):
+
+- **Ambushers** (`Adventure/Core/Design/Reinforcements.cs` `AmbushRules`, `Adventure/AmbushSpawner.cs`): three on
+  floor 1 rising to ten by floor 20, drawn from the tier's ordinary creatures. Each hides in a rubble mound or a solid
+  wall beside a corridor cell (never in a room, never within eight cells of the arrival stairs, six cells apart) and
+  bursts out already hunting when an adventurer comes within about three metres: dust, a thud and a short shake.
+  Placement is seeded, so a floor always hides the same ambushes; sprung points are saved (`FloorStateDto.SprungAmbushes`),
+  the creatures themselves are dynamic like a horde's. `--test-ambush` stands on floor 2's first point and checks it
+  springs, fights and saves.
+- **Reinforcements** (`PortalRules`, `Adventure/PortalSpawner.cs`): the boss of the tier sends creatures through
+  portals. After 90 s on a floor a portal opens every 60 s, shortening to every 20 s over six minutes, in an explored
+  room behind the party (a third of it seen, nobody standing in it, about twelve cells away and nearer the arrival
+  stairs than the lead); one creature at first, up to three as the pressure builds, never more than six loose at once.
+  The first portal on a floor is narrated in the antagonist's name; the HUD shows how many are hunting you. Portal
+  creatures give XP but almost never loot, so lingering never pays. Descending ends it; the pressure clock is saved
+  with the floor (`PressureSeconds`, `PortalWaves`) so a quick load does not reset it; killing a tier's boss silences
+  that tier for the run. "Reinforcement pressure" in Settings is 0 (off) to 2 (heavy: every wait halved, one more per
+  portal, ten loose). Servers spawn them and clients see the rift (`PortalOpenedEvt`, `AmbushSprungEvt`).
+  `--test-portal` hurries the clock on floor 1 and checks a portal opens away from the party, its creatures hunt,
+  the clock saves, and a dead tier boss silences it.
 
 ## Floors are designed, not just rolled
 

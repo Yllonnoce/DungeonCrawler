@@ -93,6 +93,8 @@ public partial class ClientWorld : Node
             case EnemySpawned es: OnEnemySpawned(es.Enemy); break;
             case HordeTriggeredEvt ht: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == ht.Id)?.Show(); break;
             case HordeSpentEvt hs: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == hs.Id)?.ShowSpent(); break;
+            case AmbushSprungEvt asp: Root?.GetChildren().OfType<AmbushSpawner>().FirstOrDefault()?.ShowBurst(asp.Index); break;
+            case PortalOpenedEvt po: Root?.GetChildren().OfType<PortalSpawner>().FirstOrDefault()?.ShowPortal(new Vector3(po.X, po.Y, po.Z)); break;
         }
     }
 

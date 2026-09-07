@@ -66,6 +66,12 @@ public partial class EventBus : Node
     public event Action<Enemies.Enemy>? EnemySpawned;
     public event Action<string>? HordeTriggered;
     public event Action<string>? HordeSpent;
+    /// <summary>An ambusher broke cover (its point index on the floor); clients show the burst.</summary>
+    public event Action<int>? AmbushSprung;
+    /// <summary>A reinforcement portal opened at a world position; clients show the rift.</summary>
+    public event Action<Vector3>? PortalOpened;
+    public void RaiseAmbushSprung(int index) => AmbushSprung?.Invoke(index);
+    public void RaisePortalOpened(Vector3 at) => PortalOpened?.Invoke(at);
     /// <summary>(member name, line): a companion spoke; a client plays the voice with its own key.</summary>
     public event Action<string, Adventure.Line>? Bark;
 

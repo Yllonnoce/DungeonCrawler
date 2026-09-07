@@ -40,4 +40,5 @@ public enum MsgKind : byte
     EnemySpawned = 60, EnemyDied, EnemyHurt, ProjectileSpawned, ProjectileEnded, LootSpawned, LootRemoved, ChestOpened, DoorOpened, LeverPulled,
     SecretRevealed, SecretOpened, TrapRevealed, TrapDisarmed, TrapTriggered, TrapPlaced, BarrelBroken, NpcChanged, HordeTriggered, HordeSpent,
     BossDefeated, MemberDowned, MemberRevived, PartyWiped, LevelUp, ForcePose, Shake, Victory, EnemyState, ChestLocked, Prop,
+    AmbushSprung, PortalOpened,
 }

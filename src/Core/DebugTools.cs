@@ -61,6 +61,13 @@ public partial class DebugTools : Node
     public string? RecordDir { get; private set; }
     public bool ForceAi { get; private set; }
     public bool NoAi { get; private set; }
+    /// <summary>--no-ambush / --no-portals: no corridor ambushers, no reinforcement portals this run.</summary>
+    public bool NoAmbush { get; private set; }
+    public bool NoPortals { get; private set; }
+    private bool _testAmbush, _testPortal;
+    private int _dangerStep;
+    private float _dangerClock;
+    private bool _hurried;
     /// <summary>No live text-to-speech in this run (automation without --ai).</summary>
     public bool NoVoice { get; private set; }
     public float? FakeAiDelay { get; private set; }
@@ -228,6 +235,10 @@ public partial class DebugTools : Node
             else if (arg == "--test-floors") { _testFloors = true; TraceAi = false; _quitAfter = 14; }
             else if (arg == "--test-structures") { _testStructures = true; TraceAi = false; _quitAfter = 12; }
             else if (arg == "--test-horde") { _testHorde = true; TraceAi = false; _quitAfter = 40; _startFloor = 3; }
+            else if (arg == "--no-ambush") NoAmbush = true;
+            else if (arg == "--no-portals") NoPortals = true;
+            else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
+            else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
             else if (arg == "--test-keys") { _testKeys = true; _menuOnly = true; _quitAfter = 2; }
             else if (arg == "--tremor") { _tremor = true; _quitAfter = Math.Max(_quitAfter, 6); }
             else if (arg == "--test-tremor") { _testTremor = true; _tremor = true; TraceAi = false; _quitAfter = 12; }
@@ -506,6 +517,8 @@ public partial class DebugTools : Node
         if (_testFloors) RunFloorsTest();
         if (_testStructures) RunStructuresTest();
         if (_testHorde) RunHordeTest();
+        if (_testAmbush) RunAmbushTest();
+        if (_testPortal) RunPortalTest();
         if (_testKeys && !_testedKeys && _elapsed >= 0.5) { _testedKeys = true; RunKeysTest(); }
         if (_tremor) RunTremor();
         if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == Math.Max(1, _startFloor)) { _inspected = true; InspectCell(ins.x, ins.y); }
@@ -840,6 +853,110 @@ public partial class DebugTools : Node
     }
 
     /// <summary>--test-horde: walk into the nest room on floor 3, count what pours out, kill it all, check the horde is spent.</summary>
+    /// <summary>--test-ambush: floor 2; stand on the first ambush point, expect the creature to burst out hunting and the point to save as sprung.</summary>
+    private void RunAmbushTest()
+    {
+        var main = Main.Instance;
+        if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame) return;
+        _dangerClock += (float)GetProcessDeltaTime();
+        var spawner = root.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault();
+        switch (_dangerStep)
+        {
+            case 0 when _dangerClock >= 1.5f:
+                _dangerStep++;
+                if (spawner == null || spawner.Points.Count == 0) { GD.Print($"[ambush] RESULT FAIL: no ambush points (spawner={(spawner != null)})"); _done = true; GetTree().Quit(); return; }
+                var p = spawner.Points[0];
+                GD.Print($"[ambush] floor {main.Builder.CurrentFloor}: {spawner.Points.Count} points (expected {Adventure.AmbushRules.Count(main.Builder.CurrentFloor)}); first {p.EnemyId} at {p.Trigger} from {(p.FromRubble ? "rubble" : "wall")} {p.Cover}; corridor={layout.RoomAt(p.Trigger) == null} spacing ok={spawner.Points.All(a => spawner.Points.Where(b => b != a).All(b => Math.Abs(a.Trigger.X - b.Trigger.X) + Math.Abs(a.Trigger.Y - b.Trigger.Y) >= Adventure.AmbushRules.Spacing))}");
+                foreach (var m in main.Party.Members) m.Hp = m.Stats[Characters.Stat.MaxHp] * 50;
+                main.Party.Teleport(main.Builder.Surface(p.Trigger) + Vector3.Up * 0.3f, main.Builder.Surface(p.Cover) + Vector3.Up * 0.5f);
+                _dangerClock = 0f;
+                break;
+            case 1 when spawner != null && spawner.Sprung.Contains(0):
+                _dangerStep++;
+                _dangerClock = 0f;
+                GD.Print("[ambush] sprung on approach");
+                break;
+            case 1 when _dangerClock >= 5f:
+                GD.Print("[ambush] RESULT FAIL: never sprung"); _done = true; GetTree().Quit();
+                break;
+            case 2 when spawner != null && _dangerClock >= 0.6f:
+            {
+                _dangerStep++;
+                var burst = root.GetChildren().OfType<Enemies.Enemy>().Where(e => e.SpawnIndex < 0 && e.SpawnIndex != -2).ToList();
+                // hunting, or already cut down by the companions: either way it came out fighting
+                var hunting = burst.Count(e => !e.IsAlive || !e.State.Unaware);
+                var dto = FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
+                var ok = burst.Count >= 1 && hunting >= 1 && dto.SprungAmbushes.Contains(0);
+                GD.Print($"[ambush] after: dynamic={burst.Count} hunting={hunting} states=[{string.Join(",", burst.Select(e => $"{e.Name}:{e.State.Name} hp={e.Hp:0} dist={e.DistanceToParty():0.0} sees={e.CanSeeParty()}"))}] saved sprung=[{string.Join(",", dto.SprungAmbushes)}]");
+                GD.Print($"[ambush] RESULT {(ok ? "ok" : "FAIL")}");
+                _done = true; GetTree().Quit();
+                break;
+            }
+        }
+    }
+
+    /// <summary>--test-portal: floor 1; hurry the pressure clock, expect a portal in an explored room away from the party and hunting creatures, then a dead tier boss to silence it.</summary>
+    private void RunPortalTest()
+    {
+        var main = Main.Instance;
+        if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame) return;
+        _dangerClock += (float)GetProcessDeltaTime();
+        var spawner = root.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault();
+        switch (_dangerStep)
+        {
+            case 0 when _dangerClock >= 2f:
+            {
+                _dangerStep++;
+                if (spawner == null) { GD.Print("[portal] RESULT FAIL: no portal spawner"); _done = true; GetTree().Quit(); return; }
+                if (spawner.Silenced) { GD.Print($"[portal] RESULT FAIL: silenced at start ({spawner.SilencedWhy})"); _done = true; GetTree().Quit(); return; }
+                foreach (var m in main.Party.Members) m.Hp = m.Stats[Characters.Stat.MaxHp] * 50;
+                // walk (well, jump) into the room farthest from the stairs so there is an explored room behind the party
+                var start = layout.RoomAt(layout.UpStairs);
+                var far = layout.Rooms.Where(r => r != start && r != layout.BossArena && !layout.Vaults.Any(v => v.Room == r)).OrderByDescending(r => Math.Abs(r.Center.X - layout.UpStairs.X) + Math.Abs(r.Center.Y - layout.UpStairs.Y)).First();
+                var cell = far.Cells().Where(c => layout.IsWalkable(c) && !layout.IsReserved(c) && !layout.IsWater(c)).OrderBy(c => Math.Abs(c.X - far.Center.X) + Math.Abs(c.Y - far.Center.Y)).First();
+                main.Party.Teleport(main.Builder.Surface(cell) + Vector3.Up * 0.3f);
+                GD.Print($"[portal] floor {main.Builder.CurrentFloor}: intensity {spawner.Intensity}, grace {Adventure.PortalRules.Grace(spawner.Intensity):0} s; party moved to room {layout.Rooms.IndexOf(far)}");
+                _dangerClock = 0f;
+                break;
+            }
+            case 1 when spawner != null && _dangerClock >= 1.5f && spawner.Waves == 0 && !_hurried:
+                _hurried = true;
+                spawner.Hurry();
+                GD.Print("[portal] hurrying");
+                break;
+            case 1 when spawner != null && spawner.Waves >= 1:
+                _dangerStep++;
+                _dangerClock = 0f;
+                var lead = layout.RoomAt(DungeonBuilder.WorldToCell(main.Party.Lead.GlobalPosition));
+                GD.Print($"[portal] opened in room {spawner.LastPortalRoom}; party in room {(lead == null ? -1 : layout.Rooms.IndexOf(lead))}");
+                break;
+            case 1 when _dangerClock >= 10f:
+                GD.Print($"[portal] RESULT FAIL: no portal opened (silenced={spawner?.Silenced} {spawner?.SilencedWhy})"); _done = true; GetTree().Quit();
+                break;
+            case 2 when spawner != null && spawner.Alive >= 1 && _dangerClock >= 2.5f:
+            {
+                _dangerStep++;
+                var sent = root.GetChildren().OfType<Enemies.Enemy>().Where(e => e.IsReinforcement).ToList();
+                var hunting = sent.Count(e => e.IsAlive && !e.State.Unaware);
+                var leadRoom = layout.RoomAt(DungeonBuilder.WorldToCell(main.Party.Lead.GlobalPosition));
+                var awayFromParty = leadRoom == null || layout.Rooms.IndexOf(leadRoom) != spawner.LastPortalRoom;
+                var dto = FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
+                var bossFloor = Adventure.PortalRules.BossFloorFor(main.Builder.CurrentFloor);
+                Game.Instance.Floors[bossFloor] = new FloorStateDto { BossDefeated = true };
+                spawner.RefreshSilence();
+                var ok = sent.Count >= 1 && hunting >= 1 && awayFromParty && dto.PortalWaves >= 1 && dto.PressureSeconds > 0f && spawner.Silenced;
+                GD.Print($"[portal] sent={sent.Count} hunting={hunting} awayFromParty={awayFromParty} saved waves={dto.PortalWaves} pressure={dto.PressureSeconds:0} s; after boss kill silenced={spawner.Silenced} ({spawner.SilencedWhy})");
+                GD.Print($"[portal] RESULT {(ok ? "ok" : "FAIL")}");
+                Game.Instance.Floors.Remove(bossFloor);
+                _done = true; GetTree().Quit();
+                break;
+            }
+            case 2 when _dangerClock >= 12f:
+                GD.Print($"[portal] RESULT FAIL: nothing came through (alive={spawner?.Alive})"); _done = true; GetTree().Quit();
+                break;
+        }
+    }
+
     private void RunHordeTest()
     {
         var main = Main.Instance;
