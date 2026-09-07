@@ -40,8 +40,31 @@ public static class Settings
     public static float VoiceRequestsPerMinute { get; set; } = 8f;
     public static string ClaudeKey { get; set; } = "";
     public static string GeminiKey { get; set; } = "";
+    public static string RunwareKey { get; set; } = "";
     public static bool HasClaudeKey => ClaudeKey.Trim().Length > 10;
     public static bool HasGeminiKey => GeminiKey.Trim().Length > 10;
+    public static bool HasRunwareKey => RunwareKey.Trim().Length > 10;
+
+    // Providers: the planner runs on Anthropic directly ("claude") or through Runware ("runware"); voice on Google directly ("gemini") or through Runware.
+    public const string ProviderClaude = "claude", ProviderGemini = "gemini", ProviderRunware = "runware";
+    public static string PlannerProvider { get; set; } = ProviderClaude;
+    public static string VoiceProvider { get; set; } = ProviderGemini;
+    public static bool PlannerViaRunware => PlannerProvider == ProviderRunware;
+    public static bool VoiceViaRunware => VoiceProvider == ProviderRunware;
+    /// <summary>The model Runware runs the planner on (Claude, Gemini, GPT, DeepSeek... in Runware's creator:family@version form).</summary>
+    public static string RunwareTextModel { get; set; } = Adventure.Ai.RunwareWire.DefaultTextModel;
+    /// <summary>Runware TTS models for the main voices, the minor ones, and the fallbacks, in Runware's form.</summary>
+    public static string RunwareVoiceModel { get; set; } = Adventure.Voice.RunwareVoices.DefaultModel;
+    public static string RunwareVoiceModelMinor { get; set; } = Adventure.Voice.RunwareVoices.DefaultMinorModel;
+    public static string RunwareVoiceFallbackModels { get; set; } = Adventure.Voice.RunwareVoices.DefaultFallbacks;
+    /// <summary>Whether the selected planner provider has its key.</summary>
+    public static bool HasPlannerKey => PlannerViaRunware ? HasRunwareKey : HasClaudeKey;
+    public static bool HasVoiceKey => VoiceViaRunware ? HasRunwareKey : HasGeminiKey;
+    /// <summary>Short names for menus: who writes the campaign, who speaks it.</summary>
+    public static string PlannerLabel => PlannerViaRunware ? "Runware" : "Claude";
+    public static string VoiceLabel => VoiceViaRunware ? "Runware" : "Gemini";
+    /// <summary>The fallback TTS list for the selected voice provider.</summary>
+    public static string ActiveVoiceFallbackModels => VoiceViaRunware ? RunwareVoiceFallbackModels : VoiceFallbackModels;
 
     public static readonly Vector2I[] Resolutions = { new(1280, 720), new(1600, 900), new(1920, 1080), new(2560, 1440), new(3840, 2160) };
 
@@ -55,6 +78,8 @@ public static class Settings
         ("map", "Map"), ("quest_log", "Quest log"), ("quicksave", "Quicksave"), ("quickload", "Quickload"), ("chat", "Chat (multiplayer)"),
     };
 
+    /// <summary>Set when any key came from the environment, so Save() leaves keys.cfg alone.</summary>
+    private static bool _envKeys;
     private static readonly Dictionary<string, Key> _defaults = new();
     private static readonly Dictionary<string, Key> _binds = new();
 
@@ -94,6 +119,14 @@ public static class Settings
             VoiceFallbackModels = cfg.GetValue("ai", "voice_fallback_models", VoiceFallbackModels).AsString();
             VoiceModelMinor = cfg.GetValue("ai", "voice_model_minor", VoiceModelMinor).AsString();
             VoiceRequestsPerMinute = (float)cfg.GetValue("ai", "voice_rpm", VoiceRequestsPerMinute).AsDouble();
+            PlannerProvider = cfg.GetValue("ai", "planner_provider", PlannerProvider).AsString();
+            VoiceProvider = cfg.GetValue("ai", "voice_provider", VoiceProvider).AsString();
+            RunwareTextModel = cfg.GetValue("ai", "runware_text_model", RunwareTextModel).AsString();
+            RunwareVoiceModel = cfg.GetValue("ai", "runware_voice_model", RunwareVoiceModel).AsString();
+            RunwareVoiceModelMinor = cfg.GetValue("ai", "runware_voice_model_minor", RunwareVoiceModelMinor).AsString();
+            RunwareVoiceFallbackModels = cfg.GetValue("ai", "runware_voice_fallback_models", RunwareVoiceFallbackModels).AsString();
+            if (PlannerProvider != ProviderRunware) PlannerProvider = ProviderClaude;
+            if (VoiceProvider != ProviderRunware) VoiceProvider = ProviderGemini;
             PlayerName = cfg.GetValue("multiplayer", "name", PlayerName).AsString();
             LastServerUrl = cfg.GetValue("multiplayer", "last_url", LastServerUrl).AsString();
             LastClassId = cfg.GetValue("multiplayer", "last_class", LastClassId).AsString();
@@ -103,7 +136,12 @@ public static class Settings
         {
             ClaudeKey = keys.GetValue("keys", "claude", "").AsString();
             GeminiKey = keys.GetValue("keys", "gemini", "").AsString();
+            RunwareKey = keys.GetValue("keys", "runware", "").AsString();
         }
+        // environment overrides for headless runs and servers; they are never written back to keys.cfg
+        if (System.Environment.GetEnvironmentVariable("CLAUDE_API_KEY") is { Length: > 10 } claudeEnv) { ClaudeKey = claudeEnv; _envKeys = true; }
+        if (System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") is { Length: > 10 } geminiEnv) { GeminiKey = geminiEnv; _envKeys = true; }
+        if (System.Environment.GetEnvironmentVariable("RUNWARE_API_KEY") is { Length: > 10 } runwareEnv) { RunwareKey = runwareEnv; _envKeys = true; }
         Apply();
     }
 
@@ -130,20 +168,37 @@ public static class Settings
         cfg.SetValue("ai", "voice_fallback_models", VoiceFallbackModels);
         cfg.SetValue("ai", "voice_model_minor", VoiceModelMinor);
         cfg.SetValue("ai", "voice_rpm", VoiceRequestsPerMinute);
+        cfg.SetValue("ai", "planner_provider", PlannerProvider);
+        cfg.SetValue("ai", "voice_provider", VoiceProvider);
+        cfg.SetValue("ai", "runware_text_model", RunwareTextModel);
+        cfg.SetValue("ai", "runware_voice_model", RunwareVoiceModel);
+        cfg.SetValue("ai", "runware_voice_model_minor", RunwareVoiceModelMinor);
+        cfg.SetValue("ai", "runware_voice_fallback_models", RunwareVoiceFallbackModels);
         cfg.SetValue("multiplayer", "name", PlayerName);
         cfg.SetValue("multiplayer", "last_url", LastServerUrl);
         cfg.SetValue("multiplayer", "last_class", LastClassId);
         cfg.Save(Path);
+        if (_envKeys) return; // keys from the environment stay there
         var keys = new ConfigFile();
         keys.SetValue("keys", "claude", ClaudeKey.Trim());
         keys.SetValue("keys", "gemini", GeminiKey.Trim());
+        keys.SetValue("keys", "runware", RunwareKey.Trim());
         keys.Save(KeysPath);
     }
 
     public static void Apply()
     {
-        Adventure.Voice.Voices.Model = string.IsNullOrWhiteSpace(VoiceModel) ? Adventure.Voice.Voices.DefaultModel : VoiceModel.Trim();
-        Adventure.Voice.Voices.MinorModel = string.IsNullOrWhiteSpace(VoiceModelMinor) ? Adventure.Voice.Voices.Model : VoiceModelMinor.Trim();
+        // the voice model names feed line ids, so they follow the selected provider
+        if (VoiceViaRunware)
+        {
+            Adventure.Voice.Voices.Model = string.IsNullOrWhiteSpace(RunwareVoiceModel) ? Adventure.Voice.RunwareVoices.DefaultModel : RunwareVoiceModel.Trim();
+            Adventure.Voice.Voices.MinorModel = string.IsNullOrWhiteSpace(RunwareVoiceModelMinor) ? Adventure.Voice.Voices.Model : RunwareVoiceModelMinor.Trim();
+        }
+        else
+        {
+            Adventure.Voice.Voices.Model = string.IsNullOrWhiteSpace(VoiceModel) ? Adventure.Voice.Voices.DefaultModel : VoiceModel.Trim();
+            Adventure.Voice.Voices.MinorModel = string.IsNullOrWhiteSpace(VoiceModelMinor) ? Adventure.Voice.Voices.Model : VoiceModelMinor.Trim();
+        }
         AudioManager.SetBusVolume("Master", MasterVolume);
         AudioManager.SetBusVolume("Music", MusicVolume);
         AudioManager.SetBusVolume("SFX", SfxVolume);

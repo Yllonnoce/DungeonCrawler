@@ -57,13 +57,15 @@ public partial class AdventureDirector : Node
             Planner = new ClaudePlanner(new ReplayClaudeClient(replay), _meter) { Log = LogPlanning };
             PlannerName = "A recording of Claude";
         }
-        else if (debug?.NoAi != true && (Settings.AiPlanning || debug?.ForceAi == true) && Settings.HasClaudeKey)
+        else if (debug?.NoAi != true && (Settings.AiPlanning || debug?.ForceAi == true) && Settings.HasPlannerKey)
         {
-            IClaudeClient client = new ClaudeSdkClient(Settings.ClaudeKey.Trim());
+            var viaRunware = Settings.PlannerViaRunware;
+            IClaudeClient client = viaRunware ? new RunwareTextClient(Settings.RunwareKey.Trim()) { Log = LogPlanning } : new ClaudeSdkClient(Settings.ClaudeKey.Trim());
             var logDir = ProjectSettings.GlobalizePath(debug?.RecordDir ?? "user://ai/log");
             client = new RecordingClaudeClient(client, logDir);
-            Planner = new ClaudePlanner(client, _meter) { Log = LogPlanning };
-            PlannerName = "Claude";
+            var model = viaRunware ? RunwareModel : Pricing.DefaultModel;
+            Planner = new ClaudePlanner(client, _meter) { Log = LogPlanning, Model = model };
+            PlannerName = viaRunware ? $"{model} via Runware" : "Claude";
         }
         else
         {
@@ -71,8 +73,11 @@ public partial class AdventureDirector : Node
             PlannerName = "The offline designer";
         }
         _voice.Configure();
-        GD.Print($"[Adventure] planner: {PlannerName}{(Settings.HasClaudeKey ? "" : " (no Claude key)")} cap=${Settings.SpendCapUsd:0.00}; voice {(_voice.Enabled ? "on" : "off")}");
+        GD.Print($"[Adventure] planner: {PlannerName}{(Settings.HasPlannerKey ? "" : $" (no {Settings.PlannerLabel} key)")} cap=${Settings.SpendCapUsd:0.00}; voice {(_voice.Enabled ? "on" : "off")}");
     }
+
+    /// <summary>The Runware planner model from Settings, or the default when the field is blank.</summary>
+    public static string RunwareModel => string.IsNullOrWhiteSpace(Settings.RunwareTextModel) ? RunwareWire.DefaultTextModel : Settings.RunwareTextModel.Trim();
 
     // ---- voice ----------------------------------------------------------------------------------
     private double _lastBark = -100;
@@ -295,12 +300,12 @@ public partial class AdventureDirector : Node
         _record.PossessSeconds[_leadName] = _record.PossessSeconds.GetValueOrDefault(_leadName) + (float)delta;
     }
 
-    /// <summary>Settings screen: a tiny structured request with the given key; the result text arrives on the main thread.</summary>
-    public void TestConnection(string key, Action<string> result)
+    /// <summary>Settings screen: a tiny structured request with the given key through the given provider; the result text arrives on the main thread.</summary>
+    public void TestConnection(string key, bool viaRunware, Action<string> result)
     {
-        if (key.Trim().Length < 10) { result("Paste a Claude API key first."); return; }
-        var client = new ClaudeSdkClient(key.Trim());
-        var request = new ClaudeRequest("ping", Pricing.DefaultModel, Array.Empty<PromptBlock>(), "Reply with a JSON object whose Reply field is the single word ok.", PlanSchemas.For<Ping>(), "low", 64);
+        if (key.Trim().Length < 10) { result($"Paste a {(viaRunware ? "Runware" : "Claude")} API key first."); return; }
+        IClaudeClient client = viaRunware ? new RunwareTextClient(key.Trim()) : new ClaudeSdkClient(key.Trim());
+        var request = new ClaudeRequest("ping", viaRunware ? RunwareModel : Pricing.DefaultModel, Array.Empty<PromptBlock>(), "Reply with a JSON object whose Reply field is the single word ok.", PlanSchemas.For<Ping>(), "low", viaRunware ? 256 : 64);
         _ = Task.Run(async () =>
         {
             var r = await client.CreateAsync(request, CancellationToken.None);

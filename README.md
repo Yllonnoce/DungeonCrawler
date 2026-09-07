@@ -119,12 +119,17 @@ godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-resu
 godot --headless --path . -- --list-voice-models                    # which Gemini text-to-speech models the stored key may call
 godot --headless --path . -- --probe-voice-model=gemini-3.1-flash-tts-preview   # render one line with a model: proves the request and the quota
 # --voice-model=NAME and --voice-fallback=A,B override the Settings values for one run
+godot --headless --path . -- --voice-provider=runware --probe-voice-model=xai:tts@0   # the same probe through Runware (--voice-provider=runware also lists the mapped TTS models with --list-voice-models)
+godot --headless --path . -- --planner=runware --probe-planner        # one tiny structured call through the selected planner provider (Claude direct without --planner=runware)
+godot --headless --path . -- --planner=runware --planner-model=anthropic:claude@sonnet-4.6 --bake-campaign=... --ai   # bake through Runware instead of Anthropic directly
+# CLAUDE_API_KEY, GEMINI_API_KEY and RUNWARE_API_KEY in the environment override user://keys.cfg for a run and are never written to it
 godot --path . -- --floor=15 --face-boss --screenshot=/tmp/boss.png --after=3   # jump to a floor
 
 Exports (templates in `~/.local/share/godot/export_templates/4.7.2.stable.mono`; presets in `export_presets.cfg`):
 
 godot --headless --path . --export-release "Linux" build/linux/DungeonCrawler.x86_64
 godot --headless --path . --export-release "Windows" build/windows/DungeonCrawler.exe
+godot --headless --path . --export-release "macOS" build/macos/DungeonCrawler.zip   # universal, ad-hoc signed, not notarized
 godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered screenshot (--open-map for the full map)
 ```
 
@@ -206,6 +211,53 @@ from the title screen only and write to `user://adventures/builtin` and `user://
 the shipped copy (the menu entry then reads "your rebake"). To ship a rebake, copy those JSON files into
 `data/adventures/builtin` and the wav files into `assets/voice/builtin`. `--test-bake-ui` exercises that path with
 stand-ins; `--open-settings` opens the panel for a screenshot.
+
+## Runware as a second provider (optional)
+
+Both jobs can run through [Runware](https://runware.ai) instead: one key, `api.runware.ai`, any model in its catalogue.
+Paste a Runware key in Settings, then pick "Campaign planner runs on: Runware" and/or "Voice runs on: Runware". The
+existing Claude and Gemini paths are untouched, and the provider choice is saved in `settings.cfg` (`planner_provider`,
+`voice_provider`); the key sits beside the others in `user://keys.cfg` (or `RUNWARE_API_KEY` in the environment).
+"Test Runware key" asks for the account details without running a model and shows the balance (the live reply
+carries `balance` as a plain number, not the documented object; both are read). "List the text models this Runware
+key can use" fetches `GET /v1/models`, which returns slugs (`anthropic-claude-sonnet-4-6`); the planner model field
+takes either that form or the AIR form (`anthropic:claude@sonnet-4.6`) and converts slugs on the wire
+(`RunwareWire.ToAir`). Verified live on 2026-09-07 with the ScenePlay key: `--planner=runware --probe-planner`
+(0.04 cents) and `--voice-provider=runware --probe-voice-model=xai:tts@0` (4 s of 48 kHz mono WAV with a
+streaming-style header, $0.001).
+
+Planner: `Adventure/Ai/RunwareTextClient.cs` sends one `textInference` task per planning call
+(`Adventure/Core/Ai/RunwareWire.cs`): the system blocks as `settings.systemPrompt` (Runware messages take only user
+and assistant roles), the schema appended to the user turn as text (the mode the direct Claude client falls back to for
+these schemas; `jsonSchema` is not accepted by every routed model), `settings.thinkingLevel` (`off` for Claude
+models, the nearest fixed level for others; dropped and retried once if a model rejects it), `includeUsage` and
+`includeCost`. Thinking is off for Claude on purpose: measured on the real outline request, `max`, `high` and
+`adaptive` each let Sonnet 4.6 draft the whole plan inside its thinking until all 48,000 tokens were spent
+($0.75, fifteen minutes, empty text, `finishReason: length`), while `off` returned a complete campaign in 10k tokens,
+$0.18 and 154 s. The direct Anthropic client keeps adaptive thinking; only the Runware path behaves this way. Tasks go with
+`deliveryMethod: "async"` and are polled with a `getResponse` task (2 s growing to 10 s, up to 15 minutes): a
+synchronous reply is cut off after about two minutes with `failedTaskTimeout`, which is what the first Runware bake
+hit on the outline and floor calls, while an async task was seen running 250 s to completion. A model that rejects
+async delivery falls back to sync for the session. The planner reads the dollar cost
+Runware reports (`ClaudeUsage.CostUsd`) instead of the Claude list prices, so the spend cap counts real money on any
+model. The model is a Settings text field ("Runware planner model", default `anthropic:claude@sonnet-4.6`; e.g.
+`google:gemini@3.5-flash`, `openai:gpt@5.4-mini`, `deepseek:v4@flash`). The requests still log under `user://ai/log`.
+
+Voice: `Adventure/Ai/RunwareTtsClient.cs` sends one `audioInference` task per line asking for WAV as base64, then
+`PcmTools` decodes it (any channel count, 8/16/24/32-bit or float) and resamples to the cache's 24 kHz mono. Runware
+fronts several TTS providers with their own voice names, so `Adventure/Core/Voice/RunwareVoices.cs` maps the game's
+Gemini names per model family: xAI (`xai:tts@0`, the default, about $0.015 per thousand characters), Inworld
+(`inworld:tts@2`), MiniMax (`minimax:speech@2.8`), and Google's Gemini TTS through Runware (`google:gemini@3.1-flash-tts`,
+same names and it hears the delivery style; the others would read the style aloud, so it is dropped for them). Any
+other model gets the Gemini name as typed. Main, minor and fallback models are separate Settings fields for Runware
+(`--voice-model=` and `--voice-model-minor=` set both providers' fields for a run). Line ids include the model, so
+switching provider renders afresh. A 402 (balance used up) stops rendering for the session; 429/503/504 back off like a
+Gemini per-minute limit. The "voice requests per minute" pace is Google's problem, not Runware's, so Runware renders at
+full speed (two lines at a time): the first Runware bake crawled at 8 lines a minute for ten minutes because the pace
+still applied, which looked like a hang. ElevenLabs is no longer on Runware and there is no OpenAI TTS there.
+
+The dedicated server takes `RUNWARE_API_KEY` beside `CLAUDE_API_KEY` (`deploy/start.sh`); with only the Runware
+key set it starts with `--planner=runware`.
 
 ## Voice (optional)
 

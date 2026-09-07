@@ -17,8 +17,10 @@ public partial class SettingsScreen : PanelContainer
         var baker = Adventure.CampaignBaker.Instance;
         var inGame = Main.Instance?.InGame == true;
         var busy = baker?.Running == true;
-        _bakeCampaign.Disabled = busy || inGame || !Settings.HasClaudeKey;
-        _bakeVoice.Disabled = busy || inGame || !Settings.HasGeminiKey || !Adventure.BuiltinCampaign.Exists;
+        _bakeCampaign.Disabled = busy || inGame || !Settings.HasPlannerKey;
+        _bakeVoice.Disabled = busy || inGame || !Settings.HasVoiceKey || !Adventure.BuiltinCampaign.Exists;
+        _bakeCampaign.Text = $"Rebuild campaign with {Settings.PlannerLabel}";
+        _bakeVoice.Text = $"Render voice with {Settings.VoiceLabel}";
         _bakeStatus.Text = baker?.Status ?? "";
     }
 
@@ -67,13 +69,63 @@ public partial class SettingsScreen : PanelContainer
         Slider(v, "Haze in the air", 0f, 1f, Settings.Haze, x => { Settings.Haze = x; Settings.Apply(); }, "P0");
 
         Header(v, "AI (optional)");
-        var note = new Label { Text = "Keys stay in user://keys.cfg on this machine and are only ever sent to api.anthropic.com and generativelanguage.googleapis.com.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
+        var note = new Label { Text = "Keys stay in user://keys.cfg on this machine and are only ever sent to api.anthropic.com, generativelanguage.googleapis.com and api.runware.ai.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
         note.AddThemeFontSizeOverride("font_size", 12);
         v.AddChild(note);
         Text(v, "Claude API key", Settings.ClaudeKey, x => { Settings.ClaudeKey = x; RefreshBake(); }, secret: true);
         Text(v, "Gemini API key", Settings.GeminiKey, x => { Settings.GeminiKey = x; RefreshBake(); }, secret: true);
-        Check(v, "Let Claude design the campaign and floors (needs a key)", Settings.AiPlanning, x => Settings.AiPlanning = x);
-        Check(v, "Voice narration with Gemini (needs a key)", Settings.AiVoice, x => Settings.AiVoice = x);
+        Text(v, "Runware API key (one key for any model Runware routes: planner and voice)", Settings.RunwareKey, x => { Settings.RunwareKey = x; RefreshBake(); }, secret: true);
+        var runwareTest = new Button { Text = "Test Runware key", FocusMode = FocusModeEnum.None };
+        var runwareResult = new Label { Modulate = new Color(0.8f, 0.8f, 0.7f) };
+        runwareTest.Pressed += () =>
+        {
+            if (!Settings.HasRunwareKey) { runwareResult.Text = "Paste a Runware API key first."; return; }
+            runwareResult.Text = "Asking Runware...";
+            var key = Settings.RunwareKey.Trim();
+            _ = Task.Run(async () =>
+            {
+                var (balance, error) = await Adventure.AiClients.RunwareTextClient.CheckKeyAsync(key, CancellationToken.None);
+                Callable.From(() => runwareResult.Text = error != null ? $"Failed: {error}" : $"Connected; balance ${balance:0.00}.").CallDeferred();
+            });
+        };
+        Row(v, "", runwareTest);
+        v.AddChild(runwareResult);
+        var plannerProvider = new OptionButton { FocusMode = FocusModeEnum.None };
+        plannerProvider.AddItem("Claude (Anthropic, direct)", 0);
+        plannerProvider.AddItem("Runware (any routed model)", 1);
+        plannerProvider.Selected = Settings.PlannerViaRunware ? 1 : 0;
+        plannerProvider.ItemSelected += i => { Settings.PlannerProvider = i == 1 ? Settings.ProviderRunware : Settings.ProviderClaude; RefreshBake(); };
+        Row(v, "Campaign planner runs on", plannerProvider);
+        Text(v, "Runware planner model (anthropic:claude@sonnet-4.6, google:gemini@3.5-flash, deepseek:v4@flash...; the slug form from the list below works too)", Settings.RunwareTextModel, x => Settings.RunwareTextModel = x, secret: false);
+        var listText = new Button { Text = "List the text models this Runware key can use", FocusMode = FocusModeEnum.None };
+        var listTextResult = new Label { AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.8f, 0.8f, 0.7f) };
+        listText.Pressed += () =>
+        {
+            if (!Settings.HasRunwareKey) { listTextResult.Text = "Paste a Runware API key first."; return; }
+            listTextResult.Text = "Asking Runware...";
+            var key = Settings.RunwareKey.Trim();
+            _ = Task.Run(async () =>
+            {
+                var (models, error) = await Adventure.AiClients.RunwareTextClient.ListTextModelsAsync(key, CancellationToken.None);
+                Callable.From(() => listTextResult.Text = error != null ? $"Failed: {error}" : "Available: " + string.Join(", ", models)).CallDeferred();
+            });
+        };
+        Row(v, "", listText);
+        v.AddChild(listTextResult);
+        var voiceProvider = new OptionButton { FocusMode = FocusModeEnum.None };
+        voiceProvider.AddItem("Gemini (Google, direct)", 0);
+        voiceProvider.AddItem("Runware (xAI, Inworld, MiniMax, Gemini TTS...)", 1);
+        voiceProvider.Selected = Settings.VoiceViaRunware ? 1 : 0;
+        voiceProvider.ItemSelected += i => { Settings.VoiceProvider = i == 1 ? Settings.ProviderRunware : Settings.ProviderGemini; Settings.Apply(); Adventure.VoiceRenderer.Instance?.Configure(); RefreshBake(); };
+        Row(v, "Voice runs on", voiceProvider);
+        Text(v, "Runware TTS model for the narrator, bosses and the cast", Settings.RunwareVoiceModel, x => { Settings.RunwareVoiceModel = x; Settings.Apply(); }, secret: false);
+        Text(v, "Runware TTS model for one-off NPCs and companion barks", Settings.RunwareVoiceModelMinor, x => { Settings.RunwareVoiceModelMinor = x; Settings.Apply(); }, secret: false);
+        Text(v, "Runware fallback TTS models (comma-separated)", Settings.RunwareVoiceFallbackModels, x => Settings.RunwareVoiceFallbackModels = x, secret: false);
+        var runwareModels = new Label { Text = "Runware TTS models with mapped voices: " + string.Join("; ", Adventure.Voice.RunwareVoices.KnownModels.Select(m => $"{m.Model} ({m.Note})")) + ". Other models get the Gemini voice names as typed.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
+        runwareModels.AddThemeFontSizeOverride("font_size", 12);
+        v.AddChild(runwareModels);
+        Check(v, "Let the AI design the campaign and floors (needs the selected provider's key)", Settings.AiPlanning, x => Settings.AiPlanning = x);
+        Check(v, "Voice narration (needs the selected provider's key)", Settings.AiVoice, x => { Settings.AiVoice = x; Adventure.VoiceRenderer.Instance?.Configure(); });
         Slider(v, "Voice volume", 0f, 1f, Settings.VoiceVolume, x => { Settings.VoiceVolume = x; Settings.Apply(); }, "P0");
         Text(v, "Gemini TTS model for the narrator, bosses and the cast", Settings.VoiceModel, x => { Settings.VoiceModel = x; Settings.Apply(); }, secret: false);
         Text(v, "TTS model for one-off NPCs and companion barks", Settings.VoiceModelMinor, x => { Settings.VoiceModelMinor = x; Settings.Apply(); }, secret: false);
@@ -96,23 +148,23 @@ public partial class SettingsScreen : PanelContainer
         v.AddChild(listResult);
         Slider(v, "Spend cap per run ($)", 0f, 20f, (float)Settings.SpendCapUsd, x => Settings.SpendCapUsd = Math.Round(x, 2), "0.00", step: 0.25f);
         Slider(v, "Wait for a floor plan (s)", 0f, 90f, Settings.PlanWaitSeconds, x => Settings.PlanWaitSeconds = x, "0", step: 1f);
-        var test = new Button { Text = "Test Claude connection", FocusMode = FocusModeEnum.None };
+        var test = new Button { Text = "Test planner connection", FocusMode = FocusModeEnum.None };
         var testResult = new Label { Modulate = new Color(0.8f, 0.8f, 0.7f) };
         test.Pressed += () =>
         {
-            testResult.Text = "Testing...";
-            Adventure.AdventureDirector.Instance?.TestConnection(Settings.ClaudeKey, r => testResult.Text = r);
+            testResult.Text = $"Testing {(Settings.PlannerViaRunware ? Adventure.AdventureDirector.RunwareModel + " via Runware" : "Claude")}...";
+            Adventure.AdventureDirector.Instance?.TestConnection(Settings.PlannerViaRunware ? Settings.RunwareKey : Settings.ClaudeKey, Settings.PlannerViaRunware, r => testResult.Text = r);
         };
         Row(v, "", test);
         v.AddChild(testResult);
 
         Header(v, "Built-in campaign");
-        var bakeNote = new Label { Text = "Rebuild the shipped campaign with your keys. Planning twenty floors with Claude takes several minutes and roughly a dollar; voice renders every line with Gemini. Results are kept in user://adventures/builtin and user://voice on this machine. Title screen only.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
+        var bakeNote = new Label { Text = "Rebuild the shipped campaign with your keys, on the providers selected above. Planning twenty floors takes several minutes and a few dollars with Claude (less on cheaper Runware models); voice renders the budgeted lines. Results are kept in user://adventures/builtin and user://voice on this machine. Title screen only.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
         bakeNote.AddThemeFontSizeOverride("font_size", 12);
         v.AddChild(bakeNote);
-        _bakeCampaign = new Button { Text = "Rebuild campaign with Claude", FocusMode = FocusModeEnum.None };
-        _bakeCampaign.Pressed += () => { Settings.Save(); Adventure.CampaignBaker.Instance?.StartCampaign(withVoice: Settings.AiVoice && Settings.HasGeminiKey); RefreshBake(); };
-        _bakeVoice = new Button { Text = "Render voice with Gemini", FocusMode = FocusModeEnum.None };
+        _bakeCampaign = new Button { Text = $"Rebuild campaign with {Settings.PlannerLabel}", FocusMode = FocusModeEnum.None };
+        _bakeCampaign.Pressed += () => { Settings.Save(); Adventure.CampaignBaker.Instance?.StartCampaign(withVoice: Settings.AiVoice && Settings.HasVoiceKey); RefreshBake(); };
+        _bakeVoice = new Button { Text = $"Render voice with {Settings.VoiceLabel}", FocusMode = FocusModeEnum.None };
         _bakeVoice.Pressed += () => { Settings.Save(); Adventure.CampaignBaker.Instance?.StartVoice(); RefreshBake(); };
         var bakeRow = new HBoxContainer();
         bakeRow.AddThemeConstantOverride("separation", 10);

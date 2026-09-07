@@ -78,7 +78,7 @@ public partial class MainMenu : Control
     private Button _builtinButton = null!;
     public void RefreshSubtitle()
     {
-        _subtitle.Text = Settings.AiPlanning && Settings.HasClaudeKey ? "Claude will write this descent" : "The built-in designer will write this descent (add a Claude key in Settings for an AI-authored run)";
+        _subtitle.Text = Settings.AiPlanning && Settings.HasPlannerKey ? (Settings.PlannerViaRunware ? "Runware will write this descent" : "Claude will write this descent") : $"The built-in designer will write this descent (add a {Settings.PlannerLabel} key in Settings for an AI-authored run)";
         if (_builtinButton == null) return; // called once before the buttons exist
         _builtinButton.Disabled = !BuiltinCampaign.Exists;
         _builtinButton.Text = BuiltinCampaign.IsUserCopy ? "Built-in Campaign (your rebake)" : "Built-in Campaign";

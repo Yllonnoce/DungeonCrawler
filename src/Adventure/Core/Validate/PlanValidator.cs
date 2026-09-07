@@ -387,6 +387,9 @@ public static class PlanValidator
             var hasAccept = n.Script.Nodes.Any(x => x.Choices.Any(c => c.Effect == DialogueEffect.AcceptQuest));
             var needsAccept = quest != null && quest.Template is not (QuestTemplate.Decide or QuestTemplate.Betrayal);
             if (needsAccept && !hasAccept) { n.QuestId = null; report.Repairs.Add($"NPC {n.Id}: no accept choice, quest unlinked"); }
+            // the finished quest must be hand-in-able from the greeting; model-written scripts often park the turn-in on a node nothing links to
+            if (n.QuestId != null && quest != null)
+                foreach (var fix in DialogueRepair.EnsureReachable(n.Script, quest.Template, quest.Lines.Complete.Text, quest.Id)) report.Repairs.Add($"NPC {n.Id}: {fix}");
         }
         // a quest nobody gives is unreachable
         plan.Quests.RemoveAll(q => { var linked = plan.Npcs.Any(n => n.QuestId == q.Id); if (!linked) report.Repairs.Add($"dropped quest {q.Id}: no NPC offers it"); return !linked; });

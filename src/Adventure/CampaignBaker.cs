@@ -20,9 +20,18 @@ public partial class CampaignBaker : Node
     /// <summary>How many lines a bake renders; the rest stay subtitles.</summary>
     public static int VoiceBudgetLines { get; set; } = VoiceBudget.Default;
     public bool Running { get; private set; }
-    public string Status { get; private set; } = "";
+    private string _status = "";
+    private ulong _stepStarted;
+    /// <summary>The current step; while a planning step is in progress the time it has taken so far is appended, since a Runware outline can poll for ten minutes with nothing else to show.</summary>
+    public string Status
+    {
+        get => Running && _status.EndsWith("...") && !_status.StartsWith("Rendering") ? $"{_status} ({(Time.GetTicksMsec() - _stepStarted) / 60000}:{(Time.GetTicksMsec() - _stepStarted) / 1000 % 60:00} so far)" : _status;
+        private set { _status = value; _stepStarted = Time.GetTicksMsec(); }
+    }
     public bool LastSucceeded { get; private set; }
     private bool _voiceOnly;
+    /// <summary>Set while the renderer works through the bake's lines; the status line used to be sniffed for this and stopped updating after its first rewrite.</summary>
+    private bool _waitingForVoice;
     private CampaignPlan? _campaign;
     private Dictionary<int, FloorPlan> _floors = new();
     private int _nextFloor;
@@ -48,7 +57,7 @@ public partial class CampaignBaker : Node
         var director = AdventureDirector.Instance;
         Game.Instance.Adventure = new Save.AdventureDto();
         director.ConfigurePlanner();
-        if (director.Planner is OfflinePlanner) { Report(DebugTools.Instance?.NoAi == true ? "Live planning is off for this run (start without automation flags, or add --ai)." : "Paste a Claude API key and enable the planner first."); return false; }
+        if (director.Planner is OfflinePlanner) { Report(DebugTools.Instance?.NoAi == true ? "Live planning is off for this run (start without automation flags, or add --ai)." : $"Paste a {Settings.PlannerLabel} API key and enable the planner first."); return false; }
         _planner = director.Planner;
         _meter = new CostMeter(Game.Instance.Adventure.Spend, Settings.SpendCapUsd);
         _voiceOnly = false;
@@ -144,7 +153,7 @@ public partial class CampaignBaker : Node
         if (BuiltinCampaign.Load() is not { } baked) { Report("There is no built-in campaign to voice yet."); return false; }
         var director = AdventureDirector.Instance;
         director.ConfigurePlanner(offlineOnly: true); // also configures the voice synth from settings
-        if (VoiceRenderer.Instance is not { Enabled: true }) { Report("Paste a Gemini API key and enable voice first."); return false; }
+        if (VoiceRenderer.Instance is not { Enabled: true }) { Report($"Paste a {Settings.VoiceLabel} API key and enable voice first."); return false; }
         Running = true;
         LastSucceeded = false;
         _voiceOnly = true;
@@ -159,7 +168,7 @@ public partial class CampaignBaker : Node
         var director = AdventureDirector.Instance;
         if (VoiceRenderer.Instance is not { Enabled: true })
         {
-            Finish(true, prefix + "No Gemini key, so no voice was rendered.");
+            Finish(true, prefix + $"No {Settings.VoiceLabel} key, so no voice was rendered.");
             return;
         }
         // only so many lines get audio: the plot first, barks last; the rest stay subtitles
@@ -173,14 +182,15 @@ public partial class CampaignBaker : Node
         GD.Print($"[bake] {VoiceBudget.Describe(picks, candidates)}");
         // ids are now on the lines: write the files again so the shipped JSON references its audio
         try { BuiltinCampaign.Write(ProjectSettings.GlobalizePath(BuiltinCampaign.UserDir), campaign, floors); } catch { }
+        _waitingForVoice = true;
+        _lastVoiceReport = Time.GetTicksMsec();
         Report(prefix + $"Rendering {VoiceRenderer.Instance.Pending} voice lines ({VoiceBudget.Describe(picks, candidates)})...");
     }
 
     public override void _Process(double delta)
     {
         if (!Running || VoiceRenderer.Instance is not { } vr) return;
-        var waitingForVoice = Status.Contains("voice lines") || _voiceOnly;
-        if (!waitingForVoice) return;
+        if (!_waitingForVoice) return;
         if (vr.StoppedReason is { } stopped) { Finish(false, $"{stopped} ({vr.Rendered} lines rendered so far.)"); return; }
         if (vr.Pending > 0)
         {
@@ -193,6 +203,7 @@ public partial class CampaignBaker : Node
     private void Finish(bool ok, string status)
     {
         Running = false;
+        _waitingForVoice = false;
         LastSucceeded = ok;
         Report(status);
         if (!_voiceOnly) Game.Instance.Adventure = new Save.AdventureDto();

@@ -471,7 +471,7 @@ public partial class PartyController : Node3D
             target.ApplyStatus(new StatusApplication(StatusKind.Poison, 6, venom));
             EventBus.Instance.Log($"{m.Name}'s blade envenoms {target.DisplayName}.");
         }
-        if (target.IsAlive) return;
+        if (target.IsAlive || !target.IsCreature) return; // a smashed crate is not a kill
         EventBus.Instance.RaiseMemberKill(m);
         var index = Array.IndexOf(Members, m);
         if (Trigger(m, TriggerKind.Bloodlust) is > 0 and var heal) { m.Heal(heal); EventBus.Instance.Log($"{m.Name} feeds on the kill (+{heal:0} HP)."); }

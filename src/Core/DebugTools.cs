@@ -1,6 +1,7 @@
 using DungeonCrawler.Adventure;
 using DungeonCrawler.Adventure.Ai;
 using DungeonCrawler.Adventure.AiClients;
+using DungeonCrawler.Adventure.Voice;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Enemies;
@@ -153,6 +154,7 @@ public partial class DebugTools : Node
     private bool _listVoiceModels, _listedVoiceModels;
     private string? _probeVoiceModel;
     private bool _probedVoiceModel;
+    private bool _probePlanner, _probedPlanner;
     private int _bakePartialWritten = -1;
     private bool _testStory;
     private int _storyStep;
@@ -211,12 +213,16 @@ public partial class DebugTools : Node
             else if (arg == "--test-ai-flow") { _testAiFlow = true; FakeAiDelay ??= 1.2f; TraceAi = false; _quitAfter = 22; }
             else if (arg.StartsWith("--bake-campaign=")) { _bakeDir = ProjectSettings.GlobalizePath(arg["--bake-campaign=".Length..]); TraceAi = false; _quitAfter = 1800; }
             else if (arg == "--bake-resume") _bakeResume = true;
-            else if (arg.StartsWith("--voice-model=")) { Settings.VoiceModel = arg["--voice-model=".Length..]; Settings.Apply(); }
+            else if (arg.StartsWith("--voice-model=")) { Settings.VoiceModel = arg["--voice-model=".Length..]; Settings.RunwareVoiceModel = Settings.VoiceModel; Settings.Apply(); }
+            else if (arg.StartsWith("--planner=")) { Settings.PlannerProvider = arg["--planner=".Length..].Trim().ToLowerInvariant() == Settings.ProviderRunware ? Settings.ProviderRunware : Settings.ProviderClaude; }
+            else if (arg.StartsWith("--voice-provider=")) { Settings.VoiceProvider = arg["--voice-provider=".Length..].Trim().ToLowerInvariant() == Settings.ProviderRunware ? Settings.ProviderRunware : Settings.ProviderGemini; Settings.Apply(); }
+            else if (arg.StartsWith("--planner-model=")) { Settings.RunwareTextModel = arg["--planner-model=".Length..]; }
             else if (arg.StartsWith("--voice-fallback=")) Settings.VoiceFallbackModels = arg["--voice-fallback=".Length..];
             else if (arg.StartsWith("--voice-rpm=")) Settings.VoiceRequestsPerMinute = float.Parse(arg["--voice-rpm=".Length..], System.Globalization.CultureInfo.InvariantCulture);
-            else if (arg.StartsWith("--voice-model-minor=")) { Settings.VoiceModelMinor = arg["--voice-model-minor=".Length..]; Settings.Apply(); }
+            else if (arg.StartsWith("--voice-model-minor=")) { Settings.VoiceModelMinor = arg["--voice-model-minor=".Length..]; Settings.RunwareVoiceModelMinor = Settings.VoiceModelMinor; Settings.Apply(); }
             else if (arg == "--list-voice-models") { _listVoiceModels = true; _menuOnly = true; _quitAfter = 30; }
             else if (arg.StartsWith("--probe-voice-model=")) { _probeVoiceModel = arg["--probe-voice-model=".Length..]; _menuOnly = true; _quitAfter = 60; }
+            else if (arg == "--probe-planner") { _probePlanner = true; _menuOnly = true; _quitAfter = 120; }
             else if (arg == "--builtin") { _builtin = true; _quitAfter = Math.Max(_quitAfter, 6); }
             else if (arg == "--fake-voice") FakeVoice = true;
             else if (arg == "--test-floors") { _testFloors = true; TraceAi = false; _quitAfter = 14; }
@@ -436,24 +442,46 @@ public partial class DebugTools : Node
         {
             // one real line through the named model: proves the request shape and the quota without a whole bake
             _probedVoiceModel = true;
-            if (!Settings.HasGeminiKey) { GD.Print("[voice-probe] no Gemini key in user://keys.cfg"); GetTree().Quit(1); return; }
-            var client = new GeminiTtsClient(Settings.GeminiKey.Trim(), _probeVoiceModel);
+            if (!Settings.HasVoiceKey) { GD.Print($"[voice-probe] no {Settings.VoiceLabel} key in user://keys.cfg"); GetTree().Quit(1); return; }
+            IVoiceSynth synth = Settings.VoiceViaRunware ? new RunwareTtsClient(Settings.RunwareKey.Trim(), _probeVoiceModel) : new GeminiTtsClient(Settings.GeminiKey.Trim(), _probeVoiceModel);
+            var client = (IVoiceSynthDiagnostics)synth;
             var model = _probeVoiceModel;
             _ = Task.Run(async () =>
             {
                 var started = DateTime.UtcNow;
-                var pcm = await client.RenderPcmAsync("The stair behind you settles. Somebody swept these steps recently.", Adventure.Voice.Voices.Narrator, Adventure.Voice.Voices.Style(Adventure.Voice.Speaker.Narrator), CancellationToken.None);
+                var pcm = await synth.RenderPcmAsync("The stair behind you settles. Somebody swept these steps recently.", Adventure.Voice.Voices.Narrator, Adventure.Voice.Voices.Style(Adventure.Voice.Speaker.Narrator), CancellationToken.None);
                 var secs = (DateTime.UtcNow - started).TotalSeconds;
                 Callable.From(() =>
                 {
-                    GD.Print(pcm != null ? $"[voice-probe] {model}: ok, {pcm.Length / 2 / (float)Adventure.Voice.IVoiceSynth.SampleRate:0.0} s of audio in {secs:0.0} s" : $"[voice-probe] {model}: FAIL HTTP {client.LastStatus} {client.LastError}{(client.QuotaExhausted ? " (daily quota used up)" : "")}");
+                    var cost = synth is RunwareTtsClient rw ? $", ${rw.SpentUsd:0.0000}" : "";
+                    GD.Print(pcm != null ? $"[voice-probe] {model} via {Settings.VoiceLabel}: ok, {pcm.Length / 2 / (float)Adventure.Voice.IVoiceSynth.SampleRate:0.0} s of audio in {secs:0.0} s{cost}" : $"[voice-probe] {model} via {Settings.VoiceLabel}: FAIL HTTP {client.LastStatus} {client.LastError}{(client.QuotaExhausted ? " (quota or balance used up)" : "")}");
                     GetTree().Quit(pcm != null ? 0 : 1);
                 }).CallDeferred();
+            });
+        }
+        if (_probePlanner && !_probedPlanner && _elapsed >= 0.3 && AdventureDirector.Instance != null)
+        {
+            // one tiny structured call through the selected planner provider: proves the key, the model id and the reply shape
+            _probedPlanner = true;
+            var viaRunware = Settings.PlannerViaRunware;
+            GD.Print($"[planner-probe] {(viaRunware ? AdventureDirector.RunwareModel + " via Runware" : "Claude " + Pricing.DefaultModel)}");
+            AdventureDirector.Instance.TestConnection(viaRunware ? Settings.RunwareKey : Settings.ClaudeKey, viaRunware, r =>
+            {
+                GD.Print($"[planner-probe] {r}");
+                GetTree().Quit(r.StartsWith("Connected") ? 0 : 1);
             });
         }
         if (_listVoiceModels && !_listedVoiceModels && _elapsed >= 0.3)
         {
             _listedVoiceModels = true;
+            if (Settings.VoiceViaRunware)
+            {
+                // Runware's model search cannot filter for speech, so this is the table we know how to voice
+                GD.Print("[voice-models] Runware TTS models with mapped voices: " + string.Join("; ", Adventure.Voice.RunwareVoices.KnownModels.Select(m => $"{m.Model} ({m.Note})")));
+                GD.Print($"[voice-models] configured: {Settings.RunwareVoiceModel}; minor: {Settings.RunwareVoiceModelMinor}; fallbacks: {Settings.RunwareVoiceFallbackModels}");
+                GetTree().Quit(0);
+                return;
+            }
             if (!Settings.HasGeminiKey) { GD.Print("[voice-models] no Gemini key in user://keys.cfg"); GetTree().Quit(1); return; }
             var key = Settings.GeminiKey.Trim();
             _ = Task.Run(async () =>

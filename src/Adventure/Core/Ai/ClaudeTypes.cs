@@ -25,7 +25,8 @@ public sealed record ClaudeRequest(string Kind, string Model, IReadOnlyList<Prom
     public int ApproxInputTokens => (System.Sum(b => b.Text.Length) + User.Length + SchemaJson.Length) / 4;
 }
 
-public sealed record ClaudeUsage(long InputTokens, long OutputTokens, long CacheReadTokens, long CacheWriteTokens)
+/// <summary>Token counts of one call; <paramref name="CostUsd"/> is set when the provider reports the price itself (Runware does), else the list prices apply.</summary>
+public sealed record ClaudeUsage(long InputTokens, long OutputTokens, long CacheReadTokens, long CacheWriteTokens, double? CostUsd = null)
 {
     public static readonly ClaudeUsage Zero = new(0, 0, 0, 0);
 }

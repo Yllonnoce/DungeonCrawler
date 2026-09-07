@@ -17,6 +17,18 @@ public interface IVoiceSynth
     Task<byte[]?> RenderPcmAsync(string text, string voice, string style, CancellationToken ct);
 }
 
+/// <summary>What a live synth can say about its last call, so the renderer backs off, switches model or stops without knowing the provider.</summary>
+public interface IVoiceSynthDiagnostics
+{
+    string Model { get; }
+    string? LastError { get; }
+    int LastStatus { get; }
+    /// <summary>The last failure means more requests to this model will only fail (a daily quota, an empty balance).</summary>
+    bool QuotaExhausted { get; }
+    /// <summary>Seconds the provider asked us to wait after the last 429, when it said.</summary>
+    float? RetryAfterSeconds { get; }
+}
+
 /// <summary>Gemini prebuilt voice names, grouped by the roles that suit them.</summary>
 public static class Voices
 {

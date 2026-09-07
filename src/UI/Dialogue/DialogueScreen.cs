@@ -56,6 +56,9 @@ public partial class DialogueScreen : Control
         Npc = npc;
         Visible = true;
         EventBus.Instance.PlaySfx("ui_open");
+        // floors built from an older plan may still carry a script with no way to hand the quest in; mend it on the spot
+        if (AdventureDirector.Instance?.QuestGivenBy(npc.Id) is { } given)
+            foreach (var fix in DialogueRepair.EnsureReachable(npc.Script, given.Template, given.CompleteLine, given.Id)) GD.Print($"[Dialogue] {npc.Id}: {fix}");
         var start = npc.Script.Nodes.FirstOrDefault(n => n.Id == npc.Script.Start) ?? npc.Script.Nodes.FirstOrDefault();
         if (start == null) { Close(); return; }
         Show(start);

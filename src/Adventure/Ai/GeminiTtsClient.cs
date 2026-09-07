@@ -5,7 +5,7 @@ using DungeonCrawler.Adventure.Voice;
 namespace DungeonCrawler.Adventure.AiClients;
 
 /// <summary>Gemini text-to-speech over plain HTTPS. Returns raw 16-bit 24 kHz mono PCM, or null after logging why.</summary>
-public sealed class GeminiTtsClient : IVoiceSynth
+public sealed class GeminiTtsClient : IVoiceSynth, IVoiceSynthDiagnostics
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(60) };
     private readonly string _key;

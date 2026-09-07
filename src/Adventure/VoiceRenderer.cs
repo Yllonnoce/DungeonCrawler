@@ -1,3 +1,4 @@
+using DungeonCrawler.Adventure.Ai;
 using DungeonCrawler.Adventure.AiClients;
 using DungeonCrawler.Adventure.Voice;
 using DungeonCrawler.Audio;
@@ -64,13 +65,16 @@ public partial class VoiceRenderer : Node
         CacheDir = ProjectSettings.GlobalizePath(debug?.FakeVoice == true ? "user://voice_fake" : "user://voice");
         _synths.Clear();
         _exhausted.Clear();
-        PaceRpm = Math.Clamp(Settings.VoiceRequestsPerMinute, 1f, 120f);
+        var fake = debug?.FakeVoice == true;
+        // the pace exists for Google's per-minute quota on the preview TTS models; the tone synth and Runware (which asks for a few concurrent requests, not a rate) run at full speed
+        PaceRpm = fake || Settings.VoiceViaRunware ? 120f : Math.Clamp(Settings.VoiceRequestsPerMinute, 1f, 120f);
         _rateLimitedSince = -1;
         _lastBackoff = 0f;
-        var fake = debug?.FakeVoice == true;
         _factory = fake ? _ => new FakeVoiceSynth()
             : debug?.NoVoice == true ? null
-            : Settings.AiVoice && Settings.HasGeminiKey ? model => new GeminiTtsClient(Settings.GeminiKey.Trim(), model)
+            : !Settings.AiVoice ? null
+            : Settings.VoiceViaRunware && Settings.HasRunwareKey ? model => new RunwareTtsClient(Settings.RunwareKey.Trim(), model)
+            : !Settings.VoiceViaRunware && Settings.HasGeminiKey ? model => new GeminiTtsClient(Settings.GeminiKey.Trim(), model)
             : null;
     }
 
@@ -78,7 +82,7 @@ public partial class VoiceRenderer : Node
     private static List<string> ModelChain()
     {
         var chain = new List<string> { Voices.Model, Voices.MinorModel };
-        chain.AddRange(Settings.VoiceFallbackModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        chain.AddRange(Settings.ActiveVoiceFallbackModels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
         return chain.Distinct().ToList();
     }
 
@@ -197,7 +201,7 @@ public partial class VoiceRenderer : Node
     private void StartJob(VoiceJob job)
     {
         var model = ResolveModel(job.Model == "" ? Voices.Model : job.Model);
-        if (model == null) { Stop("every configured Gemini model has used up its quota for today. Add a model in Settings or try again tomorrow; nothing is lost."); return; }
+        if (model == null) { Stop(Settings.VoiceViaRunware ? "the Runware balance is used up. Top it up and press \"Render voice\" again; nothing is lost." : "every configured Gemini model has used up its quota for today. Add a model in Settings or try again tomorrow; nothing is lost."); return; }
         var synth = SynthFor(model);
         _active++;
         _ = Task.Run(async () =>
@@ -221,31 +225,31 @@ public partial class VoiceRenderer : Node
                 }
                 Failed++;
                 _queue.Forget(job.Id);
-                var why = error ?? (synth as GeminiTtsClient)?.LastError ?? "unknown";
+                var diag = synth as IVoiceSynthDiagnostics;
+                var why = error ?? diag?.LastError ?? "unknown";
                 GD.PushWarning($"[Voice] {job.Id} ({job.Priority}) failed: {why}");
-                if (synth is GeminiTtsClient { LastStatus: 429 } gemini)
+                var provider = Settings.VoiceLabel;
+                if (diag != null && diag.QuotaExhausted)
                 {
+                    // a daily quota (Gemini) or an empty balance (Runware): this model is done for now, so its lines move down the chain
+                    _exhausted.Add(diag.Model);
+                    _consecutiveRateLimits = 0;
+                    var next = Settings.VoiceViaRunware ? null : ResolveModel(diag.Model); // every Runware model draws on the same balance
+                    if (next == null) Stop(Settings.VoiceViaRunware ? "the Runware balance is used up. Top it up and press \"Render voice\" again; nothing is lost." : $"Gemini quota for {diag.Model} is used up and no other model is left. Add a fallback model in Settings or try again tomorrow; nothing is lost.");
+                    else { var note = $"Gemini quota for {diag.Model} is used up; its lines continue with {next}."; GD.Print($"[Voice] {note}"); EventBus.Instance.Log(note); }
+                }
+                else if (diag is { LastStatus: 429 or 503 or 504 })
+                {
+                    // a per-minute limit or a full queue: wait as long as the provider asked (or a little longer each time), slow the pace, and only give up after a quarter hour of nothing else
                     _consecutiveRateLimits++;
-                    if (gemini.QuotaExhausted)
-                    {
-                        _exhausted.Add(gemini.Model);
-                        _consecutiveRateLimits = 0;
-                        var next = ResolveModel(gemini.Model);
-                        if (next == null) Stop($"Gemini quota for {gemini.Model} is used up and no other model is left. Add a fallback model in Settings or try again tomorrow; nothing is lost.");
-                        else { var note = $"Gemini quota for {gemini.Model} is used up; its lines continue with {next}."; GD.Print($"[Voice] {note}"); EventBus.Instance.Log(note); }
-                    }
-                    else
-                    {
-                        // a per-minute limit: wait as long as Google asked (or a little longer each time), slow the pace, and only give up after a quarter hour of nothing but 429s
-                        var seconds = Time.GetTicksMsec() / 1000.0;
-                        if (_rateLimitedSince < 0) _rateLimitedSince = seconds;
-                        _lastBackoff = Math.Clamp(gemini.RetryAfterSeconds ?? (_lastBackoff <= 0f ? 15f : _lastBackoff * 2f), 5f, 120f);
-                        PaceRpm = Math.Max(2f, PaceRpm * 0.75f);
-                        _backoffUntil = Time.GetTicksMsec() + (ulong)(_lastBackoff * 1000f);
-                        _queue.Forget(job.Id);
-                        GD.Print($"[Voice] {gemini.Model} per-minute limit: waiting {_lastBackoff:0} s, pace now {PaceRpm:0.0} requests/min");
-                        if (seconds - _rateLimitedSince > 900) Stop($"Gemini has rate limited every request for fifteen minutes ({gemini.Model}). Lower \"voice requests per minute\" in Settings and press \"Render voice\" again; nothing is lost.");
-                    }
+                    var seconds = Time.GetTicksMsec() / 1000.0;
+                    if (_rateLimitedSince < 0) _rateLimitedSince = seconds;
+                    _lastBackoff = Math.Clamp(diag.RetryAfterSeconds ?? (_lastBackoff <= 0f ? 15f : _lastBackoff * 2f), 5f, 120f);
+                    PaceRpm = Math.Max(2f, PaceRpm * 0.75f);
+                    _backoffUntil = Time.GetTicksMsec() + (ulong)(_lastBackoff * 1000f);
+                    _queue.Forget(job.Id);
+                    GD.Print($"[Voice] {diag.Model} {RunwareWire.DescribeStatus(diag.LastStatus)}: waiting {_lastBackoff:0} s, pace now {PaceRpm:0.0} requests/min");
+                    if (seconds - _rateLimitedSince > 900) Stop($"{provider} has rate limited every request for fifteen minutes ({diag.Model}). Lower \"voice requests per minute\" in Settings and press \"Render voice\" again; nothing is lost.");
                 }
                 else if (Failed >= 5 && Rendered == 0) Stop("Voice stopped after repeated failures; check the key and the console.");
             }).CallDeferred();

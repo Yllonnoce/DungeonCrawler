@@ -47,6 +47,8 @@ public partial class Breakable : StaticBody3D, ICombatTarget
     public bool IsUnaware => false;
     public void ApplyStatus(StatusApplication status) { }
 
+    public bool IsCreature => false;
+
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
         if (!IsAlive) return DamageResult.Miss(attack.Type);

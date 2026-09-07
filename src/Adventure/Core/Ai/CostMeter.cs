@@ -20,8 +20,9 @@ public static class Pricing
     public const double CacheReadPerMillion = 0.50;
     public const double CacheWritePerMillion = 6.25;
 
+    /// <summary>Dollars for a call: what the provider reported when it did, else Claude list prices on the token counts.</summary>
     public static double Cost(ClaudeUsage u)
-        => (u.InputTokens * InputPerMillion + u.OutputTokens * OutputPerMillion + u.CacheReadTokens * CacheReadPerMillion + u.CacheWriteTokens * CacheWritePerMillion) / 1_000_000.0;
+        => u.CostUsd ?? (u.InputTokens * InputPerMillion + u.OutputTokens * OutputPerMillion + u.CacheReadTokens * CacheReadPerMillion + u.CacheWriteTokens * CacheWritePerMillion) / 1_000_000.0;
 }
 
 /// <summary>Tracks spend against a per-run cap and estimates a call before it is made.</summary>
