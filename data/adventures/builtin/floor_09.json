@@ -1,113 +1,174 @@
 {
   "SchemaVersion": 1,
   "Floor": 9,
-  "Source": "fake",
-  "LayoutHash": 5429196827664975568,
-  "Title": "Dripping Barracks",
+  "Source": "claude",
+  "LayoutHash": 16704115395937608355,
+  "Title": "Deep Lair",
   "IntroLine": {
-    "Text": "The Caves swallows your torchlight. Something here has been waiting.",
-    "VoiceId": "bc0f5c19757f0f1f"
+    "Text": "The timbered galleries press close, the air thick with the rustle of chitin and the tang of spider-silk. Darkness crawls with a thousand tiny feet.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Hall",
-      "Name": "Fungal Nave"
+      "Role": "Lair",
+      "Name": "The Scuttling Drift"
     },
     {
       "Index": 1,
-      "Role": "Start",
-      "Name": "Fungal Threshold"
+      "Role": "Lair",
+      "Name": "Webbed Gallery"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "Crystal Gallery"
+      "Role": "Hall",
+      "Name": "Propped Timberway"
     },
     {
       "Index": 3,
-      "Role": "Barracks",
-      "Name": "Narrow Muster"
+      "Role": "Passage",
+      "Name": "Caved-In Adit"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "Yawning Gallery"
+      "Role": "Lair",
+      "Name": "The Brood Pit"
     },
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "Fungal Walk"
+      "Name": "Narrow Gauge Tunnel"
     },
     {
       "Index": 6,
-      "Role": "Barracks",
-      "Name": "Echoing Barracks"
+      "Role": "Lair",
+      "Name": "Spinner\u0027s Crossroads"
     },
     {
       "Index": 7,
-      "Role": "Barracks",
-      "Name": "Fungal Muster"
+      "Role": "Lair",
+      "Name": "Festering Stope"
     },
     {
       "Index": 8,
-      "Role": "Ruin",
-      "Name": "Cold Colonnade"
+      "Role": "Hall",
+      "Name": "Grand Drift"
     },
     {
       "Index": 9,
       "Role": "Passage",
-      "Name": "Dripping Walk"
+      "Name": "The Wind Gate"
     },
     {
       "Index": 10,
-      "Role": "Camp",
-      "Name": "Yawning Squat"
+      "Role": "Passage",
+      "Name": "Collapsed Haulage"
     },
     {
       "Index": 11,
-      "Role": "Barracks",
-      "Name": "Dripping Barracks"
+      "Role": "Hall",
+      "Name": "The Long Winze"
     },
     {
       "Index": 12,
-      "Role": "Passage",
-      "Name": "Yawning Passage"
+      "Role": "Exit",
+      "Name": "The Descent into Brood Caverns"
     },
     {
       "Index": 13,
       "Role": "Passage",
-      "Name": "Narrow Crossing"
+      "Name": "Spoil Heap Passage"
     },
     {
       "Index": 14,
-      "Role": "Exit",
-      "Name": "Crystal Stairwell"
+      "Role": "Passage",
+      "Name": "Dead-End Stope"
     },
     {
       "Index": 15,
+      "Role": "Start",
+      "Name": "Bivouac Under the Fungal Glow"
+    },
+    {
+      "Index": 16,
       "Role": "Treasury",
-      "Name": "Fungal Treasury"
+      "Name": "Locked Barrow"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Knifegrinders",
-      "FactionId": "bandits",
+      "Id": "vault_guardians",
+      "Name": "Vault Guardians",
+      "FactionId": "cave_brood",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 16,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "mine_patrol",
+      "Name": "Mine Patrol",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
           "Count": 2
         },
         {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 6,
+        "Objective": null,
+        "Route": [
+          6,
+          7,
+          8,
+          11,
+          0,
+          6
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "grand_drift_sentries",
+      "Name": "Grand Drift Sentries",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 10,
+        "Room": 8,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
@@ -115,359 +176,228 @@
       }
     },
     {
-      "Id": "group1",
-      "Name": "Narrow Brood",
-      "FactionId": "faction1",
+      "Id": "cavern_lookouts",
+      "Name": "Cavern Lookouts",
+      "FactionId": "cave_brood",
       "Members": [
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 4
-        }
-      ],
-      "Goal": {
-        "Kind": "Patrol",
-        "Room": 11,
-        "Objective": null,
-        "Route": [
-          11,
-          2,
-          4
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    }
-  ],
-  "Loners": [],
-  "Hordes": [
-    {
-      "Id": "horde1",
-      "Name": "The Crawl",
-      "Room": 0,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 29,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde2",
-      "Name": "The Crawl",
-      "Room": 11,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 18
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
         {
           "EnemyId": "enemy.cave_spider",
           "Count": 2
         }
       ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 30,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 13,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "vault_guardians",
+        "RallyRoom": null
       }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.rock_thrower",
+      "Room": 3
     },
     {
-      "Id": "horde3",
-      "Name": "The Scurry",
-      "Room": 13,
+      "EnemyId": "enemy.cave_spider",
+      "Room": 10
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "horde_scuttling_drift",
+      "Name": "The Scuttling Drift Horde",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 17
+          "Count": 11
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 29,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Gnawing",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 6
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 29,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Seethe",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 14
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 9
+          "Count": 2
         },
         {
           "EnemyId": "enemy.rock_thrower",
           "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 20,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The timber shudders as a cascade of skittering bodies pours from the fissures.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_webbed_gallery",
+      "Name": "Webbed Gallery Horde",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 10
         },
         {
-          "EnemyId": "enemy.cave_shaman",
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 7
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 25,
+      "Total": 20,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "From the silken cocoons, hundreds of tiny forms drop and begin to crawl.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_brood_pit",
+      "Name": "Brood Pit Horde",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 21,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "The alarm echoes; the pit erupts with a furious chittering.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_spinners_crossroads",
+      "Name": "Spinner\u0027s Crossroads Horde",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 7
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 20,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The chest was a lure. The walls break and a tide of crawling hunger floods in.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde6",
-      "Name": "The Gnawing",
-      "Room": 10,
+      "Id": "horde_festering_stope",
+      "Name": "Festering Stope Horde",
+      "Room": 7,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 17
+          "Count": 12
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
+          "Count": 6
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.cave_shaman",
+          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 29,
+      "Total": 21,
       "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The stope shudders; a putrid brood spills from the darkness.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 6,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 14,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 9,
+      "Room": 5,
       "Kind": "Spikes"
-    }
-  ],
-  "Npcs": [
+    },
     {
-      "Id": "npc1",
-      "Name": "Corvin Shale",
-      "Room": 3,
-      "VoiceId": "Orus",
-      "Script": {
-        "Start": "greet",
-        "Nodes": [
-          {
-            "Id": "greet",
-            "Line": {
-              "Text": "You... you are alive. Thank the depths. Do not come closer with that torch, my eyes are not used to it.",
-              "VoiceId": "2e37a8721471c7c5"
-            },
-            "Choices": [
-              {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "offer",
-            "Line": {
-              "Text": "I dropped the Bell of the Deep when I fled the Echoing Barracks. It is worth more than my life, which is why I am not going back for it. Would you?",
-              "VoiceId": "607fa01039851a48"
-            },
-            "Choices": [
-              {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
-              },
-              {
-                "Text": "Not now.",
-                "Next": null,
-                "Effect": "DeclineQuest"
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "Bless you. It should still be lying where I fell.",
-              "VoiceId": "e807ec313615e565"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "The Bell of the Deep! I never thought I would hold it again. Here, this is yours now.",
-              "VoiceId": "f3c95a9b58139f36"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest1"
+      "Room": 2,
+      "Kind": "Fire"
     }
   ],
-  "Quests": [
-    {
-      "Id": "quest1",
-      "Template": "Recover",
-      "Title": "The Bell of the Deep",
-      "Objective": "Bring the Bell of the Deep back from the Echoing Barracks.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": "Bell of the Deep",
-        "ItemRoom": 6,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null
-      },
-      "GiverNpc": "npc1",
-      "Reward": {
-        "Xp": 420,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "I dropped the Bell of the Deep when I fled the Echoing Barracks. It is worth more than my life, which is why I am not going back for it. Would you?",
-          "VoiceId": "607fa01039851a48"
-        },
-        "Accept": {
-          "Text": "Bless you. It should still be lying where I fell.",
-          "VoiceId": "e807ec313615e565"
-        },
-        "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "76c0e48b204474ce"
-        },
-        "Complete": {
-          "Text": "The Bell of the Deep! I never thought I would hold it again. Here, this is yours now.",
-          "VoiceId": "f3c95a9b58139f36"
-        },
-        "Fail": {
-          "Text": "Lost, then. Like everything else down here.",
-          "VoiceId": "7731e3a4a4e9daa6"
-        }
-      }
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "The Caves swallows your torchlight. Something here has been waiting.",
-        "VoiceId": "bc0f5c19757f0f1f"
-      }
+        "Text": "The timbered galleries press close, the air thick with the rustle of chitin and the tang of spider-silk. Darkness crawls with a thousand tiny feet.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "EnemyTotal": 12
 }

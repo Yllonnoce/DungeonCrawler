@@ -1,243 +1,228 @@
 {
   "SchemaVersion": 1,
   "Floor": 18,
-  "Source": "fake",
-  "LayoutHash": 8578290213987501525,
-  "Title": "Bleeding Stairwell",
+  "Source": "claude",
+  "LayoutHash": 16569791753831942375,
+  "Title": "The Final Rivalry",
   "IntroLine": {
-    "Text": "The Abyss swallows your torchlight. Something here has been waiting.",
-    "VoiceId": "24a7261b30c878db"
+    "Text": "The bitter wind howls through the shattered palace, carrying the scent of old embers and regret. A familiar silhouette waits in the ruins ahead.",
+    "VoiceId": "e182407de6b24993"
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Exit",
-      "Name": "Bleeding Stairwell"
+      "Role": "Start",
+      "Name": "Palace Foyer"
     },
     {
       "Index": 1,
-      "Role": "Kennel",
-      "Name": "Faded Warren"
+      "Role": "Lair",
+      "Name": "Hidden Ossuary"
     },
     {
       "Index": 2,
-      "Role": "Camp",
-      "Name": "Endless Hideout"
+      "Role": "Ruin",
+      "Name": "Collapsed Audience Chamber"
     },
     {
       "Index": 3,
-      "Role": "Start",
-      "Name": "Endless Threshold"
+      "Role": "Exit",
+      "Name": "The Wind-Strewn Stair"
     },
     {
       "Index": 4,
-      "Role": "Ruin",
-      "Name": "Void-Touched Wreck"
+      "Role": "Lair",
+      "Name": "The Scorched Gallery"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "Faded Crossing"
+      "Role": "Hall",
+      "Name": "The Charred Promenade"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "Faded Nave"
+      "Role": "Lair",
+      "Name": "Whispering Gallery"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "Screaming Nave"
+      "Role": "Lair",
+      "Name": "Choir Hollow"
     },
     {
       "Index": 8,
       "Role": "Treasury",
-      "Name": "Unlit Treasury"
+      "Name": "Forgotten Vault"
     },
     {
       "Index": 9,
       "Role": "Treasury",
-      "Name": "Whispering Reliquary"
+      "Name": "Lever Locked Cell"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Gallows Company",
-      "FactionId": "bandits",
+      "Id": "vault_guard_0",
+      "Name": "Vault Wraith",
+      "FactionId": "abyss_chorus",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.bandit_chief",
+          "EnemyId": "enemy.void_caller",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 2,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 8,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "group1",
-      "Name": "Endless Circle",
-      "FactionId": "faction3",
+      "Id": "vault_guard_1",
+      "Name": "Lever Protector",
+      "FactionId": "abyss_chorus",
       "Members": [
         {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 3
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 9,
+        "Objective": {
+          "Kind": "Lever",
+          "Ref": "1"
         },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "stairs_guard",
+      "Name": "Stair Sentinel",
+      "FactionId": "abyss_chorus",
+      "Members": [
         {
           "EnemyId": "enemy.void_stalker",
           "Count": 1
         }
       ],
       "Goal": {
+        "Kind": "Defend",
+        "Room": 3,
+        "Objective": {
+          "Kind": "Stairs",
+          "Ref": "down"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "patrol_void",
+      "Name": "Abyssal Patrol",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
         "Kind": "Patrol",
-        "Room": 0,
+        "Room": 5,
         "Objective": null,
         "Route": [
-          0,
-          7
+          5,
+          4
         ],
         "AlarmTarget": null,
         "RallyRoom": null
       }
+    },
+    {
+      "Id": "alarm_wing",
+      "Name": "Choir Sentries",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "stairs_guard",
+        "RallyRoom": null
+      }
     }
   ],
-  "Loners": [],
+  "Loners": [
+    {
+      "EnemyId": "enemy.void_caller",
+      "Room": 4
+    },
+    {
+      "EnemyId": "enemy.abyss_archer",
+      "Room": 2
+    }
+  ],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Rot",
-      "Room": 2,
+      "Id": "horde_ossuary",
+      "Name": "The Ossuary Tide",
+      "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 27
+          "Count": 20
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 17
+          "Count": 5
         },
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 49,
-      "Trigger": "Enter",
+      "Total": 26,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The chest lid crashes open, and from the ossuary walls pour a tide of shades, their wails mixing with the wind.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Gnawing",
+      "Id": "horde_gallery",
+      "Name": "The Scorched Swarm",
       "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 33
+          "Count": 30
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 58,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Scurry",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 29
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 4
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 53,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Welter",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 31
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 8
         },
         {
           "EnemyId": "enemy.void_stalker",
@@ -246,48 +231,63 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 56,
-      "Trigger": "Chest",
+      "Total": 40,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The gallery erupts as fire and shadow mix, shades boiling from the floor like smoke from a fresh pyre.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde5",
-      "Name": "The Gnawing",
+      "Id": "horde_choir",
+      "Name": "The Mourning Chorus",
       "Room": 7,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 27
+          "Count": 25
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 17
+          "Count": 7
         },
         {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.void_caller",
+          "EnemyId": "enemy.abyss_archer",
           "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 49,
-      "Trigger": "Chest",
+      "Total": 34,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "A discordant chant fills the hollow, and the shadows themselves rise to sing their mournful attack.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 5,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 7,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
+    {
+      "Room": 1,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 4,
+      "Kind": "Gas"
+    },
     {
       "Room": 6,
       "Kind": "Fire"
@@ -295,130 +295,231 @@
   ],
   "Npcs": [
     {
-      "Id": "npc1",
-      "Name": "The Pale Pilgrim",
-      "Room": 6,
-      "VoiceId": "Aoede",
+      "Id": "captain_voss_ally",
+      "Name": "Captain Voss",
+      "Room": 2,
+      "VoiceId": "Umbriel",
       "Script": {
-        "Start": "greet",
+        "Start": "offer",
         "Nodes": [
-          {
-            "Id": "greet",
-            "Line": {
-              "Text": "You... you are alive. Thank the depths. Do not come closer with that torch, my eyes are not used to it.",
-              "VoiceId": "a367b4f0524f3c87"
-            },
-            "Choices": [
-              {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
           {
             "Id": "offer",
             "Line": {
-              "Text": "They know I am here. The Gallows Company come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-              "VoiceId": "2a5604491486685a"
+              "Text": "You\u0027re still breathing. Good. There\u0027s a knot of void-callers guarding the way down. Help me rip them apart, and I\u0027ll cut you in on the spoils.",
+              "VoiceId": "e5a24e9ed17dd806"
             },
             "Choices": [
               {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
+                "Text": "What do you get out of this?",
+                "Next": "catch",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               },
               {
-                "Text": "Not now.",
+                "Text": "We\u0027ll handle it.",
                 "Next": null,
-                "Effect": "DeclineQuest"
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "On your own, Voss.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "done_voss_kill_stairs",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               }
             ]
           },
           {
-            "Id": "accepted",
+            "Id": "catch",
             "Line": {
-              "Text": "Then here they come. Do not let them reach me.",
-              "VoiceId": "f3fdde1479168b15"
+              "Text": "I\u0027ve got my eye on something in the vaults, but I can\u0027t get near it with those shrieking bastards on patrol. You clear the stairs, I\u0027ll do the rest.",
+              "VoiceId": "48c2fa6d4007f12d"
+            },
+            "Choices": [
+              {
+                "Text": "Fine, we\u0027ll kill them.",
+                "Next": null,
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "No deal. Find another fool.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done_voss_kill_stairs",
+            "Line": {
+              "Text": "Not bad at all. Here\u0027s your cut. Don\u0027t spend it all in one place.",
+              "VoiceId": "8bd941e8e06987a4"
             },
             "Choices": [
               {
                 "Text": "Farewell.",
                 "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-              "VoiceId": "2d54b9bf0167a0d3"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest1"
+      "QuestId": "voss_kill_stairs",
+      "CastId": null,
+      "RequiresFlag": "shared_quest",
+      "ForbidsFlag": null,
+      "Betrayal": null
+    },
+    {
+      "Id": "captain_voss_foe",
+      "Name": "Captain Voss",
+      "Room": 2,
+      "VoiceId": "Umbriel",
+      "Script": {
+        "Start": "confront",
+        "Nodes": [
+          {
+            "Id": "confront",
+            "Line": {
+              "Text": "Thought you\u0027d seen the last of me? This time, there\u0027s no negotiating. I\u0027m taking your haul and your heads.",
+              "VoiceId": "dbc05238bcd472f4"
+            },
+            "Choices": [
+              {
+                "Text": "Then come and claim them.",
+                "Next": null,
+                "Effect": "Betray",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "voss_betrayal",
+      "CastId": null,
+      "RequiresFlag": "drove_off_voss",
+      "ForbidsFlag": null,
+      "Betrayal": {
+        "EnemyId": "enemy.void_stalker",
+        "Count": 2
+      }
     }
   ],
   "Quests": [
     {
-      "Id": "quest1",
-      "Template": "HoldOut",
-      "Title": "Hold the Line",
-      "Objective": "Stand with The Pale Pilgrim against two waves of the Gallows Company.",
+      "Id": "voss_kill_stairs",
+      "Template": "KillTarget",
+      "Title": "Voss\u0027s Price",
+      "Objective": "Eliminate the void-callers guarding the exit stairs.",
+      "Params": {
+        "TargetCollective": "stairs_guard",
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "captain_voss_ally",
+      "Reward": {
+        "Xp": 600,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "I\u0027ll point you at the guards. You do the killing, I\u0027ll handle the vaults. Deal?",
+          "VoiceId": null
+        },
+        "Accept": {
+          "Text": "That\u0027s the spirit. I\u0027ll be right behind you.",
+          "VoiceId": null
+        },
+        "Decline": {
+          "Text": "Suit yourself. I\u0027ll find someone else.",
+          "VoiceId": null
+        },
+        "Complete": {
+          "Text": "Not bad at all. Here\u0027s your cut. Don\u0027t spend it all in one place.",
+          "VoiceId": null
+        },
+        "Fail": {
+          "Text": "You let them slip away? Pathetic. I should have done it myself.",
+          "VoiceId": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Id": "voss_betrayal",
+      "Template": "Betrayal",
+      "Title": "Voss\u0027s Revenge",
+      "Objective": "Survive Voss\u0027s ambush.",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
         "ItemRoom": null,
         "EscortNpc": null,
-        "Waves": 2,
-        "WaveCollective": "band1"
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
       },
-      "GiverNpc": "npc1",
+      "GiverNpc": "captain_voss_foe",
       "Reward": {
-        "Xp": 780,
+        "Xp": 500,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "They know I am here. The Gallows Company come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-          "VoiceId": "2a5604491486685a"
+          "Text": "Voss sneers. \u0027You should have shared the spoils on the forge floor. Now I\u0027ll take everything.\u0027",
+          "VoiceId": null
         },
         "Accept": {
-          "Text": "Then here they come. Do not let them reach me.",
-          "VoiceId": "f3fdde1479168b15"
+          "Text": "He lunges at you, his crew materializing from the shadows.",
+          "VoiceId": null
         },
         "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "f15eeed9a2164490"
+          "Text": "",
+          "VoiceId": null
         },
         "Complete": {
-          "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-          "VoiceId": "2d54b9bf0167a0d3"
+          "Text": "Voss\u0027s body dissolves into the abyss, his ambition finally ended.",
+          "VoiceId": null
         },
         "Fail": {
-          "Text": "You left me. I will not forget that.",
-          "VoiceId": "9fd3c65b304e3ccc"
+          "Text": "Voss cackles as he vanishes into the shadows, leaving you bruised and poorer.",
+          "VoiceId": null
         }
-      }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
   "Narration": [
@@ -426,10 +527,32 @@
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "The Abyss swallows your torchlight. Something here has been waiting.",
-        "VoiceId": "24a7261b30c878db"
-      }
+        "Text": "The bitter wind howls through the shattered palace, carrying the scent of old embers and regret. A familiar silhouette waits in the ruins ahead.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 2,
+      "Line": {
+        "Text": "Captain Voss lounges against a broken pillar, spinning a coin between his fingers. He grins when he sees you.",
+        "VoiceId": "2e90fc10b3d762ea"
+      },
+      "RequiresFlag": "shared_quest",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 2,
+      "Line": {
+        "Text": "Captain Voss stands in the centre of the ruined hall, his hand on his sword. The air around him is cold with betrayal.",
+        "VoiceId": "61567489afb8541a"
+      },
+      "RequiresFlag": "drove_off_voss",
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 9
+  "EnemyTotal": 10
 }

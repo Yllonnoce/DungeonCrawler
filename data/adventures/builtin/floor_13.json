@@ -1,266 +1,178 @@
 {
   "SchemaVersion": 1,
   "Floor": 13,
-  "Source": "fake",
-  "LayoutHash": 14039280485212330411,
-  "Title": "Soot-Black Watch",
+  "Source": "claude",
+  "LayoutHash": 8197366883069942980,
+  "Title": "The Sealed Letter",
   "IntroLine": {
-    "Text": "The Forge swallows your torchlight. Something here has been waiting.",
-    "VoiceId": "82a195dba51c4ee1"
+    "Text": "The forge\u0027s heat pulses through these cramped passages, and the air carries a bitter tang of regret. Somewhere nearby, a sealed study waits.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Kennel",
-      "Name": "Brazen Warren"
+      "Role": "Passage",
+      "Name": "Charred Corridor"
     },
     {
       "Index": 1,
-      "Role": "Gate",
-      "Name": "Soot-Black Watch"
+      "Role": "Treasury",
+      "Name": "The Warden\u0027s Sealed Study"
     },
     {
       "Index": 2,
-      "Role": "Hall",
-      "Name": "Ringing Hall"
+      "Role": "Barracks",
+      "Name": "Ironkeeper Barracks"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Molten Walk"
+      "Role": "Lair",
+      "Name": "Soot-Stained Hatchery"
     },
     {
       "Index": 4,
-      "Role": "Treasury",
-      "Name": "Rusted Hoard"
+      "Role": "Start",
+      "Name": "Ashen Landing"
     },
     {
       "Index": 5,
       "Role": "Exit",
-      "Name": "Smoldering Stairwell"
+      "Name": "Grief-Choked Stairwell"
     },
     {
       "Index": 6,
-      "Role": "Ruin",
-      "Name": "Molten Wreck"
+      "Role": "Shrine",
+      "Name": "Altar of Ashes"
     },
     {
       "Index": 7,
-      "Role": "Camp",
-      "Name": "Brazen Squat"
-    },
-    {
-      "Index": 8,
-      "Role": "Start",
-      "Name": "Smoldering Landing"
+      "Role": "Lair",
+      "Name": "Submerged Brood Chamber"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Red Hoods",
-      "FactionId": "bandits",
+      "Id": "defend_study",
+      "Name": "Study Guardians",
+      "FactionId": "forge_keepers",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.bandit_chief",
-          "Count": 1
+          "EnemyId": "enemy.forge_golem",
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 7,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 1,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "group1",
-      "Name": "Molten Forge-Guard",
-      "FactionId": "faction2",
+      "Id": "patrol_shrine",
+      "Name": "Shrine Patrol",
+      "FactionId": "forge_keepers",
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 2
+          "Count": 1
         },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 6,
+        "Objective": null,
+        "Route": [
+          6,
+          5,
+          7,
+          3,
+          0,
+          6
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "alarm_watch",
+      "Name": "Watchdog",
+      "FactionId": "forge_keepers",
+      "Members": [
         {
           "EnemyId": "enemy.ember_hound",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
-        "Room": 1,
+        "Kind": "Alarm",
+        "Room": 6,
         "Objective": null,
-        "Route": [
-          1,
-          3,
-          0
-        ],
-        "AlarmTarget": null,
+        "Route": [],
+        "AlarmTarget": "defend_study",
         "RallyRoom": null
       }
     }
   ],
-  "Loners": [],
+  "Loners": [
+    {
+      "EnemyId": "enemy.forge_golem",
+      "Room": 0
+    },
+    {
+      "EnemyId": "enemy.ember_hound",
+      "Room": 2
+    }
+  ],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Seethe",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 22
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 13
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 38,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde2",
-      "Name": "The Boil",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 22
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 14
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 39,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Tide",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 24
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 14
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 41,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Scurry",
+      "Id": "horde_hatchery",
+      "Name": "Cinder Swarm",
       "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 22
+          "Count": 15
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 13
+          "Count": 3
         },
         {
           "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 38,
+      "Total": 19,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The nest erupts: a tide of cinder imps shrieking, driven by a hulking ember ogre and a forge golem.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde5",
-      "Name": "The Welter",
-      "Room": 6,
+      "Id": "horde_brood",
+      "Name": "Waterlogged Brood",
+      "Room": 7,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 21
+          "Count": 10
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 13
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 4
         },
         {
           "EnemyId": "enemy.ember_hound",
@@ -269,10 +181,10 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 37,
-      "Trigger": "Enter",
+      "Total": 15,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "You pull the chest open, and the pond boils\u2014embers and brine rise in a churning wave of claws and fangs.",
         "VoiceId": null
       }
     }
@@ -287,146 +199,30 @@
   ],
   "Traps": [
     {
+      "Room": 2,
+      "Kind": "Spikes"
+    },
+    {
       "Room": 0,
       "Kind": "Gas"
-    }
-  ],
-  "Npcs": [
+    },
     {
-      "Id": "npc1",
-      "Name": "Ilse the Smith",
-      "Room": 2,
-      "VoiceId": "Leda",
-      "Script": {
-        "Start": "greet",
-        "Nodes": [
-          {
-            "Id": "greet",
-            "Line": {
-              "Text": "You... you are alive. Thank the depths. Do not come closer with that torch, my eyes are not used to it.",
-              "VoiceId": "9410d6695031bb70"
-            },
-            "Choices": [
-              {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "offer",
-            "Line": {
-              "Text": "They know I am here. The Red Hoods come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-              "VoiceId": "80eb37a33f36420d"
-            },
-            "Choices": [
-              {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
-              },
-              {
-                "Text": "Not now.",
-                "Next": null,
-                "Effect": "DeclineQuest"
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "Then here they come. Do not let them reach me.",
-              "VoiceId": "54c82af0e9db163d"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-              "VoiceId": "1b811a38678b7d0a"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest1"
+      "Room": 6,
+      "Kind": "Fire"
     }
   ],
-  "Quests": [
-    {
-      "Id": "quest1",
-      "Template": "HoldOut",
-      "Title": "Hold the Line",
-      "Objective": "Stand with Ilse the Smith against two waves of the Red Hoods.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": 2,
-        "WaveCollective": "band1"
-      },
-      "GiverNpc": "npc1",
-      "Reward": {
-        "Xp": 580,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "They know I am here. The Red Hoods come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-          "VoiceId": "80eb37a33f36420d"
-        },
-        "Accept": {
-          "Text": "Then here they come. Do not let them reach me.",
-          "VoiceId": "54c82af0e9db163d"
-        },
-        "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "7e360bc52d225601"
-        },
-        "Complete": {
-          "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-          "VoiceId": "1b811a38678b7d0a"
-        },
-        "Fail": {
-          "Text": "You left me. I will not forget that.",
-          "VoiceId": "4c6ae15c42755f38"
-        }
-      }
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "The Forge swallows your torchlight. Something here has been waiting.",
-        "VoiceId": "82a195dba51c4ee1"
-      }
+        "Text": "The forge\u0027s heat pulses through these cramped passages, and the air carries a bitter tang of regret. Somewhere nearby, a sealed study waits.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
   "EnemyTotal": 8

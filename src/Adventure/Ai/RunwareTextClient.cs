@@ -15,6 +15,10 @@ namespace DungeonCrawler.Adventure.AiClients;
 public sealed class RunwareTextClient : IClaudeClient
 {
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(10) };
+    /// <summary>The chat endpoint answers in one synchronous reply, so a long plan needs a long wait.</summary>
+    private static readonly HttpClient ChatHttp = new() { Timeout = TimeSpan.FromMinutes(25) };
+    /// <summary>Models the task endpoint refused with invalidModel this session: they go straight to the chat endpoint from then on.</summary>
+    public static readonly HashSet<string> ChatOnlyModels = new(StringComparer.OrdinalIgnoreCase);
     private readonly string _key;
     /// <summary>Set after a model rejected thinkingLevel; later calls leave it out.</summary>
     private bool _noThinking;
@@ -34,16 +38,29 @@ public sealed class RunwareTextClient : IClaudeClient
     {
         try
         {
+            if (ChatOnlyModels.Contains(RunwareWire.ToAir(request.Model))) return await CreateChatAsync(request, ct);
+            Log?.Invoke($"{request.Kind}: asking Runware's task endpoint for {RunwareWire.ToAir(request.Model)}");
             var response = await CreateOnceAsync(request, !_noThinking, ct);
+            if (response.Error != null) Log?.Invoke($"{request.Kind}: task endpoint answered: {response.Error}");
             if (response.Error != null && !_noThinking && response.Error.Contains("thinking", StringComparison.OrdinalIgnoreCase))
             {
                 _noThinking = true;
                 response = await CreateOnceAsync(request, thinking: false, ct);
+                if (response.Error != null) Log?.Invoke($"{request.Kind}: without thinkingLevel the task endpoint answered: {response.Error}");
             }
             if (response.Error != null && !_syncOnly && response.Error.Contains("deliveryMethod", StringComparison.OrdinalIgnoreCase))
             {
                 _syncOnly = true;
                 response = await CreateOnceAsync(request, !_noThinking, ct);
+                if (response.Error != null) Log?.Invoke($"{request.Kind}: synchronously the task endpoint answered: {response.Error}");
+            }
+            // last, since a model the task endpoint does not know may first complain about the thinking level: the
+            // task endpoint routes fewer models than the catalogue, the chat endpoint takes them all
+            if (response.Error != null && response.Error.Contains("invalidModel", StringComparison.OrdinalIgnoreCase))
+            {
+                ChatOnlyModels.Add(RunwareWire.ToAir(request.Model));
+                Log?.Invoke($"{request.Kind}: Runware's task endpoint does not route {RunwareWire.ToAir(request.Model)}; using its chat endpoint instead");
+                return await CreateChatAsync(request, ct);
             }
             return response;
         }
@@ -91,6 +108,21 @@ public sealed class RunwareTextClient : IClaudeClient
         return ClaudeResponse.Failed($"no result from Runware after {PollTimeout.TotalMinutes:0} minutes of polling ({request.Kind})");
     }
 
+    /// <summary>The same request through the OpenAI-compatible endpoint, one synchronous reply, priced from the catalogue.</summary>
+    private async Task<ClaudeResponse> CreateChatAsync(ClaudeRequest request, CancellationToken ct)
+    {
+        LastPolls = 0;
+        using var req = new HttpRequestMessage(HttpMethod.Post, RunwareWire.ChatEndpoint);
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _key);
+        req.Content = new StringContent(RunwareWire.ChatRequestJson(request), Encoding.UTF8, "application/json");
+        using var res = await ChatHttp.SendAsync(req, ct);
+        var body = await res.Content.ReadAsStringAsync(ct);
+        LastStatus = (int)res.StatusCode;
+        if (!res.IsSuccessStatusCode)
+            return ClaudeResponse.Failed($"{RunwareWire.DescribeStatus(LastStatus)}: {RunwareWire.ErrorOf(body) ?? body[..Math.Min(200, body.Length)]}");
+        return RunwareWire.ParseChatResponse(body, RunwareCatalog.PriceFor(request.Model));
+    }
+
     private async Task<(int Status, string Body)> PostAsync(string json, CancellationToken ct)
     {
         using var req = new HttpRequestMessage(HttpMethod.Post, RunwareWire.Endpoint);
@@ -113,6 +145,21 @@ public sealed class RunwareTextClient : IClaudeClient
             return RunwareWire.ParseModelList(body);
         }
         catch (Exception e) { return (new List<string>(), e.Message); }
+    }
+
+    /// <summary>The text models this key may use with their prices, dearest first; empty with an error text when the list cannot be fetched.</summary>
+    public static async Task<(List<RunwareTextModel> Models, string? Error)> ListTextCatalogueAsync(string key, CancellationToken ct)
+    {
+        try
+        {
+            using var req = new HttpRequestMessage(HttpMethod.Get, RunwareWire.ModelsEndpoint);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", key);
+            using var res = await Http.SendAsync(req, ct);
+            var body = await res.Content.ReadAsStringAsync(ct);
+            if (!res.IsSuccessStatusCode) return (new List<RunwareTextModel>(), $"{RunwareWire.DescribeStatus((int)res.StatusCode)}: {RunwareWire.ErrorOf(body) ?? body[..Math.Min(200, body.Length)]}");
+            return RunwareWire.ParseModelCatalogue(body);
+        }
+        catch (Exception e) { return (new List<RunwareTextModel>(), e.Message); }
     }
 
     /// <summary>Check a key without running a model: the account balance, or an error text.</summary>

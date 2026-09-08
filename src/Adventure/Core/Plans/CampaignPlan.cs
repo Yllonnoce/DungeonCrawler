@@ -116,6 +116,8 @@ public sealed class FloorOutline
     public string Story { get; set; } = "";
     [AiDescription("The floor's look: one of the theme ids listed for its tier, or null for the game's own pick.")]
     [AiNotNull] public string? Theme { get; set; }
+    [AiDescription("The floor's shape: one of the layout ids listed (standard, labyrinth, ring, mine, flooded, burning), or null for the game's own deal. Boss floors take standard, ring, flooded or burning only.")]
+    [AiNotNull] public string? Layout { get; set; }
     public SpecOverrides SpecOverrides { get; set; } = new();
 }
 

@@ -1,98 +1,88 @@
 {
   "SchemaVersion": 1,
   "Floor": 11,
-  "Source": "fake",
-  "LayoutHash": 12125810455763376344,
-  "Title": "Ringing Chamber",
+  "Source": "claude",
+  "LayoutHash": 14869084282038085758,
+  "Title": "The Anvil Hall",
   "IntroLine": {
-    "Text": "Cold air rises from the Forge. Whatever guards the Soot-Black Reliquary does not sleep.",
-    "VoiceId": "2f7f0de1b274ab1c"
+    "Text": "Hot breath and soot coat every surface. The kilns of the old forge are still alive, and a low voice seems to ride the crackling air\u2014the Mourner grows louder with every step.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Kennel",
-      "Name": "Brazen Den"
+      "Role": "Start",
+      "Name": "Scorched Ascent"
     },
     {
       "Index": 1,
-      "Role": "Ruin",
-      "Name": "Brazen Ruin"
+      "Role": "Passage",
+      "Name": "Charred Niche"
     },
     {
       "Index": 2,
-      "Role": "Hall",
-      "Name": "Smoldering Nave"
+      "Role": "Lair",
+      "Name": "Cinder Warren"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Rusted Chamber"
+      "Role": "Camp",
+      "Name": "Scavengers\u0027 Den"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Brazen Landing"
+      "Role": "Hall",
+      "Name": "The Anvil Hall"
     },
     {
       "Index": 5,
-      "Role": "Gate",
-      "Name": "Iron Bastion"
+      "Role": "Lair",
+      "Name": "Kiln Mouth"
     },
     {
       "Index": 6,
-      "Role": "Exit",
-      "Name": "Ringing Stairwell"
+      "Role": "Lair",
+      "Name": "Ash Pit"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "Ringing Chamber"
+      "Role": "Exit",
+      "Name": "The Descent\u0027s Maw"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "Soot-Black Chamber"
+      "Role": "Passage",
+      "Name": "Furnace Approach"
     },
     {
       "Index": 9,
-      "Role": "Camp",
-      "Name": "Rusted Camp"
+      "Role": "Lair",
+      "Name": "Flame Gallery"
     },
     {
       "Index": 10,
-      "Role": "Passage",
-      "Name": "Molten Walk"
-    },
-    {
-      "Index": 11,
-      "Role": "Hall",
-      "Name": "Soot-Black Hall"
-    },
-    {
-      "Index": 12,
       "Role": "Treasury",
-      "Name": "Soot-Black Reliquary"
+      "Name": "Iron Vault"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Gallows Company",
-      "FactionId": "bandits",
+      "Id": "camp_scavengers",
+      "Name": "Camp Scavengers",
+      "FactionId": null,
       "Members": [
+        {
+          "EnemyId": "enemy.bandit_chief",
+          "Count": 1
+        },
         {
           "EnemyId": "enemy.bandit",
           "Count": 2
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 9,
+        "Room": 3,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
@@ -100,28 +90,47 @@
       }
     },
     {
-      "Id": "group1",
-      "Name": "Soot-Black Foundry",
-      "FactionId": "faction2",
+      "Id": "vault_wardens",
+      "Name": "Vault Wardens",
+      "FactionId": "forge_keepers",
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.ember_hound",
+          "EnemyId": "enemy.forge_priest",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 7,
+        "Room": 10,
         "Objective": {
-          "Kind": "Chest",
-          "Ref": "4"
+          "Kind": "Door",
+          "Ref": "0"
         },
         "Route": [],
         "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "flame_sentries",
+      "Name": "Flame Sentries",
+      "FactionId": "forge_keepers",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 9,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "vault_wardens",
         "RallyRoom": null
       }
     }
@@ -129,337 +138,129 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Seethe",
-      "Room": 1,
+      "Id": "cinder_swarm",
+      "Name": "Cinder Swarm",
+      "Room": 2,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 20
+          "Count": 15
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 34,
+      "Total": 18,
       "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The walls of the Cinder Warren split with a hiss, and a tide of chittering imps pours out, the air filling with glowing embers.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Gnawing",
-      "Room": 8,
+      "Id": "kiln_hoppers",
+      "Name": "Kiln Hoppers",
+      "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 19
+          "Count": 12
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 11
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.forge_priest",
+          "EnemyId": "enemy.ember_hound",
           "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 32,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Scurry",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 13
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 36,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Gnawing",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 11
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 32,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Tide",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 33,
+      "Total": 16,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "As the chest lid groans open, the kiln vents blast, and a brood of cinder-imps erupts in a wave of sparks.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde6",
-      "Name": "The Spill",
-      "Room": 11,
+      "Id": "smolder_brood",
+      "Name": "Smolder Brood",
+      "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 20
+          "Count": 18
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 34,
-      "Trigger": "Enter",
+      "Total": 20,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The dust shifts, and from the cracks beneath the ash, more of the smoldering brood surge to defend their clutch.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 1,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 4,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 3,
+      "Room": 2,
       "Kind": "Spikes"
     },
     {
       "Room": 5,
-      "Kind": "Spikes"
-    }
-  ],
-  "Npcs": [
+      "Kind": "Fire"
+    },
     {
-      "Id": "npc1",
-      "Name": "Vesna Ashe",
       "Room": 8,
-      "VoiceId": "Puck",
-      "Script": {
-        "Start": "greet",
-        "Nodes": [
-          {
-            "Id": "greet",
-            "Line": {
-              "Text": "Hush. They do not know I am here. If you can help me, I can help you.",
-              "VoiceId": "95d78339c8243ecd"
-            },
-            "Choices": [
-              {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "offer",
-            "Line": {
-              "Text": "They know I am here. The Gallows Company come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-              "VoiceId": "f780afb5bf53a6a4"
-            },
-            "Choices": [
-              {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
-              },
-              {
-                "Text": "Not now.",
-                "Next": null,
-                "Effect": "DeclineQuest"
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "Then here they come. Do not let them reach me.",
-              "VoiceId": "856a0eb89add4011"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-              "VoiceId": "41b120dbcc16af1f"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest1"
+      "Kind": "Gas"
     }
   ],
-  "Quests": [
-    {
-      "Id": "quest1",
-      "Template": "HoldOut",
-      "Title": "Hold the Line",
-      "Objective": "Stand with Vesna Ashe against two waves of the Gallows Company.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": 2,
-        "WaveCollective": "band1"
-      },
-      "GiverNpc": "npc1",
-      "Reward": {
-        "Xp": 500,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "They know I am here. The Gallows Company come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-          "VoiceId": "f780afb5bf53a6a4"
-        },
-        "Accept": {
-          "Text": "Then here they come. Do not let them reach me.",
-          "VoiceId": "856a0eb89add4011"
-        },
-        "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "69e9ba07352c697c"
-        },
-        "Complete": {
-          "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-          "VoiceId": "41b120dbcc16af1f"
-        },
-        "Fail": {
-          "Text": "You left me. I will not forget that.",
-          "VoiceId": "ab0cb1e235c60c0d"
-        }
-      }
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "Cold air rises from the Forge. Whatever guards the Soot-Black Reliquary does not sleep.",
-        "VoiceId": "2f7f0de1b274ab1c"
-      }
+        "Text": "The heat is staggering here, the air warped by kiln mouths that never sleep. The Mourner\u0027s voice seems to ride the roar of the flames\u2014a low, insistent murmur just behind the clang of iron.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 4,
+      "Line": {
+        "Text": "The Anvil Hall is where the forge\u0027s heart still beats. Molten light dances on the walls, and somewhere in the roar you almost hear words\u2014a promise, or a threat.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 5
+  "EnemyTotal": 7
 }

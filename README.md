@@ -31,6 +31,19 @@ the planner is shown each tier's theme ids and descriptions and can set `Floors[
 set into `assets/textures/<id>/` (`scripts/fetch_polyhaven.py <id>` downloads a CC0 texture set and `scripts/fetch_polyhaven_model.py <id>` a glTF
 model from Poly Haven, then run the import) and writing a `.tres`; `--theme=ID` forces every floor to it for screenshots.
 
+**Floor shapes.** Besides its look, every floor has a shape (`LayoutKind`, `src/Dungeon/Generation/LayoutKinds.cs`):
+*standard* rooms and corridors; *labyrinth*, a maze of one-cell passages with small chambers set into it (flat, most
+dead ends pruned, a few loops); *ring*, a great rotunda in the middle (the arena on a boss floor) with rooms around it
+on a ring corridor and spokes leading in; *mine*, narrow timbered galleries with dead-end drifts dug into the rock,
+shafts to cellars and heaps of spoil; *flooded*, most rooms under knee-deep water; and *burning*, fires scattered over
+the room floors that burn whoever stands in them (bodies path around them, the party may wade through) under a hot,
+smoky sky. The run seed deals the twenty shapes so that floor 1 is ordinary, every shape turns up at least once, no two
+floors in a row share one, and boss floors keep to standard, ring, flooded or burning; each tier favours the shapes
+that suit it (crypts wind, caves flood and are mined, forges burn). The campaign outline may name one per floor
+(`Floors[].Layout`, listed to the planner with a line on each), and `--layout=KIND` forces every floor to one shape.
+Everything after room placement (vaults, verticality, structures, water, rubble, nests, spawns, traps) runs unchanged
+on any shape, and the ordinary floor hashes exactly as before, so shipped plans still fit.
+
 **Stairs you climb.** The up-stairs are a real flight: seven stone treads between brick parapets rising to a landing
 2 m up against the back wall; the down-stairs are a well sunk into the floor with the same flight descending to a
 landing 2 m below (the well replaces the cell's floor slab and plinth, so a level-1 room's stairs sink into its
@@ -132,7 +145,7 @@ Exports (templates in `~/.local/share/godot/export_templates/4.7.2.stable.mono`;
 godot --headless --path . --export-release "Linux" build/linux/DungeonCrawler.x86_64
 godot --headless --path . --export-release "Windows" build/windows/DungeonCrawler.exe
 godot --headless --path . --export-release "macOS" build/macos/DungeonCrawler.zip   # universal, ad-hoc signed, not notarized
-scripts/export_all.sh            # all three of the above after a Release build (add --server for the dedicated server bundles too)
+scripts/export_all.sh            # all three of the above after a Release build (add --server for the dedicated server bundles too); first copies your latest rebake (user://adventures/builtin and the voice lines it uses) into the project so the build plays it; --no-ship exports the repository's copy as it is, BAKE_DIR=... names another user data folder
 godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered screenshot (--open-map for the full map)
 ```
 
@@ -198,11 +211,20 @@ Practicalities learned baking with the real API: the plan schemas are large, so 
 
 New Game never plans anything: it plays the campaign on disk (your rebake under `user://adventures/builtin` if you
 made one, else the shipped `data/adventures/builtin`), or, with neither, a run the offline designer writes on the spot.
-A fresh AI-written run is the separate "New AI Campaign" entry, enabled when the selected planner has a key. Paste a
-Claude API key in Settings (it is stored in `user://keys.cfg` on this machine and only ever sent to
-`api.anthropic.com`) and New AI Campaign asks Claude Opus 5 for a twenty-floor campaign: title, synopsis, an antagonist,
-a faction and a story beat per tier, a mood and generator knobs per floor, plus the full plan for floor 1. A loading
-card shows the title and synopsis while that call runs. From then on each floor is written in the background while
+In Settings the Runware planner model and both Runware TTS models are drop-downs ordered dearest first: the planner
+list is fetched from Runware with your key (prices per million tokens; the shipped list of 2026-09-07 stands in until
+then, "Refresh the list from Runware" fetches again) and the TTS list is the models the game has voice banks for, with
+Runware's listed price per thousand characters. A model saved by hand that is not in the list shows as "(as typed)". That list is the one Runware's OpenAI-compatible
+chat endpoint serves, and Runware's own task endpoint (the planner's first choice, with async delivery for long plans)
+refuses a third of it with `invalidModel` (DeepSeek V4 Pro, Kimi, GLM 5.2+, GPT-5.1/5.6, Qwen, several Gemini
+Flash versions on 2026-09-07); the client then re-sends the request through the chat endpoint, remembers the model
+as chat-only for the session, and prices the reply from the catalogue since that endpoint reports no cost.
+
+The title screen has no way to plan a fresh run: a new AI-written campaign is only ever made from Settings ("Rebuild
+campaign with Claude/Runware"), which writes it to `user://adventures/builtin` so that New Game plays it from then on.
+Paste a Claude API key in Settings (it is stored in `user://keys.cfg` on this machine and only ever sent to
+`api.anthropic.com`) and the rebuild asks Claude Opus 5 for a twenty-floor campaign: title, synopsis, an antagonist,
+a faction and a story beat per tier, a mood, a shape and generator knobs per floor, plus the full plan for floor 1. From then on each floor is written in the background while
 you play the previous one (`AdventureDirector.Prefetch`); if you outrun it the game waits up to the "Wait for a floor
 plan" setting and then designs the floor offline. Every reply is structured JSON against a schema generated from the
 plan classes (`Adventure/Core/Ai/PlanSchemas.cs`), validated and repaired like an offline plan, and logged with its

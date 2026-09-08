@@ -1,49 +1,117 @@
 {
   "SchemaVersion": 1,
-  "Source": "fake",
-  "GameSeed": 20260905,
-  "Title": "The Pretend Descent",
-  "Synopsis": "A campaign written by a stand-in planner, for testing the flow without a key.",
+  "Source": "claude",
+  "GameSeed": 1147267151474572175,
+  "Title": "The Weight of Grief",
+  "Synopsis": "A grief-stricken warden walled himself in a forgotten crypt with the living and the dead. The party descends to retrieve a relic, but a rival captain dogs their steps and a sorrow-eating presence stirs below.",
   "Antagonist": {
-    "Name": "The Hollow King",
-    "Epithet": "who was buried twice",
+    "Name": "The Mourner",
+    "Epithet": "the Grief-Eater",
     "VoiceId": null
   },
   "NarratorVoiceId": "Charon",
+  "Cast": [
+    {
+      "Id": "cast_warden",
+      "Name": "Warden Hale",
+      "Role": "a grim jailer who let his prisoners starve and now longs for punishment",
+      "Secret": "He orchestrated the party\u0027s descent because he wants them to kill him and end the curse; comes out on floor 14.",
+      "VoiceId": null
+    },
+    {
+      "Id": "cast_rival",
+      "Name": "Captain Voss",
+      "Role": "leader of a rival crew who keeps losing; boastful but competent",
+      "Secret": "He was hired by the same patron for half the pay and is sabotaging the party; floor 10.",
+      "VoiceId": null
+    },
+    {
+      "Id": "cast_cartographer",
+      "Name": "Lunette",
+      "Role": "a cartographer mapping the wrong dungeon, convinced these are the old imperial baths",
+      "Secret": "She died mapping these halls a century ago and is a ghost; floor 7.",
+      "VoiceId": null
+    },
+    {
+      "Id": "cast_heir",
+      "Name": "Elowen",
+      "Role": "the dead warden\u0027s daughter, come to reclaim her father\u0027s honor",
+      "Secret": "She carries the relic the party seeks; floor 16.",
+      "VoiceId": null
+    },
+    {
+      "Id": "cast_scavenger",
+      "Name": "Thistle",
+      "Role": "a scavenger who trades in bones, always where someone died recently",
+      "Secret": "He secretly serves the Mourner, delivering sorrowful souls; floor 12 (not a story floor in this outline, but hinted).",
+      "VoiceId": null
+    },
+    {
+      "Id": "cast_prisoner",
+      "Name": "Garrick",
+      "Role": "a shackled prisoner who claims innocence",
+      "Secret": "He was the warden\u0027s torturer, and the ghosts know his face; floor 4.",
+      "VoiceId": null
+    }
+  ],
+  "Mystery": {
+    "Question": "What really happened in the crypt that sealed it for a century?",
+    "Truth": "Warden Hale locked the crypt during a plague outbreak, trapping both the sick and the healthy inside. The haunting is the accumulated grief of those left to die.",
+    "Clues": [
+      {
+        "Id": "clue1",
+        "Floor": 2,
+        "Text": "A torn quarantine order pinned to a chapel door, dated the year of the sealing. \u0027None shall leave. By order of Warden Hale.\u0027"
+      },
+      {
+        "Id": "clue2",
+        "Floor": 5,
+        "Text": "A child\u0027s rag doll with teeth marks, left in a corner of a cell. Its embroidered name reads \u0027Miri\u0027."
+      },
+      {
+        "Id": "clue3",
+        "Floor": 10,
+        "Text": "A supply ledger from the warden\u0027s office, the entries stopping abruptly mid-month, followed by a scrawled note: \u0027No more supplies. We are abandoned.\u0027"
+      },
+      {
+        "Id": "clue4",
+        "Floor": 13,
+        "Text": "A sealed letter of apology from Warden Hale to his daughter, unopened, the wax bearing the prison crest. \u0027Forgive me, Elowen.\u0027"
+      }
+    ],
+    "PayoffFloor": 15,
+    "Payoff": "The Mourner possesses the Iron Colossus and offers to end the haunting if the party feeds it Warden Hale\u0027s soul. The choice determines the final form of the antagonist."
+  },
   "Factions": [
     {
-      "Id": "faction0",
-      "Name": "Hollow Vigil",
+      "Id": "crypt_wardens",
+      "Name": "Hale\u0027s Remnants",
       "EnemyIds": [
         "enemy.ghoul",
-        "enemy.skeleton_archer",
-        "enemy.bone_priest"
+        "enemy.skeleton_archer"
       ]
     },
     {
-      "Id": "faction1",
-      "Name": "Cold Brood",
+      "Id": "cave_brood",
+      "Name": "Silken Brood",
       "EnemyIds": [
         "enemy.cave_spider",
-        "enemy.rock_thrower",
-        "enemy.cave_shaman"
+        "enemy.rock_thrower"
       ]
     },
     {
-      "Id": "faction2",
-      "Name": "Ringing Forge-Guard",
+      "Id": "forge_keepers",
+      "Name": "The Ironkeepers",
       "EnemyIds": [
         "enemy.forge_golem",
-        "enemy.ember_hound",
-        "enemy.forge_priest"
+        "enemy.ember_hound"
       ]
     },
     {
-      "Id": "faction3",
-      "Name": "Bleeding Hunters",
+      "Id": "abyss_chorus",
+      "Name": "Chorus of the Abyss",
       "EnemyIds": [
         "enemy.void_stalker",
-        "enemy.abyss_archer",
         "enemy.void_caller"
       ]
     }
@@ -51,55 +119,57 @@
   "Tiers": [
     {
       "Index": 0,
-      "Theme": "Crypt",
-      "Beat": "",
-      "BossName": "",
-      "BossSignature": null,
+      "Theme": "crypt.mossy",
+      "Beat": "The party descends into a forgotten catacomb, haunted by the warden\u0027s guilt and the first clues of the plague disaster.",
+      "BossName": "Crypt Lord, Hale\u0027s Echo",
+      "BossSignature": "Slam",
       "EnterLine": {
-        "Text": "",
-        "VoiceId": null
+        "Text": "The air cools to a damp chill, and the smell of old moss and regret seeps from the walls as you step into the crypt.",
+        "VoiceId": "99de634ef98f7abf"
       }
     },
     {
       "Index": 1,
-      "Theme": "Caves",
-      "Beat": "",
-      "BossName": "",
-      "BossSignature": null,
+      "Theme": "caves.lichen",
+      "Beat": "The caves beneath the crypt are overrun with spiders and scavengers, and the rival captain Voss makes his first appearance.",
+      "BossName": "The Broodmother",
+      "BossSignature": "Volley",
       "EnterLine": {
-        "Text": "",
-        "VoiceId": null
+        "Text": "Down into the earth, where the light goes green and the walls are crusted with glowing lichen. Something skitters in the dark.",
+        "VoiceId": "475f791002330182"
       }
     },
     {
       "Index": 2,
-      "Theme": "Forge",
-      "Beat": "",
-      "BossName": "",
-      "BossSignature": null,
+      "Theme": "forge.kiln",
+      "Beat": "The old forge still burns, guarded by the Ironkeepers. The Mourner\u0027s voice grows louder.",
+      "BossName": "The Iron Colossus",
+      "BossSignature": "Charge",
       "EnterLine": {
-        "Text": "",
-        "VoiceId": null
+        "Text": "The heat hits you like a wall. Kilns still glow, and the clang of iron echoes from ahead.",
+        "VoiceId": "355670d76bc031dc"
       }
     },
     {
       "Index": 3,
-      "Theme": "Abyss",
-      "Beat": "",
-      "BossName": "",
-      "BossSignature": null,
+      "Theme": "abyss.slate",
+      "Beat": "The abyss beneath everything, where sorrow congeals and the Mourner waits.",
+      "BossName": "Abyss Herald, Mouth of the Mourner",
+      "BossSignature": "Summon",
       "EnterLine": {
-        "Text": "",
-        "VoiceId": null
+        "Text": "The floor drops into a chasm of black stone. The air is heavy with unshed tears, and the silence is the loudest thing you\u0027ve heard.",
+        "VoiceId": "03c4df674b05aa09"
       }
     }
   ],
   "Floors": [
     {
       "Floor": 1,
-      "Title": "",
-      "Mood": "",
-      "Theme": "crypt.brick",
+      "Title": "The Bone Scavenger",
+      "Mood": "Damp and mossy, the smell of old grief.",
+      "Story": "Thistle, a bone scavenger, appears in the ruined chancel and asks the party to retrieve his lucky rib from a ghoul-nest.",
+      "Theme": null,
+      "Layout": "standard",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -119,9 +189,11 @@
     },
     {
       "Floor": 2,
-      "Title": "",
-      "Mood": "",
+      "Title": "The Cartographer\u0027s Map",
+      "Mood": "Cramped brick, the scent of old rot.",
+      "Story": "Lunette, a lost cartographer, asks the party to find torn quarantine pages she thinks are bathhouse maps.",
       "Theme": "crypt.brick",
+      "Layout": "labyrinth",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -141,9 +213,11 @@
     },
     {
       "Floor": 3,
-      "Title": "",
-      "Mood": "",
-      "Theme": "crypt.brick",
+      "Title": "Quiet Crypt",
+      "Mood": "Still and heavy.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "mine",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -163,9 +237,11 @@
     },
     {
       "Floor": 4,
-      "Title": "",
-      "Mood": "",
-      "Theme": "crypt.brick",
+      "Title": "The Prisoner\u0027s Plea",
+      "Mood": "Cells echo with clanking and whispers.",
+      "Story": "Garrick, a shackled prisoner, begs to be freed and escorted out. His true nature remains hidden.",
+      "Theme": "crypt.ossuary",
+      "Layout": "flooded",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -185,9 +261,11 @@
     },
     {
       "Floor": 5,
-      "Title": "",
-      "Mood": "",
-      "Theme": "crypt.brick",
+      "Title": "The Second Map",
+      "Mood": "Green-tinged gloom, lichen creeping.",
+      "Story": "Lunette returns, still convinced these are baths, and asks for more map fragments. A choice determines whether she learns the truth.",
+      "Theme": "crypt.mossy",
+      "Layout": "ring",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -207,9 +285,11 @@
     },
     {
       "Floor": 6,
-      "Title": "",
-      "Mood": "",
-      "Theme": "caves.sandstone",
+      "Title": "Silent Tunnels",
+      "Mood": "Damp and empty.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "standard",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -229,9 +309,11 @@
     },
     {
       "Floor": 7,
-      "Title": "",
-      "Mood": "",
-      "Theme": "caves.boulder",
+      "Title": "The Cartographer\u0027s Secret",
+      "Mood": "The lichen glow reveals something unsettling.",
+      "Story": "Lunette discovers she is dead. Her reaction depends on an earlier flag.",
+      "Theme": "caves.lichen",
+      "Layout": "burning",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -251,9 +333,11 @@
     },
     {
       "Floor": 8,
-      "Title": "",
-      "Mood": "",
-      "Theme": "caves.sandstone",
+      "Title": "Spider Trails",
+      "Mood": "Webs thick in the passages.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "labyrinth",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -273,9 +357,11 @@
     },
     {
       "Floor": 9,
-      "Title": "",
-      "Mood": "",
-      "Theme": "caves.sandstone",
+      "Title": "Deep Lair",
+      "Mood": "Dark and crawling.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "mine",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -295,9 +381,11 @@
     },
     {
       "Floor": 10,
-      "Title": "",
-      "Mood": "",
-      "Theme": "caves.sandstone",
+      "Title": "The Rival\u0027s Gambit",
+      "Mood": "Rust and rivalry in the forge\u0027s outskirts.",
+      "Story": "Captain Voss confronts the party, demanding a share of the loot. A choice determines their future relationship (sets flag shared_quest or drove_off_voss).",
+      "Theme": null,
+      "Layout": "ring",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -317,9 +405,11 @@
     },
     {
       "Floor": 11,
-      "Title": "",
-      "Mood": "",
-      "Theme": "forge.rust",
+      "Title": "Scorched Halls",
+      "Mood": "Hot breath and soot.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "burning",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -339,9 +429,11 @@
     },
     {
       "Floor": 12,
-      "Title": "",
-      "Mood": "",
-      "Theme": "forge.rust",
+      "Title": "Quiet Anvil",
+      "Mood": "The clang of metal in the distance.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "standard",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -361,9 +453,11 @@
     },
     {
       "Floor": 13,
-      "Title": "",
-      "Mood": "",
-      "Theme": "forge.kiln",
+      "Title": "The Sealed Letter",
+      "Mood": "A locked study, remorse in the air.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "labyrinth",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -383,9 +477,11 @@
     },
     {
       "Floor": 14,
-      "Title": "",
-      "Mood": "",
-      "Theme": "forge.iron",
+      "Title": "The Warden\u0027s Wish",
+      "Mood": "A cell with a view into the abyss.",
+      "Story": "Warden Hale reveals he orchestrated their descent and begs them to kill him. A Decide choice sets flag killed_hale or spared_hale.",
+      "Theme": "forge.plate",
+      "Layout": "standard",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -405,9 +501,11 @@
     },
     {
       "Floor": 15,
-      "Title": "",
-      "Mood": "",
-      "Theme": "forge.plate",
+      "Title": "The Mourner\u0027s Bargain",
+      "Mood": "Kiln heat and sorrow.",
+      "Story": "The Mourner speaks through the Iron Colossus, offering to end the haunting if the party feeds it Warden Hale\u0027s soul.",
+      "Theme": "forge.kiln",
+      "Layout": "ring",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -427,9 +525,11 @@
     },
     {
       "Floor": 16,
-      "Title": "",
-      "Mood": "",
+      "Title": "The Daughter\u0027s Relic",
+      "Mood": "Slate and whispers.",
+      "Story": "Elowen reveals she carries the relic. She will surrender it if the party promises to end her father\u0027s suffering (sets flag promised_el).",
       "Theme": "abyss.slate",
+      "Layout": "labyrinth",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -449,9 +549,11 @@
     },
     {
       "Floor": 17,
-      "Title": "",
-      "Mood": "",
-      "Theme": "abyss.palace",
+      "Title": "Cold Tiles",
+      "Mood": "Cyan lamps flicker.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "standard",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -471,9 +573,11 @@
     },
     {
       "Floor": 18,
-      "Title": "",
-      "Mood": "",
+      "Title": "The Final Rivalry",
+      "Mood": "Bitter wind.",
+      "Story": "Captain Voss returns, either as an ally or a final foe, depending on an earlier flag.",
       "Theme": "abyss.palace",
+      "Layout": "burning",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -493,9 +597,11 @@
     },
     {
       "Floor": 19,
-      "Title": "",
-      "Mood": "",
-      "Theme": "abyss.stone",
+      "Title": "Approach",
+      "Mood": "The void hums.",
+      "Story": "",
+      "Theme": null,
+      "Layout": "mine",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -515,9 +621,11 @@
     },
     {
       "Floor": 20,
-      "Title": "",
-      "Mood": "",
-      "Theme": "abyss.slate",
+      "Title": "The Grief-Eater",
+      "Mood": "Sorrow made flesh.",
+      "Story": "",
+      "Theme": "abyss.stone",
+      "Layout": "standard",
       "SpecOverrides": {
         "EnemyCount": null,
         "ChestCount": null,
@@ -543,169 +651,169 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Down.",
-            "VoiceId": "cc5cdd9eaf42504a"
+            "Text": "Another one down. They don\u0027t learn.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Stay down.",
-            "VoiceId": "ede591f4f6a1e8ac"
+            "Text": "Grief makes a poor shield.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "One less.",
-            "VoiceId": "dabc8efe8205b793"
+            "Text": "Rest now. You\u0027re free of this place.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "Agh!",
-            "VoiceId": "3b4c38ab97bf5bb1"
+            "Text": "A scratch. I\u0027ve had worse.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "That one landed.",
-            "VoiceId": "91b31b8c7eb1dd88"
+            "Text": "Pain\u0027s an old friend by now.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "I\u0027m bleeding.",
-            "VoiceId": "bfd5cd883ea6ca16"
+            "Text": "Is that all the sorrow you can wield?",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "This is worth carrying.",
-            "VoiceId": "f3f2bb23ba15630c"
+            "Text": "Supplies. Good. We\u0027ll need them.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Mine now.",
-            "VoiceId": "55d02a4df92a0923"
+            "Text": "Coin won\u0027t buy back what we lost.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Something useful.",
-            "VoiceId": "bfe3eed5f607317f"
+            "Text": "This place hoards its dead and its gold.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "I\u0027m getting the measure of this place.",
-            "VoiceId": "45e35e6cbc65b509"
+            "Text": "Each victory hardens the soul.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "Stronger. Good.",
-            "VoiceId": "02710cc01b27aae0"
+            "Text": "Stronger. If only strength sufficed.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "That felt like something clicked.",
-            "VoiceId": "b8488d0887c1fa0b"
+            "Text": "The weight grows heavier, but so do I.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "There. That\u0027s the one.",
-            "VoiceId": "45c8ddf0d98fc83e"
+            "Text": "So this is the heart of sorrow.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Steady. It\u0027s big.",
-            "VoiceId": "9343f02c91ca60fb"
+            "Text": "Big one. Let it mourn its last.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Everyone, on me.",
-            "VoiceId": "dd921116f30a84e8"
+            "Text": "I\u0027ve faced worse grief than this beast.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Brand here.",
-            "VoiceId": "110d3ba6896b1e7e"
+            "Text": "Get out of my head!",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "I have the lead.",
-            "VoiceId": "f82b4dc31ce1fe22"
+            "Text": "Their sorrow... it\u0027s so heavy.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Follow me.",
-            "VoiceId": "d87bc63b1c9c9ef5"
+            "Text": "I feel their loss. All of it.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "I can\u0027t...",
-            "VoiceId": "26d0a5a18a0c3762"
+            "Text": "Can\u0027t... hold it off...",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Get me up...",
-            "VoiceId": "fdd3d79dd4d17d71"
+            "Text": "The darkness pulls me down.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Not like this.",
-            "VoiceId": "dd1b6b60429d6069"
+            "Text": "Not... like this...",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Still here.",
-            "VoiceId": "ff5d895f538deb8c"
+            "Text": "Back from the brink. Again.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "I owe you one.",
-            "VoiceId": "bdccbf3f29e72042"
+            "Text": "Death declined. The work\u0027s not done.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Back on my feet.",
-            "VoiceId": "c1529993674a07fa"
+            "Text": "I thought I heard her calling. But no.",
+            "VoiceId": null
           }
         }
       ]
@@ -716,169 +824,169 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Down.",
-            "VoiceId": "90121daaf12501b3"
+            "Text": "Slipped right through their grief.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Stay down.",
-            "VoiceId": "3cb2cc6d5a1bd62c"
+            "Text": "Dead men tell no tales. Pity.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "One less.",
-            "VoiceId": "f3f2b35001d4ddac"
+            "Text": "A quick knife is a kindness here.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "Agh!",
-            "VoiceId": "f8c9c4805bc9a3d9"
+            "Text": "That\u0027ll leave a mark. Add it to the collection.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "That one landed.",
-            "VoiceId": "fb87d695fd4b92fc"
+            "Text": "Careful! This coat was expensive.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "I\u0027m bleeding.",
-            "VoiceId": "96a98961a896908f"
+            "Text": "Blood and sorrow. Same old song.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "This is worth carrying.",
-            "VoiceId": "d717bcc711d9fee3"
+            "Text": "Shiny. They won\u0027t miss it.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Mine now.",
-            "VoiceId": "de6ce7d10fa00e03"
+            "Text": "Treasured trinkets of the damned.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Something useful.",
-            "VoiceId": "5d7bab9739e6c7ba"
+            "Text": "I\u0027ll lighten this load. For their sake.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "I\u0027m getting the measure of this place.",
-            "VoiceId": "757f0646a76f26b9"
+            "Text": "Sharper now. Both blade and wit.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "Stronger. Good.",
-            "VoiceId": "80c79e444c5f00cf"
+            "Text": "A new trick. The dead won\u0027t see it coming.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "That felt like something clicked.",
-            "VoiceId": "236fba115849fd36"
+            "Text": "Practiced hands make short work of misery.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "There. That\u0027s the one.",
-            "VoiceId": "a9bd285f1f54be01"
+            "Text": "Well, that\u0027s a big unhappy thing.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Steady. It\u0027s big.",
-            "VoiceId": "010cbadfc7249d62"
+            "Text": "Looks like sorrow\u0027s captain. Let\u0027s mutiny.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Everyone, on me.",
-            "VoiceId": "9a36ec0a9a2a0309"
+            "Text": "Bigger they are, harder they mourn.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Sable here.",
-            "VoiceId": "0d4fdfe162167dfb"
+            "Text": "Hands... not mine. Get off!",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "I have the lead.",
-            "VoiceId": "13e36e533a5e0b43"
+            "Text": "Something\u0027s wearing me like a glove.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Follow me.",
-            "VoiceId": "cacc8c75610372e4"
+            "Text": "I see through their eyes now.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "I can\u0027t...",
-            "VoiceId": "634366ce6b836eaa"
+            "Text": "That\u0027s... a bit too close.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Get me up...",
-            "VoiceId": "b60cea8364a1a06d"
+            "Text": "No, I\u0027m not done haggling yet.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Not like this.",
-            "VoiceId": "dac85e4176f1dbe1"
+            "Text": "Down but not out... mostly down.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Still here.",
-            "VoiceId": "45f4058fd99635e2"
+            "Text": "Still breathing? Pity, I\u0027d hoped to haunt you.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "I owe you one.",
-            "VoiceId": "848d0ecfa74a6d55"
+            "Text": "Thanks. I\u0027ll return the favor, probably.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Back on my feet.",
-            "VoiceId": "cdda18ccc0465aa7"
+            "Text": "Back to the living. The dead were poor company.",
+            "VoiceId": null
           }
         }
       ]
@@ -889,169 +997,169 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Down.",
-            "VoiceId": "d8166b958d68eb82"
+            "Text": "One less sorrow in the dark.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Stay down.",
-            "VoiceId": "ba56e77df4b09cfc"
+            "Text": "Found their weakness. It was despair.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "One less.",
-            "VoiceId": "f99b418ef2bd81a2"
+            "Text": "The hunt ends. As all hunts do.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "Agh!",
-            "VoiceId": "8cfe125d59b14e41"
+            "Text": "A glancing blow. I\u0027ve tracked worse.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "That one landed.",
-            "VoiceId": "f0dbc92f5aac9c04"
+            "Text": "Flesh wound. Keep moving.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "I\u0027m bleeding.",
-            "VoiceId": "e44dcf653993109d"
+            "Text": "That one almost meant something.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "This is worth carrying.",
-            "VoiceId": "4e827e91f9647279"
+            "Text": "A hunter\u0027s prize. Waste not.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Mine now.",
-            "VoiceId": "7e0fc01b46883a49"
+            "Text": "Even the dead leave provisions.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Something useful.",
-            "VoiceId": "86c7fdafd3f3b436"
+            "Text": "Strange seeds in this soil.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "I\u0027m getting the measure of this place.",
-            "VoiceId": "7496bf76c3bd6ba4"
+            "Text": "My senses sharpen. The path grows clearer.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "Stronger. Good.",
-            "VoiceId": "4dc5947bcd519671"
+            "Text": "A hunter\u0027s stride. The quarry won\u0027t outrun me.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "That felt like something clicked.",
-            "VoiceId": "e882e1993f2f6be0"
+            "Text": "Grief has its own trail to follow.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "There. That\u0027s the one.",
-            "VoiceId": "665389f88f2d380f"
+            "Text": "The apex of this sad descent.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Steady. It\u0027s big.",
-            "VoiceId": "b3c8a9cbab3e5a0f"
+            "Text": "That one\u0027s sorrow will flood the room.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Everyone, on me.",
-            "VoiceId": "5a176967eb0099ba"
+            "Text": "Steady aim. Big target.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Wren here.",
-            "VoiceId": "4156b6727f27c837"
+            "Text": "I smell wet earth and old tears.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "I have the lead.",
-            "VoiceId": "f22e7c6812a0a715"
+            "Text": "The wild is calling... but wrong.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Follow me.",
-            "VoiceId": "994e3a44041fa76d"
+            "Text": "My own mind becomes a thicket.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "I can\u0027t...",
-            "VoiceId": "43a81440a6fee8e1"
+            "Text": "The ground... so cold...",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Get me up...",
-            "VoiceId": "3665594896c46c3e"
+            "Text": "I see the beast\u0027s den from below.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Not like this.",
-            "VoiceId": "51a51002509fe105"
+            "Text": "The hunt... ends here?",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Still here.",
-            "VoiceId": "e667c3a7f26b0572"
+            "Text": "I dreamt of endless forest. Not yet.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "I owe you one.",
-            "VoiceId": "0421c09d63b6c5b2"
+            "Text": "Woke up. The trail goes on.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Back on my feet.",
-            "VoiceId": "cae724c7618d9aeb"
+            "Text": "Still in the race. Good.",
+            "VoiceId": null
           }
         }
       ]
@@ -1062,173 +1170,173 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Down.",
-            "VoiceId": "17eb610344e9d21a"
+            "Text": "A mere cessation of consciousness.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Stay down.",
-            "VoiceId": "c94f6ce2cddb6307"
+            "Text": "Unmade. As all things eventually.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "One less.",
-            "VoiceId": "fa0220688a2f2736"
+            "Text": "Dismissed. The experiment continues.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "Agh!",
-            "VoiceId": "f05df60b06d34cdc"
+            "Text": "Fascinating. That actually stung.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "That one landed.",
-            "VoiceId": "ea12ef8c317727ad"
+            "Text": "Physical pain. A mundane distraction.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Hurt",
           "Line": {
-            "Text": "I\u0027m bleeding.",
-            "VoiceId": "ca32d946c308c73c"
+            "Text": "My wards are fraying. Noted.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "This is worth carrying.",
-            "VoiceId": "029e1950819b43cc"
+            "Text": "Ah, artifacts. Crude but useful.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Mine now.",
-            "VoiceId": "7016c312d31b4cd1"
+            "Text": "Another trinket. I\u0027ll catalogue it later.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Something useful.",
-            "VoiceId": "b000e3be2fa5ac20"
+            "Text": "The dead cling to matter. I\u0027ll take it.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "I\u0027m getting the measure of this place.",
-            "VoiceId": "e96b1ee173cebeef"
+            "Text": "A new syllable of power. Exquisite.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "Stronger. Good.",
-            "VoiceId": "c3749bafa07dbdfd"
+            "Text": "The arcane expands. So do I.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "That felt like something clicked.",
-            "VoiceId": "b227c75e32f3f629"
+            "Text": "A deeper well of sorrow to draw from.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "There. That\u0027s the one.",
-            "VoiceId": "e794a91e3315181c"
+            "Text": "The focal point of this grief-stricken geometry.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Steady. It\u0027s big.",
-            "VoiceId": "281a4c5ce5354e00"
+            "Text": "A being of concentrated woe. Academic.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Everyone, on me.",
-            "VoiceId": "b7e12dfe6d922d43"
+            "Text": "Magnificent in its despair. Let\u0027s dissect it.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Ilex here.",
-            "VoiceId": "198bd8f35f2b51fc"
+            "Text": "An interloping spirit. How tedious.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "I have the lead.",
-            "VoiceId": "7d8c068d09d8098c"
+            "Text": "My thoughts are not my own. Intriguing.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Follow me.",
-            "VoiceId": "ac2ba539c7bc1bd6"
+            "Text": "This is... undignified. Remove it.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "I can\u0027t...",
-            "VoiceId": "dd677d7fb0a93514"
+            "Text": "The body fails. How... annoying.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Get me up...",
-            "VoiceId": "41869561ce7246fa"
+            "Text": "Consciousness fading. Such a waste.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Not like this.",
-            "VoiceId": "a11d0a3978531822"
+            "Text": "Not... the proper end.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Still here.",
-            "VoiceId": "32e9b2c7115d4161"
+            "Text": "Recalibrating. That was unpleasant.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "I owe you one.",
-            "VoiceId": "b76c2588ae413d96"
+            "Text": "Ah, the mortal coil reasserts.",
+            "VoiceId": null
           }
         },
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Back on my feet.",
-            "VoiceId": "4f881633b1ed683e"
+            "Text": "I saw the formula for a moment. Then gone.",
+            "VoiceId": null
           }
         }
       ]
     }
   ],
-  "ArcNotes": ""
+  "ArcNotes": "Flags: told_truth/lie_to_lunette on floor 5 affect her ghost state on floor 7. shared_quest/drove_off_voss on floor 10 affect Voss on floor 18. killed_hale/spared_hale on floor 14 affect Mourner\u0027s bargain on floor 15 and ultimately the final encounter. promised_el on floor 16 may affect Elowen\u0027s help later. Garrick\u0027s secret on floor 4 sets up a future encounter where ghosts attack him. Thistle\u0027s betrayal is hinted but may not fire in this run; his service to the Mourner will color later interactions."
 }

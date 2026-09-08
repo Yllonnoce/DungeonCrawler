@@ -1,136 +1,127 @@
 {
   "SchemaVersion": 1,
   "Floor": 8,
-  "Source": "fake",
-  "LayoutHash": 8946649272292364037,
-  "Title": "Echoing Crossing",
+  "Source": "claude",
+  "LayoutHash": 14871976399457746592,
+  "Title": "Spider Trails",
   "IntroLine": {
-    "Text": "Dust stirs as you descend into the Caves. The Knifegrinders keep their posts.",
-    "VoiceId": "a2719f749a70fa15"
+    "Text": "Thick webs drape the walls like funeral shrouds, and the skitter of unseen legs is the only music. Even the silence feels hungry.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Barracks",
-      "Name": "Dripping Quarters"
+      "Role": "Lair",
+      "Name": "Weeping Stream Nest"
     },
     {
       "Index": 1,
-      "Role": "Start",
-      "Name": "Cold Threshold"
+      "Role": "Lair",
+      "Name": "Crawling Hatch"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "Echoing Crossing"
+      "Role": "Start",
+      "Name": "Stairway Down"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Fungal Gallery"
+      "Role": "Lair",
+      "Name": "Secret Brood Chamber"
     },
     {
       "Index": 4,
-      "Role": "Barracks",
-      "Name": "Cold Barracks"
+      "Role": "Passage",
+      "Name": "Narrow Crevice"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "Dripping Gallery"
+      "Role": "Treasury",
+      "Name": "Silken Vault"
     },
     {
       "Index": 6,
-      "Role": "Kennel",
-      "Name": "Cold Warren"
+      "Role": "Hall",
+      "Name": "Web-Choked Cubby"
     },
     {
       "Index": 7,
       "Role": "Exit",
-      "Name": "Narrow Way Down"
-    },
-    {
-      "Index": 8,
-      "Role": "Camp",
-      "Name": "Cold Hideout"
-    },
-    {
-      "Index": 9,
-      "Role": "Passage",
-      "Name": "Glimmering Passage"
-    },
-    {
-      "Index": 10,
-      "Role": "Passage",
-      "Name": "Echoing Walk"
-    },
-    {
-      "Index": 11,
-      "Role": "Ruin",
-      "Name": "Crystal Colonnade"
-    },
-    {
-      "Index": 12,
-      "Role": "Barracks",
-      "Name": "Cold Quarters"
-    },
-    {
-      "Index": 13,
-      "Role": "Treasury",
-      "Name": "Crystal Treasury"
+      "Name": "Exit into Deeper Dark"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Knifegrinders",
-      "FactionId": "bandits",
+      "Id": "coll_web_guardians",
+      "Name": "Web Guardians",
+      "FactionId": "cave_brood",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 2
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
         },
         {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 8,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "group1",
-      "Name": "Fungal Clutch",
-      "FactionId": "faction1",
+      "Id": "coll_silk_patrol",
+      "Name": "Silk Patrol",
+      "FactionId": "cave_brood",
       "Members": [
         {
-          "EnemyId": "enemy.cave_spider",
+          "EnemyId": "enemy.rock_thrower",
           "Count": 2
         },
         {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
         }
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 2,
+        "Room": 0,
         "Objective": null,
         "Route": [
-          2,
-          12
+          0,
+          4,
+          6,
+          1,
+          0
         ],
         "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "coll_hatching_alarm",
+      "Name": "Hatching Alarm",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "coll_silk_patrol",
         "RallyRoom": null
       }
     }
@@ -138,17 +129,17 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Tide",
-      "Room": 2,
+      "Id": "horde_weeping",
+      "Name": "Weeping Crawlers",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 17
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 8
+          "Count": 2
         },
         {
           "EnemyId": "enemy.cave_spider",
@@ -157,79 +148,25 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 26,
+      "Total": 11,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The stream trembles, and a horde of pallid crawlers surges from the water on a thousand needle legs.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Gnawing",
-      "Room": 9,
+      "Id": "horde_hatch",
+      "Name": "Hatch Swarm",
+      "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 17
+          "Count": 10
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 26,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Boil",
-      "Room": 11,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 9
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 27,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Boil",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 15
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 8
+          "Count": 3
         },
         {
           "EnemyId": "enemy.rock_thrower",
@@ -238,47 +175,53 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 24,
+      "Total": 14,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The walls peel back, and a tide of pale bodies chitters forth, fresh from the brood sacs.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde5",
-      "Name": "The Seethe",
-      "Room": 12,
+      "Id": "horde_secret",
+      "Name": "Secret Brood",
+      "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 15
+          "Count": 12
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 4
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 24,
-      "Trigger": "Enter",
+      "Total": 16,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "A hidden hatch splinters open, and a boiling mass of young brood spills into the corridor in a frenzy.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
-  "Traps": [
+  "Chests": [
     {
       "Room": 6,
-      "Kind": "Fire"
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
+  "Traps": [
+    {
+      "Room": 4,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 6,
+      "Kind": "Spikes"
     }
   ],
   "Npcs": [],
@@ -288,10 +231,12 @@
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "Dust stirs as you descend into the Caves. The Knifegrinders keep their posts.",
-        "VoiceId": "a2719f749a70fa15"
-      }
+        "Text": "Thick webs drape the walls like funeral shrouds, and the skitter of unseen legs is the only music. Even the silence feels hungry.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "EnemyTotal": 8
 }

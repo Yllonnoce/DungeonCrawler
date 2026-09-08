@@ -225,6 +225,12 @@ public static class Settings
 
     public static void Rebind(string action, Key key)
     {
+        if (key != Key.None)
+            foreach (var other in _binds.Where(kv => kv.Key != action && kv.Value == key).Select(kv => kv.Key).ToList())
+            {
+                _binds[other] = Key.None; // one key, one action: the old owner goes blank
+                Bind(other, Key.None);
+            }
         _binds[action] = key;
         Bind(action, key);
         Save(); // a rebind is worth keeping even if the screen is closed with Escape or the game quits

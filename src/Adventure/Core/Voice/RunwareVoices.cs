@@ -13,14 +13,24 @@ public static class RunwareVoices
     public const string DefaultMinorModel = "xai:tts@0";
     public const string DefaultFallbacks = "inworld:tts@2";
 
-    /// <summary>The TTS models we know how to voice, with the provider's own names; anything else gets the Gemini name unchanged.</summary>
-    public static readonly (string Model, string Note)[] KnownModels =
+    /// <summary>A TTS model the game can voice: its price per thousand characters (0 when Runware bills it another way) and a note for the menu.</summary>
+    public sealed record KnownModel(string Model, string Name, double PerThousandChars, string Note)
     {
-        ("xai:tts@0", "xAI, about $0.015 per thousand characters, WAV"),
-        ("inworld:tts@2", "Inworld, about $0.035 per thousand characters, WAV"),
-        ("inworld:tts@1.5-mini", "Inworld, cheaper and quicker"),
-        ("minimax:speech@2.8", "MiniMax, about $0.10 per thousand characters"),
-        ("google:gemini@3.1-flash-tts", "Google's Gemini TTS through Runware: the same voice names and delivery styles as the direct Gemini path"),
+        public string Label => PerThousandChars > 0 ? $"{Name} (${PerThousandChars:0.000} per 1k chars)" : $"{Name} ({Note})";
+    }
+
+    /// <summary>
+    /// The TTS models we know how to voice, dearest first (Runware's listed prices on 2026-09-07); anything else gets
+    /// the Gemini voice names unchanged.
+    /// </summary>
+    public static readonly KnownModel[] KnownModels =
+    {
+        new("minimax:speech@2.8", "MiniMax Speech 2.8", 0.10, "MiniMax; about $0.10 per thousand characters"),
+        new("google:gemini@3.1-flash-tts", "Gemini 3.1 Flash TTS", 0, "billed per token, $1 in / $20 out per 1M; the same voice names and delivery styles as the direct Gemini path"),
+        new("inworld:tts@1.5-max", "Inworld TTS-1.5 Max", 0.05, "Inworld, the most expressive"),
+        new("inworld:tts@2", "Inworld Realtime TTS-2", 0.035, "Inworld"),
+        new("inworld:tts@1.5-mini", "Inworld TTS-1.5 Mini", 0.025, "Inworld, cheaper and quicker"),
+        new("xai:tts@0", "xAI Text-to-Speech", 0.015, "xAI, the cheapest"),
     };
 
     /// <summary>A model's family (the part before the colon), lower case.</summary>

@@ -3,6 +3,8 @@ namespace DungeonCrawler.Dungeon.Generation;
 /// <summary>Generator parameters for one floor. Built from a TierDef on the Godot side; plain data here.</summary>
 public sealed record FloorSpec
 {
+    /// <summary>The floor's overall shape; see <see cref="LayoutKinds"/>.</summary>
+    public LayoutKind Layout { get; init; } = LayoutKind.Standard;
     public int Width { get; init; } = 48;
     public int Height { get; init; } = 48;
     public int MinRooms { get; init; } = 8;
@@ -35,6 +37,8 @@ public sealed record FloorSpec
     public int NestCount { get; init; } = 6;
     /// <summary>Ponds or streams laid in rooms at least 5x5 (may place fewer).</summary>
     public int WaterCount { get; init; } = 1;
+    /// <summary>Fires burning on room floors (a Burning floor sets this; nothing else has any).</summary>
+    public int FireCount { get; init; }
     /// <summary>Tier-final floor: a large arena room is placed and the down stairs live inside it.</summary>
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;

@@ -123,15 +123,28 @@ public partial class DungeonBuilder : Node3D
 
     public TierDef? TierFor(int floor) => _tiers.Count == 0 ? null : _tiers[Math.Min(_tiers.Count - 1, TierRules.TierIndex(floor))];
 
-    /// <summary>Generator knobs for a floor: the tier's defaults, adjusted by the campaign's per-floor overrides.</summary>
-    public FloorSpec SpecFor(int floor)
+    /// <summary>
+    /// Generator knobs for a floor: the tier's defaults, adjusted by the campaign's per-floor overrides, in the shape the
+    /// floor takes (see <see cref="LayoutFor"/>). <paramref name="gameSeed"/> defaults to the running game's seed.
+    /// </summary>
+    public FloorSpec SpecFor(int floor, ulong? gameSeed = null)
     {
-        var spec = TierFor(floor)?.ToSpec(floor) ?? TierFor(floor)?.ToSpec(floor) ?? new FloorSpec
-    {
-        EnemyCount = Math.Min(4 + floor, 14), ChestCount = 2, BossFloor = TierRules.IsBossFloor(floor), LockedChestCount = floor >= 2 ? 1 : 0,
-    };
+        var spec = TierFor(floor)?.ToSpec(floor) ?? new FloorSpec
+        {
+            EnemyCount = Math.Min(4 + floor, 14), ChestCount = 2, BossFloor = TierRules.IsBossFloor(floor), LockedChestCount = floor >= 2 ? 1 : 0,
+        };
+        spec = spec with { Layout = LayoutFor(floor, gameSeed ?? Game.Instance?.GameSeed ?? GameSeed) };
         var overrides = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.SpecOverrides;
         return overrides is { IsEmpty: false } ? overrides.Apply(spec) : spec;
+    }
+
+    /// <summary>The floor's shape: a --layout override, else the campaign's choice when it names one, else the seed's deal.</summary>
+    public LayoutKind LayoutFor(int floor, ulong gameSeed)
+    {
+        if (LayoutKinds.TryParse(DebugTools.Instance?.ForcedLayout, out var forced)) return forced;
+        var wanted = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.Layout;
+        if (LayoutKinds.TryParse(wanted, out var chosen) && (!TierRules.IsBossFloor(floor) || LayoutKinds.BossKinds.Contains(chosen))) return chosen;
+        return LayoutKinds.Pick(gameSeed, floor);
     }
 
     private readonly HashSet<GridPos> _propCells = new();
@@ -145,9 +158,10 @@ public partial class DungeonBuilder : Node3D
     public FloorLayout Build(int floorIndex, ulong gameSeed, FloorPlan? plan = null, PartySnapshot? party = null)
     {
         Clear();
+        GameSeed = gameSeed;
         var seed = Rng.FloorSeed(gameSeed, floorIndex);
         var tier = TierFor(floorIndex);
-        var spec = SpecFor(floorIndex);
+        var spec = SpecFor(floorIndex, gameSeed);
         var layout = FloorGenerator.Generate(spec, seed);
         Layout = layout;
         CurrentTier = tier;
@@ -175,6 +189,7 @@ public partial class DungeonBuilder : Node3D
         PlaceStairs(layout, _floorRoot, floorIndex);
         PlaceEnemies(contents, floorIndex);
         PlaceProps(layout, contents, _floorRoot, floorIndex, seed);
+        PlaceFires(layout, _floorRoot, floorIndex);
         PlaceStructures(layout, _floorRoot, seed);
         PlaceNestMouths(layout, _floorRoot, seed);
         PlaceHordes(layout, contents, floorIndex, Game.Instance?.SpentHordes(floorIndex) ?? Array.Empty<string>());
@@ -193,7 +208,7 @@ public partial class DungeonBuilder : Node3D
         tremor.SetStone(Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f));
         _floorRoot.AddChild(tremor);
 
-        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}) seed={seed} rooms={layout.Rooms.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
+        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}, {LayoutKinds.Id(layout.Kind)}) seed={seed} rooms={layout.Rooms.Count} fires={layout.Fires.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
         return layout;
     }
 
@@ -959,6 +974,7 @@ public partial class DungeonBuilder : Node3D
             else if (s.Kind == StructureKind.Camp) BuildCamp(layout, node, s, rng, plankMat, darkWood);
             else BuildRuin(layout, node, s, rng, wallMat);
         }
+        if (layout.Kind == LayoutKind.Mine) PlaceMineTimbers(layout, root, plankMat, darkWood);
         // rubble: the layout's mounds (bodies path around them), then loose scatter along walls and in corridors
         var rubbleRoot = new Node3D { Name = "RubbleField" };
         root.AddChild(rubbleRoot);
@@ -1063,6 +1079,71 @@ public partial class DungeonBuilder : Node3D
     }
 
     /// <summary>A glTF model scaled so its tallest side is <paramref name="size"/> metres, standing on its base at <paramref name="position"/>.</summary>
+    /// <summary>Burning floor patches (Burning floors): a hazard prop on each fire cell, which paths treat as solid.</summary>
+    private void PlaceFires(FloorLayout layout, Node3D root, int floor)
+    {
+        if (layout.Fires.Count == 0) return;
+        var node = new Node3D { Name = "Fires" };
+        root.AddChild(node);
+        var i = 0;
+        foreach (var cell in layout.Fires.OrderBy(f => f.Y).ThenBy(f => f.X))
+        {
+            var fire = new FloorFire { Floor = floor, Name = $"FloorFire{i++}" };
+            node.AddChild(fire);
+            fire.GlobalPosition = Surface(cell);
+            _propCells.Add(cell);
+        }
+    }
+
+    /// <summary>
+    /// Timber sets across a mine's galleries: two posts against the long walls and a cap beam over them every third
+    /// cell, decorative only (no collision, so nothing snags on them), never where a passage comes in.
+    /// </summary>
+    private void PlaceMineTimbers(FloorLayout layout, Node3D root, Material plank, Material darkWood)
+    {
+        var node = new Node3D { Name = "Timbers" };
+        root.AddChild(node);
+        var post = new BoxMesh { Size = new Vector3(0.32f, 3.7f, 0.32f) };
+        var sets = 0;
+        foreach (var room in layout.Rooms)
+        {
+            var width = Math.Min(room.W, room.H);
+            var length = Math.Max(room.W, room.H);
+            // ground level only: a beam in an upper gallery would be a step onto the tops of the walls
+            if (width > 3 || length < 6 || room == layout.BossArena || layout.LevelOf(room.Center) != 0) continue;
+            var along = room.W >= room.H; // the long axis runs in x
+            var span = width * CellSize;
+            var beam = new BoxMesh { Size = new Vector3(along ? 0.34f : span, 0.34f, along ? span : 0.34f) };
+            for (var k = 1; k < length; k += 3)
+            {
+                // the cells the set stands in, and the wall cells beyond each post: an opening there means a doorway
+                var a = along ? new GridPos(room.X + k, room.Y) : new GridPos(room.X, room.Y + k);
+                var b = along ? new GridPos(room.X + k, room.Bottom) : new GridPos(room.Right, room.Y + k);
+                var wallA = along ? new GridPos(a.X, a.Y - 1) : new GridPos(a.X - 1, a.Y);
+                var wallB = along ? new GridPos(b.X, b.Y + 1) : new GridPos(b.X + 1, b.Y);
+                if (layout[a] != Cell.Floor || layout[b] != Cell.Floor || layout.IsWalkable(wallA) || layout.IsWalkable(wallB)) continue;
+                if (layout.IsWater(a) || layout.IsWater(b) || layout.IsUnder(a) || layout.LevelOf(a) != layout.LevelOf(b)) continue;
+                if (layout.Ramps.ContainsKey(a) || layout.Ramps.ContainsKey(b)) continue;
+                var floorA = Surface(a);
+                var floorB = Surface(b);
+                var inset = CellSize / 2f - 0.2f;
+                var pa = floorA + (along ? new Vector3(0, 0, -inset) : new Vector3(-inset, 0, 0));
+                var pb = floorB + (along ? new Vector3(0, 0, inset) : new Vector3(inset, 0, 0));
+                foreach (var p in new[] { pa, pb })
+                {
+                    var m = new MeshInstance3D { Mesh = post, MaterialOverride = darkWood };
+                    node.AddChild(m);
+                    m.GlobalPosition = p + Vector3.Up * 1.85f;
+                }
+                var cap = new MeshInstance3D { Mesh = beam, MaterialOverride = plank };
+                node.AddChild(cap);
+                cap.GlobalPosition = (pa + pb) / 2f + Vector3.Up * 3.55f;
+                sets++;
+            }
+        }
+        if (sets == 0) node.QueueFree();
+    }
+
     private static Node3D? Decor(Node3D parent, string path, Vector3 position, float size, float yaw, float collisionRadius = 0f)
     {
         if (!ResourceLoader.Exists(path)) return null;

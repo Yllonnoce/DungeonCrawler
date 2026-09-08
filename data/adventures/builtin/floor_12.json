@@ -1,75 +1,125 @@
 {
   "SchemaVersion": 1,
   "Floor": 12,
-  "Source": "fake",
-  "LayoutHash": 10855398722339417223,
-  "Title": "Molten Watch",
+  "Source": "claude",
+  "LayoutHash": 8963159036709090918,
+  "Title": "The Foundry Floor",
   "IntroLine": {
-    "Text": "Cold air rises from the Forge. Whatever guards the Ringing Hoard does not sleep.",
-    "VoiceId": "f475eb329311e4f0"
+    "Text": "The heat of the old forges wafts through these halls, carrying the steady clang of hammer on anvil. Somewhere deeper, a voice like grinding iron murmurs your name.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Ruin",
-      "Name": "Ashen Colonnade"
+      "Role": "Camp",
+      "Name": "The Charred Hut"
     },
     {
       "Index": 1,
-      "Role": "Hall",
-      "Name": "Smoldering Chamber"
+      "Role": "Lair",
+      "Name": "The Cinder Nest"
     },
     {
       "Index": 2,
-      "Role": "Gate",
-      "Name": "Molten Watch"
+      "Role": "Exit",
+      "Name": "The Final Bellows"
     },
     {
       "Index": 3,
       "Role": "Hall",
-      "Name": "Ashen Chamber"
+      "Name": "The Ash Crossroads"
     },
     {
       "Index": 4,
-      "Role": "Hall",
-      "Name": "Smoldering Nave"
+      "Role": "Gate",
+      "Name": "Gate of the Ironkeepers"
     },
     {
       "Index": 5,
-      "Role": "Exit",
-      "Name": "Molten Stairwell"
+      "Role": "Lair",
+      "Name": "The Kiln Hollow"
     },
     {
       "Index": 6,
       "Role": "Hall",
-      "Name": "Soot-Black Chamber"
+      "Name": "The Foundry Floor"
     },
     {
       "Index": 7,
-      "Role": "Start",
-      "Name": "Rusted Landing"
+      "Role": "Hall",
+      "Name": "The Bellows Room"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "Ashen Hall"
+      "Role": "Passage",
+      "Name": "The Soot Sluice"
     },
     {
       "Index": 9,
-      "Role": "Kennel",
-      "Name": "Molten Warren"
+      "Role": "Start",
+      "Name": "The Descent Stair"
     },
     {
       "Index": 10,
+      "Role": "Passage",
+      "Name": "The Coal Chute"
+    },
+    {
+      "Index": 11,
       "Role": "Treasury",
-      "Name": "Ringing Hoard"
+      "Name": "The Keeper\u0027s Vault"
     }
   ],
   "Collectives": [
     {
-      "Id": "group1",
-      "Name": "Ashen Cohort",
-      "FactionId": "faction2",
+      "Id": "bandits_camp",
+      "Name": "Ash-Biter Gang",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "gate_defenders",
+      "Name": "Gate Wardens",
+      "FactionId": "forge_keepers",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 4,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "4"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "exit_guard",
+      "Name": "Bellows Guard",
+      "FactionId": "forge_keepers",
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
@@ -80,8 +130,8 @@
         "Kind": "Defend",
         "Room": 2,
         "Objective": {
-          "Kind": "Gate",
-          "Ref": "2"
+          "Kind": "Stairs",
+          "Ref": "down"
         },
         "Route": [],
         "AlarmTarget": null,
@@ -89,231 +139,162 @@
       }
     },
     {
-      "Id": "group2",
-      "Name": "Ringing Forge-Guard",
-      "FactionId": "faction2",
+      "Id": "forge_patrol",
+      "Name": "Iron Circuit",
+      "FactionId": "forge_keepers",
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
           "Count": 1
-        },
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 6,
+        "Objective": null,
+        "Route": [
+          6,
+          3,
+          6
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "bellows_alarm",
+      "Name": "Alarm Bellows",
+      "FactionId": "forge_keepers",
+      "Members": [
         {
-          "EnemyId": "enemy.forge_priest",
+          "EnemyId": "enemy.ember_hound",
           "Count": 2
         }
       ],
       "Goal": {
         "Kind": "Alarm",
-        "Room": 0,
+        "Room": 7,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "group1",
-        "RallyRoom": 2
+        "AlarmTarget": "gate_defenders",
+        "RallyRoom": 6
       }
     }
   ],
-  "Loners": [
-    {
-      "EnemyId": "enemy.forge_priest",
-      "Room": 5
-    }
-  ],
+  "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Spill",
-      "Room": 0,
+      "Id": "horde_kiln_rats",
+      "Name": "The Kiln Rats",
+      "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 18
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
           "Count": 12
         },
         {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 33,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde2",
-      "Name": "The Spill",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 21
-        },
-        {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 13
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 37,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Tide",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 18
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
           "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 33,
-      "Trigger": "Chest",
+      "Total": 14,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "From behind the rubble, a swarm of soot-caked imps pours out, driven by something larger.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde4",
-      "Name": "The Spill",
-      "Room": 2,
+      "Id": "horde_sluice",
+      "Name": "The Broilwake",
+      "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 22
+          "Count": 10
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 13
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 38,
-      "Trigger": "Alarm",
+      "Total": 11,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The stream hisses and churns as cinder imps crawl out of the water, their bodies spitting steam.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde5",
-      "Name": "The Gnawing",
+      "Id": "horde_emberflood",
+      "Name": "The Emberflood",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 16,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The floor seethes with tiny burning bodies as countless cinder imps surge from the walls.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_gatehouse",
+      "Name": "The Gatehouse Surge",
       "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 18
+          "Count": 10
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 33,
-      "Trigger": "Enter",
+      "Total": 12,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "A horn sounds from the gatehouse, and a flood of cinder imps comes boiling out of the nests.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde6",
-      "Name": "The Scurry",
+      "Id": "horde_vents",
+      "Name": "The Forge Vent",
       "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 19
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 34,
+      "Total": 9,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "With a hiss of steam, imps and a lumbering ogre claw their way out of the vents.",
         "VoiceId": null
       }
     }
@@ -322,7 +303,11 @@
   "Chests": [],
   "Traps": [
     {
-      "Room": 6,
+      "Room": 10,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 5,
       "Kind": "Spikes"
     }
   ],
@@ -333,10 +318,12 @@
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "Cold air rises from the Forge. Whatever guards the Ringing Hoard does not sleep.",
-        "VoiceId": "f475eb329311e4f0"
-      }
+        "Text": "The heat of the old forges wafts through these halls, carrying the steady clang of hammer on anvil. Somewhere deeper, a voice like grinding iron murmurs your name.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 6
+  "EnemyTotal": 11
 }

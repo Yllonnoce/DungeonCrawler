@@ -15,6 +15,11 @@ public static class RunwareWire
     public const string DefaultTextModel = "anthropic:claude@sonnet-4.6";
     /// <summary>Lists the text models as slugs (anthropic-claude-sonnet-4-6), the form the OpenAI-compatible endpoint takes.</summary>
     public const string ModelsEndpoint = "https://api.runware.ai/v1/models";
+    /// <summary>
+    /// The OpenAI-compatible chat endpoint. It takes every model in <see cref="ModelsEndpoint"/>'s list (slug or AIR),
+    /// while the textInference task rejects a good third of them with invalidModel; the client falls back to it.
+    /// </summary>
+    public const string ChatEndpoint = "https://api.runware.ai/v1/chat/completions";
 
     /// <summary>
     /// The task API wants AIR ids (creator:family@version) while the model list and the chat endpoint use slugs
@@ -50,6 +55,36 @@ public static class RunwareWire
         catch (Exception e) { return (new List<string>(), $"unreadable response: {e.Message}"); }
     }
 
+    /// <summary>
+    /// The priced catalogue in a GET /v1/models reply, dearest first (by output price, then input); models the reply
+    /// prices at zero sort last. Empty with an error text when the body is not a model list.
+    /// </summary>
+    public static (List<RunwareTextModel> Models, string? Error) ParseModelCatalogue(string body)
+    {
+        try
+        {
+            if (ErrorOf(body) is { } error) return (new List<RunwareTextModel>(), error);
+            var root = JsonNode.Parse(body);
+            var list = new List<RunwareTextModel>();
+            foreach (var m in (root?["data"] as JsonArray)?.OfType<JsonObject>() ?? Enumerable.Empty<JsonObject>())
+            {
+                var id = m["id"]?.GetValue<string>();
+                if (string.IsNullOrEmpty(id)) continue;
+                var pricing = m["pricing"] as JsonObject;
+                list.Add(new RunwareTextModel(id, m["name"]?.GetValue<string>() ?? id, PerMillion(pricing?["prompt"]), PerMillion(pricing?["completion"])));
+            }
+            return (RunwareTextModel.DearestFirst(list), list.Count == 0 ? "no models in the response" : null);
+        }
+        catch (Exception e) { return (new List<RunwareTextModel>(), $"unreadable response: {e.Message}"); }
+
+        static double PerMillion(JsonNode? perToken)
+        {
+            if (perToken == null) return 0;
+            var text = perToken is JsonValue v && v.TryGetValue<string>(out var s) ? s : perToken.ToJsonString().Trim('"');
+            return double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d * 1_000_000 : 0;
+        }
+    }
+
     // ---- textInference ----------------------------------------------------------------------------------
 
     /// <summary>
@@ -65,7 +100,7 @@ public static class RunwareWire
         var system = string.Join("\n\n", request.System.Select(b => b.Text));
         if (system.Length > 0) settings["systemPrompt"] = system;
         if (thinking) settings["thinkingLevel"] = ThinkingLevel(request.Effort, request.Model);
-        var user = request.User + "\n\nReply with exactly one JSON object and nothing else: no prose, no code fence. It must match this JSON Schema (every property present, enum values spelled as listed, \"\" or -1 where a field does not apply):\n" + request.SchemaJson;
+        var user = UserWithSchema(request);
         var task = new JsonObject
         {
             ["taskType"] = "textInference",
@@ -78,6 +113,63 @@ public static class RunwareWire
         };
         if (delivery != "sync") task["deliveryMethod"] = delivery;
         return new JsonArray(task).ToJsonString();
+    }
+
+    /// <summary>The user turn with the schema appended as text, the same on both routes.</summary>
+    public static string UserWithSchema(ClaudeRequest request)
+        => request.User + "\n\nReply with exactly one JSON object and nothing else: no prose, no code fence. It must match this JSON Schema (every property present, enum values spelled as listed, \"\" or -1 where a field does not apply):\n" + request.SchemaJson;
+
+    // ---- chat completions -------------------------------------------------------------------------------
+
+    /// <summary>The same planning call for the OpenAI-compatible endpoint: system and user messages, the model as typed (slug or AIR both work there).</summary>
+    public static string ChatRequestJson(ClaudeRequest request)
+    {
+        var messages = new JsonArray();
+        var system = string.Join("\n\n", request.System.Select(b => b.Text));
+        if (system.Length > 0) messages.Add(new JsonObject { ["role"] = "system", ["content"] = system });
+        messages.Add(new JsonObject { ["role"] = "user", ["content"] = UserWithSchema(request) });
+        return new JsonObject
+        {
+            ["model"] = ToAir(request.Model),
+            ["messages"] = messages,
+            ["max_tokens"] = request.MaxTokens,
+            ["stream"] = false,
+        }.ToJsonString();
+    }
+
+    /// <summary>
+    /// A chat completion as the planner's response record. The endpoint reports no dollar cost, so the caller passes
+    /// the model's list prices per million tokens (null leaves the cost unset and the list prices of the planner apply).
+    /// </summary>
+    public static ClaudeResponse ParseChatResponse(string body, (double InputPerMillion, double OutputPerMillion)? prices = null)
+    {
+        try
+        {
+            if (ErrorOf(body) is { } error) return ClaudeResponse.Failed(error);
+            var root = JsonNode.Parse(body);
+            var choice = (root?["choices"] as JsonArray)?.OfType<JsonObject>().FirstOrDefault();
+            if (choice == null) return ClaudeResponse.Failed("no choices in the response");
+            var message = choice["message"];
+            var text = message?["content"]?.GetValue<string>() ?? "";
+            var finish = choice["finish_reason"]?.GetValue<string>() ?? "stop";
+            var stop = finish.ToLowerInvariant() switch
+            {
+                "stop" or "end_turn" => "end_turn",
+                "length" or "max_tokens" => "max_tokens",
+                "content_filter" or "refusal" => "refusal",
+                _ => text.Length > 0 ? "end_turn" : finish,
+            };
+            if (stop == "end_turn" && text.Length == 0 && message?["refusal"]?.GetValue<string>() is { Length: > 0 } refusal) return new ClaudeResponse("", "refusal", ClaudeUsage.Zero, refusal);
+            var usage = root?["usage"];
+            var input = usage?["prompt_tokens"]?.GetValue<long>() ?? 0;
+            var output = usage?["completion_tokens"]?.GetValue<long>() ?? 0;
+            var details = usage?["prompt_tokens_details"];
+            var cacheRead = details?["cached_tokens"]?.GetValue<long>() ?? 0;
+            var cacheWrite = details?["created_cache_tokens"]?.GetValue<long>() ?? 0;
+            double? cost = prices is { } p ? (input * p.InputPerMillion + output * p.OutputPerMillion) / 1_000_000.0 : null;
+            return new ClaudeResponse(text, stop, new ClaudeUsage(input, output, cacheRead, cacheWrite, cost), stop == "refusal" ? finish : null);
+        }
+        catch (Exception e) { return ClaudeResponse.Failed($"unreadable response: {e.Message}"); }
     }
 
     /// <summary>Ask for the result of an async task.</summary>

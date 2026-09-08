@@ -1,106 +1,129 @@
 {
   "SchemaVersion": 1,
   "Floor": 20,
-  "Source": "fake",
-  "LayoutHash": 9815155884356853185,
-  "Title": "Void-Touched Bastion",
+  "Source": "claude",
+  "LayoutHash": 17024959734848516595,
+  "Title": "The Grief-Eater",
   "IntroLine": {
-    "Text": "Dust stirs as you descend into the Abyss. The Screaming Host keep their posts.",
-    "VoiceId": "147c1da71dde309c"
+    "Text": "The floor of the abyss is polished black stone, cold as a tomb. In the vast chamber ahead, a low note hums, and sorrow pools like water.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "Nameless Court"
+      "Name": "The Hall of Tears"
     },
     {
       "Index": 1,
       "Role": "Hall",
-      "Name": "Screaming Hall"
+      "Name": "Sorrow\u0027s Antechamber"
     },
     {
       "Index": 2,
-      "Role": "Barracks",
-      "Name": "Screaming Quarters"
+      "Role": "Treasury",
+      "Name": "Sealed Ossuary"
     },
     {
       "Index": 3,
       "Role": "Hall",
-      "Name": "Unlit Nave"
+      "Name": "Chorus Nave"
     },
     {
       "Index": 4,
-      "Role": "Hall",
-      "Name": "Whispering Chamber"
+      "Role": "Camp",
+      "Name": "Mourner\u0027s Outpost"
     },
     {
       "Index": 5,
-      "Role": "Hall",
-      "Name": "Bleeding Nave"
+      "Role": "Passage",
+      "Name": "The Weeping Cell"
     },
     {
       "Index": 6,
-      "Role": "Passage",
-      "Name": "Nameless Passage"
+      "Role": "Gate",
+      "Name": "The Black Gate"
     },
     {
       "Index": 7,
       "Role": "Passage",
-      "Name": "Faded Crossing"
+      "Name": "Hidden Alcove"
     },
     {
       "Index": 8,
-      "Role": "Ruin",
-      "Name": "Whispering Wreck"
+      "Role": "Hall",
+      "Name": "Ledge of Tears"
     },
     {
       "Index": 9,
-      "Role": "Start",
-      "Name": "Whispering Descent"
+      "Role": "Hall",
+      "Name": "Wailing Gallery"
     },
     {
       "Index": 10,
-      "Role": "Gate",
-      "Name": "Void-Touched Bastion"
+      "Role": "Start",
+      "Name": "The Last Threshold"
     },
     {
       "Index": 11,
-      "Role": "Passage",
-      "Name": "Nameless Passage"
+      "Role": "Hall",
+      "Name": "Stream of Lament"
     },
     {
       "Index": 12,
-      "Role": "Treasury",
-      "Name": "Faded Reliquary"
+      "Role": "Lair",
+      "Name": "Abyssal Creche"
     },
     {
       "Index": 13,
       "Role": "Treasury",
-      "Name": "Bleeding Reliquary"
+      "Name": "Warden\u0027s Hoard"
     }
   ],
   "Collectives": [
     {
-      "Id": "group1",
-      "Name": "Screaming Host",
-      "FactionId": "faction3",
+      "Id": "mourner_sentinels",
+      "Name": "Mourner\u0027s Sentinels",
+      "FactionId": null,
       "Members": [
         {
-          "EnemyId": "enemy.abyss_archer",
+          "EnemyId": "enemy.bandit_chief",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.void_caller",
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "hoard_guardians",
+      "Name": "Hoard Guardians",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
         }
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 10,
+        "Room": 13,
         "Objective": {
-          "Kind": "Gate",
-          "Ref": "10"
+          "Kind": "Door",
+          "Ref": "0"
         },
         "Route": [],
         "AlarmTarget": null,
@@ -108,32 +131,35 @@
       }
     },
     {
-      "Id": "group2",
-      "Name": "Unlit Choir",
-      "FactionId": "faction3",
+      "Id": "gatekeepers",
+      "Name": "Gatekeepers",
+      "FactionId": "abyss_chorus",
       "Members": [
         {
           "EnemyId": "enemy.void_caller",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Alarm",
-        "Room": 1,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 2,
+        "Objective": {
+          "Kind": "Lever",
+          "Ref": "1"
+        },
         "Route": [],
-        "AlarmTarget": "group1",
-        "RallyRoom": 10
+        "AlarmTarget": null,
+        "RallyRoom": null
       }
     },
     {
-      "Id": "group3",
-      "Name": "Void-Touched Circle",
-      "FactionId": "faction3",
+      "Id": "silent_procession",
+      "Name": "Silent Procession",
+      "FactionId": "abyss_chorus",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -145,10 +171,17 @@
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 3,
+        "Kind": "Patrol",
+        "Room": 1,
         "Objective": null,
-        "Route": [],
+        "Route": [
+          1,
+          11,
+          3,
+          5,
+          9,
+          12
+        ],
         "AlarmTarget": null,
         "RallyRoom": null
       }
@@ -157,364 +190,172 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Gnawing",
-      "Room": 1,
+      "Id": "horde_sorrow_spills",
+      "Name": "The Sorrow Spills",
+      "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 34
+          "Count": 35
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
+          "Count": 10
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 5
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 60,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde2",
-      "Name": "The Scurry",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 34
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 60,
+      "Total": 50,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "From the walls themselves, a flood of writhing shadow pours forth, each wisp a silent scream.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde3",
-      "Name": "The Gnawing",
-      "Room": 5,
+      "Id": "horde_wailing_tide",
+      "Name": "The Wailing Tide",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 34
+          "Count": 38
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 60,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Crawl",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 34
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 60,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Gnawing",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 31
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 8
         },
         {
           "EnemyId": "enemy.void_stalker",
           "Count": 4
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 54,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The chest\u0027s lid clatters\u2014and with it, a keening breaks loose, shadows boiling from the walls.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_creche_unleashed",
+      "Name": "Creche Unleashed",
+      "Room": 12,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 35
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 5
         }
       ],
       "EnemyId": null,
       "Count": null,
       "Total": 55,
-      "Trigger": "Alarm",
+      "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde6",
-      "Name": "The Rot",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 31
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 4
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 56,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The nest ruptures, spilling silent forms that move like grief given legs.",
         "VoiceId": null
       }
     }
   ],
   "Boss": {
-    "Name": "Abyss Herald",
-    "SignatureOverride": null,
+    "Name": "Abyss Herald, Mouth of the Mourner",
+    "SignatureOverride": "Summon",
     "IntroLine": {
-      "Text": "Abyss Herald rises to meet you. \u0022You should have stayed above.\u0022",
-      "VoiceId": "0b8b86dd59254b05"
+      "Text": "A shape of congealed sorrow rises from the black pool at the room\u0027s centre. It has no face, only a voice that sounds like your own regrets.",
+      "VoiceId": "c5cb70feecd14239"
     },
     "DeathLine": {
-      "Text": "\u0022Deeper... it waits... deeper...\u0022 Abyss Herald is still.",
-      "VoiceId": "1bc169b0b4395259"
+      "Text": "The Herald dissolves into mist, but the weight of its words lingers: \u0027I was only the echo.\u0027 The silence returns, heavier than before.",
+      "VoiceId": "fa89bd84452047a1"
     }
   },
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 5,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 7,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 3,
-      "Kind": "Gas"
+      "Room": 11,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 1,
+      "Kind": "Spikes"
     },
     {
       "Room": 8,
-      "Kind": "Fire"
+      "Kind": "Gas"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "npc1",
-      "Name": "The Pale Pilgrim",
-      "Room": 11,
-      "VoiceId": "Aoede",
-      "Script": {
-        "Start": "greet",
-        "Nodes": [
-          {
-            "Id": "greet",
-            "Line": {
-              "Text": "Another descent, another fool. Or perhaps a friend? Speak.",
-              "VoiceId": "3009a99ab25aa77f"
-            },
-            "Choices": [
-              {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "offer",
-            "Line": {
-              "Text": "I cannot go on alone; every corridor is watched. Take me as far as the stairs down and I will give you everything I carried out of the levels above.",
-              "VoiceId": "60fd0677b067c1b1"
-            },
-            "Choices": [
-              {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
-              },
-              {
-                "Text": "Not now.",
-                "Next": null,
-                "Effect": "DeclineQuest"
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "I will stay close. Please, do not leave me behind.",
-              "VoiceId": "a03efd62b8080cf0"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "The stairs. I can manage from here. Thank you, stranger. Take this.",
-              "VoiceId": "147681b6b0c5eb25"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest1"
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "quest1",
-      "Template": "Escort",
-      "Title": "The Pale Pilgrim\u0027s Way Down",
-      "Objective": "Get The Pale Pilgrim to the stairs down alive.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": "npc1",
-        "Waves": null,
-        "WaveCollective": null
-      },
-      "GiverNpc": "npc1",
-      "Reward": {
-        "Xp": 860,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "I cannot go on alone; every corridor is watched. Take me as far as the stairs down and I will give you everything I carried out of the levels above.",
-          "VoiceId": "60fd0677b067c1b1"
-        },
-        "Accept": {
-          "Text": "I will stay close. Please, do not leave me behind.",
-          "VoiceId": "a03efd62b8080cf0"
-        },
-        "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "f15eeed9a2164490"
-        },
-        "Complete": {
-          "Text": "The stairs. I can manage from here. Thank you, stranger. Take this.",
-          "VoiceId": "147681b6b0c5eb25"
-        },
-        "Fail": {
-          "Text": "...",
-          "VoiceId": "838c01e47a853b02"
-        }
-      }
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "Dust stirs as you descend into the Abyss. The Screaming Host keep their posts.",
-        "VoiceId": "147c1da71dde309c"
-      }
+        "Text": "You step onto stone that drinks the light. The air is heavy with unshed tears; the silence itself seems to hum with grief.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 0,
+      "Line": {
+        "Text": "Before you, the pool of shadow stirs. The Herald rises, drawn from sorrow like thread from a wound.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "The Mourner\u0027s mouthpiece regards you with the hollow of a memory. It speaks without sound, but you feel the words in your chest.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "The Herald shatters into flecks of darkness. For a moment, the weight lifts\u2014then settles deeper, as if the stone itself is mourning.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "EnemyTotal": 12
 }

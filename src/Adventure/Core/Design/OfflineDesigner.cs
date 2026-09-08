@@ -97,7 +97,7 @@ public static class OfflineDesigner
             plan.Factions.Add(new FactionPlan { Id = $"faction{t}", Name = $"{Pick(rng, Adjectives[t])} {Pick(rng, GroupNouns[t])}", EnemyIds = tier?.EnemyPool.ToList() ?? new List<string>() });
         }
         for (var f = 1; f <= TierRules.FinalFloor; f++)
-            plan.Floors.Add(new FloorOutline { Floor = f, Theme = themes == null ? null : ThemeProfile.Pick(themes, TierRules.TierIndex(f), gameSeed, f)?.Id });
+            plan.Floors.Add(new FloorOutline { Floor = f, Theme = themes == null ? null : ThemeProfile.Pick(themes, TierRules.TierIndex(f), gameSeed, f)?.Id, Layout = LayoutKinds.Id(LayoutKinds.Pick(gameSeed, f)) });
         return plan;
     }
 

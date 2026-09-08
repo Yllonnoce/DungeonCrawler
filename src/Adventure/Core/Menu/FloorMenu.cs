@@ -47,6 +47,8 @@ public sealed class FloorMenu
     public int TierIndex { get; init; }
     public string TierName { get; init; } = "";
     public bool BossFloor { get; init; }
+    /// <summary>The floor's shape id (see LayoutKinds), for the designer's and the planner's benefit.</summary>
+    public string Layout { get; init; } = "standard";
     public string? BossId { get; init; }
     public string? BossName { get; init; }
     public IReadOnlyList<RoomInfo> Rooms { get; init; } = Array.Empty<RoomInfo>();
@@ -147,7 +149,7 @@ public sealed class FloorMenu
         var bossId = TierRules.IsBossFloor(floor) && tier != null && tier.BossId != "" ? tier.BossId : null;
         return new FloorMenu
         {
-            Floor = floor, TierIndex = TierRules.TierIndex(floor), TierName = tier?.DisplayName ?? "Dungeon",
+            Floor = floor, TierIndex = TierRules.TierIndex(floor), TierName = tier?.DisplayName ?? "Dungeon", Layout = LayoutKinds.Id(layout.Kind),
             BossFloor = TierRules.IsBossFloor(floor), BossId = bossId, BossName = bossId != null && roster.TryGetValue(bossId, out var bp) ? bp.Name : null,
             Rooms = rooms, Roster = options,
             TargetEnemies = spec.EnemyCount, MinEnemies = Math.Max(3, spec.EnemyCount / 2), MaxEnemies = 16,

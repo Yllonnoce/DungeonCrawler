@@ -215,7 +215,7 @@ public partial class Main : Node
     public LoadingOverlay Overlay { get; private set; } = null!;
     private (int floor, int delta, ulong sinceMs)? _waitingFor;
 
-    /// <param name="aiCampaign">True: ask the live planner for a fresh campaign (the "New AI Campaign" entry); false: never plan, the offline designer writes it; null: follow the Settings toggle (automation).</param>
+    /// <param name="aiCampaign">True: ask the live planner for a fresh campaign (automation only; the title screen never plans, see <see cref="StartNewGameFromDisk"/>); false: never plan, the offline designer writes it; null: follow the Settings toggle (automation).</param>
     public void StartNewGame(ulong? seed = null, bool? aiCampaign = null)
     {
         CreateSession();
@@ -490,18 +490,27 @@ public partial class Main : Node
         var tier = Builder.CurrentTier;
         if (tier == null) return;
         var look = Builder.CurrentTheme ?? Dungeon.Defs.ThemeDef.FromTier(tier);
+        var (fogColor, ambientColor, fogScale) = LayoutTint(Builder.Layout?.Kind ?? Dungeon.Generation.LayoutKind.Standard, look);
         if (_world.GetNodeOrNull<WorldEnvironment>("Env")?.Environment is { } env)
         {
-            env.AmbientLightColor = look.AmbientColor;
-            env.AmbientLightEnergy = look.AmbientEnergy;
-            env.FogLightColor = look.FogColor;
-            env.FogDensity = look.FogDensity;
-            env.BackgroundColor = look.FogColor.Darkened(0.5f);
+            env.AmbientLightColor = ambientColor;
+            env.AmbientLightEnergy = look.AmbientEnergy * (fogScale > 1f ? 1.15f : 1f);
+            env.FogLightColor = fogColor;
+            env.FogDensity = look.FogDensity * fogScale;
+            env.BackgroundColor = fogColor.Darkened(0.5f);
         }
         ApplyHaze();
         foreach (var adv in Party.Adventurers) adv.Torch.LightColor = look.TorchColor;
         Audio.AudioManager.Instance?.SetTierAmbience(tier.Index);
     }
+
+    /// <summary>The air of a floor shape over the theme's own: flooded floors go cold and green, burning ones hot and thick with smoke.</summary>
+    private static (Color fog, Color ambient, float fogScale) LayoutTint(Dungeon.Generation.LayoutKind kind, Dungeon.Defs.ThemeDef look) => kind switch
+    {
+        Dungeon.Generation.LayoutKind.Flooded => (look.FogColor.Lerp(new Color(0.06f, 0.16f, 0.17f), 0.55f), look.AmbientColor.Lerp(new Color(0.3f, 0.44f, 0.46f), 0.4f), 1.3f),
+        Dungeon.Generation.LayoutKind.Burning => (look.FogColor.Lerp(new Color(0.40f, 0.13f, 0.03f), 0.6f), look.AmbientColor.Lerp(new Color(0.62f, 0.32f, 0.12f), 0.45f), 1.6f),
+        _ => (look.FogColor, look.AmbientColor, 1f),
+    };
 
     /// <summary>
     /// A slight haze hanging in the air: volumetric fog thin enough to leave rooms readable, thick enough that
@@ -514,10 +523,12 @@ public partial class Main : Node
         env.VolumetricFogEnabled = haze > 0.01f;
         if (!env.VolumetricFogEnabled) return;
         var look = Builder.CurrentTheme ?? (Builder.CurrentTier != null ? Dungeon.Defs.ThemeDef.FromTier(Builder.CurrentTier) : null);
-        var themeFog = look?.FogDensity ?? 0.035f;
+        var kind = Builder.Layout?.Kind ?? Dungeon.Generation.LayoutKind.Standard;
+        var (tintedFog, _, fogScale) = look == null ? (new Color(0.05f, 0.05f, 0.06f), Colors.Black, 1f) : LayoutTint(kind, look);
+        var themeFog = (look?.FogDensity ?? 0.035f) * fogScale;
         env.VolumetricFogDensity = 0.008f + 0.045f * haze * Mathf.Clamp(themeFog / 0.035f, 0.5f, 2f);
         // dust in torchlight: a warm grey that the theme's fog colour tints
-        var fogColor = look?.FogColor ?? new Color(0.05f, 0.05f, 0.06f);
+        var fogColor = tintedFog;
         env.VolumetricFogAlbedo = new Color(0.72f, 0.68f, 0.62f).Lerp(fogColor.Lightened(0.6f), 0.35f);
         env.VolumetricFogEmission = fogColor;
         env.VolumetricFogEmissionEnergy = 0.02f + 0.03f * haze;

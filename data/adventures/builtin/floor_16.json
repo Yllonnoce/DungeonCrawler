@@ -1,100 +1,68 @@
 {
   "SchemaVersion": 1,
   "Floor": 16,
-  "Source": "fake",
-  "LayoutHash": 10188307454921370253,
-  "Title": "Whispering Hall",
+  "Source": "claude",
+  "LayoutHash": 16668470409931050370,
+  "Title": "The Daughter\u0027s Relic",
   "IntroLine": {
-    "Text": "The stair ends in the Abyss. Footprints, none of them yours, lead toward the Void-Touched Treasury.",
-    "VoiceId": "558c277d7b0e6c2e"
+    "Text": "The walls are slick with a pale sheen, and the murmur of countless regrets echoes in the close air.",
+    "VoiceId": "3298f340e33a2cc9"
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Treasury",
-      "Name": "Screaming Treasury"
+      "Role": "Start",
+      "Name": "Entrance Gallery"
     },
     {
       "Index": 1,
-      "Role": "Camp",
-      "Name": "Endless Hideout"
+      "Role": "Passage",
+      "Name": "Slate Promenade"
     },
     {
       "Index": 2,
-      "Role": "Kennel",
-      "Name": "Bleeding Den"
+      "Role": "Exit",
+      "Name": "Descent to the Deeps"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Whispering Hall"
+      "Role": "Passage",
+      "Name": "Whispering Nook"
     },
     {
       "Index": 4,
-      "Role": "Exit",
-      "Name": "Whispering Stairwell"
+      "Role": "Hall",
+      "Name": "Chamber of the Daughter"
     },
     {
       "Index": 5,
-      "Role": "Hall",
-      "Name": "Nameless Hall"
+      "Role": "Treasury",
+      "Name": "Locked Ossuary"
     },
     {
       "Index": 6,
-      "Role": "Ruin",
-      "Name": "Unlit Colonnade"
+      "Role": "Lair",
+      "Name": "Pond of Shadows"
     },
     {
       "Index": 7,
-      "Role": "Barracks",
-      "Name": "Nameless Muster"
+      "Role": "Treasury",
+      "Name": "Gated Reliquary"
     },
     {
       "Index": 8,
-      "Role": "Start",
-      "Name": "Void-Touched Threshold"
-    },
-    {
-      "Index": 9,
-      "Role": "Treasury",
-      "Name": "Void-Touched Treasury"
+      "Role": "Lair",
+      "Name": "Brooding Hollow"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Red Hoods",
-      "FactionId": "bandits",
+      "Id": "exit_wardens",
+      "Name": "Exit Wardens",
+      "FactionId": "abyss_chorus",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.bandit_chief",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 1,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "group1",
-      "Name": "Endless Choir",
-      "FactionId": "faction3",
-      "Members": [
-        {
-          "EnemyId": "enemy.abyss_archer",
+          "EnemyId": "enemy.void_caller",
           "Count": 1
         },
         {
@@ -104,206 +72,303 @@
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 3,
+        "Room": 2,
         "Objective": {
-          "Kind": "Chest",
-          "Ref": "5"
+          "Kind": "Stairs",
+          "Ref": "down"
         },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
+      }
+    },
+    {
+      "Id": "vault5_defenders",
+      "Name": "Crypt Keepers",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "alarm_group",
+      "Name": "Whisper Sentries",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 1,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "exit_wardens",
+        "RallyRoom": 3
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Seethe",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 30
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 18
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 52,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde2",
-      "Name": "The Seethe",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 27
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 48,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Spill",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 26
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 46,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Crawl",
+      "Id": "horde_pond",
+      "Name": "Shades of the Pond",
       "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 27
+          "Count": 18
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
+          "Count": 8
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 47,
+      "Total": 30,
       "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The pond\u0027s surface ripples as shadows coalesce and pour forth.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde5",
-      "Name": "The Boil",
-      "Room": 7,
+      "Id": "horde_hollow",
+      "Name": "Brood of Shadows",
+      "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 30
+          "Count": 20
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 19
+          "Count": 10
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
+          "Count": 3
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 53,
-      "Trigger": "Enter",
+      "Total": 35,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The moment the lock clicks, a keening wail erupts and darkness floods the room.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 3,
+      "Locked": false,
+      "QuestId": null
+    },
+    {
+      "Room": 8,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 7,
+      "Room": 1,
       "Kind": "Spikes"
+    },
+    {
+      "Room": 4,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 3,
+      "Kind": "Gas"
     }
   ],
-  "Npcs": [],
-  "Quests": [],
+  "Npcs": [
+    {
+      "Id": "npc_el",
+      "Name": "Elowen",
+      "Room": 4,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "start",
+        "Nodes": [
+          {
+            "Id": "start",
+            "Line": {
+              "Text": "I know why you\u0027ve come. The relic... it\u0027s here, with me. But I\u0027ll only give it if you swear to end my father\u0027s suffering. He\u0027s in so much pain, trapped between life and death. Promise me.",
+              "VoiceId": "57d3e00919cd435b"
+            },
+            "Choices": [
+              {
+                "Text": "We promise to end his suffering.",
+                "Next": "promise",
+                "Effect": "Choose",
+                "Flag": "promised_el",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We can\u0027t make that promise.",
+                "Next": "refuse",
+                "Effect": "Choose",
+                "Flag": "refused_el",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "promise",
+            "Line": {
+              "Text": "Then take it. Use it to put him to rest. And... thank you.",
+              "VoiceId": "42eba666ef829249"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "refuse",
+            "Line": {
+              "Text": "Then leave me. I\u0027ll carry this burden alone, and the relic stays with me.",
+              "VoiceId": "0fd1aaa3da89a4f0"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_el_promise",
+      "CastId": null,
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_el_promise",
+      "Template": "Decide",
+      "Title": "The Daughter\u0027s Plea",
+      "Objective": "Promise to end Warden Hale\u0027s suffering.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_el",
+      "Reward": {
+        "Xp": 800,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "I know why you\u0027ve come. The relic... it\u0027s here, with me. But I\u0027ll only give it if you swear to end my father\u0027s suffering. He\u0027s in so much pain, trapped between life and death. Promise me.",
+          "VoiceId": null
+        },
+        "Accept": {
+          "Text": "",
+          "VoiceId": null
+        },
+        "Decline": {
+          "Text": "",
+          "VoiceId": null
+        },
+        "Complete": {
+          "Text": "",
+          "VoiceId": null
+        },
+        "Fail": {
+          "Text": "",
+          "VoiceId": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Narration": [
     {
-      "Trigger": "Enter",
+      "Trigger": "RoomEnter",
+      "Room": 4,
+      "Line": {
+        "Text": "A woman stands alone, cradling a worn satchel. Her eyes are hollow but resolute.",
+        "VoiceId": "59f4d69289df95bc"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "QuestDone",
       "Room": null,
       "Line": {
-        "Text": "The stair ends in the Abyss. Footprints, none of them yours, lead toward the Void-Touched Treasury.",
-        "VoiceId": "558c277d7b0e6c2e"
-      }
+        "Text": "The promise, like the relic, now rests heavy in your hands.",
+        "VoiceId": "ed8440951b1dea49"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "EnemyTotal": 6
 }

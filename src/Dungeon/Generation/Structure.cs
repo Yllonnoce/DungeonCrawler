@@ -17,11 +17,12 @@ public sealed record Structure(StructureKind Kind, Room Room, List<GridPos> Cell
     public bool IsInterior(GridPos p) => Kind == StructureKind.Camp && Cells.Contains(p);
 }
 
-public enum WaterKind : byte { None = 0, Pond = 1, Stream = 2 }
+/// <summary>Pond: a blob in a room; Stream: wall to wall with a bridge; Flood: a whole room under water (Flooded floors).</summary>
+public enum WaterKind : byte { None = 0, Pond = 1, Stream = 2, Flood = 3 }
 
 /// <summary>
-/// Water sunk into a room's floor: a pond blob, or a stream channel with a <see cref="Flow"/> direction (ponds have none)
-/// crossed by a plank bridge at <see cref="Bridge"/>.
+/// Water sunk into a room's floor: a pond blob, a stream channel with a <see cref="Flow"/> direction (ponds have none)
+/// crossed by a plank bridge at <see cref="Bridge"/>, or a flood over the whole room.
 /// </summary>
 public sealed record WaterFeature(WaterKind Kind, Room Room, List<GridPos> Cells, GridPos Flow, GridPos? Bridge = null);
 

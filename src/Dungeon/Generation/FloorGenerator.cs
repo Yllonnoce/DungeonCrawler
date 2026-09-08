@@ -4,16 +4,40 @@ namespace DungeonCrawler.Dungeon.Generation;
 /// Room-and-corridor generator. Deterministic for a given (spec, seed): only System.Random seeded from the
 /// argument is used, and every collection is iterated in insertion order.
 /// </summary>
-public static class FloorGenerator
+public static partial class FloorGenerator
 {
     public static FloorLayout Generate(FloorSpec spec, int seed)
     {
+        spec = LayoutKinds.Tune(spec);
         var rng = new Random(seed);
-        var layout = new FloorLayout(seed, spec.Width, spec.Height);
+        var layout = new FloorLayout(seed, spec.Width, spec.Height) { Kind = spec.Layout };
 
-        PlaceRooms(spec, rng, layout);
-        CarveRooms(layout);
-        ConnectRooms(spec, rng, layout);
+        // the shape: how rooms are laid and joined; everything after works the same on any of them (see FloorGenerator.Kinds.cs)
+        switch (spec.Layout)
+        {
+            case LayoutKind.Labyrinth:
+                PlaceLatticeRooms(spec, rng, layout);
+                CarveRooms(layout);
+                CarveMaze(spec, rng, layout);
+                DeriveConnections(layout);
+                break;
+            case LayoutKind.Ring:
+                PlaceRingRooms(spec, rng, layout);
+                CarveRooms(layout);
+                ConnectRing(spec, rng, layout);
+                break;
+            case LayoutKind.Mine:
+                PlaceGalleries(spec, rng, layout);
+                CarveRooms(layout);
+                ConnectRooms(spec, rng, layout);
+                DigDrifts(spec, new Random(seed ^ 0x0D1F), layout);
+                break;
+            default:
+                PlaceRooms(spec, rng, layout);
+                CarveRooms(layout);
+                ConnectRooms(spec, rng, layout);
+                break;
+        }
         RaiseWalls(layout);
         PlaceStairs(layout);
         PlaceVaults(spec, rng, layout);
@@ -21,9 +45,11 @@ public static class FloorGenerator
         Verticality.PlacePits(spec, rng, layout);
         Verticality.PlaceSecrets(spec, rng, layout);
         PlaceStructures(spec, new Random(seed ^ 0x57C7), layout);
-        PlaceWater(spec, new Random(seed ^ 0x7A7E), layout);
+        if (spec.Layout == LayoutKind.Flooded) FloodRooms(spec, new Random(seed ^ 0x7A7E), layout);
+        else PlaceWater(spec, new Random(seed ^ 0x7A7E), layout);
         PlaceRubble(spec, new Random(seed ^ 0x2B1E), layout);
         PlaceNests(spec, new Random(seed ^ 0x4E57), layout);
+        PlaceFires(spec, new Random(seed ^ 0xF1AE), layout);
         RaiseWalls(layout);
         PlaceSpawns(spec, rng, layout);
         PlaceTraps(spec, rng, layout);
@@ -57,7 +83,7 @@ public static class FloorGenerator
         }
     }
 
-    private static Room? TryPlace(FloorSpec spec, Random rng, FloorLayout layout, int w, int h, int attempts)
+    internal static Room? TryPlace(FloorSpec spec, Random rng, FloorLayout layout, int w, int h, int attempts)
     {
         for (var i = 0; i < attempts; i++)
         {
@@ -139,14 +165,14 @@ public static class FloorGenerator
     }
 
     private static (int, int) Norm((int a, int b) e) => e.a < e.b ? (e.a, e.b) : (e.b, e.a);
-    private static long Dist2(GridPos a, GridPos b) => (long)(a.X - b.X) * (a.X - b.X) + (long)(a.Y - b.Y) * (a.Y - b.Y);
+    internal static long Dist2(GridPos a, GridPos b) => (long)(a.X - b.X) * (a.X - b.X) + (long)(a.Y - b.Y) * (a.Y - b.Y);
 
     /// <summary>
     /// A corridor with character: the usual L between the rooms, but every long leg is staggered sideways by one cell
     /// for a stretch in its middle, so hallways jog and weave instead of running dead straight. Each jog adds only two
     /// cells and leaves straight runs at both ends, which is what ramps need.
     /// </summary>
-    private static void CarveCorridor(Random rng, FloorLayout layout, GridPos from, GridPos to)
+    internal static void CarveCorridor(Random rng, FloorLayout layout, GridPos from, GridPos to)
     {
         var corner = rng.Next(2) == 0 ? new GridPos(to.X, from.Y) : new GridPos(from.X, to.Y);
         CarveLeg(rng, layout, from, corner);
@@ -190,7 +216,7 @@ public static class FloorGenerator
         CarveLine(layout, s1, b);
     }
 
-    private static void CarveLine(FloorLayout layout, GridPos a, GridPos b)
+    internal static void CarveLine(FloorLayout layout, GridPos a, GridPos b)
     {
         var dx = Math.Sign(b.X - a.X);
         var dy = Math.Sign(b.Y - a.Y);
@@ -230,6 +256,12 @@ public static class FloorGenerator
 
         var centre = new GridPos(layout.Width / 2, layout.Height / 2);
         var candidates = layout.BossArena is { } arena ? rooms.Where(r => r != arena).ToList() : rooms;
+        if (layout.Kind == LayoutKind.Mine)
+        {
+            // stairs belong in a chamber, not jammed against a gallery wall (a flight in a two-wide gallery half blocks it)
+            var chambers = candidates.Where(r => Math.Min(r.W, r.H) >= 4).ToList();
+            if (chambers.Count >= 2) candidates = chambers;
+        }
         if (candidates.Count == 0) candidates = rooms;
 
         var upRoom = candidates.OrderByDescending(r => Dist2(r.Center, centre)).ThenBy(rooms.IndexOf).First();
@@ -435,7 +467,7 @@ public static class FloorGenerator
     }
 
     /// <summary>A cell a structure must leave alone.</summary>
-    private static bool Busy(FloorLayout layout, GridPos p)
+    internal static bool Busy(FloorLayout layout, GridPos p)
         => layout[p] != Cell.Floor || layout.IsUnder(p) || p == layout.UpStairs || p == layout.DownStairs
            || layout.Vaults.Any(v => v.Key == p || v.Lever == p || v.Door == p)
            || layout.Secrets.Any(s => s.Facing == p || s.Alcove == p) || layout.ChestSpawns.Contains(p);
@@ -551,7 +583,9 @@ public static class FloorGenerator
             }
             return true;
         }
-        var rooms = layout.Rooms.Where(r => r != upRoom && r != layout.BossArena && r.W >= 5 && r.H >= 5 && layout.Vaults.All(v => v.Room != r)).ToList();
+        // mines heap spoil in their galleries too; elsewhere a mound needs a roomy room
+        bool Roomy(Room r) => layout.Kind == LayoutKind.Mine ? Math.Min(r.W, r.H) >= 2 && r.Area >= 12 : r.W >= 5 && r.H >= 5;
+        var rooms = layout.Rooms.Where(r => r != upRoom && r != layout.BossArena && Roomy(r) && layout.Vaults.All(v => v.Room != r)).ToList();
         Shuffle(rng, rooms);
         // ruins first, and generously
         foreach (var ruin in layout.Structures.Where(s => s.Kind == StructureKind.Ruin))
@@ -632,7 +666,7 @@ public static class FloorGenerator
         }
     }
 
-    private static readonly GridPos[] Dirs4 = { new(1, 0), new(-1, 0), new(0, 1), new(0, -1) };
+    internal static readonly GridPos[] Dirs4 = { new(1, 0), new(-1, 0), new(0, 1), new(0, -1) };
 
     // ---- water -------------------------------------------------------------------------------
 
@@ -654,7 +688,7 @@ public static class FloorGenerator
         }
     }
 
-    private static bool Dry(FloorLayout layout, GridPos p)
+    internal static bool Dry(FloorLayout layout, GridPos p)
         => Busy(layout, p) || layout.IsReserved(p) || layout.IsWater(p) || layout.Ledges.Any(l => l.RampBottom == p || l.RampTop == p);
 
     /// <summary>A one-cell channel across the room's short axis, from wall to wall, never through a doorway cell.</summary>

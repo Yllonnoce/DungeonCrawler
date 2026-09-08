@@ -1,3 +1,4 @@
+using DungeonCrawler.Dungeon.Generation;
 using System.Text;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Enemies;
@@ -45,7 +46,7 @@ public sealed class PromptTemplates
     public const string DefaultOutlineTask = """
         Design the campaign for this run and the plan for floor 1.
 
-        Campaign: a Title (at most 60 characters), a Synopsis (two or three sentences), an Antagonist (Name, Epithet) who waits on floor 20, a Cast of four to six recurring characters (Id such as cast_warden, Name, Role, Secret: what they hide and on which floor it comes out; make them original people with wants of their own, not stock hermits and widows: a rival crew's captain who keeps losing to the party, a jailer who wants to be arrested, a cartographer mapping the wrong dungeon), a Mystery (Question, Truth, three to five Clues each on a different story floor, PayoffFloor 12-19, Payoff), one Faction per tier (Id, Name, EnemyIds from that tier's pool), four Tiers (Index 0-3, Theme, Beat: what this tier's floors are about, BossName for the tier's boss, optional BossSignature, EnterLine spoken by the narrator on the tier's first floor), and exactly twenty Floors (Floor 1-20, Title, Mood, Story: empty for a quiet floor, else the beat: which cast id appears, which clue, choice or betrayal happens, which earlier flag it answers; make about eight of the twenty story floors, including the payoff floor, spread through the descent with at least one per tier; SpecOverrides: leave every field null unless a floor should be unusual; EnemyCount 3-16, ChestCount 1-4, LockedChestCount 0-2, TrapCount 0-8, VaultCount 0-2, LedgeCount 0-2, PitCount 0-2, SecretCount 0-3, HighRoomChance 0-1, StructureCount 0-3 for gatehouses, bandit camps and ruins, WaterCount 0-3 for ponds and streams, RubbleCount 0-6, NestCount 0-2 for horde breaches). Plan at least one Decide floor whose flag a later floor answers with a RequiresFlag or ForbidsFlag branch, and one Betrayal by a cast member the party has met before. Barks: leave empty here. ArcNotes: private notes to your future self about threads to pay off, at most 600 characters.
+        Campaign: a Title (at most 60 characters), a Synopsis (two or three sentences), an Antagonist (Name, Epithet) who waits on floor 20, a Cast of four to six recurring characters (Id such as cast_warden, Name, Role, Secret: what they hide and on which floor it comes out; make them original people with wants of their own, not stock hermits and widows: a rival crew's captain who keeps losing to the party, a jailer who wants to be arrested, a cartographer mapping the wrong dungeon), a Mystery (Question, Truth, three to five Clues each on a different story floor, PayoffFloor 12-19, Payoff), one Faction per tier (Id, Name, EnemyIds from that tier's pool), four Tiers (Index 0-3, Theme, Beat: what this tier's floors are about, BossName for the tier's boss, optional BossSignature, EnterLine spoken by the narrator on the tier's first floor), and exactly twenty Floors (Floor 1-20, Title, Mood, Layout: one of the layout ids listed below, chosen so the descent keeps changing shape (every id at least once, never the same on two floors in a row, floor 1 standard; null lets the game deal one), Story: empty for a quiet floor, else the beat: which cast id appears, which clue, choice or betrayal happens, which earlier flag it answers; make about eight of the twenty story floors, including the payoff floor, spread through the descent with at least one per tier; SpecOverrides: leave every field null unless a floor should be unusual; EnemyCount 3-16, ChestCount 1-4, LockedChestCount 0-2, TrapCount 0-8, VaultCount 0-2, LedgeCount 0-2, PitCount 0-2, SecretCount 0-3, HighRoomChance 0-1, StructureCount 0-3 for gatehouses, bandit camps and ruins, WaterCount 0-3 for ponds and streams, RubbleCount 0-6, NestCount 0-2 for horde breaches). Plan at least one Decide floor whose flag a later floor answers with a RequiresFlag or ForbidsFlag branch, and one Betrayal by a cast member the party has met before. Barks: leave empty here. ArcNotes: private notes to your future self about threads to pay off, at most 600 characters.
 
         Floor1: the full plan for floor 1 using the menu below. Floor 1 should teach: one or two small groups, a Guard and maybe a Patrol, no Alarm. Floor 1 is a story floor if the outline says so: then one cast member with a short script and a simple quest.
         """;
@@ -86,6 +87,8 @@ public static class PromptBuilder
             if (looks.Count > 0) user.AppendLine($"  themes for this tier (Floors[].Theme): {string.Join("; ", looks.Select(l => $"{l.Id} = {l.DisplayName}{(l.Description != "" ? ", " + l.Description : "")}"))}");
         }
         user.AppendLine();
+        user.AppendLine("Floor layouts (Floors[].Layout): " + string.Join("; ", LayoutKinds.All.Select(k => $"{LayoutKinds.Id(k)} = {LayoutKinds.Describe(k)}")) + ". Boss floors: " + string.Join(", ", LayoutKinds.BossKinds.Select(LayoutKinds.Id)) + " only.");
+        user.AppendLine();
         user.AppendLine("Floor 1 menu:");
         user.AppendLine(RenderMenu(floor1));
         return new ClaudeRequest("outline", model, new[] { new PromptBlock(t.Rules.Trim(), Cache: true) }, user.ToString(), PlanSchemas.For<OutlineWithFirstFloor>(), "xhigh", OutlineMaxTokens);
@@ -97,7 +100,7 @@ public static class PromptBuilder
         user.AppendLine(t.FloorTask.Trim());
         user.AppendLine();
         if (campaign.OutlineFor(menu.Floor) is { } outline && (outline.Title != "" || outline.Mood != "" || outline.Theme != null))
-            user.AppendLine($"This floor in the outline: \"{outline.Title}\" ({outline.Mood}){(outline.Theme != null ? $", look: {outline.Theme}" : "")}.");
+            user.AppendLine($"This floor in the outline: \"{outline.Title}\" ({outline.Mood}){(outline.Theme != null ? $", look: {outline.Theme}" : "")}, shape: {menu.Layout}.");
         if (campaign.TierFor(menu.TierIndex) is { } tier) user.AppendLine($"Tier beat: {tier.Beat}");
         user.AppendLine();
         user.AppendLine("Memory notes:");
@@ -132,7 +135,7 @@ public static class PromptBuilder
     public static string RenderMenu(FloorMenu m)
     {
         var sb = new StringBuilder();
-        sb.AppendLine($"Floor {m.Floor}, tier {m.TierIndex} ({m.TierName}){(m.BossFloor ? $", BOSS FLOOR: {m.BossName} ({m.BossId}) waits in the arena" : "")}.");
+        sb.AppendLine($"Floor {m.Floor}, tier {m.TierIndex} ({m.TierName}), {m.Layout} layout{(LayoutKinds.TryParse(m.Layout, out var shape) && shape != LayoutKind.Standard ? $" ({LayoutKinds.Describe(shape)})" : "")}{(m.BossFloor ? $", BOSS FLOOR: {m.BossName} ({m.BossId}) waits in the arena" : "")}.");
         sb.AppendLine($"Enemy budget: cost {m.Budget:0.0}, between {m.MinEnemies} and {m.MaxEnemies} enemies (the generator would have placed {m.TargetEnemies}). Vaults: {m.VaultCount}. Generator chests: {m.GeneratorChests} (spawn indices 0-{Math.Max(0, m.GeneratorChests - 1)}).");
         sb.AppendLine("Roster (id: name, kind, cost):");
         foreach (var e in m.Roster) sb.AppendLine($"- {e.Id}: {e.Name}, {e.Kind}, cost {e.Cost:0.00}{(e.IsBandit ? ", bandit (camp rooms only)" : "")}{(e.IsHorde ? ", horde (nest rooms only, Hordes[] entries)" : "")}");

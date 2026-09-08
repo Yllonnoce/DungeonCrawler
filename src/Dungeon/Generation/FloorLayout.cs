@@ -7,6 +7,8 @@ namespace DungeonCrawler.Dungeon.Generation;
 public sealed class FloorLayout
 {
     public int Seed { get; }
+    /// <summary>The shape this floor was generated as.</summary>
+    public LayoutKind Kind { get; init; }
     public int Width { get; }
     public int Height { get; }
     public Cell[] Cells { get; }               // row-major, index = y * Width + x
@@ -58,8 +60,10 @@ public sealed class FloorLayout
     public List<Nest> Nests { get; } = new();
     public bool IsNestMouth(GridPos p) => Nests.Any(n => n.Mouths.Contains(p));
     public Nest? NestAt(Room room) => Nests.FirstOrDefault(n => n.Room == room);
-    /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth.</summary>
-    public bool IsReserved(GridPos p) => Rubble.Contains(p) || IsNestMouth(p) || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p)));
+    /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
+    public HashSet<GridPos> Fires { get; } = new();
+    /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
+    public bool IsReserved(GridPos p) => Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p)));
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with
@@ -154,6 +158,7 @@ public sealed class FloorLayout
         foreach (var w in _water.Keys.OrderBy(k => k.Y).ThenBy(k => k.X)) { h ^= (ulong)w.GetHashCode() * 31; h *= 1099511628211UL; }
         foreach (var r in Rubble.OrderBy(k => k.Y).ThenBy(k => k.X)) { h ^= (ulong)r.GetHashCode() * 17; h *= 1099511628211UL; }
         foreach (var m in Nests.SelectMany(n => n.Mouths)) { h ^= (ulong)m.GetHashCode() * 13; h *= 1099511628211UL; }
+        foreach (var f in Fires.OrderBy(k => k.Y).ThenBy(k => k.X)) { h ^= (ulong)f.GetHashCode() * 23; h *= 1099511628211UL; }
         foreach (var (a, b) in BlockedEdges.OrderBy(e => e.Item1.Y).ThenBy(e => e.Item1.X).ThenBy(e => e.Item2.Y).ThenBy(e => e.Item2.X))
         { h ^= (ulong)a.GetHashCode(); h *= 1099511628211UL; h ^= (ulong)b.GetHashCode(); h *= 1099511628211UL; }
         return h;
@@ -194,7 +199,7 @@ public sealed class FloorLayout
                 sb.Append(p == UpStairs ? '<' : p == DownStairs ? '>' :
                           EnemySpawns.Contains(p) ? 'e' : ChestSpawns.Contains(p) ? '$' : BreakableSpawns.Contains(p) ? 'b' :
                           TrapSpawns.Contains(p) ? '^' : KeySpawns.Contains(p) || Vaults.Any(v => v.Key == p) ? 'k' : Vaults.Any(v => v.Lever == p) ? 'L' :
-                          IsWater(p) ? '~' :
+                          IsWater(p) ? '~' : Fires.Contains(p) ? '*' :
                           this[x, y] switch { Cell.Floor => LevelOf(p) == 1 ? ':' : '.', Cell.Wall => IsUnder(p) ? '_' : '#', Cell.Door => '+', Cell.Ramp => '/', Cell.Pit => 'O', Cell.Secret => 'S', _ => IsUnder(p) ? '_' : ' ' });
             }
             sb.Append('\n');

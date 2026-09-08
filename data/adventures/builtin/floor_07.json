@@ -1,141 +1,151 @@
 {
   "SchemaVersion": 1,
   "Floor": 7,
-  "Source": "fake",
-  "LayoutHash": 6761414061594579430,
-  "Title": "Narrow Gate",
+  "Source": "claude",
+  "LayoutHash": 10303773944457290203,
+  "Title": "The Cartographer\u0027s Secret",
   "IntroLine": {
-    "Text": "The Caves swallows your torchlight. Something here has been waiting.",
-    "VoiceId": "bc0f5c19757f0f1f"
+    "Text": "The lichen glows a sickly green, and something in its light shifts the shapes of the walls \u2014 as if the rock itself were restless.",
+    "VoiceId": "46e597237017317a"
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Passage",
-      "Name": "Dripping Walk"
+      "Name": "The Echoing Threshold"
     },
     {
       "Index": 1,
-      "Role": "Gate",
-      "Name": "Narrow Gate"
+      "Role": "Lair",
+      "Name": "Webbed Crevice"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "Echoing Passage"
+      "Role": "Exit",
+      "Name": "The Descent Stairs"
     },
     {
       "Index": 3,
-      "Role": "Camp",
-      "Name": "Crystal Hideout"
+      "Role": "Hall",
+      "Name": "Eroded Hall"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Fungal Descent"
+      "Role": "Lair",
+      "Name": "Brood Warren"
     },
     {
       "Index": 5,
-      "Role": "Barracks",
-      "Name": "Crystal Muster"
+      "Role": "Ruin",
+      "Name": "The Sunken Chamber"
     },
     {
       "Index": 6,
-      "Role": "Barracks",
-      "Name": "Crystal Barracks"
+      "Role": "Lair",
+      "Name": "Weaver\u0027s Nook"
     },
     {
       "Index": 7,
-      "Role": "Passage",
-      "Name": "Fungal Crossing"
+      "Role": "Hall",
+      "Name": "The Cartographer\u0027s Perch"
     },
     {
       "Index": 8,
-      "Role": "Barracks",
-      "Name": "Yawning Muster"
+      "Role": "Gate",
+      "Name": "The Arch of Hissing Stone"
     },
     {
       "Index": 9,
-      "Role": "Hall",
-      "Name": "Glimmering Chamber"
+      "Role": "Passage",
+      "Name": "Narrow Crevice"
     },
     {
       "Index": 10,
-      "Role": "Barracks",
-      "Name": "Narrow Quarters"
+      "Role": "Passage",
+      "Name": "Secret Crawl"
     },
     {
       "Index": 11,
-      "Role": "Barracks",
-      "Name": "Dripping Muster"
+      "Role": "Lair",
+      "Name": "Hatched Alcove"
     },
     {
       "Index": 12,
-      "Role": "Passage",
-      "Name": "Glimmering Gallery"
+      "Role": "Start",
+      "Name": "The Drop Ladder"
     },
     {
       "Index": 13,
-      "Role": "Passage",
-      "Name": "Dripping Crossing"
+      "Role": "Lair",
+      "Name": "Tunnel Maw"
     },
     {
       "Index": 14,
-      "Role": "Exit",
-      "Name": "Glimmering Stairwell"
-    },
-    {
-      "Index": 15,
       "Role": "Treasury",
-      "Name": "Glimmering Reliquary"
+      "Name": "The Ironkeeper\u0027s Cache"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Saltless Men",
-      "FactionId": "bandits",
+      "Id": "gate_watch",
+      "Name": "Gate Sentry",
+      "FactionId": "cave_brood",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 3,
+        "Kind": "Alarm",
+        "Room": 8,
         "Objective": null,
+        "Route": [],
+        "AlarmTarget": "vault_guard",
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "vault_guard",
+      "Name": "Cache Wardens",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 14,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "group1",
-      "Name": "Glimmering Clutch",
-      "FactionId": "faction1",
+      "Id": "spider_patrol",
+      "Name": "Crawler Patrol",
+      "FactionId": "cave_brood",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
           "Count": 2
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 1,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "1"
-        },
-        "Route": [],
+        "Kind": "Patrol",
+        "Room": 5,
+        "Objective": null,
+        "Route": [
+          5,
+          0,
+          5
+        ],
         "AlarmTarget": null,
         "RallyRoom": null
       }
@@ -144,71 +154,17 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Welter",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 23,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde2",
-      "Name": "The Gnawing",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 14
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 21,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Welter",
+      "Id": "horde_room1",
+      "Name": "Creeping Tide",
       "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 13
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
+          "Count": 2
         },
         {
           "EnemyId": "enemy.cave_spider",
@@ -217,108 +173,285 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 20,
+      "Total": 11,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "A skittering tide pours from the darkness as you step in.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde4",
-      "Name": "The Scurry",
-      "Room": 5,
+      "Id": "horde_room4",
+      "Name": "Brood Rush",
+      "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 13
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.cave_shaman",
+          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 20,
+      "Total": 11,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The floor shudders and a wave of chitinous bodies floods the chamber.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde5",
-      "Name": "The Gnawing",
-      "Room": 7,
+      "Id": "horde_room6",
+      "Name": "Loot Trap",
+      "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 15
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.rock_thrower",
+          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 22,
-      "Trigger": "Enter",
+      "Total": 11,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The chest lid creaks open, and the walls behind you split apart with a screech.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde6",
-      "Name": "The Welter",
-      "Room": 9,
+      "Id": "horde_room8",
+      "Name": "Gate Swarm",
+      "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 15
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.rock_thrower",
+          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 22,
-      "Trigger": "Enter",
+      "Total": 11,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The alarm shrieks, and the nests disgorge hunters.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
-  "Traps": [],
-  "Npcs": [],
-  "Quests": [],
+  "Chests": [
+    {
+      "Room": 3,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 9,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
+  "Traps": [
+    {
+      "Room": 5,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 7,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 10,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "lunette",
+      "Name": "Lunette",
+      "Room": 7,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "node_start",
+        "Nodes": [
+          {
+            "Id": "node_start",
+            "Line": {
+              "Text": "Oh, you found me... I\u0027ve been lost down here for what feels like an age. There are bones, you see, bones etched with lichen\u2014maps to the surface, I\u0027m certain! Find them and bring them here, and I\u0027ll finally finish my char",
+              "VoiceId": "63a85145d027b7bf"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll look for them.",
+                "Next": "node_accept",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Not our problem.",
+                "Next": "node_decline",
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "done_lunette_quest",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "node_accept",
+            "Line": {
+              "Text": "Three locations should have them. I\u0027ve marked them on your map. Hurry!",
+              "VoiceId": "fdead90606787ed1"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "node_decline",
+            "Line": {
+              "Text": "Then I\u0027ll wait. The darkness never changes, anyway.",
+              "VoiceId": "eb2d16f95fb5aaa3"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done_lunette_quest",
+            "Line": {
+              "Text": "Lunette clutches the bones, and the lichen\u0027s glow seeps into her fingers. She holds them up, and her own hands are translucent. \u0027Ah,\u0027 she breathes. \u0027I see now. I never left the crypt at all.\u0027",
+              "VoiceId": "62d442c1bae2eed8"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "lunette_quest",
+      "CastId": null,
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "lunette_quest",
+      "Template": "Investigate",
+      "Title": "The Cartographer\u0027s Bones",
+      "Objective": "Gather the lichen-etched bones for Lunette.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          1,
+          6,
+          11
+        ],
+        "ClueName": "Lichen-etched Bones"
+      },
+      "GiverNpc": "lunette",
+      "Reward": {
+        "Xp": 200,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "There are bones, you see, bones etched with lichen\u2014maps to the surface, I\u0027m certain! Find them and bring them here, and I\u0027ll finally finish my chart.",
+          "VoiceId": null
+        },
+        "Accept": {
+          "Text": "Three locations should have them. I\u0027ve marked them on your map. Hurry!",
+          "VoiceId": null
+        },
+        "Decline": {
+          "Text": "Then I\u0027ll wait. The darkness never changes, anyway.",
+          "VoiceId": null
+        },
+        "Complete": {
+          "Text": "Lunette clutches the bones, and the lichen\u0027s glow seeps into her fingers. She holds them up, and her own hands are translucent. \u0027Ah,\u0027 she breathes. \u0027I see now. I never left the crypt at all.\u0027",
+          "VoiceId": null
+        },
+        "Fail": {
+          "Text": "Lost? No matter. I have all the time in the world.",
+          "VoiceId": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Narration": [
     {
-      "Trigger": "Enter",
+      "Trigger": "QuestDone",
       "Room": null,
       "Line": {
-        "Text": "The Caves swallows your torchlight. Something here has been waiting.",
-        "VoiceId": "bc0f5c19757f0f1f"
-      }
+        "Text": "Lunette clutches the bones, and the lichen\u0027s glow seeps into her fingers. She holds them up, and her own hands are translucent. \u0027Ah,\u0027 she breathes. \u0027I see now. I never left the crypt at all.\u0027",
+        "VoiceId": "22074b5db643f014"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
   "EnemyTotal": 6

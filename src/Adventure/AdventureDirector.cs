@@ -35,7 +35,7 @@ public partial class AdventureDirector : Node
 
     /// <summary>Pick the planner from settings and debug flags. Called at New Game and after a load.</summary>
     /// <param name="offlineOnly">Play a campaign that is already written (the built-in one): no planner at all.</param>
-    /// <param name="forceAi">Use the live planner even when the Settings toggle is off (an explicit "New AI Campaign" or a rebake).</param>
+    /// <param name="forceAi">Use the live planner even when the Settings toggle is off (a rebake from Settings, or automation).</param>
     /// <param name="noAi">Never call the planner (a plain New Game without a campaign on disk).</param>
     public void ConfigurePlanner(bool offlineOnly = false, bool forceAi = false, bool noAi = false)
     {
@@ -313,6 +313,7 @@ public partial class AdventureDirector : Node
     {
         if (key.Trim().Length < 10) { result($"Paste a {(viaRunware ? "Runware" : "Claude")} API key first."); return; }
         IClaudeClient client = viaRunware ? new RunwareTextClient(key.Trim()) : new ClaudeSdkClient(key.Trim());
+        if (client is RunwareTextClient rw) rw.Log = line => GD.Print($"[planner] {line}");
         var request = new ClaudeRequest("ping", viaRunware ? RunwareModel : Pricing.DefaultModel, Array.Empty<PromptBlock>(), "Reply with a JSON object whose Reply field is the single word ok.", PlanSchemas.For<Ping>(), "low", viaRunware ? 256 : 64);
         _ = Task.Run(async () =>
         {

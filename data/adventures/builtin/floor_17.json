@@ -1,121 +1,102 @@
 {
   "SchemaVersion": 1,
   "Floor": 17,
-  "Source": "fake",
-  "LayoutHash": 15332517063842505651,
-  "Title": "Nameless Stairwell",
+  "Source": "claude",
+  "LayoutHash": 17555845951728216256,
+  "Title": "Cold Tiles",
   "IntroLine": {
-    "Text": "Dust stirs as you descend into the Abyss. The Faded Hunters keep their posts.",
-    "VoiceId": "4966e9a8d280a0df"
+    "Text": "Cyan lamps hum along the walls, their light cold and steady. The tiles beneath your feet click with each step, each click a whisper of sorrow lost in the chasm below.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Gate",
-      "Name": "Unlit Watch"
+      "Role": "Start",
+      "Name": "Flickering Descent"
     },
     {
       "Index": 1,
-      "Role": "Hall",
-      "Name": "Screaming Nave"
+      "Role": "Exit",
+      "Name": "The Stair of Sighs"
     },
     {
       "Index": 2,
-      "Role": "Exit",
-      "Name": "Nameless Stairwell"
+      "Role": "Lair",
+      "Name": "The Wailing Creche"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Screaming Chamber"
+      "Role": "Passage",
+      "Name": "Cellar of Forgotten Lamps"
     },
     {
       "Index": 4,
-      "Role": "Kennel",
-      "Name": "Unlit Den"
+      "Role": "Lair",
+      "Name": "The Weeping Hollow"
     },
     {
       "Index": 5,
-      "Role": "Ruin",
-      "Name": "Whispering Ruin"
+      "Role": "Gate",
+      "Name": "The Brazen Gate"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "Void-Touched Chamber"
+      "Role": "Camp",
+      "Name": "Bandit\u0027s Hearth"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "Void-Touched Hall"
+      "Role": "Passage",
+      "Name": "Dim Tiled Corridor"
     },
     {
       "Index": 8,
-      "Role": "Ruin",
-      "Name": "Faded Colonnade"
+      "Role": "Lair",
+      "Name": "Shade\u0027s Maw"
     },
     {
       "Index": 9,
-      "Role": "Start",
-      "Name": "Nameless Landing"
+      "Role": "Lair",
+      "Name": "The Howling Hall"
     },
     {
       "Index": 10,
       "Role": "Passage",
-      "Name": "Nameless Crossing"
+      "Name": "Cyan-Lit Passage"
     },
     {
       "Index": 11,
-      "Role": "Hall",
-      "Name": "Bleeding Chamber"
+      "Role": "Treasury",
+      "Name": "The Sealed Vault"
     },
     {
       "Index": 12,
       "Role": "Hall",
-      "Name": "Faded Nave"
+      "Name": "The Sunken Pool"
     },
     {
       "Index": 13,
-      "Role": "Treasury",
-      "Name": "Nameless Treasury"
+      "Role": "Lair",
+      "Name": "The Chattering Dark"
     },
     {
       "Index": 14,
       "Role": "Treasury",
-      "Name": "Unlit Hoard"
+      "Name": "The Lever-Locked Alcove"
     }
   ],
   "Collectives": [
     {
-      "Id": "group1",
-      "Name": "Faded Hunters",
-      "FactionId": "faction3",
+      "Id": "defend_exit",
+      "Name": "Exit Wardens",
+      "FactionId": "abyss_chorus",
       "Members": [
         {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 3
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 2,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "group2",
-      "Name": "Nameless Hunters",
-      "FactionId": "faction3",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
         },
         {
-          "EnemyId": "enemy.abyss_archer",
+          "EnemyId": "enemy.void_caller",
           "Count": 1
         }
       ],
@@ -123,69 +104,100 @@
         "Kind": "Defend",
         "Room": 1,
         "Objective": {
-          "Kind": "Chest",
-          "Ref": "4"
+          "Kind": "Stairs",
+          "Ref": "down"
         },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
-    }
-  ],
-  "Loners": [
+    },
     {
-      "EnemyId": "enemy.abyss_archer",
-      "Room": 4
-    }
-  ],
-  "Hordes": [
-    {
-      "Id": "horde1",
-      "Name": "The Gnawing",
-      "Room": 3,
+      "Id": "guard_camp",
+      "Name": "Hearth Guardians",
+      "FactionId": null,
       "Members": [
         {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 30
+          "EnemyId": "enemy.bandit_chief",
+          "Count": 1
         },
         {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 18
+          "EnemyId": "enemy.bandit",
+          "Count": 1
         },
         {
-          "EnemyId": "enemy.void_caller",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
+          "EnemyId": "enemy.bandit_archer",
           "Count": 1
         }
       ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 52,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Seethe",
-      "Room": 11,
+      "Id": "patrol_void",
+      "Name": "Cyan Walker",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 9,
+        "Objective": null,
+        "Route": [
+          9,
+          6,
+          12,
+          5,
+          9
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "alarm_nest",
+      "Name": "Shrieking Watcher",
+      "FactionId": "abyss_chorus",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 13,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "defend_exit",
+        "RallyRoom": 9
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_wailing",
+      "Name": "Creche Spawn",
+      "Room": 2,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 26
+          "Count": 35
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
+          "Count": 10
         },
         {
           "EnemyId": "enemy.void_stalker",
@@ -194,152 +206,93 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 46,
+      "Total": 47,
       "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "A wet, keening cry erupts from the nests, and the shades come boiling out into the cyan glare.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde3",
-      "Name": "The Rot",
+      "Id": "horde_brazen",
+      "Name": "Gate Spill",
       "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 27
+          "Count": 25
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 16
+          "Count": 8
         },
         {
           "EnemyId": "enemy.void_caller",
           "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 47,
+      "Total": 34,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The lock gives a hollow click, and a torrent of wailing shades bursts through the gate mouths, drawn by the sound.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde4",
-      "Name": "The Gnawing",
-      "Room": 6,
+      "Id": "horde_howling",
+      "Name": "Hall Breach",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 31
+          "Count": 40
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 54,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Crawl",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 27
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
+          "Count": 12
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 47,
-      "Trigger": "Chest",
+      "Total": 55,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde6",
-      "Name": "The Crawl",
-      "Room": 12,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 28
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 49,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The alarm call tears through the still air, and from the three mouths of the Howling Hall the deep shades pour, a tide of sorrow made solid.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 7,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 3,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 1,
+      "Room": 9,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 13,
       "Kind": "Gas"
+    },
+    {
+      "Room": 4,
+      "Kind": "Spikes"
     }
   ],
   "Npcs": [],
@@ -349,10 +302,12 @@
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "Dust stirs as you descend into the Abyss. The Faded Hunters keep their posts.",
-        "VoiceId": "4966e9a8d280a0df"
-      }
+        "Text": "The air is cold and still, laced with the faint hum of cyan lamps. Each tile is a tombstone of silence, and your footsteps sound like an intrusion.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "EnemyTotal": 8
 }

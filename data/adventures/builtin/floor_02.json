@@ -1,87 +1,94 @@
 {
   "SchemaVersion": 1,
   "Floor": 2,
-  "Source": "fake",
-  "LayoutHash": 2320056569745528059,
-  "Title": "Broken Bastion",
+  "Source": "claude",
+  "LayoutHash": 7878149392233924786,
+  "Title": "The Cartographer\u0027s Map",
   "IntroLine": {
-    "Text": "The Crypt swallows your torchlight. Something here has been waiting.",
-    "VoiceId": "8bce09e7a161ea4b"
+    "Text": "The brickwork is tight and the air is stuffed with the smell of old rot. Somewhere, a quill scratches.",
+    "VoiceId": "09ae88dff0a42257"
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Treasury",
-      "Name": "Sunken Treasury"
+      "Role": "Start",
+      "Name": "The Choked Entry"
     },
     {
       "Index": 1,
-      "Role": "Exit",
-      "Name": "Blackened Deepening"
+      "Role": "Hall",
+      "Name": "Stagnant Bath"
     },
     {
       "Index": 2,
-      "Role": "Gate",
-      "Name": "Broken Bastion"
+      "Role": "Passage",
+      "Name": "Gallery of Soot"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Shrouded Nave"
+      "Role": "Lair",
+      "Name": "The Plague Niche"
     },
     {
       "Index": 4,
-      "Role": "Kennel",
-      "Name": "Sunken Kennel"
+      "Role": "Exit",
+      "Name": "Descending Arch"
     },
     {
       "Index": 5,
-      "Role": "Camp",
-      "Name": "Sunken Camp"
+      "Role": "Kennel",
+      "Name": "The Bone Pit"
     },
     {
       "Index": 6,
-      "Role": "Start",
-      "Name": "Silent Threshold"
+      "Role": "Treasury",
+      "Name": "Sealed Records"
     },
     {
       "Index": 7,
-      "Role": "Gate",
-      "Name": "Weeping Gate"
+      "Role": "Cell",
+      "Name": "The Cartographer\u0027s Nook"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "Blackened Hall"
-    },
-    {
-      "Index": 9,
-      "Role": "Passage",
-      "Name": "Weeping Crossing"
-    },
-    {
-      "Index": 10,
-      "Role": "Passage",
-      "Name": "Sunken Gallery"
-    },
-    {
-      "Index": 11,
-      "Role": "Passage",
-      "Name": "Sunken Gallery"
+      "Role": "Lair",
+      "Name": "The Brick Tomb"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Knifegrinders",
-      "FactionId": "bandits",
+      "Id": "vault_keepers",
+      "Name": "Vault Keepers",
+      "FactionId": "crypt_wardens",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 2
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
         },
         {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 6,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "bone_priest_guard",
+      "Name": "Bone Priest Guard",
+      "FactionId": "crypt_wardens",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
           "Count": 1
         }
       ],
@@ -95,24 +102,44 @@
       }
     },
     {
-      "Id": "group1",
-      "Name": "Forgotten Wardens",
-      "FactionId": "faction0",
+      "Id": "crypt_watch",
+      "Name": "Crypt Watch",
+      "FactionId": "crypt_wardens",
       "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 3
+          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 2,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "2"
-        },
-        "Route": [],
+        "Kind": "Patrol",
+        "Room": 7,
+        "Objective": null,
+        "Route": [
+          7,
+          2,
+          3
+        ],
         "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "alarm_ghoul",
+      "Name": "Alarm Ghoul",
+      "FactionId": "crypt_wardens",
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "vault_keepers",
         "RallyRoom": null
       }
     }
@@ -120,258 +147,263 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Welter",
-      "Room": 2,
+      "Id": "pond_horde",
+      "Name": "Pond Horde",
+      "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 7
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 7,
+      "Total": 4,
       "Trigger": "Enter",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "The murky water erupts as husks crawl from submerged graves.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Spill",
-      "Room": 8,
+      "Id": "secret_nest_horde",
+      "Name": "Secret Nest Horde",
+      "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 8
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 8,
-      "Trigger": "Enter",
+      "Total": 3,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "As the chest creaks open, a chittering rises from the walls.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde3",
-      "Name": "The Spill",
+      "Id": "bone_pit_horde",
+      "Name": "Bone Pit Horde",
       "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 9
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 9,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Welter",
-      "Room": 9,
-      "Members": [
+          "Count": 3
+        },
         {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 7
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 7,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Crawl",
-      "Room": 11,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 8
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 8,
+      "Total": 5,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "The floor trembles and the bone pit disgorges its dead.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde6",
-      "Name": "The Seethe",
-      "Room": 7,
+      "Id": "brick_tomb_horde",
+      "Name": "Brick Tomb Horde",
+      "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 9
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 9,
+      "Total": 4,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The bricks shift and a wall of grasping hands pours forth.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 3,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 5,
+      "Room": 4,
       "Kind": "Spikes"
-    },
-    {
-      "Room": 7,
-      "Kind": "Gas"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc1",
-      "Name": "Sister Wren",
-      "Room": 11,
-      "VoiceId": "Despina",
+      "Id": "lunette",
+      "Name": "Lunette",
+      "Room": 1,
+      "VoiceId": "Aoede",
       "Script": {
-        "Start": "greet",
+        "Start": "start",
         "Nodes": [
           {
-            "Id": "greet",
+            "Id": "start",
             "Line": {
-              "Text": "Hush. They do not know I am here. If you can help me, I can help you.",
-              "VoiceId": "f3a3d974f78e4e72"
+              "Text": "Oh, adventurers! I seem to have lost my bathhouse maps. Can you find them? I swear I had them just a moment ago.",
+              "VoiceId": "8008d40e5caa0838"
             },
             "Choices": [
               {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
+                "Text": "Of course.",
+                "Next": "accept",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We\u0027re busy.",
+                "Next": "decline",
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               },
               {
                 "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
+                "Next": "turnin",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               }
             ]
           },
           {
-            "Id": "offer",
+            "Id": "accept",
             "Line": {
-              "Text": "The Knifegrinders took everything I had and left me here to rot. Kill every last one of them in the Sunken Camp and I will make it worth your while.",
-              "VoiceId": "c747f63a0659215a"
+              "Text": "Wonderful! I\u0027ll sketch a quick diagram... they should be somewhere in the west gallery, the drying room, and the steam hall. I think.",
+              "VoiceId": "a1b0053e4da975a6"
             },
             "Choices": [
               {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
-              },
-              {
-                "Text": "Not now.",
+                "Text": "We\u0027ll be back.",
                 "Next": null,
-                "Effect": "DeclineQuest"
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               }
             ]
           },
           {
-            "Id": "accepted",
+            "Id": "decline",
             "Line": {
-              "Text": "Then go. And do not be gentle.",
-              "VoiceId": "9f1ddb5002c2830d"
+              "Text": "Oh. I\u0027ll just wander then. The acoustics are lovely, at least.",
+              "VoiceId": "db4f5f9f14076c08"
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "Goodbye.",
                 "Next": null,
-                "Effect": "Farewell"
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               }
             ]
           },
           {
-            "Id": "done",
+            "Id": "turnin",
             "Line": {
-              "Text": "They are dead? All of them? Then perhaps there is justice down here after all. Take this.",
-              "VoiceId": "6312c6a1c0e8e68e"
+              "Text": "These are... quarantine orders? Not bathhouse maps at all. But they mention a deeper chamber! Perhaps these are worth something after all. Thank you, here\u0027s a little something.",
+              "VoiceId": "b7ded5d074562f2e"
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "Take care.",
                 "Next": null,
-                "Effect": "Farewell"
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest1"
+      "QuestId": "lunette_map_quest",
+      "CastId": null,
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
     }
   ],
   "Quests": [
     {
-      "Id": "quest1",
-      "Template": "KillTarget",
-      "Title": "The Knifegrinders",
-      "Objective": "Slay the Knifegrinders in the Sunken Camp.",
+      "Id": "lunette_map_quest",
+      "Template": "Investigate",
+      "Title": "The Cartographer\u0027s Maps",
+      "Objective": "Recover Lunette\u0027s lost maps",
       "Params": {
-        "TargetCollective": "band1",
+        "TargetCollective": null,
         "ItemName": null,
         "ItemRoom": null,
         "EscortNpc": null,
         "Waves": null,
-        "WaveCollective": null
+        "WaveCollective": null,
+        "ClueRooms": [
+          2,
+          5,
+          7
+        ],
+        "ClueName": "torn quarantine pages"
       },
-      "GiverNpc": "npc1",
+      "GiverNpc": "lunette",
       "Reward": {
-        "Xp": 140,
+        "Xp": 50,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "The Knifegrinders took everything I had and left me here to rot. Kill every last one of them in the Sunken Camp and I will make it worth your while.",
-          "VoiceId": "c747f63a0659215a"
+          "Text": "Oh, adventurers! I seem to have lost my bathhouse maps. Can you find them? I swear I had them just a moment ago.",
+          "VoiceId": null
         },
         "Accept": {
-          "Text": "Then go. And do not be gentle.",
-          "VoiceId": "9f1ddb5002c2830d"
+          "Text": "Wonderful! I\u0027ll sketch a quick diagram... they should be somewhere in the west gallery, the drying room, and the steam hall. I think.",
+          "VoiceId": null
         },
         "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "bb1b2c2a3e167c5f"
+          "Text": "Oh. I\u0027ll just wander then. The acoustics are lovely, at least.",
+          "VoiceId": null
         },
         "Complete": {
-          "Text": "They are dead? All of them? Then perhaps there is justice down here after all. Take this.",
-          "VoiceId": "6312c6a1c0e8e68e"
+          "Text": "These are... quarantine orders? Not bathhouse maps at all. But they mention a deeper chamber! Perhaps these are worth something after all. Thank you, here\u0027s a little something.",
+          "VoiceId": null
         },
         "Fail": {
-          "Text": "So they live on. Of course they do.",
-          "VoiceId": "a3a54fa637cc9c10"
+          "Text": "",
+          "VoiceId": null
         }
-      }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
   "Narration": [
@@ -379,10 +411,12 @@
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "The Crypt swallows your torchlight. Something here has been waiting.",
-        "VoiceId": "8bce09e7a161ea4b"
-      }
+        "Text": "The brickwork is tight and the air is stuffed with the smell of old rot. Somewhere, a quill scratches.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 6
+  "EnemyTotal": 5
 }

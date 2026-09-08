@@ -1,125 +1,186 @@
 {
   "SchemaVersion": 1,
   "Floor": 15,
-  "Source": "fake",
-  "LayoutHash": 6295829375408993594,
-  "Title": "Soot-Black Gate",
+  "Source": "claude",
+  "LayoutHash": 14043928483317276841,
+  "Title": "The Kiln Rotunda",
   "IntroLine": {
-    "Text": "The stair ends in the Forge. Footprints, none of them yours, lead toward the Soot-Black Treasury.",
-    "VoiceId": "672c6199a6cdd459"
+    "Text": "The heat of the forge presses in, and sorrow hangs in the air like smoke. Ahead, the great anvil hums with a voice not its own.",
+    "VoiceId": "4d540c6586972830"
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "Brazen Sanctum"
+      "Name": "The Great Anvil"
     },
     {
       "Index": 1,
-      "Role": "Camp",
-      "Name": "Soot-Black Camp"
+      "Role": "Start",
+      "Name": "Ash-Strewn Ascent"
     },
     {
       "Index": 2,
-      "Role": "Start",
-      "Name": "Smoldering Descent"
+      "Role": "Lair",
+      "Name": "Ember-Webbed Nest"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Soot-Black Nave"
+      "Role": "Cell",
+      "Name": "Forgotten Confessional"
     },
     {
       "Index": 4,
-      "Role": "Gate",
-      "Name": "Soot-Black Gate"
+      "Role": "Lair",
+      "Name": "Cinder Warren"
     },
     {
       "Index": 5,
-      "Role": "Hall",
-      "Name": "Molten Nave"
+      "Role": "Gate",
+      "Name": "Brazen Gate of Remorse"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "Ashen Hall"
+      "Role": "Lair",
+      "Name": "Ledge of Sparks"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "Molten Nave"
+      "Role": "Lair",
+      "Name": "Tears of Molten Grief"
     },
     {
       "Index": 8,
+      "Role": "Lair",
+      "Name": "Ember Nursery"
+    },
+    {
+      "Index": 9,
+      "Role": "Ruin",
+      "Name": "Collapsed Reliquary"
+    },
+    {
+      "Index": 10,
+      "Role": "Hall",
+      "Name": "Ringway of Soot"
+    },
+    {
+      "Index": 11,
       "Role": "Treasury",
-      "Name": "Soot-Black Treasury"
+      "Name": "Forgemaster\u0027s Lock"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Ditchmen",
-      "FactionId": "bandits",
+      "Id": "gate_sentries",
+      "Name": "Gate Sentries",
+      "FactionId": "forge_keepers",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.forge_golem",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.bandit_chief",
-          "Count": 1
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 1,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "5"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "group1",
-      "Name": "Molten Stokers",
-      "FactionId": "faction2",
+      "Id": "vault_defenders",
+      "Name": "Vault Keepers",
+      "FactionId": "forge_keepers",
       "Members": [
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 3
-        },
         {
           "EnemyId": "enemy.forge_priest",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 11,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "ring_alarm",
+      "Name": "Patrol Hounds",
+      "FactionId": "forge_keepers",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 10,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "vault_defenders",
+        "RallyRoom": 10
+      }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.forge_priest",
+      "Room": 3
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "cinder_swarm_2",
+      "Name": "Cinder Swarm",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 5
         },
         {
           "EnemyId": "enemy.forge_golem",
           "Count": 1
         }
       ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 4,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "4"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
+      "EnemyId": null,
+      "Count": null,
+      "Total": 26,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "From cracks in the walls, a tide of cinder imps boils out, led by a forge golem.",
+        "VoiceId": null
       }
-    }
-  ],
-  "Loners": [],
-  "Hordes": [
+    },
     {
-      "Id": "horde1",
-      "Name": "The Spill",
-      "Room": 3,
+      "Id": "cinder_cascade_4",
+      "Name": "Cinder Cascade",
+      "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
@@ -127,29 +188,79 @@
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 16
+          "Count": 6
         },
         {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 2
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 45,
+      "Total": 32,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The floor quakes as molten slag bursts from the walls, and a cascade of cinder imps and a forge priest descends.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Boil",
+      "Id": "gate_horde_5",
+      "Name": "Remorse Tide",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 22
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 5
+        },
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 28,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The brazen gate shudders, and from the heat-shimmer a tide of ember imps and an ogre pour forth.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "chest_horde_6",
+      "Name": "Spark Storm",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 20
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 4
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 25,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "Opening the chest sends sparks skittering across the floor\u2014and with them, a swarm of ember ogres and imps pour from the vents.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "molten_tears_7",
+      "Name": "Molten Tears",
       "Room": 7,
       "Members": [
         {
@@ -158,131 +269,26 @@
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 14
+          "Count": 5
         },
         {
           "EnemyId": "enemy.forge_golem",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 41,
+      "Total": 29,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The stream hisses, and from the steam rises a mass of cinder imps, flanked by a forge golem.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde3",
-      "Name": "The Seethe",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 27
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 48,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Spill",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 23
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 15
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 42,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Welter",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 25
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 45,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde6",
-      "Name": "The Crawl",
-      "Room": 6,
+      "Id": "ember_nursery_8",
+      "Name": "Nursery Brood",
+      "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
@@ -290,48 +296,59 @@
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 15
+          "Count": 6
         },
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.forge_golem",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 43,
+      "Total": 31,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The ember nest erupts as hundreds of tiny cinder imps and an ember ogre boil out of the ash.",
         "VoiceId": null
       }
     }
   ],
   "Boss": {
-    "Name": "Iron Colossus",
-    "SignatureOverride": null,
+    "Name": "The Iron Colossus",
+    "SignatureOverride": "Charge",
     "IntroLine": {
-      "Text": "\u0022So the thieves come at last.\u0022 Iron Colossus bars the way down.",
-      "VoiceId": "1a8c36dbdf036862"
+      "Text": "I am the Mourner. This colossus is but a mouth. Hale\u0027s suffering gave me form; you will give me release. Offer me his soul, or I will gorge on yours.",
+      "VoiceId": "62c0ee03199f8449"
     },
     "DeathLine": {
-      "Text": "Iron Colossus falls, and the way down opens.",
-      "VoiceId": "87b83e4361347c68"
+      "Text": "The colossus shatters, but my voice will follow you into the deep. The grief does not end.",
+      "VoiceId": "adf3926a9cc4deba"
     }
   },
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 3,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 10,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
+    {
+      "Room": 4,
+      "Kind": "Gas"
+    },
     {
       "Room": 6,
       "Kind": "Spikes"
+    },
+    {
+      "Room": 9,
+      "Kind": "Fire"
     }
   ],
   "Npcs": [],
@@ -341,10 +358,52 @@
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "The stair ends in the Forge. Footprints, none of them yours, lead toward the Soot-Black Treasury.",
-        "VoiceId": "672c6199a6cdd459"
-      }
+        "Text": "The heat of the forge presses in, and sorrow hangs in the air like smoke. Ahead, the great anvil hums with a voice not its own.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "The iron giant\u0027s eyes glow with a green flame. Its voice is the Mourner\u0027s\u2014soft, layered with centuries of sorrow.",
+        "VoiceId": "58fbdf3b424b9d36"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "The Mourner stirs. \u0027You have spilled the warden\u0027s blood. His grief is mine already. Now, give me yours.\u0027",
+        "VoiceId": "13afb795584845d3"
+      },
+      "RequiresFlag": "killed_hale",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "\u0027The warden still breathes. You defy me. Then I shall feast on your despair instead.\u0027",
+        "VoiceId": "e41c29c16365c822"
+      },
+      "RequiresFlag": "spared_hale",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "The colossus falls, and the kiln\u0027s heat dies. Yet a cold voice lingers in your mind.",
+        "VoiceId": "f93a4896a90857e9"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 10
+  "EnemyTotal": 9
 }

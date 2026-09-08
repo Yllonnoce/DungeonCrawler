@@ -27,6 +27,13 @@ public static class TrapRules
         };
     }
 
+    /// <summary>One tick of standing in a burning floor patch (Burning floors): a lick of fire damage and the burn that follows.</summary>
+    public static AttackProfile FloorFire(int floor)
+    {
+        var s = TierRules.DamageScale(floor);
+        return Attack(TrapKind.Fire, floor) with { MinDamage = 2 * s, MaxDamage = 4 * s, OnHit = new[] { new StatusApplication(StatusKind.Burn, 3, 2 * s) } };
+    }
+
     /// <summary>Traps the party places are weaker but always trigger on enemies.</summary>
     public static AttackProfile PlacedAttack(TrapKind kind, int floor) => Attack(kind, floor) with { };
 }

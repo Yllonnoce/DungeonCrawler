@@ -1,82 +1,87 @@
 {
   "SchemaVersion": 1,
   "Floor": 5,
-  "Source": "fake",
-  "LayoutHash": 10013577963812421691,
-  "Title": "Silent Watch",
+  "Source": "claude",
+  "LayoutHash": 6853174287111889090,
+  "Title": "The Second Map",
   "IntroLine": {
-    "Text": "Cold air rises from the Crypt. Whatever guards the Silent Reliquary does not sleep.",
-    "VoiceId": "29265d21c6dc5cab"
+    "Text": "Deeper now, the air thick with moss-spores and the faint scent of old parchment. Ahead, Lunette\u0027s voice carries through the stone.",
+    "VoiceId": "942a5a25df024e83"
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "Hollow Court"
+      "Name": "The Rotunda of Echoes"
     },
     {
       "Index": 1,
-      "Role": "Start",
-      "Name": "Silent Descent"
+      "Role": "Lair",
+      "Name": "The Brood-Cradle"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "Silent Passage"
+      "Role": "Start",
+      "Name": "The Landing"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Broken Crossing"
+      "Role": "Gate",
+      "Name": "The Arched Chancel"
     },
     {
       "Index": 4,
-      "Role": "Gate",
-      "Name": "Blackened Watch"
+      "Role": "Ruin",
+      "Name": "The Scribe\u0027s Hollow"
     },
     {
       "Index": 5,
-      "Role": "Gate",
-      "Name": "Silent Watch"
+      "Role": "Lair",
+      "Name": "Ash-Ridden Alcove"
     },
     {
       "Index": 6,
-      "Role": "Ruin",
-      "Name": "Shrouded Colonnade"
+      "Role": "Lair",
+      "Name": "Guardpost Gallery"
     },
     {
       "Index": 7,
       "Role": "Hall",
-      "Name": "Hollow Chamber"
+      "Name": "The Rivulet Walk"
     },
     {
       "Index": 8,
-      "Role": "Passage",
-      "Name": "Broken Passage"
+      "Role": "Lair",
+      "Name": "Dust-Wall Den"
     },
     {
       "Index": 9,
+      "Role": "Lair",
+      "Name": "The Bile-Rut"
+    },
+    {
+      "Index": 10,
       "Role": "Treasury",
-      "Name": "Silent Reliquary"
+      "Name": "Warden\u0027s Strongbox"
     }
   ],
   "Collectives": [
     {
-      "Id": "group1",
-      "Name": "Blackened Pack",
-      "FactionId": "faction0",
+      "Id": "defend_gate",
+      "Name": "Chancel Guardians",
+      "FactionId": "crypt_wardens",
       "Members": [
         {
-          "EnemyId": "enemy.bone_priest",
+          "EnemyId": "enemy.ghoul",
           "Count": 2
         }
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 5,
+        "Room": 3,
         "Objective": {
           "Kind": "Gate",
-          "Ref": "5"
+          "Ref": "3"
         },
         "Route": [],
         "AlarmTarget": null,
@@ -84,13 +89,45 @@
       }
     },
     {
-      "Id": "group2",
-      "Name": "Forgotten Wardens",
-      "FactionId": "faction0",
+      "Id": "patrol_outer",
+      "Name": "Ring Walkers",
+      "FactionId": "crypt_wardens",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 3,
+        "Objective": null,
+        "Route": [
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          1
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "alarm_pack",
+      "Name": "Gate Wakers",
+      "FactionId": null,
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 3
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
         }
       ],
       "Goal": {
@@ -98,182 +135,399 @@
         "Room": 7,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "group1",
-        "RallyRoom": 5
+        "AlarmTarget": "defend_gate",
+        "RallyRoom": 3
+      }
+    },
+    {
+      "Id": "defend_vault",
+      "Name": "Vault Sentries",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 10,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
       }
     }
   ],
   "Loners": [
     {
       "EnemyId": "enemy.ghoul",
+      "Room": 5
+    },
+    {
+      "EnemyId": "enemy.skeleton_archer",
       "Room": 8
     }
   ],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Scurry",
-      "Room": 4,
+      "Id": "horde_1",
+      "Name": "Nest 1 Swarm",
+      "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 14
+          "Count": 4
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 4
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 18,
+      "Total": 6,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "A rasping chorus erupts from the nest ahead as husks pour out, a larger brute shoving through.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_2",
+      "Name": "Chest Trap Horde",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 6,
       "Trigger": "Chest",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "As the chest creaks open, the wall behind collapses and husks scuttle out from a hidden nest, arrows already flying.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Scurry",
-      "Room": 5,
+      "Id": "horde_3",
+      "Name": "Alarm Horde",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 14
+          "Count": 5
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 4
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 18,
+      "Total": 8,
       "Trigger": "Alarm",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Rot",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 15,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Seethe",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 14
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 17,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Spill",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 14
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 17,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde6",
-      "Name": "The Tide",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 15,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
+        "Text": "A horn sounds in the distance and the ground trembles; a flood of husks and a chanting priest pour from the eastern nest.",
         "VoiceId": null
       }
     }
   ],
   "Boss": {
-    "Name": "Crypt Lord",
+    "Name": "Crypt Lord, Hale\u0027s Echo",
     "SignatureOverride": null,
     "IntroLine": {
-      "Text": "\u0022So the thieves come at last.\u0022 Crypt Lord bars the way down.",
-      "VoiceId": "54fdbf58dff2c6d1"
+      "Text": "The heavy stone doors grind shut behind you as a towering figure of bone and rusted armor rises from a sarcophagus in the centre of the rotunda.",
+      "VoiceId": "6ccc15616e88b91a"
     },
     "DeathLine": {
-      "Text": "\u0022Deeper... it waits... deeper...\u0022 Crypt Lord is still.",
-      "VoiceId": "d8afdfcd9ef89ff0"
+      "Text": "The crypt lord crumples, its hollow chest caving in with a sound like a last rasping breath. The doors slide open once more.",
+      "VoiceId": "2a5fd66681f0733d"
     }
   },
   "Chests": [],
-  "Traps": [],
-  "Npcs": [],
-  "Quests": [],
+  "Traps": [
+    {
+      "Room": 5,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 7,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_lunette",
+      "Name": "Lunette",
+      "Room": 4,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "start",
+        "Nodes": [
+          {
+            "Id": "start",
+            "Line": {
+              "Text": "You\u0027ve returned! I\u0027ve found more fragments of the old bathhouse maps, but they\u0027re scattered in the crypt. Could you fetch them for me?",
+              "VoiceId": "5d10a77097b71fcd"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find them.",
+                "Next": "accept",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Not interested.",
+                "Next": "decline",
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "turnin",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accept",
+            "Line": {
+              "Text": "Thank the stars. They should be in the old sanctum and the guard rooms... I think.",
+              "VoiceId": "d09bd09a62adebe8"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll be back.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "decline",
+            "Line": {
+              "Text": "Suit yourself. I\u0027ll manage. The cartographer\u0027s life is solitary.",
+              "VoiceId": "1fd1dd183cf0ddf9"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "turnin",
+            "Line": {
+              "Text": "Ah, you found them! Let me see... Hmm, these symbols, they look like bathhouses, yes?",
+              "VoiceId": "3a18edc7dffd3d55"
+            },
+            "Choices": [
+              {
+                "Text": "Hand over the fragments.",
+                "Next": "interpret",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "interpret",
+            "Line": {
+              "Text": "So... what do you make of them?",
+              "VoiceId": "53879164a3c2d1ae"
+            },
+            "Choices": [
+              {
+                "Text": "These were quarantine zones, Lunette. Not baths.",
+                "Next": "farewell",
+                "Effect": "Choose",
+                "Flag": "told_truth",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Clearly baths. Big ones.",
+                "Next": "farewell",
+                "Effect": "Choose",
+                "Flag": "lie_to_lunette",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "farewell",
+            "Line": {
+              "Text": "I see... Thank you for your perspective.",
+              "VoiceId": "d0fe1128e4c5bd64"
+            },
+            "Choices": [
+              {
+                "Text": "Goodbye.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "lunette_quest",
+      "CastId": null,
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "lunette_quest",
+      "Template": "Investigate",
+      "Title": "Lunette\u0027s Second Map",
+      "Objective": "Find Lunette\u0027s scattered quarantine pages",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          4,
+          6,
+          8
+        ],
+        "ClueName": "torn quarantine pages"
+      },
+      "GiverNpc": "npc_lunette",
+      "Reward": {
+        "Xp": 150,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "I\u0027ve been piecing together more of the old bathhouse maps, but some pages have blown away. Find them, and we\u0027ll have the whole picture!",
+          "VoiceId": null
+        },
+        "Accept": {
+          "Text": "Marvelous! They were last seen near an old ruin, a guard post, and a dusty nest. Yes, dusty.",
+          "VoiceId": null
+        },
+        "Decline": {
+          "Text": "Ah, well. I\u0027ll draw what I can from memory.",
+          "VoiceId": null
+        },
+        "Complete": {
+          "Text": "She eagerly unfolds your finds, murmuring about ancient spa layouts.",
+          "VoiceId": null
+        },
+        "Fail": {
+          "Text": "Without those pages, my map remains incomplete. Perhaps another time.",
+          "VoiceId": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Narration": [
     {
       "Trigger": "Enter",
       "Room": null,
       "Line": {
-        "Text": "Cold air rises from the Crypt. Whatever guards the Silent Reliquary does not sleep.",
-        "VoiceId": "29265d21c6dc5cab"
-      }
+        "Text": "The crypt grows denser, green-tinged and clammy. Lunette\u0027s muttering echoes through the stone.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 4,
+      "Line": {
+        "Text": "In a ruined chamber, Lunette crouches among fallen columns, charcoal in hand, comparing scraps of vellum.",
+        "VoiceId": "a5bc9138144aac5e"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "Before the sarcophagus, the Crypt Lord raises its head, sockets burning with pale, grieving light.",
+        "VoiceId": "c6257be8779e6bc3"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "The echoes of sorrow die out as the lord collapses.",
+        "VoiceId": "22e11716dcff30a0"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "Lunette clutches the fragments to her chest, a mixture of hope and doubt in her eyes.",
+        "VoiceId": "5d577b258f6c0576"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 6
+  "EnemyTotal": 10
 }

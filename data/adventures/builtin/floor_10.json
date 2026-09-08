@@ -1,97 +1,109 @@
 {
   "SchemaVersion": 1,
   "Floor": 10,
-  "Source": "fake",
-  "LayoutHash": 8861010250916629973,
-  "Title": "Dripping Gate",
+  "Source": "claude",
+  "LayoutHash": 16194870443172789322,
+  "Title": "The Rival\u0027s Gambit",
   "IntroLine": {
-    "Text": "Cold air rises from the Caves. Whatever guards the Dripping Treasury does not sleep.",
-    "VoiceId": "00aecde54bf197b8"
+    "Text": "The air thickens with the smell of rust and old blood. The forge\u0027s outskirts loom ahead, and the sound of metal tapping stone echoes through the ring.",
+    "VoiceId": "16ffde0141685841"
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "Echoing Pit"
+      "Name": "The Broodmother\u0027s Lair"
     },
     {
       "Index": 1,
-      "Role": "Start",
-      "Name": "Glimmering Threshold"
+      "Role": "Lair",
+      "Name": "Webbed Hollow"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "Dripping Walk"
+      "Role": "Ruin",
+      "Name": "Forgotten Cache"
     },
     {
       "Index": 3,
-      "Role": "Gate",
-      "Name": "Dripping Gate"
+      "Role": "Start",
+      "Name": "Worn Stone Landing"
     },
     {
       "Index": 4,
-      "Role": "Barracks",
-      "Name": "Narrow Barracks"
+      "Role": "Passage",
+      "Name": "Dripping Corridor"
     },
     {
       "Index": 5,
-      "Role": "Barracks",
-      "Name": "Fungal Barracks"
+      "Role": "Treasury",
+      "Name": "Iron Vault"
     },
     {
       "Index": 6,
-      "Role": "Barracks",
-      "Name": "Yawning Muster"
+      "Role": "Kennel",
+      "Name": "Broodling Den"
     },
     {
       "Index": 7,
-      "Role": "Barracks",
-      "Name": "Glimmering Quarters"
+      "Role": "Passage",
+      "Name": "Silk-Shrouded Tunnel"
     },
     {
       "Index": 8,
-      "Role": "Barracks",
-      "Name": "Dripping Barracks"
+      "Role": "Hall",
+      "Name": "Spinner\u0027s Gallery"
     },
     {
       "Index": 9,
-      "Role": "Passage",
-      "Name": "Dripping Passage"
-    },
-    {
-      "Index": 10,
-      "Role": "Camp",
-      "Name": "Narrow Hideout"
-    },
-    {
-      "Index": 11,
-      "Role": "Treasury",
-      "Name": "Dripping Treasury"
+      "Role": "Ruin",
+      "Name": "Rusty Outpost"
     }
   ],
   "Collectives": [
     {
-      "Id": "band1",
-      "Name": "Cellar Rats",
-      "FactionId": "bandits",
+      "Id": "vault_defenders",
+      "Name": "Vault Guards",
+      "FactionId": "cave_brood",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.bandit_chief",
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "ring_patrol",
+      "Name": "Ring Wardens",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 10,
+        "Room": 4,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
@@ -99,22 +111,38 @@
       }
     },
     {
-      "Id": "group1",
-      "Name": "Echoing Tribe",
-      "FactionId": "faction1",
+      "Id": "alarm_group",
+      "Name": "Web Watchers",
+      "FactionId": "cave_brood",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 4
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 3,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "3"
-        },
+        "Kind": "Alarm",
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "vault_defenders",
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "nest_guard",
+      "Name": "Den Tenders",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
@@ -123,216 +151,313 @@
   ],
   "Loners": [
     {
+      "EnemyId": "enemy.cave_shaman",
+      "Room": 2
+    },
+    {
       "EnemyId": "enemy.cave_spider",
-      "Room": 4
+      "Room": 7
     }
   ],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Scurry",
+      "Id": "creche_swarm",
+      "Name": "Creche Swarm",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 5
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 8,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The walls weep spiders\u2014a wave of tiny legs and chittering maws surges from the dark.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "nursery_horde",
+      "Name": "Nursery Horde",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 15,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The chest lid clatters open\u2014and the floor erupts with skittering broodlings defending their nursery.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "silken_tide",
+      "Name": "Silken Tide",
       "Room": 7,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 18
+          "Count": 6
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 11
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 2
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 31,
-      "Trigger": "Enter",
+      "Total": 9,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "A runner\u0027s skitter echoes\u2014and the tunnel behind you fills with a silken tide of spiders.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Tide",
+      "Id": "ceiling_drop",
+      "Name": "Ceiling Drop",
       "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 19
+          "Count": 6
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
           "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 33,
+      "Total": 8,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde3",
-      "Name": "The Rot",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 28,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde4",
-      "Name": "The Seethe",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 28,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A sound like gravel poured from a sack: the breaches spill their teeming filth.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde5",
-      "Name": "The Seethe",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 11
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 32,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde6",
-      "Name": "The Scurry",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 28,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "They come out of the stone itself, more of them than there are heartbeats to count.",
+        "Text": "From the ceiling, a rain of glossy bodies patters down, fangs bared.",
         "VoiceId": null
       }
     }
   ],
   "Boss": {
-    "Name": "Broodmother",
-    "SignatureOverride": null,
+    "Name": "The Broodmother",
+    "SignatureOverride": "Volley",
     "IntroLine": {
-      "Text": "Broodmother rises to meet you. \u0022You should have stayed above.\u0022",
-      "VoiceId": "852468ccd74db846"
+      "Text": "The Broodmother descends on a thick strand of silk, her many eyes gleaming with an ancient hunger. The air fills with the chittering of her brood.",
+      "VoiceId": "94620dfe97cce382"
     },
     "DeathLine": {
-      "Text": "Broodmother falls, and the way down opens.",
-      "VoiceId": "6a4cb40abd3c01e4"
+      "Text": "The Broodmother thrashes once and is still. The cavern shudders, and the chittering fades to silence.",
+      "VoiceId": "396d06f0215954ff"
     }
   },
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 1,
+      "Locked": true,
+      "QuestId": null
+    },
+    {
+      "Room": 8,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 3,
+      "Room": 4,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 7,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 8,
       "Kind": "Gas"
     }
   ],
-  "Npcs": [],
-  "Quests": [],
-  "Narration": [
+  "Npcs": [
     {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "Cold air rises from the Caves. Whatever guards the Dripping Treasury does not sleep.",
-        "VoiceId": "00aecde54bf197b8"
-      }
+      "Id": "captain_voss",
+      "Name": "Captain Voss",
+      "Room": 9,
+      "VoiceId": "Umbriel",
+      "Script": {
+        "Start": "voss_start",
+        "Nodes": [
+          {
+            "Id": "voss_start",
+            "Line": {
+              "Text": "Voss leans against a pillar, a crossbow hanging loosely in his grip. \u0027I\u0027ve seen the way you fight. Half your spoils, and I\u0027ll make sure you reach the forge without any more trouble. What do you say?\u0027",
+              "VoiceId": "dff00682ff3100b5"
+            },
+            "Choices": [
+              {
+                "Text": "\u0022Fine. We\u0027ll split it.\u0022",
+                "Next": "voss_share",
+                "Effect": "Choose",
+                "Flag": "shared_quest",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "\u0022We don\u0027t share with scavengers.\u0022",
+                "Next": "voss_driven",
+                "Effect": "Choose",
+                "Flag": "drove_off_voss",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "voss_share",
+            "Line": {
+              "Text": "He grins, a glint of gold in his eye. \u0027Good. I\u0027ll be around. Don\u0027t die before we settle up.\u0027",
+              "VoiceId": "ea60d64d40944d1a"
+            },
+            "Choices": [
+              {
+                "Text": "\u0022Let\u0027s move.\u0022",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "voss_driven",
+            "Line": {
+              "Text": "His grin vanishes. \u0027You\u0027ll regret that.\u0027 He backs into the shadows.",
+              "VoiceId": "b5461ec6d835e953"
+            },
+            "Choices": [
+              {
+                "Text": "\u0022Better run.\u0022",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "rival_gambit",
+      "CastId": null,
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
     }
   ],
-  "EnemyTotal": 9
+  "Quests": [
+    {
+      "Id": "rival_gambit",
+      "Template": "Decide",
+      "Title": "The Rival\u0027s Gambit",
+      "Objective": "Decide how to deal with Captain Voss",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "captain_voss",
+      "Reward": {
+        "Xp": 0,
+        "Table": null
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Captain Voss demands a cut of your findings. He\u0027s not asking nicely.",
+          "VoiceId": null
+        },
+        "Accept": {
+          "Text": "You agree, uneasily.",
+          "VoiceId": null
+        },
+        "Decline": {
+          "Text": "You send him packing.",
+          "VoiceId": null
+        },
+        "Complete": {
+          "Text": "The deal is struck.",
+          "VoiceId": null
+        },
+        "Fail": {
+          "Text": "",
+          "VoiceId": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 9,
+      "Line": {
+        "Text": "A figure steps out from behind a corroded pillar\u2014a man in battered leathers, a crossbow at his hip. \u0027Hold there,\u0027 he says. \u0027We need to talk.\u0027",
+        "VoiceId": "bc03f3de1beec568"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "The Broodmother drops from the darkness, her legs clattering against the stone.",
+        "VoiceId": "25d5e7611921e2b7"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "The Broodmother falls, and the oppressive weight lifts.",
+        "VoiceId": "d5f2a541812cf825"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "EnemyTotal": 13
 }

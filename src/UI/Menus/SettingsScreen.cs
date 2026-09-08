@@ -1,3 +1,4 @@
+using DungeonCrawler.Adventure.Ai;
 using DungeonCrawler.Core;
 using Godot;
 
@@ -31,13 +32,19 @@ public partial class SettingsScreen : PanelContainer
     private readonly Dictionary<string, Button> _keyButtons = new();
     private Label _hint = null!;
 
+    // Runware model menus: the planner list comes from Runware when there is a key (the shipped catalogue until then), the TTS list is ours
+    private OptionButton _plannerModels = null!;
+    private Label _plannerModelStatus = null!;
+    private List<RunwareTextModel> _catalogue = RunwareCatalog.TextModels.ToList();
+    private bool _catalogueFetched;
+
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always;
         var margin = new MarginContainer();
         foreach (var edge in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" }) margin.AddThemeConstantOverride(edge, 16);
         AddChild(margin);
-        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(760, 620) };
+        var scroll = new ScrollContainer { CustomMinimumSize = new Vector2(760, 620), HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
         margin.AddChild(scroll);
         var v = new VBoxContainer();
         v.AddThemeConstantOverride("separation", 8);
@@ -103,32 +110,27 @@ public partial class SettingsScreen : PanelContainer
         plannerProvider.Selected = Settings.PlannerViaRunware ? 1 : 0;
         plannerProvider.ItemSelected += i => { Settings.PlannerProvider = i == 1 ? Settings.ProviderRunware : Settings.ProviderClaude; RefreshBake(); };
         Row(v, "Campaign planner runs on", plannerProvider);
-        Text(v, "Runware planner model (anthropic:claude@sonnet-4.6, google:gemini@3.5-flash, deepseek:v4@flash...; the slug form from the list below works too)", Settings.RunwareTextModel, x => Settings.RunwareTextModel = x, secret: false);
-        var listText = new Button { Text = "List the text models this Runware key can use", FocusMode = FocusModeEnum.None };
-        var listTextResult = new Label { AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.8f, 0.8f, 0.7f) };
-        listText.Pressed += () =>
-        {
-            if (!Settings.HasRunwareKey) { listTextResult.Text = "Paste a Runware API key first."; return; }
-            listTextResult.Text = "Asking Runware...";
-            var key = Settings.RunwareKey.Trim();
-            _ = Task.Run(async () =>
-            {
-                var (models, error) = await Adventure.AiClients.RunwareTextClient.ListTextModelsAsync(key, CancellationToken.None);
-                Callable.From(() => listTextResult.Text = error != null ? $"Failed: {error}" : "Available: " + string.Join(", ", models)).CallDeferred();
-            });
-        };
+        _plannerModels = new OptionButton { FocusMode = FocusModeEnum.None };
+        _plannerModels.ItemSelected += i => { if (_plannerModels.GetItemMetadata((int)i).AsString() is { Length: > 0 } air) Settings.RunwareTextModel = air; RefreshBake(); };
+        Row(v, "Runware planner model (dearest first)", _plannerModels);
+        FillPlannerModels();
+        var listText = new Button { Text = "Refresh the list from Runware", FocusMode = FocusModeEnum.None };
+        _plannerModelStatus = new Label { AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.8f, 0.8f, 0.7f) };
+        _plannerModelStatus.AddThemeFontSizeOverride("font_size", 12);
+        listText.Pressed += () => RefreshPlannerModels(force: true);
         Row(v, "", listText);
-        v.AddChild(listTextResult);
+        v.AddChild(_plannerModelStatus);
+        VisibilityChanged += () => { if (Visible) RefreshPlannerModels(force: false); };
         var voiceProvider = new OptionButton { FocusMode = FocusModeEnum.None };
         voiceProvider.AddItem("Gemini (Google, direct)", 0);
         voiceProvider.AddItem("Runware (xAI, Inworld, MiniMax, Gemini TTS...)", 1);
         voiceProvider.Selected = Settings.VoiceViaRunware ? 1 : 0;
         voiceProvider.ItemSelected += i => { Settings.VoiceProvider = i == 1 ? Settings.ProviderRunware : Settings.ProviderGemini; Settings.Apply(); Adventure.VoiceRenderer.Instance?.Configure(); RefreshBake(); };
         Row(v, "Voice runs on", voiceProvider);
-        Text(v, "Runware TTS model for the narrator, bosses and the cast", Settings.RunwareVoiceModel, x => { Settings.RunwareVoiceModel = x; Settings.Apply(); }, secret: false);
-        Text(v, "Runware TTS model for one-off NPCs and companion barks", Settings.RunwareVoiceModelMinor, x => { Settings.RunwareVoiceModelMinor = x; Settings.Apply(); }, secret: false);
+        TtsDropdown(v, "Runware TTS model for the narrator, bosses and the cast (dearest first)", Settings.RunwareVoiceModel, x => { Settings.RunwareVoiceModel = x; Settings.Apply(); });
+        TtsDropdown(v, "Runware TTS model for one-off NPCs and companion barks (dearest first)", Settings.RunwareVoiceModelMinor, x => { Settings.RunwareVoiceModelMinor = x; Settings.Apply(); });
         Text(v, "Runware fallback TTS models (comma-separated)", Settings.RunwareVoiceFallbackModels, x => Settings.RunwareVoiceFallbackModels = x, secret: false);
-        var runwareModels = new Label { Text = "Runware TTS models with mapped voices: " + string.Join("; ", Adventure.Voice.RunwareVoices.KnownModels.Select(m => $"{m.Model} ({m.Note})")) + ". Other models get the Gemini voice names as typed.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
+        var runwareModels = new Label { Text = "Prices are Runware's listed rates per thousand characters; the game casts its voices on every model in the list.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
         runwareModels.AddThemeFontSizeOverride("font_size", 12);
         v.AddChild(runwareModels);
         Check(v, "In an AI campaign, keep the planner writing the floors ahead (off: the offline designer takes over; New Game itself never plans)", Settings.AiPlanning, x => { Settings.AiPlanning = x; Main.Instance?.Menu?.RefreshSubtitle(); });
@@ -186,16 +188,21 @@ public partial class SettingsScreen : PanelContainer
         _hint = new Label { Text = "Click a key, then press the new key. Escape cancels.", Modulate = new Color(0.7f, 0.7f, 0.7f) };
         _hint.AddThemeFontSizeOverride("font_size", 12);
         v.AddChild(_hint);
+        var keys = new GridContainer { Columns = 2 }; // label, key: fixed widths so the key sits right beside its action
+        keys.AddThemeConstantOverride("h_separation", 12);
+        keys.AddThemeConstantOverride("v_separation", 4);
+        v.AddChild(keys);
         foreach (var (action, label) in Settings.Rebindable)
         {
-            var b = new Button { Text = KeyName(Settings.KeyFor(action)), CustomMinimumSize = new Vector2(180, 30), FocusMode = FocusModeEnum.None };
+            keys.AddChild(new Label { Text = label, CustomMinimumSize = new Vector2(240, 0) });
+            var b = new Button { Text = KeyName(Settings.KeyFor(action)), CustomMinimumSize = new Vector2(180, 30), FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
             var a = action;
             b.Pressed += () => { _rebinding = a; b.Text = "press a key..."; };
-            Row(v, label, b);
+            keys.AddChild(b);
             _keyButtons[action] = b;
         }
-        var reset = new Button { Text = "Reset keys to defaults", FocusMode = FocusModeEnum.None };
-        reset.Pressed += () => { Settings.ResetKeys(); foreach (var (a2, b2) in _keyButtons) b2.Text = KeyName(Settings.KeyFor(a2)); };
+        var reset = new Button { Text = "Reset keys to defaults", FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ShrinkBegin };
+        reset.Pressed += () => { Settings.ResetKeys(); RefreshKeys(); };
         v.AddChild(reset);
 
         var back = new Button { Text = "Back", CustomMinimumSize = new Vector2(120, 36), FocusMode = FocusModeEnum.None };
@@ -214,8 +221,81 @@ public partial class SettingsScreen : PanelContainer
             var code = key.PhysicalKeycode != Key.None ? key.PhysicalKeycode : key.Keycode;
             Settings.Rebind(action, code);
         }
-        _keyButtons[action].Text = KeyName(Settings.KeyFor(action));
+        RefreshKeys(); // the rebound action and any action that just lost this key
         GetViewport().SetInputAsHandled();
+    }
+
+    private void RefreshKeys()
+    {
+        foreach (var (a, b) in _keyButtons) b.Text = KeyName(Settings.KeyFor(a));
+    }
+
+    /// <summary>The planner menu from the current catalogue, keeping the saved model selected (a model not in the list is added as typed).</summary>
+    private void FillPlannerModels()
+    {
+        _plannerModels.Clear();
+        var current = RunwareWire.ToAir(Settings.RunwareTextModel);
+        var selected = -1;
+        foreach (var m in _catalogue)
+        {
+            var i = _plannerModels.ItemCount;
+            _plannerModels.AddItem(m.Label, i);
+            _plannerModels.SetItemMetadata(i, m.Air);
+            if (m.Air.Equals(current, StringComparison.OrdinalIgnoreCase)) selected = i;
+        }
+        if (selected < 0 && current.Length > 0)
+        {
+            selected = _plannerModels.ItemCount;
+            _plannerModels.AddItem($"{current} (as typed)", selected);
+            _plannerModels.SetItemMetadata(selected, current);
+        }
+        _plannerModels.Selected = selected;
+    }
+
+    /// <summary>Fetch Runware's priced list with the key (once per visit, or on demand) and rebuild the menu from it.</summary>
+    private void RefreshPlannerModels(bool force)
+    {
+        if (!Settings.HasRunwareKey) { _plannerModelStatus.Text = $"Showing the shipped list of {_catalogue.Count} models; paste a Runware key to fetch the current one."; return; }
+        if (_catalogueFetched && !force) return;
+        _catalogueFetched = true;
+        _plannerModelStatus.Text = "Asking Runware for its models and prices...";
+        var key = Settings.RunwareKey.Trim();
+        _ = Task.Run(async () =>
+        {
+            var (models, error) = await Adventure.AiClients.RunwareTextClient.ListTextCatalogueAsync(key, CancellationToken.None);
+            Callable.From(() =>
+            {
+                GD.Print($"[settings] Runware catalogue: {(error != null ? "failed: " + error : models.Count + " models, dearest " + models.FirstOrDefault()?.Slug + ", cheapest " + models.LastOrDefault()?.Slug)}");
+                if (error != null || models.Count == 0) { _plannerModelStatus.Text = $"Could not fetch the list ({error ?? "empty"}); showing the shipped one."; return; }
+                _catalogue = models;
+                RunwareCatalog.Live = models;
+                FillPlannerModels();
+                _plannerModelStatus.Text = $"{models.Count} models this key can use, dearest first (prices per million tokens).";
+            }).CallDeferred();
+        });
+    }
+
+    /// <summary>A menu of the TTS models the game can voice, dearest first, keeping the saved model selected.</summary>
+    private static void TtsDropdown(VBoxContainer v, string label, string value, Action<string> onChange)
+    {
+        var o = new OptionButton { FocusMode = FocusModeEnum.None };
+        var selected = -1;
+        foreach (var m in Adventure.Voice.RunwareVoices.KnownModels)
+        {
+            var i = o.ItemCount;
+            o.AddItem(m.Label, i);
+            o.SetItemMetadata(i, m.Model);
+            if (m.Model.Equals(value.Trim(), StringComparison.OrdinalIgnoreCase)) selected = i;
+        }
+        if (selected < 0 && value.Trim().Length > 0)
+        {
+            selected = o.ItemCount;
+            o.AddItem($"{value.Trim()} (as typed)", selected);
+            o.SetItemMetadata(selected, value.Trim());
+        }
+        o.Selected = selected;
+        o.ItemSelected += i => { if (o.GetItemMetadata((int)i).AsString() is { Length: > 0 } id) onChange(id); };
+        Row(v, label, o);
     }
 
     private static bool Headless => DisplayServer.GetName().Equals("headless", StringComparison.OrdinalIgnoreCase);

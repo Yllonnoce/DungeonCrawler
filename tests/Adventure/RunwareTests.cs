@@ -269,4 +269,88 @@ public class RunwareTests
         w.Flush();
         return ms.ToArray();
     }
+
+    [Fact]
+    public void ParseModelCatalogue_PricesDearestFirst()
+    {
+        var body = "{\"object\":\"list\",\"data\":[" +
+            "{\"id\":\"deepseek-v4-flash\",\"name\":\"DeepSeek V4 Flash\",\"pricing\":{\"prompt\":\"0.00000008\",\"completion\":\"0.00000015\"}}," +
+            "{\"id\":\"anthropic-claude-sonnet-4-6\",\"name\":\"Claude Sonnet 4.6\",\"pricing\":{\"prompt\":\"0.000003\",\"completion\":\"0.000015\"}}," +
+            "{\"id\":\"mystery-model-1\",\"name\":\"Mystery\"}," +
+            "{\"id\":\"anthropic-claude-haiku-4-5\",\"name\":\"Claude Haiku 4.5\",\"pricing\":{\"prompt\":\"0.000001\",\"completion\":\"0.000005\"}}]}";
+        var (models, error) = RunwareWire.ParseModelCatalogue(body);
+        Assert.Null(error);
+        Assert.Equal(new[] { "anthropic-claude-sonnet-4-6", "anthropic-claude-haiku-4-5", "deepseek-v4-flash", "mystery-model-1" }, models.Select(m => m.Slug));
+        Assert.Equal(15, models[0].OutputPerMillion, 6);
+        Assert.Equal(3, models[0].InputPerMillion, 6);
+        Assert.Equal("anthropic:claude@sonnet-4.6", models[0].Air);
+        Assert.Contains("$3.00 in / $15.00 out", models[0].Label);
+        Assert.False(models[3].Priced);
+        Assert.Contains("not listed", models[3].Label);
+        var (none, err) = RunwareWire.ParseModelCatalogue("{\"error\":\"bad key\"}");
+        Assert.Empty(none);
+        Assert.NotNull(err);
+    }
+
+    [Fact]
+    public void ShippedCatalogues_AreDearestFirst()
+    {
+        var text = RunwareCatalog.TextModels;
+        for (var i = 1; i < text.Count; i++) Assert.True(text[i - 1].OutputPerMillion >= text[i].OutputPerMillion, $"{text[i - 1].Slug} before {text[i].Slug}");
+        Assert.Contains(text, m => m.Air == RunwareWire.DefaultTextModel);
+        var tts = RunwareVoices.KnownModels;
+        var priced = tts.Where(m => m.PerThousandChars > 0).Select(m => m.PerThousandChars).ToList();
+        Assert.Equal(priced.OrderByDescending(p => p), priced);
+        Assert.Equal("xai:tts@0", tts[^1].Model); // the cheapest is the default
+        foreach (var m in tts.Where(m => !m.Model.StartsWith("google"))) Assert.NotEqual(Voices.Narrator, RunwareVoices.Map(m.Model, Voices.Narrator)); // every listed model has a voice bank
+    }
+
+    [Fact]
+    public void ChatRequest_CarriesSystemUserAndSchema()
+    {
+        var req = new ClaudeRequest("ping", "deepseek-v4-pro", new[] { new PromptBlock("Be terse.", false) }, "Say ok.", "{\"type\":\"object\"}", "low", 256);
+        var json = JsonNode.Parse(RunwareWire.ChatRequestJson(req))!;
+        Assert.Equal("deepseek:v4@pro", json["model"]!.GetValue<string>());
+        Assert.Equal(256, json["max_tokens"]!.GetValue<int>());
+        var messages = json["messages"]!.AsArray();
+        Assert.Equal("system", messages[0]!["role"]!.GetValue<string>());
+        Assert.Equal("Be terse.", messages[0]!["content"]!.GetValue<string>());
+        Assert.Equal("user", messages[1]!["role"]!.GetValue<string>());
+        Assert.Contains("Say ok.", messages[1]!["content"]!.GetValue<string>());
+        Assert.Contains("{\"type\":\"object\"}", messages[1]!["content"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public void ChatResponse_ParsesTextUsageAndCost()
+    {
+        var body = "{\"choices\":[{\"message\":{\"role\":\"assistant\",\"content\":\"{\\\"Reply\\\":\\\"ok\\\"}\",\"reasoning\":\"thinking\"},\"finish_reason\":\"stop\"}]," +
+            "\"usage\":{\"prompt_tokens\":102,\"completion_tokens\":25,\"prompt_tokens_details\":{\"cached_tokens\":2,\"created_cache_tokens\":3}}}";
+        var r = RunwareWire.ParseChatResponse(body, (1.0, 2.0));
+        Assert.True(r.Ok);
+        Assert.Equal("{\"Reply\":\"ok\"}", r.Text);
+        Assert.Equal(102, r.Usage.InputTokens);
+        Assert.Equal(25, r.Usage.OutputTokens);
+        Assert.Equal(2, r.Usage.CacheReadTokens);
+        Assert.Equal(3, r.Usage.CacheWriteTokens);
+        Assert.Equal((102 * 1.0 + 25 * 2.0) / 1_000_000, r.Usage.CostUsd!.Value, 12);
+        Assert.Null(RunwareWire.ParseChatResponse(body).Usage.CostUsd);
+        var cut = RunwareWire.ParseChatResponse("{\"choices\":[{\"message\":{\"role\":\"assistant\",\"reasoning_content\":\"We are asked\"},\"finish_reason\":\"length\"}],\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":8}}");
+        Assert.Equal("max_tokens", cut.StopReason);
+        Assert.Equal("", cut.Text);
+        var err = RunwareWire.ParseChatResponse("{\"error\":{\"message\":\"Invalid model\",\"type\":\"invalid_request_error\"}}");
+        Assert.NotNull(err.Error);
+    }
+
+    [Fact]
+    public void Catalogue_PricesByAirOrSlug()
+    {
+        RunwareCatalog.Live = null;
+        Assert.Equal((3.0, 15.0), RunwareCatalog.PriceFor("anthropic:claude@sonnet-4.6"));
+        Assert.Equal((0.96, 1.92), RunwareCatalog.PriceFor("deepseek-v4-pro"));
+        Assert.Null(RunwareCatalog.PriceFor("nobody:knows@this"));
+        RunwareCatalog.Live = new[] { new RunwareTextModel("x-y-1", "XY", 7, 9) };
+        Assert.Equal((7.0, 9.0), RunwareCatalog.PriceFor("x:y@1"));
+        Assert.Null(RunwareCatalog.PriceFor("anthropic:claude@sonnet-4.6"));
+        RunwareCatalog.Live = null;
+    }
 }

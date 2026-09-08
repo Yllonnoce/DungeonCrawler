@@ -75,6 +75,8 @@ public partial class DebugTools : Node
     public string? ForcedVault { get; private set; }
     /// <summary>--theme=ID forces every floor to wear that theme (screenshots and checks).</summary>
     public string? ForcedTheme { get; private set; }
+    /// <summary>--layout=KIND forces every floor to that shape (standard, labyrinth, ring, mine, flooded, burning).</summary>
+    public string? ForcedLayout { get; private set; }
     private bool _testFloors;
     private bool _testStructures;
     private bool _testHorde;
@@ -243,6 +245,7 @@ public partial class DebugTools : Node
             else if (arg == "--tremor") { _tremor = true; _quitAfter = Math.Max(_quitAfter, 6); }
             else if (arg == "--test-tremor") { _testTremor = true; _tremor = true; TraceAi = false; _quitAfter = 12; }
             else if (arg.StartsWith("--theme=")) ForcedTheme = arg["--theme=".Length..];
+            else if (arg.StartsWith("--layout=")) ForcedLayout = arg["--layout=".Length..];
             else if (arg.StartsWith("--vault=")) ForcedVault = arg["--vault=".Length..];
             else if (arg.StartsWith("--inspect=")) { var xy = arg["--inspect=".Length..].Split(','); _inspect = (int.Parse(xy[0]), int.Parse(xy[1])); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--bake-voice=")) _bakeVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-voice=".Length..]);
@@ -488,7 +491,7 @@ public partial class DebugTools : Node
             if (Settings.VoiceViaRunware)
             {
                 // Runware's model search cannot filter for speech, so this is the table we know how to voice
-                GD.Print("[voice-models] Runware TTS models with mapped voices: " + string.Join("; ", Adventure.Voice.RunwareVoices.KnownModels.Select(m => $"{m.Model} ({m.Note})")));
+                GD.Print("[voice-models] Runware TTS models with mapped voices: " + string.Join("; ", Adventure.Voice.RunwareVoices.KnownModels.Select(m => $"{m.Model} ({m.Label})")));
                 GD.Print($"[voice-models] configured: {Settings.RunwareVoiceModel}; minor: {Settings.RunwareVoiceModelMinor}; fallbacks: {Settings.RunwareVoiceFallbackModels}");
                 GetTree().Quit(0);
                 return;
@@ -823,7 +826,7 @@ public partial class DebugTools : Node
     private void RunKeysTest()
     {
         var before = Settings.KeyFor("jump");
-        var wanted = before == Key.J ? Key.K : Key.J;
+        var wanted = before == Key.Y ? Key.U : Key.Y; // neither is a default binding, so no other action gets cleared
         Settings.Rebind("jump", wanted);
         Settings.Load(); // what the next launch does
         var inMap = InputMap.ActionGetEvents("jump").OfType<InputEventKey>().Any(e => e.PhysicalKeycode == wanted);

@@ -1,145 +1,235 @@
 {
   "SchemaVersion": 1,
   "Floor": 6,
-  "Source": "fake",
-  "LayoutHash": 3965717791902198302,
-  "Title": "Narrow Way Down",
+  "Source": "claude",
+  "LayoutHash": 2865536137340698563,
+  "Title": "The Silent Tunnels",
   "IntroLine": {
-    "Text": "The stair ends in the Caves. Footprints, none of them yours, lead toward the Crystal Muster.",
-    "VoiceId": "1025b3ef1bdaeeb2"
+    "Text": "The tunnels stretch ahead in damp silence, the only sound the slow drip of water and the skitter of unseen things.",
+    "VoiceId": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Passage",
-      "Name": "Crystal Passage"
+      "Role": "Ruin",
+      "Name": "The Collapsed Burial"
     },
     {
       "Index": 1,
-      "Role": "Exit",
-      "Name": "Narrow Way Down"
+      "Role": "Lair",
+      "Name": "Dripping Hatchery"
     },
     {
       "Index": 2,
       "Role": "Passage",
-      "Name": "Crystal Walk"
+      "Name": "Dusty Corridor"
     },
     {
       "Index": 3,
-      "Role": "Barracks",
-      "Name": "Yawning Quarters"
+      "Role": "Exit",
+      "Name": "The Way Down"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Yawning Descent"
+      "Role": "Lair",
+      "Name": "Silken Corner"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "Glimmering Crossing"
+      "Role": "Start",
+      "Name": "The Descent Point"
     },
     {
       "Index": 6,
-      "Role": "Barracks",
-      "Name": "Cold Barracks"
+      "Role": "Lair",
+      "Name": "The Shallow Pool"
     },
     {
       "Index": 7,
       "Role": "Passage",
-      "Name": "Dripping Passage"
+      "Name": "Echoing Tunnel"
     },
     {
       "Index": 8,
-      "Role": "Barracks",
-      "Name": "Dripping Muster"
+      "Role": "Passage",
+      "Name": "Narrow Crevice"
     },
     {
       "Index": 9,
-      "Role": "Treasury",
-      "Name": "Narrow Hoard"
+      "Role": "Passage",
+      "Name": "Fungal Nook"
     },
     {
       "Index": 10,
-      "Role": "Barracks",
-      "Name": "Cold Barracks"
+      "Role": "Lair",
+      "Name": "The Creche"
     },
     {
       "Index": 11,
-      "Role": "Barracks",
-      "Name": "Crystal Muster"
+      "Role": "Ruin",
+      "Name": "Broken Pillars"
+    },
+    {
+      "Index": 12,
+      "Role": "Passage",
+      "Name": "Side Passage"
+    },
+    {
+      "Index": 13,
+      "Role": "Hall",
+      "Name": "Hidden Storeroom"
+    },
+    {
+      "Index": 14,
+      "Role": "Lair",
+      "Name": "Dark Alcove"
     }
   ],
   "Collectives": [
     {
-      "Id": "group1",
-      "Name": "Crystal Brood",
-      "FactionId": "faction1",
+      "Id": "patrol_1",
+      "Name": "Brood Patrol",
+      "FactionId": "cave_brood",
       "Members": [
         {
-          "EnemyId": "enemy.cave_shaman",
+          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 1,
+        "Kind": "Patrol",
+        "Room": 11,
         "Objective": null,
+        "Route": [
+          11,
+          7,
+          10,
+          4,
+          1,
+          8,
+          6,
+          2,
+          11
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "wardens",
+      "Name": "Exit Wardens",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 3,
+        "Objective": {
+          "Kind": "Stairs",
+          "Ref": "down"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
+    },
+    {
+      "Id": "alarm_1",
+      "Name": "Scout Alarm",
+      "FactionId": "cave_brood",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 2,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "wardens",
+        "RallyRoom": 6
+      }
     }
   ],
-  "Loners": [],
+  "Loners": [
+    {
+      "EnemyId": "enemy.cave_spider",
+      "Room": 9
+    }
+  ],
   "Hordes": [
     {
-      "Id": "horde1",
-      "Name": "The Seethe",
-      "Room": 5,
+      "Id": "horde_1",
+      "Name": "Chittering Mass",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 13
+          "Count": 10
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 4
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 18,
+      "Total": 12,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "A chittering flood erupts from the ruined stonework, a wave of gleaming black carapaces and skittering legs.",
         "VoiceId": null
       }
     },
     {
-      "Id": "horde2",
-      "Name": "The Spill",
-      "Room": 7,
+      "Id": "horde_2",
+      "Name": "Creeping Swarm",
+      "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 13
+          "Count": 8
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 5
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 11,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The pond bubbles with a foul hiss, and slick, glistening creatures boil up onto the floor.",
+        "VoiceId": null
+      }
+    },
+    {
+      "Id": "horde_3",
+      "Name": "The Egg Sac Brood",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 3
         },
         {
           "EnemyId": "enemy.cave_spider",
@@ -148,159 +238,36 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 19,
-      "Trigger": "Enter",
+      "Total": 16,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The walls give way. Something has been breeding in the dark, and all of it is hungry.",
+        "Text": "The chest\u0027s lid cracks open with a wet, fleshy sound, and a tide of skittering bodies pours forth.",
         "VoiceId": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
-  "Traps": [
+  "Chests": [
     {
-      "Room": 1,
-      "Kind": "Spikes"
+      "Room": 10,
+      "Locked": false,
+      "QuestId": null
     }
   ],
-  "Npcs": [
-    {
-      "Id": "npc1",
-      "Name": "Corvin Shale",
-      "Room": 2,
-      "VoiceId": "Orus",
-      "Script": {
-        "Start": "greet",
-        "Nodes": [
-          {
-            "Id": "greet",
-            "Line": {
-              "Text": "Another descent, another fool. Or perhaps a friend? Speak.",
-              "VoiceId": "d344abc55229e431"
-            },
-            "Choices": [
-              {
-                "Text": "What happened to you?",
-                "Next": "offer",
-                "Effect": "None"
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done",
-                "Effect": "TurnIn"
-              },
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "offer",
-            "Line": {
-              "Text": "They know I am here. The Crystal Brood come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-              "VoiceId": "aa3647efa94b6e13"
-            },
-            "Choices": [
-              {
-                "Text": "I will do it.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest"
-              },
-              {
-                "Text": "Not now.",
-                "Next": null,
-                "Effect": "DeclineQuest"
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "Then here they come. Do not let them reach me.",
-              "VoiceId": "2a90bca15ab5fb09"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-              "VoiceId": "2ac1bff358b6e4c8"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell"
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest1"
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "quest1",
-      "Template": "HoldOut",
-      "Title": "Hold the Line",
-      "Objective": "Stand with Corvin Shale against two waves of the Crystal Brood.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": 2,
-        "WaveCollective": "group1"
-      },
-      "GiverNpc": "npc1",
-      "Reward": {
-        "Xp": 300,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "They know I am here. The Crystal Brood come in waves whenever I make a sound, and I cannot keep quiet forever. Stand with me through the next two and I will pay you from what I have hidden.",
-          "VoiceId": "aa3647efa94b6e13"
-        },
-        "Accept": {
-          "Text": "Then here they come. Do not let them reach me.",
-          "VoiceId": "2a90bca15ab5fb09"
-        },
-        "Decline": {
-          "Text": "Then leave me. Others will come, or they will not.",
-          "VoiceId": "76c0e48b204474ce"
-        },
-        "Complete": {
-          "Text": "It is quiet. Truly quiet. I had forgotten what that felt like. Take what I promised.",
-          "VoiceId": "2ac1bff358b6e4c8"
-        },
-        "Fail": {
-          "Text": "You left me. I will not forget that.",
-          "VoiceId": "7d6cb29fc460af94"
-        }
-      }
-    }
-  ],
+  "Traps": [],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
+      "Trigger": "RoomEnter",
+      "Room": 10,
       "Line": {
-        "Text": "The stair ends in the Caves. Footprints, none of them yours, lead toward the Crystal Muster.",
-        "VoiceId": "1025b3ef1bdaeeb2"
-      }
+        "Text": "A large chamber, thick with webbing. In the center, a bulbous sac pulses faintly.",
+        "VoiceId": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 5
+  "EnemyTotal": 6
 }

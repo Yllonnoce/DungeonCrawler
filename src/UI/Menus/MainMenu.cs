@@ -40,9 +40,9 @@ public partial class MainMenu : Control
         _buttons = new VBoxContainer();
         _buttons.AddThemeConstantOverride("separation", 8);
         v.AddChild(_buttons);
-        // New Game never plans: it plays the campaign on disk (your rebake, else the shipped one). A fresh AI-written run is its own entry.
+        // New Game never plans: it plays the campaign on disk (your rebake, else the shipped one). A fresh AI-written
+        // campaign is only ever made from Settings ("Rebuild campaign"), where its cost is spelled out.
         AddButton("New Game", () => Main.Instance.StartNewGameFromDisk());
-        _builtinButton = AddButton("New AI Campaign", () => Main.Instance.StartNewGame(aiCampaign: true));
         AddButton("Load Game", () => { _buttons.Visible = false; _slots.Show(SlotList.Mode.Load); });
         AddButton("Join Server", () => { _buttons.Visible = false; _join.Open(); EventBus.Instance.PlaySfx("ui_open"); });
         AddButton("Settings", () => { _buttons.Visible = false; _settings.Visible = true; EventBus.Instance.PlaySfx("ui_open"); });
@@ -76,17 +76,13 @@ public partial class MainMenu : Control
 
     private JoinScreen _join = null!;
     private Label _subtitle = null!;
-    private Button _builtinButton = null!;
     public void RefreshSubtitle()
     {
         var plays = BuiltinCampaign.IsUserCopy ? "your rebaked campaign" : BuiltinCampaign.Exists ? "the built-in campaign" : "a campaign from the offline designer";
         var canPlan = Settings.HasPlannerKey && DebugTools.Instance?.NoAi != true;
         _subtitle.Text = canPlan
-            ? $"New Game plays {plays}. New AI Campaign asks {Settings.PlannerLabel} for a fresh one (takes minutes and costs money)."
-            : $"New Game plays {plays}. Add a {Settings.PlannerLabel} key in Settings for a fresh AI-written campaign.";
-        if (_builtinButton == null) return; // called once before the buttons exist
-        _builtinButton.Disabled = !canPlan;
-        _builtinButton.Text = $"New AI Campaign ({Settings.PlannerLabel})";
+            ? $"New Game plays {plays}. To write a fresh one with {Settings.PlannerLabel}, use Rebuild campaign in Settings."
+            : $"New Game plays {plays}. Add a {Settings.PlannerLabel} key in Settings to rebuild it with an AI-written one.";
     }
 
     public void ShowStatus(string text) => _status.Text = text;
