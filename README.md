@@ -115,6 +115,7 @@ godot --headless --path . -- --test-quest           # one NPC per quest template
 godot --path . -- --floor=3 --talk --screenshot=/tmp/talk.png --after=2   # open the first NPC's dialogue (add --press=quest_log for the journal)
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
+godot --headless --path . -- --check-voice-bank     # every voice line the campaign on disk refers to: how many the shipped bank holds and how many load; run it on an exported binary (build/linux/DungeonCrawler.x86_64 --headless -- --check-voice-bank) to prove the bank was packed
 scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, leave
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --ai --seed=N   # write a campaign + 20 floors with Claude (or --fake-ai=0 for the offline designer)
 godot --path . -- --ai --record-plans=user://ai/log # force the Claude planner (needs a key in Settings); requests/responses land in that folder

@@ -81,6 +81,7 @@ public partial class DebugTools : Node
     private bool _testStructures;
     private bool _testHorde;
     private bool _testKeys, _testedKeys;
+    private bool _checkVoiceBank, _checkedVoiceBank;
     private bool _tremor, _testTremor, _tremorFired;
     private float _tremorClock;
     private int _tremorRocksSeen, _tremorLanded;
@@ -230,6 +231,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--voice-rpm=")) Settings.VoiceRequestsPerMinute = float.Parse(arg["--voice-rpm=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             else if (arg.StartsWith("--voice-model-minor=")) { Settings.VoiceModelMinor = arg["--voice-model-minor=".Length..]; Settings.RunwareVoiceModelMinor = Settings.VoiceModelMinor; Settings.Apply(); }
             else if (arg == "--list-voice-models") { _listVoiceModels = true; _menuOnly = true; _quitAfter = 30; }
+            else if (arg == "--check-voice-bank") { _checkVoiceBank = true; _menuOnly = true; _quitAfter = 10; }
             else if (arg.StartsWith("--probe-voice-model=")) { _probeVoiceModel = arg["--probe-voice-model=".Length..]; _menuOnly = true; _quitAfter = 60; }
             else if (arg == "--probe-planner") { _probePlanner = true; _menuOnly = true; _quitAfter = 120; }
             else if (arg == "--builtin") { _builtin = true; _quitAfter = Math.Max(_quitAfter, 6); }
@@ -484,6 +486,21 @@ public partial class DebugTools : Node
                 GD.Print($"[planner-probe] {r}");
                 GetTree().Quit(r.StartsWith("Connected") ? 0 : 1);
             });
+        }
+        if (_checkVoiceBank && !_checkedVoiceBank && _elapsed >= 0.3 && VoiceRenderer.Instance != null)
+        {
+            // --check-voice-bank: every voice id the campaign on disk refers to, and whether the shipped bank (or the cache) has it and it loads.
+            // Run it on an exported build to prove the bank was packed and is found there.
+            _checkedVoiceBank = true;
+            var loaded = Adventure.BuiltinCampaign.Load();
+            var ids = loaded is { } bank ? Adventure.Voice.VoiceBudget.Candidates(bank.Campaign, bank.Floors).Select(c => c.Line.VoiceId).Where(id => !string.IsNullOrEmpty(id)).Select(id => id!).ToHashSet() : new HashSet<string>();
+            var vr = VoiceRenderer.Instance;
+            var builtin = ids.Count(VoiceRenderer.HasBuiltin);
+            var has = ids.Count(vr.HasAudio);
+            var loads = ids.Count(id => vr.Load(id) != null);
+            GD.Print($"[voice-bank] campaign \"{loaded?.Campaign.Title}\" ({(Adventure.BuiltinCampaign.IsUserCopy ? "user copy" : "shipped")}, {loaded?.Floors.Count ?? 0} floors) refers to {ids.Count} voice lines: {builtin} in the shipped bank, {has} with audio anywhere, {loads} load");
+            GD.Print($"[voice-bank] RESULT {(ids.Count > 0 && loads == ids.Count ? "ok" : loads == 0 ? "FAIL: nothing loads" : "PARTIAL")}");
+            GetTree().Quit(ids.Count > 0 && loads > 0 ? 0 : 1);
         }
         if (_listVoiceModels && !_listedVoiceModels && _elapsed >= 0.3)
         {

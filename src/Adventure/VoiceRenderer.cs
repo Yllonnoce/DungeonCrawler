@@ -106,7 +106,13 @@ public partial class VoiceRenderer : Node
     /// <summary>Raised when rendering stops for the session, with the reason: menus and the bake surface it.</summary>
     public event Action<string>? Stopped;
 
-    public bool HasAudio(string id) => File.Exists(CachePath(id)) || Godot.FileAccess.FileExists($"{BuiltinDir}/{id}.wav");
+    public bool HasAudio(string id) => File.Exists(CachePath(id)) || HasBuiltin(id);
+
+    /// <summary>
+    /// Is a line in the shipped bank? Through ResourceLoader, not FileAccess: an exported game packs only the imported
+    /// form of a wav, so FileAccess.FileExists says no there while the resource loads fine.
+    /// </summary>
+    public static bool HasBuiltin(string id) => ResourceLoader.Exists($"{BuiltinDir}/{id}.wav") || Godot.FileAccess.FileExists($"{BuiltinDir}/{id}.wav");
     private string CachePath(string id) => Path.Combine(CacheDir, $"{id}.wav");
 
     /// <summary>Give a line an id and queue it if it has no audio yet. Returns false when voice is off entirely.</summary>
@@ -118,6 +124,9 @@ public partial class VoiceRenderer : Node
     {
         if (Filter != null && !Filter(line)) { line.VoiceId = null; return false; }
         if (string.IsNullOrWhiteSpace(line.Text)) return false;
+        // a line already rendered under some other model or voice settings (the shipped bank, a rebake on this machine)
+        // keeps its id: the id encodes the model, so re-deriving it from today's settings would lose that audio
+        if (line.VoiceId is { Length: > 0 } existing && HasAudio(existing)) return true;
         var style = Voices.Style(speaker);
         var model = Voices.ModelFor(speaker, major);
         var id = VoiceLineId.For(line.Text, voice, style, model);
@@ -132,7 +141,7 @@ public partial class VoiceRenderer : Node
         try
         {
             var builtin = $"{BuiltinDir}/{id}.wav";
-            if (Godot.FileAccess.FileExists(builtin) && ResourceLoader.Exists(builtin)) return GD.Load<AudioStream>(builtin);
+            if (ResourceLoader.Exists(builtin)) return GD.Load<AudioStream>(builtin);
             var path = CachePath(id);
             if (!File.Exists(path)) return null;
             var (pcm, rate) = WavWriter.Unwrap(File.ReadAllBytes(path));
@@ -146,7 +155,10 @@ public partial class VoiceRenderer : Node
     {
         if (id == null || AudioManager.Instance == null) return false;
         var stream = Load(id);
-        return stream != null && AudioManager.Instance.PlayVoice(stream, interrupt);
+        if (stream == null) { GD.Print($"[Voice] no audio for line {id} ({(HasBuiltin(id) ? "in the shipped bank but it did not load" : "not in the shipped bank or the cache")})"); return false; }
+        var played = AudioManager.Instance.PlayVoice(stream, interrupt);
+        GD.Print($"[Voice] {(played ? "playing" : "skipped (busy)")} line {id}, {stream.GetLength():0.0} s, from {(HasBuiltin(id) ? "the shipped bank" : "the cache")}");
+        return played;
     }
 
     public bool PlayLine(Line line, bool interrupt) => Play(line.VoiceId, interrupt);
