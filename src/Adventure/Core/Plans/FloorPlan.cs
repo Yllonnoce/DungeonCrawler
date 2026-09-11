@@ -2,7 +2,7 @@ using DungeonCrawler.Adventure.Ai;
 
 namespace DungeonCrawler.Adventure;
 
-public enum RoomRole { Passage, Start, Exit, Arena, Treasury, Gate, Shrine, Cell, Barracks, Kennel, Lair, Hall, Camp, Ruin }
+public enum RoomRole { Passage, Start, Exit, Arena, Treasury, Gate, Shrine, Cell, Barracks, Kennel, Lair, Hall, Camp, Ruin, Jail }
 public enum GoalKind { Guard, Defend, Patrol, Alarm }
 public enum ObjectiveKind { Chest, Lever, Door, Stairs, Npc, Gate }
 public enum QuestTemplate { KillTarget, Recover, Escort, HoldOut, Investigate, Decide, Betrayal }
@@ -16,6 +16,8 @@ public sealed class Line
 {
     public string Text { get; set; } = "";
     [AiIgnore] public string? VoiceId { get; set; }
+    [AiDescription("How this line is delivered when not in the character's usual manner: one of whisper, weary, calm, warm, cheerful, sly, pleading, angry, mocking, shout, booming, frantic; null for the character's default.")]
+    [AiNotNull] public string? Delivery { get; set; }
     public Line() { }
     public Line(string text) => Text = text;
 }
@@ -157,6 +159,8 @@ public sealed class NpcPlan
     [AiNotNull] public string? QuestId { get; set; }
     [AiDescription("The id of a campaign Cast member this is; the NPC then wears that name and voice. Null for a one-off.")]
     [AiNotNull] public string? CastId { get; set; }
+    [AiDescription("How this person sounds: VoiceStyle (a few words, at most 120 characters, e.g. \"a gruff old smith, gravel voice, dry humour\"), DefaultDelivery (one of the delivery ids), Voice (one of the voice names listed); null takes the cast member's or a plain voice.")]
+    [AiNotNull] public Voice.Persona? Persona { get; set; }
     [AiDescription("The NPC only appears when this flag was set on an earlier floor. Null for always.")]
     [AiNotNull] public string? RequiresFlag { get; set; }
     [AiDescription("The NPC stays away once this flag was set. Null for always.")]
@@ -265,6 +269,8 @@ public sealed class FloorPlan
     public List<NpcPlan> Npcs { get; set; } = new();
     public List<QuestPlan> Quests { get; set; } = new();
     public List<NarrationPlan> Narration { get; set; } = new();
+    [AiDescription("Taunts the antagonist keeps for this floor in particular (its story, its cast), on top of the campaign's; usually empty.")]
+    public List<TauntPlan> Taunts { get; set; } = new();
 
     public RoomPlan? RoomPlanFor(int index) => Rooms.FirstOrDefault(r => r.Index == index);
     public int EnemyTotal => Collectives.Sum(c => c.Members.Sum(m => m.Count)) + Loners.Count;

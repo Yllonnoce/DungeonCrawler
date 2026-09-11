@@ -2,142 +2,119 @@
   "SchemaVersion": 1,
   "Floor": 18,
   "Source": "claude",
-  "LayoutHash": 16569791753831942375,
-  "Title": "The Final Rivalry",
+  "LayoutHash": 16621631354794557373,
+  "Title": "The Green Belfry",
   "IntroLine": {
-    "Text": "The bitter wind howls through the shattered palace, carrying the scent of old embers and regret. A familiar silhouette waits in the ruins ahead.",
-    "VoiceId": "e182407de6b24993"
+    "Text": "Blue tile under black timber, galleries cut through the tower\u0027s own stone, and the air going green from the bottom up. The clerk has opened the vents one last time. He wants you to hurry.",
+    "VoiceId": "e3251b7fb2a68261",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Start",
-      "Name": "Palace Foyer"
+      "Role": "Treasury",
+      "Name": "The Sexton\u0027s Purse"
     },
     {
       "Index": 1,
-      "Role": "Lair",
-      "Name": "Hidden Ossuary"
+      "Role": "Passage",
+      "Name": "Upper Rope Drift"
     },
     {
       "Index": 2,
-      "Role": "Ruin",
-      "Name": "Collapsed Audience Chamber"
+      "Role": "Lair",
+      "Name": "The Hidden Peal"
     },
     {
       "Index": 3,
-      "Role": "Exit",
-      "Name": "The Wind-Strewn Stair"
+      "Role": "Passage",
+      "Name": "Ladder Drift"
     },
     {
       "Index": 4,
-      "Role": "Lair",
-      "Name": "The Scorched Gallery"
+      "Role": "Start",
+      "Name": "Tile Head"
     },
     {
       "Index": 5,
-      "Role": "Hall",
-      "Name": "The Charred Promenade"
+      "Role": "Passage",
+      "Name": "The Long Descent"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "Whispering Gallery"
+      "Role": "Hall",
+      "Name": "Bellframe Gallery"
     },
     {
       "Index": 7,
       "Role": "Lair",
-      "Name": "Choir Hollow"
+      "Name": "The Shelf"
     },
     {
       "Index": 8,
-      "Role": "Treasury",
-      "Name": "Forgotten Vault"
+      "Role": "Exit",
+      "Name": "The Deep Gallery"
     },
     {
       "Index": 9,
       "Role": "Treasury",
-      "Name": "Lever Locked Cell"
+      "Name": "The Clapper Chest"
     }
   ],
   "Collectives": [
     {
-      "Id": "vault_guard_0",
-      "Name": "Vault Wraith",
-      "FactionId": "abyss_chorus",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 8,
-        "Objective": {
-          "Kind": "Door",
-          "Ref": "0"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "vault_guard_1",
-      "Name": "Lever Protector",
-      "FactionId": "abyss_chorus",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 9,
-        "Objective": {
-          "Kind": "Lever",
-          "Ref": "1"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "stairs_guard",
-      "Name": "Stair Sentinel",
-      "FactionId": "abyss_chorus",
+      "Id": "frame_wardens",
+      "Name": "the Bellframe Wardens",
+      "FactionId": "faction3",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 3,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "deep_archers",
+      "Name": "the Deep Archers",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
+        "Objective": null,
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "patrol_void",
-      "Name": "Abyssal Patrol",
-      "FactionId": "abyss_chorus",
+      "Id": "descent_walkers",
+      "Name": "the Descent Walkers",
+      "FactionId": "faction3",
       "Members": [
         {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
         },
         {
-          "EnemyId": "enemy.void_caller",
+          "EnemyId": "enemy.abyss_archer",
           "Count": 1
         }
       ],
@@ -147,100 +124,61 @@
         "Objective": null,
         "Route": [
           5,
-          4
+          2
         ],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "alarm_wing",
-      "Name": "Choir Sentries",
-      "FactionId": "abyss_chorus",
+      "Id": "rope_caller",
+      "Name": "the Rope Caller",
+      "FactionId": "faction3",
       "Members": [
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Alarm",
-        "Room": 7,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": "stairs_guard",
-        "RallyRoom": null
-      }
-    }
-  ],
-  "Loners": [
-    {
-      "EnemyId": "enemy.void_caller",
-      "Room": 4
-    },
-    {
-      "EnemyId": "enemy.abyss_archer",
-      "Room": 2
-    }
-  ],
-  "Hordes": [
-    {
-      "Id": "horde_ossuary",
-      "Name": "The Ossuary Tide",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
-        },
         {
           "EnemyId": "enemy.void_caller",
           "Count": 1
         }
       ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 26,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The chest lid crashes open, and from the ossuary walls pour a tide of shades, their wails mixing with the wind.",
-        "VoiceId": null
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 1,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
       }
-    },
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
     {
-      "Id": "horde_gallery",
-      "Name": "The Scorched Swarm",
-      "Room": 4,
+      "Id": "horde_peal",
+      "Name": "The Hidden Peal",
+      "Room": 2,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 30
+          "Count": 26
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 4
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 40,
+      "Total": 30,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The gallery erupts as fire and shadow mix, shades boiling from the floor like smoke from a fresh pyre.",
-        "VoiceId": null
+        "Text": "The hidden peal rings once, and the ringers come out of the stone to hear it.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_choir",
-      "Name": "The Mourning Chorus",
+      "Id": "horde_shelf",
+      "Name": "The Shelf",
       "Room": 7,
       "Members": [
         {
@@ -249,310 +187,47 @@
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 7
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 4
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 34,
-      "Trigger": "Enter",
+      "Total": 29,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "A discordant chant fills the hollow, and the shadows themselves rise to sing their mournful attack.",
-        "VoiceId": null
+        "Text": "The shelf was a ledge of the drowned, and the chest was theirs.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 5,
-      "Locked": true,
-      "QuestId": null
-    },
-    {
-      "Room": 7,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
     {
-      "Room": 1,
-      "Kind": "Spikes"
-    },
-    {
-      "Room": 4,
+      "Room": 3,
       "Kind": "Gas"
     },
     {
       "Room": 6,
-      "Kind": "Fire"
+      "Kind": "Spikes"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "captain_voss_ally",
-      "Name": "Captain Voss",
-      "Room": 2,
-      "VoiceId": "Umbriel",
-      "Script": {
-        "Start": "offer",
-        "Nodes": [
-          {
-            "Id": "offer",
-            "Line": {
-              "Text": "You\u0027re still breathing. Good. There\u0027s a knot of void-callers guarding the way down. Help me rip them apart, and I\u0027ll cut you in on the spoils.",
-              "VoiceId": "e5a24e9ed17dd806"
-            },
-            "Choices": [
-              {
-                "Text": "What do you get out of this?",
-                "Next": "catch",
-                "Effect": "None",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "We\u0027ll handle it.",
-                "Next": null,
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "On your own, Voss.",
-                "Next": null,
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done_voss_kill_stairs",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "catch",
-            "Line": {
-              "Text": "I\u0027ve got my eye on something in the vaults, but I can\u0027t get near it with those shrieking bastards on patrol. You clear the stairs, I\u0027ll do the rest.",
-              "VoiceId": "48c2fa6d4007f12d"
-            },
-            "Choices": [
-              {
-                "Text": "Fine, we\u0027ll kill them.",
-                "Next": null,
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "No deal. Find another fool.",
-                "Next": null,
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "done_voss_kill_stairs",
-            "Line": {
-              "Text": "Not bad at all. Here\u0027s your cut. Don\u0027t spend it all in one place.",
-              "VoiceId": "8bd941e8e06987a4"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "voss_kill_stairs",
-      "CastId": null,
-      "RequiresFlag": "shared_quest",
-      "ForbidsFlag": null,
-      "Betrayal": null
-    },
-    {
-      "Id": "captain_voss_foe",
-      "Name": "Captain Voss",
-      "Room": 2,
-      "VoiceId": "Umbriel",
-      "Script": {
-        "Start": "confront",
-        "Nodes": [
-          {
-            "Id": "confront",
-            "Line": {
-              "Text": "Thought you\u0027d seen the last of me? This time, there\u0027s no negotiating. I\u0027m taking your haul and your heads.",
-              "VoiceId": "dbc05238bcd472f4"
-            },
-            "Choices": [
-              {
-                "Text": "Then come and claim them.",
-                "Next": null,
-                "Effect": "Betray",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "voss_betrayal",
-      "CastId": null,
-      "RequiresFlag": "drove_off_voss",
-      "ForbidsFlag": null,
-      "Betrayal": {
-        "EnemyId": "enemy.void_stalker",
-        "Count": 2
-      }
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "voss_kill_stairs",
-      "Template": "KillTarget",
-      "Title": "Voss\u0027s Price",
-      "Objective": "Eliminate the void-callers guarding the exit stairs.",
-      "Params": {
-        "TargetCollective": "stairs_guard",
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "captain_voss_ally",
-      "Reward": {
-        "Xp": 600,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "I\u0027ll point you at the guards. You do the killing, I\u0027ll handle the vaults. Deal?",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "That\u0027s the spirit. I\u0027ll be right behind you.",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "Suit yourself. I\u0027ll find someone else.",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "Not bad at all. Here\u0027s your cut. Don\u0027t spend it all in one place.",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "You let them slip away? Pathetic. I should have done it myself.",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Id": "voss_betrayal",
-      "Template": "Betrayal",
-      "Title": "Voss\u0027s Revenge",
-      "Objective": "Survive Voss\u0027s ambush.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "captain_voss_foe",
-      "Reward": {
-        "Xp": 500,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "Voss sneers. \u0027You should have shared the spoils on the forge floor. Now I\u0027ll take everything.\u0027",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "He lunges at you, his crew materializing from the shadows.",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "Voss\u0027s body dissolves into the abyss, his ambition finally ended.",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "Voss cackles as he vanishes into the shadows, leaving you bruised and poorer.",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
+      "Trigger": "RoomEnter",
+      "Room": 8,
       "Line": {
-        "Text": "The bitter wind howls through the shattered palace, carrying the scent of old embers and regret. A familiar silhouette waits in the ruins ahead.",
-        "VoiceId": null
+        "Text": "The deep gallery, and the stairs at the end of it, where the air is thickest and greenest. He has counted your breaths. He has a number in mind.",
+        "VoiceId": "1c0d6b1c48aa6957",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 2,
-      "Line": {
-        "Text": "Captain Voss lounges against a broken pillar, spinning a coin between his fingers. He grins when he sees you.",
-        "VoiceId": "2e90fc10b3d762ea"
-      },
-      "RequiresFlag": "shared_quest",
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 2,
-      "Line": {
-        "Text": "Captain Voss stands in the centre of the ruined hall, his hand on his sword. The air around him is cold with betrayal.",
-        "VoiceId": "61567489afb8541a"
-      },
-      "RequiresFlag": "drove_off_voss",
-      "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 10
+  "Taunts": [],
+  "EnemyTotal": 7
 }

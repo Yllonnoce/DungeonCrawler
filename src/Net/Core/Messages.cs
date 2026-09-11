@@ -31,7 +31,7 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.Welcome)] public sealed record Welcome(
     int YourPeerId, int YourMemberIndex, ulong GameSeed, int CurrentFloor, double PlaySeconds, bool Victory,
     AdventureDto? Adventure, PartySnapshot BuildSnapshot, FloorStateDto FloorState, List<DynamicEnemyDto> DynamicEnemies,
-    PartyDto Party, List<NetPlayerDto> Players, string Objective, int ServerTick, ulong LayoutHash = 0) : NetMessage;
+    PartyDto Party, List<NetPlayerDto> Players, string Objective, int ServerTick, ulong LayoutHash = 0, string? FloorObjective = null) : NetMessage;
 [Msg(MsgKind.Ready)] public sealed record Ready(int Floor) : NetMessage;
 [Msg(MsgKind.PlayerJoined)] public sealed record PlayerJoined(NetPlayerDto Player) : NetMessage;
 [Msg(MsgKind.PlayerLeft)] public sealed record PlayerLeft(int MemberIndex, string Name) : NetMessage;
@@ -61,14 +61,14 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.FloorChangeBegin)] public sealed record FloorChangeBegin(int Floor, string Status) : NetMessage;
 [Msg(MsgKind.FloorChange)] public sealed record FloorChange(
     int Floor, int Delta, FloorPlan? Plan, PartySnapshot BuildSnapshot, FloorStateDto? State,
-    List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0) : NetMessage;
+    List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0, string? Objective = null) : NetMessage;
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
 [Msg(MsgKind.QuestSync)] public sealed record QuestSync(QuestState Quest) : NetMessage;
 [Msg(MsgKind.Objective)] public sealed record ObjectiveMsg(string Text) : NetMessage;
 [Msg(MsgKind.Log)] public sealed record LogMsg(List<string> Lines) : NetMessage;
 [Msg(MsgKind.Sfx)] public sealed record SfxMsg(string Name, float Volume = 0f) : NetMessage;
-[Msg(MsgKind.Narration)] public sealed record NarrationMsg(string Text, string? VoiceId) : NetMessage;
+[Msg(MsgKind.Narration)] public sealed record NarrationMsg(string Text, string? VoiceId, string? CleanText = null, string? CleanVoiceId = null) : NetMessage;
 [Msg(MsgKind.Bark)] public sealed record BarkMsg(int Member, string Text, string? VoiceId) : NetMessage;
 [Msg(MsgKind.Chat)] public sealed record ChatMsg(string From, string Text) : NetMessage;
 [Msg(MsgKind.Ping)] public sealed record Ping(int Tick, double SentAt) : NetMessage;
@@ -101,6 +101,10 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.BossDefeated)] public sealed record BossDefeatedEvt(int Floor) : NetMessage;
 [Msg(MsgKind.AmbushSprung)] public sealed record AmbushSprungEvt(int Index) : NetMessage;
 [Msg(MsgKind.PortalOpened)] public sealed record PortalOpenedEvt(float X, float Y, float Z) : NetMessage;
+/// <summary>Where the floor objective stands (every couple of seconds, and on Ready).</summary>
+[Msg(MsgKind.ObjectiveState)] public sealed record ObjectiveStateMsg(ObjectiveStateDto State) : NetMessage;
+/// <summary>The floor objective is met: the stairs open.</summary>
+[Msg(MsgKind.ObjectiveDone)] public sealed record ObjectiveDoneEvt(int Floor, string ObjectiveKind) : NetMessage;
 [Msg(MsgKind.MemberDowned)] public sealed record MemberDownedEvt(int Index) : NetMessage;
 [Msg(MsgKind.MemberRevived)] public sealed record MemberRevivedEvt(int Index) : NetMessage;
 [Msg(MsgKind.PartyWiped)] public sealed record PartyWipedEvt : NetMessage;

@@ -57,9 +57,10 @@ public sealed record EnemyProfile
         [Stat.ResistFire] = ResistFire, [Stat.ResistFrost] = ResistFrost, [Stat.ResistPoison] = ResistPoison, [Stat.ResistArcane] = ResistArcane,
     });
 
+    /// <summary>The attack this creature makes on a floor: the base numbers scaled by depth and by the dungeon's <see cref="TierRules.Lethality"/>.</summary>
     public AttackProfile BuildAttack(int floor)
     {
-        var s = TierRules.DamageScale(floor);
+        var s = TierRules.DamageScale(floor) * TierRules.Lethality;
         return new AttackProfile
         {
             MinDamage = MinDamage * s, MaxDamage = MaxDamage * s, Type = DamageType,

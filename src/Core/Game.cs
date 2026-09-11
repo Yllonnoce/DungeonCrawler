@@ -24,6 +24,8 @@ public partial class Game : Node
 
     /// <summary>Per-floor deltas for floors the party has left (and, after a load, every saved floor).</summary>
     public Dictionary<int, FloorStateDto> Floors { get; } = new();
+    /// <summary>A client's record of the objective the server dealt each floor, so both build the same floor whatever the server was told on its command line.</summary>
+    public Dictionary<int, Dungeon.Generation.FloorObjectiveKind> ServerObjectives { get; } = new();
     /// <summary>Hordes already let loose on a floor, from its saved state.</summary>
     public IReadOnlyCollection<string> SpentHordes(int floor) => Floors.TryGetValue(floor, out var s) ? s.SpentHordes : Array.Empty<string>();
     public double PlaySeconds { get; set; }

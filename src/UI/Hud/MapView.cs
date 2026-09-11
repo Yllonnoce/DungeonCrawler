@@ -20,6 +20,8 @@ public partial class MapView : Control
 
     private static readonly Color Bg = new(0.05f, 0.05f, 0.06f, 0.75f);
     private static readonly Color FloorColor = new(0.42f, 0.40f, 0.36f);
+    /// <summary>Gassed cells on a Toxic floor lean toward this, the deeper the greener.</summary>
+    private static readonly Color GasColor = new(0.30f, 0.62f, 0.18f);
     private static readonly Color WallColor = new(0.72f, 0.70f, 0.66f);
     private static readonly Color DoorColor = new(0.6f, 0.5f, 0.3f);
     private static readonly Color UpColor = new(0.9f, 0.85f, 0.5f);
@@ -93,6 +95,8 @@ public partial class MapView : Control
                     };
                 }
                 if (color.A == 0) continue;
+                if (!partyUnder && Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.ToxicController gas && layout.IsWalkable(p) && gas.LevelAt(p) is > 0f and var level)
+                    color = color.Lerp(GasColor, 0.25f + 0.6f * level);
                 DrawRect(new Rect2(CellTopLeft(p) + Vector2.One * inset * 0.5f, Vector2.One * (cell - inset)), color);
             }
 

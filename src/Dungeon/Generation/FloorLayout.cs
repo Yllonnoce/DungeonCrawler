@@ -9,6 +9,8 @@ public sealed class FloorLayout
     public int Seed { get; }
     /// <summary>The shape this floor was generated as.</summary>
     public LayoutKind Kind { get; init; }
+    /// <summary>The floor's objective and what was laid down for it; null on an ordinary floor.</summary>
+    public ObjectiveLayout? Objective { get; set; }
     public int Width { get; }
     public int Height { get; }
     public Cell[] Cells { get; }               // row-major, index = y * Width + x
@@ -63,7 +65,7 @@ public sealed class FloorLayout
     /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
     public HashSet<GridPos> Fires { get; } = new();
     /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
-    public bool IsReserved(GridPos p) => Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p)));
+    public bool IsReserved(GridPos p) => Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p)));
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with
@@ -161,6 +163,7 @@ public sealed class FloorLayout
         foreach (var f in Fires.OrderBy(k => k.Y).ThenBy(k => k.X)) { h ^= (ulong)f.GetHashCode() * 23; h *= 1099511628211UL; }
         foreach (var (a, b) in BlockedEdges.OrderBy(e => e.Item1.Y).ThenBy(e => e.Item1.X).ThenBy(e => e.Item2.Y).ThenBy(e => e.Item2.X))
         { h ^= (ulong)a.GetHashCode(); h *= 1099511628211UL; h ^= (ulong)b.GetHashCode(); h *= 1099511628211UL; }
+        if (Objective != null) { h ^= (ulong)Objective.Kind * 0x9E3779B1UL; h *= 1099511628211UL; }
         return h;
     }
 

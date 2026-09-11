@@ -31,7 +31,7 @@ public sealed class ChaseState : AiState
 
     public override void Update(Enemy enemy, float dt)
     {
-        if (!enemy.HasTarget && enemy.Party?.NearestAlive(enemy.GlobalPosition) == null) { enemy.ChangeState(enemy.Group?.LostContactState(enemy) ?? new IdleState()); return; }
+        if (!enemy.HasTarget && enemy.Party?.NearestAlive(enemy.GlobalPosition) == null) { enemy.ChangeState(enemy.Group?.LostContactState(enemy) ?? enemy.RestState()); return; }
         if (enemy.Group != null && enemy.Order is Collectives.OrderKind.ReturnHome or Collectives.OrderKind.FallBack or Collectives.OrderKind.RunAlarm or Collectives.OrderKind.Regroup && GroupOrders.Apply(enemy, allowChase: false)) return;
 
         if (enemy.TrySignature()) return;
@@ -48,7 +48,7 @@ public sealed class ChaseState : AiState
         }
 
         if (enemy.CanSeeParty()) _lostTimer = 0f;
-        else if ((_lostTimer += dt) > enemy.GiveUpSeconds) { enemy.ChangeState(enemy.Group?.LostContactState(enemy) ?? new IdleState()); return; }
+        else if ((_lostTimer += dt) > enemy.GiveUpSeconds) { enemy.ChangeState(enemy.Group?.LostContactState(enemy) ?? enemy.RestState()); return; }
 
         enemy.MoveAlongPathToward(enemy.TargetPosition, dt);
     }
@@ -200,3 +200,57 @@ public sealed class DeadState : AiState
         if (_timer >= linger) enemy.QueueFree();
     }
 }
+
+/// <summary>
+/// Go for an NPC (the ritualist) and keep hitting them; the party only matters when it hurts this creature or stands in
+/// its way. Losing the NPC (down, dead, gone) turns the creature on the party.
+/// </summary>
+public sealed class HuntNpcState : AiState
+{
+    public override string Name => "Hunt";
+    private float _timer;
+    private bool _swung;
+
+    public override void Update(Enemy enemy, float dt)
+    {
+        var npc = enemy.NpcTarget;
+        if (npc == null || !Godot.GodotObject.IsInstanceValid(npc) || !npc.IsAlive) { enemy.ChangeState(new ChaseState()); return; }
+        // the party got in the way: a fresh wound, or a body within arm's reach between us and the prize
+        if (enemy.SinceHurt < 4f || (enemy.CanSeeParty() && enemy.DistanceToParty() < enemy.AttackRange * 1.5f)) { enemy.ChangeState(new ChaseState()); return; }
+        var flat = new Godot.Vector3(npc.GlobalPosition.X, enemy.GlobalPosition.Y, npc.GlobalPosition.Z);
+        var dist = enemy.GlobalPosition.DistanceTo(flat);
+        if (dist <= enemy.AttackRange)
+        {
+            enemy.FaceToward(npc.GlobalPosition);
+            enemy.MoveToward(enemy.GlobalPosition, dt);
+            _timer += dt;
+            if (!_swung && _timer >= enemy.WindupSeconds) { _swung = true; enemy.StrikeNpc(npc); }
+            if (_timer >= enemy.WindupSeconds + enemy.RecoverSeconds) { _timer = 0f; _swung = false; }
+            return;
+        }
+        _timer = 0f; _swung = false;
+        enemy.MoveAlongPathToward(npc.GlobalPosition, dt);
+    }
+}
+
+/// <summary>
+/// A jailer marching a prisoner to the jail. The captive trails behind (the controller moves them); at the jail the
+/// controller takes over. A wound from the party turns the jailer on it, and the captive slips away.
+/// </summary>
+public sealed class EscortCaptiveState : AiState
+{
+    public override string Name => "Escort";
+    public override bool Unaware => true; // busy with its prize: the party can get the drop on it
+    private readonly Godot.Vector3 _jail;
+    public EscortCaptiveState(Godot.Vector3 jail) => _jail = jail;
+
+    public override void Update(Enemy enemy, float dt)
+    {
+        if (enemy.Captive == null || !Godot.GodotObject.IsInstanceValid(enemy.Captive) || !enemy.Captive.Captured) { enemy.ChangeState(new ChaseState()); return; }
+        if (enemy.SinceHurt < 4f) { enemy.ChangeState(new ChaseState()); return; }
+        var flat = new Godot.Vector3(_jail.X, enemy.GlobalPosition.Y, _jail.Z);
+        if (enemy.GlobalPosition.DistanceTo(flat) < Adventure.Objectives.JailbreakRules.DeliverRange) { enemy.MoveToward(enemy.GlobalPosition, dt); return; } // the controller delivers
+        enemy.MoveAlongPathToward(_jail, dt);
+    }
+}
+

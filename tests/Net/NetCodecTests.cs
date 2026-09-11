@@ -148,4 +148,28 @@ public class NetCodecTests
         Assert.Throws<NetCodecException>(() => NetCodec.Decode(new byte[] { (byte)MsgKind.Pose, 1, 2 }));
         Assert.Throws<NetCodecException>(() => NetCodec.Decode<Hello>(NetCodec.Encode(new Ready(1))));
     }
+    [Fact]
+    public void ObjectiveMessages_RoundTrip()
+    {
+        var state = new ObjectiveStateDto { Kind = "jailbreak", Completed = false, Seconds = 12.5f, FreedNpcs = { "villager1" }, JailedNpcs = { "villager2" }, SealedMouths = { 1, 3 }, LeverParity = 5, RitualProgress = 40f, RitualStarted = true };
+        var back = RoundTrip(new ObjectiveStateMsg(state)).State;
+        Assert.Equal("jailbreak", back.Kind);
+        Assert.Equal(12.5f, back.Seconds);
+        Assert.Equal(new[] { "villager1" }, back.FreedNpcs);
+        Assert.Equal(new[] { 1, 3 }, back.SealedMouths);
+        Assert.Equal(5, back.LeverParity);
+        Assert.True(back.RitualStarted);
+        var done = RoundTrip(new ObjectiveDoneEvt(7, "ritual"));
+        Assert.Equal(7, done.Floor);
+        Assert.Equal("ritual", done.ObjectiveKind);
+    }
+    [Fact]
+    public void Narration_CarriesItsCleanTwin()
+    {
+        var n = RoundTrip(new NarrationMsg("The King: \"bastards\"", "abc", "The King: \"wretches\"", "def"));
+        Assert.Equal("The King: \"wretches\"", n.CleanText);
+        Assert.Equal("def", n.CleanVoiceId);
+        var plain = RoundTrip(new NarrationMsg("hello", null));
+        Assert.Null(plain.CleanText);
+    }
 }

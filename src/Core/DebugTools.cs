@@ -77,6 +77,10 @@ public partial class DebugTools : Node
     public string? ForcedTheme { get; private set; }
     /// <summary>--layout=KIND forces every floor to that shape (standard, labyrinth, ring, mine, flooded, burning).</summary>
     public string? ForcedLayout { get; private set; }
+    /// <summary>--objective=KIND: every eligible floor carries this objective (boss floors and incompatible shapes still refuse).</summary>
+    public string? ForcedObjective { get; private set; }
+    /// <summary>--lethality=N: pin the dungeon's damage multiplier for this run (headless flows that walk through traps use 1).</summary>
+    public float? ForcedLethality { get; private set; }
     private bool _testFloors;
     private bool _testStructures;
     private bool _testHorde;
@@ -152,6 +156,14 @@ public partial class DebugTools : Node
     private int _skillStep;
     private bool _testVertical;
     private bool _testStairs;
+    /// <summary>--test-objective=KIND: jump to floor 2 with that objective, drive it to completion, check the stairs.</summary>
+    private string? _testObjective;
+    /// <summary>--print-map: once the floor stands, print its map and where the objective's pieces are, then quit.</summary>
+    private bool _printMap, _printedMap;
+    private int _objectiveStep;
+    private float _objectiveHp;
+    private bool _objectiveEventSeen;
+    private int _villainLines;
     private bool _askStairs, _askedStairsDebug;
     private int _stairsStep;
     private double _stairsWalk;
@@ -199,6 +211,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-skills") { _testSkills = true; _faceEnemy = true; _quitAfter = 7; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
+            else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
             else if (arg == "--ask-stairs") _askStairs = true;
             else if (arg == "--test-party") { _testParty = true; _faceEnemy = true; _quitAfter = 16; }
             else if (arg == "--face-boss") { _faceBoss = true; _faceEnemy = true; }
@@ -248,6 +261,9 @@ public partial class DebugTools : Node
             else if (arg == "--test-tremor") { _testTremor = true; _tremor = true; TraceAi = false; _quitAfter = 12; }
             else if (arg.StartsWith("--theme=")) ForcedTheme = arg["--theme=".Length..];
             else if (arg.StartsWith("--layout=")) ForcedLayout = arg["--layout=".Length..];
+            else if (arg.StartsWith("--objective=")) ForcedObjective = arg["--objective=".Length..];
+            else if (arg == "--print-map") { _printMap = true; if (_quitAfter <= 0) _quitAfter = 4; }
+            else if (arg.StartsWith("--lethality=")) ForcedLethality = float.Parse(arg["--lethality=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             else if (arg.StartsWith("--vault=")) ForcedVault = arg["--vault=".Length..];
             else if (arg.StartsWith("--inspect=")) { var xy = arg["--inspect=".Length..].Split(','); _inspect = (int.Parse(xy[0]), int.Parse(xy[1])); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--bake-voice=")) _bakeVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-voice=".Length..]);
@@ -265,12 +281,17 @@ public partial class DebugTools : Node
             else if (arg == "--test-net-client" || arg == "--test-net-rejoin") { _netClient = true; TraceAi = false; _quitAfter = 90; }
             else if (arg.StartsWith("--join=")) _netClient = true;
         }
+        if (ForcedLethality is { } lethality) Dungeon.TierRules.Lethality = lethality; // Settings loaded before the flags were read
+        if (_bakeDir != null && ReplayDir != null) Adventure.Ai.ClaudePlanner.StrictReplay = true; // a bake from recordings stops at the first missing one rather than filling in
         if ((_testCollectives || _testQuest || _testVoice || _testStory) && _seed == null) _seed = 4242; // scripted scenarios want a repeatable floor
         if (_testStructures && _seed == null) _seed = StructureSeed();
         if (_testHorde && _seed == null) _seed = HordeSeed();
         // Automation never spends the player's keys unless --ai is given explicitly: scripted runs use the offline designer and no live voice.
         var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _builtin || _menuOnly;
         if (automation && !ForceAi) { NoAi = true; NoVoice = !FakeVoice; }
+        // scripted scenarios were written against the plain floors of their seeds: no objective floor unless one is asked for by name
+        // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
+        if (automation && !_testFloors && !_builtin && _bakeDir == null && _testObjective == null && ForcedObjective == null) ForcedObjective = "none";
         if (_server || _netClient) NoVoice = true; // a headless server has no speakers; the test client keeps its key in its pocket
     }
 
@@ -547,6 +568,23 @@ public partial class DebugTools : Node
         if (_testSkills) RunSkillsTest();
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
+        if (_testObjective != null) RunObjectiveTest();
+        if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == Math.Max(1, _startFloor))
+        {
+            _printedMap = true;
+            var o = mapLayout.Objective;
+            GD.Print($"[map] floor {Main.Instance.Builder.CurrentFloor} {Dungeon.Generation.LayoutKinds.Id(mapLayout.Kind)} objective={Dungeon.Generation.FloorObjectives.Id(o?.Kind ?? Dungeon.Generation.FloorObjectiveKind.None)} up={mapLayout.UpStairs} down={mapLayout.DownStairs} downRoom={mapLayout.Rooms.IndexOf(mapLayout.RoomAt(mapLayout.DownStairs)!)}");
+            foreach (var v in mapLayout.Vaults) GD.Print($"[map] vault {v.Index}: {v.Kind} door={v.Door} lever={v.Lever} key={v.Key} revealed={v.Revealed} room={mapLayout.Rooms.IndexOf(v.Room)} holdsStairs={v.Room.Contains(mapLayout.DownStairs)}");
+            if (o?.Puzzle is { } pz)
+            {
+                GD.Print($"[map] puzzle: levers={string.Join(" ", pz.Levers)} gates={string.Join(" ", pz.Gates)} toggles={string.Join(",", pz.Toggles.Select(t => Convert.ToString(t, 2)))} initial={Convert.ToString(pz.Initial, 2)} target={Convert.ToString(pz.Target, 2)}");
+                GD.Print($"[map] notice: {Dungeon.Generation.VaultPuzzles.VaultClue(pz, mapLayout)}");
+                for (var i = 0; i < pz.LeverCount; i++) GD.Print($"[map] lever {i} at {pz.Levers[i]} (room {mapLayout.Rooms.IndexOf(mapLayout.RoomAt(pz.Levers[i])!)}): {Dungeon.Generation.VaultPuzzles.LeverClue(pz, i)}");
+                foreach (var (cell, clue) in o.Plaques) GD.Print($"[map] plaque at {cell} clue={clue}");
+            }
+            GD.Print(mapLayout.ToAscii());
+            GetTree().Quit();
+        }
         if (_testParty) RunPartyTest();
         if (_testDrag) RunDragTest(delta);
 
@@ -1231,6 +1269,13 @@ public partial class DebugTools : Node
             return;
         }
         if (game.Adventure.FloorPlans.ContainsKey(_bakeFloor)) { _bakeFloor++; return; }
+        if (Adventure.Ai.ClaudePlanner.StrictReplay && Adventure.Ai.ReplayClaudeClient.Pending is { } pending && !director.IsPlanning(_bakeFloor))
+        {
+            GD.Print($"[bake] REPLAY NEEDS {pending}: its request is in {ReplayDir}; write {pending}.response.json and run again with --bake-resume");
+            _bakeDir = null;
+            GetTree().Quit(3);
+            return;
+        }
         if (!director.IsPlanning(_bakeFloor)) director.Prefetch(_bakeFloor);
     }
 
@@ -1839,6 +1884,93 @@ public partial class DebugTools : Node
     private double _vertLog;
     private float _vertHp;
     private Dungeon.Props.SecretWall? _vertSecret;
+
+    // Objectives: floor 2 with the asked-for objective; the stairs sealed (all but the gas); the objective driven to its end; the stairs open.
+    private void RunObjectiveTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout) return;
+        void Fail(string why) { GD.Print($"[objective] RESULT FAIL ({why})"); _testObjective = null; }
+        var controller = Adventure.Objectives.ObjectiveController.Instance;
+        var stairs = root.GetNodeOrNull<Dungeon.Stairs>("DownStairs");
+        switch (_objectiveStep)
+        {
+            case 0 when _elapsed >= 0.5:
+                _objectiveStep++;
+                EventBus.Instance.ObjectiveEvent += (kind, trigger, arg) => { _objectiveEventSeen = true; GD.Print($"[objective] event {kind} {trigger} {arg}"); };
+                EventBus.Instance.NarrationEx += (text, voice, clean, cleanVoice) => { var villain = Game.Instance.Adventure.Campaign?.Antagonist.Name ?? ""; if (villain != "" && text.StartsWith(villain + ":")) { _villainLines++; GD.Print($"[objective] villain says: {text} (clean twin: {(clean == null ? "none" : "yes")})"); } };
+                Game.Instance.JumpToFloor(2);
+                break;
+            case 1 when _elapsed >= 2.0:
+            {
+                _objectiveStep++;
+                var kind = layout.Objective?.Kind ?? Dungeon.Generation.FloorObjectiveKind.None;
+                GD.Print($"[objective] floor {Game.Instance.CurrentFloor}: objective={Dungeon.Generation.FloorObjectives.Id(kind)} controller={controller?.GetType().Name ?? "none"} stairsLocked={stairs?.Locked} hud=\"{AdventureDirector.Instance?.CurrentObjective}\"");
+                if (!Dungeon.Generation.FloorObjectives.TryParse(_testObjective, out var wanted) || kind != wanted) { Fail($"dealt {kind}, wanted {_testObjective}"); return; }
+                if (controller == null || stairs == null) { Fail("no controller or no stairs"); return; }
+                if (stairs.Locked != Dungeon.Generation.FloorObjectives.LocksStairs(kind)) { Fail($"stairs locked={stairs.Locked}"); return; }
+                if (string.IsNullOrWhiteSpace(AdventureDirector.Instance?.CurrentObjective)) { Fail("the HUD objective line is empty"); return; }
+                // what each kind must have built
+                switch (controller)
+                {
+                    case Adventure.Objectives.ToxicController toxic:
+                        if (layout.Objective!.ExitGateVault >= 0 && root.GetChildren().OfType<Dungeon.Props.Door>().FirstOrDefault(d => d.VaultIndex == layout.Objective.ExitGateVault) is not { Detected: true }) { Fail("the exit gate is not shown"); return; }
+                        _objectiveHp = main.Party.Members.Sum(m => m.Hp);
+                        toxic.Hurry();
+                        break;
+                    case Adventure.Objectives.ShiftingVaultController vault:
+                        GD.Print($"[objective] puzzle: {vault.Puzzle?.LeverCount} levers, {vault.Puzzle?.GateCount} gates, plaques={root.GetChildren().OfType<Dungeon.Props.Plaque>().Count()}, gates built={vault.Gates.Count}");
+                        if (vault.Puzzle != null && (vault.Gates.Count != vault.Puzzle.GateCount || vault.Levers.Count != vault.Puzzle.LeverCount)) { Fail("gates or levers missing"); return; }
+                        if (root.GetChildren().OfType<Dungeon.Props.Plaque>().Count() < 1) { Fail("no plaques"); return; }
+                        vault.Hurry();
+                        break;
+                    case Adventure.Objectives.RitualController ritual:
+                        GD.Print($"[objective] ritual: ritualist={ritual.Ritualist?.NpcName} levers={layout.Objective!.BreachLevers.Count} duration={ritual.Duration}");
+                        if (ritual.Ritualist == null) { Fail("no ritualist"); return; }
+                        if (root.GetChildren().OfType<Dungeon.Props.Lever>().Count(l => l.IsObjectiveLever) != layout.Objective!.BreachLevers.Count) { Fail("breach levers missing"); return; }
+                        if (layout.Objective!.BreachLevers.Count > 0) ritual.OnLever(0, true); // seal one breach the honest way
+                        ritual.Hurry();
+                        break;
+                    case Adventure.Objectives.JailbreakController jail:
+                        GD.Print($"[objective] jail: prisoners={jail.Prisoners.Count} jailed={jail.Prisoners.Count(p => p.Jailed)} keys={root.GetChildren().OfType<Items.LootDrop>().Count(d => d.KeyIndex >= 0)}");
+                        if (jail.Prisoners.Count < 3 || jail.Prisoners.Count(p => p.Jailed) < 1) { Fail("prisoners missing"); return; }
+                        jail.Hurry();
+                        break;
+                }
+                break;
+            }
+            case 2 when _elapsed >= 5.0:
+            {
+                _objectiveStep++;
+                var kind = layout.Objective?.Kind ?? Dungeon.Generation.FloorObjectiveKind.None;
+                GD.Print($"[objective] after: completed={controller?.Completed} stairsLocked={stairs?.Locked} hud=\"{AdventureDirector.Instance?.CurrentObjective}\" events={_objectiveEventSeen}");
+                if (controller is Adventure.Objectives.ToxicController toxic)
+                {
+                    var hp = main.Party.Members.Sum(m => m.Hp);
+                    GD.Print($"[objective] gas: seconds={toxic.Seconds:0} party hp {_objectiveHp:0} -> {hp:0}");
+                    if (hp >= _objectiveHp) { Fail("the gas did no harm"); return; }
+                    if (stairs is { Locked: true }) { Fail("the gas floor sealed its stairs"); return; }
+                }
+                else
+                {
+                    if (controller is not { Completed: true }) { Fail("not completed"); return; }
+                    if (stairs is not { Locked: false }) { Fail("stairs still sealed"); return; }
+                    if (controller is Adventure.Objectives.JailbreakController jail && jail.Prisoners.Any(p => !p.Freed || !p.Escorting)) { Fail("a prisoner did not follow"); return; }
+                    if (controller is Adventure.Objectives.ShiftingVaultController sv && sv.Puzzle != null && sv.State != sv.Puzzle.Target) { Fail("gates not at the target"); return; }
+                }
+                if (!_objectiveEventSeen) { Fail("no objective event was raised"); return; }
+                if (_villainLines < 1) { Fail("the villain never spoke"); return; }
+                GD.Print($"[objective] villain lines: {_villainLines}");
+                // a save round trip keeps it
+                var dto = Save.FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
+                GD.Print($"[objective] saved: kind={dto.Objective?.Kind} completed={dto.Objective?.Completed} seconds={dto.Objective?.Seconds:0} parity={dto.Objective?.LeverParity} freed={dto.Objective?.FreedNpcs.Count} sealed={dto.Objective?.SealedMouths.Count}");
+                if (dto.Objective == null || dto.Objective.Kind != Dungeon.Generation.FloorObjectives.Id(kind)) { Fail("the objective did not save"); return; }
+                GD.Print("[objective] RESULT ok");
+                _testObjective = null;
+                break;
+            }
+        }
+    }
 
     // Stairs: walk up the flight to the landing, get asked, decline, step off and back, accept, arrive; then the well down.
     private void RunStairsTest()

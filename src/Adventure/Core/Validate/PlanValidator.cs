@@ -37,6 +37,18 @@ public static class PlanValidator
 
         var start = menu.StartRoom?.Index ?? -1;
         bool RoomOk(int i) => menu.Room(i) != null;
+        CampaignRepair.RepairLine(plan.IntroLine, report.Repairs, "intro");
+        foreach (var n in plan.Narration) CampaignRepair.RepairLine(n.Line, report.Repairs, "narration");
+        plan.Taunts.RemoveAll(t =>
+        {
+            if (!Objectives.TauntTriggers.TryParse(t.Trigger, out var trigger) || string.IsNullOrWhiteSpace(t.Line.Text)) { report.Repairs.Add("dropped a floor taunt with no trigger or no words"); return true; }
+            t.Trigger = Objectives.TauntTriggers.Id(trigger);
+            t.Line.Text = Clip(t.Line.Text, CampaignRepair.MaxLine);
+            if (t.CleanLine != null && string.IsNullOrWhiteSpace(t.CleanLine.Text)) t.CleanLine = null;
+            t.CleanLine ??= new Line(Objectives.TauntBank.Soften(t.Line.Text));
+            CampaignRepair.RepairLine(t.Line, report.Repairs, "taunt");
+            return false;
+        });
         bool IsVault(int i) => menu.Room(i)?.IsVault == true;
 
         // rooms: dedupe, drop unknown, fill roles the designer left out
@@ -51,9 +63,9 @@ public static class PlanValidator
         {
             var rp = plan.RoomPlanFor(info.Index);
             if (rp == null) { rp = new RoomPlan { Index = info.Index }; plan.Rooms.Add(rp); }
-            var forced = info.IsStart ? RoomRole.Start : info.IsExit && !info.IsArena ? RoomRole.Exit : info.IsArena ? RoomRole.Arena : (RoomRole?)null;
+            var forced = info.IsStart ? RoomRole.Start : info.IsExit && !info.IsArena ? RoomRole.Exit : info.IsArena ? RoomRole.Arena : info.IsJail ? RoomRole.Jail : info.IsShrine ? RoomRole.Shrine : (RoomRole?)null;
             if (forced != null && rp.Role != forced) { rp.Role = forced.Value; report.Repairs.Add($"room {info.Index} role forced to {forced}"); }
-            if (forced == null && rp.Role is RoomRole.Start or RoomRole.Exit or RoomRole.Arena) { rp.Role = RoomRole.Passage; report.Repairs.Add($"room {info.Index} cannot be {rp.Role}"); }
+            if (forced == null && rp.Role is RoomRole.Start or RoomRole.Exit or RoomRole.Arena or RoomRole.Jail) { rp.Role = RoomRole.Passage; report.Repairs.Add($"room {info.Index} cannot be {rp.Role}"); }
             rp.Name = Clip(rp.Name, 40);
         }
         plan.Rooms.Sort((a, b) => a.Index.CompareTo(b.Index));
@@ -102,7 +114,7 @@ public static class PlanValidator
                     if (!g.Route.Contains(g.Room)) g.Route.Insert(0, g.Room);
                     foreach (var r in g.Route)
                     {
-                        if (!RoomOk(r) || r == start || IsVault(r)) { report.Repairs.Add($"{c.Id}: dropped route room {r}"); continue; }
+                        if (!RoomOk(r) || r == start || IsVault(r) || menu.Room(r)!.IsJail) { report.Repairs.Add($"{c.Id}: dropped route room {r}"); continue; }
                         if (route.Count > 0 && route[^1] == r) continue;
                         if (route.Count > 0 && !menu.Rooms[route[^1]].Neighbours.Contains(r)) { report.Repairs.Add($"{c.Id}: route hop {route[^1]}->{r} is not connected"); continue; }
                         route.Add(r);
@@ -193,6 +205,7 @@ public static class PlanValidator
             if (string.IsNullOrWhiteSpace(h.Id) || !hordeIds.Add(h.Id)) { h.Id = $"horde{hordeIds.Count + 1}"; hordeIds.Add(h.Id); }
             var room = menu.Room(h.Room);
             if (room == null || !room.HasNest || room.Index == start) { report.Repairs.Add($"horde {h.Id}: room {h.Room} has no nest, dropped"); return true; }
+            if (room.IsShrine) { report.Repairs.Add($"horde {h.Id}: room {h.Room} is the shrine, whose breaches belong to the ritual; dropped"); return true; }
             // older plans: one creature and a count
             if (h.Members.Count == 0 && !string.IsNullOrEmpty(h.EnemyId)) h.Members.Add(new MemberPlan { EnemyId = h.EnemyId, Count = Math.Max(1, h.Count ?? 20) });
             h.EnemyId = null; h.Count = null;
@@ -296,7 +309,7 @@ public static class PlanValidator
         plan.Npcs.RemoveAll(n =>
         {
             if (string.IsNullOrWhiteSpace(n.Id) || !npcIds.Add(n.Id)) { report.Repairs.Add("dropped NPC with missing or duplicate id"); return true; }
-            if (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsArena) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
+            if (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsArena || menu.Room(n.Room)!.IsJail || menu.Room(n.Room)!.IsShrine) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
             n.Name = Clip(n.Name, 40);
             if (n.CastId != null)
             {
@@ -305,6 +318,9 @@ public static class PlanValidator
             }
             n.RequiresFlag = FlagRules.Clean(n.RequiresFlag); n.ForbidsFlag = FlagRules.Clean(n.ForbidsFlag);
             if (n.RequiresFlag != null && n.RequiresFlag == n.ForbidsFlag) { n.ForbidsFlag = null; report.Repairs.Add($"NPC {n.Id}: contradictory flags"); }
+            CampaignRepair.RepairPersona(n.Persona, report.Repairs, $"NPC {n.Id}");
+            if (n.Persona is { IsEmpty: true }) n.Persona = null;
+            foreach (var node in n.Script.Nodes) CampaignRepair.RepairLine(node.Line, report.Repairs, $"NPC {n.Id} line");
             if (n.Betrayal != null)
             {
                 if (!rosterIds.Contains(n.Betrayal.EnemyId)) { n.Betrayal = null; report.Repairs.Add($"NPC {n.Id}: betrayal creature not in the roster, dropped"); }

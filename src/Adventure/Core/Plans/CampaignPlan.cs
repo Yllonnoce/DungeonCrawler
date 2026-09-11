@@ -10,6 +10,8 @@ public sealed class VoicedCharacter
     public string Name { get; set; } = "";
     public string Epithet { get; set; } = "";
     [AiIgnore] public string? VoiceId { get; set; }
+    [AiDescription("How they sound: VoiceStyle (a few words, at most 120 characters), DefaultDelivery (a delivery id), Voice (a listed voice name); null for the game's own villain voice.")]
+    [AiNotNull] public Voice.Persona? Persona { get; set; }
 }
 
 public sealed class FactionPlan
@@ -82,6 +84,8 @@ public sealed class CastMember
     [AiDescription("What they hide and when it should come out; never said outright before its floor.")]
     public string Secret { get; set; } = "";
     [AiIgnore] public string? VoiceId { get; set; }
+    [AiDescription("How they sound: VoiceStyle (a few words, at most 120 characters, a distinct person: a boastful captain, a cheerful gravedigger, a sly fence), DefaultDelivery (a delivery id), Voice (a listed voice name).")]
+    [AiNotNull] public Voice.Persona? Persona { get; set; }
 }
 
 public sealed class CluePlan
@@ -118,7 +122,26 @@ public sealed class FloorOutline
     [AiNotNull] public string? Theme { get; set; }
     [AiDescription("The floor's shape: one of the layout ids listed (standard, labyrinth, ring, mine, flooded, burning), or null for the game's own deal. Boss floors take standard, ring, flooded or burning only.")]
     [AiNotNull] public string? Layout { get; set; }
+    [AiDescription("What the floor asks beyond the stairs: one of the objective ids listed (jailbreak, toxic, ritual, shiftingvault), or null for none or the game's own deal. Never floor 1 or a boss floor, never two objective floors in a row, about eight in twenty; toxic needs two heights (not labyrinth or flooded), shiftingvault not labyrinth.")]
+    [AiNotNull] public string? Objective { get; set; }
     public SpecOverrides SpecOverrides { get; set; } = new();
+}
+
+/// <summary>One thing the antagonist says when something happens. Coarse by default; the clean twin is used when cursing is off or a voice provider refuses the words.</summary>
+public sealed class TauntPlan
+{
+    [AiDescription("When it is said: FloorEnter, Capture, Freed, AllFreed, GasThickens, GasLethal, WrongLever, GateShift, VaultOpened, RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle, MemberDowned, PartyWiped, Descend, Reinforcements.")]
+    public string Trigger { get; set; } = "";
+    [AiDescription("The objective kind the line belongs to (jailbreak, toxic, ritual, shiftingvault) or null for any floor; FloorEnter lines should name one.")]
+    [AiNotNull] public string? Objective { get; set; }
+    [AiDescription("What the antagonist says, in their own voice, at most 220 characters; may curse. Tokens {party}, {floor} and {prisoner} are filled in.")]
+    public Line Line { get; set; } = new();
+    [AiDescription("The same line with the cursing taken out, for players who turned it off.")]
+    [AiNotNull] public Line? CleanLine { get; set; }
+    [AiNotNull] public string? RequiresFlag { get; set; }
+    [AiNotNull] public string? ForbidsFlag { get; set; }
+    /// <summary>Added from the stock bank, not written for this campaign.</summary>
+    [AiIgnore] public bool FromStock { get; set; }
 }
 
 public sealed class BarkLine
@@ -152,6 +175,8 @@ public sealed class CampaignPlan
     public List<FloorOutline> Floors { get; set; } = new();
     [AiDescription("Leave empty in the outline; barks are written in a separate call.")]
     public List<BarkSet> Barks { get; set; } = new();
+    [AiDescription("The antagonist's taunts, thrown at the party as the floors' trials play out: two or three per trigger, spiteful and theatrical, free to curse (period oaths and modern profanity both), each with a clean twin.")]
+    public List<TauntPlan> Taunts { get; set; } = new();
     /// <summary>Free-form continuity notes the planner keeps for itself between floors.</summary>
     public string ArcNotes { get; set; } = "";
 

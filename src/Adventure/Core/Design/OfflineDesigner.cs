@@ -35,6 +35,7 @@ public static class OfflineDesigner
         [RoomRole.Hall] = new[] { "Hall", "Nave", "Chamber" },
         [RoomRole.Camp] = new[] { "Camp", "Squat", "Hideout" },
         [RoomRole.Ruin] = new[] { "Ruin", "Colonnade", "Wreck" },
+        [RoomRole.Jail] = new[] { "Jail", "Lockup", "Cages" },
     };
     private static readonly string[][] GroupNouns =
     {
@@ -96,8 +97,13 @@ public static class OfflineDesigner
             plan.Tiers.Add(new TierPlan { Index = t, Theme = tier?.DisplayName ?? $"Tier {t + 1}", Beat = "", BossName = "" });
             plan.Factions.Add(new FactionPlan { Id = $"faction{t}", Name = $"{Pick(rng, Adjectives[t])} {Pick(rng, GroupNouns[t])}", EnemyIds = tier?.EnemyPool.ToList() ?? new List<string>() });
         }
+        plan.Antagonist.Persona = new Voice.Persona { VoiceStyle = "the master of the dungeon: a cracked, theatrical tyrant who finds the party hilarious", DefaultDelivery = "mocking" };
         for (var f = 1; f <= TierRules.FinalFloor; f++)
-            plan.Floors.Add(new FloorOutline { Floor = f, Theme = themes == null ? null : ThemeProfile.Pick(themes, TierRules.TierIndex(f), gameSeed, f)?.Id, Layout = LayoutKinds.Id(LayoutKinds.Pick(gameSeed, f)) });
+        {
+            var objective = FloorObjectives.Pick(gameSeed, f);
+            plan.Floors.Add(new FloorOutline { Floor = f, Theme = themes == null ? null : ThemeProfile.Pick(themes, TierRules.TierIndex(f), gameSeed, f)?.Id, Layout = LayoutKinds.Id(LayoutKinds.Pick(gameSeed, f)), Objective = objective == FloorObjectiveKind.None ? null : FloorObjectives.Id(objective) });
+        }
+        CampaignRepair.Apply(plan); // the stock taunts, every trigger covered
         return plan;
     }
 
@@ -110,14 +116,14 @@ public static class OfflineDesigner
         // room roles and names
         foreach (var r in menu.Rooms)
         {
-            var role = r.IsStart ? RoomRole.Start : r.IsArena ? RoomRole.Arena : r.IsExit ? RoomRole.Exit : r.IsVault ? RoomRole.Treasury
+            var role = r.IsStart ? RoomRole.Start : r.IsArena ? RoomRole.Arena : r.IsExit ? RoomRole.Exit : r.IsJail ? RoomRole.Jail : r.IsShrine ? RoomRole.Shrine : r.IsVault ? RoomRole.Treasury
                 : r.IsCamp ? RoomRole.Camp : r.IsRuin ? RoomRole.Ruin : r.HasGate || r.HasLedge ? RoomRole.Gate : r.HasCellar ? RoomRole.Kennel : r.Area >= 49 ? RoomRole.Hall
                 : r.DeadEnd ? Pick(rng, new[] { RoomRole.Cell, RoomRole.Shrine, RoomRole.Lair }) : Pick(rng, new[] { RoomRole.Passage, RoomRole.Barracks, RoomRole.Passage });
             plan.Rooms.Add(new RoomPlan { Index = r.Index, Role = role, Name = $"{Pick(rng, Adjectives[t])} {Pick(rng, Nouns[role])}" });
         }
         string RoomName(int i) => plan.RoomPlanFor(i)?.Name ?? "chamber";
 
-        var candidates = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && r.FreeCells >= 2).ToList();
+        var candidates = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsShrine && !r.IsJail && r.FreeCells >= 2).ToList();
         if (candidates.Count == 0) candidates = menu.Rooms.Where(r => !r.IsStart && r.FreeCells >= 1).ToList();
         if (candidates.Count == 0 || menu.Roster.Count == 0) { plan.IntroLine = new Line(Intro(rng, menu, plan, "no one")); return plan; }
 
@@ -254,7 +260,7 @@ public static class OfflineDesigner
         {
             var hasAlarm = plan.Collectives.Any(c => c.Goal.Kind == GoalKind.Alarm);
             var n = 0;
-            foreach (var nestRoom in menu.NestRooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena).OrderBy(r => r.HopsFromStart))
+            foreach (var nestRoom in menu.NestRooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsShrine).OrderBy(r => r.HopsFromStart))
             {
                 if (n >= PlanValidator.MaxHordes) break;
                 n++;
@@ -433,7 +439,9 @@ public static class OfflineDesigner
         q.Title = title; q.Objective = objective;
         q.Lines = new QuestLines { Offer = new Line(offer), Accept = new Line(accept), Decline = new Line("Then leave me. Others will come, or they will not."), Complete = new Line(complete), Fail = new Line(fail) };
         var script = customScript ?? StandardScript(Pick(rng, Greetings), offer, accept, complete);
-        plan.Npcs.Add(new NpcPlan { Id = npcId, Name = name, Room = npcRoom.Index, Script = script, QuestId = q.Id });
+        q.Lines.Offer.Delivery ??= "pleading"; q.Lines.Complete.Delivery ??= "cheerful"; q.Lines.Fail.Delivery ??= "weary"; q.Lines.Decline.Delivery ??= "weary";
+        foreach (var node in script.Nodes) node.Line.Delivery ??= node.Id switch { "greet" => "warm", "offer" => "pleading", "done" => "cheerful", _ => null };
+        plan.Npcs.Add(new NpcPlan { Id = npcId, Name = name, Room = npcRoom.Index, Script = script, QuestId = q.Id, Persona = PersonaFor(rng, name) });
         plan.Quests.Add(q);
         used.Add(npcRoom.Index);
     }
@@ -475,6 +483,29 @@ public static class OfflineDesigner
             new DialogueNode { Id = "done", Line = new Line(complete), Choices = { new ChoicePlan { Text = "Farewell.", Effect = DialogueEffect.Farewell } } },
         },
     };
+
+    /// <summary>Stock personas, so no two people met in the dark sound alike; the same name always gets the same one.</summary>
+    private static readonly Voice.Persona[] Personas =
+    {
+        new() { VoiceStyle = "a gruff old smith, gravel in the voice, dry humour", DefaultDelivery = "calm" },
+        new() { VoiceStyle = "a cheerful gravedigger who has seen it all and laughs about it", DefaultDelivery = "cheerful" },
+        new() { VoiceStyle = "a sly fence, quick and quiet, weighing what you're worth", DefaultDelivery = "sly" },
+        new() { VoiceStyle = "a frightened survivor, whispering, jumping at every sound", DefaultDelivery = "whisper" },
+        new() { VoiceStyle = "a bored, sardonic scholar who resents being rescued", DefaultDelivery = "weary" },
+        new() { VoiceStyle = "a brisk, warm matron who bosses everyone for their own good", DefaultDelivery = "warm" },
+        new() { VoiceStyle = "a boastful young soldier, loud and eager", DefaultDelivery = "shout" },
+        new() { VoiceStyle = "a soft-spoken priest, patient, faintly amused", DefaultDelivery = "calm" },
+        new() { VoiceStyle = "a wheezing old miner, slow, blunt, kind underneath", DefaultDelivery = "weary" },
+        new() { VoiceStyle = "a nervous clerk talking too fast to fill the silence", DefaultDelivery = "frantic" },
+        new() { VoiceStyle = "a grim veteran, short words, no comfort in any of them", DefaultDelivery = "angry" },
+        new() { VoiceStyle = "a bright, chatty apprentice who finds the dungeon fascinating", DefaultDelivery = "cheerful" },
+    };
+
+    private static Voice.Persona PersonaFor(Random rng, string name)
+    {
+        var p = Personas[(int)(Core.Rng.StableHash(name) % (ulong)Personas.Length)];
+        return new Voice.Persona { VoiceStyle = p.VoiceStyle, DefaultDelivery = p.DefaultDelivery };
+    }
 
     private static string Intro(Random rng, FloorMenu menu, FloorPlan plan, string group)
         => Pick(rng, IntroLines).Replace("{tier}", menu.TierName).Replace("{group}", group).Replace("{room}", plan.Rooms.Count > 0 ? plan.Rooms[^1].Name : "dark");

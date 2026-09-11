@@ -2,88 +2,138 @@
   "SchemaVersion": 1,
   "Floor": 12,
   "Source": "claude",
-  "LayoutHash": 8963159036709090918,
-  "Title": "The Foundry Floor",
+  "LayoutHash": 14391511594621273884,
+  "Title": "The Kiln Shrine",
   "IntroLine": {
-    "Text": "The heat of the old forges wafts through these halls, carrying the steady clang of hammer on anvil. Somewhere deeper, a voice like grinding iron murmurs your name.",
-    "VoiceId": null
+    "Text": "Red kiln brick and air you could bake in. The mint\u0027s own chapel is down here, where they blessed the toll coin before it was struck. Somebody means to unbless it, and the walls object.",
+    "VoiceId": "0c56dfe82dd53eda",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Camp",
-      "Name": "The Charred Hut"
+      "Role": "Gate",
+      "Name": "The Furnace Gate"
     },
     {
       "Index": 1,
       "Role": "Lair",
-      "Name": "The Cinder Nest"
+      "Name": "Cinder Gallery"
     },
     {
       "Index": 2,
       "Role": "Exit",
-      "Name": "The Final Bellows"
+      "Name": "The Die Room Stair"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "The Ash Crossroads"
+      "Role": "Kennel",
+      "Name": "The Ash Pit"
     },
     {
       "Index": 4,
-      "Role": "Gate",
-      "Name": "Gate of the Ironkeepers"
+      "Role": "Camp",
+      "Name": "Coiners\u0027 Squat"
     },
     {
       "Index": 5,
-      "Role": "Lair",
-      "Name": "The Kiln Hollow"
+      "Role": "Shrine",
+      "Name": "Chapel of the Coin"
     },
     {
       "Index": 6,
       "Role": "Hall",
-      "Name": "The Foundry Floor"
+      "Name": "The Great Kiln"
     },
     {
       "Index": 7,
       "Role": "Hall",
-      "Name": "The Bellows Room"
+      "Name": "Bellows Hall"
     },
     {
       "Index": 8,
       "Role": "Passage",
-      "Name": "The Soot Sluice"
+      "Name": "Quench Stream"
     },
     {
       "Index": 9,
       "Role": "Start",
-      "Name": "The Descent Stair"
+      "Name": "Kiln Head"
     },
     {
       "Index": 10,
-      "Role": "Passage",
-      "Name": "The Coal Chute"
+      "Role": "Lair",
+      "Name": "Slag Heaps"
     },
     {
       "Index": 11,
       "Role": "Treasury",
-      "Name": "The Keeper\u0027s Vault"
+      "Name": "The Assay Chest"
     }
   ],
   "Collectives": [
     {
-      "Id": "bandits_camp",
-      "Name": "Ash-Biter Gang",
+      "Id": "furnace_gate",
+      "Name": "the Furnace Gate Guard",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 0,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 6
+      }
+    },
+    {
+      "Id": "coiners",
+      "Name": "the Coiners",
       "FactionId": null,
       "Members": [
         {
           "EnemyId": "enemy.bandit",
           "Count": 3
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 0,
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 8
+      }
+    },
+    {
+      "Id": "bellows_golem",
+      "Name": "the Bellows Golem",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 7,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
@@ -91,61 +141,13 @@
       }
     },
     {
-      "Id": "gate_defenders",
-      "Name": "Gate Wardens",
-      "FactionId": "forge_keepers",
+      "Id": "kiln_hounds",
+      "Name": "the Kiln Hounds",
+      "FactionId": "faction2",
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
           "Count": 2
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 4,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "4"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "exit_guard",
-      "Name": "Bellows Guard",
-      "FactionId": "forge_keepers",
-      "Members": [
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 2,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "forge_patrol",
-      "Name": "Iron Circuit",
-      "FactionId": "forge_keepers",
-      "Members": [
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
         }
       ],
       "Goal": {
@@ -154,43 +156,23 @@
         "Objective": null,
         "Route": [
           6,
-          3,
-          6
+          10
         ],
         "AlarmTarget": null,
         "RallyRoom": null
-      }
-    },
-    {
-      "Id": "bellows_alarm",
-      "Name": "Alarm Bellows",
-      "FactionId": "forge_keepers",
-      "Members": [
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Alarm",
-        "Room": 7,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": "gate_defenders",
-        "RallyRoom": 6
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_kiln_rats",
-      "Name": "The Kiln Rats",
-      "Room": 5,
+      "Id": "horde_gate",
+      "Name": "The Furnace Spill",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 12
+          "Count": 15
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
@@ -199,44 +181,22 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 14,
+      "Total": 17,
       "Trigger": "Enter",
       "Line": {
-        "Text": "From behind the rubble, a swarm of soot-caked imps pours out, driven by something larger.",
-        "VoiceId": null
+        "Text": "The furnace gate\u0027s braziers spit, and what they spit is walking.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_sluice",
-      "Name": "The Broilwake",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The stream hisses and churns as cinder imps crawl out of the water, their bodies spitting steam.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_emberflood",
-      "Name": "The Emberflood",
+      "Id": "horde_cinder",
+      "Name": "The Cinder Gallery",
       "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 14
+          "Count": 16
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
@@ -245,57 +205,84 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 16,
-      "Trigger": "Enter",
+      "Total": 18,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The floor seethes with tiny burning bodies as countless cinder imps surge from the walls.",
-        "VoiceId": null
+        "Text": "The gallery\u0027s ash was never cold.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_gatehouse",
-      "Name": "The Gatehouse Surge",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 12,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "A horn sounds from the gatehouse, and a flood of cinder imps comes boiling out of the nests.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_vents",
-      "Name": "The Forge Vent",
+      "Id": "horde_kiln",
+      "Name": "The Kiln\u0027s Litter",
       "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 8
+          "Count": 16
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 1
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 9,
+      "Total": 19,
       "Trigger": "Enter",
       "Line": {
-        "Text": "With a hiss of steam, imps and a lumbering ogre claw their way out of the vents.",
-        "VoiceId": null
+        "Text": "The great kiln opens its door on its own, and it was full.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_bellows",
+      "Name": "The Bellows\u0027 Breath",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 15
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 17,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The bellows draw, and the draught is made of imps.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_slag",
+      "Name": "The Slag Heaps",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 17
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 19,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The slag heaps shrug and stand up in a hundred small pieces.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
@@ -303,11 +290,11 @@
   "Chests": [],
   "Traps": [
     {
-      "Room": 10,
+      "Room": 8,
       "Kind": "Fire"
     },
     {
-      "Room": 5,
+      "Room": 3,
       "Kind": "Spikes"
     }
   ],
@@ -315,15 +302,17 @@
   "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
+      "Trigger": "RoomEnter",
+      "Room": 5,
       "Line": {
-        "Text": "The heat of the old forges wafts through these halls, carrying the steady clang of hammer on anvil. Somewhere deeper, a voice like grinding iron murmurs your name.",
-        "VoiceId": null
+        "Text": "The chapel of the coin. The Company\u0027s lantern is cut into the altar, and somebody has been scrubbing at it with a knife.",
+        "VoiceId": "4b3002682f54dbbb",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 11
+  "Taunts": [],
+  "EnemyTotal": 9
 }

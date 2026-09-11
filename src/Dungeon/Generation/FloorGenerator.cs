@@ -8,9 +8,10 @@ public static partial class FloorGenerator
 {
     public static FloorLayout Generate(FloorSpec spec, int seed)
     {
-        spec = LayoutKinds.Tune(spec);
+        spec = FloorObjectives.Tune(LayoutKinds.Tune(spec));
         var rng = new Random(seed);
         var layout = new FloorLayout(seed, spec.Width, spec.Height) { Kind = spec.Layout };
+        if (spec.Objective != FloorObjectiveKind.None) layout.Objective = new ObjectiveLayout { Kind = spec.Objective };
 
         // the shape: how rooms are laid and joined; everything after works the same on any of them (see FloorGenerator.Kinds.cs)
         switch (spec.Layout)
@@ -42,6 +43,7 @@ public static partial class FloorGenerator
         PlaceStairs(layout);
         PlaceVaults(spec, rng, layout);
         Verticality.AssignLevels(spec, rng, layout);
+        PlaceObjective(spec, new Random(seed ^ 0x0B1E), layout); // rooms and doors the objective needs; a no-op without one
         Verticality.PlacePits(spec, rng, layout);
         Verticality.PlaceSecrets(spec, rng, layout);
         PlaceStructures(spec, new Random(seed ^ 0x57C7), layout);
@@ -49,10 +51,12 @@ public static partial class FloorGenerator
         else PlaceWater(spec, new Random(seed ^ 0x7A7E), layout);
         PlaceRubble(spec, new Random(seed ^ 0x2B1E), layout);
         PlaceNests(spec, new Random(seed ^ 0x4E57), layout);
+        PlaceObjectiveMid(spec, new Random(seed ^ 0x0B1D), layout); // the shrine is confirmed once the breaches exist; a no-op without one
         PlaceFires(spec, new Random(seed ^ 0xF1AE), layout);
         RaiseWalls(layout);
         PlaceSpawns(spec, rng, layout);
         PlaceTraps(spec, rng, layout);
+        PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
 
         return layout;
     }
@@ -441,7 +445,7 @@ public static partial class FloorGenerator
         if (spec.StructureCount <= 0) return;
         var upRoom = layout.RoomAt(layout.UpStairs);
         var downRoom = layout.RoomAt(layout.DownStairs);
-        var candidates = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena
+        var candidates = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena && r != layout.Objective?.ShrineRoom && r != layout.Objective?.JailRoom
             && Math.Min(r.W, r.H) >= 6
             && layout.Vaults.All(v => v.Room != r) && layout.Ledges.All(l => l.Room != r) && layout.Cellars.All(c => c.Room != r)).ToList();
         Shuffle(rng, candidates);
@@ -623,6 +627,12 @@ public static partial class FloorGenerator
         bool Adjoins(Room room) => layout.Connections.Any(c =>
             (layout.Rooms[c.A] == room && layout.Nests.Any(n => n.Room == layout.Rooms[c.B])) || (layout.Rooms[c.B] == room && layout.Nests.Any(n => n.Room == layout.Rooms[c.A])));
         var ordered = rooms.Where(r => !Adjoins(r)).Concat(rooms.Where(Adjoins)).ToList();
+        // a shrine (Ritual) breaches first and widest, and its neighbours next, so the rite is besieged from every side
+        if (layout.Objective?.ShrineRoom is { } shrine)
+        {
+            var next = layout.Rooms.Where(r => r != shrine && layout.Connections.Any(c => (layout.Rooms[c.A] == shrine && layout.Rooms[c.B] == r) || (layout.Rooms[c.B] == shrine && layout.Rooms[c.A] == r))).ToList();
+            ordered = new[] { shrine }.Concat(next.Where(ordered.Contains)).Concat(ordered.Where(r => r != shrine && !next.Contains(r))).ToList();
+        }
         foreach (var room in ordered)
         {
             if (layout.Nests.Count >= spec.NestCount) break;
@@ -632,7 +642,7 @@ public static partial class FloorGenerator
             var outward = new List<GridPos>();
             var sides = new List<int> { 0, 1, 2, 3 };
             Shuffle(rng, sides);
-            var want = 2 + rng.Next(2);
+            var want = room == layout.Objective?.ShrineRoom ? 3 : 2 + rng.Next(2);
             foreach (var side in sides)
             {
                 if (mouths.Count >= want) break;
@@ -677,7 +687,7 @@ public static partial class FloorGenerator
         var upRoom = layout.RoomAt(layout.UpStairs);
         var downRoom = layout.RoomAt(layout.DownStairs);
         // ground level only: the bed is sunk half a metre, which an upper room's plinth has no room for
-        var candidates = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena && r.W >= 5 && r.H >= 5 && layout.LevelOf(r.Center) == 0
+        var candidates = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena && r != layout.Objective?.ShrineRoom && r != layout.Objective?.JailRoom && r.W >= 5 && r.H >= 5 && layout.LevelOf(r.Center) == 0
             && layout.Vaults.All(v => v.Room != r) && layout.Ledges.All(l => l.Room != r) && layout.Cellars.All(c => c.Room != r) && layout.StructureAt(r) == null).ToList();
         Shuffle(rng, candidates);
         foreach (var room in candidates)

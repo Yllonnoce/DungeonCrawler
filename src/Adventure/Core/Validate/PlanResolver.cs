@@ -121,7 +121,8 @@ public static class PlanResolver
                         : ci >= 0 && ci < layout.ChestSpawns.Count ? layout.ChestSpawns[ci] : null,
                     ObjectiveKind.Lever when int.TryParse(o.Ref, out var vi) => layout.Vaults.FirstOrDefault(v => v.Index == vi)?.Lever,
                     ObjectiveKind.Door when int.TryParse(o.Ref, out var vi) => layout.Vaults.FirstOrDefault(v => v.Index == vi)?.Door,
-                    ObjectiveKind.Stairs => o.Ref == "up" ? layout.UpStairs : layout.DownStairs,
+                    // the foot of the flight, not the flight: the stairs cell is walled and a post on it is a post nobody reaches
+                    ObjectiveKind.Stairs => (o.Ref == "up" ? layout.UpStairs : layout.DownStairs) is var stairs && layout.RoomAt(stairs) is { } stairsRoom ? Standable(layout, stairsRoom, stairs) ?? stairs : stairs,
                     ObjectiveKind.Npc => contents.Npcs.FirstOrDefault(n => n.Id == o.Ref)?.Cell,
                     ObjectiveKind.Gate when int.TryParse(o.Ref, out var gi) && gi >= 0 && gi < layout.Rooms.Count => layout.StructureAt(layout.Rooms[gi]) is { Kind: StructureKind.Gate } gate ? gate.Anchor : null,
                     _ => null,
@@ -134,17 +135,28 @@ public static class PlanResolver
                 g.AlarmTarget, g.RallyRoom, g.RallyRoom is { } rr ? Anchor(layout, rr) : null,
                 placed.Select(p => p.spawn).ToList()));
         }
+        Objectives.ObjectivePlanner.Attach(contents, layout, floor, seed);
         return contents;
     }
 
-    /// <summary>A walkable cell representing a room: its centre, or the first free cell.</summary>
+    /// <summary>
+    /// A cell a body can stand on that represents a room: the free cell nearest its centre. Never the centre itself when
+    /// something stands there: the start and exit rooms keep their stairs in the middle, and a patrol sent to that cell
+    /// walks onto the flight and never arrives.
+    /// </summary>
     public static GridPos? Anchor(FloorLayout layout, int room)
     {
         if (room < 0 || room >= layout.Rooms.Count) return null;
         var r = layout.Rooms[room];
-        if (layout[r.Center] == Cell.Floor && layout.LevelOf(r.Center) == layout.LevelOf(r.Center)) return r.Center;
-        var free = RoomCells.Free(layout, r);
-        return free.Count > 0 ? free[0] : null;
+        return Standable(layout, r, r.Center);
+    }
+
+    /// <summary>The free cell of <paramref name="room"/> nearest <paramref name="near"/>; the cell itself only when nothing else is free and it is plain floor.</summary>
+    public static GridPos? Standable(FloorLayout layout, Room room, GridPos near)
+    {
+        var free = RoomCells.Free(layout, room);
+        if (free.Count > 0) return free.OrderBy(p => p.ManhattanDistance(near)).ThenBy(p => p.Y).ThenBy(p => p.X).First();
+        return layout[near] == Cell.Floor && near != layout.UpStairs && near != layout.DownStairs ? near : null;
     }
 
     private static void Shuffle<T>(Random rng, List<T> list)

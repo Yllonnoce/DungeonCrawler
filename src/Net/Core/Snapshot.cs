@@ -22,7 +22,7 @@ public readonly record struct EntityState(int NetId, NetVec Position, float Yaw,
 
 public readonly record struct NpcState(string Id, NetVec Position, float Yaw, byte Flags)
 {
-    public const byte FlagDead = 1, FlagEscorting = 2, FlagRescued = 4;
+    public const byte FlagDead = 1, FlagEscorting = 2, FlagRescued = 4, FlagDowned = 8, FlagCaptured = 16, FlagJailed = 32;
 }
 
 public readonly record struct PlayerPoseState(int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags);
@@ -83,7 +83,7 @@ public static class BinaryLayout
 /// <summary>Enemy AI state names as one byte, for the snapshot. Unknown names map to 0 (Idle).</summary>
 public static class EnemyStateCodes
 {
-    public static readonly string[] Names = { "Idle", "Chase", "Attack", "Shoot", "Signature", "Flee", "Dead", "Guard", "Return", "Patrol", "AlarmRun", "Regroup", "Investigate" };
+    public static readonly string[] Names = { "Idle", "Chase", "Attack", "Shoot", "Signature", "Flee", "Dead", "Guard", "Return", "Patrol", "AlarmRun", "Regroup", "Investigate", "Hunt", "Escort" };
 
     public static byte Encode(string name)
     {

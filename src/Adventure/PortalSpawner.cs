@@ -74,6 +74,7 @@ public partial class PortalSpawner : Node
             : DebugTools.Instance?.NoPortals == true ? (true, "--no-portals")
             : _enemyIds.Count == 0 ? (true, "no creatures in the roster")
             : bossDead ? (true, $"the tier's boss (floor {bossFloor}) is dead")
+            : Objectives.ObjectiveController.Instance is Objectives.RitualController { Active: true } ? (true, "the ritual's breaches are enough")
             : (false, "");
     }
 
@@ -114,7 +115,8 @@ public partial class PortalSpawner : Node
         if (!_announced)
         {
             _announced = true;
-            EventBus.Instance.RaiseNarration(string.IsNullOrWhiteSpace(boss) ? "The dungeon's master sends reinforcements. Push deeper; they will keep coming." : $"{boss} sends reinforcements. Push deeper; they will keep coming.", null);
+            if (AdventureDirector.Instance?.Taunt(Objectives.TauntTrigger.Reinforcements, urgent: true) != true)
+                EventBus.Instance.RaiseNarration(string.IsNullOrWhiteSpace(boss) ? "The dungeon's master sends reinforcements. Push deeper; they will keep coming." : $"{boss} sends reinforcements. Push deeper; they will keep coming.", null);
         }
         else EventBus.Instance.Log("A portal tears open behind you.");
         EventBus.Instance.RaisePortalOpened(_portalAt);
@@ -143,10 +145,12 @@ public partial class PortalSpawner : Node
         _hudTimer -= dt;
         if (_hudTimer > 0f) return;
         _hudTimer = 0.5f;
-        if (_alive.Count > 0 && !HordeSpawner.AnyLoose) { _wroteHud = true; EventBus.Instance.RaiseObjectiveChanged(HudSuffix.Trim()); }
-        else if (_wroteHud) { _wroteHud = false; AdventureDirector.Instance?.RefreshObjective(); }
+        var text = HudSuffix;
+        if (text == _lastHud) return;
+        _lastHud = text;
+        AdventureDirector.Instance?.RefreshObjective();
     }
-    private bool _wroteHud;
+    private string _lastHud = "";
 
     /// <summary>The rift itself: a glowing ring, a violet light and a spray of sparks that fade after a few seconds. Clients show it on the server's word.</summary>
     public void ShowPortal(Vector3 at)

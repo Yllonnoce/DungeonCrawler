@@ -5,6 +5,8 @@ public sealed record FloorSpec
 {
     /// <summary>The floor's overall shape; see <see cref="LayoutKinds"/>.</summary>
     public LayoutKind Layout { get; init; } = LayoutKind.Standard;
+    /// <summary>What the floor asks of the party beyond the stairs; see <see cref="FloorObjectives"/>. None leaves generation exactly as it was.</summary>
+    public FloorObjectiveKind Objective { get; init; } = FloorObjectiveKind.None;
     public int Width { get; init; } = 48;
     public int Height { get; init; } = 48;
     public int MinRooms { get; init; } = 8;

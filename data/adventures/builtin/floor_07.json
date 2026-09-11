@@ -2,135 +2,83 @@
   "SchemaVersion": 1,
   "Floor": 7,
   "Source": "claude",
-  "LayoutHash": 10303773944457290203,
-  "Title": "The Cartographer\u0027s Secret",
+  "LayoutHash": 9738003489194521161,
+  "Title": "The Drowned Lanes",
   "IntroLine": {
-    "Text": "The lichen glows a sickly green, and something in its light shifts the shapes of the walls \u2014 as if the rock itself were restless.",
-    "VoiceId": "46e597237017317a"
+    "Text": "Lichen light and lanes too narrow for two. Ashmere\u0027s low town, dug over and let flood. The locals still live here, if that is the word, and they run when they hear boots.",
+    "VoiceId": "d88a89d8a27282e3",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Passage",
-      "Name": "The Echoing Threshold"
+      "Role": "Treasury",
+      "Name": "The Pawn Cellar"
     },
     {
       "Index": 1,
-      "Role": "Lair",
-      "Name": "Webbed Crevice"
+      "Role": "Cell",
+      "Name": "Sealed Snug"
     },
     {
       "Index": 2,
-      "Role": "Exit",
-      "Name": "The Descent Stairs"
+      "Role": "Jail",
+      "Name": "Undertow Lockup"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Eroded Hall"
+      "Role": "Exit",
+      "Name": "Lower Lane Stair"
     },
     {
       "Index": 4,
-      "Role": "Lair",
-      "Name": "Brood Warren"
+      "Role": "Start",
+      "Name": "Lichen Crossroads"
     },
     {
       "Index": 5,
-      "Role": "Ruin",
-      "Name": "The Sunken Chamber"
+      "Role": "Passage",
+      "Name": "Fishwives\u0027 Row"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "Weaver\u0027s Nook"
+      "Role": "Hall",
+      "Name": "The Green Cistern"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "The Cartographer\u0027s Perch"
-    },
-    {
-      "Index": 8,
-      "Role": "Gate",
-      "Name": "The Arch of Hissing Stone"
-    },
-    {
-      "Index": 9,
       "Role": "Passage",
-      "Name": "Narrow Crevice"
-    },
-    {
-      "Index": 10,
-      "Role": "Passage",
-      "Name": "Secret Crawl"
-    },
-    {
-      "Index": 11,
-      "Role": "Lair",
-      "Name": "Hatched Alcove"
-    },
-    {
-      "Index": 12,
-      "Role": "Start",
-      "Name": "The Drop Ladder"
-    },
-    {
-      "Index": 13,
-      "Role": "Lair",
-      "Name": "Tunnel Maw"
-    },
-    {
-      "Index": 14,
-      "Role": "Treasury",
-      "Name": "The Ironkeeper\u0027s Cache"
+      "Name": "Ropewalk Lane"
     }
   ],
   "Collectives": [
     {
-      "Id": "gate_watch",
-      "Name": "Gate Sentry",
-      "FactionId": "cave_brood",
+      "Id": "cistern_watch",
+      "Name": "the Cistern Watch",
+      "FactionId": "faction1",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Alarm",
-        "Room": 8,
+        "Kind": "Guard",
+        "Room": 6,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "vault_guard",
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "vault_guard",
-      "Name": "Cache Wardens",
-      "FactionId": "cave_brood",
-      "Members": [
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 3
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 14,
-        "Objective": {
-          "Kind": "Chest",
-          "Ref": "0"
-        },
-        "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 5
       }
     },
     {
-      "Id": "spider_patrol",
-      "Name": "Crawler Patrol",
-      "FactionId": "cave_brood",
+      "Id": "lane_walkers",
+      "Name": "the Lane Walkers",
+      "FactionId": "faction1",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
@@ -143,316 +91,57 @@
         "Objective": null,
         "Route": [
           5,
-          0,
-          5
+          7
         ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "snug_thrower",
+      "Name": "the Snug Thrower",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 1,
+        "Objective": null,
+        "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     }
   ],
   "Loners": [],
-  "Hordes": [
-    {
-      "Id": "horde_room1",
-      "Name": "Creeping Tide",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "A skittering tide pours from the darkness as you step in.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_room4",
-      "Name": "Brood Rush",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The floor shudders and a wave of chitinous bodies floods the chamber.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_room6",
-      "Name": "Loot Trap",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The chest lid creaks open, and the walls behind you split apart with a screech.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_room8",
-      "Name": "Gate Swarm",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "The alarm shrieks, and the nests disgorge hunters.",
-        "VoiceId": null
-      }
-    }
-  ],
+  "Hordes": [],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 3,
-      "Locked": true,
-      "QuestId": null
-    },
-    {
-      "Room": 9,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
-    {
-      "Room": 5,
-      "Kind": "Fire"
-    },
     {
       "Room": 7,
       "Kind": "Spikes"
-    },
-    {
-      "Room": 10,
-      "Kind": "Gas"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "lunette",
-      "Name": "Lunette",
-      "Room": 7,
-      "VoiceId": "Aoede",
-      "Script": {
-        "Start": "node_start",
-        "Nodes": [
-          {
-            "Id": "node_start",
-            "Line": {
-              "Text": "Oh, you found me... I\u0027ve been lost down here for what feels like an age. There are bones, you see, bones etched with lichen\u2014maps to the surface, I\u0027m certain! Find them and bring them here, and I\u0027ll finally finish my char",
-              "VoiceId": "63a85145d027b7bf"
-            },
-            "Choices": [
-              {
-                "Text": "We\u0027ll look for them.",
-                "Next": "node_accept",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Not our problem.",
-                "Next": "node_decline",
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done_lunette_quest",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "node_accept",
-            "Line": {
-              "Text": "Three locations should have them. I\u0027ve marked them on your map. Hurry!",
-              "VoiceId": "fdead90606787ed1"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "node_decline",
-            "Line": {
-              "Text": "Then I\u0027ll wait. The darkness never changes, anyway.",
-              "VoiceId": "eb2d16f95fb5aaa3"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "done_lunette_quest",
-            "Line": {
-              "Text": "Lunette clutches the bones, and the lichen\u0027s glow seeps into her fingers. She holds them up, and her own hands are translucent. \u0027Ah,\u0027 she breathes. \u0027I see now. I never left the crypt at all.\u0027",
-              "VoiceId": "62d442c1bae2eed8"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "lunette_quest",
-      "CastId": null,
-      "RequiresFlag": null,
-      "ForbidsFlag": null,
-      "Betrayal": null
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "lunette_quest",
-      "Template": "Investigate",
-      "Title": "The Cartographer\u0027s Bones",
-      "Objective": "Gather the lichen-etched bones for Lunette.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [
-          1,
-          6,
-          11
-        ],
-        "ClueName": "Lichen-etched Bones"
-      },
-      "GiverNpc": "lunette",
-      "Reward": {
-        "Xp": 200,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "There are bones, you see, bones etched with lichen\u2014maps to the surface, I\u0027m certain! Find them and bring them here, and I\u0027ll finally finish my chart.",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "Three locations should have them. I\u0027ve marked them on your map. Hurry!",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "Then I\u0027ll wait. The darkness never changes, anyway.",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "Lunette clutches the bones, and the lichen\u0027s glow seeps into her fingers. She holds them up, and her own hands are translucent. \u0027Ah,\u0027 she breathes. \u0027I see now. I never left the crypt at all.\u0027",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "Lost? No matter. I have all the time in the world.",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
-      "Trigger": "QuestDone",
-      "Room": null,
+      "Trigger": "RoomEnter",
+      "Room": 2,
       "Line": {
-        "Text": "Lunette clutches the bones, and the lichen\u0027s glow seeps into her fingers. She holds them up, and her own hands are translucent. \u0027Ah,\u0027 she breathes. \u0027I see now. I never left the crypt at all.\u0027",
-        "VoiceId": "22074b5db643f014"
+        "Text": "A lockup with a fresh chain on the door. Whoever runs the cages down here is not the turnkey you met. Tarn only ever locked what the clerk sent him.",
+        "VoiceId": "c10d32db52a8a1b8",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
+  "Taunts": [],
   "EnemyTotal": 6
 }

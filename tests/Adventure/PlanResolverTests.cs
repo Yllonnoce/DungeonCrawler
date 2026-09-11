@@ -65,4 +65,51 @@ public class PlanResolverTests
             return;
         }
     }
+    [Fact]
+    public void Anchors_NeverStandOnTheStairs()
+    {
+        // a patrol through the start or exit room must not be sent onto the flight; a stairs post stands at its foot
+        for (var seed = 1; seed <= 30; seed++)
+        {
+            var (layout, _, menu) = TestAdventure.Floor(2, seed * 7919 + 13);
+            var start = layout.Rooms.IndexOf(layout.RoomAt(layout.UpStairs)!);
+            var exit = layout.Rooms.IndexOf(layout.RoomAt(layout.DownStairs)!);
+            foreach (var room in new[] { start, exit })
+            {
+                var anchor = PlanResolver.Anchor(layout, room);
+                Assert.NotNull(anchor);
+                Assert.NotEqual(layout.UpStairs, anchor);
+                Assert.NotEqual(layout.DownStairs, anchor);
+                Assert.True(layout.IsWalkable(anchor!.Value));
+                Assert.True(layout.Rooms[room].Contains(anchor.Value));
+            }
+            var foot = PlanResolver.Standable(layout, layout.Rooms[exit], layout.DownStairs)!.Value;
+            Assert.NotEqual(layout.DownStairs, foot);
+            Assert.True(foot.ManhattanDistance(layout.DownStairs) <= 2);
+        }
+    }
+    [Fact]
+    public void PatrolThroughTheExit_AndStairsPost_NeverTargetTheStairs()
+    {
+        for (var seed = 1; seed <= 20; seed++)
+        {
+            var (layout, _, menu) = TestAdventure.Floor(2, seed * 104729 + 7);
+            var exit = menu.ExitRoom!.Index;
+            var neighbour = menu.Rooms[exit].Neighbours.FirstOrDefault(n => !menu.Rooms[n].IsStart && !menu.Rooms[n].IsVault);
+            if (menu.Rooms[exit].Neighbours.Count == 0) continue;
+            var plan = new FloorPlan { Floor = 2 };
+            plan.Collectives.Add(new CollectivePlan { Id = "walk", Name = "walkers", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 1 } },
+                Goal = new GoalPlan { Kind = GoalKind.Patrol, Room = neighbour, Route = new List<int> { neighbour, exit } } });
+            plan.Collectives.Add(new CollectivePlan { Id = "hold", Name = "holders", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 1 } },
+                Goal = new GoalPlan { Kind = GoalKind.Defend, Room = exit, Objective = new ObjectivePlan { Kind = ObjectiveKind.Stairs, Ref = "down" } } });
+            var report = PlanValidator.Validate(layout, plan, menu, enforceBudget: false);
+            Assert.True(report.Ok, report.ToString());
+            var contents = PlanResolver.Resolve(layout, plan, TestAdventure.Crypt, TestAdventure.Roster, 2, seed);
+            foreach (var c in contents.Collectives)
+            {
+                foreach (var cell in c.RouteCells) { Assert.NotEqual(layout.DownStairs, cell); Assert.NotEqual(layout.UpStairs, cell); Assert.True(layout.IsWalkable(cell)); }
+                if (c.ObjectiveCell is { } o) { Assert.NotEqual(layout.DownStairs, o); Assert.True(layout.IsWalkable(o)); Assert.True(o.ManhattanDistance(layout.DownStairs) <= 2); }
+            }
+        }
+    }
 }

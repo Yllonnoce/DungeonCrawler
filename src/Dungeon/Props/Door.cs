@@ -21,7 +21,12 @@ public partial class Door : StaticBody3D, IInteractable
 
     private readonly List<Node3D> _marks = new();
 
-    public string Prompt => IsOpen || !Detected ? "" : Kind == VaultKind.KeyDoor ? "Locked door: use a key or pick the lock" : "Sealed gate: find its lever";
+    /// <summary>A puzzle gate's name (Gate II), hung over it; null for an ordinary vault door.</summary>
+    public string? GateLabel { get; set; }
+    /// <summary>Whether this door belongs to the floor's objective (index from <see cref="Adventure.FloorContents.ExtraIndexBase"/> up): the objective, not the save's vault list, owns its state.</summary>
+    public bool IsObjectiveGate => VaultIndex >= Adventure.FloorContents.ExtraIndexBase;
+
+    public string Prompt => IsOpen || !Detected ? "" : Kind == VaultKind.KeyDoor ? "Locked door: use a key or pick the lock" : IsObjectiveGate ? $"{GateLabel ?? "Gate"}: shut; the levers move it" : "Sealed gate: find its lever";
 
     public override void _Ready()
     {
@@ -33,7 +38,29 @@ public partial class Door : StaticBody3D, IInteractable
         if (GetNode<CollisionShape3D>("Collision").Shape is BoxShape3D box) box.Size = new Vector3(DungeonBuilder.CellSize, DungeonBuilder.CellSize, DungeonBuilder.CellSize);
         CollisionLayer = 1; // wall, not yet a thing to use
         BuildMarks();
+        if (GateLabel != null)
+            AddChild(new Label3D
+            {
+                Text = GateLabel, FontSize = 48, PixelSize = 0.006f, Modulate = new Color(0.85f, 0.8f, 0.6f), OutlineSize = 10,
+                Billboard = BaseMaterial3D.BillboardModeEnum.Enabled, Position = new Vector3(0, DungeonBuilder.CellSize / 2f + 0.6f, 0), VisibilityRangeEnd = 16f, VisibilityRangeEndMargin = 3f,
+            });
     }
+
+    /// <summary>The gate slides back down: a puzzle gate the levers shut again.</summary>
+    public void Close(bool silent = false)
+    {
+        if (!IsOpen) return;
+        IsOpen = false;
+        if (!silent) EventBus.Instance.PlaySfx("door");
+        CollisionLayer = Detected ? 9u : 1u;
+        GetNode<MeshInstance3D>("Mesh").Visible = true;
+        foreach (var m in _marks) m.Visible = Detected;
+        Main.Instance?.Builder.SetDoorClosed(Cell);
+        if (!silent) EventBus.Instance.Log($"{GateLabel ?? "A gate"} grinds shut.");
+        EventBus.Instance.RaisePropChanged(Net.NetRefs.Door(VaultIndex), "closed");
+    }
+
+    public void SetOpen(bool open, bool silent = false) { if (open) Open(silent); else Close(silent); }
 
     /// <summary>A lock plate with a keyhole (KeyDoor) or the seams of a gate (LeverGate), on every face a corridor or room touches; hidden until noticed.</summary>
     private void BuildMarks()
@@ -81,7 +108,7 @@ public partial class Door : StaticBody3D, IInteractable
         if (IsOpen) return;
         if (Kind == VaultKind.LeverGate)
         {
-            EventBus.Instance.Log("The gate will not budge. A lever somewhere on this floor must open it.");
+            EventBus.Instance.Log(IsObjectiveGate ? $"{GateLabel ?? "The gate"} will not budge. The levers on this floor move it." : "The gate will not budge. A lever somewhere on this floor must open it.");
             return;
         }
         if (party.TryUnlock("the door")) Open();
@@ -98,7 +125,7 @@ public partial class Door : StaticBody3D, IInteractable
         GetNode<MeshInstance3D>("Mesh").Visible = false;
         foreach (var m in _marks) m.Visible = false;
         Main.Instance.Builder.SetDoorOpen(Cell);
-        if (!silent) EventBus.Instance.Log(Kind == VaultKind.KeyDoor ? "The door swings open." : "Somewhere, a gate grinds open.");
+        if (!silent) EventBus.Instance.Log(Kind == VaultKind.KeyDoor ? "The door swings open." : GateLabel != null ? $"{GateLabel} grinds open." : "Somewhere, a gate grinds open.");
         EventBus.Instance.RaisePropChanged(Net.NetRefs.Door(VaultIndex), "opened");
     }
 }

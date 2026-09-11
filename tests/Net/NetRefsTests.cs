@@ -19,6 +19,8 @@ public class NetRefsTests
         Assert.Equal(g, Guid.ParseExact(id, "N"));
         Assert.True(NetRefs.TryParse(NetRefs.Npc("npc.smith:2"), out kind, out id));
         Assert.Equal("npc", kind); Assert.Equal("npc.smith:2", id);
+        Assert.True(NetRefs.TryParse(NetRefs.Plaque(2), out kind, out id));
+        Assert.Equal("plaque", kind); Assert.Equal("2", id);
     }
 
     [Fact]

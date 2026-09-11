@@ -165,6 +165,7 @@ public partial class Main : Node
             if (online.Contains(i)) Party.Unpark(i, ControlKind.Remote); else Party.Park(i);
         }
         Game.Instance.BeginNetwork(w);
+        Game.Instance.ServerObjectives[w.CurrentFloor] = Dungeon.Generation.FloorObjectives.TryParse(w.FloorObjective, out var objective) ? objective : Dungeon.Generation.FloorObjectiveKind.None;
         AdventureDirector.Instance.ConfigurePlanner(offlineOnly: true);
         _pendingPartyState = w.Party;
         _forcedSnapshot = w.BuildSnapshot;
@@ -453,6 +454,7 @@ public partial class Main : Node
         var game = Game.Instance;
         game.SetFloorFromServer(fc.Floor);
         if (fc.Plan != null) game.Adventure.FloorPlans[fc.Floor] = fc.Plan;
+        game.ServerObjectives[fc.Floor] = Dungeon.Generation.FloorObjectives.TryParse(fc.Objective, out var objective) ? objective : Dungeon.Generation.FloorObjectiveKind.None;
         if (fc.State != null) game.Floors[fc.Floor] = fc.State; else game.Floors.Remove(fc.Floor);
         _pendingPartyState = null;
         _forcedSnapshot = fc.BuildSnapshot;
@@ -491,6 +493,7 @@ public partial class Main : Node
         if (tier == null) return;
         var look = Builder.CurrentTheme ?? Dungeon.Defs.ThemeDef.FromTier(tier);
         var (fogColor, ambientColor, fogScale) = LayoutTint(Builder.Layout?.Kind ?? Dungeon.Generation.LayoutKind.Standard, look);
+        _baseFog = fogColor; _baseAmbient = ambientColor; _baseFogDensity = look.FogDensity * fogScale;
         if (_world.GetNodeOrNull<WorldEnvironment>("Env")?.Environment is { } env)
         {
             env.AmbientLightColor = ambientColor;
@@ -502,6 +505,21 @@ public partial class Main : Node
         ApplyHaze();
         foreach (var adv in Party.Adventurers) adv.Torch.LightColor = look.TorchColor;
         Audio.AudioManager.Instance?.SetTierAmbience(tier.Index);
+    }
+
+    private Color _baseFog = new(0.05f, 0.05f, 0.06f), _baseAmbient = Colors.Black;
+    private float _baseFogDensity = 0.035f;
+
+    /// <summary>The gas on a Toxic floor: the air around the player goes green and thick with its level (0 = the floor's own air).</summary>
+    public void ApplyGasTint(float level)
+    {
+        if (_world.GetNodeOrNull<WorldEnvironment>("Env")?.Environment is not { } env) return;
+        var green = new Color(0.22f, 0.42f, 0.10f);
+        level = Mathf.Clamp(level, 0f, 1f);
+        env.FogLightColor = _baseFog.Lerp(green, 0.75f * level);
+        env.AmbientLightColor = _baseAmbient.Lerp(green, 0.45f * level);
+        env.FogDensity = _baseFogDensity * (1f + 2.5f * level);
+        env.BackgroundColor = env.FogLightColor.Darkened(0.5f);
     }
 
     /// <summary>The air of a floor shape over the theme's own: flooded floors go cold and green, burning ones hot and thick with smoke.</summary>
@@ -551,6 +569,20 @@ public partial class Main : Node
             Game.Instance.Victory = true;
             Hud?.ShowVictory();
         }
+    }
+
+    /// <summary>The floor's objective is met: unlock the way down and tell everyone (clients hear it over the wire).</summary>
+    public void OnObjectiveCompleted(int floor, Dungeon.Generation.FloorObjectiveKind kind)
+    {
+        if (NetSession.IsClient) return;
+        if (Builder.FloorRoot?.GetNodeOrNull<Stairs>("DownStairs") is { } stairs) stairs.Unlock();
+        if (Game.Instance.Floors.TryGetValue(floor, out var state))
+        {
+            state.Objective ??= new Save.ObjectiveStateDto { Kind = Dungeon.Generation.FloorObjectives.Id(kind) };
+            state.Objective.Completed = true;
+        }
+        EventBus.Instance.Log(Adventure.Objectives.ObjectiveText.Completed(kind));
+        EventBus.Instance.RaiseObjectiveCompleted(floor, kind);
     }
 
     public bool BossDefeatedThisFloor => _bossDefeatedThisFloor;

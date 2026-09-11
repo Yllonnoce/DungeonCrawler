@@ -3,7 +3,7 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 1;
+    public const int Version = 2;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -41,4 +41,6 @@ public enum MsgKind : byte
     SecretRevealed, SecretOpened, TrapRevealed, TrapDisarmed, TrapTriggered, TrapPlaced, BarrelBroken, NpcChanged, HordeTriggered, HordeSpent,
     BossDefeated, MemberDowned, MemberRevived, PartyWiped, LevelUp, ForcePose, Shake, Victory, EnemyState, ChestLocked, Prop,
     AmbushSprung, PortalOpened,
+    // floor objectives (v2)
+    ObjectiveState, ObjectiveDone,
 }

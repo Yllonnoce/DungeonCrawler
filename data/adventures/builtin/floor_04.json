@@ -2,99 +2,84 @@
   "SchemaVersion": 1,
   "Floor": 4,
   "Source": "claude",
-  "LayoutHash": 4877086899379322364,
-  "Title": "The Drowned Cells",
+  "LayoutHash": 4100339883212986443,
+  "Title": "The Charnel Pits",
   "IntroLine": {
-    "Text": "The water closes over your boots, cold and thick with something that feels less like mud and more like memory. Ahead, cells echo with clanking and whispers.",
-    "VoiceId": "445a2e7ecd2ec8f2"
+    "Text": "Rotten timber over the pits where Ashmere put its dead when the church ran out of floor. The air is green at the edges, and it is coming up to meet you.",
+    "VoiceId": "f1a4fbb7d90f2684",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Passage",
-      "Name": "Antechamber to the Ossuary"
+      "Name": "High Drift"
     },
     {
       "Index": 1,
-      "Role": "Exit",
-      "Name": "The Descent"
+      "Role": "Start",
+      "Name": "Timber Head"
     },
     {
       "Index": 2,
-      "Role": "Hall",
-      "Name": "Processional Way"
+      "Role": "Passage",
+      "Name": "The Long Gallery"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Charnel Crossing"
+      "Role": "Hall",
+      "Name": "Coffin Gallery"
     },
     {
       "Index": 4,
-      "Role": "Cell",
-      "Name": "The Drowned Cells"
+      "Role": "Passage",
+      "Name": "Narrow Drift"
     },
     {
       "Index": 5,
-      "Role": "Treasury",
-      "Name": "Sealed Reliquary"
+      "Role": "Passage",
+      "Name": "Vent Shaft"
     },
     {
       "Index": 6,
       "Role": "Ruin",
-      "Name": "Flooded Chancel"
+      "Name": "Collapsed Charnel"
     },
     {
       "Index": 7,
-      "Role": "Start",
-      "Name": "Sunken Narthex"
+      "Role": "Kennel",
+      "Name": "Seep Chamber"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "Submerged Ossuary"
+      "Role": "Kennel",
+      "Name": "The Sink"
     },
     {
       "Index": 9,
-      "Role": "Gate",
-      "Name": "The Bone Gate"
+      "Role": "Exit",
+      "Name": "Low Stair"
+    },
+    {
+      "Index": 10,
+      "Role": "Passage",
+      "Name": "Spoil Drift"
+    },
+    {
+      "Index": 11,
+      "Role": "Treasury",
+      "Name": "Sexton\u0027s Cache"
     }
   ],
   "Collectives": [
     {
-      "Id": "vault_guardians",
-      "Name": "Reliquary Sentinels",
-      "FactionId": "crypt_wardens",
+      "Id": "coffin_guard",
+      "Name": "the Coffin Guard",
+      "FactionId": "faction0",
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
           "Count": 2
-        },
-        {
-          "EnemyId": "enemy.bone_priest",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 5,
-        "Objective": {
-          "Kind": "Chest",
-          "Ref": "0"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "gate_wardens",
-      "Name": "Bone Gate Wardens",
-      "FactionId": "crypt_wardens",
-      "Members": [
-        {
-          "EnemyId": "enemy.ghoul",
-          "Count": 3
         },
         {
           "EnemyId": "enemy.skeleton_archer",
@@ -102,12 +87,54 @@
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 9,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "9"
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 10
+      }
+    },
+    {
+      "Id": "gallery_walkers",
+      "Name": "the Gallery Walkers",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
         },
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 2,
+        "Objective": null,
+        "Route": [
+          2,
+          10
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "vent_priest",
+      "Name": "the Vent Priest",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 0,
+        "Objective": null,
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
@@ -117,240 +144,73 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "drowned_throng",
-      "Name": "The Drowned Throng",
-      "Room": 9,
+      "Id": "horde_charnel",
+      "Name": "The Charnel Spill",
+      "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 10
+          "Count": 6
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 6,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The collapsed charnel finishes collapsing, and what it held pours out over the timbers.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_seep",
+      "Name": "The Seep",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.skeleton_archer",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 14,
-      "Trigger": "Chest",
+      "Total": 6,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "A clamour of claws and bone erupts from the breaches as the chest\u0027s lid creaks open.",
-        "VoiceId": null
+        "Text": "Green water, then green hands, then the rest.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 6,
-      "Locked": false,
-      "QuestId": null
-    },
-    {
-      "Room": 0,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
     {
-      "Room": 2,
-      "Kind": "Spikes"
-    },
-    {
-      "Room": 3,
-      "Kind": "Fire"
-    },
-    {
-      "Room": 6,
+      "Room": 4,
       "Kind": "Gas"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "npc_garrick",
-      "Name": "Garrick",
-      "Room": 4,
-      "VoiceId": "Umbriel",
-      "Script": {
-        "Start": "node_start",
-        "Nodes": [
-          {
-            "Id": "node_start",
-            "Line": {
-              "Text": "Please, you must free me. I\u0027ve been shackled here for... I don\u0027t know how long. I\u0027ll pay you when we reach the surface, I swear.",
-              "VoiceId": "d10121934edf27cd"
-            },
-            "Choices": [
-              {
-                "Text": "Free him",
-                "Next": "node_accept",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Leave him",
-                "Next": "node_decline",
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done_escort_garrick",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "node_accept",
-            "Line": {
-              "Text": "Thank you. I\u0027ll follow close. Just get me out of this pit.",
-              "VoiceId": "4f38c48c47b33a75"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "node_decline",
-            "Line": {
-              "Text": "You\u0027ll regret this. I pray the waters take you.",
-              "VoiceId": "dbc4f626f53921e6"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "done_escort_garrick",
-            "Line": {
-              "Text": "Fresh air... even the stench of the deep is a mercy after that cell. I owe you more than coin.",
-              "VoiceId": "4216c824ef8dca7a"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "escort_garrick",
-      "CastId": null,
-      "RequiresFlag": null,
-      "ForbidsFlag": null,
-      "Betrayal": null
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "escort_garrick",
-      "Template": "Escort",
-      "Title": "The Prisoner\u0027s Plea",
-      "Objective": "Escort Garrick to the stairs down",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": "npc_garrick",
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "npc_garrick",
-      "Reward": {
-        "Xp": 500,
-        "Table": null
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "Please, you must free me. I\u0027ve been shackled here for... I don\u0027t know how long. I\u0027ll pay you when we reach the surface, I swear.",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "Thank you. I\u0027ll follow close. Just get me out of this pit.",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "You\u0027ll regret this. I pray the waters take you.",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "Fresh air... even the stench of the deep is a mercy after that cell. I owe you more than coin.",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "No... not like this...",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "The water closes over your boots, cold and thick with something that feels less like mud and more like memory. Ahead, cells echo with clanking and whispers.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
       "Trigger": "RoomEnter",
-      "Room": 4,
+      "Room": 9,
       "Line": {
-        "Text": "A hunched figure sits in the knee-deep murk, shackles rusted to the wall. \u0027You... you can get me out of here.\u0027",
-        "VoiceId": "1eec969042cfb4ab"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "QuestDone",
-      "Room": null,
-      "Line": {
-        "Text": "Garrick steps onto the stair, shivering. \u0027I\u0027ll not forget this.\u0027",
-        "VoiceId": "28febe41a1740197"
+        "Text": "The stair is down here, low and far, exactly where the air is worst. The clerk has a sense of humour and no lungs to trouble it.",
+        "VoiceId": "4d6abad94d96dac0",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "Taunts": [],
+  "EnemyTotal": 6
 }

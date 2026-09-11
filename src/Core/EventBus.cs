@@ -31,9 +31,15 @@ public partial class EventBus : Node
     public event Action<string, Adventure.DialogueEffect, string?>? DialogueEffectChosen;
     /// <summary>Narrator or character line for the subtitle strip (text, voice line id).</summary>
     public event Action<string, string?>? Narration;
+    /// <summary>Narration with its clean twin (text, voice line id, clean text, clean voice line id): what the server sends so each client picks its own.</summary>
+    public event Action<string, string?, string?, string?>? NarrationEx;
     /// <summary>The HUD objective line (empty to clear).</summary>
     public event Action<string>? ObjectiveChanged;
     public event Action<int>? BossDefeated;
+    /// <summary>A floor objective was met (floor, kind).</summary>
+    public event Action<int, Dungeon.Generation.FloorObjectiveKind>? ObjectiveCompleted;
+    /// <summary>Something happened inside a floor objective (kind, trigger, detail).</summary>
+    public event Action<Dungeon.Generation.FloorObjectiveKind, Adventure.Objectives.ObjectiveTrigger, string?>? ObjectiveEvent;
     /// <summary>One of ours hit something (member, result).</summary>
     public event Action<Characters.CharacterState, Combat.DamageResult>? HitLanded;
     public event Action<int, float>? MemberDamaged;
@@ -87,9 +93,13 @@ public partial class EventBus : Node
     public void RaiseQuestItemPicked(string questKey) => QuestItemPicked?.Invoke(questKey);
     public void RaiseNpcEvent(string npcId, Adventure.NpcEventKind kind) => NpcEvent?.Invoke(npcId, kind);
     public void RaiseDialogueEffect(string npcId, Adventure.DialogueEffect effect, string? flag = null) => DialogueEffectChosen?.Invoke(npcId, effect, flag);
-    public void RaiseNarration(string text, string? voiceId) { Log(text); Narration?.Invoke(text, voiceId); }
+    public void RaiseNarration(string text, string? voiceId) { Log(text); Narration?.Invoke(text, voiceId); NarrationEx?.Invoke(text, voiceId, null, null); }
+    /// <summary>A line with a coarse and a clean form: the local screen shows what the setting picked; the wire carries both.</summary>
+    public void RaiseNarration(string text, string? voiceId, string? cleanText, string? cleanVoiceId) { Log(text); Narration?.Invoke(text, voiceId); NarrationEx?.Invoke(text, voiceId, cleanText, cleanVoiceId); }
     public void RaiseObjectiveChanged(string text) => ObjectiveChanged?.Invoke(text);
     public void RaiseBossDefeated(int floor) => BossDefeated?.Invoke(floor);
+    public void RaiseObjectiveCompleted(int floor, Dungeon.Generation.FloorObjectiveKind kind) => ObjectiveCompleted?.Invoke(floor, kind);
+    public void RaiseObjectiveEvent(Dungeon.Generation.FloorObjectiveKind kind, Adventure.Objectives.ObjectiveTrigger trigger, string? detail = null) => ObjectiveEvent?.Invoke(kind, trigger, detail);
     public void RaiseHitLanded(Characters.CharacterState m, Combat.DamageResult r) => HitLanded?.Invoke(m, r);
     public void RaiseMemberDamaged(int index, float amount) => MemberDamaged?.Invoke(index, amount);
     public void RaiseMemberDowned(int index) => MemberDowned?.Invoke(index);

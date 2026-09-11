@@ -15,7 +15,7 @@ public sealed record RoomInfo(
     bool IsStart, bool IsExit, bool IsArena, string? VaultKind,
     bool HasLedge, bool HasCellar, bool HasSecret, bool DeadEnd,
     int Degree, int HopsFromStart, IReadOnlyList<int> Neighbours, int FreeCells, IReadOnlyList<int> Chests,
-    string? Structure = null, string? Water = null, int Mouths = 0)
+    string? Structure = null, string? Water = null, int Mouths = 0, bool IsJail = false, bool IsShrine = false)
 {
     public int Area => W * H;
     public bool IsVault => VaultKind != null;
@@ -49,6 +49,9 @@ public sealed class FloorMenu
     public bool BossFloor { get; init; }
     /// <summary>The floor's shape id (see LayoutKinds), for the designer's and the planner's benefit.</summary>
     public string Layout { get; init; } = "standard";
+    /// <summary>The floor's objective id (see FloorObjectives), "none" when the floor only asks for the stairs.</summary>
+    public string Objective { get; init; } = "none";
+    public string ObjectiveNote { get; init; } = "";
     public string? BossId { get; init; }
     public string? BossName { get; init; }
     public IReadOnlyList<RoomInfo> Rooms { get; init; } = Array.Empty<RoomInfo>();
@@ -125,7 +128,8 @@ public sealed class FloorMenu
                 room == startRoom, room == exitRoom, layout.BossArena == room, vault?.Kind.ToString(),
                 layout.Ledges.Any(l => l.Room == room), layout.Cellars.Any(c => c.Room == room), layout.Secrets.Any(s => room.Contains(s.Facing)),
                 neighbours[i].Count == 1, neighbours[i].Count, hops[i], neighbours[i], RoomCells.Free(layout, room).Count, chests,
-                structure?.Kind.ToString(), water?.Kind.ToString(), layout.NestAt(room)?.Mouths.Count ?? 0));
+                structure?.Kind.ToString(), water?.Kind.ToString(), layout.NestAt(room)?.Mouths.Count ?? 0,
+                layout.Objective?.JailRoom == room, layout.Objective?.ShrineRoom == room));
         }
 
         var options = new List<EnemyOption>();
@@ -150,6 +154,7 @@ public sealed class FloorMenu
         return new FloorMenu
         {
             Floor = floor, TierIndex = TierRules.TierIndex(floor), TierName = tier?.DisplayName ?? "Dungeon", Layout = LayoutKinds.Id(layout.Kind),
+            Objective = FloorObjectives.Id(layout.Objective?.Kind ?? FloorObjectiveKind.None), ObjectiveNote = layout.Objective is { } ol ? FloorObjectives.Describe(ol.Kind) : "",
             BossFloor = TierRules.IsBossFloor(floor), BossId = bossId, BossName = bossId != null && roster.TryGetValue(bossId, out var bp) ? bp.Name : null,
             Rooms = rooms, Roster = options,
             TargetEnemies = spec.EnemyCount, MinEnemies = Math.Max(3, spec.EnemyCount / 2), MaxEnemies = 16,

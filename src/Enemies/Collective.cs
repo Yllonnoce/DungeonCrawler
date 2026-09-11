@@ -20,7 +20,11 @@ public sealed class Collective
     public GoalKind Goal { get; }
     public int Room { get; }
     public Vector3? ObjectivePosition { get; }
-    public IReadOnlyList<Vector3> Route { get; }
+    public IReadOnlyList<Vector3> Route { get; private set; }
+    /// <summary>The rooms the patrol walks, in order (the plan's route), as it stands now.</summary>
+    public List<int> RouteRooms { get; private set; }
+    private readonly IReadOnlyList<int> _plannedRooms;
+    private readonly IReadOnlyList<Vector3> _plannedRoute;
     public string? AlarmTargetId { get; }
     public Vector3? RallyPosition { get; }
     public List<Enemy> Members { get; } = new();
@@ -47,9 +51,26 @@ public sealed class Collective
         Room = contents.Room;
         ObjectivePosition = contents.ObjectiveCell is { } o ? surface(o) : null;
         Route = contents.RouteCells.Select(surface).ToList();
+        _plannedRoute = Route;
+        _plannedRooms = contents.Route.ToList();
+        RouteRooms = contents.Route.ToList();
         AlarmTargetId = contents.AlarmTarget;
         RallyPosition = contents.RallyCell is { } r ? surface(r) : null;
         _registry = registry;
+    }
+
+    /// <summary>Walk a different set of rooms (the gates shifted): planned rooms keep their planned waypoint, new ones take the room's centre.</summary>
+    public void SetRoute(IReadOnlyList<int> rooms, Func<int, Vector3> centreOf)
+    {
+        RouteRooms = rooms.ToList();
+        var route = new List<Vector3>();
+        foreach (var r in rooms)
+        {
+            var i = _plannedRooms.ToList().IndexOf(r);
+            route.Add(i >= 0 && i < _plannedRoute.Count ? _plannedRoute[i] : centreOf(r));
+        }
+        Route = route;
+        foreach (var m in Alive) m.PatrolIndex = 0;
     }
 
     public void Add(Enemy e)

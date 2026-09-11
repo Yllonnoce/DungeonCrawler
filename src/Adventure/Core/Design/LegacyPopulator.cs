@@ -30,6 +30,7 @@ public static class LegacyPopulator
             contents.BossId = tier.BossId;
             contents.BossCell = arena.Center;
         }
+        Objectives.ObjectivePlanner.Attach(contents, layout, floor, seed);
         return contents;
     }
 

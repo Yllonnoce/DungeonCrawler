@@ -120,19 +120,22 @@ public partial class VoiceRenderer : Node
     public Func<Line, bool>? Filter { get; set; }
 
     /// <param name="major">A main character (the cast): rendered with the main model like the narrator and bosses; one-off NPCs and barks use the minor model.</param>
-    public bool Enqueue(Line line, string voice, Speaker speaker, VoicePriority priority, bool major = true)
+    /// <param name="persona">How the character sounds; with the line's own Delivery it makes the style the synth is told.</param>
+    /// <param name="fallbackText">Rendered under the same id if the provider refuses the text (a clean twin of a coarse line).</param>
+    public bool Enqueue(Line line, string voice, Speaker speaker, VoicePriority priority, bool major = true, Persona? persona = null, string? fallbackText = null)
     {
         if (Filter != null && !Filter(line)) { line.VoiceId = null; return false; }
         if (string.IsNullOrWhiteSpace(line.Text)) return false;
         // a line already rendered under some other model or voice settings (the shipped bank, a rebake on this machine)
         // keeps its id: the id encodes the model, so re-deriving it from today's settings would lose that audio
         if (line.VoiceId is { Length: > 0 } existing && HasAudio(existing)) return true;
-        var style = Voices.Style(speaker);
+        if (persona?.Voice is { } chosen && Voices.Canonical(chosen) is { } known) voice = known;
+        var style = Voices.Style(speaker, persona, Deliveries.TryParse(line.Delivery, out var d) ? d : null);
         var model = Voices.ModelFor(speaker, major);
         var id = VoiceLineId.For(line.Text, voice, style, model);
         line.VoiceId = id;
         if (!Enabled) return HasAudio(id);
-        _queue.Enqueue(line.Text, voice, style, priority, HasAudio, model);
+        _queue.Enqueue(line.Text, voice, style, priority, HasAudio, model, fallbackText);
         return true;
     }
 
@@ -235,10 +238,17 @@ public partial class VoiceRenderer : Node
                     Rendered++; RenderedByModel[model] = RenderedByModel.GetValueOrDefault(model) + 1; _consecutiveRateLimits = 0; _rateLimitedSince = -1; _lastBackoff = 0f;
                     return;
                 }
-                Failed++;
-                _queue.Forget(job.Id);
                 var diag = synth as IVoiceSynthDiagnostics;
                 var why = error ?? diag?.LastError ?? "unknown";
+                if (job.FallbackText is { Length: > 0 } clean && VoiceQueue.LooksLikeRefusal(why) && diag is not { QuotaExhausted: true })
+                {
+                    // the words were turned away: say the clean twin under the same id, so the line is not silent
+                    GD.Print($"[Voice] {job.Id} refused ({why}); rendering its clean twin instead");
+                    _queue.Requeue(job with { Text = clean, FallbackText = null });
+                    return;
+                }
+                Failed++;
+                _queue.Forget(job.Id);
                 GD.PushWarning($"[Voice] {job.Id} ({job.Priority}) failed: {why}");
                 var provider = Settings.VoiceLabel;
                 if (diag != null && diag.QuotaExhausted)

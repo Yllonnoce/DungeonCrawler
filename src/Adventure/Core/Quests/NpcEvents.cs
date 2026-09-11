@@ -1,6 +1,6 @@
 namespace DungeonCrawler.Adventure;
 
-public enum NpcEventKind { Died, ReachedStairs, StartedFollowing }
+public enum NpcEventKind { Died, ReachedStairs, StartedFollowing, Downed, Revived, Captured, Jailed, Freed }
 
 public static class QuestKeys
 {

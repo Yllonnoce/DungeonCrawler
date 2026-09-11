@@ -20,6 +20,7 @@ public static class NetRefResolver
         Stairs st => st.Direction > 0 ? NetRefs.StairsDown : NetRefs.StairsUp,
         LootDrop ld => NetRefs.Loot(ld.Item.Id),
         Npc n => NetRefs.Npc(n.Id),
+        Plaque pl => NetRefs.Plaque(pl.Index),
         _ => null,
     };
 
@@ -39,6 +40,7 @@ public static class NetRefResolver
             case NetRefs.BarrelKind: return NetRefs.TryIndex(id, out var bi) ? children.OfType<Breakable>().FirstOrDefault(b => b.SpawnIndex == bi) : null;
             case NetRefs.StairsKind: return root.GetNodeOrNull<Stairs>(id == "down" ? "DownStairs" : "UpStairs");
             case NetRefs.NpcKind: return children.OfType<Npc>().FirstOrDefault(n => n.Id == id);
+            case NetRefs.PlaqueKind: return NetRefs.TryIndex(id, out var pi) ? children.OfType<Plaque>().FirstOrDefault(p => p.Index == pi) : null;
             case NetRefs.LootKind: return Guid.TryParseExact(id, "N", out var g) ? children.OfType<LootDrop>().FirstOrDefault(l => l.Item.Id == g) : null;
             default: return null;
         }

@@ -12,10 +12,25 @@ namespace DungeonCrawler.Adventure;
 /// A quest giver placed by the floor plan. Talk with E; when escorting, follows the lead and can be hurt by hostile
 /// enemies standing next to it (the party cannot harm NPCs). Reaching the down stairs while escorted completes an escort.
 /// </summary>
+/// <summary>What an NPC is on this floor: a quest giver from the plan, or one of the floor objective's people.</summary>
+public enum NpcMode { Quest, Ritualist, Prisoner }
+
 public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
 {
     public const float WalkSpeed = 4.2f;
     public const float FollowDistance = 2.4f;
+
+    public NpcMode Mode { get; set; } = NpcMode.Quest;
+    /// <summary>At 0 HP the objective's people go down instead of dying; the party gets them up again.</summary>
+    public bool Downed { get; private set; }
+    /// <summary>Where the objective wants this NPC to walk (a prisoner fleeing or following a jailer); null = stand.</summary>
+    public Vector3? MoveTarget { get; set; }
+    /// <summary>A prisoner in a jailer's hands, on the way to the jail.</summary>
+    public bool Captured { get; set; }
+    /// <summary>A prisoner behind bars.</summary>
+    public bool Jailed { get; set; }
+    /// <summary>A prisoner the party set free.</summary>
+    public bool Freed { get; set; }
 
     public string Id { get; set; } = "";
     public string NpcName { get; set; } = "Stranger";
@@ -31,9 +46,14 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     public float MaxHp { get; private set; }
 
     public string DisplayName => NpcName;
-    public bool IsAlive => !Dead;
+    public bool IsAlive => !Dead && !Downed;
     public bool IsUnaware => false;
-    public string Prompt => Dead ? "" : Rescued ? $"{NpcName} waits by the stairs" : $"Talk to {NpcName}";
+    public string Prompt => Dead ? "" : Mode switch
+    {
+        NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin the ritual with {NpcName}" : "",
+        NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.JailbreakController jail ? jail.PromptFor(this) : "",
+        _ => Rescued ? $"{NpcName} waits by the stairs" : $"Talk to {NpcName}",
+    };
 
     private static readonly string[] Models = { "Cleric", "Monk" };
     private MeshInstance3D _body = null!, _head = null!;
@@ -50,7 +70,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         _head = GetNode<MeshInstance3D>("Head");
         _label = GetNode<Label3D>("Label");
         _gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity", 9.8f).AsDouble();
-        MaxHp = Hp = 40f + 12f * Floor;
+        MaxHp = Hp = TierRules.NpcHp(Floor);
         var tint = new Color(0.75f, 0.65f, 0.45f);
         _body.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = tint, Roughness = 0.85f });
         _head.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = new Color(0.85f, 0.7f, 0.6f) });
@@ -64,7 +84,49 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     public void Interact(PartyController party, Adventurer actor)
     {
         if (Dead) return;
+        switch (Mode)
+        {
+            case NpcMode.Ritualist:
+                if (Net.NetSession.IsClient) return; // the intent went to the server
+                if (Downed) { TryRevive(); return; }
+                (Objectives.ObjectiveController.Instance as Objectives.RitualController)?.Begin(this);
+                return;
+            case NpcMode.Prisoner:
+                if (Net.NetSession.IsClient) return;
+                (Objectives.ObjectiveController.Instance as Objectives.JailbreakController)?.OnInteract(this, party, actor);
+                return;
+        }
         if (Main.Instance?.Hud is { } hud) hud.OpenDialogue(this); // a dedicated server has no screen; the client opened its own
+    }
+
+    /// <summary>Get a downed NPC up, if nothing hostile is close enough to make it pointless.</summary>
+    public bool TryRevive()
+    {
+        if (!Downed || Dead) return false;
+        if (GetParent() is { } parent && parent.GetChildren().OfType<Enemy>().Any(e => e.IsAlive && e.IsHostile && e.GlobalPosition.DistanceTo(GlobalPosition) < Objectives.RitualRules.ReviveClearRadius))
+        {
+            EventBus.Instance.Log($"Not with them at {NpcName}'s throat. Clear the shrine first.");
+            return false;
+        }
+        Downed = false;
+        Hp = MathF.Round(MaxHp * Objectives.RitualRules.ReviveHpFraction);
+        _label.Text = NpcName;
+        _model?.Play("Idle", force: true);
+        EventBus.Instance.Log($"{NpcName} gets up, shaken.");
+        EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Revived);
+        return true;
+    }
+
+    /// <summary>Down, not dead: the rite pauses, the creatures turn on the party, and the party can get them up.</summary>
+    public void GoDown()
+    {
+        if (Dead || Downed) return;
+        Downed = true;
+        Hp = 0;
+        _label.Text = $"{NpcName} (down)";
+        _model?.Play("Death", force: true);
+        EventBus.Instance.Log($"{NpcName} goes down!");
+        EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Downed);
     }
 
     public void StartFollowing()
@@ -86,7 +148,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         if (s.Flags != _netFlags)
         {
             _netFlags = s.Flags;
-            Restore((s.Flags & Net.NpcState.FlagDead) != 0, (s.Flags & Net.NpcState.FlagEscorting) != 0, (s.Flags & Net.NpcState.FlagRescued) != 0, Hp, null);
+            Restore((s.Flags & Net.NpcState.FlagDead) != 0, (s.Flags & Net.NpcState.FlagEscorting) != 0, (s.Flags & Net.NpcState.FlagRescued) != 0, Hp, null, (s.Flags & Net.NpcState.FlagDowned) != 0);
+            Captured = (s.Flags & Net.NpcState.FlagCaptured) != 0;
+            Jailed = (s.Flags & Net.NpcState.FlagJailed) != 0;
+            Freed = Escorting && Mode == NpcMode.Prisoner;
         }
     }
 
@@ -115,7 +180,17 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
         var planar = Vector3.Zero;
         var party = Main.Instance?.Party;
-        if (!Dead && Escorting && party != null && IsInstanceValid(party) && party.HasBodies)
+        if (!Dead && !Downed && !Escorting && MoveTarget is { } goal)
+        {
+            var dest = _mover.Next(this, goal, dt, 0.6f, ClearLine, out var straight);
+            if (dest is { } d)
+            {
+                if (!straight) FaceToward(d);
+                planar = PathMover.Planar(GlobalPosition, d) * WalkSpeed;
+            }
+            if (_mover.Unreachable > 8f) { MoveTarget = null; _mover.Reset(); }
+        }
+        else if (!Dead && !Downed && Escorting && party != null && IsInstanceValid(party) && party.HasBodies)
         {
             var lead = party.Lead;
             var dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out var straight);
@@ -130,7 +205,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
                 GlobalPosition = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
                 _mover.Reset();
             }
-            CheckStairs();
+            if (Mode == NpcMode.Quest) CheckStairs();
             Hazard(dt);
         }
         v.X = planar.X;
@@ -181,11 +256,13 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
         if (Dead) return DamageResult.Miss(attack.Type);
+        if (Downed) return DamageResult.Miss(attack.Type);
         var result = HitResolver.Resolve(attackerStats, Stats.Empty, new StatusEffectController(), attack, ctx, rng);
         if (!result.Hit) return result;
         Hp = Math.Max(0, Hp - result.Amount);
         _flash = 0.25f;
-        if (Hp <= 0) Die();
+        EventBus.Instance.Log($"{attackerName} wounds {NpcName} for {result.Amount:0}. ({Hp:0}/{MaxHp:0})");
+        if (Hp <= 0) { if (Mode == NpcMode.Quest) Die(); else GoDown(); }
         return result;
     }
 
@@ -215,13 +292,19 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         EventBus.Instance.Log($"{NpcName} drops the act.");
     }
 
-    public void Restore(bool dead, bool escorting, bool rescued, float hp, Vector3? position)
+    public void Restore(bool dead, bool escorting, bool rescued, float hp, Vector3? position, bool downed = false)
     {
         if (position is { } p) GlobalPosition = p;
         Hp = Math.Clamp(hp, 0, MaxHp);
         Rescued = rescued;
         if (rescued) _label.Text = $"{NpcName} (safe)";
         Escorting = escorting && !rescued;
+        if (downed != Downed)
+        {
+            Downed = downed;
+            _label.Text = downed ? $"{NpcName} (down)" : NpcName;
+            _model?.Play(downed ? "Death" : "Idle", force: true);
+        }
         if (dead) { Dead = true; CollisionLayer = 0; _label.Text = $"{NpcName} (dead)"; _model?.Play("Death", force: true); }
     }
 

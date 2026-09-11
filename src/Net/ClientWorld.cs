@@ -85,10 +85,16 @@ public partial class ClientWorld : Node
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
             case BossDefeatedEvt bd: OnBossDefeated(bd.Floor); break;
+            case ObjectiveDoneEvt od: OnObjectiveDone(od); break;
+            case ObjectiveStateMsg os: Adventure.Objectives.ObjectiveController.Instance?.ApplyNet(os.State); break;
             case FloorChangeBegin fb: Main.Instance.Overlay.Open("The dungeon stirs...", fb.Status); Main.Instance.Party.InputLocked = true; break;
             case FloorChange fc: OnFloorChange(fc); break;
             case QuestSync qs: AdventureDirector.Instance.Quests[qs.Quest.Id] = qs.Quest; EventBus.Instance.RaiseQuestChanged(qs.Quest); break;
-            case NarrationMsg n: EventBus.Instance.RaiseNarration(n.Text, n.VoiceId); break;
+            case NarrationMsg n:
+                // the server sends both forms of a villain line; this screen shows the one its own setting asks for
+                if (n.CleanText != null && !Settings.VillainCurses) EventBus.Instance.RaiseNarration(n.CleanText, n.CleanVoiceId);
+                else EventBus.Instance.RaiseNarration(n.Text, n.VoiceId);
+                break;
             case BarkMsg b: AdventureDirector.Instance.PlayBark(new Line { Text = b.Text, VoiceId = b.VoiceId }); break;
             case EnemySpawned es: OnEnemySpawned(es.Enemy); break;
             case HordeTriggeredEvt ht: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == ht.Id)?.Show(); break;
@@ -158,7 +164,9 @@ public partial class ClientWorld : Node
             case (Dungeon.Props.Chest c, "opened"): c.MarkOpened(); Trace.Add("chest"); break;
             case (Dungeon.Props.Door d, "opened"): d.Open(silent: true); break;
             case (Dungeon.Props.Door d, "revealed"): d.Reveal(); break;
+            case (Dungeon.Props.Door d, "closed"): d.Close(silent: true); break;
             case (Dungeon.Props.Lever l, "pulled"): l.Pull(silent: true); break;
+            case (Dungeon.Props.Lever l, "reset"): l.Reset(silent: true); break;
             case (Dungeon.Props.SecretWall s, "revealed"): s.Reveal(); break;
             case (Dungeon.Props.SecretWall s, "opened"): s.Open(silent: true); break;
             case (Dungeon.Props.Trap t, "revealed"): t.Reveal(); break;
@@ -194,6 +202,14 @@ public partial class ClientWorld : Node
         if (Root?.GetNodeOrNull<Dungeon.Stairs>("DownStairs") is { } stairs) stairs.Unlock();
         EventBus.Instance.RaiseBossDefeated(floor);
         if (Dungeon.TierRules.IsFinalBossFloor(floor)) { Game.Instance.Victory = true; Main.Instance.Hud?.ShowVictory(); }
+    }
+
+    private void OnObjectiveDone(ObjectiveDoneEvt od)
+    {
+        if (Root?.GetNodeOrNull<Dungeon.Stairs>("DownStairs") is { } stairs) stairs.Unlock();
+        Adventure.Objectives.ObjectiveController.Instance?.MarkCompletedFromServer();
+        if (Dungeon.Generation.FloorObjectives.TryParse(od.ObjectiveKind, out var kind)) EventBus.Instance.RaiseObjectiveCompleted(od.Floor, kind);
+        Trace.Add("objective");
     }
 
     /// <summary>Main built the floor from the Welcome: tell the server we are in.</summary>

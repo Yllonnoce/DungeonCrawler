@@ -53,6 +53,8 @@ public sealed class ClaudePlanner : IPlanner
     private readonly PromptTemplates _templates;
     private readonly OfflinePlanner _fallback = new();
     public string Model { get; init; } = Pricing.DefaultModel;
+    /// <summary>A replay with no recording for a call throws instead of falling back to the offline designer (a bake authored by hand wants to stop and ask).</summary>
+    public static bool StrictReplay { get; set; }
     public Action<string> Log { get; init; } = _ => { };
     /// <summary>Set when a call was refused, failed or hit the cap; the director shows it and may stop using the AI.</summary>
     public string? LastFailure { get; private set; }
@@ -155,6 +157,7 @@ public sealed class ClaudePlanner : IPlanner
             try { response = await _client.CreateAsync(request, ct); }
             catch (Exception e) { response = ClaudeResponse.Failed(e.Message); }
             _meter.Record(response.Usage);
+            if (StrictReplay && response.Error is { } missing && missing.StartsWith("no recording")) throw new InvalidOperationException(missing);
             var parsed = ResponseParser.Parse<T>(response);
             if (parsed.Ok)
             {

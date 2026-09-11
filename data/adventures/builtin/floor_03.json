@@ -2,98 +2,64 @@
   "SchemaVersion": 1,
   "Floor": 3,
   "Source": "claude",
-  "LayoutHash": 6048520697192306327,
-  "Title": "The Drowned Den",
+  "LayoutHash": 5294190080565317383,
+  "Title": "The Counting House",
   "IntroLine": {
-    "Text": "The air grows still and heavy, thick with the dust of old grief. The timber supports groan, and the only sound is the slow drip of water from unseen cracks.",
-    "VoiceId": null
+    "Text": "Moss on the brick and ink on the moss. This was where Ashmere counted what it owed. The sums are still on the walls, and someone is still adding to them.",
+    "VoiceId": "e50e77dd1e6562a2",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Passage",
-      "Name": "The Hidden Gallery"
+      "Role": "Exit",
+      "Name": "The Clerk\u0027s Stair"
     },
     {
       "Index": 1,
-      "Role": "Passage",
-      "Name": "The Eastern Gallery"
+      "Role": "Hall",
+      "Name": "Front Counter"
     },
     {
       "Index": 2,
-      "Role": "Shrine",
-      "Name": "The Abandoned Shrine"
+      "Role": "Start",
+      "Name": "Moss Landing"
     },
     {
       "Index": 3,
       "Role": "Passage",
-      "Name": "The Upper Drift"
+      "Name": "Ink Runnel"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "The Western Adit"
+      "Role": "Cell",
+      "Name": "The Blotter"
     },
     {
       "Index": 5,
-      "Role": "Hall",
-      "Name": "The Timbered Stretch"
+      "Role": "Passage",
+      "Name": "Ledger Row"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "The Drowned Den"
+      "Role": "Treasury",
+      "Name": "Strongroom"
     },
     {
       "Index": 7,
-      "Role": "Exit",
-      "Name": "The Final Decline"
-    },
-    {
-      "Index": 8,
-      "Role": "Passage",
-      "Name": "The Northern Adit"
-    },
-    {
-      "Index": 9,
-      "Role": "Hall",
-      "Name": "The South Spur"
-    },
-    {
-      "Index": 10,
-      "Role": "Ruin",
-      "Name": "The Collapsed Drift"
-    },
-    {
-      "Index": 11,
-      "Role": "Passage",
-      "Name": "The High Drift"
-    },
-    {
-      "Index": 12,
-      "Role": "Passage",
-      "Name": "The Crosscut"
-    },
-    {
-      "Index": 13,
-      "Role": "Start",
-      "Name": "The Winding Descent"
-    },
-    {
-      "Index": 14,
-      "Role": "Treasury",
-      "Name": "The Warden\u0027s Cache"
+      "Role": "Barracks",
+      "Name": "Tally Room"
     }
   ],
   "Collectives": [
     {
-      "Id": "crypt_guardians",
-      "Name": "Crypt Guardians",
-      "FactionId": "crypt_wardens",
+      "Id": "tally_clerks",
+      "Name": "the Tally Clerks",
+      "FactionId": "faction0",
       "Members": [
         {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
+          "EnemyId": "enemy.ghoul",
+          "Count": 2
         },
         {
           "EnemyId": "enemy.bone_priest",
@@ -101,91 +67,37 @@
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 14,
-        "Objective": {
-          "Kind": "Door",
-          "Ref": "0"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "exit_wardens",
-      "Name": "Exit Wardens",
-      "FactionId": "crypt_wardens",
-      "Members": [
-        {
-          "EnemyId": "enemy.ghoul",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
+        "Kind": "Guard",
         "Room": 7,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
+        "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 5
       }
     },
     {
-      "Id": "timberwalk_patrol",
-      "Name": "Timberwalk Patrol",
-      "FactionId": "crypt_wardens",
+      "Id": "row_walkers",
+      "Name": "the Row Walkers",
+      "FactionId": "faction0",
       "Members": [
         {
-          "EnemyId": "enemy.ghoul",
+          "EnemyId": "enemy.skeleton_archer",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.skeleton_archer",
+          "EnemyId": "enemy.ghoul",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 1,
+        "Room": 5,
         "Objective": null,
         "Route": [
-          1,
-          12,
-          0,
-          6,
-          9,
           5,
-          8,
-          1
+          4
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "shrine_whisperers",
-      "Name": "Shrine Whisperers",
-      "FactionId": "crypt_wardens",
-      "Members": [
-        {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Alarm",
-        "Room": 8,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": "crypt_guardians",
         "RallyRoom": null
       }
     }
@@ -193,9 +105,29 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_pond",
-      "Name": "The Drowned Horde",
-      "Room": 6,
+      "Id": "horde_runnel",
+      "Name": "The Ink-Drowned",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The stream runs black, and the black climbs out.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_tally",
+      "Name": "The Overdue",
+      "Room": 7,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
@@ -203,64 +135,225 @@
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 2
+          "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 7,
+      "Total": 6,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The black water erupts as bloated shapes claw their way out, weeping silt and regret.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_ruin",
-      "Name": "The Ruin Horde",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 6
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 8,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The chest\u0027s lid clatters open, and from the rubble around you, a dozen husks rise with a sound like tearing cloth.",
-        "VoiceId": null
+        "Text": "The tally room settles its accounts all at once.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
+  "Chests": [],
+  "Traps": [
     {
-      "Room": 10,
-      "Locked": false,
-      "QuestId": null
+      "Room": 1,
+      "Kind": "Spikes"
     }
   ],
-  "Traps": [],
-  "Npcs": [],
-  "Quests": [],
-  "Narration": [
+  "Npcs": [
     {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "The air grows still and heavy, thick with the dust of old grief. The timber supports groan, and the only sound is the slow drip of water from unseen cracks.",
-        "VoiceId": null
+      "Id": "npc_nan",
+      "Name": "Nan Trellick",
+      "Room": 1,
+      "VoiceId": "Kore",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Mind the kerb, dear, this is Tallow Street. Well, it was. I\u0027m mapping it. You\u0027ll want the counting house\u0027s first page; they tore it in three, the cowards. Fetch the pieces and I\u0027ll read it you.",
+              "VoiceId": "bbf976d2e27dc646",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the pieces.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "This isn\u0027t a street. It\u0027s a tunnel.",
+                "Next": "street",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We have the pieces.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Another time, Nan.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "street",
+            "Line": {
+              "Text": "Tunnel. Street. It\u0027s all a matter of what\u0027s on top of you, and I\u0027ve never let that stop me. Here, look: the baker\u0027s was there, the Company office there. The office is the one that\u0027s still lit.",
+              "VoiceId": "857d41d5a9e134ce",
+              "Delivery": "cheerful"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the pieces.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good. They\u0027ll be where clerks hide things: under the row, in the blotter, in the tally room. Don\u0027t let the clerks see you. They count you if they see you.",
+              "VoiceId": "2c23f3423533fc4f",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "Here we are. \u0027Ashmere, the whole of it, owes the Lamplighters\u0027 Company...\u0027 a sum, my word, a sum. And under it: \u0027settled by water.\u0027 Settled by water. Well. That\u0027s Mill Lane for you, always flooding.",
+              "VoiceId": "a47ea4d274ed4f21",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_ledger",
+      "CastId": "cast_nan",
+      "Persona": {
+        "VoiceStyle": "a brisk old woman who talks over you and gets every street wrong with total confidence",
+        "DefaultDelivery": "warm",
+        "Voice": "Kore",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_ledger",
+      "Template": "Investigate",
+      "Title": "The First Page",
+      "Objective": "Find the three torn pieces of the toll ledger\u0027s first page and bring them to Nan.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          5,
+          4,
+          7
+        ],
+        "ClueName": "torn ledger pages"
+      },
+      "GiverNpc": "npc_nan",
+      "Reward": {
+        "Xp": 90,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "They tore the first page in three. Fetch the pieces and I\u0027ll read it you.",
+          "VoiceId": "569a16ef7a1b5030",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Good. Don\u0027t let the clerks count you.",
+          "VoiceId": "c959113a87ce641b",
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Then I\u0027ll map without you. I usually do.",
+          "VoiceId": "40ac61f31f52f3b8",
+          "Delivery": "weary"
+        },
+        "Complete": {
+          "Text": "\u0027Settled by water.\u0027 Well. That\u0027s Mill Lane for you.",
+          "VoiceId": "427feee4568cba16",
+          "Delivery": "calm"
+        },
+        "Fail": {
+          "Text": "Pages don\u0027t keep down here. Nor do people.",
+          "VoiceId": "7611352fce51fc26",
+          "Delivery": "weary"
+        }
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 7
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "The Company\u0027s lantern seal sits beside the sum. Somebody in the Company decided what Ashmere\u0027s debt was worth. Somebody else decided how to pay it.",
+        "VoiceId": "2e9a5b08634ecf85",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 5
 }

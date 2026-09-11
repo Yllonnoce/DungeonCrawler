@@ -296,7 +296,7 @@ public static class Verticality
         if (spec.PitCount <= 0) return;
         var upRoom = layout.RoomAt(layout.UpStairs);
         var downRoom = layout.RoomAt(layout.DownStairs);
-        var candidates = layout.Rooms.Where(r => r.W >= 5 && r.H >= 5 && layout.LevelOf(r.Center) == 1
+        var candidates = layout.Rooms.Where(r => r.W >= 5 && r.H >= 5 && layout.LevelOf(r.Center) == 1 && r != layout.Objective?.ShrineRoom && r != layout.Objective?.JailRoom
             && r != upRoom && r != downRoom && r != layout.BossArena
             && layout.Vaults.All(v => v.Room != r) && layout.Ledges.All(l => l.Room != r)
             && r.Cells().All(c => layout[c] == Cell.Floor || FloorGenerator.IsChamfered(r, c))).ToList();

@@ -14,6 +14,8 @@ public partial class Stairs : Area3D, IInteractable
 {
     [Export] public int Direction { get; set; } = 1;
     [Export] public bool Locked { get; set; }
+    /// <summary>Why the way down is sealed: the guardian, or whatever the floor's objective demands.</summary>
+    public string LockReason { get; set; } = "The stairs are sealed until the guardian falls.";
 
     // the flight: eight risers of a quarter metre over 2.8 m of run, then a landing against the back parapet
     public const float Rise = 2f;
@@ -30,7 +32,7 @@ public partial class Stairs : Area3D, IInteractable
     public string Prompt => "";
 
     /// <summary>What the landing asks.</summary>
-    public string Question => Locked ? "The stairs are sealed until the guardian falls." : Direction > 0 ? $"Descend to floor {(Game.Instance?.CurrentFloor ?? 0) + 1}?" : $"Climb back to floor {(Game.Instance?.CurrentFloor ?? 0) - 1}?";
+    public string Question => Locked ? LockReason : Direction > 0 ? $"Descend to floor {(Game.Instance?.CurrentFloor ?? 0) + 1}?" : $"Climb back to floor {(Game.Instance?.CurrentFloor ?? 0) - 1}?";
 
     public void Unlock()
     {
@@ -153,7 +155,7 @@ public partial class Stairs : Area3D, IInteractable
     {
         if (Locked)
         {
-            EventBus.Instance.Log("The stairs are sealed. The floor's guardian must fall first.");
+            EventBus.Instance.Log(LockReason);
             return;
         }
         Game.Instance.ChangeFloor(Direction);

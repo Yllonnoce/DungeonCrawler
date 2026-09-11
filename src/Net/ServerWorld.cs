@@ -62,11 +62,12 @@ public partial class ServerWorld : Node
         bus.LevelUp += i => Broadcast(new LevelUpEvt(i));
         bus.PartyWiped += () => Broadcast(new PartyWipedEvt());
         bus.BossDefeated += floor => Broadcast(new BossDefeatedEvt(floor));
+        bus.ObjectiveCompleted += (floor, kind) => Broadcast(new ObjectiveDoneEvt(floor, Dungeon.Generation.FloorObjectives.Id(kind)));
         bus.ItemPickedUp += _ => _bagDirty = true;
         bus.FloorChanged += (floor, delta) => OnFloorChangeBegin(floor);
         bus.FloorBuilt += OnFloorBuilt;
         bus.QuestChanged += q => Broadcast(new QuestSync(q));
-        bus.Narration += (text, voice) => { var i = _logBatch.LastIndexOf(text); if (i >= 0) _logBatch.RemoveAt(i); Broadcast(new NarrationMsg(text, voice)); };
+        bus.NarrationEx += (text, voice, clean, cleanVoice) => { var i = _logBatch.LastIndexOf(text); if (i >= 0) _logBatch.RemoveAt(i); Broadcast(new NarrationMsg(text, voice, clean, cleanVoice)); };
         bus.Bark += (member, line) => { var idx = Array.FindIndex(Main.Instance.Party.Members, m => m.Name == member); Broadcast(new BarkMsg(idx, line.Text, line.VoiceId)); };
         bus.EnemySpawned += e => { if (!Quiet) _spawned.Add(e); };
         bus.HordeTriggered += id => Broadcast(new HordeTriggeredEvt(id));
@@ -100,7 +101,7 @@ public partial class ServerWorld : Node
         game.Floors.TryGetValue(floor, out var state);
         var snapshot = main.BuildSnapshotFor.TryGetValue(floor, out var s) ? s : party.Snapshot();
         foreach (var peer in Handshake.InGamePeers)
-            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0)));
+            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main))));
         _lastSent.Clear();
         _firstPose.Clear();
         Trace.Add($"floor:{floor}");
@@ -122,7 +123,10 @@ public partial class ServerWorld : Node
         SendSnapshotTo(slot.PeerId, full: true);
         foreach (var q in AdventureDirector.Instance.Quests.Values) SendTo(slot.PeerId, new QuestSync(q));
         SendTo(slot.PeerId, new ObjectiveMsg(AdventureDirector.Instance.CurrentObjective));
+        if (Adventure.Objectives.ObjectiveController.Instance is { } objective) SendTo(slot.PeerId, new ObjectiveStateMsg(objective.Capture()));
     }
+
+    private static string FloorObjectiveId(Main main) => Dungeon.Generation.FloorObjectives.Id(main.Builder.Layout?.Objective?.Kind ?? Dungeon.Generation.FloorObjectiveKind.None);
 
     /// <summary>Cues the acting client already played for itself, and UI noise that is nobody else's business.</summary>
     private static readonly HashSet<string> LocalCues = new() { "swing", "swing_heavy", "bow", "cast", "ui_click", "ui_open", "footstep", "miss" };
@@ -170,7 +174,7 @@ public partial class ServerWorld : Node
         Trace.Add(slot.ParkedPose != null || slot.LastSeenUtc != "" ? $"rejoin:{slot.Name}" : $"join:{slot.Name}");
         GD.Print($"[net-server] {slot.Name} {(slot.LastSeenUtc != "" ? "rejoins" : "joins")} as member {slot.MemberIndex} ({slot.ClassId}) on floor {floor}");
         return new Welcome(peer, slot.MemberIndex, game.GameSeed, floor, game.PlaySeconds, game.Victory, adventure, snapshot, state,
-            DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0);
+            DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main));
     }
 
     public static List<DynamicEnemyDto> DynamicEnemies(Node3D? root)
@@ -404,6 +408,7 @@ public partial class ServerWorld : Node
         if (tick % (60 / Protocol.SnapshotHz) == 0) foreach (var peer in Handshake.InGamePeers) SendSnapshotTo(peer, full);
         if (tick % (60 / Protocol.VitalsHz) == 0 && Handshake.InGamePeers.Any()) Broadcast(BuildVitals());
         if (tick % 6 == 0 && Handshake.InGamePeers.Any()) FlushSync();
+        if (tick % 120 == 0 && Handshake.InGamePeers.Any() && Adventure.Objectives.ObjectiveController.Instance is { } objective) Broadcast(new ObjectiveStateMsg(objective.Capture()));
         if (_spawned.Count > 0)
         {
             foreach (var e in _spawned)
@@ -444,6 +449,9 @@ public partial class ServerWorld : Node
             if (n.Dead) f |= NpcState.FlagDead;
             if (n.Escorting) f |= NpcState.FlagEscorting;
             if (n.Rescued) f |= NpcState.FlagRescued;
+            if (n.Downed) f |= NpcState.FlagDowned;
+            if (n.Captured) f |= NpcState.FlagCaptured;
+            if (n.Jailed) f |= NpcState.FlagJailed;
             return new NpcState(n.Id, new NetVec(n.GlobalPosition.X, n.GlobalPosition.Y, n.GlobalPosition.Z), n.Rotation.Y, f);
         }).ToArray();
         var players = bodies.Select(b =>

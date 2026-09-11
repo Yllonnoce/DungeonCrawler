@@ -77,6 +77,16 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
     public bool IsHorde { get; set; }
     /// <summary>Came through a boss's portal: worth its XP, but rarely carries loot, so lingering never pays.</summary>
     public bool IsReinforcement { get; set; }
+    /// <summary>The NPC this creature hunts (a ritual's attackers); it goes for the party only when the party gets in its face.</summary>
+    public Adventure.Npc? NpcTarget { get; set; }
+    /// <summary>The prisoner this creature is marching to the jail (Jailbreak).</summary>
+    public Adventure.Npc? Captive { get; set; }
+    /// <summary>A jailer: drops an iron key when it dies.</summary>
+    public bool CarriesJailKey { get; set; }
+    /// <summary>Seconds since the party last hurt this creature.</summary>
+    public float SinceHurt { get; private set; } = 999f;
+    /// <summary>What to do with nothing to chase: hunt the NPC again, or stand.</summary>
+    public AiState RestState() => NpcTarget is { IsAlive: true } ? new HuntNpcState() : new IdleState();
     /// <summary>The horde this creature came out of (server bookkeeping for joiners).</summary>
     public string? HordeId { get; set; }
     private bool _animPaused;
@@ -458,6 +468,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
     /// <summary>Re-pick the target every half second: recent damage plus proximity, preferring members we can see.</summary>
     private void Retarget(float dt)
     {
+        SinceHurt += dt;
         if (Party == null) return;
         foreach (var k in _threat.Keys.ToList()) _threat[k] *= MathF.Pow(0.85f, dt);
         _retargetTimer -= dt;
@@ -575,6 +586,14 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         Target!.ReceiveAttack(Stats, Attack, DisplayName, this);
     }
 
+    /// <summary>A blow at the NPC this creature hunts.</summary>
+    public void StrikeNpc(Adventure.Npc npc)
+    {
+        PlayAnim("Punch", force: true);
+        if (!npc.IsAlive || GlobalPosition.DistanceTo(npc.GlobalPosition) > AttackRange * 1.15f) return;
+        npc.ReceiveAttack(Stats, Attack, new HitContext(), Party?.Rng ?? new Random(), DisplayName);
+    }
+
     public void FireAtParty() => Fire(Attack, 0f);
 
     private void Fire(AttackProfile attack, float yawOffsetDegrees)
@@ -655,6 +674,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         if (!result.Hit) return result;
         Hp = Math.Max(0, Hp - result.Amount);
         _flash = 0.25f;
+        SinceHurt = 0f;
         EventBus.Instance.RaiseEnemyHurt(this, result.Amount, result.Crit);
         if (Hp <= 0) _dying = true;
         else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx("enemy_hurt"); }
@@ -724,6 +744,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
 
         var cat = Game.Instance.Catalog;
         var level = TierRules.ItemLevel(Floor);
+        if (CarriesJailKey && cat.TryBase("item.iron_key", out _)) Drop(cat.Create("item.iron_key"), new Vector3(0, 0, 0.5f)); // the jailer's key, whatever else it had
         if (IsHorde && _rng.NextDouble() > 0.04) return; // fifty of them would bury the floor in bones
         if (IsReinforcement && _rng.NextDouble() > 0.15) return; // an endless stream must not be a loot farm
         if (!IsHorde && _rng.NextDouble() < 0.5 && cat.TryBase("item.bone_shard", out _)) Drop(cat.Create("item.bone_shard"), Vector3.Zero);

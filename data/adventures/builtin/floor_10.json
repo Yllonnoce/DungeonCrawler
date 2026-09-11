@@ -2,99 +2,117 @@
   "SchemaVersion": 1,
   "Floor": 10,
   "Source": "claude",
-  "LayoutHash": 16194870443172789322,
-  "Title": "The Rival\u0027s Gambit",
+  "LayoutHash": 12763310907567784309,
+  "Title": "The Broodmother\u0027s Well",
   "IntroLine": {
-    "Text": "The air thickens with the smell of rust and old blood. The forge\u0027s outskirts loom ahead, and the sound of metal tapping stone echoes through the ring.",
-    "VoiceId": "16ffde0141685841"
+    "Text": "The cistern burns. Lichen, oil and old rope, all alight, and in the middle of it the thing the low town fed when the toll came due. She has had a great many names to eat.",
+    "VoiceId": "447c80be3a7e5aa5",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "The Broodmother\u0027s Lair"
+      "Name": "The Burning Cistern"
     },
     {
       "Index": 1,
-      "Role": "Lair",
-      "Name": "Webbed Hollow"
+      "Role": "Passage",
+      "Name": "Ash Gallery"
     },
     {
       "Index": 2,
-      "Role": "Ruin",
-      "Name": "Forgotten Cache"
+      "Role": "Lair",
+      "Name": "The Hidden Clutch"
     },
     {
       "Index": 3,
-      "Role": "Start",
-      "Name": "Worn Stone Landing"
+      "Role": "Lair",
+      "Name": "Cinder Brood"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "Dripping Corridor"
+      "Role": "Lair",
+      "Name": "The High Clutch"
     },
     {
       "Index": 5,
-      "Role": "Treasury",
-      "Name": "Iron Vault"
+      "Role": "Ruin",
+      "Name": "Fallen Pump House"
     },
     {
       "Index": 6,
-      "Role": "Kennel",
-      "Name": "Broodling Den"
+      "Role": "Lair",
+      "Name": "Smoke Ledge"
     },
     {
       "Index": 7,
       "Role": "Passage",
-      "Name": "Silk-Shrouded Tunnel"
+      "Name": "Scorched Cut"
     },
     {
       "Index": 8,
       "Role": "Hall",
-      "Name": "Spinner\u0027s Gallery"
+      "Name": "The Overlook"
     },
     {
       "Index": 9,
-      "Role": "Ruin",
-      "Name": "Rusty Outpost"
+      "Role": "Lair",
+      "Name": "Ember Brood"
+    },
+    {
+      "Index": 10,
+      "Role": "Start",
+      "Name": "Lichen Head"
+    },
+    {
+      "Index": 11,
+      "Role": "Passage",
+      "Name": "Char Passage"
+    },
+    {
+      "Index": 12,
+      "Role": "Treasury",
+      "Name": "The Fed-Fat Chest"
+    },
+    {
+      "Index": 13,
+      "Role": "Passage",
+      "Name": "Ash Bend"
     }
   ],
   "Collectives": [
     {
-      "Id": "vault_defenders",
-      "Name": "Vault Guards",
-      "FactionId": "cave_brood",
+      "Id": "pump_guard",
+      "Name": "the Pump-House Guard",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 5,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 3
+      }
+    },
+    {
+      "Id": "high_clutch",
+      "Name": "the High Clutch",
+      "FactionId": "faction1",
       "Members": [
         {
           "EnemyId": "enemy.rock_thrower",
           "Count": 1
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 5,
-        "Objective": {
-          "Kind": "Chest",
-          "Ref": "0"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "ring_patrol",
-      "Name": "Ring Wardens",
-      "FactionId": "cave_brood",
-      "Members": [
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 2
         },
         {
           "EnemyId": "enemy.cave_shaman",
@@ -111,353 +129,210 @@
       }
     },
     {
-      "Id": "alarm_group",
-      "Name": "Web Watchers",
-      "FactionId": "cave_brood",
+      "Id": "ember_walkers",
+      "Name": "the Ember Walkers",
+      "FactionId": "faction1",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
           "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 9,
+        "Objective": null,
+        "Route": [
+          9,
+          3
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "smoke_lookout",
+      "Name": "the Smoke Lookout",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Alarm",
-        "Room": 4,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": "vault_defenders",
-        "RallyRoom": 5
-      }
-    },
-    {
-      "Id": "nest_guard",
-      "Name": "Den Tenders",
-      "FactionId": "cave_brood",
-      "Members": [
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 3
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
         "Room": 6,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "AlarmTarget": "pump_guard",
+        "RallyRoom": 5
       }
     }
   ],
-  "Loners": [
-    {
-      "EnemyId": "enemy.cave_shaman",
-      "Room": 2
-    },
-    {
-      "EnemyId": "enemy.cave_spider",
-      "Room": 7
-    }
-  ],
+  "Loners": [],
   "Hordes": [
     {
-      "Id": "creche_swarm",
-      "Name": "Creche Swarm",
-      "Room": 1,
+      "Id": "horde_hidden",
+      "Name": "The Hidden Clutch",
+      "Room": 2,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 5
+          "Count": 12
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 8,
+      "Total": 13,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls weep spiders\u2014a wave of tiny legs and chittering maws surges from the dark.",
-        "VoiceId": null
+        "Text": "The hidden clutch hears the fire and mistakes it for its mother.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "nursery_horde",
-      "Name": "Nursery Horde",
+      "Id": "horde_cinder",
+      "Name": "The Cinder Brood",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 12,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Cinders, then legs, then all of it at once.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_high",
+      "Name": "The High Clutch",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The high clutch spills down the ramp like poured gravel.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_pump",
+      "Name": "The Pump-House Brood",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The pump house was full of eggs, and you have opened the wrong box.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_smoke",
+      "Name": "The Smoke Brood",
       "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 11
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 15,
-      "Trigger": "Chest",
+      "Total": 11,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "The chest lid clatters open\u2014and the floor erupts with skittering broodlings defending their nursery.",
-        "VoiceId": null
+        "Text": "The lookout\u0027s cry brings the ledge down, and the ledge was alive.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "silken_tide",
-      "Name": "Silken Tide",
-      "Room": 7,
+      "Id": "horde_ember",
+      "Name": "The Ember Brood",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 6
+          "Count": 12
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 9,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "A runner\u0027s skitter echoes\u2014and the tunnel behind you fills with a silken tide of spiders.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "ceiling_drop",
-      "Name": "Ceiling Drop",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 6
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 8,
+      "Total": 13,
       "Trigger": "Enter",
       "Line": {
-        "Text": "From the ceiling, a rain of glossy bodies patters down, fangs bared.",
-        "VoiceId": null
+        "Text": "The ember brood comes out burning and does not seem to mind.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": {
-    "Name": "The Broodmother",
-    "SignatureOverride": "Volley",
+    "Name": "Mother of the Cistern",
+    "SignatureOverride": null,
     "IntroLine": {
-      "Text": "The Broodmother descends on a thick strand of silk, her many eyes gleaming with an ancient hunger. The air fills with the chittering of her brood.",
-      "VoiceId": "94620dfe97cce382"
+      "Text": "Eleven he sent me. Four more, he said. He always keeps his word, the clerk.",
+      "VoiceId": "1b94cef534b7b124",
+      "Delivery": "booming"
     },
     "DeathLine": {
-      "Text": "The Broodmother thrashes once and is still. The cavern shudders, and the chittering fades to silence.",
-      "VoiceId": "396d06f0215954ff"
+      "Text": "Tell him... the toll... is short...",
+      "VoiceId": "4043f6fa0fa13984",
+      "Delivery": "weary"
     }
   },
-  "Chests": [
-    {
-      "Room": 1,
-      "Locked": true,
-      "QuestId": null
-    },
-    {
-      "Room": 8,
-      "Locked": false,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
-    {
-      "Room": 4,
-      "Kind": "Spikes"
-    },
     {
       "Room": 7,
       "Kind": "Fire"
-    },
-    {
-      "Room": 8,
-      "Kind": "Gas"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "captain_voss",
-      "Name": "Captain Voss",
-      "Room": 9,
-      "VoiceId": "Umbriel",
-      "Script": {
-        "Start": "voss_start",
-        "Nodes": [
-          {
-            "Id": "voss_start",
-            "Line": {
-              "Text": "Voss leans against a pillar, a crossbow hanging loosely in his grip. \u0027I\u0027ve seen the way you fight. Half your spoils, and I\u0027ll make sure you reach the forge without any more trouble. What do you say?\u0027",
-              "VoiceId": "dff00682ff3100b5"
-            },
-            "Choices": [
-              {
-                "Text": "\u0022Fine. We\u0027ll split it.\u0022",
-                "Next": "voss_share",
-                "Effect": "Choose",
-                "Flag": "shared_quest",
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "\u0022We don\u0027t share with scavengers.\u0022",
-                "Next": "voss_driven",
-                "Effect": "Choose",
-                "Flag": "drove_off_voss",
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "voss_share",
-            "Line": {
-              "Text": "He grins, a glint of gold in his eye. \u0027Good. I\u0027ll be around. Don\u0027t die before we settle up.\u0027",
-              "VoiceId": "ea60d64d40944d1a"
-            },
-            "Choices": [
-              {
-                "Text": "\u0022Let\u0027s move.\u0022",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "voss_driven",
-            "Line": {
-              "Text": "His grin vanishes. \u0027You\u0027ll regret that.\u0027 He backs into the shadows.",
-              "VoiceId": "b5461ec6d835e953"
-            },
-            "Choices": [
-              {
-                "Text": "\u0022Better run.\u0022",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "rival_gambit",
-      "CastId": null,
-      "RequiresFlag": null,
-      "ForbidsFlag": null,
-      "Betrayal": null
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "rival_gambit",
-      "Template": "Decide",
-      "Title": "The Rival\u0027s Gambit",
-      "Objective": "Decide how to deal with Captain Voss",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "captain_voss",
-      "Reward": {
-        "Xp": 0,
-        "Table": null
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "Captain Voss demands a cut of your findings. He\u0027s not asking nicely.",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "You agree, uneasily.",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "You send him packing.",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "The deal is struck.",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
-  "Narration": [
-    {
-      "Trigger": "RoomEnter",
-      "Room": 9,
-      "Line": {
-        "Text": "A figure steps out from behind a corroded pillar\u2014a man in battered leathers, a crossbow at his hip. \u0027Hold there,\u0027 he says. \u0027We need to talk.\u0027",
-        "VoiceId": "bc03f3de1beec568"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "BossSeen",
-      "Room": null,
-      "Line": {
-        "Text": "The Broodmother drops from the darkness, her legs clattering against the stone.",
-        "VoiceId": "25d5e7611921e2b7"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "BossDead",
-      "Room": null,
-      "Line": {
-        "Text": "The Broodmother falls, and the oppressive weight lifts.",
-        "VoiceId": "d5f2a541812cf825"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
-  "EnemyTotal": 13
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [],
+  "Taunts": [],
+  "EnemyTotal": 8
 }

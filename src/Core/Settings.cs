@@ -26,6 +26,10 @@ public static class Settings
     public static bool Ambushes { get; set; } = true;
     /// <summary>Reinforcement pressure: 0 off, 1 normal, 2 heavy (every wait halved, more through each portal).</summary>
     public static float Reinforcements { get; set; } = 1f;
+    /// <summary>How hard the dungeon hits: every enemy attack and every trap, fire or gas the party suffers is multiplied by this (1 normal, 2 hard, 3 brutal).</summary>
+    public static float Lethality { get; set; } = Dungeon.TierRules.DefaultLethality;
+    /// <summary>Whether the antagonist may curse at the party (coarse lines) or keeps it clean.</summary>
+    public static bool VillainCurses { get; set; } = true;
 
     // AI planner and voice
     public static bool AiPlanning { get; set; } = true;
@@ -115,6 +119,8 @@ public static class Settings
             Resolution = cfg.GetValue("display", "resolution", Resolution).AsVector2I();
             Ambushes = cfg.GetValue("danger", "ambushes", Ambushes).AsBool();
             Reinforcements = (float)cfg.GetValue("danger", "reinforcements", Reinforcements).AsDouble();
+            Lethality = Math.Clamp((float)cfg.GetValue("danger", "lethality", Lethality).AsDouble(), Dungeon.TierRules.MinLethality, Dungeon.TierRules.MaxLethality);
+            VillainCurses = cfg.GetValue("danger", "villain_curses", VillainCurses).AsBool();
             foreach (var (action, _) in Rebindable)
                 if (cfg.HasSectionKey("keys", action)) _binds[action] = (Key)cfg.GetValue("keys", action).AsInt64();
             AiPlanning = cfg.GetValue("ai", "planning", AiPlanning).AsBool();
@@ -167,6 +173,8 @@ public static class Settings
         cfg.SetValue("display", "resolution", Resolution);
         cfg.SetValue("danger", "ambushes", Ambushes);
         cfg.SetValue("danger", "reinforcements", Reinforcements);
+        cfg.SetValue("danger", "lethality", Lethality);
+        cfg.SetValue("danger", "villain_curses", VillainCurses);
         foreach (var (action, key) in _binds) cfg.SetValue("keys", action, (long)key);
         cfg.SetValue("ai", "planning", AiPlanning);
         cfg.SetValue("ai", "voice", AiVoice);
@@ -197,6 +205,8 @@ public static class Settings
 
     public static void Apply()
     {
+        // the dungeon's lethality is a rule, not a preference: a debug flag pins it for headless flows, else the setting rules
+        Dungeon.TierRules.Lethality = DebugTools.Instance?.ForcedLethality ?? Math.Clamp(Lethality, Dungeon.TierRules.MinLethality, Dungeon.TierRules.MaxLethality);
         // the voice model names feed line ids, so they follow the selected provider
         if (VoiceViaRunware)
         {

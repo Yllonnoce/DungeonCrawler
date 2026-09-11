@@ -3,202 +3,245 @@
   "Floor": 6,
   "Source": "claude",
   "LayoutHash": 2865536137340698563,
-  "Title": "The Silent Tunnels",
+  "Title": "The Lockup",
   "IntroLine": {
-    "Text": "The tunnels stretch ahead in damp silence, the only sound the slow drip of water and the skitter of unseen things.",
-    "VoiceId": null
+    "Text": "Dark rock, wet rope, and a smell of other people\u0027s fear. This is where Ashmere kept the ones who could not pay. The cages are empty. The turnkey is not.",
+    "VoiceId": "70fa8348e8347208",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Ruin",
-      "Name": "The Collapsed Burial"
+      "Name": "Broken Gaol Yard"
     },
     {
       "Index": 1,
-      "Role": "Lair",
-      "Name": "Dripping Hatchery"
+      "Role": "Hall",
+      "Name": "The Cistern Cells"
     },
     {
       "Index": 2,
       "Role": "Passage",
-      "Name": "Dusty Corridor"
+      "Name": "Rope Walk"
     },
     {
       "Index": 3,
       "Role": "Exit",
-      "Name": "The Way Down"
+      "Name": "Warder\u0027s Stair"
     },
     {
       "Index": 4,
-      "Role": "Lair",
-      "Name": "Silken Corner"
+      "Role": "Cell",
+      "Name": "Debtors\u0027 Hole"
     },
     {
       "Index": 5,
       "Role": "Start",
-      "Name": "The Descent Point"
+      "Name": "The Grating"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "The Shallow Pool"
+      "Role": "Passage",
+      "Name": "Sluice Cell"
     },
     {
       "Index": 7,
-      "Role": "Passage",
-      "Name": "Echoing Tunnel"
+      "Role": "Hall",
+      "Name": "Turnkey\u0027s Lodge"
     },
     {
       "Index": 8,
       "Role": "Passage",
-      "Name": "Narrow Crevice"
+      "Name": "The Long Cell Row"
     },
     {
       "Index": 9,
       "Role": "Passage",
-      "Name": "Fungal Nook"
+      "Name": "Chain Store"
     },
     {
       "Index": 10,
-      "Role": "Lair",
-      "Name": "The Creche"
+      "Role": "Barracks",
+      "Name": "Warders\u0027 Mess"
     },
     {
       "Index": 11,
       "Role": "Ruin",
-      "Name": "Broken Pillars"
+      "Name": "The Fallen Cells"
     },
     {
       "Index": 12,
       "Role": "Passage",
-      "Name": "Side Passage"
+      "Name": "Key Niche"
     },
     {
       "Index": 13,
-      "Role": "Hall",
-      "Name": "Hidden Storeroom"
+      "Role": "Cell",
+      "Name": "Solitary"
     },
     {
       "Index": 14,
       "Role": "Lair",
-      "Name": "Dark Alcove"
+      "Name": "The Drop Cell"
     }
   ],
   "Collectives": [
     {
-      "Id": "patrol_1",
-      "Name": "Brood Patrol",
-      "FactionId": "cave_brood",
+      "Id": "turnkeys",
+      "Name": "the Turnkeys",
+      "FactionId": "faction1",
       "Members": [
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
-        },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Patrol",
-        "Room": 11,
-        "Objective": null,
-        "Route": [
-          11,
-          7,
-          10,
-          4,
-          1,
-          8,
-          6,
-          2,
-          11
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "wardens",
-      "Name": "Exit Wardens",
-      "FactionId": "cave_brood",
-      "Members": [
-        {
-          "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 2
         },
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 3,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "alarm_1",
-      "Name": "Scout Alarm",
-      "FactionId": "cave_brood",
-      "Members": [
         {
           "EnemyId": "enemy.cave_shaman",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Alarm",
-        "Room": 2,
+        "Kind": "Guard",
+        "Room": 10,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "wardens",
-        "RallyRoom": 6
+        "AlarmTarget": null,
+        "RallyRoom": 7
+      }
+    },
+    {
+      "Id": "cell_walkers",
+      "Name": "the Cell-Row Walkers",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 8,
+        "Objective": null,
+        "Route": [
+          8,
+          1
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "drop_watch",
+      "Name": "the Drop Watch",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 14,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "turnkeys",
+        "RallyRoom": 10
       }
     }
   ],
-  "Loners": [
-    {
-      "EnemyId": "enemy.cave_spider",
-      "Room": 9
-    }
-  ],
+  "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_1",
-      "Name": "Chittering Mass",
+      "Id": "horde_yard",
+      "Name": "The Yard Brood",
       "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
+          "Count": 8
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 12,
+      "Total": 8,
       "Trigger": "Enter",
       "Line": {
-        "Text": "A chittering flood erupts from the ruined stonework, a wave of gleaming black carapaces and skittering legs.",
-        "VoiceId": null
+        "Text": "The yard\u0027s rubble was a nest. It knows you are in the yard.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_2",
-      "Name": "Creeping Swarm",
+      "Id": "horde_cistern",
+      "Name": "The Cistern Brood",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 7
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 8,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The pond in the cells goes still, then it goes wrong.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_hole",
+      "Name": "The Debtors",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 6
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 6,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The debtors\u0027 hole was full after all.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_sluice",
+      "Name": "The Sluice Brood",
       "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 7
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 7,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Something has been breeding in the sluice, and the sluice opens.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_mess",
+      "Name": "The Mess",
+      "Room": 10,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
@@ -206,68 +249,245 @@
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The pond bubbles with a foul hiss, and slick, glistening creatures boil up onto the floor.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_3",
-      "Name": "The Egg Sac Brood",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 16,
-      "Trigger": "Chest",
+      "Total": 9,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "The chest\u0027s lid cracks open with a wet, fleshy sound, and a tide of skittering bodies pours forth.",
-        "VoiceId": null
+        "Text": "The warders\u0027 mess answers the alarm with everything it has.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_drop",
+      "Name": "The Drop Brood",
+      "Room": 14,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 7
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 7,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The drop cell drops its floor, and what lived under it climbs.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
+  "Chests": [],
+  "Traps": [
     {
-      "Room": 10,
-      "Locked": false,
-      "QuestId": null
+      "Room": 2,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 9,
+      "Kind": "Gas"
     }
   ],
-  "Traps": [],
-  "Npcs": [],
-  "Quests": [],
-  "Narration": [
+  "Npcs": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 10,
-      "Line": {
-        "Text": "A large chamber, thick with webbing. In the center, a bulbous sac pulses faintly.",
-        "VoiceId": null
+      "Id": "npc_tarn",
+      "Name": "Tarn",
+      "Room": 7,
+      "VoiceId": "Leda",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "You\u0027re the Company\u0027s. Good. Arrest me. Take me up. I\u0027m the turnkey and I\u0027ve kept his cages forty years and I want... I want to be the one in the cage. Please.",
+              "VoiceId": "76ffda898070e387",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Why would we take you?",
+                "Next": "why",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "You\u0027re under arrest, Tarn.",
+                "Next": "took",
+                "Effect": "Choose",
+                "Flag": "took_tarn",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Keep your post. We\u0027ve a road to walk.",
+                "Next": "left",
+                "Effect": "Choose",
+                "Flag": "left_tarn",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Not now.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "why",
+            "Line": {
+              "Text": "Because I\u0027ve his key. The clerk\u0027s own. He counts every step and I count his. Take me and it\u0027s yours when you need it, and you will. Leave me and I stay his, and I do my job. I\u0027m good at my job.",
+              "VoiceId": "dc48ba61c336a17f",
+              "Delivery": "pleading"
+            },
+            "Choices": [
+              {
+                "Text": "You\u0027re under arrest, Tarn.",
+                "Next": "took",
+                "Effect": "Choose",
+                "Flag": "took_tarn",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Keep your post.",
+                "Next": "left",
+                "Effect": "Choose",
+                "Flag": "left_tarn",
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "took",
+            "Line": {
+              "Text": "Arrested. Ha. Forty years. I\u0027ll follow when I can and I\u0027ll keep the key dry. He\u0027ll shout about this. He shouts about everything.",
+              "VoiceId": "96b2f39ec4d4f521",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "left",
+            "Line": {
+              "Text": "Aye. Thought so. Nobody takes the turnkey. Mind the cages below, then. I\u0027ll be locking them.",
+              "VoiceId": "a71020ebecfb6856",
+              "Delivery": "angry"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_tarn",
+      "CastId": "cast_tarn",
+      "Persona": {
+        "VoiceStyle": "a slow, heavy, hangdog man who mumbles into his collar",
+        "DefaultDelivery": "weary",
+        "Voice": "Orus",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_tarn",
+      "Template": "Decide",
+      "Title": "The Turnkey\u0027s Plea",
+      "Objective": "Decide whether to take Tarn the turnkey into custody or leave him at his post.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_tarn",
+      "Reward": {
+        "Xp": 120,
+        "Table": null
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Arrest me. Take me up. Please.",
+          "VoiceId": "1ad7ce13b2c7d656",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Arrested. Ha.",
+          "VoiceId": "15bdbfb6b52fcf27",
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Nobody takes the turnkey.",
+          "VoiceId": "0a9d6b7fc8e4e56d",
+          "Delivery": "angry"
+        },
+        "Complete": {
+          "Text": "Forty years. He\u0027ll shout about this.",
+          "VoiceId": "a91b4e935a2f9fc6",
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Then I stay his.",
+          "VoiceId": "1fc6ef67548d1161",
+          "Delivery": "weary"
+        }
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "The clerk\u0027s voice comes down the rope walk, thin with distance: somebody has been talking to his turnkey, and he has written it down.",
+        "VoiceId": "0b5d3ed8f56ee544",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
   "EnemyTotal": 6
 }

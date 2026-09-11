@@ -56,17 +56,39 @@ public sealed class FakeClaudeClient : IClaudeClient
 }
 
 /// <summary>Answers from recorded fixtures (<c>{dir}/{hash}.response.json</c>); a missing fixture is a failed call.</summary>
+/// <summary>
+/// Answers planning calls from files. A recording is looked up by its content hash (what <see cref="RecordingClaudeClient"/>
+/// wrote) and then by name: outline, floor-N (N read from the prompt), barks. A call with no recording is written out as
+/// NAME.request.json so an answer can be authored by hand, and NAME is left in <see cref="Pending"/> for a bake to notice.
+/// </summary>
 public sealed class ReplayClaudeClient : IClaudeClient
 {
     private readonly string _dir;
     public ReplayClaudeClient(string dir) => _dir = dir;
     public static string ResponsePath(string dir, ClaudeRequest r) => Path.Combine(dir, $"{r.Hash}.response.json");
     public static string RequestPath(string dir, ClaudeRequest r) => Path.Combine(dir, $"{r.Hash}.request.json");
+    /// <summary>The name of the last call that had no recording, or null.</summary>
+    public static string? Pending { get; private set; }
+
+    /// <summary>outline, floor-N, barks: the name a hand-written recording goes under.</summary>
+    public static string NameOf(ClaudeRequest r)
+    {
+        if (!r.Kind.StartsWith("floor")) return r.Kind;
+        var m = System.Text.RegularExpressions.Regex.Match(r.User, @"Floor (\d+) menu:");
+        return m.Success ? $"floor-{m.Groups[1].Value}" : r.Kind;
+    }
 
     public Task<ClaudeResponse> CreateAsync(ClaudeRequest request, CancellationToken ct)
     {
+        var name = NameOf(request);
         var path = ResponsePath(_dir, request);
-        if (!File.Exists(path)) return Task.FromResult(ClaudeResponse.Failed($"no recording for {request.Kind} ({request.Hash})"));
+        if (!File.Exists(path)) path = Path.Combine(_dir, $"{name}.response.json");
+        if (!File.Exists(path))
+        {
+            try { Directory.CreateDirectory(_dir); File.WriteAllText(Path.Combine(_dir, $"{name}.request.json"), JsonSerializer.Serialize(request, PlanFormat.Options)); } catch { }
+            Pending = name;
+            return Task.FromResult(ClaudeResponse.Failed($"no recording for {name} ({request.Hash})"));
+        }
         try
         {
             var r = JsonSerializer.Deserialize<ClaudeResponse>(File.ReadAllText(path), PlanFormat.Options);

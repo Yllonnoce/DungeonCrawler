@@ -8,10 +8,12 @@ namespace DungeonCrawler.Adventure.Voice;
 public static class VoiceBudget
 {
     public const int Default = 80;
+    /// <summary>The antagonist's taunts have a budget of their own on top of the campaign's.</summary>
+    public const int Taunts = 30;
 
     public sealed record Pick(Line Line, string Reason, int Floor);
 
-    public static List<Pick> Select(CampaignPlan campaign, IReadOnlyDictionary<int, FloorPlan> floors, int max)
+    public static List<Pick> Select(CampaignPlan campaign, IReadOnlyDictionary<int, FloorPlan> floors, int max, int tauntMax = Taunts)
     {
         var ordered = Candidates(campaign, floors);
         var seen = new HashSet<Line>(ReferenceEqualityComparer.Instance);
@@ -22,7 +24,40 @@ public static class VoiceBudget
             if (string.IsNullOrWhiteSpace(c.Line.Text) || !seen.Add(c.Line)) continue;
             picks.Add(c);
         }
+        var taunts = 0;
+        foreach (var c in TauntCandidates(campaign, floors))
+        {
+            if (taunts >= tauntMax) break;
+            if (string.IsNullOrWhiteSpace(c.Line.Text) || !seen.Add(c.Line)) continue;
+            picks.Add(c);
+            taunts++;
+        }
         return picks;
+    }
+
+    /// <summary>The taunts worth audio first: a floor entrance per objective kind, the completion lines, the wipe, then the rest by trigger.</summary>
+    public static List<Pick> TauntCandidates(CampaignPlan campaign, IReadOnlyDictionary<int, FloorPlan> floors)
+    {
+        var all = campaign.Taunts.Concat(floors.Values.SelectMany(f => f.Taunts)).ToList();
+        int Rank(TauntPlan t)
+        {
+            if (!Objectives.TauntTriggers.TryParse(t.Trigger, out var trigger)) return 99;
+            return trigger switch
+            {
+                Objectives.TauntTrigger.FloorEnter => string.IsNullOrWhiteSpace(t.Objective) ? 1 : 0,
+                Objectives.TauntTrigger.ObjectiveDone => 2,
+                Objectives.TauntTrigger.PartyWiped => 3,
+                Objectives.TauntTrigger.Reinforcements => 4,
+                _ => 5,
+            };
+        }
+        // one line per (trigger, objective) first so every moment has a voice, then the seconds and thirds
+        var list = new List<Pick>();
+        var groups = all.GroupBy(t => (t.Trigger.ToLowerInvariant(), (t.Objective ?? "").ToLowerInvariant())).Select(g => g.ToList()).ToList();
+        for (var depth = 0; groups.Any(g => g.Count > depth); depth++)
+            foreach (var g in groups.OrderBy(g => Rank(g[0])).ThenBy(g => g[0].Trigger))
+                if (g.Count > depth) list.Add(new Pick(g[depth].Line, $"taunt {g[depth].Trigger}", 0));
+        return list;
     }
 
     /// <summary>Every voiceable line in priority order (before the cap).</summary>
@@ -62,7 +97,7 @@ public static class VoiceBudget
 
     public static string Describe(IReadOnlyList<Pick> picks, int candidates)
     {
-        var groups = picks.GroupBy(p => p.Reason.StartsWith("bark") ? "barks" : p.Reason).Select(g => $"{g.Key} {g.Count()}");
+        var groups = picks.GroupBy(p => p.Reason.StartsWith("bark") ? "barks" : p.Reason.StartsWith("taunt") ? "taunts" : p.Reason).Select(g => $"{g.Key} {g.Count()}");
         return $"{picks.Count} of {candidates} lines voiced: {string.Join(", ", groups)}";
     }
 }

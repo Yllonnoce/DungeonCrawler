@@ -36,7 +36,7 @@ public static class FloorStateCapture
                 case LootDrop { QuestId: not null }:
                     break; // quest items are tracked by TakenQuestItems
                 case Npc npc:
-                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
+                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
                     break;
                 case LootDrop drop:
                     dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });
@@ -48,7 +48,7 @@ public static class FloorStateCapture
                     if (trap.Triggered) dto.TriggeredTraps.Add(trap.SpawnIndex);
                     else if (trap.Disarmed) dto.DisarmedTraps.Add(trap.SpawnIndex);
                     break;
-                case Door { IsOpen: true } door:
+                case Door { IsOpen: true, IsObjectiveGate: false } door:
                     dto.OpenedVaults.Add(door.VaultIndex);
                     break;
                 case SecretWall { IsOpen: true } secret:
@@ -74,6 +74,7 @@ public static class FloorStateCapture
             if (h.Triggered || h.Spent) dto.SpentHordes.Add(h.Horde.Id);
         if (floorRoot.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault() is { } ambushes) dto.SprungAmbushes.AddRange(ambushes.Sprung.OrderBy(i => i));
         if (floorRoot.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault() is { } portals) { dto.PressureSeconds = portals.PressureSeconds; dto.PortalWaves = portals.Waves; }
+        if (floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault() is { } objective) dto.Objective = objective.Capture();
         dto.BossDefeated = Main.Instance?.BossDefeatedThisFloor == true || floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss && !e.IsAlive) || (layout.BossArena != null && !floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss));
         return dto;
     }
@@ -117,12 +118,12 @@ public static class FloorStateCapture
                     questDrop.QueueFree();
                     break;
                 case Npc npc when npcs.TryGetValue(npc.Id, out var ns):
-                    npc.Restore(ns.Dead, ns.Escorting, ns.Rescued, ns.Hp, new Vector3(ns.X, ns.Y, ns.Z));
+                    npc.Restore(ns.Dead, ns.Escorting, ns.Rescued, ns.Hp, new Vector3(ns.X, ns.Y, ns.Z), ns.Downed);
                     break;
-                case Door d when openedVaults.Contains(d.VaultIndex):
+                case Door d when !d.IsObjectiveGate && openedVaults.Contains(d.VaultIndex):
                     d.Open();
                     break;
-                case Lever l when openedVaults.Contains(l.VaultIndex):
+                case Lever l when !l.IsObjectiveLever && openedVaults.Contains(l.VaultIndex):
                     l.Pull();
                     break;
                 case SecretWall sw when openedSecrets.Contains(sw.Index):
@@ -134,6 +135,11 @@ public static class FloorStateCapture
             if (dto.SpentHordes.Contains(h.Horde.Id)) h.MarkSpent();
         floorRoot.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault()?.Restore(dto.SprungAmbushes);
         floorRoot.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault()?.Restore(dto.PressureSeconds, dto.PortalWaves);
+        if (dto.Objective is { } os)
+        {
+            floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault()?.Restore(os);
+            if (os.Completed && floorRoot.GetNodeOrNull<Stairs>("DownStairs") is { } sealedStairs) sealedStairs.Unlock();
+        }
         if (floorRoot.GetNodeOrNull<CollectiveRegistry>("Collectives") is { } registry)
             foreach (var c in dto.Collectives)
                 registry.Find(c.Id)?.Restore(c.Alert, c.AlarmRaised, c.Regrouped);

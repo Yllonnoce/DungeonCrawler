@@ -2,90 +2,70 @@
   "SchemaVersion": 1,
   "Floor": 19,
   "Source": "claude",
-  "LayoutHash": 16572566068996579999,
-  "Title": "The Grand Gallery",
+  "LayoutHash": 10083392372839498501,
+  "Title": "The Sexton\u0027s Door",
   "IntroLine": {
-    "Text": "The void hums with a thousand unsung laments, and the rock beneath your feet feels hollow, as though something vast is breathing through it.",
-    "VoiceId": null
+    "Text": "Veined marble under blue water, the palace the town built for its dead. The Sexton\u0027s door is at the end of it, and the toll for that door is the clerk\u0027s own key.",
+    "VoiceId": "014b31b6d7185f4b",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Lair",
-      "Name": "The Weeping Drift"
+      "Role": "Hall",
+      "Name": "The Drowned Court"
     },
     {
       "Index": 1,
-      "Role": "Exit",
-      "Name": "Abyssal Descent"
+      "Role": "Cell",
+      "Name": "The Sealed Sacristy"
     },
     {
       "Index": 2,
-      "Role": "Lair",
-      "Name": "Shaft of Echoes"
+      "Role": "Exit",
+      "Name": "The Sexton\u0027s Door"
     },
     {
       "Index": 3,
       "Role": "Lair",
-      "Name": "The Sunken Gallery"
+      "Name": "Marble Ossuary"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "Timbered Chute"
+      "Role": "Start",
+      "Name": "Palace Landing"
     },
     {
       "Index": 5,
-      "Role": "Treasury",
-      "Name": "Iron Vault: Warden\u0027s Seal"
+      "Role": "Passage",
+      "Name": "The Blue Colonnade"
     },
     {
       "Index": 6,
-      "Role": "Treasury",
-      "Name": "Iron Vault: Relic Chamber"
+      "Role": "Ruin",
+      "Name": "The Turnkey\u0027s Post"
     },
     {
       "Index": 7,
       "Role": "Hall",
-      "Name": "The Grand Gallery"
+      "Name": "Hall of Tiles"
     },
     {
       "Index": 8,
-      "Role": "Start",
-      "Name": "Fractured Entrance"
+      "Role": "Treasury",
+      "Name": "The Warden\u0027s Chest"
+    },
+    {
+      "Index": 9,
+      "Role": "Treasury",
+      "Name": "The Clerk\u0027s Strongbox"
     }
   ],
   "Collectives": [
     {
-      "Id": "exit_watch",
-      "Name": "Exit Watch",
-      "FactionId": "abyss_chorus",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 1,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "vault_sentinels",
-      "Name": "Relic Guardians",
-      "FactionId": "abyss_chorus",
+      "Id": "turnkeys",
+      "Name": "the Turnkeys",
+      "FactionId": "faction3",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -93,10 +73,6 @@
         },
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
           "Count": 1
         }
       ],
@@ -106,13 +82,13 @@
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "vault_keyguard",
-      "Name": "Seal Wardens",
-      "FactionId": "abyss_chorus",
+      "Id": "ossuary_wardens",
+      "Name": "the Ossuary Wardens",
+      "FactionId": "faction3",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -121,36 +97,40 @@
         {
           "EnemyId": "enemy.abyss_archer",
           "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 5,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "shade_patrol",
-      "Name": "Shade Patrol",
-      "FactionId": "abyss_chorus",
-      "Members": [
+        },
         {
-          "EnemyId": "enemy.void_stalker",
+          "EnemyId": "enemy.void_caller",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
-        "Room": 7,
+        "Kind": "Guard",
+        "Room": 3,
         "Objective": null,
-        "Route": [
-          7,
-          0,
-          7
-        ],
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "door_wardens",
+      "Name": "the Door Wardens",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 2,
+        "Objective": null,
+        "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
@@ -159,151 +139,243 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_drift",
-      "Name": "Shade Cascade",
-      "Room": 0,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 30
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 55,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Shades boil out of the dark like breath from a frozen lung.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_echoes",
-      "Name": "Chestguard Phantoms",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 25
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 50,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The chest clatters open and a choir of voiceless spectres tears itself from the walls.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_sunken",
-      "Name": "River of Ghosts",
+      "Id": "horde_ossuary",
+      "Name": "The Marble Dead",
       "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 30
+          "Count": 28
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 15
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 4
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 4
+          "Count": 5
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 53,
+      "Total": 33,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The ossuary\u0027s marble drawers slide open on their own, and they are full.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_post",
+      "Name": "The Post\u0027s Shades",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 27
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 32,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The stream convulses as drowned souls peel themselves from the water.",
-        "VoiceId": null
+        "Text": "The turnkey\u0027s post was never unmanned. It was only quiet.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 7,
-      "Locked": true,
-      "QuestId": null
-    },
-    {
-      "Room": 4,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
     {
-      "Room": 7,
-      "Kind": "Fire"
-    },
-    {
-      "Room": 4,
+      "Room": 5,
       "Kind": "Gas"
-    },
-    {
-      "Room": 0,
-      "Kind": "Spikes"
     }
   ],
-  "Npcs": [],
-  "Quests": [],
+  "Npcs": [
+    {
+      "Id": "npc_tarn2",
+      "Name": "Tarn",
+      "Room": 6,
+      "VoiceId": "Leda",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "You took me. You did take me. I kept the key dry, like I said. It\u0027s in his strongbox, the far one, he made me put it back but I know the lock. Fetch it and the Sexton\u0027s door is yours.",
+              "VoiceId": "a63170e834fa7630",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll fetch the key.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We have the clerk\u0027s key.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We\u0027ll manage without.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good. He\u0027s shouting already, can you hear him? He knows it\u0027s gone before it\u0027s gone. Forty years I listened to that.",
+              "VoiceId": "905d1e57cbb600be",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "That\u0027s it. His key. Give it here... no. No, you keep it. You\u0027re the one arresting people now. Go and arrest him.",
+              "VoiceId": "35adb3dda7aa6e32",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_key",
+      "CastId": "cast_tarn",
+      "Persona": {
+        "VoiceStyle": "a slow, heavy, hangdog man who mumbles into his collar",
+        "DefaultDelivery": "weary",
+        "Voice": "Orus",
+        "IsEmpty": false
+      },
+      "RequiresFlag": "took_tarn",
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_key",
+      "Template": "Recover",
+      "Title": "The Clerk\u0027s Key",
+      "Objective": "Recover the clerk\u0027s own key from his strongbox and bring it to Tarn.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": "the clerk\u0027s key",
+        "ItemRoom": 9,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_tarn2",
+      "Reward": {
+        "Xp": 560,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "The key\u0027s in his strongbox, the far one. Fetch it and the Sexton\u0027s door is yours.",
+          "VoiceId": "c02a55b86d11bba8",
+          "Delivery": "warm"
+        },
+        "Accept": {
+          "Text": "He knows it\u0027s gone before it\u0027s gone.",
+          "VoiceId": "00690bf8374e72c3",
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Then I\u0027ll go myself. Slowly.",
+          "VoiceId": "1ac22af94950ccb1",
+          "Delivery": "weary"
+        },
+        "Complete": {
+          "Text": "You keep it. You\u0027re the one arresting people now.",
+          "VoiceId": "8f8e3892584dc70a",
+          "Delivery": "warm"
+        },
+        "Fail": {
+          "Text": "Lost again. He\u0027ll count that too.",
+          "VoiceId": "7515769af42f77c1",
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": "took_tarn",
+      "ForbidsFlag": null
+    }
+  ],
   "Narration": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 3,
+      "Trigger": "Enter",
+      "Room": null,
       "Line": {
-        "Text": "Water trickles through a seam of black stone, and the stream glows faintly with the same cyan luminescence as the lichen above\u2014a mockery of a stream of tears.",
-        "VoiceId": null
+        "Text": "Tarn never left his post. The clerk saw to that. Whatever holds the turnkey\u0027s post now holds it in his shape.",
+        "VoiceId": "17244eec25853999",
+        "Delivery": null
       },
-      "RequiresFlag": null,
+      "RequiresFlag": "left_tarn",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "A shape by the ruined post lifts a hand: Tarn, the turnkey you arrested, forty years late and here before you.",
+        "VoiceId": "eab9181729575c95",
+        "Delivery": null
+      },
+      "RequiresFlag": "took_tarn",
       "ForbidsFlag": null
     },
     {
       "Trigger": "RoomEnter",
-      "Room": 5,
+      "Room": 2,
       "Line": {
-        "Text": "The iron door bears a seal in old warden script: \u0027Let no grief pass.\u0027 The lever beside it is cold to the touch.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 0,
-      "Line": {
-        "Text": "The drift is narrow and wet, the walls weeping a dark ichor that smells faintly of salt.",
-        "VoiceId": null
+        "Text": "The Sexton\u0027s door. Beyond it, the bell, and the clerk, and the sum.",
+        "VoiceId": "16a74a570f3f23f2",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 9
+  "Taunts": [],
+  "EnemyTotal": 7
 }

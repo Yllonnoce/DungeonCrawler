@@ -44,6 +44,65 @@ that suit it (crypts wind, caves flood and are mined, forges burn). The campaign
 Everything after room placement (vaults, verticality, structures, water, rubble, nests, spawns, traps) runs unchanged
 on any shape, and the ordinary floor hashes exactly as before, so shipped plans still fit.
 
+## Floor objectives
+
+Eight of the twenty floors carry a trial beyond "find the stairs" (`Dungeon/Generation/FloorObjectives.cs`, dealt
+from the run seed like the shapes: two per tier, never floor 1 or a boss floor, never two in a row, every kind at
+least once, only where the shape allows; `Floors[].Objective` lets the campaign name one, `--objective=KIND` forces
+one). All but the gas seal the down-stairs until they are met (`Stairs.LockReason` says so in the villain's name), and
+the HUD's objective line (`ObjectiveLine.Compose`: the trial first, then a loose horde, the open quest, the
+reinforcement count) tracks them. Each runs in a server-only `ObjectiveController` under the floor root, saves through
+`FloorStateDto.Objective` (save v8), and reaches clients by `ObjectiveStateMsg` every couple of seconds and
+`ObjectiveDoneEvt` when it opens the stairs; the dealt kind rides `FloorChange`/`Welcome` so peers build the same floor.
+
+- **Jailbreak** (`Adventure/Objectives/JailbreakController.cs`, `PrisonerBrain`, `JailbreakRules`): three to five
+  villagers wander the floor and run from the creatures (to the emptiest room farthest from the nearest one, never the
+  jail). A creature that reaches one becomes its jailer, carries a key, and marches it to the jail, a dead end behind a
+  key door with no key of its own; one or two start behind bars, one or two spare keys lie in the floor's vaults or
+  beside locked chests. Open the door with a key or a pick, unshackle each prisoner the same way (a wandering one is
+  rescued by talking); the freed follow the party, give XP, set `freed:<id>` and `jailbreak_freed_all` flags, and the
+  last one opens a treasure vault and the stairs. A jailer killed mid-escort drops its key and its captive slips free.
+- **Rising gas** (`ToxicController`, `GasRules`, `GasField`): poison rises from the low rooms, from the start room
+  outward (45 s grace, 14 s a room, 40 s to thicken), the high ground last; corridors take their nearest room's time.
+  The stairs move to the low room farthest from the start, behind a lever gate whose lever stands on the high ground
+  when the room can be sealed. Standing in gas poisons once a second by danger (thin, thick, lethal); the minimap goes
+  green and the air with it. The stairs are never locked: leaving is the objective; the clock is saved and replicated.
+- **The ritual** (`RitualController`, `RitualRules`): a ritualist waits at an altar in a roomy shrine with three
+  breaches (the nests favour it) and a lever by each. Talking to them begins a 90 to 150 s rite; waves stream from the
+  open breaches (the tier's swarm mostly) and hunt the ritualist (`HuntNpcState`), turning on the party only when hurt
+  or blocked. Pulling a breach lever drops rubble across its mouth; with every breach sealed a slower trickle comes in
+  by the doors. The ritualist goes down at 0 HP, the rite pauses, anyone revives them with E once nothing hostile is
+  within six metres; a party wipe starts the rite over. Reinforcement portals stand down while it runs. Done opens the
+  stairs and the altar yields a chest roll.
+- **The shifting vault** (`ShiftingVaultController`, `Dungeon/Generation/VaultPuzzles.cs`, `PatrolRerouter`): the
+  stairs sit in a sealed room (the exit, another dead end, or a side room carved for them). Three to five levers in
+  different rooms each flip a set of three to five named gates standing in corridors (Gate I, II...); the vault opens
+  when the gates match a target. A plaque beside each lever says which gates it turns, a notice near the start says
+  the setting. The puzzle is proven before it is accepted: from the start with the gates as they first stand, every
+  state the party can reach (levers pulled, where it can walk) can still reach the target with the vault's doorstep in
+  reach, so no pull ever traps the party. Patrols reroute to the rooms they can still reach whenever the gates shift.
+
+## The dungeon's master
+
+The campaign's antagonist runs the place. Objective floors open with their line instead of the narrator's, the sealed
+stairs and the HUD prefix name them, the reinforcement portals are their doing, and they taunt the party as things
+happen (`Adventure/Core/Objectives/Taunts.cs`: `TauntTrigger`, `TauntDirector`, `TauntBank`): a floor entered, a
+prisoner caught or freed, gas thickening, a wrong lever, a wave, the ritualist down, a member down, a wipe, a trial
+passed, the stairs taken, a party dawdling a minute on an objective floor. Never within four seconds of anyone else
+speaking, twelve seconds of their own last line, or a minute of the same trigger, and a line said stays out for two
+floors (`BarkRepeat`, saved with the barks). The campaign carries the lines (`CampaignPlan.Taunts`, two or three per
+trigger, `FloorPlan.Taunts` for a floor's own); a planner writes them in the antagonist's voice, the offline designer
+and any campaign missing a trigger take the stock bank (`CampaignRepair`). They may curse: every taunt has a
+`CleanLine`, and "The dungeon's master may curse at you" in Settings picks which is shown (and, in multiplayer, each
+client picks for itself: `NarrationMsg` carries both). The voice provider refusing a coarse line renders its clean
+twin under the same id, so nothing goes silent. Taunts have a voice budget of their own (`VoiceBudget.Taunts`, 30 on
+top of the campaign's 80).
+
+**Lethality.** Every enemy attack and every trap, floor fire and gas the party suffers is multiplied by
+`TierRules.Lethality` (Settings "Dungeon lethality": 1 normal, 2 hard, 3 brutal, the default; `--lethality=N` pins it
+for a run). The party's own traps against enemies, fall damage and the enemy budgets a floor is planned with are not
+touched; NPCs carry the same multiplier in their hit points so escorts, prisoners and the ritualist last as they did.
+
 **Stairs you climb.** The up-stairs are a real flight: seven stone treads between brick parapets rising to a landing
 2 m up against the back wall; the down-stairs are a well sunk into the floor with the same flight descending to a
 landing 2 m below (the well replaces the cell's floor slab and plinth, so a level-1 room's stairs sink into its
@@ -115,6 +174,7 @@ godot --headless --path . -- --test-quest           # one NPC per quest template
 godot --path . -- --floor=3 --talk --screenshot=/tmp/talk.png --after=2   # open the first NPC's dialogue (add --press=quest_log for the journal)
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
+godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
 godot --headless --path . -- --check-voice-bank     # every voice line the campaign on disk refers to: how many the shipped bank holds and how many load; run it on an exported binary (build/linux/DungeonCrawler.x86_64 --headless -- --check-voice-bank) to prove the bank was packed
 scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, leave
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --ai --seed=N   # write a campaign + 20 floors with Claude (or --fake-ai=0 for the offline designer)
@@ -131,6 +191,7 @@ godot --headless --path . -- --test-ambush          # floor 2: the first corrido
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
+godot --headless --path . -- --bake-campaign=DIR --replay-plans=data/adventures/builtin/authored --seed=1147267151474572175 --voice-budget=0   # rebuild the shipped campaign "The Toll of Ashmere" from its hand-written answers, no network; with --bake-voice=assets/voice/builtin and a voice key it renders the lines too. A replay with a missing answer writes NAME.request.json and stops (strict replay): write NAME.response.json and run again with --bake-resume
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-resume --ai ...   # pick up a bake that stopped (out of credit, a crash): the outline and floors already written are read from data/adventures/builtin.partial
 godot --headless --path . -- --list-voice-models                    # which Gemini text-to-speech models the stored key may call
 godot --headless --path . -- --probe-voice-model=gemini-3.1-flash-tts-preview   # render one line with a model: proves the request and the quota
@@ -289,6 +350,16 @@ The dedicated server takes `RUNWARE_API_KEY` beside `CLAUDE_API_KEY` (`deploy/st
 key set it starts with `--planner=runware`.
 
 ## Voice (optional)
+
+Every character sounds like someone (`Voice/VoiceLines.cs`: `Delivery`, `Persona`, `Voices.Style`). The style the
+synth is told is composed from the speaker's persona (VoiceStyle: a few words on the voice and manner; DefaultDelivery;
+Voice: a name from `Voices.Catalog`) and the line's own `Delivery` (whisper, weary, calm, warm, cheerful, sly,
+pleading, angry, mocking, shout, booming, frantic) when it should not be said in the character's usual manner. NPCs
+speak plainly by default now rather than whispering, companions shout in a fight and talk between fights
+(`Voices.BarkDelivery`), the villain mocks (`Voices.Villain`). A planner sets personas on the cast, NPCs and the
+antagonist and deliveries on lines; the offline designer draws from a stock persona bank so no two people sound alike;
+`CampaignRepair` and the validator clear anything unknown. The style is part of the line id, so a changed style
+renders afresh and the old audio is simply unused; the shipped bank keeps playing its old ids until re-rendered.
 
 With a Gemini API key in Settings, every spoken line of a plan (the narrator's floor intro and narration, the boss's
 intro and death lines, NPC dialogue and quest lines, the companions' bark bank) is rendered by Gemini text-to-speech

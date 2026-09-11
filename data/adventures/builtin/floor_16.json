@@ -2,173 +2,296 @@
   "SchemaVersion": 1,
   "Floor": 16,
   "Source": "claude",
-  "LayoutHash": 16668470409931050370,
-  "Title": "The Daughter\u0027s Relic",
+  "LayoutHash": 1275258749426059060,
+  "Title": "The Choir Cages",
   "IntroLine": {
-    "Text": "The walls are slick with a pale sheen, and the murmur of countless regrets echoes in the close air.",
-    "VoiceId": "3298f340e33a2cc9"
+    "Text": "Slate and purple dark, and fire on the floor where the choir stalls stood. The belfry keeps a choir still. It keeps them in cages, and it keeps the cages full.",
+    "VoiceId": "ad05338c355b09a6",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Start",
-      "Name": "Entrance Gallery"
+      "Role": "Camp",
+      "Name": "Vane\u0027s Last Fire"
     },
     {
       "Index": 1,
-      "Role": "Passage",
-      "Name": "Slate Promenade"
+      "Role": "Cell",
+      "Name": "The Sealed Stall"
     },
     {
       "Index": 2,
-      "Role": "Exit",
-      "Name": "Descent to the Deeps"
+      "Role": "Lair",
+      "Name": "Upper Choir Loft"
     },
     {
       "Index": 3,
       "Role": "Passage",
-      "Name": "Whispering Nook"
+      "Name": "Hymnal Walk"
     },
     {
       "Index": 4,
-      "Role": "Hall",
-      "Name": "Chamber of the Daughter"
+      "Role": "Passage",
+      "Name": "The Organ Gallery"
     },
     {
       "Index": 5,
-      "Role": "Treasury",
-      "Name": "Locked Ossuary"
+      "Role": "Lair",
+      "Name": "The High Stalls"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "Pond of Shadows"
+      "Role": "Cell",
+      "Name": "Hidden Vestry"
     },
     {
       "Index": 7,
-      "Role": "Treasury",
-      "Name": "Gated Reliquary"
+      "Role": "Kennel",
+      "Name": "The Drop"
     },
     {
       "Index": 8,
+      "Role": "Hall",
+      "Name": "Chantry Hall"
+    },
+    {
+      "Index": 9,
       "Role": "Lair",
-      "Name": "Brooding Hollow"
+      "Name": "The Burning Stalls"
+    },
+    {
+      "Index": 10,
+      "Role": "Lair",
+      "Name": "Low Choir"
+    },
+    {
+      "Index": 11,
+      "Role": "Start",
+      "Name": "Slate Landing"
+    },
+    {
+      "Index": 12,
+      "Role": "Exit",
+      "Name": "The Belfry Stair"
+    },
+    {
+      "Index": 13,
+      "Role": "Lair",
+      "Name": "Choirmaster\u0027s Rest"
+    },
+    {
+      "Index": 14,
+      "Role": "Treasury",
+      "Name": "The Hymn Chest"
+    },
+    {
+      "Index": 15,
+      "Role": "Treasury",
+      "Name": "The Offertory"
+    },
+    {
+      "Index": 16,
+      "Role": "Jail",
+      "Name": "The Choir Cages"
     }
   ],
   "Collectives": [
     {
-      "Id": "exit_wardens",
-      "Name": "Exit Wardens",
-      "FactionId": "abyss_chorus",
+      "Id": "vanes_last",
+      "Name": "Vane\u0027s Last Crew",
+      "FactionId": null,
       "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 4
+      }
+    },
+    {
+      "Id": "stall_wardens",
+      "Name": "the Stall Wardens",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
         {
           "EnemyId": "enemy.void_caller",
           "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 2,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "vault5_defenders",
-      "Name": "Crypt Keepers",
-      "FactionId": "abyss_chorus",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
+        "Kind": "Guard",
         "Room": 5,
-        "Objective": {
-          "Kind": "Chest",
-          "Ref": "0"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "alarm_group",
-      "Name": "Whisper Sentries",
-      "FactionId": "abyss_chorus",
-      "Members": [
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Alarm",
-        "Room": 1,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "exit_wardens",
-        "RallyRoom": 3
+        "AlarmTarget": null,
+        "RallyRoom": 13
+      }
+    },
+    {
+      "Id": "chantry_archers",
+      "Name": "the Chantry Archers",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 8,
+        "Objective": null,
+        "Route": [
+          8,
+          9
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_pond",
-      "Name": "Shades of the Pond",
-      "Room": 6,
+      "Id": "horde_camp",
+      "Name": "The Fire\u0027s Shades",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 18
+          "Count": 22
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 30,
-      "Trigger": "Enter",
+      "Total": 25,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The pond\u0027s surface ripples as shadows coalesce and pour forth.",
-        "VoiceId": null
+        "Text": "Vane\u0027s fire goes out, and the dark it kept back comes in all at once.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_hollow",
-      "Name": "Brood of Shadows",
-      "Room": 8,
+      "Id": "horde_loft",
+      "Name": "The Loft Choir",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 21
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 24,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The loft sings one note, and the note has hands.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_high",
+      "Name": "The High Stalls",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 23
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 26,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Every stall stands up together.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_burning",
+      "Name": "The Burning Choir",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 22
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 25,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The burning stalls give up their singers, still alight.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_low",
+      "Name": "The Low Choir",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 22
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 26,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The low choir was waiting for its cue. This is its cue.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_rest",
+      "Name": "The Choirmaster\u0027s Rest",
+      "Room": 13,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
@@ -176,199 +299,47 @@
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
           "Count": 3
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 35,
+      "Total": 23,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The moment the lock clicks, a keening wail erupts and darkness floods the room.",
-        "VoiceId": null
+        "Text": "The choirmaster kept his best voices in a box.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 3,
-      "Locked": false,
-      "QuestId": null
-    },
-    {
-      "Room": 8,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
-    {
-      "Room": 1,
-      "Kind": "Spikes"
-    },
-    {
-      "Room": 4,
-      "Kind": "Fire"
-    },
     {
       "Room": 3,
       "Kind": "Gas"
-    }
-  ],
-  "Npcs": [
+    },
     {
-      "Id": "npc_el",
-      "Name": "Elowen",
       "Room": 4,
-      "VoiceId": "Despina",
-      "Script": {
-        "Start": "start",
-        "Nodes": [
-          {
-            "Id": "start",
-            "Line": {
-              "Text": "I know why you\u0027ve come. The relic... it\u0027s here, with me. But I\u0027ll only give it if you swear to end my father\u0027s suffering. He\u0027s in so much pain, trapped between life and death. Promise me.",
-              "VoiceId": "57d3e00919cd435b"
-            },
-            "Choices": [
-              {
-                "Text": "We promise to end his suffering.",
-                "Next": "promise",
-                "Effect": "Choose",
-                "Flag": "promised_el",
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "We can\u0027t make that promise.",
-                "Next": "refuse",
-                "Effect": "Choose",
-                "Flag": "refused_el",
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "promise",
-            "Line": {
-              "Text": "Then take it. Use it to put him to rest. And... thank you.",
-              "VoiceId": "42eba666ef829249"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "refuse",
-            "Line": {
-              "Text": "Then leave me. I\u0027ll carry this burden alone, and the relic stays with me.",
-              "VoiceId": "0fd1aaa3da89a4f0"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest_el_promise",
-      "CastId": null,
-      "RequiresFlag": null,
-      "ForbidsFlag": null,
-      "Betrayal": null
+      "Kind": "Spikes"
     }
   ],
-  "Quests": [
-    {
-      "Id": "quest_el_promise",
-      "Template": "Decide",
-      "Title": "The Daughter\u0027s Plea",
-      "Objective": "Promise to end Warden Hale\u0027s suffering.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "npc_el",
-      "Reward": {
-        "Xp": 800,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "I know why you\u0027ve come. The relic... it\u0027s here, with me. But I\u0027ll only give it if you swear to end my father\u0027s suffering. He\u0027s in so much pain, trapped between life and death. Promise me.",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
       "Trigger": "RoomEnter",
-      "Room": 4,
+      "Room": 0,
       "Line": {
-        "Text": "A woman stands alone, cradling a worn satchel. Her eyes are hollow but resolute.",
-        "VoiceId": "59f4d69289df95bc"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "QuestDone",
-      "Room": null,
-      "Line": {
-        "Text": "The promise, like the relic, now rests heavy in your hands.",
-        "VoiceId": "ed8440951b1dea49"
+        "Text": "Vane\u0027s colours again, and a fire with only three around it. She paid the toll here too, then. The cages next door are how she paid it.",
+        "VoiceId": "f20b9516fe15e5dc",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 6
+  "Taunts": [],
+  "EnemyTotal": 8
 }

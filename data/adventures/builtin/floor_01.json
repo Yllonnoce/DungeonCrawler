@@ -3,87 +3,69 @@
   "Floor": 1,
   "Source": "claude",
   "LayoutHash": 757036586804061643,
-  "Title": "The Ruined Chancel",
+  "Title": "The Vestry Steps",
   "IntroLine": {
-    "Text": "The crypt opens before you, walls bearded with moss and old sorrow. Somewhere a bone-scavenger mutters to himself.",
-    "VoiceId": "d0e96b9bc7445f73"
+    "Text": "The steps end in red brick and old incense. Somebody has swept them. Somebody has been expecting you.",
+    "VoiceId": "df66c12ee73ef4b9",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Ruin",
-      "Name": "Ruined Chancel"
+      "Name": "Fallen Colonnade"
     },
     {
       "Index": 1,
       "Role": "Passage",
-      "Name": "Stream-Worn Gallery"
+      "Name": "The Runnel"
     },
     {
       "Index": 2,
-      "Role": "Lair",
-      "Name": "Nest of the First Dead"
+      "Role": "Passage",
+      "Name": "Sacristy Passage"
     },
     {
       "Index": 3,
       "Role": "Treasury",
-      "Name": "Vault of the Forgotten"
+      "Name": "The Tithe Box"
     },
     {
       "Index": 4,
       "Role": "Start",
-      "Name": "Crypt Entrance"
+      "Name": "The Vestry Steps"
     },
     {
       "Index": 5,
       "Role": "Gate",
-      "Name": "Gatehouse of Remorse"
+      "Name": "Verger\u0027s Gate"
     },
     {
       "Index": 6,
       "Role": "Hall",
-      "Name": "Ledge of Vigil"
+      "Name": "Lamplit Hall"
     },
     {
       "Index": 7,
       "Role": "Exit",
-      "Name": "Stairs into Deeper Dark"
+      "Name": "The Way Down"
     },
     {
       "Index": 8,
-      "Role": "Cell",
-      "Name": "Pit-Cellar of the Buried"
+      "Role": "Kennel",
+      "Name": "Pit of the Unshriven"
     },
     {
       "Index": 9,
-      "Role": "Kennel",
-      "Name": "Kennel of Gnashing"
+      "Role": "Barracks",
+      "Name": "Vestry Watch Room"
     }
   ],
   "Collectives": [
     {
-      "Id": "guard_ledge",
-      "Name": "Archers on the Ledge",
-      "FactionId": "crypt_wardens",
-      "Members": [
-        {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 6,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "patrol_ghouls",
-      "Name": "Roving Ghouls",
-      "FactionId": null,
+      "Id": "vestry_watch",
+      "Name": "the Vestry Watch",
+      "FactionId": "faction0",
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
@@ -91,28 +73,124 @@
         }
       ],
       "Goal": {
+        "Kind": "Guard",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 6
+      }
+    },
+    {
+      "Id": "runnel_walker",
+      "Name": "the Runnel Walker",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
         "Kind": "Patrol",
-        "Room": 1,
+        "Room": 2,
         "Objective": null,
         "Route": [
-          1,
-          2
+          2,
+          1
         ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "gate_keeper",
+      "Name": "the Gate\u0027s Keeper",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "5"
+        },
+        "Route": [],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     }
   ],
-  "Loners": [
-    {
-      "EnemyId": "enemy.skeleton_archer",
-      "Room": 9
-    }
-  ],
+  "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_chest",
-      "Name": "Gatehouse Husks",
+      "Id": "horde_colonnade",
+      "Name": "The Unshriven",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 4,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The fallen columns shiver, and what was buried under them stands up, hungry.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_runnel",
+      "Name": "The Runnel Spill",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The stream chokes, then gives up its dead.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_sacristy",
+      "Name": "The Sacristy Crawl",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Something scrabbles behind the sacristy wall, then the wall gives.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_gate",
+      "Name": "The Gate\u0027s Tithe",
       "Room": 5,
       "Members": [
         {
@@ -127,16 +205,37 @@
       "EnemyId": null,
       "Count": null,
       "Total": 5,
-      "Trigger": "Chest",
+      "Trigger": "Enter",
       "Line": {
-        "Text": "A rasping moan rises as the chest\u0027s lid lifts and the gatehouse nest disgorges its dead.",
-        "VoiceId": null
+        "Text": "The braziers gutter. The Verger\u0027s gate lets its own dead through.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_enter",
-      "Name": "Hungry Husks",
-      "Room": 2,
+      "Id": "horde_hall",
+      "Name": "The Lamplit Dead",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The lamps go out one by one, and the dark fills with feet.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_watch",
+      "Name": "The Off-Duty Watch",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
@@ -148,88 +247,63 @@
       "Total": 4,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The walls crack and pale hands claw through; the nest empties in a tide of bone.",
-        "VoiceId": null
+        "Text": "The watch room empties itself at you, all at once.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 0,
-      "Locked": false,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
     {
-      "Room": 8,
+      "Room": 2,
       "Kind": "Spikes"
-    },
-    {
-      "Room": 3,
-      "Kind": "Fire"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc_thistle",
-      "Name": "Thistle",
-      "Room": 0,
-      "VoiceId": "Leda",
+      "Id": "npc_hollis",
+      "Name": "Hollis Penn",
+      "Room": 6,
+      "VoiceId": "Orus",
       "Script": {
         "Start": "greet",
         "Nodes": [
           {
             "Id": "greet",
             "Line": {
-              "Text": "Thistle glances up from a pile of old ribs. \u0027Lost my lucky one. A ghoul in the ruin took it. You find it, I\u0027ll make it worth your while.\u0027",
-              "VoiceId": "fde7f2082f02e5aa"
+              "Text": "Brand! Sable! The whole lantern brigade. Hollis Penn, Company quartermaster, came down a day ahead to smooth the road. Small snag: the vestry watch won\u0027t stay dead. Clear them and the road\u0027s yours.",
+              "VoiceId": "c3dac533e31aa679",
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Where did it take it?",
-                "Next": "tell",
-                "Effect": "None",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Not interested.",
-                "Next": "farewell",
-                "Effect": "None",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "It is done.",
-                "Next": "done_quest_lucky_rib",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "tell",
-            "Line": {
-              "Text": "Dragged a chest into the ruin, just over there. The rib\u0027s inside, I\u0027m sure.",
-              "VoiceId": "a75bad6e0b136e5a"
-            },
-            "Choices": [
-              {
-                "Text": "I\u0027ll get it.",
-                "Next": null,
+                "Text": "We\u0027ll clear the watch.",
+                "Next": "accepted",
                 "Effect": "AcceptQuest",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null
               },
               {
-                "Text": "Maybe later.",
+                "Text": "You came down a day ahead. Alone?",
+                "Next": "alone",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "The watch is dead.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Not our job, Hollis.",
                 "Next": null,
                 "Effect": "DeclineQuest",
                 "Flag": null,
@@ -239,14 +313,23 @@
             ]
           },
           {
-            "Id": "farewell",
+            "Id": "alone",
             "Line": {
-              "Text": "Suit yourself. Just don\u0027t touch my pile.",
-              "VoiceId": "e40589ef969c52a4"
+              "Text": "Alone, yes, more or less. The Company likes a man on the ground before the ground gets crowded. Don\u0027t fret about me. Fret about the two in the colonnade with no faces.",
+              "VoiceId": "17c0d37144649b00",
+              "Delivery": "sly"
             },
             "Choices": [
               {
-                "Text": "Goodbye.",
+                "Text": "We\u0027ll clear the watch.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -256,10 +339,29 @@
             ]
           },
           {
-            "Id": "done_quest_lucky_rib",
+            "Id": "accepted",
             "Line": {
-              "Text": "Ah, there she is! Good as new. Here, take this.",
-              "VoiceId": "81fd8e7ce44804b4"
+              "Text": "Good lads. Good lasses. There\u0027s a box of tithe silver in the vault that\u0027ll want a key, and I\u0027ve a note of where the key is. After. Business first.",
+              "VoiceId": "cb86395ac32e395d",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "That\u0027s the road open, then. Here, from the Company\u0027s purse, and my compliments. Keep going down. Whatever you find, I\u0027d take it straight to me. I\u0027ll be about.",
+              "VoiceId": "741722bc30d04026",
+              "Delivery": "warm"
             },
             "Choices": [
               {
@@ -274,8 +376,14 @@
           }
         ]
       },
-      "QuestId": "quest_lucky_rib",
-      "CastId": "cast_scavenger",
+      "QuestId": "quest_watch",
+      "CastId": "cast_hollis",
+      "Persona": {
+        "VoiceStyle": "a brisk, chummy company man, all smiles and quick sums, never quite looking at you",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Puck",
+        "IsEmpty": false
+      },
       "RequiresFlag": null,
       "ForbidsFlag": null,
       "Betrayal": null
@@ -283,45 +391,50 @@
   ],
   "Quests": [
     {
-      "Id": "quest_lucky_rib",
-      "Template": "Recover",
-      "Title": "Thistle\u0027s Lucky Rib",
-      "Objective": "Find Thistle\u0027s lucky rib in the Ruined Chancel.",
+      "Id": "quest_watch",
+      "Template": "KillTarget",
+      "Title": "Clear the Vestry Watch",
+      "Objective": "Kill the ghouls of the Vestry Watch in the fallen colonnade.",
       "Params": {
-        "TargetCollective": null,
-        "ItemName": "a yellowed rib bone",
-        "ItemRoom": 0,
+        "TargetCollective": "vestry_watch",
+        "ItemName": null,
+        "ItemRoom": null,
         "EscortNpc": null,
         "Waves": null,
         "WaveCollective": null,
         "ClueRooms": [],
         "ClueName": null
       },
-      "GiverNpc": "npc_thistle",
+      "GiverNpc": "npc_hollis",
       "Reward": {
-        "Xp": 30,
+        "Xp": 40,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "Bring me back that rib and I\u0027ll give you something good.",
-          "VoiceId": "78c35fc52a6b08ce"
+          "Text": "The vestry watch won\u0027t stay dead. Clear them and the road\u0027s yours.",
+          "VoiceId": "875f0a3557163cc5",
+          "Delivery": null
         },
         "Accept": {
-          "Text": "Knew you had the look. Hurry back.",
-          "VoiceId": null
+          "Text": "Good. Business first, silver after.",
+          "VoiceId": "97ec3fbbd56590a8",
+          "Delivery": null
         },
         "Decline": {
-          "Text": "Your loss.",
-          "VoiceId": null
+          "Text": "Suit yourselves. The Company\u0027s patient. I\u0027m less so.",
+          "VoiceId": "b3fc9fb12047fac5",
+          "Delivery": "sly"
         },
         "Complete": {
-          "Text": "Ah, there she is! Good as new. Here, take this.",
-          "VoiceId": null
+          "Text": "That\u0027s the road open. Keep going down, and bring what you find to me.",
+          "VoiceId": "14216d5e46532fdc",
+          "Delivery": null
         },
         "Fail": {
-          "Text": "Gone, then. Pity.",
-          "VoiceId": null
+          "Text": "Well. That\u0027s a shame for the road.",
+          "VoiceId": "35eb17269de806d1",
+          "Delivery": "weary"
         }
       },
       "RequiresFlag": null,
@@ -330,35 +443,17 @@
   ],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "The crypt opens before you, walls bearded with moss and old sorrow. Somewhere a bone-scavenger mutters to himself.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
       "Trigger": "RoomEnter",
       "Room": 3,
       "Line": {
-        "Text": "The vault door groans open, releasing a stale breath and the glint of old coin.",
-        "VoiceId": "126978518711fdd9"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 8,
-      "Line": {
-        "Text": "The pit drops into a cellar tight with forgotten cells. Something skitters below.",
-        "VoiceId": "44d4aa5e53f56dd6"
+        "Text": "Tithe silver, still stacked. Nobody down here has needed money in a long time, and somebody has kept it anyway.",
+        "VoiceId": "f8ec421510ce6acb",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 5
+  "Taunts": [],
+  "EnemyTotal": 4
 }

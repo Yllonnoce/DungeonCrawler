@@ -133,9 +133,26 @@ public partial class DungeonBuilder : Node3D
         {
             EnemyCount = Math.Min(4 + floor, 14), ChestCount = 2, BossFloor = TierRules.IsBossFloor(floor), LockedChestCount = floor >= 2 ? 1 : 0,
         };
-        spec = spec with { Layout = LayoutFor(floor, gameSeed ?? Game.Instance?.GameSeed ?? GameSeed) };
+        var seed = gameSeed ?? Game.Instance?.GameSeed ?? GameSeed;
+        var layout = LayoutFor(floor, seed);
+        spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout) };
         var overrides = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.SpecOverrides;
         return overrides is { IsEmpty: false } ? overrides.Apply(spec) : spec;
+    }
+
+    /// <summary>
+    /// The floor's objective: what the server dealt (a client), else an --objective override, else the campaign's
+    /// choice, else the seed's deal; never on a boss floor, never one the shape cannot hold, never one not yet built.
+    /// </summary>
+    public FloorObjectiveKind ObjectiveFor(int floor, ulong gameSeed, LayoutKind layout)
+    {
+        FloorObjectiveKind kind;
+        if (Net.NetSession.IsClient && Game.Instance?.ServerObjectives.TryGetValue(floor, out var served) == true) kind = served;
+        else if (FloorObjectives.TryParse(DebugTools.Instance?.ForcedObjective, out var forced)) kind = forced;
+        else if (FloorObjectives.TryParse(Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.Objective, out var wanted) && floor >= 2) kind = wanted;
+        else kind = FloorObjectives.Pick(gameSeed, floor, layout);
+        if (floor < 2 || TierRules.IsBossFloor(floor) || !FloorObjectives.Compatible(kind, layout) || !FloorObjectives.Implemented.Contains(kind)) return FloorObjectiveKind.None; // floor 1 teaches
+        return kind;
     }
 
     /// <summary>The floor's shape: a --layout override, else the campaign's choice when it names one, else the seed's deal.</summary>
@@ -151,6 +168,8 @@ public partial class DungeonBuilder : Node3D
     /// <summary>Closed doors and solid props (chests) that enemies must path around.</summary>
     public bool IsCellBlocked(GridPos cell) => _closedDoors.Contains(cell) || _propCells.Contains(cell);
     public void SetDoorOpen(GridPos cell) => _closedDoors.Remove(cell);
+    public void SetDoorClosed(GridPos cell) => _closedDoors.Add(cell);
+    public void BlockCell(GridPos cell) => _propCells.Add(cell);
 
     public EnemyProfile? EnemyProfile(string id) => _enemies.TryGetValue(id, out var p) ? p : null;
 
@@ -196,6 +215,7 @@ public partial class DungeonBuilder : Node3D
         var floorState = Game.Instance != null && Game.Instance.Floors.TryGetValue(floorIndex, out var fs) ? fs : null;
         PlaceAmbushes(layout, floorIndex, seed, floorState);
         PlacePortals(layout, floorIndex, seed, floorState);
+        PlaceObjective(layout, contents, _floorRoot, floorIndex, seed);
         if (layout.Water.Count > 0)
         {
             var tile = CurrentTheme?.MetersPerTile ?? 2f;
@@ -208,7 +228,7 @@ public partial class DungeonBuilder : Node3D
         tremor.SetStone(Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f));
         _floorRoot.AddChild(tremor);
 
-        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}, {LayoutKinds.Id(layout.Kind)}) seed={seed} rooms={layout.Rooms.Count} fires={layout.Fires.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
+        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}, {LayoutKinds.Id(layout.Kind)}) seed={seed} rooms={layout.Rooms.Count} fires={layout.Fires.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} objective={FloorObjectives.Id(layout.Objective?.Kind ?? FloorObjectiveKind.None)} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
         return layout;
     }
 
@@ -647,12 +667,120 @@ public partial class DungeonBuilder : Node3D
         var down = _stairsScene.Instantiate<Stairs>();
         down.Direction = 1;
         down.Name = "DownStairs";
-        down.Locked = TierRules.IsBossFloor(floor);
+        var objective = layout.Objective?.Kind ?? FloorObjectiveKind.None;
+        down.Locked = TierRules.IsBossFloor(floor) || FloorObjectives.LocksStairs(objective);
+        if (FloorObjectives.LocksStairs(objective)) down.LockReason = Adventure.Objectives.ObjectiveText.LockReason(objective, Game.Instance?.Adventure?.Campaign?.Antagonist?.Name);
         root.AddChild(down);
         down.GlobalTransform = StairsTransform(layout, layout.DownStairs);
         // the flights are walled: nothing paths through them
         _propCells.Add(layout.UpStairs);
         _propCells.Add(layout.DownStairs);
+    }
+
+    /// <summary>The floor objective's controller and its props, once every other prop stands (it may lean on the portals and hordes).</summary>
+    private void PlaceObjective(FloorLayout layout, FloorContents contents, Node3D root, int floor, int seed)
+    {
+        if (layout.Objective is not { } objective || contents.Objective is not { } oc) return;
+        Adventure.Objectives.ObjectiveController? controller = objective.Kind switch
+        {
+            FloorObjectiveKind.Toxic => new Adventure.Objectives.ToxicController(),
+            FloorObjectiveKind.ShiftingVault => new Adventure.Objectives.ShiftingVaultController(),
+            FloorObjectiveKind.Ritual => new Adventure.Objectives.RitualController(),
+            FloorObjectiveKind.Jailbreak => new Adventure.Objectives.JailbreakController(),
+            _ => null,
+        };
+        if (controller == null) return;
+        controller.Setup(layout, oc, floor, seed);
+        root.AddChild(controller);
+        controller.Build(this, root);
+    }
+
+    /// <summary>A puzzle gate: a lever-gate door that shows from the start, named, owned by the objective (index from <see cref="FloorContents.ExtraIndexBase"/>).</summary>
+    public Door SpawnGate(Node3D root, GridPos cell, int index, string label)
+    {
+        var door = _doorScene.Instantiate<Door>();
+        door.Kind = VaultKind.LeverGate;
+        door.VaultIndex = index;
+        door.Cell = cell;
+        door.GateLabel = label;
+        door.Name = $"Door{index}";
+        root.AddChild(door);
+        door.GlobalPosition = Surface(cell) with { Y = Layout!.LevelOf(cell) * LevelHeight };
+        _closedDoors.Add(cell);
+        door.Reveal();
+        return door;
+    }
+
+    public Lever SpawnLever(Node3D root, GridPos cell, int index, bool toggle, string? label = null)
+    {
+        var l = _leverScene.Instantiate<Lever>();
+        l.VaultIndex = index;
+        l.Toggle = toggle;
+        l.Label = label;
+        l.Name = $"Lever{index}";
+        root.AddChild(l);
+        l.GlobalPosition = Surface(cell);
+        return l;
+    }
+
+    /// <summary>One of the objective's people: no script, no quest, a mode instead.</summary>
+    public Npc SpawnObjectiveNpc(Node3D root, string id, string name, GridPos cell, NpcMode mode)
+    {
+        var npc = _npcScene.Instantiate<Npc>();
+        npc.Id = id;
+        npc.NpcName = name;
+        npc.Mode = mode;
+        npc.Floor = CurrentFloor;
+        npc.Name = $"Npc_{id}";
+        root.AddChild(npc);
+        npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
+        return npc;
+    }
+
+    /// <summary>The shrine's altar: a stone block with candles, solid, in the middle of the room.</summary>
+    public void SpawnAltar(Node3D root, GridPos cell)
+    {
+        var altar = new StaticBody3D { Name = "Altar", CollisionLayer = 1, CollisionMask = 0 };
+        var stone = Material(CurrentTheme?.WallTexture ?? "", (CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f)).Darkened(0.15f), 1f);
+        var cloth = new StandardMaterial3D { AlbedoColor = new Color(0.35f, 0.08f, 0.1f), Roughness = 0.95f };
+        altar.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.8f, 1.0f, 1.0f) }, MaterialOverride = stone, Position = new Vector3(0, 0.5f, 0) });
+        altar.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.9f, 0.06f, 1.1f) }, MaterialOverride = cloth, Position = new Vector3(0, 1.03f, 0) });
+        altar.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(1.8f, 1.05f, 1.0f) }, Position = new Vector3(0, 0.525f, 0) });
+        var candle = new StandardMaterial3D { AlbedoColor = new Color(0.9f, 0.85f, 0.7f), EmissionEnabled = true, Emission = new Color(1f, 0.7f, 0.3f), EmissionEnergyMultiplier = 1.5f };
+        foreach (var x in new[] { -0.6f, 0.6f })
+            altar.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.06f, Height = 0.3f }, MaterialOverride = candle, Position = new Vector3(x, 1.2f, 0.25f) });
+        altar.AddChild(new OmniLight3D { LightColor = new Color(1f, 0.75f, 0.4f), LightEnergy = 1.6f, OmniRange = 7f, ShadowEnabled = false, Position = new Vector3(0, 1.8f, 0) });
+        root.AddChild(altar);
+        altar.GlobalPosition = Surface(cell);
+        _propCells.Add(cell);
+    }
+
+    /// <summary>A breach mouth falls shut: rubble to the ceiling, the cell blocked for paths.</summary>
+    public void SealMouth(Node3D root, GridPos mouth, bool silent)
+    {
+        if (Layout is not { } layout) return;
+        var wallMat = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
+        var rng = new Random(mouth.X * 73856093 ^ mouth.Y * 19349663 ^ CurrentFloor);
+        var node = new StaticBody3D { Name = $"Sealed_{mouth.X}_{mouth.Y}", CollisionLayer = 1, CollisionMask = 0 };
+        var height = LevelHeight - 0.2f;
+        node.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(CellSize * 0.98f, height, CellSize * 0.98f) }, MaterialOverride = wallMat, Position = new Vector3(0, height / 2f, 0) });
+        node.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(CellSize * 0.98f, height, CellSize * 0.98f) }, Position = new Vector3(0, height / 2f, 0) });
+        root.AddChild(node);
+        node.GlobalPosition = Surface(mouth) with { Y = layout.LevelOf(mouth) * LevelHeight };
+        Rubble.Collapse(root, Surface(mouth), height, wallMat, rng);
+        _propCells.Add(mouth);
+        if (!silent) EventBus.Instance.PlaySfx("door");
+    }
+
+    public Plaque SpawnPlaque(Node3D root, GridPos cell, int index, string text)
+    {
+        var plaque = new Plaque { Index = index, Text = text };
+        root.AddChild(plaque);
+        plaque.GlobalPosition = Surface(cell);
+        // face the middle of its room
+        if (Layout?.RoomAt(cell) is { } room) { var centre = Surface(room.Center); if (centre.DistanceSquaredTo(plaque.GlobalPosition) > 0.01f) plaque.LookAt(new Vector3(centre.X, plaque.GlobalPosition.Y, centre.Z), Vector3.Up); }
+        _propCells.Add(cell);
+        return plaque;
     }
 
     /// <summary>Stairs open toward the cell the party spawns on (the first walkable neighbour), their back to the far side.</summary>
@@ -842,6 +970,7 @@ public partial class DungeonBuilder : Node3D
             root.AddChild(door);
             door.GlobalPosition = Surface(v.Door) with { Y = layout.LevelOf(v.Door) * LevelHeight }; // a full cube: no orientation to worry about
             _closedDoors.Add(v.Door);
+            if (v.Revealed) door.Reveal();
 
             if (v.Lever is { } lever)
             {

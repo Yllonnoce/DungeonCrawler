@@ -2,110 +2,113 @@
   "SchemaVersion": 1,
   "Floor": 2,
   "Source": "claude",
-  "LayoutHash": 7878149392233924786,
-  "Title": "The Cartographer\u0027s Map",
+  "LayoutHash": 6692710762951404688,
+  "Title": "The Tithe Vault",
   "IntroLine": {
-    "Text": "The brickwork is tight and the air is stuffed with the smell of old rot. Somewhere, a quill scratches.",
-    "VoiceId": "09ae88dff0a42257"
+    "Text": "White stone, and the sound of iron sliding somewhere out of sight. The vestry kept its tithe in a box with a trick lid. The trick is still working.",
+    "VoiceId": "32e9376572a6b599",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Start",
-      "Name": "The Choked Entry"
+      "Role": "Ruin",
+      "Name": "The Broken Rotunda"
     },
     {
       "Index": 1,
-      "Role": "Hall",
-      "Name": "Stagnant Bath"
+      "Role": "Start",
+      "Name": "Ossuary Landing"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "Gallery of Soot"
+      "Role": "Camp",
+      "Name": "Tithe-Thieves\u0027 Squat"
     },
     {
       "Index": 3,
-      "Role": "Lair",
-      "Name": "The Plague Niche"
+      "Role": "Passage",
+      "Name": "Bone Shelf"
     },
     {
       "Index": 4,
-      "Role": "Exit",
-      "Name": "Descending Arch"
+      "Role": "Passage",
+      "Name": "The Counting Alcove"
     },
     {
       "Index": 5,
-      "Role": "Kennel",
-      "Name": "The Bone Pit"
+      "Role": "Hall",
+      "Name": "Hall of Ledgers"
     },
     {
       "Index": 6,
-      "Role": "Treasury",
-      "Name": "Sealed Records"
+      "Role": "Lair",
+      "Name": "Gallery of Skulls"
     },
     {
       "Index": 7,
-      "Role": "Cell",
-      "Name": "The Cartographer\u0027s Nook"
+      "Role": "Kennel",
+      "Name": "The Drop"
     },
     {
       "Index": 8,
+      "Role": "Cell",
+      "Name": "Sealed Sacristy"
+    },
+    {
+      "Index": 9,
+      "Role": "Hall",
+      "Name": "The Font"
+    },
+    {
+      "Index": 10,
       "Role": "Lair",
-      "Name": "The Brick Tomb"
+      "Name": "Choir Loft"
+    },
+    {
+      "Index": 11,
+      "Role": "Treasury",
+      "Name": "The Tithe Box"
+    },
+    {
+      "Index": 12,
+      "Role": "Exit",
+      "Name": "The Locked Way Down"
     }
   ],
   "Collectives": [
     {
-      "Id": "vault_keepers",
-      "Name": "Vault Keepers",
-      "FactionId": "crypt_wardens",
+      "Id": "tithe_thieves",
+      "Name": "the Tithe-Thieves",
+      "FactionId": null,
       "Members": [
         {
-          "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "EnemyId": "enemy.bandit",
+          "Count": 3
         },
         {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 6,
-        "Objective": {
-          "Kind": "Door",
-          "Ref": "0"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "bone_priest_guard",
-      "Name": "Bone Priest Guard",
-      "FactionId": "crypt_wardens",
-      "Members": [
-        {
-          "EnemyId": "enemy.bone_priest",
+          "EnemyId": "enemy.bandit_archer",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 5,
+        "Room": 2,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 3
       }
     },
     {
-      "Id": "crypt_watch",
-      "Name": "Crypt Watch",
-      "FactionId": "crypt_wardens",
+      "Id": "shelf_walkers",
+      "Name": "the Shelf Walkers",
+      "FactionId": "faction0",
       "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        },
         {
           "EnemyId": "enemy.skeleton_archer",
           "Count": 1
@@ -113,33 +116,14 @@
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 7,
+        "Room": 4,
         "Objective": null,
         "Route": [
-          7,
-          2,
-          3
+          4,
+          3,
+          0
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "alarm_ghoul",
-      "Name": "Alarm Ghoul",
-      "FactionId": "crypt_wardens",
-      "Members": [
-        {
-          "EnemyId": "enemy.ghoul",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Alarm",
-        "Room": 3,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": "vault_keepers",
         "RallyRoom": null
       }
     }
@@ -147,17 +131,13 @@
   "Loners": [],
   "Hordes": [
     {
-      "Id": "pond_horde",
-      "Name": "Pond Horde",
-      "Room": 1,
+      "Id": "horde_squat",
+      "Name": "The Thieves\u0027 Leavings",
+      "Room": 2,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
+          "Count": 4
         }
       ],
       "EnemyId": null,
@@ -165,45 +145,43 @@
       "Total": 4,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The murky water erupts as husks crawl from submerged graves.",
-        "VoiceId": null
+        "Text": "Under the squat\u0027s floorboards, what the thieves buried gets up.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "secret_nest_horde",
-      "Name": "Secret Nest Horde",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 3,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "As the chest creaks open, a chittering rises from the walls.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "bone_pit_horde",
-      "Name": "Bone Pit Horde",
+      "Id": "horde_ledgers",
+      "Name": "The Ledger Dead",
       "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The ledgers slide off their shelves and the shelves come out of the wall, full.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_skulls",
+      "Name": "The Skull Gallery",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 4
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 2
+          "Count": 1
         }
       ],
       "EnemyId": null,
@@ -211,22 +189,19 @@
       "Total": 5,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The floor trembles and the bone pit disgorges its dead.",
-        "VoiceId": null
+        "Text": "The skulls in the niches have bodies after all, and the bodies have been waiting.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "brick_tomb_horde",
-      "Name": "Brick Tomb Horde",
+      "Id": "horde_sacristy",
+      "Name": "The Sacristy Crawl",
       "Room": 8,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
+          "Count": 4
         }
       ],
       "EnemyId": null,
@@ -234,189 +209,75 @@
       "Total": 4,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The bricks shift and a wall of grasping hands pours forth.",
-        "VoiceId": null
+        "Text": "The sealed room was sealed from the inside.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_font",
+      "Name": "The Font\u0027s Drowned",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The font overflows. What comes out of it is not water.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_loft",
+      "Name": "The Choir",
+      "Room": 10,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 4,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Something in the loft clears its throat, and the whole loft answers.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [
-    {
-      "Room": 3,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
     {
-      "Room": 4,
-      "Kind": "Spikes"
+      "Room": 3,
+      "Kind": "Gas"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "lunette",
-      "Name": "Lunette",
-      "Room": 1,
-      "VoiceId": "Aoede",
-      "Script": {
-        "Start": "start",
-        "Nodes": [
-          {
-            "Id": "start",
-            "Line": {
-              "Text": "Oh, adventurers! I seem to have lost my bathhouse maps. Can you find them? I swear I had them just a moment ago.",
-              "VoiceId": "8008d40e5caa0838"
-            },
-            "Choices": [
-              {
-                "Text": "Of course.",
-                "Next": "accept",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "We\u0027re busy.",
-                "Next": "decline",
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "It is done.",
-                "Next": "turnin",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "accept",
-            "Line": {
-              "Text": "Wonderful! I\u0027ll sketch a quick diagram... they should be somewhere in the west gallery, the drying room, and the steam hall. I think.",
-              "VoiceId": "a1b0053e4da975a6"
-            },
-            "Choices": [
-              {
-                "Text": "We\u0027ll be back.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "decline",
-            "Line": {
-              "Text": "Oh. I\u0027ll just wander then. The acoustics are lovely, at least.",
-              "VoiceId": "db4f5f9f14076c08"
-            },
-            "Choices": [
-              {
-                "Text": "Goodbye.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "turnin",
-            "Line": {
-              "Text": "These are... quarantine orders? Not bathhouse maps at all. But they mention a deeper chamber! Perhaps these are worth something after all. Thank you, here\u0027s a little something.",
-              "VoiceId": "b7ded5d074562f2e"
-            },
-            "Choices": [
-              {
-                "Text": "Take care.",
-                "Next": null,
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "lunette_map_quest",
-      "CastId": null,
-      "RequiresFlag": null,
-      "ForbidsFlag": null,
-      "Betrayal": null
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "lunette_map_quest",
-      "Template": "Investigate",
-      "Title": "The Cartographer\u0027s Maps",
-      "Objective": "Recover Lunette\u0027s lost maps",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [
-          2,
-          5,
-          7
-        ],
-        "ClueName": "torn quarantine pages"
-      },
-      "GiverNpc": "lunette",
-      "Reward": {
-        "Xp": 50,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "Oh, adventurers! I seem to have lost my bathhouse maps. Can you find them? I swear I had them just a moment ago.",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "Wonderful! I\u0027ll sketch a quick diagram... they should be somewhere in the west gallery, the drying room, and the steam hall. I think.",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "Oh. I\u0027ll just wander then. The acoustics are lovely, at least.",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "These are... quarantine orders? Not bathhouse maps at all. But they mention a deeper chamber! Perhaps these are worth something after all. Thank you, here\u0027s a little something.",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
+      "Trigger": "RoomEnter",
+      "Room": 0,
       "Line": {
-        "Text": "The brickwork is tight and the air is stuffed with the smell of old rot. Somewhere, a quill scratches.",
-        "VoiceId": null
+        "Text": "Plaques, levers, gates that slide in the walls. Ashmere\u0027s tithe box was built by a man who trusted nobody, and he was right.",
+        "VoiceId": "b17026ed7ac03aff",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 5
+  "Taunts": [],
+  "EnemyTotal": 6
 }

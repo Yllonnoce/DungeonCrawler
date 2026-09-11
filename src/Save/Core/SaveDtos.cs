@@ -169,6 +169,25 @@ public sealed class FloorStateDto
     public List<NpcDto> NpcStates { get; set; } = new();
     /// <summary>Quest keys whose item was already picked up on this floor.</summary>
     public List<string> TakenQuestItems { get; set; } = new();
+    /// <summary>The floor objective's progress (v8+); null on a floor without one.</summary>
+    public ObjectiveStateDto? Objective { get; set; }
+}
+
+/// <summary>Where a floor's objective stands: saved with the floor, sent to late joiners, broadcast every couple of seconds.</summary>
+public sealed class ObjectiveStateDto
+{
+    public string Kind { get; set; } = "none";
+    public bool Completed { get; set; }
+    /// <summary>The objective's clock: gas risen, ritual channelled.</summary>
+    public float Seconds { get; set; }
+    public List<string> FreedNpcs { get; set; } = new();
+    public List<string> JailedNpcs { get; set; } = new();
+    public float RitualProgress { get; set; }
+    public bool RitualStarted { get; set; }
+    public bool RitualistDowned { get; set; }
+    public List<int> SealedMouths { get; set; } = new();
+    /// <summary>Shifting Vault: bit i set when lever i stands pulled.</summary>
+    public int LeverParity { get; set; }
 }
 
 public sealed class NpcDto
@@ -177,6 +196,11 @@ public sealed class NpcDto
     public bool Dead { get; set; }
     public bool Escorting { get; set; }
     public bool Rescued { get; set; }
+    /// <summary>v8: the objective's people.</summary>
+    public bool Downed { get; set; }
+    public bool Captured { get; set; }
+    public bool Jailed { get; set; }
+    public bool Freed { get; set; }
     public float Hp { get; set; }
     public float X { get; set; }
     public float Y { get; set; }

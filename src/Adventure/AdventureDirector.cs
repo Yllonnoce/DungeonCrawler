@@ -104,20 +104,33 @@ public partial class AdventureDirector : Node
             _voice.Enqueue(boss.IntroLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
             _voice.Enqueue(boss.DeathLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
         }
+        var campaign = Game.Instance.Adventure.Campaign;
         foreach (var npc in plan.Npcs)
         {
             npc.VoiceId ??= Voices.ForNpc(npc.Name);
             var major = npc.CastId != null; // the cast gets the main model; passers-by the minor one
-            foreach (var node in npc.Script.Nodes) _voice.Enqueue(node.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major);
+            var persona = npc.Persona ?? campaign?.CastFor(npc.CastId)?.Persona; // how they sound: their own words, else the cast member's
+            foreach (var node in npc.Script.Nodes) _voice.Enqueue(node.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
             var quest = plan.Quests.FirstOrDefault(q => q.GiverNpc == npc.Id);
-            if (quest != null) foreach (var l in new[] { quest.Lines.Offer, quest.Lines.Accept, quest.Lines.Decline, quest.Lines.Complete, quest.Lines.Fail }) _voice.Enqueue(l, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major);
+            if (quest != null) foreach (var l in new[] { quest.Lines.Offer, quest.Lines.Accept, quest.Lines.Decline, quest.Lines.Complete, quest.Lines.Fail }) _voice.Enqueue(l, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
         }
+        foreach (var t in plan.Taunts) EnqueueTaunt(t, campaign);
+    }
+
+    /// <summary>The antagonist's line: their voice, their persona, the clean twin rendered under the same id if the words are refused.</summary>
+    private void EnqueueTaunt(TauntPlan t, CampaignPlan? campaign)
+    {
+        var line = Settings.VillainCurses || t.CleanLine == null ? t.Line : t.CleanLine;
+        _voice.Enqueue(line, Voices.Villain, Speaker.Villain, VoicePriority.Boss, major: true, campaign?.Antagonist.Persona, fallbackText: t.CleanLine?.Text);
+        if (!Settings.VillainCurses && t.CleanLine != null) _voice.Enqueue(t.Line, Voices.Villain, Speaker.Villain, VoicePriority.Bark, major: true, campaign?.Antagonist.Persona, fallbackText: t.CleanLine.Text);
     }
 
     public void EnqueueCampaignVoice(CampaignPlan campaign)
     {
         campaign.NarratorVoiceId ??= Voices.Narrator;
         foreach (var t in campaign.Tiers) _voice.Enqueue(t.EnterLine, campaign.NarratorVoiceId, Speaker.Narrator, VoicePriority.Narrator);
+        Objectives.TauntBank.Fill(campaign);
+        foreach (var t in campaign.Taunts) EnqueueTaunt(t, campaign);
         EnqueueBarks(campaign);
     }
 
@@ -130,7 +143,12 @@ public partial class AdventureDirector : Node
                 ? party.Members.FirstOrDefault(m => m.Name == set.Member)?.Class.Id
                 : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
             var voice = Voices.ForClass(classId ?? "");
-            foreach (var b in set.Lines) _voice.Enqueue(b.Line, voice, Speaker.Companion, VoicePriority.Bark, major: false);
+            var persona = Voices.CompanionPersona(classId ?? "");
+            foreach (var b in set.Lines)
+            {
+                b.Line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(b.Trigger)); // a fight is shouted, the rest said
+                _voice.Enqueue(b.Line, voice, Speaker.Companion, VoicePriority.Bark, major: false, persona);
+            }
         }
     }
 
@@ -212,6 +230,7 @@ public partial class AdventureDirector : Node
                 var secs = (Time.GetTicksMsec() - started) / 1000f;
                 GD.Print($"[Adventure] campaign \"{result.Campaign.Title}\" ({result.Campaign.Source}) and floor 1 ({result.Floor1.Source}) ready in {secs:0.0} s; {result.Floor1Report}");
                 status($"Ready in {secs:0.0} s.");
+                foreach (var r in CampaignRepair.Apply(result.Campaign)) GD.Print($"[Adventure] campaign repaired: {r}");
                 done(result.Campaign, result.Floor1);
                 EnqueueCampaignVoice(result.Campaign);
                 if (planner is not OfflinePlanner) FetchBarks(result.Campaign);
@@ -304,6 +323,7 @@ public partial class AdventureDirector : Node
 
     public override void _Process(double delta)
     {
+        TickIdleTaunt();
         if (_record == null || !Game.Instance.InGame || _leadName == "") return;
         _record.PossessSeconds[_leadName] = _record.PossessSeconds.GetValueOrDefault(_leadName) + (float)delta;
     }
@@ -341,7 +361,10 @@ public partial class AdventureDirector : Node
         bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);
         bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
         bus.LeadChanged += i => Bark(Member(i), BarkTrigger.Possess);
-        bus.MemberDowned += i => Bark(Member(i), BarkTrigger.Downed);
+        bus.MemberDowned += i => { Bark(Member(i), BarkTrigger.Downed); Taunt(Objectives.TauntTrigger.MemberDowned, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name); };
+        bus.PartyWiped += () => Taunt(Objectives.TauntTrigger.PartyWiped, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, urgent: true);
+        bus.ObjectiveEvent += OnObjectiveEvent;
+        bus.Narration += (_, _) => _taunts.NoteNarration(Game.Instance.PlaySeconds);
         bus.MemberRevived += i => Bark(Member(i), BarkTrigger.Revived);
         bus.EnemyDied += OnEnemyDied;
         bus.QuestItemPicked += id => Apply(new QuestItemPicked(QuestKeys.QuestOf(id))); // clue items carry an ordinal after the quest key
@@ -359,15 +382,26 @@ public partial class AdventureDirector : Node
 
     private void OnFloorChanged(int floor, int delta)
     {
-        if (_currentFloor > 0 && _currentFloor != floor && Game.Instance.InGame) { Apply(new FloorLeft(_currentFloor)); CloseRecord(); }
+        if (_currentFloor > 0 && _currentFloor != floor && Game.Instance.InGame)
+        {
+            Apply(new FloorLeft(_currentFloor));
+            CloseRecord();
+            if (delta > 0 && Objectives.ObjectiveController.Instance is { Completed: true } done) _pendingDescend = done.Kind;
+        }
         _currentFloor = floor;
     }
+
+    private FloorObjectiveKind? _pendingDescend;
 
     /// <summary>Called by Main once a floor's nodes exist and saved state has been applied.</summary>
     public void OnFloorBuilt(FloorContents contents, int floor, bool firstVisit)
     {
         _currentFloor = floor;
         OpenRecord(floor);
+        if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
+        // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
+        var objectiveKind = Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;
+        var villainSpoke = firstVisit && objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true);
         if (contents.Plan is { } plan)
         {
             _record!.Title = plan.Title;
@@ -384,7 +418,7 @@ public partial class AdventureDirector : Node
                 state.Id = key;
                 Quests[key] = state;
             }
-            if (firstVisit && plan.IntroLine.Text != "") EventBus.Instance.RaiseNarration(plan.IntroLine.Text, plan.IntroLine.VoiceId);
+            if (firstVisit && !villainSpoke && plan.IntroLine.Text != "") EventBus.Instance.RaiseNarration(plan.IntroLine.Text, plan.IntroLine.VoiceId);
             foreach (var q in Quests.Values.Where(q => q.Floor == floor && q.Status == QuestStatus.Active))
             {
                 if (q.Template == QuestTemplate.Escort && FindNpc(q.EscortNpc) is { Escorting: false, Rescued: false, Dead: false } npc) npc.StartFollowing();
@@ -393,6 +427,56 @@ public partial class AdventureDirector : Node
         }
         RefreshObjective();
         Prefetch(floor + 1);
+        _lastObjectiveActivity = Game.Instance.PlaySeconds;
+    }
+
+    // ---- the villain --------------------------------------------------------------------------
+
+    private readonly Objectives.TauntDirector _taunts = new();
+    private double _lastObjectiveActivity;
+
+    /// <summary>
+    /// The antagonist says something about what just happened, if the bank has a fresh line for it and enough time has
+    /// passed since anyone spoke. Server only (clients hear it over the wire). True when a line was said.
+    /// </summary>
+    public bool Taunt(Objectives.TauntTrigger trigger, FloorObjectiveKind kind = FloorObjectiveKind.None, string? arg = null, bool urgent = false)
+    {
+        if (Net.NetSession.IsClient || !Game.Instance.InGame) return false;
+        var campaign = Game.Instance.Adventure.Campaign;
+        if (campaign == null) return false;
+        if (campaign.Taunts.Count == 0) Objectives.TauntBank.Fill(campaign);
+        var bank = campaign.Taunts.Concat(Main.Instance?.Builder.Contents?.Plan?.Taunts ?? new List<TauntPlan>()).ToList();
+        var now = Game.Instance.PlaySeconds;
+        var pick = _taunts.Pick(bank, trigger, kind, Game.Instance.Adventure.BarksSaid, Memory.Flags, _currentFloor, now, _barkRng, urgent);
+        if (pick == null) return false;
+        Voice.BarkRepeat.Said(Game.Instance.Adventure.BarksSaid, pick.Line.Text, _currentFloor);
+        var partyName = Main.Instance?.Party is { } party && party.Members.Length > 0 ? party.Members[0].Name : null;
+        var name = Objectives.ObjectiveText.Villain(campaign.Antagonist.Name);
+        var coarse = $"{name}: \"{Objectives.TauntDirector.Render(pick.Line.Text, partyName, _currentFloor, arg)}\"";
+        var clean = pick.CleanLine == null ? null : $"{name}: \"{Objectives.TauntDirector.Render(pick.CleanLine.Text, partyName, _currentFloor, arg)}\"";
+        var (text, voice) = Settings.VillainCurses || clean == null ? (coarse, pick.Line.VoiceId) : (clean, pick.CleanLine!.VoiceId);
+        if (trigger == Objectives.TauntTrigger.FloorEnter) EventBus.Instance.PlaySfx("boss");
+        EventBus.Instance.RaiseNarration(text, voice, clean, pick.CleanLine?.VoiceId);
+        _lastObjectiveActivity = now;
+        return true;
+    }
+
+    private void OnObjectiveEvent(FloorObjectiveKind kind, Objectives.ObjectiveTrigger trigger, string? arg)
+    {
+        _lastObjectiveActivity = Game.Instance.PlaySeconds;
+        var urgent = trigger is Objectives.ObjectiveTrigger.ObjectiveDone or Objectives.ObjectiveTrigger.AllFreed or Objectives.ObjectiveTrigger.RitualDone or Objectives.ObjectiveTrigger.VaultOpened;
+        if (trigger == Objectives.ObjectiveTrigger.ObjectiveDone && kind is FloorObjectiveKind.Jailbreak or FloorObjectiveKind.Ritual or FloorObjectiveKind.ShiftingVault) return; // its own last word (AllFreed, RitualDone, VaultOpened) was just said
+        Taunt(Objectives.TauntTriggers.From(trigger), kind, arg, urgent);
+    }
+
+    /// <summary>A party dawdling on an objective floor hears about it.</summary>
+    private void TickIdleTaunt()
+    {
+        if (Net.NetSession.IsClient || !Game.Instance.InGame || Objectives.ObjectiveController.Instance is not { Completed: false } oc) return;
+        var now = Game.Instance.PlaySeconds;
+        if (now - _lastObjectiveActivity < Objectives.TauntDirector.IdleAfter) return;
+        _lastObjectiveActivity = now; // whether or not it had a line, wait another stretch
+        Taunt(Objectives.TauntTrigger.Idle, oc.Kind);
     }
 
     public QuestState? QuestGivenBy(string npcId) => Quests.Values.FirstOrDefault(q => q.Floor == _currentFloor && q.GiverNpc == npcId);
@@ -549,7 +633,9 @@ public partial class AdventureDirector : Node
     public void RefreshObjective()
     {
         var q = Quests.Values.Where(q => q.Floor == _currentFloor && q.IsOpen).OrderBy(q => q.Status == QuestStatus.ReadyToTurnIn ? 0 : 1).FirstOrDefault();
-        CurrentObjective = q == null ? "" : $"{q.Title}: {q.ObjectiveText}";
+        var quest = q == null ? "" : $"{q.Title}: {q.ObjectiveText}";
+        var objective = Objectives.ObjectiveController.Instance is { Completed: false } oc ? $"{Objectives.ObjectiveController.Prefix} {oc.HudText}" : null;
+        CurrentObjective = Objectives.ObjectiveLine.Compose(objective, HordeSpawner.HudText, quest, PortalSpawner.HudSuffix);
         EventBus.Instance.RaiseObjectiveChanged(CurrentObjective);
     }
 }

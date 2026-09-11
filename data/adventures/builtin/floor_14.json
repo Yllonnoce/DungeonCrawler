@@ -2,408 +2,178 @@
   "SchemaVersion": 1,
   "Floor": 14,
   "Source": "claude",
-  "LayoutHash": 4804016408554338541,
-  "Title": "The Cell Overlooking the Abyss",
+  "LayoutHash": 14850002366807183848,
+  "Title": "The Assay Vault",
   "IntroLine": {
-    "Text": "The air grows thick with heat and regret. Somewhere down here, a man waits in a cell with a view of the abyss, his sins heavier than the iron walls.",
-    "VoiceId": "e2ffb0e87922146f"
+    "Text": "Riveted iron and ember light. The mint\u0027s assayers weighed every coin here and locked the true weights in a vault that answers only to its levers. The clerk has changed the setting. He does that.",
+    "VoiceId": "a9517b7ec0ef11bf",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Camp",
-      "Name": "Bandit Bivouac"
+      "Role": "Passage",
+      "Name": "Weighing Gallery"
     },
     {
       "Index": 1,
       "Role": "Exit",
-      "Name": "The Way Down"
+      "Name": "The Assay Vault"
     },
     {
       "Index": 2,
-      "Role": "Start",
-      "Name": "Entry Landing"
+      "Role": "Passage",
+      "Name": "Crucible Drift"
     },
     {
       "Index": 3,
-      "Role": "Cell",
-      "Name": "Hale\u0027s Cell"
+      "Role": "Treasury",
+      "Name": "The True Weights"
     },
     {
       "Index": 4,
-      "Role": "Lair",
-      "Name": "The Sooty Ledge"
+      "Role": "Hall",
+      "Name": "The Long Rolling Mill"
     },
     {
       "Index": 5,
-      "Role": "Gate",
-      "Name": "Iron Portcullis"
+      "Role": "Start",
+      "Name": "Iron Head"
     },
     {
       "Index": 6,
-      "Role": "Treasury",
-      "Name": "Sealed Vault"
+      "Role": "Passage",
+      "Name": "Slag Drift"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Vault Gallery"
+    },
+    {
+      "Index": 8,
+      "Role": "Passage",
+      "Name": "Rivet Gallery"
     }
   ],
   "Collectives": [
     {
-      "Id": "guard_bandits",
-      "Name": "Bandit Lookouts",
-      "FactionId": null,
+      "Id": "mill_guard",
+      "Name": "the Mill Guard",
+      "FactionId": "faction2",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.forge_golem",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.bandit_chief",
+          "EnemyId": "enemy.forge_priest",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 0,
+        "Room": 4,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 6
       }
     },
     {
-      "Id": "defend_gate",
-      "Name": "Portcullis Keepers",
-      "FactionId": "forge_keepers",
+      "Id": "crucible_guard",
+      "Name": "the Crucible Guard",
+      "FactionId": "faction2",
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.forge_priest",
+          "EnemyId": "enemy.ember_hound",
           "Count": 1
-        },
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 2,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "rivet_hounds",
+      "Name": "the Rivet Hounds",
+      "FactionId": "faction2",
+      "Members": [
         {
           "EnemyId": "enemy.ember_hound",
           "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 5,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "5"
-        },
-        "Route": [],
+        "Kind": "Patrol",
+        "Room": 0,
+        "Objective": null,
+        "Route": [
+          0,
+          8
+        ],
         "AlarmTarget": null,
         "RallyRoom": null
       }
     },
     {
-      "Id": "defend_stairs",
-      "Name": "Iron Stair Guard",
-      "FactionId": "forge_keepers",
+      "Id": "slag_priest",
+      "Name": "the Slag Priest",
+      "FactionId": "faction2",
       "Members": [
         {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
+          "EnemyId": "enemy.forge_priest",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 1,
-        "Objective": {
-          "Kind": "Stairs",
-          "Ref": "down"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "alarm_bellower",
-      "Name": "Ember Hound Sentry",
-      "FactionId": "forge_keepers",
-      "Members": [
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Alarm",
-        "Room": 3,
+        "Kind": "Guard",
+        "Room": 6,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "defend_gate",
+        "AlarmTarget": null,
         "RallyRoom": null
       }
     }
   ],
   "Loners": [],
-  "Hordes": [
-    {
-      "Id": "horde_campfire",
-      "Name": "Cinder Imps from the Campfire",
-      "Room": 0,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 15
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 20,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "As you approach the smoldering embers, a furious screech erupts and a torrent of tiny, flaming bodies pours out of the firepit.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_ledge",
-      "Name": "Ledge Crawlers",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 12
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 16,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The moment the lid groans open, the walls themselves seem to blister. Cinder imps and larger brutes tear out of cracks, driven by an ember hound\u0027s howl.",
-        "VoiceId": null
-      }
-    },
-    {
-      "Id": "horde_portcullis",
-      "Name": "The Portcullis Swarm",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 6
-        },
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 28,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "A wailing alarm from the cell shakes the gate, and a flood of glowing imps and ogres spills through the portcullis, a forge priest chanting at their back.",
-        "VoiceId": null
-      }
-    }
-  ],
+  "Hordes": [],
   "Boss": null,
   "Chests": [],
   "Traps": [
     {
-      "Room": 3,
+      "Room": 8,
       "Kind": "Fire"
     },
     {
-      "Room": 4,
+      "Room": 7,
       "Kind": "Spikes"
-    },
-    {
-      "Room": 0,
-      "Kind": "Gas"
     }
   ],
-  "Npcs": [
-    {
-      "Id": "npc_warden_hale",
-      "Name": "Warden Hale",
-      "Room": 3,
-      "VoiceId": "Aoede",
-      "Script": {
-        "Start": "start",
-        "Nodes": [
-          {
-            "Id": "start",
-            "Line": {
-              "Text": "You... you came. I prayed you would. I\u0027m the one who sealed these depths, who lured your Captain Voss with the promise of wealth. Now the Mourner feeds on my guilt, and I can\u0027t bear it any longer. End me, please. End me,",
-              "VoiceId": "1fb8b2f6fac96792"
-            },
-            "Choices": [
-              {
-                "Text": "I will end your suffering.",
-                "Next": "killed",
-                "Effect": "Choose",
-                "Flag": "killed_hale",
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "You deserve to live with your guilt.",
-                "Next": "spared",
-                "Effect": "Choose",
-                "Flag": "spared_hale",
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "killed",
-            "Line": {
-              "Text": "Thank you. The silence... it\u0027s finally quiet. Take this, and end this place.",
-              "VoiceId": "f361b98f144d8665"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "None",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "spared",
-            "Line": {
-              "Text": "You\u0027re worse than me. You\u0027ll let the Mourner feed forever. Go, then, and witness what your mercy breeds.",
-              "VoiceId": "79fcae7843b5a467"
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "None",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          }
-        ]
-      },
-      "QuestId": "quest_warden_wish",
-      "CastId": null,
-      "RequiresFlag": null,
-      "ForbidsFlag": null,
-      "Betrayal": null
-    }
-  ],
-  "Quests": [
-    {
-      "Id": "quest_warden_wish",
-      "Template": "Decide",
-      "Title": "The Warden\u0027s Wish",
-      "Objective": "Decide the fate of Warden Hale.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "npc_warden_hale",
-      "Reward": {
-        "Xp": 400,
-        "Table": null
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "You... you came. I prayed you would.",
-          "VoiceId": null
-        },
-        "Accept": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Decline": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Complete": {
-          "Text": "",
-          "VoiceId": null
-        },
-        "Fail": {
-          "Text": "",
-          "VoiceId": null
-        }
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Npcs": [],
+  "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "The air grows thick with heat and regret. Somewhere down here, a man waits in a cell with a view of the abyss, his sins heavier than the iron walls.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
       "Trigger": "RoomEnter",
-      "Room": 3,
+      "Room": 0,
       "Line": {
-        "Text": "The cell reeks of stale guilt. Shackles hang from the wall, and a narrow slit overlooks a lightless void.",
-        "VoiceId": "7ea4786fd6e0e146"
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "QuestDone",
-      "Room": null,
-      "Line": {
-        "Text": "The weight lifts from Hale\u0027s shoulders, and the abyss sighs in hunger.",
-        "VoiceId": "38ada94b4e941c56"
+        "Text": "Plaques by the levers, in a clerk\u0027s neat hand. He wants you to solve it. He wants to watch you try.",
+        "VoiceId": "4bb05155370791e6",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 11
+  "Taunts": [],
+  "EnemyTotal": 7
 }

@@ -16,9 +16,13 @@ public static class TrapRules
 
     public static bool HitsWholeParty(TrapKind kind) => kind != TrapKind.Spikes;
 
-    public static AttackProfile Attack(TrapKind kind, int floor)
+    /// <summary>The floor's depth scaling, times the dungeon's lethality when the party is the victim.</summary>
+    private static float Scale(int floor, bool lethal) => TierRules.DamageScale(floor) * (lethal ? TierRules.Lethality : 1f);
+
+    /// <param name="lethal">The party is the victim (the default): the dungeon's <see cref="TierRules.Lethality"/> applies. False for the party's own traps springing on enemies.</param>
+    public static AttackProfile Attack(TrapKind kind, int floor, bool lethal = true)
     {
-        var s = TierRules.DamageScale(floor);
+        var s = Scale(floor, lethal);
         return kind switch
         {
             TrapKind.Spikes => new AttackProfile { MinDamage = 10 * s, MaxDamage = 16 * s, Type = DamageType.Physical, Kind = AttackKind.Melee, OnHit = new[] { new StatusApplication(StatusKind.Bleed, 5, 1 * s, 0.6f) } },
@@ -30,10 +34,10 @@ public static class TrapRules
     /// <summary>One tick of standing in a burning floor patch (Burning floors): a lick of fire damage and the burn that follows.</summary>
     public static AttackProfile FloorFire(int floor)
     {
-        var s = TierRules.DamageScale(floor);
+        var s = Scale(floor, lethal: true);
         return Attack(TrapKind.Fire, floor) with { MinDamage = 2 * s, MaxDamage = 4 * s, OnHit = new[] { new StatusApplication(StatusKind.Burn, 3, 2 * s) } };
     }
 
-    /// <summary>Traps the party places are weaker but always trigger on enemies.</summary>
-    public static AttackProfile PlacedAttack(TrapKind kind, int floor) => Attack(kind, floor) with { };
+    /// <summary>Traps the party places always trigger on enemies and deal the trap's base numbers: the dungeon's lethality is not theirs.</summary>
+    public static AttackProfile PlacedAttack(TrapKind kind, int floor) => Attack(kind, floor, lethal: false);
 }

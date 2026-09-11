@@ -66,6 +66,8 @@ public sealed class FloorContents
     public List<NpcPlacement> Npcs { get; } = new();
     public List<HordeContents> Hordes { get; } = new();
     public List<QuestItemPlacement> QuestItems { get; } = new();
+    /// <summary>The floor objective's people and texts, when the floor has one (derived from the layout, not the plan).</summary>
+    public Objectives.ObjectiveContents? Objective { get; set; }
     /// <summary>Members or props the resolver could not place (room full); logged, never fatal.</summary>
     public List<string> Dropped { get; } = new();
 

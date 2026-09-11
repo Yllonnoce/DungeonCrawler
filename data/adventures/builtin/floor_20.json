@@ -3,96 +3,97 @@
   "Floor": 20,
   "Source": "claude",
   "LayoutHash": 17024959734848516595,
-  "Title": "The Grief-Eater",
+  "Title": "The Bell",
   "IntroLine": {
-    "Text": "The floor of the abyss is polished black stone, cold as a tomb. In the vast chamber ahead, a low note hums, and sorrow pools like water.",
-    "VoiceId": null
+    "Text": "The bottom of the tower and the mouth of the bell, and a desk set in front of it with a lamp and a ledger and a clerk. He has been expecting you since the vestry. He has your account open.",
+    "VoiceId": "e49552cfc1cdd31c",
+    "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "The Hall of Tears"
+      "Name": "The Bell\u0027s Mouth"
     },
     {
       "Index": 1,
       "Role": "Hall",
-      "Name": "Sorrow\u0027s Antechamber"
+      "Name": "The Clerk\u0027s Antechamber"
     },
     {
       "Index": 2,
       "Role": "Treasury",
-      "Name": "Sealed Ossuary"
+      "Name": "The Sum"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Chorus Nave"
+      "Role": "Lair",
+      "Name": "The Ringers\u0027 Ossuary"
     },
     {
       "Index": 4,
       "Role": "Camp",
-      "Name": "Mourner\u0027s Outpost"
+      "Name": "The Last Crew"
     },
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "The Weeping Cell"
+      "Name": "Lamp Gallery"
     },
     {
       "Index": 6,
       "Role": "Gate",
-      "Name": "The Black Gate"
+      "Name": "The Lantern Gate"
     },
     {
       "Index": 7,
-      "Role": "Passage",
-      "Name": "Hidden Alcove"
+      "Role": "Cell",
+      "Name": "The Hidden Account"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "Ledge of Tears"
+      "Role": "Lair",
+      "Name": "The Ledge of Names"
     },
     {
       "Index": 9,
-      "Role": "Hall",
-      "Name": "Wailing Gallery"
+      "Role": "Lair",
+      "Name": "Tally Loft"
     },
     {
       "Index": 10,
       "Role": "Start",
-      "Name": "The Last Threshold"
+      "Name": "The Sexton\u0027s Step"
     },
     {
       "Index": 11,
-      "Role": "Hall",
-      "Name": "Stream of Lament"
+      "Role": "Passage",
+      "Name": "The Last Stream"
     },
     {
       "Index": 12,
       "Role": "Lair",
-      "Name": "Abyssal Creche"
+      "Name": "Debtors\u0027 Loft"
     },
     {
       "Index": 13,
       "Role": "Treasury",
-      "Name": "Warden\u0027s Hoard"
+      "Name": "The Company\u0027s Purse"
     }
   ],
   "Collectives": [
     {
-      "Id": "mourner_sentinels",
-      "Name": "Mourner\u0027s Sentinels",
+      "Id": "last_crew",
+      "Name": "the Last Crew",
       "FactionId": null,
       "Members": [
         {
-          "EnemyId": "enemy.bandit_chief",
-          "Count": 1
+          "EnemyId": "enemy.bandit",
+          "Count": 3
         },
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 2
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
         }
       ],
       "Goal": {
@@ -101,13 +102,39 @@
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 5
       }
     },
     {
-      "Id": "hoard_guardians",
-      "Name": "Hoard Guardians",
-      "FactionId": "abyss_chorus",
+      "Id": "lantern_gate",
+      "Name": "the Lantern Gate",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 6,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "6"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 9
+      }
+    },
+    {
+      "Id": "ossuary_guard",
+      "Name": "the Ringers\u0027 Guard",
+      "FactionId": "faction3",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -115,247 +142,247 @@
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Defend",
-        "Room": 13,
-        "Objective": {
-          "Kind": "Door",
-          "Ref": "0"
-        },
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 11
       }
     },
     {
-      "Id": "gatekeepers",
-      "Name": "Gatekeepers",
-      "FactionId": "abyss_chorus",
+      "Id": "tally_archers",
+      "Name": "the Tally Archers",
+      "FactionId": "faction3",
       "Members": [
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        },
         {
           "EnemyId": "enemy.abyss_archer",
           "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 2,
-        "Objective": {
-          "Kind": "Lever",
-          "Ref": "1"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "silent_procession",
-      "Name": "Silent Procession",
-      "FactionId": "abyss_chorus",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 2
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 1,
+        "Room": 9,
         "Objective": null,
         "Route": [
-          1,
-          11,
-          3,
-          5,
           9,
-          12
+          1
         ],
         "AlarmTarget": null,
         "RallyRoom": null
+      }
+    },
+    {
+      "Id": "debtors_caller",
+      "Name": "the Debtors\u0027 Caller",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 12,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "lantern_gate",
+        "RallyRoom": 6
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_sorrow_spills",
-      "Name": "The Sorrow Spills",
+      "Id": "horde_ossuary",
+      "Name": "The Ringers",
       "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 35
+          "Count": 30
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 10
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
           "Count": 5
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 50,
+      "Total": 35,
       "Trigger": "Enter",
       "Line": {
-        "Text": "From the walls themselves, a flood of writhing shadow pours forth, each wisp a silent scream.",
-        "VoiceId": null
+        "Text": "Every ringer Ashmere ever had, and all of them still on the rope.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_wailing_tide",
-      "Name": "The Wailing Tide",
+      "Id": "horde_crew",
+      "Name": "The Crew\u0027s Ghosts",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 28
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "The last crew\u0027s fire gutters, and the eleven Vane sold come to collect.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_gate",
+      "Name": "The Lantern\u0027s Dead",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 30
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 35,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "The lantern gate\u0027s braziers burn blue, and the debt walks through them.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_ledge",
+      "Name": "The Named",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 29
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 34,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Every name on the ledge steps off it.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_tally",
+      "Name": "The Tally",
       "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 38
+          "Count": 30
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 8
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 4
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 4
+          "Count": 6
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 54,
+      "Total": 36,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The chest\u0027s lid clatters\u2014and with it, a keening breaks loose, shadows boiling from the walls.",
-        "VoiceId": null
+        "Text": "The tally loft settles the account in shades.",
+        "VoiceId": null,
+        "Delivery": null
       }
     },
     {
-      "Id": "horde_creche_unleashed",
-      "Name": "Creche Unleashed",
+      "Id": "horde_debtors",
+      "Name": "The Debtors",
       "Room": 12,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 35
+          "Count": 30
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 15
-        },
-        {
-          "EnemyId": "enemy.void_stalker",
           "Count": 5
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 55,
+      "Total": 35,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The nest ruptures, spilling silent forms that move like grief given legs.",
-        "VoiceId": null
+        "Text": "The debtors\u0027 loft has been waiting for the ones who sent the bill.",
+        "VoiceId": null,
+        "Delivery": null
       }
     }
   ],
   "Boss": {
-    "Name": "Abyss Herald, Mouth of the Mourner",
-    "SignatureOverride": "Summon",
+    "Name": "Corvus Marl",
+    "SignatureOverride": null,
     "IntroLine": {
-      "Text": "A shape of congealed sorrow rises from the black pool at the room\u0027s centre. It has no face, only a voice that sounds like your own regrets.",
-      "VoiceId": "c5cb70feecd14239"
+      "Text": "Ah. The Lamplighters\u0027 four. Sit. I have your account here, and the Company\u0027s, and I\u0027m afraid the Company\u0027s is the larger. Shall we begin?",
+      "VoiceId": "3c15f5238772d097",
+      "Delivery": "mocking"
     },
     "DeathLine": {
-      "Text": "The Herald dissolves into mist, but the weight of its words lingers: \u0027I was only the echo.\u0027 The silence returns, heavier than before.",
-      "VoiceId": "fa89bd84452047a1"
+      "Text": "Paid... in full... tell them... I said... paid...",
+      "VoiceId": "3dad461d1bee320e",
+      "Delivery": "weary"
     }
   },
-  "Chests": [
-    {
-      "Room": 5,
-      "Locked": true,
-      "QuestId": null
-    },
-    {
-      "Room": 7,
-      "Locked": true,
-      "QuestId": null
-    }
-  ],
+  "Chests": [],
   "Traps": [
     {
       "Room": 11,
-      "Kind": "Fire"
-    },
-    {
-      "Room": 1,
-      "Kind": "Spikes"
-    },
-    {
-      "Room": 8,
       "Kind": "Gas"
+    },
+    {
+      "Room": 5,
+      "Kind": "Spikes"
     }
   ],
   "Npcs": [],
   "Quests": [],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "You step onto stone that drinks the light. The air is heavy with unshed tears; the silence itself seems to hum with grief.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 0,
-      "Line": {
-        "Text": "Before you, the pool of shadow stirs. The Herald rises, drawn from sorrow like thread from a wound.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "BossSeen",
-      "Room": null,
-      "Line": {
-        "Text": "The Mourner\u0027s mouthpiece regards you with the hollow of a memory. It speaks without sound, but you feel the words in your chest.",
-        "VoiceId": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    },
-    {
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "The Herald shatters into flecks of darkness. For a moment, the weight lifts\u2014then settles deeper, as if the stone itself is mourning.",
-        "VoiceId": null
+        "Text": "The bell rings once, on its own, and the water above begins, very slowly, to go down. Ashmere\u0027s toll is paid. Whether the Company\u0027s is, you will have to go up and ask.",
+        "VoiceId": "ffa1377fec4a37c6",
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "EnemyTotal": 12
+  "Taunts": [],
+  "EnemyTotal": 11
 }
