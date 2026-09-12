@@ -1,0 +1,28 @@
+# systemd unit for the DungeonCrawler dedicated server on a Linux VM (installed by deploy/gce/install.sh).
+# Edit the Environment lines or `sudo systemctl edit dungeoncrawler` to change the port, campaign or player count.
+[Unit]
+Description=DungeonCrawler dedicated server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=dungeon
+Group=dungeon
+WorkingDirectory=/opt/dungeoncrawler
+Environment=PORT=80
+Environment=CAMPAIGN=builtin
+Environment=MAX_PLAYERS=4
+Environment=SAVE=server
+# saves, keys and the status file go to /var/lib/dungeoncrawler (user://)
+Environment=XDG_DATA_HOME=/var/lib/dungeoncrawler
+ExecStart=/opt/dungeoncrawler/DungeonCrawler.x86_64 --headless -- --server --port=${PORT} --bind=0.0.0.0 --campaign=${CAMPAIGN} --save=${SAVE} --max-players=${MAX_PLAYERS} --status-file=/var/lib/dungeoncrawler/status.json
+Restart=on-failure
+RestartSec=5
+# binding a port below 1024 without root
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
