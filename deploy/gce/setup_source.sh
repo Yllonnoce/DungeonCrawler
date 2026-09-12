@@ -25,8 +25,13 @@ fi
 ln -sf "$GODOT_BIN" "$HOME/.local/bin/godot"
 
 echo "== .NET 8 SDK"
-if "$HOME/.dotnet/dotnet" --list-sdks 2>/dev/null | grep -q '^8\.'; then echo "already installed"; else
+# a download cut short leaves an SDK folder with empty files inside, so trust the runtime only when it lists itself
+if "$HOME/.dotnet/dotnet" --list-runtimes 2>/dev/null | grep -q 'Microsoft.NETCore.App 8\.' \
+   && ! find "$HOME/.dotnet/shared" -name '*.runtimeconfig.json' -empty | grep -q .; then echo "already installed"; else
+  [ -d "$HOME/.dotnet" ] && { echo "the .NET install under ~/.dotnet is incomplete; reinstalling"; rm -rf "$HOME/.dotnet"; }
+  df -h "$HOME" | tail -1 | awk '{print "disk free on home: " $4}'
   curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir "$HOME/.dotnet"
+  "$HOME/.dotnet/dotnet" --list-runtimes | grep -q 'Microsoft.NETCore.App 8\.' || { echo ".NET install failed (out of disk?)"; exit 1; }
 fi
 
 echo "== global .NET install location (a binary with the port-80 capability runs in secure mode and ignores DOTNET_ROOT)"
