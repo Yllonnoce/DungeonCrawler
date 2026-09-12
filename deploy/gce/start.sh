@@ -43,8 +43,15 @@ if [ ! -x "$BIN" ]; then
   fi
 fi
 if [ -n "$FROM_SOURCE" ]; then
-  [ -d .godot/imported ] || { echo "importing assets (first time)"; godot --headless --import --path . > /tmp/godot-import.log 2>&1 || true; }
-  dotnet build DungeonCrawler.csproj -v q --nologo
+  # the import is trusted only when it finished; a crash (or a killed run) leaves a half-filled folder that must be redone
+  if [ ! -f .godot/import-ok ]; then
+    echo "importing assets (first time, a few minutes; log in /tmp/godot-import.log)"
+    rm -rf .godot/imported
+    if godot --headless --import --path . > /tmp/godot-import.log 2>&1 && ! grep -q 'FATAL' /tmp/godot-import.log; then touch .godot/import-ok
+    else echo "asset import failed; see /tmp/godot-import.log"; tail -5 /tmp/godot-import.log; exit 1; fi
+  fi
+  echo "building (the first build takes 10-20 minutes on a small VM; later ones are quick)"
+  dotnet build DungeonCrawler.csproj -v m --nologo -clp:NoSummary
   BIN=$(readlink -f "$(command -v godot)")
   RUN=(godot --headless --path . --)
 else

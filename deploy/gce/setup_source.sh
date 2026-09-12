@@ -22,6 +22,16 @@ ICU=$(apt-cache search --names-only '^libicu[0-9]+$' | awk '{print $1}' | sort -
 [ -n "$ICU" ] || { echo "no libicu package found in apt"; exit 1; }
 sudo apt-get install -y -qq --no-install-recommends "$ICU"
 
+echo "== swap"
+# a 1 GB VM cannot compile the project without swap: it thrashes for hours instead of failing
+MEM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)
+SWAP_MB=$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)
+if [ "$MEM_MB" -lt 3000 ] && [ "$SWAP_MB" -lt 1000 ] && [ ! -f /swapfile ]; then
+  echo "adding a 2 GB swap file (${MEM_MB} MB RAM, ${SWAP_MB} MB swap)"
+  sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile > /dev/null && sudo swapon /swapfile
+  grep -q '^/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab > /dev/null
+else echo "ok (${MEM_MB} MB RAM, ${SWAP_MB} MB swap)"; fi
+
 echo "== Godot $GODOT_VERSION .NET"
 if [ -x "$GODOT_BIN" ]; then echo "already at $GODOT_BIN"; else
   mkdir -p "$HOME/.local/opt/godot" "$HOME/.local/bin"
@@ -61,8 +71,12 @@ echo "== versions"
 godot --version | head -1
 dotnet --version
 
-echo "== first import and build (a few minutes on a small machine)"
-[ -d .godot/imported ] && echo "assets already imported" || godot --headless --import --path . > "$TMPDIR/godot-import.log" 2>&1 || true
-dotnet build DungeonCrawler.csproj -v q --nologo
+echo "== first import and build (10-20 minutes on a small machine)"
+if [ -f .godot/import-ok ]; then echo "assets already imported"; else
+  rm -rf .godot/imported
+  if godot --headless --import --path . > "$TMPDIR/godot-import.log" 2>&1 && ! grep -q 'FATAL' "$TMPDIR/godot-import.log"; then touch .godot/import-ok
+  else echo "asset import failed; see $TMPDIR/godot-import.log"; tail -5 "$TMPDIR/godot-import.log"; exit 1; fi
+fi
+dotnet build DungeonCrawler.csproj -v m --nologo -clp:NoSummary
 echo
 echo "Ready. Start with: bash deploy/gce/start.sh   (or PORT=7777 ... for an unprivileged port)"
