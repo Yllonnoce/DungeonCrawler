@@ -29,6 +29,10 @@ if "$HOME/.dotnet/dotnet" --list-sdks 2>/dev/null | grep -q '^8\.'; then echo "a
   curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir "$HOME/.dotnet"
 fi
 
+echo "== global .NET install location (a binary with the port-80 capability runs in secure mode and ignores DOTNET_ROOT)"
+sudo mkdir -p /etc/dotnet
+echo "$HOME/.dotnet" | sudo tee /etc/dotnet/install_location > /dev/null
+
 echo "== PATH in ~/.bashrc"
 grep -q 'DOTNET_ROOT="$HOME/.dotnet"' "$HOME/.bashrc" 2>/dev/null || cat >> "$HOME/.bashrc" <<'RC'
 # DungeonCrawler: user-local Godot and .NET
