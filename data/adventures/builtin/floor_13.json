@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 13,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 8197366883069942980,
   "Title": "The Sealed Ledger",
   "IntroLine": {
     "Text": "Cold plate and white lamps, a maze of strongroom passages under the mint. Hollis Penn is waiting at the one door that matters, and for the first time since the vestry he is not smiling.",
-    "VoiceId": "c1e737a934463331",
+    "VoiceId": "42c86026a23fb38a",
     "Delivery": null
   },
   "Rooms": [
@@ -213,7 +213,7 @@
             "Id": "greet",
             "Line": {
               "Text": "Well. Here you are, and here\u0027s the door, and behind it the ledger the Company sent me down to keep shut. Yes. That was the job. The Company thanks you for the road. Go home now. Please.",
-              "VoiceId": "2d2bebd773e176a4",
+              "VoiceId": "ee28a538b50dd68d",
               "Delivery": "calm"
             },
             "Choices": [
@@ -247,7 +247,7 @@
             "Id": "why",
             "Line": {
               "Text": "Ashmere owed the Company more than a town\u0027s worth. Somebody rang a bell and the debt drowned. The book says who. You don\u0027t want the book. Nobody who pays your wages wants you to have the book.",
-              "VoiceId": "76d67cca3e281624",
+              "VoiceId": "ea1f0551801aaeee",
               "Delivery": "weary"
             },
             "Choices": [
@@ -311,27 +311,27 @@
       "Lines": {
         "Offer": {
           "Text": "The Company thanks you for the road. Go home now. Please.",
-          "VoiceId": "62086c332dc99e25",
+          "VoiceId": "78069cbd87c1ff1c",
           "Delivery": "calm"
         },
         "Accept": {
           "Text": "Then it\u0027s like that.",
-          "VoiceId": "c063b55492cb5ef2",
+          "VoiceId": null,
           "Delivery": "angry"
         },
         "Decline": {
           "Text": "Thank you. Truly. Go up.",
-          "VoiceId": "98cb6b335b415b2d",
+          "VoiceId": null,
           "Delivery": "warm"
         },
         "Complete": {
           "Text": "The golems fall apart like cheap coin. Hollis Penn is nowhere, and the door is yours.",
-          "VoiceId": "3622722ef274e9b7",
+          "VoiceId": "3f75a5d626eae1f9",
           "Delivery": "calm"
         },
         "Fail": {
           "Text": "The door stays shut, and Hollis with it.",
-          "VoiceId": "db51636a900c429c",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -345,7 +345,7 @@
       "Room": null,
       "Line": {
         "Text": "The clerk\u0027s voice, from everywhere: the Company\u0027s man is spent, and the Company still owes. He has never sounded happier.",
-        "VoiceId": "1507372adbf08ea3",
+        "VoiceId": "5127af44345ba97f",
         "Delivery": null
       },
       "RequiresFlag": null,

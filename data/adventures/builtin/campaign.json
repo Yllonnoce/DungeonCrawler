@@ -1,6 +1,6 @@
 {
   "SchemaVersion": 1,
-  "Source": "claude",
+  "Source": "builtin",
   "GameSeed": 1147267151474572175,
   "Title": "The Toll of Ashmere",
   "Synopsis": "The drowned town of Ashmere lies under the mountain, and the Lamplighters\u0027 Company has sent four of its own down to find what sank with it. Every floor is a toll road now, and the clerk who was buried with the ledger still collects. He counts every step, and he is not shy about saying so.",
@@ -158,7 +158,7 @@
       "BossSignature": null,
       "EnterLine": {
         "Text": "Ashmere begins where its church ended. The steps go down into the vestry, and the vestry still keeps its books.",
-        "VoiceId": "7348540bbf4fc915",
+        "VoiceId": "d6a551210690ed61",
         "Delivery": null
       }
     },
@@ -170,7 +170,7 @@
       "BossSignature": null,
       "EnterLine": {
         "Text": "Below the church the water never left. It only went dark, and learned to wait.",
-        "VoiceId": "e172abc1cd138188",
+        "VoiceId": "699e17985d2c51b0",
         "Delivery": null
       }
     },
@@ -182,7 +182,7 @@
       "BossSignature": null,
       "EnterLine": {
         "Text": "Heat, at last. Ashmere\u0027s mint still runs, and what it strikes is not coin.",
-        "VoiceId": "16637656b0be1ffa",
+        "VoiceId": "5258d0ca70cdddf8",
         "Delivery": null
       }
     },
@@ -194,7 +194,7 @@
       "BossSignature": null,
       "EnterLine": {
         "Text": "The tower was built to be climbed. Ashmere buried it point-first, and now you descend it, toward the bell.",
-        "VoiceId": "801ee54fb92cb8a9",
+        "VoiceId": "df9b15950ea71f47",
         "Delivery": null
       }
     }
@@ -709,7 +709,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Down. Next.",
-            "VoiceId": "c7bb8e6aafeb50b7",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -717,7 +717,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "That one\u0027s paid its toll.",
-            "VoiceId": "f4f6bb066ec951f1",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -725,7 +725,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Stay dead this time.",
-            "VoiceId": "4b21f1604bd6b234",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -733,7 +733,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Ow. That\u0027s going on somebody\u0027s bill.",
-            "VoiceId": "02b36b631267ea09",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -741,7 +741,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Hit me again and mean it.",
-            "VoiceId": "6ff2ae8c06502884",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -749,7 +749,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Blood\u0027s mine. Careful with it.",
-            "VoiceId": "abc031c6589642fe",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -757,7 +757,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Silver. Ashmere\u0027s, by the stamp.",
-            "VoiceId": "31d4699d47b1ae37",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -765,7 +765,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Mine now. The clerk can write it down.",
-            "VoiceId": "4d9008a9d0521502",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -773,7 +773,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Heavy. Good. I like heavy.",
-            "VoiceId": "da812beaff7d4cee",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -781,7 +781,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Getting the measure of this place.",
-            "VoiceId": "d406f64ec1149c09",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -789,7 +789,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Harder to kill than yesterday. Suits me.",
-            "VoiceId": "23fe2d6275fa63a3",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -797,7 +797,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "More room in the arms. Fine.",
-            "VoiceId": "0ba3b1803348c3b8",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -805,7 +805,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "That\u0027s a big one. Good. I hate stairs.",
-            "VoiceId": "013fbdf156c78ba5",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -813,7 +813,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Form up. This one\u0027s going to take some cutting.",
-            "VoiceId": "1869b9720f13884e",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -821,7 +821,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Right. Nobody dies before it does.",
-            "VoiceId": "90e2d14229178abf",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -829,7 +829,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Brand. Front rank. Try to keep up.",
-            "VoiceId": "cb83549a33dbd009",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -837,7 +837,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Give me the torch. I\u0027ll go first.",
-            "VoiceId": "66764ad70c1b6880",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -845,7 +845,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Shield\u0027s up. Walk behind it.",
-            "VoiceId": "ab95fa3a3535f006",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -853,7 +853,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Down. Not out. Get me up.",
-            "VoiceId": "a55baff741d4686e",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -861,7 +861,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Damn it. Someone\u0027s leg. Grab it.",
-            "VoiceId": "7960c25de2a080df",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -869,7 +869,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Floor\u0027s cold. Hurry.",
-            "VoiceId": "be51c96858dbe0df",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -877,7 +877,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Up. Where were we.",
-            "VoiceId": "c80ddc617769e25c",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -885,7 +885,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Right. That one owes me.",
-            "VoiceId": "ed88c06ec8d12244",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -893,7 +893,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Don\u0027t make a thing of it.",
-            "VoiceId": "ecb14e149eeca795",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         }
@@ -906,7 +906,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Quietly done. My favourite kind.",
-            "VoiceId": "4c3c5adb4b96076f",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -914,7 +914,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Never saw me. Never will.",
-            "VoiceId": "ac56f573fc47432a",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -922,7 +922,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Toll paid. Not by me.",
-            "VoiceId": "a5f57321e88fa94d",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -930,7 +930,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Rude. That was rude.",
-            "VoiceId": "dd5940a278083530",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -938,7 +938,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "I liked that shirt.",
-            "VoiceId": "3e560135f563d772",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -946,7 +946,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Note to self: he sees fine.",
-            "VoiceId": "c6bf6692f1540ecf",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -954,7 +954,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Finders\u0027 fee. I\u0027ll be keeping this.",
-            "VoiceId": "d85157e59473eeb3",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -962,7 +962,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Oh, that\u0027s nice. That\u0027s very nice.",
-            "VoiceId": "57226649c22f2b7c",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -970,7 +970,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "The clerk counts every step. Not every pocket.",
-            "VoiceId": "57a35ad6ff8977f0",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -978,7 +978,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Faster. Quieter. Prettier, probably.",
-            "VoiceId": "ef6279d9d22546f2",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -986,7 +986,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "I\u0027ve a new trick. Don\u0027t ask which.",
-            "VoiceId": "b404f8a2e94aaabc",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -994,7 +994,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Better. The dead should worry.",
-            "VoiceId": "90dc7bbb5b504420",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1002,7 +1002,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Big, slow, stupid. Two out of three, then.",
-            "VoiceId": "97a997e2e6f9d49d",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1010,7 +1010,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "I\u0027ll take the back. Someone take the front.",
-            "VoiceId": "51a51ce0700661ef",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1018,7 +1018,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Let it look at Brand. Nobody looks at me.",
-            "VoiceId": "0851aee2ee08eca9",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1026,7 +1026,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Sable. Mind the floor. I already did.",
-            "VoiceId": "6ea8330bc5891ca6",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1034,7 +1034,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Keep to the dark with me.",
-            "VoiceId": "94762d6d09351f9e",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1042,7 +1042,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "I\u0027ll go ahead. Don\u0027t follow the screams.",
-            "VoiceId": "767a27af5cb3f908",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1050,7 +1050,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Ah. That\u0027s a lot of blood for a small person.",
-            "VoiceId": "b0999b658780af9f",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1058,7 +1058,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Whoever\u0027s nearest. Now, please.",
-            "VoiceId": "d59806db76e0f30f",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1066,7 +1066,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Not dying here. Too drab.",
-            "VoiceId": "b0862b9d51911255",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1074,7 +1074,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Ta. Nobody saw that.",
-            "VoiceId": "66a73d802f64ecbe",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1082,7 +1082,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Back. Where\u0027s my knife.",
-            "VoiceId": "d098807c3649afdd",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1090,7 +1090,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Owe you one. I\u0027ll forget by the stairs.",
-            "VoiceId": "4496da57f0f4dc5c",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         }
@@ -1103,7 +1103,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Down.",
-            "VoiceId": "eeef23d5201fe765",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -1111,7 +1111,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Clean shot. Retrieve it later.",
-            "VoiceId": "3d72de1c972012f3",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -1119,7 +1119,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "One less.",
-            "VoiceId": "58e12462d8d92933",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -1127,7 +1127,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Marked.",
-            "VoiceId": "7f54bbc656f5f779",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -1135,7 +1135,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Close. Too close.",
-            "VoiceId": "b6522dec574e94b4",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -1143,7 +1143,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "I\u0027m hit. Keep moving.",
-            "VoiceId": "c14d7accbb76a422",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -1151,7 +1151,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Arrows. Good.",
-            "VoiceId": "3d1c4c5ba5048355",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1159,7 +1159,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Useful. Take it.",
-            "VoiceId": "322b4427f12f08f3",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1167,7 +1167,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Somebody died holding this.",
-            "VoiceId": "78d185e47d357c64",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1175,7 +1175,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Steadier hands.",
-            "VoiceId": "7f464efa3ff3b363",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1183,7 +1183,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "I see further. Wish I didn\u0027t.",
-            "VoiceId": "9fd5baaef732c075",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1191,7 +1191,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Good. Keep climbing.",
-            "VoiceId": "19e4bcfa4c007bb7",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1199,7 +1199,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "There. Watch its hands.",
-            "VoiceId": "d17f3ac486e46dff",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1207,7 +1207,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Big target. Fine by me.",
-            "VoiceId": "08c3135a535d9b64",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1215,7 +1215,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Draw it into the open.",
-            "VoiceId": "af6965d98f2f1969",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1223,7 +1223,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Wren. Eyes front.",
-            "VoiceId": "21b352e313e0f6ff",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1231,7 +1231,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "I\u0027ll scout. Quiet, now.",
-            "VoiceId": "2ea41a99bf46873d",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1239,7 +1239,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Stay in my sightline.",
-            "VoiceId": "cb8af131d2698163",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1247,7 +1247,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Down. Cover me.",
-            "VoiceId": "2dc6b092cecb9f35",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1255,7 +1255,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Can\u0027t draw. Get me up.",
-            "VoiceId": "e0f36642b43d3903",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1263,7 +1263,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "I\u0027ve had worse. Not much.",
-            "VoiceId": "c33330ddf53e80a7",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1271,7 +1271,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Up. Where\u0027s my bow.",
-            "VoiceId": "992e28ff505f6124",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1279,7 +1279,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Obliged.",
-            "VoiceId": "10ab1b5d3420f86b",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1287,7 +1287,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Moving.",
-            "VoiceId": "bf6864aa77636f64",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         }
@@ -1300,7 +1300,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Applied theory. Note the result.",
-            "VoiceId": "86a6974d625d2915",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -1308,7 +1308,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "A textbook case. Dead, that is.",
-            "VoiceId": "d5d4d1c0a7e227bd",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -1316,7 +1316,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Elegant. If I say so.",
-            "VoiceId": "696a090d669a2618",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -1324,7 +1324,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Ah. Bodies. Do carry on.",
-            "VoiceId": "543b54a4ca376f7c",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -1332,7 +1332,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "That will bruise. Interesting.",
-            "VoiceId": "04dd43004878f6b6",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -1340,7 +1340,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "I am not, in fact, made of stone.",
-            "VoiceId": "7c2cfc71bba80ea5",
+            "VoiceId": null,
             "Delivery": "angry"
           }
         },
@@ -1348,7 +1348,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Provenance: dubious. Value: fair.",
-            "VoiceId": "e4c2b996fa1b2c40",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1356,7 +1356,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "The toll-clerk\u0027s silver. How apt.",
-            "VoiceId": "c1dd97772f18bb8d",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1364,7 +1364,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "I\u0027ll catalogue it later.",
-            "VoiceId": "df12559cba4416fd",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1372,7 +1372,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Comprehension deepens.",
-            "VoiceId": "efa4751c03fc5983",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1380,7 +1380,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Ashmere is educational, at least.",
-            "VoiceId": "c0824bd7f3e70d2c",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1388,7 +1388,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "A new theorem. Watch.",
-            "VoiceId": "8ac5a2b725cfb982",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1396,7 +1396,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Fascinating. Kill it quickly.",
-            "VoiceId": "1e64bbc36f658e6d",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1404,7 +1404,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Large. Dense. Burn it.",
-            "VoiceId": "f04487544eb9e75f",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1412,7 +1412,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Do keep it off me. I need the hands.",
-            "VoiceId": "46a779f3b571189c",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -1420,7 +1420,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Ilex. Try not to stand in the fire.",
-            "VoiceId": "6331976afbb92539",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1428,7 +1428,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "I\u0027ll lead. Briefly.",
-            "VoiceId": "8d08735fa6978fd2",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1436,7 +1436,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Observe. Learn.",
-            "VoiceId": "71bb270bd7d84777",
+            "VoiceId": null,
             "Delivery": "calm"
           }
         },
@@ -1444,7 +1444,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "This is beneath me. Literally.",
-            "VoiceId": "4c9242b14b20ead0",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1452,7 +1452,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Someone competent, please.",
-            "VoiceId": "9e63293241127289",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1460,7 +1460,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "The floor. Charming.",
-            "VoiceId": "e5f11da1f0e30b97",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1468,7 +1468,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Thank you. I\u0027ll return the favour, eventually.",
-            "VoiceId": "a960f0edbe034b0b",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1476,7 +1476,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Ah. Vertical.",
-            "VoiceId": "d4f59d72b8b4d6c2",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -1484,7 +1484,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Resume.",
-            "VoiceId": "1708700d591931a7",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         }
@@ -1497,7 +1497,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Welcome to the vestry\u0027s little vault, {party}. The stairs are in it. The combination is not. Pull my levers and guess; I do love to watch a guess.",
-        "VoiceId": "4cfc578db893bf0a",
+        "VoiceId": "903d313b98ccd89f",
         "Delivery": null
       },
       "CleanLine": {
@@ -1514,7 +1514,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Breathe it in, {party}: that\u0027s Ashmere\u0027s own charnel air, and I\u0027ve opened the vents. The stairs are down where it pools. Sod off toward them or lie down, either pays.",
-        "VoiceId": "1cec0338c7e4b617",
+        "VoiceId": "215dfdb24adc2907",
         "Delivery": null
       },
       "CleanLine": {
@@ -1531,7 +1531,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "Some fool\u0027s chanting at my shrine. Let them. My walls are full of teeth and they\u0027re all bloody hungry. Hold the line, hero. Hold it with your bare hands.",
-        "VoiceId": "6c377cb4d1cf4175",
+        "VoiceId": "96af4b17189e6deb",
         "Delivery": null
       },
       "CleanLine": {
@@ -1548,7 +1548,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "The locals owe me passage and can\u0027t pay, so they go in the cages. Rescue them, {party}. Every bastard on this floor has a key and a grudge.",
-        "VoiceId": "ccf9715178c4ca49",
+        "VoiceId": "9b2445d30081d370",
         "Delivery": null
       },
       "CleanLine": {
@@ -1565,7 +1565,7 @@
       "Objective": null,
       "Line": {
         "Text": "Floor {floor}. Toll due, {party}. I\u0027ve had this one arranged for you special, so try not to bleed on the good stone.",
-        "VoiceId": "18975479c78eabab",
+        "VoiceId": "2cad2c6841f8d0aa",
         "Delivery": null
       },
       "CleanLine": {
@@ -1582,7 +1582,7 @@
       "Objective": null,
       "Line": {
         "Text": "Got one! {prisoner} goes in the cage, and that\u0027s another sum on the ledger. Where were you, hero? Looting a fucking barrel?",
-        "VoiceId": "ba9fff10127d0c82",
+        "VoiceId": "7e17b95903cad96d",
         "Delivery": null
       },
       "CleanLine": {
@@ -1599,7 +1599,7 @@
       "Objective": null,
       "Line": {
         "Text": "There goes {prisoner}, dragged off by the hair. Keep running, the rest of you. It makes the arithmetic so much sweeter.",
-        "VoiceId": "cf4df3c1269f31de",
+        "VoiceId": "b127e28b2cb32441",
         "Delivery": null
       },
       "CleanLine": {
@@ -1616,7 +1616,7 @@
       "Objective": null,
       "Line": {
         "Text": "One out of the cage. Struck from the ledger, then. Don\u0027t look so pleased, {party}: I\u0027ve more cages than you have hours.",
-        "VoiceId": "dbb9a9b8aca6bddb",
+        "VoiceId": "241c4f0236e5c850",
         "Delivery": null
       },
       "CleanLine": {
@@ -1633,7 +1633,7 @@
       "Objective": null,
       "Line": {
         "Text": "{prisoner} walks free. Fine. Keep them close. Things that follow you down my roads tend to die, and I charge for the burial.",
-        "VoiceId": "d2138b564312a585",
+        "VoiceId": "4f3038e13647b62f",
         "Delivery": null
       },
       "CleanLine": {
@@ -1650,7 +1650,7 @@
       "Objective": null,
       "Line": {
         "Text": "All of them? All of them. Well, damn my eyes. Toll paid, stairs open, and I\u0027ll be less gentle below.",
-        "VoiceId": "6e829b21367088f9",
+        "VoiceId": "771450890155db47",
         "Delivery": null
       },
       "CleanLine": {
@@ -1667,7 +1667,7 @@
       "Objective": null,
       "Line": {
         "Text": "Every last peasant off my books. You must feel so bloody noble. Enjoy it. Nobody who paid a toll here ever felt noble for long.",
-        "VoiceId": "78c1beaca6804395",
+        "VoiceId": "5f0512b5b18f1e61",
         "Delivery": null
       },
       "CleanLine": {
@@ -1684,7 +1684,7 @@
       "Objective": null,
       "Line": {
         "Text": "Coughing already? That\u0027s the cheap stuff. Wait till it\u0027s thick enough to chew, you sods.",
-        "VoiceId": "e07d0bbb8c4a4bf1",
+        "VoiceId": "b1a7fa29b8b9ed0a",
         "Delivery": null
       },
       "CleanLine": {
@@ -1701,7 +1701,7 @@
       "Objective": null,
       "Line": {
         "Text": "The green is rising, {party}. High ground buys you minutes. The stairs are not on high ground. I checked.",
-        "VoiceId": "3f39201ca568c958",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1718,7 +1718,7 @@
       "Objective": null,
       "Line": {
         "Text": "That\u0027s the smell of your lungs paying up. Crawl to the stairs or lie down, I honestly don\u0027t give a shit which.",
-        "VoiceId": "c61e01a47df8c52e",
+        "VoiceId": "0e721d369c9d7987",
         "Delivery": null
       },
       "CleanLine": {
@@ -1735,7 +1735,7 @@
       "Objective": null,
       "Line": {
         "Text": "Lethal now. Every breath is mine and I\u0027m charging for it. Go on. Take another.",
-        "VoiceId": "2badc75d74a83be0",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1752,7 +1752,7 @@
       "Objective": null,
       "Line": {
         "Text": "Wrong bloody lever. Did you read the plaque, or do you just yank things and hope?",
-        "VoiceId": "5e6e21f4ad9903b3",
+        "VoiceId": "c487900550943d57",
         "Delivery": null
       },
       "CleanLine": {
@@ -1769,7 +1769,7 @@
       "Objective": null,
       "Line": {
         "Text": "That shut more than it opened. Brilliant. Truly. My patrols send their thanks.",
-        "VoiceId": "5f89af9793437f60",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1786,7 +1786,7 @@
       "Objective": null,
       "Line": {
         "Text": "Hear that? Iron on stone. My whole floor just moved around you, {party}, and not one of you noticed which way.",
-        "VoiceId": "d3fa672836805f88",
+        "VoiceId": "bde95e716556627b",
         "Delivery": null
       },
       "CleanLine": {
@@ -1803,7 +1803,7 @@
       "Objective": null,
       "Line": {
         "Text": "Pull, pull, pull. Like children on a bell rope. The gates don\u0027t care how hard you haul.",
-        "VoiceId": "c8c91351d4a674e0",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1820,7 +1820,7 @@
       "Objective": null,
       "Line": {
         "Text": "Oh, it\u0027s open. Fine. A bright dog could have done it. Go down, {party}. It gets worse, and it gets dearer.",
-        "VoiceId": "231b2a4b8bd7176f",
+        "VoiceId": "1fdaacb17a18664a",
         "Delivery": null
       },
       "CleanLine": {
@@ -1837,7 +1837,7 @@
       "Objective": null,
       "Line": {
         "Text": "The vault yields. Bugger. Well. I have plenty of floors left and a great deal of spite.",
-        "VoiceId": "a0803cdc376b49ee",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1854,7 +1854,7 @@
       "Objective": null,
       "Line": {
         "Text": "Chanting? In my house? Let\u0027s see how much of that prayer gets said with my teeth in the old fool\u0027s neck.",
-        "VoiceId": "1494e38347e45017",
+        "VoiceId": "0e62018cc87d4eaa",
         "Delivery": null
       },
       "CleanLine": {
@@ -1871,7 +1871,7 @@
       "Objective": null,
       "Line": {
         "Text": "The rite begins and so does the bleeding. Everything I own is coming through those walls, {party}, and I own a lot.",
-        "VoiceId": "3de0b27eea7788d6",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1888,7 +1888,7 @@
       "Objective": null,
       "Line": {
         "Text": "Down goes the priest! Ha! Pick them up, pick them up, I want to see it happen again.",
-        "VoiceId": "7ed4a0712597540c",
+        "VoiceId": "cb2c58f9ac672a63",
         "Delivery": null
       },
       "CleanLine": {
@@ -1905,7 +1905,7 @@
       "Objective": null,
       "Line": {
         "Text": "Your chanter\u0027s face-down in the dust and the prayer\u0027s stopped. Shame. I was almost worried, you useless sods.",
-        "VoiceId": "74ef044985c5367b",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1922,7 +1922,7 @@
       "Objective": null,
       "Line": {
         "Text": "More! Through the walls! Eat the priest, eat the heroes, eat each other for all I care, it\u0027s all on the ledger!",
-        "VoiceId": "a820c096f955b517",
+        "VoiceId": "9f7dda2748c08f61",
         "Delivery": null
       },
       "CleanLine": {
@@ -1939,7 +1939,7 @@
       "Objective": null,
       "Line": {
         "Text": "Another wave, {party}. Keep swinging. Your arms will give out long before my walls do.",
-        "VoiceId": "0fd02d997e98cc59",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1956,7 +1956,7 @@
       "Objective": null,
       "Line": {
         "Text": "The rite is done. Damn it all. Very well: the stairs are yours, and so is what\u0027s under them.",
-        "VoiceId": "9b86f3e832ed7fca",
+        "VoiceId": "4d2d3305b77df388",
         "Delivery": null
       },
       "CleanLine": {
@@ -1973,7 +1973,7 @@
       "Objective": null,
       "Line": {
         "Text": "A prayer against me, finished in my own house. I\u0027ll remember that face, priest. I remember every face. I write them down.",
-        "VoiceId": "3e04abaca3645eb5",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -1990,7 +1990,7 @@
       "Objective": null,
       "Line": {
         "Text": "Fine. FINE. Toll paid. Go down, then, {party}. I\u0027ve worse than this in the book and all the time in the world.",
-        "VoiceId": "408353acedc06da4",
+        "VoiceId": "dfec688b3f091f29",
         "Delivery": null
       },
       "CleanLine": {
@@ -2007,7 +2007,7 @@
       "Objective": null,
       "Line": {
         "Text": "You passed. Don\u0027t smile. Nobody who passed my trials ever smiled for long, you smug bastards.",
-        "VoiceId": "f09edef4e3e9b178",
+        "VoiceId": "5abdfb0fe63bc74c",
         "Delivery": null
       },
       "CleanLine": {
@@ -2024,7 +2024,7 @@
       "Objective": null,
       "Line": {
         "Text": "Are you lost? You are. Standing about like sheep in a pen. Shall I send someone to hurry you along, {party}?",
-        "VoiceId": "094419816cdad079",
+        "VoiceId": "a57f70b48de283b5",
         "Delivery": null
       },
       "CleanLine": {
@@ -2041,7 +2041,7 @@
       "Objective": null,
       "Line": {
         "Text": "Tick, tock. I\u0027ve had guests die of old age on floor {floor}. It was bloody boring to watch and I watched all of it.",
-        "VoiceId": "f7e3ad1f5cef0d29",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -2058,7 +2058,7 @@
       "Objective": null,
       "Line": {
         "Text": "One down! Look at them, in the dirt. Get up, get up, I\u0027m not finished collecting from you!",
-        "VoiceId": "fb232379f046cd13",
+        "VoiceId": "bcd1b6e343a91991",
         "Delivery": null
       },
       "CleanLine": {
@@ -2075,7 +2075,7 @@
       "Objective": null,
       "Line": {
         "Text": "Down in the dust. That\u0027s where everyone ends up on my roads, {party}. Some of you just take the scenic route.",
-        "VoiceId": "ba3ebbc4393d93d8",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
@@ -2092,7 +2092,7 @@
       "Objective": null,
       "Line": {
         "Text": "All of you. All of you at once. Oh, that was beautiful. Get up and do it again, I\u0027ve nowhere to be for a hundred years.",
-        "VoiceId": "800e7414f9e1aa06",
+        "VoiceId": "2195a09da01eb67a",
         "Delivery": null
       },
       "CleanLine": {
@@ -2109,7 +2109,7 @@
       "Objective": null,
       "Line": {
         "Text": "Dead as stones, the lot of you. Well, nearly. Shame the dungeon\u0027s so damned patient. Shame I am.",
-        "VoiceId": "5f414cb17d8403d0",
+        "VoiceId": "9307a3903cadf233",
         "Delivery": null
       },
       "CleanLine": {
@@ -2126,7 +2126,7 @@
       "Objective": null,
       "Line": {
         "Text": "Deeper, then. Every step down is a step toward me and the book, {party}, and I\u0027ve such plans for our meeting.",
-        "VoiceId": "ecdbd08addfefbb1",
+        "VoiceId": "cf28ae774c24d6eb",
         "Delivery": null
       },
       "CleanLine": {
@@ -2143,7 +2143,7 @@
       "Objective": null,
       "Line": {
         "Text": "Off you go. Mind the stairs. I\u0027d hate you to die of something as boring as a fall, you clumsy sods. It doesn\u0027t even pay.",
-        "VoiceId": "52c666755430e311",
+        "VoiceId": "95fb6b3c9b4be878",
         "Delivery": null
       },
       "CleanLine": {
@@ -2160,7 +2160,7 @@
       "Objective": null,
       "Line": {
         "Text": "Dawdling on my road? Then I\u0027ll send company to collect. Behind you, {party}. Always behind you.",
-        "VoiceId": "cf88d4ce427c3fbf",
+        "VoiceId": "b9992a8a4be607a5",
         "Delivery": null
       },
       "CleanLine": {
@@ -2177,7 +2177,7 @@
       "Objective": null,
       "Line": {
         "Text": "Reinforcements. Push deeper or drown in them; I\u0027ve a bloody endless supply and it all goes on your account.",
-        "VoiceId": "a85d79ba18b36d6d",
+        "VoiceId": "f9db4741cb6f15de",
         "Delivery": null
       },
       "CleanLine": {

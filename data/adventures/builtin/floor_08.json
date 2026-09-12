@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 8,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 5137207325258696576,
   "Title": "The Cistern Shrine",
   "IntroLine": {
     "Text": "A rotunda of grey boulders around a well the town used to pray at. Somebody has walled the well and put a gate on the wall. Somebody else has moved in behind it.",
-    "VoiceId": "0addebb4a187c018",
+    "VoiceId": "8f3d5e37735b3719",
     "Delivery": null
   },
   "Rooms": [
@@ -275,7 +275,7 @@
       "Room": 6,
       "Line": {
         "Text": "Vane\u0027s colours on the hut. The rival crew came this way, camped, and left in a hurry, or left fewer than they arrived with.",
-        "VoiceId": "d124ca3cee880fbb",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

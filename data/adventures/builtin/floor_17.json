@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 17,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 17555845951728216256,
   "Title": "The Foot of the Bell",
   "IntroLine": {
     "Text": "Black rock, painted planks, violet dark, and a bell the size of a house hanging point-down from the floor above. A deacon kneels at its lip. He has been kneeling a long time.",
-    "VoiceId": "7492c608fb260159",
+    "VoiceId": "c7e05ddb0e7bf8aa",
     "Delivery": null
   },
   "Rooms": [
@@ -354,7 +354,7 @@
             "Id": "greet",
             "Line": {
               "Text": "You\u0027ve come down the whole way. I\u0027m sorry. I\u0027m Bell, the deacon, the ringer\u0027s son. The rope is somewhere in the lofts, cut in pieces; if I had it I could ring her again and raise the town. Would you... would you look?",
-              "VoiceId": "3f113f66ae6ce595",
+              "VoiceId": "beaac76fd33a2f0c",
               "Delivery": null
             },
             "Choices": [
@@ -396,7 +396,7 @@
             "Id": "who",
             "Line": {
               "Text": "Everyone asks. Nobody knows. The water came in the night and the bell was ringing and by morning there was nobody to ask. I\u0027m sorry. Would you look for the rope?",
-              "VoiceId": "dd04c032fdd85f03",
+              "VoiceId": "17ed4c2fb35a7796",
               "Delivery": "whisper"
             },
             "Choices": [
@@ -422,7 +422,7 @@
             "Id": "accepted",
             "Line": {
               "Text": "Thank you. The peal gallery, the sounding board, the drowned step. It was cut short, the rope. Somebody small was meant to reach it.",
-              "VoiceId": "eea2196a13dffb38",
+              "VoiceId": "645bcee3caf80774",
               "Delivery": null
             },
             "Choices": [
@@ -440,7 +440,7 @@
             "Id": "done",
             "Line": {
               "Text": "That\u0027s it. That\u0027s the knot. I tied that knot, I was nine, I couldn\u0027t reach and the Company man tied the rest and gave me the lantern seal to hold and said ring, Ambrose, ring and the debt goes away. I\u0027m sorry. I\u0027m so sor",
-              "VoiceId": "279e1cbd8cf0eb8c",
+              "VoiceId": "c749c9f2f0a217bd",
               "Delivery": "whisper"
             },
             "Choices": [
@@ -497,27 +497,27 @@
       "Lines": {
         "Offer": {
           "Text": "The rope is in the lofts, cut in pieces. Would you look?",
-          "VoiceId": "b1c982bc68cf6aea",
+          "VoiceId": "1510d6afe9bba11f",
           "Delivery": null
         },
         "Accept": {
           "Text": "Thank you. It was cut short. Somebody small was meant to reach it.",
-          "VoiceId": "ab2b7f754924cd40",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
           "Text": "No. No, of course. I\u0027m sorry I asked.",
-          "VoiceId": "c01c71006d1559bf",
+          "VoiceId": null,
           "Delivery": "whisper"
         },
         "Complete": {
           "Text": "I tied that knot. I was nine. The Company man said ring, Ambrose, and the debt goes away.",
-          "VoiceId": "1739960395113d66",
+          "VoiceId": "d7211b7fe5798611",
           "Delivery": "whisper"
         },
         "Fail": {
           "Text": "Then she stays silent. Perhaps that\u0027s best.",
-          "VoiceId": "a60cb029c34b6c9a",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -531,7 +531,7 @@
       "Room": null,
       "Line": {
         "Text": "The clerk\u0027s laugh comes down through the bell itself. The Lamplighters\u0027 Company, he says. Your paymasters. Your lantern on the knot. Do go home and tell them the toll is still owed.",
-        "VoiceId": "24a43a82e5a83b17",
+        "VoiceId": "d5e18881b367a8b1",
         "Delivery": null
       },
       "RequiresFlag": null,

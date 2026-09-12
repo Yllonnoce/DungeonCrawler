@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 12,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 14391511594621273884,
   "Title": "The Kiln Shrine",
   "IntroLine": {
     "Text": "Red kiln brick and air you could bake in. The mint\u0027s own chapel is down here, where they blessed the toll coin before it was struck. Somebody means to unbless it, and the walls object.",
-    "VoiceId": "0c56dfe82dd53eda",
+    "VoiceId": "cbdc71986139c66d",
     "Delivery": null
   },
   "Rooms": [
@@ -306,7 +306,7 @@
       "Room": 5,
       "Line": {
         "Text": "The chapel of the coin. The Company\u0027s lantern is cut into the altar, and somebody has been scrubbing at it with a knife.",
-        "VoiceId": "4b3002682f54dbbb",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

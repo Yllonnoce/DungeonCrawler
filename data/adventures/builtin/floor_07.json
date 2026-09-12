@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 7,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 9738003489194521161,
   "Title": "The Drowned Lanes",
   "IntroLine": {
     "Text": "Lichen light and lanes too narrow for two. Ashmere\u0027s low town, dug over and let flood. The locals still live here, if that is the word, and they run when they hear boots.",
-    "VoiceId": "d88a89d8a27282e3",
+    "VoiceId": "ed52b222b2b56d15",
     "Delivery": null
   },
   "Rooms": [
@@ -135,7 +135,7 @@
       "Room": 2,
       "Line": {
         "Text": "A lockup with a fresh chain on the door. Whoever runs the cages down here is not the turnkey you met. Tarn only ever locked what the clerk sent him.",
-        "VoiceId": "c10d32db52a8a1b8",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

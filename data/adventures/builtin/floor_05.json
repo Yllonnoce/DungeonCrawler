@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 5,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 67392983373938768,
   "Title": "The Verger\u0027s Nave",
   "IntroLine": {
     "Text": "The nave flooded first and the Verger never left it. He kept the register of the dead. He is still taking names, knee-deep in the water he drowned in.",
-    "VoiceId": "01bd6adc8dc36693",
+    "VoiceId": "707ef20be1350012",
     "Delivery": null
   },
   "Rooms": [
@@ -181,12 +181,12 @@
     "SignatureOverride": null,
     "IntroLine": {
       "Text": "Name? Parish? Cause of death? No matter. I\u0027ll fill it in after.",
-      "VoiceId": "3309a1f8f7e2453d",
+      "VoiceId": "f680e485404a36df",
       "Delivery": "booming"
     },
     "DeathLine": {
       "Text": "The register... is not... complete...",
-      "VoiceId": "105e2e1452479a07",
+      "VoiceId": "e22373d739914792",
       "Delivery": "weary"
     }
   },

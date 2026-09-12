@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 14,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 14850002366807183848,
   "Title": "The Assay Vault",
   "IntroLine": {
     "Text": "Riveted iron and ember light. The mint\u0027s assayers weighed every coin here and locked the true weights in a vault that answers only to its levers. The clerk has changed the setting. He does that.",
-    "VoiceId": "a9517b7ec0ef11bf",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -167,7 +167,7 @@
       "Room": 0,
       "Line": {
         "Text": "Plaques by the levers, in a clerk\u0027s neat hand. He wants you to solve it. He wants to watch you try.",
-        "VoiceId": "4bb05155370791e6",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

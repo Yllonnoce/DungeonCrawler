@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 16,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 1275258749426059060,
   "Title": "The Choir Cages",
   "IntroLine": {
     "Text": "Slate and purple dark, and fire on the floor where the choir stalls stood. The belfry keeps a choir still. It keeps them in cages, and it keeps the cages full.",
-    "VoiceId": "ad05338c355b09a6",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -333,7 +333,7 @@
       "Room": 0,
       "Line": {
         "Text": "Vane\u0027s colours again, and a fire with only three around it. She paid the toll here too, then. The cages next door are how she paid it.",
-        "VoiceId": "f20b9516fe15e5dc",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

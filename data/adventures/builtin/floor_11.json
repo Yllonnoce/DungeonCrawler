@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 11,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 3459982951054959492,
   "Title": "The Slag Road",
   "IntroLine": {
     "Text": "Rust, slag and a foot of warm water over all of it. The road to the mint ran here. The Company\u0027s lantern is stamped on the grates, and Nan Trellick is standing in the water, mapping a high street.",
-    "VoiceId": "3cbfa9683c183ea1",
+    "VoiceId": "e8f392ddc28a8ccf",
     "Delivery": null
   },
   "Rooms": [
@@ -167,7 +167,7 @@
             "Id": "greet",
             "Line": {
               "Text": "There you are. This is Foundry Street, don\u0027t argue. I\u0027ve the bell-ringer\u0027s house marked, second on the left past the pond, but my legs won\u0027t do the water. Go and read me the door.",
-              "VoiceId": "21bb2d8129441443",
+              "VoiceId": "10592e17c8a3eb84",
               "Delivery": null
             },
             "Choices": [
@@ -209,7 +209,7 @@
             "Id": "foundry",
             "Line": {
               "Text": "I know what I\u0027m standing in, dear. I\u0027m standing in Ashmere. Everyone else has stopped. Go on: second on the left. There\u0027s a name cut over the door, read me it.",
-              "VoiceId": "cdedc310091b38d6",
+              "VoiceId": "7cf3a600a0c4680d",
               "Delivery": "calm"
             },
             "Choices": [
@@ -235,7 +235,7 @@
             "Id": "accepted",
             "Line": {
               "Text": "Good. The house, then the yard, then the grate where the Company sign is. Read me what\u0027s cut there and I\u0027ll put it on the map.",
-              "VoiceId": "5ba1eb2810bc070f",
+              "VoiceId": "f97aba035ca6538a",
               "Delivery": null
             },
             "Choices": [
@@ -253,7 +253,7 @@
             "Id": "done",
             "Line": {
               "Text": "Well? Read it. \u0027Nan Trellick, of this parish, taken by the water in the year of the bell.\u0027 Taken by... no. That\u0027s the wrong house. That\u0027s the wrong street. Give me the map, I\u0027ll... I\u0027ll find the right one.",
-              "VoiceId": "05a8430482e63b32",
+              "VoiceId": "4a174853b758383d",
               "Delivery": "whisper"
             },
             "Choices": [
@@ -309,27 +309,27 @@
       "Lines": {
         "Offer": {
           "Text": "Go and read me the door of the bell-ringer\u0027s house. Second on the left.",
-          "VoiceId": "1a2b64ea9a0a0c1a",
+          "VoiceId": "8044d90b7c6466ea",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Read me what\u0027s cut there.",
-          "VoiceId": "a938d3cbbca44d39",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
           "Text": "Then I\u0027ll go myself, once the water\u0027s down.",
-          "VoiceId": "727ea912473a55d8",
+          "VoiceId": null,
           "Delivery": "weary"
         },
         "Complete": {
           "Text": "\u0027Taken by the water in the year of the bell.\u0027 That\u0027s the wrong house.",
-          "VoiceId": "04c2410461d5f1db",
+          "VoiceId": "b1a50b4b93212a77",
           "Delivery": "whisper"
         },
         "Fail": {
           "Text": "Never mind. I\u0027ll find the right street.",
-          "VoiceId": "c9c4bd1da10dfe6a",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -343,7 +343,7 @@
       "Room": null,
       "Line": {
         "Text": "Nan folds her map with great care and walks into the water without a ripple. The water does not notice her. It never has.",
-        "VoiceId": "17cc96be96e5dc10",
+        "VoiceId": "679d58c4c322e8d0",
         "Delivery": null
       },
       "RequiresFlag": null,

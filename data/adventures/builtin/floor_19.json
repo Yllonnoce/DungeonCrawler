@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 19,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 10083392372839498501,
   "Title": "The Sexton\u0027s Door",
   "IntroLine": {
     "Text": "Veined marble under blue water, the palace the town built for its dead. The Sexton\u0027s door is at the end of it, and the toll for that door is the clerk\u0027s own key.",
-    "VoiceId": "014b31b6d7185f4b",
+    "VoiceId": "f284491ff91c5b8e",
     "Delivery": null
   },
   "Rooms": [
@@ -208,7 +208,7 @@
             "Id": "greet",
             "Line": {
               "Text": "You took me. You did take me. I kept the key dry, like I said. It\u0027s in his strongbox, the far one, he made me put it back but I know the lock. Fetch it and the Sexton\u0027s door is yours.",
-              "VoiceId": "a63170e834fa7630",
+              "VoiceId": "f63ca8290e60b8f2",
               "Delivery": "warm"
             },
             "Choices": [
@@ -242,7 +242,7 @@
             "Id": "accepted",
             "Line": {
               "Text": "Good. He\u0027s shouting already, can you hear him? He knows it\u0027s gone before it\u0027s gone. Forty years I listened to that.",
-              "VoiceId": "905d1e57cbb600be",
+              "VoiceId": "f0513f2305d50b9b",
               "Delivery": null
             },
             "Choices": [
@@ -260,7 +260,7 @@
             "Id": "done",
             "Line": {
               "Text": "That\u0027s it. His key. Give it here... no. No, you keep it. You\u0027re the one arresting people now. Go and arrest him.",
-              "VoiceId": "35adb3dda7aa6e32",
+              "VoiceId": "4d1e8446b131d63a",
               "Delivery": "warm"
             },
             "Choices": [
@@ -313,27 +313,27 @@
       "Lines": {
         "Offer": {
           "Text": "The key\u0027s in his strongbox, the far one. Fetch it and the Sexton\u0027s door is yours.",
-          "VoiceId": "c02a55b86d11bba8",
+          "VoiceId": "a3b585d444895b7c",
           "Delivery": "warm"
         },
         "Accept": {
           "Text": "He knows it\u0027s gone before it\u0027s gone.",
-          "VoiceId": "00690bf8374e72c3",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
           "Text": "Then I\u0027ll go myself. Slowly.",
-          "VoiceId": "1ac22af94950ccb1",
+          "VoiceId": null,
           "Delivery": "weary"
         },
         "Complete": {
           "Text": "You keep it. You\u0027re the one arresting people now.",
-          "VoiceId": "8f8e3892584dc70a",
+          "VoiceId": "add747c1d843ad18",
           "Delivery": "warm"
         },
         "Fail": {
           "Text": "Lost again. He\u0027ll count that too.",
-          "VoiceId": "7515769af42f77c1",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -347,7 +347,7 @@
       "Room": null,
       "Line": {
         "Text": "Tarn never left his post. The clerk saw to that. Whatever holds the turnkey\u0027s post now holds it in his shape.",
-        "VoiceId": "17244eec25853999",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": "left_tarn",
@@ -358,7 +358,7 @@
       "Room": null,
       "Line": {
         "Text": "A shape by the ruined post lifts a hand: Tarn, the turnkey you arrested, forty years late and here before you.",
-        "VoiceId": "eab9181729575c95",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": "took_tarn",
@@ -369,7 +369,7 @@
       "Room": 2,
       "Line": {
         "Text": "The Sexton\u0027s door. Beyond it, the bell, and the clerk, and the sum.",
-        "VoiceId": "16a74a570f3f23f2",
+        "VoiceId": "5dab080d2cd6d1ce",
         "Delivery": null
       },
       "RequiresFlag": null,

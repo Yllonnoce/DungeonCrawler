@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 15,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 14043928483317276841,
   "Title": "The Coinstriker\u0027s Floor",
   "IntroLine": {
     "Text": "The striking floor of the mint, still hot, still running. The thing that struck the toll coin never stopped. It has the Company\u0027s lantern on its chest, where a heart would go.",
-    "VoiceId": "a1dbbe40919e985a",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -334,12 +334,12 @@
     "SignatureOverride": null,
     "IntroLine": {
       "Text": "Four blanks. Face up. I will strike you with the lantern, and you will spend.",
-      "VoiceId": "4b15c86eb21b92d0",
+      "VoiceId": "7d6203f2cfeea1b8",
       "Delivery": "booming"
     },
     "DeathLine": {
       "Text": "Short... weight...",
-      "VoiceId": "47b0794dbbe663ce",
+      "VoiceId": "522d24bb65f7ceb3",
       "Delivery": "weary"
     }
   },

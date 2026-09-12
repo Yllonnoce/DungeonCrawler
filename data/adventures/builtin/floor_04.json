@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 4,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 4100339883212986443,
   "Title": "The Charnel Pits",
   "IntroLine": {
     "Text": "Rotten timber over the pits where Ashmere put its dead when the church ran out of floor. The air is green at the edges, and it is coming up to meet you.",
-    "VoiceId": "f1a4fbb7d90f2684",
+    "VoiceId": "691b97fee7daf476",
     "Delivery": null
   },
   "Rooms": [
@@ -204,7 +204,7 @@
       "Room": 9,
       "Line": {
         "Text": "The stair is down here, low and far, exactly where the air is worst. The clerk has a sense of humour and no lungs to trouble it.",
-        "VoiceId": "4d6abad94d96dac0",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

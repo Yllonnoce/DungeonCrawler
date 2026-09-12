@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 6,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 2865536137340698563,
   "Title": "The Lockup",
   "IntroLine": {
     "Text": "Dark rock, wet rope, and a smell of other people\u0027s fear. This is where Ashmere kept the ones who could not pay. The cages are empty. The turnkey is not.",
-    "VoiceId": "70fa8348e8347208",
+    "VoiceId": "78348c80c566d7eb",
     "Delivery": null
   },
   "Rooms": [
@@ -308,7 +308,7 @@
             "Id": "greet",
             "Line": {
               "Text": "You\u0027re the Company\u0027s. Good. Arrest me. Take me up. I\u0027m the turnkey and I\u0027ve kept his cages forty years and I want... I want to be the one in the cage. Please.",
-              "VoiceId": "76ffda898070e387",
+              "VoiceId": "eb1094275264cf28",
               "Delivery": null
             },
             "Choices": [
@@ -350,7 +350,7 @@
             "Id": "why",
             "Line": {
               "Text": "Because I\u0027ve his key. The clerk\u0027s own. He counts every step and I count his. Take me and it\u0027s yours when you need it, and you will. Leave me and I stay his, and I do my job. I\u0027m good at my job.",
-              "VoiceId": "dc48ba61c336a17f",
+              "VoiceId": "c45d33a02feb233b",
               "Delivery": "pleading"
             },
             "Choices": [
@@ -376,7 +376,7 @@
             "Id": "took",
             "Line": {
               "Text": "Arrested. Ha. Forty years. I\u0027ll follow when I can and I\u0027ll keep the key dry. He\u0027ll shout about this. He shouts about everything.",
-              "VoiceId": "96b2f39ec4d4f521",
+              "VoiceId": "4633443a6668b7d8",
               "Delivery": "warm"
             },
             "Choices": [
@@ -394,7 +394,7 @@
             "Id": "left",
             "Line": {
               "Text": "Aye. Thought so. Nobody takes the turnkey. Mind the cages below, then. I\u0027ll be locking them.",
-              "VoiceId": "a71020ebecfb6856",
+              "VoiceId": "08c0a97548eda348",
               "Delivery": "angry"
             },
             "Choices": [
@@ -447,27 +447,27 @@
       "Lines": {
         "Offer": {
           "Text": "Arrest me. Take me up. Please.",
-          "VoiceId": "1ad7ce13b2c7d656",
+          "VoiceId": "9868ec3998d2522c",
           "Delivery": null
         },
         "Accept": {
           "Text": "Arrested. Ha.",
-          "VoiceId": "15bdbfb6b52fcf27",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
           "Text": "Nobody takes the turnkey.",
-          "VoiceId": "0a9d6b7fc8e4e56d",
+          "VoiceId": null,
           "Delivery": "angry"
         },
         "Complete": {
           "Text": "Forty years. He\u0027ll shout about this.",
-          "VoiceId": "a91b4e935a2f9fc6",
+          "VoiceId": "899226d45c339053",
           "Delivery": null
         },
         "Fail": {
           "Text": "Then I stay his.",
-          "VoiceId": "1fc6ef67548d1161",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -481,7 +481,7 @@
       "Room": null,
       "Line": {
         "Text": "The clerk\u0027s voice comes down the rope walk, thin with distance: somebody has been talking to his turnkey, and he has written it down.",
-        "VoiceId": "0b5d3ed8f56ee544",
+        "VoiceId": "e4e3230dab468c1a",
         "Delivery": null
       },
       "RequiresFlag": null,

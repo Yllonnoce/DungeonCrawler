@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 2,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 6692710762951404688,
   "Title": "The Tithe Vault",
   "IntroLine": {
     "Text": "White stone, and the sound of iron sliding somewhere out of sight. The vestry kept its tithe in a box with a trick lid. The trick is still working.",
-    "VoiceId": "32e9376572a6b599",
+    "VoiceId": "d1a814ef9b12441f",
     "Delivery": null
   },
   "Rooms": [
@@ -271,7 +271,7 @@
       "Room": 0,
       "Line": {
         "Text": "Plaques, levers, gates that slide in the walls. Ashmere\u0027s tithe box was built by a man who trusted nobody, and he was right.",
-        "VoiceId": "b17026ed7ac03aff",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

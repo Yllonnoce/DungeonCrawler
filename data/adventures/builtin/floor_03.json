@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 3,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 5294190080565317383,
   "Title": "The Counting House",
   "IntroLine": {
     "Text": "Moss on the brick and ink on the moss. This was where Ashmere counted what it owed. The sums are still on the walls, and someone is still adding to them.",
-    "VoiceId": "e50e77dd1e6562a2",
+    "VoiceId": "e7a41ee07852a833",
     "Delivery": null
   },
   "Rooms": [
@@ -170,7 +170,7 @@
             "Id": "greet",
             "Line": {
               "Text": "Mind the kerb, dear, this is Tallow Street. Well, it was. I\u0027m mapping it. You\u0027ll want the counting house\u0027s first page; they tore it in three, the cowards. Fetch the pieces and I\u0027ll read it you.",
-              "VoiceId": "bbf976d2e27dc646",
+              "VoiceId": "6c65724a467ce670",
               "Delivery": null
             },
             "Choices": [
@@ -212,7 +212,7 @@
             "Id": "street",
             "Line": {
               "Text": "Tunnel. Street. It\u0027s all a matter of what\u0027s on top of you, and I\u0027ve never let that stop me. Here, look: the baker\u0027s was there, the Company office there. The office is the one that\u0027s still lit.",
-              "VoiceId": "857d41d5a9e134ce",
+              "VoiceId": "2b80d4b4d90dc1ee",
               "Delivery": "cheerful"
             },
             "Choices": [
@@ -238,7 +238,7 @@
             "Id": "accepted",
             "Line": {
               "Text": "Good. They\u0027ll be where clerks hide things: under the row, in the blotter, in the tally room. Don\u0027t let the clerks see you. They count you if they see you.",
-              "VoiceId": "2c23f3423533fc4f",
+              "VoiceId": "82b097b00f606363",
               "Delivery": null
             },
             "Choices": [
@@ -256,7 +256,7 @@
             "Id": "done",
             "Line": {
               "Text": "Here we are. \u0027Ashmere, the whole of it, owes the Lamplighters\u0027 Company...\u0027 a sum, my word, a sum. And under it: \u0027settled by water.\u0027 Settled by water. Well. That\u0027s Mill Lane for you, always flooding.",
-              "VoiceId": "a47ea4d274ed4f21",
+              "VoiceId": "7af3fd1a8236a28f",
               "Delivery": "calm"
             },
             "Choices": [
@@ -313,27 +313,27 @@
       "Lines": {
         "Offer": {
           "Text": "They tore the first page in three. Fetch the pieces and I\u0027ll read it you.",
-          "VoiceId": "569a16ef7a1b5030",
+          "VoiceId": "e47800dd800876eb",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Don\u0027t let the clerks count you.",
-          "VoiceId": "c959113a87ce641b",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
           "Text": "Then I\u0027ll map without you. I usually do.",
-          "VoiceId": "40ac61f31f52f3b8",
+          "VoiceId": null,
           "Delivery": "weary"
         },
         "Complete": {
           "Text": "\u0027Settled by water.\u0027 Well. That\u0027s Mill Lane for you.",
-          "VoiceId": "427feee4568cba16",
+          "VoiceId": "bd6d401ccae57bbf",
           "Delivery": "calm"
         },
         "Fail": {
           "Text": "Pages don\u0027t keep down here. Nor do people.",
-          "VoiceId": "7611352fce51fc26",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -347,7 +347,7 @@
       "Room": null,
       "Line": {
         "Text": "The Company\u0027s lantern seal sits beside the sum. Somebody in the Company decided what Ashmere\u0027s debt was worth. Somebody else decided how to pay it.",
-        "VoiceId": "2e9a5b08634ecf85",
+        "VoiceId": "4d09e5b09d25fef7",
         "Delivery": null
       },
       "RequiresFlag": null,

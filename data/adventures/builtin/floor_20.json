@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 20,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 17024959734848516595,
   "Title": "The Bell",
   "IntroLine": {
     "Text": "The bottom of the tower and the mouth of the bell, and a desk set in front of it with a lamp and a ledger and a clerk. He has been expecting you since the vestry. He has your account open.",
-    "VoiceId": "e49552cfc1cdd31c",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -348,12 +348,12 @@
     "SignatureOverride": null,
     "IntroLine": {
       "Text": "Ah. The Lamplighters\u0027 four. Sit. I have your account here, and the Company\u0027s, and I\u0027m afraid the Company\u0027s is the larger. Shall we begin?",
-      "VoiceId": "3c15f5238772d097",
+      "VoiceId": "7228732ee988b5fb",
       "Delivery": "mocking"
     },
     "DeathLine": {
       "Text": "Paid... in full... tell them... I said... paid...",
-      "VoiceId": "3dad461d1bee320e",
+      "VoiceId": "ded6acd7a1493da0",
       "Delivery": "weary"
     }
   },
@@ -376,7 +376,7 @@
       "Room": null,
       "Line": {
         "Text": "The bell rings once, on its own, and the water above begins, very slowly, to go down. Ashmere\u0027s toll is paid. Whether the Company\u0027s is, you will have to go up and ask.",
-        "VoiceId": "ffa1377fec4a37c6",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

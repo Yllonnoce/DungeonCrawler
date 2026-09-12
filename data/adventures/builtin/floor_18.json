@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 18,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 16621631354794557373,
   "Title": "The Green Belfry",
   "IntroLine": {
     "Text": "Blue tile under black timber, galleries cut through the tower\u0027s own stone, and the air going green from the bottom up. The clerk has opened the vents one last time. He wants you to hurry.",
-    "VoiceId": "e3251b7fb2a68261",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -221,7 +221,7 @@
       "Room": 8,
       "Line": {
         "Text": "The deep gallery, and the stairs at the end of it, where the air is thickest and greenest. He has counted your breaths. He has a number in mind.",
-        "VoiceId": "1c0d6b1c48aa6957",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
