@@ -93,4 +93,28 @@ public class ReinforcementTests
         Assert.Null(PortalRules.ChooseSite(layout, new HashSet<GridPos>(far.Cells()), party, rng));
         Assert.Null(PortalRules.ChooseSite(layout, seen, new List<GridPos>(), rng));
     }
+    [Fact]
+    public void PortalSite_NeverOpensOnTheStairs()
+    {
+        // the start room keeps its stairs in the middle, and the portal favours it: the rift must open beside the flight, never on it
+        for (var seed = 1; seed <= 40; seed++)
+        {
+            foreach (var kind in LayoutKinds.All)
+            {
+                var layout = FloorGenerator.Generate(FloorSpec.Default with { Layout = kind }, seed);
+                var start = layout.RoomAt(layout.UpStairs)!;
+                var far = layout.Rooms.Where(r => r != start && r != layout.BossArena).OrderByDescending(r => Math.Abs(r.Center.X - layout.UpStairs.X) + Math.Abs(r.Center.Y - layout.UpStairs.Y)).First();
+                var seen = new HashSet<GridPos>(layout.Rooms.SelectMany(r => r.Cells()));
+                var site = PortalRules.ChooseSite(layout, seen, new List<GridPos> { far.Center }, new Random(seed));
+                if (site == null) continue;
+                var cell = site.Value.Cell;
+                Assert.NotEqual(layout.UpStairs, cell);
+                Assert.NotEqual(layout.DownStairs, cell);
+                Assert.True(Math.Abs(cell.X - layout.UpStairs.X) + Math.Abs(cell.Y - layout.UpStairs.Y) >= 2);
+                Assert.True(Math.Abs(cell.X - layout.DownStairs.X) + Math.Abs(cell.Y - layout.DownStairs.Y) >= 2);
+                Assert.DoesNotContain(cell, layout.ChestSpawns);
+                Assert.True(layout.IsWalkable(cell));
+            }
+        }
+    }
 }

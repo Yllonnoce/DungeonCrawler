@@ -136,7 +136,10 @@ public static class PortalRules
             if (party.Any(room.Contains)) continue;
             var cells = room.Cells().ToList();
             if (cells.Count == 0 || cells.Count(seen.Contains) * 3 < cells.Count) continue;
-            var cell = cells.Where(c => layout.IsWalkable(c) && !layout.IsWater(c) && !layout.IsReserved(c) && layout[c] == Cell.Floor)
+            // never on the stairs (the start and exit rooms keep theirs in the middle) nor on the cell at their foot, nor on a chest or a ledge
+            var cell = cells.Where(c => layout.IsWalkable(c) && !layout.IsWater(c) && !layout.IsReserved(c) && layout[c] == Cell.Floor
+                    && Dist(c, layout.UpStairs) >= 2 && Dist(c, layout.DownStairs) >= 2 && !layout.ChestSpawns.Contains(c)
+                    && !layout.Ledges.Any(l => l.Cells.Contains(c) || l.RampBottom == c || l.RampTop == c))
                 .OrderBy(c => Dist(c, room.Center)).Cast<GridPos?>().FirstOrDefault();
             if (cell == null) continue;
             var nearest = party.Min(p => Dist(room.Center, p));
