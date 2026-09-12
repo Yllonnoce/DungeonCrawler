@@ -182,6 +182,19 @@ public partial class SettingsScreen : PanelContainer
         bakeRow.AddChild(_bakeCampaign);
         bakeRow.AddChild(_bakeVoice);
         v.AddChild(bakeRow);
+        var sweep = new Button { Text = "Clear unused voice lines", FocusMode = FocusModeEnum.None };
+        var sweepNote = new Label { Modulate = new Color(0.8f, 0.8f, 0.7f) };
+        sweepNote.AddThemeFontSizeOverride("font_size", 12);
+        void ShowSweep(bool done)
+        {
+            if (Adventure.VoiceRenderer.Instance is not { } vr) { sweepNote.Text = ""; return; }
+            var plan = vr.SweepCache(dryRun: !done);
+            sweepNote.Text = done ? plan.Describe("the voice cache") : plan.Delete.Count == 0 ? $"The voice cache holds nothing unused ({plan.Kept} lines kept)." : $"{plan.Delete.Count} cached lines ({plan.Bytes / (1024.0 * 1024.0):0.0} MB) belong to no campaign, run or save.";
+        }
+        sweep.Pressed += () => ShowSweep(done: true);
+        VisibilityChanged += () => { if (Visible) ShowSweep(done: false); };
+        Row(v, "Rendered lines no campaign, run or save refers to any more", sweep);
+        v.AddChild(sweepNote);
         _bakeStatus = new Label { AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.8f, 0.8f, 0.7f) };
         v.AddChild(_bakeStatus);
         RefreshBake();

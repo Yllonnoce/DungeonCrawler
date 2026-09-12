@@ -175,6 +175,7 @@ godot --path . -- --floor=3 --talk --screenshot=/tmp/talk.png --after=2   # open
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
+godot --headless --path . -- --purge-voice          # sweep assets/voice/builtin of lines the shipped campaign no longer refers to, and user://voice of lines no campaign, run or save slot refers to; every bake does the same for the bank it wrote unless --keep-old-voice
 godot --headless --path . -- --check-voice-bank     # every voice line the campaign on disk refers to: how many the shipped bank holds and how many load; run it on an exported binary (build/linux/DungeonCrawler.x86_64 --headless -- --check-voice-bank) to prove the bank was packed
 scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, leave
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --ai --seed=N   # write a campaign + 20 floors with Claude (or --fake-ai=0 for the offline designer)
@@ -350,6 +351,13 @@ The dedicated server takes `RUNWARE_API_KEY` beside `CLAUDE_API_KEY` (`deploy/st
 key set it starts with `--planner=runware`.
 
 ## Voice (optional)
+
+**Old audio is swept.** A bank file's name is its line's content id, so a rebake or a changed delivery style leaves the
+previous audio behind as dead weight. Every bake ends by sweeping the bank it wrote for (`VoiceBankSweep`,
+`VoiceRefs.Ids`): the shipped bank keeps only the ids the shipped campaign refers to, and the user cache keeps only
+the ids the built-in campaign, the run in progress or any save slot still needs. `--purge-voice` does the same from
+the command line, Settings has a "Clear unused voice lines" button that shows what it would remove before it does,
+and `--keep-old-voice` tells a bake to leave the bank alone.
 
 Every character sounds like someone (`Voice/VoiceLines.cs`: `Delivery`, `Persona`, `Voices.Style`). The style the
 synth is told is composed from the speaker's persona (VoiceStyle: a few words on the voice and manner; DefaultDelivery;

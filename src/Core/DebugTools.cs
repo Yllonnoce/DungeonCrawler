@@ -173,6 +173,10 @@ public partial class DebugTools : Node
     private bool _server, _netClient;
     private bool _testMusic;
     private bool _bakeResume;
+    /// <summary>--keep-old-voice: a bake leaves the bank's unreferenced files alone (by default it sweeps them).</summary>
+    private bool _keepOldVoice;
+    /// <summary>--purge-voice: sweep the shipped bank against the shipped campaign and the cache against every save, then quit.</summary>
+    private bool _purgeVoice, _purgedVoice;
     private bool _listVoiceModels, _listedVoiceModels;
     private string? _probeVoiceModel;
     private bool _probedVoiceModel;
@@ -236,6 +240,8 @@ public partial class DebugTools : Node
             else if (arg == "--test-ai-flow") { _testAiFlow = true; FakeAiDelay ??= 1.2f; TraceAi = false; _quitAfter = 22; }
             else if (arg.StartsWith("--bake-campaign=")) { _bakeDir = ProjectSettings.GlobalizePath(arg["--bake-campaign=".Length..]); TraceAi = false; _quitAfter = 1800; }
             else if (arg == "--bake-resume") _bakeResume = true;
+            else if (arg == "--keep-old-voice") _keepOldVoice = true;
+            else if (arg == "--purge-voice") { _purgeVoice = true; _menuOnly = true; _quitAfter = 10; }
             else if (arg.StartsWith("--voice-model=")) { Settings.VoiceModel = arg["--voice-model=".Length..]; Settings.RunwareVoiceModel = Settings.VoiceModel; Settings.Apply(); }
             else if (arg.StartsWith("--planner=")) { Settings.PlannerProvider = arg["--planner=".Length..].Trim().ToLowerInvariant() == Settings.ProviderRunware ? Settings.ProviderRunware : Settings.ProviderClaude; }
             else if (arg.StartsWith("--voice-provider=")) { Settings.VoiceProvider = arg["--voice-provider=".Length..].Trim().ToLowerInvariant() == Settings.ProviderRunware ? Settings.ProviderRunware : Settings.ProviderGemini; Settings.Apply(); }
@@ -507,6 +513,18 @@ public partial class DebugTools : Node
                 GD.Print($"[planner-probe] {r}");
                 GetTree().Quit(r.StartsWith("Connected") ? 0 : 1);
             });
+        }
+        if (_purgeVoice && !_purgedVoice && _elapsed >= 0.3 && VoiceRenderer.Instance is { } purger)
+        {
+            _purgedVoice = true;
+            var shippedDir = ProjectSettings.GlobalizePath(BuiltinCampaign.ShippedDir);
+            var shipped = BuiltinCampaign.LoadFrom(shippedDir);
+            var shippedIds = shipped is { } s ? Adventure.Voice.VoiceRefs.Ids(s.Campaign, s.Floors) : new HashSet<string>();
+            var bankDir = ProjectSettings.GlobalizePath(VoiceRenderer.BuiltinDir);
+            GD.Print($"[purge-voice] shipped campaign \"{shipped?.Campaign.Title}\" refers to {shippedIds.Count} lines; {VoiceRenderer.Sweep(bankDir, shippedIds).Describe(bankDir)}");
+            GD.Print($"[purge-voice] {purger.SweepCache().Describe(purger.CacheDir)}");
+            GD.Print("[purge-voice] RESULT ok");
+            GetTree().Quit(0);
         }
         if (_checkVoiceBank && !_checkedVoiceBank && _elapsed >= 0.3 && VoiceRenderer.Instance != null)
         {
@@ -1261,6 +1279,13 @@ public partial class DebugTools : Node
             if (voiceStopped != null) GD.Print($"[bake] VOICE STOPPED: {voiceStopped} ({VoiceRenderer.Instance!.Rendered} lines rendered, {VoiceRenderer.Instance.Failed} failed). The plans are written; run again with --bake-voice once the quota or model is sorted, lines already rendered are kept.");
             BuiltinCampaign.Write(_bakeDir!, game.Adventure.Campaign, plans);
             try { if (Directory.Exists(_bakeDir + ".partial")) Directory.Delete(_bakeDir + ".partial", recursive: true); } catch { }
+            // the bank this campaign lives in keeps only the lines it refers to: a rebake must not leave the last story's audio behind
+            if (!_keepOldVoice)
+            {
+                var bankDir = _bakeVoiceDir ?? (Path.GetFullPath(_bakeDir!).TrimEnd('/') == Path.GetFullPath(ProjectSettings.GlobalizePath(BuiltinCampaign.ShippedDir)).TrimEnd('/') ? ProjectSettings.GlobalizePath(VoiceRenderer.BuiltinDir) : null);
+                if (bankDir != null) GD.Print($"[bake] {VoiceRenderer.Sweep(bankDir, Adventure.Voice.VoiceRefs.Ids(game.Adventure.Campaign, plans)).Describe(bankDir)}");
+                if (VoiceRenderer.Instance is { } cache) GD.Print($"[bake] cache: {cache.SweepCache().Describe(cache.CacheDir)}");
+            }
             GD.Print($"[bake] wrote {plans.Count} floors to {_bakeDir}; sources: {string.Join(",", plans.OrderBy(k => k.Key).Select(k => k.Value.Source).Distinct())}; spend ${game.Adventure.Spend.Usd:0.000} over {game.Adventure.Spend.Calls} calls");
             var bakeOk = plans.Count == TierRules.FinalFloor && voiceStopped == null;
             GD.Print($"[bake] RESULT {(bakeOk ? "ok" : voiceStopped != null ? "FAIL (voice stopped)" : "FAIL")}");

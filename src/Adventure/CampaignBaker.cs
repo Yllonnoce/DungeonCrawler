@@ -141,6 +141,7 @@ public partial class CampaignBaker : Node
         try { BuiltinCampaign.Write(dir, _campaign!, _floors); }
         catch (Exception e) { Finish(false, $"Could not write the campaign: {e.Message}"); return; }
         var spend = Game.Instance.Adventure.Spend;
+        if (VoiceRenderer.Instance is { } cache) GD.Print($"[bake] cache: {cache.SweepCache().Describe(cache.CacheDir)}"); // the old story's lines go; saves keep theirs
         if (withVoice) StartVoiceFor(_campaign!, _floors, $"Campaign written (${spend.Usd:0.00}). ");
         else Finish(true, $"Campaign \"{_campaign!.Title}\" written: {_floors.Count} floors, ${spend.Usd:0.00} over {spend.Calls} calls.");
     }

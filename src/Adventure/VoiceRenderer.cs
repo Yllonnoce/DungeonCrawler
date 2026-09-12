@@ -108,6 +108,37 @@ public partial class VoiceRenderer : Node
 
     public bool HasAudio(string id) => File.Exists(CachePath(id)) || HasBuiltin(id);
 
+    /// <summary>Delete every bank file in <paramref name="dir"/> whose id is not in <paramref name="referenced"/>. Dry run only counts.</summary>
+    public static VoiceBankSweep.Plan Sweep(string dir, ISet<string> referenced, bool dryRun = false)
+    {
+        if (!Directory.Exists(dir)) return new VoiceBankSweep.Plan(Array.Empty<string>(), 0, 0);
+        var files = Directory.EnumerateFiles(dir).Select(f => (f, new FileInfo(f).Length));
+        var plan = VoiceBankSweep.Compute(files, referenced);
+        if (!dryRun) foreach (var f in plan.Delete) { try { File.Delete(f); } catch (Exception e) { GD.PushWarning($"[Voice] could not delete {f}: {e.Message}"); } }
+        return plan;
+    }
+
+    /// <summary>
+    /// Every id something on this machine still needs: the built-in campaign (user copy or shipped), the run in progress,
+    /// and every save slot's campaign. Anything else in the cache is from a run that is gone.
+    /// </summary>
+    public static HashSet<string> ReferencedEverywhere()
+    {
+        var ids = new HashSet<string>();
+        if (BuiltinCampaign.Load() is { } bank) ids.UnionWith(VoiceRefs.Ids(bank.Campaign, bank.Floors));
+        if (BuiltinCampaign.LoadFrom(ProjectSettings.GlobalizePath(BuiltinCampaign.ShippedDir)) is { } shipped) ids.UnionWith(VoiceRefs.Ids(shipped.Campaign, shipped.Floors));
+        if (Game.Instance?.Adventure is { } live) ids.UnionWith(VoiceRefs.Ids(live.Campaign, live.FloorPlans));
+        foreach (var slot in Save.SaveManager.AllSlots)
+        {
+            try { if (Save.SaveManager.Exists(slot) && Save.SaveManager.Read(slot)?.Adventure is { } adv) ids.UnionWith(VoiceRefs.Ids(adv.Campaign, adv.FloorPlans)); }
+            catch (Exception e) { GD.PushWarning($"[Voice] could not read save {slot} for its voice ids: {e.Message}"); }
+        }
+        return ids;
+    }
+
+    /// <summary>Sweep the user cache of lines no campaign, run or save refers to.</summary>
+    public VoiceBankSweep.Plan SweepCache(bool dryRun = false) => Sweep(CacheDir, ReferencedEverywhere(), dryRun);
+
     /// <summary>
     /// Is a line in the shipped bank? Through ResourceLoader, not FileAccess: an exported game packs only the imported
     /// form of a wav, so FileAccess.FileExists says no there while the resource loads fine.
