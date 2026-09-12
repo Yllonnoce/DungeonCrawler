@@ -9,18 +9,26 @@ GODOT_DIR="$HOME/.local/opt/godot/Godot_v${GODOT_VERSION}-stable_mono_linux_x86_
 GODOT_BIN="$GODOT_DIR/Godot_v${GODOT_VERSION}-stable_mono_linux.x86_64"
 export PATH="$HOME/.local/bin:$HOME/.dotnet:$PATH"
 export DOTNET_ROOT="$HOME/.dotnet"
+# Debian 13 mounts /tmp in RAM at half the machine's memory, which is too small to unpack the SDK (~900 MB) or the
+# Godot zip on a 1 GB VM, so every temporary file goes on the home disk instead
+export TMPDIR="$HOME/.cache/dungeoncrawler-setup"
+mkdir -p "$TMPDIR"
 
 echo "== runtime libraries"
 sudo apt-get update -qq
 sudo apt-get install -y -qq --no-install-recommends ca-certificates curl unzip libfontconfig1 libgl1 libxcursor1 libxinerama1 libxrandr2 libxi6 libasound2 libpulse0 libudev1
+# .NET aborts at start without the ICU globalization library; the package name carries the ICU version (76 on Debian 13, 72 on 12)
+ICU=$(apt-cache search --names-only '^libicu[0-9]+$' | awk '{print $1}' | sort -V | tail -1)
+[ -n "$ICU" ] || { echo "no libicu package found in apt"; exit 1; }
+sudo apt-get install -y -qq --no-install-recommends "$ICU"
 
 echo "== Godot $GODOT_VERSION .NET"
 if [ -x "$GODOT_BIN" ]; then echo "already at $GODOT_BIN"; else
   mkdir -p "$HOME/.local/opt/godot" "$HOME/.local/bin"
   ZIP="Godot_v${GODOT_VERSION}-stable_mono_linux_x86_64.zip"
-  curl -fL --progress-bar -o "/tmp/$ZIP" "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/$ZIP"
-  unzip -q -o "/tmp/$ZIP" -d "$HOME/.local/opt/godot"
-  rm -f "/tmp/$ZIP"
+  curl -fL --progress-bar -o "$TMPDIR/$ZIP" "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable/$ZIP"
+  unzip -q -o "$TMPDIR/$ZIP" -d "$HOME/.local/opt/godot"
+  rm -f "$TMPDIR/$ZIP"
 fi
 ln -sf "$GODOT_BIN" "$HOME/.local/bin/godot"
 
@@ -30,8 +38,12 @@ if "$HOME/.dotnet/dotnet" --list-runtimes 2>/dev/null | grep -q 'Microsoft.NETCo
    && ! find "$HOME/.dotnet/shared" -name '*.runtimeconfig.json' -empty | grep -q .; then echo "already installed"; else
   [ -d "$HOME/.dotnet" ] && { echo "the .NET install under ~/.dotnet is incomplete; reinstalling"; rm -rf "$HOME/.dotnet"; }
   df -h "$HOME" | tail -1 | awk '{print "disk free on home: " $4}'
-  curl -fsSL https://dot.net/v1/dotnet-install.sh | bash -s -- --channel 8.0 --install-dir "$HOME/.dotnet"
-  "$HOME/.dotnet/dotnet" --list-runtimes | grep -q 'Microsoft.NETCore.App 8\.' || { echo ".NET install failed (out of disk?)"; exit 1; }
+  curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$TMPDIR/dotnet-install.sh"
+  bash "$TMPDIR/dotnet-install.sh" --channel 8.0 --install-dir "$HOME/.dotnet"
+  if ! "$HOME/.dotnet/dotnet" --list-runtimes | grep -q 'Microsoft.NETCore.App 8\.' \
+     || find "$HOME/.dotnet/shared" -name '*.runtimeconfig.json' -empty | grep -q .; then
+    echo ".NET install failed: check 'df -h $TMPDIR' and 'df -h ~' for a full disk"; exit 1
+  fi
 fi
 
 echo "== global .NET install location (a binary with the port-80 capability runs in secure mode and ignores DOTNET_ROOT)"
@@ -50,7 +62,7 @@ godot --version | head -1
 dotnet --version
 
 echo "== first import and build (a few minutes on a small machine)"
-[ -d .godot/imported ] && echo "assets already imported" || godot --headless --import --path . > /tmp/godot-import.log 2>&1 || true
+[ -d .godot/imported ] && echo "assets already imported" || godot --headless --import --path . > "$TMPDIR/godot-import.log" 2>&1 || true
 dotnet build DungeonCrawler.csproj -v q --nologo
 echo
 echo "Ready. Start with: bash deploy/gce/start.sh   (or PORT=7777 ... for an unprivileged port)"
