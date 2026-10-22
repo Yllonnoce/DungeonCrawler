@@ -290,7 +290,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         var ground = new Vector2(Velocity.X, Velocity.Z).Length();
         var moving = ground > 0.3f;
         var viewer = Profile.Model.StartsWith("viewer/");
-        PlayAnim(viewer ? ViewerGait.GaitFor(1.8f * Profile.Scale, ground) : moving ? (EffectiveMoveSpeed > 3.2f ? "Run" : "Walk") : "Idle");
+        PlayAnim(viewer ? ViewerGait.GaitFor(1.8f * Profile.Scale, ground, _currentAnim is "Walk" or "Run" ? _currentAnim : null) : moving ? (EffectiveMoveSpeed > 3.2f ? "Run" : "Walk") : "Idle");
         // a viewer-rigged character picks the cycle nearest its pace and plays it at the pace the ground actually passes, so the feet stay planted
         if (viewer) _anim.SpeedScale = moving ? ViewerGait.SpeedScaleFor(_currentAnim, 1.8f * Profile.Scale, ground) : 1f;
     }

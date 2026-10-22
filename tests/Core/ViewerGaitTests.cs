@@ -42,3 +42,19 @@ public class ViewerGaitChoiceTests
         Assert.Equal("Walk", ViewerGait.GaitFor(2.07f, 1.6f));   // the taller orc at his walking pace
     }
 }
+
+public class ViewerGaitHysteresisTests
+{
+    [Fact]
+    public void GaitFor_KeepsTheCurrentGaitNearTheSwitch()
+    {
+        var walk = ViewerGait.ImpliedSpeed("Walk", 1.8f);
+        var run = ViewerGait.ImpliedSpeed("Run", 1.8f);
+        var edge = MathF.Sqrt(walk * run);
+        Assert.Equal("Walk", ViewerGait.GaitFor(1.8f, edge * 1.05f, "Walk"));   // just over: a walker keeps walking
+        Assert.Equal("Run", ViewerGait.GaitFor(1.8f, edge * 0.95f, "Run"));     // just under: a runner keeps running
+        Assert.Equal("Run", ViewerGait.GaitFor(1.8f, edge * 1.3f, "Walk"));     // well over: switch
+        Assert.Equal("Walk", ViewerGait.GaitFor(1.8f, edge * 0.7f, "Run"));     // well under: switch
+        Assert.Equal("Idle", ViewerGait.GaitFor(1.8f, 0.2f, "Run"));
+    }
+}

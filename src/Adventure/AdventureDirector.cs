@@ -583,6 +583,7 @@ public partial class AdventureDirector : Node
                 if (q is { Template: QuestTemplate.Decide }) Apply(new ChoiceMade(q.Id, f));
                 break;
             case DialogueEffect.Betray: Betray(npcId, q); break;
+            case DialogueEffect.Join: FindNpc(npcId)?.AskToJoin(); break;
         }
     }
 

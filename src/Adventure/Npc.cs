@@ -14,7 +14,7 @@ namespace DungeonCrawler.Adventure;
 /// enemies standing next to it (the party cannot harm NPCs). Reaching the down stairs while escorted completes an escort.
 /// </summary>
 /// <summary>What an NPC is on this floor: a quest giver from the plan, or one of the floor objective's people.</summary>
-public enum NpcMode { Quest, Ritualist, Prisoner }
+public enum NpcMode { Quest, Ritualist, Prisoner, Fighter }
 
 public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
 {
@@ -54,6 +54,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     {
         NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin the ritual with {NpcName}" : "",
         NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.JailbreakController jail ? jail.PromptFor(this) : "",
+        NpcMode.Fighter when Downed => $"Revive {NpcName}",
         _ => Rescued ? $"{NpcName} waits by the stairs" : $"Talk to {NpcName}",
     };
 
@@ -91,7 +92,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         _head = GetNode<MeshInstance3D>("Head");
         _label = GetNode<Label3D>("Label");
         _gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity", 9.8f).AsDouble();
-        MaxHp = Hp = TierRules.NpcHp(Floor);
+        MaxHp = Hp = TierRules.NpcHp(Floor) * (Mode == NpcMode.Fighter ? NpcFight.HpMultiplier : 1f);
         var tint = new Color(0.75f, 0.65f, 0.45f);
         _body.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = tint, Roughness = 0.85f });
         _head.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = new Color(0.85f, 0.7f, 0.6f) });
@@ -105,6 +106,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     public void Interact(PartyController party, Adventurer actor)
     {
         if (Dead) return;
+        if (Mode == NpcMode.Fighter && Downed) { if (!Net.NetSession.IsClient) TryRevive(); return; }
         switch (Mode)
         {
             case NpcMode.Ritualist:
@@ -218,6 +220,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         {
             if (away is { } d) { FaceToward(d); planar = PathMover.Planar(GlobalPosition, d) * speed; }
         }
+        else if (!Dead && !Downed && Mode == NpcMode.Fighter && MoveTarget == null && Fight(dt, out var at, out speed))
+        {
+            if (at is { } d) { FaceToward(d); planar = PathMover.Planar(GlobalPosition, d) * speed; }
+        }
         else if (!Dead && !Downed && !Escorting && MoveTarget is { } goal)
         {
             var dest = _mover.Next(this, goal, dt, 0.6f, ClearLine, out var straight);
@@ -231,11 +237,14 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         else if (!Dead && !Downed && Escorting && party != null && IsInstanceValid(party) && party.HasBodies)
         {
             var lead = party.Lead;
+            var gap = new Vector2(lead.GlobalPosition.X - GlobalPosition.X, lead.GlobalPosition.Z - GlobalPosition.Z).Length() - FollowDistance;
             var dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out var straight);
-            if (dest is { } d)
+            // speed follows the gap: a trailing follower settles at a steady pace instead of lurching between full speed
+            // and a dead stop every frame; well behind, it runs to catch up
+            if (dest is { } d && gap > 0.25f)
             {
                 if (!straight) FaceToward(d);
-                planar = PathMover.Planar(GlobalPosition, d) * WalkSpeed;
+                planar = PathMover.Planar(GlobalPosition, d) * Math.Clamp(gap * 2.5f, 1.2f, gap > 3f ? RunSpeed : WalkSpeed);
             }
             else FaceToward(lead.GlobalPosition);
             if (_mover.Unreachable > 5f)
@@ -269,7 +278,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     private void ShowGait(float groundSpeed, float dt)
     {
         if (_model == null) return;
-        var gait = ModelPath != null ? ViewerGait.GaitFor(1.8f, groundSpeed) : groundSpeed > 0.5f ? (groundSpeed > WalkSpeed + 0.5f ? "Run" : "Walk") : "Idle";
+        var current = _model.Current is "Walk" or "Run" ? _model.Current : null;
+        var gait = ModelPath != null ? ViewerGait.GaitFor(1.8f, groundSpeed, current) : groundSpeed > 0.5f ? (groundSpeed > WalkSpeed + 0.5f ? "Run" : "Walk") : "Idle";
         if (!Dead && _showcase == null && !_model.IsPlayingOneShot) _model.Play(gait);
         if (ModelPath != null && _model.Player != null) _model.Player.SpeedScale = _model.IsPlayingOneShot || gait == "Idle" ? 1f : ViewerGait.SpeedScaleFor(gait, 1.8f, groundSpeed);
     }
@@ -331,6 +341,71 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         if (new Vector2(home.X - GlobalPosition.X, home.Z - GlobalPosition.Z).Length() < 0.8f) { Fleeing = false; _mover.Reset(); GD.Print($"[Npc] {NpcName} is back at its spot"); return false; }
         dest = _mover.Next(this, home, dt, 0.6f, ClearLine, out _);
         return true;
+    }
+
+    private Enemy? _foe;
+    private float _swing;
+    private bool _struck;
+    private int _asks;
+
+    /// <summary>Asked to join the party: a fighter decides (<see cref="NpcFight.Decides"/>) and, if willing, follows and fights beside it. True when they come along.</summary>
+    public bool AskToJoin()
+    {
+        if (Dead || Downed || Mode != NpcMode.Fighter) return false;
+        if (Escorting) return true;
+        _asks++;
+        var yes = NpcFight.Decides(Game.Instance?.GameSeed ?? 0, Id, _asks);
+        GD.Print($"[Npc] {NpcName} asked to join (ask {_asks}): {(yes ? "yes" : "no")}");
+        if (yes) StartFollowing();
+        return yes;
+    }
+
+    /// <summary>Carry hit points across a floor change.</summary>
+    public void RestoreHp(float fraction) => Hp = Math.Clamp(MaxHp * fraction, 1f, MaxHp);
+
+    /// <summary>
+    /// A fighter goes for the nearest enemy within <see cref="NpcFight.SightRange"/>, swings at it in the windup/recover
+    /// rhythm enemies use, and walks back to its spot when none is left. True while there is somewhere to go or someone to hit.
+    /// </summary>
+    private bool Fight(float dt, out Vector3? dest, out float speed)
+    {
+        dest = null;
+        speed = WalkSpeed;
+        _home ??= GlobalPosition;
+        var foe = NearestEnemy(GlobalPosition, NpcFight.SightRange, out var dist);
+        if (foe != null)
+        {
+            if (_foe != foe) { _foe = foe; _swing = 0f; _struck = false; EventBus.Instance.Log($"{NpcName} squares up to {foe.DisplayName}!"); GD.Print($"[Npc] {NpcName} squares up to {foe.DisplayName} ({dist:0.0} m away)"); }
+            if (dist > NpcFight.AttackRange)
+            {
+                _swing = 0f; _struck = false;
+                dest = _mover.Next(this, foe.GlobalPosition, dt, NpcFight.AttackRange * 0.85f, ClearLine, out _);
+                speed = Math.Clamp((dist - NpcFight.AttackRange * 0.85f) * 3f, 1.0f, WalkSpeed);   // ease up to the foe instead of slamming to a stop
+                return true;
+            }
+            FaceToward(foe.GlobalPosition);
+            _swing += dt;
+            if (!_struck && _swing >= NpcFight.Windup) { _struck = true; Strike(foe); }
+            if (_swing >= NpcFight.Windup + NpcFight.Recover) { _swing = 0f; _struck = false; }
+            return true;
+        }
+        _foe = null; _swing = 0f; _struck = false;
+        if (Escorting) return false;   // nobody to hit: fall in behind the party
+        var home = _home.Value;
+        if (new Vector2(home.X - GlobalPosition.X, home.Z - GlobalPosition.Z).Length() < 0.8f) return false;
+        dest = _mover.Next(this, home, dt, 0.6f, ClearLine, out _);
+        return true;
+    }
+
+    private void Strike(Enemy foe)
+    {
+        _model?.Play("Punch", force: true);
+        if (GlobalPosition.DistanceTo(foe.GlobalPosition) > NpcFight.AttackRange * 1.15f) return;
+        var rng = Main.Instance?.Party?.Rng ?? new Random();
+        var r = foe.ReceiveAttack(NpcFight.Stats, NpcFight.AttackFor(Floor), new HitContext(), rng, NpcName);
+        EventBus.Instance.Log(r.Hit ? $"{NpcName} hits {foe.DisplayName} for {r.Amount:0}." : $"{NpcName} misses {foe.DisplayName}.");
+        if (r.Hit) GD.Print($"[Npc] {NpcName} hits {foe.DisplayName} for {r.Amount:0}");
+        if (foe.IsAlive && foe.NpcTarget == null) foe.NpcTarget = this;   // it has someone to answer
     }
 
     /// <summary>The nearest alive enemy within <paramref name="range"/> metres of <paramref name="of"/> (flat distance), or null.</summary>

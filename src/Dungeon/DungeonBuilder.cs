@@ -252,6 +252,7 @@ public partial class DungeonBuilder : Node3D
     public const string GreeterWeapon = "sword_1handed";
     /// <summary>More characters from the viewer, set out near floor 1's up stairs to be looked at and tried: a goddess to talk to and an orc to fight.</summary>
     public const string GoddessModel = "res://assets/models/viewer/goddess.glb";
+    public const string FoehammerModel = "res://assets/models/viewer/foehammer.glb";
     public const string ViewerOrcId = "enemy.viewer_orc";
 
     /// <summary>
@@ -310,6 +311,32 @@ public partial class DungeonBuilder : Node3D
             };
             npc.LookAt(Surface(arrival) + Vector3.Up * 0.1f, Vector3.Up);
             GD.Print($"[DungeonBuilder] floor {floorIndex}: goddess at {gCell} (model {(npc.HasModel ? "loaded" : "missing")})");
+        }
+        if (ResourceLoader.Exists(FoehammerModel) && Main.Instance?.Companions.Contains("viewer_foehammer") != true && (StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } fCell)
+        {
+            var npc = SpawnObjectiveNpc(root, "viewer_foehammer", "Foehammer", fCell, NpcMode.Fighter, FoehammerModel);
+            npc.ShowMoves = true;
+            npc.Script = new NpcScript
+            {
+                Start = "hello",
+                Nodes =
+                {
+                    new DialogueNode
+                    {
+                        Id = "hello",
+                        Line = new Line("Stand behind me when it comes to blows. Ask, and I'll show you how I move."),
+                        Choices =
+                        {
+                            new ChoicePlan { Text = "Will you fight alongside us?", Effect = DialogueEffect.Join, Next = "yes", NextIfRefused = "no" },
+                            new ChoicePlan { Text = "Farewell.", Effect = DialogueEffect.Farewell },
+                        },
+                    },
+                    new DialogueNode { Id = "yes", Line = new Line("Then I'm with you. Keep up, and keep out of the way of my hammer."), Choices = { new ChoicePlan { Text = "Welcome aboard.", Effect = DialogueEffect.Farewell } } },
+                    new DialogueNode { Id = "no", Line = new Line("Not today. Show me you can hold your own, then ask again."), Choices = { new ChoicePlan { Text = "Fair enough.", Effect = DialogueEffect.Farewell } } },
+                },
+            };
+            npc.LookAt(Surface(arrival) + Vector3.Up * 0.1f, Vector3.Up);
+            GD.Print($"[DungeonBuilder] floor {floorIndex}: fighter Foehammer at {fCell} (model {(npc.HasModel ? "loaded" : "missing")})");
         }
         if (_enemies.ContainsKey(ViewerOrcId) && (StepsFrom(layout, arrival, 8) ?? StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } oCell)
         {

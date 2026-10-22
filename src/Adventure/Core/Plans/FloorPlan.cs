@@ -7,7 +7,7 @@ public enum GoalKind { Guard, Defend, Patrol, Alarm }
 public enum ObjectiveKind { Chest, Lever, Door, Stairs, Npc, Gate }
 public enum QuestTemplate { KillTarget, Recover, Escort, HoldOut, Investigate, Decide, Betrayal }
 public enum NarrationTrigger { Enter, RoomEnter, BossSeen, BossDead, QuestDone, QuestFailed }
-public enum DialogueEffect { None, AcceptQuest, DeclineQuest, TurnIn, Farewell, Choose, Betray }
+public enum DialogueEffect { None, AcceptQuest, DeclineQuest, TurnIn, Farewell, Choose, Betray, Join }
 /// <summary>What lets a horde loose: the party stepping into the nest room, any collective raising the alarm, or a chest opened in the nest room.</summary>
 public enum HordeTrigger { Enter, Alarm, Chest }
 
@@ -124,6 +124,8 @@ public sealed class ChoicePlan
     [AiNotNull] public string? RequiresFlag { get; set; }
     [AiDescription("Hidden once this flag was set. Null for always.")]
     [AiNotNull] public string? ForbidsFlag { get; set; }
+    /// <summary>With Effect Join: the node shown when the character decides not to come along (Next is shown when they do).</summary>
+    [AiIgnore] public string? NextIfRefused { get; set; }
 }
 
 public sealed class DialogueNode

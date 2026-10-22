@@ -22,13 +22,17 @@ public static class ViewerGait
     }
 
     /// <summary>Walk or Run, whichever cycle's natural pace is nearer to <paramref name="groundSpeed"/> (the switch sits at the geometric mean of the two), or Idle when barely moving. A fast walker runs rather than playing a frantic walk.</summary>
-    public static string GaitFor(float height, float groundSpeed)
+    public static string GaitFor(float height, float groundSpeed, string? current = null)
     {
         if (groundSpeed <= 0.5f) return "Idle";
         var walk = ImpliedSpeed("Walk", height);
         var run = ImpliedSpeed("Run", height);
         if (walk <= 0f || run <= 0f) return "Walk";
-        return groundSpeed < MathF.Sqrt(walk * run) ? "Walk" : "Run";
+        var edge = MathF.Sqrt(walk * run);
+        // hysteresis: a speed hovering at the switch would otherwise flip the clip every few frames
+        if (current == "Walk" && groundSpeed < edge * 1.15f) return "Walk";
+        if (current == "Run" && groundSpeed > edge * 0.85f) return "Run";
+        return groundSpeed < edge ? "Walk" : "Run";
     }
 
     /// <summary>AnimationPlayer speed scale that makes <paramref name="clip"/> cover the ground at <paramref name="groundSpeed"/>; 1 when unknown.</summary>

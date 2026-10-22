@@ -90,6 +90,7 @@ public partial class DialogueScreen : Control
                 DialogueEffect.TurnIn => quest is { Status: QuestStatus.ReadyToTurnIn },
                 DialogueEffect.Choose => quest == null || quest.Template != QuestTemplate.Decide || quest.Status is QuestStatus.Offered or QuestStatus.Active,
                 DialogueEffect.Betray => Npc?.Turned == false,
+                DialogueEffect.Join => Npc is { Mode: NpcMode.Fighter, Escorting: false, IsAlive: true },
                 _ => true,
             };
             if (!visible || !FlagRules.Allowed(choice.RequiresFlag, choice.ForbidsFlag, flags)) continue;
@@ -147,6 +148,15 @@ public partial class DialogueScreen : Control
     {
         if (Npc == null || index < 0 || index >= _shown.Count) return;
         var choice = _shown[index];
+        if (choice.Effect == DialogueEffect.Join && !Net.NetSession.IsClient)
+        {
+            // the character decides on the spot; the answer picks which line comes next
+            var target = Npc.AskToJoin() ? choice.Next : choice.NextIfRefused;
+            var answer = target == null ? null : Npc.Script.Nodes.FirstOrDefault(n => n.Id == target);
+            if (answer == null) { Close(); return; }
+            Show(answer);
+            return;
+        }
         if (choice.Effect != DialogueEffect.None)
         {
             if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.DialogueChoiceIntent(Npc.Id, choice.Effect, choice.Flag)); // the server keeps the quests

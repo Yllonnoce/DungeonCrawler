@@ -17,6 +17,8 @@ public partial class Main : Node
 
     public PartyController Party { get; private set; } = null!;
     public DungeonBuilder Builder { get; private set; } = null!;
+    /// <summary>Ids of fighters who joined the party and travel with it between floors (the builder does not place them again).</summary>
+    public HashSet<string> Companions { get; } = new();
     public Hud Hud { get; private set; } = null!;
     public ExplorationMap? Exploration { get; private set; }
 
@@ -412,6 +414,16 @@ public partial class Main : Node
         if (!InGame) return;
         var game = Game.Instance;
 
+        // a fighter who joined the party comes along: lifted off the old floor before it is remembered, set down by the party on the new one
+        var travelling = new List<(string Id, string Name, string? Model, float HpFraction, Adventure.NpcScript Script, bool ShowMoves)>();
+        if (Builder.FloorRoot is { } leaving && _lastBuiltFloor != floor)
+            foreach (var n in leaving.GetChildren().OfType<Adventure.Npc>().Where(n => n.Mode == Adventure.NpcMode.Fighter && n.Escorting && n.IsAlive).ToList())
+            {
+                travelling.Add((n.Id, n.NpcName, n.ModelPath, n.Hp / n.MaxHp, n.Script, n.ShowMoves));
+                Companions.Add(n.Id);
+                leaving.RemoveChild(n);
+                n.QueueFree();
+            }
         // remember the floor we are leaving so it comes back the same way
         if (Builder.FloorRoot is { } oldRoot && Builder.Layout is { } oldLayout && Exploration != null && _lastBuiltFloor != floor)
             game.Floors[_lastBuiltFloor] = FloorStateCapture.Capture(oldRoot, oldLayout, Builder.Contents, Exploration);
@@ -442,6 +454,16 @@ public partial class Main : Node
         var stairs = delta >= 0 ? layout.UpStairs : layout.DownStairs;
         var spawnCell = DungeonBuilder.WalkableNeighbor(layout, stairs);
         Party.Teleport(Builder.Surface(spawnCell) + Vector3.Up * 0.3f, Builder.Surface(stairs));
+        foreach (var t in travelling)
+        {
+            if (Builder.FloorRoot is not { } here) break;
+            var npc = Builder.SpawnObjectiveNpc(here, t.Id, t.Name, DungeonBuilder.WalkableNeighbor(layout, spawnCell), Adventure.NpcMode.Fighter, t.Model);
+            npc.ShowMoves = t.ShowMoves;
+            npc.Script = t.Script;
+            npc.RestoreHp(t.HpFraction);
+            npc.StartFollowing();
+            GD.Print($"[Main] {t.Name} comes along to floor {floor}");
+        }
         if (!NetSession.IsClient) EventBus.Instance.Log(delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
         if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null);
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
