@@ -1,0 +1,43 @@
+[gd_resource type="Resource" script_class="EnemyDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Enemies/Defs/EnemyDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "enemy.viewer_orc"
+DisplayName = "Orc Brute"
+Kind = "Melee"
+MaxHp = 280
+MinDamage = 9
+MaxDamage = 14
+DamageType = "Physical"
+MoveSpeed = 1.6
+DetectRange = 7
+AttackRange = 2.1
+PreferredRange = 0
+WindupSeconds = 0.45
+RecoverSeconds = 0.8
+ProjectileSpeed = 0
+Xp = 60
+Accuracy = 66
+Evasion = 8
+Armor = 10
+ResistFire = 0
+ResistFrost = 0
+ResistPoison = 0
+ResistArcane = 0
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+Color = Color(0.35,0.5,0.3,1)
+Scale = 1.15
+IsBoss = false
+Signature = "None"
+SignatureCooldown = 0
+SummonId = ""
+Model = "viewer/orc1"
+Weapon = ""
+Faction = "viewer"
+PackHunter = false
+FleeHpFraction = 0

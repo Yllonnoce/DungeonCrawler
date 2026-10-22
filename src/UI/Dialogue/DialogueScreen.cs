@@ -6,7 +6,9 @@ namespace DungeonCrawler.UI.Dialogue;
 
 /// <summary>
 /// Modal conversation with an NPC: the current line and up to four numbered choices. Choices that need a quest state
-/// the player is not in (accept when already accepted, turn in before it is done) are hidden.
+/// the player is not in (accept when already accepted, turn in before it is done) are hidden. An NPC with
+/// <see cref="Npc.ShowMoves"/> also gets a grid of its model's clips under the choices: click one and the character
+/// plays it while the conversation stays open.
 /// </summary>
 public partial class DialogueScreen : Control
 {
@@ -18,6 +20,9 @@ public partial class DialogueScreen : Control
     private Label _name = null!;
     private Label _text = null!;
     private VBoxContainer _choices = null!;
+    private CenterContainer _centre = null!;
+    private VBoxContainer _moves = null!;
+    private Label _moveStatus = null!;
     private readonly List<ChoicePlan> _shown = new();
 
     public override void _Ready()
@@ -28,11 +33,11 @@ public partial class DialogueScreen : Control
         var dim = new ColorRect { Color = new Color(0, 0, 0, 0.45f) };
         dim.FillParent();
         AddChild(dim);
-        var centre = new CenterContainer();
-        centre.FillParent();
-        AddChild(centre);
+        _centre = new CenterContainer();
+        _centre.FillParent();
+        AddChild(_centre);
         var panel = new PanelContainer { CustomMinimumSize = new Vector2(720, 0) };
-        centre.AddChild(panel);
+        _centre.AddChild(panel);
         var margin = new MarginContainer();
         foreach (var edge in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" }) margin.AddThemeConstantOverride(edge, 22);
         panel.AddChild(margin);
@@ -49,6 +54,9 @@ public partial class DialogueScreen : Control
         _choices = new VBoxContainer();
         _choices.AddThemeConstantOverride("separation", 6);
         v.AddChild(_choices);
+        _moves = new VBoxContainer { Visible = false };
+        _moves.AddThemeConstantOverride("separation", 8);
+        v.AddChild(_moves);
     }
 
     public void Open(Npc npc)
@@ -95,6 +103,44 @@ public partial class DialogueScreen : Control
             btn.Pressed += () => Choose(index);
             _choices.AddChild(btn);
         }
+        BuildMoves();
+    }
+
+    /// <summary>One button per clip the NPC's model has, four to a row; only for an NPC that shows its moves.</summary>
+    private void BuildMoves()
+    {
+        foreach (var c in _moves.GetChildren()) c.QueueFree();
+        var clips = Npc is { ShowMoves: true } npc ? npc.ModelClips : Array.Empty<string>();
+        _moves.Visible = clips.Count > 0;
+        _centre.AnchorBottom = clips.Count > 0 ? 0.6f : 1f; // with moves on offer the panel sits high, so the character below stays in view
+        if (clips.Count == 0) return;
+        _moves.AddChild(new HSeparator());
+        var title = new Label { Text = $"{Npc!.NpcName} can show you a move:" };
+        title.AddThemeFontSizeOverride("font_size", 15);
+        _moves.AddChild(title);
+        var grid = new GridContainer { Columns = 4 };
+        grid.AddThemeConstantOverride("h_separation", 6);
+        grid.AddThemeConstantOverride("v_separation", 6);
+        _moves.AddChild(grid);
+        foreach (var clip in clips)
+        {
+            var name = clip;
+            var btn = new Button { Text = name, FocusMode = FocusModeEnum.None, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            btn.Pressed += () => ShowMove(name);
+            grid.AddChild(btn);
+        }
+        _moveStatus = new Label { Text = "" };
+        _moveStatus.AddThemeFontSizeOverride("font_size", 14);
+        _moves.AddChild(_moveStatus);
+    }
+
+    /// <summary>Play one of the NPC's clips; the dialogue stays open. Unknown clips are ignored.</summary>
+    public void ShowMove(string clip)
+    {
+        if (Npc is not { ShowMoves: true } npc || !npc.ModelClips.Contains(clip)) return;
+        npc.Showcase(clip);
+        _moveStatus.Text = $"Showing: {clip}";
+        GD.Print($"[Dialogue] {npc.Id} shows {clip}");
     }
 
     public void Choose(int index)
@@ -116,6 +162,7 @@ public partial class DialogueScreen : Control
     {
         if (!Visible) return;
         Visible = false;
+        Npc?.Showcase(null); // back to Idle once the conversation ends
         Npc = null;
         Node = null;
         EventBus.Instance.PlaySfx("ui_close");

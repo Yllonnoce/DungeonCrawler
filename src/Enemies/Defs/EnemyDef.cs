@@ -43,6 +43,8 @@ public partial class EnemyDef : Resource, IHasId
     [Export] public string SummonId { get; set; } = "";
     /// <summary>Quaternius model name under assets/models/quaternius_monsters (empty = capsule).</summary>
     [Export] public string Model { get; set; } = "";
+    /// <summary>KayKit item hung from a viewer-rigged model's right-hand grip (see WeaponGrip); empty = none.</summary>
+    [Export] public string Weapon { get; set; } = "";
     /// <summary>"bandits": only placed in bandit camps, on any tier.</summary>
     [Export] public string Faction { get; set; } = "";
     /// <summary>Horde creatures belong to one tier (-1 for any).</summary>
@@ -67,7 +69,7 @@ public partial class EnemyDef : Resource, IHasId
             ResistFire = ResistFire, ResistFrost = ResistFrost, ResistPoison = ResistPoison, ResistArcane = ResistArcane,
             OnHit = onHit, Color = Color.ToHtml(false), Scale = Scale, IsBoss = IsBoss,
             Signature = Enum.TryParse<Signature>(Signature, true, out var sig) ? sig : Enemies.Signature.None,
-            SignatureCooldown = SignatureCooldown, SummonId = SummonId, PackHunter = PackHunter, FleeHpFraction = FleeHpFraction, Model = Model, Faction = Faction, TierIndex = TierIndex,
+            SignatureCooldown = SignatureCooldown, SummonId = SummonId, PackHunter = PackHunter, FleeHpFraction = FleeHpFraction, Model = Model, Weapon = Weapon, Faction = Faction, TierIndex = TierIndex,
         };
     }
 }

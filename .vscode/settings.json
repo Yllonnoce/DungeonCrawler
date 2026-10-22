@@ -1,0 +1,5 @@
+{
+  "dotnet.defaultSolution": "DungeonCrawler.sln",
+  "files.exclude": { ".godot/": true },
+  "search.exclude": { ".godot/": true, "build/": true, "assets/": true }
+}

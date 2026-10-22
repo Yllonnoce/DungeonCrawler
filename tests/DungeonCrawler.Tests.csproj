@@ -10,6 +10,8 @@
     <!-- Engine-free game logic compiled directly into the test assembly.
          Anything listed here must never reference the Godot namespace. -->
     <Compile Include="../src/Core/Rng.cs" Link="Game/Core/Rng.cs" />
+    <Compile Include="../src/Core/GripMath.cs" Link="Game/Core/GripMath.cs" />
+    <Compile Include="../src/Core/ViewerGait.cs" Link="Game/Core/ViewerGait.cs" />
     <Compile Include="../src/Characters/*.cs" Link="Game/Characters/%(Filename)%(Extension)" />
     <Compile Include="../src/Characters/Skills/*.cs" Link="Game/Characters/Skills/%(Filename)%(Extension)" />
     <Compile Include="../src/Characters/Companions/*.cs" Link="Game/Characters/Companions/%(Filename)%(Extension)" />

@@ -172,6 +172,7 @@ godot --headless --path . -- --test-plan            # offline designer: plan 20 
 godot --headless --path . -- --test-collectives     # guard leash and return, patrol, alarm runner, regroup; fixed seed 4242 unless --seed
 godot --headless --path . -- --test-quest           # one NPC per quest template, played through dialogue to completion, saved
 godot --path . -- --floor=3 --talk --screenshot=/tmp/talk.png --after=2   # open the first NPC's dialogue (add --press=quest_log for the journal)
+godot --path . -- --seed=1 --floor=1 --talk --showcase=Death --screenshot=/tmp/move.png --after=3   # floor 1's greeter: open his dialogue and play one of his model's clips from the moves grid
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier

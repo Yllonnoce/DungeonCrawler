@@ -42,6 +42,8 @@ public sealed record EnemyProfile
     public string SummonId { get; init; } = "";
     /// <summary>Aggroing one alerts idle kin nearby.</summary>
     public string Model { get; init; } = "";
+    /// <summary>A KayKit item (sword_1handed, axe_1handed, dagger…) hung from the model's right-hand grip bone; empty for none. Only models rigged in the 3dObject viewer have grips.</summary>
+    public string Weapon { get; init; } = "";
     /// <summary>"bandits" for the outlaws who squat in camps; empty for a tier's own creatures.</summary>
     public string Faction { get; init; } = "";
     /// <summary>For horde creatures: the tier they belong to (-1 any).</summary>

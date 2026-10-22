@@ -50,6 +50,7 @@ public partial class DebugTools : Node
     private Vector3 _collPatrolStart;
     private bool _talk;
     private bool _talked;
+    private string? _showcase;
     private bool _testQuest;
     private int _questStep;
     private readonly List<string> _questFails = new();
@@ -231,6 +232,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-collectives") { _testCollectives = true; TraceAi = false; _quitAfter = 37; }
             else if (arg == "--test-quest") { _testQuest = true; TraceAi = false; _quitAfter = 14; }
             else if (arg == "--talk") _talk = true;
+            else if (arg.StartsWith("--showcase=")) _showcase = arg["--showcase=".Length..];
             else if (arg == "--ai") ForceAi = true;
             else if (arg == "--no-ai") NoAi = true;
             else if (arg.StartsWith("--replay-plans=")) ReplayDir = ProjectSettings.GlobalizePath(arg["--replay-plans=".Length..]);
@@ -463,6 +465,7 @@ public partial class DebugTools : Node
                 var cell = DungeonBuilder.WalkableNeighbor(b.Layout!, DungeonBuilder.WorldToCell(npc.GlobalPosition));
                 Main.Instance.Party.Teleport(b.Surface(cell) + Vector3.Up * 0.3f, npc.GlobalPosition);
                 Main.Instance.Hud.OpenDialogue(npc);
+                if (_showcase != null) Main.Instance.Hud.Dialogue.ShowMove(_showcase);
             }
             else GD.Print("[talk] no NPC on this floor");
         }

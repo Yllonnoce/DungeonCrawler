@@ -22,21 +22,27 @@ public sealed class AnimatedModel
         root.Name = "Model";
         parent.AddChild(root);
 
+        // Pose the rig first: a model whose bind pose lies flat (a character exported from the 3dObject viewer) only
+        // stands up once Idle is applied, and the height must be measured standing.
+        var model = new AnimatedModel(root, FindPlayer(root));
+        model.Play("Idle");
+        model.Player?.Seek(0, update: true);
+
         var aabb = new Aabb();
         var first = true;
         foreach (var mi in Meshes(root))
         {
-            var box = mi.GetAabb().Abs();
+            var box = (SkinnedBox(mi) ?? mi.GetAabb()).Abs();
             aabb = first ? box : aabb.Merge(box);
             first = false;
         }
         var height = Math.Max(0.5f, aabb.Size.Y);
         var scale = targetHeight / height;
+        GD.Print($"[AnimatedModel] {path}: box {aabb.Position:0.000} size {aabb.Size:0.000} height {height:0.000} scale {scale:0.00} skinned {Meshes(root).Count(m => SkinnedBox(m) != null)}/{Meshes(root).Count()}");
         root.Scale = Vector3.One * scale;
         root.Position = new Vector3(0, -aabb.Position.Y * scale, 0);
         root.RotateY(Mathf.Pi); // glTF forward is +Z; our bodies face -Z
 
-        var model = new AnimatedModel(root, FindPlayer(root));
         foreach (var mi in Meshes(root))
             for (var i = 0; i < mi.GetSurfaceOverrideMaterialCount(); i++)
             {
@@ -45,7 +51,6 @@ public sealed class AnimatedModel
                 mi.SetSurfaceOverrideMaterial(i, mat);
                 model._materials.Add(mat);
             }
-        model.Play("Idle");
         return model;
     }
 
@@ -68,6 +73,65 @@ public sealed class AnimatedModel
             m.EmissionEnabled = amount > 0f;
             m.Emission = Colors.White * amount;
         }
+    }
+
+    /// <summary>
+    /// The bounds of a skinned mesh in its current pose, in the mesh's own space: every vertex run through its bone
+    /// weights. MeshInstance3D.GetAabb only knows the bind pose, which need not be upright. Null when the mesh is not skinned.
+    /// </summary>
+    public static Aabb? SkinnedBox(MeshInstance3D mi)
+    {
+        if (mi.Mesh == null || mi.Skin is not { } skin || mi.Skeleton.IsEmpty || mi.GetNodeOrNull<Skeleton3D>(mi.Skeleton) is not { } skel) return null;
+        skel.ForceUpdateAllBoneTransforms();
+        var binds = new Transform3D[skin.GetBindCount()];
+        for (var b = 0; b < binds.Length; b++)
+        {
+            var bone = skin.GetBindBone(b);
+            if (bone < 0) bone = skel.FindBone(skin.GetBindName(b));
+            if (bone < 0) return null;
+            binds[b] = skel.GetBoneGlobalPose(bone) * skin.GetBindPose(b);
+        }
+        var toMesh = Relative(skel, mi).AffineInverse(); // skeleton space -> mesh space
+        var lo = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        var hi = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        var any = false;
+        for (var s = 0; s < mi.Mesh.GetSurfaceCount(); s++)
+        {
+            var arrays = mi.Mesh.SurfaceGetArrays(s);
+            var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+            var bonesV = arrays[(int)Mesh.ArrayType.Bones];
+            var bones = bonesV.VariantType == Variant.Type.PackedFloat32Array ? Array.ConvertAll(bonesV.AsFloat32Array(), f => (int)f) : bonesV.AsInt32Array();
+            var weightsV = arrays[(int)Mesh.ArrayType.Weights];
+            var weights = weightsV.VariantType == Variant.Type.PackedFloat64Array ? Array.ConvertAll(weightsV.AsFloat64Array(), d => (float)d) : weightsV.AsFloat32Array();
+            if (verts.Length == 0 || bones.Length < verts.Length || weights.Length != bones.Length) continue;
+            var per = bones.Length / verts.Length;
+            for (var i = 0; i < verts.Length; i++)
+            {
+                var p = Vector3.Zero;
+                for (var k = 0; k < per; k++)
+                {
+                    var w = weights[i * per + k];
+                    if (w == 0f) continue;
+                    var b = bones[i * per + k];
+                    if ((uint)b >= (uint)binds.Length) continue;
+                    p += binds[b] * verts[i] * w;
+                }
+                p = toMesh * p;
+                lo = lo.Min(p);
+                hi = hi.Max(p);
+                any = true;
+            }
+        }
+        return any ? new Aabb(lo, hi - lo) : null;
+    }
+
+    /// <summary>The transform of <paramref name="node"/> relative to <paramref name="ancestor"/> (identity when they are the same node).</summary>
+    private static Transform3D Relative(Node3D ancestor, Node3D node)
+    {
+        var t = Transform3D.Identity;
+        for (Node? n = node; n != null && n != ancestor; n = n.GetParent())
+            if (n is Node3D n3) t = n3.Transform * t;
+        return t;
     }
 
     public static IEnumerable<MeshInstance3D> Meshes(Node n)

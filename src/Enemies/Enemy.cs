@@ -222,14 +222,18 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         var keep = Profile.Kind == EnemyKind.Ranged ? "2H_Crossbow" : FindMeshes(_model).Select(m => m.Name.ToString()).FirstOrDefault(n => n is "Knife" or "1H_Axe" or "1H_Sword") ?? "";
         foreach (var mi in FindMeshes(_model))
             if (KayKitWeapons.Contains(mi.Name.ToString())) mi.Visible = mi.Name == keep;
+        // Pose the rig before measuring: a character from the 3dObject viewer stands differently in its saved pose
+        // than in its bind pose, and the feet have to be measured where Idle puts them (see AnimatedModel.Attach).
+        _anim = FindAnimationPlayer(_model);
+        PlayAnim("Idle");
+        _anim?.Seek(0, update: true);
         // scale the model so it stands 1.8 m tall times the profile scale
         var aabb = new Aabb();
         var first = true;
         foreach (var mi in FindMeshes(_model))
         {
             if (!mi.Visible) continue;
-            var box = mi.GetAabb();
-            box = box.Abs();
+            var box = (AnimatedModel.SkinnedBox(mi) ?? mi.GetAabb()).Abs();
             var xf = mi.GlobalTransform.AffineInverse() * mi.GlobalTransform; // identity; keep local box
             aabb = first ? box : aabb.Merge(box);
             first = false;
@@ -249,8 +253,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
                 mi.SetSurfaceOverrideMaterial(i, mat);
                 _modelMaterials.Add(mat);
             }
-        _anim = FindAnimationPlayer(_model);
-        PlayAnim("Idle");
+        if (Profile.Weapon != "" && WeaponGrip.Attach(_model, Profile.Weapon, "Right") == null) GD.Print($"[Enemy] {Profile.Id}: no grip bone or no file for weapon {Profile.Weapon}");
+        if (Profile.Model.Contains('/')) GD.Print($"[Enemy] {Profile.Id}: {path} box {aabb.Position:0.000} size {aabb.Size:0.000} scale {_model.Scale.Y:0.00} lift {_model.Position.Y:0.000}");
     }
 
     private static IEnumerable<MeshInstance3D> FindMeshes(Node n)
@@ -282,9 +286,13 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
     private void UpdateAnimation()
     {
         if (_anim == null || !IsAlive) return;
-        if (_currentAnim is "Punch" or "HitReact" && _anim.IsPlaying()) return;
-        var moving = new Vector2(Velocity.X, Velocity.Z).Length() > 0.3f;
-        PlayAnim(moving ? (EffectiveMoveSpeed > 3.2f ? "Run" : "Walk") : "Idle");
+        if (_currentAnim is "Punch" or "HitReact" && _anim.IsPlaying()) { _anim.SpeedScale = 1f; return; }   // one-shots play at their own pace
+        var ground = new Vector2(Velocity.X, Velocity.Z).Length();
+        var moving = ground > 0.3f;
+        var viewer = Profile.Model.StartsWith("viewer/");
+        PlayAnim(viewer ? ViewerGait.GaitFor(1.8f * Profile.Scale, ground) : moving ? (EffectiveMoveSpeed > 3.2f ? "Run" : "Walk") : "Idle");
+        // a viewer-rigged character picks the cycle nearest its pace and plays it at the pace the ground actually passes, so the feet stay planted
+        if (viewer) _anim.SpeedScale = moving ? ViewerGait.SpeedScaleFor(_currentAnim, 1.8f * Profile.Scale, ground) : 1f;
     }
 
     // ---- networking: a client shows what the server streams --------------------------------------

@@ -1,0 +1,93 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Play",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["--path", "${workspaceFolder}"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Play (builtin campaign)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["--path", "${workspaceFolder}", "--", "--builtin"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Play (seed + floor)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["--path", "${workspaceFolder}", "--", "--seed=${input:seed}", "--floor=${input:floor}"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Headless smoke",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["--headless", "--path", "${workspaceFolder}", "--", "--smoke"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Headless (custom args)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["--headless", "--path", "${workspaceFolder}", "--", "${input:gameArgs}"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Dedicated server",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["--headless", "--path", "${workspaceFolder}", "--", "--server", "--port=7777", "--bind=127.0.0.1", "--campaign=builtin", "--save=server", "--max-players=4"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Editor",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "args": ["-e", "--path", "${workspaceFolder}"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
+      "name": "Attach to running game",
+      "type": "coreclr",
+      "request": "attach",
+      "processId": "${command:pickProcess}"
+    }
+  ],
+  "inputs": [
+    { "id": "seed", "type": "promptString", "description": "Run seed", "default": "1" },
+    { "id": "floor", "type": "promptString", "description": "Floor to start on", "default": "1" },
+    { "id": "gameArgs", "type": "promptString", "description": "Game argument after the -- (see README: --test-depth, --test-party, --builtin ...)", "default": "--test-depth" }
+  ]
+}

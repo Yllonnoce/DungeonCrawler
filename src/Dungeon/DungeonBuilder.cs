@@ -206,6 +206,8 @@ public partial class DungeonBuilder : Node3D
         _grid = BuildGridMap(layout, CurrentTheme);
         _floorRoot.AddChild(_grid);
         PlaceStairs(layout, _floorRoot, floorIndex);
+        PlaceGreeter(layout, _floorRoot, floorIndex);
+        PlaceViewerCast(layout, _floorRoot, floorIndex);
         PlaceEnemies(contents, floorIndex);
         PlaceProps(layout, contents, _floorRoot, floorIndex, seed);
         PlaceFires(layout, _floorRoot, floorIndex);
@@ -242,6 +244,101 @@ public partial class DungeonBuilder : Node3D
         _floorRoot.QueueFree();
         _floorRoot = null;
         Layout = null;
+    }
+
+    /// <summary>The character rigged in the 3dObject viewer (assets/models/viewer/dwarf_warrior.glb, exported with "Export for Godot").</summary>
+    public const string GreeterModel = "res://assets/models/viewer/dwarf_warrior.glb";
+    /// <summary>The KayKit item hung from the greeter's right-hand grip bone.</summary>
+    public const string GreeterWeapon = "sword_1handed";
+    /// <summary>More characters from the viewer, set out near floor 1's up stairs to be looked at and tried: a goddess to talk to and an orc to fight.</summary>
+    public const string GoddessModel = "res://assets/models/viewer/goddess.glb";
+    public const string ViewerOrcId = "enemy.viewer_orc";
+
+    /// <summary>
+    /// Floor 1 only: the viewer-made dwarf stands a few steps from the entrance stairs, facing the cell the party
+    /// arrives on (the stairs' walkable neighbour, where Main teleports it), with a word of welcome.
+    /// </summary>
+    private void PlaceGreeter(FloorLayout layout, Node3D root, int floorIndex)
+    {
+        if (floorIndex != 1 || !ResourceLoader.Exists(GreeterModel)) return;
+        var arrival = WalkableNeighbor(layout, layout.UpStairs);
+        if (arrival == layout.UpStairs) return;
+        var cell = StepsFrom(layout, arrival, 3) ?? StepsFrom(layout, arrival, 2);
+        if (cell == null) return;
+        var npc = SpawnObjectiveNpc(root, "greeter_dwarf", "Brannock", cell.Value, NpcMode.Quest, GreeterModel);
+        var armed = npc.HoldWeapon(GreeterWeapon, 0.75f);
+        GD.Print($"[DungeonBuilder] greeter {(armed ? "holds " + GreeterWeapon : "has nothing to hold (no grip bones in the model)")}");
+        npc.ShowMoves = true; // his dialogue lists every clip the viewer export carries, to try them in place
+        npc.Script = new NpcScript
+        {
+            Start = "hello",
+            Nodes =
+            {
+                new DialogueNode
+                {
+                    Id = "hello",
+                    Line = new Line("Welcome, travellers. The dark starts past these stairs. Mind your footing, and your friends. Ask, and I'll show you how I move."),
+                    Choices = { new ChoicePlan { Text = "Farewell.", Effect = DialogueEffect.Farewell } },
+                },
+            },
+        };
+        npc.LookAt(Surface(arrival) + Vector3.Up * 0.1f, Vector3.Up);
+        GD.Print($"[DungeonBuilder] floor {floorIndex}: greeter {npc.NpcName} at {cell} facing the arrival cell {arrival} by the up stairs {layout.UpStairs} (model {(npc.HasModel ? "loaded" : "missing")})");
+    }
+
+    private void PlaceViewerCast(FloorLayout layout, Node3D root, int floorIndex)
+    {
+        if (floorIndex != 1) return;
+        var arrival = WalkableNeighbor(layout, layout.UpStairs);
+        if (arrival == layout.UpStairs) return;
+        if (ResourceLoader.Exists(GoddessModel) && (StepsFrom(layout, arrival, 5) ?? StepsFrom(layout, arrival, 4)) is { } gCell)
+        {
+            var npc = SpawnObjectiveNpc(root, "viewer_goddess", "Goddess", gCell, NpcMode.Quest, GoddessModel);
+            npc.ShowMoves = true;
+            npc.Script = new NpcScript
+            {
+                Start = "hello",
+                Nodes =
+                {
+                    new DialogueNode
+                    {
+                        Id = "hello",
+                        Line = new Line("You have come far for so little light. Ask, and I will show you how I move."),
+                        Choices = { new ChoicePlan { Text = "Farewell.", Effect = DialogueEffect.Farewell } },
+                    },
+                },
+            };
+            npc.LookAt(Surface(arrival) + Vector3.Up * 0.1f, Vector3.Up);
+            GD.Print($"[DungeonBuilder] floor {floorIndex}: goddess at {gCell} (model {(npc.HasModel ? "loaded" : "missing")})");
+        }
+        if (_enemies.ContainsKey(ViewerOrcId) && (StepsFrom(layout, arrival, 8) ?? StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } oCell)
+        {
+            var orc = SpawnEnemy(ViewerOrcId, Surface(oCell) + Vector3.Up * 0.1f, floorIndex);
+            GD.Print($"[DungeonBuilder] floor {floorIndex}: viewer orc at {oCell} ({(orc != null ? "spawned" : "not spawned")})");
+        }
+    }
+
+    /// <summary>A plain floor cell exactly <paramref name="steps"/> walkable steps from <paramref name="from"/>, or null when there is none.</summary>
+    private static GridPos? StepsFrom(FloorLayout layout, GridPos from, int steps)
+    {
+        ReadOnlySpan<GridPos> dirs = stackalloc GridPos[] { new(0, 1), new(1, 0), new(0, -1), new(-1, 0) };
+        var seen = new HashSet<GridPos> { from };
+        var ring = new List<GridPos> { from };
+        for (var d = 0; d < steps && ring.Count > 0; d++)
+        {
+            var next = new List<GridPos>();
+            foreach (var c in ring)
+                foreach (var dir in dirs)
+                {
+                    var n = c + dir;
+                    if (!layout.IsWalkable(n) || !layout.CanStep(c, n) || !seen.Add(n)) continue;
+                    next.Add(n);
+                }
+            ring = next;
+        }
+        foreach (var c in ring)
+            if (layout[c] is Cell.Floor && c != layout.UpStairs && c != layout.DownStairs && !layout.IsWater(c) && !layout.IsUnder(c) && !layout.IsReserved(c)) return c;
+        return null;
     }
 
     public static GridPos WalkableNeighbor(FloorLayout layout, GridPos cell)
@@ -724,12 +821,13 @@ public partial class DungeonBuilder : Node3D
     }
 
     /// <summary>One of the objective's people: no script, no quest, a mode instead.</summary>
-    public Npc SpawnObjectiveNpc(Node3D root, string id, string name, GridPos cell, NpcMode mode)
+    public Npc SpawnObjectiveNpc(Node3D root, string id, string name, GridPos cell, NpcMode mode, string? modelPath = null)
     {
         var npc = _npcScene.Instantiate<Npc>();
         npc.Id = id;
         npc.NpcName = name;
         npc.Mode = mode;
+        npc.ModelPath = modelPath;
         npc.Floor = CurrentFloor;
         npc.Name = $"Npc_{id}";
         root.AddChild(npc);

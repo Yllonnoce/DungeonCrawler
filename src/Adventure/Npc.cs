@@ -2,6 +2,7 @@ using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon;
+using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Party;
 using Godot;
@@ -18,6 +19,7 @@ public enum NpcMode { Quest, Ritualist, Prisoner }
 public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
 {
     public const float WalkSpeed = 4.2f;
+    public const float RunSpeed = 6.5f;
     public const float FollowDistance = 2.4f;
 
     public NpcMode Mode { get; set; } = NpcMode.Quest;
@@ -56,10 +58,29 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     };
 
     private static readonly string[] Models = { "Cleric", "Monk" };
+    /// <summary>A glTF to use instead of the stock party models (a character exported from the 3dObject viewer).</summary>
+    public string? ModelPath { get; set; }
+    /// <summary>True once a glTF model is attached (false while the capsule stand-in shows).</summary>
+    public bool HasModel => _model != null;
+    /// <summary>Put one of the game's weapons (a KayKit item name) in the model's right hand; false when the model has no grip bones (see <see cref="WeaponGrip"/>).</summary>
+    public bool HoldWeapon(string weapon, float scale = 1f) => _model != null && WeaponGrip.Attach(_model.Root, weapon, "Right", scale) != null;
+    /// <summary>True for a character whose dialogue also offers every clip of its model to play (the viewer-made greeter).</summary>
+    public bool ShowMoves { get; set; }
+    /// <summary>The clips the attached model can play, in the model's own order; empty without a model.</summary>
+    public IReadOnlyList<string> ModelClips => _model?.Player?.GetAnimationList() ?? Array.Empty<string>();
+    private string? _showcase;
     private MeshInstance3D _body = null!, _head = null!;
     private Label3D _label = null!;
     private AnimatedModel? _model;
     private readonly PathMover _mover = new();
+    /// <summary>Running from an enemy that came within <see cref="NpcFlight.FleeRange"/> (quest NPCs standing about); walks back to its spot once the enemy has been gone a while.</summary>
+    public bool Fleeing { get; private set; }
+    private Vector3? _home;       // where this NPC stood before anything scared it
+    private Vector3? _fleeGoal;
+    /// <summary>The cell this NPC is running to, so neighbours pick other cells; null when not running.</summary>
+    public GridPos? FleeCell { get; private set; }
+    private float _calm, _repick, _stuck;
+    private readonly HashSet<GridPos> _badCells = new();   // flee cells that turned out unreachable this scare
     private float _gravity;
     private float _hurtTimer;
     private float _flash;
@@ -75,7 +96,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         _body.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = tint, Roughness = 0.85f });
         _head.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = new Color(0.85f, 0.7f, 0.6f) });
         var model = Models[(int)((Rng.StableHash(Id) + (ulong)Floor) % (ulong)Models.Length)]; // stable per run and peer
-        _model = AnimatedModel.Attach(this, $"res://assets/models/quaternius_rpg/{model}.gltf", 1.8f, tint, 0.1f);
+        _model = AnimatedModel.Attach(this, ModelPath ?? $"res://assets/models/quaternius_rpg/{model}.gltf", 1.8f, tint, ModelPath != null ? 0f : 0.1f);
         if (_model != null) { _body.Visible = false; _head.Visible = false; }
         _label.Text = NpcName;
         AddToGroup("npcs");
@@ -97,6 +118,18 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
                 return;
         }
         if (Main.Instance?.Hud is { } hud) hud.OpenDialogue(this); // a dedicated server has no screen; the client opened its own
+    }
+
+    /// <summary>
+    /// Play a clip on the model and keep it there: a looping clip loops, a one-shot holds its last frame (Death stays
+    /// dead) until another clip is chosen or <c>Showcase(null)</c> hands the body back to Idle/Walk. Local only: the
+    /// other players in a session do not see it.
+    /// </summary>
+    public void Showcase(string? clip)
+    {
+        _showcase = clip;
+        if (_model == null || Dead) return;
+        _model.Play(clip ?? "Idle", force: true);
     }
 
     /// <summary>Get a downed NPC up, if nothing hostile is close enough to make it pointless.</summary>
@@ -168,7 +201,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         if (_model != null)
         {
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
-            if (!Dead && !_model.IsPlayingOneShot) _model.Play(new Vector2(planar.X, planar.Z).Length() > 0.5f ? "Walk" : "Idle");
+            ShowGait(new Vector2(planar.X, planar.Z).Length(), dt);
         }
     }
 
@@ -180,7 +213,12 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
         var planar = Vector3.Zero;
         var party = Main.Instance?.Party;
-        if (!Dead && !Downed && !Escorting && MoveTarget is { } goal)
+        var speed = WalkSpeed;
+        if (!Dead && !Downed && !Escorting && Mode == NpcMode.Quest && MoveTarget == null && Flight(dt, out var away, out speed))
+        {
+            if (away is { } d) { FaceToward(d); planar = PathMover.Planar(GlobalPosition, d) * speed; }
+        }
+        else if (!Dead && !Downed && !Escorting && MoveTarget is { } goal)
         {
             var dest = _mover.Next(this, goal, dt, 0.6f, ClearLine, out var straight);
             if (dest is { } d)
@@ -212,11 +250,102 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         v.Z = planar.Z;
         Velocity = v;
         MoveAndSlide();
+        var actual = new Vector2(Velocity.X, Velocity.Z).Length();   // what the slide allowed, not what was asked for
+        if (Fleeing && planar.Length() > 0.5f)
+        {
+            // pushing but not moving: this refuge is behind something; give it up and pick another
+            _stuck = actual < 0.5f ? _stuck + dt : 0f;
+            if (_stuck > 0.6f) { if (FleeCell is { } bad) _badCells.Add(bad); _fleeGoal = null; _repick = 0f; _stuck = 0f; }
+        }
+        else _stuck = 0f;
         if (_model != null)
         {
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
-            if (!Dead && !_model.IsPlayingOneShot) _model.Play(planar.Length() > 0.5f ? "Walk" : "Idle");
+            ShowGait(actual, dt);   // a blocked NPC stands instead of running on the spot
         }
+    }
+
+    /// <summary>Idle, Walk or Run for this ground speed; a viewer-rigged model's gait is played at the pace the ground passes so its feet stay planted.</summary>
+    private void ShowGait(float groundSpeed, float dt)
+    {
+        if (_model == null) return;
+        var gait = ModelPath != null ? ViewerGait.GaitFor(1.8f, groundSpeed) : groundSpeed > 0.5f ? (groundSpeed > WalkSpeed + 0.5f ? "Run" : "Walk") : "Idle";
+        if (!Dead && _showcase == null && !_model.IsPlayingOneShot) _model.Play(gait);
+        if (ModelPath != null && _model.Player != null) _model.Player.SpeedScale = _model.IsPlayingOneShot || gait == "Idle" ? 1f : ViewerGait.SpeedScaleFor(gait, 1.8f, groundSpeed);
+    }
+
+    /// <summary>
+    /// Run from the nearest alive enemy within <see cref="NpcFlight.FleeRange"/>, re-picking the way every
+    /// <see cref="NpcFlight.RepickSeconds"/>; once it has been gone for <see cref="NpcFlight.CalmSeconds"/>, walk back to the
+    /// spot. True while there is somewhere to go (or breath to catch); <paramref name="dest"/> is the next point to head for.
+    /// </summary>
+    private bool Flight(float dt, out Vector3? dest, out float speed)
+    {
+        dest = null;
+        speed = WalkSpeed;
+        _home ??= GlobalPosition;
+        // a new scare starts inside FleeRange; once scared, anything inside SafeRange keeps the NPC wary (hysteresis, so it
+        // does not run, calm down at the edge of the range, walk back into it and run again)
+        var watch = Fleeing ? NpcFlight.SafeRange : NpcFlight.FleeRange;
+        var threat = NearestEnemy(GlobalPosition, watch, out var dist);
+        if (threat != null)
+        {
+            _calm = 0f;
+            _repick -= dt;
+            if (!Fleeing) { Fleeing = true; _repick = 0f; EventBus.Instance.Log($"{NpcName} runs from {threat.DisplayName}!"); GD.Print($"[Npc] {NpcName} runs from {threat.DisplayName} ({dist:0.0} m away) at {GlobalPosition:0.0}"); }
+            var near = dist < NpcFlight.FleeRange;
+            var arrived = _fleeGoal == null || GlobalPosition.DistanceTo(_fleeGoal.Value) < 0.8f;
+            if (near && (arrived || _repick <= 0f))
+            {
+                _repick = NpcFlight.RepickSeconds;
+                if (Main.Instance?.Builder is { Layout: { } layout } builder)
+                {
+                    var others = GetTree().GetNodesInGroup("npcs").OfType<Npc>().Where(o => o != this && o.IsAlive).ToList();
+                    bool Taken(GridPos c) => others.Any(o => o.FleeCell == c || DungeonBuilder.WorldToCell(o.GlobalPosition) == c);
+                    // a refuge must be walkable AND reachable by a path: the mover walks straight at an unreachable goal, which plants the NPC against a wall
+                    var myCell = DungeonBuilder.WorldToCell(GlobalPosition);
+                    var me = new PathNode(myCell, builder.IsUnderAt(GlobalPosition));
+                    bool Reachable(GridPos c) => layout.IsWalkable(c) && !builder.IsCellBlocked(c) && !_badCells.Contains(c)
+                        && GridPathfinder.FindPath(layout, me, new PathNode(c, false), builder.IsCellBlocked, builder.IsSecretOpen) != null;
+                    var cell = NpcFlight.PickFleeCell(myCell, DungeonBuilder.WorldToCell(threat.GlobalPosition), Reachable, NpcFlight.FleeSteps, Taken);
+                    var changed = cell != FleeCell;
+                    FleeCell = cell;
+                    _fleeGoal = cell is { } c2 ? builder.Surface(c2) : null;
+                    if (_fleeGoal != null && changed) { _mover.Reset(); GD.Print($"[Npc] {NpcName} runs to {cell}"); }
+                }
+            }
+            else if (!near && arrived) { _fleeGoal = null; FleeCell = null; }   // far enough: hold here and keep an eye on it
+            speed = RunSpeed;
+            if (_fleeGoal is { } g) dest = _mover.Next(this, g, dt, 0.6f, ClearLine, out _);
+            else FaceToward(threat.GlobalPosition);
+            return true;
+        }
+        if (!Fleeing) return false;
+        _badCells.Clear();
+        _fleeGoal = null;
+        FleeCell = null;
+        _calm += dt;
+        if (_calm < NpcFlight.CalmSeconds) return true;   // stands a moment, catching breath
+        var home = _home.Value;
+        if (NearestEnemy(home, NpcFlight.FleeRange, out _) != null) return true;   // home is not clear yet: wait here
+        if (new Vector2(home.X - GlobalPosition.X, home.Z - GlobalPosition.Z).Length() < 0.8f) { Fleeing = false; _mover.Reset(); GD.Print($"[Npc] {NpcName} is back at its spot"); return false; }
+        dest = _mover.Next(this, home, dt, 0.6f, ClearLine, out _);
+        return true;
+    }
+
+    /// <summary>The nearest alive enemy within <paramref name="range"/> metres of <paramref name="of"/> (flat distance), or null.</summary>
+    private Enemy? NearestEnemy(Vector3 of, float range, out float distance)
+    {
+        Enemy? best = null;
+        var bestD2 = range * range;
+        foreach (var n in GetTree().GetNodesInGroup("enemies"))
+        {
+            if (n is not Enemy e || !e.IsAlive) continue;
+            var d2 = new Vector2(e.GlobalPosition.X - of.X, e.GlobalPosition.Z - of.Z).LengthSquared();
+            if (d2 < bestD2) { bestD2 = d2; best = e; }
+        }
+        distance = MathF.Sqrt(bestD2);
+        return best;
     }
 
     private void CheckStairs()
