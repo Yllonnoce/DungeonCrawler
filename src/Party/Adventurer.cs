@@ -615,10 +615,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void TryInteract()
     {
+        if (Downed)
+        {
+            // a mangled player on a client cannot act, but can shout: everyone reads it in the log
+            if (Net.NetSession.IsClient && State.Mangled) Net.NetSession.Instance.Send(new Net.ShoutIntent());
+            return;
+        }
         if (LookingAt is not { } target) return;
         // talking is local (the choice goes over the wire); everything else the server does for us
         if (Net.NetSession.IsClient && target is not Npc)
         {
+            if (target is Adventurer { Downed: true, State.Mangled: true } mangled) { Net.NetSession.Instance.Send(new Net.RescueIntent(mangled.Index)); return; }
             if (Net.NetRefResolver.RefOf(target) is { } netRef) Net.NetSession.Instance.Send(new Net.InteractIntent(netRef));
             return;
         }

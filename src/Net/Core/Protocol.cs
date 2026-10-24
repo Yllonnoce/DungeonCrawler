@@ -43,4 +43,6 @@ public enum MsgKind : byte
     AmbushSprung, PortalOpened,
     // floor objectives (v2)
     ObjectiveState, ObjectiveDone,
+    // lethal hazards (v3): server-owned phases, a client asking to rescue or shouting for help
+    HazardPhase, RescueIntent, ShoutIntent,
 }

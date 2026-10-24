@@ -105,6 +105,14 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.ObjectiveState)] public sealed record ObjectiveStateMsg(ObjectiveStateDto State) : NetMessage;
 /// <summary>The floor objective is met: the stairs open.</summary>
 [Msg(MsgKind.ObjectiveDone)] public sealed record ObjectiveDoneEvt(int Floor, string ObjectiveKind) : NetMessage;
+
+// lethal hazards: the server owns every phase; a client animates from the tick the phase began
+/// <summary>A hazard entered a phase. Hazard is a (byte)HazardKind; Phase a PressPhase or SpikePhase byte; DurationTicks how long it lasts.</summary>
+[Msg(MsgKind.HazardPhase)] public sealed record HazardPhaseMsg(int Index, byte Hazard, byte Phase, int ServerTick, int DurationTicks, bool Jammed, int Spent) : NetMessage;
+/// <summary>The sender wants to pull a Mangled member clear; the server runs the hold.</summary>
+[Msg(MsgKind.RescueIntent)] public sealed record RescueIntent(int Member) : NetMessage;
+/// <summary>A downed player calling for help; everyone reads it in the log.</summary>
+[Msg(MsgKind.ShoutIntent)] public sealed record ShoutIntent : NetMessage;
 [Msg(MsgKind.MemberDowned)] public sealed record MemberDownedEvt(int Index) : NetMessage;
 [Msg(MsgKind.MemberRevived)] public sealed record MemberRevivedEvt(int Index) : NetMessage;
 [Msg(MsgKind.PartyWiped)] public sealed record PartyWipedEvt : NetMessage;

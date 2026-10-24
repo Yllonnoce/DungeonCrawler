@@ -15,7 +15,7 @@ SERVER_EXE=${SERVER_BIN:-}   # e.g. build/server/DungeonCrawler.x86_64 to test t
 run_server() { if [ -n "$SERVER_EXE" ]; then "$SERVER_EXE" --headless -- "$@"; else "$GODOT" --headless --path . -- "$@"; fi; }
 
 if [ "$MODE" = direct ]; then
-  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --port=$PORT --bind=127.0.0.1 --campaign=offline --seed=4242 --quit-when-empty --status-file="$TMP/status.json" > "$TMP/server.log" 2>&1 &
+  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --port=$PORT --bind=127.0.0.1 --campaign=offline --seed=4242 --lethality=1 --hazard=press@2 --quit-when-empty --status-file="$TMP/status.json" > "$TMP/server.log" 2>&1 &
   SERVER=$!
   wait_port() { for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && return 0; sleep 0.5; done; echo "server never opened port $PORT"; return 1; }
   wait_port || { echo "--- server"; tail -20 "$TMP/server.log"; echo "NET TEST: FAIL"; exit 1; }
@@ -24,7 +24,7 @@ if [ "$MODE" = direct ]; then
   sleep 1
 fi
 
-XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --join="$URL" --name=Tester --class=class.warrior > "$TMP/client.log" 2>&1
+XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --join="$URL" --name=Tester --class=class.warrior --hazard=press@2 > "$TMP/client.log" 2>&1
 CLIENT_RC=$?
 
 if [ "$MODE" = direct ]; then

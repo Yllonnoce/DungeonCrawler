@@ -36,7 +36,10 @@ public partial class NetTestFlow : Node
         var resumed = NetSession.Instance.Resumed;
         if ((resumed && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
         {
-            var want = resumed ? new[] { "rejoin:", "ready:", "left:" } : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "left:", "rejoin:" };
+            var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
+            var want = resumed ? new[] { "rejoin:", "ready:", "left:" }
+                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "left:", "rejoin:" }
+                : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "left:", "rejoin:" };
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -108,7 +111,8 @@ public partial class NetTestFlow : Node
                 {
                     if (client.Trace.Contains("kill")) { GD.Print($"[net] kill confirmed after {_swings} swings"); _clock = 0; _step = 5; return; }
                     // a loner, not a camp or a nest: one level-1 warrior against a band would be a different test
-                    var candidates = main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Where(e => e.IsAlive && !e.IsBoss && !e.IsHorde && e.Kind == Enemies.EnemyKind.Melee).ToList() ?? new List<Enemies.Enemy>();
+                    // the viewer's 280 hp orc by the entrance is a showpiece, not a level-1 fight
+                    var candidates = main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Where(e => e.IsAlive && !e.IsBoss && !e.IsHorde && e.Kind == Enemies.EnemyKind.Melee && e.Profile.Id != Dungeon.DungeonBuilder.ViewerOrcId).ToList() ?? new List<Enemies.Enemy>();
                     _target = candidates.Where(e => e.Group == null).OrderBy(e => e.GlobalPosition.DistanceSquaredTo(me.GlobalPosition)).FirstOrDefault()
                         ?? candidates.OrderBy(e => e.GlobalPosition.DistanceSquaredTo(me.GlobalPosition)).FirstOrDefault();
                     if (_target == null) { Finish("[net]", false, "no enemy to fight"); return; }
@@ -186,10 +190,32 @@ public partial class NetTestFlow : Node
                 if (client.Trace.Contains("floor:2") && Game.Instance.CurrentFloor == 2 && main.Builder.Layout != null)
                 {
                     GD.Print($"[net] on floor 2: {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies, hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}");
-                    _clock = 0; _step = 8;
+                    _clock = 0; _step = 11;
                 }
                 else if (_clock > 20) Finish("[net]", false, $"floor 2 never came (floor {Game.Instance.CurrentFloor}, trace=[{string.Join(", ", client.Trace)}])");
                 return;
+            case 11:
+            {
+                // the forced Press: stand on its plate, see the server's Warning phase arrive, step off before it closes
+                if (client.SnapshotsSeen < 10 && _clock < 10) return;
+                var press = main.Builder.Hazards.OfType<Dungeon.Props.Press>().FirstOrDefault();
+                if (press == null) { GD.Print("[net] no Press on this floor; skipping the hazard step"); _clock = 0; _step = 8; return; }
+                if (_hazardReturn == null)
+                {
+                    _hazardReturn = main.Party.Local!.GlobalPosition;
+                    main.Party.Local.Teleport(main.Builder.Surface(press.Placement.Plate) + Vector3.Up * 0.3f);
+                    GD.Print($"[net] stepping onto the Press plate at {main.Party.Local.GlobalPosition:0.0} (plate node {press.Plate.GlobalPosition:0.0}, cell {press.Placement.Plate}); body was at {_hazardReturn:0.0}");
+                    _clock = 0; return;
+                }
+                if (client.Trace.Contains("hazard:Warning"))
+                {
+                    main.Party.Local!.Teleport(_hazardReturn.Value);
+                    GD.Print($"[net] press warned after {_clock:0.0} s (phase {press.Phase}, {press.PhaseTime:0.00} s in); stepped clear");
+                    _clock = 0; _step = 8;
+                }
+                else if (_clock > 10) Finish("[net]", false, $"the Press never warned (phase {press.Phase}, trace=[{string.Join(", ", client.Trace.Distinct())}])");
+                return;
+            }
             case 8:
                 if (client.SnapshotsSeen < 10 && _clock < 10) return;
                 // leave, then come back under the same name: same member, same bag, same floor
@@ -223,6 +249,6 @@ public partial class NetTestFlow : Node
     private string _firstRun = "";
     private int _bagAtLeave, _memberAtLeave;
     private void Trace(string what) => GD.Print($"[net] {what}");
-    private Vector3? _startAfterPose;
+    private Vector3? _startAfterPose, _hazardReturn;
     public void NotePlaced(Vector3 at) => _startAfterPose = at;
 }

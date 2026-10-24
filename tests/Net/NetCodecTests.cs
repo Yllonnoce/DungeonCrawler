@@ -1,3 +1,4 @@
+using DungeonCrawler.Dungeon;
 using DungeonCrawler.Adventure;
 using DungeonCrawler.Items;
 using DungeonCrawler.Net;
@@ -23,6 +24,16 @@ public class NetCodecTests
         Assert.Equal(kinds.Count, kinds.Distinct().Count());
         Assert.True(kinds.Count > 50);
         foreach (var t in MsgRegistry.AllTypes) Assert.Same(t, MsgRegistry.TypeOf(MsgRegistry.KindOf(t)));
+    }
+
+    [Fact]
+    public void HazardMessages_RoundTrip()
+    {
+        var h = RoundTrip(new HazardPhaseMsg(2, (byte)HazardKind.Press, (byte)PressPhase.Closing, 1234, 144, false, 1));
+        Assert.Equal(2, h.Index); Assert.Equal((byte)HazardKind.Press, h.Hazard); Assert.Equal((byte)PressPhase.Closing, h.Phase);
+        Assert.Equal(1234, h.ServerTick); Assert.Equal(144, h.DurationTicks); Assert.False(h.Jammed); Assert.Equal(1, h.Spent);
+        Assert.Equal(3, RoundTrip(new RescueIntent(3)).Member);
+        _ = RoundTrip(new ShoutIntent());
     }
 
     [Fact]

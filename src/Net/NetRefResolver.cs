@@ -40,6 +40,7 @@ public static class NetRefResolver
             case NetRefs.BarrelKind: return NetRefs.TryIndex(id, out var bi) ? children.OfType<Breakable>().FirstOrDefault(b => b.SpawnIndex == bi) : null;
             case NetRefs.StairsKind: return root.GetNodeOrNull<Stairs>(id == "down" ? "DownStairs" : "UpStairs");
             case NetRefs.NpcKind: return children.OfType<Npc>().FirstOrDefault(n => n.Id == id);
+            case NetRefs.HazardKind: return NetRefs.TryIndex(id, out var hi) ? children.FirstOrDefault(n => n is Press { Index: var pi } && pi == hi || n is SpikeBed { Index: var bi2 } && bi2 == hi) as Node3D : null;
             case NetRefs.PlaqueKind: return NetRefs.TryIndex(id, out var pi) ? children.OfType<Plaque>().FirstOrDefault(p => p.Index == pi) : null;
             case NetRefs.LootKind: return Guid.TryParseExact(id, "N", out var g) ? children.OfType<LootDrop>().FirstOrDefault(l => l.Item.Id == g) : null;
             default: return null;

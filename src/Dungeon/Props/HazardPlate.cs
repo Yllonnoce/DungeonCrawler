@@ -48,6 +48,7 @@ public partial class HazardPlate : Area3D
             Npc n => n.IsAlive,
             _ => false,
         };
+        if (Net.NetSession.Instance?.TestServer == true) GD.Print($"[net-server] plate {GetParent().Name} touched by {body.Name} counts={counts}");
         if (counts) Pressed?.Invoke(body);
     }
 

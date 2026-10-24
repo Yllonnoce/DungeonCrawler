@@ -64,6 +64,8 @@ public partial class DebugTools : Node
     public string? StoryBriefPath { get; private set; }
     /// <summary>--hazard=press|spikes: force one hazard of that kind near the up stairs on every floor.</summary>
     public string? ForcedHazard { get; private set; }
+    /// <summary>--hazard=press@2: the forced hazard only on that floor; null means every floor.</summary>
+    public int? ForcedHazardFloor { get; private set; }
     private string? _testHazard;
     private int _hazardStep;
     private float _hazardClock;
@@ -247,7 +249,13 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--replay-plans=")) ReplayDir = ProjectSettings.GlobalizePath(arg["--replay-plans=".Length..]);
             else if (arg.StartsWith("--record-plans=")) RecordDir = arg["--record-plans=".Length..];
             else if (arg == "--trace-voice") TraceVoice = true;
-            else if (arg.StartsWith("--hazard=")) ForcedHazard = arg["--hazard=".Length..].Trim().ToLowerInvariant();
+            else if (arg.StartsWith("--hazard="))
+            {
+                var spec = arg["--hazard=".Length..].Trim().ToLowerInvariant();
+                var at = spec.IndexOf('@');
+                if (at > 0 && int.TryParse(spec[(at + 1)..], out var onFloor)) { ForcedHazardFloor = onFloor; spec = spec[..at]; }
+                ForcedHazard = spec;
+            }
             else if (arg.StartsWith("--test-hazard=")) { _testHazard = arg["--test-hazard=".Length..].Trim().ToLowerInvariant(); ForcedHazard = _testHazard; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _seed ??= 4242; _quitAfter = 60; }
             else if (arg.StartsWith("--story-brief=")) StoryBriefPath = ProjectSettings.GlobalizePath(arg["--story-brief=".Length..]);
             else if (arg.StartsWith("--fake-ai=")) FakeAiDelay = float.Parse(arg["--fake-ai=".Length..], System.Globalization.CultureInfo.InvariantCulture);

@@ -136,7 +136,7 @@ public partial class DungeonBuilder : Node3D
         var seed = gameSeed ?? Game.Instance?.GameSeed ?? GameSeed;
         var layout = LayoutFor(floor, seed);
         spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout) };
-        if (DebugTools.Instance?.ForcedHazard is { } fh) spec = spec with { ForceHazard = fh.StartsWith("spike") ? HazardKind.SpikeBed : HazardKind.Press };
+        if (DebugTools.Instance?.ForcedHazard is { } fh && (DebugTools.Instance.ForcedHazardFloor is not { } onFloor || onFloor == floor)) spec = spec with { ForceHazard = fh.StartsWith("spike") ? HazardKind.SpikeBed : HazardKind.Press };
         var overrides = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.SpecOverrides;
         return overrides is { IsEmpty: false } ? overrides.Apply(spec) : spec;
     }

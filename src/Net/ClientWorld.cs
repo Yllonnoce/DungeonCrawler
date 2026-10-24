@@ -100,6 +100,7 @@ public partial class ClientWorld : Node
             case HordeTriggeredEvt ht: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == ht.Id)?.Show(); break;
             case HordeSpentEvt hs: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == hs.Id)?.ShowSpent(); break;
             case AmbushSprungEvt asp: Root?.GetChildren().OfType<AmbushSpawner>().FirstOrDefault()?.ShowBurst(asp.Index); break;
+            case HazardPhaseMsg hp: OnHazardPhase(hp); break;
             case PortalOpenedEvt po: Root?.GetChildren().OfType<PortalSpawner>().FirstOrDefault()?.ShowPortal(new Vector3(po.X, po.Y, po.Z)); break;
         }
     }
@@ -116,6 +117,29 @@ public partial class ClientWorld : Node
     }
 
     private static Node3D? Root => Main.Instance?.Builder.FloorRoot;
+
+    /// <summary>Server tick minus ours, from the latest snapshot: turns a phase's start tick into seconds already elapsed here.</summary>
+    private int _serverTickOffset;
+
+    private void OnHazardPhase(HazardPhaseMsg hp)
+    {
+        var elapsedTicks = NetSession.Instance.Tick + _serverTickOffset - hp.ServerTick;
+        var secondsIn = Math.Clamp(elapsedTicks / 60f, 0f, hp.DurationTicks / 60f);
+        foreach (var node in Main.Instance?.Builder.Hazards ?? Array.Empty<Node3D>())
+        {
+            switch (node)
+            {
+                case Dungeon.Props.Press p when hp.Hazard == (byte)Dungeon.HazardKind.Press && p.Index == hp.Index:
+                    p.ApplyPhase((Dungeon.PressPhase)hp.Phase, secondsIn, hp.Jammed, hp.Spent);
+                    Trace.Add($"hazard:{p.Phase}");
+                    return;
+                case Dungeon.Props.SpikeBed b when hp.Hazard == (byte)Dungeon.HazardKind.SpikeBed && b.Index == hp.Index:
+                    b.ApplyPhase((Dungeon.SpikePhase)hp.Phase, secondsIn, hp.Spent);
+                    Trace.Add($"hazard:{b.Phase}");
+                    return;
+            }
+        }
+    }
 
     private void OnFloorChange(FloorChange fc)
     {
@@ -257,6 +281,7 @@ public partial class ClientWorld : Node
     private void ApplySnapshot(WorldSnapshot s)
     {
         SnapshotsSeen++;
+        _serverTickOffset = s.Tick - NetSession.Instance.Tick;
         var now = NetSession.Instance.Now;
         var party = Main.Instance?.Party;
         if (party == null) return;

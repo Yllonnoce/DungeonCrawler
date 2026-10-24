@@ -73,6 +73,7 @@ public partial class ServerWorld : Node
         bus.HordeTriggered += id => Broadcast(new HordeTriggeredEvt(id));
         bus.HordeSpent += id => Broadcast(new HordeSpentEvt(id));
         bus.AmbushSprung += i => Broadcast(new AmbushSprungEvt(i));
+        bus.HazardPhase += OnHazardPhase;
         bus.PortalOpened += at => Broadcast(new PortalOpenedEvt(at.X, at.Y, at.Z));
     }
 
@@ -335,6 +336,21 @@ public partial class ServerWorld : Node
                 if (node is Dungeon.Props.Chest) Trace.Add("chest");
                 break;
             }
+            case RescueIntent r:
+            {
+                if (r.Member < 0 || r.Member >= party.Adventurers.Length) break;
+                var target = party.Adventurers[r.Member];
+                if (!target.State.Mangled || !target.Downed) break;
+                var started = party.TryRescue(target, body, () => main.Builder.HazardArmed(target.State.MangledBy));
+                if (NetSession.Instance.TestServer) GD.Print($"[net-server] rescue of {target.State.Name} by {slot.Name}: {(started ? "started" : "refused")}");
+                if (started) Trace.Add("rescue");
+                break;
+            }
+            case ShoutIntent:
+                if (!body.Downed) break;
+                EventBus.Instance.Log($"{slot.Name} needs help!");
+                Trace.Add("shout");
+                break;
             case BagMoveIntent bm:
                 if (!OwnsSlots(slot, bm.From, bm.To)) break;
                 party.BagMove(bm.From, bm.To, body);
@@ -372,7 +388,9 @@ public partial class ServerWorld : Node
         if (body.Control != ControlKind.Remote) return;
         var at = new Vector3(pose.Position.X, pose.Position.Y, pose.Position.Z);
         // a body cannot be steered off the map: keep it on floor the layout knows
-        if (Main.Instance!.Builder.Layout is { } layout && !layout.IsWalkable(DungeonBuilder.WorldToCell(at)) && !Main.Instance.Builder.IsUnderAt(at)) { RejectedPoses++; return; }
+        if (Main.Instance!.Builder.Layout is { } layout && !layout.IsWalkable(DungeonBuilder.WorldToCell(at)) && !Main.Instance.Builder.IsUnderAt(at)) { RejectedPoses++; if (NetSession.Instance.TestServer && RejectedPoses <= 12) GD.Print($"[net-server] pose from {slot.Name} rejected at {at:0.0} cell {DungeonBuilder.WorldToCell(at)} ({layout[DungeonBuilder.WorldToCell(at)]})"); return; }
+        // nor into a Press that is holding shut: there is no room for a body between the slabs
+        if (Main.Instance.Builder.Hazards.OfType<Dungeon.Props.Press>().Any(p => p.Phase == PressPhase.Hold && p.Placement.Cells.Contains(DungeonBuilder.WorldToCell(at)))) { RejectedPoses++; return; }
         body.Remote ??= new RemotePose();
         body.Remote.Position = at;
         body.Remote.Yaw = pose.Yaw;
@@ -383,6 +401,26 @@ public partial class ServerWorld : Node
         body.Remote.OnFloor = pose.Flags.HasFlag(PoseFlags.OnFloor);
         if (!_moved.Contains(slot.MemberIndex) && _firstPose.TryGetValue(slot.MemberIndex, out var first) && first.DistanceTo(at) > 1f) { _moved.Add(slot.MemberIndex); Trace.Add($"moved:{slot.Name}"); }
         _firstPose.TryAdd(slot.MemberIndex, at);
+    }
+
+    /// <summary>A hazard entered a phase: tell every client which, when and how far along, so they animate in step.</summary>
+    private void OnHazardPhase(int index, byte phase)
+    {
+        var tick = NetSession.Instance.Tick;
+        foreach (var node in Main.Instance?.Builder.Hazards ?? Array.Empty<Node3D>())
+        {
+            switch (node)
+            {
+                case Dungeon.Props.Press p when p.Index == index:
+                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.Press, phase, tick, (int)(HazardRules.PressDuration(p.Phase) * 60), p.Jammed, p.Spent));
+                    Trace.Add($"hazard:{p.Phase}");
+                    return;
+                case Dungeon.Props.SpikeBed b when b.Index == index:
+                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.SpikeBed, phase, tick, (int)(HazardRules.SpikeDuration(b.Phase, b.Variant) * 60), false, b.Spent));
+                    Trace.Add($"hazard:{b.Phase}");
+                    return;
+            }
+        }
     }
 
     public int RejectedPoses { get; private set; }
