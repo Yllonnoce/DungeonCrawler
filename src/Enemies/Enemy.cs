@@ -12,7 +12,7 @@ using Godot;
 namespace DungeonCrawler.Enemies;
 
 /// <summary>An enemy driven by a small FSM, built from an EnemyProfile scaled to its floor.</summary>
-public partial class Enemy : CharacterBody3D, ICombatTarget
+public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 {
     /// <summary>Set before adding to the tree.</summary>
     public EnemyProfile Profile { get; set; } = new();
@@ -736,6 +736,35 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         _dying = true;
     }
 
+    public VictimKind HazardVictimKind => IsBoss ? VictimKind.Boss : VictimKind.Enemy;
+
+    private bool _environmentalKill;
+
+    /// <summary>The dungeon itself caught this creature. Regulars die (no loot; XP if a member saw it); bosses stagger.</summary>
+    public void ReceiveHazard(HazardDamage kind, HazardOutcome outcome, string sourceName, int hazardIndex)
+    {
+        if (!IsAlive) return;
+        if (outcome.Lethal) { KillByEnvironment(sourceName, kind); return; }
+        var amount = MaxHp * outcome.HpFraction;
+        Hp = Math.Max(1, Hp - amount);
+        _flash = 0.25f;
+        SinceHurt = 0f;
+        EventBus.Instance.RaiseEnemyHurt(this, amount, false);
+        if (outcome.StunSeconds > 0) Effects.Apply(new StatusApplication(StatusKind.Stun, outcome.StunSeconds, 0));
+        PlayAnim("HitReact", force: true);
+        EventBus.Instance.Log($"{sourceName} staggers {DisplayName} for {amount:0}.");
+    }
+
+    /// <summary>An environmental kill: the death sequence without the loot, and only the XP if the party was close enough to count it.</summary>
+    public void KillByEnvironment(string sourceName, HazardDamage kind)
+    {
+        if (!IsAlive) return;
+        _environmentalKill = true;
+        EventBus.Instance.Log($"{sourceName} {(kind == HazardDamage.Crush ? "crushes" : "impales")} {DisplayName}.");
+        EventBus.Instance.RaiseEnemyKilledByHazard(this, sourceName);
+        Kill();
+    }
+
     public void OnDeath()
     {
         PlayAnim("Death", force: true);
@@ -746,9 +775,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget
         _material.AlbedoColor = _baseColor.Darkened(0.6f);
         Effects.Clear();
 
-        Party?.AwardXp(Profile.ScaledXp(Floor));
+        if (!_environmentalKill || Party?.Active.Any(a => !a.Downed && a.GlobalPosition.DistanceTo(GlobalPosition) <= 10f) == true) Party?.AwardXp(Profile.ScaledXp(Floor));
         Group?.OnMemberDied(this);
         EventBus.Instance.RaiseEnemyDied(this);
+        if (_environmentalKill) { if (IsBoss) Main.Instance?.OnBossDefeated(Floor); return; } // the dungeon's kills leave no loot
 
         var cat = Game.Instance.Catalog;
         var level = TierRules.ItemLevel(Floor);

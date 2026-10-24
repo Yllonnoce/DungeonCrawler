@@ -16,7 +16,7 @@ namespace DungeonCrawler.Adventure;
 /// <summary>What an NPC is on this floor: a quest giver from the plan, or one of the floor objective's people.</summary>
 public enum NpcMode { Quest, Ritualist, Prisoner, Fighter }
 
-public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
+public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazardVictim
 {
     public const float WalkSpeed = 4.2f;
     public const float RunSpeed = 6.5f;
@@ -41,6 +41,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
     public int Floor { get; set; } = 1;
     public bool Dead { get; private set; }
     public bool Escorting { get; private set; }
+    /// <summary>Down to a lethal hazard: an ally waits to be pulled free rather than revived with a word.</summary>
+    public bool Mangled { get; private set; }
+    public int MangledBy { get; private set; } = -1;
     public bool Rescued { get; private set; }
     /// <summary>Betrayed the party: gone from the floor, their creatures stand in their place.</summary>
     public bool Turned { get; private set; }
@@ -147,6 +150,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         Hp = MathF.Round(MaxHp * Objectives.RitualRules.ReviveHpFraction);
         _label.Text = NpcName;
         _model?.Play("Idle", force: true);
+        Mangled = false;
+        MangledBy = -1;
         EventBus.Instance.Log($"{NpcName} gets up, shaken.");
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Revived);
         return true;
@@ -454,7 +459,27 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget
         Hp = Math.Max(0, Hp - dmg);
         _flash = 0.25f;
         EventBus.Instance.Log($"{nearest.DisplayName} wounds {NpcName} for {dmg:0}. ({Hp:0}/{MaxHp:0})");
-        if (Hp <= 0) Die();
+        if (Hp <= 0) GoDown(); // wounds put an escort down; only the dungeon's own hazards and quest-mode blows kill
+    }
+
+    public VictimKind HazardVictimKind => Mode == NpcMode.Fighter && Escorting ? VictimKind.Ally : VictimKind.QuestNpc;
+
+    /// <summary>A lethal hazard caught this NPC. Allies go down Mangled; everyone else goes down and waits for the party.</summary>
+    public void ReceiveHazard(HazardDamage kind, HazardOutcome outcome, string sourceName, int hazardIndex)
+    {
+        if (Dead || Downed) return;
+        if (outcome.Lethal || outcome.HpFraction >= 1f)
+        {
+            EventBus.Instance.Log($"{sourceName} {(kind == HazardDamage.Crush ? "crushes" : "impales")} {NpcName}!");
+            if (outcome.Lethal) { Mangled = true; MangledBy = hazardIndex; }
+            GoDown();
+            return;
+        }
+        var amount = MaxHp * outcome.HpFraction;
+        Hp = Math.Max(0, Hp - amount);
+        _flash = 0.25f;
+        EventBus.Instance.Log($"{sourceName} hits {NpcName} for {amount:0}. ({Hp:0}/{MaxHp:0})");
+        if (Hp <= 0) GoDown();
     }
 
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
