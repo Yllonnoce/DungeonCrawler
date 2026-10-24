@@ -59,6 +59,8 @@ public partial class EventBus : Node
     public event Action<int>? LevelUp;
     public event Action<int>? MemberRevived;
     /// <summary>A party member was killed outright by a lethal hazard (the Press, spikes) and lies Mangled.</summary>
+    /// <summary>A lethal hazard changed phase (index on the floor, the new phase as a byte of PressPhase or SpikePhase).</summary>
+    public event Action<int, byte>? HazardPhase;
     public event Action<int, string>? MemberKilledByHazard;
     /// <summary>An enemy died to a lethal hazard: an environmental kill, no loot.</summary>
     public event Action<Enemies.Enemy, string>? EnemyKilledByHazard;
@@ -116,6 +118,7 @@ public partial class EventBus : Node
     public void RaiseChestOpened(Vector3 at) => ChestOpened?.Invoke(at);
     public void RaiseMemberKill(Characters.CharacterState m) => MemberKill?.Invoke(m);
     public void RaiseLevelUp(int index) => LevelUp?.Invoke(index);
+    public void RaiseHazardPhase(int index, byte phase) => HazardPhase?.Invoke(index, phase);
     public void RaiseMemberKilledByHazard(int index, string source) => MemberKilledByHazard?.Invoke(index, source);
     public void RaiseEnemyKilledByHazard(Enemies.Enemy enemy, string source) => EnemyKilledByHazard?.Invoke(enemy, source);
     public void RaiseMemberRevived(int index) => MemberRevived?.Invoke(index);

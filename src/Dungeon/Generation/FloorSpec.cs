@@ -49,6 +49,8 @@ public sealed record FloorSpec
     public int Floor { get; init; } = 1;
     /// <summary>False leaves the floor exactly as the generator made it before the lethal hazards existed.</summary>
     public bool HazardsEnabled { get; init; } = true;
+    /// <summary>Testing: force one hazard of this kind as close to the up stairs as the rules allow, on any floor (--hazard=press|spikes).</summary>
+    public HazardKind? ForceHazard { get; init; }
 
     public static FloorSpec Default { get; } = new();
 }

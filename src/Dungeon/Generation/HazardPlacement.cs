@@ -36,6 +36,12 @@ public static class HazardPlanner
     {
         if (!spec.HazardsEnabled) return;
         var (pressMax, bedsMin, bedsMax, periodicAllowed) = HazardCounts.For(spec.Floor);
+        if (spec.ForceHazard is { } forced)
+        {
+            pressMax = forced == HazardKind.Press ? 1 : 0;
+            bedsMin = bedsMax = forced == HazardKind.SpikeBed ? 1 : 0;
+            periodicAllowed = false;
+        }
         if (pressMax == 0 && bedsMax == 0) return;
 
         var critical = CriticalPath(layout);
@@ -43,9 +49,10 @@ public static class HazardPlanner
         var taken = Taken(layout);
         var index = 0;
 
-        if (pressMax > 0 && layout.Kind != LayoutKind.Labyrinth && (spec.Floor > 5 || rng.NextDouble() < CryptPressChance))
+        if (pressMax > 0 && layout.Kind != LayoutKind.Labyrinth && (spec.ForceHazard != null || spec.Floor > 5 || rng.NextDouble() < CryptPressChance))
         {
             var runs = PressCandidates(layout, taken, depth, rng);
+            if (spec.ForceHazard != null) runs = runs.OrderBy(r => depth.TryGetValue(r.Cells[1], out var d) ? d : int.MaxValue).ToList(); // the test wants it by the door
             if (runs.Count > 0)
             {
                 var (cells, horizontal, guards) = runs[0];
@@ -57,6 +64,7 @@ public static class HazardPlanner
         {
             var want = rng.Next(bedsMin, bedsMax + 1);
             var patches = BedCandidates(layout, taken, rng);
+            if (spec.ForceHazard != null) patches = patches.OrderBy(p => depth.TryGetValue(p[0], out var d) ? d : int.MaxValue).ToList();
             foreach (var cells in patches)
             {
                 if (layout.Hazards.Count(h => h.Kind == HazardKind.SpikeBed) >= want) break;

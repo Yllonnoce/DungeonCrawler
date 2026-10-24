@@ -136,6 +136,7 @@ public partial class DungeonBuilder : Node3D
         var seed = gameSeed ?? Game.Instance?.GameSeed ?? GameSeed;
         var layout = LayoutFor(floor, seed);
         spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout) };
+        if (DebugTools.Instance?.ForcedHazard is { } fh) spec = spec with { ForceHazard = fh.StartsWith("spike") ? HazardKind.SpikeBed : HazardKind.Press };
         var overrides = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.SpecOverrides;
         return overrides is { IsEmpty: false } ? overrides.Apply(spec) : spec;
     }
@@ -188,8 +189,19 @@ public partial class DungeonBuilder : Node3D
         return false;
     }
 
-    /// <summary>Whether the lethal hazard with this placement index is back at rest (a Mangled body may be pulled free). Filled in by the hazard nodes; true when no such hazard exists.</summary>
-    public bool HazardArmed(int index) => true;
+    private readonly List<Node3D> _hazards = new();
+    /// <summary>The lethal hazard nodes on this floor (Press, SpikeBed), by placement index.</summary>
+    public IReadOnlyList<Node3D> Hazards => _hazards;
+    /// <summary>Whether the lethal hazard with this placement index is back at rest (a Mangled body may be pulled free). True when no such hazard exists.</summary>
+    public bool HazardArmed(int index)
+    {
+        foreach (var h in _hazards)
+        {
+            if (!IsInstanceValid(h)) continue;
+            if (h is Props.Press p && p.Index == index) return p.Armed;
+        }
+        return true;
+    }
 
     public EnemyProfile? EnemyProfile(string id) => _enemies.TryGetValue(id, out var p) ? p : null;
 
@@ -260,6 +272,7 @@ public partial class DungeonBuilder : Node3D
         _openSecrets.Clear();
         _propCells.Clear();
         _danger.Clear();
+        _hazards.Clear();
         _grid = null;
         if (_floorRoot == null) return;
         _floorRoot.QueueFree();
@@ -1069,6 +1082,15 @@ public partial class DungeonBuilder : Node3D
             trap.Name = $"Trap{i}";
             root.AddChild(trap);
             trap.GlobalPosition = Surface(layout.TrapSpawns[i]);
+        }
+        var stone = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
+        foreach (var h in layout.Hazards)
+        {
+            if (h.Kind != HazardKind.Press) continue; // spike beds arrive with their own node
+            var press = new Props.Press { Name = $"Press{h.Index}" };
+            press.Configure(h, floor, stone, this);
+            root.AddChild(press);
+            _hazards.Add(press);
         }
         foreach (var n in contents.Npcs)
         {

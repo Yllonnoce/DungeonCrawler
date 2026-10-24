@@ -62,6 +62,11 @@ public partial class DebugTools : Node
     public string? RecordDir { get; private set; }
     /// <summary>--story-brief=FILE: a campaign bible (markdown) the planner must follow; it rides along every planning call as a cached system block.</summary>
     public string? StoryBriefPath { get; private set; }
+    /// <summary>--hazard=press|spikes: force one hazard of that kind near the up stairs on every floor.</summary>
+    public string? ForcedHazard { get; private set; }
+    private string? _testHazard;
+    private int _hazardStep;
+    private float _hazardClock;
     /// <summary>--trace-voice: log every voice job the renderer starts (id, model, voice, style, text).</summary>
     public bool TraceVoice { get; private set; }
     public bool ForceAi { get; private set; }
@@ -242,6 +247,8 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--replay-plans=")) ReplayDir = ProjectSettings.GlobalizePath(arg["--replay-plans=".Length..]);
             else if (arg.StartsWith("--record-plans=")) RecordDir = arg["--record-plans=".Length..];
             else if (arg == "--trace-voice") TraceVoice = true;
+            else if (arg.StartsWith("--hazard=")) ForcedHazard = arg["--hazard=".Length..].Trim().ToLowerInvariant();
+            else if (arg.StartsWith("--test-hazard=")) { _testHazard = arg["--test-hazard=".Length..].Trim().ToLowerInvariant(); ForcedHazard = _testHazard; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _seed ??= 4242; _quitAfter = 60; }
             else if (arg.StartsWith("--story-brief=")) StoryBriefPath = ProjectSettings.GlobalizePath(arg["--story-brief=".Length..]);
             else if (arg.StartsWith("--fake-ai=")) FakeAiDelay = float.Parse(arg["--fake-ai=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             else if (arg == "--fake-ai") FakeAiDelay = 1f;
@@ -586,6 +593,7 @@ public partial class DebugTools : Node
         if (_testStructures) RunStructuresTest();
         if (_testHorde) RunHordeTest();
         if (_testAmbush) RunAmbushTest();
+        if (_testHazard != null) RunHazardTest();
         if (_testPortal) RunPortalTest();
         if (_testKeys && !_testedKeys && _elapsed >= 0.5) { _testedKeys = true; RunKeysTest(); }
         if (_tremor) RunTremor();
@@ -976,6 +984,128 @@ public partial class DebugTools : Node
                 GD.Print($"[ambush] RESULT {(ok ? "ok" : "FAIL")}");
                 _done = true; GetTree().Quit();
                 break;
+            }
+        }
+    }
+
+    private bool _hazardMemberKilled, _hazardEnemyKilled;
+    private Enemies.Enemy? _hazardEnemy;
+    private Vector3 _hazardBody;
+    private int _hazardLead = -1;
+
+    /// <summary>--test-hazard=press|spikes: floor 1 with one forced hazard by the stairs; trigger it, crush an enemy and the lead, rescue, re-arm, jam, save.</summary>
+    private void RunHazardTest()
+    {
+        var main = Main.Instance;
+        if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame) return;
+        _hazardClock += (float)GetProcessDeltaTime();
+        void Fail(string why) { GD.Print($"[hazard] RESULT FAIL: {why}"); _done = true; GetTree().Quit(1); }
+        var b = main.Builder;
+        // the test owns the only enemy on the floor: ambushes, ledge archers and portals are culled as they appear
+        foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) if (e != _hazardEnemy && e.IsAlive) e.Kill();
+        if (_testHazard == "press")
+        {
+            var press = root.GetChildren().OfType<Dungeon.Props.Press>().FirstOrDefault();
+            switch (_hazardStep)
+            {
+                case 0 when _hazardClock >= 1.0f:
+                    _hazardStep++;
+                    if (press == null) { Fail($"no Press on the floor (hazards in layout: {layout.Hazards.Count})"); return; }
+                    EventBus.Instance.MemberKilledByHazard += (_, _) => _hazardMemberKilled = true;
+                    EventBus.Instance.EnemyKilledByHazard += (_, _) => _hazardEnemyKilled = true;
+                    foreach (var a in main.Party.Adventurers) a.Stance = Characters.Stance.Hold;
+                    foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) e.Kill(); // an empty floor: the only enemy in this test is the one we place in the run
+                    foreach (var m in main.Party.Members) m.Effects.Clear();
+                    _hazardLead = main.Party.Anchor.Index;
+                    GD.Print($"[hazard] press {press.Index} cells=[{string.Join(",", press.Placement.Cells)}] plate={press.Placement.Plate} guards={press.Placement.GuardsCell} phase={press.Phase}");
+                    main.Party.Teleport(b.Surface(press.Placement.Plate) + Vector3.Up * 0.3f, b.Surface(press.Placement.Cells[2]) + Vector3.Up * 0.5f);
+                    {
+                        // the companions wait two cells short of the run; only the lead stands on the plate
+                        var dir = press.Placement.Horizontal ? new Dungeon.Generation.GridPos(1, 0) : new Dungeon.Generation.GridPos(0, 1);
+                        var safe = press.Placement.Cells[0] - dir - dir;
+                        var k = 0;
+                        foreach (var a in main.Party.Active.Where(a => a.Index != _hazardLead)) a.GlobalPosition = b.Surface(safe) + Vector3.Up * 0.3f + new Vector3(0.5f * (k++ - 1), 0, 0);
+                    }
+                    _hazardClock = 0f;
+                    break;
+                case 1 when press != null && press.Phase == Dungeon.PressPhase.Warning:
+                    _hazardStep++;
+                    _hazardClock = 0f;
+                    _hazardEnemy = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], b.Surface(press.Placement.Cells[0]) + Vector3.Up * 0.3f, b.CurrentFloor);
+                    GD.Print($"[hazard] warning began; enemy {_hazardEnemy?.Name} placed in the run; lead {main.Party.Members[_hazardLead].Name} on the plate");
+                    break;
+                case 1 when _hazardClock >= 3f:
+                    Fail($"the plate did not trigger (phase {press?.Phase})"); break;
+                case 2 when press != null && press.Phase is Dungeon.PressPhase.Closing:
+                    // keep the lead in the run: the companions on Hold stay where the teleport put them
+                    main.Party.Adventurers[_hazardLead].GlobalPosition = b.Surface(press.Placement.Plate) + Vector3.Up * 0.3f;
+                    break;
+                case 2 when press != null && press.Phase is Dungeon.PressPhase.Hold:
+                {
+                    _hazardStep++;
+                    _hazardClock = 0f;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    var enemyDead = _hazardEnemy != null && !_hazardEnemy.IsAlive;
+                    GD.Print($"[hazard] crush: enemy dead={enemyDead} enemyKilledEvent={_hazardEnemyKilled} lead downed={lead.Downed} mangled={lead.State.Mangled} hp={lead.State.Hp} memberKilledEvent={_hazardMemberKilled} spent={press.Spent} body at {DungeonBuilder.WorldToCell(lead.GlobalPosition)} (run {string.Join(",", press.Placement.Cells)})");
+                    if (!enemyDead || !_hazardEnemyKilled) { Fail("the enemy in the run was not killed"); return; }
+                    if (!lead.Downed || !lead.State.Mangled || !_hazardMemberKilled) { Fail("the lead was not mangled"); return; }
+                    if (press.Placement.Cells.Contains(DungeonBuilder.WorldToCell(lead.GlobalPosition))) { Fail("the body was left inside the run"); return; }
+                    _hazardBody = lead.GlobalPosition;
+                    break;
+                }
+                case 2 when _hazardClock >= 6f:
+                    Fail($"never reached Hold (phase {press?.Phase})"); break;
+                case 3 when _hazardClock >= 5f:
+                {
+                    _hazardStep++;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    if (!lead.Downed) { Fail("a mangled member auto-revived"); return; }
+                    GD.Print($"[hazard] 5 s later still down (phase {press!.Phase}); waiting for Armed");
+                    break;
+                }
+                case 4 when press != null && press.Phase == Dungeon.PressPhase.Armed:
+                {
+                    _hazardStep++;
+                    _hazardClock = 0f;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    var rescuer = main.Party.Active.First(a => !a.Downed && a.Index != _hazardLead);
+                    rescuer.GlobalPosition = lead.GlobalPosition + new Vector3(1.2f, 0, 0);
+                    var started = main.Party.TryRescue(lead, rescuer, () => b.HazardArmed(press.Index));
+                    GD.Print($"[hazard] armed again after {_hazardClock:0.0} s; rescue by {rescuer.State.Name} started={started} armed={b.HazardArmed(press.Index)}");
+                    if (!started) { Fail("rescue did not start"); return; }
+                    break;
+                }
+                case 4 when _hazardClock >= 20f:
+                    Fail($"press never re-armed (phase {press?.Phase})"); break;
+                case 5 when _hazardClock >= Party.MangledRules.RescueSeconds + 0.5f:
+                {
+                    _hazardStep++;
+                    _hazardClock = 0f;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    GD.Print($"[hazard] after rescue: downed={lead.Downed} mangled={lead.State.Mangled} hp={lead.State.Hp} progress={main.Party.RescueProgress(_hazardLead):0.00}");
+                    if (lead.Downed || lead.State.Mangled || lead.State.Hp < 1f) { Fail("rescue did not stand the member up"); return; }
+                    // jam: a barrel in the run, then trigger again
+                    var barrel = GD.Load<PackedScene>("res://scenes/Props/Barrel.tscn").Instantiate<Dungeon.Props.Breakable>();
+                    barrel.Name = "JamBarrel";
+                    root.AddChild(barrel);
+                    barrel.GlobalPosition = b.Surface(press!.Placement.Plate);
+                    main.Party.Teleport(b.Surface(press.Placement.Cells[0] + (press.Placement.Horizontal ? new Dungeon.Generation.GridPos(-2, 0) : new Dungeon.Generation.GridPos(0, -2))) + Vector3.Up * 0.3f, b.Surface(press.Placement.Plate));
+                    _hazardMemberKilled = false;
+                    press.Trigger();
+                    break;
+                }
+                case 6 when press != null && press.Phase is Dungeon.PressPhase.Hold or Dungeon.PressPhase.Retract:
+                {
+                    _hazardStep++;
+                    GD.Print($"[hazard] jam run: jammed={press.Jammed} spent={press.Spent} memberKilled={_hazardMemberKilled}");
+                    if (!press.Jammed || _hazardMemberKilled) { Fail("the barrel did not jam the press"); return; }
+                    main.SaveGame("hazardtest");
+                    GD.Print("[hazard] RESULT ok");
+                    _done = true; GetTree().Quit();
+                    break;
+                }
+                case 6 when _hazardClock >= 8f:
+                    Fail($"jam run never closed (phase {press?.Phase})"); break;
             }
         }
     }

@@ -470,11 +470,17 @@ public partial class PartyController : Node3D
         for (var i = _rescues.Count - 1; i >= 0; i--)
         {
             var r = _rescues[i];
-            var interrupted = !IsInstanceValid(r.Rescuer) || r.Rescuer.Downed || !r.HazardArmed()
-                || r.Rescuer.GlobalPosition.DistanceTo(r.Start) > MangledRules.RescueInterruptMove
-                || r.Rescuer.GlobalPosition.DistanceTo(r.Target.GlobalPosition) > MangledRules.RescueRange
-                || r.Rescuer.State.Hp < r.Hp;
-            if (interrupted || !r.Target.State.Mangled) { _rescues.RemoveAt(i); continue; }
+            string? why = !IsInstanceValid(r.Rescuer) ? "gone" : r.Rescuer.Downed ? "rescuer down" : !r.HazardArmed() ? "hazard moving"
+                : r.Rescuer.GlobalPosition.DistanceTo(r.Start) > MangledRules.RescueInterruptMove ? $"rescuer moved {r.Rescuer.GlobalPosition.DistanceTo(r.Start):0.0} m"
+                : r.Rescuer.GlobalPosition.DistanceTo(r.Target.GlobalPosition) > MangledRules.RescueRange ? $"out of reach ({r.Rescuer.GlobalPosition.DistanceTo(r.Target.GlobalPosition):0.0} m)"
+                : r.Rescuer.State.Hp < r.Hp ? $"rescuer hurt ({r.Hp:0.00} -> {r.Rescuer.State.Hp:0.00} of {r.Rescuer.State.Stats[Stat.MaxHp]:0.0}, y={r.Rescuer.GlobalPosition.Y:0.00} start y={r.Start.Y:0.00})" : null;
+            if (why != null || !r.Target.State.Mangled)
+            {
+                if (why != null && r.Progress > 0f) EventBus.Instance.Log($"{r.Rescuer.State.Name} lets go of {r.Target.State.Name} ({why}).");
+                else if (why != null) GD.Print($"[rescue] {r.Rescuer.State.Name} could not hold {r.Target.State.Name}: {why}");
+                _rescues.RemoveAt(i);
+                continue;
+            }
             r.Progress += dt;
             if (r.Progress < MangledRules.RescueSeconds) continue;
             _rescues.RemoveAt(i);
