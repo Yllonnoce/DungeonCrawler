@@ -52,6 +52,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public RemotePose? Remote { get; set; }
     /// <summary>On a client, the teammate a crushed local body is watching while it waits; null when not spectating.</summary>
     public Adventurer? SpectateTarget { get; private set; }
+    /// <summary>The crushed member this companion is walking to or kneeling by.</summary>
+    public Adventurer? RescueTarget { get; private set; }
     private Vector3 _cameraHome;
     /// <summary>Holding block. Only a driven body (local or remote) can guard.</summary>
     public bool Guarding { get; private set; }
@@ -443,6 +445,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 var dest = GlobalPosition + (away.LengthSquared() > 0.01f ? away.Normalized() : -GlobalTransform.Basis.Z) * 3f;
                 if (Target != null) FaceToward(Target.GlobalPosition);
                 return Planar(dest) * WalkSpeed * State.Stats[Stat.MoveSpeed] * (InWater ? Enemies.Enemy.WaterSlow : 1f);
+            case ActionKind.Rescue when RescueTarget != null && IsInstanceValid(RescueTarget):
+            {
+                var gap = GlobalPosition.DistanceTo(RescueTarget.GlobalPosition);
+                if (gap > MangledRules.RescueRange * 0.8f) return Steer(RescueTarget.GlobalPosition, dt, stopWithin: 1.2f);
+                FaceToward(RescueTarget.GlobalPosition);
+                var victim = RescueTarget;
+                Party.TryRescue(victim, this, () => Main.Instance?.Builder.HazardArmed(victim.State.MangledBy) ?? true);
+                return Vector3.Zero;
+            }
             case ActionKind.Regroup:
                 Teleport(lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f), lead.GlobalPosition + -lead.GlobalTransform.Basis.Z * 5f);
                 _unreachable = 0;
@@ -545,6 +556,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         var prefersRange = w.IsRanged || State.KnownAbilities.Any(id => Party.GetAbility(id).Kind == AbilityKind.Projectile && Party.GetAbility(id).ArrowCost == 0);
         var alive = Party.Members.Where(m => m.IsAlive).ToList();
         var spot = FormationSpot();
+        var mangled = Party.Active.Where(a => a != this && a.Downed && a.State.Mangled).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(GlobalPosition)).FirstOrDefault();
         var ctx = new CompanionContext
         {
             HpFraction = State.Hp / Math.Max(1f, State.Stats[Stat.MaxHp]),
@@ -562,10 +574,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             StaminaFraction = State.Stamina / Math.Max(1f, State.Stats[Stat.MaxStamina]),
             DistanceToFormation = new Vector2(spot.X - GlobalPosition.X, spot.Z - GlobalPosition.Z).Length(),
             FormationReachable = _unreachable < 5f && GlobalPosition.DistanceTo(lead.GlobalPosition) < 25f,
+            MangledMemberId = mangled?.Index ?? -1,
+            MangledDistance = mangled?.GlobalPosition.DistanceTo(GlobalPosition) ?? 0f,
+            NearestEnemyDistance = enemies.Count > 0 ? enemies.Min(e => e.Distance) : float.MaxValue,
         };
 
         _action = CompanionBrain.Decide(ctx);
-        Target = _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;
+        RescueTarget = _action.Kind == ActionKind.Rescue ? mangled : null;
+        Target = _action.Kind != ActionKind.Rescue && _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;
         if (DebugTools.TraceAi && enemies.Count > 0)
             GD.Print($"[cai] {State.Name}: {_action.Kind} target={(Target?.DisplayName ?? "-")} nearest={enemies.Min(e => e.Distance):0.0}m abilities=[{string.Join(", ", abilities.Select(a => $"{a.Ability.Name}:{(a.Ready ? "ready" : AbilityRules.WhyCannotUse(State, a.Ability, Party.ArrowCount))}/r{a.Range:0.0}"))}] stamina={State.Stamina:0} cd={State.CooldownRemaining:0.00}");
 

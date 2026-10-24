@@ -367,7 +367,13 @@ public partial class AdventureDirector : Node
         bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);
         bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
         bus.LeadChanged += i => Bark(Member(i), BarkTrigger.Possess);
-        bus.MemberDowned += i => { Bark(Member(i), BarkTrigger.Downed); Taunt(Objectives.TauntTrigger.MemberDowned, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name); };
+        bus.MemberDowned += i => { Bark(Member(i), BarkTrigger.Downed); if (Member(i) is not { Mangled: true }) Taunt(Objectives.TauntTrigger.MemberDowned, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name); }; // a crushing gets its own gloat
+        bus.MemberKilledByHazard += (i, _) => Taunt(Objectives.TauntTrigger.Crushed, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name, urgent: true);
+        bus.EnemyKilledByHazard += (e, _) =>
+        {
+            var witness = Main.Instance?.Party?.Active.Where(a => !a.Downed).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(e.GlobalPosition)).FirstOrDefault();
+            if (witness != null && witness.GlobalPosition.DistanceTo(e.GlobalPosition) <= 10f) Bark(witness.State, BarkTrigger.Kill);
+        };
         bus.PartyWiped += () => Taunt(Objectives.TauntTrigger.PartyWiped, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, urgent: true);
         bus.ObjectiveEvent += OnObjectiveEvent;
         bus.Narration += (_, _) => _taunts.NoteNarration(Game.Instance.PlaySeconds);
@@ -450,7 +456,7 @@ public partial class AdventureDirector : Node
         if (Net.NetSession.IsClient || !Game.Instance.InGame) return false;
         var campaign = Game.Instance.Adventure.Campaign;
         if (campaign == null) return false;
-        if (campaign.Taunts.Count == 0) Objectives.TauntBank.Fill(campaign);
+        if (campaign.Taunts.Count == 0 || !campaign.Taunts.Any(t => t.Trigger == Objectives.TauntTriggers.Id(trigger))) Objectives.TauntBank.Fill(campaign); // a campaign baked before a trigger existed gets the stock line for it
         var bank = campaign.Taunts.Concat(Main.Instance?.Builder.Contents?.Plan?.Taunts ?? new List<TauntPlan>()).ToList();
         var now = Game.Instance.PlaySeconds;
         var pick = _taunts.Pick(bank, trigger, kind, Game.Instance.Adventure.BarksSaid, Memory.Flags, _currentFloor, now, _barkRng, urgent);

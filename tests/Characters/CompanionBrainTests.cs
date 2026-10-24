@@ -15,6 +15,18 @@ public class CompanionBrainTests
     private static AbilityView V(int i, AbilityProfile a, float range, bool ready = true) => new(i, a, ready, range);
 
     [Fact]
+    public void Companion_Rescues_WhenCalm_AndSomeoneIsMangled()
+    {
+        var ctx = new CompanionContext { MangledMemberId = 2, MangledDistance = 6f, NearestEnemyDistance = 30f, Enemies = Array.Empty<EnemyView>() };
+        Assert.Equal(ActionKind.Rescue, CompanionBrain.Decide(ctx).Kind);
+        Assert.Equal(2, CompanionBrain.Decide(ctx).TargetId);
+    }
+
+    [Fact] public void Companion_DoesNotRescue_UnderFire() => Assert.NotEqual(ActionKind.Rescue, CompanionBrain.Decide(new CompanionContext { MangledMemberId = 2, NearestEnemyDistance = 5f }).Kind);
+    [Fact] public void Companion_OnHold_DoesNotRescue() => Assert.NotEqual(ActionKind.Rescue, CompanionBrain.Decide(new CompanionContext { MangledMemberId = 2, NearestEnemyDistance = 30f, Stance = Stance.Hold }).Kind);
+    [Fact] public void Companion_WithNobodyMangled_DoesNotRescue() => Assert.NotEqual(ActionKind.Rescue, CompanionBrain.Decide(new CompanionContext { NearestEnemyDistance = 30f }).Kind);
+
+    [Fact]
     public void LowHealth_DrinksPotionFirst()
     {
         var ctx = new CompanionContext { HpFraction = 0.2f, HasHealingPotion = true, Enemies = new[] { new EnemyView(1, 1.5f, true, true, 1f) }, Abilities = new[] { V(0, Basic, 1.8f) } };

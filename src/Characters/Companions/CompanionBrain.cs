@@ -30,9 +30,14 @@ public sealed record CompanionContext
     public float StaminaFraction { get; init; } = 1f;
     public float DistanceToFormation { get; init; }
     public bool FormationReachable { get; init; } = true;
+    /// <summary>A party member a hazard mangled and nobody has pulled free yet; -1 when none.</summary>
+    public int MangledMemberId { get; init; } = -1;
+    public float MangledDistance { get; init; }
+    /// <summary>How far the nearest living enemy is; nothing in sight reads as very far.</summary>
+    public float NearestEnemyDistance { get; init; } = float.MaxValue;
 }
 
-public enum ActionKind { Idle, Follow, Hold, DrinkPotion, Approach, Retreat, Attack, Regroup }
+public enum ActionKind { Idle, Follow, Hold, DrinkPotion, Approach, Retreat, Attack, Regroup, Rescue }
 
 public sealed record CompanionAction(ActionKind Kind, int TargetId = -1, int AbilityIndex = -1, bool Heavy = false)
 {
@@ -42,16 +47,19 @@ public sealed record CompanionAction(ActionKind Kind, int TargetId = -1, int Abi
     public static readonly CompanionAction Drink = new(ActionKind.DrinkPotion);
 }
 
-/// <summary>Priority list: survive, then fight what the stance allows, then keep formation.</summary>
+/// <summary>Priority list: survive, then pull a crushed friend free when nothing is near, then fight what the stance allows, then keep formation.</summary>
 public static class CompanionBrain
 {
     public const float PotionThreshold = 0.3f;
     public const float PanicThreshold = 0.15f;
     public const float RangedTooClose = 3f;
+    /// <summary>No enemy closer than this: calm enough to kneel and pull.</summary>
+    public const float RescueCalmDistance = 12f;
 
     public static CompanionAction Decide(CompanionContext ctx)
     {
         if (ctx.HpFraction < PotionThreshold && ctx.HasHealingPotion) return CompanionAction.Drink;
+        if (ctx.MangledMemberId >= 0 && ctx.NearestEnemyDistance > RescueCalmDistance && ctx.Stance != Stance.Hold) return new CompanionAction(ActionKind.Rescue, ctx.MangledMemberId);
 
         var target = PickTarget(ctx);
         if (target == null)

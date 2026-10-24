@@ -12,6 +12,15 @@ public class TauntTests
     private static readonly Dictionary<string, int> Fresh = new();
 
     [Fact]
+    public void Stock_HasCrushedTaunts_WithCleanTwins()
+    {
+        var campaign = new CampaignPlan(); TauntBank.Fill(campaign);
+        var crushed = campaign.Taunts.Where(t => t.Trigger == nameof(TauntTrigger.Crushed)).ToList();
+        Assert.True(crushed.Count >= 2);
+        Assert.All(crushed, t => Assert.False(string.IsNullOrWhiteSpace(t.CleanLine?.Text)));
+    }
+
+    [Fact]
     public void Stock_CoversEveryTrigger_WithCleanTwins()
     {
         var bank = Bank();

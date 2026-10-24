@@ -1001,6 +1001,7 @@ public partial class DebugTools : Node
     private Vector3 _hazardBody;
     private int _hazardLead = -1;
     private int _hazardSavedSpent;
+    private bool _hazardTauntSeen;
 
     /// <summary>--test-hazard=press|spikes: floor 1 with one forced hazard by the stairs; trigger it, crush an enemy and the lead, rescue, re-arm, jam, save.</summary>
     private void RunHazardTest()
@@ -1022,6 +1023,10 @@ public partial class DebugTools : Node
                     if (press == null) { Fail($"no Press on the floor (hazards in layout: {layout.Hazards.Count})"); return; }
                     EventBus.Instance.MemberKilledByHazard += (_, _) => _hazardMemberKilled = true;
                     EventBus.Instance.EnemyKilledByHazard += (_, _) => _hazardEnemyKilled = true;
+                    {
+                        var crushedLines = Adventure.Objectives.TauntBank.All().Where(t => t.Trigger == nameof(Adventure.Objectives.TauntTrigger.Crushed)).SelectMany(t => new[] { t.Line.Text, t.CleanLine?.Text ?? "" }).Where(l => l.Length > 0).ToList();
+                        EventBus.Instance.Narration += (text, _) => { if (crushedLines.Any(text.Contains)) _hazardTauntSeen = true; };
+                    }
                     foreach (var a in main.Party.Adventurers) a.Stance = Characters.Stance.Hold;
                     foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) e.Kill(); // an empty floor: the only enemy in this test is the one we place in the run
                     foreach (var m in main.Party.Members) m.Effects.Clear();
@@ -1077,22 +1082,31 @@ public partial class DebugTools : Node
                     _hazardStep++;
                     _hazardClock = 0f;
                     var lead = main.Party.Adventurers[_hazardLead];
-                    var rescuer = main.Party.Active.First(a => !a.Downed && a.Index != _hazardLead);
-                    rescuer.GlobalPosition = lead.GlobalPosition + new Vector3(1.2f, 0, 0);
-                    var started = main.Party.TryRescue(lead, rescuer, () => b.HazardArmed(press.Index));
-                    GD.Print($"[hazard] armed again after {_hazardClock:0.0} s; rescue by {rescuer.State.Name} started={started} armed={b.HazardArmed(press.Index)}");
-                    if (!started) { Fail("rescue did not start"); return; }
+                    // the companions come off Hold; with no enemy near, one of them should walk over and pull
+                    foreach (var a in main.Party.Active.Where(a => a.Index != _hazardLead)) a.Stance = Characters.Stance.Defensive;
+                    GD.Print($"[hazard] armed again after {_hazardClock:0.0} s; companions set to Defensive, {main.Party.Active.Count(a => !a.Downed)} standing, lead body at {lead.GlobalPosition:0.0}");
                     break;
                 }
                 case 4 when _hazardClock >= 20f:
                     Fail($"press never re-armed (phase {press?.Phase})"); break;
-                case 5 when _hazardClock >= Party.MangledRules.RescueSeconds + 0.5f:
+                case 5 when main.Party.RescueProgress(_hazardLead) > 0f:
+                {
+                    _hazardStep++;
+                    _hazardClock = 0f;
+                    var rescuer = main.Party.Active.FirstOrDefault(a => a.RescueTarget?.Index == _hazardLead);
+                    GD.Print($"[hazard] {rescuer?.State.Name ?? "a companion"} began the rescue {_hazardClock:0.0} s after the press re-armed");
+                    break;
+                }
+                case 5 when _hazardClock >= 12f:
+                    Fail($"no companion came to pull the lead free (actions: {string.Join(", ", main.Party.Active.Where(a => a.Index != _hazardLead).Select(a => $"{a.State.Name}:{a.Stance}:{(a.RescueTarget?.State.Name ?? "-")}"))})"); break;
+                case 6 when _hazardClock >= Party.MangledRules.RescueSeconds + 0.5f:
                 {
                     _hazardStep++;
                     _hazardClock = 0f;
                     var lead = main.Party.Adventurers[_hazardLead];
-                    GD.Print($"[hazard] after rescue: downed={lead.Downed} mangled={lead.State.Mangled} hp={lead.State.Hp} progress={main.Party.RescueProgress(_hazardLead):0.00}");
+                    GD.Print($"[hazard] after rescue: downed={lead.Downed} mangled={lead.State.Mangled} hp={lead.State.Hp} progress={main.Party.RescueProgress(_hazardLead):0.00} crushedTaunt={_hazardTauntSeen}");
                     if (lead.Downed || lead.State.Mangled || lead.State.Hp < 1f) { Fail("rescue did not stand the member up"); return; }
+                    if (!_hazardTauntSeen) { Fail("the villain never gloated over the crushing (no Crushed taunt in the narration)"); return; }
                     // jam: a barrel in the run, then trigger again
                     var barrel = GD.Load<PackedScene>("res://scenes/Props/Barrel.tscn").Instantiate<Dungeon.Props.Breakable>();
                     barrel.Name = "JamBarrel";
@@ -1103,7 +1117,7 @@ public partial class DebugTools : Node
                     press.Trigger();
                     break;
                 }
-                case 6 when press != null && press.Phase is Dungeon.PressPhase.Hold or Dungeon.PressPhase.Retract:
+                case 7 when press != null && press.Phase is Dungeon.PressPhase.Hold or Dungeon.PressPhase.Retract:
                 {
                     _hazardStep++;
                     GD.Print($"[hazard] jam run: jammed={press.Jammed} spent={press.Spent} memberKilled={_hazardMemberKilled}");
@@ -1114,9 +1128,9 @@ public partial class DebugTools : Node
                     _hazardClock = 0f;
                     break;
                 }
-                case 6 when _hazardClock >= 8f:
+                case 7 when _hazardClock >= 8f:
                     Fail($"jam run never closed (phase {press?.Phase})"); break;
-                case 7 when _hazardClock >= 1.5f:
+                case 8 when _hazardClock >= 1.5f:
                 {
                     _hazardStep++;
                     if (press == null) { Fail("no Press after loading the save"); return; }

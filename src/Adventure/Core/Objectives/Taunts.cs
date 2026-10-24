@@ -8,6 +8,7 @@ public enum TauntTrigger
     FloorEnter, Capture, Freed, AllFreed, GasThickens, GasLethal, WrongLever, GateShift, VaultOpened,
     RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle,
     MemberDowned, PartyWiped, Descend, Reinforcements,
+    Crushed,
 }
 
 public static class TauntTriggers
@@ -129,6 +130,8 @@ public static class TauntBank
         (TauntTrigger.MemberDowned, null, "Down in the dirt. That's where you all end up, {party}. Some of you just take the scenic route.", "Down in the dirt. That's where you all end up, {party}. Some of you just take the scenic route."),
         (TauntTrigger.PartyWiped, null, "All of you. All of you at once. Oh, that was beautiful. Get up and do it again, I've nowhere to be.", "All of you. All of you at once. Oh, that was beautiful. Get up and do it again, I've nowhere to be."),
         (TauntTrigger.PartyWiped, null, "Dead as stones, the lot of you. Well, nearly. Shame the dungeon's so damned patient.", "Dead as stones, the lot of you. Well, nearly. Shame the dungeon's so patient."),
+        (TauntTrigger.Crushed, null, "Oh, good. The Press works. Nobody tells me anything down here.", "Oh, good. The Press works. Nobody tells me anything down here."),
+        (TauntTrigger.Crushed, null, "Pressed and filed. Thank you for your custom, and for the spine, you poor bugger.", "Pressed and filed. Thank you for your custom."),
         (TauntTrigger.Descend, null, "Deeper, then. Every step down is a step toward me, and I have such plans for the meeting.", "Deeper, then. Every step down is a step toward me, and I have such plans for the meeting."),
         (TauntTrigger.Descend, null, "Off you go. Mind the stairs. Wouldn't want you dying of something as boring as a fall, you clumsy sods.", "Off you go. Mind the stairs. Wouldn't want you dying of something as boring as a fall."),
         (TauntTrigger.Reinforcements, null, "Taking your time? Then I'll send company. Behind you, {party}. Always behind you.", "Taking your time? Then I'll send company. Behind you, {party}. Always behind you."),
