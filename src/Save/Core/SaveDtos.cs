@@ -52,6 +52,8 @@ public sealed class AdventureDto
     public string? AiStoppedReason { get; set; }
     /// <summary>Companion barks already said, by text, and the floor they were said on: a line waits two floors before it may repeat.</summary>
     public Dictionary<string, int> BarksSaid { get; set; } = new();
+    /// <summary>Floors below this were built before the lethal hazards existed (an old save): they stay as they were. New runs start at 1.</summary>
+    public int HazardsFromFloor { get; set; } = 1;
 }
 
 public sealed class PartyDto
@@ -174,6 +176,19 @@ public sealed class FloorStateDto
     public List<string> TakenQuestItems { get; set; } = new();
     /// <summary>The floor objective's progress (v8+); null on a floor without one.</summary>
     public ObjectiveStateDto? Objective { get; set; }
+    /// <summary>The lethal hazards' state (v9+): phase, time into it, kills, jam.</summary>
+    public List<HazardStateDto> Hazards { get; set; } = new();
+}
+
+/// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>
+public sealed class HazardStateDto
+{
+    public int Index { get; set; }
+    public byte Kind { get; set; }
+    public byte Phase { get; set; }
+    public float PhaseTime { get; set; }
+    public int Spent { get; set; }
+    public bool Jammed { get; set; }
 }
 
 /// <summary>Where a floor's objective stands: saved with the floor, sent to late joiners, broadcast every couple of seconds.</summary>

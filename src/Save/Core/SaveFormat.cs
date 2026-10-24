@@ -6,7 +6,7 @@ namespace DungeonCrawler.Save;
 /// <summary>JSON (de)serialisation with a version stamp and a migration chain. Engine-free.</summary>
 public static class SaveFormat
 {
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
 
     public static readonly JsonSerializerOptions Options = new()
     {
@@ -66,12 +66,24 @@ public static class SaveMigrations
                 5 => root, // v6 added Adventure (campaign + floor plans); missing means legacy random population
                 6 => root, // v7 added Multiplayer and Players (a dedicated server's roster); missing means single-player
                 7 => root, // v8 added Objective per floor (the floor objective's progress); missing means none or not started
+                8 => From8To9(root), // v9 added lethal hazards per floor and Mangled members; floors an old run already visited keep no hazards
                 _ => throw new InvalidDataException($"No migration from save version {version}"),
             };
             version++;
             root["Version"] = version;
         }
         if (version > SaveFormat.CurrentVersion) throw new InvalidDataException($"Save version {version} is newer than this build supports ({SaveFormat.CurrentVersion})");
+        return root;
+    }
+
+    /// <summary>Version 9 added the lethal hazards. A run that is already under way gets them only on floors it has not seen, so saved floors stay exactly as the player left them.</summary>
+    private static JsonObject From8To9(JsonObject root)
+    {
+        if (root["Adventure"] is JsonObject adventure)
+        {
+            var current = root["CurrentFloor"]?.GetValue<int>() ?? 1;
+            adventure["HazardsFromFloor"] = current + 1;
+        }
         return root;
     }
 

@@ -1090,8 +1090,10 @@ public partial class DungeonBuilder : Node3D
             trap.GlobalPosition = Surface(layout.TrapSpawns[i]);
         }
         var stone = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
+        var hazardsFrom = Game.Instance?.Adventure?.HazardsFromFloor ?? 1;
         foreach (var h in layout.Hazards)
         {
+            if (floor < hazardsFrom) break; // an old save's floors were built before the hazards existed
             if (h.Kind == HazardKind.Press)
             {
                 var press = new Props.Press { Name = $"Press{h.Index}" };

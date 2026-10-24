@@ -54,6 +54,12 @@ public static class FloorStateCapture
                 case SecretWall { IsOpen: true } secret:
                     dto.OpenedSecrets.Add(secret.Index);
                     break;
+                case Press press:
+                    dto.Hazards.Add(new HazardStateDto { Index = press.Index, Kind = (byte)Dungeon.HazardKind.Press, Phase = (byte)press.Phase, PhaseTime = press.PhaseTime, Spent = press.Spent, Jammed = press.Jammed });
+                    break;
+                case SpikeBed bed:
+                    dto.Hazards.Add(new HazardStateDto { Index = bed.Index, Kind = (byte)Dungeon.HazardKind.SpikeBed, Phase = (byte)bed.Phase, PhaseTime = bed.PhaseTime, Spent = bed.Spent });
+                    break;
             }
         }
         // enemies already freed (corpse timer ran out) are dead too
@@ -93,6 +99,7 @@ public static class FloorStateCapture
         var openedSecrets = dto.OpenedSecrets.ToHashSet();
         var takenQuestItems = dto.TakenQuestItems.ToHashSet();
         var npcs = dto.NpcStates.ToDictionary(n => n.Id);
+        var hazards = dto.Hazards.ToDictionary(h => (h.Kind, h.Index));
 
         foreach (var child in floorRoot.GetChildren().ToList())
         {
@@ -122,6 +129,12 @@ public static class FloorStateCapture
                     break;
                 case Door d when !d.IsObjectiveGate && openedVaults.Contains(d.VaultIndex):
                     d.Open();
+                    break;
+                case Press press when hazards.TryGetValue(((byte)Dungeon.HazardKind.Press, press.Index), out var ps):
+                    press.Restore((Dungeon.PressPhase)ps.Phase, ps.PhaseTime, ps.Jammed, ps.Spent);
+                    break;
+                case SpikeBed bed when hazards.TryGetValue(((byte)Dungeon.HazardKind.SpikeBed, bed.Index), out var bs):
+                    bed.Restore((Dungeon.SpikePhase)bs.Phase, bs.PhaseTime, bs.Spent);
                     break;
                 case Lever l when !l.IsObjectiveLever && openedVaults.Contains(l.VaultIndex):
                     l.Pull();

@@ -992,6 +992,7 @@ public partial class DebugTools : Node
     private Enemies.Enemy? _hazardEnemy;
     private Vector3 _hazardBody;
     private int _hazardLead = -1;
+    private int _hazardSavedSpent;
 
     /// <summary>--test-hazard=press|spikes: floor 1 with one forced hazard by the stairs; trigger it, crush an enemy and the lead, rescue, re-arm, jam, save.</summary>
     private void RunHazardTest()
@@ -1100,12 +1101,25 @@ public partial class DebugTools : Node
                     GD.Print($"[hazard] jam run: jammed={press.Jammed} spent={press.Spent} memberKilled={_hazardMemberKilled}");
                     if (!press.Jammed || _hazardMemberKilled) { Fail("the barrel did not jam the press"); return; }
                     main.SaveGame("hazardtest");
-                    GD.Print("[hazard] RESULT ok");
-                    _done = true; GetTree().Quit();
+                    _hazardSavedSpent = press.Spent;
+                    main.LoadGame("hazardtest");
+                    _hazardClock = 0f;
                     break;
                 }
                 case 6 when _hazardClock >= 8f:
                     Fail($"jam run never closed (phase {press?.Phase})"); break;
+                case 7 when _hazardClock >= 1.5f:
+                {
+                    _hazardStep++;
+                    if (press == null) { Fail("no Press after loading the save"); return; }
+                    GD.Print($"[hazard] after load: phase={press.Phase} time={press.PhaseTime:0.0} spent={press.Spent} jammed={press.Jammed}");
+                    if (press.Spent != _hazardSavedSpent) { Fail($"spent did not survive the save ({press.Spent} vs {_hazardSavedSpent})"); return; }
+                    if (!press.Jammed) { Fail("the jam did not survive the save"); return; }
+                    if (press.Phase == Dungeon.PressPhase.Armed) { Fail("the press re-armed instead of resuming its phase after the load"); return; }
+                    GD.Print("[hazard] RESULT ok");
+                    _done = true; GetTree().Quit();
+                    break;
+                }
             }
         }
         else if (_testHazard == "spikes")

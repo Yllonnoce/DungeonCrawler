@@ -188,4 +188,48 @@ public class SaveV7Tests
         Xunit.Assert.False(slot.Online);
         Xunit.Assert.Equal("Eric", slot.ToSave().Name);
     }
+
+    [Fact]
+    public void V8_To_V9_SetsHazardsFromFloor_AfterCurrentFloor()
+    {
+        var root = JsonNode.Parse("{\"Version\":8,\"CurrentFloor\":6,\"Adventure\":{}}")!.AsObject();
+        var migrated = SaveMigrations.Migrate(root);
+        Assert.Equal(SaveFormat.CurrentVersion, migrated["Version"]!.GetValue<int>());
+        Assert.Equal(9, SaveFormat.CurrentVersion);
+        Assert.Equal(7, migrated["Adventure"]!["HazardsFromFloor"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public void V8_WithoutAdventure_StillMigrates()
+    {
+        var root = JsonNode.Parse("{\"Version\":8,\"CurrentFloor\":3}")!.AsObject();
+        var migrated = SaveMigrations.Migrate(root);
+        Assert.Equal(SaveFormat.CurrentVersion, migrated["Version"]!.GetValue<int>());
+    }
+
+    [Fact]
+    public void HazardState_RoundTrips()
+    {
+        var dto = new FloorStateDto { Hazards = { new HazardStateDto { Index = 0, Kind = (byte)DungeonCrawler.Dungeon.HazardKind.Press, Phase = (byte)DungeonCrawler.Dungeon.PressPhase.Closing, PhaseTime = 1.1f, Spent = 2, Jammed = false } } };
+        var json = System.Text.Json.JsonSerializer.Serialize(dto, SaveFormat.Options);
+        var back = System.Text.Json.JsonSerializer.Deserialize<FloorStateDto>(json, SaveFormat.Options)!;
+        Assert.Single(back.Hazards);
+        Assert.Equal(1.1f, back.Hazards[0].PhaseTime);
+        Assert.Equal(2, back.Hazards[0].Spent);
+        Assert.Equal((byte)DungeonCrawler.Dungeon.PressPhase.Closing, back.Hazards[0].Phase);
+    }
+
+    [Fact]
+    public void NewAdventure_HasHazardsFromFloorOne()
+    {
+        Assert.Equal(1, new AdventureDto().HazardsFromFloor);
+    }
+
+    [Fact]
+    public void Restore_MidClosing_ResumesRemainingTime()
+    {
+        var remaining = DungeonCrawler.Dungeon.HazardRules.PressDuration(DungeonCrawler.Dungeon.PressPhase.Closing) - 1.1f;
+        Assert.Equal(1.3f, remaining, 3);
+        Assert.True(remaining > 0, "a restored Closing phase must still have time before Crush");
+    }
 }
