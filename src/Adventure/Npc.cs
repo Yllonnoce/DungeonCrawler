@@ -322,7 +322,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                     var me = new PathNode(myCell, builder.IsUnderAt(GlobalPosition));
                     bool Reachable(GridPos c) => layout.IsWalkable(c) && !builder.IsCellBlocked(c) && !_badCells.Contains(c)
                         && GridPathfinder.FindPath(layout, me, new PathNode(c, false), builder.IsCellBlocked, builder.IsSecretOpen) != null;
-                    var cell = NpcFlight.PickFleeCell(myCell, DungeonBuilder.WorldToCell(threat.GlobalPosition), Reachable, NpcFlight.FleeSteps, Taken);
+                    var cell = NpcFlight.PickFleeCell(myCell, DungeonBuilder.WorldToCell(threat.GlobalPosition), Reachable, NpcFlight.FleeSteps, Taken, c => Main.Instance?.Builder.DangerAt(c) ?? 0f);
                     var changed = cell != FleeCell;
                     FleeCell = cell;
                     _fleeGoal = cell is { } c2 ? builder.Surface(c2) : null;

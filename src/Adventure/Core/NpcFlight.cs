@@ -25,7 +25,8 @@ public static class NpcFlight
     /// from the threat than the NPC already is. Cells for which <paramref name="taken"/> is true (another NPC's spot or goal) are skipped,
     /// so frightened neighbours scatter instead of piling onto one cell.
     /// </summary>
-    public static GridPos? PickFleeCell(GridPos npc, GridPos threat, Func<GridPos, bool> open, int steps, Func<GridPos, bool>? taken = null)
+    /// <param name="danger">A cell a lethal hazard is arming over is no refuge.</param>
+    public static GridPos? PickFleeCell(GridPos npc, GridPos threat, Func<GridPos, bool> open, int steps, Func<GridPos, bool>? taken = null, Func<GridPos, float>? danger = null)
     {
         GridPos? best = null;
         var bestScore = double.NegativeInfinity;
@@ -38,7 +39,7 @@ public static class NpcFlight
             for (var s = steps; s >= 1; s--)
             {
                 var cell = new GridPos(npc.X + (int)Math.Round(dx * s), npc.Y + (int)Math.Round(dy * s));
-                if (cell == npc || !open(cell) || (taken != null && taken(cell))) continue;   // a cell another NPC is heading for is not a refuge
+                if (cell == npc || !open(cell) || (taken != null && taken(cell)) || (danger != null && danger(cell) > 0f)) continue;   // a cell another NPC is heading for is not a refuge
                 var gain = Distance(cell, threat) - now;
                 if (gain <= 0) break;                 // this way leads toward the threat
                 var score = gain + s * 0.25;          // farther is better, a longer run slightly more so

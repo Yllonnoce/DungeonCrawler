@@ -37,7 +37,7 @@ public sealed class PathMover
         var pos = body.GlobalPosition;
         var flatDist = new Vector2(target.X - pos.X, target.Z - pos.Z).Length();
         if (flatDist <= stopWithin) { Unreachable = 0f; return null; }
-        if (layout == null || builder == null || (flatDist < 5f && Math.Abs(target.Y - pos.Y) < 1.5f && clearLine(target)))
+        if (layout == null || builder == null || (flatDist < 5f && Math.Abs(target.Y - pos.Y) < 1.5f && clearLine(target) && !builder.DangerAlong(pos, target)))
         {
             _path = null;
             straight = true;
@@ -48,7 +48,7 @@ public sealed class PathMover
         _repathTimer -= dt;
         if (_path == null || goal.Cell != _pathTarget || _repathTimer <= 0f)
         {
-            _path = GridPathfinder.FindPath(layout, me, goal, builder.IsCellBlocked, builder.IsSecretOpen);
+            _path = GridPathfinder.FindPath(layout, me, goal, builder.IsCellBlocked, builder.IsSecretOpen, danger: builder.DangerAt, dangerWeight: DungeonBuilder.DangerWeightCompanion);
             _pathIndex = 1;
             _pathTarget = goal.Cell;
             _repathTimer = 0.5f;

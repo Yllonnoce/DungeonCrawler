@@ -9,17 +9,20 @@ public static class GridPathfinder
     private static readonly GridPos[] Steps = { new(1, 0), new(-1, 0), new(0, 1), new(0, -1) };
 
     /// <summary>Main-layer path. <paramref name="blocked"/> marks closed doors; <paramref name="passable"/> marks opened secret walls.</summary>
-    public static List<GridPos>? FindPath(FloorLayout layout, GridPos from, GridPos to, Func<GridPos, bool>? blocked = null, int maxExpansions = 6000, Func<GridPos, bool>? passable = null)
-        => FindPath(layout, new PathNode(from, false), new PathNode(to, false), blocked, passable, maxExpansions)?.Select(n => n.Cell).ToList();
+    /// <param name="danger">0..1 per cell, written by the lethal hazards while they arm and close; added to the step cost as danger * dangerWeight.</param>
+    /// <param name="dangerWeight">How much a walker cares: companions 50, thinking enemies 12, a horde 0.</param>
+    public static List<GridPos>? FindPath(FloorLayout layout, GridPos from, GridPos to, Func<GridPos, bool>? blocked = null, int maxExpansions = 6000, Func<GridPos, bool>? passable = null, Func<GridPos, float>? danger = null, float dangerWeight = 0f)
+        => FindPath(layout, new PathNode(from, false), new PathNode(to, false), blocked, passable, maxExpansions, danger, dangerWeight)?.Select(n => n.Cell).ToList();
 
-    public static List<PathNode>? FindPath(FloorLayout layout, PathNode from, PathNode to, Func<GridPos, bool>? blocked = null, Func<GridPos, bool>? passable = null, int maxExpansions = 6000)
+    public static List<PathNode>? FindPath(FloorLayout layout, PathNode from, PathNode to, Func<GridPos, bool>? blocked = null, Func<GridPos, bool>? passable = null, int maxExpansions = 6000, Func<GridPos, float>? danger = null, float dangerWeight = 0f)
     {
+        var weighDanger = danger != null && dangerWeight > 0f;
         if (!Exists(layout, from, passable) || !Exists(layout, to, passable)) return null;
         if (from == to) return new List<PathNode> { from };
 
-        var open = new PriorityQueue<PathNode, int>();
+        var open = new PriorityQueue<PathNode, float>();
         var cameFrom = new Dictionary<PathNode, PathNode>();
-        var gScore = new Dictionary<PathNode, int> { [from] = 0 };
+        var gScore = new Dictionary<PathNode, float> { [from] = 0 };
         open.Enqueue(from, from.Cell.ManhattanDistance(to.Cell));
         var expansions = 0;
 
@@ -31,7 +34,7 @@ public static class GridPathfinder
             foreach (var n in Neighbours(layout, current, passable))
             {
                 if (n != to && blocked != null && !n.Under && blocked(n.Cell)) continue;
-                var ng = g + 1;
+                var ng = g + 1 + (weighDanger && !n.Under ? danger!(n.Cell) * dangerWeight : 0f);
                 if (gScore.TryGetValue(n, out var old) && old <= ng) continue;
                 gScore[n] = ng;
                 cameFrom[n] = current;

@@ -171,6 +171,23 @@ public partial class DungeonBuilder : Node3D
     public void SetDoorClosed(GridPos cell) => _closedDoors.Add(cell);
     public void BlockCell(GridPos cell) => _propCells.Add(cell);
 
+    public const float DangerWeightCompanion = 50f;
+    public const float DangerWeightSmart = 12f;
+    public const float DangerWeightMindless = 0f;
+    private readonly Dictionary<GridPos, float> _danger = new();
+    /// <summary>How dangerous a cell is right now, 0..1: a lethal hazard arming or closing over it. Pathfinders add it to their step cost.</summary>
+    public float DangerAt(GridPos cell) => _danger.TryGetValue(cell, out var d) ? d : 0f;
+    public void SetDanger(GridPos cell, float value) { if (value <= 0f) _danger.Remove(cell); else _danger[cell] = Math.Min(1f, value); }
+    public void ClearDanger(IEnumerable<GridPos> cells) { foreach (var c in cells) _danger.Remove(c); }
+    /// <summary>Any cell between two points (sampled every half cell) carrying danger.</summary>
+    public bool DangerAlong(Vector3 from, Vector3 to)
+    {
+        if (_danger.Count == 0) return false;
+        var steps = Math.Max(1, (int)(from.DistanceTo(to) / (CellSize * 0.5f)));
+        for (var i = 0; i <= steps; i++) if (DangerAt(WorldToCell(from.Lerp(to, i / (float)steps))) > 0f) return true;
+        return false;
+    }
+
     /// <summary>Whether the lethal hazard with this placement index is back at rest (a Mangled body may be pulled free). Filled in by the hazard nodes; true when no such hazard exists.</summary>
     public bool HazardArmed(int index) => true;
 
@@ -242,6 +259,7 @@ public partial class DungeonBuilder : Node3D
         _closedDoors.Clear();
         _openSecrets.Clear();
         _propCells.Clear();
+        _danger.Clear();
         _grid = null;
         if (_floorRoot == null) return;
         _floorRoot.QueueFree();

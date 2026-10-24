@@ -541,6 +541,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     }
 
     /// <summary>Follow an A* path through the corridors; go straight when the target is close and visible.</summary>
+    /// <summary>How much this creature avoids an arming hazard: a swarm or a bandit pours straight in, a thinking creature detours when the detour is short.</summary>
+    public float DangerWeight => IsHorde || Profile.Faction == "bandits" ? DungeonBuilder.DangerWeightMindless : DungeonBuilder.DangerWeightSmart;
+
     public void MoveAlongPathToward(Vector3 target, float dt)
     {
         var builder = Main.Instance?.Builder;
@@ -548,14 +551,14 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (layout == null) { MoveToward(target, dt); return; }
 
         var dist = GlobalPosition.DistanceTo(target);
-        if (dist < 5f && Math.Abs(GlobalPosition.Y - target.Y) < 1.5f && HasLineOfSight()) { _path = null; MoveToward(target, dt); return; }
+        if (dist < 5f && Math.Abs(GlobalPosition.Y - target.Y) < 1.5f && HasLineOfSight() && !(DangerWeight > 0f && builder!.DangerAlong(GlobalPosition, target))) { _path = null; MoveToward(target, dt); return; }
 
         var me = new PathNode(DungeonBuilder.WorldToCell(GlobalPosition), builder!.IsUnderAt(GlobalPosition));
         var goal = new PathNode(DungeonBuilder.WorldToCell(target), builder.IsUnderAt(target));
         _repathTimer -= dt;
         if (_path == null || goal.Cell != _pathTarget || _repathTimer <= 0f)
         {
-            _path = GridPathfinder.FindPath(layout, me, goal, builder.IsCellBlocked, builder.IsSecretOpen);
+            _path = GridPathfinder.FindPath(layout, me, goal, builder.IsCellBlocked, builder.IsSecretOpen, danger: builder.DangerAt, dangerWeight: DangerWeight);
             _pathIndex = 1;
             _pathTarget = goal.Cell;
             _repathTimer = IsHorde ? 0.9f : 0.5f; // a swarm can afford a staler path

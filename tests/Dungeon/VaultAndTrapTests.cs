@@ -139,4 +139,30 @@ public class VaultAndTrapTests
         }
         return seen;
     }
+
+    [Fact]
+    public void Pathfinder_AvoidsDangerWhenWeighted_IgnoresItAtZero()
+    {
+        var layout = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Standard, HazardsEnabled = false }, 7);
+        var path = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs)!;
+        var mid = path[path.Count / 2];
+        float Danger(GridPos p) => p == mid ? 1f : 0f;
+        var weighted = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, danger: Danger, dangerWeight: 50f)!;
+        var mindless = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, danger: Danger, dangerWeight: 0f)!;
+        Assert.Equal(path, mindless);
+        if (!layout.Reachable(layout.UpStairs, c => c == mid).Contains(layout.DownStairs)) return; // mid is a bridge; nothing to detour through
+        Assert.DoesNotContain(mid, weighted);
+    }
+
+    [Fact]
+    public void Pathfinder_DangerCost_IsProportional()
+    {
+        // a 1x5 corridor with a dangerous middle: with weight 0 the path is 5 long, with weight it still passes (no alternative) but costs more
+        var layout = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Standard, HazardsEnabled = false }, 3);
+        var path = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs)!;
+        var all = new HashSet<GridPos>(path);
+        var weighted = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, danger: p => all.Contains(p) ? 1f : 0f, dangerWeight: 12f)!;
+        Assert.NotNull(weighted);
+        Assert.Equal(layout.DownStairs, weighted[^1]);
+    }
 }
