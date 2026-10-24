@@ -58,6 +58,10 @@ public partial class EventBus : Node
     public event Action<Characters.CharacterState>? MemberKill;
     public event Action<int>? LevelUp;
     public event Action<int>? MemberRevived;
+    /// <summary>A party member was killed outright by a lethal hazard (the Press, spikes) and lies Mangled.</summary>
+    public event Action<int, string>? MemberKilledByHazard;
+    /// <summary>An enemy died to a lethal hazard: an environmental kill, no loot.</summary>
+    public event Action<Enemies.Enemy, string>? EnemyKilledByHazard;
     // ---- world hooks a dedicated server forwards to its clients ----
     public event Action<Items.LootDrop>? LootSpawned;
     public event Action<Guid, int>? LootRemoved;
@@ -112,6 +116,8 @@ public partial class EventBus : Node
     public void RaiseChestOpened(Vector3 at) => ChestOpened?.Invoke(at);
     public void RaiseMemberKill(Characters.CharacterState m) => MemberKill?.Invoke(m);
     public void RaiseLevelUp(int index) => LevelUp?.Invoke(index);
+    public void RaiseMemberKilledByHazard(int index, string source) => MemberKilledByHazard?.Invoke(index, source);
+    public void RaiseEnemyKilledByHazard(Enemies.Enemy enemy, string source) => EnemyKilledByHazard?.Invoke(enemy, source);
     public void RaiseMemberRevived(int index) => MemberRevived?.Invoke(index);
     public void RaiseLootSpawned(Items.LootDrop drop) => LootSpawned?.Invoke(drop);
     public void RaiseLootRemoved(Guid id, int byMember) => LootRemoved?.Invoke(id, byMember);

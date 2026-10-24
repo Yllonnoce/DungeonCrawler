@@ -171,6 +171,9 @@ public partial class DungeonBuilder : Node3D
     public void SetDoorClosed(GridPos cell) => _closedDoors.Add(cell);
     public void BlockCell(GridPos cell) => _propCells.Add(cell);
 
+    /// <summary>Whether the lethal hazard with this placement index is back at rest (a Mangled body may be pulled free). Filled in by the hazard nodes; true when no such hazard exists.</summary>
+    public bool HazardArmed(int index) => true;
+
     public EnemyProfile? EnemyProfile(string id) => _enemies.TryGetValue(id, out var p) ? p : null;
 
     /// <summary>Build a floor. With a plan, enemies and extras follow it (falling back to legacy population if it no longer fits the layout).</summary>

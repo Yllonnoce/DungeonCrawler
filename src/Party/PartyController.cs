@@ -405,8 +405,9 @@ public partial class PartyController : Node3D
             if (wasAlive && !m.IsAlive) { EventBus.Instance.Log($"{m.Name} falls!"); body.CallDeferred(nameof(Adventurer.Revive)); m.Hp = 0; OnMemberDowned(i); }
             if (m.Effects.Version != _effectVersions[i]) { _effectVersions[i] = m.Effects.Version; m.Recalculate(); }
         }
-        if (Active.Any() && !PartyAlive && Main.Instance?.Builder.Layout != null) { OnPartyWiped(); return; }
+        if (Active.Any() && MangledRules.IsWipe(Active.Select(a => (a.Downed, a.State.Mangled)).ToList()) && Main.Instance?.Builder.Layout != null) { OnPartyWiped(); return; }
         AutoRevive(dt);
+        TickRescues(dt);
     }
 
     public void OnMemberDowned(int index)
@@ -422,7 +423,7 @@ public partial class PartyController : Node3D
     /// <summary>Downed members get up at 1 HP once no enemy has been fighting the party for a few seconds.</summary>
     private void AutoRevive(float dt)
     {
-        var down = Active.Where(a => a.Downed).ToList();
+        var down = Active.Where(a => a.Downed && MangledRules.CanAutoRevive(a.State.Mangled, hazardArmed: true)).ToList();
         if (down.Count == 0) { _calmTimer = 0; return; }
         var fighting = false;
         if (Main.Instance.Builder.FloorRoot is { } root)
@@ -440,6 +441,50 @@ public partial class PartyController : Node3D
             EventBus.Instance.RaiseMemberChanged(i);
         }
         _calmTimer = 0;
+    }
+
+    private sealed class Rescue { public Adventurer Target = null!; public Adventurer Rescuer = null!; public Func<bool> HazardArmed = () => true; public Vector3 Start; public float Hp; public float Progress; }
+    private readonly List<Rescue> _rescues = new();
+
+    /// <summary>Start (or keep) pulling a Mangled member free: the hazard that took them must be at rest and the rescuer within reach. Progress runs in <see cref="TickRescues"/>.</summary>
+    public bool TryRescue(Adventurer target, Adventurer rescuer, Func<bool> hazardArmed)
+    {
+        if (!target.State.Mangled || !target.Downed) return false;
+        var distance = rescuer.GlobalPosition.DistanceTo(target.GlobalPosition);
+        if (!MangledRules.RescueAllowed(hazardArmed(), distance, rescuer.Downed))
+        {
+            if (!hazardArmed()) EventBus.Instance.Log($"{target.State.Name} cannot be reached until it stops moving.");
+            return false;
+        }
+        if (_rescues.Any(r => r.Target == target)) return true;
+        _rescues.Add(new Rescue { Target = target, Rescuer = rescuer, HazardArmed = hazardArmed, Start = rescuer.GlobalPosition, Hp = rescuer.State.Hp });
+        EventBus.Instance.Log($"{rescuer.State.Name} pulls at {target.State.Name}...");
+        return true;
+    }
+
+    /// <summary>0..1 of the rescue in progress for this member, 0 when none.</summary>
+    public float RescueProgress(int index) => _rescues.FirstOrDefault(r => r.Target.Index == index)?.Progress / MangledRules.RescueSeconds ?? 0f;
+
+    private void TickRescues(float dt)
+    {
+        for (var i = _rescues.Count - 1; i >= 0; i--)
+        {
+            var r = _rescues[i];
+            var interrupted = !IsInstanceValid(r.Rescuer) || r.Rescuer.Downed || !r.HazardArmed()
+                || r.Rescuer.GlobalPosition.DistanceTo(r.Start) > MangledRules.RescueInterruptMove
+                || r.Rescuer.GlobalPosition.DistanceTo(r.Target.GlobalPosition) > MangledRules.RescueRange
+                || r.Rescuer.State.Hp < r.Hp;
+            if (interrupted || !r.Target.State.Mangled) { _rescues.RemoveAt(i); continue; }
+            r.Progress += dt;
+            if (r.Progress < MangledRules.RescueSeconds) continue;
+            _rescues.RemoveAt(i);
+            var m = r.Target.State;
+            m.Hp = MangledRules.ReviveHp;
+            m.Effects.Clear();
+            r.Target.Revive();
+            EventBus.Instance.Log($"{m.Name} is pulled free.");
+            EventBus.Instance.RaiseMemberChanged(r.Target.Index);
+        }
     }
 
     private void OnPartyWiped()

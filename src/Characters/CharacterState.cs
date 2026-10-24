@@ -35,6 +35,10 @@ public sealed class CharacterState
     public float CooldownRemaining { get; set; }
 
     public bool IsAlive => Hp > 0;
+    /// <summary>Down because a lethal hazard caught them: auto-revive skips them until a living body pulls them free.</summary>
+    public bool Mangled { get; set; }
+    /// <summary>The hazard (its placement index on the floor) that mangled them, -1 when none.</summary>
+    public int MangledBy { get; set; } = -1;
     public bool IsStunned => Effects.IsStunned;
     public WeaponProfile WeaponProfile => Weapon?.Weapon ?? WeaponProfile.Fists;
 

@@ -16,7 +16,7 @@ namespace DungeonCrawler.Party;
 /// the PartyController), companion AI (<see cref="CompanionBrain"/>: follow in formation, fight by stance, drink
 /// potions when hurt, pick up loot they pass), another player over the network, or nobody while parked.
 /// </summary>
-public partial class Adventurer : CharacterBody3D
+public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 {
     public const float WalkSpeed = 4.0f;
     public const float SprintMultiplier = 1.6f;
@@ -805,6 +805,46 @@ public partial class Adventurer : CharacterBody3D
             if (!adv.Downed && adv.GlobalPosition.DistanceTo(GlobalPosition) < 2.5f) adv.ReceiveAttack(Trap.TrapStats, attack, $"The {kind.ToString().ToLower()} trap");
     }
 
+    public VictimKind HazardVictimKind => VictimKind.Member;
+
+    /// <summary>A lethal hazard caught this body. Lethal means down and Mangled (no auto-revive); otherwise a fraction of max HP, unmitigated.</summary>
+    public void ReceiveHazard(HazardDamage kind, HazardOutcome outcome, string sourceName, int hazardIndex)
+    {
+        if (Downed) return;
+        var m = State;
+        if (outcome.Lethal)
+        {
+            m.Hp = 0;
+            m.Mangled = true;
+            m.MangledBy = hazardIndex;
+            m.Effects.Clear();
+            EventBus.Instance.Log($"{sourceName} {(kind == HazardDamage.Crush ? "crushes" : "impales")} {m.Name}!");
+            EventBus.Instance.PlaySfx("hit_flesh");
+            EventBus.Instance.RaiseMemberChanged(Index);
+            OnDowned();
+            EventBus.Instance.RaiseMemberKilledByHazard(Index, sourceName);
+            return;
+        }
+        var amount = m.Stats[Stat.MaxHp] * outcome.HpFraction;
+        m.TakeDamage(amount);
+        EventBus.Instance.RaiseMemberDamaged(Index, amount);
+        _flash = 0.25f;
+        _model?.Play(Clips.hit, force: true);
+        EventBus.Instance.PlaySfx("hit_flesh");
+        EventBus.Instance.RaiseMemberChanged(Index);
+        EventBus.Instance.Log($"{sourceName} hits {m.Name} for {amount:0}{(m.IsAlive ? "." : $". {m.Name} falls!")}");
+        if (!m.IsAlive) OnDowned();
+    }
+
+    /// <summary>Only a Mangled body offers anything to a passer-by: pulling them free.</summary>
+    public string Prompt => State.Mangled && Downed ? $"Rescue {State.Name}" : "";
+
+    public void Interact(PartyController party, Adventurer actor)
+    {
+        if (!State.Mangled || !Downed || actor == this) return;
+        party.TryRescue(this, actor, () => Main.Instance?.Builder.HazardArmed(State.MangledBy) ?? true);
+    }
+
     private void OnDowned()
     {
         ShowDowned();
@@ -814,7 +854,7 @@ public partial class Adventurer : CharacterBody3D
     /// <summary>The fallen pose and label, no bookkeeping (clients get the event from the server).</summary>
     public void ShowDowned()
     {
-        CollisionLayer = 0;
+        CollisionLayer = State.Mangled ? 8u : 0u; // a Mangled body is something to reach for: the interact ray finds it
         if (_model != null) _model.Play("Death", force: true);
         else
         {
@@ -830,6 +870,8 @@ public partial class Adventurer : CharacterBody3D
     public void Revive()
     {
         var wasDown = State.Hp <= 0f;
+        State.Mangled = false;
+        State.MangledBy = -1;
         State.Hp = Math.Max(1f, State.Hp);
         if (wasDown) EventBus.Instance.RaiseMemberRevived(Index);
         CollisionLayer = Parked ? 0u : 2u;

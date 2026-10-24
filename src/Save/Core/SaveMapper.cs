@@ -59,6 +59,7 @@ public static class SaveMapper
         KnownAbilities = c.KnownAbilities.ToList(), LearnedSkills = c.LearnedSkills.ToList(), ActiveAbilityIndex = c.ActiveAbilityIndex,
         Equipment = c.Equipment.Items.ToDictionary(t => t.Slot.ToString(), t => ToDto(t.Item)),
         Effects = c.Effects.Active.Select(e => new StatusDto { Kind = e.Kind.ToString(), Remaining = e.Remaining, Magnitude = e.Magnitude, Stacks = e.Stacks }).ToList(),
+        Mangled = c.Mangled, MangledBy = c.MangledBy,
     };
 
     public static CharacterState FromDto(CharacterDto d, Func<string, ClassProfile?> classes, ItemCatalog cat, SkillCatalog? skills = null)
@@ -66,6 +67,7 @@ public static class SaveMapper
         var cls = classes(d.ClassId) ?? ClassProfile.Empty;
         var c = new CharacterState { Name = d.Name, Class = cls, Rank = Enum.TryParse<Rank>(d.Rank, out var rank) ? rank : Rank.Front };
         c.Level = d.Level; c.Xp = d.Xp; c.StatPoints = d.StatPoints; c.SkillPoints = d.SkillPoints;
+        c.Mangled = d.Mangled; c.MangledBy = d.MangledBy;
         foreach (var (k, v) in d.Allocated) if (Enum.TryParse<Stat>(k, out var st)) c.Allocated[st] = v;
 
         c.KnownAbilities.Clear();

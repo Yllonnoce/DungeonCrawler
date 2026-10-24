@@ -99,6 +99,9 @@ public sealed class CharacterDto
     public int ActiveAbilityIndex { get; set; }
     public Dictionary<string, ItemDto> Equipment { get; set; } = new();
     public List<StatusDto> Effects { get; set; } = new();
+    /// <summary>Down to a lethal hazard (v9+); old saves read false / -1.</summary>
+    public bool Mangled { get; set; }
+    public int MangledBy { get; set; } = -1;
 }
 
 public sealed class StatusDto
