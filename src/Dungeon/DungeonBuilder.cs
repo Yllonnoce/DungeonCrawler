@@ -467,33 +467,38 @@ public partial class DungeonBuilder : Node3D
                 var p = new GridPos(x, y);
                 var level = layout.LevelOf(p);
                 var under = layout.IsUnder(p);
+                var ceilingLayer = layout.CeilingLayer(p); // two above the floor in a ledge's tall room, else one
                 switch (layout[p])
                 {
                     case Cell.Floor or Cell.Door:
                         // the down-stairs cell is a well the stairs prop floors itself
                         if (!layout.IsWater(p) && p != layout.DownStairs) grid.SetCellItem(new Vector3I(x, level, y), _buckled.TryGetValue(p, out var variant) ? ItemBuckledBase + variant : ItemFloor);
-                        // a low cell beside an upper floor gets a wall cube above it (its ceiling doubles as the upper room's side);
-                        // ledges are the exception, they are meant to overlook the room below
-                        var besideUpper = level == 0 && Neighbours4(p).Any(n => layout[n] is Cell.Floor or Cell.Door && layout.LevelOf(n) == 1 && !layout.Ledges.Any(l => l.Cells.Contains(n)));
-                        grid.SetCellItem(new Vector3I(x, level + 1, y), besideUpper ? ItemWall : CeilingFor(layout, p, level));
+                        // a low cell beside a taller one (an upper room, a ledge's tall room) gets a wall cube above it: its
+                        // ceiling doubles as the taller space's side, a lintel over the doorway rather than a view over the vault
+                        var besideUpper = level == 0 && Neighbours4(p).Any(n => layout[n] is Cell.Floor or Cell.Door && layout.CeilingLayer(n) > ceilingLayer);
+                        if (besideUpper) grid.SetCellItem(new Vector3I(x, level + 1, y), ItemWall);
+                        else grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, level));
                         // an upper floor stands on a solid plinth unless a cellar or tunnel runs beneath it
                         if (level == 1 && !under && p != layout.DownStairs) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
                         break;
                     case Cell.Pit:
-                        grid.SetCellItem(new Vector3I(x, level + 1, y), CeilingFor(layout, p, level));
+                        grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, level));
                         break;
                     case Cell.Ramp:
                         var ramp = layout.Ramps[p];
                         var dirIndex = Array.IndexOf(RampDirs, ramp.Dir);
                         grid.SetCellItem(new Vector3I(x, level, y), ItemRampBase + dirIndex * 2 + (ramp.LowHeight % 4 == 2 ? 1 : 0));
                         // the ceiling climbs with the ramp, 4 m over it, from the lower level's vault to the upper's: a flat
-                        // ceiling one layer up would leave the void above the lower corridor's ceiling open to view from the slope
-                        grid.SetCellItem(new Vector3I(x, level + 1, y), ItemRampVaultBase + dirIndex * 2 + (ramp.LowHeight % 4 == 2 ? 1 : 0));
+                        // ceiling one layer up would leave the void above the lower corridor's ceiling open to view from the slope.
+                        // A ledge's ramp stands inside its tall room and shares the room's high vault instead.
+                        if (layout.IsTall(p)) grid.SetCellItem(new Vector3I(x, level + 2, y), CeilingFor(layout, p, level));
+                        else grid.SetCellItem(new Vector3I(x, level + 1, y), ItemRampVaultBase + dirIndex * 2 + (ramp.LowHeight % 4 == 2 ? 1 : 0));
                         break;
                     case Cell.Wall when layout.IsChamfer(p, out var open):
                         // a corner cut at 45°: the solid half faces away from the floors, the open half gets its own floor
                         grid.SetCellItem(new Vector3I(x, 0, y), ItemChamferBase + ChamferIndex(open));
-                        grid.SetCellItem(new Vector3I(x, 1, y), CeilingFor(layout, p, 0));
+                        if (layout.IsTall(p)) grid.SetCellItem(new Vector3I(x, 1, y), ItemChamferBase + ChamferIndex(open)); // the cut corner rises with the tall room
+                        grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, 0));
                         break;
                     case Cell.Wall or Cell.Secret:
                         if (!under) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
@@ -505,7 +510,7 @@ public partial class DungeonBuilder : Node3D
                     grid.SetCellItem(new Vector3I(x, 0, y), ItemFloor);
                     // a tunnel is roofed by a full cube (nothing can walk on it); a cellar under an upper room is roofed by that room's floor
                     if (layout[p] is not (Cell.Floor or Cell.Door or Cell.Pit)) grid.SetCellItem(new Vector3I(x, 1, y), ItemWall);
-                    else if (level != 1) grid.SetCellItem(new Vector3I(x, 1, y), CeilingFor(layout, p, 0));
+                    else if (level != 1) grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, 0));
                 }
             }
         // enclose the under layer: cells beside a cellar/tunnel that are open at ground level get a low wall cube
@@ -584,7 +589,7 @@ public partial class DungeonBuilder : Node3D
             if (c == Cell.Ramp || layout[p] == Cell.Ramp) return c is Cell.Floor or Cell.Door or Cell.Pit or Cell.Ramp;
             if (c == Cell.Secret && _openSecrets.Contains(n)) return true;
             if (c is not (Cell.Floor or Cell.Door or Cell.Pit)) return false;
-            return asOpen || layout.LevelOf(n) == layout.LevelOf(p);
+            return asOpen || layout.CeilingLayer(n) == layout.CeilingLayer(p); // the vault runs on where the next ceiling is at the same height
         }
         var piece = VaultRules.PieceFor(Open(new GridPos(p.X - 1, p.Y)), Open(new GridPos(p.X + 1, p.Y)), Open(new GridPos(p.X, p.Y - 1)), Open(new GridPos(p.X, p.Y + 1)));
         return ItemVaultBase + (int)piece;
@@ -596,6 +601,8 @@ public partial class DungeonBuilder : Node3D
     public float CeilingRise => _vaultKind == ArchKind.Flat ? -0.2f : VaultRules.Rise(_vaultKind, CellSize / 2f);
     /// <summary>Height of the ceiling above a cell's floor surface, at the cell's centre.</summary>
     public float CeilingAbove => LevelHeight + CeilingRise;
+    /// <summary>The same for a particular cell: a ledge's tall room has its vault a whole level higher.</summary>
+    public float CeilingAboveAt(GridPos cell) => CeilingAbove + (Layout != null && Layout.IsTall(cell) ? LevelHeight : 0f);
 
     private static IEnumerable<GridPos> Neighbours4(GridPos p)
     {
@@ -1363,11 +1370,11 @@ public partial class DungeonBuilder : Node3D
                 var vaulted = false;
                 if (_grid != null)
                 {
-                    var above = new Vector3I(cell.X, layout.LevelOf(cell) + 1, cell.Y);
+                    var above = new Vector3I(cell.X, layout.CeilingLayer(cell), cell.Y);
                     var item = _grid.GetCellItem(above);
                     if (item >= ItemVaultBase && item < ItemVaultBase + 3) { _grid.SetCellItem(above, item - ItemVaultBase + ItemVaultBrokenBase); vaulted = true; }
                 }
-                Rubble.Collapse(rubbleRoot, Surface(cell), vaulted ? CeilingAbove : LevelHeight - 0.2f, wallMat, rng, vaulted);
+                Rubble.Collapse(rubbleRoot, Surface(cell), vaulted ? CeilingAboveAt(cell) : LevelHeight - 0.2f + (Layout?.IsTall(cell) == true ? LevelHeight : 0f), wallMat, rng, vaulted);
             }
         }
         var scatterWant = 8 + rng.Next(6);

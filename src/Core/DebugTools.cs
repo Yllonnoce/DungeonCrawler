@@ -20,7 +20,7 @@ namespace DungeonCrawler.Core;
 /// User args (after "--" on the command line):
 ///   --screenshot=PATH   save a PNG then quit      --after=SECONDS   delay before the screenshot / quit (default 2)
 ///   --face-enemy        teleport next to the nearest enemy at start
-///   --face-ramp[=bottom|top|ledge]  stand a cell short of a corridor ramp looking up it (bottom), at its top looking down, or on a ledge's ramp looking into the room
+///   --face-ramp[=bottom|top|ledge|gallery]  stand a cell short of a corridor ramp looking up it (bottom), at its top looking down, on a ledge's ramp looking into the room, or on the ledge looking down
 ///   --auto-attack       every member swings whenever ready (headless combat smoke test)
 ///   --trace-ai          print enemy state transitions
 ///   --quit-after=SECONDS quit without a screenshot
@@ -479,7 +479,14 @@ public partial class DebugTools : Node
             _facedRamp = true;
             var b = Main.Instance.Builder;
             var lows = rampLay.Ramps.Where(kv => kv.Value.LowHeight % 4 == 0 && rampLay.Ledges.All(l => l.RampBottom != kv.Key)).OrderBy(kv => kv.Key.Y).ThenBy(kv => kv.Key.X).ToList();
-            if (_faceRamp == "ledge" && rampLay.Ledges.Count > 0)
+            if (_faceRamp == "gallery" && rampLay.Ledges.Count > 0)
+            {
+                // on the ledge itself, looking down into the room
+                var ledge = rampLay.Ledges[0];
+                Main.Instance.Party.Teleport(b.Surface(ledge.EnemySpawn) + Vector3.Up * 0.3f, b.Surface(ledge.Room.Center) + Vector3.Up * 0.5f);
+                GD.Print($"[face-ramp] on the gallery at {ledge.EnemySpawn}, looking at the room centre {ledge.Room.Center}; cells: {b.DebugCell(ledge.EnemySpawn)} {b.DebugCell(ledge.Room.Center)}");
+            }
+            else if (_faceRamp == "ledge" && rampLay.Ledges.Count > 0)
             {
                 // on a ledge's ramp, high half, looking sideways into the room it climbs out of
                 var ledge = rampLay.Ledges[0];
@@ -864,6 +871,7 @@ public partial class DebugTools : Node
             return hit.Count > 0 ? ((Vector3)hit["position"]).Y : null;
         }
         var seen = new HashSet<(GridPos, int)>();
+        var parent = new Dictionary<(GridPos, int), (GridPos, float)>(); // how the probe reached a surface, for reading a hole's trail
         var frontier = new Queue<(GridPos cell, float h)>();
         for (var y = 0; y < layout.Height; y++)
             for (var x = 0; x < layout.Width; x++)
@@ -891,14 +899,19 @@ public partial class DebugTools : Node
                 {
                     // a surface with solid right above it (a cube buried inside a taller cube) is not somewhere a body can stand
                     if (Ground(n, nh + 1.7f, nh + 0.3f, inside: true) != null) continue;
-                    if (seen.Add((n, (int)MathF.Round(nh)))) frontier.Enqueue((n, nh));
+                    if (seen.Add((n, (int)MathF.Round(nh)))) { parent[(n, (int)MathF.Round(nh))] = (cell, h); frontier.Enqueue((n, nh)); }
                     continue;
                 }
                 // no walking surface: fine if solid blocks the way at body height (rays that start inside a cube count), a hole if nothing lies below
                 var wall = Ground(n, h + 1.6f, h + 0.3f, inside: true);
                 if (wall != null) continue;
                 var below = Ground(n, h + 0.3f, -12f, inside: true);
-                if (below == null) misses.Add($"{cell}@{h:0.0} -> {n} ({layout[n]}/L{layout.LevelOf(n)}{(layout.IsUnder(n) ? "u" : "")}) drops into nothing");
+                if (below == null)
+                {
+                    var trail = ""; var key = (cell, (int)MathF.Round(h));
+                    for (var k = 0; k < 6 && parent.TryGetValue(key, out var from); k++) { trail += $" <- {from.Item1}@{from.Item2:0.0}{main.Builder.DebugCell(from.Item1)}"; key = (from.Item1, (int)MathF.Round(from.Item2)); }
+                    misses.Add($"{cell}@{h:0.0} -> {n} ({layout[n]}/L{layout.LevelOf(n)}{(layout.IsUnder(n) ? "u" : "")}) drops into nothing [{main.Builder.DebugCell(cell)} -> {main.Builder.DebugCell(n)}]{trail}");
+                }
             }
         }
         _floorsMisses += misses.Count;

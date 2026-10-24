@@ -13,6 +13,25 @@ public class VerticalityTests
     private static readonly FloorSpec Spec = FloorSpec.Default with { VaultCount = 1, LedgeCount = 1, PitCount = 1, SecretCount = 1, HighRoomChance = 0.45f };
 
     [Fact]
+    public void LedgeRoom_IsBuiltTall_SoTheGalleryOverlooksIt()
+    {
+        // a room with a ledge gets its ceiling two layers up, like the ledge and an upper room; everything else keeps one
+        FloorLayout? l = null;
+        for (var s = 1; s <= 60 && l == null; s++) { var c = FloorGenerator.Generate(Spec, s * 7919 + 101); if (c.Ledges.Count > 0) l = c; }
+        Assert.NotNull(l);
+        var ledge = l!.Ledges[0];
+        Assert.True(l.IsTall(ledge.RampBottom));
+        Assert.All(ledge.Room.Cells().Where(c => l[c] is Cell.Floor or Cell.Ramp), c => Assert.Equal(2, l.CeilingLayer(c)));
+        Assert.All(ledge.Cells, c => Assert.Equal(2, l.CeilingLayer(c)));
+        var plainLow = l.Rooms.First(r => r != ledge.Room && l.LevelOf(r.Center) == 0 && l.Ledges.All(g => g.Room != r));
+        Assert.Equal(1, l.CeilingLayer(plainLow.Center));
+        Assert.False(l.IsTall(plainLow.Center));
+        var corridor = Enumerable.Range(0, l.Height).SelectMany(y => Enumerable.Range(0, l.Width).Select(x => new GridPos(x, y))).First(c => l[c] == Cell.Floor && l.RoomAt(c) == null && l.LevelOf(c) == 0);
+        Assert.Equal(1, l.CeilingLayer(corridor));
+        if (l.Rooms.FirstOrDefault(r => l.LevelOf(r.Center) == 1) is { } high) Assert.Equal(2, l.CeilingLayer(high.Center));
+    }
+
+    [Fact]
     public void Floor5_Ring_HasALedgeOnTheArenaWall()
     {
         // the Gallery: archers shoot down into the Crypt Lord's arena

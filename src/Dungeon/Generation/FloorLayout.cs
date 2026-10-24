@@ -153,6 +153,16 @@ public sealed class FloorLayout
 
     public Room? RoomAt(GridPos p) => Rooms.FirstOrDefault(r => r.Contains(p));
 
+    /// <summary>A ground-level room with a ledge is built twice as tall, so the gallery at 4 m really overlooks it.</summary>
+    public bool IsTall(GridPos p) => LevelOf(p) == 0 && RoomAt(p) is { } r && Ledges.Any(l => l.Room == r);
+
+    /// <summary>
+    /// The grid layer a cell's ceiling piece sits in: one above its floor, or two above for an upper room, a ledge and
+    /// the tall room a ledge looks over. Neighbours in different layers are closed off from each other by a wall cube
+    /// over the lower one; a corridor ramp's climbing vault counts as the lower layer.
+    /// </summary>
+    public int CeilingLayer(GridPos p) => LevelOf(p) + 1 + (IsTall(p) ? 1 : 0);
+
     /// <summary>Stable content hash for determinism tests and save-file sanity checks.</summary>
     public ulong ContentHash()
     {

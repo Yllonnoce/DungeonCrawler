@@ -109,7 +109,7 @@ public partial class Tremor : Node
     {
         if (!RandomCellNear(main, 10f, out var cell)) return;
         var builder = main.Builder;
-        var at = builder.Surface(cell) + new Vector3(((float)_rng.NextDouble() - 0.5f) * 2.4f, builder.CeilingAbove - 0.5f, ((float)_rng.NextDouble() - 0.5f) * 2.4f); // out of the vault above
+        var at = builder.Surface(cell) + new Vector3(((float)_rng.NextDouble() - 0.5f) * 2.4f, builder.CeilingAboveAt(cell) - 0.5f, ((float)_rng.NextDouble() - 0.5f) * 2.4f); // out of the vault above
         var size = 0.18f + (float)_rng.NextDouble() * 0.22f * (0.6f + _strength * 0.6f);
         var rock = new FallingRock { Size = size, Stone = _stone, Puff = Puff() };
         builder.FloorRoot!.AddChild(rock);

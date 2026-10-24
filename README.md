@@ -522,9 +522,13 @@ helms, cuirasses, gloves, boots, rings, amulets, crystals and bones. Magic and b
 rarity colour, rare and better a small light.
 
 Geometry rules that keep the floor closed (`DungeonBuilder.BuildGridMap`): an opened secret wall becomes a floored
-doorway; ramps carry a floor slab beneath the slope; upper-level floors stand on solid plinths; a low cell beside an
-upper floor is walled above (except under a ledge, which overlooks its room); tunnels are roofed with cubes and the
-cubes enclosing them are full height. `--test-floors` is the regression check for all of this.
+doorway; ramps carry a floor slab beneath the slope and a vault that climbs with them (`FloorLayout.CeilingLayer`,
+`VaultRules.RampRise`), so a slope never looks out over the lower corridor's ceiling; upper-level floors stand on
+solid plinths; a room with a ledge is built two layers tall so the gallery at 4 m really overlooks it, and every
+corridor entering it gets a lintel cube over its last cell (the same rule that walls a low cell beside an upper floor);
+tunnels are roofed with cubes and the cubes enclosing them are full height. `--test-floors` is the regression check
+for all of this (it rolls a fresh seed each run; `--seed=N` pins one), and `--face-ramp[=bottom|top|ledge|gallery]`
+stands the party at a ramp or on a gallery for a screenshot.
 
 NPCs (`Adventure/Npc.cs`) stand where the plan put them; talk with E. Quests (`Adventure/Core/Quests/QuestMachine.cs`)
 come in four shapes: slay a named group, recover a relic from a room and bring it back, escort the NPC to the stairs
