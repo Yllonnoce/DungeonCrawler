@@ -9,6 +9,25 @@ public class StructureTests
     public static IEnumerable<object[]> Seeds() => Enumerable.Range(0, 40).Select(i => new object[] { i * 977 + 5 });
 
     [Fact]
+    public void Floor20_Ring_HasARuinInTheArena()
+    {
+        // the Colonnade: broken pillars to fight the Verger around
+        var l = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Ring, Floor = 20, BossFloor = true, StructureCount = 1 }, 5);
+        Assert.Contains(l.Structures, s => s.Kind == StructureKind.Ruin && s.Cells.Any(c => l.BossArena!.Contains(c)));
+    }
+
+    [Fact]
+    public void Floor10_Burning_RingsTheArenaCentreWithFire()
+    {
+        // the Hatchery: a ring of fire around the Broodmother's centre
+        var l = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Burning, Floor = 10, BossFloor = true, FireCount = 12 }, 3);
+        var centre = l.BossArena!.Center;
+        var ring = l.Fires.Count(f => { var d = f.ManhattanDistance(centre); return d >= 1 && d <= 3; });
+        Assert.True(ring >= 4, $"{ring} fires ring the centre");
+        Assert.DoesNotContain(centre, l.Fires);
+    }
+
+    [Fact]
     public void BigRooms_LoseTheirCorners()
     {
         var layouts = Enumerable.Range(0, 30).Select(i => FloorGenerator.Generate(Spec, i * 41 + 7)).ToList();

@@ -12,6 +12,19 @@ public class VerticalityTests
     public static IEnumerable<object[]> Seeds() => Enumerable.Range(0, 80).Select(i => new object[] { i * 7919 + 101 });
     private static readonly FloorSpec Spec = FloorSpec.Default with { VaultCount = 1, LedgeCount = 1, PitCount = 1, SecretCount = 1, HighRoomChance = 0.45f };
 
+    [Fact]
+    public void Floor5_Ring_HasALedgeOnTheArenaWall()
+    {
+        // the Gallery: archers shoot down into the Crypt Lord's arena
+        var with = 0;
+        for (var s = 1; s <= 20; s++)
+        {
+            var l = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Ring, Floor = 5, BossFloor = true, LedgeCount = 1 }, s);
+            if (l.Ledges.Any(g => g.Room == l.BossArena)) with++;
+        }
+        Assert.True(with >= 10, $"a ledge on the arena wall on {with} of 20 floors");
+    }
+
     [Theory, MemberData(nameof(Seeds))]
     public void EveryWalkableCell_ReachableRespectingHeights(int seed)
     {

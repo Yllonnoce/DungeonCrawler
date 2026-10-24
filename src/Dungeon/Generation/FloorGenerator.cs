@@ -443,6 +443,9 @@ public static partial class FloorGenerator
     /// <summary>Gatehouses and bandit camps in big rooms that carry nothing else special.</summary>
     private static void PlaceStructures(FloorSpec spec, Random rng, FloorLayout layout)
     {
+        // the Colonnade: the last arena is fought among broken pillars; it does not use up a room's structure
+        var colonnade = spec.Floor >= 20 && spec.Floor % 5 == 0 && layout.Kind == LayoutKind.Ring && layout.BossArena is { } arena
+            && layout.Ledges.All(l => l.Room != arena) && TryRuin(rng, layout, arena) ? 1 : 0;
         if (spec.StructureCount <= 0) return;
         var upRoom = layout.RoomAt(layout.UpStairs);
         var downRoom = layout.RoomAt(layout.DownStairs);
@@ -456,7 +459,7 @@ public static partial class FloorGenerator
         var next = 0;
         foreach (var room in candidates)
         {
-            if (layout.Structures.Count >= spec.StructureCount) break;
+            if (layout.Structures.Count >= spec.StructureCount + colonnade) break;
             for (var k = 0; k < kinds.Count; k++)
             {
                 var kind = kinds[(next + k) % kinds.Count];

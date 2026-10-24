@@ -27,7 +27,7 @@ public static class Verticality
         var ledges = PickLedges(spec, rng, layout, roomLevel);
         var ramps = new List<(GridPos low, GridPos high, GridPos dir, int lowLevel, bool ledge)>();
         foreach (var l in ledges)
-            ramps.Add((l.RampBottom, l.RampTop, new GridPos(0, -1), 0, true));
+            ramps.Add((l.RampBottom, l.RampTop, new GridPos(Math.Sign(l.RampTop.X - l.RampBottom.X), Math.Sign(l.RampTop.Y - l.RampBottom.Y)), 0, true));
 
         // Rooms that could not be joined by a ramp are merged onto one level; merges only grow, so this converges.
         var group = Enumerable.Range(0, rooms.Count).ToArray();
@@ -126,20 +126,72 @@ public static class Verticality
             candidates.Add(i);
         }
         FloorGenerator.Shuffle(rng, candidates);
-        foreach (var i in candidates.Take(spec.LedgeCount))
+        // the Gallery: on floor 5 the Ring arena takes a ledge on whichever wall no spoke enters, for archers to shoot down from
+        if (spec.Floor == 5 && spec.BossFloor && layout.Kind == LayoutKind.Ring && layout.BossArena is { } arena && roomLevel[layout.Rooms.IndexOf(arena)] == 0)
         {
-            var room = layout.Rooms[i];
-            // the strip needs its corners: a chamfered room gets its top corners back (walls are raised again afterwards)
-            layout[room.X, room.Y] = Cell.Floor;
-            layout[room.Right, room.Y] = Cell.Floor;
-            var cells = new List<GridPos> { new(room.X, room.Y) };
-            for (var x = room.X + 1; x <= room.Right; x++) cells.Add(new GridPos(x, room.Y));
-            var bottom = new GridPos(room.X, room.Y + 2);
-            var top = new GridPos(room.X, room.Y + 1);
-            GridPos? chest = room.W >= 4 && rng.NextDouble() < 0.5 ? new GridPos(room.X + 2, room.Y) : null;
-            result.Add(new Ledge(room, cells, bottom, top, new GridPos(room.Right, room.Y), chest));
+            var walls = new List<int> { 0, 1, 2, 3 };
+            FloorGenerator.Shuffle(rng, walls);
+            foreach (var w in walls) if (LedgeOnWall(layout, arena, w, rng, segment: true) is { } gallery) { result.Add(gallery); break; }
         }
+        foreach (var i in candidates.Take(Math.Max(0, spec.LedgeCount - result.Count)))
+            if (LedgeOnWall(layout, layout.Rooms[i], 0, rng) is { } ledge) result.Add(ledge);
         return result;
+    }
+
+    /// <summary>
+    /// A raised strip along one wall of a room (0 top, 1 bottom, 2 left, 3 right) with a two-cell ramp up from the room
+    /// floor at one end, or null when a corridor enters along that wall or beside the ramp. Ordinary rooms use the top
+    /// wall and get their chamfered corners back; a deeply chamfered room (the arena) keeps the strip inside the chamfer.
+    /// </summary>
+    private static Ledge? LedgeOnWall(FloorLayout layout, Room room, int wall, Random rng, bool segment = false)
+    {
+        var depth = FloorGenerator.ChamferDepth(room);
+        var inset = depth > 1 ? depth : 0;
+        var horizontal = wall is 0 or 1;
+        if (horizontal ? room.H < 5 || room.W - 2 * inset < 4 : room.W < 5 || room.H - 2 * inset < 4) return null;
+        var entrances = FloorGenerator.Entrances(layout, room).ToList();
+        int wallLine, inward; // the strip's row or column, and which way the room lies from it
+        List<GridPos> onWall; // corridor cells opening onto this wall from outside
+        switch (wall)
+        {
+            case 0: wallLine = room.Y; inward = 1; onWall = entrances.Where(e => e.Y == room.Y - 1).ToList(); if (!segment && entrances.Any(e => e.X == room.X - 1 && e.Y <= room.Y + 2)) return null; break;
+            case 1: wallLine = room.Bottom; inward = -1; onWall = entrances.Where(e => e.Y == room.Bottom + 1).ToList(); if (!segment && entrances.Any(e => e.X == room.X - 1 && e.Y >= room.Bottom - 2)) return null; break;
+            case 2: wallLine = room.X; inward = 1; onWall = entrances.Where(e => e.X == room.X - 1).ToList(); if (!segment && entrances.Any(e => e.Y == room.Y - 1 && e.X <= room.X + 2)) return null; break;
+            default: wallLine = room.Right; inward = -1; onWall = entrances.Where(e => e.X == room.Right + 1).ToList(); if (!segment && entrances.Any(e => e.Y == room.Y - 1 && e.X >= room.Right - 2)) return null; break;
+        }
+        if (!segment && onWall.Count > 0) return null;
+        var from = (horizontal ? room.X : room.Y) + inset;
+        var to = (horizontal ? room.Right : room.Bottom) - inset;
+        if (segment)
+        {
+            // the longest stretch of wall between the corridors that enter along it, a cell clear of each
+            var blocked = new HashSet<int>(onWall.SelectMany(e => { var a = horizontal ? e.X : e.Y; return new[] { a - 1, a, a + 1 }; }));
+            int bestFrom = -1, bestTo = -2, runFrom = from;
+            for (var a = from; a <= to + 1; a++)
+            {
+                if (a <= to && !blocked.Contains(a)) continue;
+                if (a - 1 - runFrom > bestTo - bestFrom) { bestFrom = runFrom; bestTo = a - 1; }
+                runFrom = a + 1;
+            }
+            if (bestTo - bestFrom + 1 < 4) return null;
+            from = bestFrom; to = bestTo;
+            inset = 1; // an inner segment never touches the corners
+        }
+        GridPos At(int along, int across) => horizontal ? new GridPos(along, wallLine + across * inward) : new GridPos(wallLine + across * inward, along);
+        if (inset == 0)
+        {
+            // the strip needs its corners: a chamfered room gets them back (walls are raised again afterwards)
+            layout[At(from, 0)] = Cell.Floor;
+            layout[At(to, 0)] = Cell.Floor;
+        }
+        var cells = new List<GridPos>();
+        for (var a = from; a <= to; a++) cells.Add(At(a, 0));
+        if (cells.Any(c => layout[c] != Cell.Floor)) return null;
+        var top = At(from, 1);
+        var bottom = At(from, 2);
+        if (layout[top] != Cell.Floor || layout[bottom] != Cell.Floor) return null;
+        GridPos? chest = to - from >= 3 && rng.NextDouble() < 0.5 ? At(from + 2, 0) : null;
+        return new Ledge(room, cells, bottom, top, At(to, 0), chest);
     }
 
     private static void ApplyLevels(FloorLayout layout, int[] roomLevel, List<Ledge> ledges, List<(GridPos low, GridPos high, GridPos dir, int lowLevel, bool ledge)> ramps)

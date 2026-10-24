@@ -52,6 +52,12 @@ public static class HazardPlanner
         if (pressMax > 0 && layout.Kind != LayoutKind.Labyrinth && (spec.ForceHazard != null || spec.Floor > 5 || rng.NextDouble() < CryptPressChance))
         {
             var runs = PressCandidates(layout, taken, depth, rng);
+            if (spec.Floor == 15 && layout.BossArena is { } arena)
+            {
+                // the Gauntlet: a run that opens onto the arena comes first, so the way in to the boss closes behind you
+                var rim = new HashSet<GridPos>(arena.Cells().SelectMany(c => c.Neighbours4()).Where(n => !arena.Contains(n)));
+                runs = runs.OrderBy(r => r.Cells.Any(c => rim.Contains(c) || c.Neighbours4().Any(rim.Contains)) ? 0 : 1).ToList();
+            }
             if (spec.ForceHazard != null) runs = runs.OrderBy(r => depth.TryGetValue(r.Cells[1], out var d) ? d : int.MaxValue).ToList(); // the test wants it by the door
             if (runs.Count > 0)
             {

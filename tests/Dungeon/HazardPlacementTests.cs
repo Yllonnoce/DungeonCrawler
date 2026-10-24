@@ -10,6 +10,36 @@ public class HazardPlacementTests
         => FloorGenerator.Generate(FloorSpec.Default with { Layout = kind, Objective = obj, Floor = floor, BossFloor = TierRules.IsBossFloor(floor) }, seed);
 
     [Fact]
+    public void Floor15_MayPlaceAPressInAnArenaSpoke_NeverInside()
+    {
+        var any = false;
+        for (var s = 1; s <= 40; s++)
+        {
+            var l = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Ring, Floor = 15, BossFloor = true }, s);
+            foreach (var h in l.Hazards.Where(h => h.Kind == HazardKind.Press)) { any = true; Assert.All(h.Cells, c => Assert.False(l.BossArena!.Contains(c))); }
+        }
+        Assert.True(any);
+    }
+
+    [Fact]
+    public void Floor15_Press_AdjoinsTheArena_WhenOneIsPlaced()
+    {
+        // the Gauntlet: the floor 15 press sits in a spoke that opens onto the arena
+        var adjoining = 0; var placed = 0;
+        for (var s = 1; s <= 40; s++)
+        {
+            var l = FloorGenerator.Generate(FloorSpec.Default with { Layout = LayoutKind.Ring, Floor = 15, BossFloor = true }, s);
+            foreach (var h in l.Hazards.Where(h => h.Kind == HazardKind.Press))
+            {
+                placed++;
+                if (h.Cells.Any(c => c.Neighbours4().Any(n => l.BossArena!.Contains(n))) || h.Cells.Any(c => l.BossArena!.Contains(c + new GridPos(1, 0) + new GridPos(1, 0)) || l.BossArena!.Contains(c - new GridPos(1, 0) - new GridPos(1, 0)) || l.BossArena!.Contains(c + new GridPos(0, 1) + new GridPos(0, 1)) || l.BossArena!.Contains(c - new GridPos(0, 1) - new GridPos(0, 1)))) adjoining++;
+            }
+        }
+        Assert.True(placed > 0);
+        Assert.True(adjoining * 2 >= placed, $"{adjoining} of {placed} presses adjoin the arena");
+    }
+
+    [Fact]
     public void Floors1And2_HaveNoHazards()
     {
         for (var s = 1; s <= 40; s++) { Assert.Empty(Gen(s, 1).Hazards); Assert.Empty(Gen(s, 2).Hazards); }

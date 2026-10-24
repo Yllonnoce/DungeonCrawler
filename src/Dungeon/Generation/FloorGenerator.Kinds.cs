@@ -384,6 +384,16 @@ public static partial class FloorGenerator
     /// </summary>
     private static void PlaceFires(FloorSpec spec, Random rng, FloorLayout layout)
     {
+        if (spec.Floor == 10 && layout.Kind == LayoutKind.Burning && spec.BossFloor && layout.BossArena is { } arena)
+        {
+            // the Hatchery (floor 10, the Broodmother): eight fires in a broken ring two cells out from the arena's centre, open along the axes
+            var centre = arena.Center;
+            foreach (var (dx, dy) in new[] { (2, 1), (2, -1), (-2, 1), (-2, -1), (1, 2), (-1, 2), (1, -2), (-1, -2) })
+            {
+                var p = centre + new GridPos(dx, dy);
+                if (arena.Contains(p) && !Busy(layout, p) && !layout.IsReserved(p) && !layout.IsWater(p) && !layout.IsUnder(p) && layout.LevelOf(p) == layout.LevelOf(centre)) layout.Fires.Add(p);
+            }
+        }
         if (spec.FireCount <= 0) return;
         var upRoom = layout.RoomAt(layout.UpStairs);
         var rooms = layout.Rooms.Where(r => r != upRoom && r != layout.BossArena && r.W >= 4 && r.H >= 4 && layout.Vaults.All(v => v.Room != r)).ToList();
