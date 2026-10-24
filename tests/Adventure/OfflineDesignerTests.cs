@@ -75,6 +75,45 @@ public class OfflineDesignerTests
     }
 
     [Fact]
+    public void PlanFloor_OnFloorsWithHazards_NeedsNoRepairs()
+    {
+        // the designer must not put its extra chests and traps where the generator reserved a Press or a Spike Bed
+        var failures = new List<string>();
+        for (var floor = 3; floor <= TierRules.FinalFloor; floor++)
+            for (var seed = 1; seed <= 12; seed++)
+            {
+                var spec = TestAdventure.SpecFor(floor) with { Floor = floor };
+                var layout = FloorGenerator.Generate(spec, seed);
+                if (layout.Hazards.Count == 0) continue;
+                var menu = FloorMenu.Build(layout, spec, TestAdventure.Crypt, TestAdventure.Roster, floor, PartySnapshot.Expected(floor));
+                var plan = OfflineDesigner.PlanFloor(menu, layout, seed);
+                var report = PlanValidator.Validate(layout, plan, menu);
+                if (!report.Ok || report.Repairs.Count > 0) failures.Add($"floor {floor} seed {seed}: ok={report.Ok} repairs=[{string.Join("; ", report.Repairs)}]");
+            }
+        Assert.True(failures.Count == 0, string.Join("\n", failures.Take(6)));
+    }
+
+    [Fact]
+    public void PlanFloor_NeverThrows_AcrossFloorsAndSeeds()
+    {
+        // every floor of a run, many seeds: a goal that runs out of rooms to claim must fall back, not crash the designer
+        var failures = new List<string>();
+        foreach (var kind in Enum.GetValues<LayoutKind>())
+            for (var floor = 1; floor <= TierRules.FinalFloor; floor++)
+                for (var seed = 1; seed <= 12; seed++)
+                {
+                    var spec = TestAdventure.SpecFor(floor) with { Floor = floor, Layout = kind };
+                    var layout = FloorGenerator.Generate(spec, seed);
+                    var menu = FloorMenu.Build(layout, spec, TestAdventure.Crypt, TestAdventure.Roster, floor, PartySnapshot.Expected(floor));
+                    var plan = OfflineDesigner.PlanFloor(menu, layout, seed);
+                    Assert.All(plan.Collectives, c => Assert.True(c.Goal.Room >= 0, $"{kind} floor {floor} seed {seed}: {c.Id} has no room"));
+                    var report = PlanValidator.Validate(layout, plan, menu);
+                    if (!report.Ok || report.Repairs.Count > 0) failures.Add($"{kind} floor {floor} seed {seed}: ok={report.Ok} repairs=[{string.Join("; ", report.Repairs)}]");
+                }
+        Assert.True(failures.Count == 0, $"{failures.Count} plans needed repair:\n{string.Join("\n", failures.Take(8))}");
+    }
+
+    [Fact]
     public void NpcQuests_AppearAndValidate_AcrossTemplates()
     {
         var templates = new HashSet<QuestTemplate>();

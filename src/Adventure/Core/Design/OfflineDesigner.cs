@@ -152,6 +152,8 @@ public static class OfflineDesigner
         var groupCount = Math.Clamp((target - loners) / 3, 1, Math.Min(4, Math.Max(1, candidates.Count - used.Count)));
         var sizes = new int[groupCount];
         for (var i = 0; i < target - loners; i++) sizes[i % groupCount]++;
+        // a floor with few rooms to post in cannot grow a group past what the validator allows: the rest walk alone
+        for (var i = 0; i < sizes.Length; i++) if (sizes[i] > PlanValidator.MaxMembersPerCollective) { loners += sizes[i] - PlanValidator.MaxMembersPerCollective; sizes[i] = PlanValidator.MaxMembersPerCollective; }
 
         var weights = menu.Roster.Select(e => e.Weight).ToArray();
         string PickEnemy() => menu.Roster[LootRoller.WeightedIndex(weights, rng)].Id;
@@ -162,6 +164,8 @@ public static class OfflineDesigner
             if (pick != null) used.Add(pick.Index);
             return pick;
         }
+        // every room already spoken for: share one rather than leave a goal without a room
+        RoomInfo Fallback() => candidates.Count > 0 ? candidates[rng.Next(candidates.Count)] : menu.Rooms[0];
 
         // which goals this floor uses: every kind gets a turn across floors; Alarm needs someone to run to
         var kinds = new List<GoalKind> { GoalKind.Defend, GoalKind.Patrol, GoalKind.Alarm, GoalKind.Guard };
@@ -192,7 +196,7 @@ public static class OfflineDesigner
                     var vault = menu.Rooms.FirstOrDefault(r => r.IsVault);
                     var doorRoom = vault == null ? null : Claim(r => vault.Neighbours.Contains(r.Index));
                     if (vault != null && doorRoom != null) { g.Kind = GoalKind.Defend; g.Room = doorRoom.Index; g.Objective = new ObjectivePlan { Kind = ObjectiveKind.Door, Ref = layout.Vaults.First(v => v.Room == layout.Rooms[vault.Index]).Index.ToString() }; break; }
-                    var far = Claim(_ => true, r => r.HopsFromStart)!;
+                    var far = Claim(_ => true, r => r.HopsFromStart) ?? Fallback();
                     g.Kind = GoalKind.Guard; g.Room = far.Index;
                     break;
                 }
@@ -208,20 +212,20 @@ public static class OfflineDesigner
                         if (c3 != null && rng.Next(2) == 0) { g.Route.Add(c3.Index); used.Add(c3.Index); }
                         break;
                     }
-                    var any = Claim(_ => true) ?? candidates[rng.Next(candidates.Count)];
+                    var any = Claim(_ => true) ?? Fallback();
                     g.Kind = GoalKind.Guard; g.Room = any.Index;
                     break;
                 }
                 case GoalKind.Alarm:
                 {
-                    var near = Claim(_ => true, r => -r.HopsFromStart) ?? candidates[rng.Next(candidates.Count)];
+                    var near = Claim(_ => true, r => -r.HopsFromStart) ?? Fallback();
                     g.Kind = GoalKind.Alarm; g.Room = near.Index;
                     alarmGroups.Add(c); // target chosen once every group exists
                     break;
                 }
                 default:
                 {
-                    var room = Claim(r => r.IsExit) ?? Claim(_ => true) ?? candidates[rng.Next(candidates.Count)];
+                    var room = Claim(r => r.IsExit) ?? Claim(_ => true) ?? Fallback();
                     g.Kind = GoalKind.Guard; g.Room = room.Index;
                     break;
                 }
@@ -247,7 +251,7 @@ public static class OfflineDesigner
         }
         for (var i = 0; i < loners; i++)
         {
-            var room = candidates.Where(r => !used.Contains(r.Index)).OrderBy(_ => rng.Next()).FirstOrDefault() ?? candidates[rng.Next(candidates.Count)];
+            var room = candidates.Where(r => !used.Contains(r.Index)).OrderBy(_ => rng.Next()).FirstOrDefault() ?? Fallback();
             var id = PickEnemy();
             if (Cost() + menu.CostOf(id) > menu.Budget * 1.1f) break;
             plan.Loners.Add(new LonerPlan { EnemyId = id, Room = room.Index });
