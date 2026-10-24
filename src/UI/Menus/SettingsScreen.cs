@@ -82,7 +82,7 @@ public partial class SettingsScreen : PanelContainer
         Check(v, "Ambushers along the corridors", Settings.Ambushes, x => Settings.Ambushes = x);
         Slider(v, "Reinforcement pressure (0 off, 1 normal, 2 heavy)", 0f, 2f, Settings.Reinforcements, x => { Settings.Reinforcements = x; Adventure.PortalSpawner.Instance?.RefreshSilence(); }, "0.00", step: 0.25f);
         Check(v, "The dungeon's master may curse at you (off: the same taunts, cleaned up)", Settings.VillainCurses, x => Settings.VillainCurses = x);
-        Slider(v, "Dungeon lethality (1 normal, 2 hard, 3 brutal): how hard enemies, traps, fire and gas hit you", Dungeon.TierRules.MinLethality, Dungeon.TierRules.MaxLethality, Settings.Lethality, x => { Settings.Lethality = x; Settings.Apply(); }, "0.0", step: 0.5f);
+        Slider(v, "Dungeon lethality (1 normal, 2 hard, 3 brutal): how hard enemies, traps, fire and gas hit you; 2.5 and above: presses and spikes kill outright", Dungeon.TierRules.MinLethality, Dungeon.TierRules.MaxLethality, Settings.Lethality, x => { Settings.Lethality = x; Settings.Apply(); }, "0.0", step: 0.5f);
 
         Header(v, "AI (optional)");
         var note = new Label { Text = "Keys stay in user://keys.cfg on this machine and are only ever sent to api.anthropic.com, generativelanguage.googleapis.com and api.runware.ai.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };

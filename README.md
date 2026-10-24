@@ -102,6 +102,7 @@ top of the campaign's 80).
 `TierRules.Lethality` (Settings "Dungeon lethality": 1 normal, 2 hard, 3 brutal, the default; `--lethality=N` pins it
 for a run). The party's own traps against enemies, fall damage and the enemy budgets a floor is planned with are not
 touched; NPCs carry the same multiplier in their hit points so escorts, prisoners and the ritualist last as they did.
+At 2.5 and above the lethal traps (below) kill a party member outright; under that they take a fraction of max HP.
 
 **Stairs you climb.** The up-stairs are a real flight: seven stone treads between brick parapets rising to a landing
 2 m up against the back wall; the down-stairs are a well sunk into the floor with the same flight descending to a
@@ -175,10 +176,12 @@ godot --path . -- --floor=3 --talk --screenshot=/tmp/talk.png --after=2   # open
 godot --path . -- --seed=1 --floor=1 --talk --showcase=Death --screenshot=/tmp/move.png --after=3   # floor 1's greeter: open his dialogue and play one of his model's clips from the moves grid
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
+godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an enemy and the lead in the run, crushed and mangled, no auto-revive, a companion pulls the lead free, the villain gloats, a barrel jams the second run, saved, loaded, phase and kills survive
+godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
 godot --headless --path . -- --purge-voice          # sweep assets/voice/builtin of lines the shipped campaign no longer refers to, and user://voice of lines no campaign, run or save slot refers to; every bake does the same for the bank it wrote unless --keep-old-voice
 godot --headless --path . -- --check-voice-bank     # every voice line the campaign on disk refers to: how many the shipped bank holds and how many load; run it on an exported binary (build/linux/DungeonCrawler.x86_64 --headless -- --check-voice-bank) to prove the bank was packed
-scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, leave
+scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, the Press on floor 2 replicated, leave (the server runs at lethality 1 with --hazard=press@2)
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --ai --seed=N   # write a campaign + 20 floors with Claude (or --fake-ai=0 for the offline designer)
 godot --path . -- --ai --record-plans=user://ai/log # force the Claude planner (needs a key in Settings); requests/responses land in that folder
 godot --headless --path . -- --replay-plans=DIR     # answer planning calls from a recorded folder instead of the network
@@ -388,6 +391,31 @@ When Gemini answers with a quota error (HTTP 429), rendering stops for the sessi
 daily-quota error stops at once, a per-minute limit is retried after the delay Google suggests and stops after three
 in a row. Nothing is lost; the lines that were not rendered are queued again the next time you press "Render voice"
 or enter a floor that uses them. The reason is shown in the Settings status line and the message log.
+
+## Lethal traps
+
+From floor 3 the generator reserves one or two hazards on the critical path (`HazardPlanner`, `HazardCounts.For(floor)`),
+never on the only route past a bridge cell and never where a vault, nest, water or stair already sits:
+
+- **The Press**: a three-cell corridor run between two sliding stone slabs, the plate in the middle cell. Step on it and
+  the walls grind (1.2 s warning), close over 2.4 s, crush, hold, retract and cool down before arming again. Anything with
+  a body in the run when the gap closes is a victim: enemies die (no loot, XP only if a member saw it), bosses take 35%
+  and stagger, quest NPCs go down, party members and fighting allies are **Mangled** (see below). A barrel left in the
+  run jams the slabs at a metre; the second squeeze crushes it. Crypt floors favour presses.
+- **Spike Beds**: a patch of holed floor. Pressure beds click, pre-raise a hand's breadth, then fire; periodic beds run
+  on a metronome from the floor tick (4.5 s period, out of step with their neighbours) and glow red the second before.
+  Feet on the patch at full height are impaled; a body in the air is not, so a jump clears them.
+
+A **Mangled** member never auto-revives. Another living body stands within 2 m once the hazard is armed again and holds
+E on them for 3 s (moving a metre, taking damage, or the hazard moving again interrupts); companions on Defensive or
+Aggressive come and pull when no enemy is within 12 m. The villain gloats (`TauntTrigger.Crushed`). In co-op a crushed
+player spectates the nearest teammate; after 30 s unrescued the server binds the body ahead on the critical path, in a
+room the party has already seen, for a living player to free. Pathing treats a hazard's cells as danger: companions
+detour hard, smart enemies lightly, hordes and bandits not at all.
+
+Saves are v9: each floor keeps every hazard's phase, time into it, kills and jam; an older save gets hazards only on
+floors it has not visited (`AdventureDto.HazardsFromFloor`). Flags: `--hazard=press|spikes` forces one hazard by the
+door on every floor (`--hazard=press@2` on floor 2 only); `--test-hazard=press|spikes` runs the headless checks below.
 
 ## Ambushes and the boss's reinforcements
 
