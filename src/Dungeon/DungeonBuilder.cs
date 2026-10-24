@@ -189,6 +189,10 @@ public partial class DungeonBuilder : Node3D
         return false;
     }
 
+    /// <summary>Physics ticks since this floor was built; the metronome for periodic hazards (the server's clock in co-op, replicated by phase messages).</summary>
+    public int FloorTick { get; private set; }
+    public override void _PhysicsProcess(double delta) { if (!Net.NetSession.IsClient) FloorTick++; }
+
     private readonly List<Node3D> _hazards = new();
     /// <summary>The lethal hazard nodes on this floor (Press, SpikeBed), by placement index.</summary>
     public IReadOnlyList<Node3D> Hazards => _hazards;
@@ -199,6 +203,7 @@ public partial class DungeonBuilder : Node3D
         {
             if (!IsInstanceValid(h)) continue;
             if (h is Props.Press p && p.Index == index) return p.Armed;
+            if (h is Props.SpikeBed b && b.Index == index) return b.Armed;
         }
         return true;
     }
@@ -273,6 +278,7 @@ public partial class DungeonBuilder : Node3D
         _propCells.Clear();
         _danger.Clear();
         _hazards.Clear();
+        FloorTick = 0;
         _grid = null;
         if (_floorRoot == null) return;
         _floorRoot.QueueFree();
@@ -1086,11 +1092,20 @@ public partial class DungeonBuilder : Node3D
         var stone = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
         foreach (var h in layout.Hazards)
         {
-            if (h.Kind != HazardKind.Press) continue; // spike beds arrive with their own node
-            var press = new Props.Press { Name = $"Press{h.Index}" };
-            press.Configure(h, floor, stone, this);
-            root.AddChild(press);
-            _hazards.Add(press);
+            if (h.Kind == HazardKind.Press)
+            {
+                var press = new Props.Press { Name = $"Press{h.Index}" };
+                press.Configure(h, floor, stone, this);
+                root.AddChild(press);
+                _hazards.Add(press);
+            }
+            else
+            {
+                var bed = new Props.SpikeBed { Name = $"SpikeBed{h.Index}" };
+                bed.Configure(h, floor, stone, this);
+                root.AddChild(bed);
+                _hazards.Add(bed);
+            }
         }
         foreach (var n in contents.Npcs)
         {

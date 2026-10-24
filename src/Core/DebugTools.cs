@@ -1108,6 +1108,119 @@ public partial class DebugTools : Node
                     Fail($"jam run never closed (phase {press?.Phase})"); break;
             }
         }
+        else if (_testHazard == "spikes")
+        {
+            var bed = root.GetChildren().OfType<Dungeon.Props.SpikeBed>().FirstOrDefault();
+            switch (_hazardStep)
+            {
+                case 0 when _hazardClock >= 1.0f:
+                    _hazardStep++;
+                    if (bed == null) { Fail($"no SpikeBed on the floor (hazards in layout: {layout.Hazards.Count})"); return; }
+                    EventBus.Instance.MemberKilledByHazard += (_, _) => _hazardMemberKilled = true;
+                    EventBus.Instance.EnemyKilledByHazard += (_, _) => _hazardEnemyKilled = true;
+                    foreach (var a in main.Party.Adventurers) a.Stance = Characters.Stance.Hold;
+                    foreach (var m in main.Party.Members) m.Effects.Clear();
+                    _hazardLead = main.Party.Anchor.Index;
+                    GD.Print($"[hazard] bed {bed.Index} variant={bed.Variant} cells=[{string.Join(",", bed.Cells)}] phase={bed.Phase}");
+                    {
+                        // companions wait three cells away; the lead steps onto the bed
+                        var away = bed.Cells[0] + new Dungeon.Generation.GridPos(0, -3);
+                        if (!layout.IsWalkable(away)) away = layout.Rooms.First(r => r.Contains(bed.Cells[0])).Center;
+                        main.Party.Teleport(b.Surface(away) + Vector3.Up * 0.3f, b.Surface(bed.Cells[0]));
+                        main.Party.Adventurers[_hazardLead].GlobalPosition = b.Surface(bed.Cells[0]) + Vector3.Up * 0.3f;
+                    }
+                    _hazardClock = 0f;
+                    break;
+                case 1 when bed != null && bed.Phase == Dungeon.SpikePhase.Click:
+                    _hazardStep++; _hazardClock = 0f;
+                    GD.Print("[hazard] click");
+                    break;
+                case 1 when _hazardClock >= 3f:
+                    Fail($"the bed did not fire (phase {bed?.Phase})"); break;
+                case 2 when bed != null && bed.Phase is Dungeon.SpikePhase.Up or Dungeon.SpikePhase.Retract:
+                {
+                    _hazardStep++; _hazardClock = 0f;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    GD.Print($"[hazard] up after {_hazardClock:0.00}: lead downed={lead.Downed} mangled={lead.State.Mangled} killedEvent={_hazardMemberKilled} body at {DungeonBuilder.WorldToCell(lead.GlobalPosition)} bed [{string.Join(",", bed.Cells)}]");
+                    if (!lead.Downed || !lead.State.Mangled || !_hazardMemberKilled) { Fail("the lead was not impaled"); return; }
+                    if (bed.Cells.Contains(DungeonBuilder.WorldToCell(lead.GlobalPosition))) { Fail("the body was left on the bed"); return; }
+                    break;
+                }
+                case 2 when _hazardClock >= 3f:
+                    Fail($"never rose (phase {bed?.Phase})"); break;
+                case 3 when bed != null && bed.Phase == Dungeon.SpikePhase.Down && bed.Armed:
+                {
+                    _hazardStep++; _hazardClock = 0f;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    var rescuer = main.Party.Active.First(a => !a.Downed && a.Index != _hazardLead);
+                    rescuer.GlobalPosition = lead.GlobalPosition + new Vector3(1.2f, 0, 0);
+                    var started = main.Party.TryRescue(lead, rescuer, () => b.HazardArmed(bed.Index));
+                    GD.Print($"[hazard] re-armed; rescue started={started}");
+                    if (!started) { Fail("rescue did not start"); return; }
+                    break;
+                }
+                case 3 when _hazardClock >= 10f:
+                    Fail($"bed never re-armed (phase {bed?.Phase})"); break;
+                case 4 when _hazardClock >= Party.MangledRules.RescueSeconds + 0.5f:
+                {
+                    _hazardStep++; _hazardClock = 0f;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    if (lead.Downed || lead.State.Mangled) { Fail("rescue did not stand the member up"); return; }
+                    // an enemy walks onto the bed and dies
+                    _hazardEnemy = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], b.Surface(bed!.Cells[0]) + Vector3.Up * 0.3f, b.CurrentFloor);
+                    bed.Trigger();
+                    GD.Print($"[hazard] rescued; enemy {_hazardEnemy?.Name} placed on the bed and the bed triggered");
+                    break;
+                }
+                case 5 when bed != null && bed.Phase is Dungeon.SpikePhase.Retract or Dungeon.SpikePhase.Rearm:
+                {
+                    _hazardStep++; _hazardClock = 0f;
+                    var dead = _hazardEnemy != null && !_hazardEnemy.IsAlive;
+                    GD.Print($"[hazard] enemy dead={dead} event={_hazardEnemyKilled}");
+                    if (!dead || !_hazardEnemyKilled) { Fail("the enemy on the bed was not killed"); return; }
+                    // periodic: the phase follows the server tick
+                    bed.ForceVariant(Dungeon.HazardVariant.Periodic);
+                    break;
+                }
+                case 5 when _hazardClock >= 4f:
+                    Fail($"second cycle never retracted (phase {bed?.Phase})"); break;
+                case 6 when _hazardClock >= 1f:
+                {
+                    _hazardStep++; _hazardClock = 0f;
+                    var expected = Dungeon.HazardRules.PeriodicPhaseAt(b.FloorTick, bed!.Index, out _);
+                    GD.Print($"[hazard] periodic: phase={bed.Phase} expected={expected} tick={b.FloorTick}");
+                    if (bed.Phase != expected) { Fail("periodic phase does not follow the server tick"); return; }
+                    // the dodge: the lead is in the air over the bed when it fires
+                    _hazardMemberKilled = false;
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    lead.GlobalPosition = b.Surface(bed.Cells[0]) + Vector3.Up * 0.3f;
+                    break;
+                }
+                case 7 when bed != null && bed.Phase == Dungeon.SpikePhase.Click:
+                {
+                    // leave the ground just before the spikes come up and stay up through the rise
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    lead.GlobalPosition = b.Surface(bed.Cells[0]) + Vector3.Up * 1.4f;
+                    lead.Velocity = new Vector3(0, 5f, 0);
+                    break;
+                }
+                case 7 when bed != null && bed.Phase == Dungeon.SpikePhase.Up:
+                    _hazardStep++; _hazardClock = 0f;
+                    break;
+                case 7 when _hazardClock >= 8f:
+                    Fail($"periodic cycle never fired (phase {bed?.Phase})"); break;
+                case 8 when _hazardClock >= 1.2f:
+                {
+                    var lead = main.Party.Adventurers[_hazardLead];
+                    GD.Print($"[hazard] dodge: killed={_hazardMemberKilled} downed={lead.Downed}");
+                    if (_hazardMemberKilled) { Fail("a jumping member was impaled"); return; }
+                    main.SaveGame("hazardtest");
+                    GD.Print("[hazard] RESULT ok");
+                    _done = true; GetTree().Quit();
+                    break;
+                }
+            }
+        }
     }
 
     /// <summary>--test-portal: floor 1; hurry the pressure clock, expect a portal in an explored room away from the party and hunting creatures, then a dead tier boss to silence it.</summary>
