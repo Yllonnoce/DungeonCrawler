@@ -30,6 +30,19 @@ public class VaultRulesTests
     }
 
     [Fact]
+    public void RampVault_ClimbsWithTheRamp_AndMeetsBothLevels()
+    {
+        // a ramp's ceiling rises 2 m over each half, from the lower level's spring line to the upper level's
+        Assert.Equal(0f, VaultRules.RampRise(-1f, half: 0, rising: true), 3);
+        Assert.Equal(2f, VaultRules.RampRise(1f, half: 0, rising: true), 3);
+        Assert.Equal(2f, VaultRules.RampRise(-1f, half: 1, rising: true), 3);
+        Assert.Equal(4f, VaultRules.RampRise(1f, half: 1, rising: true), 3);
+        // a ramp climbing the other way mirrors it
+        Assert.Equal(0f, VaultRules.RampRise(1f, half: 0, rising: false), 3);
+        Assert.Equal(4f, VaultRules.RampRise(-1f, half: 1, rising: false), 3);
+    }
+
+    [Fact]
     public void Vaults_fit_inside_the_ceiling_layer()
     {
         foreach (var kind in Enum.GetValues<ArchKind>()) Assert.True(VaultRules.Rise(kind, 2f) < 4f, kind.ToString());

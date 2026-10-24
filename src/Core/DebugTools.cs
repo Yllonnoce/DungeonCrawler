@@ -20,6 +20,7 @@ namespace DungeonCrawler.Core;
 /// User args (after "--" on the command line):
 ///   --screenshot=PATH   save a PNG then quit      --after=SECONDS   delay before the screenshot / quit (default 2)
 ///   --face-enemy        teleport next to the nearest enemy at start
+///   --face-ramp[=bottom|top|ledge]  stand a cell short of a corridor ramp looking up it (bottom), at its top looking down, or on a ledge's ramp looking into the room
 ///   --auto-attack       every member swings whenever ready (headless combat smoke test)
 ///   --trace-ai          print enemy state transitions
 ///   --quit-after=SECONDS quit without a screenshot
@@ -152,7 +153,8 @@ public partial class DebugTools : Node
     private bool _counted;
     private int _startFloor;
     private bool _faceBoss;
-    private bool _faceLedge;
+    private bool _faceLedge, _facedRamp;
+    private string? _faceRamp;
     private bool _facePit;
     private string? _faceNode;
     private int _faceBack = 1;
@@ -232,6 +234,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-party") { _testParty = true; _faceEnemy = true; _quitAfter = 16; }
             else if (arg == "--face-boss") { _faceBoss = true; _faceEnemy = true; }
             else if (arg == "--face-ledge") _faceLedge = true;
+            else if (arg.StartsWith("--face-ramp")) { _faceRamp = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..] : "bottom"; _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg == "--face-pit") _facePit = true;
             else if (arg.StartsWith("--face-node=")) { var spec = arg["--face-node=".Length..].Split(':'); _faceNode = spec[0]; if (spec.Length > 1) _faceBack = int.Parse(spec[1]); }
             else if (arg.StartsWith("--face-cell=")) { var spec = arg["--face-cell=".Length..].Split(':'); var xy = spec[0].Split(','); _faceCell = (int.Parse(xy[0]), int.Parse(xy[1])); if (spec.Length > 1) _faceBack = int.Parse(spec[1]); _quitAfter = Math.Max(_quitAfter, 3); }
@@ -469,6 +472,35 @@ public partial class DebugTools : Node
             var edge = cellar.Pit + new GridPos(0, 2);
             Main.Instance.Party.Teleport(b.Surface(edge) + Vector3.Up * 0.3f, b.Surface(cellar.Pit, under: true));
             Main.Instance.Party.Lead.Look(new Vector2(0, 260)); // tilt the eye down into the pit
+        }
+        if (_faceRamp != null && !_facedRamp && _elapsed >= 0.6 && Main.Instance?.Builder.Layout is { Ramps.Count: > 0 } rampLay)
+        {
+            // --face-ramp[=bottom|top]: stand a cell short of a corridor ramp (not a ledge's) and look along it
+            _facedRamp = true;
+            var b = Main.Instance.Builder;
+            var lows = rampLay.Ramps.Where(kv => kv.Value.LowHeight % 4 == 0 && rampLay.Ledges.All(l => l.RampBottom != kv.Key)).OrderBy(kv => kv.Key.Y).ThenBy(kv => kv.Key.X).ToList();
+            if (_faceRamp == "ledge" && rampLay.Ledges.Count > 0)
+            {
+                // on a ledge's ramp, high half, looking sideways into the room it climbs out of
+                var ledge = rampLay.Ledges[0];
+                var top = ledge.RampTop;
+                var dir = top - ledge.RampBottom;
+                var side = new Dungeon.Generation.GridPos(dir.Y, -dir.X);
+                if (!rampLay.IsWalkable(top + side)) side = new Dungeon.Generation.GridPos(-dir.Y, dir.X);
+                Main.Instance.Party.Teleport(b.Surface(top) + Vector3.Up * 0.3f, b.Surface(top + side + side) + Vector3.Up * 5f);
+                GD.Print($"[face-ramp] ledge ramp {ledge.RampBottom}->{top}; standing on {top}, looking at {top + side + side}; cells: {b.DebugCell(top)} {b.DebugCell(top + side)} {b.DebugCell(top + side + side)}");
+            }
+            else if (lows.Count > 0)
+            {
+                var (low, info) = (lows[0].Key, lows[0].Value);
+                var high = low + info.Dir;
+                var below = low - info.Dir;
+                var above = high + info.Dir;
+                var stand = _faceRamp == "top" ? above : below;
+                var look = _faceRamp == "top" ? below : above;
+                Main.Instance.Party.Teleport(b.Surface(stand) + Vector3.Up * 0.3f, b.Surface(look) + Vector3.Up * 1.6f);
+                GD.Print($"[face-ramp] ramp {low}->{high} dir {info.Dir}; standing at {stand} ({rampLay[stand]} L{rampLay.LevelOf(stand)}) looking at {look} ({rampLay[look]} L{rampLay.LevelOf(look)}); cells: {b.DebugCell(below)} {b.DebugCell(low)} {b.DebugCell(high)} {b.DebugCell(above)}");
+            }
         }
         if (_faceLedge && !_facedLedge && _elapsed >= 0.6 && Main.Instance?.Builder.Layout is { Ledges.Count: > 0 } lay)
         {

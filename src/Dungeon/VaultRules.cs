@@ -22,6 +22,18 @@ public static class VaultRules
         _ => 0f,
     };
 
+    /// <summary>
+    /// How far a ramp's ceiling has climbed at position t (-1..1) along the ramp: each half of a climb rises 2 m, so the
+    /// vault over the lower half runs from the lower level's spring line and the upper half's ends on the upper level's.
+    /// A ramp that climbs toward -t mirrors it.
+    /// </summary>
+    public static float RampRise(float t, int half, bool rising)
+    {
+        t = Math.Clamp(t, -1f, 1f);
+        var along = rising ? t : -t;
+        return half * 2f + (along + 1f);
+    }
+
     /// <summary>Height above the spring line at cross position t (-1..1); 0 at the walls, <see cref="Rise"/> at the centre.</summary>
     public static float Height(ArchKind kind, float t, float halfWidth)
     {

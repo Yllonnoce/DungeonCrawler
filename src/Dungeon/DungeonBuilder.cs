@@ -28,6 +28,7 @@ public partial class DungeonBuilder : Node3D
     private const int ItemBuckledBase = 16; // 16..19: floor slabs heaved into ridges and domes
     private const int ItemVaultBase = 20; // 20..22: vaulted ceiling pieces, see VaultPiece (barrel along X, barrel along Z, groin)
     private const int ItemVaultBrokenBase = 23; // 23..25: the same pieces with the crown fallen in (a ruin's collapse)
+    private const int ItemRampVaultBase = 26; // 26..33: the ceiling over a ramp, a vault that climbs with it, 4 directions x {low half, high half}
     private const int BuckledVariants = 4;
     /// <summary>Floor cells whose slab is tilted or heaved this floor; picked from the seed before the grid is built.</summary>
     private readonly Dictionary<GridPos, int> _buckled = new();
@@ -485,7 +486,9 @@ public partial class DungeonBuilder : Node3D
                         var ramp = layout.Ramps[p];
                         var dirIndex = Array.IndexOf(RampDirs, ramp.Dir);
                         grid.SetCellItem(new Vector3I(x, level, y), ItemRampBase + dirIndex * 2 + (ramp.LowHeight % 4 == 2 ? 1 : 0));
-                        grid.SetCellItem(new Vector3I(x, level + 2, y), CeilingFor(layout, p, level));
+                        // the ceiling climbs with the ramp, 4 m over it, from the lower level's vault to the upper's: a flat
+                        // ceiling one layer up would leave the void above the lower corridor's ceiling open to view from the slope
+                        grid.SetCellItem(new Vector3I(x, level + 1, y), ItemRampVaultBase + dirIndex * 2 + (ramp.LowHeight % 4 == 2 ? 1 : 0));
                         break;
                     case Cell.Wall when layout.IsChamfer(p, out var open):
                         // a corner cut at 45°: the solid half faces away from the floors, the open half gets its own floor
@@ -636,6 +639,7 @@ public partial class DungeonBuilder : Node3D
         AddBoxItem(lib, ItemWall, "Wall", new Vector3(CellSize, CellSize, CellSize), Vector3.Zero, wallMat);
         AddBoxItem(lib, ItemCeiling, "Ceiling", new Vector3(CellSize, 0.2f, CellSize), slabOffset, ceilMat);
         AddVaultItems(lib, VaultRules.Parse(DebugTools.Instance?.ForcedVault ?? tier?.Vault, tier?.TierIndex ?? 0), ceilMat);
+        AddRampVaultItems(lib, VaultRules.Parse(DebugTools.Instance?.ForcedVault ?? tier?.Vault, tier?.TierIndex ?? 0), ceilMat);
 
         // ramps: a slab rising 2 m over one cell, in four directions, for the lower and upper half of a climb
         var rampMat = Material(tier?.FloorTexture ?? "", (tier?.FloorColor ?? new Color(0.32f, 0.30f, 0.28f)).Lerp(new Color(0.9f, 0.7f, 0.4f), 0.5f), tile); // warmer tint marks a ramp
@@ -820,6 +824,48 @@ public partial class DungeonBuilder : Node3D
             lib.SetItemMeshTransform(id, Transform3D.Identity);
             lib.SetItemShapes(id, new Godot.Collections.Array { mesh.CreateTrimeshShape(), Transform3D.Identity });
         }
+    }
+
+    /// <summary>
+    /// The ceiling over a ramp cell: the theme's barrel vault (a flat slab for a flat theme) run along the ramp and
+    /// sheared upward 2 m across the cell, so the lower half springs from the lower level's ceiling height and the
+    /// upper half ends at the upper level's. Both halves sit in the layer above the ramp.
+    /// </summary>
+    private static void AddRampVaultItems(MeshLibrary lib, ArchKind kind, Material material)
+    {
+        const int n = 12;
+        var half = CellSize / 2f;
+        var spring = -CellSize / 2f;
+        for (var d = 0; d < RampDirs.Length; d++)
+            for (var part = 0; part < 2; part++)
+            {
+                var dir = RampDirs[d];
+                var alongX = dir.X != 0;
+                var rising = alongX ? dir.X > 0 : dir.Y > 0;
+                float Height(float u, float w) => (kind == ArchKind.Flat ? 0.1f : VaultRules.Height(kind, alongX ? w : u, half)) + VaultRules.RampRise(alongX ? u : w, part, rising);
+                var st = new SurfaceTool();
+                st.Begin(Mesh.PrimitiveType.Triangles);
+                for (var i = 0; i < n; i++)
+                    for (var j = 0; j < n; j++)
+                    {
+                        float u0 = -1f + 2f * i / n, u1 = -1f + 2f * (i + 1) / n, w0 = -1f + 2f * j / n, w1 = -1f + 2f * (j + 1) / n;
+                        var a = new Vector3(u0 * half, spring + Height(u0, w0), w0 * half);
+                        var b = new Vector3(u1 * half, spring + Height(u1, w0), w0 * half);
+                        var c = new Vector3(u1 * half, spring + Height(u1, w1), w1 * half);
+                        var dd = new Vector3(u0 * half, spring + Height(u0, w1), w1 * half);
+                        st.AddVertex(a); st.AddVertex(c); st.AddVertex(b); // clockwise from below: front faces
+                        st.AddVertex(a); st.AddVertex(dd); st.AddVertex(c);
+                    }
+                st.GenerateNormals();
+                var mesh = st.Commit();
+                mesh.SurfaceSetMaterial(0, material);
+                var id = ItemRampVaultBase + d * 2 + part;
+                lib.CreateItem(id);
+                lib.SetItemName(id, $"RampVault{dir}{part}");
+                lib.SetItemMesh(id, mesh);
+                lib.SetItemMeshTransform(id, Transform3D.Identity);
+                lib.SetItemShapes(id, new Godot.Collections.Array { mesh.CreateTrimeshShape(), Transform3D.Identity });
+            }
     }
 
     private static void AddBoxItem(MeshLibrary lib, int id, string name, Vector3 size, Vector3 offset, Material material)
