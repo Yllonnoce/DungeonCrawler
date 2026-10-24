@@ -1,84 +1,101 @@
 {
   "SchemaVersion": 1,
   "Floor": 13,
-  "Source": "builtin",
-  "LayoutHash": 8197366883069942980,
-  "Title": "The Sealed Ledger",
+  "Source": "claude",
+  "LayoutHash": 13442667228186605269,
+  "Title": "The Mould Room",
   "IntroLine": {
-    "Text": "Cold plate and white lamps, a maze of strongroom passages under the mint. Hollis Penn is waiting at the one door that matters, and for the first time since the vestry he is not smiling.",
-    "VoiceId": "42c86026a23fb38a",
+    "Text": "Cold steel plate, white lamps that never gutter, and shelf upon shelf of casting sand pressed with faces. Someone down here knows what Dunmarrow will look like before Dunmarrow does.",
+    "VoiceId": "fee07b5ed14aa330",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Passage",
-      "Name": "Plate Junction"
+      "Role": "Jail",
+      "Name": "The Keyward\u0027s Cage"
     },
     {
       "Index": 1,
-      "Role": "Treasury",
-      "Name": "The Ledger Vault"
+      "Role": "Lair",
+      "Name": "Breach Behind the Shelves"
     },
     {
       "Index": 2,
-      "Role": "Hall",
-      "Name": "The Company Office"
+      "Role": "Exit",
+      "Name": "The Pouring Stair"
     },
     {
       "Index": 3,
-      "Role": "Lair",
-      "Name": "Die Store"
+      "Role": "Treasury",
+      "Name": "The Mould Vault"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Strongroom Head"
+      "Role": "Passage",
+      "Name": "The Sand Cupboard"
     },
     {
       "Index": 5,
-      "Role": "Exit",
-      "Name": "The Coining Stair"
+      "Role": "Start",
+      "Name": "The Cold Gallery"
     },
     {
       "Index": 6,
-      "Role": "Passage",
-      "Name": "Lamp Turn"
-    },
-    {
-      "Index": 7,
-      "Role": "Lair",
-      "Name": "The Flooded Assay"
+      "Role": "Hall",
+      "Name": "The Shelves of Faces"
     }
   ],
   "Collectives": [
     {
-      "Id": "die_wardens",
-      "Name": "the Die Wardens",
-      "FactionId": "faction2",
+      "Id": "col_mould_vault",
+      "Name": "Keepers of the Patterns",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
+          "EnemyId": "enemy.forge_priest",
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Guard",
+        "Kind": "Defend",
         "Room": 3,
-        "Objective": null,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 0
+        "RallyRoom": 3
       }
     },
     {
-      "Id": "assay_priests",
-      "Name": "the Assay Priests",
-      "FactionId": "faction2",
+      "Id": "col_stair_watch",
+      "Name": "The Stair Watch",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 2,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "col_mould_vault",
+        "RallyRoom": 3
+      }
+    },
+    {
+      "Id": "col_shelf_tenders",
+      "Name": "Tenders of the Shelves",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
@@ -86,22 +103,22 @@
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 1
+          "Count": 2
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 7,
+        "Room": 6,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 6
       }
     },
     {
-      "Id": "lamp_hounds",
-      "Name": "the Lamp Hounds",
-      "FactionId": "faction2",
+      "Id": "col_sand_round",
+      "Name": "The Sand Round",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
@@ -110,189 +127,191 @@
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 0,
+        "Room": 4,
         "Objective": null,
         "Route": [
-          0,
+          4,
+          1,
           6,
           2
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "stair_priest",
-      "Name": "the Coining Priest",
-      "FactionId": "faction2",
-      "Members": [
-        {
-          "EnemyId": "enemy.forge_priest",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 5,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 4
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_dies",
-      "Name": "The Die Store",
-      "Room": 3,
+      "Id": "horde_breach",
+      "Name": "The Spoiled Casting",
+      "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 18
+          "Count": 24
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 21,
+      "Total": 34,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The die store\u0027s shelves were racks, and the racks were full of something that wanted out.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_assay",
-      "Name": "The Assay\u0027s Drowned",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 20,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The assay pond boils, and what boils up is angry about it.",
+        "Text": "The wall behind the shelves is all mouths, and every one of them is spitting out something that was poured wrong and crawled off anyway.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
-  "Traps": [
+  "Chests": [
     {
       "Room": 6,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
+  "Traps": [
+    {
+      "Room": 4,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 2,
       "Kind": "Fire"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc_hollis2",
-      "Name": "Hollis Penn",
-      "Room": 2,
+      "Id": "npc_ulf",
+      "Name": "Old Ulf",
+      "Room": 6,
       "VoiceId": "Orus",
       "Script": {
-        "Start": "greet",
+        "Start": "u1",
         "Nodes": [
           {
-            "Id": "greet",
+            "Id": "u1",
             "Line": {
-              "Text": "Well. Here you are, and here\u0027s the door, and behind it the ledger the Company sent me down to keep shut. Yes. That was the job. The Company thanks you for the road. Go home now. Please.",
-              "VoiceId": "ee28a538b50dd68d",
-              "Delivery": "calm"
+              "Text": "Mind the shelves, mind the shelves. Forty years I\u0027ve kept this sand dry and you come in dripping. Come on, then. Have a look at the good ones.",
+              "VoiceId": "260adb432df7c2dc",
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "You were sent to keep it shut?",
-                "Next": "why",
+                "Text": "What are you casting down here, old man?",
+                "Next": "u2",
                 "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "Give us the ledger, Hollis.",
-                "Next": null,
-                "Effect": "Betray",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Fine. We go home.",
+                "Text": "We\u0027re not here for pottery.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "u3",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           },
           {
-            "Id": "why",
+            "Id": "u2",
             "Line": {
-              "Text": "Ashmere owed the Company more than a town\u0027s worth. Somebody rang a bell and the debt drowned. The book says who. You don\u0027t want the book. Nobody who pays your wages wants you to have the book.",
-              "VoiceId": "ea1f0551801aaeee",
-              "Delivery": "weary"
+              "Text": "Tools, lad. Ladles, hinges, hasps. Only the patterns have got faces this season, and I can\u0027t read half of them with my eyes gone. Fetch me three off the shelves and I\u0027ll name them for you.",
+              "VoiceId": "52fed9c6bf1e1ca7",
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Give us the ledger, Hollis.",
-                "Next": null,
-                "Effect": "Betray",
+                "Text": "We\u0027ll bring your moulds.",
+                "Next": "u3",
+                "Effect": "AcceptQuest",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "We\u0027ll think about it.",
+                "Text": "Keep your sand. We\u0027ve stairs to find.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "u3",
+            "Line": {
+              "Text": "Carry them flat. Tip one and you\u0027ve lost a chin, and a chin is the hardest thing in the world to put back.",
+              "VoiceId": "2e7387bd67cc834e",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Here. Three faces, flat as you asked.",
+                "Next": null,
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Later. They\u0027re heavy.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest_hollis",
-      "CastId": "cast_hollis",
+      "QuestId": "q_moulds",
+      "CastId": "cast_ulf",
       "Persona": {
-        "VoiceStyle": "a brisk, chummy company man, all smiles and quick sums, never quite looking at you",
+        "VoiceStyle": "a cheerful old founder, soot in his beard, proud of forty years\u0027 work and deaf to what it means",
         "DefaultDelivery": "cheerful",
-        "Voice": "Puck",
+        "Voice": null,
         "IsEmpty": false
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": {
-        "EnemyId": "enemy.forge_golem",
-        "Count": 2
-      }
+      "Betrayal": null
     }
   ],
   "Quests": [
     {
-      "Id": "quest_hollis",
-      "Template": "Betrayal",
-      "Title": "The Company\u0027s Man",
-      "Objective": "Hollis Penn has turned. Put down the golems he has hidden behind, and take the door.",
+      "Id": "q_moulds",
+      "Template": "Investigate",
+      "Title": "The Good Ones",
+      "Objective": "Bring Old Ulf three casting moulds from the shelves of the Mould Room",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -300,58 +319,50 @@
         "EscortNpc": null,
         "Waves": null,
         "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
+        "ClueRooms": [
+          6,
+          4,
+          2
+        ],
+        "ClueName": "a casting mould with a face in it"
       },
-      "GiverNpc": "npc_hollis2",
+      "GiverNpc": "npc_ulf",
       "Reward": {
-        "Xp": 420,
+        "Xp": 300,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "The Company thanks you for the road. Go home now. Please.",
-          "VoiceId": "78069cbd87c1ff1c",
-          "Delivery": "calm"
+          "Text": "Three patterns off the shelves, that\u0027s all. The hall, the sand cupboard, and the one they keep by the stair. Don\u0027t drop them; the sand remembers being dropped.",
+          "VoiceId": "6f57eb875a88a136",
+          "Delivery": null
         },
         "Accept": {
-          "Text": "Then it\u0027s like that.",
+          "Text": "Good. Flat, mind, and don\u0027t breathe on them. A breath puts a dimple in a cheek and then he\u0027s got a dimple for life.",
           "VoiceId": null,
-          "Delivery": "angry"
+          "Delivery": null
         },
         "Decline": {
-          "Text": "Thank you. Truly. Go up.",
+          "Text": "Suit yourselves. They\u0027ll get poured whether you look at them or not. Everything here does.",
           "VoiceId": null,
-          "Delivery": "warm"
+          "Delivery": null
         },
         "Complete": {
-          "Text": "The golems fall apart like cheap coin. Hollis Penn is nowhere, and the door is yours.",
-          "VoiceId": "3f75a5d626eae1f9",
-          "Delivery": "calm"
+          "Text": "Ah, now. That\u0027s a Sorrel nose. That\u0027s a Dunmarrow chin, Fenn or Fenwick. And that one\u0027s a Crane; Hesketh\u0027s grandson, by the brow. Not born yet, mind. The sand has him first. Proud work, that.",
+          "VoiceId": "ff36d9df63b1f49d",
+          "Delivery": null
         },
         "Fail": {
-          "Text": "The door stays shut, and Hollis with it.",
+          "Text": "Left them lying, did you. They\u0027ll cool crooked and some poor soul will walk about wrong for sixty years and never know why.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
         }
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "Narration": [
-    {
-      "Trigger": "QuestDone",
-      "Room": null,
-      "Line": {
-        "Text": "The clerk\u0027s voice, from everywhere: the Company\u0027s man is spent, and the Company still owes. He has never sounded happier.",
-        "VoiceId": "5127af44345ba97f",
-        "Delivery": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Narration": [],
   "Taunts": [],
-  "EnemyTotal": 7
+  "EnemyTotal": 11
 }

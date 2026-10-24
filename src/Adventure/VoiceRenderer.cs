@@ -249,6 +249,7 @@ public partial class VoiceRenderer : Node
         var model = ResolveModel(job.Model == "" ? Voices.Model : job.Model);
         if (model == null) { Stop(Settings.VoiceViaRunware ? "the Runware balance is used up. Top it up and press \"Render voice\" again; nothing is lost." : "every configured Gemini model has used up its quota for today. Add a model in Settings or try again tomorrow; nothing is lost."); return; }
         var synth = SynthFor(model);
+        if (DebugTools.Instance?.TraceVoice == true) GD.Print($"[Voice] job {job.Id} model={model} voice={job.Voice} style=\"{job.Style}\" text=\"{(job.Text.Length > 50 ? job.Text[..50] : job.Text)}\"");
         _active++;
         _ = Task.Run(async () =>
         {

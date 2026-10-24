@@ -1,0 +1,459 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 1,
+  "Source": "builtin",
+  "LayoutHash": 757036586804061643,
+  "Title": "The Vestry Steps",
+  "IntroLine": {
+    "Text": "The steps end in red brick and old incense. Somebody has swept them. Somebody has been expecting you.",
+    "VoiceId": "09fbe6583c4169fd",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Ruin",
+      "Name": "Fallen Colonnade"
+    },
+    {
+      "Index": 1,
+      "Role": "Passage",
+      "Name": "The Runnel"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "Sacristy Passage"
+    },
+    {
+      "Index": 3,
+      "Role": "Treasury",
+      "Name": "The Tithe Box"
+    },
+    {
+      "Index": 4,
+      "Role": "Start",
+      "Name": "The Vestry Steps"
+    },
+    {
+      "Index": 5,
+      "Role": "Gate",
+      "Name": "Verger\u0027s Gate"
+    },
+    {
+      "Index": 6,
+      "Role": "Hall",
+      "Name": "Lamplit Hall"
+    },
+    {
+      "Index": 7,
+      "Role": "Exit",
+      "Name": "The Way Down"
+    },
+    {
+      "Index": 8,
+      "Role": "Kennel",
+      "Name": "Pit of the Unshriven"
+    },
+    {
+      "Index": 9,
+      "Role": "Barracks",
+      "Name": "Vestry Watch Room"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "vestry_watch",
+      "Name": "the Vestry Watch",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 6
+      }
+    },
+    {
+      "Id": "runnel_walker",
+      "Name": "the Runnel Walker",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 2,
+        "Objective": null,
+        "Route": [
+          2,
+          1
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "gate_keeper",
+      "Name": "the Gate\u0027s Keeper",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "5"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_colonnade",
+      "Name": "The Unshriven",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 4,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The fallen columns shiver, and what was buried under them stands up, hungry.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_runnel",
+      "Name": "The Runnel Spill",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The stream chokes, then gives up its dead.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_sacristy",
+      "Name": "The Sacristy Crawl",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Something scrabbles behind the sacristy wall, then the wall gives.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_gate",
+      "Name": "The Gate\u0027s Tithe",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 4
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The braziers gutter. The Verger\u0027s gate lets its own dead through.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_hall",
+      "Name": "The Lamplit Dead",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The lamps go out one by one, and the dark fills with feet.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_watch",
+      "Name": "The Off-Duty Watch",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 4,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The watch room empties itself at you, all at once.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 2,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_hollis",
+      "Name": "Hollis Penn",
+      "Room": 6,
+      "VoiceId": "Orus",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Brand! Sable! The whole lantern brigade. Hollis Penn, Company quartermaster, came down a day ahead to smooth the road. Small snag: the vestry watch won\u0027t stay dead. Clear them and the road\u0027s yours.",
+              "VoiceId": "9c8389b3fd098f38",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll clear the watch.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "You came down a day ahead. Alone?",
+                "Next": "alone",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "The watch is dead.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Not our job, Hollis.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "alone",
+            "Line": {
+              "Text": "Alone, yes, more or less. The Company likes a man on the ground before the ground gets crowded. Don\u0027t fret about me. Fret about the two in the colonnade with no faces.",
+              "VoiceId": "bdd768958995ad2f",
+              "Delivery": "sly"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll clear the watch.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good lads. Good lasses. There\u0027s a box of tithe silver in the vault that\u0027ll want a key, and I\u0027ve a note of where the key is. After. Business first.",
+              "VoiceId": "e7a641cea9b1547e",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "That\u0027s the road open, then. Here, from the Company\u0027s purse, and my compliments. Keep going down. Whatever you find, I\u0027d take it straight to me. I\u0027ll be about.",
+              "VoiceId": "2b9f5ba62532d093",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_watch",
+      "CastId": "cast_hollis",
+      "Persona": {
+        "VoiceStyle": "a brisk, chummy company man, all smiles and quick sums, never quite looking at you",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Puck",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_watch",
+      "Template": "KillTarget",
+      "Title": "Clear the Vestry Watch",
+      "Objective": "Kill the ghouls of the Vestry Watch in the fallen colonnade.",
+      "Params": {
+        "TargetCollective": "vestry_watch",
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_hollis",
+      "Reward": {
+        "Xp": 40,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "The vestry watch won\u0027t stay dead. Clear them and the road\u0027s yours.",
+          "VoiceId": "60794026e659f750",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Good. Business first, silver after.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Suit yourselves. The Company\u0027s patient. I\u0027m less so.",
+          "VoiceId": null,
+          "Delivery": "sly"
+        },
+        "Complete": {
+          "Text": "That\u0027s the road open. Keep going down, and bring what you find to me.",
+          "VoiceId": "ce49f65a7310db22",
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Well. That\u0027s a shame for the road.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 3,
+      "Line": {
+        "Text": "Tithe silver, still stacked. Nobody down here has needed money in a long time, and somebody has kept it anyway.",
+        "VoiceId": "6d47615b4c747904",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 4
+}

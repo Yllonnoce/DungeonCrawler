@@ -1,71 +1,129 @@
 {
   "SchemaVersion": 1,
   "Floor": 19,
-  "Source": "builtin",
-  "LayoutHash": 10083392372839498501,
-  "Title": "The Sexton\u0027s Door",
+  "Source": "claude",
+  "LayoutHash": 11695870830709217508,
+  "Title": "The Last Station",
   "IntroLine": {
-    "Text": "Veined marble under blue water, the palace the town built for its dead. The Sexton\u0027s door is at the end of it, and the toll for that door is the clerk\u0027s own key.",
-    "VoiceId": "f284491ff91c5b8e",
+    "Text": "Three cold galleries meet at a shrine of white tile, and the Choir has stopped singing to listen. Somewhere beneath, the Verger counts verses he believes no one finishes.",
+    "VoiceId": "238c40759fa37286",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Hall",
-      "Name": "The Drowned Court"
+      "Name": "Gallery of the Dropped Verse"
     },
     {
       "Index": 1,
-      "Role": "Cell",
-      "Name": "The Sealed Sacristy"
+      "Role": "Shrine",
+      "Name": "The Last Station"
     },
     {
       "Index": 2,
-      "Role": "Exit",
-      "Name": "The Sexton\u0027s Door"
+      "Role": "Hall",
+      "Name": "Gallery of Three Mouths"
     },
     {
       "Index": 3,
-      "Role": "Lair",
-      "Name": "Marble Ossuary"
+      "Role": "Cell",
+      "Name": "The Low Vestry"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Palace Landing"
+      "Role": "Exit",
+      "Name": "The Throat Stair"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "The Blue Colonnade"
+      "Role": "Start",
+      "Name": "Porch of Cold Tiles"
     },
     {
       "Index": 6,
-      "Role": "Ruin",
-      "Name": "The Turnkey\u0027s Post"
+      "Role": "Camp",
+      "Name": "Oddfellows\u0027 Last Pitch"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "Hall of Tiles"
-    },
-    {
-      "Index": 8,
-      "Role": "Treasury",
-      "Name": "The Warden\u0027s Chest"
-    },
-    {
-      "Index": 9,
-      "Role": "Treasury",
-      "Name": "The Clerk\u0027s Strongbox"
+      "Role": "Passage",
+      "Name": "The Antiphon Walk"
     }
   ],
   "Collectives": [
     {
-      "Id": "turnkeys",
-      "Name": "the Turnkeys",
-      "FactionId": "faction3",
+      "Id": "co_stairwardens",
+      "Name": "Wardens of the Throat",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 4,
+        "Objective": {
+          "Kind": "Stairs",
+          "Ref": "down"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 4
+      }
+    },
+    {
+      "Id": "co_antiphon",
+      "Name": "The Antiphon",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 0,
+        "Objective": null,
+        "Route": [
+          0,
+          2,
+          7
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": 2
+      }
+    },
+    {
+      "Id": "co_bellringers",
+      "Name": "The Bell-Ringers",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "co_stairwardens",
+        "RallyRoom": 4
+      }
+    },
+    {
+      "Id": "co_cellarsingers",
+      "Name": "Singers in the Cellar",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -73,6 +131,29 @@
         },
         {
           "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 2
+      }
+    },
+    {
+      "Id": "co_oddfellows",
+      "Name": "The Last Oddfellows",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
           "Count": 1
         }
       ],
@@ -82,300 +163,305 @@
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 0
-      }
-    },
-    {
-      "Id": "ossuary_wardens",
-      "Name": "the Ossuary Wardens",
-      "FactionId": "faction3",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_stalker",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 3,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 5
-      }
-    },
-    {
-      "Id": "door_wardens",
-      "Name": "the Door Wardens",
-      "FactionId": "faction3",
-      "Members": [
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 2,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 6
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_ossuary",
-      "Name": "The Marble Dead",
-      "Room": 3,
+      "Id": "hd_mouths",
+      "Name": "The Breath of the Choir",
+      "Room": 2,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 28
+          "Count": 22
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 33,
-      "Trigger": "Chest",
+      "Total": 34,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "The ossuary\u0027s marble drawers slide open on their own, and they are full.",
+        "Text": "The three mouths in the tilework exhale at once, and the dark comes out of them on its hands and knees.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_post",
-      "Name": "The Post\u0027s Shades",
+      "Id": "hd_pitch",
+      "Name": "What the Oddfellows Dug Into",
       "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 27
+          "Count": 16
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
+          "Count": 6
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 32,
-      "Trigger": "Enter",
+      "Total": 24,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The turnkey\u0027s post was never unmanned. It was only quiet.",
+        "Text": "The lid lifts, and the wall behind the camp lets go of everything the Oddfellows had been pretending not to hear.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 3,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 5,
-      "Kind": "Gas"
+      "Room": 2,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 7,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 0,
+      "Kind": "Fire"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc_tarn2",
-      "Name": "Tarn",
-      "Room": 6,
-      "VoiceId": "Leda",
+      "Id": "npc_maud",
+      "Name": "Maud Sorrel",
+      "Room": 2,
+      "VoiceId": "Despina",
       "Script": {
-        "Start": "greet",
+        "Start": "m_open",
         "Nodes": [
           {
-            "Id": "greet",
+            "Id": "m_open",
             "Line": {
-              "Text": "You took me. You did take me. I kept the key dry, like I said. It\u0027s in his strongbox, the far one, he made me put it back but I know the lock. Fetch it and the Sexton\u0027s door is yours.",
-              "VoiceId": "f63ca8290e60b8f2",
-              "Delivery": "warm"
-            },
-            "Choices": [
-              {
-                "Text": "We\u0027ll fetch the key.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "We have the clerk\u0027s key.",
-                "Next": "done",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "We\u0027ll manage without.",
-                "Next": null,
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "Good. He\u0027s shouting already, can you hear him? He knows it\u0027s gone before it\u0027s gone. Forty years I listened to that.",
-              "VoiceId": "f0513f2305d50b9b",
+              "Text": "I have carried this verse since the lychgate and I am tired of the weight of it. Stand in the galleries. The Choir will come for the parts I cannot sing.",
+              "VoiceId": "da78b9476a1c1b55",
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "Sing. We\u0027ll hold the three mouths.",
                 "Next": null,
-                "Effect": "Farewell",
+                "Effect": "AcceptQuest",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "What ends when the verse ends?",
+                "Next": "m_which",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Keep your mouth shut and walk down with us.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "m_done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           },
           {
-            "Id": "done",
+            "Id": "m_which",
             "Line": {
-              "Text": "That\u0027s it. His key. Give it here... no. No, you keep it. You\u0027re the one arresting people now. Go and arrest him.",
-              "VoiceId": "4d1e8446b131d63a",
-              "Delivery": "warm"
+              "Text": "Something ends either way, dear. Mine, or His three hundred years of being tucked in. Say which you chose above, and I will sing that one.",
+              "VoiceId": "b1dc9088bece3132",
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "The Waking. Sing Him up.",
+                "Next": null,
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": "wake_gorm",
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "The Unbinding. Let Him lie.",
+                "Next": null,
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": "wake_gorm",
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Nothing yet. Rest a moment.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m_done",
+            "Line": {
+              "Text": "Finished. The tiles are warm; they were never tiles. The stair below remembers it is a throat, and it is opening.",
+              "VoiceId": "8e5bf5898dbf30a5",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Then we go down.",
+                "Next": null,
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest_key",
-      "CastId": "cast_tarn",
+      "QuestId": "q_last_verse",
+      "CastId": "cast_maud",
       "Persona": {
-        "VoiceStyle": "a slow, heavy, hangdog man who mumbles into his collar",
-        "DefaultDelivery": "weary",
-        "Voice": "Orus",
+        "VoiceStyle": "an old woman speaking from the middle of a dream; unhurried, kind, entirely unsurprised by anything",
+        "DefaultDelivery": "calm",
+        "Voice": null,
         "IsEmpty": false
       },
-      "RequiresFlag": "took_tarn",
+      "RequiresFlag": null,
       "ForbidsFlag": null,
       "Betrayal": null
     }
   ],
   "Quests": [
     {
-      "Id": "quest_key",
-      "Template": "Recover",
-      "Title": "The Clerk\u0027s Key",
-      "Objective": "Recover the clerk\u0027s own key from his strongbox and bring it to Tarn.",
+      "Id": "q_last_verse",
+      "Template": "HoldOut",
+      "Title": "The Last Verse",
+      "Objective": "Hold the three galleries while Maud Sorrel finishes the verse.",
       "Params": {
         "TargetCollective": null,
-        "ItemName": "the clerk\u0027s key",
-        "ItemRoom": 9,
+        "ItemName": null,
+        "ItemRoom": null,
         "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
+        "Waves": 3,
+        "WaveCollective": "co_antiphon",
         "ClueRooms": [],
         "ClueName": null
       },
-      "GiverNpc": "npc_tarn2",
+      "GiverNpc": "npc_maud",
       "Reward": {
-        "Xp": 560,
+        "Xp": 760,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "The key\u0027s in his strongbox, the far one. Fetch it and the Sexton\u0027s door is yours.",
-          "VoiceId": "a3b585d444895b7c",
-          "Delivery": "warm"
+          "Text": "Three galleries, three mouths, one old woman with the words. Keep them off me for the length of a hymn and this is done with.",
+          "VoiceId": null,
+          "Delivery": null
         },
         "Accept": {
-          "Text": "He knows it\u0027s gone before it\u0027s gone.",
+          "Text": "Good. Do not listen too closely; the tune gets into people.",
           "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "Then I\u0027ll go myself. Slowly.",
+          "Text": "Then I shall wait here and hum it, and we shall all be very old before anything changes.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
         },
         "Complete": {
-          "Text": "You keep it. You\u0027re the one arresting people now.",
-          "VoiceId": "add747c1d843ad18",
-          "Delivery": "warm"
+          "Text": "There. Three hundred years of the same line, and someone finally sang the next one.",
+          "VoiceId": null,
+          "Delivery": null
         },
         "Fail": {
-          "Text": "Lost again. He\u0027ll count that too.",
+          "Text": "The verse is dropped. Pick me up; the Choir will start again from the top, and so, I am afraid, must we.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
         }
-      },
-      "RequiresFlag": "took_tarn",
-      "ForbidsFlag": null
-    }
-  ],
-  "Narration": [
-    {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "Tarn never left his post. The clerk saw to that. Whatever holds the turnkey\u0027s post now holds it in his shape.",
-        "VoiceId": null,
-        "Delivery": null
-      },
-      "RequiresFlag": "left_tarn",
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "Enter",
-      "Room": null,
-      "Line": {
-        "Text": "A shape by the ruined post lifts a hand: Tarn, the turnkey you arrested, forty years late and here before you.",
-        "VoiceId": null,
-        "Delivery": null
-      },
-      "RequiresFlag": "took_tarn",
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 2,
-      "Line": {
-        "Text": "The Sexton\u0027s door. Beyond it, the bell, and the clerk, and the sum.",
-        "VoiceId": "5dab080d2cd6d1ce",
-        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 7
+  "Narration": [],
+  "Taunts": [
+    {
+      "Trigger": "RitualStart",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "The Waking? In my church? Put the bloody woman down and let Himself sleep, you half-witted congregation.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The Waking? In my church? Put the woman down and let Himself sleep, you half-witted congregation.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualStart",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "The Unbinding. Unpicking my knots after three hundred years, and not one of you can tie a lace.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The Unbinding. Unpicking my knots after three hundred years, and not one of you can tie a lace.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "wake_gorm",
+      "FromStock": false
+    }
+  ],
+  "EnemyTotal": 13
 }

@@ -1,0 +1,2194 @@
+{
+  "SchemaVersion": 1,
+  "Source": "builtin",
+  "GameSeed": 1147267151474572175,
+  "Title": "The Toll of Ashmere",
+  "Synopsis": "The drowned town of Ashmere lies under the mountain, and the Lamplighters\u0027 Company has sent four of its own down to find what sank with it. Every floor is a toll road now, and the clerk who was buried with the ledger still collects. He counts every step, and he is not shy about saying so.",
+  "Antagonist": {
+    "Name": "Corvus Marl",
+    "Epithet": "the Toll-Keeper, who counts every step",
+    "VoiceId": null,
+    "Persona": {
+      "VoiceStyle": "a shrill, theatrical toll clerk gone to seed, quick with sums and quicker with curses",
+      "DefaultDelivery": "mocking",
+      "Voice": null,
+      "IsEmpty": false
+    }
+  },
+  "NarratorVoiceId": "Charon",
+  "Cast": [
+    {
+      "Id": "cast_hollis",
+      "Name": "Hollis Penn",
+      "Role": "the Company\u0027s quartermaster who came down ahead of the party to \u0027smooth the way\u0027",
+      "Secret": "He was sent to make sure the ledger is never found; on floor 13 he tries to bury the party with it.",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a brisk, chummy company man, all smiles and quick sums, never quite looking at you",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Puck",
+        "IsEmpty": false
+      }
+    },
+    {
+      "Id": "cast_ottilie",
+      "Name": "Ottilie Vane",
+      "Role": "captain of a rival crew that keeps losing people to the toll",
+      "Secret": "She has been paying the Toll-Keeper in her own crew; on floor 9 her manifests say so.",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a hoarse, swaggering captain who laughs at her own bad luck before you can",
+        "DefaultDelivery": "sly",
+        "Voice": "Gacrux",
+        "IsEmpty": false
+      }
+    },
+    {
+      "Id": "cast_bell",
+      "Name": "Ambrose Bell",
+      "Role": "the bell-ringer\u0027s son, a deacon who wants to ring Ashmere\u0027s bell again and raise the town",
+      "Secret": "He rang it the first time, as a boy, on the Company\u0027s orders; it comes out on floor 17.",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a soft, guilty man, every sentence half an apology",
+        "DefaultDelivery": "pleading",
+        "Voice": "Enceladus",
+        "IsEmpty": false
+      }
+    },
+    {
+      "Id": "cast_nan",
+      "Name": "Nan Trellick",
+      "Role": "an old cartographer mapping Ashmere as it was, streets and shopfronts, not the corridors she stands in",
+      "Secret": "She drowned with the town and does not know it; her own headstone is on her map, and on floor 11 the party finds it.",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a brisk old woman who talks over you and gets every street wrong with total confidence",
+        "DefaultDelivery": "warm",
+        "Voice": "Kore",
+        "IsEmpty": false
+      }
+    },
+    {
+      "Id": "cast_tarn",
+      "Name": "Tarn",
+      "Role": "the Toll-Keeper\u0027s turnkey, who wants very badly to be arrested and taken away",
+      "Secret": "He holds the clerk\u0027s own key and will trade it for being \u0027taken prisoner\u0027; on floor 19 he can open the belfry, if the party took him.",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a slow, heavy, hangdog man who mumbles into his collar",
+        "DefaultDelivery": "weary",
+        "Voice": "Orus",
+        "IsEmpty": false
+      }
+    }
+  ],
+  "Mystery": {
+    "Question": "Who rang the bell that drowned Ashmere?",
+    "Truth": "Ambrose Bell rang it as a boy on the Lamplighters\u0027 Company\u0027s orders, so the town\u0027s debt to the Company would drown with the town. Corvus Marl, the toll clerk, was sealed in with the ledger and has kept the toll ever since.",
+    "Clues": [
+      {
+        "Id": "clue_ledger",
+        "Floor": 3,
+        "Text": "The toll ledger\u0027s first page: the Company\u0027s lantern seal beside a sum owed by the whole town, marked \u0027settled by water\u0027."
+      },
+      {
+        "Id": "clue_manifest",
+        "Floor": 9,
+        "Text": "Ottilie\u0027s crew manifests: eleven names struck through and written again under \u0027passage paid to the Toll-Keeper\u0027."
+      },
+      {
+        "Id": "clue_headstone",
+        "Floor": 11,
+        "Text": "A headstone drawn into Nan\u0027s map as \u0027the bell-ringer\u0027s house\u0027: it carries her own name and the year the water came."
+      },
+      {
+        "Id": "clue_rope",
+        "Floor": 17,
+        "Text": "The bell-rope, cut short and knotted for a child\u0027s hands, the Company\u0027s lantern seal burned into the knot."
+      }
+    ],
+    "PayoffFloor": 17,
+    "Payoff": "At the foot of the belfry Ambrose Bell confesses to the rope, and Corvus Marl, delighted, names the Lamplighters\u0027 Company, the party\u0027s own paymasters, as the hands that drowned Ashmere. The last three floors are the Company\u0027s debt coming due."
+  },
+  "Factions": [
+    {
+      "Id": "faction0",
+      "Name": "The Drowned Vestry",
+      "EnemyIds": [
+        "enemy.ghoul",
+        "enemy.skeleton_archer",
+        "enemy.bone_priest"
+      ]
+    },
+    {
+      "Id": "faction1",
+      "Name": "The Undertow",
+      "EnemyIds": [
+        "enemy.cave_spider",
+        "enemy.rock_thrower",
+        "enemy.cave_shaman"
+      ]
+    },
+    {
+      "Id": "faction2",
+      "Name": "The Mint-Men",
+      "EnemyIds": [
+        "enemy.forge_golem",
+        "enemy.ember_hound",
+        "enemy.forge_priest"
+      ]
+    },
+    {
+      "Id": "faction3",
+      "Name": "The Bell-Choir",
+      "EnemyIds": [
+        "enemy.void_stalker",
+        "enemy.abyss_archer",
+        "enemy.void_caller"
+      ]
+    }
+  ],
+  "Tiers": [
+    {
+      "Index": 0,
+      "Theme": "The Vestry",
+      "Beat": "The church quarter of Ashmere, where the dead were counted and the toll was first written down. The Company\u0027s man is friendly. Too friendly.",
+      "BossName": "The Verger",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "Ashmere begins where its church ended. The steps go down into the vestry, and the vestry still keeps its books.",
+        "VoiceId": "d6a551210690ed61",
+        "Delivery": null
+      }
+    },
+    {
+      "Index": 1,
+      "Theme": "The Undertow",
+      "Beat": "The low town, drowned and dug over: cisterns, cellars, the jail. Other crews came this way and did not all come back.",
+      "BossName": "Mother of the Cistern",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "Below the church the water never left. It only went dark, and learned to wait.",
+        "VoiceId": "699e17985d2c51b0",
+        "Delivery": null
+      }
+    },
+    {
+      "Index": 2,
+      "Theme": "The Mint",
+      "Beat": "The foundry where the toll coin was struck. The Company\u0027s seal is on everything. Hollis Penn stops smiling.",
+      "BossName": "The Coinstriker",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "Heat, at last. Ashmere\u0027s mint still runs, and what it strikes is not coin.",
+        "VoiceId": "5258d0ca70cdddf8",
+        "Delivery": null
+      }
+    },
+    {
+      "Index": 3,
+      "Theme": "The Belfry",
+      "Beat": "The bell tower, upside down under the town, the bell at the bottom. Who rang it, and who paid for the ringing, and what the party will do about it.",
+      "BossName": "The Sexton",
+      "BossSignature": null,
+      "EnterLine": {
+        "Text": "The tower was built to be climbed. Ashmere buried it point-first, and now you descend it, toward the bell.",
+        "VoiceId": "df9b15950ea71f47",
+        "Delivery": null
+      }
+    }
+  ],
+  "Floors": [
+    {
+      "Floor": 1,
+      "Title": "The Vestry Steps",
+      "Mood": "watchful",
+      "Story": "cast_hollis appears at the foot of the steps, all smiles, and asks the party to clear the vestry watch so \u0027the road stays open\u0027; he hints the Company has business below.",
+      "Theme": "crypt.brick",
+      "Layout": "standard",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 2,
+      "Title": "The Tithe Vault",
+      "Mood": "greedy",
+      "Story": "",
+      "Theme": "crypt.ossuary",
+      "Layout": "ring",
+      "Objective": "shiftingvault",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 3,
+      "Title": "The Counting House",
+      "Mood": "curious",
+      "Story": "cast_nan appears with her map of the wrong town and an Investigate for the toll ledger\u0027s first page (clue_ledger); her TurnIn line reads it out and gets the street name wrong.",
+      "Theme": "crypt.mossy",
+      "Layout": "labyrinth",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 4,
+      "Title": "The Charnel Pits",
+      "Mood": "choking",
+      "Story": "",
+      "Theme": "crypt.undercroft",
+      "Layout": "mine",
+      "Objective": "toxic",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 5,
+      "Title": "The Verger\u0027s Nave",
+      "Mood": "solemn",
+      "Story": "",
+      "Theme": "crypt.brick",
+      "Layout": "flooded",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 6,
+      "Title": "The Lockup",
+      "Mood": "furtive",
+      "Story": "cast_tarn, the turnkey, begs to be arrested: a Decide floor. Choose took_tarn (he follows in spirit; he gives a key) or left_tarn (he stays). No quest beyond the choice.",
+      "Theme": "caves.rock",
+      "Layout": "standard",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 7,
+      "Title": "The Drowned Lanes",
+      "Mood": "cold",
+      "Story": "",
+      "Theme": "caves.lichen",
+      "Layout": "labyrinth",
+      "Objective": "jailbreak",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 8,
+      "Title": "The Cistern Shrine",
+      "Mood": "desperate",
+      "Story": "",
+      "Theme": "caves.boulder",
+      "Layout": "ring",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 9,
+      "Title": "Vane\u0027s Camp",
+      "Mood": "bitter",
+      "Story": "cast_ottilie holds a camp and asks the party to fetch her crew manifests from the Undertow (Investigate, clue_manifest); the manifests show she sold her own people for passage. Her TurnIn line admits it, laughing.",
+      "Theme": "caves.sandstone",
+      "Layout": "mine",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 10,
+      "Title": "The Broodmother\u0027s Well",
+      "Mood": "dread",
+      "Story": "",
+      "Theme": "caves.lichen",
+      "Layout": "burning",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 11,
+      "Title": "The Slag Road",
+      "Mood": "grim",
+      "Story": "cast_nan again, mapping the Mint as a high street. Investigate for her \u0027house\u0027 on the map (clue_headstone): it is her headstone. Her TurnIn line does not understand what she is reading.",
+      "Theme": "forge.rust",
+      "Layout": "flooded",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 12,
+      "Title": "The Kiln Shrine",
+      "Mood": "heated",
+      "Story": "",
+      "Theme": "forge.kiln",
+      "Layout": "standard",
+      "Objective": "ritual",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 13,
+      "Title": "The Sealed Ledger",
+      "Mood": "treacherous",
+      "Story": "cast_hollis waits by a locked vault door and offers the party the Company\u0027s thanks: a Betrayal. When the party pushes, he turns (Betray choice) and Mint-Men golems stand where he stood.",
+      "Theme": "forge.plate",
+      "Layout": "labyrinth",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 14,
+      "Title": "The Assay Vault",
+      "Mood": "calculating",
+      "Story": "",
+      "Theme": "forge.iron",
+      "Layout": "mine",
+      "Objective": "shiftingvault",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 15,
+      "Title": "The Coinstriker\u0027s Floor",
+      "Mood": "molten",
+      "Story": "",
+      "Theme": "forge.kiln",
+      "Layout": "ring",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 16,
+      "Title": "The Choir Cages",
+      "Mood": "mournful",
+      "Story": "",
+      "Theme": "abyss.slate",
+      "Layout": "burning",
+      "Objective": "jailbreak",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 17,
+      "Title": "The Foot of the Bell",
+      "Mood": "confessional",
+      "Story": "cast_bell at the bell\u0027s foot; Investigate for the bell-rope (clue_rope), the payoff. His TurnIn confesses the ringing and the Company\u0027s order; the party learns who they work for.",
+      "Theme": "abyss.stone",
+      "Layout": "standard",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 18,
+      "Title": "The Green Belfry",
+      "Mood": "suffocating",
+      "Story": "",
+      "Theme": "abyss.tiles",
+      "Layout": "mine",
+      "Objective": "toxic",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 19,
+      "Title": "The Sexton\u0027s Door",
+      "Mood": "reckoning",
+      "Story": "If took_tarn: cast_tarn is here (RequiresFlag took_tarn) with a Recover quest for the clerk\u0027s key that opens the way; if left_tarn: a hostile guard collective \u0027The Turnkeys\u0027 waits and a narration line says Tarn never left his post.",
+      "Theme": "abyss.palace",
+      "Layout": "flooded",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    },
+    {
+      "Floor": 20,
+      "Title": "The Bell",
+      "Mood": "final",
+      "Story": "",
+      "Theme": "abyss.palace",
+      "Layout": "standard",
+      "Objective": "none",
+      "SpecOverrides": {
+        "EnemyCount": null,
+        "ChestCount": null,
+        "LockedChestCount": null,
+        "TrapCount": null,
+        "VaultCount": null,
+        "LedgeCount": null,
+        "PitCount": null,
+        "SecretCount": null,
+        "HighRoomChance": null,
+        "StructureCount": null,
+        "RubbleCount": null,
+        "NestCount": null,
+        "WaterCount": null,
+        "IsEmpty": true
+      }
+    }
+  ],
+  "Barks": [
+    {
+      "Member": "Brand",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Down. Next.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "That one\u0027s paid its toll.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Stay dead this time.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Ow. That\u0027s going on somebody\u0027s bill.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Hit me again and mean it.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Blood\u0027s mine. Careful with it.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Silver. Ashmere\u0027s, by the stamp.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Mine now. The clerk can write it down.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Heavy. Good. I like heavy.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Getting the measure of this place.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Harder to kill than yesterday. Suits me.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "More room in the arms. Fine.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "That\u0027s a big one. Good. I hate stairs.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Form up. This one\u0027s going to take some cutting.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Right. Nobody dies before it does.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Brand. Front rank. Try to keep up.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Give me the torch. I\u0027ll go first.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Shield\u0027s up. Walk behind it.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Down. Not out. Get me up.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Damn it. Someone\u0027s leg. Grab it.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Floor\u0027s cold. Hurry.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Up. Where were we.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Right. That one owes me.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Don\u0027t make a thing of it.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ]
+    },
+    {
+      "Member": "Sable",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Quietly done. My favourite kind.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Never saw me. Never will.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Toll paid. Not by me.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Rude. That was rude.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I liked that shirt.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Note to self: he sees fine.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Finders\u0027 fee. I\u0027ll be keeping this.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Oh, that\u0027s nice. That\u0027s very nice.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "The clerk counts every step. Not every pocket.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Faster. Quieter. Prettier, probably.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "I\u0027ve a new trick. Don\u0027t ask which.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Better. The dead should worry.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Big, slow, stupid. Two out of three, then.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "I\u0027ll take the back. Someone take the front.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Let it look at Brand. Nobody looks at me.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Sable. Mind the floor. I already did.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Keep to the dark with me.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I\u0027ll go ahead. Don\u0027t follow the screams.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Ah. That\u0027s a lot of blood for a small person.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Whoever\u0027s nearest. Now, please.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Not dying here. Too drab.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Ta. Nobody saw that.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Back. Where\u0027s my knife.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Owe you one. I\u0027ll forget by the stairs.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ]
+    },
+    {
+      "Member": "Wren",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Down.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Clean shot. Retrieve it later.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "One less.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Marked.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Close. Too close.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I\u0027m hit. Keep moving.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Arrows. Good.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Useful. Take it.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Somebody died holding this.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Steadier hands.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "I see further. Wish I didn\u0027t.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Good. Keep climbing.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "There. Watch its hands.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Big target. Fine by me.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Draw it into the open.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Wren. Eyes front.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I\u0027ll scout. Quiet, now.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Stay in my sightline.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Down. Cover me.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Can\u0027t draw. Get me up.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "I\u0027ve had worse. Not much.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Up. Where\u0027s my bow.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Obliged.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Moving.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ]
+    },
+    {
+      "Member": "Ilex",
+      "Lines": [
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Applied theory. Note the result.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "A textbook case. Dead, that is.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Elegant. If I say so.",
+            "VoiceId": null,
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "Ah. Bodies. Do carry on.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "That will bruise. Interesting.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Hurt",
+          "Line": {
+            "Text": "I am not, in fact, made of stone.",
+            "VoiceId": null,
+            "Delivery": "angry"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "Provenance: dubious. Value: fair.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "The toll-clerk\u0027s silver. How apt.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Loot",
+          "Line": {
+            "Text": "I\u0027ll catalogue it later.",
+            "VoiceId": null,
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Comprehension deepens.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "Ashmere is educational, at least.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "LevelUp",
+          "Line": {
+            "Text": "A new theorem. Watch.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Fascinating. Kill it quickly.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Large. Dense. Burn it.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "BossSeen",
+          "Line": {
+            "Text": "Do keep it off me. I need the hands.",
+            "VoiceId": null,
+            "Delivery": "frantic"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Ilex. Try not to stand in the fire.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "I\u0027ll lead. Briefly.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Possess",
+          "Line": {
+            "Text": "Observe. Learn.",
+            "VoiceId": null,
+            "Delivery": "calm"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "This is beneath me. Literally.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "Someone competent, please.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Downed",
+          "Line": {
+            "Text": "The floor. Charming.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Thank you. I\u0027ll return the favour, eventually.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Ah. Vertical.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Revived",
+          "Line": {
+            "Text": "Resume.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ]
+    }
+  ],
+  "Taunts": [
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "shiftingvault",
+      "Line": {
+        "Text": "Welcome to the vestry\u0027s little vault, {party}. The stairs are in it. The combination is not. Pull my levers and guess; I do love to watch a guess.",
+        "VoiceId": "903d313b98ccd89f",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Welcome to the vestry\u0027s little vault, {party}. The stairs are in it. The combination is not. Pull my levers and guess; I do love to watch a guess.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "toxic",
+      "Line": {
+        "Text": "Breathe it in, {party}: that\u0027s Ashmere\u0027s own charnel air, and I\u0027ve opened the vents. The stairs are down where it pools. Sod off toward them or lie down, either pays.",
+        "VoiceId": "215dfdb24adc2907",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Breathe it in, {party}: that\u0027s Ashmere\u0027s own charnel air, and I\u0027ve opened the vents. The stairs are down where it pools. Go toward them or lie down, either pays.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "Some fool\u0027s chanting at my shrine. Let them. My walls are full of teeth and they\u0027re all bloody hungry. Hold the line, hero. Hold it with your bare hands.",
+        "VoiceId": "96af4b17189e6deb",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Some fool\u0027s chanting at my shrine. Let them. My walls are full of teeth and they\u0027re all hungry. Hold the line, hero. Hold it with your bare hands.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "The locals owe me passage and can\u0027t pay, so they go in the cages. Rescue them, {party}. Every bastard on this floor has a key and a grudge.",
+        "VoiceId": "9b2445d30081d370",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The locals owe me passage and can\u0027t pay, so they go in the cages. Rescue them, {party}. Every wretch on this floor has a key and a grudge.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": null,
+      "Line": {
+        "Text": "Floor {floor}. Toll due, {party}. I\u0027ve had this one arranged for you special, so try not to bleed on the good stone.",
+        "VoiceId": "2cad2c6841f8d0aa",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Floor {floor}. Toll due, {party}. I\u0027ve had this one arranged for you special, so try not to bleed on the good stone.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Capture",
+      "Objective": null,
+      "Line": {
+        "Text": "Got one! {prisoner} goes in the cage, and that\u0027s another sum on the ledger. Where were you, hero? Looting a fucking barrel?",
+        "VoiceId": "7e17b95903cad96d",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Got one! {prisoner} goes in the cage, and that\u0027s another sum on the ledger. Where were you, hero? Looting a barrel?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Capture",
+      "Objective": null,
+      "Line": {
+        "Text": "There goes {prisoner}, dragged off by the hair. Keep running, the rest of you. It makes the arithmetic so much sweeter.",
+        "VoiceId": "b127e28b2cb32441",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "There goes {prisoner}, dragged off by the hair. Keep running, the rest of you. It makes the arithmetic so much sweeter.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Freed",
+      "Objective": null,
+      "Line": {
+        "Text": "One out of the cage. Struck from the ledger, then. Don\u0027t look so pleased, {party}: I\u0027ve more cages than you have hours.",
+        "VoiceId": "241c4f0236e5c850",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "One out of the cage. Struck from the ledger, then. Don\u0027t look so pleased, {party}: I\u0027ve more cages than you have hours.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Freed",
+      "Objective": null,
+      "Line": {
+        "Text": "{prisoner} walks free. Fine. Keep them close. Things that follow you down my roads tend to die, and I charge for the burial.",
+        "VoiceId": "4f3038e13647b62f",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "{prisoner} walks free. Fine. Keep them close. Things that follow you down my roads tend to die, and I charge for the burial.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllFreed",
+      "Objective": null,
+      "Line": {
+        "Text": "All of them? All of them. Well, damn my eyes. Toll paid, stairs open, and I\u0027ll be less gentle below.",
+        "VoiceId": "771450890155db47",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "All of them? All of them. Well then. Toll paid, stairs open, and I\u0027ll be less gentle below.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllFreed",
+      "Objective": null,
+      "Line": {
+        "Text": "Every last peasant off my books. You must feel so bloody noble. Enjoy it. Nobody who paid a toll here ever felt noble for long.",
+        "VoiceId": "5f0512b5b18f1e61",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Every last peasant off my books. You must feel so noble. Enjoy it. Nobody who paid a toll here ever felt noble for long.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GasThickens",
+      "Objective": null,
+      "Line": {
+        "Text": "Coughing already? That\u0027s the cheap stuff. Wait till it\u0027s thick enough to chew, you sods.",
+        "VoiceId": "b1a7fa29b8b9ed0a",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Coughing already? That\u0027s the cheap stuff. Wait till it\u0027s thick enough to chew.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GasThickens",
+      "Objective": null,
+      "Line": {
+        "Text": "The green is rising, {party}. High ground buys you minutes. The stairs are not on high ground. I checked.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The green is rising, {party}. High ground buys you minutes. The stairs are not on high ground. I checked.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GasLethal",
+      "Objective": null,
+      "Line": {
+        "Text": "That\u0027s the smell of your lungs paying up. Crawl to the stairs or lie down, I honestly don\u0027t give a shit which.",
+        "VoiceId": "0e721d369c9d7987",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "That\u0027s the smell of your lungs paying up. Crawl to the stairs or lie down; I honestly don\u0027t mind which.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GasLethal",
+      "Objective": null,
+      "Line": {
+        "Text": "Lethal now. Every breath is mine and I\u0027m charging for it. Go on. Take another.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Lethal now. Every breath is mine and I\u0027m charging for it. Go on. Take another.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "WrongLever",
+      "Objective": null,
+      "Line": {
+        "Text": "Wrong bloody lever. Did you read the plaque, or do you just yank things and hope?",
+        "VoiceId": "c487900550943d57",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Wrong lever. Did you read the plaque, or do you just pull things and hope?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "WrongLever",
+      "Objective": null,
+      "Line": {
+        "Text": "That shut more than it opened. Brilliant. Truly. My patrols send their thanks.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "That shut more than it opened. Brilliant. Truly. My patrols send their thanks.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GateShift",
+      "Objective": null,
+      "Line": {
+        "Text": "Hear that? Iron on stone. My whole floor just moved around you, {party}, and not one of you noticed which way.",
+        "VoiceId": "bde95e716556627b",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Hear that? Iron on stone. My whole floor just moved around you, {party}, and not one of you noticed which way.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GateShift",
+      "Objective": null,
+      "Line": {
+        "Text": "Pull, pull, pull. Like children on a bell rope. The gates don\u0027t care how hard you haul.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Pull, pull, pull. Like children on a bell rope. The gates don\u0027t care how hard you haul.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "VaultOpened",
+      "Objective": null,
+      "Line": {
+        "Text": "Oh, it\u0027s open. Fine. A bright dog could have done it. Go down, {party}. It gets worse, and it gets dearer.",
+        "VoiceId": "1fdaacb17a18664a",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Oh, it\u0027s open. Fine. A bright dog could have done it. Go down, {party}. It gets worse, and it gets dearer.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "VaultOpened",
+      "Objective": null,
+      "Line": {
+        "Text": "The vault yields. Bugger. Well. I have plenty of floors left and a great deal of spite.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The vault yields. Well. I have plenty of floors left and a great deal of spite.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualStart",
+      "Objective": null,
+      "Line": {
+        "Text": "Chanting? In my house? Let\u0027s see how much of that prayer gets said with my teeth in the old fool\u0027s neck.",
+        "VoiceId": "0e62018cc87d4eaa",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Chanting? In my house? Let\u0027s see how much of that prayer gets said with my teeth in the old fool\u0027s neck.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualStart",
+      "Objective": null,
+      "Line": {
+        "Text": "The rite begins and so does the bleeding. Everything I own is coming through those walls, {party}, and I own a lot.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The rite begins and so does the bleeding. Everything I own is coming through those walls, {party}, and I own a lot.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualistDown",
+      "Objective": null,
+      "Line": {
+        "Text": "Down goes the priest! Ha! Pick them up, pick them up, I want to see it happen again.",
+        "VoiceId": "cb2c58f9ac672a63",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Down goes the priest! Ha! Pick them up, pick them up, I want to see it happen again.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualistDown",
+      "Objective": null,
+      "Line": {
+        "Text": "Your chanter\u0027s face-down in the dust and the prayer\u0027s stopped. Shame. I was almost worried, you useless sods.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Your chanter\u0027s face-down in the dust and the prayer\u0027s stopped. Shame. I was almost worried.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "WaveBreak",
+      "Objective": null,
+      "Line": {
+        "Text": "More! Through the walls! Eat the priest, eat the heroes, eat each other for all I care, it\u0027s all on the ledger!",
+        "VoiceId": "9f7dda2748c08f61",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "More! Through the walls! Take the priest, take the heroes, take each other for all I care, it\u0027s all on the ledger!",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "WaveBreak",
+      "Objective": null,
+      "Line": {
+        "Text": "Another wave, {party}. Keep swinging. Your arms will give out long before my walls do.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Another wave, {party}. Keep swinging. Your arms will give out long before my walls do.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualDone",
+      "Objective": null,
+      "Line": {
+        "Text": "The rite is done. Damn it all. Very well: the stairs are yours, and so is what\u0027s under them.",
+        "VoiceId": "4d2d3305b77df388",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The rite is done. Very well: the stairs are yours, and so is what\u0027s under them.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualDone",
+      "Objective": null,
+      "Line": {
+        "Text": "A prayer against me, finished in my own house. I\u0027ll remember that face, priest. I remember every face. I write them down.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "A prayer against me, finished in my own house. I\u0027ll remember that face, priest. I remember every face. I write them down.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "ObjectiveDone",
+      "Objective": null,
+      "Line": {
+        "Text": "Fine. FINE. Toll paid. Go down, then, {party}. I\u0027ve worse than this in the book and all the time in the world.",
+        "VoiceId": "dfec688b3f091f29",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Fine. FINE. Toll paid. Go down, then, {party}. I\u0027ve worse than this in the book and all the time in the world.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "ObjectiveDone",
+      "Objective": null,
+      "Line": {
+        "Text": "You passed. Don\u0027t smile. Nobody who passed my trials ever smiled for long, you smug bastards.",
+        "VoiceId": "5abdfb0fe63bc74c",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You passed. Don\u0027t smile. Nobody who passed my trials ever smiled for long.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Idle",
+      "Objective": null,
+      "Line": {
+        "Text": "Are you lost? You are. Standing about like sheep in a pen. Shall I send someone to hurry you along, {party}?",
+        "VoiceId": "a57f70b48de283b5",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Are you lost? You are. Standing about like sheep in a pen. Shall I send someone to hurry you along, {party}?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Idle",
+      "Objective": null,
+      "Line": {
+        "Text": "Tick, tock. I\u0027ve had guests die of old age on floor {floor}. It was bloody boring to watch and I watched all of it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Tick, tock. I\u0027ve had guests die of old age on floor {floor}. It was boring to watch and I watched all of it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MemberDowned",
+      "Objective": null,
+      "Line": {
+        "Text": "One down! Look at them, in the dirt. Get up, get up, I\u0027m not finished collecting from you!",
+        "VoiceId": "bcd1b6e343a91991",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "One down! Look at them, in the dirt. Get up, get up, I\u0027m not finished collecting from you!",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MemberDowned",
+      "Objective": null,
+      "Line": {
+        "Text": "Down in the dust. That\u0027s where everyone ends up on my roads, {party}. Some of you just take the scenic route.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Down in the dust. That\u0027s where everyone ends up on my roads, {party}. Some of you just take the scenic route.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "PartyWiped",
+      "Objective": null,
+      "Line": {
+        "Text": "All of you. All of you at once. Oh, that was beautiful. Get up and do it again, I\u0027ve nowhere to be for a hundred years.",
+        "VoiceId": "2195a09da01eb67a",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "All of you. All of you at once. Oh, that was beautiful. Get up and do it again, I\u0027ve nowhere to be for a hundred years.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "PartyWiped",
+      "Objective": null,
+      "Line": {
+        "Text": "Dead as stones, the lot of you. Well, nearly. Shame the dungeon\u0027s so damned patient. Shame I am.",
+        "VoiceId": "9307a3903cadf233",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Dead as stones, the lot of you. Well, nearly. Shame the dungeon\u0027s so patient. Shame I am.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Deeper, then. Every step down is a step toward me and the book, {party}, and I\u0027ve such plans for our meeting.",
+        "VoiceId": "cf28ae774c24d6eb",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Deeper, then. Every step down is a step toward me and the book, {party}, and I\u0027ve such plans for our meeting.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Off you go. Mind the stairs. I\u0027d hate you to die of something as boring as a fall, you clumsy sods. It doesn\u0027t even pay.",
+        "VoiceId": "95fb6b3c9b4be878",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Off you go. Mind the stairs. I\u0027d hate you to die of something as boring as a fall. It doesn\u0027t even pay.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Reinforcements",
+      "Objective": null,
+      "Line": {
+        "Text": "Dawdling on my road? Then I\u0027ll send company to collect. Behind you, {party}. Always behind you.",
+        "VoiceId": "b9992a8a4be607a5",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Dawdling on my road? Then I\u0027ll send company to collect. Behind you, {party}. Always behind you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Reinforcements",
+      "Objective": null,
+      "Line": {
+        "Text": "Reinforcements. Push deeper or drown in them; I\u0027ve a bloody endless supply and it all goes on your account.",
+        "VoiceId": "f9db4741cb6f15de",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Reinforcements. Push deeper or drown in them; I\u0027ve an endless supply and it all goes on your account.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
+  "ArcNotes": "Hollis is the Company\u0027s man: friendly on 1, cagey on 11\u0027s theme, betrays on 13 (Betrayal quest, ghoul-free tier: use forge golems). Tarn\u0027s Decide on 6 sets took_tarn or left_tarn; floor 19 answers it (took_tarn: Tarn opens the way and gives the clerk\u0027s key; left_tarn: a hostile turnkey guard). Nan is dead: floor 11 clue is her headstone; she should not be seen after 11. Ottilie\u0027s manifests on 9; she may reappear on 16 (jailbreak floor) shamed. Payoff 17: Bell confesses; taunts there should name the Company. Keep quiet floors quiet: 2,4,5,7,8,10,12,14,15,16,18,20."
+}

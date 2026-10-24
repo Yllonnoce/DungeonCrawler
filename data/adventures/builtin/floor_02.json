@@ -1,117 +1,65 @@
 {
   "SchemaVersion": 1,
   "Floor": 2,
-  "Source": "builtin",
-  "LayoutHash": 6692710762951404688,
-  "Title": "The Tithe Vault",
+  "Source": "claude",
+  "LayoutHash": 7213723373104572968,
+  "Title": "The Vestibule",
   "IntroLine": {
-    "Text": "White stone, and the sound of iron sliding somewhere out of sight. The vestry kept its tithe in a box with a trick lid. The trick is still working.",
-    "VoiceId": "d1a814ef9b12441f",
+    "Text": "Moss in the mortar, and the sexton\u0027s lot gone wandering through it. The Vestry walks them back politely, one at a time, and locks the door behind.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Ruin",
-      "Name": "The Broken Rotunda"
+      "Role": "Hall",
+      "Name": "The Mossed Vestibule"
     },
     {
       "Index": 1,
       "Role": "Start",
-      "Name": "Ossuary Landing"
+      "Name": "Stair of the Lychgate"
     },
     {
       "Index": 2,
-      "Role": "Camp",
-      "Name": "Tithe-Thieves\u0027 Squat"
+      "Role": "Jail",
+      "Name": "The Sexton\u0027s Locker"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Bone Shelf"
+      "Role": "Shrine",
+      "Name": "Niche of the Unsaid Name"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "The Counting Alcove"
+      "Role": "Barracks",
+      "Name": "Coat-Room of the Dead"
     },
     {
       "Index": 5,
-      "Role": "Hall",
-      "Name": "Hall of Ledgers"
+      "Role": "Treasury",
+      "Name": "Vestry Plate-Press"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "Gallery of Skulls"
+      "Role": "Exit",
+      "Name": "Stair to the Chantry Walk"
     },
     {
       "Index": 7,
-      "Role": "Kennel",
-      "Name": "The Drop"
-    },
-    {
-      "Index": 8,
-      "Role": "Cell",
-      "Name": "Sealed Sacristy"
-    },
-    {
-      "Index": 9,
-      "Role": "Hall",
-      "Name": "The Font"
-    },
-    {
-      "Index": 10,
-      "Role": "Lair",
-      "Name": "Choir Loft"
-    },
-    {
-      "Index": 11,
-      "Role": "Treasury",
-      "Name": "The Tithe Box"
-    },
-    {
-      "Index": 12,
-      "Role": "Exit",
-      "Name": "The Locked Way Down"
+      "Role": "Passage",
+      "Name": "The Damp Ambulatory"
     }
   ],
   "Collectives": [
     {
-      "Id": "tithe_thieves",
-      "Name": "the Tithe-Thieves",
-      "FactionId": null,
-      "Members": [
-        {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 2,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 3
-      }
-    },
-    {
-      "Id": "shelf_walkers",
-      "Name": "the Shelf Walkers",
-      "FactionId": "faction0",
+      "Id": "col_coat",
+      "Name": "The Coat-Room Vestry",
+      "FactionId": "fac_vestry",
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
+          "Count": 2
         }
       ],
       "Goal": {
@@ -120,64 +68,70 @@
         "Objective": null,
         "Route": [
           4,
-          3,
-          0
+          7,
+          0,
+          3
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 4
+      }
+    },
+    {
+      "Id": "col_plate",
+      "Name": "Keepers of the Plate",
+      "FactionId": "fac_vestry",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "col_bell",
+      "Name": "The Bell-Pull Acolytes",
+      "FactionId": "fac_vestry",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "col_plate",
+        "RallyRoom": 5
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_squat",
-      "Name": "The Thieves\u0027 Leavings",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 4
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 4,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Under the squat\u0027s floorboards, what the thieves buried gets up.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_ledgers",
-      "Name": "The Ledger Dead",
-      "Room": 5,
+      "Id": "hrd_vestibule",
+      "Name": "The Wandered Congregation",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
           "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 5,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The ledgers slide off their shelves and the shelves come out of the wall, full.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_skulls",
-      "Name": "The Skull Gallery",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 4
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
@@ -186,80 +140,30 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 5,
-      "Trigger": "Enter",
+      "Total": 6,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The skulls in the niches have bodies after all, and the bodies have been waiting.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_sacristy",
-      "Name": "The Sacristy Crawl",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 4
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 4,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The sealed room was sealed from the inside.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_font",
-      "Name": "The Font\u0027s Drowned",
-      "Room": 9,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 5,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The font overflows. What comes out of it is not water.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_loft",
-      "Name": "The Choir",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 4
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 4,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Something in the loft clears its throat, and the whole loft answers.",
+        "Text": "The mortar splits at both mouths of the vestibule, and the parish comes out of it still wearing its coats.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 7,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 3,
+      "Room": 0,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 4,
       "Kind": "Gas"
     }
   ],
@@ -268,9 +172,9 @@
   "Narration": [
     {
       "Trigger": "RoomEnter",
-      "Room": 0,
+      "Room": 4,
       "Line": {
-        "Text": "Plaques, levers, gates that slide in the walls. Ashmere\u0027s tithe box was built by a man who trusted nobody, and he was right.",
+        "Text": "Coats on pegs, nineteen years of them, each with a name stitched inside the collar. Something is wearing the oldest.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -278,6 +182,41 @@
       "ForbidsFlag": null
     }
   ],
-  "Taunts": [],
+  "Taunts": [
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "Second Station. The sexton\u0027s lot wandered off and we fetched them back. Doors are kept shut for a reason; so are mouths.",
+        "VoiceId": "2c8bebde0fbd7414",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Second Station. The sexton\u0027s lot wandered off and we fetched them back. Doors are kept shut for a reason; so are mouths.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Capture",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "{prisoner} goes back in the locker. Everything in its place, and a place for everything.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "{prisoner} goes back in the locker. Everything in its place, and a place for everything.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
   "EnemyTotal": 6
 }

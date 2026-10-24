@@ -12,8 +12,14 @@ public sealed class PromptTemplates
     public string OutlineTask { get; init; } = DefaultOutlineTask;
     public string FloorTask { get; init; } = DefaultFloorTask;
     public string BarksTask { get; init; } = DefaultBarksTask;
+    /// <summary>An author-written campaign bible (markdown). When set, every planning call carries it as a cached system block and the outline is told to follow it.</summary>
+    public string Brief { get; init; } = "";
 
     public static PromptTemplates Default { get; } = new();
+
+    public const string BriefPreamble = """
+        Campaign bible, written by the game's author. It is the campaign: take the title, premise, antagonist, cast (names, roles, secrets, bodies, personality labels, floors), mystery and clues, choices and flags, factions, tier beats, the twenty-floor table (titles, themes, layouts, objectives, what happens), puzzles, boss names and lines, taunts and narration from it, and invent only what it leaves open. Where the bible and the rules conflict (a layout or objective the game forbids, a line too long), the rules win and the bible's intent is kept as closely as the rules allow. Lines quoted in the bible are to be used as written.
+        """;
 
     public const string DefaultRules = """
         You are the dungeon master for a first-person, real-time, party dungeon crawler. Four adventurers (a Warrior, a Rogue, a Ranger and a Mage) descend twenty procedurally generated floors in four tiers of five: Crypt, Caves, Forge, Abyss. Every fifth floor ends in a boss arena; the boss locks the stairs down until it dies. There is no town and no return to the surface: the whole story happens on the way down.
@@ -75,10 +81,20 @@ public static class PromptBuilder
     public const int FloorMaxTokens = 16000;
     public const int BarksMaxTokens = 8000;
 
+    /// <summary>The system blocks every call shares: the rules, then the author's bible when there is one. Byte-stable so they cache.</summary>
+    private static PromptBlock[] SystemBlocks(PromptTemplates t, params PromptBlock[] extra)
+    {
+        var blocks = new List<PromptBlock> { new(t.Rules.Trim(), Cache: true) };
+        if (!string.IsNullOrWhiteSpace(t.Brief)) blocks.Add(new PromptBlock(PromptTemplates.BriefPreamble.Trim() + "\n\n" + t.Brief.Trim(), Cache: true));
+        blocks.AddRange(extra);
+        return blocks.ToArray();
+    }
+
     public static ClaudeRequest Outline(PromptTemplates t, string model, ulong seed, IReadOnlyList<TierProfile> tiers, IReadOnlyDictionary<string, EnemyProfile> roster, IReadOnlyList<PartyMemberInfo> party, FloorMenu floor1, IReadOnlyList<ThemeProfile>? themes = null)
     {
         var user = new StringBuilder();
         user.AppendLine(t.OutlineTask.Trim());
+        if (!string.IsNullOrWhiteSpace(t.Brief)) user.AppendLine("Follow the campaign bible in the system prompt: this outline is that bible in the schema's shape.");
         user.AppendLine();
         user.AppendLine($"Run seed: {seed}.");
         user.AppendLine("Party: " + string.Join(", ", party.Select(p => $"{p.Name} the {p.ClassName}")) + ".");
@@ -99,7 +115,7 @@ public static class PromptBuilder
         user.AppendLine();
         user.AppendLine("Floor 1 menu:");
         user.AppendLine(RenderMenu(floor1));
-        return new ClaudeRequest("outline", model, new[] { new PromptBlock(t.Rules.Trim(), Cache: true) }, user.ToString(), PlanSchemas.For<OutlineWithFirstFloor>(), "xhigh", OutlineMaxTokens);
+        return new ClaudeRequest("outline", model, SystemBlocks(t), user.ToString(), PlanSchemas.For<OutlineWithFirstFloor>(), "xhigh", OutlineMaxTokens);
     }
 
     public static ClaudeRequest Floor(PromptTemplates t, string model, CampaignPlan campaign, FloorMenu menu, string memorySummary)
@@ -116,11 +132,8 @@ public static class PromptBuilder
         user.AppendLine();
         user.AppendLine($"Floor {menu.Floor} menu:");
         user.AppendLine(RenderMenu(menu));
-        var system = new[]
-        {
-            new PromptBlock(t.Rules.Trim(), Cache: true),
-            new PromptBlock("Campaign outline (JSON):\n" + PlanFormat.Serialize(OutlineForPrompt(campaign)), Cache: true),
-        };
+        if (!string.IsNullOrWhiteSpace(t.Brief)) user.AppendLine("The campaign bible in the system prompt describes this floor: its puzzle, its people and their lines. Use them.");
+        var system = SystemBlocks(t, new PromptBlock("Campaign outline (JSON):\n" + PlanFormat.Serialize(OutlineForPrompt(campaign)), Cache: true));
         return new ClaudeRequest($"floor{menu.Floor}", model, system, user.ToString(), PlanSchemas.For<FloorPlan>(), menu.Floor <= 5 ? "medium" : "high", FloorMaxTokens);
     }
 
@@ -131,7 +144,7 @@ public static class PromptBuilder
         user.AppendLine();
         user.AppendLine("Members: " + string.Join(", ", party.Select(p => $"{p.Name} ({p.ClassName})")) + ".");
         user.AppendLine($"Campaign: {campaign.Title}. {campaign.Synopsis}");
-        return new ClaudeRequest("barks", model, new[] { new PromptBlock(t.Rules.Trim(), Cache: true) }, user.ToString(), PlanSchemas.For<BarkBank>(), "medium", BarksMaxTokens);
+        return new ClaudeRequest("barks", model, SystemBlocks(t), user.ToString(), PlanSchemas.For<BarkBank>(), "medium", BarksMaxTokens);
     }
 
     /// <summary>The outline without the per-floor plans' bulk: everything the floor call needs for continuity.</summary>

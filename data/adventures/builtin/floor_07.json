@@ -1,65 +1,117 @@
 {
   "SchemaVersion": 1,
   "Floor": 7,
-  "Source": "builtin",
-  "LayoutHash": 9738003489194521161,
-  "Title": "The Drowned Lanes",
+  "Source": "claude",
+  "LayoutHash": 4383714818748545168,
+  "Title": "The Crop",
   "IntroLine": {
-    "Text": "Lichen light and lanes too narrow for two. Ashmere\u0027s low town, dug over and let flood. The locals still live here, if that is the word, and they run when they hear boots.",
-    "VoiceId": "ed52b222b2b56d15",
+    "Text": "Nineteen years of someone\u0027s housekeeping: a hut roofed with a spider\u0027s back, a banner sewn out of dead men\u0027s coats, and a rite already started without you.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Treasury",
-      "Name": "The Pawn Cellar"
+      "Role": "Hall",
+      "Name": "Spoil Hollow"
     },
     {
       "Index": 1,
-      "Role": "Cell",
-      "Name": "Sealed Snug"
+      "Role": "Barracks",
+      "Name": "The Prop Store"
     },
     {
       "Index": 2,
-      "Role": "Jail",
-      "Name": "Undertow Lockup"
+      "Role": "Hall",
+      "Name": "The Long Gallery"
     },
     {
       "Index": 3,
-      "Role": "Exit",
-      "Name": "Lower Lane Stair"
+      "Role": "Passage",
+      "Name": "Cellar Drift"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Lichen Crossroads"
+      "Role": "Lair",
+      "Name": "The Two Mouths"
     },
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "Fishwives\u0027 Row"
+      "Name": "The Sunken Seam"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "The Green Cistern"
+      "Role": "Passage",
+      "Name": "Gullet Drift"
     },
     {
       "Index": 7,
+      "Role": "Exit",
+      "Name": "The Downshaft"
+    },
+    {
+      "Index": 8,
+      "Role": "Kennel",
+      "Name": "The Weeping Breach"
+    },
+    {
+      "Index": 9,
+      "Role": "Shrine",
+      "Name": "The Unswearing Stone"
+    },
+    {
+      "Index": 10,
       "Role": "Passage",
-      "Name": "Ropewalk Lane"
+      "Name": "Timbered Gallery"
+    },
+    {
+      "Index": 11,
+      "Role": "Treasury",
+      "Name": "The Spoil Pocket"
+    },
+    {
+      "Index": 12,
+      "Role": "Cell",
+      "Name": "Dead Drift"
+    },
+    {
+      "Index": 13,
+      "Role": "Start",
+      "Name": "The Dig Head"
     }
   ],
   "Collectives": [
     {
-      "Id": "cistern_watch",
-      "Name": "the Cistern Watch",
-      "FactionId": "faction1",
+      "Id": "col_pocket",
+      "Name": "Hoard-Minders",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
           "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 11,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "2"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 8
+      }
+    },
+    {
+      "Id": "col_gallery",
+      "Name": "The Gallery Walk",
+      "FactionId": "fac_swallowed",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
         },
         {
           "EnemyId": "enemy.cave_shaman",
@@ -67,18 +119,23 @@
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 6,
+        "Kind": "Patrol",
+        "Room": 10,
         "Objective": null,
-        "Route": [],
+        "Route": [
+          10,
+          0,
+          3,
+          2
+        ],
         "AlarmTarget": null,
-        "RallyRoom": 5
+        "RallyRoom": 10
       }
     },
     {
-      "Id": "lane_walkers",
-      "Name": "the Lane Walkers",
-      "FactionId": "faction1",
+      "Id": "col_seam",
+      "Name": "Seam Listeners",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
@@ -86,62 +143,161 @@
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
+        "Kind": "Alarm",
         "Room": 5,
         "Objective": null,
-        "Route": [
-          5,
-          7
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "Route": [],
+        "AlarmTarget": "col_shaft",
+        "RallyRoom": 7
       }
     },
     {
-      "Id": "snug_thrower",
-      "Name": "the Snug Thrower",
-      "FactionId": "faction1",
+      "Id": "col_shaft",
+      "Name": "Shaft Wardens",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
           "EnemyId": "enemy.rock_thrower",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 1,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 7,
+        "Objective": {
+          "Kind": "Stairs",
+          "Ref": "down"
+        },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 2
       }
     }
   ],
   "Loners": [],
-  "Hordes": [],
+  "Hordes": [
+    {
+      "Id": "horde_mouths",
+      "Name": "The Two Mouths",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 11,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Both breaches cough at once, and what the god ate comes back up it on too many legs.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_weeping",
+      "Name": "The Weeping Breach",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 5
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 7,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The lid lifts, the wall behind it does too, and the drift fills with wet scrabbling.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 8,
+      "Locked": false,
+      "QuestId": null
+    },
+    {
+      "Room": 12,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 7,
+      "Room": 10,
       "Kind": "Spikes"
+    },
+    {
+      "Room": 4,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 2,
+      "Kind": "Gas"
     }
   ],
   "Npcs": [],
   "Quests": [],
-  "Narration": [
+  "Narration": [],
+  "Taunts": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 2,
+      "Trigger": "FloorEnter",
+      "Objective": "ritual",
       "Line": {
-        "Text": "A lockup with a fresh chain on the door. Whoever runs the cages down here is not the turnkey you met. Tarn only ever locked what the clerk sent him.",
+        "Text": "Somebody down here is singing herself out of an oath. Let her. Nineteen bloody years and she still thinks the verse cares.",
+        "VoiceId": "7aa5428fe306c0be",
+        "Delivery": "calm"
+      },
+      "CleanLine": {
+        "Text": "Somebody down here is singing herself out of an oath. Let her. Nineteen years and she still thinks the verse cares.",
+        "VoiceId": null,
+        "Delivery": "calm"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualistDown",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "She has lain down before, you know. Rather well. It is the only thing she has ever done promptly.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "She has lain down before, you know. Rather well. It is the only thing she has ever done promptly.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null
+      "ForbidsFlag": null,
+      "FromStock": false
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 6
+  "EnemyTotal": 8
 }

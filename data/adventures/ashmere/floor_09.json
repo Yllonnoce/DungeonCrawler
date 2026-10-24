@@ -1,0 +1,514 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 9,
+  "Source": "builtin",
+  "LayoutHash": 16704115395937608355,
+  "Title": "Vane\u0027s Camp",
+  "IntroLine": {
+    "Text": "Sandstone, warm and dry for once, and a fire still going in it. Vane\u0027s crew came down here with eleven names on the roll. The fire is big enough for about four.",
+    "VoiceId": "afbd1efd1dc7430f",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Lair",
+      "Name": "North Brood Drift"
+    },
+    {
+      "Index": 1,
+      "Role": "Lair",
+      "Name": "The Egg Drift"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "The Adit"
+    },
+    {
+      "Index": 3,
+      "Role": "Passage",
+      "Name": "Split Seam"
+    },
+    {
+      "Index": 4,
+      "Role": "Lair",
+      "Name": "The Cracked Face"
+    },
+    {
+      "Index": 5,
+      "Role": "Passage",
+      "Name": "Timber Cross"
+    },
+    {
+      "Index": 6,
+      "Role": "Lair",
+      "Name": "Web Gallery"
+    },
+    {
+      "Index": 7,
+      "Role": "Lair",
+      "Name": "Chest Drift"
+    },
+    {
+      "Index": 8,
+      "Role": "Hall",
+      "Name": "The Long Adit"
+    },
+    {
+      "Index": 9,
+      "Role": "Passage",
+      "Name": "Spoil Gallery"
+    },
+    {
+      "Index": 10,
+      "Role": "Cell",
+      "Name": "Manifest Cache"
+    },
+    {
+      "Index": 11,
+      "Role": "Hall",
+      "Name": "Vane\u0027s Fire"
+    },
+    {
+      "Index": 12,
+      "Role": "Exit",
+      "Name": "The Sump Stair"
+    },
+    {
+      "Index": 13,
+      "Role": "Passage",
+      "Name": "Tally Gallery"
+    },
+    {
+      "Index": 14,
+      "Role": "Passage",
+      "Name": "Ladder Drift"
+    },
+    {
+      "Index": 15,
+      "Role": "Start",
+      "Name": "Sandstone Head"
+    },
+    {
+      "Index": 16,
+      "Role": "Treasury",
+      "Name": "The Pay Chest"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "face_brood",
+      "Name": "the Face Brood",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 3
+      }
+    },
+    {
+      "Id": "seam_walkers",
+      "Name": "the Seam Walkers",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 9,
+        "Objective": null,
+        "Route": [
+          9,
+          13
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "web_lookout",
+      "Name": "the Web Lookout",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "face_brood",
+        "RallyRoom": 4
+      }
+    },
+    {
+      "Id": "fire_thrower",
+      "Name": "the Thrower at the Fire",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 11,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_north",
+      "Name": "The North Brood",
+      "Room": 0,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 11,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The drift\u0027s end is not rock. It is eggs, and they are done waiting.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_egg",
+      "Name": "The Hatching",
+      "Room": 1,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 11
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 11,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Something hatches, all of it at once.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_face",
+      "Name": "The Face Brood",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 12,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "The cracked face cracks the rest of the way.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_web",
+      "Name": "The Web",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 10
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 10,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The web is thicker than it looked, and it is moving.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_chest",
+      "Name": "The Chest Brood",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 12,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The chest was bait. The drift was the trap.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 14,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 5,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_ottilie",
+      "Name": "Ottilie Vane",
+      "Room": 8,
+      "VoiceId": "Enceladus",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Ha. The Company\u0027s four. Ottilie Vane, captain of what\u0027s left. Do me a turn: my crew\u0027s manifests are scattered up the galleries, and I want them before the clerk reads them out. He does that. Reads things out.",
+              "VoiceId": "01d2d1e5adc53bb5",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll fetch them.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "What\u0027s left of your crew?",
+                "Next": "crew",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We have your manifests.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Fetch your own papers.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "crew",
+            "Line": {
+              "Text": "Four of eleven. The toll\u0027s steep down here and I\u0027m bad at sums. Don\u0027t look at me like that. You\u0027ll be bad at sums too, by the belfry.",
+              "VoiceId": "6ca33b5b906d6532",
+              "Delivery": "weary"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll fetch them.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later, captain.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good. Three sheets: the cache, the tally gallery, the far seam. Mind the brood, they like paper. They like anything.",
+              "VoiceId": "e968d065d681f1c2",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "Give them here. Yes. Yes, that\u0027s... eleven names struck through, and here they are again under \u0027passage paid to the Toll-Keeper\u0027. In my hand. Ha! Well. Ha. I told you I was bad at sums.",
+              "VoiceId": "6ae1a390f80fb0f6",
+              "Delivery": "weary"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_manifest",
+      "CastId": "cast_ottilie",
+      "Persona": {
+        "VoiceStyle": "a hoarse, swaggering captain who laughs at her own bad luck before you can",
+        "DefaultDelivery": "sly",
+        "Voice": "Gacrux",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_manifest",
+      "Template": "Investigate",
+      "Title": "The Captain\u0027s Manifests",
+      "Objective": "Gather Ottilie Vane\u0027s three crew manifests from the galleries and bring them to her fire.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          10,
+          13,
+          3
+        ],
+        "ClueName": "crew manifests"
+      },
+      "GiverNpc": "npc_ottilie",
+      "Reward": {
+        "Xp": 250,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "My crew\u0027s manifests are scattered up the galleries. I want them before the clerk reads them out.",
+          "VoiceId": "305753780ac16731",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Three sheets. Mind the brood.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Then he\u0027ll read them. He reads everything.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Complete": {
+          "Text": "Eleven names struck through and written again as \u0027passage paid\u0027. In my hand. I told you I was bad at sums.",
+          "VoiceId": "b9c3193951c1e387",
+          "Delivery": "weary"
+        },
+        "Fail": {
+          "Text": "Paper doesn\u0027t keep down here. Nor does a crew.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "The captain feeds the manifests to her fire, one sheet at a time, and does not look up. Somewhere below, the clerk laughs, and it carries.",
+        "VoiceId": "a5b8c5f4fb8c166e",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 8
+}

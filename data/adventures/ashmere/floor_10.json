@@ -1,0 +1,338 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 10,
+  "Source": "builtin",
+  "LayoutHash": 12763310907567784309,
+  "Title": "The Broodmother\u0027s Well",
+  "IntroLine": {
+    "Text": "The cistern burns. Lichen, oil and old rope, all alight, and in the middle of it the thing the low town fed when the toll came due. She has had a great many names to eat.",
+    "VoiceId": "a8cb2abb4f148817",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Arena",
+      "Name": "The Burning Cistern"
+    },
+    {
+      "Index": 1,
+      "Role": "Passage",
+      "Name": "Ash Gallery"
+    },
+    {
+      "Index": 2,
+      "Role": "Lair",
+      "Name": "The Hidden Clutch"
+    },
+    {
+      "Index": 3,
+      "Role": "Lair",
+      "Name": "Cinder Brood"
+    },
+    {
+      "Index": 4,
+      "Role": "Lair",
+      "Name": "The High Clutch"
+    },
+    {
+      "Index": 5,
+      "Role": "Ruin",
+      "Name": "Fallen Pump House"
+    },
+    {
+      "Index": 6,
+      "Role": "Lair",
+      "Name": "Smoke Ledge"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Scorched Cut"
+    },
+    {
+      "Index": 8,
+      "Role": "Hall",
+      "Name": "The Overlook"
+    },
+    {
+      "Index": 9,
+      "Role": "Lair",
+      "Name": "Ember Brood"
+    },
+    {
+      "Index": 10,
+      "Role": "Start",
+      "Name": "Lichen Head"
+    },
+    {
+      "Index": 11,
+      "Role": "Passage",
+      "Name": "Char Passage"
+    },
+    {
+      "Index": 12,
+      "Role": "Treasury",
+      "Name": "The Fed-Fat Chest"
+    },
+    {
+      "Index": 13,
+      "Role": "Passage",
+      "Name": "Ash Bend"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "pump_guard",
+      "Name": "the Pump-House Guard",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 5,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 3
+      }
+    },
+    {
+      "Id": "high_clutch",
+      "Name": "the High Clutch",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_shaman",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "ember_walkers",
+      "Name": "the Ember Walkers",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 9,
+        "Objective": null,
+        "Route": [
+          9,
+          3
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "smoke_lookout",
+      "Name": "the Smoke Lookout",
+      "FactionId": "faction1",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "pump_guard",
+        "RallyRoom": 5
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_hidden",
+      "Name": "The Hidden Clutch",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The hidden clutch hears the fire and mistakes it for its mother.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_cinder",
+      "Name": "The Cinder Brood",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 12,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "Cinders, then legs, then all of it at once.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_high",
+      "Name": "The High Clutch",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 11
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The high clutch spills down the ramp like poured gravel.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_pump",
+      "Name": "The Pump-House Brood",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The pump house was full of eggs, and you have opened the wrong box.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_smoke",
+      "Name": "The Smoke Brood",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 11
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 11,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "The lookout\u0027s cry brings the ledge down, and the ledge was alive.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_ember",
+      "Name": "The Ember Brood",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_crawler",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_crawler_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 13,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The ember brood comes out burning and does not seem to mind.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": {
+    "Name": "Mother of the Cistern",
+    "SignatureOverride": null,
+    "IntroLine": {
+      "Text": "Eleven he sent me. Four more, he said. He always keeps his word, the clerk.",
+      "VoiceId": "f1af8d030e2f4d22",
+      "Delivery": "booming"
+    },
+    "DeathLine": {
+      "Text": "Tell him... the toll... is short...",
+      "VoiceId": "b573659f15ee302d",
+      "Delivery": "weary"
+    }
+  },
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 7,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [],
+  "Taunts": [],
+  "EnemyTotal": 8
+}

@@ -1,0 +1,359 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 3,
+  "Source": "builtin",
+  "LayoutHash": 5294190080565317383,
+  "Title": "The Counting House",
+  "IntroLine": {
+    "Text": "Moss on the brick and ink on the moss. This was where Ashmere counted what it owed. The sums are still on the walls, and someone is still adding to them.",
+    "VoiceId": "e7a41ee07852a833",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Exit",
+      "Name": "The Clerk\u0027s Stair"
+    },
+    {
+      "Index": 1,
+      "Role": "Hall",
+      "Name": "Front Counter"
+    },
+    {
+      "Index": 2,
+      "Role": "Start",
+      "Name": "Moss Landing"
+    },
+    {
+      "Index": 3,
+      "Role": "Passage",
+      "Name": "Ink Runnel"
+    },
+    {
+      "Index": 4,
+      "Role": "Cell",
+      "Name": "The Blotter"
+    },
+    {
+      "Index": 5,
+      "Role": "Passage",
+      "Name": "Ledger Row"
+    },
+    {
+      "Index": 6,
+      "Role": "Treasury",
+      "Name": "Strongroom"
+    },
+    {
+      "Index": 7,
+      "Role": "Barracks",
+      "Name": "Tally Room"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "tally_clerks",
+      "Name": "the Tally Clerks",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "row_walkers",
+      "Name": "the Row Walkers",
+      "FactionId": "faction0",
+      "Members": [
+        {
+          "EnemyId": "enemy.skeleton_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 5,
+        "Objective": null,
+        "Route": [
+          5,
+          4
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_runnel",
+      "Name": "The Ink-Drowned",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 5,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The stream runs black, and the black climbs out.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_tally",
+      "Name": "The Overdue",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 5
+        },
+        {
+          "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 6,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The tally room settles its accounts all at once.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 1,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_nan",
+      "Name": "Nan Trellick",
+      "Room": 1,
+      "VoiceId": "Kore",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Mind the kerb, dear, this is Tallow Street. Well, it was. I\u0027m mapping it. You\u0027ll want the counting house\u0027s first page; they tore it in three, the cowards. Fetch the pieces and I\u0027ll read it you.",
+              "VoiceId": "6c65724a467ce670",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the pieces.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "This isn\u0027t a street. It\u0027s a tunnel.",
+                "Next": "street",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We have the pieces.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Another time, Nan.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "street",
+            "Line": {
+              "Text": "Tunnel. Street. It\u0027s all a matter of what\u0027s on top of you, and I\u0027ve never let that stop me. Here, look: the baker\u0027s was there, the Company office there. The office is the one that\u0027s still lit.",
+              "VoiceId": "2b80d4b4d90dc1ee",
+              "Delivery": "cheerful"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the pieces.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good. They\u0027ll be where clerks hide things: under the row, in the blotter, in the tally room. Don\u0027t let the clerks see you. They count you if they see you.",
+              "VoiceId": "82b097b00f606363",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "Here we are. \u0027Ashmere, the whole of it, owes the Lamplighters\u0027 Company...\u0027 a sum, my word, a sum. And under it: \u0027settled by water.\u0027 Settled by water. Well. That\u0027s Mill Lane for you, always flooding.",
+              "VoiceId": "7af3fd1a8236a28f",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_ledger",
+      "CastId": "cast_nan",
+      "Persona": {
+        "VoiceStyle": "a brisk old woman who talks over you and gets every street wrong with total confidence",
+        "DefaultDelivery": "warm",
+        "Voice": "Kore",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_ledger",
+      "Template": "Investigate",
+      "Title": "The First Page",
+      "Objective": "Find the three torn pieces of the toll ledger\u0027s first page and bring them to Nan.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          5,
+          4,
+          7
+        ],
+        "ClueName": "torn ledger pages"
+      },
+      "GiverNpc": "npc_nan",
+      "Reward": {
+        "Xp": 90,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "They tore the first page in three. Fetch the pieces and I\u0027ll read it you.",
+          "VoiceId": "e47800dd800876eb",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Good. Don\u0027t let the clerks count you.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Then I\u0027ll map without you. I usually do.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Complete": {
+          "Text": "\u0027Settled by water.\u0027 Well. That\u0027s Mill Lane for you.",
+          "VoiceId": "bd6d401ccae57bbf",
+          "Delivery": "calm"
+        },
+        "Fail": {
+          "Text": "Pages don\u0027t keep down here. Nor do people.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "The Company\u0027s lantern seal sits beside the sum. Somebody in the Company decided what Ashmere\u0027s debt was worth. Somebody else decided how to pay it.",
+        "VoiceId": "4d09e5b09d25fef7",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 5
+}

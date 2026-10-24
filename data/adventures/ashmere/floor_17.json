@@ -1,0 +1,543 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 17,
+  "Source": "builtin",
+  "LayoutHash": 17555845951728216256,
+  "Title": "The Foot of the Bell",
+  "IntroLine": {
+    "Text": "Black rock, painted planks, violet dark, and a bell the size of a house hanging point-down from the floor above. A deacon kneels at its lip. He has been kneeling a long time.",
+    "VoiceId": "c7e05ddb0e7bf8aa",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Start",
+      "Name": "The Rope Loft"
+    },
+    {
+      "Index": 1,
+      "Role": "Exit",
+      "Name": "The Clapper Stair"
+    },
+    {
+      "Index": 2,
+      "Role": "Lair",
+      "Name": "Upper Gallery"
+    },
+    {
+      "Index": 3,
+      "Role": "Kennel",
+      "Name": "The Sounding Board"
+    },
+    {
+      "Index": 4,
+      "Role": "Lair",
+      "Name": "The Wheel Loft"
+    },
+    {
+      "Index": 5,
+      "Role": "Gate",
+      "Name": "The Belfry Gate"
+    },
+    {
+      "Index": 6,
+      "Role": "Camp",
+      "Name": "Ringers\u0027 Squat"
+    },
+    {
+      "Index": 7,
+      "Role": "Hall",
+      "Name": "The Lip of the Bell"
+    },
+    {
+      "Index": 8,
+      "Role": "Lair",
+      "Name": "Frame Loft"
+    },
+    {
+      "Index": 9,
+      "Role": "Hall",
+      "Name": "The Bell Chamber"
+    },
+    {
+      "Index": 10,
+      "Role": "Hall",
+      "Name": "Peal Gallery"
+    },
+    {
+      "Index": 11,
+      "Role": "Treasury",
+      "Name": "The Ringers\u0027 Purse"
+    },
+    {
+      "Index": 12,
+      "Role": "Passage",
+      "Name": "The Drowned Step"
+    },
+    {
+      "Index": 13,
+      "Role": "Lair",
+      "Name": "Clapper Pit"
+    },
+    {
+      "Index": 14,
+      "Role": "Treasury",
+      "Name": "The Sealed Rope"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "belfry_gate",
+      "Name": "the Belfry Gate Guard",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Gate",
+          "Ref": "5"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 9
+      }
+    },
+    {
+      "Id": "ringers",
+      "Name": "the Ringers\u0027 Squat",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 12
+      }
+    },
+    {
+      "Id": "peal_wardens",
+      "Name": "the Peal Wardens",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 10,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "chamber_archer",
+      "Name": "the Chamber Archer",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 9,
+        "Objective": null,
+        "Route": [
+          9,
+          13
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_upper",
+      "Name": "The Upper Choir",
+      "Room": 2,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 23
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 27,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The gallery hums the bell\u0027s note back at it, and the hum takes shape.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_wheel",
+      "Name": "The Wheel Loft",
+      "Room": 4,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 24
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 27,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The wheel turns once, and everything in the loft turns with it, toward you.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_gate",
+      "Name": "The Gate\u0027s Peal",
+      "Room": 5,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 24
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 28,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The gate\u0027s braziers ring like struck bronze, and the dark answers.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_frame",
+      "Name": "The Frame Loft",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 25
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 29,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The frame creaks, and what hangs from it lets go.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_chamber",
+      "Name": "The Bell\u0027s Own",
+      "Room": 9,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 24
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 28,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The bell chamber gives up everything that ever drowned to its note.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_clapper",
+      "Name": "The Clapper Pit",
+      "Room": 13,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 23
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 4
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 27,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The pit under the clapper was a grave, and it opens.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 12,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 3,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_bell",
+      "Name": "Ambrose Bell",
+      "Room": 7,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "You\u0027ve come down the whole way. I\u0027m sorry. I\u0027m Bell, the deacon, the ringer\u0027s son. The rope is somewhere in the lofts, cut in pieces; if I had it I could ring her again and raise the town. Would you... would you look?",
+              "VoiceId": "beaac76fd33a2f0c",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the rope.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Who rang it the first time?",
+                "Next": "who",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We have the rope.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Ring your own bell.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "who",
+            "Line": {
+              "Text": "Everyone asks. Nobody knows. The water came in the night and the bell was ringing and by morning there was nobody to ask. I\u0027m sorry. Would you look for the rope?",
+              "VoiceId": "86ee5fca51c41456",
+              "Delivery": "whisper"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the rope.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Thank you. The peal gallery, the sounding board, the drowned step. It was cut short, the rope. Somebody small was meant to reach it.",
+              "VoiceId": "645bcee3caf80774",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "That\u0027s it. That\u0027s the knot. I tied that knot, I was nine, I couldn\u0027t reach and the Company man tied the rest and gave me the lantern seal to hold and said ring, Ambrose, ring and the debt goes away. I\u0027m sorry. I\u0027m so sor",
+              "VoiceId": "c749c9f2f0a217bd",
+              "Delivery": "whisper"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_rope",
+      "CastId": "cast_bell",
+      "Persona": {
+        "VoiceStyle": "a soft, guilty man, every sentence half an apology",
+        "DefaultDelivery": "pleading",
+        "Voice": "Enceladus",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_rope",
+      "Template": "Investigate",
+      "Title": "The Bell-Rope",
+      "Objective": "Find the three cut lengths of the bell-rope in the lofts and bring them to Ambrose Bell.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          10,
+          3,
+          12
+        ],
+        "ClueName": "cut lengths of bell-rope"
+      },
+      "GiverNpc": "npc_bell",
+      "Reward": {
+        "Xp": 500,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "The rope is in the lofts, cut in pieces. Would you look?",
+          "VoiceId": "1510d6afe9bba11f",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Thank you. It was cut short. Somebody small was meant to reach it.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "No. No, of course. I\u0027m sorry I asked.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Complete": {
+          "Text": "I tied that knot. I was nine. The Company man said ring, Ambrose, and the debt goes away.",
+          "VoiceId": "d7211b7fe5798611",
+          "Delivery": "whisper"
+        },
+        "Fail": {
+          "Text": "Then she stays silent. Perhaps that\u0027s best.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "The clerk\u0027s laugh comes down through the bell itself. The Lamplighters\u0027 Company, he says. Your paymasters. Your lantern on the knot. Do go home and tell them the toll is still owed.",
+        "VoiceId": "d5e18881b367a8b1",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 9
+}

@@ -1,216 +1,401 @@
 {
   "SchemaVersion": 1,
   "Floor": 4,
-  "Source": "builtin",
-  "LayoutHash": 4100339883212986443,
-  "Title": "The Charnel Pits",
+  "Source": "claude",
+  "LayoutHash": 168417766994182582,
+  "Title": "The Chantry",
   "IntroLine": {
-    "Text": "Rotten timber over the pits where Ashmere put its dead when the church ran out of floor. The air is green at the edges, and it is coming up to meet you.",
-    "VoiceId": "691b97fee7daf476",
+    "Text": "Rotten timber, a green air rising out of the cellars, and somewhere in it a man with a ledger apologising to nobody.",
+    "VoiceId": "28fdca3dd672d0cc",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Passage",
-      "Name": "High Drift"
+      "Name": "The Breached Crossing"
     },
     {
       "Index": 1,
-      "Role": "Start",
-      "Name": "Timber Head"
+      "Role": "Hall",
+      "Name": "Chantry of Small Bequests"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "The Long Gallery"
+      "Role": "Start",
+      "Name": "The Bread Cellar"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "Coffin Gallery"
+      "Role": "Exit",
+      "Name": "Sealed Soul-Shaft"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "Narrow Drift"
+      "Role": "Treasury",
+      "Name": "The Alms Drift"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "Vent Shaft"
+      "Role": "Barracks",
+      "Name": "Gallery of Last Coats"
     },
     {
       "Index": 6,
-      "Role": "Ruin",
-      "Name": "Collapsed Charnel"
+      "Role": "Passage",
+      "Name": "The Long Timbering"
     },
     {
       "Index": 7,
-      "Role": "Kennel",
-      "Name": "Seep Chamber"
+      "Role": "Passage",
+      "Name": "The Candle Drift"
     },
     {
       "Index": 8,
-      "Role": "Kennel",
-      "Name": "The Sink"
-    },
-    {
-      "Index": 9,
-      "Role": "Exit",
-      "Name": "Low Stair"
-    },
-    {
-      "Index": 10,
-      "Role": "Passage",
-      "Name": "Spoil Drift"
-    },
-    {
-      "Index": 11,
-      "Role": "Treasury",
-      "Name": "Sexton\u0027s Cache"
+      "Role": "Shrine",
+      "Name": "Chapel of the Spoil Heap"
     }
   ],
   "Collectives": [
     {
-      "Id": "coffin_guard",
-      "Name": "the Coffin Guard",
-      "FactionId": "faction0",
+      "Id": "col_alms",
+      "Name": "Wardens of the Alms Drift",
+      "FactionId": "fac_vestry",
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 2
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 4,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "1"
         },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 7
+      }
+    },
+    {
+      "Id": "col_bell",
+      "Name": "The Bell-Runners",
+      "FactionId": "fac_vestry",
+      "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 3,
+        "Kind": "Alarm",
+        "Room": 8,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 10
+        "AlarmTarget": "col_alms",
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "gallery_walkers",
-      "Name": "the Gallery Walkers",
-      "FactionId": "faction0",
+      "Id": "col_round",
+      "Name": "The Evening Round",
+      "FactionId": "fac_vestry",
       "Members": [
         {
-          "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.bone_priest",
+          "EnemyId": "enemy.ghoul",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 2,
+        "Room": 6,
         "Objective": null,
         "Route": [
-          2,
-          10
+          6,
+          7,
+          0
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 6
       }
     },
     {
-      "Id": "vent_priest",
-      "Name": "the Vent Priest",
-      "FactionId": "faction0",
+      "Id": "col_gate",
+      "Name": "Keepers of the Lever Gate",
+      "FactionId": "fac_vestry",
       "Members": [
         {
           "EnemyId": "enemy.bone_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 0,
+        "Room": 5,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 1
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_charnel",
-      "Name": "The Charnel Spill",
-      "Room": 6,
+      "Id": "hor_crossing",
+      "Name": "The Parish Overflow",
+      "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 6
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 6,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The collapsed charnel finishes collapsing, and what it held pours out over the timbers.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_seep",
-      "Name": "The Seep",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 5
+          "Count": 7
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ghoul",
           "Count": 1
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 6,
+      "Total": 9,
       "Trigger": "Enter",
       "Line": {
-        "Text": "Green water, then green hands, then the rest.",
+        "Text": "The wall of the crossing gives up its mortar, and out come the parish, still wearing last generation\u0027s coats.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
-  "Traps": [
+  "Chests": [
     {
-      "Room": 4,
-      "Kind": "Gas"
+      "Room": 8,
+      "Locked": false,
+      "QuestId": null
     }
   ],
-  "Npcs": [],
-  "Quests": [],
+  "Traps": [
+    {
+      "Room": 6,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 7,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_crane",
+      "Name": "Alderman Hesketh Crane",
+      "Room": 8,
+      "VoiceId": "Umbriel",
+      "Script": {
+        "Start": "n1",
+        "Nodes": [
+          {
+            "Id": "n1",
+            "Line": {
+              "Text": "Ah. You. I came down to check the invoice, that\u0027s all, and the sexton\u0027s book has gone and shed itself all over these drifts. Pages everywhere. Most irregular.",
+              "VoiceId": "40208744a3b04433",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "What is in the book, Alderman?",
+                "Next": "n2",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Keep your paper. The air is going green.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "n2",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "n2",
+            "Line": {
+              "Text": "Plumbing inspections. Nineteen years apart, four names a time, and a column at the end that nobody ever filled in. Fetch the pages and I shall explain the column.",
+              "VoiceId": "13082166d19a0111",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "I\u0027ll gather your pages.",
+                "Next": null,
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Gather them yourself. Mind the gas.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "The pages are here, Alderman.",
+                "Next": null,
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "q_ledger",
+      "CastId": "cast_crane",
+      "Persona": {
+        "VoiceStyle": "a plump market-town alderman, chain of office, blusters when cornered, apologises to furniture",
+        "DefaultDelivery": "frantic",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "q_ledger",
+      "Template": "Investigate",
+      "Title": "The Sexton\u0027s Ledger",
+      "Objective": "Recover the scattered ledger pages from the drifts and bring them to Crane",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          4,
+          6,
+          1
+        ],
+        "ClueName": "a damp ledger page"
+      },
+      "GiverNpc": "npc_crane",
+      "Reward": {
+        "Xp": 140,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Three pages, no more. One in the alms drift, one along the timbering, one up in the chantry. I would go myself, but the chain of office is heavy and I am, frankly, a coward.",
+          "VoiceId": "44aee353fa0ccc2c",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Good. Good. I shall stand here and guard the heap, which is important work.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Quite right. Paper is paper. It is only names.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "Sixteen twelve. Four names. Sixteen thirty-one, four names. And so on, every nineteen years, and not one return date. The column says Rendered. I never asked what it meant.",
+          "VoiceId": "aac3580d74ee1c60",
+          "Delivery": "weary"
+        },
+        "Fail": {
+          "Text": "Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Narration": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 9,
+      "Trigger": "QuestDone",
+      "Room": null,
       "Line": {
-        "Text": "The stair is down here, low and far, exactly where the air is worst. The clerk has a sense of humour and no lungs to trouble it.",
-        "VoiceId": null,
+        "Text": "Crane holds the pages at arm\u0027s length, as a man holds something that has bitten him before.",
+        "VoiceId": "498f4fc23aa7da49",
         "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 6
+  "Taunts": [
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "toxic",
+      "Line": {
+        "Text": "The chantry breathes out. It is only the damp, the gas and six hundred years of parish. Do not stand in the low ground, and do not bleed on the pages.",
+        "VoiceId": "7ae2236a6c9afe67",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The chantry breathes out. It is only the damp, the gas and six hundred years of parish. Do not stand in the low ground, and do not bleed on the pages.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GasThickens",
+      "Objective": "toxic",
+      "Line": {
+        "Text": "That is Himself breathing out. Do try not to take it personally.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "That is Himself breathing out. Do try not to take it personally.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
+  "EnemyTotal": 5
 }

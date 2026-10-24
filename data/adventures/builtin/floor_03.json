@@ -1,137 +1,152 @@
 {
   "SchemaVersion": 1,
   "Floor": 3,
-  "Source": "builtin",
-  "LayoutHash": 5294190080565317383,
-  "Title": "The Counting House",
+  "Source": "claude",
+  "LayoutHash": 2759344506831363821,
+  "Title": "The Nave",
   "IntroLine": {
-    "Text": "Moss on the brick and ink on the moss. This was where Ashmere counted what it owed. The sums are still on the walls, and someone is still adding to them.",
-    "VoiceId": "e7a41ee07852a833",
+    "Text": "Chalk-white bone stacked to the vaulting, and a candle burning in a chapel where nobody has needed light for six hundred years.",
+    "VoiceId": "167ded0ae4f266f6",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Exit",
-      "Name": "The Clerk\u0027s Stair"
+      "Role": "Passage",
+      "Name": "Crossing of the Nave"
     },
     {
       "Index": 1,
-      "Role": "Hall",
-      "Name": "Front Counter"
+      "Role": "Barracks",
+      "Name": "Vestry Benches"
     },
     {
       "Index": 2,
       "Role": "Start",
-      "Name": "Moss Landing"
+      "Name": "Porch of the Second Station"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Ink Runnel"
+      "Role": "Hall",
+      "Name": "The Long Nave"
     },
     {
       "Index": 4,
-      "Role": "Cell",
-      "Name": "The Blotter"
+      "Role": "Exit",
+      "Name": "Stair Behind the Reredos"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "Ledger Row"
+      "Role": "Treasury",
+      "Name": "Chancel Strongbox"
     },
     {
       "Index": 6,
-      "Role": "Treasury",
-      "Name": "Strongroom"
+      "Role": "Passage",
+      "Name": "North Aisle"
     },
     {
       "Index": 7,
-      "Role": "Barracks",
-      "Name": "Tally Room"
+      "Role": "Shrine",
+      "Name": "The Chancel"
+    },
+    {
+      "Index": 8,
+      "Role": "Cell",
+      "Name": "Priest\u0027s Hole"
+    },
+    {
+      "Index": 9,
+      "Role": "Cell",
+      "Name": "The Bone Chapel"
+    },
+    {
+      "Index": 10,
+      "Role": "Lair",
+      "Name": "Breached Ossuary Wall"
     }
   ],
   "Collectives": [
     {
-      "Id": "tally_clerks",
-      "Name": "the Tally Clerks",
-      "FactionId": "faction0",
+      "Id": "col_chancel",
+      "Name": "Keepers of the Strongbox",
+      "FactionId": "fac_vestry",
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
           "Count": 2
-        },
-        {
-          "EnemyId": "enemy.bone_priest",
-          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 7,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 5,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "1"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": 5
       }
     },
     {
-      "Id": "row_walkers",
-      "Name": "the Row Walkers",
-      "FactionId": "faction0",
+      "Id": "col_bellcord",
+      "Name": "The Bell-Cord Boys",
+      "FactionId": "fac_vestry",
       "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 0,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "col_chancel",
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "col_procession",
+      "Name": "The Evening Procession",
+      "FactionId": "fac_vestry",
+      "Members": [
+        {
+          "EnemyId": "enemy.bone_priest",
           "Count": 1
         },
         {
-          "EnemyId": "enemy.ghoul",
+          "EnemyId": "enemy.skeleton_archer",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 5,
+        "Room": 7,
         "Objective": null,
         "Route": [
-          5,
-          4
+          7,
+          3,
+          0,
+          6
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 3
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_runnel",
-      "Name": "The Ink-Drowned",
-      "Room": 3,
+      "Id": "hrd_ossuary",
+      "Name": "The Shelved Dead",
+      "Room": 10,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 5,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The stream runs black, and the black climbs out.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_tally",
-      "Name": "The Overdue",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 5
+          "Count": 6
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
@@ -140,144 +155,129 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 6,
+      "Total": 7,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The tally room settles its accounts all at once.",
+        "Text": "The stacked bone shifts, and shifts again, and then the wall gives up its tenants all at once.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 6,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 1,
+      "Room": 9,
       "Kind": "Spikes"
+    },
+    {
+      "Room": 10,
+      "Kind": "Gas"
+    },
+    {
+      "Room": 3,
+      "Kind": "Fire"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc_nan",
-      "Name": "Nan Trellick",
-      "Room": 1,
-      "VoiceId": "Kore",
+      "Id": "npc_tobit",
+      "Name": "Deacon Tobit Hale",
+      "Room": 7,
+      "VoiceId": "Orus",
       "Script": {
         "Start": "greet",
         "Nodes": [
           {
             "Id": "greet",
             "Line": {
-              "Text": "Mind the kerb, dear, this is Tallow Street. Well, it was. I\u0027m mapping it. You\u0027ll want the counting house\u0027s first page; they tore it in three, the cowards. Fetch the pieces and I\u0027ll read it you.",
-              "VoiceId": "6c65724a467ce670",
-              "Delivery": null
+              "Text": "Welcome to the First Station. The Verger sends his regrets, and asks that you not bleed on the flagstones; they were only just done.",
+              "VoiceId": "4659fe519f848155",
+              "Delivery": "warm"
             },
             "Choices": [
               {
-                "Text": "We\u0027ll find the pieces.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "This isn\u0027t a street. It\u0027s a tunnel.",
-                "Next": "street",
+                "Text": "Regrets for what, exactly?",
+                "Next": "ask",
                 "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "We have the pieces.",
-                "Next": "done",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Another time, Nan.",
-                "Next": null,
-                "Effect": "DeclineQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "street",
-            "Line": {
-              "Text": "Tunnel. Street. It\u0027s all a matter of what\u0027s on top of you, and I\u0027ve never let that stop me. Here, look: the baker\u0027s was there, the Company office there. The office is the one that\u0027s still lit.",
-              "VoiceId": "2b80d4b4d90dc1ee",
-              "Delivery": "cheerful"
-            },
-            "Choices": [
-              {
-                "Text": "We\u0027ll find the pieces.",
-                "Next": "accepted",
+                "Text": "We\u0027re here about the plumbing, deacon.",
+                "Next": "ask",
                 "Effect": "AcceptQuest",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Later.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           },
           {
-            "Id": "accepted",
+            "Id": "ask",
             "Line": {
-              "Text": "Good. They\u0027ll be where clerks hide things: under the row, in the blotter, in the tally room. Don\u0027t let the clerks see you. They count you if they see you.",
-              "VoiceId": "82b097b00f606363",
+              "Text": "Pilgrims come down the Gullet every nineteen years. He prepares the Stations himself. You are expected, and that is a comfort, is it not?",
+              "VoiceId": "36e0b5664fc79710",
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
+                "Text": "Nobody down here is expecting anything good. The council hired us to clear a drain.",
+                "Next": "end",
+                "Effect": "Choose",
+                "Flag": "told_tobit",
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "A great comfort. Say nothing more about it.",
+                "Next": "end",
+                "Effect": "Choose",
+                "Flag": "kept_his_saint",
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           },
           {
-            "Id": "done",
+            "Id": "end",
             "Line": {
-              "Text": "Here we are. \u0027Ashmere, the whole of it, owes the Lamplighters\u0027 Company...\u0027 a sum, my word, a sum. And under it: \u0027settled by water.\u0027 Settled by water. Well. That\u0027s Mill Lane for you, always flooding.",
-              "VoiceId": "7af3fd1a8236a28f",
-              "Delivery": "calm"
+              "Text": "Then go gently. The chapel past the chancel has a press in the walls, and it does not care whose bones it is given.",
+              "VoiceId": "134041eac2d23e33",
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "Mind the flagstones, deacon.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest_ledger",
-      "CastId": "cast_nan",
+      "QuestId": "q_tobit_truth",
+      "CastId": "cast_tobit",
       "Persona": {
-        "VoiceStyle": "a brisk old woman who talks over you and gets every street wrong with total confidence",
+        "VoiceStyle": "a young deacon, courteous and bright, polishing fear with liturgy; eager to be useful",
         "DefaultDelivery": "warm",
-        "Voice": "Kore",
+        "Voice": null,
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -287,10 +287,10 @@
   ],
   "Quests": [
     {
-      "Id": "quest_ledger",
-      "Template": "Investigate",
-      "Title": "The First Page",
-      "Objective": "Find the three torn pieces of the toll ledger\u0027s first page and bring them to Nan.",
+      "Id": "q_tobit_truth",
+      "Template": "Decide",
+      "Title": "Plumbers, Not Pilgrims",
+      "Objective": "Tell Deacon Hale what the contract actually says, or let him keep his saint.",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -298,62 +298,81 @@
         "EscortNpc": null,
         "Waves": null,
         "WaveCollective": null,
-        "ClueRooms": [
-          5,
-          4,
-          7
-        ],
-        "ClueName": "torn ledger pages"
+        "ClueRooms": [],
+        "ClueName": null
       },
-      "GiverNpc": "npc_nan",
+      "GiverNpc": "npc_tobit",
       "Reward": {
-        "Xp": 90,
+        "Xp": 120,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "They tore the first page in three. Fetch the pieces and I\u0027ll read it you.",
-          "VoiceId": "e47800dd800876eb",
+          "Text": "You have the look of people with a paper in their coat. Read it to me, if you like. I am told I am a good listener.",
+          "VoiceId": "d873c4806ed00bb7",
           "Delivery": null
         },
         "Accept": {
-          "Text": "Good. Don\u0027t let the clerks count you.",
+          "Text": "Yes. Say it plainly. He never says anything plainly, and I have stopped being able to tell why.",
           "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "Then I\u0027ll map without you. I usually do.",
+          "Text": "As you wish. The candle will keep until you change your mind. It keeps very well.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
         },
         "Complete": {
-          "Text": "\u0027Settled by water.\u0027 Well. That\u0027s Mill Lane for you.",
-          "VoiceId": "bd6d401ccae57bbf",
-          "Delivery": "calm"
+          "Text": "Plumbing. Four of you, every nineteen years, for the plumbing. I shall have to think about that somewhere with fewer bones in it.",
+          "VoiceId": "faa24af1197ce42a",
+          "Delivery": null
         },
         "Fail": {
-          "Text": "Pages don\u0027t keep down here. Nor do people.",
+          "Text": "Go down, then. He is waiting at the fourth, and he is very patient with me.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
         }
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "Narration": [
+  "Narration": [],
+  "Taunts": [
     {
-      "Trigger": "QuestDone",
-      "Room": null,
+      "Trigger": "FloorEnter",
+      "Objective": null,
       "Line": {
-        "Text": "The Company\u0027s lantern seal sits beside the sum. Somebody in the Company decided what Ashmere\u0027s debt was worth. Somebody else decided how to pay it.",
-        "VoiceId": "4d09e5b09d25fef7",
+        "Text": "Wipe your bloody feet. This is a church.",
+        "VoiceId": "e7ea30dbb9c8b4ff",
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Wipe your feet. This is a church.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MemberDowned",
+      "Objective": null,
+      "Line": {
+        "Text": "Oh, good. The press works. Nobody tells me a sodding thing down here.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Oh, good. The press works. Nobody tells me anything down here.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 5
+  "EnemyTotal": 6
 }

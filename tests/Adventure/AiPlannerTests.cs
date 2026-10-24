@@ -103,6 +103,32 @@ public class PromptBuilderTests
     }
 
     [Fact]
+    public void StoryBrief_RidesEveryCallAsACachedBlock_AndIsAbsentByDefault()
+    {
+        var campaign = OfflineDesigner.Outline(5, new[] { TestAdventure.Crypt });
+        var (_, _, menu) = TestAdventure.Floor(2, 3);
+        var party = new[] { new PartyMemberInfo("Brand", "Warrior") };
+        var withBrief = new PromptTemplates { Brief = "# The Gullet of Gorm\nA god sleeps under Dunmarrow." };
+
+        var plain = PromptBuilder.Floor(PromptTemplates.Default, "claude-opus-5", campaign, menu, "");
+        Assert.DoesNotContain(plain.System, s => s.Text.Contains("Gullet of Gorm"));
+        Assert.DoesNotContain("bible", plain.User);
+
+        var floor = PromptBuilder.Floor(withBrief, "claude-opus-5", campaign, menu, "");
+        var bible = Assert.Single(floor.System, s => s.Text.Contains("Gullet of Gorm"));
+        Assert.True(bible.Cache);
+        Assert.StartsWith(PromptTemplates.BriefPreamble.Trim(), bible.Text);
+        Assert.Contains("bible", floor.User);
+
+        var outline = PromptBuilder.Outline(withBrief, "claude-opus-5", 5, new[] { TestAdventure.Crypt }, TestAdventure.Roster, party, menu);
+        Assert.Contains(outline.System, s => s.Text == bible.Text);
+        Assert.Contains("Follow the campaign bible", outline.User);
+
+        var barks = PromptBuilder.Barks(withBrief, "claude-opus-5", campaign, party);
+        Assert.Contains(barks.System, s => s.Text == bible.Text);
+    }
+
+    [Fact]
     public void OutlineRequest_ListsTiersAndParty()
     {
         var (_, _, menu) = TestAdventure.Floor(1, 9);

@@ -1,91 +1,104 @@
 {
   "SchemaVersion": 1,
   "Floor": 1,
-  "Source": "builtin",
-  "LayoutHash": 757036586804061643,
-  "Title": "The Vestry Steps",
+  "Source": "claude",
+  "LayoutHash": 2107112901460205004,
+  "Title": "The Lychgate",
   "IntroLine": {
-    "Text": "The steps end in red brick and old incense. Somebody has swept them. Somebody has been expecting you.",
-    "VoiceId": "09fbe6583c4169fd",
+    "Text": "Six hundred years of Dunmarrow\u0027s dead lie overhead. The council calls what breathes beneath them a drainage fault, and has paid you four in advance.",
+    "VoiceId": "56e4778aeea8b8d6",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Ruin",
-      "Name": "Fallen Colonnade"
+      "Role": "Hall",
+      "Name": "The Mourners\u0027 Cloakroom"
     },
     {
       "Index": 1,
-      "Role": "Passage",
-      "Name": "The Runnel"
+      "Role": "Start",
+      "Name": "The Lychgate Stair"
     },
     {
       "Index": 2,
       "Role": "Passage",
-      "Name": "Sacristy Passage"
+      "Name": "Candle Store"
     },
     {
       "Index": 3,
-      "Role": "Treasury",
-      "Name": "The Tithe Box"
+      "Role": "Exit",
+      "Name": "Chancel Steps"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "The Vestry Steps"
+      "Role": "Shrine",
+      "Name": "The Drowned Font"
     },
     {
       "Index": 5,
-      "Role": "Gate",
-      "Name": "Verger\u0027s Gate"
+      "Role": "Ruin",
+      "Name": "The Fallen Aisle"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "Lamplit Hall"
+      "Role": "Passage",
+      "Name": "Vestry Passage"
     },
     {
       "Index": 7,
-      "Role": "Exit",
-      "Name": "The Way Down"
+      "Role": "Cell",
+      "Name": "The First Cellar"
     },
     {
       "Index": 8,
-      "Role": "Kennel",
-      "Name": "Pit of the Unshriven"
+      "Role": "Camp",
+      "Name": "Oddfellows\u0027 Squat"
     },
     {
       "Index": 9,
       "Role": "Barracks",
-      "Name": "Vestry Watch Room"
+      "Name": "Gravediggers\u0027 Walk"
+    },
+    {
+      "Index": 10,
+      "Role": "Treasury",
+      "Name": "The Alms Vault"
     }
   ],
   "Collectives": [
     {
-      "Id": "vestry_watch",
-      "Name": "the Vestry Watch",
-      "FactionId": "faction0",
+      "Id": "col_oddfellows",
+      "Name": "The Oddfellows\u0027 Watch",
+      "FactionId": null,
       "Members": [
         {
-          "EnemyId": "enemy.ghoul",
+          "EnemyId": "enemy.bandit",
           "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 0,
+        "Room": 8,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 6
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "runnel_walker",
-      "Name": "the Runnel Walker",
-      "FactionId": "faction0",
+      "Id": "col_vestry_round",
+      "Name": "The Vestry Round",
+      "FactionId": "fac_vestry",
       "Members": [
+        {
+          "EnemyId": "enemy.ghoul",
+          "Count": 1
+        },
         {
           "EnemyId": "enemy.skeleton_archer",
           "Count": 1
@@ -97,40 +110,39 @@
         "Objective": null,
         "Route": [
           2,
-          1
+          6,
+          4
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "gate_keeper",
-      "Name": "the Gate\u0027s Keeper",
-      "FactionId": "faction0",
-      "Members": [
-        {
-          "EnemyId": "enemy.bone_priest",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Defend",
-        "Room": 5,
-        "Objective": {
-          "Kind": "Gate",
-          "Ref": "5"
-        },
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 2
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_colonnade",
-      "Name": "The Unshriven",
+      "Id": "horde_vestry_passage",
+      "Name": "Seam in the Vestry Wall",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The vestry wall opens along a seam, and dry things come out of it sideways.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_cloakroom",
+      "Name": "Coats Off Their Hooks",
       "Room": 0,
       "Members": [
         {
@@ -141,17 +153,17 @@
       "EnemyId": null,
       "Count": null,
       "Total": 4,
-      "Trigger": "Enter",
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The fallen columns shiver, and what was buried under them stands up, hungry.",
+        "Text": "The chest lid lifts, and the cloakroom answers: husks shrugging out of the coats they were buried in.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_runnel",
-      "Name": "The Runnel Spill",
-      "Room": 1,
+      "Id": "horde_diggers",
+      "Name": "The Diggers Come Up",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
@@ -163,39 +175,19 @@
       "Total": 3,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The stream chokes, then gives up its dead.",
+        "Text": "Gravediggers\u0027 walk, and the gravediggers come up through their own breaches.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_sacristy",
-      "Name": "The Sacristy Crawl",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 3,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Something scrabbles behind the sacristy wall, then the wall gives.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_gate",
-      "Name": "The Gate\u0027s Tithe",
+      "Id": "horde_aisle",
+      "Name": "The Rubble Stands Up",
       "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 4
+          "Count": 3
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
@@ -204,38 +196,18 @@
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 5,
-      "Trigger": "Enter",
+      "Total": 4,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The braziers gutter. The Verger\u0027s gate lets its own dead through.",
+        "Text": "Behind the fallen columns the rubble stands up. One of them stands taller than the rest.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_hall",
-      "Name": "The Lamplit Dead",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_husk",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 3,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The lamps go out one by one, and the dark fills with feet.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_watch",
-      "Name": "The Off-Duty Watch",
-      "Room": 9,
+      "Id": "horde_font",
+      "Name": "Wading Out of the Font",
+      "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
@@ -247,141 +219,165 @@
       "Total": 4,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The watch room empties itself at you, all at once.",
+        "Text": "The font water goes grey, and things wade out of the breaches to meet you in it.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_squat",
+      "Name": "Neighbours at the Hut",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_husk",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 3,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The squatters\u0027 hut shudders. The breaches behind it cough up neighbours.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 5,
+      "Locked": false,
+      "QuestId": null
+    },
+    {
+      "Room": 7,
+      "Locked": false,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
       "Room": 2,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 0,
       "Kind": "Spikes"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc_hollis",
-      "Name": "Hollis Penn",
-      "Room": 6,
-      "VoiceId": "Orus",
+      "Id": "npc_crane",
+      "Name": "Alderman Hesketh Crane",
+      "Room": 1,
+      "VoiceId": "Umbriel",
       "Script": {
-        "Start": "greet",
+        "Start": "gate",
         "Nodes": [
           {
-            "Id": "greet",
+            "Id": "gate",
             "Line": {
-              "Text": "Brand! Sable! The whole lantern brigade. Hollis Penn, Company quartermaster, came down a day ahead to smooth the road. Small snag: the vestry watch won\u0027t stay dead. Clear them and the road\u0027s yours.",
-              "VoiceId": "9c8389b3fd098f38",
+              "Text": "Nobody said god. I said plumbing. Legally those are very different words, and the contract uses mine.",
+              "VoiceId": "0712ef2049dc0183",
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "We\u0027ll clear the watch.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "You came down a day ahead. Alone?",
-                "Next": "alone",
+                "Text": "Then what is breathing down there?",
+                "Next": "bread",
                 "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "The watch is dead.",
-                "Next": "done",
+                "Text": "Show us the seal and stand aside.",
+                "Next": "bread",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "bread",
                 "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "bread",
+            "Line": {
+              "Text": "Sour wells. Nineteen years of silt. That is all it has ever been. There is bread in the first cellar; I put it there myself.",
+              "VoiceId": "392f73989857bf6b",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll bring your basket back.",
+                "Next": null,
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "Not our job, Hollis.",
+                "Text": "Keep your crumbs, alderman.",
                 "Next": null,
                 "Effect": "DeclineQuest",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "alone",
-            "Line": {
-              "Text": "Alone, yes, more or less. The Company likes a man on the ground before the ground gets crowded. Don\u0027t fret about me. Fret about the two in the colonnade with no faces.",
-              "VoiceId": "bdd768958995ad2f",
-              "Delivery": "sly"
-            },
-            "Choices": [
-              {
-                "Text": "We\u0027ll clear the watch.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "Later.",
-                "Next": null,
-                "Effect": "Farewell",
+                "Text": "Your basket. And the paper folded in it.",
+                "Next": "done",
+                "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "accepted",
-            "Line": {
-              "Text": "Good lads. Good lasses. There\u0027s a box of tithe silver in the vault that\u0027ll want a key, and I\u0027ve a note of where the key is. After. Business first.",
-              "VoiceId": "e7a641cea9b1547e",
-              "Delivery": null
-            },
-            "Choices": [
-              {
-                "Text": "Farewell.",
-                "Next": null,
-                "Effect": "Farewell",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           },
           {
             "Id": "done",
             "Line": {
-              "Text": "That\u0027s the road open, then. Here, from the Company\u0027s purse, and my compliments. Keep going down. Whatever you find, I\u0027d take it straight to me. I\u0027ll be about.",
-              "VoiceId": "2b9f5ba62532d093",
-              "Delivery": "warm"
+              "Text": "A counterfoil. An old form. Every house in Dunmarrow has one in a drawer. Go down, inspectors; the council thanks you in writing.",
+              "VoiceId": "a57442cfe88282be",
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "Go back up, Crane. While the gate\u0027s open.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest_watch",
-      "CastId": "cast_hollis",
+      "QuestId": "q1_basket",
+      "CastId": "cast_crane",
       "Persona": {
-        "VoiceStyle": "a brisk, chummy company man, all smiles and quick sums, never quite looking at you",
+        "VoiceStyle": "a plump market-town alderman; bluster over panic, speaks in clauses, invoices and apologies",
         "DefaultDelivery": "cheerful",
-        "Voice": "Puck",
+        "Voice": "Umbriel",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -391,50 +387,50 @@
   ],
   "Quests": [
     {
-      "Id": "quest_watch",
-      "Template": "KillTarget",
-      "Title": "Clear the Vestry Watch",
-      "Objective": "Kill the ghouls of the Vestry Watch in the fallen colonnade.",
+      "Id": "q1_basket",
+      "Template": "Recover",
+      "Title": "Council Property",
+      "Objective": "Fetch the alderman\u0027s bread-basket up from the first cellar.",
       "Params": {
-        "TargetCollective": "vestry_watch",
-        "ItemName": null,
-        "ItemRoom": null,
+        "TargetCollective": null,
+        "ItemName": "the alderman\u0027s bread-basket",
+        "ItemRoom": 7,
         "EscortNpc": null,
         "Waves": null,
         "WaveCollective": null,
         "ClueRooms": [],
         "ClueName": null
       },
-      "GiverNpc": "npc_hollis",
+      "GiverNpc": "npc_crane",
       "Reward": {
         "Xp": 40,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "The vestry watch won\u0027t stay dead. Clear them and the road\u0027s yours.",
-          "VoiceId": "60794026e659f750",
+          "Text": "There is bread in the first cellar. I put it there myself. Bring the basket up when it\u0027s empty; the basket is council property, and I account for everything.",
+          "VoiceId": "d3e12ba68b2ea3bf",
           "Delivery": null
         },
         "Accept": {
-          "Text": "Good. Business first, silver after.",
+          "Text": "Good. Good. Don\u0027t eat the cloth.",
           "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "Suit yourselves. The Company\u0027s patient. I\u0027m less so.",
+          "Text": "Then it rots down there with the rest of the parish\u0027s goodwill. Suit yourselves.",
           "VoiceId": null,
-          "Delivery": "sly"
-        },
-        "Complete": {
-          "Text": "That\u0027s the road open. Keep going down, and bring what you find to me.",
-          "VoiceId": "ce49f65a7310db22",
           "Delivery": null
         },
-        "Fail": {
-          "Text": "Well. That\u0027s a shame for the road.",
-          "VoiceId": null,
+        "Complete": {
+          "Text": "...and the counterfoil folded in the bottom. That is nothing. An old form. Mind the step on your way down, there\u0027s good inspectors.",
+          "VoiceId": "ba9907f5e58039f3",
           "Delivery": "weary"
+        },
+        "Fail": {
+          "Text": "Keep it. I shall enter the basket on the loss ledger, under drainage.",
+          "VoiceId": null,
+          "Delivery": null
         }
       },
       "RequiresFlag": null,
@@ -444,10 +440,10 @@
   "Narration": [
     {
       "Trigger": "RoomEnter",
-      "Room": 3,
+      "Room": 0,
       "Line": {
-        "Text": "Tithe silver, still stacked. Nobody down here has needed money in a long time, and somebody has kept it anyway.",
-        "VoiceId": "6d47615b4c747904",
+        "Text": "Coats on hooks, buttoned, numbered in the sexton\u0027s hand. The last four hung theirs here too; the tickets are still in the pockets.",
+        "VoiceId": "db295055f3c8fb9d",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -455,5 +451,5 @@
     }
   ],
   "Taunts": [],
-  "EnemyTotal": 4
+  "EnemyTotal": 5
 }

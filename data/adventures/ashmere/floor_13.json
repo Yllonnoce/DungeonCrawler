@@ -1,0 +1,357 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 13,
+  "Source": "builtin",
+  "LayoutHash": 8197366883069942980,
+  "Title": "The Sealed Ledger",
+  "IntroLine": {
+    "Text": "Cold plate and white lamps, a maze of strongroom passages under the mint. Hollis Penn is waiting at the one door that matters, and for the first time since the vestry he is not smiling.",
+    "VoiceId": "42c86026a23fb38a",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Passage",
+      "Name": "Plate Junction"
+    },
+    {
+      "Index": 1,
+      "Role": "Treasury",
+      "Name": "The Ledger Vault"
+    },
+    {
+      "Index": 2,
+      "Role": "Hall",
+      "Name": "The Company Office"
+    },
+    {
+      "Index": 3,
+      "Role": "Lair",
+      "Name": "Die Store"
+    },
+    {
+      "Index": 4,
+      "Role": "Start",
+      "Name": "Strongroom Head"
+    },
+    {
+      "Index": 5,
+      "Role": "Exit",
+      "Name": "The Coining Stair"
+    },
+    {
+      "Index": 6,
+      "Role": "Passage",
+      "Name": "Lamp Turn"
+    },
+    {
+      "Index": 7,
+      "Role": "Lair",
+      "Name": "The Flooded Assay"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "die_wardens",
+      "Name": "the Die Wardens",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "assay_priests",
+      "Name": "the Assay Priests",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "lamp_hounds",
+      "Name": "the Lamp Hounds",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 0,
+        "Objective": null,
+        "Route": [
+          0,
+          6,
+          2
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "stair_priest",
+      "Name": "the Coining Priest",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 5,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_dies",
+      "Name": "The Die Store",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 18
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 21,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The die store\u0027s shelves were racks, and the racks were full of something that wanted out.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_assay",
+      "Name": "The Assay\u0027s Drowned",
+      "Room": 7,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 17
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 3
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 20,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The assay pond boils, and what boils up is angry about it.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 6,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_hollis2",
+      "Name": "Hollis Penn",
+      "Room": 2,
+      "VoiceId": "Orus",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Well. Here you are, and here\u0027s the door, and behind it the ledger the Company sent me down to keep shut. Yes. That was the job. The Company thanks you for the road. Go home now. Please.",
+              "VoiceId": "ee28a538b50dd68d",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "You were sent to keep it shut?",
+                "Next": "why",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Give us the ledger, Hollis.",
+                "Next": null,
+                "Effect": "Betray",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Fine. We go home.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "why",
+            "Line": {
+              "Text": "Ashmere owed the Company more than a town\u0027s worth. Somebody rang a bell and the debt drowned. The book says who. You don\u0027t want the book. Nobody who pays your wages wants you to have the book.",
+              "VoiceId": "ea1f0551801aaeee",
+              "Delivery": "weary"
+            },
+            "Choices": [
+              {
+                "Text": "Give us the ledger, Hollis.",
+                "Next": null,
+                "Effect": "Betray",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We\u0027ll think about it.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_hollis",
+      "CastId": "cast_hollis",
+      "Persona": {
+        "VoiceStyle": "a brisk, chummy company man, all smiles and quick sums, never quite looking at you",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Puck",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": {
+        "EnemyId": "enemy.forge_golem",
+        "Count": 2
+      }
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_hollis",
+      "Template": "Betrayal",
+      "Title": "The Company\u0027s Man",
+      "Objective": "Hollis Penn has turned. Put down the golems he has hidden behind, and take the door.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_hollis2",
+      "Reward": {
+        "Xp": 420,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "The Company thanks you for the road. Go home now. Please.",
+          "VoiceId": "78069cbd87c1ff1c",
+          "Delivery": "calm"
+        },
+        "Accept": {
+          "Text": "Then it\u0027s like that.",
+          "VoiceId": null,
+          "Delivery": "angry"
+        },
+        "Decline": {
+          "Text": "Thank you. Truly. Go up.",
+          "VoiceId": null,
+          "Delivery": "warm"
+        },
+        "Complete": {
+          "Text": "The golems fall apart like cheap coin. Hollis Penn is nowhere, and the door is yours.",
+          "VoiceId": "3f75a5d626eae1f9",
+          "Delivery": "calm"
+        },
+        "Fail": {
+          "Text": "The door stays shut, and Hollis with it.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "The clerk\u0027s voice, from everywhere: the Company\u0027s man is spent, and the Company still owes. He has never sounded happier.",
+        "VoiceId": "5127af44345ba97f",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 7
+}

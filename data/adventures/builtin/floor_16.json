@@ -1,129 +1,81 @@
 {
   "SchemaVersion": 1,
   "Floor": 16,
-  "Source": "builtin",
-  "LayoutHash": 1275258749426059060,
-  "Title": "The Choir Cages",
+  "Source": "claude",
+  "LayoutHash": 17617491385268428607,
+  "Title": "The Dream Door",
   "IntroLine": {
-    "Text": "Slate and purple dark, and fire on the floor where the choir stalls stood. The belfry keeps a choir still. It keeps them in cages, and it keeps the cages full.",
-    "VoiceId": null,
+    "Text": "Marble, because He dreams in marble. Blue light on the veins of it, and a long way off a choir holding one note until it thins. Walk softly; the floor is listening.",
+    "VoiceId": "33c60a73cf71b988",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Camp",
-      "Name": "Vane\u0027s Last Fire"
+      "Role": "Hall",
+      "Name": "The Dream Door"
     },
     {
       "Index": 1,
-      "Role": "Cell",
-      "Name": "The Sealed Stall"
+      "Role": "Start",
+      "Name": "Stairhead of Blue Light"
     },
     {
       "Index": 2,
-      "Role": "Lair",
-      "Name": "Upper Choir Loft"
+      "Role": "Passage",
+      "Name": "Antechamber of Soft Singing"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Hymnal Walk"
+      "Role": "Shrine",
+      "Name": "Chorister\u0027s Ledge"
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "The Organ Gallery"
+      "Role": "Cell",
+      "Name": "The Sleeping Well"
     },
     {
       "Index": 5,
-      "Role": "Lair",
-      "Name": "The High Stalls"
+      "Role": "Ruin",
+      "Name": "Fallen Colonnade of Psalms"
     },
     {
       "Index": 6,
-      "Role": "Cell",
-      "Name": "Hidden Vestry"
+      "Role": "Exit",
+      "Name": "Descent Beneath the Choir"
     },
     {
       "Index": 7,
-      "Role": "Kennel",
-      "Name": "The Drop"
+      "Role": "Passage",
+      "Name": "The Walled Confessional"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "Chantry Hall"
+      "Role": "Barracks",
+      "Name": "Reliquary of Unsung Names"
     },
     {
       "Index": 9,
-      "Role": "Lair",
-      "Name": "The Burning Stalls"
+      "Role": "Passage",
+      "Name": "The Weeping Font"
     },
     {
       "Index": 10,
-      "Role": "Lair",
-      "Name": "Low Choir"
+      "Role": "Passage",
+      "Name": "Marble Ambulatory"
     },
     {
       "Index": 11,
-      "Role": "Start",
-      "Name": "Slate Landing"
-    },
-    {
-      "Index": 12,
-      "Role": "Exit",
-      "Name": "The Belfry Stair"
-    },
-    {
-      "Index": 13,
-      "Role": "Lair",
-      "Name": "Choirmaster\u0027s Rest"
-    },
-    {
-      "Index": 14,
       "Role": "Treasury",
-      "Name": "The Hymn Chest"
-    },
-    {
-      "Index": 15,
-      "Role": "Treasury",
-      "Name": "The Offertory"
-    },
-    {
-      "Index": 16,
-      "Role": "Jail",
-      "Name": "The Choir Cages"
+      "Name": "The Verger\u0027s Strongroom"
     }
   ],
   "Collectives": [
     {
-      "Id": "vanes_last",
-      "Name": "Vane\u0027s Last Crew",
-      "FactionId": null,
-      "Members": [
-        {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 0,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 4
-      }
-    },
-    {
-      "Id": "stall_wardens",
-      "Name": "the Stall Wardens",
-      "FactionId": "faction3",
+      "Id": "col_vault",
+      "Name": "Keepers of the Press",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -135,18 +87,21 @@
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 5,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 11,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 13
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "chantry_archers",
-      "Name": "the Chantry Archers",
-      "FactionId": "faction3",
+      "Id": "col_stair_watch",
+      "Name": "Watch on the Last Step",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
@@ -154,192 +109,462 @@
         }
       ],
       "Goal": {
+        "Kind": "Alarm",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "col_vault",
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "col_ring_patrol",
+      "Name": "The Ambulatory Verse",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
         "Kind": "Patrol",
-        "Room": 8,
+        "Room": 5,
         "Objective": null,
         "Route": [
-          8,
-          9
+          5,
+          4,
+          3,
+          2
         ],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "col_reliquary",
+      "Name": "Singers of the Unsung Names",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 7
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_camp",
-      "Name": "The Fire\u0027s Shades",
+      "Id": "horde_choir_rotunda",
+      "Name": "The Lullaby Breaks",
       "Room": 0,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 22
+          "Count": 26
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 3
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 25,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "Vane\u0027s fire goes out, and the dark it kept back comes in all at once.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_loft",
-      "Name": "The Loft Choir",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 24,
+      "Total": 40,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The loft sings one note, and the note has hands.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_high",
-      "Name": "The High Stalls",
-      "Room": 5,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 23
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 26,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Every stall stands up together.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_burning",
-      "Name": "The Burning Choir",
-      "Room": 9,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 22
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 25,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The burning stalls give up their singers, still alight.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_low",
-      "Name": "The Low Choir",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 22
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 4
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 26,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The low choir was waiting for its cue. This is its cue.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_rest",
-      "Name": "The Choirmaster\u0027s Rest",
-      "Room": 13,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 23,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The choirmaster kept his best voices in a box.",
+        "Text": "The note holds, and holds, and then comes apart: shades pour from three mouths in the marble, every one of them still trying to sing.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 5,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
       "Room": 3,
       "Kind": "Gas"
     },
     {
-      "Room": 4,
+      "Room": 7,
       "Kind": "Spikes"
     }
   ],
-  "Npcs": [],
-  "Quests": [],
-  "Narration": [
+  "Npcs": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 0,
-      "Line": {
-        "Text": "Vane\u0027s colours again, and a fire with only three around it. She paid the toll here too, then. The cages next door are how she paid it.",
-        "VoiceId": null,
-        "Delivery": null
+      "Id": "npc_tobit_16",
+      "Name": "Deacon Tobit Hale",
+      "Room": 5,
+      "VoiceId": "Orus",
+      "Script": {
+        "Start": "t1",
+        "Nodes": [
+          {
+            "Id": "t1",
+            "Line": {
+              "Text": "You told me the truth on the flagstones and I have been no use to anyone since. They gave me a letter for the council and told me not to read it. I read it.",
+              "VoiceId": "a57e6dcc71a555db",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "What was in it, deacon?",
+                "Next": "t2",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Keep it. We have stairs to find.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "t2",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "t2",
+            "Line": {
+              "Text": "I tore it into three and scattered it down three halls, which I now see was the act of a coward with very good handwriting. Bring the pieces and I will read it aloud.",
+              "VoiceId": "1a0aac161b6b122a",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll gather your courage for you.",
+                "Next": "t3",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Three pieces. Here.",
+                "Next": "t3",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Tear up something else. We\u0027re busy.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "t3",
+            "Line": {
+              "Text": "Then stand where the pillars fell and let me say it where the Choir can hear. I would rather be wrong out loud than obedient in a whisper.",
+              "VoiceId": "c474da0639f7f08f",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Say it, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "q_letter_tobit",
+      "CastId": "cast_tobit",
+      "Persona": {
+        "VoiceStyle": "a young deacon, earnest and bookish, courteous past all sense, voice thinning when he means it",
+        "DefaultDelivery": "pleading",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null,
+      "Betrayal": null
+    },
+    {
+      "Id": "npc_maud_16",
+      "Name": "Maud Sorrel",
+      "Room": 9,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "m1",
+        "Nodes": [
+          {
+            "Id": "m1",
+            "Line": {
+              "Text": "I walked this hall asleep an hour ago and something fell out of my sleeve. A letter. I don\u0027t write letters. I only carry things as far as the water.",
+              "VoiceId": "22f7149bb6fc21c5",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Whose letter, Maud?",
+                "Next": "m2",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Dry feet in a pond. We\u0027ll not ask.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "m2",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m2",
+            "Line": {
+              "Text": "It went to pieces in three halls, the way paper does down here. The young deacon\u0027s voice is in the Choir now, so he cannot fetch them. Fetch them, and I will know what I was carrying.",
+              "VoiceId": "81838ba5f8eda31a",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll walk the ring for you.",
+                "Next": "m3",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Three pieces. Here.",
+                "Next": "m3",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Carry your own post.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m3",
+            "Line": {
+              "Text": "Read it to me slowly, when you have it. He likes being read to. It is the nearest thing to a voice He has had in three hundred years.",
+              "VoiceId": "202ab9846f5dc4ee",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Slowly, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "q_letter_maud",
+      "CastId": "cast_maud",
+      "Persona": {
+        "VoiceStyle": "an old woman speaking half-asleep, unhurried, kind, never startled by anything at all",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null
+      "ForbidsFlag": "told_tobit",
+      "Betrayal": null
     }
   ],
+  "Quests": [
+    {
+      "Id": "q_letter_tobit",
+      "Template": "Investigate",
+      "Title": "The Torn Letter",
+      "Objective": "Gather the three pieces of the Verger\u0027s letter from the marble halls and bring them to Tobit.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          5,
+          8,
+          9
+        ],
+        "ClueName": "a torn piece of the Verger\u0027s letter"
+      },
+      "GiverNpc": "npc_tobit_16",
+      "Reward": {
+        "Xp": 420,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Three pieces, three halls. I was thorough. I am always thorough; it is my only virtue and it has never once helped anybody.",
+          "VoiceId": "157b217d4f4f0f95",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Thank you. Mind the colonnade; the singers use the fallen pillars the way I used to use the pulpit.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "No. Quite right. Letters have done enough damage in this church.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "\u0027Send the usual. Something fierce this time; He stirs.\u0027 His hand, your alderman\u0027s seal. The usual, he writes. You are the usual, and so, one day, am I.",
+          "VoiceId": "750e889cf25ef4c3",
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Leave them scattered, then. The Choir will learn the words soon enough; it learns everything eventually.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null
+    },
+    {
+      "Id": "q_letter_maud",
+      "Template": "Investigate",
+      "Title": "What She Was Carrying",
+      "Objective": "Gather the three pieces of the Verger\u0027s letter from the marble halls and bring them to Maud.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          5,
+          8,
+          9
+        ],
+        "ClueName": "a torn piece of the Verger\u0027s letter"
+      },
+      "GiverNpc": "npc_maud_16",
+      "Reward": {
+        "Xp": 420,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Three pieces in three halls. I would fetch them myself, but I only go downward, and never twice over the same stone.",
+          "VoiceId": "7c83b76808a2f452",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Good. Keep to the outer ring. The singers are fond of the middle, and so, I think, is the one beneath it.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "As you like. It will still be there when you come back up, and so will I, which is the sadder of the two facts.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "\u0027Send the usual. Something fierce this time; He stirs.\u0027 The verger\u0027s hand, the council\u0027s seal. You were ordered, dears. You were not hired.",
+          "VoiceId": "ec911ea0e51385fb",
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Paper rots quickly in a throat. No matter. I remember the wording; I have been carrying it since before you were apprenticed.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit"
+    }
+  ],
+  "Narration": [],
   "Taunts": [],
-  "EnemyTotal": 8
+  "EnemyTotal": 9
 }

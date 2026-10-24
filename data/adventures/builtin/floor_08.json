@@ -1,81 +1,56 @@
 {
   "SchemaVersion": 1,
   "Floor": 8,
-  "Source": "builtin",
-  "LayoutHash": 5137207325258696576,
-  "Title": "The Cistern Shrine",
+  "Source": "claude",
+  "LayoutHash": 10373345934953087694,
+  "Title": "The Craw",
   "IntroLine": {
-    "Text": "A rotunda of grey boulders around a well the town used to pray at. Somebody has walled the well and put a gate on the wall. Somebody else has moved in behind it.",
-    "VoiceId": "8f3d5e37735b3719",
+    "Text": "The passages narrow until the walls touch your shoulders, and every so often the whole craw shifts a hand\u0027s breadth, grinding boulders like a mouth that has not finished chewing.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Gate",
-      "Name": "The Welled Rotunda"
+      "Role": "Passage",
+      "Name": "The Grinding Straight"
     },
     {
       "Index": 1,
-      "Role": "Kennel",
-      "Name": "The Sump"
+      "Role": "Treasury",
+      "Name": "Shell-Roof Hoard"
     },
     {
       "Index": 2,
       "Role": "Start",
-      "Name": "Boulder Landing"
+      "Name": "Swallow\u0027s End"
     },
     {
       "Index": 3,
-      "Role": "Lair",
-      "Name": "Spider Shelf"
+      "Role": "Exit",
+      "Name": "Downgullet Stair"
     },
     {
       "Index": 4,
-      "Role": "Cell",
-      "Name": "The Hidden Cistern"
+      "Role": "Treasury",
+      "Name": "Split-Boulder Cache"
     },
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "Ring Walk"
+      "Name": "Tremor Pocket"
     },
     {
       "Index": 6,
-      "Role": "Camp",
-      "Name": "Vane\u0027s Outriders"
-    },
-    {
-      "Index": 7,
-      "Role": "Exit",
-      "Name": "The Overflow Stair"
-    },
-    {
-      "Index": 8,
-      "Role": "Passage",
-      "Name": "Drip Gallery"
-    },
-    {
-      "Index": 9,
       "Role": "Lair",
-      "Name": "The Brood Cleft"
-    },
-    {
-      "Index": 10,
-      "Role": "Passage",
-      "Name": "Low Spoke"
-    },
-    {
-      "Index": 11,
-      "Role": "Treasury",
-      "Name": "The Offering Box"
+      "Name": "Gravel Throat"
     }
   ],
   "Collectives": [
     {
-      "Id": "well_wardens",
-      "Name": "the Well Wardens",
-      "FactionId": "faction1",
+      "Id": "col_hoard",
+      "Name": "Shell-Roof Wardens",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
@@ -88,43 +63,66 @@
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 0,
+        "Room": 1,
         "Objective": {
-          "Kind": "Gate",
-          "Ref": "0"
+          "Kind": "Chest",
+          "Ref": "3"
         },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 5
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "outriders",
-      "Name": "Vane\u0027s Outriders",
-      "FactionId": null,
+      "Id": "col_stairwatch",
+      "Name": "Stair-Watch",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "col_hoard",
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "col_round",
+      "Name": "The Craw Round",
+      "FactionId": "fac_swallowed",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
         },
         {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.rock_thrower",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 6,
+        "Kind": "Patrol",
+        "Room": 0,
         "Objective": null,
-        "Route": [],
+        "Route": [
+          0,
+          5,
+          6
+        ],
         "AlarmTarget": null,
-        "RallyRoom": 5
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "cleft_walker",
-      "Name": "the Cleft Walker",
-      "FactionId": "faction1",
+      "Id": "col_cache",
+      "Name": "Boulder Hoarder",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
@@ -132,156 +130,71 @@
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
-        "Room": 9,
+        "Kind": "Guard",
+        "Room": 4,
         "Objective": null,
-        "Route": [
-          9,
-          8
-        ],
+        "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 0
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_rotunda",
-      "Name": "The Well Brood",
-      "Room": 0,
+      "Id": "horde_craw",
+      "Name": "The Craw\u0027s Lice",
+      "Room": 1,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 9
+          "Count": 14
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 10,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The well was never empty. It answers the alarm with legs.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_shelf",
-      "Name": "The Shelf Brood",
-      "Room": 3,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 8
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 8,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The shelf is not rock. It never was.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_hidden",
-      "Name": "The Cistern Brood",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 8
+          "Count": 4
         },
         {
-          "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 1
+          "EnemyId": "enemy.cave_spider",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 9,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The hidden cistern has been hiding this.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_camp",
-      "Name": "The Camp\u0027s Guests",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 9
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 9,
+      "Total": 20,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The outriders\u0027 loot box was bait, and not for you.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_cleft",
-      "Name": "The Cleft Brood",
-      "Room": 9,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 10
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 10,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The cleft breathes out, and the breath has legs.",
+        "Text": "The lid lifts, the shell roof shivers, and both breaches open at once: the hoard was bait, and something has been waiting behind the walls for nineteen years.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 5,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 8,
-      "Kind": "Gas"
+      "Room": 0,
+      "Kind": "Spikes"
     },
     {
       "Room": 5,
       "Kind": "Spikes"
+    },
+    {
+      "Room": 6,
+      "Kind": "Gas"
     }
   ],
   "Npcs": [],
   "Quests": [],
-  "Narration": [
-    {
-      "Trigger": "RoomEnter",
-      "Room": 6,
-      "Line": {
-        "Text": "Vane\u0027s colours on the hut. The rival crew came this way, camped, and left in a hurry, or left fewer than they arrived with.",
-        "VoiceId": null,
-        "Delivery": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Narration": [],
   "Taunts": [],
-  "EnemyTotal": 8
+  "EnemyTotal": 9
 }

@@ -1,71 +1,71 @@
 {
   "SchemaVersion": 1,
   "Floor": 18,
-  "Source": "builtin",
-  "LayoutHash": 16621631354794557373,
-  "Title": "The Green Belfry",
+  "Source": "claude",
+  "LayoutHash": 5312613950339343779,
+  "Title": "The Dreaming Hall",
   "IntroLine": {
-    "Text": "Blue tile under black timber, galleries cut through the tower\u0027s own stone, and the air going green from the bottom up. The clerk has opened the vents one last time. He wants you to hurry.",
-    "VoiceId": null,
+    "Text": "Violet dark, and one corridor into a rotunda that breathes. Maud Sorrel has stopped walking. She is sitting on the floor of the god\u0027s dream with her hands folded in her lap.",
+    "VoiceId": "edfe261dbab35a5c",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Treasury",
-      "Name": "The Sexton\u0027s Purse"
+      "Role": "Hall",
+      "Name": "The Dreaming Hall"
     },
     {
       "Index": 1,
-      "Role": "Passage",
-      "Name": "Upper Rope Drift"
+      "Role": "Start",
+      "Name": "The Marble Threshold"
     },
     {
       "Index": 2,
-      "Role": "Lair",
-      "Name": "The Hidden Peal"
+      "Role": "Ruin",
+      "Name": "The Fallen Colonnade"
     },
     {
       "Index": 3,
-      "Role": "Passage",
-      "Name": "Ladder Drift"
+      "Role": "Lair",
+      "Name": "The Near Mouth"
     },
     {
       "Index": 4,
-      "Role": "Start",
-      "Name": "Tile Head"
+      "Role": "Lair",
+      "Name": "The Far Mouth"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "The Long Descent"
+      "Role": "Exit",
+      "Name": "Stair Beneath the Sleeper"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "Bellframe Gallery"
+      "Role": "Passage",
+      "Name": "West Ambulatory"
     },
     {
       "Index": 7,
-      "Role": "Lair",
-      "Name": "The Shelf"
+      "Role": "Passage",
+      "Name": "East Ambulatory"
     },
     {
       "Index": 8,
-      "Role": "Exit",
-      "Name": "The Deep Gallery"
+      "Role": "Passage",
+      "Name": "The Antechoir"
     },
     {
       "Index": 9,
       "Role": "Treasury",
-      "Name": "The Clapper Chest"
+      "Name": "Reliquary of the Gag"
     }
   ],
   "Collectives": [
     {
-      "Id": "frame_wardens",
-      "Name": "the Bellframe Wardens",
-      "FactionId": "faction3",
+      "Id": "col_reliquary",
+      "Name": "Keepers of the Gag",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -77,18 +77,49 @@
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 6,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 9,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 5
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "deep_archers",
-      "Name": "the Deep Archers",
-      "FactionId": "faction3",
+      "Id": "col_antiphon",
+      "Name": "The Antiphon",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 7,
+        "Objective": null,
+        "Route": [
+          7,
+          8,
+          0,
+          6
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "col_bellringers",
+      "Name": "The Bellringers",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
@@ -96,18 +127,18 @@
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 8,
+        "Kind": "Alarm",
+        "Room": 6,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "AlarmTarget": "col_stairs",
+        "RallyRoom": 5
       }
     },
     {
-      "Id": "descent_walkers",
-      "Name": "the Descent Walkers",
-      "FactionId": "faction3",
+      "Id": "col_stairs",
+      "Name": "The Descant at the Stair",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -115,119 +146,251 @@
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
+        "Kind": "Defend",
         "Room": 5,
-        "Objective": null,
-        "Route": [
-          5,
-          2
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "rope_caller",
-      "Name": "the Rope Caller",
-      "FactionId": "faction3",
-      "Members": [
-        {
-          "EnemyId": "enemy.void_caller",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 1,
-        "Objective": null,
+        "Objective": {
+          "Kind": "Stairs",
+          "Ref": "down"
+        },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 0
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_peal",
-      "Name": "The Hidden Peal",
-      "Room": 2,
+      "Id": "horde_near_mouth",
+      "Name": "The Near Mouth",
+      "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 26
+          "Count": 18
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 4
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 30,
-      "Trigger": "Enter",
+      "Total": 28,
+      "Trigger": "Chest",
       "Line": {
-        "Text": "The hidden peal rings once, and the ringers come out of the stone to hear it.",
+        "Text": "The lid lifts and the wall behind it lets go: shades pour out of the breaches like cold poured from a jug, and the corridor into the rotunda fills from end to end.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_shelf",
-      "Name": "The Shelf",
-      "Room": 7,
+      "Id": "horde_far_mouth",
+      "Name": "The Far Mouth",
+      "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 25
+          "Count": 17
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 4
+          "Count": 9
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
       "Total": 29,
-      "Trigger": "Chest",
+      "Trigger": "Enter",
       "Line": {
-        "Text": "The shelf was a ledge of the drowned, and the chest was theirs.",
+        "Text": "Two mouths in the marble open together and the singing stops, which is worse. The Dream empties itself at you.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 7,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
       "Room": 3,
-      "Kind": "Gas"
+      "Kind": "Spikes"
     },
     {
       "Room": 6,
-      "Kind": "Spikes"
+      "Kind": "Gas"
     }
   ],
-  "Npcs": [],
-  "Quests": [],
-  "Narration": [
+  "Npcs": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 8,
-      "Line": {
-        "Text": "The deep gallery, and the stairs at the end of it, where the air is thickest and greenest. He has counted your breaths. He has a number in mind.",
-        "VoiceId": null,
-        "Delivery": null
+      "Id": "npc_maud",
+      "Name": "Maud Sorrel",
+      "Room": 0,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "n_sit",
+        "Nodes": [
+          {
+            "Id": "n_sit",
+            "Line": {
+              "Text": "Forgive the size of me. I have been trying to turn over for three hundred years and a small man keeps his hand across my mouth. Put down the ledger, the contract, the moulds, the letter. Sit.",
+              "VoiceId": "c02bfa626e559d41",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "Who is holding your mouth shut?",
+                "Next": "n_verger",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "We were hired about the plumbing. What do you want of us?",
+                "Next": "n_choose",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "n_verger",
+            "Line": {
+              "Text": "A verger. He tends me the way a man tends a grave: tidily, so that nothing ever comes up. Four of you every nineteen years, and your wells run sweet. That is the whole of the arithmetic.",
+              "VoiceId": "4fb265a6e1c2090d",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "And if we take his hand away?",
+                "Next": "n_choose",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "n_choose",
+            "Line": {
+              "Text": "Below is the last station. Finish the pilgrimage and I open my eyes, and Dunmarrow learns what it stands on. Or burn the contract and I dream on, and your town keeps its souls. I will not argue either way.",
+              "VoiceId": "1345315b5244d92c",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "We finish it. Wake, and let the town take its chances.",
+                "Next": null,
+                "Effect": "Choose",
+                "Flag": "wake_gorm",
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Dream on. We burn the contract and leave you sleeping.",
+                "Next": null,
+                "Effect": "Choose",
+                "Flag": "let_him_dream",
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "q_pilgrimage",
+      "CastId": "cast_maud",
+      "Persona": {
+        "VoiceStyle": "an old woman speaking slowly for something far larger than herself; dry, kind, unhurried, never startled",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "q_pilgrimage",
+      "Template": "Decide",
+      "Title": "The End of the Pilgrimage",
+      "Objective": "Tell the sleeper whether to wake",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_maud",
+      "Reward": {
+        "Xp": 600,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Four papers and four graves say the same word. Choose it aloud, inspectors: my eyes open, or the contract burns and the dream goes deeper. Either is a kindness; neither is clean.",
+          "VoiceId": null,
+          "Delivery": "calm"
+        },
+        "Accept": {
+          "Text": "Said, then. Carry it down. He will hear it before you reach him; he hears everything that happens in my throat.",
+          "VoiceId": null,
+          "Delivery": "calm"
+        },
+        "Decline": {
+          "Text": "Then stand there a while. I have waited three hundred years; I can wait out a quiet spell from four plumbers.",
+          "VoiceId": null,
+          "Delivery": "calm"
+        },
+        "Complete": {
+          "Text": "Thank you for coming. Nobody has, before. They were sent, and that is a different verb.",
+          "VoiceId": null,
+          "Delivery": "calm"
+        },
+        "Fail": {
+          "Text": "No matter. The verse finishes itself eventually, with or without a mouth.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
+  "Narration": [],
   "Taunts": [],
-  "EnemyTotal": 7
+  "EnemyTotal": 10
 }

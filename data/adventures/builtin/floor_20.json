@@ -1,118 +1,75 @@
 {
   "SchemaVersion": 1,
   "Floor": 20,
-  "Source": "builtin",
-  "LayoutHash": 17024959734848516595,
-  "Title": "The Bell",
+  "Source": "claude",
+  "LayoutHash": 9283463762577883319,
+  "Title": "The Mouth",
   "IntroLine": {
-    "Text": "The bottom of the tower and the mouth of the bell, and a desk set in front of it with a lamp and a ledger and a clerk. He has been expecting you since the vestry. He has your account open.",
-    "VoiceId": null,
+    "Text": "Pillars for teeth, a floor that gives underfoot like a tongue, braziers smouldering at the back of the throat. The alderman called it on the first day, and nobody laughed then either.",
+    "VoiceId": "5ea33933416ed08f",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "The Bell\u0027s Mouth"
+      "Name": "The Mouth"
     },
     {
       "Index": 1,
-      "Role": "Hall",
-      "Name": "The Clerk\u0027s Antechamber"
+      "Role": "Start",
+      "Name": "The Last Stair Down"
     },
     {
       "Index": 2,
-      "Role": "Treasury",
-      "Name": "The Sum"
+      "Role": "Shrine",
+      "Name": "Tooth Ledge"
     },
     {
       "Index": 3,
       "Role": "Lair",
-      "Name": "The Ringers\u0027 Ossuary"
+      "Name": "The Left Gallery of Teeth"
     },
     {
       "Index": 4,
-      "Role": "Camp",
-      "Name": "The Last Crew"
+      "Role": "Kennel",
+      "Name": "The Breach Behind the Gum"
     },
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "Lamp Gallery"
+      "Name": "The Soft Palate"
     },
     {
       "Index": 6,
-      "Role": "Gate",
-      "Name": "The Lantern Gate"
+      "Role": "Hall",
+      "Name": "Hall of the Unsung Verse"
     },
     {
       "Index": 7,
-      "Role": "Cell",
-      "Name": "The Hidden Account"
+      "Role": "Barracks",
+      "Name": "The Choir\u0027s Vestry"
     },
     {
       "Index": 8,
-      "Role": "Lair",
-      "Name": "The Ledge of Names"
+      "Role": "Camp",
+      "Name": "The Oddfellows\u0027 Last Camp"
     },
     {
       "Index": 9,
-      "Role": "Lair",
-      "Name": "Tally Loft"
-    },
-    {
-      "Index": 10,
-      "Role": "Start",
-      "Name": "The Sexton\u0027s Step"
-    },
-    {
-      "Index": 11,
-      "Role": "Passage",
-      "Name": "The Last Stream"
-    },
-    {
-      "Index": 12,
-      "Role": "Lair",
-      "Name": "Debtors\u0027 Loft"
-    },
-    {
-      "Index": 13,
       "Role": "Treasury",
-      "Name": "The Company\u0027s Purse"
+      "Name": "The Reliquary of Gold Teeth"
     }
   ],
   "Collectives": [
     {
-      "Id": "last_crew",
-      "Name": "the Last Crew",
-      "FactionId": null,
-      "Members": [
-        {
-          "EnemyId": "enemy.bandit",
-          "Count": 3
-        },
-        {
-          "EnemyId": "enemy.bandit_archer",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 4,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 5
-      }
-    },
-    {
-      "Id": "lantern_gate",
-      "Name": "the Lantern Gate",
-      "FactionId": "faction3",
+      "Id": "col_litany",
+      "Name": "The Litany Choir",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 2
         },
         {
           "EnemyId": "enemy.void_caller",
@@ -121,20 +78,20 @@
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 6,
+        "Room": 0,
         "Objective": {
-          "Kind": "Gate",
-          "Ref": "6"
+          "Kind": "Stairs",
+          "Ref": "down"
         },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 9
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "ossuary_guard",
-      "Name": "the Ringers\u0027 Guard",
-      "FactionId": "faction3",
+      "Id": "col_vestry_watch",
+      "Name": "The Watch at the Vestry",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
@@ -146,226 +103,176 @@
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 3,
+        "Kind": "Alarm",
+        "Room": 7,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 11
+        "AlarmTarget": "col_litany",
+        "RallyRoom": 0
       }
     },
     {
-      "Id": "tally_archers",
-      "Name": "the Tally Archers",
-      "FactionId": "faction3",
-      "Members": [
-        {
-          "EnemyId": "enemy.abyss_archer",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Patrol",
-        "Room": 9,
-        "Objective": null,
-        "Route": [
-          9,
-          1
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "debtors_caller",
-      "Name": "the Debtors\u0027 Caller",
-      "FactionId": "faction3",
+      "Id": "col_descant",
+      "Name": "The Walking Descant",
+      "FactionId": "fac_choir",
       "Members": [
         {
           "EnemyId": "enemy.void_caller",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Alarm",
-        "Room": 12,
+        "Kind": "Patrol",
+        "Room": 5,
+        "Objective": null,
+        "Route": [
+          5,
+          6,
+          7,
+          0
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "col_reliquary",
+      "Name": "Keeper of the Gold Teeth",
+      "FactionId": "fac_choir",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Defend",
+        "Room": 9,
+        "Objective": {
+          "Kind": "Door",
+          "Ref": "0"
+        },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 9
+      }
+    },
+    {
+      "Id": "col_oddfellows",
+      "Name": "The Last Oddfellows",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 4
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "lantern_gate",
-        "RallyRoom": 6
+        "AlarmTarget": null,
+        "RallyRoom": 8
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_ossuary",
-      "Name": "The Ringers",
+      "Id": "horde_left_gallery",
+      "Name": "The Verse Breaks",
       "Room": 3,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 30
+          "Count": 22
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
+          "Count": 8
+        },
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 35,
+      "Total": 32,
       "Trigger": "Enter",
       "Line": {
-        "Text": "Every ringer Ashmere ever had, and all of them still on the rope.",
+        "Text": "The gallery\u0027s teeth are hollow. The singing in them stops, which is worse, and the dark pours out between the pillars in one long grey breath.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_crew",
-      "Name": "The Crew\u0027s Ghosts",
+      "Id": "horde_gum_breach",
+      "Name": "The Answering Stanza",
       "Room": 4,
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 28
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 33,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "The last crew\u0027s fire gutters, and the eleven Vane sold come to collect.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_gate",
-      "Name": "The Lantern\u0027s Dead",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 30
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 35,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "The lantern gate\u0027s braziers burn blue, and the debt walks through them.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_ledge",
-      "Name": "The Named",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 29
-        },
-        {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 34,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Every name on the ledge steps off it.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_tally",
-      "Name": "The Tally",
-      "Room": 9,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 30
+          "Count": 16
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
           "Count": 6
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 36,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The tally loft settles the account in shades.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_debtors",
-      "Name": "The Debtors",
-      "Room": 12,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_shade",
-          "Count": 30
         },
         {
-          "EnemyId": "enemy.horde_shade_brute",
-          "Count": 5
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 35,
-      "Trigger": "Enter",
+      "Total": 24,
+      "Trigger": "Alarm",
       "Line": {
-        "Text": "The debtors\u0027 loft has been waiting for the ones who sent the bill.",
+        "Text": "Somewhere behind you a runner reaches the Mouth, and the breach answers: shade on shade, climbing out of the gum like rot leaving a tooth.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": {
-    "Name": "Corvus Marl",
-    "SignatureOverride": null,
+    "Name": "The Verger",
+    "SignatureOverride": "Volley",
     "IntroLine": {
-      "Text": "Ah. The Lamplighters\u0027 four. Sit. I have your account here, and the Company\u0027s, and I\u0027m afraid the Company\u0027s is the larger. Shall we begin?",
-      "VoiceId": "7228732ee988b5fb",
-      "Delivery": "mocking"
+      "Text": "Fourth Station. You have come a long way to lie down. Kneel; it is the same thing, only sooner.",
+      "VoiceId": "80364500538c56b2",
+      "Delivery": "calm"
     },
     "DeathLine": {
-      "Text": "Paid... in full... tell them... I said... paid...",
-      "VoiceId": "ded6acd7a1493da0",
-      "Delivery": "weary"
+      "Text": "Hush. Hush. He\u0027s still... hush.",
+      "VoiceId": "37a14d45489de59a",
+      "Delivery": "whisper"
     }
   },
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 7,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 11,
-      "Kind": "Gas"
+      "Room": 6,
+      "Kind": "Spikes"
     },
     {
       "Room": 5,
-      "Kind": "Spikes"
+      "Kind": "Gas"
     }
   ],
   "Npcs": [],
@@ -375,14 +282,94 @@
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "The bell rings once, on its own, and the water above begins, very slowly, to go down. Ashmere\u0027s toll is paid. Whether the Company\u0027s is, you will have to go up and ask.",
+        "Text": "Far above, Dunmarrow lurches on His chest and the wells run clear and cold. The halls below are Gorm\u0027s waking thoughts now, and Maud walks them beside you, awake at last.",
+        "VoiceId": "7c45722abefd86a4",
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "The dream goes on. The Forge casts, and so do you. The halls below are only the dream deepening, and a long way down one of them somebody is still carrying a candle.",
+        "VoiceId": "eeafe8cc858b55d6",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "wake_gorm"
+    }
+  ],
+  "Taunts": [
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Fourth Station. Come in. Come in. Mind the teeth.",
+        "VoiceId": null,
+        "Delivery": "calm"
+      },
+      "CleanLine": {
+        "Text": "Fourth Station. Come in. Come in. Mind the teeth.",
+        "VoiceId": null,
+        "Delivery": "calm"
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": null,
+      "Line": {
+        "Text": "The Dream. Lower your voices. He hears you now, and He is not fond of shouting.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The Dream. Lower your voices. He hears you now, and He is not fond of shouting.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MemberDowned",
+      "Objective": null,
+      "Line": {
+        "Text": "Nearly. Nearly there. A little further down and you can stop.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Nearly. Nearly there. A little further down and you can stop.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Idle",
+      "Objective": null,
+      "Line": {
+        "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 11
+  "EnemyTotal": 13
 }

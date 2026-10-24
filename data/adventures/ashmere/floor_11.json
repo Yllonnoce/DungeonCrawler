@@ -1,0 +1,355 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 11,
+  "Source": "builtin",
+  "LayoutHash": 3459982951054959492,
+  "Title": "The Slag Road",
+  "IntroLine": {
+    "Text": "Rust, slag and a foot of warm water over all of it. The road to the mint ran here. The Company\u0027s lantern is stamped on the grates, and Nan Trellick is standing in the water, mapping a high street.",
+    "VoiceId": "e8f392ddc28a8ccf",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Start",
+      "Name": "Rusted Head"
+    },
+    {
+      "Index": 1,
+      "Role": "Passage",
+      "Name": "Slag Pool"
+    },
+    {
+      "Index": 2,
+      "Role": "Hall",
+      "Name": "The Drowned Yard"
+    },
+    {
+      "Index": 3,
+      "Role": "Camp",
+      "Name": "Wreckers\u0027 Squat"
+    },
+    {
+      "Index": 4,
+      "Role": "Passage",
+      "Name": "Quench Channel"
+    },
+    {
+      "Index": 5,
+      "Role": "Hall",
+      "Name": "The Cooling Pond"
+    },
+    {
+      "Index": 6,
+      "Role": "Cell",
+      "Name": "The Bell-Ringer\u0027s House"
+    },
+    {
+      "Index": 7,
+      "Role": "Exit",
+      "Name": "The Mint Road"
+    },
+    {
+      "Index": 8,
+      "Role": "Hall",
+      "Name": "Scale Yard"
+    },
+    {
+      "Index": 9,
+      "Role": "Passage",
+      "Name": "Grate Walk"
+    },
+    {
+      "Index": 10,
+      "Role": "Treasury",
+      "Name": "The Lantern Box"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "wreckers",
+      "Name": "the Wreckers",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 3
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 9
+      }
+    },
+    {
+      "Id": "road_wardens",
+      "Name": "the Road Wardens",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 9
+      }
+    }
+  ],
+  "Loners": [
+    {
+      "EnemyId": "enemy.ember_hound",
+      "Room": 6
+    }
+  ],
+  "Hordes": [
+    {
+      "Id": "horde_squat",
+      "Name": "The Squat\u0027s Fire",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 16,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The wreckers\u0027 fire was never theirs. It gets up and comes at you in pieces.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 9,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_nan2",
+      "Name": "Nan Trellick",
+      "Room": 7,
+      "VoiceId": "Kore",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "There you are. This is Foundry Street, don\u0027t argue. I\u0027ve the bell-ringer\u0027s house marked, second on the left past the pond, but my legs won\u0027t do the water. Go and read me the door.",
+              "VoiceId": "10592e17c8a3eb84",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the house.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Nan, you\u0027re standing in a foundry.",
+                "Next": "foundry",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We found the house.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Not today.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "foundry",
+            "Line": {
+              "Text": "I know what I\u0027m standing in, dear. I\u0027m standing in Ashmere. Everyone else has stopped. Go on: second on the left. There\u0027s a name cut over the door, read me it.",
+              "VoiceId": "7cf3a600a0c4680d",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll find the house.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "Later.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good. The house, then the yard, then the grate where the Company sign is. Read me what\u0027s cut there and I\u0027ll put it on the map.",
+              "VoiceId": "f97aba035ca6538a",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "Well? Read it. \u0027Nan Trellick, of this parish, taken by the water in the year of the bell.\u0027 Taken by... no. That\u0027s the wrong house. That\u0027s the wrong street. Give me the map, I\u0027ll... I\u0027ll find the right one.",
+              "VoiceId": "4a174853b758383d",
+              "Delivery": "whisper"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_headstone",
+      "CastId": "cast_nan",
+      "Persona": {
+        "VoiceStyle": "a brisk old woman who talks over you and gets every street wrong with total confidence",
+        "DefaultDelivery": "warm",
+        "Voice": "Kore",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_headstone",
+      "Template": "Investigate",
+      "Title": "The Bell-Ringer\u0027s House",
+      "Objective": "Find what is cut over the doors Nan has marked and read them to her.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [
+          6,
+          3
+        ],
+        "ClueName": "names cut over doors"
+      },
+      "GiverNpc": "npc_nan2",
+      "Reward": {
+        "Xp": 320,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Go and read me the door of the bell-ringer\u0027s house. Second on the left.",
+          "VoiceId": "8044d90b7c6466ea",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Good. Read me what\u0027s cut there.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Then I\u0027ll go myself, once the water\u0027s down.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Complete": {
+          "Text": "\u0027Taken by the water in the year of the bell.\u0027 That\u0027s the wrong house.",
+          "VoiceId": "f2482415d9c4a0b5",
+          "Delivery": "whisper"
+        },
+        "Fail": {
+          "Text": "Never mind. I\u0027ll find the right street.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "QuestDone",
+      "Room": null,
+      "Line": {
+        "Text": "Nan folds her map with great care and walks into the water without a ripple. The water does not notice her. It never has.",
+        "VoiceId": "679d58c4c322e8d0",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 7
+}

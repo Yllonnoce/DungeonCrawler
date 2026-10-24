@@ -60,6 +60,10 @@ public partial class DebugTools : Node
     public bool Automated => _started;
     public string? ReplayDir { get; private set; }
     public string? RecordDir { get; private set; }
+    /// <summary>--story-brief=FILE: a campaign bible (markdown) the planner must follow; it rides along every planning call as a cached system block.</summary>
+    public string? StoryBriefPath { get; private set; }
+    /// <summary>--trace-voice: log every voice job the renderer starts (id, model, voice, style, text).</summary>
+    public bool TraceVoice { get; private set; }
     public bool ForceAi { get; private set; }
     public bool NoAi { get; private set; }
     /// <summary>--no-ambush / --no-portals: no corridor ambushers, no reinforcement portals this run.</summary>
@@ -237,6 +241,8 @@ public partial class DebugTools : Node
             else if (arg == "--no-ai") NoAi = true;
             else if (arg.StartsWith("--replay-plans=")) ReplayDir = ProjectSettings.GlobalizePath(arg["--replay-plans=".Length..]);
             else if (arg.StartsWith("--record-plans=")) RecordDir = arg["--record-plans=".Length..];
+            else if (arg == "--trace-voice") TraceVoice = true;
+            else if (arg.StartsWith("--story-brief=")) StoryBriefPath = ProjectSettings.GlobalizePath(arg["--story-brief=".Length..]);
             else if (arg.StartsWith("--fake-ai=")) FakeAiDelay = float.Parse(arg["--fake-ai=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             else if (arg == "--fake-ai") FakeAiDelay = 1f;
             else if (arg == "--test-ai-flow") { _testAiFlow = true; FakeAiDelay ??= 1.2f; TraceAi = false; _quitAfter = 22; }
@@ -1274,7 +1280,8 @@ public partial class DebugTools : Node
                 foreach (var plan in plans.Values) director.EnqueueFloorVoice(plan);
                 queue.Filter = null;
                 GD.Print($"[bake] {Adventure.Voice.VoiceBudget.Describe(picks, Adventure.Voice.VoiceBudget.Candidates(game.Adventure.Campaign, plans).Count)}");
-                foreach (var p in picks) GD.Print($"[bake]   voice floor {p.Floor,2} {p.Reason}: {p.Line.Text}");
+                GD.Print($"[bake] voice cache dir: {queue.CacheDir}; builtin dir: {ProjectSettings.GlobalizePath(VoiceRenderer.BuiltinDir)}");
+                foreach (var p in picks) GD.Print($"[bake]   voice floor {p.Floor,2} {p.Reason} [{p.Line.VoiceId ?? "-"} {(p.Line.VoiceId != null && queue.HasAudio(p.Line.VoiceId) ? "cached" : "render")}]: {p.Line.Text}");
             }
             if (VoiceRenderer.Instance is { Enabled: true } vr && vr.Pending > 0 && _elapsed < 1700) { if ((int)_elapsed % 10 == 0) GD.Print($"[bake] voice: {vr.Pending} lines pending, {vr.Rendered} done, {vr.Failed} failed ({vr.CurrentModel})"); return; }
             var voiceStopped = _bakeVoiceDir != null ? VoiceRenderer.Instance?.StoppedReason : null;

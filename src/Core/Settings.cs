@@ -34,7 +34,7 @@ public static class Settings
     // AI planner and voice
     public static bool AiPlanning { get; set; } = true;
     public static bool AiVoice { get; set; } = true;
-    public static double SpendCapUsd { get; set; } = 3.0;
+    public static double SpendCapUsd { get; set; } = 15.0;
     public static float PlanWaitSeconds { get; set; } = 20f;
     public static float VoiceVolume { get; set; } = 1f;
     public static string PlayerName { get; set; } = "";

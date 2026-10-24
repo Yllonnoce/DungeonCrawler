@@ -1,0 +1,381 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 19,
+  "Source": "builtin",
+  "LayoutHash": 10083392372839498501,
+  "Title": "The Sexton\u0027s Door",
+  "IntroLine": {
+    "Text": "Veined marble under blue water, the palace the town built for its dead. The Sexton\u0027s door is at the end of it, and the toll for that door is the clerk\u0027s own key.",
+    "VoiceId": "f284491ff91c5b8e",
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Hall",
+      "Name": "The Drowned Court"
+    },
+    {
+      "Index": 1,
+      "Role": "Cell",
+      "Name": "The Sealed Sacristy"
+    },
+    {
+      "Index": 2,
+      "Role": "Exit",
+      "Name": "The Sexton\u0027s Door"
+    },
+    {
+      "Index": 3,
+      "Role": "Lair",
+      "Name": "Marble Ossuary"
+    },
+    {
+      "Index": 4,
+      "Role": "Start",
+      "Name": "Palace Landing"
+    },
+    {
+      "Index": 5,
+      "Role": "Passage",
+      "Name": "The Blue Colonnade"
+    },
+    {
+      "Index": 6,
+      "Role": "Ruin",
+      "Name": "The Turnkey\u0027s Post"
+    },
+    {
+      "Index": 7,
+      "Role": "Hall",
+      "Name": "Hall of Tiles"
+    },
+    {
+      "Index": 8,
+      "Role": "Treasury",
+      "Name": "The Warden\u0027s Chest"
+    },
+    {
+      "Index": 9,
+      "Role": "Treasury",
+      "Name": "The Clerk\u0027s Strongbox"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "turnkeys",
+      "Name": "the Turnkeys",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "ossuary_wardens",
+      "Name": "the Ossuary Wardens",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.void_stalker",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 3,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 5
+      }
+    },
+    {
+      "Id": "door_wardens",
+      "Name": "the Door Wardens",
+      "FactionId": "faction3",
+      "Members": [
+        {
+          "EnemyId": "enemy.abyss_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.void_caller",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 2,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [
+    {
+      "Id": "horde_ossuary",
+      "Name": "The Marble Dead",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 28
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 33,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The ossuary\u0027s marble drawers slide open on their own, and they are full.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    },
+    {
+      "Id": "horde_post",
+      "Name": "The Post\u0027s Shades",
+      "Room": 6,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_shade",
+          "Count": 27
+        },
+        {
+          "EnemyId": "enemy.horde_shade_brute",
+          "Count": 5
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 32,
+      "Trigger": "Enter",
+      "Line": {
+        "Text": "The turnkey\u0027s post was never unmanned. It was only quiet.",
+        "VoiceId": null,
+        "Delivery": null
+      }
+    }
+  ],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 5,
+      "Kind": "Gas"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_tarn2",
+      "Name": "Tarn",
+      "Room": 6,
+      "VoiceId": "Leda",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "You took me. You did take me. I kept the key dry, like I said. It\u0027s in his strongbox, the far one, he made me put it back but I know the lock. Fetch it and the Sexton\u0027s door is yours.",
+              "VoiceId": "f63ca8290e60b8f2",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll fetch the key.",
+                "Next": "accepted",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We have the clerk\u0027s key.",
+                "Next": "done",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              },
+              {
+                "Text": "We\u0027ll manage without.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "accepted",
+            "Line": {
+              "Text": "Good. He\u0027s shouting already, can you hear him? He knows it\u0027s gone before it\u0027s gone. Forty years I listened to that.",
+              "VoiceId": "f0513f2305d50b9b",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          },
+          {
+            "Id": "done",
+            "Line": {
+              "Text": "That\u0027s it. His key. Give it here... no. No, you keep it. You\u0027re the one arresting people now. Go and arrest him.",
+              "VoiceId": "4d1e8446b131d63a",
+              "Delivery": "warm"
+            },
+            "Choices": [
+              {
+                "Text": "Farewell.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_key",
+      "CastId": "cast_tarn",
+      "Persona": {
+        "VoiceStyle": "a slow, heavy, hangdog man who mumbles into his collar",
+        "DefaultDelivery": "weary",
+        "Voice": "Orus",
+        "IsEmpty": false
+      },
+      "RequiresFlag": "took_tarn",
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_key",
+      "Template": "Recover",
+      "Title": "The Clerk\u0027s Key",
+      "Objective": "Recover the clerk\u0027s own key from his strongbox and bring it to Tarn.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": "the clerk\u0027s key",
+        "ItemRoom": 9,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_tarn2",
+      "Reward": {
+        "Xp": 560,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "The key\u0027s in his strongbox, the far one. Fetch it and the Sexton\u0027s door is yours.",
+          "VoiceId": "a3b585d444895b7c",
+          "Delivery": "warm"
+        },
+        "Accept": {
+          "Text": "He knows it\u0027s gone before it\u0027s gone.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Then I\u0027ll go myself. Slowly.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Complete": {
+          "Text": "You keep it. You\u0027re the one arresting people now.",
+          "VoiceId": "add747c1d843ad18",
+          "Delivery": "warm"
+        },
+        "Fail": {
+          "Text": "Lost again. He\u0027ll count that too.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      "RequiresFlag": "took_tarn",
+      "ForbidsFlag": null
+    }
+  ],
+  "Narration": [
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "Tarn never left his post. The clerk saw to that. Whatever holds the turnkey\u0027s post now holds it in his shape.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "left_tarn",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "Enter",
+      "Room": null,
+      "Line": {
+        "Text": "A shape by the ruined post lifts a hand: Tarn, the turnkey you arrested, forty years late and here before you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "took_tarn",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 2,
+      "Line": {
+        "Text": "The Sexton\u0027s door. Beyond it, the bell, and the clerk, and the sum.",
+        "VoiceId": "5dab080d2cd6d1ce",
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 7
+}

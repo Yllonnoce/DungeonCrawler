@@ -1,11 +1,11 @@
 {
   "SchemaVersion": 1,
   "Floor": 15,
-  "Source": "builtin",
-  "LayoutHash": 14043928483317276841,
-  "Title": "The Coinstriker\u0027s Floor",
+  "Source": "claude",
+  "LayoutHash": 15039110198966668915,
+  "Title": "The Bellows",
   "IntroLine": {
-    "Text": "The striking floor of the mint, still hot, still running. The thing that struck the toll coin never stopped. It has the Company\u0027s lantern on its chest, where a heart would go.",
+    "Text": "Red air, and under it a beat that loses count. Something ahead is doing the work of a heart, over and over, and has never once been thanked for it.",
     "VoiceId": null,
     "Delivery": null
   },
@@ -13,69 +13,64 @@
     {
       "Index": 0,
       "Role": "Arena",
-      "Name": "The Striking Floor"
+      "Name": "The Valve Chamber"
     },
     {
       "Index": 1,
-      "Role": "Start",
-      "Name": "Kiln Landing"
+      "Role": "Hall",
+      "Name": "Bellows Gallery"
     },
     {
       "Index": 2,
-      "Role": "Lair",
-      "Name": "Upper Cinder Store"
+      "Role": "Start",
+      "Name": "The Stoking Stair"
     },
     {
       "Index": 3,
-      "Role": "Cell",
-      "Name": "The Hidden Assay"
+      "Role": "Hall",
+      "Name": "Hall of Hot Iron"
     },
     {
       "Index": 4,
-      "Role": "Lair",
-      "Name": "High Ember Gallery"
+      "Role": "Passage",
+      "Name": "The Flue Walk"
     },
     {
       "Index": 5,
-      "Role": "Gate",
-      "Name": "The Coin Gate"
+      "Role": "Lair",
+      "Name": "The Cinder Breach"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "Cooling Hall"
+      "Role": "Passage",
+      "Name": "Ash Chute"
     },
     {
       "Index": 7,
-      "Role": "Lair",
-      "Name": "Quench Run"
+      "Role": "Treasury",
+      "Name": "The Coke Vault"
     },
     {
       "Index": 8,
-      "Role": "Lair",
-      "Name": "Blank Store"
+      "Role": "Kennel",
+      "Name": "The Hound Pit"
     },
     {
       "Index": 9,
-      "Role": "Ruin",
-      "Name": "Fallen Foundry"
+      "Role": "Passage",
+      "Name": "Draught Junction"
     },
     {
       "Index": 10,
-      "Role": "Hall",
-      "Name": "The Counting Floor"
-    },
-    {
-      "Index": 11,
-      "Role": "Treasury",
-      "Name": "Struck Coin Chest"
+      "Role": "Passage",
+      "Name": "The Slag Drain"
     }
   ],
   "Collectives": [
     {
-      "Id": "coin_gate",
-      "Name": "the Coin Gate Guard",
-      "FactionId": "faction2",
+      "Id": "col_vault",
+      "Name": "Keepers of the Coke",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
@@ -83,48 +78,44 @@
         },
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 1
+          "Count": 2
         }
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 5,
+        "Room": 7,
         "Objective": {
-          "Kind": "Gate",
-          "Ref": "5"
+          "Kind": "Chest",
+          "Ref": "1"
         },
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 3
+      }
+    },
+    {
+      "Id": "col_kennel",
+      "Name": "The Banked Pack",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
+        "Objective": null,
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": 6
       }
     },
     {
-      "Id": "foundry_guard",
-      "Name": "the Foundry Guard",
-      "FactionId": "faction2",
-      "Members": [
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 9,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 10
-      }
-    },
-    {
-      "Id": "counting_hounds",
-      "Name": "the Counting Hounds",
-      "FactionId": "faction2",
+      "Id": "col_bell",
+      "Name": "The Draught Watch",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
@@ -132,231 +123,114 @@
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
-        "Room": 10,
-        "Objective": null,
-        "Route": [
-          10,
-          9
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "assay_lookout",
-      "Name": "the Assay Lookout",
-      "FactionId": "faction2",
-      "Members": [
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "Goal": {
         "Kind": "Alarm",
-        "Room": 3,
+        "Room": 9,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "coin_gate",
-        "RallyRoom": 5
+        "AlarmTarget": "col_vault",
+        "RallyRoom": 3
       }
     },
     {
-      "Id": "cooling_priest",
-      "Name": "the Cooling Priest",
-      "FactionId": "faction2",
+      "Id": "col_round",
+      "Name": "The Stokers\u0027 Round",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 6,
+        "Kind": "Patrol",
+        "Room": 3,
         "Objective": null,
-        "Route": [],
+        "Route": [
+          3,
+          4,
+          1,
+          6,
+          9
+        ],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 3
       }
     }
   ],
-  "Loners": [],
+  "Loners": [
+    {
+      "EnemyId": "enemy.ember_hound",
+      "Room": 10
+    }
+  ],
   "Hordes": [
     {
-      "Id": "horde_cinder_store",
-      "Name": "The Cinder Store",
-      "Room": 2,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 23,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The cinder store was stacked to the roof, and the stack moves.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_ember_gallery",
-      "Name": "The Ember Gallery",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 19
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 22,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Embers with legs, a gallery of them, all downhill toward you.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_coin_gate",
-      "Name": "The Gate\u0027s Tithe",
+      "Id": "hor_breach",
+      "Name": "The Cinder Spill",
       "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 20
+          "Count": 26
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
+          "Count": 10
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 4
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 23,
-      "Trigger": "Alarm",
-      "Line": {
-        "Text": "The coin gate\u0027s braziers empty themselves at the alarm.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_cooling",
-      "Name": "The Cooling Hall",
-      "Room": 6,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 21
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 24,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The cooling racks tip, and nothing on them was cool.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_quench",
-      "Name": "The Quench",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 20
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 23,
+      "Total": 40,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The quench stream steams, then boils, then walks.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_blanks",
-      "Name": "The Blanks",
-      "Room": 8,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 22
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 25,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Unstruck coin, a room of it, and every blank has decided to be something.",
+        "Text": "The wall splits along a seam of soot and the heat comes out walking: small burning things, and behind them the ones that stopped being small.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": {
-    "Name": "The Coinstriker",
-    "SignatureOverride": null,
+    "Name": "The Bellows",
+    "SignatureOverride": "Charge",
     "IntroLine": {
-      "Text": "Four blanks. Face up. I will strike you with the lantern, and you will spend.",
-      "VoiceId": "7d6203f2cfeea1b8",
-      "Delivery": "booming"
+      "Text": "The heart-valve knows you are foreign. It beats faster.",
+      "VoiceId": "2f41042e34628cf7",
+      "Delivery": null
     },
     "DeathLine": {
-      "Text": "Short... weight...",
-      "VoiceId": "522d24bb65f7ceb3",
-      "Delivery": "weary"
+      "Text": "The beat does not stop. It only loses count for a while.",
+      "VoiceId": "406f9dddba9d381b",
+      "Delivery": null
     }
   },
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 10,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 7,
+      "Room": 9,
       "Kind": "Fire"
     },
     {
-      "Room": 10,
-      "Kind": "Spikes"
+      "Room": 6,
+      "Kind": "Fire"
     }
   ],
   "Npcs": [],
   "Quests": [],
   "Narration": [],
   "Taunts": [],
-  "EnemyTotal": 8
+  "EnemyTotal": 12
 }

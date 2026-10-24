@@ -1,84 +1,84 @@
 {
   "SchemaVersion": 1,
   "Floor": 12,
-  "Source": "builtin",
-  "LayoutHash": 14391511594621273884,
-  "Title": "The Kiln Shrine",
+  "Source": "claude",
+  "LayoutHash": 4196110155754077147,
+  "Title": "The Casting Hall",
   "IntroLine": {
-    "Text": "Red kiln brick and air you could bake in. The mint\u0027s own chapel is down here, where they blessed the toll coin before it was struck. Somebody means to unbless it, and the walls object.",
-    "VoiceId": "cbdc71986139c66d",
+    "Text": "Kiln brick, and cages. The Forge keeps what it has not finished, and the unfinished press their faces to the bars and watch you walk by.",
+    "VoiceId": "da089ca7501d83ef",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Gate",
-      "Name": "The Furnace Gate"
+      "Role": "Hall",
+      "Name": "The Casting Floor"
     },
     {
       "Index": 1,
-      "Role": "Lair",
-      "Name": "Cinder Gallery"
+      "Role": "Start",
+      "Name": "Kiln-Mouth Landing"
     },
     {
       "Index": 2,
-      "Role": "Exit",
-      "Name": "The Die Room Stair"
+      "Role": "Passage",
+      "Name": "The Slag Walk"
     },
     {
       "Index": 3,
-      "Role": "Kennel",
-      "Name": "The Ash Pit"
+      "Role": "Hall",
+      "Name": "The Pouring Gallery"
     },
     {
       "Index": 4,
       "Role": "Camp",
-      "Name": "Coiners\u0027 Squat"
+      "Name": "Oddfellows\u0027 Fire"
     },
     {
       "Index": 5,
-      "Role": "Shrine",
-      "Name": "Chapel of the Coin"
+      "Role": "Exit",
+      "Name": "The Cooling Stair"
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "The Great Kiln"
+      "Role": "Lair",
+      "Name": "The Cinder Breaches"
     },
     {
       "Index": 7,
-      "Role": "Hall",
-      "Name": "Bellows Hall"
+      "Role": "Barracks",
+      "Name": "Tenders\u0027 Quarters"
     },
     {
       "Index": 8,
-      "Role": "Passage",
-      "Name": "Quench Stream"
+      "Role": "Hall",
+      "Name": "Shelf of Blanks"
     },
     {
       "Index": 9,
-      "Role": "Start",
-      "Name": "Kiln Head"
+      "Role": "Passage",
+      "Name": "The Ladle Ledge"
     },
     {
       "Index": 10,
-      "Role": "Lair",
-      "Name": "Slag Heaps"
+      "Role": "Treasury",
+      "Name": "The Founders\u0027 Strongbox"
     },
     {
       "Index": 11,
-      "Role": "Treasury",
-      "Name": "The Assay Chest"
+      "Role": "Jail",
+      "Name": "The Uncast Cages"
     }
   ],
   "Collectives": [
     {
-      "Id": "furnace_gate",
-      "Name": "the Furnace Gate Guard",
-      "FactionId": "faction2",
+      "Id": "col_vault",
+      "Name": "Keepers of the Strongbox",
+      "FactionId": "fac_bellows",
       "Members": [
         {
-          "EnemyId": "enemy.forge_priest",
+          "EnemyId": "enemy.forge_golem",
           "Count": 1
         },
         {
@@ -88,27 +88,78 @@
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 0,
+        "Room": 10,
         "Objective": {
-          "Kind": "Gate",
+          "Kind": "Chest",
           "Ref": "0"
         },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 6
+        "RallyRoom": 4
       }
     },
     {
-      "Id": "coiners",
-      "Name": "the Coiners",
+      "Id": "col_ring",
+      "Name": "The Ring Walk",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 0,
+        "Objective": null,
+        "Route": [
+          0,
+          9,
+          8,
+          7
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "col_stairbell",
+      "Name": "The Stair Bell",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Alarm",
+        "Room": 5,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": "col_vault",
+        "RallyRoom": 4
+      }
+    },
+    {
+      "Id": "col_oddfellows",
+      "Name": "The Oddfellows",
       "FactionId": null,
       "Members": [
         {
           "EnemyId": "enemy.bandit",
-          "Count": 3
+          "Count": 2
         },
         {
           "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.bandit_chief",
           "Count": 1
         }
       ],
@@ -118,201 +169,288 @@
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 8
+        "RallyRoom": 4
       }
     },
     {
-      "Id": "bellows_golem",
-      "Name": "the Bellows Golem",
-      "FactionId": "faction2",
+      "Id": "col_floorpriest",
+      "Name": "Tender of the Floor",
+      "FactionId": "fac_bellows",
       "Members": [
         {
-          "EnemyId": "enemy.forge_golem",
+          "EnemyId": "enemy.forge_priest",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 7,
+        "Room": 0,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "kiln_hounds",
-      "Name": "the Kiln Hounds",
-      "FactionId": "faction2",
-      "Members": [
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 2
-        }
-      ],
-      "Goal": {
-        "Kind": "Patrol",
-        "Room": 6,
-        "Objective": null,
-        "Route": [
-          6,
-          10
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 0
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_gate",
-      "Name": "The Furnace Spill",
-      "Room": 0,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 15
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 17,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The furnace gate\u0027s braziers spit, and what they spit is walking.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_cinder",
-      "Name": "The Cinder Gallery",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 16
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 18,
-      "Trigger": "Chest",
-      "Line": {
-        "Text": "The gallery\u0027s ash was never cold.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_kiln",
-      "Name": "The Kiln\u0027s Litter",
+      "Id": "horde_breach",
+      "Name": "The Spill",
       "Room": 6,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 16
+          "Count": 22
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 3
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 19,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The great kiln opens its door on its own, and it was full.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_bellows",
-      "Name": "The Bellows\u0027 Breath",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 15
+          "Count": 6
         },
         {
-          "EnemyId": "enemy.horde_cinder_brute",
+          "EnemyId": "enemy.ember_hound",
           "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 17,
+      "Total": 30,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The bellows draw, and the draught is made of imps.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_slag",
-      "Name": "The Slag Heaps",
-      "Room": 10,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_cinder",
-          "Count": 17
-        },
-        {
-          "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 2
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 19,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The slag heaps shrug and stand up in a hundred small pieces.",
+        "Text": "The wall cracks like a crust and the kiln empties itself: little burning things with hands, and behind them something that has to stoop.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 6,
+      "Locked": false,
+      "QuestId": null
+    },
+    {
+      "Room": 2,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
-      "Room": 8,
+      "Room": 0,
       "Kind": "Fire"
     },
     {
-      "Room": 3,
+      "Room": 9,
       "Kind": "Spikes"
+    },
+    {
+      "Room": 3,
+      "Kind": "Fire"
     }
   ],
-  "Npcs": [],
-  "Quests": [],
+  "Npcs": [
+    {
+      "Id": "npc_grisel",
+      "Name": "Grisel Thorn",
+      "Room": 7,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "g1",
+        "Nodes": [
+          {
+            "Id": "g1",
+            "Line": {
+              "Text": "Second lot usually steps over the first lot. You came back instead. I haven\u0027t decided yet whether that\u0027s kindness or bad arithmetic.",
+              "VoiceId": "222db2e1c13beecb",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Walk with us. The stairs are down past the cages.",
+                "Next": "g2",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Stay here. The spiders were fine with you.",
+                "Next": "g3",
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "There. The stair. Go up it or down it, but go.",
+                "Next": "g4",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "g2",
+            "Line": {
+              "Text": "Keys on their belts, hooks for hands. Keep me between you and the hooks and I\u0027ll say something generous about you later, when there\u0027s a later.",
+              "VoiceId": "fcb4062da06bec17",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Move.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "g3",
+            "Line": {
+              "Text": "Fair. I\u0027d have left me too. Mind the kiln wall by the breaches; it has been coughing all week.",
+              "VoiceId": "0c90c09cf0590954",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Keep your head down.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "g4",
+            "Line": {
+              "Text": "Nineteen years, and it was two rooms over. I walked my own four the other way and I have been paying the difference ever since.",
+              "VoiceId": "f8e6acd9ec83cd0f",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Then stop paying.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "q_grisel_out",
+      "CastId": "cast_grisel",
+      "Persona": {
+        "VoiceStyle": "nineteen years underground; flat, dry, contrary, speaks of spiders like neighbours",
+        "DefaultDelivery": "weary",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": "grisel_forgiven",
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "q_grisel_out",
+      "Template": "Escort",
+      "Title": "Walking Grisel Out",
+      "Objective": "Bring Grisel Thorn down to the stairs alive, past the jailers and their keys.",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": "npc_grisel",
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_grisel",
+      "Reward": {
+        "Xp": 320,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "I know every cage on this floor by the noise it makes. What I don\u0027t know is how to cross the casting floor with company. Take me to the stair.",
+          "VoiceId": "1671ff0dd94e75c2",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Right. Slowly, and don\u0027t look in the cages. They look back, and they have my face half-finished in there somewhere.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Suit yourself. I\u0027ve been left in worse rooms by better liars.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "That\u0027s the stair. I\u0027ve not stood on a step going up since before you were paid. Don\u0027t wait for me to thank you properly; I\u0027m out of practice.",
+          "VoiceId": "8d92cc0783a2041d",
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Should have stayed with the spiders. They at least finish what they start.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": "grisel_forgiven",
+      "ForbidsFlag": null
+    }
+  ],
   "Narration": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 5,
+      "Trigger": "Enter",
+      "Room": null,
       "Line": {
-        "Text": "The chapel of the coin. The Company\u0027s lantern is cut into the altar, and somebody has been scrubbing at it with a knife.",
+        "Text": "The head jailer wears a company badge nineteen years out of date, and answers to Grisel Thorn. She does not look up. The keys on her belt do the talking.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null
+      "ForbidsFlag": "grisel_forgiven"
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 9
+  "Taunts": [
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "The Casting Hall. Those in the cages are not finished yet, so kindly stop bloody rattling them. Himself dreams them one at a time.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The Casting Hall. Those in the cages are not finished yet, so kindly stop rattling them. Himself dreams them one at a time.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
+  "EnemyTotal": 12
 }

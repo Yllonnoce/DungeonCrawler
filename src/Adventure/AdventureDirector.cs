@@ -45,6 +45,12 @@ public partial class AdventureDirector : Node
         var debug = DebugTools.Instance;
         var spend = Game.Instance.Adventure.Spend;
         _meter = new CostMeter(spend, Settings.SpendCapUsd);
+        var templates = PromptTemplates.Default;
+        if (debug?.StoryBriefPath is { } briefPath)
+        {
+            try { templates = new PromptTemplates { Brief = File.ReadAllText(briefPath) }; GD.Print($"[Adventure] story brief: {briefPath} ({templates.Brief.Length} chars)"); }
+            catch (Exception e) { GD.PushError($"[Adventure] story brief {briefPath} could not be read: {e.Message}"); }
+        }
         if (offlineOnly || Game.Instance.Adventure.Mode == AdventureMode.Builtin)
         {
             Planner = new OfflinePlanner();
@@ -57,7 +63,7 @@ public partial class AdventureDirector : Node
         }
         else if (debug?.ReplayDir is { } replay)
         {
-            Planner = new ClaudePlanner(new ReplayClaudeClient(replay), _meter) { Log = LogPlanning };
+            Planner = new ClaudePlanner(new ReplayClaudeClient(replay), _meter, templates) { Log = LogPlanning };
             PlannerName = "A recording of Claude";
         }
         else if (!noAi && debug?.NoAi != true && (Settings.AiPlanning || debug?.ForceAi == true || forceAi) && Settings.HasPlannerKey)
@@ -67,7 +73,7 @@ public partial class AdventureDirector : Node
             var logDir = ProjectSettings.GlobalizePath(debug?.RecordDir ?? "user://ai/log");
             client = new RecordingClaudeClient(client, logDir);
             var model = viaRunware ? RunwareModel : Pricing.DefaultModel;
-            Planner = new ClaudePlanner(client, _meter) { Log = LogPlanning, Model = model };
+            Planner = new ClaudePlanner(client, _meter, templates) { Log = LogPlanning, Model = model };
             PlannerName = viaRunware ? $"{model} via Runware" : "Claude";
         }
         else

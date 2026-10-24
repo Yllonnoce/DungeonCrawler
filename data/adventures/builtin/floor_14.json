@@ -1,66 +1,108 @@
 {
   "SchemaVersion": 1,
   "Floor": 14,
-  "Source": "builtin",
-  "LayoutHash": 14850002366807183848,
-  "Title": "The Assay Vault",
+  "Source": "claude",
+  "LayoutHash": 16079063412800819907,
+  "Title": "The Quench",
   "IntroLine": {
-    "Text": "Riveted iron and ember light. The mint\u0027s assayers weighed every coin here and locked the true weights in a vault that answers only to its levers. The clerk has changed the setting. He does that.",
+    "Text": "Black water stands knee-deep over the quench grates, cold as a font and twice as patient. On the ledges above it, something with a bow waits for the ripples to tell it where you are.",
     "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Passage",
-      "Name": "Weighing Gallery"
+      "Role": "Hall",
+      "Name": "The Flooded Casting Floor"
     },
     {
       "Index": 1,
-      "Role": "Exit",
-      "Name": "The Assay Vault"
+      "Role": "Passage",
+      "Name": "Scum Channel"
     },
     {
       "Index": 2,
       "Role": "Passage",
-      "Name": "Crucible Drift"
+      "Name": "The Rust Race"
     },
     {
       "Index": 3,
-      "Role": "Treasury",
-      "Name": "The True Weights"
+      "Role": "Lair",
+      "Name": "The Breached Font"
     },
     {
       "Index": 4,
-      "Role": "Hall",
-      "Name": "The Long Rolling Mill"
+      "Role": "Passage",
+      "Name": "The Sluice Neck"
     },
     {
       "Index": 5,
-      "Role": "Start",
-      "Name": "Iron Head"
+      "Role": "Passage",
+      "Name": "The Weir Walk"
     },
     {
       "Index": 6,
-      "Role": "Passage",
-      "Name": "Slag Drift"
+      "Role": "Treasury",
+      "Name": "The Slag Vault"
     },
     {
       "Index": 7,
-      "Role": "Passage",
-      "Name": "Vault Gallery"
+      "Role": "Camp",
+      "Name": "Oddfellows\u0027 Sodden Camp"
     },
     {
       "Index": 8,
-      "Role": "Passage",
-      "Name": "Rivet Gallery"
+      "Role": "Cell",
+      "Name": "The Confessional Grate"
+    },
+    {
+      "Index": 9,
+      "Role": "Start",
+      "Name": "The Drowned Stair"
+    },
+    {
+      "Index": 10,
+      "Role": "Treasury",
+      "Name": "Lever-Gate Coffer"
+    },
+    {
+      "Index": 11,
+      "Role": "Exit",
+      "Name": "The Sealed Quench-Gate"
     }
   ],
   "Collectives": [
     {
-      "Id": "mill_guard",
-      "Name": "the Mill Guard",
-      "FactionId": "faction2",
+      "Id": "col_oddfellows",
+      "Name": "Oddfellow Dregs",
+      "FactionId": null,
+      "Members": [
+        {
+          "EnemyId": "enemy.bandit_chief",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.bandit",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.bandit_archer",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 7,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 7
+      }
+    },
+    {
+      "Id": "col_wardens",
+      "Name": "The Quench Wardens",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
@@ -68,45 +110,25 @@
         },
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 1
+          "Count": 2
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 4,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 6,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "0"
+        },
         "Route": [],
         "AlarmTarget": null,
         "RallyRoom": 6
       }
     },
     {
-      "Id": "crucible_guard",
-      "Name": "the Crucible Guard",
-      "FactionId": "faction2",
-      "Members": [
-        {
-          "EnemyId": "enemy.forge_golem",
-          "Count": 1
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Guard",
-        "Room": 2,
-        "Objective": null,
-        "Route": [],
-        "AlarmTarget": null,
-        "RallyRoom": 0
-      }
-    },
-    {
-      "Id": "rivet_hounds",
-      "Name": "the Rivet Hounds",
-      "FactionId": "faction2",
+      "Id": "col_gratehounds",
+      "Name": "Grate-Hounds",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
@@ -114,66 +136,492 @@
         }
       ],
       "Goal": {
-        "Kind": "Patrol",
-        "Room": 0,
+        "Kind": "Alarm",
+        "Room": 3,
         "Objective": null,
-        "Route": [
-          0,
-          8
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
+        "Route": [],
+        "AlarmTarget": "col_wardens",
+        "RallyRoom": 6
       }
     },
     {
-      "Id": "slag_priest",
-      "Name": "the Slag Priest",
-      "FactionId": "faction2",
+      "Id": "col_procession",
+      "Name": "The Slag Procession",
+      "FactionId": "fac_bellows",
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
+          "Count": 2
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
           "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 6,
+        "Kind": "Patrol",
+        "Room": 3,
         "Objective": null,
-        "Route": [],
+        "Route": [
+          3,
+          4,
+          2,
+          1,
+          5,
+          8
+        ],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 3
       }
     }
   ],
   "Loners": [],
-  "Hordes": [],
-  "Boss": null,
-  "Chests": [],
-  "Traps": [
+  "Hordes": [
     {
-      "Room": 8,
-      "Kind": "Fire"
+      "Id": "horde_font",
+      "Name": "The Font Spill",
+      "Room": 3,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 14
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 5
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 21,
+      "Trigger": "Chest",
+      "Line": {
+        "Text": "The lid lifts, the water hisses, and the breaches in the font wall cough out cinders that walk.",
+        "VoiceId": null,
+        "Delivery": null
+      }
     },
     {
-      "Room": 7,
-      "Kind": "Spikes"
+      "Id": "horde_grate",
+      "Name": "The Grate Chorus",
+      "Room": 8,
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 12
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 5
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "EnemyId": null,
+      "Count": null,
+      "Total": 19,
+      "Trigger": "Alarm",
+      "Line": {
+        "Text": "Something small and fast reaches the vault, and behind you the grate room empties itself into the flood.",
+        "VoiceId": null,
+        "Delivery": null
+      }
     }
   ],
-  "Npcs": [],
-  "Quests": [],
-  "Narration": [
+  "Boss": null,
+  "Chests": [
     {
-      "Trigger": "RoomEnter",
-      "Room": 0,
+      "Room": 8,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
+  "Traps": [
+    {
+      "Room": 3,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 6,
+      "Kind": "Fire"
+    }
+  ],
+  "Npcs": [
+    {
+      "Id": "npc_tobit_defect",
+      "Name": "Deacon Tobit Hale",
+      "Room": 8,
+      "VoiceId": "Orus",
+      "Script": {
+        "Start": "tob_a",
+        "Nodes": [
+          {
+            "Id": "tob_a",
+            "Line": {
+              "Text": "You told me the truth on the flagstones and I have not been able to stop hearing it. He writes the verses down, you know. I copied one out.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Which verse, deacon?",
+                "Next": "tob_b",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Keep your copying. We have levers to pull.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "It is done.",
+                "Next": "tob_c",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "tob_b",
+            "Line": {
+              "Text": "The Quench answers to a parity: which gates sleep while which wake. It is written in my psalter, and my psalter is in the font room, where I dropped it running.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll wade and fetch it.",
+                "Next": "tob_c",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Fetch it yourself. You\u0027re the one who\u0027s dry.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "tob_c",
+            "Line": {
+              "Text": "Bring it back and I will read you the order aloud. After that I shall have to decide what I am, and I would rather do it with wet boots than none.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Here. Read.",
+                "Next": null,
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Stay by the grate. We\u0027ll be back.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_psalter",
+      "CastId": "cast_tobit",
+      "Persona": {
+        "VoiceStyle": "a young deacon, over-polite and candle-lit, hopeful diction cracking around a new doubt",
+        "DefaultDelivery": "warm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null,
+      "Betrayal": null
+    },
+    {
+      "Id": "npc_tobit_choir",
+      "Name": "Deacon Tobit Hale",
+      "Room": 8,
+      "VoiceId": "Orus",
+      "Script": {
+        "Start": "bet_a",
+        "Nodes": [
+          {
+            "Id": "bet_a",
+            "Line": {
+              "Text": "The Verger sends his blessing and one kindness: the levers are all correct. Pull whichever you like. He would not lie to the congregation.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Then tell us which opens the stairs.",
+                "Next": "bet_b",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "You\u0027ve been singing, deacon. We can hear it on you.",
+                "Next": "bet_b",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "bet_b",
+            "Line": {
+              "Text": "I have been given a part. It is a small part, held very long, and it does not want words any more. He says I shall be better for it. He says I shall be quieter.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Step out of the water where we can see you.",
+                "Next": null,
+                "Effect": "Betray",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Keep your part. We\u0027ll find the gates without you.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "quest_tobit_choir",
+      "CastId": "cast_tobit",
+      "Persona": {
+        "VoiceStyle": "a young deacon gone thin and formal, vowels stretched like held notes, pleased and far away",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit",
+      "Betrayal": {
+        "EnemyId": "enemy.forge_priest",
+        "Count": 2
+      }
+    }
+  ],
+  "Quests": [
+    {
+      "Id": "quest_psalter",
+      "Template": "Recover",
+      "Title": "The Deacon\u0027s Psalter",
+      "Objective": "Recover Tobit\u0027s psalter from the breached font room",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": "Tobit\u0027s psalter",
+        "ItemRoom": 3,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_tobit_defect",
+      "Reward": {
+        "Xp": 320,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Small black book, water-swollen, dropped by the font where the wall is broken. The parity is on the flyleaf in my own bad hand.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Thank you. Mind the cinders in there; they come out of the wall like wasps out of a loaf.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "No. Quite right. I lost it, I should drown for it. I only thought you preferred stairs to guessing.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "Second gate sleeps while the first wakes, then the fourth, then nothing. There. I have told you, and I am no longer his. Rather a relief, and rather late.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Then it stays in the water, and so does the order, and so, I suppose, do I.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null
+    },
+    {
+      "Id": "quest_tobit_choir",
+      "Template": "Betrayal",
+      "Title": "A Part Held Very Long",
+      "Objective": "Put down what wears the deacon\u0027s name",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": "npc_tobit_choir",
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_tobit_choir",
+      "Reward": {
+        "Xp": 300,
+        "Table": "table.chest"
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Stand where you are, please. The water carries the note. He asked me to keep you by the grate until the verse comes round again.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Oh. You wanted to see. Everybody wants to see, right up until.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "As you like. I shall wait. Waiting is most of the part.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "The singing stops in the flooded room. What is left in the deacon\u0027s coat was never going to make deacon.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Hush now. You are making the water ring.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit"
+    }
+  ],
+  "Narration": [],
+  "Taunts": [
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "shiftingvault",
       "Line": {
-        "Text": "Plaques by the levers, in a clerk\u0027s neat hand. He wants you to solve it. He wants to watch you try.",
+        "Text": "The Quench. Mind your footing, congregation; the gates move when I say the verse, and I say it bloody often.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The Quench. Mind your footing, congregation; the gates move when I say the verse, and I say it often.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "WrongLever",
+      "Objective": "shiftingvault",
+      "Line": {
+        "Text": "Correct. Entirely correct. Himself approves.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Correct. Entirely correct. Himself approves.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "WrongLever",
+      "Objective": "shiftingvault",
+      "Line": {
+        "Text": "Wrong. Himself heard that. So did everything else.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Wrong. Himself heard that. So did everything else.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GateShift",
+      "Objective": "shiftingvault",
+      "Line": {
+        "Text": "The doors move. They are His throat. Did you think they would hold still for you?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The doors move. They are His throat. Did you think they would hold still for you?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
     }
   ],
-  "Taunts": [],
-  "EnemyTotal": 7
+  "EnemyTotal": 12
 }

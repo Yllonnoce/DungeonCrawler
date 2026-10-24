@@ -1,0 +1,179 @@
+{
+  "SchemaVersion": 1,
+  "Floor": 14,
+  "Source": "builtin",
+  "LayoutHash": 14850002366807183848,
+  "Title": "The Assay Vault",
+  "IntroLine": {
+    "Text": "Riveted iron and ember light. The mint\u0027s assayers weighed every coin here and locked the true weights in a vault that answers only to its levers. The clerk has changed the setting. He does that.",
+    "VoiceId": null,
+    "Delivery": null
+  },
+  "Rooms": [
+    {
+      "Index": 0,
+      "Role": "Passage",
+      "Name": "Weighing Gallery"
+    },
+    {
+      "Index": 1,
+      "Role": "Exit",
+      "Name": "The Assay Vault"
+    },
+    {
+      "Index": 2,
+      "Role": "Passage",
+      "Name": "Crucible Drift"
+    },
+    {
+      "Index": 3,
+      "Role": "Treasury",
+      "Name": "The True Weights"
+    },
+    {
+      "Index": 4,
+      "Role": "Hall",
+      "Name": "The Long Rolling Mill"
+    },
+    {
+      "Index": 5,
+      "Role": "Start",
+      "Name": "Iron Head"
+    },
+    {
+      "Index": 6,
+      "Role": "Passage",
+      "Name": "Slag Drift"
+    },
+    {
+      "Index": 7,
+      "Role": "Passage",
+      "Name": "Vault Gallery"
+    },
+    {
+      "Index": 8,
+      "Role": "Passage",
+      "Name": "Rivet Gallery"
+    }
+  ],
+  "Collectives": [
+    {
+      "Id": "mill_guard",
+      "Name": "the Mill Guard",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 4,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 6
+      }
+    },
+    {
+      "Id": "crucible_guard",
+      "Name": "the Crucible Guard",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 2,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 0
+      }
+    },
+    {
+      "Id": "rivet_hounds",
+      "Name": "the Rivet Hounds",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 0,
+        "Objective": null,
+        "Route": [
+          0,
+          8
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    },
+    {
+      "Id": "slag_priest",
+      "Name": "the Slag Priest",
+      "FactionId": "faction2",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": null
+      }
+    }
+  ],
+  "Loners": [],
+  "Hordes": [],
+  "Boss": null,
+  "Chests": [],
+  "Traps": [
+    {
+      "Room": 8,
+      "Kind": "Fire"
+    },
+    {
+      "Room": 7,
+      "Kind": "Spikes"
+    }
+  ],
+  "Npcs": [],
+  "Quests": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 0,
+      "Line": {
+        "Text": "Plaques by the levers, in a clerk\u0027s neat hand. He wants you to solve it. He wants to watch you try.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [],
+  "EnemyTotal": 7
+}

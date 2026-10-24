@@ -1,159 +1,135 @@
 {
   "SchemaVersion": 1,
   "Floor": 9,
-  "Source": "builtin",
-  "LayoutHash": 16704115395937608355,
-  "Title": "Vane\u0027s Camp",
+  "Source": "claude",
+  "LayoutHash": 7083642127442343333,
+  "Title": "The Cistern",
   "IntroLine": {
-    "Text": "Sandstone, warm and dry for once, and a fire still going in it. Vane\u0027s crew came down here with eleven names on the roll. The fire is big enough for about four.",
-    "VoiceId": "afbd1efd1dc7430f",
+    "Text": "Warm sandstone, and water going sour in the dark. Four levers in four chambers, and over each one a verse, carved by a hand that knew the tune.",
+    "VoiceId": "aa677908b7741c98",
     "Delivery": null
   },
   "Rooms": [
     {
       "Index": 0,
-      "Role": "Lair",
-      "Name": "North Brood Drift"
+      "Role": "Hall",
+      "Name": "Cistern of the Second Verse"
     },
     {
       "Index": 1,
-      "Role": "Lair",
-      "Name": "The Egg Drift"
+      "Role": "Passage",
+      "Name": "Sluice Crawl"
     },
     {
       "Index": 2,
-      "Role": "Passage",
-      "Name": "The Adit"
+      "Role": "Hall",
+      "Name": "Cistern of the First Verse"
     },
     {
       "Index": 3,
       "Role": "Passage",
-      "Name": "Split Seam"
+      "Name": "The Dripping Gallery"
     },
     {
       "Index": 4,
-      "Role": "Lair",
-      "Name": "The Cracked Face"
+      "Role": "Hall",
+      "Name": "The Settling Tank"
     },
     {
       "Index": 5,
-      "Role": "Passage",
-      "Name": "Timber Cross"
+      "Role": "Start",
+      "Name": "The Sump Stair"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "Web Gallery"
+      "Role": "Exit",
+      "Name": "The Drain Mouth"
     },
     {
       "Index": 7,
       "Role": "Lair",
-      "Name": "Chest Drift"
+      "Name": "The Silt Pit"
     },
     {
       "Index": 8,
-      "Role": "Hall",
-      "Name": "The Long Adit"
+      "Role": "Passage",
+      "Name": "The Long Overflow"
     },
     {
       "Index": 9,
-      "Role": "Passage",
-      "Name": "Spoil Gallery"
+      "Role": "Lair",
+      "Name": "Breach of the Fourth Verse"
     },
     {
       "Index": 10,
       "Role": "Cell",
-      "Name": "Manifest Cache"
+      "Name": "The Hollow Behind the Verse"
     },
     {
       "Index": 11,
-      "Role": "Hall",
-      "Name": "Vane\u0027s Fire"
+      "Role": "Shrine",
+      "Name": "Cistern of the Third Verse"
     },
     {
       "Index": 12,
-      "Role": "Exit",
-      "Name": "The Sump Stair"
+      "Role": "Passage",
+      "Name": "Channel of Soured Water"
     },
     {
       "Index": 13,
-      "Role": "Passage",
-      "Name": "Tally Gallery"
+      "Role": "Treasury",
+      "Name": "The Verse Vault"
     },
     {
       "Index": 14,
       "Role": "Passage",
-      "Name": "Ladder Drift"
+      "Name": "Weep-Hole Walk"
     },
     {
       "Index": 15,
-      "Role": "Start",
-      "Name": "Sandstone Head"
-    },
-    {
-      "Index": 16,
-      "Role": "Treasury",
-      "Name": "The Pay Chest"
+      "Role": "Passage",
+      "Name": "Standpipe Run"
     }
   ],
   "Collectives": [
     {
-      "Id": "face_brood",
-      "Name": "the Face Brood",
-      "FactionId": "faction1",
+      "Id": "col_vault",
+      "Name": "Keepers of the Last Verse",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "EnemyId": "enemy.rock_thrower",
+          "Count": 1
         },
         {
           "EnemyId": "enemy.cave_shaman",
           "Count": 1
+        },
+        {
+          "EnemyId": "enemy.cave_spider",
+          "Count": 1
         }
       ],
       "Goal": {
-        "Kind": "Guard",
-        "Room": 4,
-        "Objective": null,
+        "Kind": "Defend",
+        "Room": 13,
+        "Objective": {
+          "Kind": "Chest",
+          "Ref": "2"
+        },
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 3
+        "RallyRoom": 13
       }
     },
     {
-      "Id": "seam_walkers",
-      "Name": "the Seam Walkers",
-      "FactionId": "faction1",
+      "Id": "col_alarm",
+      "Name": "The Drain Watch",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
           "Count": 2
-        },
-        {
-          "EnemyId": "enemy.cave_shaman",
-          "Count": 1
-        }
-      ],
-      "Goal": {
-        "Kind": "Patrol",
-        "Room": 9,
-        "Objective": null,
-        "Route": [
-          9,
-          13
-        ],
-        "AlarmTarget": null,
-        "RallyRoom": null
-      }
-    },
-    {
-      "Id": "web_lookout",
-      "Name": "the Web Lookout",
-      "FactionId": "faction1",
-      "Members": [
-        {
-          "EnemyId": "enemy.cave_spider",
-          "Count": 1
         }
       ],
       "Goal": {
@@ -161,278 +137,301 @@
         "Room": 6,
         "Objective": null,
         "Route": [],
-        "AlarmTarget": "face_brood",
-        "RallyRoom": 4
+        "AlarmTarget": "col_vault",
+        "RallyRoom": 9
       }
     },
     {
-      "Id": "fire_thrower",
-      "Name": "the Thrower at the Fire",
-      "FactionId": "faction1",
+      "Id": "col_patrol",
+      "Name": "The Verse Walk",
+      "FactionId": "fac_swallowed",
       "Members": [
         {
-          "EnemyId": "enemy.rock_thrower",
+          "EnemyId": "enemy.cave_spider",
+          "Count": 3
+        }
+      ],
+      "Goal": {
+        "Kind": "Patrol",
+        "Room": 12,
+        "Objective": null,
+        "Route": [
+          12,
+          0,
+          15,
+          14
+        ],
+        "AlarmTarget": null,
+        "RallyRoom": 12
+      }
+    },
+    {
+      "Id": "col_firstverse",
+      "Name": "Squatter of the First Verse",
+      "FactionId": "fac_swallowed",
+      "Members": [
+        {
+          "EnemyId": "enemy.cave_spider",
           "Count": 1
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 11,
+        "Room": 2,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": null
+        "RallyRoom": 2
       }
     }
   ],
   "Loners": [],
   "Hordes": [
     {
-      "Id": "horde_north",
-      "Name": "The North Brood",
-      "Room": 0,
+      "Id": "horde_fourth",
+      "Name": "The Fourth Verse Breach",
+      "Room": 9,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 10
+          "Count": 12
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 1
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The drift\u0027s end is not rock. It is eggs, and they are done waiting.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_egg",
-      "Name": "The Hatching",
-      "Room": 1,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 11
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 11,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "Something hatches, all of it at once.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_face",
-      "Name": "The Face Brood",
-      "Room": 4,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 10
+          "Count": 4
         },
         {
-          "EnemyId": "enemy.horde_crawler_brute",
+          "EnemyId": "enemy.cave_spider",
           "Count": 2
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 12,
-      "Trigger": "Alarm",
+      "Total": 18,
+      "Trigger": "Enter",
       "Line": {
-        "Text": "The cracked face cracks the rest of the way.",
+        "Text": "The carved verse splits down its middle and the wall behind it is not wall at all; it is legs, and all of them coming.",
         "VoiceId": null,
         "Delivery": null
       }
     },
     {
-      "Id": "horde_web",
-      "Name": "The Web",
-      "Room": 6,
+      "Id": "horde_hollow",
+      "Name": "What Waited Behind the Hymn",
+      "Room": 10,
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
           "Count": 10
-        }
-      ],
-      "EnemyId": null,
-      "Count": null,
-      "Total": 10,
-      "Trigger": "Enter",
-      "Line": {
-        "Text": "The web is thicker than it looked, and it is moving.",
-        "VoiceId": null,
-        "Delivery": null
-      }
-    },
-    {
-      "Id": "horde_chest",
-      "Name": "The Chest Brood",
-      "Room": 7,
-      "Members": [
-        {
-          "EnemyId": "enemy.horde_crawler",
-          "Count": 11
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 1
+          "Count": 3
         }
       ],
       "EnemyId": null,
       "Count": null,
-      "Total": 12,
+      "Total": 13,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The chest was bait. The drift was the trap.",
+        "Text": "The lid lifts, and the hollow behind the stonework answers it: a long wet scrabble, getting closer in the dark.",
         "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": null,
-  "Chests": [],
+  "Chests": [
+    {
+      "Room": 7,
+      "Locked": true,
+      "QuestId": null
+    }
+  ],
   "Traps": [
     {
       "Room": 14,
       "Kind": "Spikes"
     },
     {
-      "Room": 5,
+      "Room": 15,
+      "Kind": "Spikes"
+    },
+    {
+      "Room": 11,
       "Kind": "Gas"
     }
   ],
   "Npcs": [
     {
-      "Id": "npc_ottilie",
-      "Name": "Ottilie Vane",
-      "Room": 8,
-      "VoiceId": "Enceladus",
+      "Id": "npc_crane",
+      "Name": "Alderman Hesketh Crane",
+      "Room": 3,
+      "VoiceId": "Umbriel",
       "Script": {
         "Start": "greet",
         "Nodes": [
           {
             "Id": "greet",
             "Line": {
-              "Text": "Ha. The Company\u0027s four. Ottilie Vane, captain of what\u0027s left. Do me a turn: my crew\u0027s manifests are scattered up the galleries, and I want them before the clerk reads them out. He does that. Reads things out.",
-              "VoiceId": "01d2d1e5adc53bb5",
-              "Delivery": null
+              "Text": "A progress check, that is all. The council likes a tally. Only \u2014 there are papers blown about these cisterns with my seal on them, and I should very much like them gathered up.",
+              "VoiceId": "3c147349ff1d5bcd",
+              "Delivery": "weary"
             },
             "Choices": [
               {
-                "Text": "We\u0027ll fetch them.",
-                "Next": "accepted",
+                "Text": "We\u0027ll gather your papers.",
+                "Next": null,
                 "Effect": "AcceptQuest",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "What\u0027s left of your crew?",
-                "Next": "crew",
-                "Effect": "None",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "We have your manifests.",
-                "Next": "done",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
-              },
-              {
-                "Text": "Fetch your own papers.",
+                "Text": "Gather your own litter, alderman.",
                 "Next": null,
                 "Effect": "DeclineQuest",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "crew",
-            "Line": {
-              "Text": "Four of eleven. The toll\u0027s steep down here and I\u0027m bad at sums. Don\u0027t look at me like that. You\u0027ll be bad at sums too, by the belfry.",
-              "VoiceId": "6ca33b5b906d6532",
-              "Delivery": "weary"
-            },
-            "Choices": [
-              {
-                "Text": "We\u0027ll fetch them.",
-                "Next": "accepted",
-                "Effect": "AcceptQuest",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               },
               {
-                "Text": "Later, captain.",
-                "Next": null,
-                "Effect": "Farewell",
+                "Text": "Here. Every leaf of it.",
+                "Next": "read",
+                "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           },
           {
-            "Id": "accepted",
+            "Id": "read",
             "Line": {
-              "Text": "Good. Three sheets: the cache, the tally gallery, the far seam. Mind the brood, they like paper. They like anything.",
-              "VoiceId": "e968d065d681f1c2",
+              "Text": "Same wording as yours. Same hand. Same seal \u2014 mine, nineteen years old. Four names. A date down and no date up. It says plumbing. They always say plumbing.",
+              "VoiceId": "22930f8dc93fc303",
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Farewell.",
+                "Text": "Four names. Whose?",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
-              }
-            ]
-          },
-          {
-            "Id": "done",
-            "Line": {
-              "Text": "Give them here. Yes. Yes, that\u0027s... eleven names struck through, and here they are again under \u0027passage paid to the Toll-Keeper\u0027. In my hand. Ha! Well. Ha. I told you I was bad at sums.",
-              "VoiceId": "6ae1a390f80fb0f6",
-              "Delivery": "weary"
-            },
-            "Choices": [
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
               {
-                "Text": "Farewell.",
+                "Text": "Keep it. We\u0027ll want it read aloud later.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
-                "ForbidsFlag": null
+                "ForbidsFlag": null,
+                "NextIfRefused": null
               }
             ]
           }
         ]
       },
-      "QuestId": "quest_manifest",
-      "CastId": "cast_ottilie",
+      "QuestId": "q_contract",
+      "CastId": "cast_crane",
       "Persona": {
-        "VoiceStyle": "a hoarse, swaggering captain who laughs at her own bad luck before you can",
-        "DefaultDelivery": "sly",
-        "Voice": "Gacrux",
+        "VoiceStyle": "a plump market alderman, wheezing on the stair, chain of office, jokes to cover the sweat",
+        "DefaultDelivery": "weary",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    },
+    {
+      "Id": "npc_grisel",
+      "Name": "Grisel Thorn",
+      "Room": 4,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "greet",
+        "Nodes": [
+          {
+            "Id": "greet",
+            "Line": {
+              "Text": "Watch him read it. He knows the seal. Nineteen years ago I walked my four to the jailers and bought these years with them, and I have spent every one of them down here.",
+              "VoiceId": "060c1557d4d05aec",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Nineteen years is paid. It\u0027s forgiven.",
+                "Next": "forgiven",
+                "Effect": "Choose",
+                "Flag": "grisel_forgiven",
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "You sold four people. That stands.",
+                "Next": "kept",
+                "Effect": "Choose",
+                "Flag": "grisel_condemned",
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "forgiven",
+            "Line": {
+              "Text": "Forgiven. By plumbers. Well. The spiders never asked and the stone never answered, so you are an improvement on both. I\u0027ll be lower down when you come through.",
+              "VoiceId": "07f3777fd5e127a4",
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind the levers.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "kept",
+            "Line": {
+              "Text": "Good. I\u0027d not have believed the other thing. Go on down, then, and when you meet me again, remember you had the chance to say otherwise and spent it.",
+              "VoiceId": "f31936d437613d71",
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "We\u0027ll remember.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": "q_grisel",
+      "CastId": "cast_grisel",
+      "Persona": {
+        "VoiceStyle": "nineteen years underground; flat, dry, contrary, speaks to spiders more easily than to people",
+        "DefaultDelivery": "calm",
+        "Voice": null,
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -442,10 +441,10 @@
   ],
   "Quests": [
     {
-      "Id": "quest_manifest",
+      "Id": "q_contract",
       "Template": "Investigate",
-      "Title": "The Captain\u0027s Manifests",
-      "Objective": "Gather Ottilie Vane\u0027s three crew manifests from the galleries and bring them to her fire.",
+      "Title": "The Last Four\u0027s Contract",
+      "Objective": "Gather the scattered leaves of the old contract from the cisterns and bring them to Crane",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -454,61 +453,99 @@
         "Waves": null,
         "WaveCollective": null,
         "ClueRooms": [
-          10,
           13,
-          3
+          11,
+          7
         ],
-        "ClueName": "crew manifests"
+        "ClueName": "leaves of the last four\u0027s contract"
       },
-      "GiverNpc": "npc_ottilie",
+      "GiverNpc": "npc_crane",
       "Reward": {
         "Xp": 250,
         "Table": "table.chest"
       },
       "Lines": {
         "Offer": {
-          "Text": "My crew\u0027s manifests are scattered up the galleries. I want them before the clerk reads them out.",
-          "VoiceId": "305753780ac16731",
-          "Delivery": null
+          "Text": "Three leaves, by my count, soaked and scattered. Bring them here and we shall say no more about it. Paperwork out of its folder makes me unwell.",
+          "VoiceId": "abf7c82d8e62580f",
+          "Delivery": "weary"
         },
         "Accept": {
-          "Text": "Three sheets. Mind the brood.",
+          "Text": "Good. Quickly, and do not read them on the way. They are council property and very dull.",
           "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "Then he\u0027ll read them. He reads everything.",
+          "Text": "Then they stay down here getting damp, and so, I suppose, does my peace of mind.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
         },
         "Complete": {
-          "Text": "Eleven names struck through and written again as \u0027passage paid\u0027. In my hand. I told you I was bad at sums.",
-          "VoiceId": "b9c3193951c1e387",
-          "Delivery": "weary"
+          "Text": "All three. Yes. Thank you. I shall file them somewhere the water cannot reach.",
+          "VoiceId": "fa034ba5b3b632e6",
+          "Delivery": null
         },
         "Fail": {
-          "Text": "Paper doesn\u0027t keep down here. Nor does a crew.",
+          "Text": "Gone soft in the wet, then. Just as well. Nobody ever profited by reading an old invoice.",
           "VoiceId": null,
-          "Delivery": "weary"
+          "Delivery": null
+        }
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Id": "q_grisel",
+      "Template": "Decide",
+      "Title": "The Unforgiven",
+      "Objective": "Answer Grisel Thorn for what she did to the last four",
+      "Params": {
+        "TargetCollective": null,
+        "ItemName": null,
+        "ItemRoom": null,
+        "EscortNpc": null,
+        "Waves": null,
+        "WaveCollective": null,
+        "ClueRooms": [],
+        "ClueName": null
+      },
+      "GiverNpc": "npc_grisel",
+      "Reward": {
+        "Xp": 200,
+        "Table": null
+      },
+      "Lines": {
+        "Offer": {
+          "Text": "Don\u0027t look at me like a jury. Say the thing or don\u0027t say it. I have waited nineteen years; another moment won\u0027t kill me, though plenty else might.",
+          "VoiceId": "5624ff4088ed6199",
+          "Delivery": null
+        },
+        "Accept": {
+          "Text": "Said, then.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Decline": {
+          "Text": "Silence is also an answer. A coward\u0027s, but an answer.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Complete": {
+          "Text": "That\u0027s that. The water\u0027s still sour and we\u0027re both still standing in it.",
+          "VoiceId": "7531f954c7d1347a",
+          "Delivery": null
+        },
+        "Fail": {
+          "Text": "Nothing, then. Fine. The spiders are better company and they bite less.",
+          "VoiceId": null,
+          "Delivery": null
         }
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "Narration": [
-    {
-      "Trigger": "QuestDone",
-      "Room": null,
-      "Line": {
-        "Text": "The captain feeds the manifests to her fire, one sheet at a time, and does not look up. Somewhere below, the clerk laughs, and it carries.",
-        "VoiceId": "a5b8c5f4fb8c166e",
-        "Delivery": null
-      },
-      "RequiresFlag": null,
-      "ForbidsFlag": null
-    }
-  ],
+  "Narration": [],
   "Taunts": [],
-  "EnemyTotal": 8
+  "EnemyTotal": 9
 }
