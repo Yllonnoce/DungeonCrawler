@@ -123,8 +123,7 @@ public partial class ClientWorld : Node
 
     private void OnHazardPhase(HazardPhaseMsg hp)
     {
-        var elapsedTicks = NetSession.Instance.Tick + _serverTickOffset - hp.ServerTick;
-        var secondsIn = Math.Clamp(elapsedTicks / 60f, 0f, hp.DurationTicks / 60f);
+        var secondsIn = HazardSync.SecondsIn(NetSession.Instance.Tick, _serverTickOffset, hp.ServerTick, hp.DurationTicks);
         foreach (var node in Main.Instance?.Builder.Hazards ?? Array.Empty<Node3D>())
         {
             switch (node)
@@ -194,6 +193,7 @@ public partial class ClientWorld : Node
             case (Dungeon.Props.SecretWall s, "revealed"): s.Reveal(); break;
             case (Dungeon.Props.SecretWall s, "opened"): s.Open(silent: true); break;
             case (Dungeon.Props.Trap t, "revealed"): t.Reveal(); break;
+            case (Dungeon.Props.Press p, "revealed"): p.Plate.Reveal(); break;
             case (Dungeon.Props.Trap t, "disarmed"): t.Disarm(); break;
             case (Dungeon.Props.Trap t, "sprung"): t.ShowSprung(); break;
             case (Dungeon.Props.Breakable b, "broken"): b.Vanish(); break;

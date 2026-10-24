@@ -112,6 +112,7 @@ public partial class Trap : Area3D, IInteractable
     private void Spring(Enemy enemy)
     {
         Triggered = true;
+        Main.Instance?.Builder.TripPlateAt(GlobalPosition, this); // a trap laid on a plate springs the hazard too
         var r = enemy.ReceiveAttack(TrapStats, TrapRules.PlacedAttack(Kind, Floor), new HitContext { DefenderStunned = true }, Main.Instance.Party.Rng, $"{Kind} trap");
         EventBus.Instance.Log($"{enemy.DisplayName} springs the {Kind.ToString().ToLower()} trap for {r.Amount:0}{(r.Applied.Count > 0 ? $" [{string.Join(", ", r.Applied.Select(a => a.Kind))}]" : "")}.");
         Flash();

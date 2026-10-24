@@ -135,7 +135,8 @@ public partial class DungeonBuilder : Node3D
         };
         var seed = gameSeed ?? Game.Instance?.GameSeed ?? GameSeed;
         var layout = LayoutFor(floor, seed);
-        spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout) };
+        // an old save's floors were built before the hazards existed: they stay as they were, reserved cells and all
+        spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout), HazardsEnabled = floor >= (Game.Instance?.Adventure?.HazardsFromFloor ?? 1) };
         if (DebugTools.Instance?.ForcedHazard is { } fh && (DebugTools.Instance.ForcedHazardFloor is not { } onFloor || onFloor == floor)) spec = spec with { ForceHazard = fh.StartsWith("spike") ? HazardKind.SpikeBed : HazardKind.Press };
         var overrides = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.SpecOverrides;
         return overrides is { IsEmpty: false } ? overrides.Apply(spec) : spec;
@@ -197,6 +198,20 @@ public partial class DungeonBuilder : Node3D
     /// <summary>The lethal hazard nodes on this floor (Press, SpikeBed), by placement index.</summary>
     public IReadOnlyList<Node3D> Hazards => _hazards;
     /// <summary>Whether the lethal hazard with this placement index is back at rest (a Mangled body may be pulled free). True when no such hazard exists.</summary>
+    /// <summary>Something landed on this cell (an arrow, a trap going off): a hazard plate there counts it as a step.</summary>
+    public void TripPlateAt(Vector3 at, Node3D by)
+    {
+        var cell = WorldToCell(at);
+        foreach (var h in _hazards)
+        {
+            switch (h)
+            {
+                case Props.Press p when p.Placement.Plate == cell: p.Plate.Trip(by); break;
+                case Props.SpikeBed b when b.Variant == HazardVariant.Pressure && b.Placement.Plate == cell: b.Plate.Trip(by); break;
+            }
+        }
+    }
+
     public bool HazardArmed(int index)
     {
         foreach (var h in _hazards)
@@ -1090,10 +1105,8 @@ public partial class DungeonBuilder : Node3D
             trap.GlobalPosition = Surface(layout.TrapSpawns[i]);
         }
         var stone = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
-        var hazardsFrom = Game.Instance?.Adventure?.HazardsFromFloor ?? 1;
         foreach (var h in layout.Hazards)
         {
-            if (floor < hazardsFrom) break; // an old save's floors were built before the hazards existed
             if (h.Kind == HazardKind.Press)
             {
                 var press = new Props.Press { Name = $"Press{h.Index}" };

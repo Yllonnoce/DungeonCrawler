@@ -227,6 +227,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Camera.Rotation = new Vector3(_pitch, 0, 0);
     }
 
+    /// <summary>
+    /// The world moved this body (a hazard pushed it clear of its footprint): on a server the owning client is told
+    /// with a ForcePose, or its next pose would snap the body straight back onto the plate.
+    /// </summary>
+    public void Shove(Vector3 to)
+    {
+        GlobalPosition = to;
+        if (Remote != null) Remote.Position = to;
+        if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.ForcePose(Index, new Save.PoseDto { X = to.X, Y = to.Y, Z = to.Z, Yaw = Rotation.Y }));
+    }
+
     public void Teleport(Vector3 position, Vector3? lookTarget = null)
     {
         GlobalPosition = position;

@@ -179,7 +179,8 @@ public partial class SpikeBed : Node3D
             if (HazardRules.CanDodgeSpikes(onFloor)) { EventBus.Instance.Log($"The spikes miss {(body is Adventurer a ? a.State.Name : body.Name)} in the air."); continue; }
             victim.ReceiveHazard(HazardDamage.Impale, HazardRules.Outcome(victim.HazardVictimKind, lethality), SourceName, Index);
             any = true;
-            if (body is Adventurer { Downed: true } or Npc { Downed: true }) body.GlobalPosition = NearestExit(body.GlobalPosition);
+            if (body is Adventurer { Downed: true } shoved) shoved.Shove(NearestExit(body.GlobalPosition));
+            else if (body is Npc { Downed: true }) body.GlobalPosition = NearestExit(body.GlobalPosition);
         }
         if (any) { Spent++; EventBus.Instance.PlaySfx("hit_flesh"); }
     }

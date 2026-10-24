@@ -201,7 +201,8 @@ public partial class Press : Node3D
             victim.ReceiveHazard(HazardDamage.Crush, HazardRules.Outcome(victim.HazardVictimKind, lethality), SourceName, Index);
             any = true;
             // a body the press put down is shoved to the nearest cell outside the run, so the rescue never happens inside it
-            if (v is Adventurer { Downed: true } or Npc { Downed: true }) v.GlobalPosition = NearestExit(v.GlobalPosition);
+            if (v is Adventurer { Downed: true } shoved) shoved.Shove(NearestExit(v.GlobalPosition));
+            else if (v is Npc { Downed: true }) v.GlobalPosition = NearestExit(v.GlobalPosition);
         }
         if (any) { Spent++; _decal.Visible = true; EventBus.Instance.PlaySfx("hit_flesh"); }
     }

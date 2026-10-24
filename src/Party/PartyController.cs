@@ -642,6 +642,13 @@ public partial class PartyController : Node3D
             trap.Reveal();
             EventBus.Instance.Log($"{who.State.Name} spots a {trap.Kind.ToString().ToLower()} trap!");
         }
+        foreach (var press in Main.Instance.Builder.Hazards.OfType<Press>())
+        {
+            if (press.Plate.Detected || Spotter(press.Plate.GlobalPosition, 0f) is not { } who) continue; // a press mid-cycle is no secret either
+            press.Plate.Reveal();
+            EventBus.Instance.Log($"{who.State.Name} spots a pressure plate between the grooved walls!");
+            EventBus.Instance.RaisePropChanged(Net.NetRefs.Hazard(press.Index), "revealed");
+        }
         foreach (var secret in root.GetChildren().OfType<SecretWall>())
         {
             if (secret.Detected || Spotter(secret.GlobalPosition, 1f) is not { } who) continue;

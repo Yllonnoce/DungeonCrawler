@@ -105,6 +105,7 @@ public partial class Projectile : Area3D
             else if (body is not Enemy)
             {
                 _spent = true;
+                Main.Instance?.Builder.TripPlateAt(GlobalPosition, this);
                 QueueFree();
             }
             return;
@@ -133,6 +134,7 @@ public partial class Projectile : Area3D
                 break;
             default:
                 _spent = true;
+                Main.Instance?.Builder.TripPlateAt(GlobalPosition, this); // an arrow on a plate sets the hazard off from a safe distance
                 if (IsArrow) Party.SpawnArrowPickup(GlobalPosition - Velocity.Normalized() * 0.4f, 0.6f);
                 QueueFree();
                 break;

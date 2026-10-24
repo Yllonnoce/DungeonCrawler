@@ -1064,6 +1064,7 @@ public partial class DebugTools : Node
                     if (!enemyDead || !_hazardEnemyKilled) { Fail("the enemy in the run was not killed"); return; }
                     if (!lead.Downed || !lead.State.Mangled || !_hazardMemberKilled) { Fail("the lead was not mangled"); return; }
                     if (press.Placement.Cells.Contains(DungeonBuilder.WorldToCell(lead.GlobalPosition))) { Fail("the body was left inside the run"); return; }
+                    if (!press.Plate.Detected) { Fail("nobody spotted the plate (perception never reveals a Press plate)"); return; }
                     _hazardBody = lead.GlobalPosition;
                     break;
                 }

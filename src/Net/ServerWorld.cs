@@ -412,11 +412,11 @@ public partial class ServerWorld : Node
             switch (node)
             {
                 case Dungeon.Props.Press p when p.Index == index:
-                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.Press, phase, tick, (int)(HazardRules.PressDuration(p.Phase) * 60), p.Jammed, p.Spent));
+                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.Press, phase, tick, HazardSync.DurationTicks(HazardRules.PressDuration(p.Phase)), p.Jammed, p.Spent));
                     Trace.Add($"hazard:{p.Phase}");
                     return;
                 case Dungeon.Props.SpikeBed b when b.Index == index:
-                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.SpikeBed, phase, tick, (int)(HazardRules.SpikeDuration(b.Phase, b.Variant) * 60), false, b.Spent));
+                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.SpikeBed, phase, tick, HazardSync.DurationTicks(HazardRules.SpikeDuration(b.Phase, b.Variant)), false, b.Spent));
                     Trace.Add($"hazard:{b.Phase}");
                     return;
             }
@@ -446,9 +446,7 @@ public partial class ServerWorld : Node
             var cell = MangledRules.BoundCell(layout, exploration.Seen, living, Dungeon.Generation.HazardPlanner.CriticalPath(layout));
             _bound.Add(b.Index); // decided once: a body with nowhere to go stays where it fell
             if (cell is not { } at) continue;
-            b.Teleport(main.Builder.Surface(at) + Vector3.Up * 0.3f);
-            if (b.Remote != null) b.Remote.Position = b.GlobalPosition;
-            Broadcast(new ForcePose(b.Index, new PoseDto { X = b.GlobalPosition.X, Y = b.GlobalPosition.Y, Z = b.GlobalPosition.Z, Yaw = b.Rotation.Y }));
+            b.Shove(main.Builder.Surface(at) + Vector3.Up * 0.3f);
             EventBus.Instance.Log($"{b.State.Name} is bound in the dark ahead.");
             Trace.Add($"bound:{b.State.Name}");
         }
