@@ -40,6 +40,8 @@ public partial class Hud : Control
     private StairsPrompt _stairsPrompt = null!;
     private Label _objective = null!;
     private Label _subtitle = null!;
+    private Label _mangled = null!;
+    private float _mangledSince;
     private float _subtitleTimer;
 
     public void Bind(PartyController party) => _party = party;
@@ -108,6 +110,11 @@ public partial class Hud : Control
         _subtitle.AnchorLeft = 0.5f; _subtitle.AnchorRight = 0.5f; _subtitle.AnchorTop = 1; _subtitle.AnchorBottom = 1;
         _subtitle.OffsetLeft = -420; _subtitle.OffsetRight = 420; _subtitle.OffsetTop = -215; _subtitle.OffsetBottom = -165;
         AddChild(_subtitle);
+        _mangled = new Label { Name = "Mangled", HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color(0.95f, 0.4f, 0.35f), Visible = false };
+        _mangled.AddThemeFontSizeOverride("font_size", 20);
+        _mangled.AnchorLeft = 0.5f; _mangled.AnchorRight = 0.5f; _mangled.AnchorTop = 0; _mangled.AnchorBottom = 0;
+        _mangled.OffsetLeft = -360; _mangled.OffsetRight = 360; _mangled.OffsetTop = 80; _mangled.OffsetBottom = 110;
+        AddChild(_mangled);
 
         _dialogue = new DialogueScreen { Name = "Dialogue", Visible = false };
         _dialogue.Closed += UpdateModalState;
@@ -249,9 +256,23 @@ public partial class Hud : Control
         var target = _party.LookingAt;
         _prompt.Text = target == null || _sheet.Visible || _inventory.Visible || _skills.Visible || _dialogue.Visible || _questLog.Visible ? "" : $"[E] {target.Prompt}";
         if (_subtitleTimer > 0f) { _subtitleTimer -= (float)delta; if (_subtitleTimer <= 0f) _subtitle.Text = ""; }
+        TickMangledBanner((float)delta);
         if (_sheet.Visible) _sheet.Refresh();
         TickNetLabel();
         foreach (var p in _panels) p.Refresh(); // cheap; keeps cooldown text live
+    }
+
+    /// <summary>A crushed player on a client: how long until the server carries them ahead, then that they can be freed.</summary>
+    private void TickMangledBanner(float dt)
+    {
+        if (_party.Local is { Downed: true, State.Mangled: true } && Net.NetSession.IsClient)
+        {
+            _mangledSince += dt;
+            var left = MangledRules.BoundAfterSeconds - _mangledSince;
+            _mangled.Text = left > 0f ? $"Crushed. Rescue in {Math.Ceiling(left):0}s, or wait to be found" : "Crushed. Bound in the dark ahead; a friend can free you";
+            _mangled.Visible = true;
+        }
+        else { _mangledSince = 0f; _mangled.Visible = false; }
     }
 
     public void Refresh()

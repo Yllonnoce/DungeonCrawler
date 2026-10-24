@@ -12,7 +12,7 @@ public readonly record struct NetVec(float X, float Y, float Z)
 }
 
 [Flags]
-public enum PoseFlags : byte { None = 0, Crouch = 1, Sprint = 2, Guard = 4, OnFloor = 8, Downed = 16 }
+public enum PoseFlags : byte { None = 0, Crouch = 1, Sprint = 2, Guard = 4, OnFloor = 8, Downed = 16, Bound = 32 }
 
 /// <summary>An enemy as the server last saw it.</summary>
 public readonly record struct EntityState(int NetId, NetVec Position, float Yaw, float Hp, byte State, byte Flags)

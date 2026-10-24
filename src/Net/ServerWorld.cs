@@ -58,7 +58,7 @@ public partial class ServerWorld : Node
         bus.EnemyDied += e => { if (!Quiet) { Broadcast(new EnemyDied(e.NetId, -1)); Trace.Add("kill"); } };
         bus.ProjectileFired += p => { if (!Quiet) Broadcast(new ProjectileSpawned(0, Vec(p.GlobalPosition), Vec(p.Velocity), p.IsArrow, p.Color.ToRgba32(), p.SourceMember)); };
         bus.MemberDowned += i => Broadcast(new MemberDownedEvt(i));
-        bus.MemberRevived += i => Broadcast(new MemberRevivedEvt(i));
+        bus.MemberRevived += i => { _mangledSince.Remove(i); _bound.Remove(i); Broadcast(new MemberRevivedEvt(i)); };
         bus.LevelUp += i => Broadcast(new LevelUpEvt(i));
         bus.PartyWiped += () => Broadcast(new PartyWipedEvt());
         bus.BossDefeated += floor => Broadcast(new BossDefeatedEvt(floor));
@@ -341,7 +341,7 @@ public partial class ServerWorld : Node
                 if (r.Member < 0 || r.Member >= party.Adventurers.Length) break;
                 var target = party.Adventurers[r.Member];
                 if (!target.State.Mangled || !target.Downed) break;
-                var started = party.TryRescue(target, body, () => main.Builder.HazardArmed(target.State.MangledBy));
+                var started = party.TryRescue(target, body, () => _bound.Contains(target.Index) || main.Builder.HazardArmed(target.State.MangledBy)); // a bound body is clear of its hazard
                 if (NetSession.Instance.TestServer) GD.Print($"[net-server] rescue of {target.State.Name} by {slot.Name}: {(started ? "started" : "refused")}");
                 if (started) Trace.Add("rescue");
                 break;
@@ -423,6 +423,37 @@ public partial class ServerWorld : Node
         }
     }
 
+    // ---- bound respawn: a crushed body nobody reached is carried ahead for the party to find --------------------
+
+    private readonly Dictionary<int, float> _mangledSince = new();
+    private readonly HashSet<int> _bound = new();
+    /// <summary>Members the server has bound ahead (tests and the HUD read it).</summary>
+    public IReadOnlySet<int> Bound => _bound;
+
+    private void TickBound(float dt)
+    {
+        var main = Main.Instance;
+        if (main == null || !main.InGame || main.Builder.Layout is not { } layout || main.Exploration is not { } exploration) return;
+        var party = main.Party;
+        foreach (var b in party.Active)
+        {
+            if (!b.Downed || !b.State.Mangled) { _mangledSince.Remove(b.Index); _bound.Remove(b.Index); continue; }
+            if (_bound.Contains(b.Index)) continue;
+            var since = _mangledSince.GetValueOrDefault(b.Index) + dt;
+            _mangledSince[b.Index] = since;
+            if (since < MangledRules.BoundAfterSeconds) continue;
+            var living = party.Active.Where(a => !a.Downed).Select(a => DungeonBuilder.WorldToCell(a.GlobalPosition)).ToList();
+            var cell = MangledRules.BoundCell(layout, exploration.Seen, living, Dungeon.Generation.HazardPlanner.CriticalPath(layout));
+            _bound.Add(b.Index); // decided once: a body with nowhere to go stays where it fell
+            if (cell is not { } at) continue;
+            b.Teleport(main.Builder.Surface(at) + Vector3.Up * 0.3f);
+            if (b.Remote != null) b.Remote.Position = b.GlobalPosition;
+            Broadcast(new ForcePose(b.Index, new PoseDto { X = b.GlobalPosition.X, Y = b.GlobalPosition.Y, Z = b.GlobalPosition.Z, Yaw = b.Rotation.Y }));
+            EventBus.Instance.Log($"{b.State.Name} is bound in the dark ahead.");
+            Trace.Add($"bound:{b.State.Name}");
+        }
+    }
+
     public int RejectedPoses { get; private set; }
     private readonly Dictionary<int, Vector3> _firstPose = new();
     private readonly HashSet<int> _moved = new();
@@ -453,6 +484,7 @@ public partial class ServerWorld : Node
                 if (GodotObject.IsInstanceValid(e)) Broadcast(new EnemySpawned(new DynamicEnemyDto(e.NetId, e.Profile.Id, e.GlobalPosition.X, e.GlobalPosition.Y, e.GlobalPosition.Z, e.Rotation.Y, e.Hp, e.HordeId)));
             _spawned.Clear();
         }
+        TickBound(dt);
         _statusTimer -= dt;
         if (_statusTimer <= 0f) { _statusTimer = 10f; WriteStatus(); }
         _autosaveTimer += dt;
@@ -499,6 +531,7 @@ public partial class ServerWorld : Node
             if (b.Guarding) flags |= PoseFlags.Guard;
             if (b.IsOnFloor() || b.Remote?.OnFloor == true) flags |= PoseFlags.OnFloor;
             if (b.Downed) flags |= PoseFlags.Downed;
+            if (_bound.Contains(b.Index)) flags |= PoseFlags.Bound;
             return new PlayerPoseState(b.Index, new NetVec(b.GlobalPosition.X, b.GlobalPosition.Y, b.GlobalPosition.Z), b.Rotation.Y, b.Camera.Rotation.X,
                 new NetVec(b.Velocity.X, b.Velocity.Y, b.Velocity.Z), flags);
         }).ToArray();

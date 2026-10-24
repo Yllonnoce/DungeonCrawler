@@ -50,6 +50,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public InputIntent Intent { get; set; }
     /// <summary>Where a remote player's body should be; null until the first pose arrives.</summary>
     public RemotePose? Remote { get; set; }
+    /// <summary>On a client, the teammate a crushed local body is watching while it waits; null when not spectating.</summary>
+    public Adventurer? SpectateTarget { get; private set; }
+    private Vector3 _cameraHome;
     /// <summary>Holding block. Only a driven body (local or remote) can guard.</summary>
     public bool Guarding { get; private set; }
     private double _holdStart = -1;
@@ -109,6 +112,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public override void _Ready()
     {
         Camera = GetNode<Camera3D>("Camera");
+        _cameraHome = Camera.Position;
         Torch = GetNode<OmniLight3D>("Camera/Torch");
         _meleeCast = GetNode<ShapeCast3D>("Camera/MeleeCast");
         _interactRay = GetNode<RayCast3D>("Camera/InteractRay");
@@ -214,6 +218,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void Look(Vector2 relative)
     {
+        if (SpectateTarget != null) return;
         var sens = 0.0022f * Settings.MouseSensitivity;
         RotateY(-relative.X * sens);
         _pitch = Mathf.Clamp(_pitch - relative.Y * sens * (Settings.InvertY ? -1f : 1f), Mathf.DegToRad(-MaxPitchDegrees), Mathf.DegToRad(MaxPitchDegrees));
@@ -334,6 +339,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             if (LookingAt is { Prompt: "" }) LookingAt = null;
         }
         else LookingAt = null;
+        if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
 
         if (Control == ControlKind.Companion && !Downed) ScanLoot(dt);
     }
@@ -872,6 +878,24 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _label.Text = $"{State.Name} (down)";
         Target = null;
         _action = CompanionAction.Idle;
+    }
+
+    /// <summary>A crushed client body watches the nearest standing teammate from two metres behind and one up until it is freed.</summary>
+    private void Spectate()
+    {
+        var target = Party.Active.Where(a => a != this && !a.Downed).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(GlobalPosition)).FirstOrDefault();
+        if (target == null) { if (SpectateTarget != null) EndSpectate(); return; }
+        SpectateTarget = target;
+        var eye = target.GlobalPosition + target.GlobalTransform.Basis.Z * 2f + Vector3.Up * 1f;
+        Camera.GlobalPosition = eye;
+        Camera.LookAt(target.GlobalPosition + Vector3.Up * 1.2f, Vector3.Up);
+    }
+
+    private void EndSpectate()
+    {
+        SpectateTarget = null;
+        Camera.Position = _cameraHome;
+        Camera.Rotation = new Vector3(_pitch, 0, 0);
     }
 
     public void Revive()
