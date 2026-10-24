@@ -45,5 +45,10 @@ public sealed record FloorSpec
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;
 
+    /// <summary>The floor number (1-based); the lethal hazards start on floor 3 and scale by tier.</summary>
+    public int Floor { get; init; } = 1;
+    /// <summary>False leaves the floor exactly as the generator made it before the lethal hazards existed.</summary>
+    public bool HazardsEnabled { get; init; } = true;
+
     public static FloorSpec Default { get; } = new();
 }

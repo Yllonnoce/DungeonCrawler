@@ -64,7 +64,7 @@ public partial class TierDef : Resource, IHasId
             EnemyCount = Math.Min(16, BaseEnemyCount + inTier + (TierRules.IsEndless(floor) ? (floor - TierRules.FinalFloor) / 2 : 0)),
             ChestCount = ChestCount, BreakableCount = BreakableCount, TrapCount = TrapCount,
             VaultCount = VaultCount, LockedChestCount = floor >= 2 ? 1 : 0,
-            BossFloor = TierRules.IsBossFloor(floor),
+            BossFloor = TierRules.IsBossFloor(floor), Floor = floor,
             HighRoomChance = HighRoomChance, LedgeCount = LedgeCount, PitCount = TierRules.IsBossFloor(floor) ? 0 : PitCount, SecretCount = SecretCount, StructureCount = StructureCount, WaterCount = WaterCount, RubbleCount = RubbleCount, NestCount = NestCount,
         };
     }

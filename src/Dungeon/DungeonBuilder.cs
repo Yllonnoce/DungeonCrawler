@@ -131,7 +131,7 @@ public partial class DungeonBuilder : Node3D
     {
         var spec = TierFor(floor)?.ToSpec(floor) ?? new FloorSpec
         {
-            EnemyCount = Math.Min(4 + floor, 14), ChestCount = 2, BossFloor = TierRules.IsBossFloor(floor), LockedChestCount = floor >= 2 ? 1 : 0,
+            EnemyCount = Math.Min(4 + floor, 14), ChestCount = 2, BossFloor = TierRules.IsBossFloor(floor), LockedChestCount = floor >= 2 ? 1 : 0, Floor = floor,
         };
         var seed = gameSeed ?? Game.Instance?.GameSeed ?? GameSeed;
         var layout = LayoutFor(floor, seed);

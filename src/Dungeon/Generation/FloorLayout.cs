@@ -35,6 +35,8 @@ public sealed class FloorLayout
     public List<GridPos> ChestSpawns { get; } = new();
     public List<GridPos> BreakableSpawns { get; } = new();
     public List<GridPos> TrapSpawns { get; } = new();
+    /// <summary>The lethal hazards (Press, Spike Beds), dealt last; see HazardPlanner.</summary>
+    public List<HazardPlacement> Hazards { get; } = new();
     public List<Vault> Vaults { get; } = new();
     /// <summary>Keys for locked chests, parallel to LockedChests.</summary>
     public List<GridPos> KeySpawns { get; } = new();
@@ -65,7 +67,7 @@ public sealed class FloorLayout
     /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
     public HashSet<GridPos> Fires { get; } = new();
     /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
-    public bool IsReserved(GridPos p) => Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p)));
+    public bool IsReserved(GridPos p) => Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p));
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with
@@ -138,6 +140,8 @@ public sealed class FloorLayout
         set { if (InBounds(x, y)) Cells[y * Width + x] = value; }
     }
 
+    public bool Contains(GridPos p) => p.X >= 0 && p.Y >= 0 && p.X < Width && p.Y < Height;
+
     public Cell this[GridPos p]
     {
         get => this[p.X, p.Y];
@@ -164,6 +168,11 @@ public sealed class FloorLayout
         foreach (var (a, b) in BlockedEdges.OrderBy(e => e.Item1.Y).ThenBy(e => e.Item1.X).ThenBy(e => e.Item2.Y).ThenBy(e => e.Item2.X))
         { h ^= (ulong)a.GetHashCode(); h *= 1099511628211UL; h ^= (ulong)b.GetHashCode(); h *= 1099511628211UL; }
         if (Objective != null) { h ^= (ulong)Objective.Kind * 0x9E3779B1UL; h *= 1099511628211UL; }
+        foreach (var hz in Hazards)
+        {
+            h ^= (ulong)hz.Index * 0x9E37UL + (ulong)hz.Kind * 0x1F3UL + (ulong)hz.Variant * 0x2BUL; h *= 1099511628211UL;
+            foreach (var c in hz.Cells) { h ^= (ulong)c.GetHashCode() * 29; h *= 1099511628211UL; }
+        }
         return h;
     }
 

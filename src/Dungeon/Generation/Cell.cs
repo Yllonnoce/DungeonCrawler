@@ -22,6 +22,8 @@ public readonly record struct GridPos(int X, int Y)
     public static GridPos operator -(GridPos a, GridPos b) => new(a.X - b.X, a.Y - b.Y);
     public static GridPos operator -(GridPos a) => new(-a.X, -a.Y);
     public GridPos Perp => new(-Y, X);
+    /// <summary>The four orthogonal neighbours.</summary>
+    public IEnumerable<GridPos> Neighbours4() { yield return new GridPos(X + 1, Y); yield return new GridPos(X - 1, Y); yield return new GridPos(X, Y + 1); yield return new GridPos(X, Y - 1); }
     public bool IsParallelTo(GridPos other) => X * other.Y - Y * other.X == 0;
     public override string ToString() => $"({X},{Y})";
 }

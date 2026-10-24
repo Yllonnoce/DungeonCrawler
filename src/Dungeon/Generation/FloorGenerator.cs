@@ -56,6 +56,7 @@ public static partial class FloorGenerator
         RaiseWalls(layout);
         PlaceSpawns(spec, rng, layout);
         PlaceTraps(spec, rng, layout);
+        HazardPlanner.PlaceHazards(spec, new Random(seed ^ 0x4A2D), layout); // the lethal hazards, last and from their own seed: a floor without them is untouched
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
 
         return layout;
