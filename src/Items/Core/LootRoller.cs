@@ -25,6 +25,13 @@ public static class LootRoller
         _ => 0,
     };
 
+    /// <summary>How many of a found stack: a bundle of arrows is five to ten, any other stackable one to three, the rest one.</summary>
+    public static int StackSize(ItemBase b, Random rng)
+    {
+        if (!b.Stackable) return 1;
+        return b.Kind == SlotKind.Ammo ? rng.Next(5, 11) : rng.Next(1, 4);
+    }
+
     /// <summary>One roll on a table. Null when the drop chance fails or nothing matches the level.</summary>
     public static ItemInstance? Roll(ItemCatalog cat, LootTableProfile table, int itemLevel, Random rng)
     {
@@ -37,7 +44,7 @@ public static class LootRoller
         var b = candidates[rng.Next(candidates.Count)];
 
         if (!b.IsEquippable)
-            return ItemInstance.FromBase(b, b.Stackable ? rng.Next(1, 4) : 1);
+            return ItemInstance.FromBase(b, StackSize(b, rng));
 
         var rarity = RollRarity(table.RarityWeights, itemLevel, rng);
         if (rarity == Rarity.Legendary)

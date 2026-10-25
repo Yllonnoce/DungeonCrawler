@@ -10,6 +10,20 @@ public class LootRollerTests
     private readonly ItemCatalog _cat = TestCatalog.Build();
 
     [Fact]
+    public void StackSize_ArrowBundles_HoldFiveToTen_OtherStacksOneToThree()
+    {
+        var rng = new Random(7);
+        var arrows = new ItemBase { Id = "item.arrow", Name = "Arrow", Kind = SlotKind.Ammo, Tags = new[] { "ammo" }, Stackable = true, MaxStack = 50 };
+        var potion = new ItemBase { Id = "item.potion", Name = "Health Potion", Kind = SlotKind.Consumable, Tags = new[] { "consumable" }, Stackable = true, MaxStack = 10 };
+        var arrowRolls = Enumerable.Range(0, 300).Select(_ => LootRoller.StackSize(arrows, rng)).ToList();
+        var potionRolls = Enumerable.Range(0, 300).Select(_ => LootRoller.StackSize(potion, rng)).ToList();
+        Assert.All(arrowRolls, n => Assert.InRange(n, 5, 10));
+        Assert.Contains(5, arrowRolls); Assert.Contains(10, arrowRolls);
+        Assert.All(potionRolls, n => Assert.InRange(n, 1, 3));
+        Assert.Equal(1, LootRoller.StackSize(new ItemBase { Id = "item.ring", Name = "Ring", Kind = SlotKind.Ring }, rng));
+    }
+
+    [Fact]
     public void Rarity_DistributionFollowsWeights()
     {
         var rng = new Random(1);
