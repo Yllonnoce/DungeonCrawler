@@ -398,7 +398,7 @@ public partial class DungeonBuilder : Node3D
             if (f.Floor != floorIndex || !ResourceLoader.Exists(f.Model) || Main.Instance?.Companions.Contains(f.Id) == true) continue;
             if ((StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6) ?? StepsFrom(layout, arrival, 5)) is not { } fCell) continue;
             var npc = SpawnObjectiveNpc(root, f.Id, f.Name, fCell, NpcMode.Fighter, f.Model);
-            npc.ShowMoves = true;
+            npc.ShowMoves = f.Floor == 1; // the floor-1 demo cast offers its moves grid; the campaign's fighters are story characters
             var armed = f.Weapon != null && npc.HoldWeapon(f.Weapon, 0.75f);
             npc.Script = new NpcScript
             {

@@ -120,7 +120,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         ["class.ranger"] = ("Punch", "Bow_Shoot", "RecieveHit"),
         ["class.mage"] = ("Staff_Attack", "Spell1", "RecieveHit"),
     };
-    private (string melee, string cast, string hit) Clips => ClassClips.GetValueOrDefault(State.Class.Id, ("Punch", "Punch", "RecieveHit"));
+    private (string melee, string cast, string hit) Clips => _viewerModel ? ("Punch", "Punch", "HitReact") : ClassClips.GetValueOrDefault(State.Class.Id, ("Punch", "Punch", "RecieveHit")); // a viewer export carries the briefs' clip names
 
     private static readonly Dictionary<string, Color> ClassColors = new()
     {
