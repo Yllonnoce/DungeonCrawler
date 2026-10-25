@@ -343,12 +343,37 @@ public partial class DungeonBuilder : Node3D
         GD.Print($"[DungeonBuilder] floor {floorIndex}: greeter {npc.NpcName} at {cell} facing the arrival cell {arrival} by the up stairs {layout.UpStairs} (model {(npc.HasModel ? "loaded" : "missing")})");
     }
 
+    /// <summary>
+    /// A fighter who can be asked to join, standing a few steps from the entrance of their floor: Foehammer on floor 1
+    /// and the campaign's three (the bible's cast), each on the first floor of their tier. Each needs their viewer
+    /// export in assets/models/viewer; a missing file just leaves that floor without them.
+    /// </summary>
+    private sealed record ViewerFighter(string Id, string Name, string Model, int Floor, string? Weapon, string Hello, string Yes, string No);
+    private static readonly ViewerFighter[] ViewerFighters =
+    {
+        new("viewer_foehammer", "Foehammer", FoehammerModel, 1, null,
+            "Stand behind me when it comes to blows. Ask, and I'll show you how I move.",
+            "Then I'm with you. Keep up, and keep out of the way of my hammer.",
+            "Not today. Show me you can hold your own, then ask again."),
+        new("fighter_tamsin", "Tamsin Rook", "res://assets/models/viewer/tamsin_rook.glb", 6, "axe_1handed",
+            "Mind the wet. The god's got gold in his teeth down here, and I mean to have it before the water does. You lot look like you could carry.",
+            "Ha! Then we're partners. Shares are even, unless I find it first.",
+            "No offence, but I've seen your sort go into the dark and not come back with their boots. Prove me wrong."),
+        new("fighter_oskar", "Oskar Vell", "res://assets/models/viewer/oskar_vell.glb", 11, "axe_2handed",
+            "Ulf's apprentice. Was. I know what the moulds are for, and I'm not saying it twice. If you're going deeper, you'll want someone who can read iron.",
+            "Good. I'll go in front. Don't thank me, and don't ask about the old man.",
+            "No. I left one master. I'm in no hurry to take another."),
+        new("fighter_ione", "Sister Ione", "res://assets/models/viewer/sister_ione.glb", 16, "staff",
+            "The Verger lit this lantern for me. He is a saint, whatever they say above. I will walk beside you, if you walk toward him.",
+            "Then we go together. Stay close to the light. I... I am not brave, but I am not alone now.",
+            "Forgive me. I cannot. Not yet."),
+    };
+
     private void PlaceViewerCast(FloorLayout layout, Node3D root, int floorIndex)
     {
-        if (floorIndex != 1) return;
         var arrival = WalkableNeighbor(layout, layout.UpStairs);
         if (arrival == layout.UpStairs) return;
-        if (ResourceLoader.Exists(GoddessModel) && (StepsFrom(layout, arrival, 5) ?? StepsFrom(layout, arrival, 4)) is { } gCell)
+        if (floorIndex == 1 && ResourceLoader.Exists(GoddessModel) && (StepsFrom(layout, arrival, 5) ?? StepsFrom(layout, arrival, 4)) is { } gCell)
         {
             var npc = SpawnObjectiveNpc(root, "viewer_goddess", "Goddess", gCell, NpcMode.Quest, GoddessModel);
             npc.ShowMoves = true;
@@ -368,10 +393,13 @@ public partial class DungeonBuilder : Node3D
             npc.LookAt(Surface(arrival) + Vector3.Up * 0.1f, Vector3.Up);
             GD.Print($"[DungeonBuilder] floor {floorIndex}: goddess at {gCell} (model {(npc.HasModel ? "loaded" : "missing")})");
         }
-        if (ResourceLoader.Exists(FoehammerModel) && Main.Instance?.Companions.Contains("viewer_foehammer") != true && (StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } fCell)
+        foreach (var f in ViewerFighters)
         {
-            var npc = SpawnObjectiveNpc(root, "viewer_foehammer", "Foehammer", fCell, NpcMode.Fighter, FoehammerModel);
+            if (f.Floor != floorIndex || !ResourceLoader.Exists(f.Model) || Main.Instance?.Companions.Contains(f.Id) == true) continue;
+            if ((StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6) ?? StepsFrom(layout, arrival, 5)) is not { } fCell) continue;
+            var npc = SpawnObjectiveNpc(root, f.Id, f.Name, fCell, NpcMode.Fighter, f.Model);
             npc.ShowMoves = true;
+            var armed = f.Weapon != null && npc.HoldWeapon(f.Weapon, 0.75f);
             npc.Script = new NpcScript
             {
                 Start = "hello",
@@ -380,21 +408,21 @@ public partial class DungeonBuilder : Node3D
                     new DialogueNode
                     {
                         Id = "hello",
-                        Line = new Line("Stand behind me when it comes to blows. Ask, and I'll show you how I move."),
+                        Line = new Line(f.Hello),
                         Choices =
                         {
                             new ChoicePlan { Text = "Will you fight alongside us?", Effect = DialogueEffect.Join, Next = "yes", NextIfRefused = "no" },
                             new ChoicePlan { Text = "Farewell.", Effect = DialogueEffect.Farewell },
                         },
                     },
-                    new DialogueNode { Id = "yes", Line = new Line("Then I'm with you. Keep up, and keep out of the way of my hammer."), Choices = { new ChoicePlan { Text = "Welcome aboard.", Effect = DialogueEffect.Farewell } } },
-                    new DialogueNode { Id = "no", Line = new Line("Not today. Show me you can hold your own, then ask again."), Choices = { new ChoicePlan { Text = "Fair enough.", Effect = DialogueEffect.Farewell } } },
+                    new DialogueNode { Id = "yes", Line = new Line(f.Yes), Choices = { new ChoicePlan { Text = "Welcome aboard.", Effect = DialogueEffect.Farewell } } },
+                    new DialogueNode { Id = "no", Line = new Line(f.No), Choices = { new ChoicePlan { Text = "Fair enough.", Effect = DialogueEffect.Farewell } } },
                 },
             };
             npc.LookAt(Surface(arrival) + Vector3.Up * 0.1f, Vector3.Up);
-            GD.Print($"[DungeonBuilder] floor {floorIndex}: fighter Foehammer at {fCell} (model {(npc.HasModel ? "loaded" : "missing")})");
+            GD.Print($"[DungeonBuilder] floor {floorIndex}: fighter {f.Name} at {fCell} (model {(npc.HasModel ? "loaded" : "missing")}{(armed ? ", holds " + f.Weapon : "")})");
         }
-        if (_enemies.ContainsKey(ViewerOrcId) && (StepsFrom(layout, arrival, 8) ?? StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } oCell)
+        if (floorIndex == 1 && _enemies.ContainsKey(ViewerOrcId) && (StepsFrom(layout, arrival, 8) ?? StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } oCell)
         {
             var orc = SpawnEnemy(ViewerOrcId, Surface(oCell) + Vector3.Up * 0.1f, floorIndex);
             GD.Print($"[DungeonBuilder] floor {floorIndex}: viewer orc at {oCell} ({(orc != null ? "spawned" : "not spawned")})");

@@ -132,6 +132,21 @@ a holed variant (items 23–25) so the crown is really missing, with a dark thro
 on its wall and stone still clinging to the rim (`Rubble.Collapse`; `--face-node=collapse:N` looks up at one). Under
 a `flat` theme the old black disc stands in for the hole.
 
+## Viewer characters
+
+Characters rigged in the 3dObject viewer ("Export for Godot") go in `assets/models/viewer/` under the file names in
+`docs/superpowers/specs/2026-10-22-character-briefs.md`, then `godot --headless --path . --import` (or open the editor
+once) writes their `.import` files. A missing file never breaks anything: the slot keeps its stock model or stays empty.
+
+- Party bodies by class: `brand.glb` (warrior), `sable.glb` (rogue), `wren.glb` (ranger), `ilex.glb` (mage); `Adventurer.ClassViewerBodies`. Untinted, Walk/Run paced to the ground speed, weapons hung from `RightHandGrip`.
+- Fighters who can be asked to join, a few steps from the entrance of their floor: Foehammer (1), `tamsin_rook.glb` (6), `oskar_vell.glb` (11), `sister_ione.glb` (16); `DungeonBuilder.ViewerFighters` holds their floors, weapons and lines.
+- Floor 1 showcases: the greeter `dwarf_warrior.glb`, `goddess.glb`, the orc `orc1.glb`. Every viewer character's dialogue offers a moves grid to try each clip.
+- Not wired yet: the eight NPC archetype bodies and the Verger (Phase 12, when quest NPCs get bodies by role).
+
+Screenshots: `godot --path . -- --seed=11 --floor=6 --face-node=Npc_fighter_tamsin:1 --screenshot=/tmp/t.png --after=4`
+stands the party a cell from a fighter; `--possess=1 --face-node=Brand:4` puts a party member in front of the camera
+(the rest wait behind it).
+
 ## Assets
 
 Real materials and models are CC0: Poly Haven PBR textures per tier (triplanar on the GridMap boxes) and props

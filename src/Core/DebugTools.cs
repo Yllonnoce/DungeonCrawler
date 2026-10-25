@@ -348,11 +348,27 @@ public partial class DebugTools : Node
         if (_testBakeUi) RunBakeUiTest();
         if (_openSettings && !_openedSettings && _elapsed >= 0.3 && Main.Instance?.Menu != null) { _openedSettings = true; Main.Instance.Menu.OpenSettings(); }
 
-        if ((_faceNode != null || _faceCell != null) && !_facedNode && _elapsed >= 0.6 && Main.Instance?.Builder.FloorRoot is { } faceRoot && Main.Instance.Builder.Layout is { } faceLayout)
+        if ((_faceNode != null || _faceCell != null) && !_facedNode && _possess < 0 && _elapsed >= (_startFloor > 1 ? 1.2 : 0.6) && Game.Instance.CurrentFloor == Math.Max(1, _startFloor) && Main.Instance?.Builder.FloorRoot is { } faceRoot && Main.Instance.Builder.Layout is { } faceLayout)
         {
             _facedNode = true;
             Vector3? look = null;
             GridPos? stand = null;
+            if (_faceNode != null && Main.Instance.Party.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } member && member != Main.Instance.Party.Local)
+            {
+                // a party member by name (with --possess=N to lead as someone else): stood in front of the camera, facing it
+                var lead = Main.Instance.Party.Local!;
+                member.Stance = Characters.Stance.Hold;
+                member.Teleport(lead.GlobalPosition - lead.GlobalTransform.Basis.Z * Math.Max(2, _faceBack), lead.GlobalPosition);
+                // the others wait behind the camera so nobody's shoulder fills the frame
+                var k = 0;
+                foreach (var other in Main.Instance.Party.Active.Where(a => a != member && a != lead))
+                {
+                    other.Stance = Characters.Stance.Hold;
+                    other.Teleport(lead.GlobalPosition + lead.GlobalTransform.Basis.Z * 3f + lead.GlobalTransform.Basis.X * (k++ - 0.5f) * 1.5f, lead.GlobalPosition);
+                }
+                GD.Print($"[face-node] {member.State.Name} placed {Math.Max(2, _faceBack)} m in front of {lead.State.Name}; member {member.ModelDebug}; lead {lead.ModelDebug}");
+                return;
+            }
             if (_faceCell is { } fc) look = Main.Instance.Builder.Surface(new GridPos(fc.x, fc.y));
             else if (_faceNode == "buckled" && Main.Instance.Builder.BuckledCells.Count > 0)
             {
@@ -708,6 +724,7 @@ public partial class DebugTools : Node
 
         if (_screenshotPath != null && !_testHorde && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
         {
+            if (_faceNode != null && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } shot) GD.Print($"[face-node] at the screenshot: {shot.State.Name} {shot.ModelDebug}; lead at {Main.Instance.Party.Local?.GlobalPosition:0.0} facing {-Main.Instance.Party.Local?.GlobalTransform.Basis.Z:0.00}");
             _done = true;
             SaveScreenshot(_screenshotPath);
             GetTree().Quit();

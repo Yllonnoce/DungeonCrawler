@@ -90,7 +90,26 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         ["class.warrior"] = "Warrior", ["class.rogue"] = "Rogue", ["class.ranger"] = "Ranger", ["class.mage"] = "Wizard",
     };
+    /// <summary>The party's own bodies from the 3dObject viewer (docs/superpowers/specs/2026-10-22-character-briefs.md); a class whose file is missing keeps its stock model.</summary>
+    private static readonly Dictionary<string, string> ClassViewerBodies = new()
+    {
+        ["class.warrior"] = "brand", ["class.rogue"] = "sable", ["class.ranger"] = "wren", ["class.mage"] = "ilex",
+    };
     private AnimatedModel? _model;
+    /// <summary>Debug: the attached model's root scale, position and visibility.</summary>
+    public string ModelDebug
+    {
+        get
+        {
+            if (_model == null) return "no model";
+            var skel = _model.Root.FindChildren("*", "Skeleton3D", recursive: true, owned: false).OfType<Skeleton3D>().FirstOrDefault();
+            var mi = _model.Root.FindChildren("*", "MeshInstance3D", recursive: true, owned: false).OfType<MeshInstance3D>().FirstOrDefault();
+            return $"scale={_model.Root.Scale:0.00} pos={_model.Root.Position:0.00} visible={_model.Root.Visible} viewer={_viewerModel} clip={_model.Current} playing={_model.Player?.IsPlaying()} root={_model.Player?.RootNode}"
+                + $" skel={(skel == null ? "-" : $"{skel.GetBoneCount()} bones gscale={skel.GlobalTransform.Basis.Scale:0.00}")}"
+                + $" mesh={(mi == null ? "-" : $"{mi.Name} aabb={mi.GetAabb().Size:0.00} gscale={mi.GlobalTransform.Basis.Scale:0.00} gpos={mi.GlobalPosition:0.0} skin={(mi.Skin != null)} skelPath={mi.Skeleton}")} body={GlobalPosition:0.0}";
+        }
+    }
+    private bool _viewerModel; // a viewer export: textured, so untinted, and its gait clips are paced to the ground speed
     private FirstPersonWeapon _fpWeapon = null!;
     private float _flash;
     // clip names differ per Quaternius character: (melee attack, ranged/spell attack, hit reaction)
@@ -133,11 +152,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _fpWeapon = new FirstPersonWeapon { Name = "FirstPersonWeapon" };
         _fpWeapon.Bind(this);
         Camera.AddChild(_fpWeapon);
-        if (ClassModels.TryGetValue(State.Class.Id, out var modelName))
+        if (ClassViewerBodies.TryGetValue(State.Class.Id, out var viewerBody) && ResourceLoader.Exists($"res://assets/models/viewer/{viewerBody}.glb"))
         {
-            _model = AnimatedModel.Attach(this, $"res://assets/models/quaternius_rpg/{modelName}.gltf", 1.8f, color, 0.1f);
-            if (_model != null) { _body.Visible = false; _head.Visible = false; }
+            _model = AnimatedModel.Attach(this, $"res://assets/models/viewer/{viewerBody}.glb", 1.8f, color, 0f);
+            _viewerModel = _model != null;
         }
+        if (_model == null && ClassModels.TryGetValue(State.Class.Id, out var modelName))
+            _model = AnimatedModel.Attach(this, $"res://assets/models/quaternius_rpg/{modelName}.gltf", 1.8f, color, 0.1f);
+        if (_model != null) { _body.Visible = false; _head.Visible = false; }
         SetControl(Control);
     }
 
@@ -336,7 +358,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_model != null && !Downed)
         {
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
-            if (!_model.IsPlayingOneShot) _model.Play(planar > 0.5f ? (planar > 5f ? "Run" : "Walk") : "Idle");
+            ShowGait(planar);
         }
         if (IsOnFloor() && planar > 0.5f)
         {
@@ -355,6 +377,16 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
 
         if (Control == ControlKind.Companion && !Downed) ScanLoot(dt);
+    }
+
+    /// <summary>Idle, Walk or Run for the ground speed; a viewer body's clip is paced to the speed so the feet do not slide.</summary>
+    private void ShowGait(float groundSpeed)
+    {
+        if (_model == null || _model.IsPlayingOneShot) return;
+        var current = _model.Current is "Walk" or "Run" ? _model.Current : null;
+        var gait = _viewerModel ? ViewerGait.GaitFor(1.8f, groundSpeed, current) : groundSpeed > 0.5f ? (groundSpeed > 5f ? "Run" : "Walk") : "Idle";
+        _model.Play(gait);
+        if (_viewerModel && _model.Player != null) _model.Player.SpeedScale = gait == "Idle" ? 1f : ViewerGait.SpeedScaleFor(gait, 1.8f, groundSpeed);
     }
 
     /// <summary>Another player's body: ease toward the pose the network reported and animate from the motion.</summary>
@@ -379,7 +411,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_model != null && !Downed)
         {
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
-            if (!_model.IsPlayingOneShot) _model.Play(planar > 0.5f ? (planar > 5f ? "Run" : "Walk") : "Idle");
+            ShowGait(planar);
         }
         if (pose.OnFloor && planar > 0.5f)
         {
