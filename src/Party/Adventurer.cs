@@ -110,6 +110,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         }
     }
     private bool _viewerModel; // a viewer export: textured, so untinted, and its gait clips are paced to the ground speed
+    /// <summary>The KayKit prop hung from a viewer body's right-hand grip for each weapon kind; fists hold nothing.</summary>
+    private static readonly Dictionary<WeaponKind, string> HeldWeapons = new()
+    {
+        [WeaponKind.Sword] = "sword_1handed", [WeaponKind.Axe] = "axe_1handed", [WeaponKind.Mace] = "axe_1handed", [WeaponKind.Dagger] = "dagger",
+        [WeaponKind.Polearm] = "staff", [WeaponKind.Staff] = "staff", [WeaponKind.Bow] = "crossbow_2handed",
+    };
+    private Node3D? _heldWeapon;
+    private WeaponKind? _heldKind;
+    private int _heldCheck;
     private FirstPersonWeapon _fpWeapon = null!;
     private float _flash;
     // clip names differ per Quaternius character: (melee attack, ranged/spell attack, hit reaction)
@@ -160,6 +169,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_model == null && ClassModels.TryGetValue(State.Class.Id, out var modelName))
             _model = AnimatedModel.Attach(this, $"res://assets/models/quaternius_rpg/{modelName}.gltf", 1.8f, color, 0.1f);
         if (_model != null) { _body.Visible = false; _head.Visible = false; }
+        RefreshHeldWeapon();
         SetControl(Control);
     }
 
@@ -295,6 +305,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         var dt = (float)delta;
         if (Parked) return;
         if (Main.Instance?.Builder.Layout == null) return; // no floor yet (the planner is still writing it): stand still rather than fall forever
+        if (++_heldCheck % 30 == 0) RefreshHeldWeapon(); // the equipped weapon changes from the inventory, a loot pickup or a sync
         if (Control == ControlKind.Remote) { RemoteTick(dt); return; }
         var velocity = Velocity;
         var wasInWater = InWater;
@@ -377,6 +388,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
 
         if (Control == ControlKind.Companion && !Downed) ScanLoot(dt);
+    }
+
+    /// <summary>A viewer body shows the weapon it has equipped, hung from its right-hand grip bone; swapped when the equipment changes.</summary>
+    private void RefreshHeldWeapon()
+    {
+        if (_model == null || !_viewerModel) return;
+        var kind = State.WeaponProfile.Kind;
+        if (_heldKind == kind) return;
+        _heldKind = kind;
+        _heldWeapon?.GetParent()?.QueueFree(); // the bone attachment goes with it
+        _heldWeapon = HeldWeapons.TryGetValue(kind, out var prop) ? WeaponGrip.Attach(_model.Root, prop, "Right", 0.75f) : null;
     }
 
     /// <summary>Idle, Walk or Run for the ground speed; a viewer body's clip is paced to the speed so the feet do not slide.</summary>
