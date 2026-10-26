@@ -110,11 +110,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         }
     }
     private bool _viewerModel; // a viewer export: textured, so untinted, and its gait clips are paced to the ground speed
-    /// <summary>The KayKit prop hung from a viewer body's right-hand grip for each weapon kind; fists hold nothing.</summary>
-    private static readonly Dictionary<WeaponKind, string> HeldWeapons = new()
+    /// <summary>The KayKit prop hung from a viewer body's right-hand grip for each weapon kind, and its size; fists hold nothing.</summary>
+    private static readonly Dictionary<WeaponKind, (string prop, float scale)> HeldWeapons = new()
     {
-        [WeaponKind.Sword] = "sword_1handed", [WeaponKind.Axe] = "axe_1handed", [WeaponKind.Mace] = "axe_1handed", [WeaponKind.Dagger] = "dagger",
-        [WeaponKind.Polearm] = "staff", [WeaponKind.Staff] = "staff", [WeaponKind.Bow] = "crossbow_2handed",
+        [WeaponKind.Sword] = ("sword_1handed", 0.75f), [WeaponKind.Axe] = ("axe_1handed", 0.75f), [WeaponKind.Mace] = ("axe_1handed", 0.75f), [WeaponKind.Dagger] = ("dagger", 0.75f),
+        [WeaponKind.Polearm] = ("staff", 0.5f), [WeaponKind.Staff] = ("staff", 0.5f), [WeaponKind.Bow] = ("crossbow_2handed", 0.45f),
     };
     private Node3D? _heldWeapon;
     private WeaponKind? _heldKind;
@@ -398,7 +398,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_heldKind == kind) return;
         _heldKind = kind;
         _heldWeapon?.GetParent()?.QueueFree(); // the bone attachment goes with it
-        _heldWeapon = HeldWeapons.TryGetValue(kind, out var prop) ? WeaponGrip.Attach(_model.Root, prop, "Right", 0.75f) : null;
+        _heldWeapon = HeldWeapons.TryGetValue(kind, out var held) ? WeaponGrip.Attach(_model.Root, held.prop, "Right", held.scale) : null;
     }
 
     /// <summary>Idle, Walk or Run for the ground speed; a viewer body's clip is paced to the speed so the feet do not slide.</summary>
