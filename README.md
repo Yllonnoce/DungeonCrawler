@@ -141,7 +141,7 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
 - Party bodies by class: `brand.glb` (warrior), `sable.glb` (rogue), `wren.glb` (ranger), `ilex.glb` (mage); `Adventurer.ClassViewerBodies`. Untinted, Walk/Run paced to the ground speed, weapons hung from `RightHandGrip`.
 - Fighters who can be asked to join, a few steps from the entrance of their floor: Foehammer (1), `tamsin_rook.glb` (6), `oskar_vell.glb` (11), `sister_ione.glb` (16); `DungeonBuilder.ViewerFighters` holds their floors, weapons and lines.
 - Floor 1 showcases: the greeter `dwarf_warrior.glb`, `goddess.glb`, the orc `orc1.glb`. Every viewer character's dialogue offers a moves grid to try each clip.
-- Not wired yet: the eight NPC archetype bodies and the Verger (Phase 12, when quest NPCs get bodies by role).
+- All four party bodies and the four fighters are in. Not wired yet: the eight NPC archetype bodies and the Verger (Phase 12, when quest NPCs get bodies by role).
 
 Screenshots: `godot --path . -- --seed=11 --floor=6 --face-node=Npc_fighter_tamsin:1 --screenshot=/tmp/t.png --after=4`
 stands the party a cell from a fighter; `--possess=1 --face-node=Brand:4` puts a party member in front of the camera

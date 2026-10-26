@@ -351,7 +351,7 @@ public partial class DungeonBuilder : Node3D
     private sealed record ViewerFighter(string Id, string Name, string Model, int Floor, string? Weapon, string Hello, string Yes, string No);
     private static readonly ViewerFighter[] ViewerFighters =
     {
-        new("viewer_foehammer", "Foehammer", FoehammerModel, 1, null,
+        new("viewer_foehammer", "Foehammer", FoehammerModel, 1, "axe_2handed",
             "Stand behind me when it comes to blows. Ask, and I'll show you how I move.",
             "Then I'm with you. Keep up, and keep out of the way of my hammer.",
             "Not today. Show me you can hold your own, then ask again."),
