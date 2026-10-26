@@ -68,7 +68,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool HasModel => _model != null;
     /// <summary>Put one of the game's weapons (a KayKit item name) in the model's right hand; false when the model has no grip bones (see <see cref="WeaponGrip"/>).</summary>
     public bool HoldWeapon(string weapon, float scale = 1f) => _model != null && WeaponGrip.Attach(_model.Root, weapon, "Right", scale) != null;
-    /// <summary>True for a character whose dialogue also offers every clip of its model to play (the viewer-made greeter).</summary>
+    /// <summary>True for a character whose dialogue also offers every clip of its model to play (the floor-1 viewer cast).</summary>
     public bool ShowMoves { get; set; }
     /// <summary>The clips the attached model can play, in the model's own order; empty without a model.</summary>
     public IReadOnlyList<string> ModelClips => _model?.Player?.GetAnimationList() ?? Array.Empty<string>();

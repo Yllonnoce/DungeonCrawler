@@ -140,7 +140,7 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
 
 - Party bodies by class: `brand.glb` (warrior), `sable.glb` (rogue), `wren.glb` (ranger), `ilex.glb` (mage); `Adventurer.ClassViewerBodies`. Untinted, Walk/Run paced to the ground speed, weapons hung from `RightHandGrip`.
 - Fighters who can be asked to join, a few steps from the entrance of their floor: Foehammer (1), `tamsin_rook.glb` (6), `oskar_vell.glb` (11), `sister_ione.glb` (16); `DungeonBuilder.ViewerFighters` holds their floors, weapons and lines.
-- Floor 1 showcases: the greeter `dwarf_warrior.glb`, `goddess.glb`, the orc `orc1.glb`. Every viewer character's dialogue offers a moves grid to try each clip.
+- Floor 1 showcase: the orc `orc1.glb` to try fighting. Foehammer's dialogue offers a moves grid to try each clip.
 - All four party bodies and the four fighters are in. Not wired yet: the eight NPC archetype bodies and the Verger (Phase 12, when quest NPCs get bodies by role).
 
 Screenshots: `godot --path . -- --seed=11 --floor=6 --face-node=Npc_fighter_tamsin:1 --screenshot=/tmp/t.png --after=4`
@@ -188,7 +188,7 @@ godot --headless --path . -- --test-plan            # offline designer: plan 20 
 godot --headless --path . -- --test-collectives     # guard leash and return, patrol, alarm runner, regroup; fixed seed 4242 unless --seed
 godot --headless --path . -- --test-quest           # one NPC per quest template, played through dialogue to completion, saved
 godot --path . -- --floor=3 --talk --screenshot=/tmp/talk.png --after=2   # open the first NPC's dialogue (add --press=quest_log for the journal)
-godot --path . -- --seed=1 --floor=1 --talk --showcase=Death --screenshot=/tmp/move.png --after=3   # floor 1's greeter: open his dialogue and play one of his model's clips from the moves grid
+godot --path . -- --seed=1 --floor=1 --talk --showcase=Death --screenshot=/tmp/move.png --after=3   # floor 1's fighter: open his dialogue and play one of his model's clips from the moves grid
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
 godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an enemy and the lead in the run, crushed and mangled, no auto-revive, a companion pulls the lead free, the villain gloats, a barrel jams the second run, saved, loaded, phase and kills survive
