@@ -20,6 +20,7 @@ namespace DungeonCrawler.Core;
 /// User args (after "--" on the command line):
 ///   --screenshot=PATH   save a PNG then quit      --after=SECONDS   delay before the screenshot / quit (default 2)
 ///   --face-enemy        teleport next to the nearest enemy at start
+///   --clear-enemies     every enemy dies as soon as its floor is built (quiet screenshots of the cast)
 ///   --face-ramp[=bottom|top|ledge|gallery]  stand a cell short of a corridor ramp looking up it (bottom), at its top looking down, on a ledge's ramp looking into the room, or on the ledge looking down
 ///   --auto-attack       every member swings whenever ready (headless combat smoke test)
 ///   --trace-ai          print enemy state transitions
@@ -38,6 +39,7 @@ public partial class DebugTools : Node
     private bool _smoke;
     private bool _openMap;
     private readonly List<string> _pressActions = new();
+    private bool _clearEnemies;
     private bool _levelUp;
     private bool _testDrag;
     private bool _testSave;
@@ -304,6 +306,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-voice") { _testVoice = true; FakeVoice = true; TraceAi = false; _quitAfter = 16; }
             else if (arg == "--test-bake-ui") { _testBakeUi = true; _menuOnly = true; FakeVoice = true; FakeAiDelay = 0f; TraceAi = false; _quitAfter = 240; }
             else if (arg.StartsWith("--press=")) _pressActions.AddRange(arg["--press=".Length..].Split(','));
+            else if (arg == "--clear-enemies") _clearEnemies = true; // every enemy on the floor dies as soon as it is built: screenshots of the cast without a brawl
             else if (arg == "--smoke") { _smoke = true; _faceEnemy = true; TraceAi = true; _quitAfter = 11; }
             else if (arg == "--trace-ai") TraceAi = true;
             else if (arg == "--test-music") { _testMusic = true; TraceAi = false; _quitAfter = 45; }
@@ -712,6 +715,8 @@ public partial class DebugTools : Node
             p.Lead.RotateY(Mathf.Pi); // turn around to see the companions
         }
         if (_openMap) { _pressActions.Add("map"); _openMap = false; }
+        if (_clearEnemies && Main.Instance?.InGame == true && Main.Instance.Builder.FloorRoot is { } clearRoot)
+            foreach (var e in clearRoot.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive) e.Kill();
         if (_pressActions.Count > 0 && _elapsed >= _after - 0.3 && Main.Instance != null)
         {
             foreach (var action in _pressActions)
