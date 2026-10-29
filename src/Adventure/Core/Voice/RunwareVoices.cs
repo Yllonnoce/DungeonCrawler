@@ -46,11 +46,43 @@ public static class RunwareVoices
     {
         ["xai"] = new("orion", "zagan", new[] { "luna", "iris", "helix", "perseus", "celeste", "castor", "ara", "cosmo" },
             new() { ["class.warrior"] = "atlas", ["class.rogue"] = "lux", ["class.ranger"] = "kepler", ["class.mage"] = "rigel" }, "eve", "en"),
+        // the ranger and the mage are a woman and a man (Wren, Ilex): Callum and Marlene had them the other way round
         ["inworld"] = new("Mortimer", "Graham", new[] { "Loretta", "Hank", "Evelyn", "Pippa", "Tessa", "Liam", "Callum", "Abby" },
-            new() { ["class.warrior"] = "Hamish", ["class.rogue"] = "Tessa", ["class.ranger"] = "Callum", ["class.mage"] = "Marlene" }, "Hank", "en"),
+            new() { ["class.warrior"] = "Hamish", ["class.rogue"] = "Tessa", ["class.ranger"] = "Deborah", ["class.mage"] = "Theodore" }, "Hank", "en"),
         ["minimax"] = new("English_expressive_narrator", "English_magnetic_voiced_man", new[] { "English_CalmWoman", "English_radiant_girl", "English_PlayfulGirl", "English_magnetic_voiced_man" },
             new() { ["class.warrior"] = "English_magnetic_voiced_man", ["class.rogue"] = "English_PlayfulGirl", ["class.ranger"] = "English_CalmWoman", ["class.mage"] = "English_expressive_narrator" }, "English_CalmWoman", "en"),
     };
+
+    /// <summary>
+    /// Gemini voices with no class, NPC, narrator or boss slot, by family: the fighters' and the villain's voices, and the
+    /// rest of the catalogue, each on a voice of the same sex. Without an entry such a name fell to the family default.
+    /// </summary>
+    private static readonly Dictionary<string, Dictionary<string, string>> Named = new()
+    {
+        ["inworld"] = new()
+        {
+            ["Schedar"] = "Hades", ["Sadaltager"] = "Conrad", ["Achird"] = "Oliver", ["Fenrir"] = "Dominus",
+            ["Sulafat"] = "Riley", ["Gacrux"] = "Miranda", ["Zephyr"] = "Tessa", ["Autonoe"] = "Deborah", ["Iapetus"] = "Theodore",
+        },
+    };
+
+    /// <summary>
+    /// The sex of a provider voice the game uses, "male", "female" or "unknown". Inworld's confirmed ones come from its
+    /// own voice descriptions and listings (2026-10-29); Hamish, Callum, Liam, Hank, Mortimer, Graham, Loretta, Evelyn and
+    /// Marlene are taken from the names, which Inworld's catalogue has matched in every case checked.
+    /// </summary>
+    public static string Gender(string model, string providerVoice)
+    {
+        if (Family(model) != "inworld") return "unknown";
+        if (InworldWomen.Contains(providerVoice)) return "female";
+        if (InworldMen.Contains(providerVoice)) return "male";
+        return "unknown";
+    }
+
+    private static readonly HashSet<string> InworldWomen = new(StringComparer.OrdinalIgnoreCase)
+        { "Loretta", "Evelyn", "Tessa", "Abby", "Pippa", "Deborah", "Riley", "Miranda", "Marlene", "Julia", "Olivia", "Ashley", "Luna", "Celeste", "Chloe", "Darlene", "Amina" };
+    private static readonly HashSet<string> InworldMen = new(StringComparer.OrdinalIgnoreCase)
+        { "Mortimer", "Graham", "Hank", "Liam", "Callum", "Hamish", "Theodore", "Hades", "Conrad", "Oliver", "Dominus", "Edward", "Dennis", "Alex", "Brian", "Sebastian", "Gareth" };
 
     /// <summary>Whether the model is Google's Gemini TTS behind Runware, which keeps Gemini's names and reads a delivery style.</summary>
     public static bool IsGemini(string model) => Family(model) == "google";
@@ -61,6 +93,7 @@ public static class RunwareVoices
         if (!Banks.TryGetValue(Family(model), out var bank)) return geminiVoice;
         if (geminiVoice == Voices.Narrator) return bank.Narrator;
         if (geminiVoice == Voices.Boss) return bank.Boss;
+        if (Named.TryGetValue(Family(model), out var named) && named.TryGetValue(geminiVoice, out var exact)) return exact;
         // class voices first: "Orus" is both the warrior's voice and an NPC voice, and the companion should sound like a warrior
         foreach (var (classId, name) in Voices.Classes)
             if (name == geminiVoice) return bank.Classes.GetValueOrDefault(classId, bank.Default);

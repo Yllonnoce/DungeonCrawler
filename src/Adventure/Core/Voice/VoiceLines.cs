@@ -132,6 +132,22 @@ public static class Voices
         ["class.warrior"] = "Orus", ["class.rogue"] = "Zephyr", ["class.ranger"] = "Autonoe", ["class.mage"] = "Iapetus",
     };
 
+    /// <summary>The recruitable fighters' voices and manners, by NPC id: a man's voice for the men, a woman's for the women.</summary>
+    public static readonly (string Id, string Voice, Persona Persona)[] Fighters =
+    {
+        ("viewer_foehammer", "Schedar", new Persona { VoiceStyle = "a big, cheerful dwarf fighter, loud and proud of his hammer", DefaultDelivery = "cheerful" }),
+        ("fighter_tamsin", "Sulafat", new Persona { VoiceStyle = "a jovial, greedy miner turned sellsword, quick to laugh", DefaultDelivery = "cheerful" }),
+        ("fighter_oskar", "Sadaltager", new Persona { VoiceStyle = "a patient, proud smith of few words, dry and heavy", DefaultDelivery = "calm" }),
+        ("fighter_ione", "Leda", new Persona { VoiceStyle = "a frightened, pious young nun, soft and unsteady", DefaultDelivery = "whisper" }),
+    };
+
+    /// <summary>A fighter's voice and persona; anyone unlisted sounds like a seasoned man-at-arms.</summary>
+    public static (string Voice, Persona Persona) FighterVoice(string npcId)
+    {
+        foreach (var (id, voice, persona) in Fighters) if (id == npcId) return (voice, persona);
+        return ("Orus", new Persona { VoiceStyle = "a seasoned fighter", DefaultDelivery = "calm" });
+    }
+
     public static string ForNpc(string npcName) => Npcs[Math.Abs(StableHash(npcName)) % Npcs.Length];
     public static string ForClass(string classId) => Classes.GetValueOrDefault(classId, "Puck");
 

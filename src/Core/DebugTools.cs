@@ -21,6 +21,7 @@ namespace DungeonCrawler.Core;
 ///   --screenshot=PATH   save a PNG then quit      --after=SECONDS   delay before the screenshot / quit (default 2)
 ///   --face-enemy        teleport next to the nearest enemy at start
 ///   --clear-enemies     every enemy dies as soon as its floor is built (quiet screenshots of the cast)
+///   --bake-kill-barks=DIR  with --builtin --ai: render every member's and fighter's kill line into DIR (assets/voice/builtin for the shipped bank), then quit
 ///   --face-ramp[=bottom|top|ledge|gallery]  stand a cell short of a corridor ramp looking up it (bottom), at its top looking down, on a ledge's ramp looking into the room, or on the ledge looking down
 ///   --auto-attack       every member swings whenever ready (headless combat smoke test)
 ///   --trace-ai          print enemy state transitions
@@ -118,6 +119,8 @@ public partial class DebugTools : Node
     private bool _openedSettings;
     private int _bakeUiStep;
     private string? _bakeVoiceDir;
+    private string? _bakeKillBarksDir;
+    private int _bakeKillBarksQueued = -1;
     private bool _testVoice;
     private int _voiceStep;
     private readonly List<string> _voiceFails = new();
@@ -301,6 +304,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--vault=")) ForcedVault = arg["--vault=".Length..];
             else if (arg.StartsWith("--inspect=")) { var xy = arg["--inspect=".Length..].Split(','); _inspect = (int.Parse(xy[0]), int.Parse(xy[1])); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--bake-voice=")) _bakeVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-voice=".Length..]);
+            else if (arg.StartsWith("--bake-kill-barks=")) { _bakeKillBarksDir = ProjectSettings.GlobalizePath(arg["--bake-kill-barks=".Length..]); _quitAfter = Math.Max(_quitAfter, 900); }
             else if (arg.StartsWith("--voice-budget=")) CampaignBaker.VoiceBudgetLines = int.Parse(arg["--voice-budget=".Length..]);
             else if (arg.StartsWith("--spend-cap=")) Settings.SpendCapUsd = double.Parse(arg["--spend-cap=".Length..], System.Globalization.CultureInfo.InvariantCulture); // this run only; not saved
             else if (arg == "--test-voice") { _testVoice = true; FakeVoice = true; TraceAi = false; _quitAfter = 16; }
@@ -727,6 +731,25 @@ public partial class DebugTools : Node
             _pressActions.Clear();
         }
 
+        if (_bakeKillBarksDir != null && Main.Instance?.InGame == true && Game.Instance.Adventure.Campaign is { } killCampaign && _elapsed >= 2.0)
+        {
+            // --bake-kill-barks=DIR (with --builtin --ai and the voice flags): render every kill line into DIR, then quit
+            var vr = VoiceRenderer.Instance;
+            if (_bakeKillBarksQueued < 0)
+            {
+                if (vr is not { Enabled: true }) { GD.Print("[kill-barks] RESULT FAIL: voice is off (pass --ai and a provider key)"); _done = true; GetTree().Quit(1); return; }
+                vr.CacheDir = _bakeKillBarksDir; vr.Filter = null;
+                _bakeKillBarksQueued = AdventureDirector.Instance.EnqueueKillBarkVoice(killCampaign);
+                GD.Print($"[kill-barks] queued {_bakeKillBarksQueued} lines into {vr.CacheDir} with {vr.CurrentModel}; {vr.Pending} to render");
+            }
+            else if (vr != null && (vr.Pending == 0 || vr.StoppedReason != null))
+            {
+                GD.Print($"[kill-barks] rendered {vr.Rendered}, failed {vr.Failed}{(vr.StoppedReason != null ? ", stopped: " + vr.StoppedReason : "")}; per model: {string.Join(", ", vr.RenderedByModel.Select(kv => $"{kv.Key} x{kv.Value}"))}");
+                GD.Print($"[kill-barks] RESULT {(vr.Failed == 0 && vr.StoppedReason == null ? "ok" : "FAIL")}");
+                _done = true; GetTree().Quit(vr.Failed == 0 && vr.StoppedReason == null ? 0 : 1); return;
+            }
+            else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[kill-barks] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
+        }
         if (_screenshotPath != null && !_testHorde && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
         {
             if (_faceNode != null && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } shot) GD.Print($"[face-node] at the screenshot: {shot.State.Name} {shot.ModelDebug}; lead at {Main.Instance.Party.Local?.GlobalPosition:0.0} facing {-Main.Instance.Party.Local?.GlobalTransform.Basis.Z:0.00}");

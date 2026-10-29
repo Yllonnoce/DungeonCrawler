@@ -12,6 +12,36 @@ public class RunwareTests
         "Plan floor 3.", "{\"type\":\"object\"}", "high", 12000);
 
     [Fact]
+    public void InworldVoices_KeepEachCharactersGender()
+    {
+        // every Gemini voice the game hands out is a man's or a woman's (Voices.Catalog says which); the Inworld voice it
+        // becomes must be the same sex, for the party by class, the fighters, the cast's NPC voices and the villain
+        foreach (var (name, sound) in Voices.Catalog)
+        {
+            var inworld = RunwareVoices.Map("inworld:tts@1.5-max", name);
+            var want = sound.StartsWith("woman") ? "female" : "male";
+            Assert.True(RunwareVoices.Gender("inworld:tts@1.5-max", inworld) == want, $"{name} ({sound}) -> {inworld}, which is not {want}");
+        }
+        Assert.Equal("female", RunwareVoices.Gender("inworld:tts@2", RunwareVoices.Map("inworld:tts@2", Voices.Classes["class.ranger"]))); // Wren
+        Assert.Equal("male", RunwareVoices.Gender("inworld:tts@2", RunwareVoices.Map("inworld:tts@2", Voices.Classes["class.mage"])));     // Ilex
+        foreach (var (id, voice, _) in Voices.Fighters)
+        {
+            var sound = Voices.Catalog.First(c => c.Name == voice).Sound;
+            Assert.Equal(sound.StartsWith("woman") ? "female" : "male", RunwareVoices.Gender("inworld:tts@2", RunwareVoices.Map("inworld:tts@2", voice)));
+        }
+    }
+
+    [Fact]
+    public void FighterVoices_MatchTheCharacters()
+    {
+        string SexOf(string id) => Voices.Catalog.First(c => c.Name == Voices.FighterVoice(id).Voice).Sound.StartsWith("woman") ? "female" : "male";
+        Assert.Equal("male", SexOf("viewer_foehammer"));
+        Assert.Equal("female", SexOf("fighter_tamsin"));
+        Assert.Equal("male", SexOf("fighter_oskar"));
+        Assert.Equal("female", SexOf("fighter_ione"));
+    }
+
+    [Fact]
     public void TextRequest_IsOneTask_WithSystemPrompt_SchemaAsText_AndThinking()
     {
         var json = JsonNode.Parse(RunwareWire.TextRequestJson(Request(), "uuid-1"))!.AsArray();

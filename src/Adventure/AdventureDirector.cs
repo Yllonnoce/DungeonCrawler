@@ -150,6 +150,7 @@ public partial class AdventureDirector : Node
                 : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
             var voice = Voices.ForClass(classId ?? "");
             var persona = Voices.CompanionPersona(classId ?? "");
+            Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
             foreach (var b in set.Lines)
             {
                 b.Line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(b.Trigger)); // a fight is shouted, the rest said
@@ -205,10 +206,35 @@ public partial class AdventureDirector : Node
         Voice.BarkRepeat.Said(said, text, _currentFloor);
         _lastBark = now;
         _barkCooldown[(npc.Id, BarkTrigger.Kill)] = now;
-        var line = new Line(text);
+        var line = new Line(text) { Delivery = Deliveries.Id(Delivery.Shout) };
+        var (voice, persona) = Voices.FighterVoice(npc.Id);
+        _voice.Enqueue(line, voice, Speaker.Npc, VoicePriority.Bark, major: false, persona); // gives the line its id; plays from the bank when rendered
         EventBus.Instance.Log($"{npc.NpcName}: \"{text}\"");
         EventBus.Instance.RaiseBark(npc.NpcName, line);
         _voice.PlayLine(line, interrupt: false);
+    }
+
+    /// <summary>
+    /// Queue every kill line for rendering: each party member's whole Kill set (written and stock) in the class voice,
+    /// and each fighter's stock in their own. Returns how many lines were queued. Used by --bake-kill-barks.
+    /// </summary>
+    public int EnqueueKillBarkVoice(CampaignPlan campaign)
+    {
+        var n = 0;
+        foreach (var set in campaign.Barks)
+        {
+            var classId = Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId ?? "";
+            Voice.KillBarks.TopUp(set, classId);
+            foreach (var b in set.Lines.Where(l => l.Trigger == BarkTrigger.Kill))
+            {
+                b.Line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(b.Trigger));
+                if (_voice.Enqueue(b.Line, Voices.ForClass(classId), Speaker.Companion, VoicePriority.Bark, major: false, Voices.CompanionPersona(classId))) n++;
+            }
+        }
+        foreach (var (id, voice, persona) in Voices.Fighters)
+            foreach (var text in Voice.KillBarks.ForFighter(id))
+                if (_voice.Enqueue(new Line(text) { Delivery = Deliveries.Id(Delivery.Shout) }, voice, Speaker.Npc, VoicePriority.Bark, major: false, persona)) n++;
+        return n;
     }
 
     /// <summary>A client voicing a bark the server chose.</summary>
