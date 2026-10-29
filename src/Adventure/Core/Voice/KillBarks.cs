@@ -138,6 +138,27 @@ public static class KillBarks
     /// <summary>A recruitable fighter's kill lines by NPC id; empty for anyone else.</summary>
     public static IReadOnlyList<string> ForFighter(string npcId) => Fighters.TryGetValue(npcId, out var lines) ? lines : Array.Empty<string>();
 
+    /// <summary>Whether a bark set's Member is one of the recruitable fighters (their sets ride in the campaign beside the party's).</summary>
+    public static bool IsFighter(string member) => Fighters.ContainsKey(member);
+
+    /// <summary>
+    /// Give every fighter a bark set in the campaign, keyed by NPC id, so their lines carry voice ids like the party's and
+    /// play from the shipped bank whatever the player's voice settings. Returns how many sets were added.
+    /// </summary>
+    public static int TopUpFighters(CampaignPlan campaign)
+    {
+        var added = 0;
+        foreach (var (id, lines) in Fighters)
+        {
+            if (campaign.Barks.Any(b => b.Member == id)) continue;
+            var set = new BarkSet { Member = id };
+            foreach (var text in lines) set.Lines.Add(new BarkLine { Trigger = BarkTrigger.Kill, Line = new Line(text) });
+            campaign.Barks.Add(set);
+            added++;
+        }
+        return added;
+    }
+
     /// <summary>Append stock Kill lines a bark set lacks until it holds at least <see cref="MinLines"/>; returns how many were added.</summary>
     public static int TopUp(BarkSet set, string classId)
     {

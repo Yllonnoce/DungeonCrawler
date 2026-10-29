@@ -737,16 +737,22 @@ public partial class DebugTools : Node
             var vr = VoiceRenderer.Instance;
             if (_bakeKillBarksQueued < 0)
             {
-                if (vr is not { Enabled: true }) { GD.Print("[kill-barks] RESULT FAIL: voice is off (pass --ai and a provider key)"); _done = true; GetTree().Quit(1); return; }
+                if (vr == null) { GD.Print("[kill-barks] RESULT FAIL: no voice renderer"); _done = true; GetTree().Quit(1); return; }
                 vr.CacheDir = _bakeKillBarksDir; vr.Filter = null;
                 _bakeKillBarksQueued = AdventureDirector.Instance.EnqueueKillBarkVoice(killCampaign);
-                GD.Print($"[kill-barks] queued {_bakeKillBarksQueued} lines into {vr.CacheDir} with {vr.CurrentModel}; {vr.Pending} to render");
+                GD.Print($"[kill-barks] {_bakeKillBarksQueued} bark lines carry ids for {vr.CurrentModel}; {vr.Pending} to render into {vr.CacheDir}{(vr.Enabled ? "" : " (voice is off: nothing renders, ids come from the bank as it stands)")}");
             }
             else if (vr != null && (vr.Pending == 0 || vr.StoppedReason != null))
             {
+                var ok = vr.Failed == 0 && vr.StoppedReason == null;
                 GD.Print($"[kill-barks] rendered {vr.Rendered}, failed {vr.Failed}{(vr.StoppedReason != null ? ", stopped: " + vr.StoppedReason : "")}; per model: {string.Join(", ", vr.RenderedByModel.Select(kv => $"{kv.Key} x{kv.Value}"))}");
-                GD.Print($"[kill-barks] RESULT {(vr.Failed == 0 && vr.StoppedReason == null ? "ok" : "FAIL")}");
-                _done = true; GetTree().Quit(vr.Failed == 0 && vr.StoppedReason == null ? 0 : 1); return;
+                // the ids ship inside the campaign, so a player's own voice settings never change which file a bark looks for
+                var plans = Game.Instance.Adventure.FloorPlans.Where(kv => kv.Key >= 1 && kv.Key <= TierRules.FinalFloor).ToDictionary(kv => kv.Key, kv => kv.Value);
+                var dir = ProjectSettings.GlobalizePath(BuiltinCampaign.Dir);
+                var missing = killCampaign.Barks.Sum(set => set.Lines.Count(l => l.Line.VoiceId == null || !vr.HasAudio(l.Line.VoiceId)));
+                if (ok) { BuiltinCampaign.Write(dir, killCampaign, plans); GD.Print($"[kill-barks] wrote {dir}/campaign.json with {killCampaign.Barks.Count} bark sets; {missing} bark lines still without audio"); }
+                GD.Print($"[kill-barks] RESULT {(ok ? "ok" : "FAIL")}");
+                _done = true; GetTree().Quit(ok ? 0 : 1); return;
             }
             else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[kill-barks] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
         }

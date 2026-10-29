@@ -197,8 +197,32 @@ public partial class VoiceRenderer : Node
 
     public bool PlayLine(Line line, bool interrupt) => Play(line.VoiceId, interrupt);
 
+    private (string Id, double Deadline)? _held;
+
+    /// <summary>
+    /// Play a short line now, or as soon as the voice channel frees within <paramref name="withinSeconds"/>: a bark over a
+    /// kill should not be lost because the narrator was mid-sentence. Only one line is held; a newer one replaces it.
+    /// </summary>
+    public bool PlaySoon(Line line, float withinSeconds = 8f)
+    {
+        if (line.VoiceId == null) return false;
+        if (Play(line.VoiceId, interrupt: false)) { _held = null; return true; }
+        if (!HasAudio(line.VoiceId)) return false;
+        _held = (line.VoiceId, Time.GetTicksMsec() / 1000.0 + withinSeconds);
+        return false;
+    }
+
+    private void TickHeld()
+    {
+        if (_held is not { } held) return;
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (now > held.Deadline) { _held = null; return; }
+        if (AudioManager.Instance is { VoiceBusy: false }) { _held = null; Play(held.Id, interrupt: false); }
+    }
+
     public override void _Process(double delta)
     {
+        TickHeld();
         _combatTimer -= (float)delta;
         if (_combatTimer <= 0f)
         {

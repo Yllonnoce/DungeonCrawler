@@ -143,18 +143,25 @@ public partial class AdventureDirector : Node
     private void EnqueueBarks(CampaignPlan campaign)
     {
         var party = Main.Instance?.Party;
+        Voice.KillBarks.TopUpFighters(campaign); // the fighters' sets live in the campaign beside the party's
         foreach (var set in campaign.Barks)
         {
-            var classId = party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
-                ? party.Members.FirstOrDefault(m => m.Name == set.Member)?.Class.Id
-                : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
-            var voice = Voices.ForClass(classId ?? "");
-            var persona = Voices.CompanionPersona(classId ?? "");
-            Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
+            string voice; Persona persona; var speaker = Speaker.Companion;
+            if (Voice.KillBarks.IsFighter(set.Member)) { (voice, persona) = Voices.FighterVoice(set.Member); speaker = Speaker.Npc; }
+            else
+            {
+                var classId = party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
+                    ? party.Members.FirstOrDefault(m => m.Name == set.Member)?.Class.Id
+                    : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
+                voice = Voices.ForClass(classId ?? "");
+                persona = Voices.CompanionPersona(classId ?? "");
+                Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
+            }
             foreach (var b in set.Lines)
             {
                 b.Line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(b.Trigger)); // a fight is shouted, the rest said
-                _voice.Enqueue(b.Line, voice, Speaker.Companion, VoicePriority.Bark, major: false, persona);
+                // a line whose id is written in the campaign keeps it (the shipped bank was rendered under it); only a new line derives one from today's settings
+                _voice.Enqueue(b.Line, voice, speaker, VoicePriority.Bark, major: false, persona);
             }
         }
     }
@@ -187,14 +194,19 @@ public partial class AdventureDirector : Node
         _barkCooldown[(m.Name, trigger)] = now;
         EventBus.Instance.Log($"{m.Name}: \"{line.Text}\"");
         EventBus.Instance.RaiseBark(m.Name, line);
-        _voice.PlayLine(line, interrupt: false);
+        _voice.PlaySoon(line); // waits a few seconds for the narrator to finish rather than dropping the line
     }
 
     /// <summary>A recruited fighter's word over a kill, on the kill-bark rules; fighters have no voiced bank, so it is a log line and a subtitle.</summary>
     private void FighterBark(Npc npc)
     {
         if (Net.NetSession.IsClient || !Game.Instance.InGame) return;
-        var lines = Voice.KillBarks.ForFighter(npc.Id);
+        var campaign = Game.Instance.Adventure.Campaign;
+        if (campaign == null || !Voice.KillBarks.IsFighter(npc.Id)) return;
+        if (Voice.KillBarks.TopUpFighters(campaign) > 0) EnqueueBarks(campaign); // a campaign written before the fighters had lines
+        var set = campaign.Barks.FirstOrDefault(b => b.Member == npc.Id);
+        var barkLines = set?.Lines.Where(l => l.Trigger == BarkTrigger.Kill && l.Line.Text != "").ToList() ?? new List<BarkLine>();
+        var lines = barkLines.Select(l => l.Line.Text).ToList();
         if (lines.Count == 0) return;
         var now = Game.Instance.PlaySeconds;
         if (now - _lastBark < Voice.KillBarks.GlobalGapSeconds) return;
@@ -206,12 +218,10 @@ public partial class AdventureDirector : Node
         Voice.BarkRepeat.Said(said, text, _currentFloor);
         _lastBark = now;
         _barkCooldown[(npc.Id, BarkTrigger.Kill)] = now;
-        var line = new Line(text) { Delivery = Deliveries.Id(Delivery.Shout) };
-        var (voice, persona) = Voices.FighterVoice(npc.Id);
-        _voice.Enqueue(line, voice, Speaker.Npc, VoicePriority.Bark, major: false, persona); // gives the line its id; plays from the bank when rendered
+        var line = barkLines.First(l => l.Line.Text == text).Line; // carries the id the bank was rendered under
         EventBus.Instance.Log($"{npc.NpcName}: \"{text}\"");
         EventBus.Instance.RaiseBark(npc.NpcName, line);
-        _voice.PlayLine(line, interrupt: false);
+        _voice.PlaySoon(line);
     }
 
     /// <summary>
@@ -220,21 +230,8 @@ public partial class AdventureDirector : Node
     /// </summary>
     public int EnqueueKillBarkVoice(CampaignPlan campaign)
     {
-        var n = 0;
-        foreach (var set in campaign.Barks)
-        {
-            var classId = Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId ?? "";
-            Voice.KillBarks.TopUp(set, classId);
-            foreach (var b in set.Lines.Where(l => l.Trigger == BarkTrigger.Kill))
-            {
-                b.Line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(b.Trigger));
-                if (_voice.Enqueue(b.Line, Voices.ForClass(classId), Speaker.Companion, VoicePriority.Bark, major: false, Voices.CompanionPersona(classId))) n++;
-            }
-        }
-        foreach (var (id, voice, persona) in Voices.Fighters)
-            foreach (var text in Voice.KillBarks.ForFighter(id))
-                if (_voice.Enqueue(new Line(text) { Delivery = Deliveries.Id(Delivery.Shout) }, voice, Speaker.Npc, VoicePriority.Bark, major: false, persona)) n++;
-        return n;
+        EnqueueBarks(campaign); // tops up the party's and the fighters' sets and gives every bark line its id
+        return campaign.Barks.Sum(set => set.Lines.Count(l => l.Line.VoiceId != null));
     }
 
     /// <summary>A client voicing a bark the server chose.</summary>

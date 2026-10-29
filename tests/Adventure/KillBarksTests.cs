@@ -48,6 +48,24 @@ public class KillBarksTests
     }
 
     [Fact]
+    public void TopUpFighters_GivesEachFighterABarkSet_Once()
+    {
+        var campaign = new CampaignPlan();
+        campaign.Barks.Add(new BarkSet { Member = "Brand" });
+        var added = KillBarks.TopUpFighters(campaign);
+        Assert.Equal(4, added);
+        foreach (var id in new[] { "viewer_foehammer", "fighter_tamsin", "fighter_oskar", "fighter_ione" })
+        {
+            var set = campaign.Barks.Single(b => b.Member == id);
+            Assert.True(set.Lines.Count(l => l.Trigger == BarkTrigger.Kill) >= 6);
+        }
+        Assert.Equal(0, KillBarks.TopUpFighters(campaign));
+        Assert.Equal(5, campaign.Barks.Count);
+        Assert.True(KillBarks.IsFighter("fighter_tamsin"));
+        Assert.False(KillBarks.IsFighter("Brand"));
+    }
+
+    [Fact]
     public void ChooseOrOldest_NeverFallsSilent()
     {
         var said = new Dictionary<string, int> { ["a"] = 5, ["b"] = 4, ["c"] = 5 };
