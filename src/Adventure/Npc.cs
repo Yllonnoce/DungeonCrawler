@@ -410,6 +410,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         var r = foe.ReceiveAttack(NpcFight.Stats, NpcFight.AttackFor(Floor), new HitContext(), rng, NpcName);
         EventBus.Instance.Log(r.Hit ? $"{NpcName} hits {foe.DisplayName} for {r.Amount:0}." : $"{NpcName} misses {foe.DisplayName}.");
         if (r.Hit) GD.Print($"[Npc] {NpcName} hits {foe.DisplayName} for {r.Amount:0}");
+        if (r.Hit && !foe.IsAlive) EventBus.Instance.RaiseNpcKill(this);
         if (foe.IsAlive && foe.NpcTarget == null) foe.NpcTarget = this;   // it has someone to answer
     }
 

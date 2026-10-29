@@ -64,6 +64,8 @@ public partial class EventBus : Node
     public event Action<int, string>? MemberKilledByHazard;
     /// <summary>An enemy died to a lethal hazard: an environmental kill, no loot.</summary>
     public event Action<Enemies.Enemy, string>? EnemyKilledByHazard;
+    /// <summary>A fighting NPC (a recruited fighter) landed the blow that killed an enemy.</summary>
+    public event Action<Adventure.Npc>? NpcKill;
     // ---- world hooks a dedicated server forwards to its clients ----
     public event Action<Items.LootDrop>? LootSpawned;
     public event Action<Guid, int>? LootRemoved;
@@ -117,6 +119,7 @@ public partial class EventBus : Node
     public void RaiseAlarmRaised(string collectiveId) => AlarmRaised?.Invoke(collectiveId);
     public void RaiseChestOpened(Vector3 at) => ChestOpened?.Invoke(at);
     public void RaiseMemberKill(Characters.CharacterState m) => MemberKill?.Invoke(m);
+    public void RaiseNpcKill(Adventure.Npc npc) => NpcKill?.Invoke(npc);
     public void RaiseLevelUp(int index) => LevelUp?.Invoke(index);
     public void RaiseHazardPhase(int index, byte phase) => HazardPhase?.Invoke(index, phase);
     public void RaiseMemberKilledByHazard(int index, string source) => MemberKilledByHazard?.Invoke(index, source);

@@ -166,13 +166,19 @@ public partial class AdventureDirector : Node
         var set = campaign?.Barks.FirstOrDefault(b => b.Member == m.Name);
         if (set == null) return;
         var now = Game.Instance.PlaySeconds;
-        if (now - _lastBark < 5) return;
-        if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < 25) return;
+        // a kill is remarked on more freely than anything else: a quick cooldown, a roll, and a bank topped up from stock
+        var kill = trigger == BarkTrigger.Kill;
+        if (kill) Voice.KillBarks.TopUp(set, m.Class.Id);
+        if (now - _lastBark < (kill ? Voice.KillBarks.GlobalGapSeconds : 5)) return;
+        if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill ? Voice.KillBarks.CooldownSeconds : 25)) return;
+        if (kill && _barkRng.NextDouble() >= Voice.KillBarks.Chance) return;
         var lines = set.Lines.Where(l => l.Trigger == trigger && l.Line.Text != "").ToList();
         if (lines.Count == 0) return;
-        // a line said in the last two floors stays quiet; when every line for this trigger is that recent, so does the companion
+        // a line said in the last two floors stays quiet; when every line for this trigger is that recent, so does the companion,
+        // except over a kill, where the line said longest ago comes back
         var said = Game.Instance.Adventure.BarksSaid;
-        var text = Voice.BarkRepeat.Choose(said, lines.Select(l => l.Line.Text).ToList(), _currentFloor, _barkRng);
+        var texts = lines.Select(l => l.Line.Text).ToList();
+        var text = kill ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
         if (text == null) return;
         var line = lines.First(l => l.Line.Text == text).Line;
         Voice.BarkRepeat.Said(said, text, _currentFloor);
@@ -180,6 +186,28 @@ public partial class AdventureDirector : Node
         _barkCooldown[(m.Name, trigger)] = now;
         EventBus.Instance.Log($"{m.Name}: \"{line.Text}\"");
         EventBus.Instance.RaiseBark(m.Name, line);
+        _voice.PlayLine(line, interrupt: false);
+    }
+
+    /// <summary>A recruited fighter's word over a kill, on the kill-bark rules; fighters have no voiced bank, so it is a log line and a subtitle.</summary>
+    private void FighterBark(Npc npc)
+    {
+        if (Net.NetSession.IsClient || !Game.Instance.InGame) return;
+        var lines = Voice.KillBarks.ForFighter(npc.Id);
+        if (lines.Count == 0) return;
+        var now = Game.Instance.PlaySeconds;
+        if (now - _lastBark < Voice.KillBarks.GlobalGapSeconds) return;
+        if (_barkCooldown.TryGetValue((npc.Id, BarkTrigger.Kill), out var last) && now - last < Voice.KillBarks.CooldownSeconds) return;
+        if (_barkRng.NextDouble() >= Voice.KillBarks.Chance) return;
+        var said = Game.Instance.Adventure.BarksSaid;
+        var text = Voice.BarkRepeat.ChooseOrOldest(said, lines, _currentFloor, _barkRng);
+        if (text == null) return;
+        Voice.BarkRepeat.Said(said, text, _currentFloor);
+        _lastBark = now;
+        _barkCooldown[(npc.Id, BarkTrigger.Kill)] = now;
+        var line = new Line(text);
+        EventBus.Instance.Log($"{npc.NpcName}: \"{text}\"");
+        EventBus.Instance.RaiseBark(npc.NpcName, line);
         _voice.PlayLine(line, interrupt: false);
     }
 
@@ -363,6 +391,7 @@ public partial class AdventureDirector : Node
         bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); };
         bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.DeathLine.Text}", b.DeathLine.VoiceId); };
         bus.MemberKill += m => Bark(m, BarkTrigger.Kill);
+        bus.NpcKill += FighterBark;
         bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * 0.15f) Bark(m, BarkTrigger.Hurt); };
         bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);
         bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
