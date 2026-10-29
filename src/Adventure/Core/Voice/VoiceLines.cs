@@ -129,7 +129,8 @@ public static class Voices
     };
     public static readonly Dictionary<string, string> Classes = new()
     {
-        ["class.warrior"] = "Orus", ["class.rogue"] = "Zephyr", ["class.ranger"] = "Autonoe", ["class.mage"] = "Iapetus",
+        // the party as the owner built them: Brand, Wren and Ilex are men, Sable is a woman
+        ["class.warrior"] = "Orus", ["class.rogue"] = "Zephyr", ["class.ranger"] = "Umbriel", ["class.mage"] = "Iapetus",
     };
 
     /// <summary>The recruitable fighters' voices and manners, by NPC id: a man's voice for the men, a woman's for the women.</summary>

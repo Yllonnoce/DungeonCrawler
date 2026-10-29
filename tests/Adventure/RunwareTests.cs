@@ -22,7 +22,7 @@ public class RunwareTests
             var want = sound.StartsWith("woman") ? "female" : "male";
             Assert.True(RunwareVoices.Gender("inworld:tts@1.5-max", inworld) == want, $"{name} ({sound}) -> {inworld}, which is not {want}");
         }
-        Assert.Equal("female", RunwareVoices.Gender("inworld:tts@2", RunwareVoices.Map("inworld:tts@2", Voices.Classes["class.ranger"]))); // Wren
+        Assert.Equal("male", RunwareVoices.Gender("inworld:tts@2", RunwareVoices.Map("inworld:tts@2", Voices.Classes["class.ranger"])));   // Wren, as the owner built him
         Assert.Equal("male", RunwareVoices.Gender("inworld:tts@2", RunwareVoices.Map("inworld:tts@2", Voices.Classes["class.mage"])));     // Ilex
         foreach (var (id, voice, _) in Voices.Fighters)
         {

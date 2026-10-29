@@ -1239,7 +1239,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Through the eye. It won\u0027t walk back.",
-            "VoiceId": "d099fb34f320c7d1",
+            "VoiceId": "1afe76bb2f920cc2",
             "Delivery": "calm"
           }
         },
@@ -1247,7 +1247,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "One down. I\u0027ll want that arrow back.",
-            "VoiceId": "098e943db527c3bf",
+            "VoiceId": "352681ca7c64f55e",
             "Delivery": ""
           }
         },
@@ -1255,7 +1255,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Nothing down here dies surprised.",
-            "VoiceId": "67546ca2a570eabb",
+            "VoiceId": "f5666c476cc37b23",
             "Delivery": ""
           }
         },
@@ -1263,7 +1263,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Clipped. Still shooting.",
-            "VoiceId": "47cafcce4f951ff7",
+            "VoiceId": "af8b16b6c28e136f",
             "Delivery": ""
           }
         },
@@ -1271,7 +1271,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Mark the archer on the ledge. I have.",
-            "VoiceId": "76e43d41e1cf4214",
+            "VoiceId": "ad881c47f7083829",
             "Delivery": ""
           }
         },
@@ -1279,7 +1279,7 @@
           "Trigger": "Hurt",
           "Line": {
             "Text": "Blood on the string. That slows a draw.",
-            "VoiceId": "75282beb624e76a7",
+            "VoiceId": "8a590fdd2c9bec01",
             "Delivery": ""
           }
         },
@@ -1287,7 +1287,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Fletchings. Whoever\u0027s they were is past caring.",
-            "VoiceId": "d1932700e7fefef3",
+            "VoiceId": "2775d9874359eb27",
             "Delivery": ""
           }
         },
@@ -1295,7 +1295,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Someone packed this for a trip home.",
-            "VoiceId": "b915c3661fab4690",
+            "VoiceId": "143c3a01d5685944",
             "Delivery": ""
           }
         },
@@ -1303,7 +1303,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Take the rope. Down here rope is kindness.",
-            "VoiceId": "68a7518f0bad62a3",
+            "VoiceId": "75adde0e60aabf18",
             "Delivery": ""
           }
         },
@@ -1311,7 +1311,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Steadier draw. The dark\u0027s still steadier.",
-            "VoiceId": "80a4ef426801b380",
+            "VoiceId": "437806813bd62f9f",
             "Delivery": ""
           }
         },
@@ -1319,7 +1319,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "I\u0027m learning His corridors. That frightens me.",
-            "VoiceId": "724c41470ae2356e",
+            "VoiceId": "02c57cad586bc65e",
             "Delivery": ""
           }
         },
@@ -1327,7 +1327,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Longer sight. Wish I liked what\u0027s in it.",
-            "VoiceId": "01c25c7c229730c5",
+            "VoiceId": "16a8a8aca2113071",
             "Delivery": ""
           }
         },
@@ -1335,7 +1335,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Wide target. Thick hide. Keep it at range.",
-            "VoiceId": "75f91d80fc54102c",
+            "VoiceId": "06abf55b39b235c2",
             "Delivery": ""
           }
         },
@@ -1343,7 +1343,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Pillars first, then shoot. Not the reverse.",
-            "VoiceId": "5f220c6f8ce34932",
+            "VoiceId": "64cef9894d34298d",
             "Delivery": ""
           }
         },
@@ -1351,7 +1351,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "It\u0027s breathing in time with the walls.",
-            "VoiceId": "db63220ee7602e89",
+            "VoiceId": "963bb655e1bc2d31",
             "Delivery": "whisper"
           }
         },
@@ -1359,7 +1359,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Something\u0027s drawing my bow for me. Move.",
-            "VoiceId": "9ec80cc30c23a18d",
+            "VoiceId": "2ea530feff98f32a",
             "Delivery": ""
           }
         },
@@ -1367,7 +1367,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "Don\u0027t stand in my line. Please don\u0027t.",
-            "VoiceId": "efeb74470e2a59cc",
+            "VoiceId": "a2c41f091a8639d2",
             "Delivery": "pleading"
           }
         },
@@ -1375,7 +1375,7 @@
           "Trigger": "Possess",
           "Line": {
             "Text": "I see through two sets of eyes and one is His.",
-            "VoiceId": "6819a024c47d5bc1",
+            "VoiceId": "99d0f38606d36cce",
             "Delivery": ""
           }
         },
@@ -1383,7 +1383,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Quiver\u0027s empty anyway. Go on without me.",
-            "VoiceId": "c1055eaa88eb0f00",
+            "VoiceId": "de505d3f137a18f2",
             "Delivery": "weary"
           }
         },
@@ -1391,7 +1391,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Count the exits. I counted. Use the second.",
-            "VoiceId": "d454fae67d86dbed",
+            "VoiceId": "219801e1d31d2e48",
             "Delivery": "weary"
           }
         },
@@ -1399,7 +1399,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "The floor\u0027s beating. I\u0027d rather it didn\u0027t.",
-            "VoiceId": "2e32e82596e9a1ed",
+            "VoiceId": "92c974aa15fd0638",
             "Delivery": "whisper"
           }
         },
@@ -1407,7 +1407,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Hands on the bow. Good. Step aside.",
-            "VoiceId": "ccfee7ed168a0f11",
+            "VoiceId": "39400d776f8be6a0",
             "Delivery": ""
           }
         },
@@ -1415,7 +1415,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Thank you. Now watch the high ledges.",
-            "VoiceId": "6b51f29bd1ca895e",
+            "VoiceId": "76de1dbeb109d2be",
             "Delivery": ""
           }
         },
@@ -1423,7 +1423,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Alive, and still owed nineteen years of wages.",
-            "VoiceId": "8b7035fc7e2e4709",
+            "VoiceId": "1ca16395f1a97c3b",
             "Delivery": ""
           }
         },
@@ -1431,7 +1431,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Marked it. Loosed. Done.",
-            "VoiceId": "716950812a5d474e",
+            "VoiceId": "153364def7455ce7",
             "Delivery": "shout"
           }
         },
@@ -1439,7 +1439,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Two steps closer and it would have been you.",
-            "VoiceId": "be80a20cf74a72dc",
+            "VoiceId": "94de5675bd3bdd54",
             "Delivery": "shout"
           }
         },
@@ -1447,7 +1447,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Wind\u0027s dead down here. Makes it easy.",
-            "VoiceId": "1313147f130471da",
+            "VoiceId": "cb29b7fecc9ec4c7",
             "Delivery": "shout"
           }
         },
@@ -1455,7 +1455,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "It stood still. Its mistake.",
-            "VoiceId": "dab0869f67a50741",
+            "VoiceId": "4640bc4a6c1280aa",
             "Delivery": "shout"
           }
         },
@@ -1463,7 +1463,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Good arrow. Shame about the fletching.",
-            "VoiceId": "797e09bc8704803f",
+            "VoiceId": "42b082858f59d8fa",
             "Delivery": "shout"
           }
         },
@@ -1471,7 +1471,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Quiet. Listen for the next one.",
-            "VoiceId": "940d0330120d0bb6",
+            "VoiceId": "50fc1ab4d22abcdc",
             "Delivery": "shout"
           }
         },
@@ -1479,7 +1479,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Drop. Stay dropped.",
-            "VoiceId": "acbac1e7d69f1ff0",
+            "VoiceId": "b9ef5972d6c52630",
             "Delivery": "shout"
           }
         }

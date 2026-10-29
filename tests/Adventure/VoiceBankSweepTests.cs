@@ -7,6 +7,16 @@ namespace DungeonCrawler.Tests.Adventure;
 public class VoiceBankSweepTests
 {
     [Fact]
+    public void ReferencedIds_IncludeTheBarkLines_SoASweepKeepsTheirAudio()
+    {
+        var campaign = new CampaignPlan();
+        var set = new BarkSet { Member = "Brand" };
+        set.Lines.Add(new BarkLine { Trigger = BarkTrigger.Kill, Line = new Line("Stay down.") { VoiceId = "feedfacefeedface" } });
+        campaign.Barks.Add(set);
+        Assert.Contains("feedfacefeedface", VoiceRefs.Ids(campaign, new Dictionary<int, FloorPlan>()));
+    }
+
+    [Fact]
     public void IdOf_ReadsBankFilesOnly()
     {
         Assert.Equal("01d2d1e5adc53bb5", VoiceBankSweep.IdOf("/bank/01d2d1e5adc53bb5.wav"));

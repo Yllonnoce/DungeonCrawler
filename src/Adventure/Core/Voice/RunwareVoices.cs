@@ -46,9 +46,9 @@ public static class RunwareVoices
     {
         ["xai"] = new("orion", "zagan", new[] { "luna", "iris", "helix", "perseus", "celeste", "castor", "ara", "cosmo" },
             new() { ["class.warrior"] = "atlas", ["class.rogue"] = "lux", ["class.ranger"] = "kepler", ["class.mage"] = "rigel" }, "eve", "en"),
-        // the ranger and the mage are a woman and a man (Wren, Ilex): Callum and Marlene had them the other way round
+        // the party as built: Brand, Wren and Ilex are men, Sable a woman (Marlene had the mage as a woman)
         ["inworld"] = new("Mortimer", "Graham", new[] { "Loretta", "Hank", "Evelyn", "Pippa", "Tessa", "Liam", "Callum", "Abby" },
-            new() { ["class.warrior"] = "Hamish", ["class.rogue"] = "Tessa", ["class.ranger"] = "Deborah", ["class.mage"] = "Theodore" }, "Hank", "en"),
+            new() { ["class.warrior"] = "Hamish", ["class.rogue"] = "Tessa", ["class.ranger"] = "Callum", ["class.mage"] = "Theodore" }, "Hank", "en"),
         ["minimax"] = new("English_expressive_narrator", "English_magnetic_voiced_man", new[] { "English_CalmWoman", "English_radiant_girl", "English_PlayfulGirl", "English_magnetic_voiced_man" },
             new() { ["class.warrior"] = "English_magnetic_voiced_man", ["class.rogue"] = "English_PlayfulGirl", ["class.ranger"] = "English_CalmWoman", ["class.mage"] = "English_expressive_narrator" }, "English_CalmWoman", "en"),
     };
