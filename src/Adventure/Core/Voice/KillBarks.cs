@@ -15,7 +15,7 @@ public static class KillBarks
     /// <summary>The share of kills that earn a line.</summary>
     public const float Chance = 0.7f;
     /// <summary>A set with fewer Kill lines than this is topped up from stock.</summary>
-    public const int MinLines = 8;
+    public const int MinLines = 20;
 
     private static readonly Dictionary<string, string[]> ByName = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -44,6 +44,22 @@ public static class KillBarks
             "I liked him better quiet.",
             "Shh. The dead don't haggle.",
             "That one owed me. Now we're square.",
+            // the dance-themed set (2026-10-30): a woman's voice, a thief's manners
+            "Dead. Cue the music.",
+            "Stabbed in time with the beat.",
+            "That's the knife work done. Now the footwork.",
+            "One less partner. Shame, he had rhythm.",
+            "Drop. Good. Now watch me not.",
+            "Quiet now. I like to dance in silence.",
+            "Pockets first, then the hips.",
+            "Fell like a drunk on a dance floor. Stays like one too.",
+            "Knife in, knife out, step to the left.",
+            "I've killed quieter, but never prettier.",
+            "Boot on the chest, shimmy to follow.",
+            "That one didn't see the blade or the squat coming.",
+            "Oh, you dropped something. Everything, actually.",
+            "A girl's got to warm up before she dances.",
+            "Nothing personal. Everything rhythmic.",
         },
         ["Wren"] = new[]
         {

@@ -101,7 +101,7 @@ public class GulletCampaignTests
     }
 
     [Fact]
-    public void EveryHero_HasFiveVoicedDanceLines_InTheShippedBank()
+    public void EveryHero_HasTwentyVoicedDanceLines_InTheShippedBank()
     {
         var campaign = Campaign();
         var bank = Path.Combine(Root, "assets", "voice", "builtin");
@@ -109,7 +109,13 @@ public class GulletCampaignTests
         {
             var set = campaign.Barks.First(b => b.Member == name);
             var dance = set.Lines.Where(l => l.Trigger == BarkTrigger.Dance).ToList();
-            Assert.True(dance.Count >= 5, $"{name} has {dance.Count} dance lines");
+            Assert.True(dance.Count >= 20, $"{name} has {dance.Count} dance lines");
+            if (name == "Sable")
+            {
+                var kills = set.Lines.Where(l => l.Trigger == BarkTrigger.Kill).ToList();
+                Assert.True(kills.Count >= 25, $"Sable has {kills.Count} kill lines");
+                Assert.All(kills, l => Assert.True(l.Line.VoiceId != null && File.Exists(Path.Combine(bank, l.Line.VoiceId + ".wav")), $"Sable: no audio for \"{l.Line.Text}\""));
+            }
             foreach (var l in dance)
             {
                 Assert.NotNull(l.Line.VoiceId);

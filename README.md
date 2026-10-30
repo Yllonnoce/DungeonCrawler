@@ -154,8 +154,10 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
   in a row at 4x speed, then a Wave if nothing is left fighting the party by then (`VictoryDance`, engine-free). The dance starts
   once the swing has played out. A companion stands still for it unless the fight is still on, and no companion goes for
   loot or a chest while anyone is dancing; a player's body stops the moment it walks off, and anyone stops when they swing
-  again or are hit. The dancer crows one of five voiced lines (`Voice/DanceBarks.cs`, per hero by name, class and generic
-  fallbacks, `BarkTrigger.Dance`, "Booty be all that..."), which stands in for the kill bark that kill. Your own body is
+  again or are hit. The dancer crows one of twenty voiced lines (`Voice/DanceBarks.cs`, per hero by name, five by class and five
+  generic as fallbacks, `BarkTrigger.Dance`, "Booty be all that..."), which stands in for the kill bark that kill. Sable's
+  lines, like her voice (Inworld Tessa), are a woman's; her kill bank also has fifteen dance-themed taunts beside the
+  original ten. A bark set is topped up from stock until it holds 20 lines of a trigger (`KillBarks.MinLines`, `DanceBarks.MinLines`). Your own body is
   hidden in first person, so it does not dance (your kill bark plays as before); you see your companions' dances. In co-op
   the server tells every screen whose body dances (`EmoteEvt`) and the line arrives as a bark. The stock Quaternius models
   have no such clips and sit it out. Logs `[Dance] Name: Clip xSpeed`. `--dance` starts the dance on every companion at

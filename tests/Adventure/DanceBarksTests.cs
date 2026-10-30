@@ -14,10 +14,11 @@ public class DanceBarksTests
     [InlineData("Ilex", "class.mage")]
     [InlineData("Somebody", "class.warrior")] // a co-op name falls back to the class
     [InlineData("Nobody", "class.unknown")]   // and an unknown class to the generic lines
-    public void EveryHero_HasFiveDistinctDanceLines(string name, string classId)
+    public void EveryHero_HasTwentyDistinctDanceLines(string name, string classId)
     {
         var lines = DanceBarks.For(name, classId);
-        Assert.True(lines.Count >= 5, $"{lines.Count} lines");
+        var want = name is "Brand" or "Sable" or "Wren" or "Ilex" ? 20 : 5;
+        Assert.True(lines.Count >= want, $"{lines.Count} lines");
         Assert.Equal(lines.Count, lines.Distinct().Count());
         Assert.All(lines, l => Assert.InRange(l.Length, 8, 120));
     }
@@ -34,10 +35,21 @@ public class DanceBarksTests
     {
         var set = new BarkSet { Member = "Sable" };
         var added = DanceBarks.TopUp(set, "class.rogue");
-        Assert.Equal(5, added);
+        Assert.Equal(20, added);
         Assert.All(set.Lines, l => Assert.Equal(BarkTrigger.Dance, l.Trigger));
         Assert.Equal(0, DanceBarks.TopUp(set, "class.rogue"));
-        Assert.Equal(5, set.Lines.Count);
+        Assert.Equal(20, set.Lines.Count);
+    }
+
+    [Fact]
+    public void Sable_SpeaksAsAWoman_AndHasFifteenDanceKillTaunts()
+    {
+        var dance = DanceBarks.For("Sable", "class.rogue");
+        Assert.Contains(dance, l => l.Contains("girl") || l.Contains("lady"));
+        var kills = KillBarks.For("Sable", "class.rogue");
+        Assert.True(kills.Count >= 25, $"{kills.Count} kill lines"); // the ten first voiced plus fifteen on the dance theme
+        Assert.Equal(kills.Count, kills.Distinct().Count());
+        Assert.True(kills.Skip(10).Count(l => l.Contains("danc") || l.Contains("beat") || l.Contains("music") || l.Contains("hips") || l.Contains("shimmy") || l.Contains("squat") || l.Contains("rhythm") || l.Contains("footwork") || l.Contains("step")) >= 12);
     }
 
     [Fact]

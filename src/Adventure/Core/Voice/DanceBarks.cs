@@ -1,13 +1,14 @@
 namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
-/// What a hero crows while dancing over a kill (<see cref="Party.VictoryDance"/>): five lines per hero by roster name,
-/// else by class, else generic, topped up into the campaign's bark set like the kill lines. Engine-free.
+/// What a hero crows while dancing over a kill (<see cref="Party.VictoryDance"/>): twenty lines per hero by roster name
+/// (Sable's written for a woman, like her voice), else five by class, else five generic, topped up into the campaign's
+/// bark set like the kill lines. The first five of each hero were voiced first; new text goes at the end. Engine-free.
 /// </summary>
 public static class DanceBarks
 {
     /// <summary>A set with fewer Dance lines than this is topped up from stock.</summary>
-    public const int MinLines = 5;
+    public const int MinLines = 20;
 
     private static readonly Dictionary<string, string[]> ByName = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -18,6 +19,21 @@ public static class DanceBarks
             "Down you go, and up go my heels.",
             "Shield, sword, and a little shimmy. Full service.",
             "Who's next? I've got five more of these in me.",
+            "Brand's rule: kill it, then shake it.",
+            "The shield arm's for blocking. The hips are for this.",
+            "Don't tell the captain I can move like this.",
+            "Squat, buck, rock. Drill of the day.",
+            "That's a soldier's dance. Learned it in a tavern.",
+            "Two of each, then back to work. Discipline.",
+            "Watch the veteran. Learn something.",
+            "I don't do it pretty. I do it done.",
+            "My knees disagree with the squats. My knees lost.",
+            "There's a wave at the end if you behave.",
+            "Stand back. Brand is celebrating.",
+            "Even a wall can dance when the enemy's down.",
+            "Shields down, hips up.",
+            "Call that a funeral march. A quick one.",
+            "Right. That's enough feeling good. Where's the next one?",
         },
         ["Sable"] = new[]
         {
@@ -26,6 +42,21 @@ public static class DanceBarks
             "Stabbed, dropped, and danced on. The Sable special.",
             "Shake it, Sable. Nobody left to watch but the rats.",
             "Oh, I'm good. I'm so good I'm dancing about it.",
+            "Hips don't lie, and neither do I. Much.",
+            "Pockets picked, hips kicked. Try and keep up.",
+            "Nobody said a girl can't gloat. Watch me gloat.",
+            "Two squats, two shimmies, one less problem.",
+            "I'd curtsey, but this is better.",
+            "A lady celebrates how she likes. This is how I like.",
+            "Dead men tell no tales, but this one's getting a dance.",
+            "Light fingers, loose hips.",
+            "Call it a victory wiggle. I call it Tuesday.",
+            "The rats are clapping. Good rats.",
+            "If you'd paid up, I'd have danced for you alive.",
+            "Shh. Don't talk over the hip rock.",
+            "This body was built for stealing and swaying. Mostly swaying.",
+            "Another one in the ledger, another little squat.",
+            "I take what I like. Tonight I like dancing.",
         },
         ["Wren"] = new[]
         {
@@ -34,6 +65,21 @@ public static class DanceBarks
             "The hunt's done. The hips take it from here.",
             "Rangers don't dance, they say. Rangers lie.",
             "Marked, shot, dropped. Now the fun part.",
+            "Quiet, both of you. I'm dancing.",
+            "Tracked it, dropped it, now I shake it off.",
+            "A ranger celebrates once. This is the once.",
+            "My arrows fly straight. My hips don't.",
+            "Forest rules: kill clean, dance short.",
+            "Two squats for the bow, two for the arrow.",
+            "I learned this from a stag. Don't ask.",
+            "Hunt's over. Hips, you have the floor.",
+            "Try the hip rock in a treeline. Builds balance.",
+            "I don't smile. I squat.",
+            "Something had to die for me to dance. It did.",
+            "Nock, loose, wiggle. In that order.",
+            "The woods never saw me do this. The woods are lucky.",
+            "It stood still. I didn't.",
+            "One wave for the dead, then we move.",
         },
         ["Ilex"] = new[]
         {
@@ -42,6 +88,21 @@ public static class DanceBarks
             "I have reduced you to ash, and I shall now wiggle about it.",
             "A scholar's dance. Dignified. Mostly.",
             "Science wins again, and science has rhythm.",
+            "Thaumaturgy, then choreography.",
+            "The academy would expel me for this hip rock. Worth it.",
+            "Two squats: the recommended dose after any incineration.",
+            "Observe the mage in motion. Rare. Treasure it.",
+            "Cinders settle; a scholar sways.",
+            "My robes were not cut for this. I persist.",
+            "Fire, then footwork. Both precise.",
+            "Ashes to ashes, hips to hips.",
+            "The spell cost mana. The dance is free.",
+            "A wiggle in the name of natural philosophy.",
+            "Let the record show: the mage can move.",
+            "Combustion complete. Commence the shimmy.",
+            "I calculated the angle of every squat. Flawless.",
+            "Dignity is for the unburnt.",
+            "Rhythm is merely applied mathematics. Behold.",
         },
     };
 

@@ -1088,6 +1088,126 @@
             "VoiceId": "497acc83c615843e",
             "Delivery": "cheerful"
           }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Brand\u0027s rule: kill it, then shake it.",
+            "VoiceId": "184cfe810343b51b",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "The shield arm\u0027s for blocking. The hips are for this.",
+            "VoiceId": "bc8c4de8c7c48043",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Don\u0027t tell the captain I can move like this.",
+            "VoiceId": "6749f76567527a4b",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Squat, buck, rock. Drill of the day.",
+            "VoiceId": "15f8201ff344407d",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "That\u0027s a soldier\u0027s dance. Learned it in a tavern.",
+            "VoiceId": "1b47628297052d9a",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Two of each, then back to work. Discipline.",
+            "VoiceId": "f08345fddbe0a04b",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Watch the veteran. Learn something.",
+            "VoiceId": "428d5f732123f613",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I don\u0027t do it pretty. I do it done.",
+            "VoiceId": "b7ef3aaeac50c853",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "My knees disagree with the squats. My knees lost.",
+            "VoiceId": "f3ded123fbf2aa77",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "There\u0027s a wave at the end if you behave.",
+            "VoiceId": "2103a64080ef91f0",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Stand back. Brand is celebrating.",
+            "VoiceId": "138e96a0c3b040cf",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Even a wall can dance when the enemy\u0027s down.",
+            "VoiceId": "fb347588534af60e",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Shields down, hips up.",
+            "VoiceId": "339fcdf54db691a8",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Call that a funeral march. A quick one.",
+            "VoiceId": "95ccb222e816d6af",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Right. That\u0027s enough feeling good. Where\u0027s the next one?",
+            "VoiceId": "f85606cb52916d9d",
+            "Delivery": "cheerful"
+          }
         }
       ]
     },
@@ -1469,6 +1589,246 @@
             "VoiceId": "128b3500c1d7e5d5",
             "Delivery": "cheerful"
           }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Dead. Cue the music.",
+            "VoiceId": "887c19b898e4fce7",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Stabbed in time with the beat.",
+            "VoiceId": "1a5ea9bd98ead7f1",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "That\u0027s the knife work done. Now the footwork.",
+            "VoiceId": "798f7a84ce3f22c7",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "One less partner. Shame, he had rhythm.",
+            "VoiceId": "fe6158ba7d43ef7d",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Drop. Good. Now watch me not.",
+            "VoiceId": "0f30f90ef4b5cd2e",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Quiet now. I like to dance in silence.",
+            "VoiceId": "6321b49ef52243ac",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Pockets first, then the hips.",
+            "VoiceId": "c5aec2758a3c0301",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Fell like a drunk on a dance floor. Stays like one too.",
+            "VoiceId": "99e86fa79e16acc0",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Knife in, knife out, step to the left.",
+            "VoiceId": "710dc63c793371a2",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "I\u0027ve killed quieter, but never prettier.",
+            "VoiceId": "983e756e8bbbc8d6",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Boot on the chest, shimmy to follow.",
+            "VoiceId": "a4e269fc06e07f75",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "That one didn\u0027t see the blade or the squat coming.",
+            "VoiceId": "5961a2f6d85825f6",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Oh, you dropped something. Everything, actually.",
+            "VoiceId": "7c8bdc99545c3a84",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "A girl\u0027s got to warm up before she dances.",
+            "VoiceId": "a93a509616426ddf",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Kill",
+          "Line": {
+            "Text": "Nothing personal. Everything rhythmic.",
+            "VoiceId": "4544dff887b44dbb",
+            "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Hips don\u0027t lie, and neither do I. Much.",
+            "VoiceId": "adafd32a0cc13d32",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Pockets picked, hips kicked. Try and keep up.",
+            "VoiceId": "5f17f76b26431588",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Nobody said a girl can\u0027t gloat. Watch me gloat.",
+            "VoiceId": "43cf5814e4889e9f",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Two squats, two shimmies, one less problem.",
+            "VoiceId": "01e69ef7f06cd51b",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I\u0027d curtsey, but this is better.",
+            "VoiceId": "065e504c84cb5627",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "A lady celebrates how she likes. This is how I like.",
+            "VoiceId": "deb7a1b6b5531336",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Dead men tell no tales, but this one\u0027s getting a dance.",
+            "VoiceId": "c77aab9ab51a39e6",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Light fingers, loose hips.",
+            "VoiceId": "06d4beaf809ccce9",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Call it a victory wiggle. I call it Tuesday.",
+            "VoiceId": "1b2e9d52d5b3e45c",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "The rats are clapping. Good rats.",
+            "VoiceId": "ad6aa1cc103c3d80",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "If you\u0027d paid up, I\u0027d have danced for you alive.",
+            "VoiceId": "e79e57abba3824f3",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Shh. Don\u0027t talk over the hip rock.",
+            "VoiceId": "952f0c992fb6cd7d",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "This body was built for stealing and swaying. Mostly swaying.",
+            "VoiceId": "0e3f620d5d127f53",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Another one in the ledger, another little squat.",
+            "VoiceId": "6b94d04932f8838e",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I take what I like. Tonight I like dancing.",
+            "VoiceId": "49156bb89dcd8db5",
+            "Delivery": "cheerful"
+          }
         }
       ]
     },
@@ -1840,6 +2200,126 @@
           "Line": {
             "Text": "Marked, shot, dropped. Now the fun part.",
             "VoiceId": "7fa8893871ef8305",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Quiet, both of you. I\u0027m dancing.",
+            "VoiceId": "2c0a99001ab0f6ce",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Tracked it, dropped it, now I shake it off.",
+            "VoiceId": "dc6d4b347d1d1c1c",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "A ranger celebrates once. This is the once.",
+            "VoiceId": "7af82a09e0a9a5e8",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "My arrows fly straight. My hips don\u0027t.",
+            "VoiceId": "f3e0fc35cdf97fca",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Forest rules: kill clean, dance short.",
+            "VoiceId": "96e7f8c1ed1c6744",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Two squats for the bow, two for the arrow.",
+            "VoiceId": "9adb7ebd088570de",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I learned this from a stag. Don\u0027t ask.",
+            "VoiceId": "493f6e92e1570428",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Hunt\u0027s over. Hips, you have the floor.",
+            "VoiceId": "e0a37bc658c51b70",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Try the hip rock in a treeline. Builds balance.",
+            "VoiceId": "057ac54fdc854125",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I don\u0027t smile. I squat.",
+            "VoiceId": "395d68080a6c8d3c",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Something had to die for me to dance. It did.",
+            "VoiceId": "a72b53e830fde08c",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Nock, loose, wiggle. In that order.",
+            "VoiceId": "5abbe734d421ff98",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "The woods never saw me do this. The woods are lucky.",
+            "VoiceId": "20ceafa10db910d4",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "It stood still. I didn\u0027t.",
+            "VoiceId": "e57361b0a2dd2eb0",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "One wave for the dead, then we move.",
+            "VoiceId": "d006dbc5a5f888ef",
             "Delivery": "cheerful"
           }
         }
@@ -2221,6 +2701,126 @@
           "Line": {
             "Text": "Science wins again, and science has rhythm.",
             "VoiceId": "e6bc8182e3c99182",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Thaumaturgy, then choreography.",
+            "VoiceId": "8f311538eba6bdcd",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "The academy would expel me for this hip rock. Worth it.",
+            "VoiceId": "6668353ca27a9f3e",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Two squats: the recommended dose after any incineration.",
+            "VoiceId": "f024b4a0421cb01b",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Observe the mage in motion. Rare. Treasure it.",
+            "VoiceId": "c289251a0313894b",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Cinders settle; a scholar sways.",
+            "VoiceId": "ef73958a460f9dd1",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "My robes were not cut for this. I persist.",
+            "VoiceId": "9c33cccc1a99cdeb",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Fire, then footwork. Both precise.",
+            "VoiceId": "d2c9070693302d0e",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Ashes to ashes, hips to hips.",
+            "VoiceId": "0a8a37f793c78c72",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "The spell cost mana. The dance is free.",
+            "VoiceId": "86d76d7087cd9b12",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "A wiggle in the name of natural philosophy.",
+            "VoiceId": "1825c1473b7d316a",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Let the record show: the mage can move.",
+            "VoiceId": "3a5e94f136eef601",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Combustion complete. Commence the shimmy.",
+            "VoiceId": "e6f5ee1a968893b0",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I calculated the angle of every squat. Flawless.",
+            "VoiceId": "1b5bd2703b6f5917",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Dignity is for the unburnt.",
+            "VoiceId": "91d467fac672643e",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Rhythm is merely applied mathematics. Behold.",
+            "VoiceId": "bc023019351e9394",
             "Delivery": "cheerful"
           }
         }
