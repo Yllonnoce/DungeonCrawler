@@ -1,6 +1,6 @@
 # Viewer cast in their campaign roles
 
-**Date:** 2026-10-24. **Status:** design, awaiting approval.
+**Date:** 2026-10-24. **Status:** superseded. The fighters were placed from code instead (`DungeonBuilder.ViewerFighters`, 2026-10-25) and quest NPCs got bodies by role through `NpcBodies` on 2026-10-29; kept as the record of the data-driven alternative.
 
 ## Intent
 
