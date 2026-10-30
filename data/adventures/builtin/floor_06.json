@@ -190,7 +190,7 @@
       "Id": "npc_maud_6",
       "Name": "Maud Sorrel",
       "Room": 6,
-      "VoiceId": "Despina",
+      "VoiceId": "Gacrux",
       "Script": {
         "Start": "m6_dry",
         "Nodes": [
@@ -198,7 +198,7 @@
             "Id": "m6_dry",
             "Line": {
               "Text": "Dry? Am I? So I am. The water goes round me the way it goes round a stone it has had long enough. Keep wading; the Gut is only a swallow away.",
-              "VoiceId": "6bcb1fc24b43b15d",
+              "VoiceId": "37baa6efaa38d3dd",
               "Delivery": null
             },
             "Choices": [
@@ -235,7 +235,7 @@
             "Id": "m6_ahead",
             "Line": {
               "Text": "I did not hurry. I never hurry. He is slow, and I go at His pace, and somehow that is always one floor further than yours.",
-              "VoiceId": "d65c4f343bfc5b7e",
+              "VoiceId": "595823a292ae196a",
               "Delivery": null
             },
             "Choices": [
@@ -254,7 +254,7 @@
             "Id": "m6_tamsin",
             "Line": {
               "Text": "Tamsin. Yes. She thinks He is a vein. Let her; gold is a kinder word than the right one, and she laughs, which He likes.",
-              "VoiceId": "a01d978517819834",
+              "VoiceId": "0fcf818636e2bca8",
               "Delivery": null
             },
             "Choices": [

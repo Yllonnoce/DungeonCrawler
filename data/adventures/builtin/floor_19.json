@@ -253,7 +253,7 @@
       "Id": "npc_maud",
       "Name": "Maud Sorrel",
       "Room": 2,
-      "VoiceId": "Despina",
+      "VoiceId": "Gacrux",
       "Script": {
         "Start": "m_open",
         "Nodes": [
@@ -261,7 +261,7 @@
             "Id": "m_open",
             "Line": {
               "Text": "I have carried this verse since the lychgate and I am tired of the weight of it. Stand in the galleries. The Choir will come for the parts I cannot sing.",
-              "VoiceId": "da78b9476a1c1b55",
+              "VoiceId": "ffb116a6862cf01d",
               "Delivery": null
             },
             "Choices": [
@@ -307,7 +307,7 @@
             "Id": "m_which",
             "Line": {
               "Text": "Something ends either way, dear. Mine, or His three hundred years of being tucked in. Say which you chose above, and I will sing that one.",
-              "VoiceId": "b1dc9088bece3132",
+              "VoiceId": "ac47f848a27bd8ad",
               "Delivery": null
             },
             "Choices": [
@@ -344,7 +344,7 @@
             "Id": "m_done",
             "Line": {
               "Text": "Finished. The tiles are warm; they were never tiles. The stair below remembers it is a throat, and it is opening.",
-              "VoiceId": "8e5bf5898dbf30a5",
+              "VoiceId": "db48f2b995c936f0",
               "Delivery": null
             },
             "Choices": [
@@ -398,27 +398,27 @@
       "Lines": {
         "Offer": {
           "Text": "Three galleries, three mouths, one old woman with the words. Keep them off me for the length of a hymn and this is done with.",
-          "VoiceId": "f82d6186e49022a0",
+          "VoiceId": "cae59e15adb410f0",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Do not listen too closely; the tune gets into people.",
-          "VoiceId": "549ab1a68433d937",
+          "VoiceId": "ebf72f0e60df20b3",
           "Delivery": null
         },
         "Decline": {
           "Text": "Then I shall wait here and hum it, and we shall all be very old before anything changes.",
-          "VoiceId": "b42e8fb3bdb50bfe",
+          "VoiceId": "8df1ba72bdaf8a8d",
           "Delivery": null
         },
         "Complete": {
           "Text": "There. Three hundred years of the same line, and someone finally sang the next one.",
-          "VoiceId": "e66adabf7eb7f1dd",
+          "VoiceId": "f80b93e985a6bf9b",
           "Delivery": null
         },
         "Fail": {
           "Text": "The verse is dropped. Pick me up; the Choir will start again from the top, and so, I am afraid, must we.",
-          "VoiceId": "1d4d194f5f62e1dd",
+          "VoiceId": "b1d0faf65c381653",
           "Delivery": null
         }
       },

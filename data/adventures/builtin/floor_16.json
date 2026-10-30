@@ -342,7 +342,7 @@
       "Id": "npc_maud_16",
       "Name": "Maud Sorrel",
       "Room": 9,
-      "VoiceId": "Despina",
+      "VoiceId": "Gacrux",
       "Script": {
         "Start": "m1",
         "Nodes": [
@@ -350,7 +350,7 @@
             "Id": "m1",
             "Line": {
               "Text": "I walked this hall asleep an hour ago and something fell out of my sleeve. A letter. I don\u0027t write letters. I only carry things as far as the water.",
-              "VoiceId": "22f7149bb6fc21c5",
+              "VoiceId": "1356428100d7207b",
               "Delivery": null
             },
             "Choices": [
@@ -387,7 +387,7 @@
             "Id": "m2",
             "Line": {
               "Text": "It went to pieces in three halls, the way paper does down here. The young deacon\u0027s voice is in the Choir now, so he cannot fetch them. Fetch them, and I will know what I was carrying.",
-              "VoiceId": "81838ba5f8eda31a",
+              "VoiceId": "93ac1c9c4a02f13c",
               "Delivery": null
             },
             "Choices": [
@@ -424,7 +424,7 @@
             "Id": "m3",
             "Line": {
               "Text": "Read it to me slowly, when you have it. He likes being read to. It is the nearest thing to a voice He has had in three hundred years.",
-              "VoiceId": "202ab9846f5dc4ee",
+              "VoiceId": "ef56ce79dd9b8a6d",
               "Delivery": null
             },
             "Choices": [
@@ -536,27 +536,27 @@
       "Lines": {
         "Offer": {
           "Text": "Three pieces in three halls. I would fetch them myself, but I only go downward, and never twice over the same stone.",
-          "VoiceId": "7c83b76808a2f452",
+          "VoiceId": "69a438210f16fa27",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Keep to the outer ring. The singers are fond of the middle, and so, I think, is the one beneath it.",
-          "VoiceId": "463e871994d2007b",
+          "VoiceId": "04d466175fc9811d",
           "Delivery": null
         },
         "Decline": {
           "Text": "As you like. It will still be there when you come back up, and so will I, which is the sadder of the two facts.",
-          "VoiceId": "2b2f09e95a1ee020",
+          "VoiceId": "cdc9745ffd9fd58d",
           "Delivery": null
         },
         "Complete": {
           "Text": "\u0027Send the usual. Something fierce this time; He stirs.\u0027 The verger\u0027s hand, the council\u0027s seal. You were ordered, dears. You were not hired.",
-          "VoiceId": "ec911ea0e51385fb",
+          "VoiceId": "a7328cefe612cbb8",
           "Delivery": null
         },
         "Fail": {
           "Text": "Paper rots quickly in a throat. No matter. I remember the wording; I have been carrying it since before you were apprenticed.",
-          "VoiceId": "4bea74352574648b",
+          "VoiceId": "2f6086bf5fbd4c5e",
           "Delivery": null
         }
       },

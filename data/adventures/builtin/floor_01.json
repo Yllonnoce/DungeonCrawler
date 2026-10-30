@@ -388,7 +388,7 @@
       "Id": "npc_maud_1",
       "Name": "Maud Sorrel",
       "Room": 3,
-      "VoiceId": "Despina",
+      "VoiceId": "Gacrux",
       "Script": {
         "Start": "m1_step",
         "Nodes": [
@@ -396,7 +396,7 @@
             "Id": "m1_step",
             "Line": {
               "Text": "Mind the step, inspectors; it is wet where He breathes out. I am going down ahead of you. I always am.",
-              "VoiceId": "e8a7710b64fce6a4",
+              "VoiceId": "2a95db19929538d4",
               "Delivery": null
             },
             "Choices": [
@@ -433,7 +433,7 @@
             "Id": "m1_who",
             "Line": {
               "Text": "Maud. Maud Sorrel, from the lane behind the chandler\u0027s. Thirty-eight years I have been coming down here and I have never once been cold.",
-              "VoiceId": "218e7775c08d1126",
+              "VoiceId": "0acf8933cdbf53a4",
               "Delivery": null
             },
             "Choices": [
@@ -461,7 +461,7 @@
             "Id": "m1_back",
             "Line": {
               "Text": "Up? No, dear. Up is where the wells are sour. Down is where the sleep is. You will see; everyone does, in the end.",
-              "VoiceId": "b73d6737b86f8e9d",
+              "VoiceId": "bb60a0becf06b58c",
               "Delivery": null
             },
             "Choices": [

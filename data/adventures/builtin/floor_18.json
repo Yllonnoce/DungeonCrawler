@@ -244,7 +244,7 @@
       "Id": "npc_maud",
       "Name": "Maud Sorrel",
       "Room": 0,
-      "VoiceId": "Despina",
+      "VoiceId": "Gacrux",
       "Script": {
         "Start": "n_sit",
         "Nodes": [
@@ -252,7 +252,7 @@
             "Id": "n_sit",
             "Line": {
               "Text": "Forgive the size of me. I have been trying to turn over for three hundred years and a small man keeps his hand across my mouth. Put down the ledger, the contract, the moulds, the letter. Sit.",
-              "VoiceId": "c02bfa626e559d41",
+              "VoiceId": "7e3f4b75fe00f4b5",
               "Delivery": "calm"
             },
             "Choices": [
@@ -280,7 +280,7 @@
             "Id": "n_verger",
             "Line": {
               "Text": "A verger. He tends me the way a man tends a grave: tidily, so that nothing ever comes up. Four of you every nineteen years, and your wells run sweet. That is the whole of the arithmetic.",
-              "VoiceId": "4fb265a6e1c2090d",
+              "VoiceId": "3431de2973d82a90",
               "Delivery": "calm"
             },
             "Choices": [
@@ -299,7 +299,7 @@
             "Id": "n_choose",
             "Line": {
               "Text": "Below is the last station. Finish the pilgrimage and I open my eyes, and Dunmarrow learns what it stands on. Or burn the contract and I dream on, and your town keeps its souls. I will not argue either way.",
-              "VoiceId": "1345315b5244d92c",
+              "VoiceId": "8788be7206fc4857",
               "Delivery": "calm"
             },
             "Choices": [
@@ -362,27 +362,27 @@
       "Lines": {
         "Offer": {
           "Text": "Four papers and four graves say the same word. Choose it aloud, inspectors: my eyes open, or the contract burns and the dream goes deeper. Either is a kindness; neither is clean.",
-          "VoiceId": "616b51ea4769b3da",
+          "VoiceId": "fbbb3587b502e4a6",
           "Delivery": "calm"
         },
         "Accept": {
           "Text": "Said, then. Carry it down. He will hear it before you reach him; he hears everything that happens in my throat.",
-          "VoiceId": "2c21145b940b8e8f",
+          "VoiceId": "601bef6eee925901",
           "Delivery": "calm"
         },
         "Decline": {
           "Text": "Then stand there a while. I have waited three hundred years; I can wait out a quiet spell from four plumbers.",
-          "VoiceId": "15150fe08e9fa44b",
+          "VoiceId": "52a14868f86671f1",
           "Delivery": "calm"
         },
         "Complete": {
           "Text": "Thank you for coming. Nobody has, before. They were sent, and that is a different verb.",
-          "VoiceId": "1d9cd4bfe5f15851",
+          "VoiceId": "30ff212b4e203785",
           "Delivery": "calm"
         },
         "Fail": {
           "Text": "No matter. The verse finishes itself eventually, with or without a mouth.",
-          "VoiceId": "1dc42905fa83d39d",
+          "VoiceId": "fdb725a819a6efb7",
           "Delivery": "weary"
         }
       },

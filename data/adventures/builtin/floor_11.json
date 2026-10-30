@@ -339,7 +339,7 @@
       "Id": "npc_maud_11",
       "Name": "Maud Sorrel",
       "Room": 8,
-      "VoiceId": "Despina",
+      "VoiceId": "Gacrux",
       "Script": {
         "Start": "m11_shh",
         "Nodes": [
@@ -347,7 +347,7 @@
             "Id": "m11_shh",
             "Line": {
               "Text": "Shh. Ulf is working, and he sings when he works, and I like the singing. He thinks he casts kettles. Let him; it is kind, what he thinks.",
-              "VoiceId": "905e3dd6047eaf52",
+              "VoiceId": "5b61a3853c98f383",
               "Delivery": null
             },
             "Choices": [
@@ -384,7 +384,7 @@
             "Id": "m11_faces",
             "Line": {
               "Text": "Faces, dear. Small ones. You will see them two floors down and you will wish you had not. Go on; I will be at the Dream Door before you.",
-              "VoiceId": "f00ea16e5a4d2401",
+              "VoiceId": "b5713d3d323b9948",
               "Delivery": null
             },
             "Choices": [
@@ -403,7 +403,7 @@
             "Id": "m11_warm",
             "Line": {
               "Text": "It is warm, and He is loudest here, where His heart is. One sleeps where one can hear the one who dreams one. You will learn that too.",
-              "VoiceId": "5606b6a8873d92cd",
+              "VoiceId": "a25ee0ff7c605ab7",
               "Delivery": null
             },
             "Choices": [

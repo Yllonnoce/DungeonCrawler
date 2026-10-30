@@ -62,7 +62,7 @@ public static class RunwareVoices
         ["inworld"] = new()
         {
             ["Schedar"] = "Hades", ["Sadaltager"] = "Conrad", ["Achird"] = "Oliver", ["Fenrir"] = "Dominus",
-            ["Sulafat"] = "Riley", ["Gacrux"] = "Miranda", ["Zephyr"] = "Tessa", ["Autonoe"] = "Deborah", ["Iapetus"] = "Theodore",
+            ["Sulafat"] = "Riley", ["Gacrux"] = "Wendy", ["Zephyr"] = "Tessa", ["Autonoe"] = "Deborah", ["Iapetus"] = "Theodore", // Gacrux: Maud Sorrel, an old woman
         },
     };
 
@@ -80,7 +80,7 @@ public static class RunwareVoices
     }
 
     private static readonly HashSet<string> InworldWomen = new(StringComparer.OrdinalIgnoreCase)
-        { "Loretta", "Evelyn", "Tessa", "Abby", "Pippa", "Deborah", "Riley", "Miranda", "Marlene", "Julia", "Olivia", "Ashley", "Luna", "Celeste", "Chloe", "Darlene", "Amina" };
+        { "Loretta", "Evelyn", "Tessa", "Abby", "Pippa", "Deborah", "Riley", "Miranda", "Marlene", "Julia", "Olivia", "Ashley", "Luna", "Celeste", "Chloe", "Darlene", "Amina", "Wendy", "Elizabeth", "Sarah", "Pixie", "Priya" };
     private static readonly HashSet<string> InworldMen = new(StringComparer.OrdinalIgnoreCase)
         { "Mortimer", "Graham", "Hank", "Liam", "Callum", "Hamish", "Theodore", "Hades", "Conrad", "Oliver", "Dominus", "Edward", "Dennis", "Alex", "Brian", "Sebastian", "Gareth" };
 
