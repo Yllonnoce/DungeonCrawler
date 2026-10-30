@@ -110,16 +110,16 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public void Interact(PartyController party, Adventurer actor)
     {
         if (Dead) return;
-        if (Mode == NpcMode.Fighter && Downed) { if (!Net.NetSession.IsClient) TryRevive(); return; }
+        // on a co-op client only talking is local; freeing a prisoner, starting the rite or getting a fighter up is the server's to do
+        if (Net.NetSession.IsClient && (Mode is NpcMode.Ritualist or NpcMode.Prisoner || (Mode == NpcMode.Fighter && Downed))) { Net.NetSession.Instance.Send(new Net.InteractIntent(Net.NetRefs.Npc(Id))); return; }
+        if (Mode == NpcMode.Fighter && Downed) { TryRevive(); return; }
         switch (Mode)
         {
             case NpcMode.Ritualist:
-                if (Net.NetSession.IsClient) return; // the intent went to the server
                 if (Downed) { TryRevive(); return; }
                 (Objectives.ObjectiveController.Instance as Objectives.RitualController)?.Begin(this);
                 return;
             case NpcMode.Prisoner:
-                if (Net.NetSession.IsClient) return;
                 (Objectives.ObjectiveController.Instance as Objectives.JailbreakController)?.OnInteract(this, party, actor);
                 return;
         }
@@ -399,7 +399,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         dest = null;
         speed = WalkSpeed;
         _home ??= GlobalPosition;
-        var foe = NearestEnemy(GlobalPosition, NpcFight.SightRange, out var dist);
+        // nobody of the party about (a server floor built before anyone joined): stand down rather than settle the bout alone
+        var partyNear = Main.Instance?.Party is { } p && NpcFight.PartyNear(p.Active.Where(a => !a.Downed).Select(a => new Vector2(a.GlobalPosition.X - GlobalPosition.X, a.GlobalPosition.Z - GlobalPosition.Z).Length()));
+        var dist = 0f;
+        var foe = partyNear ? NearestEnemy(GlobalPosition, NpcFight.SightRange, out dist) : null;
         if (foe != null)
         {
             if (_foe != foe) { _foe = foe; _swing = 0f; _struck = false; EventBus.Instance.Log($"{NpcName} squares up to {foe.DisplayName}!"); GD.Print($"[Npc] {NpcName} squares up to {foe.DisplayName} ({dist:0.0} m away)"); }

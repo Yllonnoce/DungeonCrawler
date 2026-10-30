@@ -124,6 +124,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.Prop)] public sealed record PropEvt(string Ref, string What) : NetMessage;
 /// <summary>A member's body performs for show: "victory" is the dance over a kill. Every screen plays it on that member.</summary>
 [Msg(MsgKind.Emote)] public sealed record EmoteEvt(int Member, string Emote) : NetMessage;
+/// <summary>The server's verdict on a client's "will you fight alongside us?": the fighter said yes (and now follows) or no.</summary>
+[Msg(MsgKind.DialogueAnswer)] public sealed record DialogueAnswer(string NpcId, bool Accepted) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

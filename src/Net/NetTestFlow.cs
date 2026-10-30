@@ -1,3 +1,4 @@
+using DungeonCrawler.Adventure;
 using DungeonCrawler.Core;
 using Godot;
 
@@ -159,7 +160,7 @@ public partial class NetTestFlow : Node
                 var me = main.Party.Local!;
                 _chest ??= main.Builder.FloorRoot?.GetChildren().OfType<Dungeon.Props.Chest>().Where(c => !c.Opened && !c.Locked).OrderBy(c => c.GlobalPosition.DistanceSquaredTo(me.GlobalPosition)).FirstOrDefault();
                 var chest = _chest;
-                if (chest == null) { GD.Print("[net] no unlocked chest on this floor; skipping"); _clock = 0; _step = 7; return; }
+                if (chest == null) { GD.Print("[net] no unlocked chest on this floor; skipping"); _clock = 0; _step = 12; return; }
                 if (!_placed3)
                 {
                     // a step back from the chest on the walkable side, at its level
@@ -171,8 +172,39 @@ public partial class NetTestFlow : Node
                     return;
                 }
                 if (_clock > 0.8 && !_askedChest) { _askedChest = true; net.Send(new InteractIntent(NetRefs.Chest(chest.SpawnIndex))); }
-                if (client.Trace.Contains("chest") && chest.Opened) { GD.Print($"[net] chest opened, {client.Trace.Count(t => t == "loot") - _lootBefore} item(s) spilled"); _clock = 0; _step = 7; }
+                if (client.Trace.Contains("chest") && chest.Opened) { GD.Print($"[net] chest opened, {client.Trace.Count(t => t == "loot") - _lootBefore} item(s) spilled"); _clock = 0; _step = 12; }
                 else if (_clock > 8) Finish("[net]", false, $"chest never opened (trace=[{string.Join(", ", client.Trace)}])");
+                return;
+            }
+            case 12:
+            {
+                // a fighter on this floor: ask it to join through the dialogue; the server decides and its answer picks the line we see
+                var me = main.Party.Local!;
+                var fighter = main.Builder.FloorRoot?.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Mode == NpcMode.Fighter && !n.Dead);
+                if (fighter == null) { GD.Print("[net] no fighter on this floor; skipping the join"); _clock = 0; _step = 7; return; }
+                var dialogue = main.Hud.Dialogue;
+                if (!_placedJoin)
+                {
+                    var cell = Dungeon.DungeonBuilder.WalkableNeighbor(main.Builder.Layout!, Dungeon.DungeonBuilder.WorldToCell(fighter.GlobalPosition));
+                    me.Teleport(main.Builder.Surface(cell) + Vector3.Up * 0.3f, fighter.GlobalPosition);
+                    main.Hud.OpenDialogue(fighter);
+                    var join = dialogue.Choices.ToList().FindIndex(c => c.Effect == DialogueEffect.Join);
+                    if (join < 0) { Finish("[net]", false, $"{fighter.NpcName}'s dialogue offers no Join choice"); return; }
+                    dialogue.Choose(join);
+                    _placedJoin = true; _clock = 0; return;
+                }
+                var answered = client.Trace.Contains("joined") || client.Trace.Contains("refused");
+                if (answered && _clock > 1.5)
+                {
+                    var yes = client.Trace.Contains("joined");
+                    var shown = dialogue.Node?.Id;
+                    var agree = shown == (yes ? "yes" : "no") && fighter.Escorting == yes;
+                    GD.Print($"[net] asked {fighter.NpcName} to join: server said {(yes ? "yes" : "no")}, dialogue shows '{shown}', escorting={fighter.Escorting}");
+                    dialogue.Close();
+                    if (!agree) { Finish("[net]", false, $"join answer and screen disagree (server {(yes ? "yes" : "no")}, node {shown}, escorting {fighter.Escorting})"); return; }
+                    _clock = 0; _step = 7;
+                }
+                else if (_clock > 8) Finish("[net]", false, $"no answer to the join question (dialogue node {dialogue.Node?.Id}, trace=[{string.Join(", ", client.Trace.Distinct())}])");
                 return;
             }
             case 7:
@@ -261,6 +293,7 @@ public partial class NetTestFlow : Node
     private void Trace(string what) => GD.Print($"[net] {what}");
     private Vector3? _startAfterPose, _hazardReturn;
     private int _placements, _placementsAtFloor2;
+    private bool _placedJoin;
     /// <summary>The server placed our body (a ForcePose): the start position on floor 1, and the arrival spot after a floor change.</summary>
     public void NotePlaced(Vector3 at) { _startAfterPose = at; _placements++; }
 }

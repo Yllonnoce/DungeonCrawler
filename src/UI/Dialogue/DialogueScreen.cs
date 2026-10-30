@@ -24,6 +24,7 @@ public partial class DialogueScreen : Control
     private VBoxContainer _moves = null!;
     private Label _moveStatus = null!;
     private readonly List<ChoicePlan> _shown = new();
+    private ChoicePlan? _pendingJoin; // a co-op client asked a fighter to join and waits for the server's answer
     private double _speakUntil; // the NPC counts as speaking until then even with no audio (an unvoiced line, read at talking pace)
 
     /// <summary>True while the NPC's current line is being spoken: its voice is playing, or an unvoiced line is still being "read".</summary>
@@ -152,8 +153,15 @@ public partial class DialogueScreen : Control
 
     public void Choose(int index)
     {
-        if (Npc == null || index < 0 || index >= _shown.Count) return;
+        if (Npc == null || index < 0 || index >= _shown.Count || _pendingJoin != null) return;
         var choice = _shown[index];
+        if (choice.Effect == DialogueEffect.Join && Net.NetSession.IsClient)
+        {
+            // the server's fighter decides; the yes or no line comes back as a DialogueAnswer
+            _pendingJoin = choice;
+            Net.NetSession.Instance.Send(new Net.DialogueChoiceIntent(Npc.Id, choice.Effect, choice.Flag));
+            return;
+        }
         if (choice.Effect == DialogueEffect.Join && !Net.NetSession.IsClient)
         {
             // the character decides on the spot; the answer picks which line comes next
@@ -174,10 +182,22 @@ public partial class DialogueScreen : Control
         Show(next);
     }
 
+    /// <summary>The server's word on a Join choice made on this client: show the fighter's yes or no line.</summary>
+    public void OnJoinAnswer(string npcId, bool accepted)
+    {
+        if (!Visible || Npc == null || Npc.Id != npcId || _pendingJoin is not { } choice) return;
+        _pendingJoin = null;
+        var target = accepted ? choice.Next : choice.NextIfRefused;
+        var answer = target == null ? null : Npc.Script.Nodes.FirstOrDefault(n => n.Id == target);
+        if (answer == null) { Close(); return; }
+        Show(answer);
+    }
+
     public void Close()
     {
         if (!Visible) return;
         Visible = false;
+        _pendingJoin = null;
         Npc?.Converse(null); // back to Idle once the conversation ends
         Npc = null;
         Node = null;

@@ -47,4 +47,6 @@ public enum MsgKind : byte
     HazardPhase, RescueIntent, ShoutIntent,
     // a member's body doing something for show (v4): the victory dance over a kill
     Emote,
+    // the server's answer to a Join choice (v4): the client shows the yes or the no line
+    DialogueAnswer,
 }

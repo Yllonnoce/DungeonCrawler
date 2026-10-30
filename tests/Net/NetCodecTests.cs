@@ -37,6 +37,14 @@ public class NetCodecTests
     }
 
     [Fact]
+    public void DialogueAnswer_RoundTrips_SoTheClientShowsTheRealOutcome()
+    {
+        var a = RoundTrip(new DialogueAnswer("viewer_foehammer", false));
+        Assert.Equal("viewer_foehammer", a.NpcId);
+        Assert.False(a.Accepted);
+    }
+
+    [Fact]
     public void Emote_RoundTrips_SoEveryoneSeesTheDance()
     {
         var e = RoundTrip(new EmoteEvt(2, "victory"));

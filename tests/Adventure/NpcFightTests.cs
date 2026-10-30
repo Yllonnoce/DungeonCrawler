@@ -30,6 +30,16 @@ public class NpcFightTests
 public class NpcJoinTests
 {
     [Fact]
+    public void AFighter_OnlyPicksFights_WithThePartyNearby()
+    {
+        // a dedicated server builds the floor long before anyone joins: Foehammer must not settle the orc alone
+        Assert.False(NpcFight.PartyNear(Array.Empty<float>()));
+        Assert.False(NpcFight.PartyNear(new[] { NpcFight.PartyNearRange + 1f, 60f }));
+        Assert.True(NpcFight.PartyNear(new[] { 45f, NpcFight.PartyNearRange - 1f }));
+        Assert.InRange(NpcFight.PartyNearRange, 12f, 30f); // the party arriving by the stairs is within it; the far end of the floor is not
+    }
+
+    [Fact]
     public void Decides_IsStablePerAsk_AndSaysYesAboutSevenTimesInTen()
     {
         Assert.Equal(NpcFight.Decides(42, "viewer_foehammer", 1), NpcFight.Decides(42, "viewer_foehammer", 1));

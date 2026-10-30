@@ -17,6 +17,9 @@ public static class NpcFight
     public const float Recover = 1.0f;
     /// <summary>A fighter has this many times a plain NPC's hit points.</summary>
     public const float HpMultiplier = 3f;
+    /// <summary>A fighter only picks a fight while a standing party member is within this (metres, flat): a dedicated server builds the floor long before anyone arrives, and the showpiece bout by the stairs must wait for them.</summary>
+    public const float PartyNearRange = 20f;
+    public static bool PartyNear(IEnumerable<float> flatDistances) => flatDistances.Any(d => d <= PartyNearRange);
 
     /// <summary>How often a fighter says yes when asked to join the party. Each ask rolls again.</summary>
     public const int JoinChancePercent = 70;

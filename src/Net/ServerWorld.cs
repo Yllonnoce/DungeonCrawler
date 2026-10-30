@@ -378,6 +378,16 @@ public partial class ServerWorld : Node
                 if (Game.Instance.Skills.Skills.TryGetValue(ls.SkillId, out var skill)) party.LearnSkill(slot.MemberIndex, skill);
                 break;
             case DialogueChoiceIntent d:
+                if (d.Effect == DialogueEffect.Join)
+                {
+                    // the fighter decides here and the asker hears the answer, so their screen shows the yes or the no line
+                    var fighter = main.Builder.FloorRoot?.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == d.NpcId);
+                    var yes = fighter?.AskToJoin() ?? false;
+                    SendTo(slot.PeerId, new DialogueAnswer(d.NpcId, yes));
+                    Trace.Add(yes ? $"escort:{fighter!.NpcName}" : $"refused:{d.NpcId}");
+                    if (NetSession.Instance.TestServer) GD.Print($"[net-server] {slot.Name} asked {d.NpcId} to join: {(yes ? "yes" : "no")}");
+                    break;
+                }
                 EventBus.Instance.RaiseDialogueEffect(d.NpcId, d.Effect, d.Flag);
                 break;
         }
