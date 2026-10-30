@@ -117,6 +117,7 @@ public partial class Stairs : Area3D, IInteractable
 
     private void OnLandingEntered(Node3D body)
     {
+        if (Net.NetSession.Instance?.TestClient == true) GD.Print($"[stairs] {Name} landing entered by {body.Name} (local {(body as Adventurer)?.IsLocal}, hud {Main.Instance?.Hud != null})");
         if (body is not Adventurer { IsLocal: true } me || Main.Instance?.Hud is not { } hud) return;
         if (!_onLanding.Add(me.GetInstanceId())) return;
         Callable.From(() => { if (_onLanding.Contains(me.GetInstanceId())) hud.AskStairs(this, me); }).CallDeferred(); // out of the physics step

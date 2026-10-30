@@ -221,7 +221,23 @@ public partial class NetTestFlow : Node
                     main.Party.Local!.Teleport(stand with { Y = down.Y + 0.3f }, down);
                     _placed4 = true; _clock = 0; return;
                 }
-                if (!_askedStairs && _clock > 0.8) { _askedStairs = true; net.Send(new InteractIntent(NetRefs.StairsDown)); _clock = 0; return; }
+                if (!_askedStairs)
+                {
+                    // walk onto the landing: the stairs must ask before we answer (the question is what a player sees)
+                    var stairs = main.Builder.FloorRoot?.GetChildren().OfType<Dungeon.Stairs>().FirstOrDefault(s => s.Direction > 0);
+                    if (stairs == null) { Finish("[net]", false, "no down stairs on this floor"); return; }
+                    if (!main.Hud.StairsPromptOpen)
+                    {
+                        if (_clock > 0.5) { main.Party.Local!.FaceToward(stairs.GlobalPosition); main.Party.ForcedMoveInput = new Vector2(0, -1); }
+                        if (_clock > 6) { main.Party.ForcedMoveInput = null; Finish("[net]", false, $"the stairs never asked (we stand {main.Party.Local!.GlobalPosition.DistanceTo(stairs.GlobalPosition):0.0} m from them, prompt open {main.Hud.StairsPromptOpen})"); }
+                        return;
+                    }
+                    main.Party.ForcedMoveInput = null;
+                    GD.Print($"[net] the stairs asked after {_clock:0.0} s: \"{stairs.Question}\"; answering yes");
+                    _askedStairs = true;
+                    stairs.Confirm(main.Party, main.Party.Local!); // the Yes button's path: a client sends the intent
+                    _clock = 0; return;
+                }
                 if (client.Trace.Contains("floor:2") && Game.Instance.CurrentFloor == 2 && main.Builder.Layout != null)
                 {
                     GD.Print($"[net] on floor 2: {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies, hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}");
