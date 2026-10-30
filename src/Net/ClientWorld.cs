@@ -84,6 +84,7 @@ public partial class ClientWorld : Node
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
+            case EmoteEvt em: if (em.Emote == "victory" && em.Member >= 0 && em.Member < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[em.Member].Celebrate(); break;
             case BossDefeatedEvt bd: OnBossDefeated(bd.Floor); break;
             case ObjectiveDoneEvt od: OnObjectiveDone(od); break;
             case ObjectiveStateMsg os: Adventure.Objectives.ObjectiveController.Instance?.ApplyNet(os.State); break;

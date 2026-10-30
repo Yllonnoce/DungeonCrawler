@@ -45,4 +45,6 @@ public enum MsgKind : byte
     ObjectiveState, ObjectiveDone,
     // lethal hazards (v3): server-owned phases, a client asking to rescue or shouting for help
     HazardPhase, RescueIntent, ShoutIntent,
+    // a member's body doing something for show (v4): the victory dance over a kill
+    Emote,
 }

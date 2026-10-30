@@ -60,6 +60,7 @@ public partial class ServerWorld : Node
         bus.MemberDowned += i => Broadcast(new MemberDownedEvt(i));
         bus.MemberRevived += i => { _mangledSince.Remove(i); _bound.Remove(i); Broadcast(new MemberRevivedEvt(i)); };
         bus.LevelUp += i => Broadcast(new LevelUpEvt(i));
+        bus.MemberKill += m => { var idx = Array.IndexOf(Main.Instance.Party.Members, m); if (idx >= 0) Broadcast(new EmoteEvt(idx, "victory")); };
         bus.PartyWiped += () => Broadcast(new PartyWipedEvt());
         bus.BossDefeated += floor => Broadcast(new BossDefeatedEvt(floor));
         bus.ObjectiveCompleted += (floor, kind) => Broadcast(new ObjectiveDoneEvt(floor, Dungeon.Generation.FloorObjectives.Id(kind)));

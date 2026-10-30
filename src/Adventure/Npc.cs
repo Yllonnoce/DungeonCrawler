@@ -73,6 +73,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// <summary>The clips the attached model can play, in the model's own order; empty without a model.</summary>
     public IReadOnlyList<string> ModelClips => _model?.Player?.GetAnimationList() ?? Array.Empty<string>();
     private string? _showcase;
+    private bool? _talking; // in a conversation: true while its line is spoken, false while it waits; null outside one
     private MeshInstance3D _body = null!, _head = null!;
     private Label3D _label = null!;
     private AnimatedModel? _model;
@@ -133,8 +134,20 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public void Showcase(string? clip)
     {
         _showcase = clip;
+        if (clip == null) _talking = null;
         if (_model == null || Dead) return;
         _model.Play(clip ?? "Idle", force: true);
+    }
+
+    /// <summary>
+    /// The pose of a conversation: Talk while <paramref name="speaking"/>, a slow HipRock while waiting for an answer
+    /// (<see cref="TalkPose"/>); null when the dialogue closes hands the body back to Idle. A move picked from the moves
+    /// grid plays out first. Local only, like <see cref="Showcase"/>.
+    /// </summary>
+    public void Converse(bool? speaking)
+    {
+        if (speaking == null) { if (_talking != null) Showcase(null); return; }
+        _talking = speaking;
     }
 
     /// <summary>Get a downed NPC up, if nothing hostile is close enough to make it pointless.</summary>
@@ -283,6 +296,15 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     private void ShowGait(float groundSpeed, float dt)
     {
         if (_model == null) return;
+        if (_talking is { } speaking && !Dead)
+        {
+            if (_showcase != null && _model.IsPlayingOneShot) return; // a move from the grid plays through first
+            _showcase = null;
+            var (clip, speed) = TalkPose.Choose(speaking);
+            if (_model.Current != clip) GD.Print($"[Talk] {Id}: {clip} x{speed:0.0}");
+            _model.Play(clip, loop: true, speed: speed);
+            return;
+        }
         var current = _model.Current is "Walk" or "Run" ? _model.Current : null;
         var gait = ModelPath != null ? ViewerGait.GaitFor(1.8f, groundSpeed, current) : groundSpeed > 0.5f ? (groundSpeed > WalkSpeed + 0.5f ? "Run" : "Walk") : "Idle";
         if (!Dead && _showcase == null && !_model.IsPlayingOneShot) _model.Play(gait);

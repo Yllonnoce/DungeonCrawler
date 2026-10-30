@@ -24,6 +24,10 @@ public partial class DialogueScreen : Control
     private VBoxContainer _moves = null!;
     private Label _moveStatus = null!;
     private readonly List<ChoicePlan> _shown = new();
+    private double _speakUntil; // the NPC counts as speaking until then even with no audio (an unvoiced line, read at talking pace)
+
+    /// <summary>True while the NPC's current line is being spoken: its voice is playing, or an unvoiced line is still being "read".</summary>
+    public bool Speaking => Audio.AudioManager.Instance?.VoiceBusy == true || Time.GetTicksMsec() / 1000.0 < _speakUntil;
 
     public override void _Ready()
     {
@@ -77,7 +81,9 @@ public partial class DialogueScreen : Control
         Node = node;
         _name.Text = Npc?.NpcName ?? "";
         _text.Text = node.Line.Text;
-        VoiceRenderer.Instance?.PlayLine(node.Line, interrupt: true);
+        var voiced = VoiceRenderer.Instance?.PlayLine(node.Line, interrupt: true) == true;
+        _speakUntil = Time.GetTicksMsec() / 1000.0 + (voiced ? 0.5 : TalkPose.EstimateSeconds(node.Line.Text));
+        Npc?.Converse(true);
         foreach (var c in _choices.GetChildren()) c.QueueFree();
         _shown.Clear();
         var quest = Npc == null ? null : AdventureDirector.Instance?.QuestGivenBy(Npc.Id);
@@ -172,11 +178,16 @@ public partial class DialogueScreen : Control
     {
         if (!Visible) return;
         Visible = false;
-        Npc?.Showcase(null); // back to Idle once the conversation ends
+        Npc?.Converse(null); // back to Idle once the conversation ends
         Npc = null;
         Node = null;
         EventBus.Instance.PlaySfx("ui_close");
         Closed?.Invoke();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (Visible && Npc != null) Npc.Converse(Speaking);
     }
 
     public override void _UnhandledInput(InputEvent @event)

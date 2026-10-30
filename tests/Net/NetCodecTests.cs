@@ -37,6 +37,14 @@ public class NetCodecTests
     }
 
     [Fact]
+    public void Emote_RoundTrips_SoEveryoneSeesTheDance()
+    {
+        var e = RoundTrip(new EmoteEvt(2, "victory"));
+        Assert.Equal(2, e.Member);
+        Assert.Equal("victory", e.Emote);
+    }
+
+    [Fact]
     public void Hello_Reject_Ready_RoundTrip()
     {
         var h = RoundTrip(new Hello(Protocol.Version, "Eric", "class.rogue", "dev"));

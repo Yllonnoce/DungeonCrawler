@@ -122,6 +122,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.Victory)] public sealed record VictoryEvt : NetMessage;
 /// <summary>Something on the floor changed state: the client applies it to the node the ref names.</summary>
 [Msg(MsgKind.Prop)] public sealed record PropEvt(string Ref, string What) : NetMessage;
+/// <summary>A member's body performs for show: "victory" is the dance over a kill. Every screen plays it on that member.</summary>
+[Msg(MsgKind.Emote)] public sealed record EmoteEvt(int Member, string Emote) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

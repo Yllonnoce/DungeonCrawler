@@ -96,6 +96,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         ["class.warrior"] = "brand", ["class.rogue"] = "sable", ["class.ranger"] = "wren", ["class.mage"] = "ilex",
     };
     private AnimatedModel? _model;
+    private readonly VictoryDance _dance = new();
+    /// <summary>Debug: the clip the dance is on, "" when not dancing.</summary>
+    public string DanceDebug => _dance.Active ? _model?.Current ?? "" : "";
     /// <summary>Debug: the attached model's root scale, position and visibility.</summary>
     public string ModelDebug
     {
@@ -369,6 +372,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_model != null && !Downed)
         {
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
+            TickDance(planar);
             ShowGait(planar);
         }
         if (IsOnFloor() && planar > 0.5f)
@@ -399,6 +403,28 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _heldKind = kind;
         _heldWeapon?.GetParent()?.QueueFree(); // the bone attachment goes with it
         _heldWeapon = HeldWeapons.TryGetValue(kind, out var held) ? WeaponGrip.Attach(_model.Root, held.prop, "Right", held.scale) : null;
+    }
+
+    /// <summary>
+    /// Start the victory dance over a kill (five quick HipBucks, five quick HipRocks, a Wave if the fight is over): the
+    /// party controller calls it for the member whose blow landed, a co-op client for whichever member the server named.
+    /// It begins once the attack swing has played out and stops the moment the body moves, swings or is hit.
+    /// </summary>
+    public void Celebrate()
+    {
+        if (_model == null || !_viewerModel || Downed) return; // the stock models have no dance clips
+        _dance.Start();
+    }
+
+    /// <summary>Hand the body the next step of its dance when the last clip has run out; walking off, or an enemy still at it with a hit, ends it.</summary>
+    private void TickDance(float groundSpeed)
+    {
+        if (!_dance.Active || _model == null) return;
+        if (groundSpeed > 0.5f) { _dance.Cancel(); return; }
+        if (_model.IsPlayingOneShot) return;
+        var enemiesRemain = Main.Instance is { } main && Audio.MusicDirector.AnyoneFighting(main);
+        if (_dance.Next(enemiesRemain) is { } step) { _model.Play(step.Clip, force: true, speed: step.Speed); GD.Print($"[Dance] {State.Name}: {step.Clip} x{step.Speed:0.0}"); }
+        else _model.Play("Idle", force: true);
     }
 
     /// <summary>Idle, Walk or Run for the ground speed; a viewer body's clip is paced to the speed so the feet do not slide.</summary>
@@ -433,6 +459,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_model != null && !Downed)
         {
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
+            TickDance(planar);
             ShowGait(planar);
         }
         if (pose.OnFloor && planar > 0.5f)
@@ -739,6 +766,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             // the server rolls the attack; this machine only shows the swing
             if (!IsLocal) return;
             var wp = m.WeaponProfile;
+            _dance.Cancel();
             _model?.Play(a.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike ? (wp.IsRanged ? Clips.cast : Clips.melee) : Clips.cast, force: true);
             _fpWeapon.PlayAttack(a.Kind, heavy, wp.IsRanged && a.Kind == AbilityKind.WeaponAttack);
             var cam = Camera.GlobalPosition;
@@ -752,6 +780,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
         var w = m.WeaponProfile;
         EventBus.Instance.RaiseAbilityUsed(Index, a.Kind);
+        _dance.Cancel();
         _model?.Play(a.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike ? (w.IsRanged ? Clips.cast : Clips.melee) : Clips.cast, force: true);
         if (IsLocal) _fpWeapon.PlayAttack(a.Kind, heavy, w.IsRanged && a.Kind == AbilityKind.WeaponAttack);
         EventBus.Instance.PlaySfx(a.Kind switch
@@ -861,6 +890,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         m.TakeDamage(r.Amount);
         EventBus.Instance.RaiseMemberDamaged(Index, r.Amount);
         _flash = 0.25f;
+        _dance.Cancel();
         _model?.Play(Clips.hit, force: true);
         EventBus.Instance.PlaySfx(r.Blocked ? "block" : "hit_flesh");
         EventBus.Instance.RaiseMemberChanged(Index);
@@ -923,6 +953,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         m.TakeDamage(amount);
         EventBus.Instance.RaiseMemberDamaged(Index, amount);
         _flash = 0.25f;
+        _dance.Cancel();
         _model?.Play(Clips.hit, force: true);
         EventBus.Instance.PlaySfx("hit_flesh");
         EventBus.Instance.RaiseMemberChanged(Index);

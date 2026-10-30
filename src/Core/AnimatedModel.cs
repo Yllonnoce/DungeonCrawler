@@ -54,17 +54,26 @@ public sealed class AnimatedModel
         return model;
     }
 
-    /// <summary>Play a clip if the model has it; Idle/Walk/Run loop, the rest play once.</summary>
-    public void Play(string name, bool force = false)
+    /// <summary>True while the current clip was started as a loop (the gaits, or a held pose such as an NPC's Talk).</summary>
+    public bool Looping { get; private set; }
+
+    /// <summary>
+    /// Play a clip if the model has it; Idle/Walk/Run loop, the rest play once unless <paramref name="loop"/> says
+    /// otherwise. <paramref name="speed"/> is the player's speed scale for the clip (the gait code rescales gaits itself).
+    /// </summary>
+    public void Play(string name, bool force = false, bool? loop = null, float speed = 1f)
     {
-        if (Player == null || (!force && Current == name) || !Player.HasAnimation(name)) return;
-        var loop = name is "Idle" or "Walk" or "Run";
-        Player.GetAnimation(name).LoopMode = loop ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None;
+        if (Player == null || !Player.HasAnimation(name)) return;
+        if (!force && Current == name) { if (Looping) Player.SpeedScale = speed; return; }
+        var loops = loop ?? name is "Idle" or "Walk" or "Run";
+        Player.GetAnimation(name).LoopMode = loops ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None;
+        Player.SpeedScale = speed;
         Player.Play(name, customBlend: 0.15);
         Current = name;
+        Looping = loops;
     }
 
-    public bool IsPlayingOneShot => Player != null && Player.IsPlaying() && Current is not ("Idle" or "Walk" or "Run");
+    public bool IsPlayingOneShot => Player != null && Player.IsPlaying() && !Looping;
 
     public void Flash(float amount)
     {
