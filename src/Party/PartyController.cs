@@ -523,9 +523,9 @@ public partial class PartyController : Node3D
             EventBus.Instance.Log($"{m.Name}'s blade envenoms {target.DisplayName}.");
         }
         if (target.IsAlive || !target.IsCreature) return; // a smashed crate is not a kill
-        EventBus.Instance.RaiseMemberKill(m);
         var index = Array.IndexOf(Members, m);
-        if (index >= 0 && index < Adventurers.Length) Adventurers[index].Celebrate(); // the dance over the kill; co-op clients hear of it from the server
+        if (index >= 0 && index < Adventurers.Length) Adventurers[index].Celebrate(); // the dance over the kill, before the kill is announced: a dancer crows instead of barking
+        EventBus.Instance.RaiseMemberKill(m);
         if (Trigger(m, TriggerKind.Bloodlust) is > 0 and var heal) { m.Heal(heal); EventBus.Instance.Log($"{m.Name} feeds on the kill (+{heal:0} HP)."); }
         if (Trigger(m, TriggerKind.SoulSiphon) is > 0 and var mana) { m.Mana = Math.Min(m.Stats[Stat.MaxMana], m.Mana + mana); EventBus.Instance.Log($"{m.Name} siphons {mana:0} mana."); }
         if (Trigger(m, TriggerKind.Scavenger) is > 0 and var arrows && m.WeaponProfile.IsRanged && Game.Instance.Catalog.TryBase(ArrowDefId, out _))

@@ -124,6 +124,7 @@ public static class Voices
         BarkTrigger.Downed => Delivery.Weary,
         BarkTrigger.Revived => Delivery.Weary,
         BarkTrigger.Idle => Delivery.Mocking,
+        BarkTrigger.Dance => Delivery.Cheerful,
         BarkTrigger.Loot => Delivery.Cheerful,
         BarkTrigger.LevelUp => Delivery.Cheerful,
         _ => Delivery.Calm,

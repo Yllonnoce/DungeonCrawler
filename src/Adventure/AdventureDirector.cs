@@ -156,6 +156,7 @@ public partial class AdventureDirector : Node
                 persona = Voices.CompanionPersona(classId ?? "");
                 Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
                 Voice.IdleBarks.TopUp(set, classId ?? ""); // and the razzings for a player who stands about
+                Voice.DanceBarks.TopUp(set, classId ?? ""); // and the crowing over a kill being danced on
             }
             foreach (var b in set.Lines)
             {
@@ -165,6 +166,9 @@ public partial class AdventureDirector : Node
             }
         }
     }
+
+    /// <summary>Whether this member's body is in its victory dance (its dance line stands in for the kill bark).</summary>
+    private static bool IsDancing(Characters.CharacterState m) => Main.Instance?.Party.Adventurers.FirstOrDefault(a => a.State == m)?.Dancing == true;
 
     /// <summary>A short in-character line from the bark bank, rate limited, spoken if its audio exists.</summary>
     private void Bark(Characters.CharacterState? m, BarkTrigger trigger)
@@ -177,10 +181,12 @@ public partial class AdventureDirector : Node
         // a kill is remarked on more freely than anything else: a quick cooldown, a roll, and a bank topped up from stock
         var kill = trigger == BarkTrigger.Kill;
         var razz = trigger == BarkTrigger.Idle;
+        var dance = trigger == BarkTrigger.Dance; // every dance gets its word, on the kill's quick gaps and with no roll
         if (kill) Voice.KillBarks.TopUp(set, m.Class.Id);
         if (razz) Voice.IdleBarks.TopUp(set, m.Class.Id);
-        if (now - _lastBark < (kill ? Voice.KillBarks.GlobalGapSeconds : 5)) return;
-        if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill ? Voice.KillBarks.CooldownSeconds : 25)) return;
+        if (dance) Voice.DanceBarks.TopUp(set, m.Class.Id);
+        if (now - _lastBark < (kill || dance ? Voice.KillBarks.GlobalGapSeconds : 5)) return;
+        if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill || dance ? Voice.KillBarks.CooldownSeconds : 25)) return;
         if (kill && _barkRng.NextDouble() >= Voice.KillBarks.Chance) return;
         var lines = set.Lines.Where(l => l.Trigger == trigger && l.Line.Text != "").ToList();
         if (lines.Count == 0) return;
@@ -188,7 +194,7 @@ public partial class AdventureDirector : Node
         // except over a kill, where the line said longest ago comes back
         var said = Game.Instance.Adventure.BarksSaid;
         var texts = lines.Select(l => l.Line.Text).ToList();
-        var text = kill || razz ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
+        var text = kill || razz || dance ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
         if (text == null) return;
         var line = lines.First(l => l.Line.Text == text).Line;
         Voice.BarkRepeat.Said(said, text, _currentFloor);
@@ -417,7 +423,8 @@ public partial class AdventureDirector : Node
         bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); };
         bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); };
         bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
-        bus.MemberKill += m => Bark(m, BarkTrigger.Kill);
+        bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
+        bus.MemberDance += i => { var members = Main.Instance?.Party.Members; if (members != null && i >= 0 && i < members.Length) Bark(members[i], BarkTrigger.Dance); };
         bus.NpcKill += FighterBark;
         bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * 0.15f) Bark(m, BarkTrigger.Hurt); };
         bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);

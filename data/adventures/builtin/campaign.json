@@ -1048,6 +1048,46 @@
             "VoiceId": "2e3d2cf308a71a5c",
             "Delivery": "mocking"
           }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Dancing is my speciality. Dying, it seems, is yours.",
+            "VoiceId": "01c32d8be21c1842",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "That\u0027s how Brand does it. Watch the hips, not the sword.",
+            "VoiceId": "6250a4eadbc5cb13",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Down you go, and up go my heels.",
+            "VoiceId": "93336133ba65dda9",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Shield, sword, and a little shimmy. Full service.",
+            "VoiceId": "f1b2a61f85381e07",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Who\u0027s next? I\u0027ve got five more of these in me.",
+            "VoiceId": "497acc83c615843e",
+            "Delivery": "cheerful"
+          }
         }
       ]
     },
@@ -1389,6 +1429,46 @@
             "VoiceId": "c1cbcc4fd9c95cd6",
             "Delivery": "mocking"
           }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Booty be all that, and the booty\u0027s all mine.",
+            "VoiceId": "454f7a51f8545bff",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Look at me go. Look at you not.",
+            "VoiceId": "f7a9fba4fada32cf",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Stabbed, dropped, and danced on. The Sable special.",
+            "VoiceId": "9e2beae7d2286c79",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Shake it, Sable. Nobody left to watch but the rats.",
+            "VoiceId": "f8b4069954f10505",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Oh, I\u0027m good. I\u0027m so good I\u0027m dancing about it.",
+            "VoiceId": "128b3500c1d7e5d5",
+            "Delivery": "cheerful"
+          }
         }
       ]
     },
@@ -1721,6 +1801,46 @@
             "Text": "I\u0027ll scout ahead. By which I mean anywhere but here.",
             "VoiceId": "c3a4ee8bc71354a1",
             "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "One arrow, one corpse, one little dance.",
+            "VoiceId": "25da8cb6da42a55e",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I don\u0027t dance for just anyone. You\u0027re welcome, dead thing.",
+            "VoiceId": "12c1508591c7db54",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "The hunt\u0027s done. The hips take it from here.",
+            "VoiceId": "0fd6c3b2c049e44f",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Rangers don\u0027t dance, they say. Rangers lie.",
+            "VoiceId": "9544bbcbd4af3b17",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Marked, shot, dropped. Now the fun part.",
+            "VoiceId": "7fa8893871ef8305",
+            "Delivery": "cheerful"
           }
         }
       ]
@@ -2062,6 +2182,46 @@
             "Text": "Marvellous. We have found the one puzzle you cannot solve: forwards.",
             "VoiceId": "1bd3d421ab2008d5",
             "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Observe: the victory squat. Taught at no academy.",
+            "VoiceId": "137ee4520975c45f",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Spell, then shimmy. The second part is not in the grimoire.",
+            "VoiceId": "ba5c40aff7c34dcd",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "I have reduced you to ash, and I shall now wiggle about it.",
+            "VoiceId": "2af8f3b6a021442f",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "A scholar\u0027s dance. Dignified. Mostly.",
+            "VoiceId": "d5068f283bf5a721",
+            "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Dance",
+          "Line": {
+            "Text": "Science wins again, and science has rhythm.",
+            "VoiceId": "e6bc8182e3c99182",
+            "Delivery": "cheerful"
           }
         }
       ]

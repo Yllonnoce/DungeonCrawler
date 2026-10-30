@@ -3,7 +3,7 @@ using DungeonCrawler.Dungeon.Generation;
 
 namespace DungeonCrawler.Adventure;
 
-public enum BarkTrigger { Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, Idle }
+public enum BarkTrigger { Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, Idle, Dance }
 
 public sealed class VoicedCharacter
 {

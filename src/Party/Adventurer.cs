@@ -97,6 +97,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     };
     private AnimatedModel? _model;
     private readonly VictoryDance _dance = new();
+    /// <summary>True while this body is in its victory dance; no companion goes for loot until every dance is over.</summary>
+    public bool Dancing => _dance.Active;
     /// <summary>Debug: the clip the dance is on, "" when not dancing.</summary>
     public string DanceDebug => _dance.Active ? _model?.Current ?? "" : "";
     /// <summary>Debug: the attached model's root scale, position and visibility.</summary>
@@ -391,7 +393,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         else LookingAt = null;
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
 
-        if (Control == ControlKind.Companion && !Downed && !_dance.Active) ScanLoot(dt); // the loot waits for the dance
+        if (Control == ControlKind.Companion && !Downed && !Party.Adventurers.Any(a => a.Dancing)) ScanLoot(dt); // the loot waits until every dance is over
     }
 
     /// <summary>A viewer body shows the weapon it has equipped, hung from its right-hand grip bone; swapped when the equipment changes.</summary>
@@ -413,7 +415,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public void Celebrate()
     {
         if (_model == null || !_viewerModel || Downed) return; // the stock models have no dance clips
+        if (IsLocal && !Net.NetSession.IsClient) return;        // your own body is hidden in first person: nothing to see, so the kill bark stays
         _dance.Start();
+        if (!Net.NetSession.IsClient) EventBus.Instance.RaiseMemberDance(Index); // the crowing (the server's word reaches co-op clients as a bark)
     }
 
     /// <summary>An engaged enemy within earshot of the party: the fight is still on.</summary>

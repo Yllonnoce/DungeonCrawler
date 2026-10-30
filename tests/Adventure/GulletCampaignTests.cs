@@ -99,4 +99,22 @@ public class GulletCampaignTests
         Assert.Contains("new Verger", boss.HalfLine!.Text);
         Assert.Contains("turning over", boss.AltHalfLine!.Text);
     }
+
+    [Fact]
+    public void EveryHero_HasFiveVoicedDanceLines_InTheShippedBank()
+    {
+        var campaign = Campaign();
+        var bank = Path.Combine(Root, "assets", "voice", "builtin");
+        foreach (var name in new[] { "Brand", "Sable", "Wren", "Ilex" })
+        {
+            var set = campaign.Barks.First(b => b.Member == name);
+            var dance = set.Lines.Where(l => l.Trigger == BarkTrigger.Dance).ToList();
+            Assert.True(dance.Count >= 5, $"{name} has {dance.Count} dance lines");
+            foreach (var l in dance)
+            {
+                Assert.NotNull(l.Line.VoiceId);
+                Assert.True(File.Exists(Path.Combine(bank, l.Line.VoiceId + ".wav")), $"{name}: no audio for \"{l.Line.Text}\"");
+            }
+        }
+    }
 }

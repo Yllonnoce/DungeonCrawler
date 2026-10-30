@@ -58,6 +58,8 @@ public partial class EventBus : Node
     public event Action<Vector3>? ChestOpened;
     /// <summary>A member's hit finished off a target.</summary>
     public event Action<Characters.CharacterState>? MemberKill;
+    /// <summary>A member's body has begun its victory dance (index into the party).</summary>
+    public event Action<int>? MemberDance;
     public event Action<int>? LevelUp;
     public event Action<int>? MemberRevived;
     /// <summary>A party member was killed outright by a lethal hazard (the Press, spikes) and lies Mangled.</summary>
@@ -122,6 +124,7 @@ public partial class EventBus : Node
     public void RaiseAlarmRaised(string collectiveId) => AlarmRaised?.Invoke(collectiveId);
     public void RaiseChestOpened(Vector3 at) => ChestOpened?.Invoke(at);
     public void RaiseMemberKill(Characters.CharacterState m) => MemberKill?.Invoke(m);
+    public void RaiseMemberDance(int index) => MemberDance?.Invoke(index);
     public void RaiseNpcKill(Adventure.Npc npc) => NpcKill?.Invoke(npc);
     public void RaiseLevelUp(int index) => LevelUp?.Invoke(index);
     public void RaiseHazardPhase(int index, byte phase) => HazardPhase?.Invoke(index, phase);
