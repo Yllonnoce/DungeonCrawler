@@ -91,10 +91,14 @@ public partial class ServerWorld : Node
             if (s.MemberIndex < party.Adventurers.Length) party.Adventurers[s.MemberIndex].Remote = null;
         }
         Broadcast(new FloorChangeBegin(floor, floor > Game.Instance.CurrentFloor ? "Descending..." : "The dungeon shifts..."));
+        _floorChangeStarted = Time.GetTicksMsec() / 1000.0;
     }
+
+    private double _floorChangeStarted;
 
     private void OnFloorBuilt(int floor, int delta, bool firstVisit)
     {
+        if (NetSession.Instance.TestServer) GD.Print($"[net-server] floor {floor} built {(_floorChangeStarted > 0 ? $"{Time.GetTicksMsec() / 1000.0 - _floorChangeStarted:0.00} s after the change began" : "")}");
         var main = Main.Instance;
         var game = Game.Instance;
         var party = main.Party;
@@ -238,7 +242,9 @@ public partial class ServerWorld : Node
         if (main == null || !main.InGame || main.Rebuilding) return;
         try
         {
+            var started = Time.GetTicksMsec();
             SaveManager.Write(NetSession.Instance.SaveSlot, main.BuildSaveData("Server"));
+            if (NetSession.Instance.TestServer) GD.Print($"[net-server] autosave took {Time.GetTicksMsec() - started} ms");
             GD.Print($"[net-server] autosaved ({reason})");
         }
         catch (Exception e) { GD.PushError($"[net-server] autosave failed: {e.Message}"); }

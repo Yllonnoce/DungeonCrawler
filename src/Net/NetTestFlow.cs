@@ -190,22 +190,32 @@ public partial class NetTestFlow : Node
                 if (client.Trace.Contains("floor:2") && Game.Instance.CurrentFloor == 2 && main.Builder.Layout != null)
                 {
                     GD.Print($"[net] on floor 2: {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies, hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}");
-                    _clock = 0; _step = 11;
+                    _placementsAtFloor2 = _placements; _clock = 0; _step = 11;
                 }
                 else if (_clock > 20) Finish("[net]", false, $"floor 2 never came (floor {Game.Instance.CurrentFloor}, trace=[{string.Join(", ", client.Trace)}])");
                 return;
             case 11:
             {
                 // the forced Press: stand on its plate, see the server's Warning phase arrive, step off before it closes
-                if (client.SnapshotsSeen < 10 && _clock < 10) return;
+                // the server answers our Ready with a ForcePose to the arrival spot; stepping onto the plate before it lands would be undone by it
+                if (_hazardReturn == null && _placements == _placementsAtFloor2 && _clock < 5) return;
+                if (_placements != _placementsAtFloor2 && _hazardReturn == null && _clock < 0.3) return; // let the placement settle
                 var press = main.Builder.Hazards.OfType<Dungeon.Props.Press>().FirstOrDefault();
                 if (press == null) { GD.Print("[net] no Press on this floor; skipping the hazard step"); _clock = 0; _step = 8; return; }
                 if (_hazardReturn == null)
                 {
                     _hazardReturn = main.Party.Local!.GlobalPosition;
                     main.Party.Local.Teleport(main.Builder.Surface(press.Placement.Plate) + Vector3.Up * 0.3f);
-                    GD.Print($"[net] stepping onto the Press plate at {main.Party.Local.GlobalPosition:0.0} (plate node {press.Plate.GlobalPosition:0.0}, cell {press.Placement.Plate}); body was at {_hazardReturn:0.0}");
-                    _clock = 0; return;
+                    GD.Print($"[net] stepping onto the Press plate at {main.Party.Local.GlobalPosition:0.0} (plate node {press.Plate.GlobalPosition:0.0}, cell {press.Placement.Plate}); body was at {_hazardReturn:0.0}; placements {_placements} (floor 2 arrival {(_placements > _placementsAtFloor2 ? "seen" : "NOT seen")})");
+                    _placementsAtFloor2 = _placements; _clock = 0; return;
+                }
+                if (_placements != _placementsAtFloor2 && main.Party.Local!.GlobalPosition.DistanceTo(main.Builder.Surface(press.Placement.Plate)) > 1.5f)
+                {
+                    // a late placement pulled us off the plate: step back on
+                    _placementsAtFloor2 = _placements;
+                    main.Party.Local.Teleport(main.Builder.Surface(press.Placement.Plate) + Vector3.Up * 0.3f);
+                    GD.Print($"[net] a late placement moved us; back onto the plate at {main.Party.Local.GlobalPosition:0.0}");
+                    return;
                 }
                 if (client.Trace.Contains("hazard:Warning"))
                 {
@@ -250,5 +260,7 @@ public partial class NetTestFlow : Node
     private int _bagAtLeave, _memberAtLeave;
     private void Trace(string what) => GD.Print($"[net] {what}");
     private Vector3? _startAfterPose, _hazardReturn;
-    public void NotePlaced(Vector3 at) => _startAfterPose = at;
+    private int _placements, _placementsAtFloor2;
+    /// <summary>The server placed our body (a ForcePose): the start position on floor 1, and the arrival spot after a floor change.</summary>
+    public void NotePlaced(Vector3 at) { _startAfterPose = at; _placements++; }
 }
