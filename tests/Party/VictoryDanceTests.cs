@@ -13,12 +13,13 @@ public class VictoryDanceTests
     }
 
     [Fact]
-    public void Dance_IsFiveBucks_FiveRocks_ThenAWave_WhenTheFightIsOver()
+    public void Dance_IsFiveSquats_FiveBucks_FiveRocks_ThenAWave_WhenTheFightIsOver()
     {
         var dance = new VictoryDance();
         dance.Start();
         var steps = Run(dance, enemiesRemain: false);
-        Assert.Equal(Enumerable.Repeat("HipBuck", VictoryDance.Repeats).Concat(Enumerable.Repeat("HipRock", VictoryDance.Repeats)).Append("Wave"), steps.Select(s => s.Clip));
+        var five = (string clip) => Enumerable.Repeat(clip, VictoryDance.Repeats);
+        Assert.Equal(five("Squat").Concat(five("HipBuck")).Concat(five("HipRock")).Append("Wave"), steps.Select(s => s.Clip));
         Assert.False(dance.Active);
     }
 
@@ -28,7 +29,7 @@ public class VictoryDanceTests
         var dance = new VictoryDance();
         dance.Start();
         var steps = Run(dance, enemiesRemain: true);
-        Assert.Equal(VictoryDance.Repeats * 2, steps.Count);
+        Assert.Equal(VictoryDance.Repeats * 3, steps.Count);
         Assert.DoesNotContain(steps, s => s.Clip == "Wave");
     }
 
@@ -49,7 +50,7 @@ public class VictoryDanceTests
     {
         var dance = new VictoryDance();
         dance.Start();
-        for (var i = 0; i < VictoryDance.Repeats * 2; i++) Assert.NotNull(dance.Next(enemiesRemain: true));
+        for (var i = 0; i < VictoryDance.Repeats * 3; i++) Assert.NotNull(dance.Next(enemiesRemain: true));
         Assert.Equal("Wave", dance.Next(enemiesRemain: false)?.Clip);
         Assert.Null(dance.Next(enemiesRemain: false));
     }
@@ -75,6 +76,6 @@ public class VictoryDanceTests
         dance.Start();
         for (var i = 0; i < VictoryDance.Repeats + 2; i++) dance.Next(enemiesRemain: false);
         dance.Start();
-        Assert.Equal("HipBuck", dance.Next(enemiesRemain: false)?.Clip);
+        Assert.Equal("Squat", dance.Next(enemiesRemain: false)?.Clip);
     }
 }

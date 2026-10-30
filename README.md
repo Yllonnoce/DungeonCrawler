@@ -150,10 +150,13 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
 - The villain in person: on the last boss floor the tier's boss wears `verger.glb` (scaled to 2.25 m) when the campaign's
   antagonist is a verger (`NpcBodies.Villain`); other campaigns keep the creature.
 - All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger).
-- Victory dance: a hero whose blow kills something does five quick HipBucks and five quick HipRocks (2.5x speed), then
-  a Wave if nothing is left fighting the party by then (`VictoryDance`, engine-free). The dance starts once the swing has
-  played out and stops the moment the body walks off, swings again or is hit; in co-op the server tells every screen whose
+- Victory dance: a hero whose blow kills something does five quick Squats, five quick HipBucks and five quick HipRocks
+  (2.5x speed), then a Wave if nothing is left fighting the party by then (`VictoryDance`, engine-free). The dance starts
+  once the swing has played out. A companion stands still for it (and leaves the loot until after) unless the fight is
+  still on; a player's body stops the moment it walks off, and anyone stops when they swing again or are hit. Your own body
+  is hidden in first person, so you see your companions' dances, not your own. In co-op the server tells every screen whose
   body dances (`EmoteEvt`). The stock Quaternius models have no such clips and sit it out. Logs `[Dance] Name: Clip xSpeed`.
+  `--dance` starts the dance on every companion at `--after` for a screenshot (`--possess=3 --face-node=Brand:3 --dance ...`).
 - Talking to an NPC: while its line is spoken (voice playing, or an unvoiced line "read" at about 2.6 words a second)
   the body plays Talk; while it waits for your answer it rocks slowly on the spot (HipRock at half speed); `TalkPose`,
   driven by the dialogue screen through `Npc.Converse`. A move picked from Foehammer's grid plays through first. Logs `[Talk]`.

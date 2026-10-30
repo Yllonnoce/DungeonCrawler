@@ -54,6 +54,7 @@ public partial class DebugTools : Node
     private Enemy? _collPatrol;
     private Vector3 _collPatrolStart;
     private bool _talk;
+    private bool _dance, _danced; // --dance: every companion starts the victory dance a second before --after
     private bool _talked;
     private string? _showcase;
     private bool _testQuest;
@@ -254,6 +255,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-collectives") { _testCollectives = true; TraceAi = false; _quitAfter = 37; }
             else if (arg == "--test-quest") { _testQuest = true; TraceAi = false; _quitAfter = 14; }
             else if (arg == "--talk") _talk = true;
+            else if (arg == "--dance") _dance = true;
             else if (arg.StartsWith("--showcase=")) _showcase = arg["--showcase=".Length..];
             else if (arg == "--ai") ForceAi = true;
             else if (arg == "--no-ai") NoAi = true;
@@ -330,7 +332,7 @@ public partial class DebugTools : Node
         if (_testStructures && _seed == null) _seed = StructureSeed();
         if (_testHorde && _seed == null) _seed = HordeSeed();
         // Automation never spends the player's keys unless --ai is given explicitly: scripted runs use the offline designer and no live voice.
-        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _builtin || _menuOnly;
+        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _builtin || _menuOnly;
         if (automation && !ForceAi) { NoAi = true; NoVoice = !FakeVoice; }
         // scripted scenarios were written against the plain floors of their seeds: no objective floor unless one is asked for by name
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
@@ -548,6 +550,12 @@ public partial class DebugTools : Node
             var ledge = lay.Ledges[0];
             var b = Main.Instance.Builder;
             Main.Instance.Party.Teleport(b.Surface(ledge.RampBottom + new Dungeon.Generation.GridPos(0, 2)) + Vector3.Up * 0.3f, b.Surface(ledge.EnemySpawn) + Vector3.Up * 1.2f);
+        }
+        if (_dance && !_danced && Main.Instance?.InGame == true && _elapsed >= _after - 1.0)
+        {
+            _danced = true;
+            foreach (var a in Main.Instance.Party.Adventurers) if (a != Main.Instance.Party.Local && !a.Downed) a.Celebrate();
+            GD.Print("[dance] companions start the victory dance");
         }
         if (_talk && !_talked && _elapsed >= (_startFloor > 1 ? 0.8 : 0.4) && Main.Instance?.Builder.FloorRoot is { } talkRoot)
         {

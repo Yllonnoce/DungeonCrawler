@@ -357,7 +357,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         {
             SetCrouch(false);
             Guarding = false;
-            target = CompanionVelocity(dt);
+            target = _dance.Active && !FightOn ? Vector3.Zero : CompanionVelocity(dt); // a companion stands for its dance unless the fight is still on
         }
 
         velocity.X = Mathf.MoveToward(velocity.X, target.X, Acceleration * dt);
@@ -391,7 +391,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         else LookingAt = null;
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
 
-        if (Control == ControlKind.Companion && !Downed) ScanLoot(dt);
+        if (Control == ControlKind.Companion && !Downed && !_dance.Active) ScanLoot(dt); // the loot waits for the dance
     }
 
     /// <summary>A viewer body shows the weapon it has equipped, hung from its right-hand grip bone; swapped when the equipment changes.</summary>
@@ -416,13 +416,19 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _dance.Start();
     }
 
-    /// <summary>Hand the body the next step of its dance when the last clip has run out; walking off, or an enemy still at it with a hit, ends it.</summary>
+    /// <summary>An engaged enemy within earshot of the party: the fight is still on.</summary>
+    private static bool FightOn => Main.Instance is { } main && Audio.MusicDirector.AnyoneFighting(main);
+
+    /// <summary>
+    /// Hand the body the next step of its dance when the last clip has run out. A player walking off ends it; a companion
+    /// is held still for it (see the physics tick) and only gives it up when the fight is still on and it has to move.
+    /// </summary>
     private void TickDance(float groundSpeed)
     {
         if (!_dance.Active || _model == null) return;
-        if (groundSpeed > 0.5f) { _dance.Cancel(); return; }
+        var enemiesRemain = FightOn;
+        if (groundSpeed > 0.5f && (Control != ControlKind.Companion || enemiesRemain)) { _dance.Cancel(); return; }
         if (_model.IsPlayingOneShot) return;
-        var enemiesRemain = Main.Instance is { } main && Audio.MusicDirector.AnyoneFighting(main);
         if (_dance.Next(enemiesRemain) is { } step) { _model.Play(step.Clip, force: true, speed: step.Speed); GD.Print($"[Dance] {State.Name}: {step.Clip} x{step.Speed:0.0}"); }
         else _model.Play("Idle", force: true);
     }
