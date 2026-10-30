@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 4,
   "Source": "claude",
-  "LayoutHash": 168417766994182582,
+  "LayoutHash": 13316579606895462659,
   "Title": "The Chantry",
   "IntroLine": {
     "Text": "Rotten timber, a green air rising out of the cellars, and somewhere in it a man with a ledger apologising to nobody.",
@@ -325,12 +325,12 @@
         },
         "Accept": {
           "Text": "Good. Good. I shall stand here and guard the heap, which is important work.",
-          "VoiceId": null,
+          "VoiceId": "7adedb8a5c751b19",
           "Delivery": null
         },
         "Decline": {
           "Text": "Quite right. Paper is paper. It is only names.",
-          "VoiceId": null,
+          "VoiceId": "f2e8721759459bbc",
           "Delivery": null
         },
         "Complete": {
@@ -340,7 +340,7 @@
         },
         "Fail": {
           "Text": "Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.",
-          "VoiceId": null,
+          "VoiceId": "8b772ebb88d43e9c",
           "Delivery": null
         }
       },

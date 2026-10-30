@@ -91,6 +91,18 @@ public class StoryBeatsTests
         Assert.Null(PlanFormat.Deserialize<BossPlan>("{\"Name\":\"x\"}").AltDeathLine);
         var schema = PlanSchemas.For(typeof(BossPlan));
         Assert.DoesNotContain("AltDeath", schema);
+        Assert.DoesNotContain("HalfLine", schema);
         Assert.DoesNotContain("Ritualist", PlanSchemas.For(typeof(NpcPlan)));
+    }
+
+    [Fact]
+    public void ABoss_SpeaksAtHalfHealth_InTheWordsTheFlagPicks()
+    {
+        var mute = new BossPlan { Name = "Canon Ludd" };
+        Assert.Null(mute.HalfLineFor(new[] { "wake_gorm" }));
+        var boss = new BossPlan { Name = "The Verger", HalfLine = new Line("new Verger"), AltDeathFlag = "wake_gorm", AltHalfLine = new Line("turning over") };
+        Assert.Equal("new Verger", boss.HalfLineFor(Array.Empty<string>())!.Text);
+        Assert.Equal("turning over", boss.HalfLineFor(new[] { "wake_gorm" })!.Text);
+        Assert.Equal(new[] { boss.IntroLine, boss.DeathLine, boss.HalfLine, boss.AltHalfLine }, boss.AllLines().ToArray()); // every line reaches the voice pass
     }
 }

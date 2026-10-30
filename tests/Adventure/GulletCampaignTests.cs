@@ -91,4 +91,12 @@ public class GulletCampaignTests
         Assert.NotEqual(boss.DeathLine.Text, boss.AltDeathLine!.Text);
         Assert.Contains("thank you", boss.AltDeathLine.Text);
     }
+
+    [Fact]
+    public void TheVerger_SpeaksAtHalfHealth_EitherWay()
+    {
+        var boss = Floor(20).Boss!;
+        Assert.Contains("new Verger", boss.HalfLine!.Text);
+        Assert.Contains("turning over", boss.AltHalfLine!.Text);
+    }
 }

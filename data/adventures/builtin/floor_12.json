@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 12,
   "Source": "claude",
-  "LayoutHash": 4196110155754077147,
+  "LayoutHash": 4298302243103044976,
   "Title": "The Casting Hall",
   "IntroLine": {
     "Text": "Kiln brick, and cages. The Forge keeps what it has not finished, and the unfinished press their faces to the bars and watch you walk by.",
@@ -397,12 +397,12 @@
         },
         "Accept": {
           "Text": "Right. Slowly, and don\u0027t look in the cages. They look back, and they have my face half-finished in there somewhere.",
-          "VoiceId": null,
+          "VoiceId": "7b19bc446b967038",
           "Delivery": null
         },
         "Decline": {
           "Text": "Suit yourself. I\u0027ve been left in worse rooms by better liars.",
-          "VoiceId": null,
+          "VoiceId": "e609345ca049206d",
           "Delivery": null
         },
         "Complete": {
@@ -412,7 +412,7 @@
         },
         "Fail": {
           "Text": "Should have stayed with the spiders. They at least finish what they start.",
-          "VoiceId": null,
+          "VoiceId": "05936b867fbfdfb4",
           "Delivery": null
         }
       },

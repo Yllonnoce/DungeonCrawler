@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 13,
   "Source": "claude",
-  "LayoutHash": 13442667228186605269,
+  "LayoutHash": 3108799685069494302,
   "Title": "The Mould Room",
   "IntroLine": {
     "Text": "Cold steel plate, white lamps that never gutter, and shelf upon shelf of casting sand pressed with faces. Someone down here knows what Dunmarrow will look like before Dunmarrow does.",
@@ -339,12 +339,12 @@
         },
         "Accept": {
           "Text": "Good. Flat, mind, and don\u0027t breathe on them. A breath puts a dimple in a cheek and then he\u0027s got a dimple for life.",
-          "VoiceId": null,
+          "VoiceId": "5d4a4ce2587c0830",
           "Delivery": null
         },
         "Decline": {
           "Text": "Suit yourselves. They\u0027ll get poured whether you look at them or not. Everything here does.",
-          "VoiceId": null,
+          "VoiceId": "dc11281fd58a8607",
           "Delivery": null
         },
         "Complete": {
@@ -354,7 +354,7 @@
         },
         "Fail": {
           "Text": "Left them lying, did you. They\u0027ll cool crooked and some poor soul will walk about wrong for sixty years and never know why.",
-          "VoiceId": null,
+          "VoiceId": "a92f73b7f7908a19",
           "Delivery": null
         }
       },

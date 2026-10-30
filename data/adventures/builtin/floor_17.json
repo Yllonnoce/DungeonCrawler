@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 17,
   "Source": "claude",
-  "LayoutHash": 16701913224623672457,
+  "LayoutHash": 10406495676470815347,
   "Title": "The Windpipe",
   "IntroLine": {
     "Text": "Purple slate, and the gas climbing the galleries behind you with all night to do it. Somewhere ahead a man in a chain of office is clearing his throat.",
@@ -374,27 +374,27 @@
       "Lines": {
         "Offer": {
           "Text": "Don\u0027t look at me like that. The council voted. I only held the pen, and the pen was very heavy, and the wells ran clean for nineteen years.",
-          "VoiceId": null,
+          "VoiceId": "00f317640fc2cac5",
           "Delivery": null
         },
         "Accept": {
           "Text": "Oh, don\u0027t. You\u0027ll only bleed on the Station, and they\u0027ve only just had it done.",
-          "VoiceId": null,
+          "VoiceId": "0d80150968e87124",
           "Delivery": null
         },
         "Decline": {
           "Text": "Sensible. Walk on. I\u0027ll follow at my own pace, as I always have.",
-          "VoiceId": null,
+          "VoiceId": "f9ca06094976acdb",
           "Delivery": null
         },
         "Complete": {
           "Text": "The chain of office lies in the spoil with nobody inside it, and the gas comes up the gallery without hurrying.",
-          "VoiceId": null,
+          "VoiceId": "3e63bf6c70cfcb3e",
           "Delivery": null
         },
         "Fail": {
           "Text": "The alderman is already climbing, and the carving will be done by candle, same as the last four times.",
-          "VoiceId": null,
+          "VoiceId": "74bae3320528d70f",
           "Delivery": null
         }
       },

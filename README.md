@@ -200,6 +200,7 @@ godot --path . -- --seed=1 --floor=1 --talk --showcase=Death --screenshot=/tmp/m
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
 godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-model=inworld:tts@1.5-max --voice-model-minor=inworld:tts@1.5-max --bake-kill-barks=assets/voice/builtin   # render every party member's and fighter's kill line into the shipped bank (RUNWARE_API_KEY in the environment), then run the import
+godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-model=inworld:tts@1.5-max --voice-model-minor=inworld:tts@1.5-max --bake-cast-voice=assets/voice/builtin   # render every line of the recurring cast and every boss line (outside the 80-line budget) into the shipped bank; the plans with their ids land in assets/voice/builtin/cast-plans, to merge into data/adventures/builtin by hand, then --import
 godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an enemy and the lead in the run, crushed and mangled, no auto-revive, a companion pulls the lead free, the villain gloats, a barrel jams the second run, saved, loaded, phase and kills survive
 godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
@@ -298,9 +299,10 @@ A campaign has a recurring **Cast** (four to six people with a role and a secret
 
 Two hand-authored hooks the designer is never asked for (both `[AiIgnore]`): an NPC with `"Ritualist": true` on a Ritual
 floor leads the rite instead of a stock-named villager (placed beside the altar, no script needed; the validator clears
-the flag with a repair note on a floor with no shrine), and a boss with `AltDeathFlag` / `AltDeathLine` dies with those
-words when that flag was set earlier in the run. The shipped Gullet of Gorm uses both: Grisel Thorn's Unswearing on
-floor 7, and the Verger's last words on floor 20 turning on `wake_gorm`. Maud Sorrel also stands on floors 1, 6 and 11
+the flag with a repair note on a floor with no shrine), and a boss with `HalfLine` speaks once at half health, while
+`AltDeathFlag` with `AltHalfLine` / `AltDeathLine` swaps its middle and last words when that flag was set earlier in
+the run. The shipped Gullet of Gorm uses both: Grisel Thorn's Unswearing on floor 7, and the Verger's half-health and
+death lines on floor 20 turning on `wake_gorm`. The recurring cast is voiced in full (see `--bake-cast-voice`). Maud Sorrel also stands on floors 1, 6 and 11
 (the bible's cameos) with a few lines and no quest.
 
 Voice is budgeted: `Adventure/Core/Voice/VoiceBudget.cs` picks at most 80 lines of a baked campaign to render (tier entrances and boss lines, then story floors' intros, NPC dialogue and quest lines, quiet floors' intros, barks last); everything else stays a subtitle. `--voice-budget=N` changes it for a bake.

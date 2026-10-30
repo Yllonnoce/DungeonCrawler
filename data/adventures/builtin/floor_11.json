@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 11,
   "Source": "claude",
-  "LayoutHash": 756951528095006968,
+  "LayoutHash": 13847786872254121441,
   "Title": "The Hearth",
   "IntroLine": {
     "Text": "Riveted plate the colour of a kettle, coal stacked in courses like masonry, and under it all a beat like a heavy man climbing stairs. Someone down here is singing flat to the draw of the fire.",
@@ -241,7 +241,7 @@
             "Id": "ulf_hail",
             "Line": {
               "Text": "Off the sand, off the sand! That\u0027s a face setting, that is, and a footprint in a face is a lifetime of squint. Now. Something\u0027s been at my coal. Something with four legs and a hot backside.",
-              "VoiceId": null,
+              "VoiceId": "2ee6b93427385306",
               "Delivery": null
             },
             "Choices": [
@@ -278,7 +278,7 @@
             "Id": "ulf_cinders",
             "Line": {
               "Text": "Hounds. Three of them, slipped the pit down the slag run. They eat heat, see, and a cold forge casts slow, and slow work shows in the face. I\u0027d go myself, but I\u0027m eighty and I\u0027m busy.",
-              "VoiceId": null,
+              "VoiceId": "19b9835ee1acf36f",
               "Delivery": null
             },
             "Choices": [
@@ -306,7 +306,7 @@
             "Id": "ulf_thanks",
             "Line": {
               "Text": "Hear that? The draw\u0027s come back up. Take a cup of the small beer, it\u0027s warm on principle, and mind the shelves on your way by. Faces keep better when nobody stares.",
-              "VoiceId": null,
+              "VoiceId": "8cecb96185d5ec30",
               "Delivery": null
             },
             "Choices": [
@@ -347,7 +347,7 @@
             "Id": "m11_shh",
             "Line": {
               "Text": "Shh. Ulf is working, and he sings when he works, and I like the singing. He thinks he casts kettles. Let him; it is kind, what he thinks.",
-              "VoiceId": null,
+              "VoiceId": "905e3dd6047eaf52",
               "Delivery": null
             },
             "Choices": [
@@ -384,7 +384,7 @@
             "Id": "m11_faces",
             "Line": {
               "Text": "Faces, dear. Small ones. You will see them two floors down and you will wish you had not. Go on; I will be at the Dream Door before you.",
-              "VoiceId": null,
+              "VoiceId": "f00ea16e5a4d2401",
               "Delivery": null
             },
             "Choices": [
@@ -403,7 +403,7 @@
             "Id": "m11_warm",
             "Line": {
               "Text": "It is warm, and He is loudest here, where His heart is. One sleeps where one can hear the one who dreams one. You will learn that too.",
-              "VoiceId": null,
+              "VoiceId": "5606b6a8873d92cd",
               "Delivery": null
             },
             "Choices": [
@@ -457,27 +457,27 @@
       "Lines": {
         "Offer": {
           "Text": "Three hounds out of the pit and into my coal. Kill them and I\u0027ll show you a mould I\u0027m proud of, which is all of them, so bring patience.",
-          "VoiceId": null,
+          "VoiceId": "6fef42e9ef831bc5",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good lad. Go down the slag run and don\u0027t let them get behind you; they bite where the armour\u0027s thin and they know where that is.",
-          "VoiceId": null,
+          "VoiceId": "95db0acf38570652",
           "Delivery": null
         },
         "Decline": {
           "Text": "Suit yourselves. They\u0027ll eat, the Forge runs cool, and somewhere up top a child comes out slow and nobody blames the hounds.",
-          "VoiceId": null,
+          "VoiceId": "31ae70d695779c03",
           "Delivery": null
         },
         "Complete": {
           "Text": "There\u0027s the draw. Here, take this off the shelf for your trouble. Don\u0027t look at it too long, mind. You\u0027ll start recognising folk.",
-          "VoiceId": null,
+          "VoiceId": "10e467725251b1a0",
           "Delivery": null
         },
         "Fail": {
           "Text": "Still chewing, are they. Well. I\u0027ve worked colder, and I\u0027ve worked with worse than you.",
-          "VoiceId": null,
+          "VoiceId": "5d865ea47d955a24",
           "Delivery": null
         }
       },

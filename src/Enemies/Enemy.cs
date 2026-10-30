@@ -678,6 +678,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     // ---- damage ------------------------------------------------------------------------------
 
+    private bool _halfSaid; // a boss speaks its middle line once
+
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
         if (!IsAlive) return DamageResult.Miss(attack.Type);
@@ -687,6 +689,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _flash = 0.25f;
         SinceHurt = 0f;
         EventBus.Instance.RaiseEnemyHurt(this, result.Amount, result.Crit);
+        if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
         if (Hp <= 0) _dying = true;
         else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx("enemy_hurt"); }
         if (Hp > 0 && State.Unaware) ChangeState(new ChaseState());

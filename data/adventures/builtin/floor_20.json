@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 20,
   "Source": "claude",
-  "LayoutHash": 9283463762577883319,
+  "LayoutHash": 14587061399930219220,
   "Title": "The Mouth",
   "IntroLine": {
     "Text": "Pillars for teeth, a floor that gives underfoot like a tongue, braziers smouldering at the back of the throat. The alderman called it on the first day, and nobody laughed then either.",
@@ -163,15 +163,15 @@
     },
     {
       "Id": "col_oddfellows",
-      "Name": "The Last Oddfellows",
-      "FactionId": null,
+      "Name": "What Took the Oddfellows",
+      "FactionId": "fac_choir",
       "Members": [
         {
-          "EnemyId": "enemy.bandit",
-          "Count": 4
+          "EnemyId": "enemy.void_stalker",
+          "Count": 3
         },
         {
-          "EnemyId": "enemy.bandit_archer",
+          "EnemyId": "enemy.abyss_archer",
           "Count": 1
         }
       ],
@@ -257,11 +257,21 @@
       "VoiceId": "37a14d45489de59a",
       "Delivery": "whisper"
     },
+    "HalfLine": {
+      "Text": "You would keep Him asleep and kill me? Then one of you is the new Verger. I do not make the rules; I only wrote them down.",
+      "VoiceId": "d1cfa9a93481008c",
+      "Delivery": "calm"
+    },
     "AltDeathFlag": "wake_gorm",
     "AltDeathLine": {
       "Text": "...He is saying something. He is saying thank you. Three hundred years, and that is what He...",
-      "VoiceId": null,
+      "VoiceId": "2736272b311ed58f",
       "Delivery": "whisper"
+    },
+    "AltHalfLine": {
+      "Text": "He is turning over. Do you know what a town looks like from underneath? You will.",
+      "VoiceId": "575724869af88532",
+      "Delivery": "calm"
     }
   },
   "Chests": [

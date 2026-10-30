@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 18,
   "Source": "claude",
-  "LayoutHash": 5312613950339343779,
+  "LayoutHash": 1134323546814438192,
   "Title": "The Dreaming Hall",
   "IntroLine": {
     "Text": "Violet dark, and one corridor into a rotunda that breathes. Maud Sorrel has stopped walking. She is sitting on the floor of the god\u0027s dream with her hands folded in her lap.",
@@ -362,27 +362,27 @@
       "Lines": {
         "Offer": {
           "Text": "Four papers and four graves say the same word. Choose it aloud, inspectors: my eyes open, or the contract burns and the dream goes deeper. Either is a kindness; neither is clean.",
-          "VoiceId": null,
+          "VoiceId": "616b51ea4769b3da",
           "Delivery": "calm"
         },
         "Accept": {
           "Text": "Said, then. Carry it down. He will hear it before you reach him; he hears everything that happens in my throat.",
-          "VoiceId": null,
+          "VoiceId": "2c21145b940b8e8f",
           "Delivery": "calm"
         },
         "Decline": {
           "Text": "Then stand there a while. I have waited three hundred years; I can wait out a quiet spell from four plumbers.",
-          "VoiceId": null,
+          "VoiceId": "15150fe08e9fa44b",
           "Delivery": "calm"
         },
         "Complete": {
           "Text": "Thank you for coming. Nobody has, before. They were sent, and that is a different verb.",
-          "VoiceId": null,
+          "VoiceId": "1d9cd4bfe5f15851",
           "Delivery": "calm"
         },
         "Fail": {
           "Text": "No matter. The verse finishes itself eventually, with or without a mouth.",
-          "VoiceId": null,
+          "VoiceId": "1dc42905fa83d39d",
           "Delivery": "weary"
         }
       },

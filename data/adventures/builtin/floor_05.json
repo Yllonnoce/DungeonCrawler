@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 5,
   "Source": "claude",
-  "LayoutHash": 4902206263473016557,
+  "LayoutHash": 15889628749481789317,
   "Title": "Canon Ludd",
   "IntroLine": {
     "Text": "Somebody is still saying the office down here, on the hour, to empty pews. Six hundred years of it, and not one amen.",
@@ -183,7 +183,7 @@
       "EnemyId": null,
       "Count": null,
       "Total": 13,
-      "Trigger": "Chest",
+      "Trigger": "Enter",
       "Line": {
         "Text": "The charnel wall gives at both seams, and last generation\u0027s coats come out of it walking.",
         "VoiceId": null,

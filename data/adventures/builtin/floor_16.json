@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 16,
   "Source": "claude",
-  "LayoutHash": 17617491385268428607,
+  "LayoutHash": 12934211061234841658,
   "Title": "The Dream Door",
   "IntroLine": {
     "Text": "Marble, because He dreams in marble. Blue light on the veins of it, and a long way off a choir holding one note until it thins. Walk softly; the floor is listening.",
@@ -487,12 +487,12 @@
         },
         "Accept": {
           "Text": "Thank you. Mind the colonnade; the singers use the fallen pillars the way I used to use the pulpit.",
-          "VoiceId": null,
+          "VoiceId": "b16a90fa22630734",
           "Delivery": null
         },
         "Decline": {
           "Text": "No. Quite right. Letters have done enough damage in this church.",
-          "VoiceId": null,
+          "VoiceId": "0c0bf03c372226c9",
           "Delivery": null
         },
         "Complete": {
@@ -502,7 +502,7 @@
         },
         "Fail": {
           "Text": "Leave them scattered, then. The Choir will learn the words soon enough; it learns everything eventually.",
-          "VoiceId": null,
+          "VoiceId": "abefa1678366cf4e",
           "Delivery": null
         }
       },
@@ -541,12 +541,12 @@
         },
         "Accept": {
           "Text": "Good. Keep to the outer ring. The singers are fond of the middle, and so, I think, is the one beneath it.",
-          "VoiceId": null,
+          "VoiceId": "463e871994d2007b",
           "Delivery": null
         },
         "Decline": {
           "Text": "As you like. It will still be there when you come back up, and so will I, which is the sadder of the two facts.",
-          "VoiceId": null,
+          "VoiceId": "2b2f09e95a1ee020",
           "Delivery": null
         },
         "Complete": {
@@ -556,7 +556,7 @@
         },
         "Fail": {
           "Text": "Paper rots quickly in a throat. No matter. I remember the wording; I have been carrying it since before you were apprenticed.",
-          "VoiceId": null,
+          "VoiceId": "4bea74352574648b",
           "Delivery": null
         }
       },

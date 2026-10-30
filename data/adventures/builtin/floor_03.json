@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 3,
   "Source": "claude",
-  "LayoutHash": 2759344506831363821,
+  "LayoutHash": 3969854396483107954,
   "Title": "The Nave",
   "IntroLine": {
     "Text": "Chalk-white bone stacked to the vaulting, and a candle burning in a chapel where nobody has needed light for six hundred years.",
@@ -314,12 +314,12 @@
         },
         "Accept": {
           "Text": "Yes. Say it plainly. He never says anything plainly, and I have stopped being able to tell why.",
-          "VoiceId": null,
+          "VoiceId": "2036222d9bfc6670",
           "Delivery": null
         },
         "Decline": {
           "Text": "As you wish. The candle will keep until you change your mind. It keeps very well.",
-          "VoiceId": null,
+          "VoiceId": "e2113c1c204ac999",
           "Delivery": null
         },
         "Complete": {
@@ -329,7 +329,7 @@
         },
         "Fail": {
           "Text": "Go down, then. He is waiting at the fourth, and he is very patient with me.",
-          "VoiceId": null,
+          "VoiceId": "515c337d6f48bc2e",
           "Delivery": null
         }
       },

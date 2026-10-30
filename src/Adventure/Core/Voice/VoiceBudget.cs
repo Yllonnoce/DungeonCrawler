@@ -67,7 +67,7 @@ public static class VoiceBudget
         foreach (var t in campaign.Tiers.OrderBy(t => t.Index)) list.Add(new Pick(t.EnterLine, "tier entrance", t.Index * 5 + 1));
         var byFloor = floors.OrderBy(f => f.Key).ToList();
         foreach (var (floor, plan) in byFloor)
-            if (plan.Boss != null) { list.Add(new Pick(plan.Boss.IntroLine, "boss intro", floor)); list.Add(new Pick(plan.Boss.DeathLine, "boss death", floor)); if (plan.Boss.AltDeathLine != null) list.Add(new Pick(plan.Boss.AltDeathLine, "boss death", floor)); }
+            if (plan.Boss != null) foreach (var l in plan.Boss.AllLines()) list.Add(new Pick(l, ReferenceEquals(l, plan.Boss.IntroLine) ? "boss intro" : "boss death", floor));
         // story floors carry the plot: their intro, then what their people say
         var story = byFloor.Where(f => campaign.IsStoryFloor(f.Key)).ToList();
         foreach (var (floor, plan) in story) list.Add(new Pick(plan.IntroLine, "story intro", floor));

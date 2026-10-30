@@ -22,6 +22,7 @@ namespace DungeonCrawler.Core;
 ///   --face-enemy        teleport next to the nearest enemy at start
 ///   --clear-enemies     every enemy dies as soon as its floor is built (quiet screenshots of the cast)
 ///   --bake-kill-barks=DIR  with --builtin --ai: render every member's and fighter's kill line into DIR (assets/voice/builtin for the shipped bank), then quit
+///   --bake-cast-voice=DIR  with --builtin --ai: render every line of the recurring cast and every boss line into DIR, write the plans with their ids to DIR/cast-plans, then quit
 ///   --face-ramp[=bottom|top|ledge|gallery]  stand a cell short of a corridor ramp looking up it (bottom), at its top looking down, on a ledge's ramp looking into the room, or on the ledge looking down
 ///   --auto-attack       every member swings whenever ready (headless combat smoke test)
 ///   --trace-ai          print enemy state transitions
@@ -120,6 +121,8 @@ public partial class DebugTools : Node
     private int _bakeUiStep;
     private string? _bakeVoiceDir;
     private string? _bakeKillBarksDir;
+    private string? _bakeCastVoiceDir;
+    private int _bakeCastVoiceQueued = -1;
     private int _bakeKillBarksQueued = -1;
     private bool _testVoice;
     private int _voiceStep;
@@ -305,6 +308,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--inspect=")) { var xy = arg["--inspect=".Length..].Split(','); _inspect = (int.Parse(xy[0]), int.Parse(xy[1])); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--bake-voice=")) _bakeVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-voice=".Length..]);
             else if (arg.StartsWith("--bake-kill-barks=")) { _bakeKillBarksDir = ProjectSettings.GlobalizePath(arg["--bake-kill-barks=".Length..]); _quitAfter = Math.Max(_quitAfter, 900); }
+            else if (arg.StartsWith("--bake-cast-voice=")) { _bakeCastVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-cast-voice=".Length..]); _quitAfter = Math.Max(_quitAfter, 900); }
             else if (arg.StartsWith("--voice-budget=")) CampaignBaker.VoiceBudgetLines = int.Parse(arg["--voice-budget=".Length..]);
             else if (arg.StartsWith("--spend-cap=")) Settings.SpendCapUsd = double.Parse(arg["--spend-cap=".Length..], System.Globalization.CultureInfo.InvariantCulture); // this run only; not saved
             else if (arg == "--test-voice") { _testVoice = true; FakeVoice = true; TraceAi = false; _quitAfter = 16; }
@@ -731,6 +735,43 @@ public partial class DebugTools : Node
             _pressActions.Clear();
         }
 
+        if (_bakeCastVoiceDir != null && Main.Instance?.InGame == true && Game.Instance.Adventure.Campaign is { } castCampaign && _elapsed >= 2.0)
+        {
+            // --bake-cast-voice=DIR (with --builtin --ai and the voice flags): every line of the recurring cast and every boss line gets
+            // audio in DIR, outside the 80-line budget; the plans with their new ids are written to DIR/cast-plans for merging by hand
+            var vr = VoiceRenderer.Instance;
+            var castPlans = Game.Instance.Adventure.FloorPlans.Where(kv => kv.Key >= 1 && kv.Key <= TierRules.FinalFloor).ToDictionary(kv => kv.Key, kv => kv.Value);
+            if (_bakeCastVoiceQueued < 0)
+            {
+                if (vr == null) { GD.Print("[cast-voice] RESULT FAIL: no voice renderer"); _done = true; GetTree().Quit(1); return; }
+                var wanted = new HashSet<Line>(ReferenceEqualityComparer.Instance);
+                foreach (var plan in castPlans.Values)
+                {
+                    foreach (var npc in plan.Npcs.Where(n => n.CastId != null))
+                    {
+                        foreach (var node in npc.Script.Nodes) wanted.Add(node.Line);
+                        foreach (var q in plan.Quests.Where(q => q.GiverNpc == npc.Id)) foreach (var l in new[] { q.Lines.Offer, q.Lines.Accept, q.Lines.Decline, q.Lines.Complete, q.Lines.Fail }) wanted.Add(l);
+                    }
+                    if (plan.Boss != null) foreach (var l in plan.Boss.AllLines()) wanted.Add(l);
+                }
+                vr.CacheDir = _bakeCastVoiceDir;
+                vr.Filter = line => wanted.Contains(line);
+                foreach (var plan in castPlans.Values) AdventureDirector.Instance.EnqueueFloorVoice(plan);
+                vr.Filter = null;
+                _bakeCastVoiceQueued = wanted.Count;
+                GD.Print($"[cast-voice] {wanted.Count} cast and boss lines across {castPlans.Count} floors; {vr.Pending} to render into {vr.CacheDir} with {vr.CurrentModel}{(vr.Enabled ? "" : " (voice is off: nothing renders)")}");
+            }
+            else if (vr != null && (vr.Pending == 0 || vr.StoppedReason != null))
+            {
+                var ok = vr.Failed == 0 && vr.StoppedReason == null;
+                GD.Print($"[cast-voice] rendered {vr.Rendered}, failed {vr.Failed}{(vr.StoppedReason != null ? ", stopped: " + vr.StoppedReason : "")}; per model: {string.Join(", ", vr.RenderedByModel.Select(kv => $"{kv.Key} x{kv.Value}"))}");
+                var outDir = Path.Combine(_bakeCastVoiceDir, "cast-plans");
+                if (ok) { BuiltinCampaign.Write(outDir, castCampaign, castPlans); GD.Print($"[cast-voice] wrote the plans with their voice ids to {outDir}"); }
+                GD.Print($"[cast-voice] RESULT {(ok ? "ok" : "FAIL")}");
+                _done = true; GetTree().Quit(ok ? 0 : 1); return;
+            }
+            else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[cast-voice] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
+        }
         if (_bakeKillBarksDir != null && Main.Instance?.InGame == true && Game.Instance.Adventure.Campaign is { } killCampaign && _elapsed >= 2.0)
         {
             // --bake-kill-barks=DIR (with --builtin --ai and the voice flags): render every kill line into DIR, then quit

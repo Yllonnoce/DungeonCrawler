@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 9,
   "Source": "claude",
-  "LayoutHash": 7083642127442343333,
+  "LayoutHash": 3844715684746720664,
   "Title": "The Cistern",
   "IntroLine": {
     "Text": "Warm sandstone, and water going sour in the dark. Four levers in four chambers, and over each one a verse, carved by a hand that knew the tune.",
@@ -472,12 +472,12 @@
         },
         "Accept": {
           "Text": "Good. Quickly, and do not read them on the way. They are council property and very dull.",
-          "VoiceId": null,
+          "VoiceId": "026748ef930e22c8",
           "Delivery": null
         },
         "Decline": {
           "Text": "Then they stay down here getting damp, and so, I suppose, does my peace of mind.",
-          "VoiceId": null,
+          "VoiceId": "e2eaff326d10bda4",
           "Delivery": null
         },
         "Complete": {
@@ -487,7 +487,7 @@
         },
         "Fail": {
           "Text": "Gone soft in the wet, then. Just as well. Nobody ever profited by reading an old invoice.",
-          "VoiceId": null,
+          "VoiceId": "560b504e23141db3",
           "Delivery": null
         }
       },
@@ -522,12 +522,12 @@
         },
         "Accept": {
           "Text": "Said, then.",
-          "VoiceId": null,
+          "VoiceId": "c6937ecaa2651866",
           "Delivery": null
         },
         "Decline": {
           "Text": "Silence is also an answer. A coward\u0027s, but an answer.",
-          "VoiceId": null,
+          "VoiceId": "3181bdca1dc6de91",
           "Delivery": null
         },
         "Complete": {
@@ -537,7 +537,7 @@
         },
         "Fail": {
           "Text": "Nothing, then. Fine. The spiders are better company and they bite less.",
-          "VoiceId": null,
+          "VoiceId": "7d00ec1f81d0b07f",
           "Delivery": null
         }
       },

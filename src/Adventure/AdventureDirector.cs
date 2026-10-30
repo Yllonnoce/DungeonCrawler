@@ -107,9 +107,7 @@ public partial class AdventureDirector : Node
         foreach (var n in plan.Narration) _voice.Enqueue(n.Line, narrator, Speaker.Narrator, VoicePriority.Narrator);
         if (plan.Boss is { } boss)
         {
-            _voice.Enqueue(boss.IntroLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
-            _voice.Enqueue(boss.DeathLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
-            if (boss.AltDeathLine != null) _voice.Enqueue(boss.AltDeathLine, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
+            foreach (var l in boss.AllLines()) _voice.Enqueue(l, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
         }
         var campaign = Game.Instance.Adventure.Campaign;
         foreach (var npc in plan.Npcs)
@@ -414,6 +412,7 @@ public partial class AdventureDirector : Node
         var bus = EventBus.Instance;
         bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); };
         bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); };
+        bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
         bus.MemberKill += m => Bark(m, BarkTrigger.Kill);
         bus.NpcKill += FighterBark;
         bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * 0.15f) Bark(m, BarkTrigger.Hurt); };

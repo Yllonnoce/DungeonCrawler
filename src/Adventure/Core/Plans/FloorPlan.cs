@@ -97,14 +97,32 @@ public sealed class BossPlan
     [AiNotNull] public string? SignatureOverride { get; set; }
     public Line IntroLine { get; set; } = new();
     public Line DeathLine { get; set; } = new();
-    /// <summary>A flag that changes the boss's last words; hand-authored, never asked of the designer.</summary>
+    /// <summary>What the boss says at half health; null for nothing. Hand-authored, never asked of the designer.</summary>
+    [AiIgnore] public Line? HalfLine { get; set; }
+    /// <summary>A flag that changes the boss's middle and last words; hand-authored, never asked of the designer.</summary>
     [AiIgnore] public string? AltDeathFlag { get; set; }
+    /// <summary>What the boss says at half health when <see cref="AltDeathFlag"/> was set on an earlier floor.</summary>
+    [AiIgnore] public Line? AltHalfLine { get; set; }
     /// <summary>What the boss says dying when <see cref="AltDeathFlag"/> was set on an earlier floor.</summary>
     [AiIgnore] public Line? AltDeathLine { get; set; }
 
     /// <summary>The death line for this run: the twin when its flag is set, else the plain one.</summary>
     public Line DeathLineFor(IReadOnlyCollection<string> flags)
         => AltDeathLine != null && AltDeathFlag != null && flags.Contains(AltDeathFlag) ? AltDeathLine : DeathLine;
+
+    /// <summary>The half-health line for this run: the twin when its flag is set, else the plain one; null when the boss has none.</summary>
+    public Line? HalfLineFor(IReadOnlyCollection<string> flags)
+        => AltHalfLine != null && AltDeathFlag != null && flags.Contains(AltDeathFlag) ? AltHalfLine : HalfLine;
+
+    /// <summary>Every line the boss may speak, for voice and the sweep.</summary>
+    public IEnumerable<Line> AllLines()
+    {
+        yield return IntroLine;
+        yield return DeathLine;
+        if (HalfLine != null) yield return HalfLine;
+        if (AltHalfLine != null) yield return AltHalfLine;
+        if (AltDeathLine != null) yield return AltDeathLine;
+    }
 }
 
 public sealed class ChestPlan

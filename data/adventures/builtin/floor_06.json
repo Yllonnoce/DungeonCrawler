@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 6,
   "Source": "claude",
-  "LayoutHash": 5600236929218880696,
+  "LayoutHash": 4275804721252089328,
   "Title": "The Swallow",
   "IntroLine": {
     "Text": "Knee-deep, and warm as a mouth. Dunmarrow draws its drinking water from this, and the council has never once asked what else is in here.",
@@ -198,7 +198,7 @@
             "Id": "m6_dry",
             "Line": {
               "Text": "Dry? Am I? So I am. The water goes round me the way it goes round a stone it has had long enough. Keep wading; the Gut is only a swallow away.",
-              "VoiceId": null,
+              "VoiceId": "6bcb1fc24b43b15d",
               "Delivery": null
             },
             "Choices": [
@@ -235,7 +235,7 @@
             "Id": "m6_ahead",
             "Line": {
               "Text": "I did not hurry. I never hurry. He is slow, and I go at His pace, and somehow that is always one floor further than yours.",
-              "VoiceId": null,
+              "VoiceId": "d65c4f343bfc5b7e",
               "Delivery": null
             },
             "Choices": [
@@ -254,7 +254,7 @@
             "Id": "m6_tamsin",
             "Line": {
               "Text": "Tamsin. Yes. She thinks He is a vein. Let her; gold is a kinder word than the right one, and she laughs, which He likes.",
-              "VoiceId": null,
+              "VoiceId": "a01d978517819834",
               "Delivery": null
             },
             "Choices": [

@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 14,
   "Source": "claude",
-  "LayoutHash": 16079063412800819907,
+  "LayoutHash": 10184200325736615639,
   "Title": "The Quench",
   "IntroLine": {
     "Text": "Black water stands knee-deep over the quench grates, cold as a font and twice as patient. On the ledges above it, something with a bow waits for the ripples to tell it where you are.",
@@ -265,7 +265,7 @@
             "Id": "tob_a",
             "Line": {
               "Text": "You told me the truth on the flagstones and I have not been able to stop hearing it. He writes the verses down, you know. I copied one out.",
-              "VoiceId": null,
+              "VoiceId": "663afb08cd7dff4b",
               "Delivery": null
             },
             "Choices": [
@@ -302,7 +302,7 @@
             "Id": "tob_b",
             "Line": {
               "Text": "The Quench answers to a parity: which gates sleep while which wake. It is written in my psalter, and my psalter is in the font room, where I dropped it running.",
-              "VoiceId": null,
+              "VoiceId": "aad57deb4057e99a",
               "Delivery": null
             },
             "Choices": [
@@ -330,7 +330,7 @@
             "Id": "tob_c",
             "Line": {
               "Text": "Bring it back and I will read you the order aloud. After that I shall have to decide what I am, and I would rather do it with wet boots than none.",
-              "VoiceId": null,
+              "VoiceId": "a647a734c86683e0",
               "Delivery": null
             },
             "Choices": [
@@ -380,7 +380,7 @@
             "Id": "bet_a",
             "Line": {
               "Text": "The Verger sends his blessing and one kindness: the levers are all correct. Pull whichever you like. He would not lie to the congregation.",
-              "VoiceId": null,
+              "VoiceId": "c023e5642cfe052a",
               "Delivery": null
             },
             "Choices": [
@@ -408,7 +408,7 @@
             "Id": "bet_b",
             "Line": {
               "Text": "I have been given a part. It is a small part, held very long, and it does not want words any more. He says I shall be better for it. He says I shall be quieter.",
-              "VoiceId": null,
+              "VoiceId": "98b4f72ad4f33b13",
               "Delivery": null
             },
             "Choices": [
@@ -474,27 +474,27 @@
       "Lines": {
         "Offer": {
           "Text": "Small black book, water-swollen, dropped by the font where the wall is broken. The parity is on the flyleaf in my own bad hand.",
-          "VoiceId": null,
+          "VoiceId": "ae76a016d373aaaf",
           "Delivery": null
         },
         "Accept": {
           "Text": "Thank you. Mind the cinders in there; they come out of the wall like wasps out of a loaf.",
-          "VoiceId": null,
+          "VoiceId": "42631f31c4e85d98",
           "Delivery": null
         },
         "Decline": {
           "Text": "No. Quite right. I lost it, I should drown for it. I only thought you preferred stairs to guessing.",
-          "VoiceId": null,
+          "VoiceId": "9d1d517d41f09138",
           "Delivery": null
         },
         "Complete": {
           "Text": "Second gate sleeps while the first wakes, then the fourth, then nothing. There. I have told you, and I am no longer his. Rather a relief, and rather late.",
-          "VoiceId": null,
+          "VoiceId": "c50b1087909d10e2",
           "Delivery": null
         },
         "Fail": {
           "Text": "Then it stays in the water, and so does the order, and so, I suppose, do I.",
-          "VoiceId": null,
+          "VoiceId": "06fc12168b88aa6e",
           "Delivery": null
         }
       },
@@ -524,27 +524,27 @@
       "Lines": {
         "Offer": {
           "Text": "Stand where you are, please. The water carries the note. He asked me to keep you by the grate until the verse comes round again.",
-          "VoiceId": null,
+          "VoiceId": "a63cd2b646b15c34",
           "Delivery": null
         },
         "Accept": {
           "Text": "Oh. You wanted to see. Everybody wants to see, right up until.",
-          "VoiceId": null,
+          "VoiceId": "2cd38c2942b95506",
           "Delivery": null
         },
         "Decline": {
           "Text": "As you like. I shall wait. Waiting is most of the part.",
-          "VoiceId": null,
+          "VoiceId": "0fcb837f93d4f2ff",
           "Delivery": null
         },
         "Complete": {
           "Text": "The singing stops in the flooded room. What is left in the deacon\u0027s coat was never going to make deacon.",
-          "VoiceId": null,
+          "VoiceId": "49e54aa965c49380",
           "Delivery": null
         },
         "Fail": {
           "Text": "Hush now. You are making the water ring.",
-          "VoiceId": null,
+          "VoiceId": "5d91acc53bbc431a",
           "Delivery": null
         }
       },

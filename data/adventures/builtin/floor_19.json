@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 19,
   "Source": "claude",
-  "LayoutHash": 11695870830709217508,
+  "LayoutHash": 5811900724474181083,
   "Title": "The Last Station",
   "IntroLine": {
     "Text": "Three cold galleries meet at a shrine of white tile, and the Choir has stopped singing to listen. Somewhere beneath, the Verger counts verses he believes no one finishes.",
@@ -398,27 +398,27 @@
       "Lines": {
         "Offer": {
           "Text": "Three galleries, three mouths, one old woman with the words. Keep them off me for the length of a hymn and this is done with.",
-          "VoiceId": null,
+          "VoiceId": "f82d6186e49022a0",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Do not listen too closely; the tune gets into people.",
-          "VoiceId": null,
+          "VoiceId": "549ab1a68433d937",
           "Delivery": null
         },
         "Decline": {
           "Text": "Then I shall wait here and hum it, and we shall all be very old before anything changes.",
-          "VoiceId": null,
+          "VoiceId": "b42e8fb3bdb50bfe",
           "Delivery": null
         },
         "Complete": {
           "Text": "There. Three hundred years of the same line, and someone finally sang the next one.",
-          "VoiceId": null,
+          "VoiceId": "e66adabf7eb7f1dd",
           "Delivery": null
         },
         "Fail": {
           "Text": "The verse is dropped. Pick me up; the Choir will start again from the top, and so, I am afraid, must we.",
-          "VoiceId": null,
+          "VoiceId": "1d4d194f5f62e1dd",
           "Delivery": null
         }
       },

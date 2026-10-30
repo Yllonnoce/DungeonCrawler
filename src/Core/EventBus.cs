@@ -50,6 +50,8 @@ public partial class EventBus : Node
     /// <summary>Members were added, parked or unparked: the HUD rebuilds its portraits.</summary>
     public event Action? RosterChanged;
     public event Action<Enemies.Enemy>? BossSeen;
+    /// <summary>A tier guardian fell to half its health (once per boss): the moment for its middle line.</summary>
+    public event Action<Enemies.Enemy>? BossHalf;
     /// <summary>An alarm runner reached its target collective; hordes set to the alarm break loose.</summary>
     public event Action<string>? AlarmRaised;
     /// <summary>A chest was opened at a world position; hordes set to a chest in their room break loose.</summary>
@@ -116,6 +118,7 @@ public partial class EventBus : Node
     public void RaiseLeadChanged(int index) => LeadChanged?.Invoke(index);
     public void RaiseRosterChanged() => RosterChanged?.Invoke();
     public void RaiseBossSeen(Enemies.Enemy boss) => BossSeen?.Invoke(boss);
+    public void RaiseBossHalf(Enemies.Enemy boss) => BossHalf?.Invoke(boss);
     public void RaiseAlarmRaised(string collectiveId) => AlarmRaised?.Invoke(collectiveId);
     public void RaiseChestOpened(Vector3 at) => ChestOpened?.Invoke(at);
     public void RaiseMemberKill(Characters.CharacterState m) => MemberKill?.Invoke(m);
