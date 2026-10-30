@@ -304,6 +304,12 @@ public partial class DungeonBuilder : Node3D
     /// <summary>Characters from the 3dObject viewer: the fighter by floor 1's stairs and an orc to try fighting.</summary>
     public const string FoehammerModel = "res://assets/models/viewer/foehammer.glb";
     public const string ViewerOrcId = "enemy.viewer_orc";
+    /// <summary>
+    /// The showpiece orc's spawn index, far above any layout enemy's: a fixed index makes it a static enemy, so the
+    /// server and every client build the same orc under the same net id (no second copy from the server's dynamic
+    /// list), and its death is saved with the floor instead of coming back on every server restart.
+    /// </summary>
+    public const int ViewerOrcSpawnIndex = 90000;
 
     /// <summary>
     /// A fighter who can be asked to join, standing a few steps from the entrance of their floor: Foehammer on floor 1
@@ -366,7 +372,7 @@ public partial class DungeonBuilder : Node3D
         }
         if (floorIndex == 1 && _enemies.ContainsKey(ViewerOrcId) && (StepsFrom(layout, arrival, 8) ?? StepsFrom(layout, arrival, 7) ?? StepsFrom(layout, arrival, 6)) is { } oCell)
         {
-            var orc = SpawnEnemy(ViewerOrcId, Surface(oCell) + Vector3.Up * 0.1f, floorIndex);
+            var orc = SpawnEnemy(ViewerOrcId, Surface(oCell) + Vector3.Up * 0.1f, floorIndex, ViewerOrcSpawnIndex);
             GD.Print($"[DungeonBuilder] floor {floorIndex}: viewer orc at {oCell} ({(orc != null ? "spawned" : "not spawned")})");
         }
     }

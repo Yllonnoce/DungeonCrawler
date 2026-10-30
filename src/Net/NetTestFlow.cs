@@ -87,6 +87,9 @@ public partial class NetTestFlow : Node
                     GetTree().CreateTimer(1.0).Timeout += () => GetTree().Quit(okBack ? 0 : 1);
                     return;
                 }
+                var orcs = main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count(e => e.Profile.Id == Dungeon.DungeonBuilder.ViewerOrcId) ?? 0;
+                GD.Print($"[net] viewer orcs on this floor: {orcs}");
+                if (orcs > 1) { Finish("[net]", false, $"{orcs} copies of the viewer orc: the client spawned its own beside the server's"); return; }
                 _start = local.GlobalPosition;
                 _clock = 0; _step = 1;
                 return;
