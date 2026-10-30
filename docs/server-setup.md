@@ -3,7 +3,7 @@
 A dedicated server is the game itself started headless with `--server`. Players join it from the title screen
 (Join Server) with a name and a class, each controlling one adventurer. This guide takes a fresh Google Cloud
 account to a running server and covers the day-to-day afterwards. Any other Linux machine works the same from
-step 4 onward; the Render route (Docker behind a WebSocket front door) is described in the README under Multiplayer.
+step 4 onward; the Render route (Docker behind a WebSocket front door) is described in [development.md](development.md) under Multiplayer.
 
 Placeholders used below: `PROJECT_ID` (your Google Cloud project), `ZONE` (for example `us-central1-f`),
 `VM` (the instance name, for example `dungeoncrawler`). Replace them as you go.

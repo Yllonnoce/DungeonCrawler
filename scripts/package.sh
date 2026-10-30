@@ -4,8 +4,8 @@
 #   dist/DungeonCrawler-<version>-linux-x86_64.tar.gz   the binary, its data folder, setup.sh (menu) plus install.sh / uninstall.sh
 #   dist/DungeonCrawler-<version>-windows-x86_64.zip    DungeonCrawler.exe, its data folder and Setup.bat (menu; copies to %LOCALAPPDATA%\Programs)
 #   dist/DungeonCrawler-<version>-macos-universal.zip   DungeonCrawler.app (ad-hoc signed, not notarized) and Setup.command (menu; copies to Applications)
-# plus dist/SHA256SUMS and dist/INSTALL.txt. Run scripts/export_all.sh --no-ship (or the three --export-release lines in the
-# README) first; VERSION=1.2 overrides the version, which defaults to the short git hash.
+# plus dist/SHA256SUMS and dist/INSTALL.txt. Run scripts/export_all.sh --no-ship (or the three --export-release lines in
+# docs/development.md) first; VERSION=1.2 overrides the version, which defaults to the short git hash.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 VERSION=${VERSION:-$(git rev-parse --short HEAD 2>/dev/null || echo dev)}

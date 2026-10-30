@@ -9,5 +9,5 @@ TAG=${1:-server-$(date -u +%Y%m%d-%H%M)}
 mkdir -p build
 tar -C build -czf build/dungeoncrawler-server.tar.gz server
 ls -la build/dungeoncrawler-server.tar.gz
-gh release create "$TAG" build/dungeoncrawler-server.tar.gz --title "Dedicated server $TAG" --notes "Linux dedicated server export (commit $(git rev-parse --short HEAD)). Fetch on a VM with deploy/gce/fetch.sh." --latest
+gh release create "$TAG" build/dungeoncrawler-server.tar.gz --title "Dedicated server $TAG" --notes "Linux dedicated server export (commit $(git rev-parse --short HEAD)). Fetch on a VM with deploy/gce/fetch.sh." --latest=false
 echo "published: gh release view $TAG"
