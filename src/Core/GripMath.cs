@@ -13,6 +13,9 @@ public static class GripMath
     /// <summary>A plain name is a KayKit item (sword_1handed, dagger, axe_1handed…); a name with a slash is any glTF under assets/models.</summary>
     public static string WeaponPath(string name) => name.Contains('/') ? $"res://assets/models/{name}.gltf" : $"{ItemsDir}{name}.gltf";
 
+    /// <summary>How big a KayKit weapon sits in a viewer-rigged hand: the party's proportions (a crossbow and a staff are long, the rest hand-sized).</summary>
+    public static float HeldScale(string weapon) => weapon.StartsWith("crossbow") || weapon == "bow" ? 0.45f : weapon == "staff" ? 0.5f : 0.75f;
+
     /// <summary>
     /// A right-handed orthonormal basis whose Y axis is <paramref name="bladeDir"/>: KayKit weapons stand along +Y with the
     /// hand at the origin, so a weapon given this rotation points its blade the way the grip's end joint does. Roll is

@@ -46,3 +46,14 @@ public class EnemyProfileWeaponTests
         Assert.Equal("res://assets/models/kaykit_items/axe_1handed.gltf", GripMath.WeaponPath(armed.Weapon));
     }
 }
+
+public class HeldScaleTests
+{
+    [Theory]
+    [InlineData("sword_1handed", 0.75f)]
+    [InlineData("axe_2handed", 0.75f)]
+    [InlineData("crossbow_2handed", 0.45f)]
+    [InlineData("staff", 0.5f)]
+    public void AWeaponInAViewerHand_KeepsThePartysProportions(string weapon, float expected)
+        => Assert.Equal(expected, DungeonCrawler.Core.GripMath.HeldScale(weapon));
+}

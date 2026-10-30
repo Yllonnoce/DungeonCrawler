@@ -150,6 +150,9 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
 - The villain in person: on the last boss floor the tier's boss wears `verger.glb` (scaled to 2.25 m) when the campaign's
   antagonist is a verger (`NpcBodies.Villain`); other campaigns keep the creature.
 - All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger).
+- The Oddfellows' camps: `npc_bandit.glb` is the bandit (sword) and the bandit archer (crossbow), `npc_large_bandit.glb` the
+  bandit chief (two-handed axe); set in `data/enemies/bandit*.tres` through `Model = "viewer/..."` and `Weapon`, the weapon
+  scaled by `GripMath.HeldScale`. `--face-node=camp:3` stands the camera off a floor's camp for a screenshot.
 
 Screenshots: `godot --path . -- --seed=11 --floor=6 --face-node=Npc_fighter_tamsin:1 --screenshot=/tmp/t.png --after=4`
 stands the party a cell from a fighter; `--possess=1 --face-node=Brand:4` puts a party member in front of the camera

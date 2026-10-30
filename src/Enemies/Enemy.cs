@@ -253,7 +253,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
                 mi.SetSurfaceOverrideMaterial(i, mat);
                 _modelMaterials.Add(mat);
             }
-        if (Profile.Weapon != "" && WeaponGrip.Attach(_model, Profile.Weapon, "Right") == null) GD.Print($"[Enemy] {Profile.Id}: no grip bone or no file for weapon {Profile.Weapon}");
+        if (Profile.Weapon != "" && WeaponGrip.Attach(_model, Profile.Weapon, "Right", GripMath.HeldScale(Profile.Weapon)) == null) GD.Print($"[Enemy] {Profile.Id}: no grip bone or no file for weapon {Profile.Weapon}");
         if (Profile.Model.Contains('/')) GD.Print($"[Enemy] {Profile.Id}: {path} box {aabb.Position:0.000} size {aabb.Size:0.000} scale {_model.Scale.Y:0.00} lift {_model.Position.Y:0.000}");
     }
 

@@ -455,6 +455,12 @@ public partial class DebugTools : Node
                             break;
                         }
             }
+            else if (_faceNode == "camp" && faceLayout.Structures.FirstOrDefault(s => s.Kind == StructureKind.Camp) is { } camp)
+            {
+                // the floor's bandit camp, seen from a few cells off its tents
+                look = Main.Instance.Builder.Surface(camp.Anchor) + Vector3.Up * 0.5f;
+                GD.Print($"[face] camp at {camp.Anchor}");
+            }
             else if (faceRoot.GetChildren().OfType<Node3D>().FirstOrDefault(n => n.Name.ToString().StartsWith(_faceNode!)) is { } target) { look = target.GlobalPosition; GD.Print($"[face] {target.Name} at {target.GlobalPosition:0.0} cell {DungeonBuilder.WorldToCell(target.GlobalPosition)} level {faceLayout.LevelOf(DungeonBuilder.WorldToCell(target.GlobalPosition))}"); }
             if (look is { } at)
             {
