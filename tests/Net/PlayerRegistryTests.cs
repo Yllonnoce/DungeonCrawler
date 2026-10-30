@@ -15,14 +15,14 @@ public class PlayerRegistryTests
     public void NewName_CreatesMember_ReturningName_KeepsStoredClass()
     {
         var r = new PlayerRegistry();
-        Assert.Equal(ClaimResult.Ok, r.Claim(2, " Eric ", "class.rogue", Cls, Create, out var slot));
-        Assert.Equal("Eric", slot!.Name);
+        Assert.Equal(ClaimResult.Ok, r.Claim(2, " Ash ", "class.rogue", Cls, Create, out var slot));
+        Assert.Equal("Ash", slot!.Name);
         Assert.Equal(0, slot.MemberIndex);
         Assert.True(slot.Online);
         r.Leave(2, new PoseDto { X = 5 }, 3, "t1");
         Assert.False(slot.Online);
         Assert.Equal(3, slot.ParkedFloor);
-        Assert.Equal(ClaimResult.Ok, r.Claim(7, "eric", "class.mage", Cls, Create, out var again));
+        Assert.Equal(ClaimResult.Ok, r.Claim(7, "ash", "class.mage", Cls, Create, out var again));
         Assert.Same(slot, again);
         Assert.Equal("class.rogue", again!.ClassId);
         Assert.Equal(7, again.PeerId);
@@ -37,9 +37,9 @@ public class PlayerRegistryTests
         Assert.Equal(ClaimResult.BadName, r.Claim(2, "", "class.rogue", Cls, Create, out _));
         Assert.Equal(ClaimResult.BadName, r.Claim(2, "a name that is far too long", "class.rogue", Cls, Create, out _));
         Assert.Equal(ClaimResult.BadName, r.Claim(2, "bad<name>", "class.rogue", Cls, Create, out _));
-        Assert.Equal(ClaimResult.BadClass, r.Claim(2, "Eric", "class.bard", Cls, Create, out _));
-        Assert.Equal(ClaimResult.Ok, r.Claim(2, "Eric", "class.rogue", Cls, Create, out _));
-        Assert.Equal(ClaimResult.NameInUse, r.Claim(3, "ERIC", "class.rogue", Cls, Create, out _));
+        Assert.Equal(ClaimResult.BadClass, r.Claim(2, "Ash", "class.bard", Cls, Create, out _));
+        Assert.Equal(ClaimResult.Ok, r.Claim(2, "Ash", "class.rogue", Cls, Create, out _));
+        Assert.Equal(ClaimResult.NameInUse, r.Claim(3, "ASH", "class.rogue", Cls, Create, out _));
         Assert.Equal(ClaimResult.Ok, r.Claim(3, "Sam", "class.mage", Cls, Create, out _));
         Assert.Equal(ClaimResult.Full, r.Claim(4, "Kim", "class.mage", Cls, Create, out _));
         Assert.Equal(2, r.OnlineCount);
@@ -53,17 +53,17 @@ public class PlayerRegistryTests
     public void FullServer_RefusesReturningPlayerToo()
     {
         var r = new PlayerRegistry { MaxOnline = 1 };
-        r.Claim(2, "Eric", "class.rogue", Cls, Create, out _);
+        r.Claim(2, "Ash", "class.rogue", Cls, Create, out _);
         r.Leave(2, null, 1, "t");
         r.Claim(3, "Sam", "class.mage", Cls, Create, out _);
-        Assert.Equal(ClaimResult.Full, r.Claim(4, "Eric", "class.rogue", Cls, Create, out _));
+        Assert.Equal(ClaimResult.Full, r.Claim(4, "Ash", "class.rogue", Cls, Create, out _));
     }
 
     [Fact]
     public void Load_StartsEveryoneOffline_AndDtosMatch()
     {
         var r = new PlayerRegistry();
-        r.Load(new[] { new PlayerSlot { Name = "Eric", ClassId = "class.rogue", MemberIndex = 0, PeerId = 9 }, new PlayerSlot { Name = "Sam", ClassId = "class.mage", MemberIndex = 1 } });
+        r.Load(new[] { new PlayerSlot { Name = "Ash", ClassId = "class.rogue", MemberIndex = 0, PeerId = 9 }, new PlayerSlot { Name = "Sam", ClassId = "class.mage", MemberIndex = 1 } });
         Assert.Equal(0, r.OnlineCount);
         Assert.Equal(1, r.ByName("sam")!.MemberIndex);
         Assert.Null(r.ByPeer(0));

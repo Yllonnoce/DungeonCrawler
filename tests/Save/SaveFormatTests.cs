@@ -178,15 +178,15 @@ public class SaveV7Tests
     [Xunit.Fact]
     public void ServerSave_KeepsPlayers()
     {
-        var data = new SaveData { Multiplayer = true, Players = { new PlayerDto { Name = "Eric", ClassId = "class.rogue", MemberIndex = 1, ParkedFloor = 3, ParkedPose = new PoseDto { X = 1, Y = 2, Z = 3, Yaw = 0.5f }, LastSeenUtc = "t" } } };
+        var data = new SaveData { Multiplayer = true, Players = { new PlayerDto { Name = "Ash", ClassId = "class.rogue", MemberIndex = 1, ParkedFloor = 3, ParkedPose = new PoseDto { X = 1, Y = 2, Z = 3, Yaw = 0.5f }, LastSeenUtc = "t" } } };
         var back = SaveFormat.Deserialize(SaveFormat.Serialize(data));
         Xunit.Assert.True(back.Multiplayer);
         Xunit.Assert.Equal(1, back.Players[0].MemberIndex);
         Xunit.Assert.Equal(3f, back.Players[0].ParkedPose!.Z);
         var slot = DungeonCrawler.Net.PlayerSlot.FromSave(back.Players[0]);
-        Xunit.Assert.Equal("Eric", slot.Name);
+        Xunit.Assert.Equal("Ash", slot.Name);
         Xunit.Assert.False(slot.Online);
-        Xunit.Assert.Equal("Eric", slot.ToSave().Name);
+        Xunit.Assert.Equal("Ash", slot.ToSave().Name);
     }
 
     [Fact]

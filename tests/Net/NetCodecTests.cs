@@ -55,8 +55,8 @@ public class NetCodecTests
     [Fact]
     public void Hello_Reject_Ready_RoundTrip()
     {
-        var h = RoundTrip(new Hello(Protocol.Version, "Eric", "class.rogue", "dev"));
-        Assert.Equal("Eric", h.PlayerName);
+        var h = RoundTrip(new Hello(Protocol.Version, "Ash", "class.rogue", "dev"));
+        Assert.Equal("Ash", h.PlayerName);
         Assert.Equal("class.rogue", h.ClassId);
         Assert.Equal("The server is full.", RoundTrip(new Reject("The server is full.")).Reason);
         Assert.Equal(3, RoundTrip(new Ready(3)).Floor);
@@ -69,11 +69,11 @@ public class NetCodecTests
     {
         var plan = new FloorPlan { Floor = 2, Title = "The Drowned Hall", LayoutHash = 12345UL };
         var adventure = new AdventureDto { Mode = AdventureMode.Offline, FloorPlans = { [2] = plan }, Quests = { ["2.q1"] = new QuestState { Id = "q1", Floor = 2, Title = "Find the key", Status = QuestStatus.Active } } };
-        var party = new PartyDto { FocusedIndex = 1, Members = { new CharacterDto { Name = "Eric", ClassId = "class.rogue", Level = 3 } }, Bag = { new BagCellDto { Index = 0, Item = new ItemDto { Id = Guid.NewGuid(), DefId = "item.arrow", StackCount = 12 } } } };
+        var party = new PartyDto { FocusedIndex = 1, Members = { new CharacterDto { Name = "Ash", ClassId = "class.rogue", Level = 3 } }, Bag = { new BagCellDto { Index = 0, Item = new ItemDto { Id = Guid.NewGuid(), DefId = "item.arrow", StackCount = 12 } } } };
         var state = new FloorStateDto { Visited = true, DeadEnemies = { 1, 4 }, OpenedChests = { 0 }, SpentHordes = { "h1" } };
         var w = new Welcome(2, 0, 987654321UL, 2, 12.5, false, adventure, new PartySnapshot(3, 2.5f, 1), state,
             new List<DynamicEnemyDto> { new(200001, "enemy.horde_husk", 1, 2, 3, 0.5f, 9f, "h1") }, party,
-            new List<NetPlayerDto> { new("Eric", 0, "class.rogue", 2, true) }, "Find the stairs", 600);
+            new List<NetPlayerDto> { new("Ash", 0, "class.rogue", 2, true) }, "Find the stairs", 600);
         var back = RoundTrip(w);
         Assert.Equal(987654321UL, back.GameSeed);
         Assert.Equal("The Drowned Hall", back.Adventure!.FloorPlans[2].Title);
