@@ -136,7 +136,8 @@ public partial class MusicDirector : Node
         }
     }
 
-    private static bool AnyoneFighting(Main main)
+    /// <summary>An engaged enemy within earshot of a standing member: the party is in a fight (the idle razzing holds its tongue too).</summary>
+    public static bool AnyoneFighting(Main main)
     {
         if (main.Builder.FloorRoot is not { } root || !main.Party.HasBodies) return false;
         var bodies = main.Party.Active.Where(a => !a.Downed).Select(a => a.GlobalPosition).ToList();

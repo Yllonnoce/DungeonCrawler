@@ -422,7 +422,11 @@ interrupt barks, barks never interrupt anything. Lines without audio still show 
 kills, heavy hits, loot, level-ups, seeing a boss, possession, going down and getting up, rate limited to one every
 five seconds; they also print in the message log. A line that has been said stays out of the draw until the party is
 two floors deeper (`Adventure/Core/Voice/BarkRepeat.cs`, the record travels in the save as `BarksSaid`); when every
-line for a trigger is that recent the companion says nothing rather than repeat itself. Without a key the game is silent apart from the shipped bank.
+line for a trigger is that recent the companion says nothing rather than repeat itself, except over a kill or a
+dawdle, where the line said longest ago comes back. Kill lines (`KillBarks`, ten per hero) and idle razzings
+(`IdleBarks`, ten per hero: a companion who is not being played mocks a player who has stood in one place for ten
+seconds with no fight, dialogue or menu open, another one every twenty seconds after) are topped up from stock into
+the campaign's bark sets and voiced with `--bake-kill-barks`. Without a key the game is silent apart from the shipped bank.
 When Gemini answers with a quota error (HTTP 429), rendering stops for the session rather than burning requests: a
 daily-quota error stops at once, a per-minute limit is retried after the delay Google suggests and stops after three
 in a row. Nothing is lost; the lines that were not rendered are queued again the next time you press "Render voice"

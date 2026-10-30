@@ -31,6 +31,7 @@ public partial class Hud : Control
     private InventoryScreen _inventory = null!;
     public InventoryScreen Inventory => _inventory;
     public bool InventoryOpen => _inventory.Visible;
+    public bool DialogueOpen => _dialogue.Visible;
     private PauseMenu _pause = null!;
     private SkillTreeScreen _skills = null!;
     public bool Paused => _pause.Visible;

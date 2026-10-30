@@ -123,6 +123,7 @@ public static class Voices
         BarkTrigger.BossSeen => Delivery.Frantic,
         BarkTrigger.Downed => Delivery.Weary,
         BarkTrigger.Revived => Delivery.Weary,
+        BarkTrigger.Idle => Delivery.Mocking,
         BarkTrigger.Loot => Delivery.Cheerful,
         BarkTrigger.LevelUp => Delivery.Cheerful,
         _ => Delivery.Calm,

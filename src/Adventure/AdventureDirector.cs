@@ -155,6 +155,7 @@ public partial class AdventureDirector : Node
                 voice = Voices.ForClass(classId ?? "");
                 persona = Voices.CompanionPersona(classId ?? "");
                 Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
+                Voice.IdleBarks.TopUp(set, classId ?? ""); // and the razzings for a player who stands about
             }
             foreach (var b in set.Lines)
             {
@@ -175,7 +176,9 @@ public partial class AdventureDirector : Node
         var now = Game.Instance.PlaySeconds;
         // a kill is remarked on more freely than anything else: a quick cooldown, a roll, and a bank topped up from stock
         var kill = trigger == BarkTrigger.Kill;
+        var razz = trigger == BarkTrigger.Idle;
         if (kill) Voice.KillBarks.TopUp(set, m.Class.Id);
+        if (razz) Voice.IdleBarks.TopUp(set, m.Class.Id);
         if (now - _lastBark < (kill ? Voice.KillBarks.GlobalGapSeconds : 5)) return;
         if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill ? Voice.KillBarks.CooldownSeconds : 25)) return;
         if (kill && _barkRng.NextDouble() >= Voice.KillBarks.Chance) return;
@@ -185,7 +188,7 @@ public partial class AdventureDirector : Node
         // except over a kill, where the line said longest ago comes back
         var said = Game.Instance.Adventure.BarksSaid;
         var texts = lines.Select(l => l.Line.Text).ToList();
-        var text = kill ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
+        var text = kill || razz ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
         if (text == null) return;
         var line = lines.First(l => l.Line.Text == text).Line;
         Voice.BarkRepeat.Said(said, text, _currentFloor);
@@ -380,6 +383,7 @@ public partial class AdventureDirector : Node
     public override void _Process(double delta)
     {
         TickIdleTaunt();
+        TickIdleRazz();
         if (_record == null || !Game.Instance.InGame || _leadName == "") return;
         _record.PossessSeconds[_leadName] = _record.PossessSeconds.GetValueOrDefault(_leadName) + (float)delta;
     }
@@ -534,6 +538,22 @@ public partial class AdventureDirector : Node
     }
 
     /// <summary>A party dawdling on an objective floor hears about it.</summary>
+    private readonly Voice.IdleWatch _idle = new();
+    private int _razzTurn;
+
+    /// <summary>The player has stood in one place for ten seconds with nothing going on: a companion (never the one being played) razzes them, another one twenty seconds later.</summary>
+    private void TickIdleRazz()
+    {
+        if (Net.NetSession.IsClient || !Game.Instance.InGame || Main.Instance is not { } main || main.Party is not { } party || !party.HasBodies || party.Local is not { } lead) return;
+        var hud = main.Hud;
+        var busy = !party.PartyAlive || lead.Downed || party.InputLocked || hud == null || hud.Paused || hud.DialogueOpen || hud.InventoryOpen || Audio.MusicDirector.AnyoneFighting(main);
+        var at = lead.GlobalPosition;
+        if (!_idle.Update(at.X, at.Z, Game.Instance.PlaySeconds, busy)) return;
+        var standing = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
+        if (Voice.IdleBarks.Razzer(standing, lead.State.Name, _razzTurn++) is { } who)
+            Bark(party.Members.FirstOrDefault(m => m.Name == who), BarkTrigger.Idle);
+    }
+
     private void TickIdleTaunt()
     {
         if (Net.NetSession.IsClient || !Game.Instance.InGame || Objectives.ObjectiveController.Instance is not { Completed: false } oc) return;

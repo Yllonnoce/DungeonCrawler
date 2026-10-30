@@ -968,6 +968,86 @@
             "VoiceId": "9087e370ad8ddfa3",
             "Delivery": "shout"
           }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Are we camping here? Say so and I\u0027ll light a fire.",
+            "VoiceId": "7d941e40be90b285",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "The stairs are that way. Or that way. Pick one. Any one.",
+            "VoiceId": "28b4d5e30cb68680",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I\u0027ve seen statues with more go in them.",
+            "VoiceId": "4a696c46247c84e8",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Moss is forming on your boots. I can hear it.",
+            "VoiceId": "e93a77cc2921b641",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "If you\u0027re waiting for the dungeon to come to you, it will, and you won\u0027t like it.",
+            "VoiceId": "3b287a9e77707456",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Move, or I start charging rent for standing in my shadow.",
+            "VoiceId": "f8b7693f54180d03",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Thinking? Don\u0027t strain yourself. Walk and think at the same time; the rest of us manage.",
+            "VoiceId": "af69e6563f430665",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I\u0027ve held shield walls shorter than this.",
+            "VoiceId": "2d5bfeb4c43dc0cc",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Left foot. Then the right. It\u0027s a system. Try it.",
+            "VoiceId": "ab95f5980978edab",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Fine. I\u0027ll go alone, and you can explain to the alderman why.",
+            "VoiceId": "2e3d2cf308a71a5c",
+            "Delivery": "mocking"
+          }
         }
       ]
     },
@@ -1229,6 +1309,86 @@
             "VoiceId": "8c47c5840597e7a9",
             "Delivery": "shout"
           }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "You\u0027re standing like somebody owes you money. Nobody down here pays.",
+            "VoiceId": "502b8af05de603e1",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Shall I pick the lock on your feet?",
+            "VoiceId": "6caddf8f7df0444f",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I\u0027ve robbed people faster than you decide which way to face.",
+            "VoiceId": "1387fa0958f20a18",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Go on, dawdle. The rats are taking bets on you.",
+            "VoiceId": "d648f7c5be25b8bd",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Don\u0027t worry, I\u0027m sure the treasure will wait. Treasure\u0027s patient like that. It isn\u0027t.",
+            "VoiceId": "bb196a2c774a3137",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Is this a plan, or did your brain step out for a smoke?",
+            "VoiceId": "e5e82f4274ad548a",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I could rob you blind right now and you\u0027d still be standing here.",
+            "VoiceId": "62a268af1ce7c295",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Lovely spot. Shall we die in it, or somewhere with better light?",
+            "VoiceId": "0d5d2782bb3bfceb",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Blink twice if you\u0027ve forgotten how legs work.",
+            "VoiceId": "4dd8dec02d9f3936",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "You know the walls don\u0027t move, yes? You have to.",
+            "VoiceId": "c1cbcc4fd9c95cd6",
+            "Delivery": "mocking"
+          }
         }
       ]
     },
@@ -1481,6 +1641,86 @@
             "Text": "Drop. Stay dropped.",
             "VoiceId": "b9ef5972d6c52630",
             "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I\u0027ve tracked deer that moved more than you. Dead ones.",
+            "VoiceId": "559e8d5e1982f78d",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Standing still works for a tree. You lack the leaves.",
+            "VoiceId": "16c8deb5f5f63eca",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "The trail\u0027s cold and so are my feet. Walk.",
+            "VoiceId": "a54b21bb532c5e4b",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "If this is stealth, it\u0027s the loud kind.",
+            "VoiceId": "b253b99f5f926577",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Two things don\u0027t move down here: the dead and you. Keep it to the one.",
+            "VoiceId": "76596796b19feb73",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "The arrow doesn\u0027t fly until you nock it. Same with you and this corridor.",
+            "VoiceId": "0eb6cd4b8a92750c",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I count sixty breaths. The dungeon counted them too.",
+            "VoiceId": "37e7775a3aa40a7c",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Lost? The way on is the one you\u0027re not looking at.",
+            "VoiceId": "e84236fe56da8e6c",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Even a stump knows which way the sun went. Pick a direction.",
+            "VoiceId": "2a6800ccf7837639",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I\u0027ll scout ahead. By which I mean anywhere but here.",
+            "VoiceId": "c3a4ee8bc71354a1",
+            "Delivery": "mocking"
           }
         }
       ]
@@ -1742,6 +1982,86 @@
             "Text": "Do try to leave the next one for the sword. My hands are cold.",
             "VoiceId": "cc2bc64707d1623f",
             "Delivery": "shout"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Fascinating. A man standing in a corridor. I shall write a monograph.",
+            "VoiceId": "9ecd609ac8edbcc5",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "The mind moves the body. In your case the message appears to be lost in transit.",
+            "VoiceId": "d8537cd2aa3581e4",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "I have watched candles make decisions faster.",
+            "VoiceId": "7b90229f2b2851e2",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Shall I cast Haste on you, or would that only waste the spell?",
+            "VoiceId": "f0dd34e4bba3c70c",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "We are losing light, warmth and, I suspect, brain tissue. Walk.",
+            "VoiceId": "4aaba41bfbf336bf",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Contemplation is a virtue. Loitering is merely a habit. Guess which this is.",
+            "VoiceId": "1f7c50c1f6df6827",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "The door will not open from pure longing. I have tested this.",
+            "VoiceId": "9cbe7860a846b7a7",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Is this a tactical pause, or did you forget what feet are for?",
+            "VoiceId": "08c526e21fc6023e",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Every second you stand there the dungeon grows a little wiser than you. It did not need the help.",
+            "VoiceId": "e35c1ed5035db091",
+            "Delivery": "mocking"
+          }
+        },
+        {
+          "Trigger": "Idle",
+          "Line": {
+            "Text": "Marvellous. We have found the one puzzle you cannot solve: forwards.",
+            "VoiceId": "1bd3d421ab2008d5",
+            "Delivery": "mocking"
           }
         }
       ]
