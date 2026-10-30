@@ -265,7 +265,7 @@ godot --headless --path . --export-release "Windows" build/windows/DungeonCrawle
 godot --headless --path . --export-release "macOS" build/macos/DungeonCrawler.zip   # universal, ad-hoc signed, not notarized
 scripts/export_all.sh            # all three of the above after a Release build (add --server for the dedicated server bundles too); first copies your latest rebake (user://adventures/builtin and the voice lines it uses)
 scripts/export_all.sh --no-ship  # the same, exporting the campaign as it is in the repository (use this when the repo's copy is the newer one)
-scripts/package.sh               # installable archives under dist/: Linux tar.gz with install.sh (app-menu entry), Windows zip (unzip and run), macOS zip (the .app); INSTALL.txt and SHA256SUMS beside them; VERSION=1.2 names them into the project so the build plays it; --no-ship exports the repository's copy as it is, BAKE_DIR=... names another user data folder
+scripts/package.sh               # installable archives under dist/, each with a setup program offering Install or Uninstall and, on install, a Desktop launcher: Linux tar.gz (setup.sh: ~/.local/opt, app menu, dungeoncrawler command), Windows zip (Setup.bat: %LOCALAPPDATA%\Programs, Start Menu), macOS zip (Setup.command: Applications, quarantine cleared); INSTALL.txt and SHA256SUMS beside them; VERSION=1.2 names them into the project so the build plays it; --no-ship exports the repository's copy as it is, BAKE_DIR=... names another user data folder
 godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered screenshot (--open-map for the full map)
 ```
 
