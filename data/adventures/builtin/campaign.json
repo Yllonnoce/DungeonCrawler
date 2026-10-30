@@ -1208,6 +1208,166 @@
             "VoiceId": "f85606cb52916d9d",
             "Delivery": "cheerful"
           }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I guess we\u0027re getting paid by the mile.",
+            "VoiceId": "82043297092df178",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Walking for a living. Didn\u0027t see that in the contract.",
+            "VoiceId": "1ef524d06b76f135",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "If I\u0027d wanted to march I\u0027d have stayed in the levy.",
+            "VoiceId": "5163bccd9a9c9372",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My feet have opinions. None of them polite.",
+            "VoiceId": "05989af451b9fad8",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Another corridor. Somebody\u0027s very proud of these corridors.",
+            "VoiceId": "4bc56fb16af04ff0",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Anyone counting the doors? I stopped at forty.",
+            "VoiceId": "eb0d3b79f4adb79e",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Shield\u0027s getting heavy. Nothing to hit with it.",
+            "VoiceId": "b40390cdd6bc385c",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Wake me if something growls.",
+            "VoiceId": "a4861664fe562ee4",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027ve had quieter patrols. Not many.",
+            "VoiceId": "d932bd057f57e2b0",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "At this rate the Verger dies of old age before we find him.",
+            "VoiceId": "11f44c55ee1f3408",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Rations are low. Patience is lower.",
+            "VoiceId": "8d48eaee680fcc4f",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "A fight would be nice. A chair would be nicer.",
+            "VoiceId": "effbdd5f40586475",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Left, left, left again. I\u0027m starting to suspect a circle.",
+            "VoiceId": "536fbba551ae6b50",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The dead are doing a poor job of defending this place.",
+            "VoiceId": "57b27b2f892405b0",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027ve seen livelier graveyards. In fact, this is one.",
+            "VoiceId": "14ba08cae3f28d33",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My sword is sulking. It hasn\u0027t been out in an hour.",
+            "VoiceId": "a0b9d43d1cd640c0",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Somebody hum something. Not Sable.",
+            "VoiceId": "2d7e4b548d1a08cf",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Mind the puddle. Mind the other puddle.",
+            "VoiceId": "14290d1b83481913",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The alderman said dangerous. The alderman lied, or is bad at walking.",
+            "VoiceId": "31e7bf84267d3034",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Boots. Stone. Boots. Stone. Gripping stuff.",
+            "VoiceId": "d34cbf4dd2588573",
+            "Delivery": "weary"
+          }
         }
       ]
     },
@@ -1829,6 +1989,166 @@
             "VoiceId": "49156bb89dcd8db5",
             "Delivery": "cheerful"
           }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Did somebody just pass gas? Brand. It was Brand.",
+            "VoiceId": "92c10afdd2035f7d",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I could be robbing someone right now. Someone rich. Someone indoors.",
+            "VoiceId": "73fb680105503049",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "A girl walks into a dungeon. That\u0027s it. That\u0027s the whole joke.",
+            "VoiceId": "e88a049681734bc0",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Nothing to steal, nothing to stab. Worst holiday ever.",
+            "VoiceId": "c9a9e81849f3d24b",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I spy, with my little eye, something beginning with stone.",
+            "VoiceId": "cfe267b41313b38e",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "If the next room\u0027s empty too I\u0027m picking Ilex\u0027s pockets for practice.",
+            "VoiceId": "fa2fe90e65273d6d",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027ve cased houses faster than we\u0027re casing this hole.",
+            "VoiceId": "62f3f330f7de0e2c",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Who built this? And can I rob them instead?",
+            "VoiceId": "65d827951fe5a036",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027d sing, but Brand said not to. Brand has no ear.",
+            "VoiceId": "c9ebaafd9d6fdff9",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My knives are bored. Bored knives slip.",
+            "VoiceId": "b7f88e702e864cc9",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Twenty more steps and I\u0027m charging a walking fee.",
+            "VoiceId": "1e89e0bc6eae06cd",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Is it just me, or does every corridor smell of regret?",
+            "VoiceId": "b4fe01dbb4954cae",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "A lady needs excitement. A lady is getting corridors.",
+            "VoiceId": "d6b72bf44c1dbc29",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Wake me when there\u0027s a lock. Any lock.",
+            "VoiceId": "44a5f16fd1eced80",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027ve stolen things that moved more than this dungeon.",
+            "VoiceId": "ab83a9d93d80a294",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Shall we take bets on the next room? I say empty. I always win.",
+            "VoiceId": "fe3fbffc71e70092",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "If I see one more torch bracket I\u0027m stealing it out of spite.",
+            "VoiceId": "e1dd74cde0ac39fd",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Nothing\u0027s tried to kill us in ages. I\u0027m almost insulted.",
+            "VoiceId": "fba01ff2bb90b5b3",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I miss the city. The city had things worth taking.",
+            "VoiceId": "715816cdc309172d",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Walk, walk, walk. My thighs will be magnificent and nobody will see them.",
+            "VoiceId": "68de63b74f1b306c",
+            "Delivery": "weary"
+          }
         }
       ]
     },
@@ -2321,6 +2641,166 @@
             "Text": "One wave for the dead, then we move.",
             "VoiceId": "d006dbc5a5f888ef",
             "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Fighting for a living is overrated anyway.",
+            "VoiceId": "7c96126695008e73",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "No tracks. Nothing\u0027s been through here but us and the damp.",
+            "VoiceId": "fdb90cc1052b34c1",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027ve stalked deer for a day and been less bored.",
+            "VoiceId": "55c0998e4b40185b",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The wind would tell me something. There\u0027s no wind.",
+            "VoiceId": "1364911a91f222a6",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My arrows are getting dusty in the quiver.",
+            "VoiceId": "d3757ad21caa4abf",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Mark the wall. We\u0027ve been here. Twice, now.",
+            "VoiceId": "bc0c155e42e48847",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Quiet dungeon. Quiet\u0027s where things hide. Or where nothing is.",
+            "VoiceId": "ef9af734467a0b21",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I could track a mouse through this. There are no mice.",
+            "VoiceId": "859cdfb8126f67c8",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Nothing to shoot. I\u0027m counting bricks instead. Four thousand.",
+            "VoiceId": "6a477b02ce2690bb",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Out in the woods there\u0027d be a bird by now. Something.",
+            "VoiceId": "544df1d15aec93af",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Anyone else\u0027s boots talking to them? Mine won\u0027t shut up.",
+            "VoiceId": "c0c4336255c78aed",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "If this is a trail, it\u0027s the dullest one I\u0027ve walked.",
+            "VoiceId": "375ccc9e37eedc25",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "A ranger\u0027s patience is long. Not this long.",
+            "VoiceId": "1a4fd325baa742e3",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I\u0027ll scout ahead. Ahead is more of this.",
+            "VoiceId": "a743417fe8998bd2",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I miss trees. I\u0027d settle for a shrub.",
+            "VoiceId": "2ed8139b834580d7",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Nothing moving. I checked. I keep checking.",
+            "VoiceId": "3f22f11291985253",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The bowstring\u0027s going slack from boredom. So am I.",
+            "VoiceId": "751e2259dc0bb884",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Steady pace. Steady nothing.",
+            "VoiceId": "fad88346daa2f73a",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "If something jumps us now I\u0027ll thank it.",
+            "VoiceId": "1d3cd672676244eb",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The stone has no smell. Give me mud and a dead fox any day.",
+            "VoiceId": "a4bb43e832d2993e",
+            "Delivery": "weary"
           }
         }
       ]
@@ -2822,6 +3302,166 @@
             "Text": "Rhythm is merely applied mathematics. Behold.",
             "VoiceId": "bc023019351e9394",
             "Delivery": "cheerful"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "At this pace my thesis will write itself from boredom.",
+            "VoiceId": "16f66cf8151cda2d",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I have memorised the mortar pattern. It is not interesting.",
+            "VoiceId": "cdb3f37e10e061e0",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "A spell unused is a spell wasted. I am very wasteful today.",
+            "VoiceId": "7d6d62fb5d62ce24",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I could enchant a lantern to walk for us. Nobody asked.",
+            "VoiceId": "23d10d823507a5f6",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The academy never covered tedium. An oversight.",
+            "VoiceId": "0722073740f4ff86",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Corridor. Corridor. A rich variety of corridor.",
+            "VoiceId": "c43d144086c02814",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My robes gather dust at a measurable rate. I have measured it.",
+            "VoiceId": "8067498bc1ed5cec",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I count forty-one torches, no foes and one pressing need to sit.",
+            "VoiceId": "74848f7e17850845",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "If knowledge is power, I am learning a great deal about flagstones.",
+            "VoiceId": "ff604755b92a6b3d",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Observe: nothing. Again.",
+            "VoiceId": "170f7a505158800c",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Walking is merely falling forwards with manners.",
+            "VoiceId": "31f29b7bf5497906",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I would summon something to fight, but it would also be bored.",
+            "VoiceId": "9f9522c8c7a7e31d",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My feet file a formal complaint.",
+            "VoiceId": "fc2b9ced41b6f29f",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "I have begun naming the puddles. This one is Gerald.",
+            "VoiceId": "8786c8719bbf4f7a",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "A dungeon this empty should be ashamed of itself.",
+            "VoiceId": "b6da73840ade6cf4",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Somebody say something clever. Not Brand.",
+            "VoiceId": "c696e3eb148e0eed",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Fireball. Just to see colour. No? Very well.",
+            "VoiceId": "eaea163069aeee90",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "My mana regenerates faster than my interest.",
+            "VoiceId": "1818d658b16c3c4c",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "The council pays by the floor, not by the fight. Walk on.",
+            "VoiceId": "aa6b1a822109a8a9",
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Trigger": "Travel",
+          "Line": {
+            "Text": "Even the echoes have stopped bothering.",
+            "VoiceId": "2ccdd13afb68b79c",
+            "Delivery": "weary"
           }
         }
       ]

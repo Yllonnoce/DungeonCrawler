@@ -157,6 +157,7 @@ public partial class AdventureDirector : Node
                 Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
                 Voice.IdleBarks.TopUp(set, classId ?? ""); // and the razzings for a player who stands about
                 Voice.DanceBarks.TopUp(set, classId ?? ""); // and the crowing over a kill being danced on
+                Voice.TravelBarks.TopUp(set, classId ?? ""); // and the grumbling over quiet miles
             }
             foreach (var b in set.Lines)
             {
@@ -182,9 +183,11 @@ public partial class AdventureDirector : Node
         var kill = trigger == BarkTrigger.Kill;
         var razz = trigger == BarkTrigger.Idle;
         var dance = trigger == BarkTrigger.Dance; // every dance gets its word, on the kill's quick gaps and with no roll
+        var travel = trigger == BarkTrigger.Travel;
         if (kill) Voice.KillBarks.TopUp(set, m.Class.Id);
         if (razz) Voice.IdleBarks.TopUp(set, m.Class.Id);
         if (dance) Voice.DanceBarks.TopUp(set, m.Class.Id);
+        if (travel) Voice.TravelBarks.TopUp(set, m.Class.Id);
         if (now - _lastBark < (kill || dance ? Voice.KillBarks.GlobalGapSeconds : 5)) return;
         if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill || dance ? Voice.KillBarks.CooldownSeconds : 25)) return;
         if (kill && _barkRng.NextDouble() >= Voice.KillBarks.Chance) return;
@@ -194,7 +197,7 @@ public partial class AdventureDirector : Node
         // except over a kill, where the line said longest ago comes back
         var said = Game.Instance.Adventure.BarksSaid;
         var texts = lines.Select(l => l.Line.Text).ToList();
-        var text = kill || razz || dance ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
+        var text = kill || razz || dance || travel ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
         if (text == null) return;
         var line = lines.First(l => l.Line.Text == text).Line;
         Voice.BarkRepeat.Said(said, text, _currentFloor);
@@ -390,6 +393,7 @@ public partial class AdventureDirector : Node
     {
         TickIdleTaunt();
         TickIdleRazz();
+        TickTravel();
         if (_record == null || !Game.Instance.InGame || _leadName == "") return;
         _record.PossessSeconds[_leadName] = _record.PossessSeconds.GetValueOrDefault(_leadName) + (float)delta;
     }
@@ -547,6 +551,20 @@ public partial class AdventureDirector : Node
     /// <summary>A party dawdling on an objective floor hears about it.</summary>
     private readonly Voice.IdleWatch _idle = new();
     private int _razzTurn;
+    private readonly Voice.TravelWatch _travel = new();
+    private int _travelTurn;
+
+    /// <summary>A grumble from whoever's turn it is once the party has walked a long quiet way (server/solo only; clients hear it as a bark).</summary>
+    private void TickTravel()
+    {
+        if (Net.NetSession.IsClient || !Game.Instance.InGame || Main.Instance is not { } main || main.Party is not { } party || !party.HasBodies || party.Local is not { } lead) return;
+        var hud = main.Hud;
+        var action = !party.PartyAlive || lead.Downed || party.InputLocked || hud == null || hud.Paused || hud.DialogueOpen || hud.InventoryOpen || Audio.MusicDirector.AnyoneFighting(main);
+        if (!_travel.Update(Game.Instance.PlaySeconds, lead.DistanceTravelled, action)) return;
+        var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
+        if (Voice.TravelBarks.Speaker(living, _travelTurn++) is { } who)
+            Bark(party.Members.FirstOrDefault(m => m.Name == who), BarkTrigger.Travel);
+    }
 
     /// <summary>The player has stood in one place for ten seconds with nothing going on: a companion (never the one being played) razzes them, another one twenty seconds later.</summary>
     private void TickIdleRazz()

@@ -123,4 +123,17 @@ public class GulletCampaignTests
             }
         }
     }
+
+    [Fact]
+    public void EveryHero_HasTwentyVoicedTravelLines_InTheShippedBank()
+    {
+        var campaign = Campaign();
+        var bank = Path.Combine(Root, "assets", "voice", "builtin");
+        foreach (var name in new[] { "Brand", "Sable", "Wren", "Ilex" })
+        {
+            var travel = campaign.Barks.First(b => b.Member == name).Lines.Where(l => l.Trigger == BarkTrigger.Travel).ToList();
+            Assert.True(travel.Count >= 20, $"{name} has {travel.Count} travel lines");
+            Assert.All(travel, l => Assert.True(l.Line.VoiceId != null && File.Exists(Path.Combine(bank, l.Line.VoiceId + ".wav")), $"{name}: no audio for \"{l.Line.Text}\""));
+        }
+    }
 }

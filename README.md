@@ -162,6 +162,12 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
   the server tells every screen whose body dances (`EmoteEvt`) and the line arrives as a bark. The stock Quaternius models
   have no such clips and sit it out. Logs `[Dance] Name: Clip xSpeed`. `--dance` starts the dance on every companion at
   `--after` for a screenshot (`--possess=3 --face-node=Brand:3 --dance ...`). New dance text is voiced with `--bake-kill-barks`.
+- Travel grumbles: once nothing has happened for 45 s (no fight, dialogue or menu) and the party has walked 20 m since the
+  last one, whoever's turn it is (the player's own hero included) says one of twenty bored lines (`Voice/TravelBarks.cs`,
+  `BarkTrigger.Travel`, "I guess we're getting paid by the mile", "Did somebody just pass gas?"), then not again for 40 s
+  and another 20 m (`TravelWatch`, driven by `AdventureDirector.TickTravel` on the server or in solo). `--wander=SECONDS`
+  walks the lead ahead, turning when it bumps into something, so a headless run covers ground: `--builtin --no-ai
+  --clear-enemies --floor=1 --wander=110 --quit-after=115` and grep `[Log] Brand: "`.
 - Talking to an NPC: while its line is spoken (voice playing, or an unvoiced line "read" at about 2.6 words a second)
   the body plays Talk; while it waits for your answer it rocks slowly on the spot (HipRock at half speed); `TalkPose`,
   driven by the dialogue screen through `Npc.Converse`. A move picked from Foehammer's grid plays through first. Logs `[Talk]`.
