@@ -195,6 +195,9 @@ After adding files under `assets/`, run `godot --headless --import --path .` onc
 
 ## Build, test, run
 
+The test suite (`tests/`, xUnit, ~3,600 tests over the engine-free rules) is kept on the development machine and is
+not in the repository, by decision; a fresh clone builds and runs the game without it.
+
 ```bash
 dotnet build DungeonCrawler.csproj          # game assembly -> .godot/mono/temp/bin/Debug
 dotnet test tests/DungeonCrawler.Tests.csproj   # engine-free logic (generator, rng, ...)

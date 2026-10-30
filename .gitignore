@@ -19,3 +19,5 @@ dist/
 
 # bake in progress (resumed with --bake-resume)
 data/adventures/*.partial/
+# the test suite lives on the dev machine only (owner's decision 2026-10-30): tests/ is not published
+tests/
