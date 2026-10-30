@@ -8,8 +8,8 @@ namespace DungeonCrawler.Party;
 public sealed class VictoryDance
 {
     public const int Repeats = 5;
-    /// <summary>AnimationPlayer speed for the hip moves: a whole set of five fits in roughly the time one would take.</summary>
-    public const float FastSpeed = 2.5f;
+    /// <summary>AnimationPlayer speed for the squats and hip moves: five of a clip take little more than one would at normal pace.</summary>
+    public const float FastSpeed = 4f;
     public const string Squat = "Squat", Buck = "HipBuck", Rock = "HipRock", Wave = "Wave";
     private static readonly string[] Moves = { Squat, Buck, Rock };
 

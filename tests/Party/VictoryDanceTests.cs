@@ -41,7 +41,7 @@ public class VictoryDanceTests
         dance.Start();
         var steps = Run(dance, enemiesRemain: false);
         Assert.All(steps.Where(s => s.Clip != "Wave"), s => Assert.Equal(VictoryDance.FastSpeed, s.Speed));
-        Assert.True(VictoryDance.FastSpeed >= 2f);
+        Assert.Equal(4f, VictoryDance.FastSpeed);
         Assert.Equal(1f, steps.Last().Speed);
     }
 

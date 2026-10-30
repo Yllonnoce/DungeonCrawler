@@ -151,7 +151,7 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
   antagonist is a verger (`NpcBodies.Villain`); other campaigns keep the creature.
 - All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger).
 - Victory dance: a hero whose blow kills something does five quick Squats, five quick HipBucks and five quick HipRocks
-  (2.5x speed), then a Wave if nothing is left fighting the party by then (`VictoryDance`, engine-free). The dance starts
+  (4x speed), then a Wave if nothing is left fighting the party by then (`VictoryDance`, engine-free). The dance starts
   once the swing has played out. A companion stands still for it unless the fight is still on, and no companion goes for
   loot or a chest while anyone is dancing; a player's body stops the moment it walks off, and anyone stops when they swing
   again or are hit. The dancer crows one of five voiced lines (`Voice/DanceBarks.cs`, per hero by name, class and generic
