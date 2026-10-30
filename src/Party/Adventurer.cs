@@ -416,7 +416,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (_model == null || !_viewerModel || Downed) return; // the stock models have no dance clips
         if (IsLocal && !Net.NetSession.IsClient) return;        // your own body is hidden in first person: nothing to see, so the kill bark stays
-        _dance.Start();
+        _dance.Start(Random.Shared.Next());
         if (!Net.NetSession.IsClient) EventBus.Instance.RaiseMemberDance(Index); // the crowing (the server's word reaches co-op clients as a bark)
     }
 
