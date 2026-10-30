@@ -5,7 +5,8 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// <summary>Turns what the generator laid down for an objective into the people and texts the floor needs. Deterministic per layout and seed.</summary>
 public static class ObjectivePlanner
 {
-    public static ObjectiveContents? Resolve(FloorLayout layout, int floor, int seed)
+    /// <param name="ritualist">A cast member the plan named to lead the rite (id and name); null takes a stock name.</param>
+    public static ObjectiveContents? Resolve(FloorLayout layout, int floor, int seed, (string Id, string Name)? ritualist = null)
     {
         if (layout.Objective is not { } objective || objective.Kind == FloorObjectiveKind.None) return null;
         var rng = new Random(seed ^ 0x0B7EC7);
@@ -13,7 +14,8 @@ public static class ObjectivePlanner
         switch (objective.Kind)
         {
             case FloorObjectiveKind.Ritual when objective.ShrineRoom is { } shrine && objective.Altar is { } altar:
-                contents.Ritualist = new RitualistContents("ritualist", Pick(rng, RitualistNames), AltarSide(layout, shrine, altar));
+                var stock = Pick(rng, RitualistNames); // drawn either way, so the rest of the roll is the same with or without a cast leader
+                contents.Ritualist = new RitualistContents(ritualist?.Id ?? "ritualist", ritualist?.Name ?? stock, AltarSide(layout, shrine, altar));
                 break;
             case FloorObjectiveKind.Jailbreak:
                 var names = PrisonerNames.OrderBy(_ => rng.Next()).ToList();
@@ -26,7 +28,7 @@ public static class ObjectivePlanner
     }
 
     /// <summary>Attach the objective's contents to a populated floor (both the plan resolver and the legacy populator call this).</summary>
-    public static void Attach(FloorContents contents, FloorLayout layout, int floor, int seed) => contents.Objective = Resolve(layout, floor, seed);
+    public static void Attach(FloorContents contents, FloorLayout layout, int floor, int seed, (string Id, string Name)? ritualist = null) => contents.Objective = Resolve(layout, floor, seed, ritualist);
 
     internal static T Pick<T>(Random rng, IReadOnlyList<T> list) => list[rng.Next(list.Count)];
 

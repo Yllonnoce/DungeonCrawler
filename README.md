@@ -141,7 +141,15 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
 - Party bodies by class: `brand.glb` (warrior), `sable.glb` (rogue), `wren.glb` (ranger), `ilex.glb` (mage); `Adventurer.ClassViewerBodies`. Untinted, Walk/Run paced to the ground speed, weapons hung from `RightHandGrip`.
 - Fighters who can be asked to join, a few steps from the entrance of their floor: Foehammer (1), `tamsin_rook.glb` (6), `oskar_vell.glb` (11), `sister_ione.glb` (16); `DungeonBuilder.ViewerFighters` holds their floors, weapons and lines.
 - Floor 1 showcase: the orc `orc1.glb` to try fighting. Foehammer's dialogue offers a moves grid to try each clip.
-- All four party bodies and the four fighters are in. Not wired yet: the eight NPC archetype bodies and the Verger (Phase 12, when quest NPCs get bodies by role).
+- Everyone else wears one of the eight archetype bodies, chosen by `NpcBodies` from who they are: a Jailbreak prisoner is
+  always `npc_prisoner.glb`; otherwise the NPC's name, persona and (for a cast member) campaign role are read for words
+  such as alderman or merchant (`npc_merchant`), deacon, father, brother (`npc_priest`), guard, soldier, sergeant
+  (`npc_guard`), prisoner, captive, survivor (`npc_prisoner`), and failing those for sex and age (`npc_old_man`,
+  `npc_old_woman`, `npc_young_man`, `npc_young_woman`; with no clue at all, a plain body picked by the NPC's id). In the
+  shipped campaign Maud is the old woman, Crane the merchant, Tobit the priest, Grisel the prisoner and Ulf the old man.
+- The villain in person: on the last boss floor the tier's boss wears `verger.glb` (scaled to 2.25 m) when the campaign's
+  antagonist is a verger (`NpcBodies.Villain`); other campaigns keep the creature.
+- All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger).
 
 Screenshots: `godot --path . -- --seed=11 --floor=6 --face-node=Npc_fighter_tamsin:1 --screenshot=/tmp/t.png --after=4`
 stands the party a cell from a fighter; `--possess=1 --face-node=Brand:4` puts a party member in front of the camera
@@ -287,6 +295,13 @@ seconds, then gets up at 1 HP; if the lead goes down, control passes to the next
 ## Story: cast, mystery, choices
 
 A campaign has a recurring **Cast** (four to six people with a role and a secret), a **Mystery** (a question, its hidden truth, clues spread over the descent, a payoff floor) and per-floor **Story** beats; about eight of the twenty floors carry the plot, the rest get one line of narration. Quest templates: KillTarget, Recover, Escort, HoldOut, and three story kinds: **Investigate** (clues lie in two to four rooms; bring them back), **Decide** (a dialogue choice sets a flag the run remembers and completes the quest), **Betrayal** (an NPC with a `Betrayal` turns when you take a `Betray` choice: they vanish, their creatures stand where they stood, the first wearing their name, and killing them completes the quest). NPCs, quests, dialogue choices and narration can carry `RequiresFlag` / `ForbidsFlag`, so a floor can hold both branches of an earlier decision and only the matching one appears. Flags live in the campaign memory (saved) and reach the planner in the memory notes.
+
+Two hand-authored hooks the designer is never asked for (both `[AiIgnore]`): an NPC with `"Ritualist": true` on a Ritual
+floor leads the rite instead of a stock-named villager (placed beside the altar, no script needed; the validator clears
+the flag with a repair note on a floor with no shrine), and a boss with `AltDeathFlag` / `AltDeathLine` dies with those
+words when that flag was set earlier in the run. The shipped Gullet of Gorm uses both: Grisel Thorn's Unswearing on
+floor 7, and the Verger's last words on floor 20 turning on `wake_gorm`. Maud Sorrel also stands on floors 1, 6 and 11
+(the bible's cameos) with a few lines and no quest.
 
 Voice is budgeted: `Adventure/Core/Voice/VoiceBudget.cs` picks at most 80 lines of a baked campaign to render (tier entrances and boss lines, then story floors' intros, NPC dialogue and quest lines, quiet floors' intros, barks last); everything else stays a subtitle. `--voice-budget=N` changes it for a bake.
 

@@ -97,6 +97,14 @@ public sealed class BossPlan
     [AiNotNull] public string? SignatureOverride { get; set; }
     public Line IntroLine { get; set; } = new();
     public Line DeathLine { get; set; } = new();
+    /// <summary>A flag that changes the boss's last words; hand-authored, never asked of the designer.</summary>
+    [AiIgnore] public string? AltDeathFlag { get; set; }
+    /// <summary>What the boss says dying when <see cref="AltDeathFlag"/> was set on an earlier floor.</summary>
+    [AiIgnore] public Line? AltDeathLine { get; set; }
+
+    /// <summary>The death line for this run: the twin when its flag is set, else the plain one.</summary>
+    public Line DeathLineFor(IReadOnlyCollection<string> flags)
+        => AltDeathLine != null && AltDeathFlag != null && flags.Contains(AltDeathFlag) ? AltDeathLine : DeathLine;
 }
 
 public sealed class ChestPlan
@@ -169,6 +177,11 @@ public sealed class NpcPlan
     [AiNotNull] public string? ForbidsFlag { get; set; }
     [AiDescription("Set when a dialogue choice with Effect Betray makes this NPC turn on the party. Null otherwise.")]
     [AiNotNull] public BetrayalPlan? Betrayal { get; set; }
+    /// <summary>
+    /// This person leads the floor's Ritual objective: placed beside the altar, not in <see cref="Room"/>, and spoken to
+    /// through the rite rather than a script. Hand-authored (a cast member as the ritualist); the designer never sets it.
+    /// </summary>
+    [AiIgnore] public bool Ritualist { get; set; }
 }
 
 public sealed class QuestParams

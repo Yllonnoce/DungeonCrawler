@@ -79,9 +79,11 @@ public static class PlanResolver
         }
 
         var set = flags ?? Array.Empty<string>();
+        NpcPlan? ritualist = null;
         foreach (var n in plan.Npcs)
         {
             if (!FlagRules.Allowed(n.RequiresFlag, n.ForbidsFlag, set)) { contents.Dropped.Add($"npc {n.Id}: waits on flag {n.RequiresFlag ?? ("not " + n.ForbidsFlag)}"); continue; }
+            if (n.Ritualist && layout.Objective?.Kind == FloorObjectiveKind.Ritual && ritualist == null) { ritualist = n; continue; } // the rite seats its leader beside the altar
             if (Take(n.Room) is not { } cell) { contents.Dropped.Add($"npc {n.Id}: room {n.Room} full"); continue; }
             contents.Npcs.Add(new NpcPlacement(n.Id, cell));
         }
@@ -135,7 +137,7 @@ public static class PlanResolver
                 g.AlarmTarget, g.RallyRoom, g.RallyRoom is { } rr ? Anchor(layout, rr) : null,
                 placed.Select(p => p.spawn).ToList()));
         }
-        Objectives.ObjectivePlanner.Attach(contents, layout, floor, seed);
+        Objectives.ObjectivePlanner.Attach(contents, layout, floor, seed, ritualist == null ? null : (ritualist.Id, ritualist.Name));
         return contents;
     }
 

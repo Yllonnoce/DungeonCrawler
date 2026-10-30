@@ -309,7 +309,9 @@ public static class PlanValidator
         plan.Npcs.RemoveAll(n =>
         {
             if (string.IsNullOrWhiteSpace(n.Id) || !npcIds.Add(n.Id)) { report.Repairs.Add("dropped NPC with missing or duplicate id"); return true; }
-            if (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsArena || menu.Room(n.Room)!.IsJail || menu.Room(n.Room)!.IsShrine) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
+            if (n.Ritualist && !menu.Rooms.Any(r => r.IsShrine)) { n.Ritualist = false; report.Repairs.Add($"NPC {n.Id}: no ritual on this floor to lead"); }
+            // the rite's leader stands beside the altar wherever the plan put them; everyone else needs a room people may stand in
+            if (!n.Ritualist && (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsArena || menu.Room(n.Room)!.IsJail || menu.Room(n.Room)!.IsShrine)) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
             n.Name = Clip(n.Name, 40);
             if (n.CastId != null)
             {
@@ -330,7 +332,7 @@ public static class PlanValidator
             if (n.Script.Nodes.Count == 0 || !nodeIds.Contains(n.Script.Start))
             {
                 if (n.Script.Nodes.Count > 0) { n.Script.Start = n.Script.Nodes[0].Id; report.Repairs.Add($"NPC {n.Id}: start node fixed"); }
-                else { report.Repairs.Add($"dropped NPC {n.Id} with no dialogue"); return true; }
+                else if (!n.Ritualist) { report.Repairs.Add($"dropped NPC {n.Id} with no dialogue"); return true; } // the ritualist speaks through the rite
             }
             foreach (var node in n.Script.Nodes)
             {

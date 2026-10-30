@@ -334,6 +334,103 @@
       "RequiresFlag": null,
       "ForbidsFlag": null,
       "Betrayal": null
+    },
+    {
+      "Id": "npc_maud_11",
+      "Name": "Maud Sorrel",
+      "Room": 8,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "m11_shh",
+        "Nodes": [
+          {
+            "Id": "m11_shh",
+            "Line": {
+              "Text": "Shh. Ulf is working, and he sings when he works, and I like the singing. He thinks he casts kettles. Let him; it is kind, what he thinks.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "What does he cast, Maud?",
+                "Next": "m11_faces",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Why are you asleep at an anvil?",
+                "Next": "m11_warm",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m11_faces",
+            "Line": {
+              "Text": "Faces, dear. Small ones. You will see them two floors down and you will wish you had not. Go on; I will be at the Dream Door before you.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m11_warm",
+            "Line": {
+              "Text": "It is warm, and He is loudest here, where His heart is. One sleeps where one can hear the one who dreams one. You will learn that too.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": null,
+      "CastId": "cast_maud",
+      "Persona": {
+        "VoiceStyle": "an old woman talking in her sleep: unhurried, kind, faintly amused at the size of everything",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
     }
   ],
   "Quests": [

@@ -260,7 +260,30 @@
       "Kind": "Gas"
     }
   ],
-  "Npcs": [],
+  "Npcs": [
+    {
+      "Id": "npc_grisel",
+      "Name": "Grisel Thorn",
+      "Room": 9,
+      "VoiceId": "Aoede",
+      "Script": {
+        "Start": "",
+        "Nodes": []
+      },
+      "QuestId": null,
+      "CastId": "cast_grisel",
+      "Persona": {
+        "VoiceStyle": "nineteen years underground; flat, dry, contrary, speaks to spiders more easily than to people",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null,
+      "Ritualist": true
+    }
+  ],
   "Quests": [],
   "Narration": [],
   "Taunts": [

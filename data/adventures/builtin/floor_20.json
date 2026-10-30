@@ -256,6 +256,12 @@
       "Text": "Hush. Hush. He\u0027s still... hush.",
       "VoiceId": "37a14d45489de59a",
       "Delivery": "whisper"
+    },
+    "AltDeathFlag": "wake_gorm",
+    "AltDeathLine": {
+      "Text": "...He is saying something. He is saying thank you. Three hundred years, and that is what He...",
+      "VoiceId": null,
+      "Delivery": "whisper"
     }
   },
   "Chests": [

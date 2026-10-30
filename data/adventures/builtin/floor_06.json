@@ -185,7 +185,105 @@
       "Kind": "Gas"
     }
   ],
-  "Npcs": [],
+  "Npcs": [
+    {
+      "Id": "npc_maud_6",
+      "Name": "Maud Sorrel",
+      "Room": 6,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "m6_dry",
+        "Nodes": [
+          {
+            "Id": "m6_dry",
+            "Line": {
+              "Text": "Dry? Am I? So I am. The water goes round me the way it goes round a stone it has had long enough. Keep wading; the Gut is only a swallow away.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "How did you get ahead of us again?",
+                "Next": "m6_ahead",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "There is a woman up there mining His teeth.",
+                "Next": "m6_tamsin",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m6_ahead",
+            "Line": {
+              "Text": "I did not hurry. I never hurry. He is slow, and I go at His pace, and somehow that is always one floor further than yours.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m6_tamsin",
+            "Line": {
+              "Text": "Tamsin. Yes. She thinks He is a vein. Let her; gold is a kinder word than the right one, and she laughs, which He likes.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": null,
+      "CastId": "cast_maud",
+      "Persona": {
+        "VoiceStyle": "an old woman talking in her sleep: unhurried, kind, faintly amused at the size of everything",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
+    }
+  ],
   "Quests": [],
   "Narration": [],
   "Taunts": [],

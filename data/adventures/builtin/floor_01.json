@@ -383,6 +383,112 @@
       "RequiresFlag": null,
       "ForbidsFlag": null,
       "Betrayal": null
+    },
+    {
+      "Id": "npc_maud_1",
+      "Name": "Maud Sorrel",
+      "Room": 3,
+      "VoiceId": "Despina",
+      "Script": {
+        "Start": "m1_step",
+        "Nodes": [
+          {
+            "Id": "m1_step",
+            "Line": {
+              "Text": "Mind the step, inspectors; it is wet where He breathes out. I am going down ahead of you. I always am.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Who are you, mother?",
+                "Next": "m1_who",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "You should go back up. It isn\u0027t safe.",
+                "Next": "m1_back",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m1_who",
+            "Line": {
+              "Text": "Maud. Maud Sorrel, from the lane behind the chandler\u0027s. Thirty-eight years I have been coming down here and I have never once been cold.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Thirty-eight years?",
+                "Next": "m1_back",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          },
+          {
+            "Id": "m1_back",
+            "Line": {
+              "Text": "Up? No, dear. Up is where the wells are sour. Down is where the sleep is. You will see; everyone does, in the end.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ]
+          }
+        ]
+      },
+      "QuestId": null,
+      "CastId": "cast_maud",
+      "Persona": {
+        "VoiceStyle": "an old woman talking in her sleep: unhurried, kind, faintly amused at the size of everything",
+        "DefaultDelivery": "calm",
+        "Voice": null,
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null
     }
   ],
   "Quests": [
