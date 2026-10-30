@@ -47,7 +47,7 @@ Full-body character in a strict T-pose, arms straight out horizontally, palms do
 ### 6. Wren, Ranger — `wren.glb`
 
 ```
-Full-body character in a strict T-pose, arms straight out horizontally, palms down, legs apart, facing the camera, neutral face, mouth closed. A lean, weathered woman in her thirties, pale grey eyes, dark hair in a short tail. Mottled green-brown leather jerkin over a dun shirt, a bracer on the left forearm, a belt with a pouch, green-brown trousers, soft laced boots. No cloak, no hood. Empty hands. Realistic medieval style, muted greens and browns, dusty. Plain grey background, even lighting.
+Full-body character in a strict T-pose, arms straight out horizontally, palms down, legs apart, facing the camera, neutral face, mouth closed. A lean, weathered man in his thirties, pale grey eyes, dark hair in a short tail (built as a man; the first draft of this brief said woman). Mottled green-brown leather jerkin over a dun shirt, a bracer on the left forearm, a belt with a pouch, green-brown trousers, soft laced boots. No cloak, no hood. Empty hands. Realistic medieval style, muted greens and browns, dusty. Plain grey background, even lighting.
 ```
 
 ### 7. Ilex, Mage — `ilex.glb`

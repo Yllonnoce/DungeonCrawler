@@ -932,12 +932,32 @@ public partial class DungeonBuilder : Node3D
         npc.Id = id;
         npc.NpcName = name;
         npc.Mode = mode;
-        npc.ModelPath = modelPath;
+        var cast = CastWords(null, name);
+        npc.ModelPath = modelPath ?? BodyPath(Adventure.NpcBodies.For(id, name, mode == NpcMode.Prisoner, cast.Role, cast.Style));
         npc.Floor = CurrentFloor;
         npc.Name = $"Npc_{id}";
         root.AddChild(npc);
         npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
         return npc;
+    }
+
+    /// <summary>The viewer body file for an archetype, or null when the owner has not exported that one yet (the stock body stays).</summary>
+    private static string? BodyPath(string? body) => body != null && ResourceLoader.Exists(Adventure.NpcBodies.Path(body)) ? Adventure.NpcBodies.Path(body) : null;
+
+    /// <summary>What the campaign says about a cast member, by id or by name, so their body follows their role.</summary>
+    private static (string? Role, string? Style) CastWords(string? castId, string name)
+    {
+        if (Game.Instance?.Adventure?.Campaign is not { } campaign) return (null, null);
+        var cast = campaign.CastFor(castId) ?? campaign.Cast.FirstOrDefault(c => c.Name == name);
+        return (cast?.Role, cast?.Persona?.VoiceStyle);
+    }
+
+    /// <summary>The villain's own body on the last floor, when the campaign's antagonist has one; null keeps the tier's creature.</summary>
+    private static string? VillainBody(int floor)
+    {
+        if (!TierRules.IsFinalBossFloor(floor) || Game.Instance?.Adventure?.Campaign?.Antagonist is not { } villain) return null;
+        var body = Adventure.NpcBodies.Villain(villain.Name, villain.Epithet, villain.Persona?.VoiceStyle);
+        return body != null && ResourceLoader.Exists(Adventure.NpcBodies.Path(body)) ? body : null;
     }
 
     /// <summary>The shrine's altar: a stone block with candles, solid, in the middle of the room.</summary>
@@ -1066,6 +1086,8 @@ public partial class DungeonBuilder : Node3D
     {
         if (_floorRoot == null) return null;
         var profile = EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile();
+        // the last boss is the campaign's villain in person when the owner built them a body: a tall man, not a 3.8 m demon
+        if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = 1.25f };
         var enemy = _enemyScene.Instantiate<Enemy>();
         enemy.Profile = profile;
         enemy.Floor = floor;
@@ -1156,6 +1178,8 @@ public partial class DungeonBuilder : Node3D
             npc.QuestKey = plan.QuestId == null ? null : QuestKeys.For(floor, plan.QuestId);
             npc.Floor = floor;
             npc.Name = $"Npc_{plan.Id}";
+            var cast = CastWords(plan.CastId, plan.Name);
+            npc.ModelPath = BodyPath(Adventure.NpcBodies.For(plan.Id, plan.Name, false, plan.Persona?.VoiceStyle, cast.Role, cast.Style));
             root.AddChild(npc);
             npc.GlobalPosition = Surface(n.Cell) + Vector3.Up * 0.1f;
             npc.RotateY((float)(Rng.Mix((ulong)seed ^ (Rng.StableHash(n.Id) & 0xFFFF)) % 8) * Mathf.Pi / 4f);
