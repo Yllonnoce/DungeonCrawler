@@ -91,7 +91,8 @@ public partial class AdventureDirector : Node
     // ---- voice ----------------------------------------------------------------------------------
     private double _lastBark = -100;
     private readonly Dictionary<(string, BarkTrigger), double> _barkCooldown = new();
-    private readonly Random _barkRng = new(11);
+    // unseeded on purpose: a fixed seed made every new game open with the same few lines, since the "said" record starts empty
+    private readonly Random _barkRng = new();
 
     private static Characters.CharacterState? Member(int index)
     {
