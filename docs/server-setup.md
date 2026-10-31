@@ -5,18 +5,19 @@ class, each controlling one adventurer. There are two ways to have a server.
 
 ## The simple way: host from your own computer
 
-Install the game (see the [README](../README.md)). Next to the setup program you ran is a Host script: `Host.bat` on
-Windows, `Host.command` on macOS, `host.sh` on Linux (on Windows and Linux it is also in the installed folder,
-`%LOCALAPPDATA%\Programs\DungeonCrawler` and `~/.local/opt/DungeonCrawler`). Double-click it, or run it from a terminal,
-and leave its window open while people play. It prints the two addresses players can use:
+1. Install the game (see the [README](../README.md)).
+2. Run the **Host** script that sits next to the setup program: `Host.bat` (Windows), `Host.command` (macOS), `host.sh`
+   (Linux). On Windows and Linux it is also in the installed folder (`%LOCALAPPDATA%\Programs\DungeonCrawler`,
+   `~/.local/opt/DungeonCrawler`).
+3. Leave its window open. It prints two addresses; send the right one to your friends.
+4. Friends start the game, pick **Join Server**, enter the address, choose a name and a class.
 
-- **Same network** (friends in the same house): `ws://<your local address>:7777`.
-- **Internet**: `ws://<your public address>:7777`. For this one your router must forward TCP port 7777 to your computer;
-  the router's manual calls this *port forwarding* or *virtual server*.
-
-Windows and macOS ask once whether to allow the game through the firewall; say yes. `Host.bat 8000 6` (or
-`./host.sh 8000 6`) uses port 8000 and allows six players. Closing the window stops the server. The game is saved as it
-goes (save slot `server`) and continues where everyone left off the next time you host.
+- **Same network** (friends in the same house): the first address, like `ws://192.168.1.20:7777`.
+- **Internet**: the second address. Your router must forward TCP port 7777 to your computer; the router manual calls
+  this *port forwarding* or *virtual server*.
+- Windows and macOS ask once whether to allow the game through the firewall: say yes.
+- `Host.bat 8000 6` (or `./host.sh 8000 6`) uses port 8000 and allows six players.
+- Closing the window stops the server. The game is saved as it goes (save slot `server`) and continues next time.
 
 This is all most groups need. The rest of this guide is for a server that keeps running when your own computer is off.
 

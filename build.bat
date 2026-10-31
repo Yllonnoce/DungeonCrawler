@@ -5,9 +5,10 @@ rem programmers: it fetches the tools it needs (Godot 4.7.2 .NET, its export tem
 rem user folder, so it needs no administrator rights, builds the game for this PC, then runs Setup.bat (Install /
 rem Uninstall menu, optional Desktop shortcut).
 rem
-rem   From a copy of the repository:  double-click build.bat
-rem   From anywhere, without git:     download build.bat alone and double-click it
-rem       (puts the source in %USERPROFILE%\DungeonCrawler first; run it again later to update and rebuild)
+rem   git clone https://github.com/Yllonnoce/DungeonCrawler.git, then double-click build.bat in the new folder
+rem   or download build.bat alone and double-click it: it clones the source into %USERPROFILE%\DungeonCrawler with git
+rem   (fetching a portable git first if this PC has none), or updates that clone when it is already there.
+rem   Later: update.bat pulls the newest code, rebuilds and reinstalls over the current install.
 rem
 rem Needs Windows 10 (version 1803 or newer) or Windows 11, which carry curl and tar. The first run downloads about
 rem 1.3 GB of tools and takes 20-40 minutes; later runs skip what is already in place. About 6 GB of disk in all.
@@ -15,6 +16,8 @@ rem Words after the command go to the setup program:  build.bat install      bui
 set "REPO=Yllonnoce/DungeonCrawler"
 if not "%DUNGEONCRAWLER_REPO%"=="" set "REPO=%DUNGEONCRAWLER_REPO%"
 set "GODOT_VERSION=4.7.2"
+set "MINGIT_TAG=2.56.0.windows.4"
+set "MINGIT_VERSION=2.56.0.4"
 set "GODOT_BUILDS=https://github.com/godotengine/godot-builds/releases/download/%GODOT_VERSION%-stable"
 set "TOOLS=%LOCALAPPDATA%\DungeonCrawlerTools"
 set "GODOT_DIR=%TOOLS%\Godot_v%GODOT_VERSION%-stable_mono_win64"
@@ -118,30 +121,28 @@ call build\windows\Setup.bat %*
 goto end
 
 :get_source
-where git >nul 2>&1
-if not errorlevel 1 (
-  if exist "%SRC%\.git" (
-    echo.
-    echo == Updating the source in %SRC%
-    git -C "%SRC%" pull --ff-only || exit /b 1
-  ) else (
-    echo.
-    echo == Downloading the source into %SRC% ^(about 700 MB^)
-    git clone --depth 1 "https://github.com/%REPO%.git" "%SRC%" || exit /b 1
-  )
-  exit /b 0
-)
+rem git: the one on this PC, else a portable copy (MinGit) fetched into the tools folder, no installer and no admin rights
+where git >nul 2>&1 && goto have_git
+if exist "%TOOLS%\git\cmd\git.exe" (set "PATH=%TOOLS%\git\cmd;%PATH%" & goto have_git)
 echo.
-echo == Downloading the source into %SRC% ^(about 700 MB; git is not installed, so this is a plain copy^)
-curl -fL -# -o "%TMP_DIR%\source.zip" "https://codeload.github.com/%REPO%/zip/refs/heads/main" || exit /b 1
-if exist "%TMP_DIR%\source" rmdir /s /q "%TMP_DIR%\source"
-mkdir "%TMP_DIR%\source"
-tar -xf "%TMP_DIR%\source.zip" -C "%TMP_DIR%\source" || exit /b 1
-del "%TMP_DIR%\source.zip"
-if not exist "%SRC%" mkdir "%SRC%"
-for /d %%d in ("%TMP_DIR%\source\*") do robocopy "%%d" "%SRC%" /E /NFL /NDL /NJH /NJS /NP >nul
-rmdir /s /q "%TMP_DIR%\source"
-if not exist "%SRC%\DungeonCrawler.csproj" (echo The source did not unpack where expected: %SRC% & exit /b 1)
+echo == Downloading a portable git ^(about 40 MB^)
+curl -fL -# -o "%TMP_DIR%\mingit.zip" "https://github.com/git-for-windows/git/releases/download/v%MINGIT_TAG%/MinGit-%MINGIT_VERSION%-64-bit.zip" || (echo The git download failed. & exit /b 1)
+if exist "%TOOLS%\git" rmdir /s /q "%TOOLS%\git"
+mkdir "%TOOLS%\git"
+tar -xf "%TMP_DIR%\mingit.zip" -C "%TOOLS%\git" || (echo Unpacking git failed. & exit /b 1)
+del "%TMP_DIR%\mingit.zip"
+if not exist "%TOOLS%\git\cmd\git.exe" (echo git did not unpack where expected: %TOOLS%\git & exit /b 1)
+set "PATH=%TOOLS%\git\cmd;%PATH%"
+:have_git
+if exist "%SRC%\.git" (
+  echo.
+  echo == Updating the source in %SRC%
+  git -C "%SRC%" pull --ff-only || exit /b 1
+) else (
+  echo.
+  echo == Cloning the source into %SRC% ^(about 700 MB^)
+  git clone "https://github.com/%REPO%.git" "%SRC%" || exit /b 1
+)
 exit /b 0
 
 :fail

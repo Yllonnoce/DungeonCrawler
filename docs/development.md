@@ -197,7 +197,9 @@ After adding files under `assets/`, run `godot --headless --import --path .` onc
 
 Players never see this section: `get.sh` / `get.bat` at the repository root download the latest `game-*` release and run
 its setup program, `build.sh` / `build.bat` fetch Godot 4.7.2 .NET, the export templates and the .NET 8 SDK user-local,
-build, export for the current system and run the same setup program. The setup programs (`setup.sh`, `Setup.bat`,
+build, export for the current system and run the same setup program (outside a clone they `git clone` into
+~/DungeonCrawler; build.bat fetches a portable MinGit into %LOCALAPPDATA%\DungeonCrawlerTools when the PC has no git),
+and `update.sh` / `update.bat` pull, rebuild and reinstall keeping the Desktop launcher choice. The setup programs (`setup.sh`, `Setup.bat`,
 `Setup.command`: Install / Uninstall menu, optional Desktop launcher) and the Host scripts (run the installed game as a
 dedicated server on port 7777) live in `installer/<os>/` and are copied into every archive by `scripts/package.sh` and
 next to the export by the build scripts. Windows scripts are classic `cmd` batch files on purpose (PowerShell's

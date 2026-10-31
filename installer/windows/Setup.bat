@@ -2,7 +2,7 @@
 setlocal
 rem DungeonCrawler setup for the current user (no administrator rights needed).
 rem   Setup.bat                menu: Install / Uninstall
-rem   Setup.bat install        install (asks about a Desktop shortcut)
+rem   Setup.bat install [--desktop|--no-desktop]   install without the menu (asks about the Desktop shortcut unless told)
 rem   Setup.bat uninstall      remove the install and its shortcuts
 rem Install copies this folder to %LOCALAPPDATA%\Programs\DungeonCrawler and adds a Start Menu shortcut, plus a Desktop
 rem shortcut if you want one. Saves and settings stay in %APPDATA%\Godot\app_userdata\DungeonCrawler.
@@ -13,7 +13,7 @@ set "DESKTOP=%USERPROFILE%\Desktop\DungeonCrawler.lnk"
 
 if /i "%~1"=="install" goto install
 if /i "%~1"=="uninstall" goto uninstall
-if not "%~1"=="" echo usage: Setup.bat [install ^| uninstall] & exit /b 2
+if not "%~1"=="" echo usage: Setup.bat [install [--desktop ^| --no-desktop] ^| uninstall] & exit /b 2
 
 echo DungeonCrawler setup
 if exist "%DEST%\DungeonCrawler.exe" echo   (an install exists at %DEST%)
@@ -31,8 +31,11 @@ if not exist "%DEST%" mkdir "%DEST%"
 robocopy "%HERE%." "%DEST%" /E /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 echo Copy failed.& exit /b 1
 call :shortcut "%STARTMENU%"
+if /i "%~2"=="--desktop" goto desktop
+if /i "%~2"=="--no-desktop" goto installed
 choice /c YN /n /m "Put a DungeonCrawler shortcut on the Desktop? [Y/N] "
 if errorlevel 2 goto installed
+:desktop
 call :shortcut "%DESKTOP%"
 echo Desktop shortcut: %DESKTOP%
 :installed

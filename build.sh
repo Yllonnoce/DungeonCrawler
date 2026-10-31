@@ -4,9 +4,10 @@
 # needs no administrator rights, builds the game for this computer, then runs the setup program (Install / Uninstall
 # menu, optional Desktop launcher).
 #
-#   From a copy of the repository:   bash build.sh
-#   From anywhere, without git:      curl -fsSL https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/build.sh | bash
-#       (puts the source in ~/DungeonCrawler first; run the same command again later to update and rebuild)
+#   git clone https://github.com/Yllonnoce/DungeonCrawler.git && cd DungeonCrawler && bash build.sh
+#   or, from anywhere:  curl -fsSL https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/build.sh | bash
+#       (clones the source into ~/DungeonCrawler with git first, or updates it when it is already there)
+#   Later:  bash update.sh   pulls the newest code, rebuilds and reinstalls over the current install.
 #
 # Linux (x86_64) and macOS (Apple silicon or Intel). Windows: build.bat. The first run downloads about 1.3 GB of tools
 # and takes 20-40 minutes; later runs skip what is already in place and take a few minutes. About 6 GB of disk in all.
@@ -40,20 +41,21 @@ case "$(uname -s)" in
 esac
 TMP="$HOME/.cache/dungeoncrawler-build"; mkdir -p "$TMP"
 
-# ---- the source: this folder if it is the repository, else ~/DungeonCrawler (cloned or downloaded)
+# ---- the source: this folder if it is the repository, else a git clone in ~/DungeonCrawler (updated when it exists)
 if [ -f ./DungeonCrawler.csproj ]; then :
 elif [ -f "$(dirname "$0")/DungeonCrawler.csproj" ]; then cd "$(dirname "$0")"
 else
   SRC=${DUNGEONCRAWLER_SRC:-$HOME/DungeonCrawler}
-  if command -v git >/dev/null 2>&1; then
-    if [ -d "$SRC/.git" ]; then say "Updating the source in $SRC"; git -C "$SRC" pull --ff-only
-    else say "Downloading the source into $SRC (about 700 MB)"; git clone --depth 1 "https://github.com/$REPO.git" "$SRC"; fi
-  else
-    say "Downloading the source into $SRC (about 700 MB; git is not installed, so this is a plain copy)"
-    curl -fL --progress-bar -o "$TMP/source.zip" "https://codeload.github.com/$REPO/zip/refs/heads/main"
-    rm -rf "$TMP/source"; mkdir -p "$TMP/source"; unzip -q "$TMP/source.zip" -d "$TMP/source"
-    mkdir -p "$SRC"; cp -R "$TMP/source"/*/. "$SRC/"; rm -rf "$TMP/source" "$TMP/source.zip"
+  if ! command -v git >/dev/null 2>&1; then
+    echo "This needs git to fetch the source. Install it and run build.sh again:" >&2
+    case "$OS" in
+      macos) echo "  xcode-select --install        (Apple's command line tools, which include git)" >&2 ;;
+      *)     echo "  sudo apt-get install -y git   (Debian, Ubuntu, Mint)     sudo dnf install git   (Fedora)" >&2 ;;
+    esac
+    exit 1
   fi
+  if [ -d "$SRC/.git" ]; then say "Updating the source in $SRC"; git -C "$SRC" pull --ff-only
+  else say "Cloning the source into $SRC (about 700 MB)"; git clone "https://github.com/$REPO.git" "$SRC"; fi
   cd "$SRC"
 fi
 say "Building from $(pwd)"
