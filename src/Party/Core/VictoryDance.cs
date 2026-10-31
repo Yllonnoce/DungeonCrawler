@@ -2,7 +2,7 @@ namespace DungeonCrawler.Party;
 
 /// <summary>
 /// The jig a hero does over a kill: a Squat to open, then <see cref="RandomMoves"/> different moves drawn fresh each time from
-/// the rest of <see cref="Pool"/>, <see cref="Repeats"/> of each in a row (the three hip moves at a quick pace, the gestures at
+/// the rest of <see cref="Pool"/>, each done <see cref="Repeats"/> time(s) (the three hip moves at a quick pace, the gestures at
 /// their natural pace), and a
 /// Wave at normal pace if nothing is left to fight by then. A step is handed out each time the body asks for the next
 /// clip, so the body decides when a clip has finished; moving, attacking or taking a hit cancels the rest. Engine-free
@@ -10,7 +10,8 @@ namespace DungeonCrawler.Party;
 /// </summary>
 public sealed class VictoryDance
 {
-    public const int Repeats = 2;
+    /// <summary>How many times each move is done in a row.</summary>
+    public const int Repeats = 1;
     /// <summary>How many different moves one dance uses: the Squat that opens it plus <see cref="RandomMoves"/> drawn ones.</summary>
     public const int MovesPerDance = 1 + RandomMoves;
     /// <summary>How many moves are drawn from the pool after the opening Squat.</summary>
