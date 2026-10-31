@@ -66,7 +66,7 @@ public partial class AudioManager : Node
     public bool VoiceBusy => _voice != null && _voice.Playing;
     private AudioStreamGenerator? _ambientGen;
     private AudioStreamGeneratorPlayback? _ambientPlayback;
-    private Random _rng = new(3);
+    private Random _rng = new(); // pitch jitter and noise only: unseeded, nothing here is game state
     private float _ambientHum = 55f;
     private float _ambientNoise = 0.03f;
     private double _phase;

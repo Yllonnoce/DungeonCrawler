@@ -237,7 +237,7 @@ public static class WaterAudio
 {
     private const int Rate = 22050;
     private static AudioStreamWav? _stream, _pond, _splash;
-    private static readonly Random Rng = new(7);
+    private static readonly Random Rng = new(); // splash sounds only: unseeded, nothing here is game state
 
     public static AudioStreamWav Ambience(bool stream) => stream ? (_stream ??= Loop(4f, bright: 0.55f)) : (_pond ??= Loop(5f, bright: 0.18f));
 

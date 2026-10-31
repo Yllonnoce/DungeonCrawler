@@ -7,7 +7,7 @@ public static class Synth
 {
     private const int Rate = 22050;
     private static AudioStreamWav? _rumble, _thud;
-    private static readonly Random Rng = new(11);
+    private static readonly Random Rng = new(); // sound only, nothing a peer must agree on: unseeded so no two sessions sound alike
 
     /// <summary>Stone giving way: a low rolling rumble with grit on top, three seconds, fading out.</summary>
     public static AudioStreamWav Rumble()
