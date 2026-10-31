@@ -1,10 +1,13 @@
 {
+  // On Windows the commands go through scripts/dotnet.bat and scripts/godot.bat, which find the .NET 8 SDK and Godot on
+  // PATH or fall back to the copies build.bat fetched into %LOCALAPPDATA%\DungeonCrawlerTools.
   "version": "2.0.0",
   "tasks": [
     {
       "label": "build",
       "type": "shell",
       "command": "dotnet",
+      "windows": { "command": "${workspaceFolder}\\scripts\\dotnet.bat" },
       "args": ["build", "DungeonCrawler.csproj", "--nologo", "-clp:NoSummary"],
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": "$msCompile",
@@ -14,6 +17,7 @@
       "label": "test",
       "type": "shell",
       "command": "dotnet",
+      "windows": { "command": "${workspaceFolder}\\scripts\\dotnet.bat" },
       "args": ["test", "tests/DungeonCrawler.Tests.csproj", "--nologo"],
       "group": { "kind": "test", "isDefault": true },
       "problemMatcher": "$msCompile"
@@ -22,6 +26,7 @@
       "label": "import assets",
       "type": "shell",
       "command": "godot",
+      "windows": { "command": "${workspaceFolder}\\scripts\\godot.bat" },
       "args": ["--headless", "--import", "--path", "${workspaceFolder}"],
       "problemMatcher": []
     }

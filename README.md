@@ -91,10 +91,11 @@ Pick your system. Each step is one thing to do.
 - **Two ways to install.** *Build it yourself* (the three steps) compiles the newest code on your machine; about 6 GB of
   disk, no administrator rights, the tools go in your own user folder. *The finished game* (the `get` line) downloads the
   newest release, about 500 MB, a few minutes.
-- **Updating.** Build route: `update.bat` or `bash update.sh`. Download route: run the `get` line again.
+- **Debugging on Windows.** The launcher's menu has a **Debug** choice: the game starts with `--verbose` and any flags you type (`--floor=3 --seed=1`, see `src/Core/DebugTools.cs`) in a console that shows its output. `Launch.bat debug --floor=3` from a Command Prompt does the same without the menu.
+- **Updating.** Build route: `update.bat` or `bash update.sh`. Download route: on Windows the launcher offers each new release when you start the game; elsewhere run the `get` line again.
 - **Uninstalling.** Run the setup program again (`Setup.bat`, `Setup.command`, `setup.sh`) and choose **Uninstall**.
 - **Saves** live in your user data folder and survive updating and uninstalling.
-- **Privacy.** Nothing phones home. The campaign is complete on disk; the optional AI features only run with your own keys.
+- **Privacy.** Nothing phones home about you. On Windows the launcher's Play choice asks GitHub for the newest release (Debug does not). The campaign is complete on disk; the optional AI features only run with your own keys.
 - **By hand.** Every release on the **[Releases page](../../releases/latest)** has three archives. Unpack yours and run the
   setup program inside; `INSTALL.txt` repeats the steps and `SHA256SUMS` checks the download.
 

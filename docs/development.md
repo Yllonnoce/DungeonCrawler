@@ -201,7 +201,7 @@ build, export for the current system and run the same setup program (outside a c
 ~/DungeonCrawler; build.bat fetches a portable MinGit into %LOCALAPPDATA%\DungeonCrawlerTools when the PC has no git),
 and `update.sh` / `update.bat` pull, rebuild and reinstall keeping the Desktop launcher choice. The setup programs (`setup.sh`, `Setup.bat`,
 `Setup.command`: Install / Uninstall menu, optional Desktop launcher) and the Host scripts (run the installed game as a
-dedicated server on port 7777) live in `installer/<os>/` and are copied into every archive by `scripts/package.sh` and
+dedicated server on port 7777) live in `installer/<os>/`; Windows also has `Launch.bat`, which the shortcuts open: a boot menu with Play (asks GitHub for a newer `game-*` release, installs it on request, starts the game) and Debug (`DungeonCrawler.console.exe --verbose -- <flags>`, or the exe plus the Godot log followed live when a build has no console wrapper; the Windows preset now exports the wrapper for release too). The release check judges by the `VERSION` file that `package.sh` and `build.bat` put beside the exe (`<hash> source` marks a from-source build, which it leaves to `update.bat`). All of them are copied into every archive by `scripts/package.sh` and
 next to the export by the build scripts. Windows scripts are classic `cmd` batch files on purpose (PowerShell's
 execution policy stops ordinary users from running `.ps1` files); `.gitattributes` keeps them CRLF.
 
@@ -214,6 +214,15 @@ dotnet test tests/DungeonCrawler.Tests.csproj   # engine-free logic (generator, 
 godot --path .                              # play
 godot -e --path .                           # open the editor
 ```
+
+
+On Windows (the other half of the dual boot, same checkout): run `build.bat` once; it fetches Godot 4.7.2 .NET, the export
+templates and a .NET 8 SDK into `%LOCALAPPDATA%\DungeonCrawlerTools` without touching the system. F5 then works from VS Code:
+`.vscode/tasks.json` builds through `scripts/dotnet.bat` (the SDK on PATH when it is .NET 8, else that private copy) and
+`.vscode/launch.json` starts the fetched Godot console exe with the private SDK in front of its PATH, because Godot .NET finds
+its runtime by running `dotnet --list-sdks` and crashes at startup without one. `nuget.config` at the root names nuget.org, so
+the build does not depend on the user-level NuGet config (empty on one Windows PC: MSB4236, Godot.NET.Sdk not found).
+`scripts/godot.bat` is the same fallback for the command line: `scripts\godot.bat --path .` plays, `-e` opens the editor.
 
 Headless checks:
 

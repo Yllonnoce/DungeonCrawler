@@ -114,6 +114,11 @@ if not exist "build\windows" mkdir "build\windows"
 if not exist "build\windows\DungeonCrawler.exe" (type "%TMP_DIR%\godot-export.log" & echo The export failed; the log is %TMP_DIR%\godot-export.log & goto fail)
 copy /y installer\windows\Setup.bat build\windows\ >nul
 copy /y installer\windows\Host.bat build\windows\ >nul
+copy /y installer\windows\Launch.bat build\windows\ >nul
+rem the launcher reads VERSION; "source" tells it this copy is updated by update.bat, not from a release
+set "HASH=dev"
+for /f %%h in ('git rev-parse --short HEAD 2^>nul') do set "HASH=%%h"
+> build\windows\VERSION echo %HASH% source
 echo.
 echo == Built. Starting the setup program ^(%CD%\build\windows\Setup.bat^)
 echo.

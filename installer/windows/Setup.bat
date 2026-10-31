@@ -5,7 +5,8 @@ rem   Setup.bat                menu: Install / Uninstall
 rem   Setup.bat install [--desktop|--no-desktop]   install without the menu (asks about the Desktop shortcut unless told)
 rem   Setup.bat uninstall      remove the install and its shortcuts
 rem Install copies this folder to %LOCALAPPDATA%\Programs\DungeonCrawler and adds a Start Menu shortcut, plus a Desktop
-rem shortcut if you want one. Saves and settings stay in %APPDATA%\Godot\app_userdata\DungeonCrawler.
+rem shortcut if you want one. The shortcuts open Launch.bat, which checks for a newer release and then starts the game.
+rem Saves and settings stay in %APPDATA%\Godot\app_userdata\DungeonCrawler.
 set "HERE=%~dp0"
 set "DEST=%LOCALAPPDATA%\Programs\DungeonCrawler"
 set "STARTMENU=%APPDATA%\Microsoft\Windows\Start Menu\Programs\DungeonCrawler.lnk"
@@ -39,7 +40,8 @@ if errorlevel 2 goto installed
 call :shortcut "%DESKTOP%"
 echo Desktop shortcut: %DESKTOP%
 :installed
-echo Installed. Start it from the Start Menu (DungeonCrawler) or run "%DEST%\DungeonCrawler.exe".
+echo Installed. Start it from the Start Menu (DungeonCrawler): the launcher offers Play (checks for a newer release first) or Debug.
+echo ("%DEST%\Launch.bat" play skips the menu, "%DEST%\Launch.bat" debug --floor=3 goes straight to debugging; "%DEST%\DungeonCrawler.exe" is the game itself.)
 echo To remove it later run "%DEST%\Setup.bat" uninstall
 echo SmartScreen may warn the first time because the build is unsigned: "More info" then "Run anyway".
 exit /b 0
@@ -57,5 +59,9 @@ echo Removed DungeonCrawler. Saves and settings stay in %%APPDATA%%\Godot\app_us
 exit /b 0
 
 :shortcut
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('%~1'); $s.TargetPath='%DEST%\DungeonCrawler.exe'; $s.WorkingDirectory='%DEST%'; $s.Description='A first-person party dungeon crawler'; $s.Save()"
+rem The shortcut opens the launcher (update check, then the game) and wears the game's icon; an archive without a
+rem launcher gets a shortcut to the game itself.
+set "TARGET=%DEST%\Launch.bat"
+if not exist "%TARGET%" set "TARGET=%DEST%\DungeonCrawler.exe"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$s=(New-Object -ComObject WScript.Shell).CreateShortcut('%~1'); $s.TargetPath='%TARGET%'; $s.WorkingDirectory='%DEST%'; $s.IconLocation='%DEST%\DungeonCrawler.exe,0'; $s.Description='A first-person party dungeon crawler'; $s.Save()"
 exit /b 0
