@@ -18,7 +18,8 @@ stage=$(mktemp -d); trap 'rm -rf "$stage"' EXIT
 
 # ---- Linux: a folder with setup.sh (Install / Uninstall menu, Desktop launcher on request)
 mkdir -p "$stage/linux/$NAME"
-cp -r build/linux/. "$stage/linux/$NAME/"
+# only the export itself: a stray file left in build/linux must not ship
+cp build/linux/$NAME.x86_64 "$stage/linux/$NAME/"; cp -r build/linux/data_${NAME}_linuxbsd_x86_64 "$stage/linux/$NAME/"
 cp installer/linux/setup.sh installer/linux/host.sh "$stage/linux/$NAME/"
 # the two plain commands from earlier releases keep working
 printf '#!/usr/bin/env bash\nexec "$(dirname "$0")/setup.sh" install "$@"\n' > "$stage/linux/$NAME/install.sh"
@@ -28,7 +29,8 @@ tar -C "$stage/linux" -czf "dist/$NAME-$VERSION-linux-x86_64.tar.gz" "$NAME"
 
 # ---- Windows: the exe, its data folder and Setup.bat (Install / Uninstall menu, Desktop shortcut on request)
 mkdir -p "$stage/windows"
-cp -r build/windows/. "$stage/windows/"
+# only the export itself (the game, its console wrapper when the preset makes one, its data folder): a stray file left in build/windows must not ship
+cp build/windows/$NAME.exe "$stage/windows/"; [ -f build/windows/$NAME.console.exe ] && cp build/windows/$NAME.console.exe "$stage/windows/"; cp -r build/windows/data_${NAME}_windows_x86_64 "$stage/windows/"
 # Setup.bat and Host.bat are stored with CRLF line endings (.gitattributes): cmd.exe misreads bare LF in some constructs
 cp installer/windows/Setup.bat installer/windows/Host.bat installer/windows/Launch.bat "$stage/windows/"
 echo "$VERSION" > "$stage/windows/VERSION"   # Launch.bat compares this with the newest release's archive name
