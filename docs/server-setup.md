@@ -1,26 +1,47 @@
 # Running a DungeonCrawler server
 
-A dedicated server is the game itself started headless with `--server`. Players join it from the title screen
-(Join Server) with a name and a class, each controlling one adventurer. This guide takes a fresh Google Cloud
-account to a running server and covers the day-to-day afterwards. Any other Linux machine works the same from
-step 4 onward; the Render route (Docker behind a WebSocket front door) is described in [development.md](development.md) under Multiplayer.
+A game for several players needs one server. Players join it from the title screen (**Join Server**) with a name and a
+class, each controlling one adventurer. There are two ways to have a server.
+
+## The simple way: host from your own computer
+
+Install the game (see the [README](../README.md)). Next to the setup program you ran is a Host script: `Host.bat` on
+Windows, `Host.command` on macOS, `host.sh` on Linux (on Windows and Linux it is also in the installed folder,
+`%LOCALAPPDATA%\Programs\DungeonCrawler` and `~/.local/opt/DungeonCrawler`). Double-click it, or run it from a terminal,
+and leave its window open while people play. It prints the two addresses players can use:
+
+- **Same network** (friends in the same house): `ws://<your local address>:7777`.
+- **Internet**: `ws://<your public address>:7777`. For this one your router must forward TCP port 7777 to your computer;
+  the router's manual calls this *port forwarding* or *virtual server*.
+
+Windows and macOS ask once whether to allow the game through the firewall; say yes. `Host.bat 8000 6` (or
+`./host.sh 8000 6`) uses port 8000 and allows six players. Closing the window stops the server. The game is saved as it
+goes (save slot `server`) and continues where everyone left off the next time you host.
+
+This is all most groups need. The rest of this guide is for a server that keeps running when your own computer is off.
+
+## The around-the-clock way: a small cloud machine
+
+The dedicated server is the game itself started headless with `--server`. This part takes a fresh Google Cloud account
+to a running server and covers the day-to-day afterwards. Any other x86_64 Linux machine that stays on (a spare PC, a
+VPS from another provider) works the same from step 4 onward. The repository is public, so the server machine needs no
+GitHub account.
 
 Placeholders used below: `PROJECT_ID` (your Google Cloud project), `ZONE` (for example `us-central1-f`),
 `VM` (the instance name, for example `dungeoncrawler`). Replace them as you go.
 
 ## 1. One-time setup on your own machine
 
-1. Install the Google Cloud CLI (`gcloud`) and sign in: `gcloud auth login`.
-2. Install the GitHub CLI (`gh`) and sign in: `gh auth login`. The server build is published as a GitHub release of the
-   game's repository, which is private, so the VM will also need a GitHub login (step 5) or a copy of the build (step 6b).
-3. From the repository, make sure a server build exists or publish one:
+Install the Google Cloud CLI (`gcloud`) and sign in: `gcloud auth login`. That is all: the server build itself comes
+from the repository's [Releases page](../../../releases) (the `server-*` releases), which the VM downloads in step 6.
+
+Only if you changed the game and want your own server build, publish one from your copy of the repository (needs the
+GitHub CLI, `gh auth login`, and write access to the repository):
 
 ```
 scripts/export_server.sh                 # build/server/DungeonCrawler.x86_64 (Linux, headless)
 scripts/publish_server.sh                # exports and publishes a GitHub release tagged server-<date>-<time>
 ```
-
-`publish_server.sh` prints the release tag. `SKIP_EXPORT=1 scripts/publish_server.sh` publishes an export you already made.
 
 ## 2. Create the project and enable Compute Engine
 
@@ -65,15 +86,15 @@ gcloud compute ssh VM --zone ZONE
 The first connection creates an SSH key for you (you may give it a passphrase) and registers it with the project.
 Everything from here on runs on the VM.
 
-## 5. Install the tools and the repository on the VM
+## 5. Put the repository on the VM
 
 ```
-sudo apt-get update && sudo apt-get install -y git gh
-gh auth login            # GitHub.com, HTTPS, then follow the prompt; read access to the repository is enough
-git clone https://github.com/<owner>/DungeonCrawler.git ~/DungeonCrawler
+sudo apt-get update && sudo apt-get install -y git
+git clone https://github.com/Yllonnoce/DungeonCrawler.git ~/DungeonCrawler
 ```
 
-Use the repository's real owner in the clone URL (the same one `scripts/publish_server.sh` publishes to).
+The clone brings the scripts the next steps use. If you run your own fork, use its address instead and set
+`DUNGEONCRAWLER_REPO=<owner>/DungeonCrawler` in the environment so `fetch.sh` looks at its releases.
 
 ## 6. Install the server
 
@@ -88,7 +109,7 @@ system user, copies the build to `/opt/dungeoncrawler`, puts saves and the statu
 installs the `dungeoncrawler` systemd service and starts it. Run the same command for every later update; the service is
 stopped and started around the copy and keeps its saves. `fetch.sh server-20261030-1915` installs a specific release.
 
-### 6b. From a copy of the build (no GitHub login on the VM)
+### 6b. From a copy of the build (a machine without internet access to GitHub)
 
 On your own machine:
 
@@ -159,7 +180,8 @@ gcloud compute instances start VM --zone ZONE      # later; the service starts w
 - A client that joins sees an old version: clients and server must come from the same build; rebuild and reinstall the
   game on the players' machines (`scripts/export_all.sh --no-ship` then `scripts/package.sh` make the installers).
 - `fetch.sh` says no `server-*` release: publish one from the repository with `scripts/publish_server.sh`.
-- `gh` on the VM says not logged in: `gh auth login` again; tokens expire.
+- Players at home cannot reach a server you host yourself: check the router forwards TCP 7777 to the hosting computer,
+  and that the computer's firewall allowed the game when it asked.
 
 ## 10. Keys for the AI features (optional)
 

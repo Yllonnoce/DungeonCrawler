@@ -3,7 +3,7 @@
 #   bash deploy/gce/start.sh                 # port 80, the shipped campaign, 4 players
 #   PORT=7777 CAMPAIGN=offline MAX_PLAYERS=6 bash deploy/gce/start.sh
 # Uses build/server if it is there (an export, or a tarball you copied in), else downloads the latest server-*
-# GitHub release (needs `gh auth login` once), else runs from source when Godot is installed (deploy/gce/setup_source.sh).
+# GitHub release (the repository is public, no login needed), else runs from source when Godot is installed (deploy/gce/setup_source.sh).
 # For a service that survives logout and reboots use deploy/gce/install.sh instead; this script is for trying it
 # out and for watching the log.
 set -euo pipefail
@@ -22,14 +22,14 @@ if [ ! -x "$BIN" ]; then
     echo "unpacking build/dungeoncrawler-server.tar.gz"
     tar -C build -xzf build/dungeoncrawler-server.tar.gz
   else
-    TAG=""
-    if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
-      TAG=$(gh release list --repo Yllonnoce/DungeonCrawler --limit 20 --json tagName --jq '.[] | select(.tagName | startswith("server-")) | .tagName' | head -1 || true)
-    fi
-    if [ -n "$TAG" ]; then
+    API="https://api.github.com/repos/${DUNGEONCRAWLER_REPO:-Yllonnoce/DungeonCrawler}/releases"
+    TAG=$(curl -fsSL -H 'User-Agent: DungeonCrawler-start' "$API?per_page=50" 2>/dev/null | grep -o '"tag_name": *"server-[^"]*"' | head -1 | sed 's/.*"\(server-[^"]*\)"/\1/' || true)
+    URL=""
+    [ -n "$TAG" ] && URL=$(curl -fsSL -H 'User-Agent: DungeonCrawler-start' "$API/tags/$TAG" | grep -o '"browser_download_url": *"[^"]*dungeoncrawler-server.tar.gz"' | sed 's/.*"\(https\?:[^"]*\)"/\1/' | head -1 || true)
+    if [ -n "$URL" ]; then
       echo "no server build in build/server: fetching release $TAG from GitHub"
       mkdir -p build
-      gh release download "$TAG" --repo Yllonnoce/DungeonCrawler --pattern dungeoncrawler-server.tar.gz --dir build --clobber
+      curl -fL --progress-bar -o build/dungeoncrawler-server.tar.gz "$URL"
       tar -C build -xzf build/dungeoncrawler-server.tar.gz
     elif command -v godot >/dev/null; then
       echo "no server build and no published release: running from source with $(godot --version | head -1)"
@@ -37,7 +37,7 @@ if [ ! -x "$BIN" ]; then
     else
       echo "no server build, no published release, and no Godot here."
       echo "Either: bash deploy/gce/setup_source.sh (installs Godot + .NET, runs from this clone)"
-      echo "or: scripts/publish_server.sh on the dev machine, then gh auth login here and run this again"
+      echo "or: scripts/publish_server.sh on the dev machine, then run this again"
       exit 1
     fi
   fi

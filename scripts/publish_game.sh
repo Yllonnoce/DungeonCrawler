@@ -22,6 +22,8 @@ Download the file for your system, unpack it, and run the setup program inside i
 - Windows: \`DungeonCrawler-*-windows-x86_64.zip\`, then double-click \`Setup.bat\` (SmartScreen may warn because the build is unsigned: "More info", then "Run anyway")
 - macOS: \`DungeonCrawler-*-macos-universal.zip\`, then double-click \`Setup.command\` (right-click, Open the first time)
 
+Or let a script do all of it (README, "Get the game"): on Windows \`curl -fsSL -o get.bat https://raw.githubusercontent.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/main/get.bat && get.bat\`, on macOS and Linux \`curl -fsSL https://raw.githubusercontent.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/main/get.sh | bash\`.
+
 INSTALL.txt repeats these steps; SHA256SUMS lets you check a download. Saves live in your user data folder and survive reinstalling.
 EOF
 )
