@@ -154,15 +154,20 @@ public static class TravelBarks
 public sealed class TravelWatch
 {
     /// <summary>Seconds without a fight, a conversation or a menu before the walking counts as boring.</summary>
-    public const double QuietSeconds = 45;
-    /// <summary>Least seconds between two grumbles.</summary>
-    public const double RepeatSeconds = 40;
+    public const double QuietSeconds = 25;
+    /// <summary>The gap between two grumbles is drawn fresh each time, between these two.</summary>
+    public const double RepeatMinSeconds = 15, RepeatMaxSeconds = 32;
     /// <summary>Metres the party must cover between grumbles: standing about is the idle razzing's business.</summary>
-    public const float MinDistance = 20f;
+    public const float MinDistance = 12f;
 
+    private readonly Random _rng;
     private double _lastAction = double.NegativeInfinity;
     private double _lastLine = double.NegativeInfinity;
+    private double _gap = RepeatMinSeconds;
     private float _distanceAtLast;
+
+    /// <param name="rng">Draws the gap between grumbles; the game's own is unseeded so no two sessions grumble on the same beat.</param>
+    public TravelWatch(Random? rng = null) => _rng = rng ?? new Random();
 
     /// <summary>Feed the lead's distance travelled each tick; true on the ticks a grumble is due. <paramref name="action"/> (a fight, a dialogue, a menu, a downed lead) restarts the quiet clock.</summary>
     public bool Update(double now, float distance, bool action)
@@ -170,10 +175,11 @@ public sealed class TravelWatch
         if (distance < _distanceAtLast) _distanceAtLast = distance; // a new body on a new floor starts from nothing
         if (action) { _lastAction = now; return false; }
         if (now - _lastAction < QuietSeconds) return false;
-        if (now - _lastLine < RepeatSeconds) return false;
+        if (now - _lastLine < _gap) return false;
         if (distance - _distanceAtLast < MinDistance) return false;
         _lastLine = now;
         _distanceAtLast = distance;
+        _gap = RepeatMinSeconds + _rng.NextDouble() * (RepeatMaxSeconds - RepeatMinSeconds);
         return true;
     }
 }
