@@ -65,7 +65,9 @@ ship_rebake() {
 if [ "$SHIP" = 1 ]; then ship_rebake; else echo "Exporting the campaign in data/adventures/builtin as it is (--no-ship)."; fi
 if [ "$EXPORT" = 0 ]; then echo "Rebake shipped into the project; not exporting (--ship-only)."; exit 0; fi
 
-dotnet build DungeonCrawler.csproj -c Release
+# --no-incremental: this folder is shared with a Windows boot whose clock has run hours ahead, and an assembly stamped in the
+# future makes an incremental build skip the compile and export stale code
+dotnet build DungeonCrawler.csproj -c Release --no-incremental
 mkdir -p build/linux build/windows build/macos
 "$GODOT" --headless --path . --export-release "Linux" build/linux/DungeonCrawler.x86_64
 "$GODOT" --headless --path . --export-release "Windows" build/windows/DungeonCrawler.exe
