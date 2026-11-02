@@ -3276,6 +3276,10 @@ public partial class DebugTools : Node
                 if (game.Adventure.SeedMoneyPaid) Fail("a new game starts with the seed money paid");
                 if (layout.Rooms.Count != 1) Fail($"the tavern has {layout.Rooms.Count} rooms");
                 if (enemies != 0) Fail($"{enemies} enemies in the tavern");
+                var portals = root.GetChildren().OfType<PortalSpawner>().Count();
+                var ambushers = root.GetChildren().OfType<AmbushSpawner>().Count();
+                GD.Print($"[tavern] spawners: portals={portals} ambushes={ambushers}");
+                if (portals + ambushers != 0) Fail($"the tavern builds {portals} portal and {ambushers} ambush spawner(s)");
                 if (party.Gold != 0) Fail($"the purse starts with {party.Gold} gold");
                 if (floorText != "The Tavern") Fail($"the HUD says \"{floorText}\"");
                 if (Audio.MusicDirector.Instance is { Enabled: true } music)
@@ -3407,6 +3411,9 @@ public partial class DebugTools : Node
                 if (layout.Kind == LayoutKind.Tavern) Fail("floor 1 is still the tavern layout");
                 if (party.Gold != TavernRules.SeedGold) Fail($"floor 1 opens with {party.Gold} gold, not {TavernRules.SeedGold} (paid once)");
                 if (!game.Adventure.SeedMoneyPaid) Fail("the seed money is not marked paid on floor 1");
+                var tavernRecord = game.Adventure.Memory.Floors.FirstOrDefault(f => f.Floor == 0);
+                GD.Print($"[tavern] floor 0 record: {(tavernRecord == null ? "missing" : $"completed={tavernRecord.Completed} seconds={tavernRecord.Seconds:0.0}")}");
+                if (tavernRecord is not { Completed: true }) Fail("leaving the tavern did not close its floor-0 record");
                 Finish();
                 break;
         }

@@ -21,6 +21,7 @@ public partial class AdventureDirector : Node
     public static AdventureDirector Instance { get; private set; } = null!;
 
     private int _currentFloor;
+    private bool _hasFloor; // set once a floor is built; floor 0 (the tavern) is a floor to leave like any other
     public Dictionary<string, QuestState> Quests => Game.Instance.Adventure.Quests;
 
     // ---- planning ----------------------------------------------------------------------------
@@ -495,13 +496,14 @@ public partial class AdventureDirector : Node
 
     private void OnFloorChanged(int floor, int delta)
     {
-        if (_currentFloor > 0 && _currentFloor != floor && Game.Instance.InGame)
+        if (_hasFloor && _currentFloor != floor && Game.Instance.InGame)
         {
             Apply(new FloorLeft(_currentFloor));
             CloseRecord();
             if (delta > 0 && Objectives.ObjectiveController.Instance is { Completed: true } done) _pendingDescend = done.Kind;
         }
         _currentFloor = floor;
+        _hasFloor = true;
     }
 
     private FloorObjectiveKind? _pendingDescend;
@@ -529,6 +531,7 @@ public partial class AdventureDirector : Node
     public void OnFloorBuilt(FloorContents contents, int floor, bool firstVisit)
     {
         _currentFloor = floor;
+        _hasFloor = true;
         _gatheringRemarks = 0; // every build or load starts the gathering count again
         OpenRecord(floor);
         if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }

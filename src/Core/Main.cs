@@ -243,7 +243,7 @@ public partial class Main : Node
             game.Adventure.Mode = campaign.Source == PlanSources.Claude ? AdventureMode.Claude : AdventureMode.Offline;
             if (floor1 != null) game.Adventure.FloorPlans[1] = floor1;
             Overlay.ShowCampaign(campaign.Title, campaign.Synopsis);
-            Overlay.SetStatus("Descending...");
+            Overlay.SetStatus(ArrivalStatus(game.CurrentFloor));
             var linger = DebugTools.Instance?.Automated == true ? 0.3f : 3.5f;
             GetTree().CreateTimer(linger).Timeout += () =>
             {
@@ -264,6 +264,9 @@ public partial class Main : Node
         if (!StartBuiltinCampaign()) StartNewGame(aiCampaign: false);
     }
 
+    /// <summary>The overlay's last line before a new game's first floor: a run opens in the tavern (floor 0), not on a stair.</summary>
+    private static string ArrivalStatus(int floor) => floor == 0 ? "The tavern..." : "Descending...";
+
     /// <summary>New Game on the shipped campaign: fixed seed, every floor plan already written.</summary>
     public bool StartBuiltinCampaign()
     {
@@ -278,7 +281,7 @@ public partial class Main : Node
         if (baked.Campaign.Barks.Count == 0) baked.Campaign.Barks = Party.Members.Select(m => OfflineDesigner.DefaultBarks(m.Name, m.Class.Name)).ToList();
         AdventureDirector.Instance.EnqueueCampaignVoice(baked.Campaign);
         Overlay.Open(baked.Campaign.Title, baked.Campaign.Synopsis);
-        Overlay.SetStatus("Descending...");
+        Overlay.SetStatus(ArrivalStatus(game.CurrentFloor));
         Party.InputLocked = true;
         GetTree().CreateTimer(DebugTools.Instance?.Automated == true ? 0.3f : 3.0f).Timeout += () =>
         {

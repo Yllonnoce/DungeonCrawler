@@ -1109,6 +1109,7 @@ public partial class DungeonBuilder : Node3D
     /// <summary>Seeded ambushers along the corridors (see <see cref="AmbushRules"/>); none when the setting or a debug flag says so.</summary>
     public void PlaceAmbushes(FloorLayout layout, int floor, int seed, Save.FloorStateDto? state)
     {
+        if (layout.Kind == LayoutKind.Tavern) return; // nothing lies in wait in the tavern
         var count = Settings.Ambushes && DebugTools.Instance?.NoAmbush != true ? AmbushRules.Count(floor) : 0;
         var points = AmbushRules.Place(layout, RegularEnemies(floor), seed, count);
         var spawner = new AmbushSpawner();
@@ -1119,6 +1120,7 @@ public partial class DungeonBuilder : Node3D
     /// <summary>The boss's reinforcement portals for this floor (see <see cref="PortalRules"/>), with the saved pressure clock.</summary>
     public void PlacePortals(FloorLayout layout, int floor, int seed, Save.FloorStateDto? state)
     {
+        if (layout.Kind == LayoutKind.Tavern) return; // no rift opens in the tavern, whatever room the party stands in
         var spawner = new PortalSpawner();
         _floorRoot!.AddChild(spawner);
         spawner.Setup(layout, floor, RegularEnemies(floor), seed, state?.PressureSeconds ?? 0f, state?.PortalWaves ?? 0);
