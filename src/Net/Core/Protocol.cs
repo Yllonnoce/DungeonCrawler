@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 4;
+    public const int Version = 5;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 78;
+    public const int MessageKindCount = 79;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -57,4 +57,6 @@ public enum MsgKind : byte
     ShopBuyIntent, ShopSellIntent, ShopSync,
     // an NPC's line raised on the server
     NpcSay,
+    // a client reached a dialogue node on its own screen (v5): the server relays it so the merchant's deal pays the purse once
+    DialogueNodeIntent,
 }

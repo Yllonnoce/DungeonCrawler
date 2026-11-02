@@ -81,7 +81,7 @@ public partial class DialogueScreen : Control
     /// <summary>The merchant's briefing in the tavern: an ordinary script conversation (hire, quakes, deal, sendoff). Local.</summary>
     public void OpenBriefing(Npc npc, NpcScript script)
     {
-        npc.Script = script;
+        npc.Script = script; // the Hud passes the builder's own briefing back, so this is the same script
         Open(npc);
     }
 
@@ -137,7 +137,7 @@ public partial class DialogueScreen : Control
     {
         Node = node;
         if (Npc != null) EventBus.Instance.RaiseDialogueNode(Npc.Id, node.Id);
-        // Task 5: on a co-op client also send new Net.DialogueNodeIntent(Npc.Id, node.Id) so the server can pay the deal
+        if (Npc != null && Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.DialogueNodeIntent(Npc.Id, node.Id)); // the server pays the deal; a client's purse is the server's
         _name.Text = Npc?.NpcName ?? "";
         _text.Text = node.Line.Text;
         var voiced = VoiceRenderer.Instance?.PlayLine(node.Line, interrupt: true) == true;

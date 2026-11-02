@@ -394,6 +394,13 @@ public partial class ServerWorld : Node
                 SendShopSync();
                 _bagDirty = true;
                 break;
+            case DialogueNodeIntent dn:
+                // any ready player may reach the deal; AdventureDirector filters (floor 0, the merchant) and pays the shared purse once
+                if (!slot.Ready || string.IsNullOrEmpty(dn.NpcId) || string.IsNullOrEmpty(dn.NodeId)) break;
+                EventBus.Instance.RaiseDialogueNode(dn.NpcId, dn.NodeId);
+                if (!Trace.Contains($"node:{dn.NodeId}")) Trace.Add($"node:{dn.NodeId}");
+                if (NetSession.Instance.TestServer) GD.Print($"[net-server] {slot.Name} reached dialogue node {dn.NpcId}/{dn.NodeId} on floor {Game.Instance.CurrentFloor}");
+                break;
             case QuickActionIntent q:
                 if (!OwnsSlots(slot, q.Slot, q.Slot)) break;
                 party.BagQuick(q.Slot, slot.MemberIndex, body);

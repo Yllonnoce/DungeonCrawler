@@ -181,7 +181,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (_greeted || !InTavern || Dead || GreetRadius <= 0f) return;
         if (Main.Instance is not { Hud: { } hud, Party: { } party } || !IsInstanceValid(party) || party.Local is not { } local) return;
         if (hud.DialogueOpen || hud.InventoryOpen || hud.Paused || hud.StairsPromptOpen || hud.ShopOpen || party.InputLocked) return;
-        if (local.GlobalPosition.DistanceTo(GlobalPosition) > GreetRadius) return;
+        if (new Vector2(local.GlobalPosition.X - GlobalPosition.X, local.GlobalPosition.Z - GlobalPosition.Z).Length() > GreetRadius) return; // planar, like Greet
         _greeted = true;
         GD.Print($"[Npc] {NpcName} greets the party in the tavern: the briefing opens");
         hud.OpenBriefing(this);

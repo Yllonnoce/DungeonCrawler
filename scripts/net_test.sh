@@ -3,11 +3,14 @@
 # chats and leaves. Each keeps its own user:// (XDG_DATA_HOME) so settings, keys and saves stay apart.
 # Usage: scripts/net_test.sh            (direct ws://127.0.0.1:7790)
 #        scripts/net_test.sh relay URL  (a client against an already-running relay, e.g. ws://127.0.0.1:10000/ws)
+#        START_FLOOR=0 scripts/net_test.sh  (the server opens in the tavern; the client joins, strikes the deal and leaves)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
 MODE=${1:-direct}
 URL=${2:-ws://127.0.0.1:$PORT}
+START_FLOOR=${START_FLOOR:-1}
+JOIN_ONLY=""; [ "$START_FLOOR" = 0 ] && JOIN_ONLY="--net-test-join-only"
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 GODOT=${GODOT:-godot}
@@ -15,16 +18,16 @@ SERVER_EXE=${SERVER_BIN:-}   # e.g. build/server/DungeonCrawler.x86_64 to test t
 run_server() { if [ -n "$SERVER_EXE" ]; then "$SERVER_EXE" --headless -- "$@"; else "$GODOT" --headless --path . -- "$@"; fi; }
 
 if [ "$MODE" = direct ]; then
-  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --port=$PORT --bind=127.0.0.1 --campaign=offline --seed=4242 --lethality=1 --hazard=press@2 --quit-when-empty --status-file="$TMP/status.json" > "$TMP/server.log" 2>&1 &
+  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --floor=$START_FLOOR --port=$PORT --bind=127.0.0.1 --campaign=offline --seed=4242 --lethality=1 --hazard=press@2 --quit-when-empty --status-file="$TMP/status.json" > "$TMP/server.log" 2>&1 &
   SERVER=$!
   wait_port() { for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && return 0; sleep 0.5; done; echo "server never opened port $PORT"; return 1; }
   wait_port || { echo "--- server"; tail -20 "$TMP/server.log"; echo "NET TEST: FAIL"; exit 1; }
   # the floor takes a moment to build after the socket opens
-  for i in $(seq 1 120); do grep -q "\[Adventure\]\|You descend\|floor 1" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
+  for i in $(seq 1 120); do grep -q "\[Adventure\]\|You descend\|floor 1\|The tavern\.\|floor 0" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
   sleep 1
 fi
 
-XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --join="$URL" --name=Tester --class=class.warrior --hazard=press@2 > "$TMP/client.log" 2>&1
+XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client $JOIN_ONLY --join="$URL" --name=Tester --class=class.warrior --hazard=press@2 > "$TMP/client.log" 2>&1
 CLIENT_RC=$?
 
 if [ "$MODE" = direct ]; then
@@ -40,6 +43,11 @@ fi
 echo "--- client"; grep -E "\[net|RESULT|Unhandled|ERROR" "$TMP/client.log" | head -40
 if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || { [ "$MODE" = direct ] && ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; }; then
   echo "NET TEST: FAIL"; exit 1
+fi
+if [ -n "$JOIN_ONLY" ]; then
+  # the tavern run stops after the join: the floor, the merchant and the deal paid once through the server
+  if ! grep -q "\[net-client\] tavern join OK" "$TMP/client.log"; then echo "NET TEST: FAIL (no tavern join)"; exit 1; fi
+  echo "NET TEST: ok"; exit 0
 fi
 # the safe room on floor 2: the client stepped in and its HUD showed it (the server's objective line)
 if ! grep -q "\[net\] safe room: HUD shows" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's HUD never showed the safe room)"; exit 1; fi

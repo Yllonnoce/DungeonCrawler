@@ -44,6 +44,8 @@ public partial class NetSession : Node
     public bool TestClient { get; private set; }
     /// <summary>The short client check: join a resumed server, confirm the character came back, leave.</summary>
     public bool TestRejoinOnly { get; private set; }
+    /// <summary>The short client check against a server in the tavern: join, check the floor, strike the merchant's deal, leave.</summary>
+    public bool TestJoinOnly { get; private set; }
     /// <summary>The server resumed a save at start (the scripted check expects a rejoin, not a fresh join).</summary>
     public bool Resumed { get; set; }
 
@@ -69,6 +71,7 @@ public partial class NetSession : Node
             else if (arg == "--test-net-server") { TestServer = true; ServerRequested = true; }
             else if (arg == "--test-net-client") TestClient = true;
             else if (arg == "--test-net-rejoin") { TestClient = true; TestRejoinOnly = true; }
+            else if (arg == "--net-test-join-only") TestJoinOnly = true;
         }
         if (ServerRequested || JoinUrl != null) CallDeferred(nameof(AutoStart));
     }

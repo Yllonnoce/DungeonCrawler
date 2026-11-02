@@ -70,6 +70,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.ShopSync)] public sealed record ShopSync(int Floor, List<int> Sold, int Gold) : NetMessage;
 /// <summary>An NPC's spoken line, raised on the server (the merchant's remarks): clients show the subtitle, play the voice and move the pose.</summary>
 [Msg(MsgKind.NpcSay)] public sealed record NpcSay(string NpcId, Adventure.Line Line) : NetMessage;
+/// <summary>A client's dialogue reached a node (the briefing is local to each screen): the server raises it as <c>EventBus.DialogueNode</c>, and the director decides what it pays.</summary>
+[Msg(MsgKind.DialogueNodeIntent)] public sealed record DialogueNodeIntent(string NpcId, string NodeId) : NetMessage;
 [Msg(MsgKind.QuestSync)] public sealed record QuestSync(QuestState Quest) : NetMessage;
 [Msg(MsgKind.Objective)] public sealed record ObjectiveMsg(string Text) : NetMessage;
 [Msg(MsgKind.Log)] public sealed record LogMsg(List<string> Lines) : NetMessage;

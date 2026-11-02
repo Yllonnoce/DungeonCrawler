@@ -206,7 +206,7 @@ public partial class Hud : Control
         if (_pause.Visible) return;
         _shop.Close();
         _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
-        _dialogue.OpenBriefing(npc, TavernRules.BriefingFor(Game.Instance.Adventure.Campaign));
+        _dialogue.OpenBriefing(npc, npc.Script); // DungeonBuilder.PlaceTavernMerchant set the briefing: the one source
         UpdateModalState();
     }
 

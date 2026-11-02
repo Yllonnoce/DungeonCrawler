@@ -36,7 +36,7 @@ public partial class NetTestFlow : Node
         if (world == null) return;
         var resumed = NetSession.Instance.Resumed;
         if (Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a != null && IsInstanceValid(a)) is { } leadNow) _lastLead = leadNow.GlobalPosition;
-        if (!_pileLeft && !resumed && _lastLead is { } lastLead && world.Trace.Any(t => t.StartsWith("left:")) && Main.Instance?.Party is { } sp)
+        if (!_pileLeft && !resumed && Game.Instance.CurrentFloor != 0 && _lastLead is { } lastLead && world.Trace.Any(t => t.StartsWith("left:")) && Main.Instance?.Party is { } sp)
         {
             // leave a coin pile on the floor while the client is away: it must come back through the floor state with an id the server knows
             _pileLeft = true;
@@ -51,10 +51,11 @@ public partial class NetTestFlow : Node
             rich.AddGold(10_000);
             GD.Print($"[net-server] granted 10000 gold for the shop: purse {rich.Gold}");
         }
-        if ((resumed && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
+        if (((resumed || Game.Instance.CurrentFloor == 0) && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
         {
             var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
             var want = resumed ? new[] { "rejoin:", "ready:", "left:" }
+                : Game.Instance.CurrentFloor == 0 ? new[] { "join:", "ready:", "node:deal", "left:" } // --floor=0: the client joins the tavern, strikes the deal and leaves
                 : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "shop", "left:", "rejoin:" }
                 : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "shop", "left:", "rejoin:" };
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
@@ -92,6 +93,27 @@ public partial class NetTestFlow : Node
                 if (!client.Trace.Contains("ready") || main.Party?.Local is not { } local) { if (_elapsed > 40) Finish("[net]", false, $"never ready ({net.Status})"); return; }
                 if (!net.TestRejoinOnly && client.SnapshotsSeen >= 3 && !client.Trace.Contains("shop")) { Finish("[net]", false, "no shop sync arrived on joining"); return; }
                 GD.Print($"[net] in game as member {client.MemberIndex}, floor {Game.Instance.CurrentFloor}, layout hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}, {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies");
+                // join floor: the client built the floor the Welcome named, and a tavern is a tavern with its merchant in it
+                if (client.Welcome is not { } welcome || Game.Instance.CurrentFloor != welcome.CurrentFloor || !main.LayoutHashMatched)
+                { Finish("[net]", false, $"join floor: client on floor {Game.Instance.CurrentFloor}, welcome said {client.Welcome?.CurrentFloor}, layout hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}"); return; }
+                if (welcome.CurrentFloor == 0)
+                {
+                    var kind = main.Builder.Layout?.Kind;
+                    var merchant = main.Builder.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant");
+                    if (kind != Dungeon.Generation.LayoutKind.Tavern || merchant == null) { Finish("[net]", false, $"tavern join: layout {kind}, merchant {(merchant == null ? "missing" : "present")}"); return; }
+                    if (!_tavernJoinSeen) GD.Print($"[net-client] tavern join OK: layout {kind}, merchant {merchant.NpcName} present");
+                    _tavernJoinSeen = true; // step 0 runs again while the join-only check waits for snapshots
+                }
+                if (net.TestJoinOnly)
+                {
+                    if (welcome.CurrentFloor != 0) { Finish("[net]", false, $"--net-test-join-only expects a server in the tavern, got floor {welcome.CurrentFloor}"); return; }
+                    if (client.SnapshotsSeen < 3) return; // the server has our Ready, so it handles intents from us
+                    // the briefing is local to this screen: its deal node goes to the server, which pays the shared purse once
+                    _goldBefore = main.Party.Gold;
+                    net.Send(new DialogueNodeIntent("merchant", "deal"));
+                    _clock = 0; _step = 20;
+                    return;
+                }
                 if (net.TestRejoinOnly)
                 {
                     if (client.SnapshotsSeen < 3) return; // snapshots only flow once the server has our Ready
@@ -110,6 +132,21 @@ public partial class NetTestFlow : Node
                 _start = local.GlobalPosition;
                 _clock = 0; _step = 1;
                 return;
+            case 20:
+            {
+                var gained = main.Party.Gold - _goldBefore;
+                if (gained == TavernRules.SeedGold)
+                {
+                    if (!_dealSentTwice) { _dealSentTwice = true; net.Send(new DialogueNodeIntent("merchant", "deal")); _clock = 0; return; } // a second deal must not pay again
+                    if (_clock < 2) return;
+                    Finish("[net]", true, $"tavern join: the deal reached the server and the purse went {_goldBefore} -> {main.Party.Gold} once");
+                    net.Disconnect("test finished");
+                    return;
+                }
+                if (gained != 0) { Finish("[net]", false, $"the deal paid {gained} gold, expected {TavernRules.SeedGold} once"); return; }
+                if (_clock > 8) Finish("[net]", false, $"the deal never paid (gold {main.Party.Gold}, before {_goldBefore})");
+                return;
+            }
             case 1:
                 if (_clock < 0.5) return; // let ForcePose land first
                 main.Party.ForcedMoveInput = new Vector2(0, -1);
@@ -429,7 +466,7 @@ public partial class NetTestFlow : Node
     private Vector3? _startAfterPose, _hazardReturn, _safeReturn;
     private int _placements, _placementsAtFloor2;
     private bool _placedJoin;
-    private bool _goldGranted;
+    private bool _goldGranted, _dealSentTwice, _tavernJoinSeen;
     private int _shopPhase, _shopsBefore;
     private HashSet<int> _shopHeld = new();
     /// <summary>The server placed our body (a ForcePose): the start position on floor 1, and the arrival spot after a floor change.</summary>
