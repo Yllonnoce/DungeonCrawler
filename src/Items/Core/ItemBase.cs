@@ -82,6 +82,8 @@ public sealed record LegendaryProfile
     public int ItemLevelMin { get; init; } = 1;
     public float Weight { get; init; } = 1f;
     public StatModifier[] Modifiers { get; init; } = Array.Empty<StatModifier>();
+    /// <summary>Sold by the merchant only; the dungeon never rolls it.</summary>
+    public bool ShopOnly { get; init; }
     public StatusApplication? OnHit { get; init; }
 }
 

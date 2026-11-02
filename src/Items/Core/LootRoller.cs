@@ -50,7 +50,7 @@ public static class LootRoller
         if (rarity == Rarity.Legendary)
         {
             var legs = cat.Legendaries.Values
-                .Where(l => l.ItemLevelMin <= itemLevel && cat.Bases.TryGetValue(l.BaseId, out var lb) && lb.ItemLevelMin <= itemLevel && entry.Matches(lb))
+                .Where(l => !l.ShopOnly && l.ItemLevelMin <= itemLevel && cat.Bases.TryGetValue(l.BaseId, out var lb) && lb.ItemLevelMin <= itemLevel && entry.Matches(lb))
                 .OrderBy(l => l.Id).ToList();
             if (legs.Count > 0)
                 return MakeLegendary(cat, legs[WeightedIndex(legs.Select(l => l.Weight).ToArray(), rng)], itemLevel, rng);

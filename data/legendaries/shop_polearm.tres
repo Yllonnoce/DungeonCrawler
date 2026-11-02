@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.shop_polearm"
+DisplayName = "Longwinter"
+BaseId = "item.spear"
+Flavor = "Cold to the touch, even in the forge's own shop."
+ItemLevelMin = 3
+Weight = 1.0
+Modifiers = PackedStringArray("MeleeDamage+4", "Accuracy+6", "ResistFrost+15")
+OnHitStatus = "Frost"
+OnHitDuration = 4
+OnHitMagnitude = 1
+OnHitChance = 0.4
+ShopOnly = true

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.shop_axe"
+DisplayName = "Widowmaker"
+BaseId = "item.hand_axe"
+Flavor = "The haft is notched, one for each argument it won."
+ItemLevelMin = 3
+Weight = 1.0
+Modifiers = PackedStringArray("MeleeDamage+5", "CritMultiplier+0.25")
+OnHitStatus = "Bleed"
+OnHitDuration = 5
+OnHitMagnitude = 2
+OnHitChance = 0.4
+ShopOnly = true

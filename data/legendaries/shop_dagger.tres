@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.shop_dagger"
+DisplayName = "Quiet Mercy"
+BaseId = "item.dagger"
+Flavor = "Cheap, to the buyer. Dear, to everyone else."
+ItemLevelMin = 3
+Weight = 1.0
+Modifiers = PackedStringArray("MeleeDamage+3", "CritChance+0.08", "Stealth+10")
+OnHitStatus = "Poison"
+OnHitDuration = 5
+OnHitMagnitude = 2
+OnHitChance = 0.5
+ShopOnly = true

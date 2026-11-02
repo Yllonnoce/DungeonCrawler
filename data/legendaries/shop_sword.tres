@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.shop_sword"
+DisplayName = "Oathkeeper"
+BaseId = "item.longsword"
+Flavor = "Sworn to nothing, which is why it has never broken."
+ItemLevelMin = 3
+Weight = 1.0
+Modifiers = PackedStringArray("MeleeDamage+4", "Accuracy+8", "CritChance+0.05")
+OnHitStatus = "Bleed"
+OnHitDuration = 4
+OnHitMagnitude = 2
+OnHitChance = 0.35
+ShopOnly = true

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.shop_bow"
+DisplayName = "Crowsfoot"
+BaseId = "item.shortbow"
+Flavor = "Strung with something that was not quite hair."
+ItemLevelMin = 3
+Weight = 1.0
+Modifiers = PackedStringArray("RangedDamage+5", "Accuracy+10", "CritChance+0.06")
+OnHitStatus = "Poison"
+OnHitDuration = 5
+OnHitMagnitude = 2
+OnHitChance = 0.4
+ShopOnly = true

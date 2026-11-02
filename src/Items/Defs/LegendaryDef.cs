@@ -18,6 +18,7 @@ public partial class LegendaryDef : Resource, IHasId
     [Export] public float OnHitDuration { get; set; }
     [Export] public float OnHitMagnitude { get; set; }
     [Export] public float OnHitChance { get; set; } = 1f;
+    [Export] public bool ShopOnly { get; set; }
 
     public LegendaryProfile ToProfile()
     {
@@ -27,7 +28,7 @@ public partial class LegendaryDef : Resource, IHasId
         return new LegendaryProfile
         {
             Id = Id, Name = DisplayName, BaseId = BaseId, Flavor = Flavor, ItemLevelMin = ItemLevelMin, Weight = Weight,
-            Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName), OnHit = onHit,
+            Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName), OnHit = onHit, ShopOnly = ShopOnly,
         };
     }
 }
