@@ -789,9 +789,13 @@ public partial class PartyController : Node3D
     {
         if (Net.NetSession.IsClient) { /* Task 7: send the intent */ return null; }
         var gold = Gold;
-        var refusal = ShopRules.TryBuy(ShopStockFor(Game.Instance.CurrentFloor), ShopSoldOnFloor, stockIndex, Bag, ref gold);
+        var stock = ShopStockFor(Game.Instance.CurrentFloor);
+        var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
+        var refusal = ShopRules.TryBuy(stock, ShopSoldOnFloor, stockIndex, Bag, ref gold);
         if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
+        var paid = Gold - gold;
         AddGold(gold - Gold);
+        EventBus.Instance.Log($"Bought {bought} for {paid} gold.");
         Main.Instance?.Hud?.Refresh();
         return null;
     }
@@ -800,10 +804,12 @@ public partial class PartyController : Node3D
     public string? ShopSell(BagSlot slot)
     {
         if (Net.NetSession.IsClient) { /* Task 7: send the intent */ return null; }
-        if (!slot.IsBag) return "Nothing there.";
+        if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
+        var item = Bag[slot.BagIndex];
         var gold = Gold;
         var refusal = ShopRules.TrySell(Bag, slot.BagIndex, ref gold);
         if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
+        EventBus.Instance.Log($"Sold {item} for {gold - Gold} gold.");
         AddGold(gold - Gold);
         Main.Instance?.Hud?.Refresh();
         return null;

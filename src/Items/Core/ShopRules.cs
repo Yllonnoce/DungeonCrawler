@@ -88,7 +88,7 @@ public static class ShopRules
         var price = Prices.BuyPrice(item);
         if (gold < price) return "Not enough gold.";
         if (!Fits(bag, item)) return "The bag is full.";
-        bag.TryAdd(item);
+        bag.TryAdd(item.Clone());
         sold.Add(index);
         gold -= price;
         return null;

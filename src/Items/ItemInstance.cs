@@ -73,5 +73,20 @@ public sealed class ItemInstance
     public static ItemInstance Simple(string defId, string name, SlotKind kind = SlotKind.Junk, bool stackable = false, int count = 1, Guid? id = null)
         => new() { Id = id ?? Guid.NewGuid(), DefId = defId, BaseName = name, Kind = kind, Stackable = stackable, StackCount = count };
 
+    /// <summary>An independent copy with a fresh <see cref="Id"/>: stack counts and affixes can change without touching the original.</summary>
+    public ItemInstance Clone()
+    {
+        var c = new ItemInstance
+        {
+            DefId = DefId, BaseName = BaseName, Description = Description, Kind = Kind, Tags = Tags, Stackable = Stackable,
+            StackCount = StackCount, MaxStack = MaxStack, Color = Color, BaseWeapon = BaseWeapon, TwoHanded = TwoHanded,
+            ArmorClass = ArmorClass, Offhand = Offhand, Consumable = Consumable, BaseModifiers = new List<StatModifier>(BaseModifiers),
+            Rarity = Rarity, ItemLevel = ItemLevel, LegendaryName = LegendaryName, Flavor = Flavor,
+        };
+        foreach (var a in Affixes)
+            c.Affixes.Add(new RolledAffix { AffixId = a.AffixId, Name = a.Name, IsPrefix = a.IsPrefix, Tier = a.Tier, Modifiers = new List<StatModifier>(a.Modifiers), OnHit = a.OnHit });
+        return c;
+    }
+
     public override string ToString() => StackCount > 1 ? $"{DisplayName} x{StackCount}" : DisplayName;
 }
