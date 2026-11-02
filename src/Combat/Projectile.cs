@@ -6,7 +6,7 @@ using Godot;
 
 namespace DungeonCrawler.Combat;
 
-/// <summary>Arrows and spell bolts. Flies straight, resolves a hit on the first enemy or wall it touches.</summary>
+/// <summary>Arrows and spell bolts. Flies straight, resolves a hit on the first enemy or wall it touches (a ray sweep each step; the area overlap stays as a second net).</summary>
 public partial class Projectile : Area3D
 {
     public CharacterState? Attacker { get; private set; }
@@ -85,9 +85,36 @@ public partial class Projectile : Area3D
     {
         if (_spent) return;
         var dt = (float)delta;
-        GlobalPosition += Velocity * dt;
+        var from = GlobalPosition;
+        var to = from + Velocity * dt;
+        // The area's overlap test never reports the GridMap that the dungeon's walls are built from, and at 40 m/s a bolt
+        // can cross a thin body between two steps, so every step is swept with a ray first: whatever it finds is what the
+        // bolt touched, at the point it touched it.
+        if (Sweep(from, to)) return;
+        GlobalPosition = to;
         Lifetime -= dt;
         if (Lifetime <= 0) QueueFree();
+    }
+
+    /// <summary>Ray from <paramref name="from"/> to <paramref name="to"/> on this bolt's mask; corpses are looked past. True when the bolt is spent.</summary>
+    private bool Sweep(Vector3 from, Vector3 to)
+    {
+        if (from.DistanceSquaredTo(to) < 1e-8f) return false;
+        var space = GetWorld3D().DirectSpaceState;
+        var exclude = new Godot.Collections.Array<Rid>();
+        for (var guard = 0; guard < 6; guard++)
+        {
+            var query = PhysicsRayQueryParameters3D.Create(from, to, CollisionMask, exclude);
+            query.HitFromInside = true; // a bolt that starts inside a wall or a body has hit it already
+            var hit = space.IntersectRay(query);
+            if (hit.Count == 0) return false;
+            if (hit["collider"].As<GodotObject>() is not Node3D node) return false;
+            if (node is Enemy { IsAlive: false } corpse) { exclude.Add(corpse.GetRid()); continue; } // corpses do not stop projectiles
+            GlobalPosition = (Vector3)hit["position"];
+            OnBodyEntered(node);
+            return _spent;
+        }
+        return false;
     }
 
     private void OnBodyEntered(Node3D body)

@@ -237,6 +237,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--seed=")) _seed = ulong.Parse(arg["--seed=".Length..]);
             else if (arg == "--test-path") { _testPath = true; _quitAfter = 8; }
             else if (arg == "--test-skills") { _testSkills = true; _faceEnemy = true; _quitAfter = 7; }
+            else if (arg == "--test-abilities") { _testAbilities = true; _quitAfter = 150; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
@@ -702,6 +703,7 @@ public partial class DebugTools : Node
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
         if (_testPath) RunPathTest();
         if (_testSkills) RunSkillsTest();
+        if (_testAbilities) RunAbilitiesTest();
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();
@@ -2646,6 +2648,229 @@ public partial class DebugTools : Node
                 var w2 = main.Party.Members[2];
                 GD.Print($"[skills] load: Wren skills same={string.Join(",", w2.LearnedSkills.OrderBy(x => x)) == learnedBefore} maxHp {maxHpBefore} -> {w2.Stats[Characters.Stat.MaxHp]} multishot known={w2.KnownAbilities.Contains("ability.multishot")}");
                 GD.Print("[skills] RESULT ok");
+                break;
+        }
+    }
+
+    // --test-abilities: every hero learns every skill of their class, then uses every ability they know (and a heavy swing
+    // for melee weapons) on a fresh enemy standing 1.5 m ahead. Costs are checked the moment the ability fires; a second
+    // later the enemy's health and statuses, or the party's buffs, are checked. The three heroes not under test are parked
+    // so nobody else hits the enemy. Ends with a fireball and an arrow shot straight into a wall. Prints RESULT.
+    private bool _testAbilities;
+    private int _abilStep;
+    private double _abilNext;
+    private readonly List<(int Hero, string Ability, bool Heavy)> _abilPlan = new();
+    private int _abilIndex, _abilTries, _abilFails;
+    private Enemy? _abilEnemy;
+    private float _abilEnemyHp, _abilEnemyShield;
+    private string _abilCostNote = "";
+    private Vector3 _abilStand, _abilWallStand;
+    private Vector3 _abilCastFrom;
+
+    private void AbilitiesTakeControl(int hero)
+    {
+        var party = Main.Instance!.Party;
+        var adv = party.Adventurers[hero];
+        if (adv.Parked) adv.SetControl(DungeonCrawler.Party.ControlKind.Companion);
+        party.Possess(hero);
+        for (var i = 0; i < party.Adventurers.Length; i++) if (i != hero) party.Adventurers[i].SetControl(DungeonCrawler.Party.ControlKind.Parked);
+    }
+
+    private static void AbilitiesRefill(Characters.CharacterState m)
+    {
+        m.Effects.Clear();
+        m.Recalculate();
+        m.Hp = m.Stats[Characters.Stat.MaxHp]; m.Mana = m.Stats[Characters.Stat.MaxMana]; m.Stamina = m.Stats[Characters.Stat.MaxStamina];
+        m.AbilityCooldowns.Clear(); m.CooldownRemaining = 0;
+    }
+
+    /// <summary>The statuses this use is expected to leave on the enemy (chance 1 only): the weapon's for swings, the ability's otherwise.</summary>
+    private static List<Combat.StatusApplication> AbilitiesExpectedOnHit(Characters.CharacterState m, Combat.AbilityProfile a)
+    {
+        var list = new List<Combat.StatusApplication>();
+        if (a.Kind is Combat.AbilityKind.WeaponAttack or Combat.AbilityKind.MeleeStrike) list.AddRange(m.WeaponProfile.OnHit);
+        if (a.Attack != null && a.Kind != Combat.AbilityKind.WeaponAttack) list.AddRange(a.Attack.OnHit);
+        return list.Where(x => x.Chance >= 1f && x.Duration > 0).ToList();
+    }
+
+    private void RunAbilitiesTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame) return;
+        if (_elapsed < _abilNext) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var skills = Game.Instance.Skills;
+        switch (_abilStep)
+        {
+            case 0 when _elapsed >= 1.0:
+                _abilStep = 1; _abilNext = _elapsed + 1.0;
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree();
+                for (var i = 0; i < party.Members.Length; i++)
+                {
+                    var m = party.Members[i];
+                    m.SkillPoints = 99;
+                    var learned = true;
+                    while (learned)
+                    {
+                        learned = false;
+                        foreach (var sk in skills.ForClass(m.Class.Id).ToList())
+                            if (Characters.SkillRules.WhyCannotLearn(m, sk) == null && Characters.SkillRules.Learn(m, sk, skills)) learned = true;
+                    }
+                    m.SkillModifiers.Add(new Characters.StatModifier(Characters.Stat.Accuracy, Characters.ModOp.Add, 1000f, "test"));
+                    m.Recalculate();
+                    foreach (var id in m.KnownAbilities) _abilPlan.Add((i, id, false));
+                    if (!m.WeaponProfile.IsRanged) _abilPlan.Add((i, Combat.AbilityProfile.BasicId, true));
+                    GD.Print($"[abilities] {m.Name} ({m.Class.Name}, {m.WeaponProfile.Kind}): skills={m.LearnedSkills.Count} abilities=[{string.Join(", ", m.KnownAbilities.Select(party.AbilityName))}]");
+                }
+                var room = layout.Rooms.OrderByDescending(r => r.W * r.H).First();
+                _abilStand = b.Surface(room.Center) + Vector3.Up * 0.3f;
+                party.Teleport(_abilStand, _abilStand + new Vector3(0, 0, -1.5f));
+                GD.Print($"[abilities] {_abilPlan.Count} uses planned; standing at {room.Center} {_abilStand:0.0}");
+                break;
+            case 1: // arm: a fresh enemy, a full hero, one use
+            {
+                if (_abilIndex >= _abilPlan.Count) { _abilStep = 4; _abilNext = _elapsed + 0.5; break; }
+                var (hero, id, heavy) = _abilPlan[_abilIndex];
+                var m = party.Members[hero];
+                AbilitiesTakeControl(hero);
+                foreach (var other in party.Members) AbilitiesRefill(other);
+                party.Adventurers[hero].Teleport(_abilStand, _abilStand + new Vector3(0, 0, -1.5f));
+                if (party.ArrowCount < 10) party.Bag.TryAdd(Game.Instance.Catalog.Create(DungeonCrawler.Party.PartyController.ArrowDefId, 20));
+                foreach (var stray in root.GetChildren().OfType<Enemy>()) stray.QueueFree(); // the test enemy from last time and anything that wandered in
+                var a = party.GetAbilityFor(m, id);
+                var expect = AbilitiesExpectedOnHit(m, a);
+                _abilEnemy = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], _abilStand - Vector3.Up * 0.2f + new Vector3(0, 0, -1.5f), b.CurrentFloor);
+                if (_abilEnemy == null) { GD.Print("[abilities] FAIL could not spawn an enemy"); _abilFails++; _abilIndex++; break; }
+                if (expect.All(x => x.Kind != Combat.StatusKind.Stun)) _abilEnemy.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Stun, 30f, 0f));
+                _abilEnemy.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Shield, 60f, Combat.StatusEffectController.MaxShield)); // soaks the blow so the body survives and its statuses can be read
+                _abilEnemyHp = _abilEnemy.Hp;
+                // the new body joins the physics world next step: fire only then, or a swing finds nothing
+                _abilStep = 2; _abilNext = _elapsed + 0.35;
+                break;
+            }
+            case 2: // fire: one use, costs checked the moment it goes off
+            {
+                var (hero, id, heavy) = _abilPlan[_abilIndex];
+                var m = party.Members[hero];
+                var a = party.GetAbilityFor(m, id);
+                if (_abilEnemy == null || !IsInstanceValid(_abilEnemy)) { _abilStep = 1; break; }
+                _abilEnemyHp = _abilEnemy.Hp; _abilEnemyShield = _abilEnemy.Effects.ShieldPoints;
+                var mana0 = m.Mana; var stam0 = m.Stamina; var arrows0 = party.ArrowCount;
+                m.ActiveAbilityIndex = Math.Max(0, m.KnownAbilities.IndexOf(id));
+                party.Attack(hero, heavy);
+                // costs are paid the moment the ability fires, before any regen
+                var manaCost = a.ManaCost; var stamCost = Combat.AbilityRules.StaminaCost(m, a, heavy); var arrowCost = Combat.AbilityRules.ArrowCost(m, a);
+                var costs = new List<string>();
+                var killedNow = !_abilEnemy.IsAlive;
+                var siphon = killedNow ? party.Trigger(m, Characters.TriggerKind.SoulSiphon) : 0f; // a kill hands mana back through Soul Siphon
+                if (manaCost > 0) { var paid = mana0 - m.Mana; var ok = Math.Abs(paid - manaCost) < 0.01f || (siphon > 0 && Math.Abs(paid + siphon - manaCost) < 0.01f); costs.Add($"mana {manaCost:0} {(ok ? (paid < manaCost ? $"OK (siphon +{siphon:0})" : "OK") : $"FAIL(paid {paid:0.#})")}"); if (!ok) _abilFails++; }
+                if (stamCost > 0) { var ok = Math.Abs((stam0 - m.Stamina) - stamCost) < 0.01f; costs.Add($"stamina {stamCost:0} {(ok ? "OK" : $"FAIL(paid {stam0 - m.Stamina:0.#})")}"); if (!ok) _abilFails++; }
+                if (arrowCost > 0) { var ok = arrows0 - party.ArrowCount == arrowCost; costs.Add($"arrows {arrowCost} {(ok ? "OK" : $"FAIL(used {arrows0 - party.ArrowCount})")}"); if (!ok) _abilFails++; }
+                var cd = a.Cooldown > 0 ? (m.AbilityCooldown(a.Id) > 0 ? "cooldown OK" : "cooldown FAIL(not started)") : "";
+                if (cd.Contains("FAIL")) _abilFails++;
+                if (cd != "") costs.Add(cd);
+                _abilCostNote = string.Join(", ", costs);
+                _abilStep = 3; _abilNext = _elapsed + 1.0;
+                break;
+            }
+            case 3: // check: what the use did
+            {
+                var (hero, id, heavy) = _abilPlan[_abilIndex];
+                var m = party.Members[hero];
+                var a = party.GetAbilityFor(m, id);
+                var label = $"{m.Name} {a.Name}{(heavy ? " (heavy)" : "")} [{a.Kind}{(a.UsesWeapon ? $", {m.WeaponProfile.Kind}" : "")}]";
+                var notes = new List<string>();
+                if (_abilCostNote != "") notes.Add(_abilCostNote);
+                var fails = 0;
+                switch (a.Kind)
+                {
+                    case Combat.AbilityKind.SelfBuff:
+                        foreach (var ef in a.Effects) { var ok = m.Effects.Has(ef.Kind); notes.Add($"self {ef.Kind} {(ok ? "OK" : "FAIL")}"); if (!ok) fails++; }
+                        break;
+                    case Combat.AbilityKind.PartyBuff:
+                        foreach (var ef in a.Effects)
+                        {
+                            var missing = party.Members.Where(x => x.IsAlive && !x.Effects.Has(ef.Kind)).Select(x => x.Name).ToList();
+                            notes.Add($"party {ef.Kind} {(missing.Count == 0 ? "OK" : $"FAIL(missing {string.Join(",", missing)})")}"); if (missing.Count > 0) fails++;
+                        }
+                        break;
+                    default:
+                    {
+                        var alive = _abilEnemy != null && IsInstanceValid(_abilEnemy) && _abilEnemy.IsAlive;
+                        var hp = alive ? _abilEnemy!.Hp : 0f;
+                        var shield = alive ? _abilEnemy!.Effects.ShieldPoints : 0f;
+                        var hit = !alive || hp < _abilEnemyHp - 0.01f || shield < _abilEnemyShield - 0.01f;
+                        if (!hit && _abilTries < 2)
+                        {
+                            _abilTries++;
+                            GD.Print($"[abilities] {label}: no hit registered, trying again ({_abilTries})");
+                            _abilStep = 1; _abilNext = _elapsed + 0.2;
+                            return;
+                        }
+                        notes.Add(alive ? $"enemy hp {_abilEnemyHp:0}->{hp:0} shield {_abilEnemyShield:0}->{shield:0} {(hit ? "HIT" : "FAIL(no damage)")}" : $"enemy {_abilEnemyHp:0}->dead HIT");
+                        if (!hit) fails++;
+                        if (alive)
+                            foreach (var st in AbilitiesExpectedOnHit(m, a)) { var ok = _abilEnemy!.Effects.Has(st.Kind); notes.Add($"{st.Kind} {(ok ? "OK" : "FAIL(not applied)")}"); if (!ok) fails++; }
+                        else if (AbilitiesExpectedOnHit(m, a).Count > 0) notes.Add("statuses n/a (dead)");
+                        break;
+                    }
+                }
+                _abilFails += fails;
+                GD.Print($"[abilities] {label}: {string.Join(" | ", notes)}");
+                _abilIndex++; _abilTries = 0;
+                _abilStep = 1; _abilNext = _elapsed + 0.2;
+                break;
+            }
+            case 4: // the wall: a fireball from Ilex straight into solid rock from 2 m
+            case 6: // and an arrow from Wren
+            {
+                var hero = _abilStep == 4 ? 3 : 2;
+                if (_abilStep == 4)
+                {
+                    GridPos? found = null;
+                    for (var y = 1; y < layout.Height && found == null; y++)
+                        for (var x = 0; x < layout.Width && found == null; x++)
+                        {
+                            var c = new GridPos(x, y); var wall = new GridPos(x, y - 1);
+                            if (layout[c] == Cell.Floor && layout[wall] == Cell.Wall && !layout.IsUnder(c) && !layout.IsUnder(wall) && layout.RoomAt(c) != null) found = c;
+                        }
+                    if (found == null) { GD.Print("[abilities] wall test: no room cell with a wall to the north; skipped"); _abilStep = 8; break; }
+                    _abilWallStand = b.Surface(found.Value) + Vector3.Up * 0.3f;
+                    GD.Print($"[abilities] wall test from cell {found.Value}: the wall face is 2 m ahead");
+                }
+                if (_abilEnemy != null && IsInstanceValid(_abilEnemy)) _abilEnemy.QueueFree();
+                var m = party.Members[hero];
+                AbilitiesTakeControl(hero);
+                AbilitiesRefill(m);
+                party.Adventurers[hero].Teleport(_abilWallStand, _abilWallStand + new Vector3(0, 0, -2f));
+                m.ActiveAbilityIndex = Math.Max(0, m.KnownAbilities.IndexOf(hero == 3 ? "ability.fireball" : Combat.AbilityProfile.BasicId));
+                _abilCastFrom = party.Adventurers[hero].Camera.GlobalPosition;
+                var camNode = party.Adventurers[hero].Camera;
+                var rq = PhysicsRayQueryParameters3D.Create(camNode.GlobalPosition, camNode.GlobalPosition - camNode.GlobalTransform.Basis.Z * 6f, collisionMask: 1);
+                var rh = camNode.GetWorld3D().DirectSpaceState.IntersectRay(rq);
+                GD.Print($"[abilities] wall ray from the eye: {(rh.Count > 0 ? $"solid at {((Vector3)rh["position"]).DistanceTo(camNode.GlobalPosition):0.00} m ({((GodotObject)rh["collider"]).GetType().Name})" : "nothing within 6 m")}");
+                party.Attack(hero);
+                _abilStep++; _abilNext = _elapsed + 0.6;
+                break;
+            }
+            case 5:
+            case 7:
+            {
+                var what = _abilStep == 5 ? "fireball" : "arrow";
+                var flying = root.GetChildren().OfType<Combat.Projectile>().ToList();
+                var far = flying.Select(p => p.GlobalPosition.DistanceTo(_abilCastFrom)).DefaultIfEmpty(0f).Max();
+                var penetrated = flying.Count > 0 && far > 3f;
+                GD.Print($"[abilities] {what} vs wall: {(penetrated ? $"PENETRATED ({flying.Count} in flight, {far:0.0} m past the caster)" : "STOPPED")}");
+                if (penetrated) _abilFails++;
+                foreach (var p in flying) p.QueueFree();
+                _abilStep++; _abilNext = _elapsed + 0.3;
+                break;
+            }
+            case 8:
+                _abilStep = 9;
+                GD.Print($"[abilities] RESULT {(_abilFails == 0 ? "ok" : $"FAIL ({_abilFails} problems)")}");
+                _quitAfter = _elapsed + 0.5;
                 break;
         }
     }

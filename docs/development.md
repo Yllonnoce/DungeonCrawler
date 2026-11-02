@@ -235,6 +235,7 @@ godot --headless --path . -- --test-save           # save, mutate, load, compare
 godot --path . -- --test-drag                      # synthetic inventory drag-and-drop through the GUI
 godot --headless --path . -- --test-depth          # traps, doors, levers, pathing, boss stairs, victory, endless
 godot --headless --path . -- --test-skills         # learn chains, upgrades, multishot, respec, save round trip
+godot --headless --path . -- --test-abilities --no-ambush --no-portals   # every hero learns every skill and uses every ability on a shielded enemy: costs, damage, statuses, buffs; then a fireball and an arrow into a wall; prints RESULT
 godot --headless --path . -- --test-vertical --seed=5
 godot --path . -- --seed=3 --test-stairs                                   # climb the up flight, get asked, decline, accept, then take the well down (needs a window: the question is HUD)   # climb a ledge, fall into a cellar, open a secret, cross-level chase
 godot --headless --path . -- --test-party          # companions follow, possession switch, companions kill an enemy, auto-revive
