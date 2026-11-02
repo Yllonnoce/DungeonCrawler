@@ -70,7 +70,9 @@ public partial class Chest : Area3D, IInteractable
         for (var i = 0; i < items.Count; i++)
             party.SpawnLoot(items[i], GlobalPosition + toward * 1.0f + side * (i - (items.Count - 1) / 2f) * 0.7f + Vector3.Up * 0.4f);
         var coins = CoinRules.ChestCoins(Game.Instance.CurrentFloor, rng);
-        if (coins > 0) party.SpawnCoins(coins, GlobalPosition + toward * 1.0f + Vector3.Up * 0.4f);
-        EventBus.Instance.Log(items.Count == 0 ? "The chest is empty." : $"The chest holds {string.Join(", ", items.Select(i => i.ToString()))}.");
+        if (coins > 0) party.SpawnCoins(coins, GlobalPosition + toward * 1.5f + Vector3.Up * 0.4f);
+        var held = items.Select(i => i.ToString()).ToList();
+        if (coins > 0) held.Add($"{coins} gold");
+        EventBus.Instance.Log(held.Count == 0 ? "The chest is empty." : items.Count == 0 ? $"The chest holds {coins} gold." : coins > 0 ? $"The chest holds {string.Join(", ", held.Take(held.Count - 1))} and {coins} gold." : $"The chest holds {string.Join(", ", held)}.");
     }
 }

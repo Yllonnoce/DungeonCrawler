@@ -503,7 +503,7 @@ player spectates the nearest teammate; after 30 s unrescued the server binds the
 room the party has already seen, for a living player to free. Pathing treats a hazard's cells as danger: companions
 detour hard, smart enemies lightly, hordes and bandits not at all.
 
-Saves are v9: each floor keeps every hazard's phase, time into it, kills and jam; an older save gets hazards only on
+Saves are v10 (the party purse and any coin piles on the floor are saved; an older save loads with none): each floor keeps every hazard's phase, time into it, kills and jam; an older save gets hazards only on
 floors it has not visited (`AdventureDto.HazardsFromFloor`). Flags: `--hazard=press|spikes` forces one hazard by the
 door on every floor (`--hazard=press@2` on floor 2 only); `--test-hazard=press|spikes` runs the headless checks below.
 

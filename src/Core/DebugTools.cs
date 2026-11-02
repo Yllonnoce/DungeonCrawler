@@ -2560,6 +2560,7 @@ public partial class DebugTools : Node
                 party.AddGold(-10);
                 var spent = party.TrySpendGold(5);
                 Check("clamp", party.Gold == 0 && !spent);
+                Check("negative spend refused", !party.TrySpendGold(-5) && party.Gold == 0);
                 var chest = root.GetChildren().OfType<Chest>().Where(c => !c.Opened && !c.Locked).OrderBy(c => c.GlobalPosition.DistanceSquaredTo(party.Lead.GlobalPosition)).FirstOrDefault();
                 if (chest == null) { Check("chest found", false); break; }
                 chest.Interact(party, party.Lead);

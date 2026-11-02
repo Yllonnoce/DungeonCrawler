@@ -35,6 +35,15 @@ public partial class NetTestFlow : Node
         var world = NetSession.Instance.Server;
         if (world == null) return;
         var resumed = NetSession.Instance.Resumed;
+        if (Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a != null && IsInstanceValid(a)) is { } leadNow) _lastLead = leadNow.GlobalPosition;
+        if (!_pileLeft && !resumed && _lastLead is { } lastLead && world.Trace.Any(t => t.StartsWith("left:")) && Main.Instance?.Party is { } sp)
+        {
+            // leave a coin pile on the floor while the client is away: it must come back through the floor state with an id the server knows
+            _pileLeft = true;
+            var leftPile = sp.SpawnCoins(37, lastLead + new Vector3(1.5f, 0.4f, 0));
+            if (leftPile != null) leftPile.DroppedByParty = true; // companions leave it alone: only the rejoined client takes it
+            GD.Print($"[net-server] left a 37 gold pile at {lastLead:0.0}: {leftPile != null}");
+        }
         if ((resumed && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
         {
             var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
@@ -305,13 +314,34 @@ public partial class NetTestFlow : Node
                 if (client.SnapshotsSeen < 5) return;
                 var back = main.Party.Bag.Items.Count();
                 var okRejoin = client.MemberIndex == _memberAtLeave && back >= _bagAtLeave && Game.Instance.CurrentFloor == 2 && main.LayoutHashMatched && main.Party.Gold == _goldAtLeave;
-                var ok = okRejoin && _firstRun.Contains("hash match");
-                _done = true;
+                _okRejoin = okRejoin;
                 GD.Print($"[net] rejoined as member {client.MemberIndex} (was {_memberAtLeave}), bag {back} (was {_bagAtLeave}), gold {main.Party.Gold} (was {_goldAtLeave}), floor {Game.Instance.CurrentFloor}");
-                GD.Print($"[net] RESULT {(ok ? "ok" : "FAIL")}: first run {_firstRun}; rejoin {(okRejoin ? "ok" : "FAIL")}");
+                _clock = 0; _step = 13;
+                return;
+            case 13:
+            {
+                // the pile the server left while we were away: pick it up through the server, which only works if the client rebuilt it with the server's id
+                var me = main.Party.Local!;
+                var pile = main.Builder.FloorRoot?.GetChildren().OfType<Items.LootDrop>().FirstOrDefault(d => d.Coins == 37);
+                if (pile == null && !_askedRejoinPile) { if (_clock > 5) Finish("[net]", false, $"rejoin pile pickup: FAIL, the 37 gold pile never reached the rejoined client welcome carried {client.Welcome?.FloorState.Items.Count} item(s)"); return; }
+                if (!_askedRejoinPile && pile != null)
+                {
+                    _askedRejoinPile = true; _goldBefore = main.Party.Gold;
+                    me.Teleport(pile.GlobalPosition + new Vector3(0.6f, 0.2f, 0.6f), pile.GlobalPosition);
+                    net.Send(new InteractIntent(NetRefs.Loot(pile.Item.Id)));
+                    _clock = 0;
+                    return;
+                }
+                var pileOk = main.Party.Gold == _goldBefore + 37;
+                if (!pileOk && _clock < 8) return;
+                GD.Print($"[net] rejoin pile pickup: {(pileOk ? "OK" : "FAIL")} (gold {_goldBefore} -> {main.Party.Gold})");
+                var ok = _okRejoin && pileOk && _firstRun.Contains("hash match");
+                _done = true;
+                GD.Print($"[net] RESULT {(ok ? "ok" : "FAIL")}: first run {_firstRun}; rejoin {(_okRejoin ? "ok" : "FAIL")}");
                 net.Disconnect("test finished");
                 GetTree().CreateTimer(1.0).Timeout += () => GetTree().Quit(ok ? 0 : 1);
                 return;
+            }
         }
     }
 
@@ -322,7 +352,8 @@ public partial class NetTestFlow : Node
     private int _swings, _bagBefore, _lootBefore;
     private string _firstRun = "";
     private int _bagAtLeave, _memberAtLeave, _goldBefore, _goldAtLeave;
-    private bool _askedCoins;
+    private Vector3? _lastLead;
+    private bool _askedCoins, _pileLeft, _okRejoin, _askedRejoinPile;
     private void Trace(string what) => GD.Print($"[net] {what}");
     private Vector3? _startAfterPose, _hazardReturn;
     private int _placements, _placementsAtFloor2;

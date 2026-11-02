@@ -679,11 +679,13 @@ public partial class PartyController : Node3D
     }
 
     /// <summary>A pile of gold on the floor; walking into it (or a companion passing) adds it to the purse. Null for no coins.</summary>
-    public LootDrop? SpawnCoins(int coins, Vector3 at)
+    public LootDrop? SpawnCoins(int coins, Vector3 at, Guid? id = null)
     {
+        if (Net.NetSession.IsClient && id == null) return null; // a client only rebuilds the server's piles (which come with their ids), never makes its own
         if (coins <= 0 || Main.Instance.Builder.FloorRoot is not { } root) return null;
         var drop = _lootScene.Instantiate<LootDrop>();
         drop.Coins = coins;
+        if (id is { } pileId) drop.Item = ItemInstance.Simple("item.unknown", "Unknown Item", id: pileId);
         root.AddChild(drop);
         drop.GlobalPosition = at;
         EventBus.Instance.RaiseLootSpawned(drop);
@@ -773,9 +775,11 @@ public partial class PartyController : Node3D
     /// <summary>Adds (or, negative, removes) gold; the purse never drops below 0. Logs the real change and chimes on a gain.</summary>
     public void AddGold(int amount)
     {
+        if (Net.NetSession.IsClient) return;
         var before = Gold;
         Gold = Math.Max(0, Gold + amount);
         var delta = Gold - before;
+        if (delta == 0) return;
         EventBus.Instance.RaiseGoldChanged(Gold, delta);
         EventBus.Instance.Log(delta >= 0 ? $"+{delta} gold" : $"{delta} gold");
         if (delta > 0) EventBus.Instance.PlaySfx("coins");
@@ -784,6 +788,8 @@ public partial class PartyController : Node3D
     /// <summary>Pays from the purse; false (and nothing taken) when the party cannot afford it.</summary>
     public bool TrySpendGold(int amount)
     {
+        if (Net.NetSession.IsClient || amount < 0) return false;
+        if (amount == 0) return true;
         if (amount > Gold) return false;
         AddGold(-amount);
         return true;

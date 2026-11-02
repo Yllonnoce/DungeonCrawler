@@ -722,10 +722,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         {
             if (child is LootDrop { Coins: > 0, DroppedByParty: false, Taken: false } pile && pile.GlobalPosition.DistanceTo(GlobalPosition) < 1.6f)
             {
-                EventBus.Instance.Log($"{State.Name} picks up {pile.Coins} gold.");
                 pile.Interact(Party, this);
-                EventBus.Instance.RaiseLootRemoved(pile.Item.Id, Index);
-                pile.QueueFree();
                 return;
             }
             if (child is LootDrop { DroppedByParty: false } drop && drop.GlobalPosition.DistanceTo(GlobalPosition) < 1.6f && Party.Bag.FreeSlots > 0)

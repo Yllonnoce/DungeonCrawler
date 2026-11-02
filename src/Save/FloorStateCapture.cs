@@ -38,7 +38,7 @@ public static class FloorStateCapture
                 case Npc npc:
                     dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
                     break;
-                case LootDrop drop:
+                case LootDrop drop when !drop.IsQueuedForDeletion():
                     dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), Coins = drop.Coins, X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });
                     break;
                 case Trap { PlacedByParty: true, Armed: true } placed:
@@ -158,7 +158,7 @@ public static class FloorStateCapture
                 registry.Find(c.Id)?.Restore(c.Alert, c.AlarmRaised, c.Regrouped);
         foreach (var w in dto.Items)
         {
-            if (w.Coins > 0) party.SpawnCoins(w.Coins, new Vector3(w.X, w.Y, w.Z));
+            if (w.Coins > 0) party.SpawnCoins(w.Coins, new Vector3(w.X, w.Y, w.Z), w.Item.Id);
             else party.SpawnLoot(SaveMapper.FromDto(w.Item, Game.Instance.Catalog), new Vector3(w.X, w.Y, w.Z));
         }
         foreach (var t in dto.PlacedTraps)
