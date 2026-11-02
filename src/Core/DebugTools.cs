@@ -827,8 +827,8 @@ public partial class DebugTools : Node
                 foreach (var l in castCampaign.Merchant?.AllLines() ?? Enumerable.Empty<Line>()) wanted.Add(l);
                 vr.CacheDir = _bakeCastVoiceDir;
                 vr.Filter = line => wanted.Contains(line);
-                foreach (var plan in castPlans.Values) AdventureDirector.Instance.EnqueueFloorVoice(plan);
-                AdventureDirector.Instance.EnqueueMerchantVoice(castCampaign);
+                foreach (var plan in castPlans.Values) AdventureDirector.Instance?.EnqueueFloorVoice(plan);
+                AdventureDirector.Instance?.EnqueueMerchantVoice(castCampaign);
                 vr.Filter = null;
                 _bakeCastVoiceQueued = wanted.Count;
                 GD.Print($"[cast-voice] {wanted.Count} cast, merchant and boss lines across {castPlans.Count} floors; {vr.Pending} to render into {vr.CacheDir} with {vr.CurrentModel}{(vr.Enabled ? "" : " (voice is off: nothing renders)")}");

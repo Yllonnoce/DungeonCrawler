@@ -178,7 +178,7 @@ public sealed class MerchantPlan
     public NpcScript Briefing { get; set; } = new();
     [AiDescription("One entry for each floor 1 to 20.")]
     public List<MerchantFloorLines> FloorLines { get; set; } = new();
-    [AiDescription("Three short lines said when he is called to the party in a hurry.")]
+    [AiDescription("Three short lines about the enemies gathering outside his door, said as more of them arrive.")]
     public List<Line> Gathering { get; set; } = new();
 
     /// <summary>An empty section counts as absent.</summary>
@@ -207,7 +207,7 @@ public sealed class CampaignPlan
     public string Synopsis { get; set; } = "";
     public VoicedCharacter Antagonist { get; set; } = new();
     [AiIgnore] public string? NarratorVoiceId { get; set; }
-    [AiDescription("Four to six recurring characters the party meets more than once.")]
+    [AiDescription("Four to six recurring characters the party meets more than once, plus exactly one merchant (Merchant true).")]
     public List<CastMember> Cast { get; set; } = new();
     public MysteryPlan Mystery { get; set; } = new();
     public List<FactionPlan> Factions { get; set; } = new();

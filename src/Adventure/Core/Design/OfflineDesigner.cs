@@ -62,6 +62,7 @@ public static class OfflineDesigner
         new[] { "Ilse the Smith", "Bram Coalhand", "Oren Tallow", "Vesna Ashe" },
         new[] { "The Pale Pilgrim", "Nyx", "Halvard the Broken", "Sera Voidwalker" },
     };
+    private static readonly string[] FactorNames = { "Osric Pell", "Hamble Voss", "Tobiah Quill", "Garrow Fitch", "Ansel Merriweather", "Pellam Dunn", "Corvin Ashby", "Ludo Farthing" };
     private static readonly string[] BandNames = { "Gallows Company", "Knifegrinders", "Red Hoods", "Ditchmen", "Crowfeeders", "Saltless Men", "Cellar Rats" };
     private static readonly string[] HordeNames = { "The Tide", "The Gnawing", "The Crawl", "The Rot", "The Spill", "The Seethe", "The Boil", "The Scurry", "The Welter" };
     private static readonly string[] HordeLines =
@@ -103,6 +104,13 @@ public static class OfflineDesigner
             var objective = FloorObjectives.Pick(gameSeed, f);
             plan.Floors.Add(new FloorOutline { Floor = f, Theme = themes == null ? null : ThemeProfile.Pick(themes, TierRules.TierIndex(f), gameSeed, f)?.Id, Layout = LayoutKinds.Id(LayoutKinds.Pick(gameSeed, f)), Objective = objective == FloorObjectiveKind.None ? null : FloorObjectives.Id(objective) });
         }
+        plan.Cast.Add(new CastMember
+        {
+            Id = "cast_merchant", Name = Pick(rng, FactorNames), Merchant = true, Secret = "",
+            Role = "The merchant who financed the venture and follows it down, one safe room at a time",
+            Persona = new Voice.Persona { VoiceStyle = "a fussy factor, money-minded, brave in sentences and nowhere else", DefaultDelivery = "cheerful", Voice = Voice.MerchantLineBank.GenericCast().Persona!.Voice },
+        });
+        plan.Merchant = Voice.MerchantLineBank.Generic(plan.Title, plan.Antagonist.Name);
         CampaignRepair.Apply(plan); // the stock taunts, every trigger covered
         return plan;
     }
