@@ -86,7 +86,7 @@ public sealed class GasField
         for (var i = 0; i < layout.Rooms.Count; i++)
             foreach (var p in layout.Rooms[i].Cells())
             {
-                if (!layout.IsWalkable(p)) continue;
+                if (!layout.IsWalkable(p) || layout.IsInSafeRoom(p)) continue;
                 var idx = p.Y * layout.Width + p.X;
                 if (rooms[i] < arrival[idx]) { arrival[idx] = rooms[i]; queue.Enqueue(p); }
             }
@@ -99,7 +99,7 @@ public sealed class GasField
             foreach (var d in dirs)
             {
                 var n = p + d;
-                if (!layout.InBounds(n.X, n.Y) || !layout.IsWalkable(n) || !layout.CanStep(p, n)) continue;
+                if (!layout.InBounds(n.X, n.Y) || !layout.IsWalkable(n) || layout.IsInSafeRoom(n) || !layout.CanStep(p, n)) continue;
                 if (layout.RoomAt(n) != null) continue; // a room's cells keep the room's own time; only the ways between take the spread
                 var idx = n.Y * layout.Width + n.X;
                 if (here < arrival[idx]) { arrival[idx] = here; queue.Enqueue(n); }
