@@ -75,6 +75,7 @@ public partial class ClientWorld : Node
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
             case GoldSync gs: Main.Instance.Party.SetGold(gs.Gold); Trace.Add("gold"); break;
+            case SafeRoomSync sr: Main.Instance.Hud.SafeRoom = sr.Inside; break;
             case LootSpawned ls: OnLootSpawned(ls); break;
             case LootRemoved lr: OnLootRemoved(lr); break;
             case PropEvt pe: OnProp(pe); break;
