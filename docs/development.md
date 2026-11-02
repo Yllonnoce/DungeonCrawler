@@ -235,7 +235,7 @@ godot --headless --path . -- --test-save           # save, mutate, load, compare
 godot --path . -- --test-drag                      # synthetic inventory drag-and-drop through the GUI
 godot --headless --path . -- --test-depth          # traps, doors, levers, pathing, boss stairs, victory, endless
 godot --headless --path . -- --test-skills         # learn chains, upgrades, multishot, respec, save round trip
-godot --headless --path . -- --test-abilities --no-ambush --no-portals   # every hero learns every skill and uses every ability on a shielded enemy: costs, damage, statuses, buffs; then a fireball and an arrow into a wall; prints RESULT
+godot --headless --path . -- --test-abilities --no-ambush --no-portals   # every hero learns every skill and uses every ability on a shielded enemy: costs, damage, statuses, buffs; then a fireball and an arrow into a wall; prints RESULT (seed 7 unless --seed= is given: its fights are flaky on random floors)
 godot --headless --path . -- --test-vertical --seed=5
 godot --path . -- --seed=3 --test-stairs                                   # climb the up flight, get asked, decline, accept, then take the well down (needs a window: the question is HUD)   # climb a ledge, fall into a cellar, open a secret, cross-level chase
 godot --headless --path . -- --test-gold --no-ambush --no-portals   # chest spills a coin pile, a full bag still picks it up, a companion picks coins up, enemies drop coins one time in four; prints RESULT
@@ -270,6 +270,8 @@ godot --path . -- --test-horde --screenshot=out.png                 # floor 3 ne
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)
 godot --headless --path . -- --test-ambush          # floor 2: the first corridor ambush springs when stood on, fights, saves as sprung
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
+godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, x6 regen, gathering, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
+godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2   # regenerate each floor_NN.json's layout from its campaign and rewrite only its LayoutHash (after a generator change, so the shipped plans load without "adapted")
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
 godot --headless --path . -- --bake-campaign=DIR --replay-plans=data/adventures/builtin/authored --seed=7319 --story-brief=docs/superpowers/specs/2026-10-22-campaign-gullet-of-gorm.md --voice-budget=0   # rebuild the shipped campaign "The Gullet of Gorm" from Claude's recorded answers, no network; with --bake-voice=assets/voice/builtin and a voice key it renders the lines too. A replay with a missing answer writes NAME.request.json and stops (strict replay): write NAME.response.json and run again with --bake-resume
@@ -530,6 +532,27 @@ Two layers of pressure sit on top of every floor's planned population (Settings,
   portal, ten loose). Servers spawn them and clients see the rift (`PortalOpenedEvt`, `AmbushSprungEvt`).
   `--test-portal` hurries the clock on floor 1 and checks a portal opens away from the party, its creatures hunt,
   the clock saves, and a dead tier boss silences it.
+
+## Safe rooms
+
+Every floor seals one room as a safe room (`Adventure/Core/SafeRoomRules.cs`, placed by `FloorGenerator.PlaceSafeRoom`
+before anything else so nothing lands inside it): a dead end with a single entrance within ten cells of the
+stairs-to-stairs route, never a stairs room, the arena or a vault; failing that a side room carved off a room on the
+route, a dead end farther away, a side room off any open room, or a small two-door chamber with one door walled up.
+Its iron-banded door (`VaultKind.SafeDoor`, no prompt, a lit lantern on the corridor side) opens by itself when a
+living member comes within 2.5 m and shuts 2 s after all of them are beyond 3 m; no creature passes it, paths into the
+room or spawns there (`DungeonBuilder.IsCellBlockedForEnemies`), and the toxic gas never gets in (`GasField`).
+`Adventure/SafeRoomController.cs` runs it on the server or in solo: each living member inside regenerates hp, stamina
+and mana six times faster (a member outside heals normally; a downed body is not revived), and while anyone is inside
+the objective line ends with "Safe room" (the line reaches clients with the objective message). Resting is not free:
+after 20 s inside, one or two of the tier's creatures gather outside, 4 to 8 cells from the door and out of its
+straight line, and hold there awake (`HoldState`, log `[gather] ...`, `EventBus.Gathered`); another group every 40 s,
+never while eight of them are alive. They go for the party when it steps out. An empty room pauses the clock and after
+30 s starts it over; the count of groups sent is saved with the floor (`FloorStateDto.Gathered`), the creatures
+themselves are dynamic and not saved. The gathering ignores the "Reinforcement pressure" setting; `--no-gathering`
+turns it off for a run. A safe room changes a floor's `ContentHash`, so plans written before it log "adapted";
+`--rehash-plans=DIR` refreshes the `LayoutHash` of every `floor_NN.json` in DIR (the shipped plans in
+`data/adventures/builtin` were rehashed when safe rooms arrived). `--test-safe-room` checks all of it headless.
 
 ## Floors are designed, not just rolled
 

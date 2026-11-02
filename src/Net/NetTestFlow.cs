@@ -273,7 +273,7 @@ public partial class NetTestFlow : Node
                 if (_hazardReturn == null && _placements == _placementsAtFloor2 && _clock < 5) return;
                 if (_placements != _placementsAtFloor2 && _hazardReturn == null && _clock < 0.3) return; // let the placement settle
                 var press = main.Builder.Hazards.OfType<Dungeon.Props.Press>().FirstOrDefault();
-                if (press == null) { GD.Print("[net] no Press on this floor; skipping the hazard step"); _clock = 0; _step = 8; return; }
+                if (press == null) { GD.Print("[net] no Press on this floor; skipping the hazard step"); _clock = 0; _step = 14; return; }
                 if (_hazardReturn == null)
                 {
                     _hazardReturn = main.Party.Local!.GlobalPosition;
@@ -293,9 +293,32 @@ public partial class NetTestFlow : Node
                 {
                     main.Party.Local!.Teleport(_hazardReturn.Value);
                     GD.Print($"[net] press warned after {_clock:0.0} s (phase {press.Phase}, {press.PhaseTime:0.00} s in); stepped clear");
-                    _clock = 0; _step = 8;
+                    _clock = 0; _step = 14;
                 }
                 else if (_clock > 10) Finish("[net]", false, $"the Press never warned (phase {press.Phase}, trace=[{string.Join(", ", client.Trace.Distinct())}])");
+                return;
+            }
+            case 14:
+            {
+                // the safe room: step inside; the server sees our body there and its objective line, which ends with "Safe room", reaches our HUD
+                if (main.Builder.Layout is not { SafeRoom: >= 0 } safeLayout) { GD.Print("[net] no safe room on this floor; skipping"); _clock = 0; _step = 8; return; }
+                var me = main.Party.Local!;
+                if (_safeReturn == null)
+                {
+                    if (_clock < 0.5) return; // let the step off the plate land first
+                    _safeReturn = me.GlobalPosition;
+                    if (main.Hud.ObjectiveText.EndsWith("Safe room")) { Finish("[net]", false, $"safe room: the HUD says so before we stepped in (\"{main.Hud.ObjectiveText}\")"); return; }
+                    me.Teleport(main.Builder.Surface(SafeRoomRules.MerchantCell(safeLayout)) + Vector3.Up * 0.3f, main.Builder.Surface(safeLayout.SafeRoomDoor));
+                    _clock = 0; return;
+                }
+                var line = main.Hud.ObjectiveText;
+                if (line.EndsWith("Safe room"))
+                {
+                    GD.Print($"[net] safe room: HUD shows \"{line}\" {_clock:0.0} s after stepping inside");
+                    me.Teleport(_safeReturn.Value);
+                    _clock = 0; _step = 8;
+                }
+                else if (_clock > 6) Finish("[net]", false, $"safe room: the HUD never showed it (line \"{line}\", we stand at {Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition)}, inside={safeLayout.IsInSafeRoom(Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition))})");
                 return;
             }
             case 8:
@@ -355,7 +378,7 @@ public partial class NetTestFlow : Node
     private Vector3? _lastLead;
     private bool _askedCoins, _pileLeft, _okRejoin, _askedRejoinPile;
     private void Trace(string what) => GD.Print($"[net] {what}");
-    private Vector3? _startAfterPose, _hazardReturn;
+    private Vector3? _startAfterPose, _hazardReturn, _safeReturn;
     private int _placements, _placementsAtFloor2;
     private bool _placedJoin;
     /// <summary>The server placed our body (a ForcePose): the start position on floor 1, and the arrival spot after a floor change.</summary>

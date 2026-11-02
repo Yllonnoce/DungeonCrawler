@@ -41,6 +41,8 @@ echo "--- client"; grep -E "\[net|RESULT|Unhandled|ERROR" "$TMP/client.log" | he
 if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || { [ "$MODE" = direct ] && ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; }; then
   echo "NET TEST: FAIL"; exit 1
 fi
+# the safe room on floor 2: the client stepped in and its HUD showed it (the server's objective line)
+if ! grep -q "\[net\] safe room: HUD shows" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's HUD never showed the safe room)"; exit 1; fi
 
 if [ "$MODE" = direct ]; then
   # second pass: the server restarts on its own save; the same name gets its character, bag and floor back
