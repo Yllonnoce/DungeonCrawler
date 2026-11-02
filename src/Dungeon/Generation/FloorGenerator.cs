@@ -42,6 +42,7 @@ public static partial class FloorGenerator
         RaiseWalls(layout);
         PlaceStairs(layout);
         PlaceVaults(spec, rng, layout);
+        PlaceSafeRoom(layout, new Random(seed ^ 0x5AFE)); // before anything else is placed, so nothing lands inside it
         Verticality.AssignLevels(spec, rng, layout);
         PlaceObjective(spec, new Random(seed ^ 0x0B1E), layout); // rooms and doors the objective needs; a no-op without one
         Verticality.PlacePits(spec, rng, layout);
@@ -355,14 +356,46 @@ public static partial class FloorGenerator
         }
     }
 
+    /// <summary>Side rooms tried before a floor goes without a safe room: most tries fail on space, and a labyrinth's maze leaves little.</summary>
+    private const int SafeRoomCarveAttempts = 400;
+
     /// <summary>
-    /// Add a 3-5 cell room a short straight corridor away from a host room, so it has exactly one entrance.
+    /// Seal the floor's safe room (see <see cref="Adventure.SafeRoomRules.Choose"/>): a natural dead end when one
+    /// qualifies, else a carved side room. It is a vault with a revealed <see cref="VaultKind.SafeDoor"/> and no prize.
+    /// </summary>
+    internal static void PlaceSafeRoom(FloorLayout layout, Random rng)
+    {
+        if (layout.Rooms.Count == 0) return;
+        var i = Adventure.SafeRoomRules.Choose(layout);
+        if (i < 0)
+        {
+            // no dead end qualifies: carve one off a room the route runs through, so it lands near the route; never off a
+            // vault (the side room would open a second way into it and sit behind its door)
+            var route = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, maxExpansions: 20000) ?? new List<GridPos>();
+            var open = layout.Rooms.Where(r => r != layout.BossArena && layout.Vaults.All(v => v.Room != r)).ToList();
+            var hosts = open.Where(r => route.Any(r.Contains)).ToList();
+            if (hosts.Count == 0) hosts = open;
+            for (var attempt = 0; attempt < SafeRoomCarveAttempts && i < 0 && hosts.Count > 0; attempt++)
+                if (TryCarveSideRoom(rng, layout, hosts[rng.Next(hosts.Count)]) != null) i = Adventure.SafeRoomRules.Choose(layout);
+        }
+        if (i < 0) return;
+        var room = layout.Rooms[i];
+        var door = Adventure.SafeRoomRules.DoorCell(layout, i);
+        layout.SafeRoom = i;
+        layout.SafeRoomDoor = door;
+        layout[door] = Cell.Door;
+        layout.Vaults.Add(new Vault(layout.Vaults.Count, room, door, VaultKind.SafeDoor, null, null, Revealed: true));
+    }
+
+    /// <summary>
+    /// Add a 3-5 cell room a short straight corridor away from a host room (<paramref name="onto"/>, or a random one),
+    /// so it has exactly one entrance.
     /// Returns the room and its door cell, or null if nothing fit.
     /// </summary>
-    private static (Room room, GridPos entrance)? TryCarveSideRoom(Random rng, FloorLayout layout)
+    internal static (Room room, GridPos entrance)? TryCarveSideRoom(Random rng, FloorLayout layout, Room? onto = null)
     {
         var rooms = layout.Rooms;
-        var host = rooms[rng.Next(rooms.Count)];
+        var host = onto ?? rooms[rng.Next(rooms.Count)];
         if (host == layout.BossArena) return null;
         var dir = rng.Next(4); // 0 right, 1 left, 2 down, 3 up
         var w = rng.Next(3, 6);
@@ -406,7 +439,7 @@ public static partial class FloorGenerator
         var p = start;
         var step = new GridPos(Math.Sign(end.X - start.X), Math.Sign(end.Y - start.Y));
         while (true) { cells.Add(p); if (p == end) break; p += step; }
-        foreach (var c in cells) if (layout[c] == Cell.Floor || layout[c] == Cell.Door) return null;
+        foreach (var c in cells) if (layout[c] is Cell.Floor or Cell.Door or Cell.Ramp) return null; // a ramp too: carving after the levels must not flatten one
         // the room must not touch any existing floor cell (would create extra entrances)
         foreach (var c in room.Cells())
             for (var oy = -1; oy <= 1; oy++) for (var ox = -1; ox <= 1; ox++)

@@ -102,6 +102,12 @@ public sealed class FloorLayout
 
     public bool IsInVault(GridPos p) => Vaults.Any(v => v.Room.Contains(p));
 
+    /// <summary>Index into <see cref="Rooms"/> of the floor's safe room, or -1 when the floor has none.</summary>
+    public int SafeRoom { get; internal set; } = -1;
+    /// <summary>The cell the safe room's door stands in (meaningless when <see cref="SafeRoom"/> is -1).</summary>
+    public GridPos SafeRoomDoor { get; internal set; }
+    public bool IsInSafeRoom(GridPos p) => SafeRoom >= 0 && Rooms[SafeRoom].Contains(p);
+
     public FloorLayout(int seed, int width, int height)
     {
         Seed = seed;
