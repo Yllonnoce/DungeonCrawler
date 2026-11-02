@@ -807,7 +807,7 @@ public partial class DebugTools : Node
 
         if (_bakeCastVoiceDir != null && Main.Instance?.InGame == true && Game.Instance.Adventure.Campaign is { } castCampaign && _elapsed >= 2.0)
         {
-            // --bake-cast-voice=DIR (with --builtin --ai and the voice flags): every line of the recurring cast and every boss line gets
+            // --bake-cast-voice=DIR (with --builtin --ai and the voice flags): every line of the recurring cast, the merchant and every boss line gets
             // audio in DIR, outside the 80-line budget; the plans with their new ids are written to DIR/cast-plans for merging by hand
             var vr = VoiceRenderer.Instance;
             var castPlans = Game.Instance.Adventure.FloorPlans.Where(kv => kv.Key >= 1 && kv.Key <= TierRules.FinalFloor).ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -824,12 +824,14 @@ public partial class DebugTools : Node
                     }
                     if (plan.Boss != null) foreach (var l in plan.Boss.AllLines()) wanted.Add(l);
                 }
+                foreach (var l in castCampaign.Merchant?.AllLines() ?? Enumerable.Empty<Line>()) wanted.Add(l);
                 vr.CacheDir = _bakeCastVoiceDir;
                 vr.Filter = line => wanted.Contains(line);
                 foreach (var plan in castPlans.Values) AdventureDirector.Instance.EnqueueFloorVoice(plan);
+                AdventureDirector.Instance.EnqueueMerchantVoice(castCampaign);
                 vr.Filter = null;
                 _bakeCastVoiceQueued = wanted.Count;
-                GD.Print($"[cast-voice] {wanted.Count} cast and boss lines across {castPlans.Count} floors; {vr.Pending} to render into {vr.CacheDir} with {vr.CurrentModel}{(vr.Enabled ? "" : " (voice is off: nothing renders)")}");
+                GD.Print($"[cast-voice] {wanted.Count} cast, merchant and boss lines across {castPlans.Count} floors; {vr.Pending} to render into {vr.CacheDir} with {vr.CurrentModel}{(vr.Enabled ? "" : " (voice is off: nothing renders)")}");
             }
             else if (vr != null && (vr.Pending == 0 || vr.StoppedReason != null))
             {

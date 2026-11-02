@@ -3,7 +3,7 @@ namespace DungeonCrawler.Adventure.Voice;
 /// <summary>
 /// Which lines of a baked campaign get audio when only so many may be rendered. Priority: the tier entrances and boss
 /// lines, then the story floors' intros and NPC dialogue in floor order, then the remaining narration, then quest lines,
-/// and companion barks last. Everything else stays a subtitle.
+/// companion barks, and the merchant's lines last. Everything else stays a subtitle.
 /// </summary>
 public static class VoiceBudget
 {
@@ -92,6 +92,13 @@ public static class VoiceBudget
             foreach (var n in plan.Narration.Where(n => n.Trigger != NarrationTrigger.Enter)) list.Add(new Pick(n.Line, "narration", floor));
         foreach (var (floor, plan) in byFloor) foreach (var h in plan.Hordes) list.Add(new Pick(h.Line, "horde", floor));
         foreach (var set in campaign.Barks) foreach (var b in set.Lines) list.Add(new Pick(b.Line, $"bark {set.Member}", 0));
+        if (campaign.Merchant is { } m)
+        {
+            // the merchant last: the briefing and the gathering calls belong to no floor, his safe-room lines to theirs
+            foreach (var node in m.Briefing.Nodes) list.Add(new Pick(node.Line, "merchant briefing", 0));
+            foreach (var fl in m.FloorLines.OrderBy(f => f.Floor)) foreach (var l in new[] { fl.Greeting, fl.Progress, fl.Trade }) list.Add(new Pick(l, "merchant floor", fl.Floor));
+            foreach (var l in m.Gathering) list.Add(new Pick(l, "merchant gathering", 0));
+        }
         return list;
     }
 

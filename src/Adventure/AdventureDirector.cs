@@ -138,6 +138,15 @@ public partial class AdventureDirector : Node
         Objectives.TauntBank.Fill(campaign);
         foreach (var t in campaign.Taunts) EnqueueTaunt(t, campaign);
         EnqueueBarks(campaign);
+        EnqueueMerchantVoice(campaign);
+    }
+
+    /// <summary>The merchant's lines in his cast member's voice: the briefing, every floor's safe-room lines and the gathering calls.</summary>
+    public void EnqueueMerchantVoice(CampaignPlan campaign)
+    {
+        if (campaign.Merchant == null || campaign.MerchantCast() is not { } cast) return;
+        // the persona's voice overrides the placeholder inside Enqueue
+        foreach (var line in campaign.Merchant.AllLines()) _voice.Enqueue(line, Voices.Npcs[0], Speaker.Npc, VoicePriority.Npc, major: true, persona: cast.Persona);
     }
 
     private void EnqueueBarks(CampaignPlan campaign)

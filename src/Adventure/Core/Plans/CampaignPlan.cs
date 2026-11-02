@@ -187,6 +187,14 @@ public sealed class MerchantPlan
     /// <summary>The floor's lines, or past the last authored floor (endless floors 21 and on) the deepest authored floor's below it; null above them all.</summary>
     public MerchantFloorLines? For(int floor) =>
         FloorLines.FirstOrDefault(f => f.Floor == floor) ?? FloorLines.Where(f => f.Floor <= floor).MaxBy(f => f.Floor);
+
+    /// <summary>Every line he speaks: the briefing's nodes, each floor's greeting, progress and trade in floor order, then the gathering calls.</summary>
+    public IEnumerable<Line> AllLines()
+    {
+        foreach (var node in Briefing.Nodes) yield return node.Line;
+        foreach (var fl in FloorLines.OrderBy(f => f.Floor)) { yield return fl.Greeting; yield return fl.Progress; yield return fl.Trade; }
+        foreach (var l in Gathering) yield return l;
+    }
 }
 
 /// <summary>The arc of a whole run, written once at New Game. Floors are detailed later as <see cref="FloorPlan"/>s.</summary>
