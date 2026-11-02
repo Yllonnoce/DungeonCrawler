@@ -432,6 +432,7 @@ public partial class Main : Node
         BuildSnapshotFor[floor] = snapshot; // what a client must pass to Build to get the same floor
         var layout = Builder.Build(floor, game.GameSeed, PlanFor(floor), snapshot);
         NoteFloorBuilt();
+        Party.ShopSoldOnFloor.Clear();
         ApplyTierLook();
         Hud?.RefreshFloorLabel();
         Exploration = game.ExplorationFor(floor);

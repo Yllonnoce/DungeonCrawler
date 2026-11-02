@@ -78,4 +78,41 @@ public static class ShopRules
         stock.Items.AddRange(items);
         return stock;
     }
+
+    /// <summary>Buys stock item <paramref name="index"/> into the bag. Null on success, else the reason it was refused (nothing changes then).</summary>
+    public static string? TryBuy(ShopStock stock, ISet<int> sold, int index, Inventory bag, ref int gold)
+    {
+        if (index < 0 || index >= stock.Items.Count) return "Nothing there.";
+        if (sold.Contains(index)) return "Sold out.";
+        var item = stock.Items[index];
+        var price = Prices.BuyPrice(item);
+        if (gold < price) return "Not enough gold.";
+        if (!Fits(bag, item)) return "The bag is full.";
+        bag.TryAdd(item);
+        sold.Add(index);
+        gold -= price;
+        return null;
+    }
+
+    /// <summary>Sells the bag's item at <paramref name="bagIndex"/>. Null on success, else the reason it was refused.</summary>
+    public static string? TrySell(Inventory bag, int bagIndex, ref int gold)
+    {
+        var item = bag[bagIndex];
+        if (item == null) return "Nothing there.";
+        if (!Prices.Sellable(item)) return $"{item.DisplayName} cannot be sold.";
+        bag.RemoveAt(bagIndex);
+        gold += Prices.SellPrice(item);
+        return null;
+    }
+
+    /// <summary>Whether the whole item fits, so a refused buy never leaves a half-merged stack behind.</summary>
+    private static bool Fits(Inventory bag, ItemInstance item)
+    {
+        if (bag.FreeSlots > 0) return true;
+        if (!item.Stackable) return false;
+        var room = 0;
+        for (var i = 0; i < bag.Capacity; i++)
+            if (bag[i] is { Stackable: true } s && s.DefId == item.DefId) room += Math.Max(0, s.MaxStack - s.StackCount);
+        return room >= item.StackCount;
+    }
 }

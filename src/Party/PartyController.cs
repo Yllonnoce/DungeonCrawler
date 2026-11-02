@@ -770,6 +770,45 @@ public partial class PartyController : Node3D
         if (!quiet) EventBus.Instance.Log($"Dropped {item}.");
     }
 
+    // ---- shop ----------------------------------------------------------------------------------
+
+    /// <summary>Stock slots of the current floor's merchant already bought; cleared when a floor is built, restored from the floor's save state.</summary>
+    public HashSet<int> ShopSoldOnFloor { get; } = new();
+    private readonly Dictionary<int, ShopStock> _shopStock = new();
+
+    /// <summary>The merchant's stock for a floor, rolled once and kept.</summary>
+    public ShopStock ShopStockFor(int floor)
+    {
+        if (!_shopStock.TryGetValue(floor, out var stock))
+            _shopStock[floor] = stock = ShopRules.Roll(Game.Instance.Catalog, Game.Instance.GameSeed, floor);
+        return stock;
+    }
+
+    /// <summary>Buy a stock slot on the current floor. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
+    public string? ShopBuy(int stockIndex)
+    {
+        if (Net.NetSession.IsClient) { /* Task 7: send the intent */ return null; }
+        var gold = Gold;
+        var refusal = ShopRules.TryBuy(ShopStockFor(Game.Instance.CurrentFloor), ShopSoldOnFloor, stockIndex, Bag, ref gold);
+        if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
+        AddGold(gold - Gold);
+        Main.Instance?.Hud?.Refresh();
+        return null;
+    }
+
+    /// <summary>Sell a bag item to the merchant. Null on success (or on a client); else the refusal, also logged.</summary>
+    public string? ShopSell(BagSlot slot)
+    {
+        if (Net.NetSession.IsClient) { /* Task 7: send the intent */ return null; }
+        if (!slot.IsBag) return "Nothing there.";
+        var gold = Gold;
+        var refusal = ShopRules.TrySell(Bag, slot.BagIndex, ref gold);
+        if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
+        AddGold(gold - Gold);
+        Main.Instance?.Hud?.Refresh();
+        return null;
+    }
+
     // ---- gold ----------------------------------------------------------------------------------
 
     /// <summary>Adds (or, negative, removes) gold; the purse never drops below 0. Logs the real change and chimes on a gain.</summary>
