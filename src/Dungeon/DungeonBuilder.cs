@@ -284,7 +284,7 @@ public partial class DungeonBuilder : Node3D
             foreach (var water in layout.Water) _floorRoot.AddChild(WaterSurface.Build(layout, water, cell => Surface(cell), CellSize, bedMat, plank));
         }
         PlaceLightsAndDecor(layout, _floorRoot, tier, seed);
-        if (layout.Kind == LayoutKind.Tavern) DressTavern(layout, _floorRoot);
+        if (layout.Kind == LayoutKind.Tavern) { DressTavern(layout, _floorRoot); PlaceTavernMerchant(layout, _floorRoot); }
         var tremor = new Tremor { Name = "Tremor" };
         tremor.SetStone(Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f));
         _floorRoot.AddChild(tremor);
@@ -351,6 +351,7 @@ public partial class DungeonBuilder : Node3D
     /// </summary>
     private void PlaceMerchant(FloorLayout layout, Node3D root, int floor)
     {
+        if (layout.Kind == LayoutKind.Tavern) return; // the tavern has its own: PlaceTavernMerchant
         var campaign = Game.Instance?.Adventure?.Campaign;
         if (layout.SafeRoom < 0 || campaign?.MerchantCast() is not { } cast)
         {
@@ -373,6 +374,33 @@ public partial class DungeonBuilder : Node3D
         npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
         npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
         GD.Print($"[DungeonBuilder] floor {floor}: merchant {cast.Name} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+    }
+
+    /// <summary>
+    /// The campaign's merchant in the middle of the tavern, facing the way the party comes in: he greets them within
+    /// <see cref="TavernRules.GreetRadius"/> with his briefing (no shop up here). Every machine builds him; a campaign
+    /// without a merchant still gets one ("The Merchant", the generic briefing), since the seed money hangs on him.
+    /// </summary>
+    private void PlaceTavernMerchant(FloorLayout layout, Node3D root)
+    {
+        if (layout.Rooms.Count == 0) return;
+        var campaign = Game.Instance?.Adventure?.Campaign;
+        var cast = campaign?.MerchantCast();
+        var npc = _npcScene.Instantiate<Npc>();
+        npc.Id = "merchant";
+        npc.NpcName = cast?.Name ?? "The Merchant";
+        npc.Mode = NpcMode.Quest;
+        npc.IsMerchant = true;
+        npc.GreetRadius = TavernRules.GreetRadius;
+        npc.Floor = 0;
+        npc.ModelPath = BodyPath(cast != null ? Adventure.NpcBodies.ForCast(cast) : "npc_merchant");
+        npc.Script = TavernRules.BriefingFor(campaign); // E on him repeats the briefing
+        npc.Name = "Npc_merchant";
+        root.AddChild(npc);
+        var cell = layout.Rooms[0].Center;
+        npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
+        npc.FaceToward(Surface(WalkableNeighbor(layout, layout.UpStairs)));
+        GD.Print($"[DungeonBuilder] floor 0: tavern merchant {npc.NpcName} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, briefing {npc.Script.Nodes.Count} nodes)");
     }
 
     private void PlaceViewerCast(FloorLayout layout, Node3D root, int floorIndex)
@@ -1378,6 +1406,13 @@ public partial class DungeonBuilder : Node3D
                     if (layout[w] == Cell.Wall && !layout.IsUnder(w) && !layout.IsChamfer(w, out _)) spots.Add((w, c));
                 }
             }
+            if (layout.Kind == LayoutKind.Tavern)
+            {
+                // the hearth's wall is the fire's, and the flights want their walls bare: no lamp over either
+                var hearth = TavernHearth(layout);
+                spots.RemoveAll(sp => (hearth is { } h && sp.wall.ManhattanDistance(h.Cell + h.Out) <= 1)
+                    || sp.floor.ManhattanDistance(layout.UpStairs) <= 1 || sp.floor.ManhattanDistance(layout.DownStairs) <= 1);
+            }
             var wanted = perRoom + (layout.StructureAt(room)?.Kind == StructureKind.Ruin ? 2 : 0); // a ruin shows its bones
             for (var i = 0; i < wanted && spots.Count > 0; i++)
             {
@@ -1426,25 +1461,42 @@ public partial class DungeonBuilder : Node3D
     /// benches and a candle each, and barrels and crates stacked in the two free corners. Every piece blocks its cell so
     /// companions walk round it; the stairs, the cell the party arrives on and the cell before the down flight stay clear.
     /// </summary>
-    private void DressTavern(FloorLayout layout, Node3D root)
-    {
-        if (layout.Rooms.Count == 0) return;
-        var room = layout.Rooms[0];
-        var keepClear = new HashSet<GridPos> { layout.UpStairs, WalkableNeighbor(layout, layout.UpStairs), layout.DownStairs, WalkableNeighbor(layout, layout.DownStairs) };
-        GridPos At(int dx, int dy) => new(room.X + dx, room.Y + dy);
-        bool Free(GridPos c) => layout.IsWalkable(c) && !keepClear.Contains(c) && !_propCells.Contains(c);
+    /// <summary>The cells the tavern keeps clear: both stairs, the cell the party arrives on and the cell before the down flight.</summary>
+    private static HashSet<GridPos> TavernKeepClear(FloorLayout layout)
+        => new() { layout.UpStairs, WalkableNeighbor(layout, layout.UpStairs), layout.DownStairs, WalkableNeighbor(layout, layout.DownStairs) };
 
-        // the hearth: the middle of the wall farthest from the down stairs
+    /// <summary>
+    /// Where the tavern's hearth goes: the middle of the wall farthest from the down stairs (its cell and the way out to
+    /// the wall). Asked by the wall lamps too, so none hangs over the fire; null when no middle cell is free.
+    /// </summary>
+    private (GridPos Cell, GridPos Out)? TavernHearth(FloorLayout layout)
+    {
+        if (layout.Rooms.Count == 0) return null;
+        var room = layout.Rooms[0];
+        var keepClear = TavernKeepClear(layout);
+        GridPos At(int dx, int dy) => new(room.X + dx, room.Y + dy);
         var walls = new (GridPos Cell, GridPos Out)[]
         {
             (At(0, room.H / 2), new GridPos(-1, 0)), (At(room.W - 1, room.H / 2), new GridPos(1, 0)),
             (At(room.W / 2, 0), new GridPos(0, -1)), (At(room.W / 2, room.H - 1), new GridPos(0, 1)),
         };
+        var spots = walls.Where(w => layout.IsWalkable(w.Cell) && !keepClear.Contains(w.Cell) && !_propCells.Contains(w.Cell)).OrderByDescending(w => w.Cell.ManhattanDistance(layout.DownStairs)).ToList();
+        return spots.Count > 0 ? spots[0] : null;
+    }
+
+    private void DressTavern(FloorLayout layout, Node3D root)
+    {
+        if (layout.Rooms.Count == 0) return;
+        var room = layout.Rooms[0];
+        var keepClear = TavernKeepClear(layout);
+        GridPos At(int dx, int dy) => new(room.X + dx, room.Y + dy);
+        bool Free(GridPos c) => layout.IsWalkable(c) && !keepClear.Contains(c) && !_propCells.Contains(c);
+
+        // the hearth: the middle of the wall farthest from the down stairs
         var hearthCell = default(GridPos?);
-        var hearthSpots = walls.Where(w => Free(w.Cell)).OrderByDescending(w => w.Cell.ManhattanDistance(layout.DownStairs)).ToList();
-        if (hearthSpots.Count > 0)
+        if (TavernHearth(layout) is { } spot)
         {
-            var (cell, outward) = hearthSpots[0];
+            var (cell, outward) = spot;
             var at = Surface(cell) + new Vector3(outward.X, 0, outward.Y) * (CellSize / 2f - 0.5f);
             var stone = Material("rustic_stone_wall_02", new Color(0.5f, 0.47f, 0.44f), 1f);
             Box(root, new Vector3(1.6f, 0.3f, 0.9f), at + Vector3.Up * 0.15f, stone, yaw: outward.X != 0 ? Mathf.Pi / 2f : 0f);
@@ -1544,7 +1596,7 @@ public partial class DungeonBuilder : Node3D
                 Rubble.Collapse(rubbleRoot, Surface(cell), vaulted ? CeilingAboveAt(cell) : LevelHeight - 0.2f + (Layout?.IsTall(cell) == true ? LevelHeight : 0f), wallMat, rng, vaulted);
             }
         }
-        var scatterWant = 8 + rng.Next(6);
+        var scatterWant = layout.Kind == LayoutKind.Tavern ? 0 : 8 + rng.Next(6); // the tavern's floor is swept
         for (var attempt = 0; attempt < 200 && scatterWant > 0; attempt++)
         {
             var p = new GridPos(rng.Next(layout.Width), rng.Next(layout.Height));

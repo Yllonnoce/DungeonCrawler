@@ -78,6 +78,13 @@ public partial class DialogueScreen : Control
         Show(start);
     }
 
+    /// <summary>The merchant's briefing in the tavern: an ordinary script conversation (hire, quakes, deal, sendoff). Local.</summary>
+    public void OpenBriefing(Npc npc, NpcScript script)
+    {
+        npc.Script = script;
+        Open(npc);
+    }
+
     /// <summary>The merchant's talk: his trade line and exactly three choices, Trade, How is it going? and Leave. All local.</summary>
     public void OpenMerchant(Npc npc)
     {
@@ -129,6 +136,8 @@ public partial class DialogueScreen : Control
     private void Show(DialogueNode node)
     {
         Node = node;
+        if (Npc != null) EventBus.Instance.RaiseDialogueNode(Npc.Id, node.Id);
+        // Task 5: on a co-op client also send new Net.DialogueNodeIntent(Npc.Id, node.Id) so the server can pay the deal
         _name.Text = Npc?.NpcName ?? "";
         _text.Text = node.Line.Text;
         var voiced = VoiceRenderer.Instance?.PlayLine(node.Line, interrupt: true) == true;

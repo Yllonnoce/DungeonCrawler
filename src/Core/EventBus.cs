@@ -31,6 +31,8 @@ public partial class EventBus : Node
     public event Action<string, Adventure.NpcEventKind>? NpcEvent;
     /// <summary>The player picked a dialogue option with an effect (npc id, effect).</summary>
     public event Action<string, Adventure.DialogueEffect, string?>? DialogueEffectChosen;
+    /// <summary>A dialogue node came up on this screen (npc id, node id): the tavern's deal pays the seed money.</summary>
+    public event Action<string, string>? DialogueNode;
     /// <summary>Narrator or character line for the subtitle strip (text, voice line id).</summary>
     public event Action<string, string?>? Narration;
     /// <summary>Narration with its clean twin (text, voice line id, clean text, clean voice line id): what the server sends so each client picks its own.</summary>
@@ -117,6 +119,7 @@ public partial class EventBus : Node
     public void RaiseQuestChanged(Adventure.QuestState quest) => QuestChanged?.Invoke(quest);
     public void RaiseQuestItemPicked(string questKey) => QuestItemPicked?.Invoke(questKey);
     public void RaiseNpcEvent(string npcId, Adventure.NpcEventKind kind) => NpcEvent?.Invoke(npcId, kind);
+    public void RaiseDialogueNode(string npcId, string nodeId) => DialogueNode?.Invoke(npcId, nodeId);
     public void RaiseDialogueEffect(string npcId, Adventure.DialogueEffect effect, string? flag = null) => DialogueEffectChosen?.Invoke(npcId, effect, flag);
     public void RaiseNarration(string text, string? voiceId) { Log(text); Narration?.Invoke(text, voiceId); NarrationEx?.Invoke(text, voiceId, null, null); }
     /// <summary>A line with a coarse and a clean form: the local screen shows what the setting picked; the wire carries both.</summary>

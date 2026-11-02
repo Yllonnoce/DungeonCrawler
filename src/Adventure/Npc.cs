@@ -53,9 +53,13 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool IsMerchant { get; set; }
     /// <summary>The merchant's lines for this floor (greeting, progress, trade); null for everyone else.</summary>
     public MerchantFloorLines? MerchantLines { get; set; }
-    /// <summary>How close (metres) the local adventurer comes before the merchant greets them.</summary>
+    /// <summary>How close (metres) the local adventurer comes before the merchant greets them (0 never greets): 8 in a safe room, <see cref="TavernRules.GreetRadius"/> in the tavern.</summary>
     public float GreetRadius { get; set; } = 8f;
     private bool _greeted;
+    /// <summary>Whether he has greeted the local adventurer on this floor (the safe room's line, or the tavern's briefing).</summary>
+    public bool Greeted => _greeted;
+    /// <summary>The merchant in the tavern on floor 0: he briefs the party instead of trading (his wares come down later).</summary>
+    public bool InTavern => IsMerchant && Floor == 0;
 
     public string DisplayName => NpcName;
     public bool IsAlive => !Dead && !Downed;
@@ -131,7 +135,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                 return;
         }
         if (Main.Instance?.Hud is not { } hud) return; // a dedicated server has no screen; the client opened its own
-        if (IsMerchant) hud.OpenMerchant(this); // trade, how it goes, leave: all local, the purchases go through the party
+        if (InTavern) hud.OpenBriefing(this); // no shop in the tavern: talking to him again replays the briefing
+        else if (IsMerchant) hud.OpenMerchant(this); // trade, how it goes, leave: all local, the purchases go through the party
         else hud.OpenDialogue(this);
     }
 
@@ -164,6 +169,22 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (new Vector2(local.GlobalPosition.X - GlobalPosition.X, local.GlobalPosition.Z - GlobalPosition.Z).Length() > GreetRadius) return;
         _greeted = true;
         Say(lines.Greeting);
+    }
+
+    /// <summary>
+    /// The tavern merchant opens his briefing the first time the local adventurer comes within <see cref="GreetRadius"/>,
+    /// and never over another screen: while one is open he waits (this is polled each tick) and greets once it closes.
+    /// Local only; a dedicated server has no screen and no local adventurer.
+    /// </summary>
+    private void GreetInTavern()
+    {
+        if (_greeted || !InTavern || Dead || GreetRadius <= 0f) return;
+        if (Main.Instance is not { Hud: { } hud, Party: { } party } || !IsInstanceValid(party) || party.Local is not { } local) return;
+        if (hud.DialogueOpen || hud.InventoryOpen || hud.Paused || hud.StairsPromptOpen || hud.ShopOpen || party.InputLocked) return;
+        if (local.GlobalPosition.DistanceTo(GlobalPosition) > GreetRadius) return;
+        _greeted = true;
+        GD.Print($"[Npc] {NpcName} greets the party in the tavern: the briefing opens");
+        hud.OpenBriefing(this);
     }
 
     /// <summary>
@@ -268,7 +289,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public override void _PhysicsProcess(double delta)
     {
         var dt = (float)delta;
-        if (!Net.NetSession.IsServer) Greet(); // every player's own screen: a dedicated server has nobody to greet
+        if (!Net.NetSession.IsServer) { Greet(); GreetInTavern(); } // every player's own screen: a dedicated server has nobody to greet
         if (Net.NetSession.IsClient) { ClientTick(dt); return; }
         var v = Velocity;
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;

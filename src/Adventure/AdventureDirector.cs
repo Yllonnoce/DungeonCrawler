@@ -450,6 +450,7 @@ public partial class AdventureDirector : Node
         bus.QuestItemPicked += id => Apply(new QuestItemPicked(QuestKeys.QuestOf(id))); // clue items carry an ordinal after the quest key
         bus.NpcEvent += OnNpcEvent;
         bus.DialogueEffectChosen += OnDialogueEffect;
+        bus.DialogueNode += OnDialogueNode;
         bus.FloorChanged += OnFloorChanged;
         bus.Gathered += OnGathered;
         bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; };
@@ -459,6 +460,28 @@ public partial class AdventureDirector : Node
         bus.AbilityUsed += (_, kind) => { if (_record == null) return; if (kind is Combat.AbilityKind.WeaponAttack or Combat.AbilityKind.MeleeStrike) _record.WeaponAttacks++; else _record.SpellCasts++; };
         bus.LeadChanged += index => { var p = Main.Instance?.Party; if (p != null && index < p.Members.Length) _leadName = p.Members[index].Name; };
         bus.BossDefeated += _ => { if (_record != null) _record.BossSeconds = (float)(Game.Instance.PlaySeconds - _floorStart); };
+    }
+
+    /// <summary>The tavern merchant's briefing reached the deal: the seed money, once. The server's (or solo's) to pay; a client's gold follows.</summary>
+    private void OnDialogueNode(string npcId, string nodeId)
+    {
+        if (Net.NetSession.IsClient || Game.Instance.CurrentFloor != 0 || npcId != "merchant") return;
+        if (TavernRules.ShouldPaySeed(Game.Instance.Adventure.SeedMoneyPaid, nodeId, descending: false)) PaySeedMoney();
+    }
+
+    /// <summary>The party goes down from the tavern: if they never struck the deal, they are staked anyway.</summary>
+    public void OnLeavingTavern()
+    {
+        if (Net.NetSession.IsClient) return;
+        if (TavernRules.ShouldPaySeed(Game.Instance.Adventure.SeedMoneyPaid, null, descending: true)) PaySeedMoney();
+    }
+
+    private static void PaySeedMoney()
+    {
+        if (Main.Instance?.Party is not { } party) return;
+        party.AddGold(TavernRules.SeedGold);
+        Game.Instance.Adventure.SeedMoneyPaid = true;
+        EventBus.Instance.Log("The seed money: 150 gold, counted twice.");
     }
 
     private void OnFloorChanged(int floor, int delta)

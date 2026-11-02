@@ -139,6 +139,7 @@ public partial class Game : Node
             EventBus.Instance.Log("The way up is sealed.");
             return false;
         }
+        if (CurrentFloor == 0 && delta > 0) AdventureDirector.Instance?.OnLeavingTavern(); // staked before the first step down
         CurrentFloor = target;
         EventBus.Instance.RaiseFloorChanged(CurrentFloor, delta);
         return true;

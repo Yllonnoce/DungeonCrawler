@@ -4,7 +4,7 @@ namespace DungeonCrawler.Save;
 
 public sealed record SlotInfo(string Slot, bool Exists, string Label, int Floor, string SavedAt, double PlaySeconds, List<string> Members, bool Corrupt)
 {
-    public string Summary => !Exists ? "Empty" : Corrupt ? "Unreadable save" : $"Floor {Floor}   {string.Join(", ", Members)}   {FormatTime(PlaySeconds)}";
+    public string Summary => !Exists ? "Empty" : Corrupt ? "Unreadable save" : $"{(Floor == 0 ? "The Tavern" : $"Floor {Floor}")}   {string.Join(", ", Members)}   {FormatTime(PlaySeconds)}";
     public static string FormatTime(double s) => s >= 3600 ? $"{(int)(s / 3600)}h {(int)(s % 3600 / 60)}m" : $"{(int)(s / 60)}m {(int)(s % 60)}s";
 }
 

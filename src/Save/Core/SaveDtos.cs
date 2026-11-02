@@ -48,6 +48,8 @@ public sealed class AdventureDto
     public CampaignMemoryDto Memory { get; set; } = new();
     /// <summary>Tokens and dollars spent on the AI planner for this run.</summary>
     public Adventure.Ai.SpendDto Spend { get; set; } = new();
+    /// <summary>The tavern's seed money has been paid (at the briefing's deal or on the first descent): it is paid once a run.</summary>
+    public bool SeedMoneyPaid { get; set; }
     /// <summary>Set once the AI was switched off mid-run (cap, refusal, no key) so later floors are designed offline.</summary>
     public string? AiStoppedReason { get; set; }
     /// <summary>Companion barks already said, by text, and the floor they were said on: a line waits two floors before it may repeat.</summary>

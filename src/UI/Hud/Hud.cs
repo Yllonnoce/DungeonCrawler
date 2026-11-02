@@ -200,6 +200,16 @@ public partial class Hud : Control
         UpdateModalState();
     }
 
+    /// <summary>The tavern merchant's briefing (on his greeting and whenever he is spoken to on floor 0): local to this screen.</summary>
+    public void OpenBriefing(Npc npc)
+    {
+        if (_pause.Visible) return;
+        _shop.Close();
+        _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
+        _dialogue.OpenBriefing(npc, TavernRules.BriefingFor(Game.Instance.Adventure.Campaign));
+        UpdateModalState();
+    }
+
     public void OpenDialogue(Npc npc)
     {
         if (_pause.Visible) return;
