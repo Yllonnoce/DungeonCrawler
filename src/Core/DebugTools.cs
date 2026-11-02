@@ -306,6 +306,8 @@ public partial class DebugTools : Node
             else if (arg == "--no-ambush") NoAmbush = true;
             else if (arg == "--no-portals") NoPortals = true;
             else if (arg == "--no-gathering") NoGathering = true;
+            else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
             else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
             else if (arg == "--test-keys") { _testKeys = true; _menuOnly = true; _quitAfter = 2; }
@@ -341,12 +343,20 @@ public partial class DebugTools : Node
         if ((_testCollectives || _testQuest || _testVoice || _testStory) && _seed == null) _seed = 4242; // scripted scenarios want a repeatable floor
         if (_testStructures && _seed == null) _seed = StructureSeed();
         if (_testHorde && _seed == null) _seed = HordeSeed();
+        if (_testAbilities && _seed == null) _seed = 7; // its fights are flaky on random floors
+        if (_testSafeRoom)
+        {
+            _seed ??= 7;
+            ForcedLethality ??= 1f;
+            Dungeon.TierRules.Lethality = ForcedLethality.Value;
+            if (Dungeon.Generation.FloorObjectives.TryParse(ForcedObjective, out var srObjective) && srObjective != Dungeon.Generation.FloorObjectiveKind.None && _startFloor < 2) { _startFloor = 2; ForcedLayout ??= "standard"; } // floor 1 never carries an objective, and not every shape takes every objective
+        }
         // Automation never spends the player's keys unless --ai is given explicitly: scripted runs use the offline designer and no live voice.
         var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly;
         if (automation && !ForceAi) { NoAi = true; NoVoice = !FakeVoice; }
         // scripted scenarios were written against the plain floors of their seeds: no objective floor unless one is asked for by name
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
-        if (automation && !_testFloors && !_builtin && _bakeDir == null && _testObjective == null && ForcedObjective == null) ForcedObjective = "none";
+        if (automation && !_testFloors && !_builtin && _bakeDir == null && _rehashDir == null && _testObjective == null && ForcedObjective == null) ForcedObjective = "none";
         if (_server || _netClient) NoVoice = true; // a headless server has no speakers; the test client keeps its key in its pocket
     }
 
@@ -705,6 +715,8 @@ public partial class DebugTools : Node
         if (_testHazard != null) RunHazardTest();
         if (_testPortal) RunPortalTest();
         if (_testKeys && !_testedKeys && _elapsed >= 0.5) { _testedKeys = true; RunKeysTest(); }
+        if (_rehashDir != null && !_rehashed && _elapsed >= 0.3 && Main.Instance != null) RunRehashPlans();
+        if (_testSafeRoom) RunSafeRoomTest();
         if (_tremor) RunTremor();
         if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == Math.Max(1, _startFloor)) { _inspected = true; InspectCell(ins.x, ins.y); }
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
@@ -2543,6 +2555,280 @@ public partial class DebugTools : Node
             party.ForcedMoveInput = new Vector2(0, -1);
             if (_stairsWalk <= 0) party.ForcedMoveInput = null;
         }
+    }
+
+    // ---- --test-safe-room ---------------------------------------------------------------------------------
+    // The floor's safe room end to end: the room and its door, the door opening for the party and shut against an
+    // enemy, x6 regeneration inside, the HUD line, the gathering (or none with --no-gathering), the gatherers going for
+    // the party when it steps out, the gathered count through a save, and (with --objective=toxic) clean air inside.
+    private bool _testSafeRoom;
+    private int _srStep;
+    private double _srAt;
+    private readonly List<string> _srFails = new();
+    private Door? _srDoor;
+    private Enemy? _srEnemy;
+    private int _srMember;
+    private float _srHp;
+    private double _srOccupiedAt;
+    private int _srSavedGathered;
+    private readonly List<Enemy> _srGatherers = new();
+
+    /// <summary>Walking distances (cells) from the safe room's door to the cells outside it, up to <paramref name="max"/>.</summary>
+    private static Dictionary<GridPos, int> SafeRoomOutside(FloorLayout layout, int max)
+    {
+        var room = layout.Rooms[layout.SafeRoom];
+        var door = layout.SafeRoomDoor;
+        var distance = new Dictionary<GridPos, int> { [door] = 0 };
+        var queue = new Queue<GridPos>();
+        queue.Enqueue(door);
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            if (distance[p] >= max) continue;
+            foreach (var n in p.Neighbours4())
+            {
+                if (room.Contains(n) || distance.ContainsKey(n) || !layout.CanStep(p, n)) continue;
+                distance[n] = distance[p] + 1;
+                queue.Enqueue(n);
+            }
+        }
+        return distance;
+    }
+
+    private void RunSafeRoomTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame) return;
+        if (_startFloor > 1 && main.Builder.CurrentFloor != _startFloor) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var since = _elapsed - _srAt;
+        void Next() { _srStep++; _srAt = _elapsed; }
+        void Fail(string why) { _srFails.Add(why); GD.Print($"[saferoom] FAIL: {why}"); }
+        void Finish()
+        {
+            GD.Print(_srFails.Count == 0 ? "[saferoom] RESULT ok" : $"[saferoom] RESULT FAIL ({string.Join("; ", _srFails)})");
+            _srStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        Vector3 Stand(GridPos cell) => b.Surface(cell) + Vector3.Up * 0.3f;
+        GridPos? Outside(int atLeast) => layout.SafeRoom < 0 ? null : SafeRoomOutside(layout, 12).Where(kv => kv.Value >= atLeast).OrderBy(kv => kv.Value).ThenBy(kv => kv.Key.Y).ThenBy(kv => kv.Key.X).Select(kv => (GridPos?)kv.Key).FirstOrDefault();
+        var controller = SafeRoomController.Instance;
+        switch (_srStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                // 1. the room and its door
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor: only the test's creatures move
+                if (layout.SafeRoom < 0) { Fail($"floor {b.CurrentFloor} has no safe room"); Finish(); return; }
+                var gather = SafeRoomRules.GatherCell(layout);
+                _srDoor = root.GetChildren().OfType<Door>().FirstOrDefault(d => d.Kind == VaultKind.SafeDoor);
+                GD.Print($"[saferoom] floor {b.CurrentFloor} seed {Game.Instance.GameSeed}: room {layout.SafeRoom} ({layout.Rooms[layout.SafeRoom].Cells().Count()} cells) door {layout.SafeRoomDoor} merchant {SafeRoomRules.MerchantCell(layout)} gather {gather?.ToString() ?? "none"}");
+                if (_srDoor == null) { Fail("no SafeDoor on the floor"); Finish(); return; }
+                GD.Print($"[saferoom] door at {_srDoor.Cell} open={_srDoor.IsOpen} prompt=\"{_srDoor.Prompt}\"");
+                if (_srDoor.Cell != layout.SafeRoomDoor) Fail($"the door stands at {_srDoor.Cell}, the layout says {layout.SafeRoomDoor}");
+                if (_srDoor.Prompt != "") Fail("the safe door has a prompt");
+                if (_srDoor.IsOpen) Fail("the safe door starts open");
+                if (gather == null) Fail("no gather cell");
+                if (controller == null) Fail("no SafeRoomController");
+                // 2. walk up to the door: stand 2 m from it on the corridor side
+                var near = Outside(1)!.Value;
+                var toward = (b.Surface(near) - _srDoor.GlobalPosition) with { Y = 0 };
+                party.Teleport(_srDoor.GlobalPosition with { Y = Stand(near).Y } + toward.Normalized() * 2f, _srDoor.GlobalPosition);
+                Next();
+                break;
+            }
+            case 1:
+                if (_srDoor!.IsOpen) { GD.Print($"[saferoom] door opened for the party after {since:0.00} s"); var away = Outside(2)!.Value; party.Teleport(Stand(away), _srDoor.GlobalPosition); GD.Print($"[saferoom] party moved {b.Surface(away).DistanceTo(_srDoor.GlobalPosition):0.0} m off"); Next(); }
+                else if (since > 0.5) { Fail("the door did not open for the party within 0.5 s"); _srStep = 2; _srAt = _elapsed; }
+                break;
+            case 2 when since >= SafeRoomRules.DoorCloseDelay + 0.5:
+            {
+                GD.Print($"[saferoom] {SafeRoomRules.DoorCloseDelay + 0.5:0.0} s after the party left: door open={_srDoor!.IsOpen}");
+                if (_srDoor.IsOpen) Fail("the door did not close behind the party");
+                // 3. a creature at the door, awake and set on the party, which rests deep in the room beyond the door's reach
+                // (out in a corridor the companions cut it down before it could try the door)
+                var outside = Outside(1)!.Value;
+                var merchant = SafeRoomRules.MerchantCell(layout);
+                party.Teleport(Stand(merchant), _srDoor.GlobalPosition);
+                _srOccupiedAt = _elapsed; // the gathering clock starts with this step inside
+                _srEnemy = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], Stand(outside), b.CurrentFloor);
+                if (_srEnemy == null) { Fail("could not spawn the test enemy"); Finish(); return; }
+                GD.Print($"[saferoom] {_srEnemy.DisplayName} spawned at {outside}; party at {merchant}, {b.Surface(merchant).DistanceTo(_srDoor.GlobalPosition):0.0} m behind the door");
+                Next();
+                break;
+            }
+            case 3 when since >= 0.1:
+                _srEnemy!.ForceAggro(); // after a physics frame
+                Next();
+                break;
+            case 4 when since >= 3.0:
+            {
+                var cell = DungeonBuilder.WorldToCell(_srEnemy!.GlobalPosition);
+                GD.Print($"[saferoom] after 3 s the enemy ({_srEnemy.State.Name}, alive={_srEnemy.IsAlive}) stands at {cell}, {_srEnemy.GlobalPosition.DistanceTo(_srDoor!.GlobalPosition):0.0} m from the door, in room={layout.IsInSafeRoom(cell)}; door open={_srDoor.IsOpen}");
+                if (!_srEnemy.IsAlive) Fail("the test enemy died before it could try the door");
+                if (_srDoor.IsOpen) Fail("the door opened for an enemy");
+                if (layout.IsInSafeRoom(cell) || cell == layout.SafeRoomDoor) Fail("the enemy got into the safe room");
+                if (!SafeRoomRules.Cells(layout).Append(layout.SafeRoomDoor).All(b.IsCellBlockedForEnemies)) Fail("some safe room cell is open to enemies");
+                _srEnemy.QueueFree();
+                // 4. on the merchant's cell (where the party already rests)
+                party.Teleport(Stand(SafeRoomRules.MerchantCell(layout)), _srDoor.GlobalPosition);
+                Next();
+                break;
+            }
+            case 5:
+            {
+                var hud = main.Hud;
+                if (controller is { Occupied: true } && hud.SafeRoom && hud.ObjectiveText.EndsWith("Safe room"))
+                {
+                    GD.Print($"[saferoom] inside after {since:0.00} s: occupied, HUD \"{hud.ObjectiveText}\"");
+                    _srMember = party.Anchor.Index;
+                    party.Members[_srMember].Hp = 10f;
+                    _srHp = 10f;
+                    Next();
+                }
+                else if (since > 1.0) { Fail($"inside: occupied={controller?.Occupied} hud.SafeRoom={hud.SafeRoom} line=\"{hud.ObjectiveText}\""); Finish(); }
+                break;
+            }
+            case 6 when since >= 3.0:
+            {
+                var m = party.Members[_srMember];
+                var gain = m.Hp - _srHp;
+                var rate = m.Stats[Characters.Stat.HpRegen];
+                var want = 5f * rate * 3f;
+                GD.Print($"[saferoom] {m.Name} regained {gain:0.00} hp in 3 s inside (base {rate:0.000}/s, x{SafeRoomRules.RegenMultiplier} = {SafeRoomRules.RegenMultiplier * rate * 3f:0.00}, need >= {want:0.00}); inside={controller?.IsInside(_srMember)}");
+                if (gain < want) Fail($"regeneration inside is {gain / (rate * 3f):0.0}x, want about {SafeRoomRules.RegenMultiplier}x");
+                Next();
+                break;
+            }
+            case 7 when _elapsed >= _srOccupiedAt + SafeRoomRules.GraceSeconds + 1:
+            {
+                // 5. the creatures shut out gather after the grace
+                var gather = SafeRoomRules.GatherCell(layout)!.Value;
+                _srGatherers.Clear();
+                _srGatherers.AddRange(root.GetChildren().OfType<Enemy>().Where(e => e.IsAlive && !e.IsQueuedForDeletion() && DungeonBuilder.WorldToCell(e.GlobalPosition).ManhattanDistance(gather) <= 2));
+                var gathered = controller?.Gathered ?? -1;
+                GD.Print($"[saferoom] after the grace ({SafeRoomRules.GraceSeconds:0} s + 1): Gathered={gathered}, by the gather cell: [{string.Join(", ", _srGatherers.Select(e => $"{e.DisplayName}:{e.State.Name}"))}]");
+                if (NoGathering)
+                {
+                    if (gathered != 0 || _srGatherers.Count > 0) Fail("--no-gathering still gathered");
+                }
+                else
+                {
+                    if (gathered != 1) Fail($"Gathered={gathered} after the grace, want 1");
+                    if (!_srGatherers.Any(e => e.State.Name == "Hold")) Fail("no creature holds by the gather cell");
+                }
+                if (root.GetChildren().OfType<Enemy>().Any(e => e.IsAlive && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(e.GlobalPosition)))) Fail("a creature is inside the safe room");
+                Next();
+                break;
+            }
+            case 8 when _elapsed >= _srOccupiedAt + SafeRoomRules.GraceSeconds + SafeRoomRules.IntervalSeconds + 1:
+            {
+                var gathered = controller?.Gathered ?? -1;
+                var gather = SafeRoomRules.GatherCell(layout)!.Value;
+                _srGatherers.Clear();
+                _srGatherers.AddRange(root.GetChildren().OfType<Enemy>().Where(e => e.IsAlive && !e.IsQueuedForDeletion() && DungeonBuilder.WorldToCell(e.GlobalPosition).ManhattanDistance(gather) <= 3));
+                GD.Print($"[saferoom] after another {SafeRoomRules.IntervalSeconds:0} s: Gathered={gathered}, {_srGatherers.Count} creature(s) outside: [{string.Join(", ", _srGatherers.Select(e => $"{e.DisplayName}:{e.State.Name}"))}]");
+                if (gathered != (NoGathering ? 0 : 2)) Fail($"Gathered={gathered}, want {(NoGathering ? 0 : 2)}");
+                if (root.GetChildren().OfType<Enemy>().Any(e => e.IsAlive && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(e.GlobalPosition)))) Fail("a creature is inside the safe room");
+                // 7. step out past them: they come for the party (before the save, which keeps the count but not the creatures)
+                if (_srGatherers.Count > 0)
+                {
+                    var outside = SafeRoomOutside(layout, 12);
+                    var beyond = gather.Neighbours4().Where(n => outside.TryGetValue(n, out var d) && d > outside[gather]).Select(n => (GridPos?)n).FirstOrDefault() ?? gather;
+                    party.Teleport(Stand(beyond), b.Surface(gather) + Vector3.Up);
+                    GD.Print($"[saferoom] party steps out to {beyond}");
+                }
+                Next();
+                break;
+            }
+            case 9:
+            {
+                if (_srGatherers.Count == 0) { GD.Print("[saferoom] no gatherers to step out to (none gathered)"); Next(); break; }
+                var hunting = _srGatherers.Where(e => IsInstanceValid(e) && e.State.Name is "Chase" or "Attack").ToList();
+                if (hunting.Count > 0 || _srGatherers.All(e => !IsInstanceValid(e) || !e.IsAlive))
+                {
+                    GD.Print($"[saferoom] {since:0.0} s after stepping out: [{string.Join(", ", _srGatherers.Where(IsInstanceValid).Select(e => $"{e.DisplayName}:{e.State.Name}"))}]");
+                    if (hunting.Count == 0) Fail("the gatherers died before they were seen to attack");
+                    Next();
+                }
+                else if (since > 4.0) { Fail($"no gatherer attacked within 4 s: [{string.Join(", ", _srGatherers.Where(IsInstanceValid).Select(e => e.State.Name))}]"); Next(); }
+                break;
+            }
+            case 10:
+            {
+                // 6. the count survives a save (the creatures themselves do not: the clock is what is kept)
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree();
+                party.Teleport(Stand(SafeRoomRules.MerchantCell(layout)), b.Surface(layout.SafeRoomDoor));
+                _srSavedGathered = controller?.Gathered ?? -1;
+                main.SaveGame("saferoom");
+                if (!main.LoadGame("saferoom")) { Fail("the save would not load"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 11 when since >= 2.0:
+            {
+                var back = SafeRoomController.Instance?.Gathered ?? -1;
+                GD.Print($"[saferoom] save/load: Gathered {_srSavedGathered} -> {back}");
+                if (back != _srSavedGathered) Fail($"Gathered came back as {back}, saved {_srSavedGathered}");
+                // the gas run: the room's air stays clean while the rest of the floor fills
+                if (Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.ToxicController gas)
+                {
+                    gas.Seconds = 200f;
+                    var merchant = SafeRoomRules.MerchantCell(layout);
+                    var dangerInside = SafeRoomRules.Cells(layout).Where(layout.IsWalkable).Max(gas.DangerAt);
+                    var gassedOutside = layout.Rooms.Where((r, i) => i != layout.SafeRoom).Any(r => gas.DangerAt(r.Center) > 0);
+                    GD.Print($"[saferoom] gas at {gas.Seconds:0} s: merchant cell danger {gas.DangerAt(merchant)}, worst inside {dangerInside}, gas elsewhere {gassedOutside}");
+                    if (gas.DangerAt(merchant) != 0 || dangerInside != 0) Fail("the gas gets into the safe room");
+                    else GD.Print("[saferoom] air inside: clean");
+                    if (!gassedOutside) Fail("no gas anywhere at 200 s: the check proves nothing");
+                }
+                Finish();
+                break;
+            }
+        }
+    }
+
+    // ---- --rehash-plans=DIR --------------------------------------------------------------------------------
+    private string? _rehashDir;
+    private bool _rehashed;
+
+    /// <summary>
+    /// Regenerate each floor_NN.json's layout in <see cref="_rehashDir"/> from its campaign (seed and per-floor shape, as
+    /// <see cref="DungeonBuilder.Build"/> does) and write back the plan's <c>LayoutHash</c>, so a build whose generator has
+    /// moved on (a safe room displacing a spawn) loads the shipped plans without "adapted". Only the hash's digits change
+    /// in each file: the rest of it stays byte for byte as written.
+    /// </summary>
+    private void RunRehashPlans()
+    {
+        _rehashed = true;
+        var dir = _rehashDir!;
+        if (BuiltinCampaign.LoadFrom(dir) is not { } baked) { GD.Print($"[rehash] RESULT FAIL: no campaign.json in {dir}"); GetTree().Quit(); return; }
+        var builder = Main.Instance!.Builder;
+        var adventure = Game.Instance.Adventure;
+        var keep = adventure.Campaign;
+        adventure.Campaign = baked.Campaign; // the floors' shapes and objectives come from its outline
+        var seed = baked.Campaign.GameSeed;
+        var changed = 0;
+        try
+        {
+            foreach (var (floor, plan) in baked.Floors.OrderBy(kv => kv.Key))
+            {
+                var spec = builder.SpecFor(floor, seed);
+                var hash = FloorGenerator.Generate(spec, Rng.FloorSeed(seed, floor)).ContentHash();
+                var path = System.IO.Path.Combine(dir, $"floor_{floor:00}.json");
+                if (plan.LayoutHash == hash) { GD.Print($"[rehash] floor {floor:00}: {hash} (unchanged)"); continue; }
+                var text = System.IO.File.ReadAllText(path);
+                var field = new System.Text.RegularExpressions.Regex("(\"LayoutHash\"\\s*:\\s*)\\d+");
+                if (!field.IsMatch(text)) { GD.Print($"[rehash] floor {floor:00}: no LayoutHash field; left alone"); continue; }
+                System.IO.File.WriteAllText(path, field.Replace(text, m => m.Groups[1].Value + hash.ToString(System.Globalization.CultureInfo.InvariantCulture), 1));
+                GD.Print($"[rehash] floor {floor:00}: {plan.LayoutHash} -> {hash}");
+                changed++;
+            }
+        }
+        finally { adventure.Campaign = keep; }
+        GD.Print($"[rehash] RESULT ok: {changed} of {baked.Floors.Count} floor plans rehashed in {dir}");
+        GetTree().Quit();
     }
 
     // Party: companions follow, switch control, companions fight on their own, auto-revive.

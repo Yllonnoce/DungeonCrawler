@@ -16,7 +16,8 @@ public partial class ToxicController : ObjectiveController
 {
     public const float TickSeconds = 1f;
 
-    public float Seconds { get; private set; }
+    /// <summary>Gas time on this floor; the --test-safe-room flow sets it directly to look ahead.</summary>
+    public float Seconds { get; internal set; }
     public GasField Field { get; private set; } = null!;
     private float _tick;
     private int _worstSeen;
