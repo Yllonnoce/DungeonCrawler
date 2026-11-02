@@ -255,6 +255,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-tavern" || arg == "--test-tavern-skip") { _testTavern = true; _tavernSkip = arg == "--test-tavern-skip"; _startFloor = 0; _floorGiven = true; _quitAfter = 20; }
             else if (arg == "--test-skills") { _testSkills = true; _faceEnemy = true; _quitAfter = 7; }
             else if (arg == "--test-abilities") { _testAbilities = true; _quitAfter = 150; }
+            else if (arg == "--test-hit-fx") { _testHitFx = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 40; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
@@ -356,6 +357,7 @@ public partial class DebugTools : Node
         if (_testStructures && _seed == null) _seed = StructureSeed();
         if (_testHorde && _seed == null) _seed = HordeSeed();
         if (_testAbilities && _seed == null) _seed = 7; // its fights are flaky on random floors
+        if (_testHitFx && _seed == null) _seed = 7; // the abilities flow's floor: a repeatable first regular enemy
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -736,6 +738,7 @@ public partial class DebugTools : Node
         if (_testSkills) RunSkillsTest();
         if (_testTavern) RunTavernTest();
         if (_testAbilities) RunAbilitiesTest();
+        if (_testHitFx) RunHitFxTest();
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();
@@ -3473,6 +3476,131 @@ public partial class DebugTools : Node
                 GD.Print($"[skills] load: Wren skills same={string.Join(",", w2.LearnedSkills.OrderBy(x => x)) == learnedBefore} maxHp {maxHpBefore} -> {w2.Stats[Characters.Stat.MaxHp]} multishot known={w2.KnownAbilities.Contains("ability.multishot")}");
                 GD.Print("[skills] RESULT ok");
                 break;
+        }
+    }
+
+    // ---- --test-hit-fx ------------------------------------------------------------------------------------
+    // What a blow looks and sounds like. Staged like --test-abilities: the party in the largest room, a stunned enemy
+    // 1.5 m ahead of Brand, the others parked. A: Brand hits it and its hurt grunt plays; B: it is killed and its death
+    // grunt plays; C: an enemy whose definition names a nonsense voice set speaks with the size rule's set, and a set with
+    // no clips falls back to enemy_hurt / enemy_die. Cues are recorded from EventBus.Sfx. Prints [hitfx] lines and RESULT.
+    private bool _testHitFx;
+    private int _hfxStep;
+    private double _hfxNext;
+    private int _hfxTries;
+    private Enemy? _hfxEnemy;
+    private Vector3 _hfxStand;
+    private readonly List<string> _hfxCues = new();
+    private readonly List<string> _hfxFails = new();
+    private string _hfxHurt = "", _hfxDeath = "";
+    private bool _hfxListening;
+
+    private void HitFxCue(string cue) => _hfxCues.Add(cue);
+
+    private void RunHitFxTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame) return;
+        if (_elapsed < _hfxNext || _hfxStep >= 99) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var brand = Math.Max(0, Array.FindIndex(party.Members, m => m.Name == "Brand"));
+        void Fail(string why) { _hfxFails.Add(why); GD.Print($"[hitfx] FAIL: {why}"); }
+        void Finish()
+        {
+            if (_hfxListening) { EventBus.Instance.Sfx -= HitFxCue; _hfxListening = false; }
+            GD.Print(_hfxFails.Count == 0 ? "[hitfx] RESULT ok" : $"[hitfx] RESULT FAIL ({string.Join("; ", _hfxFails)})");
+            _hfxStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        Enemy? Spawn(string? voiceSet)
+        {
+            foreach (var stray in root.GetChildren().OfType<Enemy>()) stray.QueueFree();
+            party.Adventurers[brand].Teleport(_hfxStand, _hfxStand + new Vector3(0, 0, -1.5f));
+            var e = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], _hfxStand - Vector3.Up * 0.2f + new Vector3(0, 0, -1.5f), b.CurrentFloor);
+            if (e == null) return null;
+            if (voiceSet != null) e.OverrideVoiceSet(voiceSet);
+            e.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Stun, 30f, 0f));
+            e.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Shield, 60f, Combat.StatusEffectController.MaxShield)); // the hit lands but the body survives it
+            return e;
+        }
+        bool HitLanded() => _hfxEnemy != null && IsInstanceValid(_hfxEnemy) && _hfxCues.Contains(_hfxEnemy.HurtCue);
+        void Swing() { _hfxCues.Clear(); AbilitiesRefill(party.Members[brand]); party.Attack(brand); }
+        switch (_hfxStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree();
+                var m = party.Members[brand];
+                m.SkillModifiers.Add(new Characters.StatModifier(Characters.Stat.Accuracy, Characters.ModOp.Add, 1000f, "test"));
+                m.Recalculate();
+                AbilitiesTakeControl(brand);
+                var room = layout.Rooms.OrderByDescending(r => r.W * r.H).First();
+                _hfxStand = b.Surface(room.Center) + Vector3.Up * 0.3f;
+                party.Teleport(_hfxStand, _hfxStand + new Vector3(0, 0, -1.5f));
+                EventBus.Instance.Sfx += HitFxCue; _hfxListening = true;
+                _hfxEnemy = Spawn(null);
+                if (_hfxEnemy == null) { Fail("could not spawn an enemy"); Finish(); return; }
+                GD.Print($"[hitfx] floor {b.CurrentFloor} seed {Game.Instance.GameSeed}: {m.Name} vs {_hfxEnemy.Profile.Id} (scale {_hfxEnemy.Profile.Scale:0.00}, voice \"{_hfxEnemy.Profile.VoiceSet}\" -> {_hfxEnemy.VoiceSet}) at {room.Center}");
+                _hfxStep = 1; _hfxNext = _elapsed + 0.35; // the new body joins the physics world next step
+                break;
+            }
+            case 1: // A: one blow
+                Swing();
+                _hfxStep = 2; _hfxNext = _elapsed + 0.6;
+                break;
+            case 2:
+            {
+                var e = _hfxEnemy!;
+                if (!HitLanded() && _hfxTries++ < 2) { GD.Print($"[hitfx] no hurt cue yet (cues [{string.Join(", ", _hfxCues)}]), swinging again"); _hfxStep = 1; break; }
+                _hfxHurt = e.HurtCue;
+                var expected = VoiceSets.Resolve(e.Profile.VoiceSet, e.Profile.Scale, e.IsBoss);
+                GD.Print($"[hitfx] A hurt: cue {_hfxHurt}, heard [{string.Join(", ", _hfxCues)}]");
+                if (!_hfxCues.Contains(_hfxHurt)) Fail($"the hurt cue {_hfxHurt} did not play");
+                if (e.VoiceSet != expected) Fail($"voice set {e.VoiceSet}, expected {expected}");
+                if (Audio.AudioManager.Instance?.Has(VoiceSets.HurtCue(e.VoiceSet)) == true && !_hfxHurt.StartsWith("grunt_hurt_")) Fail($"the {e.VoiceSet} set has hurt clips but the cue is {_hfxHurt}");
+                // B: the death
+                _hfxCues.Clear();
+                e.Kill();
+                _hfxStep = 3; _hfxNext = _elapsed + 0.6;
+                break;
+            }
+            case 3:
+            {
+                var e = _hfxEnemy!;
+                _hfxDeath = e.DeathCue;
+                GD.Print($"[hitfx] B death: cue {_hfxDeath}, alive={e.IsAlive}, heard [{string.Join(", ", _hfxCues)}]");
+                if (!_hfxCues.Contains(_hfxDeath)) Fail($"the death cue {_hfxDeath} did not play");
+                if (_hfxCues.Contains("boss") != e.IsBoss) Fail("the boss bell rang for a regular, or not for a boss");
+                if (Audio.AudioManager.Instance?.Has(VoiceSets.DeathCue(e.VoiceSet)) == true && !_hfxDeath.StartsWith("grunt_death_")) Fail($"the {e.VoiceSet} set has death clips but the cue is {_hfxDeath}");
+                // C: a definition naming a voice set that does not exist
+                _hfxEnemy = Spawn("nonsense");
+                if (_hfxEnemy == null) { Fail("could not spawn the second enemy"); Finish(); return; }
+                _hfxTries = 0;
+                _hfxStep = 4; _hfxNext = _elapsed + 0.35;
+                break;
+            }
+            case 4:
+                Swing();
+                _hfxStep = 5; _hfxNext = _elapsed + 0.6;
+                break;
+            case 5:
+            {
+                var e = _hfxEnemy!;
+                if (!HitLanded() && _hfxTries++ < 2) { GD.Print("[hitfx] no hurt cue yet on the second enemy, swinging again"); _hfxStep = 4; break; }
+                var sizeRule = VoiceSets.DefaultFor(e.Profile.Scale, e.IsBoss);
+                GD.Print($"[hitfx] C voice \"nonsense\" -> {e.VoiceSet} (size rule {sizeRule}), cue {e.HurtCue}, heard [{string.Join(", ", _hfxCues)}]");
+                if (e.VoiceSet != sizeRule) Fail($"a nonsense voice set resolved to {e.VoiceSet}, not the size rule's {sizeRule}");
+                if (!_hfxCues.Contains(e.HurtCue)) Fail($"the second enemy's hurt cue {e.HurtCue} did not play");
+                // a set whose folder has no clips: what HurtCue / DeathCue hand back when AudioManager.Has is false
+                var fallbackHurt = Enemy.CueOrFallback(VoiceSets.HurtCue(e.VoiceSet), "enemy_hurt", _ => false);
+                var fallbackDeath = Enemy.CueOrFallback(VoiceSets.DeathCue(e.VoiceSet), "enemy_die", _ => false);
+                var noAudio = Enemy.CueOrFallback(VoiceSets.HurtCue(e.VoiceSet), "enemy_hurt", null);
+                if (fallbackHurt != "enemy_hurt" || fallbackDeath != "enemy_die" || noAudio != "enemy_hurt") Fail($"with no clips the cues are {fallbackHurt}/{fallbackDeath} (no audio: {noAudio})");
+                GD.Print($"[hitfx] grunts: hurt={_hfxHurt} death={_hfxDeath} fallback={fallbackHurt}");
+                Finish();
+                break;
+            }
         }
     }
 

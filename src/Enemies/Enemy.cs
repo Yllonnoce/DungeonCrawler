@@ -1,3 +1,4 @@
+using DungeonCrawler.Audio;
 using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
@@ -37,6 +38,19 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public string DisplayName => NameOverride ?? Profile.Name;
     public EnemyKind Kind => Profile.Kind;
     public bool IsBoss => Profile.IsBoss;
+
+    /// <summary>The grunt set this enemy speaks with: its definition's, or by size and boss flag (resolved in <c>_Ready</c>).</summary>
+    public string VoiceSet { get; private set; } = VoiceSets.Medium;
+    /// <summary>The cue played when hurt: the set's grunt when its clips loaded, else the generic thud.</summary>
+    public string HurtCue => CueOrFallback(VoiceSets.HurtCue(VoiceSet), "enemy_hurt", AudioManager.Instance is { } a ? a.Has : null);
+    /// <summary>The cue played on death: the set's death grunt when its clips loaded, else the generic thud.</summary>
+    public string DeathCue => CueOrFallback(VoiceSets.DeathCue(VoiceSet), "enemy_die", AudioManager.Instance is { } a ? a.Has : null);
+
+    /// <summary>The grunt when <paramref name="has"/> says its clips exist, otherwise <paramref name="fallback"/> (also with no audio at all).</summary>
+    public static string CueOrFallback(string grunt, string fallback, Func<string, bool>? has) => has?.Invoke(grunt) == true ? grunt : fallback;
+
+    /// <summary>Test hook: re-resolve the voice as if the definition had named <paramref name="voiceSet"/>.</summary>
+    public void OverrideVoiceSet(string voiceSet) => VoiceSet = VoiceSets.Resolve(voiceSet, Profile.Scale, IsBoss);
     public float MaxHp { get; private set; }
     public float Hp { get; private set; }
     public bool IsAlive => Hp > 0;
@@ -166,6 +180,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Stats = Profile.BuildStats();
         Attack = Profile.BuildAttack(Floor);
         _signatureTimer = Profile.SignatureCooldown * 0.5f;
+        VoiceSet = VoiceSets.Resolve(Profile.VoiceSet, Profile.Scale, IsBoss);
 
         _mesh = GetNode<MeshInstance3D>("Mesh");
         _material = new StandardMaterial3D { AlbedoColor = new Color(Profile.Color), Roughness = 0.8f };
@@ -334,7 +349,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         CollisionMask = 1 | Dungeon.Props.Door.SafeDoorBarrierLayer; // the world, and the open safe door's barrier
         _material.AlbedoColor = _baseColor.Darkened(0.6f);
         Effects.Clear();
-        EventBus.Instance.PlaySfx(IsBoss ? "boss" : "enemy_die");
+        EventBus.Instance.PlaySfx(DeathCue); // the server keeps death cues local (ServerWorld.LocalCues), so this is the only one a client hears; the boss bell comes relayed
     }
 
     private void ClientTick(float dt)
@@ -703,7 +718,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         EventBus.Instance.RaiseEnemyHurt(this, result.Amount, result.Crit);
         if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
         if (Hp <= 0) _dying = true;
-        else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx("enemy_hurt"); }
+        else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx(HurtCue); }
         if (Hp > 0 && State.Unaware) ChangeState(new ChaseState());
         else if (!_fled && Profile.FleeHpFraction > 0 && Hp / MaxHp < Profile.FleeHpFraction && State is not FleeState)
         {
@@ -786,7 +801,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void OnDeath()
     {
         PlayAnim("Death", force: true);
-        EventBus.Instance.PlaySfx(IsBoss ? "boss" : "enemy_die");
+        EventBus.Instance.PlaySfx(DeathCue);
+        if (IsBoss) EventBus.Instance.PlaySfx("boss");
         EventBus.Instance.Log(IsBoss ? $"{DisplayName} falls! The way down is open." : $"{DisplayName} dies.");
         CollisionLayer = 0;
         CollisionMask = 1 | Dungeon.Props.Door.SafeDoorBarrierLayer; // the world, and the open safe door's barrier

@@ -135,8 +135,12 @@ public partial class ServerWorld : Node
 
     private static string FloorObjectiveId(Main main) => Dungeon.Generation.FloorObjectives.Id(main.Builder.Layout?.Objective?.Kind ?? Dungeon.Generation.FloorObjectiveKind.None);
 
-    /// <summary>Cues the acting client already played for itself, and UI noise that is nobody else's business.</summary>
-    private static readonly HashSet<string> LocalCues = new() { "swing", "swing_heavy", "bow", "cast", "ui_click", "ui_open", "footstep", "miss" };
+    /// <summary>
+    /// Cues the acting client already played for itself, and UI noise that is nobody else's business. Death cues too:
+    /// every client plays its enemy's death cue in <c>Enemy.ClientDie</c> on the EnemyDied message.
+    /// </summary>
+    private static readonly HashSet<string> LocalCues = new(new[] { "swing", "swing_heavy", "bow", "cast", "ui_click", "ui_open", "footstep", "miss", "enemy_die" }
+        .Concat(VoiceSets.All.Select(VoiceSets.DeathCue)));
     private static bool Quiet => Main.Instance?.Rebuilding == true;
     private static NetVec Vec(Vector3 v) => new(v.X, v.Y, v.Z);
     private int _attackLogs;
