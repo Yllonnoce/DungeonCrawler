@@ -22,6 +22,17 @@ public static class NpcBodies
     public static string For(string id, string name, bool prisoner, params string?[] descriptions)
         => prisoner ? "npc_prisoner" : Guess(name, descriptions) ?? Fallback(id);
 
+    /// <summary>
+    /// A cast member's body: the shopkeeper look belongs to the one merchant alone, so anyone else whose words
+    /// point at it (an alderman, a plump employer) wears the old man instead.
+    /// </summary>
+    public static string ForCast(CastMember cast)
+    {
+        if (cast.Merchant) return "npc_merchant";
+        var body = For(cast.Id, cast.Name, false, cast.Role, cast.Persona?.VoiceStyle);
+        return body == "npc_merchant" ? "npc_old_man" : body;
+    }
+
     /// <summary>The body the words point at, or null when they point at nothing.</summary>
     public static string? Guess(string name, params string?[] descriptions)
     {

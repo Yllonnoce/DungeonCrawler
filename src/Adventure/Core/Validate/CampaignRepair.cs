@@ -29,6 +29,7 @@ public static class CampaignRepair
             if (t.CleanLine != null) RepairLine(t.CleanLine, repairs, $"{t.Trigger} taunt (clean)");
             return false;
         });
+        RepairMerchant(campaign, repairs);
         var added = TauntBank.Fill(campaign);
         if (added > 0) repairs.Add($"{added} stock taunts added for triggers the campaign had none for");
         RepairPersona(campaign.Antagonist.Persona, repairs, "antagonist");
@@ -36,6 +37,18 @@ public static class CampaignRepair
         foreach (var t in campaign.Tiers) RepairLine(t.EnterLine, repairs, $"tier {t.Index} entrance");
         foreach (var set in campaign.Barks) foreach (var b in set.Lines) RepairLine(b.Line, repairs, $"{set.Member} bark");
         return repairs;
+    }
+
+    /// <summary>Exactly one cast member keeps the shop, hides nothing, and has lines to speak; a campaign without one gets the generic merchant.</summary>
+    private static void RepairMerchant(CampaignPlan campaign, List<string> repairs)
+    {
+        if (!campaign.Cast.Any(c => c.Merchant)) { campaign.Cast.Add(MerchantLineBank.GenericCast()); repairs.Add("generic merchant added"); }
+        var first = campaign.Cast.First(c => c.Merchant);
+        var extra = false;
+        foreach (var c in campaign.Cast) if (c.Merchant && c != first) { c.Merchant = false; extra = true; }
+        if (extra) repairs.Add("extra merchant flags cleared");
+        if (!string.IsNullOrEmpty(first.Secret)) { first.Secret = ""; repairs.Add("merchant secret cleared"); }
+        if (campaign.Merchant is null or { IsEmpty: true }) { campaign.Merchant = MerchantLineBank.Generic(campaign.Title, campaign.Antagonist.Name); repairs.Add("generic merchant lines added"); }
     }
 
     /// <summary>A line's delivery must be one of ours; anything else falls back to the character's default.</summary>

@@ -1199,8 +1199,9 @@ public partial class DungeonBuilder : Node3D
             npc.QuestKey = plan.QuestId == null ? null : QuestKeys.For(floor, plan.QuestId);
             npc.Floor = floor;
             npc.Name = $"Npc_{plan.Id}";
+            var castMember = Game.Instance?.Adventure?.Campaign?.CastFor(plan.CastId);
             var cast = CastWords(plan.CastId, plan.Name);
-            npc.ModelPath = BodyPath(Adventure.NpcBodies.For(plan.Id, plan.Name, false, plan.Persona?.VoiceStyle, cast.Role, cast.Style));
+            npc.ModelPath = BodyPath(castMember != null ? Adventure.NpcBodies.ForCast(castMember) : Adventure.NpcBodies.For(plan.Id, plan.Name, false, plan.Persona?.VoiceStyle, cast.Role, cast.Style));
             root.AddChild(npc);
             npc.GlobalPosition = Surface(n.Cell) + Vector3.Up * 0.1f;
             npc.RotateY((float)(Rng.Mix((ulong)seed ^ (Rng.StableHash(n.Id) & 0xFFFF)) % 8) * Mathf.Pi / 4f);

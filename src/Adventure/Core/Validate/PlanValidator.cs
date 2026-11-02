@@ -314,6 +314,7 @@ public static class PlanValidator
             if (n.Ritualist && !menu.Rooms.Any(r => r.IsShrine)) { n.Ritualist = false; report.Repairs.Add($"NPC {n.Id}: no ritual on this floor to lead"); }
             // the rite's leader stands beside the altar wherever the plan put them; everyone else needs a room people may stand in
             if (!n.Ritualist && (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsSafeRoom || menu.Room(n.Room)!.IsArena || menu.Room(n.Room)!.IsJail || menu.Room(n.Room)!.IsShrine)) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
+            if (n.CastId != null && campaign?.CastFor(n.CastId) is { Merchant: true }) { report.Repairs.Add($"dropped NPC {n.Id}: the merchant is never a floor NPC"); return true; }
             n.Name = Clip(n.Name, 40);
             if (n.CastId != null)
             {
