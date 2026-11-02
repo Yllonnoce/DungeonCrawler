@@ -50,7 +50,7 @@ public partial class ServerWorld : Node
         bus.Sfx += cue => { if (!LocalCues.Contains(cue) && !Quiet) Broadcast(new SfxMsg(cue)); };
         bus.ObjectiveChanged += text => Broadcast(new ObjectiveMsg(text));
         bus.MemberChanged += i => _dirtyMembers.Add(i);
-        bus.LootSpawned += drop => { if (!Quiet) Broadcast(new LootSpawned(SaveMapper.ToDto(drop.Item), Vec(drop.GlobalPosition), drop.KeyIndex, drop.QuestId)); };
+        bus.LootSpawned += drop => { if (!Quiet) Broadcast(new LootSpawned(SaveMapper.ToDto(drop.Item), Vec(drop.GlobalPosition), drop.KeyIndex, drop.QuestId, drop.Coins)); };
         bus.LootRemoved += (id, by) => { if (!Quiet) Broadcast(new LootRemoved(id, by)); };
         bus.PropChanged += (r, what) => { if (!Quiet) Broadcast(new PropEvt(r, what)); };
         bus.TrapPlaced += trap => { if (!Quiet) Broadcast(new TrapPlacedEvt(new PlacedTrapDto { Kind = trap.Kind.ToString(), X = trap.GlobalPosition.X, Y = trap.GlobalPosition.Y, Z = trap.GlobalPosition.Z })); };
@@ -142,6 +142,7 @@ public partial class ServerWorld : Node
     private readonly HashSet<int> _dirtyMembers = new();
     private bool _bagDirty;
     private string _bagSignature = "";
+    private int _goldSent = -1;
 
     private void QuitEmpty()
     {
@@ -567,6 +568,11 @@ public partial class ServerWorld : Node
             _bagSignature = sig;
             _bagDirty = false;
             Broadcast(new BagSync(SaveMapper.ToDto(party.Bag)));
+        }
+        if (party.Gold != _goldSent)
+        {
+            _goldSent = party.Gold;
+            Broadcast(new GoldSync(party.Gold));
         }
     }
 

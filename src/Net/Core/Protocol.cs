@@ -49,4 +49,6 @@ public enum MsgKind : byte
     Emote,
     // the server's answer to a Join choice (v4): the client shows the yes or the no line
     DialogueAnswer,
+    // the party purse (plan A): the server sends the total whenever it changes
+    GoldSync,
 }

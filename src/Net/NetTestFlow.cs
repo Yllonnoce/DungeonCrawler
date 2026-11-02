@@ -171,12 +171,24 @@ public partial class NetTestFlow : Node
                     var away = (main.Builder.Surface(cell) - chest.GlobalPosition) with { Y = 0 };
                     var stand = chest.GlobalPosition + (away.LengthSquared() > 0.01f ? away.Normalized() : Vector3.Forward) * 1.3f;
                     me.Teleport(stand with { Y = chest.GlobalPosition.Y + 0.3f }, chest.GlobalPosition);
-                    _placed3 = true; _lootBefore = client.Trace.Count(t => t == "loot");
+                    _placed3 = true; _goldBefore = main.Party.Gold; _lootBefore = client.Trace.Count(t => t == "loot");
                     return;
                 }
                 if (_clock > 0.8 && !_askedChest) { _askedChest = true; net.Send(new InteractIntent(NetRefs.Chest(chest.SpawnIndex))); }
-                if (client.Trace.Contains("chest") && chest.Opened) { GD.Print($"[net] chest opened, {client.Trace.Count(t => t == "loot") - _lootBefore} item(s) spilled"); _clock = 0; _step = 12; }
-                else if (_clock > 8) Finish("[net]", false, $"chest never opened (trace=[{string.Join(", ", client.Trace)}])");
+                // the chest's coin pile reached the client as a pile; take it through the server like any pickup
+                if (chest.Opened && !_askedCoins && main.Builder.FloorRoot?.GetChildren().OfType<Items.LootDrop>().Where(d => d.Coins > 0).OrderBy(d => d.GlobalPosition.DistanceSquaredTo(me.GlobalPosition)).FirstOrDefault() is { } pile)
+                {
+                    _askedCoins = true;
+                    me.Teleport(pile.GlobalPosition + new Vector3(0.6f, 0.2f, 0.6f), pile.GlobalPosition);
+                    net.Send(new InteractIntent(NetRefs.Loot(pile.Item.Id)));
+                }
+                if (client.Trace.Contains("chest") && chest.Opened && client.Trace.Contains("gold") && main.Party.Gold > _goldBefore)
+                {
+                    GD.Print($"[net] chest opened, {client.Trace.Count(t => t == "loot") - _lootBefore} item(s) spilled");
+                    GD.Print($"[net] gold synced: {main.Party.Gold}");
+                    _clock = 0; _step = 12;
+                }
+                else if (_clock > 8) Finish("[net]", false, $"chest never opened or its gold never synced (gold {main.Party.Gold} vs {_goldBefore}, trace=[{string.Join(", ", client.Trace)}])");
                 return;
             }
             case 12:
@@ -283,6 +295,7 @@ public partial class NetTestFlow : Node
                 _firstRun = $"hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}, snapshots {client.SnapshotsSeen}, rtt {client.Rtt * 1000:0} ms, trace=[{string.Join(", ", client.Trace.Distinct())}]";
                 _bagAtLeave = main.Party.Bag.Items.Count();
                 _memberAtLeave = client.MemberIndex;
+                _goldAtLeave = main.Party.Gold;
                 GD.Print($"[net] leaving with {_bagAtLeave} bag item(s) as member {_memberAtLeave}; rejoining shortly");
                 net.Disconnect("test: leaving to rejoin");
                 _clock = 0; _step = 9;
@@ -291,10 +304,10 @@ public partial class NetTestFlow : Node
                 if (!client.Trace.Contains("ready")) { if (_clock > 40) Finish("[net]", false, $"rejoin never became ready ({net.Status})"); return; }
                 if (client.SnapshotsSeen < 5) return;
                 var back = main.Party.Bag.Items.Count();
-                var okRejoin = client.MemberIndex == _memberAtLeave && back >= _bagAtLeave && Game.Instance.CurrentFloor == 2 && main.LayoutHashMatched;
+                var okRejoin = client.MemberIndex == _memberAtLeave && back >= _bagAtLeave && Game.Instance.CurrentFloor == 2 && main.LayoutHashMatched && main.Party.Gold == _goldAtLeave;
                 var ok = okRejoin && _firstRun.Contains("hash match");
                 _done = true;
-                GD.Print($"[net] rejoined as member {client.MemberIndex} (was {_memberAtLeave}), bag {back} (was {_bagAtLeave}), floor {Game.Instance.CurrentFloor}");
+                GD.Print($"[net] rejoined as member {client.MemberIndex} (was {_memberAtLeave}), bag {back} (was {_bagAtLeave}), gold {main.Party.Gold} (was {_goldAtLeave}), floor {Game.Instance.CurrentFloor}");
                 GD.Print($"[net] RESULT {(ok ? "ok" : "FAIL")}: first run {_firstRun}; rejoin {(okRejoin ? "ok" : "FAIL")}");
                 net.Disconnect("test finished");
                 GetTree().CreateTimer(1.0).Timeout += () => GetTree().Quit(ok ? 0 : 1);
@@ -308,7 +321,8 @@ public partial class NetTestFlow : Node
     private double _swingClock, _chaseClock;
     private int _swings, _bagBefore, _lootBefore;
     private string _firstRun = "";
-    private int _bagAtLeave, _memberAtLeave;
+    private int _bagAtLeave, _memberAtLeave, _goldBefore, _goldAtLeave;
+    private bool _askedCoins;
     private void Trace(string what) => GD.Print($"[net] {what}");
     private Vector3? _startAfterPose, _hazardReturn;
     private int _placements, _placementsAtFloor2;

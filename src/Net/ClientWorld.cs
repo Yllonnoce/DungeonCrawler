@@ -74,6 +74,7 @@ public partial class ClientWorld : Node
             case ForcePose fp: ApplyForcePose(fp); break;
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
+            case GoldSync gs: Main.Instance.Party.SetGold(gs.Gold); Trace.Add("gold"); break;
             case LootSpawned ls: OnLootSpawned(ls); break;
             case LootRemoved lr: OnLootRemoved(lr); break;
             case PropEvt pe: OnProp(pe); break;
@@ -167,6 +168,7 @@ public partial class ClientWorld : Node
         if (Root is not { } root) return;
         var drop = GD.Load<PackedScene>("res://scenes/Props/LootDrop.tscn").Instantiate<Items.LootDrop>();
         drop.Item = Save.SaveMapper.FromDto(ls.Item, Game.Instance.Catalog);
+        drop.Coins = ls.Coins;
         drop.KeyIndex = ls.KeyIndex;
         drop.QuestId = ls.QuestKey;
         root.AddChild(drop);

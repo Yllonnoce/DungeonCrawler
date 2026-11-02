@@ -64,6 +64,7 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
     List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0, string? Objective = null) : NetMessage;
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
+[Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;
 [Msg(MsgKind.QuestSync)] public sealed record QuestSync(QuestState Quest) : NetMessage;
 [Msg(MsgKind.Objective)] public sealed record ObjectiveMsg(string Text) : NetMessage;
 [Msg(MsgKind.Log)] public sealed record LogMsg(List<string> Lines) : NetMessage;
@@ -82,7 +83,7 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.EnemyState)] public sealed record EnemyStateMsg(int NetId, string State) : NetMessage;
 [Msg(MsgKind.ProjectileSpawned)] public sealed record ProjectileSpawned(int Id, NetVec Position, NetVec Velocity, bool Arrow, uint Color, int SourceMember) : NetMessage;
 [Msg(MsgKind.ProjectileEnded)] public sealed record ProjectileEnded(int Id, NetVec Position) : NetMessage;
-[Msg(MsgKind.LootSpawned)] public sealed record LootSpawned(ItemDto Item, NetVec Position, int KeyIndex, string? QuestKey) : NetMessage;
+[Msg(MsgKind.LootSpawned)] public sealed record LootSpawned(ItemDto Item, NetVec Position, int KeyIndex, string? QuestKey, int Coins = 0) : NetMessage;
 [Msg(MsgKind.LootRemoved)] public sealed record LootRemoved(Guid Id, int ByMember) : NetMessage;
 [Msg(MsgKind.ChestOpened)] public sealed record ChestOpenedEvt(int Index) : NetMessage;
 [Msg(MsgKind.ChestLocked)] public sealed record ChestLockedEvt(int Index, bool Locked) : NetMessage;
