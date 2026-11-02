@@ -67,6 +67,8 @@ public sealed class PartyDto
     public List<string> Stances { get; set; } = new();
     public List<CharacterDto> Members { get; set; } = new();
     public List<BagCellDto> Bag { get; set; } = new();
+    /// <summary>The party's shared gold purse. Saves before version 10 have none, so it loads as 0.</summary>
+    public int Gold { get; set; }
 }
 
 public sealed class PoseDto

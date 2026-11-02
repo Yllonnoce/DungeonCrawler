@@ -3163,7 +3163,7 @@ public partial class DebugTools : Node
         var loot = root.GetChildren().OfType<LootDrop>().Count(l => !l.IsQueuedForDeletion());
         var chests = root.GetChildren().OfType<Dungeon.Props.Chest>().Count(c => c.Opened);
         var pos = party.GlobalPosition;
-        return $"floor={Game.Instance.CurrentFloor} enemies={enemies} loot={loot} openedChests={chests} bag=[{string.Join(",", party.Bag.Items.Select(i => i.DisplayName))}] hp={string.Join("/", party.Members.Select(m => m.Hp.ToString("0")))} pos=({pos.X:0.0},{pos.Z:0.0}) explored={main.Exploration?.Seen.Count}";
+        return $"floor={Game.Instance.CurrentFloor} enemies={enemies} loot={loot} openedChests={chests} bag=[{string.Join(",", party.Bag.Items.Select(i => i.DisplayName))}] hp={string.Join("/", party.Members.Select(m => m.Hp.ToString("0")))} pos=({pos.X:0.0},{pos.Z:0.0}) explored={main.Exploration?.Seen.Count} gold={party.Gold}";
     }
 
     // Synthetic mouse drag: bag cell -> paper-doll cell, then doll -> doll, through the real GUI input path.

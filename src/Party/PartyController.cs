@@ -38,6 +38,8 @@ public partial class PartyController : Node3D
     public CharacterState[] Members { get; private set; } = Array.Empty<CharacterState>();
     public Adventurer[] Adventurers { get; private set; } = Array.Empty<Adventurer>();
     public Inventory Bag { get; } = new();
+    /// <summary>The party's shared gold purse (never negative).</summary>
+    public int Gold { get; private set; }
     public Random Rng { get; } = new(7);
     /// <summary>The member this machine controls, or -1 (a dedicated server, or a client between characters).</summary>
     public int LocalIndex { get; private set; }
@@ -754,6 +756,35 @@ public partial class PartyController : Node3D
         if (!quiet) EventBus.Instance.Log($"Dropped {item}.");
     }
 
+    // ---- gold ----------------------------------------------------------------------------------
+
+    /// <summary>Adds (or, negative, removes) gold; the purse never drops below 0. Logs the real change and chimes on a gain.</summary>
+    public void AddGold(int amount)
+    {
+        var before = Gold;
+        Gold = Math.Max(0, Gold + amount);
+        var delta = Gold - before;
+        EventBus.Instance.RaiseGoldChanged(Gold, delta);
+        EventBus.Instance.Log(delta >= 0 ? $"+{delta} gold" : $"{delta} gold");
+        if (delta > 0) EventBus.Instance.PlaySfx("coins");
+    }
+
+    /// <summary>Pays from the purse; false (and nothing taken) when the party cannot afford it.</summary>
+    public bool TrySpendGold(int amount)
+    {
+        if (amount > Gold) return false;
+        AddGold(-amount);
+        return true;
+    }
+
+    /// <summary>Mirrors the server's total on a client: no log line, no chime.</summary>
+    public void SetGold(int gold)
+    {
+        var delta = Math.Max(0, gold) - Gold;
+        Gold += delta;
+        EventBus.Instance.RaiseGoldChanged(Gold, delta);
+    }
+
     // ---- save ----------------------------------------------------------------------------------
 
     public Save.PartyDto CaptureState()
@@ -767,6 +798,7 @@ public partial class PartyController : Node3D
             Stances = Adventurers.Select(a => a.Stance.ToString()).ToList(),
             Members = Members.Select(Save.SaveMapper.ToDto).ToList(),
             Bag = Save.SaveMapper.ToDto(Bag),
+            Gold = Gold,
         };
     }
 
@@ -777,6 +809,7 @@ public partial class PartyController : Node3D
         ClassProfile? Classes(string id) => Registry.Instance.TryGet<ClassDef>(id, out var def) ? def.ToProfile() : null;
         if (dto.Members.Count > 0) Members = dto.Members.Select(m => Save.SaveMapper.FromDto(m, Classes, cat, Game.Instance.Skills)).ToArray();
         Save.SaveMapper.Restore(Bag, dto.Bag, cat);
+        Gold = Math.Max(0, dto.Gold);
         if (Members.Length != Adventurers.Length && GetParent() is { } world) SpawnBodies(world);
         _effectVersions.Clear();
         _effectVersions.AddRange(Members.Select(m => m.Effects.Version));

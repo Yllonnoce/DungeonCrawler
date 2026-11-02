@@ -16,6 +16,8 @@ public partial class EventBus : Node
     public event Action<int, int>? FloorChanged;
     /// <summary>A party member's stats changed (hp, mana, cooldown). Payload is the member index.</summary>
     public event Action<int>? MemberChanged;
+    /// <summary>The party purse changed: new total, and the change (0 when a client mirror is set to the same total).</summary>
+    public event Action<int, int>? GoldChanged;
     public event Action<ItemInstance>? ItemPickedUp;
     /// <summary>Free-text line for the HUD message log.</summary>
     public event Action<string>? Message;
@@ -117,6 +119,7 @@ public partial class EventBus : Node
     public void RaiseMemberDowned(int index) => MemberDowned?.Invoke(index);
     public void RaisePartyWiped() => PartyWiped?.Invoke();
     public void RaiseAbilityUsed(int index, Combat.AbilityKind kind) => AbilityUsed?.Invoke(index, kind);
+    public void RaiseGoldChanged(int total, int delta) => GoldChanged?.Invoke(total, delta);
     public void RaiseLeadChanged(int index) => LeadChanged?.Invoke(index);
     public void RaiseRosterChanged() => RosterChanged?.Invoke();
     public void RaiseBossSeen(Enemies.Enemy boss) => BossSeen?.Invoke(boss);
