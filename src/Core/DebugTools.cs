@@ -2663,11 +2663,19 @@ public partial class DebugTools : Node
                     talk.Choose(1);
                     var progress = talk.Node?.Line.Text;
                     var again = string.Join(" / ", talk.Choices.Select(c => c.Text));
+                    // the dialogue closing on Trade must not release the input (the mouse recaptured, the cursor warping) before the shop shows
+                    bool? lockedAsTalkClosed = null;
+                    void OnTalkClosed() => lockedAsTalkClosed = main.Party.InputLocked;
+                    talk.Closed += OnTalkClosed;
                     talk.Choose(0);
+                    talk.Closed -= OnTalkClosed;
                     var shopOpened = main.Hud.ShopOpen;
+                    var keeper = main.Hud.Shop.Keeper == merchantNpc;
                     main.Hud.Shop.Close();
-                    GD.Print($"[saferoom] merchant talk: \"{opening}\" [{offered}]; how is it going: \"{progress}\" [{again}]; after Trade open={talk.Visible}, shop open={shopOpened}");
+                    GD.Print($"[saferoom] merchant talk: \"{opening}\" [{offered}]; how is it going: \"{progress}\" [{again}]; after Trade open={talk.Visible}, shop open={shopOpened}, input locked as the talk closed={lockedAsTalkClosed}, shop keeper={keeper}");
                     if (!shopOpened) Fail("Trade did not open the shop");
+                    if (lockedAsTalkClosed != true) Fail("Trade released the input between the talk and the shop (the cursor warps)");
+                    if (!keeper) Fail("the shop does not know the merchant it was opened from (he would stop talking)");
                     if (offered != "Trade / How is it going? / Leave" || again != offered) Fail($"merchant choices are [{offered}] then [{again}]");
                     if (opening != ml.Trade.Text || progress != ml.Progress.Text) Fail("merchant lines are not his trade and progress lines");
                     if (talk.Visible) { Fail("Trade left the dialogue open"); talk.Close(); }
@@ -3003,6 +3011,24 @@ public partial class DebugTools : Node
                     if (!open || stockCells != party.ShopStockFor(floor).Items.Count || Math.Abs(soldDim - 0.4f) > 0.01f || price != wantPrice || purse != $"{party.Gold} gold" || !locked || hud.ShopOpen || party.InputLocked)
                         Fail("the shop screen did not show the stock, the sold slot, the prices and the purse, or did not lock and release the input");
                     else GD.Print("[saferoom] shop screen opens: OK");
+                    // (g) a legendary from the bag waits for the question: still there after the click, gone once confirmed
+                    var cat = Game.Instance.Catalog;
+                    var leg = cat.Legendaries.Values.Where(l => l.ShopOnly).OrderBy(l => l.Id, StringComparer.Ordinal).First();
+                    var legendary = Items.LootRoller.MakeLegendary(cat, leg, 10, new Random(1));
+                    if (!party.Bag.TryAdd(legendary)) { Fail("no bag room for the legendary"); Finish(); break; }
+                    var cellIndex = Enumerable.Range(0, party.Bag.Capacity).First(i => ReferenceEquals(party.Bag[i], legendary));
+                    var legPrice = Items.Prices.SellPrice(legendary);
+                    var goldPre = party.Gold;
+                    shop.Open(floor);
+                    shop.Clicked(false, cellIndex);
+                    var waited = ReferenceEquals(party.Bag[cellIndex], legendary) && party.Gold == goldPre;
+                    var asking = shop.Confirming;
+                    shop.Confirm();
+                    var gone = party.Bag[cellIndex] == null && party.Gold == goldPre + legPrice;
+                    shop.Close();
+                    GD.Print($"[saferoom] legendary sell ({legendary.DisplayName}, {legPrice} gold): after the click in bag={waited} asking={asking}; after confirming gone={gone}, gold {goldPre} -> {party.Gold}");
+                    if (waited && asking && gone) GD.Print("[saferoom] legendary sell waits for the confirm: OK");
+                    else Fail("a legendary sold without asking, or the confirm did not sell it");
                 }
                 catch (Exception e) { Fail($"shop screen: {e.GetType().Name}: {e.Message}"); }
                 Finish();

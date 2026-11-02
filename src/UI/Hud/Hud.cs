@@ -380,7 +380,7 @@ public partial class Hud : Control
 
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }

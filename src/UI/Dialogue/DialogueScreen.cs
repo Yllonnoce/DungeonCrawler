@@ -113,8 +113,9 @@ public partial class DialogueScreen : Control
         {
             case MerchantTrade:
                 GD.Print($"[Dialogue] {npc.Id}: trade");
+                // the shop opens first and closes this dialogue as it does, so the mouse stays released and he keeps talking
+                Main.Instance?.Hud?.Shop.Open(Game.Instance.CurrentFloor, npc);
                 Close();
-                Main.Instance?.Hud?.Shop.Open(Game.Instance.CurrentFloor);
                 return;
             case MerchantProgress when npc.MerchantLines is { } lines:
                 Show(MerchantNode(lines.Progress));
@@ -248,7 +249,7 @@ public partial class DialogueScreen : Control
         Visible = false;
         _pendingJoin = null;
         _merchant = false;
-        Npc?.Converse(null); // back to Idle once the conversation ends
+        if (Main.Instance?.Hud?.Shop is not { IsOpening: true } shop || shop.Keeper != Npc) Npc?.Converse(null); // back to Idle once the conversation ends (a shop he opens keeps him talking)
         Npc = null;
         Node = null;
         EventBus.Instance.PlaySfx("ui_close");

@@ -9,7 +9,7 @@ namespace DungeonCrawler.UI.Shop;
 /// <summary>
 /// The merchant's shop: his stock for the floor on the left (price under each item, sold slots greyed), the party's bag on
 /// the right (what each item would fetch), the purse in the middle. A click buys or sells, as does a drag from one side to
-/// the other; a legendary asks first. Every trade goes through <see cref="PartyController.ShopBuy"/> / <see cref="PartyController.ShopSell"/>.
+/// the other; buying or selling a legendary asks first. Every trade goes through <see cref="PartyController.ShopBuy"/> / <see cref="PartyController.ShopSell"/>.
 /// </summary>
 public partial class ShopScreen : PanelContainer
 {
@@ -22,6 +22,8 @@ public partial class ShopScreen : PanelContainer
     private Label _gold = null!;
     private ConfirmationDialog _confirm = null!;
     private int _pendingBuy = -1;
+    private int _pendingSell = -1;
+    private Guid _pendingSellItem;
 
     /// <summary>Raised as the shop opens, before it shows: the HUD closes its other screens.</summary>
     public event Action? Opening;
@@ -29,10 +31,18 @@ public partial class ShopScreen : PanelContainer
     public event Action? Closed;
 
     public int Floor => _floor;
+    /// <summary>The merchant the shop was opened from: he keeps his conversation pose while it is open. Null when opened otherwise.</summary>
+    public Adventure.Npc? Keeper { get; private set; }
+    /// <summary>True from <see cref="Opening"/> until the shop shows: the HUD keeps the mouse released while the dialogue it came from closes.</summary>
+    public bool IsOpening { get; private set; }
     public string GoldText => _gold.Text;
     public ItemSlotControl StockCell(int index) => _stock[index];
     public ItemSlotControl BagCell(int index) => _bag[index];
     public int StockCount => _stock.Count;
+    /// <summary>True while the legendary buy or sell question is up.</summary>
+    public bool Confirming => _confirm.Visible;
+    /// <summary>Answers the question as the OK button does (the headless flows).</summary>
+    public void Confirm() { OnConfirmed(); _confirm.Hide(); }
 
     public void Bind(PartyController party) => _party = party;
 
@@ -96,11 +106,19 @@ public partial class ShopScreen : PanelContainer
         }
 
         _confirm = new ConfirmationDialog { Title = "A legendary", OkButtonText = "Buy", CancelButtonText = "Not now" };
-        _confirm.Confirmed += () => { var i = _pendingBuy; _pendingBuy = -1; if (i >= 0) Buy(i); };
-        _confirm.Canceled += () => _pendingBuy = -1;
+        _confirm.Confirmed += OnConfirmed;
+        _confirm.Canceled += () => { _pendingBuy = -1; _pendingSell = -1; };
         AddChild(_confirm);
 
         EventBus.Instance.GoldChanged += OnGoldChanged;
+    }
+
+    private void OnConfirmed()
+    {
+        var (buy, sell) = (_pendingBuy, _pendingSell);
+        _pendingBuy = -1; _pendingSell = -1;
+        if (buy >= 0) Buy(buy);
+        else if (sell >= 0 && _party.Bag[sell]?.Id == _pendingSellItem) Sell(sell); // the cell still holds what was asked about (by id: a co-op bag sync rebuilds the items)
     }
 
     public override void _ExitTree() => EventBus.Instance.GoldChanged -= OnGoldChanged;
@@ -108,12 +126,18 @@ public partial class ShopScreen : PanelContainer
     private void OnGoldChanged(int total, int delta) { if (Visible) Refresh(); }
 
     /// <summary>Shows the merchant's stock for <paramref name="floor"/> beside the bag.</summary>
-    public void Open(int floor)
+    public void Open(int floor, Adventure.Npc? keeper = null)
     {
         _floor = floor;
-        Opening?.Invoke();
-        BuildStock();
-        Visible = true;
+        Keeper = keeper;
+        IsOpening = true;
+        try
+        {
+            Opening?.Invoke();
+            BuildStock();
+            Visible = true;
+        }
+        finally { IsOpening = false; }
         Refresh();
         EventBus.Instance.PlaySfx("ui_open");
         GD.Print($"[Shop] open for floor {floor}: {_stock.Count} wares, {_party.ShopSoldOnFloor.Count} sold, {_party.Gold} gold");
@@ -124,7 +148,10 @@ public partial class ShopScreen : PanelContainer
     {
         if (!Visible) return;
         Visible = false;
+        if (Keeper is { } keeper && IsInstanceValid(keeper)) keeper.Converse(null); // back to Idle once the trading ends
+        Keeper = null;
         _pendingBuy = -1;
+        _pendingSell = -1;
         _confirm.Hide();
         EventBus.Instance.PlaySfx("ui_close");
         Closed?.Invoke();
@@ -176,7 +203,7 @@ public partial class ShopScreen : PanelContainer
     public void Clicked(bool stockSide, int index)
     {
         if (stockSide) TryBuy(index);
-        else Sell(index);
+        else TrySell(index);
     }
 
     /// <summary>A drag landed on the other side: from the stock it buys, from the bag it sells.</summary>
@@ -190,11 +217,29 @@ public partial class ShopScreen : PanelContainer
         {
             var item = stock.Items[index];
             _pendingBuy = index;
+            _pendingSell = -1;
+            _confirm.OkButtonText = "Buy";
             _confirm.DialogText = $"Buy {item.DisplayName} for {Prices.BuyPrice(item)} gold?";
             _confirm.PopupCentered();
             return;
         }
         Buy(index);
+    }
+
+    /// <summary>Sells bag cell <paramref name="index"/>, asking first when it is a legendary (he never resells one).</summary>
+    public void TrySell(int index)
+    {
+        if (index >= 0 && index < _party.Bag.Capacity && _party.Bag[index] is { Rarity: Rarity.Legendary } item && Prices.Sellable(item))
+        {
+            _pendingSell = index;
+            _pendingSellItem = item.Id;
+            _pendingBuy = -1;
+            _confirm.OkButtonText = "Sell";
+            _confirm.DialogText = $"Sell {item.DisplayName} for {Prices.SellPrice(item)} gold? The merchant never resells.";
+            _confirm.PopupCentered();
+            return;
+        }
+        Sell(index);
     }
 
     private void Buy(int index)
@@ -207,6 +252,12 @@ public partial class ShopScreen : PanelContainer
     {
         _party.ShopSell(BagSlot.Bag(index));
         Refresh();
+    }
+
+    /// <summary>The talk pose rules of a conversation: Talk while his line is still playing, the waiting pose after.</summary>
+    public override void _Process(double delta)
+    {
+        if (Visible && Keeper is { } keeper && IsInstanceValid(keeper)) keeper.Converse(Audio.AudioManager.Instance?.VoiceBusy == true);
     }
 
     public override void _UnhandledInput(InputEvent @event)

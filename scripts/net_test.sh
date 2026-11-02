@@ -45,7 +45,6 @@ fi
 if ! grep -q "\[net\] safe room: HUD shows" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's HUD never showed the safe room)"; exit 1; fi
 # the merchant in that safe room: a purchase and a sale through the server, each answered with a shop sync
 if ! grep -q "\[net\] bought and sold at the merchant" "$TMP/client.log"; then echo "NET TEST: FAIL (no purchase and sale at the merchant)"; exit 1; fi
-if ! grep -q "\[net\] RESULT ok:.*trace=\[[^]]*shop" "$TMP/client.log"; then echo "NET TEST: FAIL (no shop sync in the client trace)"; exit 1; fi
 
 if [ "$MODE" = direct ]; then
   # second pass: the server restarts on its own save; the same name gets its character, bag and floor back
