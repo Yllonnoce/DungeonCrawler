@@ -33,6 +33,10 @@ public static partial class FloorGenerator
                 ConnectRooms(spec, rng, layout);
                 DigDrifts(spec, new Random(seed ^ 0x0D1F), layout);
                 break;
+            case LayoutKind.Tavern:
+                PlaceTavernRoom(spec, layout);
+                CarveRooms(layout);
+                break;
             default:
                 PlaceRooms(spec, rng, layout);
                 CarveRooms(layout);
@@ -41,6 +45,7 @@ public static partial class FloorGenerator
         }
         RaiseWalls(layout);
         PlaceStairs(layout);
+        if (layout.Kind == LayoutKind.Tavern) PlaceTavernStairs(layout);
         PlaceVaults(spec, rng, layout);
         Verticality.AssignLevels(spec, rng, layout);
         PlaceObjective(spec, new Random(seed ^ 0x0B1E), layout); // rooms and doors the objective needs; a no-op without one
@@ -256,6 +261,18 @@ public static partial class FloorGenerator
     }
 
     // ---- stairs and spawns -------------------------------------------------------------------
+
+    /// <summary>The tavern's one room, 7 by 5, centred in its small grid.</summary>
+    private static void PlaceTavernRoom(FloorSpec spec, FloorLayout layout)
+        => layout.Rooms.Add(new Room((spec.Width - 7) / 2, (spec.Height - 5) / 2, 7, 5));
+
+    /// <summary>The tavern's stairs: up in the top-left corner of the room, down in the bottom-right.</summary>
+    private static void PlaceTavernStairs(FloorLayout layout)
+    {
+        var room = layout.Rooms[0];
+        layout.UpStairs = new GridPos(room.X, room.Y);
+        layout.DownStairs = new GridPos(room.X + room.W - 1, room.Y + room.H - 1);
+    }
 
     private static void PlaceStairs(FloorLayout layout)
     {

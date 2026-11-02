@@ -14,6 +14,8 @@ public enum LayoutKind : byte
     Flooded = 4,
     /// <summary>Fires burn across the room floors; standing in one burns.</summary>
     Burning = 5,
+    /// <summary>The tavern above the dungeon: one room, floor 0 only; never dealt.</summary>
+    Tavern = 6,
 }
 
 /// <summary>
@@ -42,6 +44,7 @@ public static class LayoutKinds
         LayoutKind.Mine => "long timbered galleries, dead-end drifts dug into the rock, shafts down to cellars and heaps of spoil",
         LayoutKind.Flooded => "most rooms lie under knee-deep water that slows everyone wading through it",
         LayoutKind.Burning => "fires burn across the room floors and anyone standing in one burns; no water",
+        LayoutKind.Tavern => "the tavern over the dungeon: one warm room with the way down in a corner",
         _ => "the ordinary rooms-and-corridors floor",
     };
 
@@ -148,6 +151,13 @@ public static class LayoutKinds
         // flat: water beds sink into the floor, which an upper room's plinth has no room for, so every room can flood
         LayoutKind.Flooded => spec with { HighRoomChance = 0f, LedgeCount = 0, PitCount = 0, StructureCount = Math.Min(spec.StructureCount, 1) },
         LayoutKind.Burning => spec with { WaterCount = 0, FireCount = Math.Max(spec.FireCount, 14), RubbleCount = Math.Max(spec.RubbleCount, 3), StructureCount = Math.Min(spec.StructureCount, 1) },
+        LayoutKind.Tavern => spec with
+        {
+            Width = 11, Height = 9, MinRooms = 1, MaxRooms = 1, MinRoomSize = 5, MaxRoomSize = 7,
+            EnemyCount = 0, ChestCount = 0, BreakableCount = 0, TrapCount = 0, VaultCount = 0, LockedChestCount = 0, LedgeCount = 0,
+            PitCount = 0, SecretCount = 0, StructureCount = 0, RubbleCount = 0, NestCount = 0, FireCount = 0,
+            HighRoomChance = 0f, HazardsEnabled = false, Objective = FloorObjectiveKind.None,
+        },
         _ => spec,
     };
 }
