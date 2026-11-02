@@ -2629,7 +2629,7 @@ public partial class DebugTools : Node
                 if (_srDoor.Cell != layout.SafeRoomDoor) Fail($"the door stands at {_srDoor.Cell}, the layout says {layout.SafeRoomDoor}");
                 if (_srDoor.Prompt != "") Fail("the safe door has a prompt");
                 if (_srDoor.IsOpen) Fail("the safe door starts open");
-                if (gather == null) Fail("no gather cell");
+                if (gather == null) { Fail("no gather cell"); Finish(); return; }
                 if (controller == null) Fail("no SafeRoomController");
                 // 2. walk up to the door: stand 2 m from it on the corridor side
                 var near = Outside(1)!.Value;
@@ -2652,7 +2652,9 @@ public partial class DebugTools : Node
                 var merchant = SafeRoomRules.MerchantCell(layout);
                 party.Teleport(Stand(merchant), _srDoor.GlobalPosition);
                 _srOccupiedAt = _elapsed; // the gathering clock starts with this step inside
-                _srEnemy = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], Stand(outside), b.CurrentFloor);
+                var regulars = b.RegularEnemies(b.CurrentFloor);
+                var meleeId = regulars.FirstOrDefault(id => b.EnemyProfile(id)?.Kind == EnemyKind.Melee) ?? regulars[0]; // a melee one walks right up to the door
+                _srEnemy = b.SpawnEnemy(meleeId, Stand(outside), b.CurrentFloor);
                 if (_srEnemy == null) { Fail("could not spawn the test enemy"); Finish(); return; }
                 GD.Print($"[saferoom] {_srEnemy.DisplayName} spawned at {outside}; party at {merchant}, {b.Surface(merchant).DistanceTo(_srDoor.GlobalPosition):0.0} m behind the door");
                 Next();
@@ -2667,6 +2669,11 @@ public partial class DebugTools : Node
                 var cell = DungeonBuilder.WorldToCell(_srEnemy!.GlobalPosition);
                 GD.Print($"[saferoom] after 3 s the enemy ({_srEnemy.State.Name}, alive={_srEnemy.IsAlive}) stands at {cell}, {_srEnemy.GlobalPosition.DistanceTo(_srDoor!.GlobalPosition):0.0} m from the door, in room={layout.IsInSafeRoom(cell)}; door open={_srDoor.IsOpen}");
                 if (!_srEnemy.IsAlive) Fail("the test enemy died before it could try the door");
+                // the door must be shut because it held, not because the enemy never came: it is hunting and pressed against it
+                var atDoor = _srEnemy.GlobalPosition.DistanceTo(_srDoor.GlobalPosition);
+                if (_srEnemy.State.Name is not ("Chase" or "Attack" or "Shoot")) Fail($"the test enemy is in {_srEnemy.State.Name}, not hunting the party");
+                if (atDoor > SafeRoomRules.DoorOpenRadius + 0.5f) Fail($"the test enemy stands {atDoor:0.0} m from the door, never came at it (want <= {SafeRoomRules.DoorOpenRadius + 0.5f:0.0})");
+                else GD.Print($"[saferoom] the enemy is at the door ({atDoor:0.0} m <= {SafeRoomRules.DoorOpenRadius + 0.5f:0.0}) and hunting ({_srEnemy.State.Name}); the door held");
                 if (_srDoor.IsOpen) Fail("the door opened for an enemy");
                 if (layout.IsInSafeRoom(cell) || cell == layout.SafeRoomDoor) Fail("the enemy got into the safe room");
                 if (!SafeRoomRules.Cells(layout).Append(layout.SafeRoomDoor).All(b.IsCellBlockedForEnemies)) Fail("some safe room cell is open to enemies");
