@@ -259,4 +259,6 @@ public sealed class WorldItemDto
     public float X { get; set; }
     public float Y { get; set; }
     public float Z { get; set; }
+    /// <summary>Above zero: a pile of gold, and Item is only a placeholder.</summary>
+    public int Coins { get; set; }
 }

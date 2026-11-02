@@ -2575,7 +2575,9 @@ public partial class DebugTools : Node
                 for (var i = 0; party.Bag.FreeSlots > 0 && i < 200; i++) party.Bag.TryAdd(ItemInstance.Simple($"item.junk{i}", "Junk")); // one of each: nothing stacks
                 _goldBefore = party.Gold;
                 _goldPile.Interact(party, party.Lead);
+                _goldPile.Interact(party, party.Lead); // a second pickup in the same frame must not pay again
                 Check("full bag pickup", party.Bag.FreeSlots == 0 && party.Gold == _goldBefore + _goldPile.Coins && _goldPile.IsQueuedForDeletion());
+                Check("double pickup", party.Gold == _goldBefore + _goldPile.Coins);
                 break;
             case 2 when _elapsed >= 3.0:
                 _goldStep++;
@@ -2586,6 +2588,12 @@ public partial class DebugTools : Node
             case 3 when _elapsed >= 5.0:
                 _goldStep++;
                 Check("companion pickup", party.Gold == _goldBefore + 25);
+                // a pile left on the floor must survive save and load
+                party.SpawnCoins(17, party.Lead.GlobalPosition + new Vector3(0, 0, -40f));
+                main.SaveGame("gold");
+                main.LoadGame("gold");
+                var back = Main.Instance!.Builder.FloorRoot!.GetChildren().OfType<LootDrop>().ToList();
+                Check("save round trip", back.Any(d => d.Coins == 17) && !back.Any(d => d.Coins == 0 && d.Item.DefId == "item.unknown"));
                 break;
             case 4 when _elapsed >= 5.5:
                 _goldStep++;

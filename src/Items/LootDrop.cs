@@ -15,6 +15,9 @@ public partial class LootDrop : Area3D, IInteractable
     public bool DroppedByParty { get; set; }
     /// <summary>Above zero: a pile of gold instead of an item. Its <see cref="Item"/> only supplies the id co-op uses to remove it.</summary>
     public int Coins { get; set; }
+    private bool _taken;
+    /// <summary>Already picked up this frame or about to be freed: no second pickup may count.</summary>
+    public bool Taken => _taken || IsQueuedForDeletion();
 
     public void NotifyPicked() { if (QuestId != null) Core.EventBus.Instance.RaiseQuestItemPicked(QuestId); }
 
@@ -77,6 +80,8 @@ public partial class LootDrop : Area3D, IInteractable
     {
         if (Coins > 0)
         {
+            if (Taken) return;
+            _taken = true;
             party.AddGold(Coins);
             Core.EventBus.Instance.RaiseLootRemoved(Item.Id, actor.Index);
             QueueFree();
