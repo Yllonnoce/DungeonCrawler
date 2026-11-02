@@ -68,10 +68,11 @@ public partial class DebugTools : Node
     /// <summary>Any automation flag: skip the title screen and shorten cosmetic waits.</summary>
     public bool Automated => _started;
     /// <summary>
-    /// The floor a new game opens on: null for an ordinary run (the game's own rule, the tavern), floor 1 for every
-    /// automation and the server, and the tavern too when --floor=0 is given (a deeper --floor= opens on 1 and jumps).
+    /// The floor a new game opens on: null for an ordinary run and a plain --server (the game's own rule, the tavern,
+    /// where co-op players gather until the first descent), floor 1 for every automation and --test-net-server, and
+    /// the tavern too when --floor=0 is given (a deeper --floor= opens on 1 and jumps).
     /// </summary>
-    public int? StartFloor => _floorGiven ? Math.Clamp(_startFloor, 0, 1) : (Automated || _server ? 1 : null);
+    public int? StartFloor => _floorGiven ? Math.Clamp(_startFloor, 0, 1) : (Automated || _testNetServer ? 1 : null);
     /// <summary>The floor the scripted checks face and inspect: the --floor= asked for, else floor 1.</summary>
     private int TargetFloor => _floorGiven ? _startFloor : Math.Max(1, _startFloor); // a scenario that picks its own floor (--test-horde, an objective) still counts
     public string? ReplayDir { get; private set; }
@@ -208,7 +209,7 @@ public partial class DebugTools : Node
     private int _goldStep, _goldFails, _goldBefore;
     private LootDrop? _goldPile;
     private int _partyStep;
-    private bool _server, _netClient;
+    private bool _server, _netClient, _testNetServer;
     private bool _testMusic;
     private bool _bakeResume;
     /// <summary>--keep-old-voice: a bake leaves the bank's unreferenced files alone (by default it sweeps them).</summary>
@@ -344,7 +345,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-music") { _testMusic = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-story") { _testStory = true; TraceAi = false; _quitAfter = 20; }
             else if (arg == "--server") _server = true;
-            else if (arg == "--test-net-server") { _server = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg == "--test-net-server") { _server = true; _testNetServer = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-net-client" || arg == "--test-net-rejoin") { _netClient = true; TraceAi = false; _quitAfter = 90; }
             else if (arg.StartsWith("--join=")) _netClient = true;
         }
