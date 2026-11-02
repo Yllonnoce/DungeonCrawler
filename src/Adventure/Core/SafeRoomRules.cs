@@ -24,7 +24,9 @@ public static class SafeRoomRules
     private const int GatherMax = 8;
 
     /// <summary>
-    /// The room to seal: not a stairs room or the arena, not already a vault, with exactly one entrance whose sealing
+    /// The room to seal: not a stairs room or the arena, not already a vault (the objective's jail and stairs vault are
+    /// vaults), not the ritual shrine or a room holding a cell the objective reserved, no cellar or ledge, every cell on
+    /// the ground and no ramp; with exactly one entrance whose sealing
     /// keeps the down stairs reachable and cuts no other room off, and that entrance within <see cref="RouteDistanceCells"/>
     /// of the route (<paramref name="maxRouteDistance"/>; the generator relaxes it when nothing qualifies). Of those, the
     /// one whose entrance is nearest the route's midpoint (ties: lower room index); -1 when none.
@@ -45,9 +47,14 @@ public static class SafeRoomRules
         {
             var room = rooms[i];
             if (room == upRoom || room == downRoom || room == layout.BossArena || layout.Vaults.Any(v => v.Room == room)) continue;
+            if (layout.Objective is { } objective && (objective.ShrineRoom == room || objective.Reserved.Any(room.Contains))) continue; // the objective's rooms and cells stay its own
+            if (layout.Cellars.Any(c => c.Room == room) || layout.Ledges.Any(l => l.Room == room)) continue;
             var entrances = FloorGenerator.Entrances(layout, room);
             if (entrances.Count != 1) continue;
             var door = entrances[0];
+            if (layout.Objective?.Reserved.Contains(door) == true) continue;
+            // on the ground like every vault: no ramp in it or at its door, no raised floor (the heights are in by now)
+            if (layout.Ramps.ContainsKey(door) || layout.LevelOf(door) != 0 || room.Cells().Any(c => layout.Ramps.ContainsKey(c) || layout.LevelOf(c) != 0)) continue;
             if (route.Min(c => c.ManhattanDistance(door)) > maxRouteDistance) continue;
             var distance = door.ManhattanDistance(mid);
             if (distance >= bestDistance) continue; // ties keep the lower index

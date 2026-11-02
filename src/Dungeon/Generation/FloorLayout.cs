@@ -107,6 +107,8 @@ public sealed class FloorLayout
     /// <summary>The cell the safe room's door stands in (meaningless when <see cref="SafeRoom"/> is -1).</summary>
     public GridPos SafeRoomDoor { get; internal set; }
     public bool IsInSafeRoom(GridPos p) => SafeRoom >= 0 && Rooms[SafeRoom].Contains(p);
+    /// <summary>Whether the safe room was carved for the purpose (a side room the floor did not have) rather than a room it already had.</summary>
+    public bool SafeRoomCarved { get; internal set; }
 
     public FloorLayout(int seed, int width, int height)
     {

@@ -42,9 +42,11 @@ public static partial class FloorGenerator
         RaiseWalls(layout);
         PlaceStairs(layout);
         PlaceVaults(spec, rng, layout);
-        PlaceSafeRoom(layout, new Random(seed ^ 0x5AFE)); // before anything else is placed, so nothing lands inside it
         Verticality.AssignLevels(spec, rng, layout);
         PlaceObjective(spec, new Random(seed ^ 0x0B1E), layout); // rooms and doors the objective needs; a no-op without one
+        // after the objective has fixed its jail, shrine and stairs vault (and moved the stairs), before pits, secrets,
+        // structures, nests and spawns, so nothing lands inside it; from its own seed, so the floor around it is as it was
+        PlaceSafeRoom(layout, new Random(seed ^ 0x5AFE));
         Verticality.PlacePits(spec, rng, layout);
         Verticality.PlaceSecrets(spec, rng, layout);
         PlaceStructures(spec, new Random(seed ^ 0x57C7), layout);
@@ -371,7 +373,8 @@ public static partial class FloorGenerator
     /// </summary>
     internal static void PlaceSafeRoom(FloorLayout layout, Random rng)
     {
-        if (layout.Rooms.Count == 0) return;
+        if (layout.Rooms.Count < 2) return; // a one-room floor (the tavern) has no side to seal
+        var rooms = layout.Rooms.Count;
         var route = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, maxExpansions: 20000) ?? new List<GridPos>();
         // never off the arena or a vault: a side room would open a second way into a vault and sit behind its door
         var open = layout.Rooms.Where(r => r != layout.BossArena && layout.Vaults.All(v => v.Room != r)).ToList();
@@ -386,6 +389,7 @@ public static partial class FloorGenerator
         var room = layout.Rooms[i];
         var door = Adventure.SafeRoomRules.DoorCell(layout, i);
         layout.SafeRoom = i;
+        layout.SafeRoomCarved = i >= rooms;
         layout.SafeRoomDoor = door;
         layout[door] = Cell.Door;
         layout.Vaults.Add(new Vault(layout.Vaults.Count, room, door, VaultKind.SafeDoor, null, null, Revealed: true));
@@ -398,8 +402,9 @@ public static partial class FloorGenerator
         {
             var cells = (Cell[])layout.Cells.Clone();
             var connections = layout.Connections.Count;
-            if (TryCarveSideRoom(rng, layout, hosts[rng.Next(hosts.Count)]) == null) continue;
-            var i = Adventure.SafeRoomRules.Choose(layout, maxRouteDistance);
+            if (TryCarveSideRoom(rng, layout, hosts[rng.Next(hosts.Count)]) is not { } side) continue;
+            // the heights are in by now: the room takes its corridor's ground level, or the carve is undone
+            var i = LevelCarved(layout, side.room, side.entrance) ? Adventure.SafeRoomRules.Choose(layout, maxRouteDistance) : -1;
             if (i >= 0) return i;
             Array.Copy(cells, layout.Cells, cells.Length);
             layout.Rooms.RemoveAt(layout.Rooms.Count - 1);
@@ -469,11 +474,11 @@ public static partial class FloorGenerator
     internal static (Room room, GridPos entrance)? TryCarveSideRoom(Random rng, FloorLayout layout, Room? onto = null)
     {
         var rooms = layout.Rooms;
-        // never off a vault: the corridor would be its second way in (with no vaults yet this is the plain random pick)
-        var hosts = layout.Vaults.Count == 0 ? rooms : rooms.Where(r => layout.Vaults.All(v => v.Room != r)).ToList();
-        if (onto != null && !hosts.Contains(onto)) return null;
-        var host = onto ?? (hosts.Count > 0 ? hosts[rng.Next(hosts.Count)] : null);
-        if (host == null || host == layout.BossArena) return null;
+        // never off a vault: the corridor would be its second way in. The random pick draws from every room and refuses a
+        // vault, so the rng runs exactly as it did before vaults were refused and an older floor carves where it always did.
+        if (onto != null && layout.Vaults.Any(v => v.Room == onto)) return null;
+        var host = onto ?? (rooms.Count > 0 ? rooms[rng.Next(rooms.Count)] : null);
+        if (host == null || host == layout.BossArena || layout.Vaults.Any(v => v.Room == host)) return null;
         var dir = rng.Next(4); // 0 right, 1 left, 2 down, 3 up
         var w = rng.Next(3, 6);
         var h = rng.Next(3, 6);
@@ -735,9 +740,13 @@ public static partial class FloorGenerator
         if (spec.NestCount <= 0) return;
         var upRoom = layout.RoomAt(layout.UpStairs);
         var downRoom = layout.RoomAt(layout.DownStairs);
+        // a room the floor already had and sealed as the safe room is shuffled with the rest and skipped after, so sealing
+        // it does not reshuffle where the breaches go (a carved one was never a candidate: it stays out of the shuffle)
+        var safe = layout.SafeRoom >= 0 && !layout.SafeRoomCarved ? layout.Rooms[layout.SafeRoom] : null;
         var rooms = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena && r.W >= 4 && r.H >= 4
-            && layout.Vaults.All(v => v.Room != r) && layout.Cellars.All(c => c.Room != r)).ToList();
+            && layout.Vaults.All(v => v.Room != r || r == safe) && layout.Cellars.All(c => c.Room != r)).ToList();
         Shuffle(rng, rooms);
+        rooms.Remove(safe!);
         bool Adjoins(Room room) => layout.Connections.Any(c =>
             (layout.Rooms[c.A] == room && layout.Nests.Any(n => n.Room == layout.Rooms[c.B])) || (layout.Rooms[c.B] == room && layout.Nests.Any(n => n.Room == layout.Rooms[c.A])));
         var ordered = rooms.Where(r => !Adjoins(r)).Concat(rooms.Where(Adjoins)).ToList();
