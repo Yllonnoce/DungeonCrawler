@@ -86,6 +86,8 @@ public sealed class CastMember
     [AiIgnore] public string? VoiceId { get; set; }
     [AiDescription("How they sound: VoiceStyle (a few words, at most 120 characters, a distinct person: a boastful captain, a cheerful gravedigger, a sly fence), DefaultDelivery (a delivery id), Voice (a listed voice name).")]
     [AiNotNull] public Voice.Persona? Persona { get; set; }
+    [AiDescription("True for the one cast member who sells to the party from the safe rooms; never a story NPC, never a Secret, quest or Betray.")]
+    public bool Merchant { get; set; }
 }
 
 public sealed class CluePlan
@@ -157,6 +159,31 @@ public sealed class BarkSet
     public List<BarkLine> Lines { get; set; } = new();
 }
 
+/// <summary>What the merchant says on one floor: on meeting the party, when asked how it goes, and when opening the shop.</summary>
+public sealed class MerchantFloorLines
+{
+    public int Floor { get; set; }
+    [AiDescription("Said as the party walks into the safe room, at most 220 characters.")]
+    public Line Greeting { get; set; } = new();
+    [AiDescription("His remark on how the descent is going, at most 220 characters; never a truth about the dungeon.")]
+    public Line Progress { get; set; } = new();
+    [AiDescription("Said as he opens his wares, at most 220 characters.")]
+    public Line Trade { get; set; } = new();
+}
+
+/// <summary>The trader who follows the party down: one briefing at the hire, a few lines per floor, and what he says when gathered.</summary>
+public sealed class MerchantPlan
+{
+    [AiDescription("The hire conversation: nodes hire, quakes, deal, sendoff; every path reaches deal.")]
+    public NpcScript Briefing { get; set; } = new();
+    [AiDescription("One entry for each floor 1 to 20.")]
+    public List<MerchantFloorLines> FloorLines { get; set; } = new();
+    [AiDescription("Three short lines said when he is called to the party in a hurry.")]
+    public List<Line> Gathering { get; set; } = new();
+
+    public MerchantFloorLines? For(int floor) => FloorLines.FirstOrDefault(f => f.Floor == floor);
+}
+
 /// <summary>The arc of a whole run, written once at New Game. Floors are detailed later as <see cref="FloorPlan"/>s.</summary>
 public sealed class CampaignPlan
 {
@@ -177,10 +204,13 @@ public sealed class CampaignPlan
     public List<BarkSet> Barks { get; set; } = new();
     [AiDescription("The antagonist's taunts, thrown at the party as the floors' trials play out: two or three per trigger, spiteful and theatrical, free to curse (period oaths and modern profanity both), each with a clean twin.")]
     public List<TauntPlan> Taunts { get; set; } = new();
+    [AiDescription("The merchant's lines; leave null, they are added from the stock bank.")]
+    [AiNotNull] public MerchantPlan? Merchant { get; set; }
     /// <summary>Free-form continuity notes the planner keeps for itself between floors.</summary>
     public string ArcNotes { get; set; } = "";
 
     public FloorOutline? OutlineFor(int floor) => Floors.FirstOrDefault(f => f.Floor == floor);
+    public CastMember? MerchantCast() => Cast.FirstOrDefault(c => c.Merchant);
     public CastMember? CastFor(string? id) => id == null ? null : Cast.FirstOrDefault(c => c.Id == id);
     public bool IsStoryFloor(int floor) => !string.IsNullOrWhiteSpace(OutlineFor(floor)?.Story);
     public TierPlan? TierFor(int tierIndex) => Tiers.FirstOrDefault(t => t.Index == tierIndex);
