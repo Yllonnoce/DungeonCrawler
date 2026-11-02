@@ -2560,7 +2560,8 @@ public partial class DebugTools : Node
     // ---- --test-safe-room ---------------------------------------------------------------------------------
     // The floor's safe room end to end: the room and its door, the door opening for the party and shut against an
     // enemy, x6 regeneration inside, the HUD line, the gathering (or none with --no-gathering), the gatherers going for
-    // the party when it steps out, the gathered count through a save, and (with --objective=toxic) clean air inside.
+    // the party when it steps out and back to their post when it is gone again, the open door holding a creature out
+    // while a member stands in it, the gathered count through a save, and (with --objective=toxic) clean air inside.
     private bool _testSafeRoom;
     private int _srStep;
     private double _srAt;
@@ -2572,6 +2573,8 @@ public partial class DebugTools : Node
     private double _srOccupiedAt;
     private int _srSavedGathered;
     private readonly List<Enemy> _srGatherers = new();
+    private readonly List<Party.Adventurer> _srFrozen = new();
+    private bool _srBreached;
 
     /// <summary>Walking distances (cells) from the safe room's door to the cells outside it, up to <paramref name="max"/>.</summary>
     private static Dictionary<GridPos, int> SafeRoomOutside(FloorLayout layout, int max)
@@ -2604,6 +2607,7 @@ public partial class DebugTools : Node
         var b = main.Builder;
         var since = _elapsed - _srAt;
         void Next() { _srStep++; _srAt = _elapsed; }
+        void Go(int step) { _srStep = step; _srAt = _elapsed; }
         void Fail(string why) { _srFails.Add(why); GD.Print($"[saferoom] FAIL: {why}"); }
         void Finish()
         {
@@ -2751,15 +2755,110 @@ public partial class DebugTools : Node
             }
             case 9:
             {
-                if (_srGatherers.Count == 0) { GD.Print("[saferoom] no gatherers to step out to (none gathered)"); Next(); break; }
+                if (_srGatherers.Count == 0) { GD.Print("[saferoom] no gatherers to step out to (none gathered)"); Go(30); break; }
                 var hunting = _srGatherers.Where(e => IsInstanceValid(e) && e.State.Name is "Chase" or "Attack").ToList();
                 if (hunting.Count > 0 || _srGatherers.All(e => !IsInstanceValid(e) || !e.IsAlive))
                 {
                     GD.Print($"[saferoom] {since:0.0} s after stepping out: [{string.Join(", ", _srGatherers.Where(IsInstanceValid).Select(e => $"{e.DisplayName}:{e.State.Name}"))}]");
                     if (hunting.Count == 0) Fail("the gatherers died before they were seen to attack");
-                    Next();
+                    // 8. back inside behind the shut door: a gatherer that loses the party goes back to its post, awake
+                    party.Teleport(Stand(SafeRoomRules.MerchantCell(layout)), b.Surface(layout.SafeRoomDoor));
+                    Go(20);
                 }
-                else if (since > 4.0) { Fail($"no gatherer attacked within 4 s: [{string.Join(", ", _srGatherers.Where(IsInstanceValid).Select(e => e.State.Name))}]"); Next(); }
+                else if (since > 4.0) { Fail($"no gatherer attacked within 4 s: [{string.Join(", ", _srGatherers.Where(IsInstanceValid).Select(e => e.State.Name))}]"); Go(30); }
+                break;
+            }
+            case 20:
+            {
+                if (_srDoor!.IsOpen && since >= 0.1) _srDoor.Close(); // the party is deep inside: shut it now rather than after the delay
+                var left = _srGatherers.Where(e => IsInstanceValid(e) && e.IsAlive).ToList();
+                if (left.Count == 0) { GD.Print("[saferoom] no gatherer left alive to go back to its post"); Go(30); break; }
+                float FromPost(Enemy e) => new Vector2(e.GlobalPosition.X - e.HomePosition.X, e.GlobalPosition.Z - e.HomePosition.Z).Length();
+                var holding = left.FirstOrDefault(e => e.State.Name == "Hold" && !e.IsUnaware && e.HoldsPost);
+                if (holding != null && since >= 0.5)
+                {
+                    GD.Print($"[saferoom] {since:0.0} s after the party went back inside: {holding.DisplayName} holds again ({holding.State.Name}, unaware={holding.IsUnaware}), {FromPost(holding):0.0} m from its post");
+                    _srEnemy = holding;
+                    Go(21);
+                }
+                else if (since > left[0].GiveUpSeconds + 2.0)
+                {
+                    Fail($"no gatherer went back to holding within {left[0].GiveUpSeconds + 2.0:0} s: [{string.Join(", ", left.Select(e => $"{e.DisplayName}:{e.State.Name}:unaware={e.IsUnaware}"))}]");
+                    Go(30);
+                }
+                break;
+            }
+            case 21:
+            {
+                // and it walks back to the post it holds, still awake
+                var e = _srEnemy!;
+                if (!IsInstanceValid(e) || !e.IsAlive) { GD.Print("[saferoom] the holder died on its way back"); Go(30); break; }
+                var away = new Vector2(e.GlobalPosition.X - e.HomePosition.X, e.GlobalPosition.Z - e.HomePosition.Z).Length();
+                if (away <= HoldState.StrayDistance && e.State.Name == "Hold" && !e.IsUnaware)
+                {
+                    GD.Print($"[saferoom] {e.DisplayName} back at its post ({away:0.0} m) after {since:0.0} s, holding awake: OK");
+                    Go(30);
+                }
+                else if (since > 12.0) { Fail($"{e.DisplayName} did not walk back to its post: {away:0.0} m off, {e.State.Name}, unaware={e.IsUnaware}"); Go(30); }
+                break;
+            }
+            case 30:
+            {
+                // 9. the open door holds a creature out: a member stands in the doorway (the door open for them), an aggroed
+                // melee creature starts 3 m outside; the companions wait frozen deep inside so nothing kills it first
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree();
+                var merchant = SafeRoomRules.MerchantCell(layout);
+                party.Teleport(Stand(merchant), b.Surface(layout.SafeRoomDoor));
+                var anchor = party.Anchor;
+                _srFrozen.Clear();
+                foreach (var a in party.Active.Where(a => a != anchor)) { a.ProcessMode = ProcessModeEnum.Disabled; _srFrozen.Add(a); }
+                anchor.Teleport(Stand(layout.SafeRoomDoor), b.Surface(merchant));
+                _srMember = anchor.Index;
+                // 3 m out from the door's centre, toward the corridor cell beside it
+                var beside = Outside(1)!.Value;
+                var outward = (b.Surface(beside) - _srDoor!.GlobalPosition) with { Y = 0 };
+                var start = _srDoor.GlobalPosition with { Y = Stand(beside).Y } + outward.Normalized() * 3f;
+                var regulars = b.RegularEnemies(b.CurrentFloor);
+                var meleeId = regulars.FirstOrDefault(id => b.EnemyProfile(id)?.Kind == EnemyKind.Melee) ?? regulars[0];
+                _srEnemy = b.SpawnEnemy(meleeId, start, b.CurrentFloor);
+                if (_srEnemy == null) { Fail("could not spawn the doorway test enemy"); Go(33); break; }
+                _srBreached = false;
+                GD.Print($"[saferoom] {party.Members[anchor.Index].Name} stands in the doorway {layout.SafeRoomDoor}; {_srEnemy.DisplayName} spawned at {DungeonBuilder.WorldToCell(start)}, {(start - _srDoor.GlobalPosition with { Y = start.Y }).Length():0.0} m outside");
+                Next();
+                break;
+            }
+            case 31 when since >= 0.1:
+                _srEnemy!.ForceAggro();
+                Next();
+                break;
+            case 32:
+            {
+                // the member in the doorway is kept standing (the door opens for a living member only)
+                var m = party.Members[_srMember];
+                m.Hp = m.Stats[Characters.Stat.MaxHp];
+                if (IsInstanceValid(_srEnemy) && _srEnemy!.IsAlive && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(_srEnemy.GlobalPosition))) _srBreached = true;
+                if (since < 3.0) break;
+                var alive = IsInstanceValid(_srEnemy) && _srEnemy!.IsAlive;
+                var cell = alive ? DungeonBuilder.WorldToCell(_srEnemy!.GlobalPosition) : default;
+                var atDoor = alive ? _srEnemy!.GlobalPosition.DistanceTo(_srDoor!.GlobalPosition) : -1f;
+                GD.Print($"[saferoom] after 3 s with the door open={_srDoor!.IsOpen}: the enemy (alive={alive}, {(alive ? _srEnemy!.State.Name : "-")}) at {cell}, {atDoor:0.0} m from the door, ever inside={_srBreached}");
+                if (!_srDoor.IsOpen) Fail("the safe door was not open for the member in the doorway");
+                if (!alive) Fail("the doorway test enemy died");
+                else if (_srEnemy!.State.Name is not ("Chase" or "Attack")) Fail($"the doorway test enemy is in {_srEnemy.State.Name}, not after the member");
+                if (_srBreached || (alive && layout.IsInSafeRoom(cell))) Fail("the enemy followed the party through the open safe door");
+                // held at the threshold: without the barrier it walks into the door cell and strikes from there (1.9 m measured)
+                if (alive && cell == layout.SafeRoomDoor) Fail("the enemy stepped into the open doorway");
+                if (alive && atDoor > SafeRoomRules.DoorOpenRadius + 0.5f) Fail($"the doorway test enemy stands {atDoor:0.0} m off, never came at the doorway");
+                if (_srDoor.IsOpen && alive && !_srBreached && !layout.IsInSafeRoom(cell) && cell != layout.SafeRoomDoor && atDoor <= SafeRoomRules.DoorOpenRadius + 0.5f) GD.Print("[saferoom] open door held the enemy out: OK");
+                Go(33);
+                break;
+            }
+            case 33:
+            {
+                foreach (var a in _srFrozen.Where(IsInstanceValid)) a.ProcessMode = ProcessModeEnum.Inherit;
+                _srFrozen.Clear();
+                if (IsInstanceValid(_srEnemy)) _srEnemy!.QueueFree();
+                Go(10);
                 break;
             }
             case 10:
