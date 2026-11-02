@@ -95,9 +95,14 @@ public partial class EventBus : Node
     /// <summary>The party entered (true) or left (false) the safe room.</summary>
     public event Action<bool>? SafeRoomChanged;
     public void RaiseSafeRoomChanged(bool inside) => SafeRoomChanged?.Invoke(inside);
-    /// <summary>The shut-out creatures sent another group to the safe room's door (groups sent so far on this floor).</summary>
+    /// <summary>
+    /// The shut-out creatures sent another group to the safe room's door, at least one creature of it made: carries the
+    /// number of creatures gathered on this floor so far (since it was built or loaded), not groups; the merchant's
+    /// remarks count these. The group count, which the clock and the save use, is <c>SafeRoomController.Gathered</c>.
+    /// </summary>
     public event Action<int>? Gathered;
-    public void RaiseGathered(int spawnedTotal) => Gathered?.Invoke(spawnedTotal);
+    /// <param name="creaturesTotal">Creatures gathered on this floor so far, this group included.</param>
+    public void RaiseGathered(int creaturesTotal) => Gathered?.Invoke(creaturesTotal);
     /// <summary>(member name, line): a companion spoke; a client plays the voice with its own key.</summary>
     public event Action<string, Adventure.Line>? Bark;
 

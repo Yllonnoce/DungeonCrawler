@@ -21,12 +21,15 @@ public partial class SafeRoomController : Node
     public static string? HudText => Instance is { Occupied: true } ? "Safe room" : null;
 
     public bool Occupied { get; private set; }
-    /// <summary>Groups the shut-out creatures have sent so far (saved with the floor).</summary>
+    /// <summary>Groups the shut-out creatures have sent so far (saved with the floor; the clock and the cap run on it).</summary>
     public int Gathered => _clock.Spawned;
+    /// <summary>Creatures gathered on this floor since it was built or loaded (what <see cref="EventBus.Gathered"/> carries; not saved).</summary>
+    public int GatheredCreatures => _creatures;
     /// <summary>Whether the party member at <paramref name="memberIndex"/> (an index into the party's adventurers) is alive and inside the room this tick.</summary>
     public bool IsInside(int memberIndex) => _inside.Contains(memberIndex);
 
     private readonly GatheringClock _clock = new();
+    private int _creatures;
     private readonly List<string> _enemyIds = new();
     private readonly List<Enemy> _alive = new();
     private Random _rng = new();
@@ -112,8 +115,12 @@ public partial class SafeRoomController : Node
             _alive.Add(e);
             made++;
         }
-        EventBus.Instance.RaiseGathered(_clock.Spawned);
-        GD.Print($"[gather] floor {_floor}: {made} creature(s) at {cell} (total {_clock.Spawned})");
+        if (made > 0)
+        {
+            _creatures += made;
+            EventBus.Instance.RaiseGathered(_creatures);
+        }
+        GD.Print($"[gather] floor {_floor}: {made} creature(s) at {cell} (groups {_clock.Spawned}, creatures {_creatures})");
     }
 
     private void TickDoor(float dt, Main main, IEnumerable<Vector3> living)
