@@ -4,10 +4,10 @@ using Godot;
 
 namespace DungeonCrawler.Audio;
 
-public enum Mood { Silent, Menu, Explore, Combat, Boss }
+public enum Mood { Silent, Menu, Tavern, Explore, Combat, Boss }
 
 /// <summary>
-/// Picks and crossfades the CC0 tracks under assets/audio/music: a tavern tune on the title screen, an exploration
+/// Picks and crossfades the CC0 tracks under assets/audio/music: a tavern tune on the title screen and in the tavern, an exploration
 /// track per tier (shuffled, with a breath of silence between), a battle track while anything is fighting the party,
 /// the boss track from the moment a guardian notices you until it falls, and short stings for victory and a wipe.
 /// Music ducks under spoken lines. A dedicated server plays nothing.
@@ -117,7 +117,8 @@ public partial class MusicDirector : Node
             var tier = main.Builder.CurrentTier?.Index ?? 0;
             if (tier != _tier && Mood == Mood.Explore) { _tier = tier; Play(PickExplore(), loop: false, fadeSeconds: 3f); }
             _tier = tier;
-            if (_bossActive) wanted = Mood.Boss;
+            if (Game.Instance.CurrentFloor == 0) wanted = Mood.Tavern; // the tavern over the dungeon keeps the title tune
+            else if (_bossActive) wanted = Mood.Boss;
             else
             {
                 if (AnyoneFighting(main)) _combatUntil = _clock + CombatHoldSeconds;
@@ -130,6 +131,7 @@ public partial class MusicDirector : Node
         switch (wanted)
         {
             case Mood.Menu: Play(MenuTracks[0], loop: true, fadeSeconds: 2f); break;
+            case Mood.Tavern: if (CurrentTrack != MenuTracks[0]) Play(MenuTracks[0], loop: true, fadeSeconds: 2f); break; // from the title it plays on unbroken
             case Mood.Explore: _gapLeft = 0f; Play(PickExplore(), loop: false, fadeSeconds: from == Mood.Menu ? 2f : 3.5f); break;
             case Mood.Combat: Play(CombatTracks[_rng.Next(CombatTracks.Length)], loop: true, fadeSeconds: 1.2f); break;
             case Mood.Boss: Play(BossTracks[_rng.Next(BossTracks.Length)], loop: true, fadeSeconds: 1.5f); break;

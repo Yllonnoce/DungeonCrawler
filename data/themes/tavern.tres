@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="ThemeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Dungeon/Defs/ThemeDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "tavern"
+DisplayName = "The Tavern"
+TierIndex = 99
+Weight = 1.0
+Description = "plank floor, plaster and timber walls, rough-beamed ceiling, firelight"
+FloorTexture = "wood_floor_deck"
+WallTexture = "plaster_brick_pattern"
+CeilingTexture = "wooden_rough_planks"
+FloorColor = Color(0.42,0.3,0.18,1)
+WallColor = Color(0.7,0.62,0.5,1)
+CeilingColor = Color(0.3,0.22,0.14,1)
+MetersPerTile = 1.5
+Vault = "flat"
+AmbientColor = Color(0.55,0.42,0.28,1)
+AmbientEnergy = 0.5
+FogColor = Color(0.18,0.12,0.06,1)
+FogDensity = 0.02
+TorchColor = Color(1,0.78,0.5,1)
+WallLightsPerRoom = 4

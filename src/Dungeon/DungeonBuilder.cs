@@ -284,6 +284,7 @@ public partial class DungeonBuilder : Node3D
             foreach (var water in layout.Water) _floorRoot.AddChild(WaterSurface.Build(layout, water, cell => Surface(cell), CellSize, bedMat, plank));
         }
         PlaceLightsAndDecor(layout, _floorRoot, tier, seed);
+        if (layout.Kind == LayoutKind.Tavern) DressTavern(layout, _floorRoot);
         var tremor = new Tremor { Name = "Tremor" };
         tremor.SetStone(Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f));
         _floorRoot.AddChild(tremor);
@@ -1415,6 +1416,88 @@ public partial class DungeonBuilder : Node3D
                 model.AddChild(body);
             }
         }
+    }
+
+    private const string CratePath = "res://assets/models/wooden_crate_01/wooden_crate_01_1k.gltf";
+    private const string BarrelPath = "res://assets/models/wine_barrel_01/wine_barrel_01_1k.gltf";
+
+    /// <summary>
+    /// The tavern's furniture: a hearth on a stone plinth against the wall farthest from the way down, three tables with
+    /// benches and a candle each, and barrels and crates stacked in the two free corners. Every piece blocks its cell so
+    /// companions walk round it; the stairs, the cell the party arrives on and the cell before the down flight stay clear.
+    /// </summary>
+    private void DressTavern(FloorLayout layout, Node3D root)
+    {
+        if (layout.Rooms.Count == 0) return;
+        var room = layout.Rooms[0];
+        var keepClear = new HashSet<GridPos> { layout.UpStairs, WalkableNeighbor(layout, layout.UpStairs), layout.DownStairs, WalkableNeighbor(layout, layout.DownStairs) };
+        GridPos At(int dx, int dy) => new(room.X + dx, room.Y + dy);
+        bool Free(GridPos c) => layout.IsWalkable(c) && !keepClear.Contains(c) && !_propCells.Contains(c);
+
+        // the hearth: the middle of the wall farthest from the down stairs
+        var walls = new (GridPos Cell, GridPos Out)[]
+        {
+            (At(0, room.H / 2), new GridPos(-1, 0)), (At(room.W - 1, room.H / 2), new GridPos(1, 0)),
+            (At(room.W / 2, 0), new GridPos(0, -1)), (At(room.W / 2, room.H - 1), new GridPos(0, 1)),
+        };
+        var hearthCell = default(GridPos?);
+        var hearthSpots = walls.Where(w => Free(w.Cell)).OrderByDescending(w => w.Cell.ManhattanDistance(layout.DownStairs)).ToList();
+        if (hearthSpots.Count > 0)
+        {
+            var (cell, outward) = hearthSpots[0];
+            var at = Surface(cell) + new Vector3(outward.X, 0, outward.Y) * (CellSize / 2f - 0.5f);
+            var stone = Material("rustic_stone_wall_02", new Color(0.5f, 0.47f, 0.44f), 1f);
+            Box(root, new Vector3(1.6f, 0.3f, 0.9f), at + Vector3.Up * 0.15f, stone, yaw: outward.X != 0 ? Mathf.Pi / 2f : 0f);
+            var fire = Fire.Create(0.5f, 1.2f, 2.6f, 11f);
+            fire.Name = "Hearth";
+            root.AddChild(fire);
+            fire.GlobalPosition = at + Vector3.Up * 0.3f;
+            BlockCell(cell);
+            hearthCell = cell;
+        }
+
+        // three tables, each with a bench along both long sides and a candle in the middle
+        var plank = Material("weathered_planks", new Color(0.5f, 0.38f, 0.24f), 1.6f);
+        var wax = new StandardMaterial3D { AlbedoColor = new Color(0.95f, 0.9f, 0.75f), EmissionEnabled = true, Emission = new Color(1f, 0.8f, 0.5f), EmissionEnergyMultiplier = 0.6f };
+        var tables = 0;
+        foreach (var cell in new[] { At(2, 1), At(2, 3), At(4, 2) }.Where(Free))
+        {
+            var table = new Node3D { Name = $"Table{tables++}" };
+            root.AddChild(table);
+            var c = Surface(cell);
+            table.GlobalPosition = c;
+            Box(table, new Vector3(1.6f, 0.08f, 0.8f), c + Vector3.Up * 0.82f, plank); // the top rests on legs 0.78 tall
+            foreach (var (lx, lz) in new[] { (-0.72f, -0.34f), (0.72f, -0.34f), (-0.72f, 0.34f), (0.72f, 0.34f) })
+                Box(table, new Vector3(0.08f, 0.78f, 0.08f), c + new Vector3(lx, 0.39f, lz), plank, collide: false);
+            foreach (var side in new[] { -1f, 1f })
+            {
+                var bench = c + new Vector3(0, 0, side * 0.7f);
+                Box(table, new Vector3(1.6f, 0.06f, 0.35f), bench + Vector3.Up * 0.45f, plank);
+                foreach (var end in new[] { -0.7f, 0.7f }) Box(table, new Vector3(0.06f, 0.42f, 0.3f), bench + new Vector3(end, 0.21f, 0), plank, collide: false);
+            }
+            var candle = new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.03f, Height = 0.12f }, MaterialOverride = wax };
+            table.AddChild(candle);
+            candle.GlobalPosition = c + Vector3.Up * 0.92f;
+            var flame = new OmniLight3D { Name = "Candle", LightColor = new Color(1f, 0.8f, 0.5f), LightEnergy = 0.9f, OmniRange = 3f, ShadowEnabled = false };
+            table.AddChild(flame);
+            flame.GlobalPosition = c + Vector3.Up * 1.05f;
+            BlockCell(cell);
+        }
+
+        // stores: two barrels and a crate tucked into each free corner, against both walls
+        var barrels = 0;
+        var crates = 0;
+        foreach (var cell in new[] { At(0, room.H - 1), At(room.W - 1, 0) }.Where(Free))
+        {
+            var sx = cell.X == room.X ? -1f : 1f;
+            var sz = cell.Y == room.Y ? -1f : 1f;
+            var c = Surface(cell);
+            if (Decor(root, BarrelPath, c + new Vector3(sx * 1.3f, 0, sz * 1.3f), 1.0f, sx * 0.4f, 0.45f) != null) barrels++;
+            if (Decor(root, BarrelPath, c + new Vector3(sx * 1.3f, 0, sz * 0.1f), 1.0f, sz * 1.1f, 0.45f) != null) barrels++;
+            if (Decor(root, CratePath, c + new Vector3(sx * 0.1f, 0, sz * 1.35f), 0.8f, sx * sz * 0.3f, 0.45f) != null) crates++;
+            BlockCell(cell);
+        }
+        GD.Print($"[DungeonBuilder] floor {CurrentFloor}: tavern dressed: Hearth at {hearthCell?.ToString() ?? "none"}, tables={tables}, barrels={barrels}, crates={crates}");
     }
 
     // ---- structures: gatehouses and bandit camps ----------------------------------------------

@@ -11,10 +11,13 @@ All Poly Haven assets are CC0 (https://polyhaven.com/license). Kenney packs are 
 - dark_rock: https://polyhaven.com/a/dark_rock
 - dark_rock_02: https://polyhaven.com/a/dark_rock_02
 - metal_plate: https://polyhaven.com/a/metal_plate
+- plaster_brick_pattern: https://polyhaven.com/a/plaster_brick_pattern
 - rock_wall_05: https://polyhaven.com/a/rock_wall_05
 - rock_wall_08: https://polyhaven.com/a/rock_wall_08
 - rustic_stone_wall_02: https://polyhaven.com/a/rustic_stone_wall_02
 - rusty_metal: https://polyhaven.com/a/rusty_metal
+- wood_floor_deck: https://polyhaven.com/a/wood_floor_deck
+- wooden_rough_planks: https://polyhaven.com/a/wooden_rough_planks
 
 ## Poly Haven models (glTF 1k)
 - wine_barrel_01: https://polyhaven.com/a/wine_barrel_01
