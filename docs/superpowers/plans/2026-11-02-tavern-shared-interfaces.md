@@ -1,7 +1,7 @@
 # Tavern, merchant and safe rooms: shared interfaces for the plans
 
 Spec: `docs/superpowers/specs/2026-11-02-tavern-merchant-safe-rooms-design.md`. Six plans implement it; this file is
-the contract between them, so a later plan consumes exactly what an earlier one produces. Order of execution:
+the contract between them (every new `MsgKind` value is appended at the then-current end of the enum, never inserted), so a later plan consumes exactly what an earlier one produces. Order of execution:
 
 | # | Plan | Depends on |
 |---|---|---|
@@ -26,8 +26,8 @@ guards); saves bump `SaveFormat.CurrentVersion` (9 today) with a migration; buil
   Body 18, Head/Hands/Feet 10, Offhand 12, Ring/Amulet 15, Consumable 4, arrows 3 per 10 (a stack of n arrows is
   worth floor(0.3 × n)); rarity Common 1, Magic 2.2, Rare 4.5, Legendary 12.
   `int SellPrice(ItemInstance item) => Value(item)`; `int BuyPrice(ItemInstance item) => (int)Math.Floor(2.5 * Value(item))`;
-  `bool Sellable(ItemInstance item)`: false for `item.DefId == "item.iron_key"` and for quest items (whatever marks them
-  today; the plan names it), true otherwise (the Tome of Unlearning sells).
+  `bool Sellable(ItemInstance item)`: false for `item.DefId == "item.iron_key"` and for quest items, which are
+  `item.DefId == "item.quest_relic"` (the only quest item id, DungeonBuilder.cs:1196); true otherwise (the Tome of Unlearning sells).
 - `public static class CoinRules` (engine-free): `int ChestCoins(int floor, Random rng)` uniform in
   [10 + 6 × floor, 25 + 10 × floor]; `int EnemyCoins(int floor, Random rng)` = 0 with probability 3/4, else uniform in
   [2 + floor, 6 + 2 × floor]; `int BossCoins(int tier) => 150 * tier`.
@@ -65,13 +65,15 @@ guards); saves bump `SaveFormat.CurrentVersion` (9 today) with a migration; buil
   (any living party member inside), sets `PartyController.RegenMultiplier = RegenMultiplier` while occupied (1 otherwise;
   `CharacterState.Tick` multiplies HP, stamina and mana regen by it), runs the `GatheringClock`, spawns a group of 1 or 2
   floor enemies at the walkable corridor cell nearest the door that is not visible from it, awake and holding position
-  (`Enemy.HoldAt(GridPos)`), raises `EventBus.RaiseGathered(int spawnedTotal)` at each spawn, `EventBus.RaiseSafeRoomChanged(bool inside)`
+  (`Enemy.HoldAt(Vector3)`, world position; the controller converts the cell with `DungeonBuilder.Surface`), raises `EventBus.RaiseGathered(int spawnedTotal)` at each spawn, `EventBus.RaiseSafeRoomChanged(bool inside)`
   on change; honours `DebugTools --no-gathering`; ignores `Settings.Reinforcements`.
 - Exclusions: generation never puts enemy, chest, trap, breakable, ambush, horde, nest or portal in safe-room cells;
   `DungeonBuilder` calls `BlockCell` for every safe-room cell and the door cell; `GasField.Build` gives safe-room cells
   `GasRules.Unreachable`; the HUD air indicator reads clean inside.
 - HUD: `Hud.SafeRoom` (bool) shows the text "Safe room" in the objective line area while true.
-- Save: `FloorStateDto.Gathered` (int, default 0), restored into the clock's `Spawned`.
+- Save: `FloorStateDto.Gathered` (int, default 0), restored into the clock's `Spawned`. Appending the safe room to `Vaults`
+  before spawns are placed changes `FloorLayout.ContentHash` on some floors; the shipped plans' `LayoutHash` values are
+  refreshed with a new `--rehash-plans=DIR` flag (plan B) and the validator already adapts rather than rejects.
 - Net: door state travels as today via `PropChanged(NetRefs.Door(index), "opened"/"closed")`; `SafeRoomChanged` and
   regen are server-side, visible to clients through `Vitals`/`PartySync`; a `SafeRoomSync(bool Inside)` message tells
   clients to show the HUD text.
@@ -81,7 +83,7 @@ guards); saves bump `SaveFormat.CurrentVersion` (9 today) with a migration; buil
 - `CastMember.Merchant` (bool, `[AiDescription]`: exactly one cast member; sells to the party; never a story NPC, never
   a Secret, quest or Betray). `PlanValidator` rejects a floor plan that places the merchant cast member as an NPC and a
   campaign with zero or more than one merchant (`CampaignRepair` adds a generic one when missing).
-- `CampaignPlan.Merchant : MerchantPlan?`; `public sealed class MerchantPlan { NpcScript Briefing; List<MerchantFloorLines> FloorLines; List<Line> Gathering; }`;
+- `CampaignPlan.Merchant : MerchantPlan?` and `CastMember? CampaignPlan.MerchantCast()` (plan C); `IEnumerable<Line> MerchantPlan.AllLines()` (plan E); `public sealed class MerchantPlan { NpcScript Briefing; List<MerchantFloorLines> FloorLines; List<Line> Gathering; }`;
   `public sealed class MerchantFloorLines { int Floor; Line Greeting; Line Progress; Line Trade; }`.
   `public static class MerchantLineBank` (engine-free, `src/Adventure/Core/Voice/MerchantLineBank.cs`):
   `MerchantPlan Generic(string campaignTitle, string antagonistName)` used when a campaign has no `Merchant` section.
@@ -93,12 +95,12 @@ guards); saves bump `SaveFormat.CurrentVersion` (9 today) with a migration; buil
   with three fixed choices: "Trade" → `Hud.Shop.Open(floor)`, "How is it going?" → `lines.Progress`, "Leave" → close.
   First approach within 8 m speaks `lines.Greeting` as a bark (`Npc.Converse`). `EventBus.Gathered` with
   spawnedTotal 2, 4, 6 speaks `Merchant.Gathering[0..2]`.
-- `LegendaryDef.ShopOnly` (bool, default false) → `LegendaryBase.ShopOnly`; `LootRoller` excludes `ShopOnly` legendaries
+- `LegendaryDef.ShopOnly` (bool, default false) → `LegendaryProfile.ShopOnly` (the record in src/Items/Core/ItemBase.cs); `LootRoller` excludes `ShopOnly` legendaries
   from every dungeon roll. Seven new `data/legendaries/*.tres` with `ShopOnly = true`: sword, axe, mace, polearm,
   shortbow, dagger, staff.
 - `public static class ShopRules` (engine-free): `static readonly int[] UniqueFloors = { 3, 6, 9, 12, 15, 18, 20 }`;
   `WeaponKind UniqueKindFor(ulong gameSeed, int floor)` (a seeded permutation of the seven kinds over the seven floors;
-  throws for other floors); `ShopStock Roll(Catalog cat, ulong gameSeed, int floor)`; `public sealed class ShopStock { List<ItemInstance> Items; }`
+  throws for other floors); `ShopStock Roll(ItemCatalog cat, ulong gameSeed, int floor)` (the catalog type is `ItemCatalog`, src/Items/Core/ItemBase.cs); `public sealed class ShopStock { List<ItemInstance> Items; }`
   with, in order: 2 weapons, 1 body armour, 1 offhand-or-jewellery (all `LootRoller` at item level floor + 2, rarity
   Magic or better), 5 health potions, 3 mana potions, 2 antidotes, 2 arrow stacks of 20, 1 scroll (seeded choice), 1 trap
   kit (seeded choice), then on a unique floor the `ShopOnly` legendary of `UniqueKindFor`. Rolled from
@@ -131,8 +133,10 @@ guards); saves bump `SaveFormat.CurrentVersion` (9 today) with a migration; buil
 - `AdventureDto.SeedMoneyPaid` (bool). `DialogueScreen` raises `EventBus.RaiseDialogueNode(string npcId, string nodeId)`
   on every node shown; `Game` (or `AdventureDirector`) pays `SeedGold` once when `DealNodeId` is reached on floor 0 or
   when the party descends from floor 0 unpaid.
-- Co-op: the server starts on floor 0 like solo; the briefing is lead-only (the interacting player); seed money goes to
-  the shared purse once.
+- Co-op: the server starts on floor 0 like solo; the briefing is lead-only (the interacting player); a client's deal node
+  reaches the server as `[Msg(MsgKind.DialogueNodeIntent)] record DialogueNodeIntent(string NpcId, string NodeId)`; seed money
+  goes to the shared purse once. Automation (`--test-*`, `--server` in net_test, screenshots) keeps starting on floor 1 through
+  `DebugTools.StartFloor` unless `--floor=0` is given, so every existing flow is unchanged.
 - Save: nothing new beyond `SeedMoneyPaid` (floor 0 saves like any floor).
 
 ## E. Merchant lines and voice (data + bake)
