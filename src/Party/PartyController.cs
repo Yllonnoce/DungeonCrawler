@@ -678,6 +678,18 @@ public partial class PartyController : Node3D
         return drop;
     }
 
+    /// <summary>A pile of gold on the floor; walking into it (or a companion passing) adds it to the purse. Null for no coins.</summary>
+    public LootDrop? SpawnCoins(int coins, Vector3 at)
+    {
+        if (coins <= 0 || Main.Instance.Builder.FloorRoot is not { } root) return null;
+        var drop = _lootScene.Instantiate<LootDrop>();
+        drop.Coins = coins;
+        root.AddChild(drop);
+        drop.GlobalPosition = at;
+        EventBus.Instance.RaiseLootSpawned(drop);
+        return drop;
+    }
+
     public void SpawnArrowPickup(Vector3 at, float chance)
     {
         if (Rng.NextDouble() >= chance || !Game.Instance.Catalog.TryBase(ArrowDefId, out _)) return;

@@ -69,6 +69,8 @@ public partial class Chest : Area3D, IInteractable
         var side = toward.Cross(Vector3.Up);
         for (var i = 0; i < items.Count; i++)
             party.SpawnLoot(items[i], GlobalPosition + toward * 1.0f + side * (i - (items.Count - 1) / 2f) * 0.7f + Vector3.Up * 0.4f);
+        var coins = CoinRules.ChestCoins(Game.Instance.CurrentFloor, rng);
+        if (coins > 0) party.SpawnCoins(coins, GlobalPosition + toward * 1.0f + Vector3.Up * 0.4f);
         EventBus.Instance.Log(items.Count == 0 ? "The chest is empty." : $"The chest holds {string.Join(", ", items.Select(i => i.ToString()))}.");
     }
 }

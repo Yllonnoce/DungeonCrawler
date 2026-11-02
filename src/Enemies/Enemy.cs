@@ -792,6 +792,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (IsHorde && _rng.NextDouble() > 0.04) return; // fifty of them would bury the floor in bones
         if (IsReinforcement && _rng.NextDouble() > 0.15) return; // an endless stream must not be a loot farm
         if (!IsHorde && _rng.NextDouble() < 0.5 && cat.TryBase("item.bone_shard", out _)) Drop(cat.Create("item.bone_shard"), Vector3.Zero);
+        var coins = IsBoss ? CoinRules.BossCoins(TierRules.TierIndex(Floor) + 1) : CoinRules.EnemyCoins(Floor, _rng);
+        if (coins > 0) Party?.SpawnCoins(coins, GlobalPosition + Vector3.Up * 0.4f + new Vector3(0.3f, 0, -0.5f));
         var tableId = IsBoss ? "table.chest" : "table.enemy";
         if (cat.Tables.TryGetValue(tableId, out var table))
         {

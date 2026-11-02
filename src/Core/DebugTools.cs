@@ -4,6 +4,7 @@ using DungeonCrawler.Adventure.AiClients;
 using DungeonCrawler.Adventure.Voice;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
+using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Enemies.Ai;
 using DungeonCrawler.Enemies.Collectives;
@@ -192,7 +193,9 @@ public partial class DebugTools : Node
     private int _stairsStep;
     private double _stairsWalk;
     private int _vertStep;
-    private bool _testParty;
+    private bool _testParty, _testGold;
+    private int _goldStep, _goldFails, _goldBefore;
+    private LootDrop? _goldPile;
     private int _partyStep;
     private bool _server, _netClient;
     private bool _testMusic;
@@ -242,6 +245,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
             else if (arg == "--ask-stairs") _askStairs = true;
+            else if (arg == "--test-gold") { _testGold = true; _quitAfter = 14; }
             else if (arg == "--test-party") { _testParty = true; _faceEnemy = true; _quitAfter = 16; }
             else if (arg == "--face-boss") { _faceBoss = true; _faceEnemy = true; }
             else if (arg == "--face-ledge") _faceLedge = true;
@@ -724,6 +728,7 @@ public partial class DebugTools : Node
             GetTree().Quit();
         }
         if (_testParty) RunPartyTest();
+        if (_testGold) RunGoldTest();
         if (_testDrag) RunDragTest(delta);
 
         if (_autoAttack && Main.Instance != null && (_attackTimer -= delta) <= 0)
@@ -2538,6 +2543,69 @@ public partial class DebugTools : Node
     }
 
     // Party: companions follow, switch control, companions fight on their own, auto-revive.
+    // --test-gold: a chest spills one coin pile; a full bag still takes it; a companion walks into a pile; enemies drop coins
+    // about one time in four. Prints RESULT.
+    private void RunGoldTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root) return;
+        var party = main.Party;
+        void Check(string label, bool ok) { GD.Print($"[gold] {label}: {(ok ? "OK" : "FAIL")}"); if (!ok) _goldFails++; }
+        switch (_goldStep)
+        {
+            case 0 when _elapsed >= 1.0:
+                _goldStep++;
+                GD.Print($"[gold] start gold={party.Gold}");
+                Check("starts empty", party.Gold == 0);
+                party.AddGold(-10);
+                var spent = party.TrySpendGold(5);
+                Check("clamp", party.Gold == 0 && !spent);
+                var chest = root.GetChildren().OfType<Chest>().Where(c => !c.Opened && !c.Locked).OrderBy(c => c.GlobalPosition.DistanceSquaredTo(party.Lead.GlobalPosition)).FirstOrDefault();
+                if (chest == null) { Check("chest found", false); break; }
+                chest.Interact(party, party.Lead);
+                var piles = root.GetChildren().OfType<LootDrop>().Where(d => d.Coins > 0).ToList();
+                var floor = Game.Instance.CurrentFloor;
+                _goldPile = piles.FirstOrDefault();
+                GD.Print($"[gold] chest coin piles={piles.Count} coins={_goldPile?.Coins ?? 0}");
+                Check("chest pile", piles.Count == 1 && _goldPile!.Coins >= 10 + 6 * floor && _goldPile.Coins <= 25 + 10 * floor);
+                break;
+            case 1 when _elapsed >= 2.0:
+                _goldStep++;
+                if (_goldPile == null) break;
+                for (var i = 0; party.Bag.FreeSlots > 0 && i < 200; i++) party.Bag.TryAdd(ItemInstance.Simple($"item.junk{i}", "Junk")); // one of each: nothing stacks
+                _goldBefore = party.Gold;
+                _goldPile.Interact(party, party.Lead);
+                Check("full bag pickup", party.Bag.FreeSlots == 0 && party.Gold == _goldBefore + _goldPile.Coins && _goldPile.IsQueuedForDeletion());
+                break;
+            case 2 when _elapsed >= 3.0:
+                _goldStep++;
+                var companion = party.Adventurers.First(a => !a.IsLocal);
+                _goldBefore = party.Gold;
+                party.SpawnCoins(25, companion.GlobalPosition + companion.GlobalTransform.Basis.Z * -1f);
+                break;
+            case 3 when _elapsed >= 5.0:
+                _goldStep++;
+                Check("companion pickup", party.Gold == _goldBefore + 25);
+                break;
+            case 4 when _elapsed >= 5.5:
+                _goldStep++;
+                var b = main.Builder;
+                var def = b.RegularEnemies(b.CurrentFloor)[0];
+                var at = party.Lead.GlobalPosition + new Vector3(0, 0, -40f); // far from every companion's reach
+                _goldBefore = root.GetChildren().OfType<LootDrop>().Count(d => d.Coins > 0 && !d.IsQueuedForDeletion());
+                for (var i = 0; i < 40; i++) b.SpawnEnemy(def, at, b.CurrentFloor).Kill();
+                break;
+            case 5 when _elapsed >= 6.5: // the deaths are handled on the next frames
+                _goldStep++;
+                var made = root.GetChildren().OfType<LootDrop>().Count(d => d.Coins > 0 && !d.IsQueuedForDeletion()) - _goldBefore;
+                GD.Print($"[gold] enemy coins: piles={made} of 40");
+                Check("enemy coins", made >= 3 && made <= 20);
+                GD.Print(_goldFails == 0 ? "[gold] RESULT ok" : $"[gold] RESULT FAIL ({_goldFails})");
+                _quitAfter = _elapsed + 0.5;
+                break;
+        }
+    }
+
     private void RunPartyTest()
     {
         var main = Main.Instance;

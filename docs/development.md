@@ -238,6 +238,7 @@ godot --headless --path . -- --test-skills         # learn chains, upgrades, mul
 godot --headless --path . -- --test-abilities --no-ambush --no-portals   # every hero learns every skill and uses every ability on a shielded enemy: costs, damage, statuses, buffs; then a fireball and an arrow into a wall; prints RESULT
 godot --headless --path . -- --test-vertical --seed=5
 godot --path . -- --seed=3 --test-stairs                                   # climb the up flight, get asked, decline, accept, then take the well down (needs a window: the question is HUD)   # climb a ledge, fall into a cellar, open a secret, cross-level chase
+godot --headless --path . -- --test-gold --no-ambush --no-portals   # chest spills a coin pile, a full bag still picks it up, a companion picks coins up, enemies drop coins one time in four; prints RESULT
 godot --headless --path . -- --test-party          # companions follow, possession switch, companions kill an enemy, auto-revive
 godot --headless --path . -- --test-music          # exploration track plays, battle music on aggro, back to exploration after the kill, tavern tune in the menu
 godot --headless --path . -- --test-story          # Investigate clues, a Decide flag, a Betrayal that spawns the turncoat's creatures, a flag-gated NPC on the next floor
@@ -337,7 +338,7 @@ you equip a different weapon.
 
 Companions (`Party/Adventurer.cs`, decisions in `Characters/Companions/CompanionBrain.cs`): they keep a formation
 behind the lead (melee classes close, ranged and casters further back), path through corridors and across levels,
-teleport to the lead if lost for five seconds, drink a shared potion below 30% health, pick up loot they pass and
+teleport to the lead if lost for five seconds, drink a shared potion below 30% health, pick up loot they pass (coin piles too, even with a full bag) and
 open chests they reach, and fight by stance. Defensive (default) engages enemies that are already fighting the party
 or whatever the lead attacks; Aggressive engages anything seen within 12 m; Hold stays put and only fights what
 reaches it. Ranged characters keep about 7 m away and back off when something closes in. They cast party buffs when

@@ -13,16 +13,26 @@ public partial class LootDrop : Area3D, IInteractable
     public string? QuestId { get; set; }
     /// <summary>Put down on purpose by the party: companions walk past it.</summary>
     public bool DroppedByParty { get; set; }
+    /// <summary>Above zero: a pile of gold instead of an item. Its <see cref="Item"/> only supplies the id co-op uses to remove it.</summary>
+    public int Coins { get; set; }
 
     public void NotifyPicked() { if (QuestId != null) Core.EventBus.Instance.RaiseQuestItemPicked(QuestId); }
 
-    public string Prompt => Item.Rarity == Rarity.Common ? $"Pick up {Item}" : $"Pick up {Item} ({Item.Rarity})";
+    public string Prompt => Coins > 0 ? $"Pick up {Coins} gold" : Item.Rarity == Rarity.Common ? $"Pick up {Item}" : $"Pick up {Item} ({Item.Rarity})";
 
     private Node3D? _spin;
 
     public override void _Ready()
     {
         var mesh = GetNode<MeshInstance3D>("Mesh");
+        if (Coins > 0)
+        {
+            var gold = new Color("#ffd040");
+            mesh.Mesh = new CylinderMesh { TopRadius = 0.18f, BottomRadius = 0.18f, Height = 0.08f, RadialSegments = 16 };
+            mesh.SetSurfaceOverrideMaterial(0, new StandardMaterial3D { AlbedoColor = gold, Metallic = 0.8f, Roughness = 0.35f, EmissionEnabled = true, Emission = gold, EmissionEnergyMultiplier = 0.5f });
+            _spin = mesh;
+            return;
+        }
         var rarityColor = new Color(RarityInfo.ColorHex(Item.Rarity));
         if (ItemVisuals.Attach(this, Item))
         {
@@ -65,6 +75,13 @@ public partial class LootDrop : Area3D, IInteractable
 
     public void Interact(PartyController party, Adventurer actor)
     {
+        if (Coins > 0)
+        {
+            party.AddGold(Coins);
+            Core.EventBus.Instance.RaiseLootRemoved(Item.Id, actor.Index);
+            QueueFree();
+            return;
+        }
         if (party.PickUp(Item)) { NotifyPicked(); Core.EventBus.Instance.RaiseLootRemoved(Item.Id, actor.Index); QueueFree(); }
     }
 }
