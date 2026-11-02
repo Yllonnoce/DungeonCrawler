@@ -85,8 +85,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public bool CarriesJailKey { get; set; }
     /// <summary>Seconds since the party last hurt this creature.</summary>
     public float SinceHurt { get; private set; } = 999f;
-    /// <summary>What to do with nothing to chase: hunt the NPC again, or stand.</summary>
-    public AiState RestState() => NpcTarget is { IsAlive: true } ? new HuntNpcState() : new IdleState();
+    /// <summary>A post to hold (<see cref="HoldAt"/>, the safe room's gatherers): losing the party sends it back there, awake.</summary>
+    public bool HoldsPost { get; private set; }
+    /// <summary>What to do with nothing to chase: hunt the NPC again, go back to the post it holds, or stand.</summary>
+    public AiState RestState() => NpcTarget is { IsAlive: true } ? new HuntNpcState() : HoldsPost ? new HoldState() : new IdleState();
     /// <summary>The horde this creature came out of (server bookkeeping for joiners).</summary>
     public string? HordeId { get; set; }
     private bool _animPaused;
@@ -414,6 +416,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void HoldAt(Vector3 at)
     {
         HomePosition = at;
+        HoldsPost = true;
         Order = OrderKind.HoldPost;
         IsReinforcement = true;
         ChangeState(new HoldState());
