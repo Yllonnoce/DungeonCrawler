@@ -13,6 +13,11 @@ public partial class ItemSlotControl : Control
     public ItemInstance? Item { get; set; }
     public string Caption { get; set; } = "";
     public bool Highlight { get; set; }
+    /// <summary>Set on the shop's cells: clicks and drags go to the shop instead of <see cref="Screen"/>, and the price caption shows over the item.</summary>
+    public UI.Shop.ShopScreen? Shop { get; set; }
+    /// <summary>A shop cell on the merchant's side (else the bag's side); <see cref="SlotRef.BagIndex"/> is the stock or bag index.</summary>
+    public bool StockSide { get; set; }
+    private bool _armed; // a left press on a shop cell that has not turned into a drag
 
     public override void _Ready()
     {
@@ -51,7 +56,12 @@ public partial class ItemSlotControl : Control
                 DrawString(font, new Vector2(0, 14), count, HorizontalAlignment.Right, Size.X - 3, 12, Colors.White);
             }
         }
-        else if (Caption != "")
+        if (Item != null && Shop != null && Caption != "")
+        {
+            DrawRect(new Rect2(new Vector2(1, Size.Y - 15), new Vector2(Size.X - 2, 14)), new Color(0f, 0f, 0f, 0.7f));
+            DrawString(font, new Vector2(0, Size.Y - 4), Caption, HorizontalAlignment.Center, Size.X, 11, new Color(1f, 0.85f, 0.4f));
+        }
+        else if (Item == null && Caption != "")
         {
             DrawString(font, new Vector2(0, Size.Y / 2 + 4), Caption, HorizontalAlignment.Center, Size.X, 10, new Color(0.5f, 0.5f, 0.55f));
         }
@@ -67,20 +77,40 @@ public partial class ItemSlotControl : Control
     public override Variant _GetDragData(Vector2 atPosition)
     {
         if (Item == null || Ref.IsZone) return default;
+        _armed = false;
         var preview = new Label { Text = Item.DisplayName };
         preview.AddThemeColorOverride("font_color", new Color(RarityInfo.ColorHex(Item.Rarity)));
         SetDragPreview(preview);
+        if (Shop != null) return new Godot.Collections.Dictionary { ["shop"] = StockSide, ["i"] = Ref.BagIndex };
         return Ref.ToDict();
     }
 
     public override bool _CanDropData(Vector2 atPosition, Variant data)
-        => data.VariantType == Variant.Type.Dictionary && Screen.CanMove(SlotRef.FromDict(data.AsGodotDictionary()), Ref);
+    {
+        if (data.VariantType != Variant.Type.Dictionary) return false;
+        var d = data.AsGodotDictionary();
+        if (Shop != null) return d.ContainsKey("shop") && (bool)d["shop"] != StockSide; // stock onto the bag buys, bag onto the stock sells
+        return !d.ContainsKey("shop") && Screen.CanMove(SlotRef.FromDict(d), Ref);
+    }
 
     public override void _DropData(Vector2 atPosition, Variant data)
-        => Screen.Move(SlotRef.FromDict(data.AsGodotDictionary()), Ref);
+    {
+        var d = data.AsGodotDictionary();
+        if (Shop != null) Shop.Dropped((bool)d["shop"], (int)d["i"]);
+        else Screen.Move(SlotRef.FromDict(d), Ref);
+    }
 
     public override void _GuiInput(InputEvent @event)
     {
+        if (Shop != null)
+        {
+            // a click (press and release without a drag) buys or sells; the action waits for the release so a drag never also clicks
+            if (@event is not InputEventMouseButton { ButtonIndex: MouseButton.Left } click) return;
+            if (click.Pressed) _armed = Item != null;
+            else if (_armed) { _armed = false; Shop.Clicked(StockSide, Ref.BagIndex); }
+            AcceptEvent();
+            return;
+        }
         if (@event is not InputEventMouseButton { Pressed: true } mb) return;
         if ((mb.ButtonIndex == MouseButton.Left && mb.DoubleClick) || mb.ButtonIndex == MouseButton.Right)
         {

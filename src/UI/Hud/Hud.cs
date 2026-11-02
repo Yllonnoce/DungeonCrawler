@@ -7,6 +7,7 @@ using DungeonCrawler.UI.Inventory;
 using DungeonCrawler.UI.Menus;
 using DungeonCrawler.UI.Dialogue;
 using DungeonCrawler.UI.Quests;
+using DungeonCrawler.UI.Shop;
 using DungeonCrawler.UI.Skills;
 using Godot;
 
@@ -32,6 +33,10 @@ public partial class Hud : Control
     public InventoryScreen Inventory => _inventory;
     public bool InventoryOpen => _inventory.Visible;
     public bool DialogueOpen => _dialogue.Visible;
+    private ShopScreen _shop = null!;
+    /// <summary>The merchant's shop; <see cref="ShopScreen.Open"/> closes the dialogue and the other screens first.</summary>
+    public ShopScreen Shop => _shop;
+    public bool ShopOpen => _shop.Visible;
     private PauseMenu _pause = null!;
     private SkillTreeScreen _skills = null!;
     public bool Paused => _pause.Visible;
@@ -130,6 +135,16 @@ public partial class Hud : Control
         _stairsPrompt = new StairsPrompt { Name = "StairsPrompt" };
         _stairsPrompt.Closed += UpdateModalState;
         AddChild(_stairsPrompt);
+        _shop = new ShopScreen { Name = "Shop", Visible = false };
+        _shop.Bind(_party);
+        _shop.Opening += () =>
+        {
+            _dialogue.Close();
+            _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
+            _prompt.Text = "";
+        };
+        _shop.VisibilityChanged += UpdateModalState;
+        AddChild(_shop);
         _questLog = new QuestLogScreen { Name = "QuestLog", Visible = false };
         AddChild(_questLog);
         _questLog.SetAnchorsPreset(LayoutPreset.CenterTop);
@@ -179,20 +194,16 @@ public partial class Hud : Control
     public void OpenMerchant(Npc npc)
     {
         if (_pause.Visible) return;
+        _shop.Close();
         _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
         _dialogue.OpenMerchant(npc);
         UpdateModalState();
     }
 
-    /// <summary>The merchant's wares for <paramref name="floor"/>. Task 8 builds the shop screen; until then it only says so.</summary>
-    public void OpenShop(int floor)
-    {
-        GD.Print($"[Hud] shop for floor {floor}: The shop opens here in Task 8");
-    }
-
     public void OpenDialogue(Npc npc)
     {
         if (_pause.Visible) return;
+        _shop.Close();
         _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
         _dialogue.Open(npc);
         UpdateModalState();
@@ -221,7 +232,7 @@ public partial class Hud : Control
             if (@event.IsActionPressed("ui_cancel")) { CloseChat(); GetViewport().SetInputAsHandled(); }
             return; // the chat line owns the keys while open
         }
-        if (@event.IsActionPressed("chat") && Net.NetSession.IsClient && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible)
+        if (@event.IsActionPressed("chat") && Net.NetSession.IsClient && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible)
         {
             _chat.Text = "";
             _chat.Visible = true;
@@ -230,7 +241,7 @@ public partial class Hud : Control
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (_dialogue.Visible || _stairsPrompt.Visible) return; // the dialogue / stair question owns input while open
+        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible) return; // the dialogue / stair question / shop owns input while open
         if (@event.IsActionPressed("quest_log"))
         {
             ToggleQuestLog();
@@ -283,7 +294,7 @@ public partial class Hud : Control
     {
         if (GetTree().Paused || !IsInstanceValid(_party) || !_party.HasBodies) return;
         var target = _party.LookingAt;
-        _prompt.Text = target == null || _sheet.Visible || _inventory.Visible || _skills.Visible || _dialogue.Visible || _questLog.Visible ? "" : $"[E] {target.Prompt}";
+        _prompt.Text = target == null || _sheet.Visible || _inventory.Visible || _skills.Visible || _dialogue.Visible || _questLog.Visible || _shop.Visible ? "" : $"[E] {target.Prompt}";
         if (_subtitleTimer > 0f) { _subtitleTimer -= (float)delta; if (_subtitleTimer <= 0f) _subtitle.Text = ""; }
         TickMangledBanner((float)delta);
         if (_sheet.Visible) _sheet.Refresh();
@@ -307,6 +318,7 @@ public partial class Hud : Control
     public void Refresh()
     {
         foreach (var p in _panels) p.Refresh();
+        if (_shop.Visible) _shop.Refresh();
         OnFloorChanged(Game.Instance.CurrentFloor, 0);
     }
 
@@ -354,6 +366,7 @@ public partial class Hud : Control
     public void AskStairs(Dungeon.Stairs stairs, Adventurer actor)
     {
         if (_pause.Visible || _dialogue.Visible || _victory != null) return;
+        _shop.Close();
         _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
         _prompt.Text = "";
         _stairsPrompt.Open(stairs, actor);
@@ -367,7 +380,7 @@ public partial class Hud : Control
 
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }
@@ -385,6 +398,7 @@ public partial class Hud : Control
 
     private void OnFloorChanged(int floor, int delta)
     {
+        if (_shop.Visible && floor != _shop.Floor) _shop.Close(); // the merchant's wares are the floor's
         var tier = Main.Instance?.Builder.CurrentTier?.DisplayName ?? "";
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;
@@ -446,7 +460,7 @@ public partial class Hud : Control
             _panels.Add(panel);
         }
     }
-    private void OnItemPickedUp(ItemInstance item) { if (_inventory.Visible) _inventory.Refresh(); }
+    private void OnItemPickedUp(ItemInstance item) { if (_inventory.Visible) _inventory.Refresh(); if (_shop.Visible) _shop.Refresh(); }
 
     private void OnMessage(string text)
     {

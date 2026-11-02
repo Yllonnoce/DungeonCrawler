@@ -383,14 +383,14 @@ public partial class ServerWorld : Node
                 break;
             case ShopBuyIntent sb:
                 if (!slot.Ready || !CanTrade(slot)) break;
-                party.ShopBuy(sb.StockIndex);
+                if (party.ShopBuy(sb.StockIndex) == null) Trace.Add("shop");
                 SendShopSync();
                 _bagDirty = true;
                 break;
             case ShopSellIntent ss:
                 if (!slot.Ready || !CanTrade(slot)) break;
                 if (!OwnsSlots(slot, ss.Slot, ss.Slot)) break;
-                party.ShopSell(ss.Slot);
+                if (party.ShopSell(ss.Slot) == null) Trace.Add("shop");
                 SendShopSync();
                 _bagDirty = true;
                 break;

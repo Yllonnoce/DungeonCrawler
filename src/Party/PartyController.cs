@@ -787,14 +787,14 @@ public partial class PartyController : Node3D
     /// <summary>How near the merchant a body must stand to trade outside the safe room (the interact reach).</summary>
     public const float MerchantReach = 3.5f;
 
-    /// <summary>Whether this body may trade: alive, the floor has a merchant, and it is in the safe room or within reach of him. Logs the refusal. With no floor built (no scene) there is nothing to judge.</summary>
+    /// <summary>Whether this body may trade: alive, the floor has a merchant, and it is in the safe room or within reach of him. Logs the refusal. With no game scene at all (no Main) there is nothing to judge; a live Main with no floor built refuses.</summary>
     public static bool CanTradeAt(Adventurer? body)
     {
-        var builder = Main.Instance?.Builder;
-        if (builder?.FloorRoot == null) return true;
-        if (body != null && !body.Downed && builder.FloorRoot.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
+        if (Main.Instance == null) return true;
+        var builder = Main.Instance.Builder;
+        if (body != null && !body.Downed && builder?.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
         {
-            var inRoom = builder.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
+            var inRoom = builder!.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
             if (inRoom || body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return true;
         }
         EventBus.Instance.Log($"{body?.State.Name ?? "Nobody"} is not at the merchant.");
@@ -805,7 +805,7 @@ public partial class PartyController : Node3D
     public string? ShopBuy(int stockIndex)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopBuyIntent(stockIndex)); return null; }
-        if (!CanTradeAt(Local)) return "Not at the merchant.";
+        if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
         var gold = Gold;
         var stock = ShopStockFor(Game.Instance.CurrentFloor);
         var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
@@ -822,7 +822,7 @@ public partial class PartyController : Node3D
     public string? ShopSell(BagSlot slot)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopSellIntent(slot)); return null; }
-        if (!CanTradeAt(Local)) return "Not at the merchant.";
+        if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
         if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
         var item = Bag[slot.BagIndex];
         var gold = Gold;
@@ -843,7 +843,7 @@ public partial class PartyController : Node3D
             foreach (var i in sold) ShopSoldOnFloor.Add(i);
         }
         SetGold(gold);
-        Main.Instance?.Hud?.Refresh(); // Task 8: refresh the shop screen
+        Main.Instance?.Hud?.Refresh(); // refreshes an open shop screen too
     }
 
     // ---- gold ----------------------------------------------------------------------------------

@@ -41,6 +41,7 @@ public partial class DebugTools : Node
     private bool _autoAttack;
     private bool _smoke;
     private bool _openMap;
+    private bool _openShop, _openedShop; // --open-shop: the merchant's shop open at --after (slot 0 shown sold), for screenshots
     private readonly List<string> _pressActions = new();
     private bool _clearEnemies;
     private bool _levelUp;
@@ -231,6 +232,7 @@ public partial class DebugTools : Node
             else if (arg == "--face-enemy") _faceEnemy = true;
             else if (arg == "--auto-attack") _autoAttack = true;
             else if (arg == "--open-map") _openMap = true;
+            else if (arg == "--open-shop") _openShop = true;
             else if (arg == "--level-up") _levelUp = true;
             else if (arg == "--menu-only") _menuOnly = true;
             else if (arg == "--open-settings") { _menuOnly = true; _openSettings = true; }
@@ -772,6 +774,14 @@ public partial class DebugTools : Node
             p.Lead.RotateY(Mathf.Pi); // turn around to see the companions
         }
         if (_openMap) { _pressActions.Add("map"); _openMap = false; }
+        if (_openShop && !_openedShop && _elapsed >= _after - 0.6 && Main.Instance?.InGame == true)
+        {
+            _openedShop = true;
+            var shopParty = Main.Instance.Party;
+            shopParty.AddGold(500);
+            shopParty.ShopSoldOnFloor.Add(0);
+            Main.Instance.Hud.Shop.Open(Game.Instance.CurrentFloor);
+        }
         if (_clearEnemies && Main.Instance?.InGame == true && Main.Instance.Builder.FloorRoot is { } clearRoot)
             foreach (var e in clearRoot.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive) e.Kill();
         if (_pressActions.Count > 0 && _elapsed >= _after - 0.3 && Main.Instance != null)
@@ -2646,7 +2656,10 @@ public partial class DebugTools : Node
                     var progress = talk.Node?.Line.Text;
                     var again = string.Join(" / ", talk.Choices.Select(c => c.Text));
                     talk.Choose(0);
-                    GD.Print($"[saferoom] merchant talk: \"{opening}\" [{offered}]; how is it going: \"{progress}\" [{again}]; after Trade open={talk.Visible}");
+                    var shopOpened = main.Hud.ShopOpen;
+                    main.Hud.Shop.Close();
+                    GD.Print($"[saferoom] merchant talk: \"{opening}\" [{offered}]; how is it going: \"{progress}\" [{again}]; after Trade open={talk.Visible}, shop open={shopOpened}");
+                    if (!shopOpened) Fail("Trade did not open the shop");
                     if (offered != "Trade / How is it going? / Leave" || again != offered) Fail($"merchant choices are [{offered}] then [{again}]");
                     if (opening != ml.Trade.Text || progress != ml.Progress.Text) Fail("merchant lines are not his trade and progress lines");
                     if (talk.Visible) { Fail("Trade left the dialogue open"); talk.Close(); }
@@ -2912,6 +2925,78 @@ public partial class DebugTools : Node
                     else GD.Print("[saferoom] air inside: clean");
                     if (!gassedOutside) Fail("no gas anywhere at 200 s: the check proves nothing");
                 }
+                Go(40);
+                break;
+            }
+            case 40:
+            {
+                // 10. the merchant's shop, from the merchant's cell: the stock, a buy, the same slot refused, a sale, the sold slots through a save
+                party.Teleport(Stand(SafeRoomRules.MerchantCell(layout)), b.Surface(layout.SafeRoomDoor));
+                var floor = Game.Instance.CurrentFloor;
+                var stock = party.ShopStockFor(floor);
+                var wantUnique = Items.ShopRules.IsUniqueFloor(floor);
+                GD.Print($"[saferoom] stock: {stock.Items.Count} items, unique={(stock.UniqueIndex >= 0 ? "yes" : "no")}");
+                if (stock.Items.Count != (wantUnique ? 12 : 11) || (stock.UniqueIndex >= 0) != wantUnique || (wantUnique && stock.UniqueIndex != 11))
+                    Fail($"stock has {stock.Items.Count} items, unique at {stock.UniqueIndex} (floor {floor} {(wantUnique ? "carries" : "carries no")} unique)");
+                if (stock.Items.Count == 0) { Finish(); return; }
+                // (b) a buy
+                party.AddGold(10_000);
+                var goldBefore = party.Gold;
+                var bagBefore = party.Bag.Items.Count();
+                var held = Enumerable.Range(0, party.Bag.Capacity).Where(i => party.Bag[i] != null).ToHashSet();
+                var price = Items.Prices.BuyPrice(stock.Items[0]);
+                var refusal = party.ShopBuy(0);
+                var newIndex = Enumerable.Range(0, party.Bag.Capacity).FirstOrDefault(i => party.Bag[i] != null && !held.Contains(i), -1);
+                if (refusal == null && party.Bag.Items.Count() == bagBefore + 1 && party.Gold == goldBefore - price && party.ShopSoldOnFloor.Contains(0) && newIndex >= 0)
+                    GD.Print($"[saferoom] buy: OK ({party.Bag[newIndex]} for {price} gold into bag cell {newIndex})");
+                else Fail($"buy: refusal \"{refusal}\", bag {bagBefore} -> {party.Bag.Items.Count()}, gold {goldBefore} -> {party.Gold} (price {price}), sold [{string.Join(",", party.ShopSoldOnFloor)}]");
+                // (c) the same slot again
+                var goldMid = party.Gold;
+                var bagMid = party.Bag.Items.Count();
+                var again = party.ShopBuy(0);
+                if (again != null && party.Gold == goldMid && party.Bag.Items.Count() == bagMid) GD.Print($"[saferoom] buy twice: refused OK (\"{again}\")");
+                else Fail($"buy twice: refusal \"{again}\", gold {goldMid} -> {party.Gold}, bag {bagMid} -> {party.Bag.Items.Count()}");
+                // (d) a sale of what was bought
+                if (newIndex >= 0)
+                {
+                    var sellPrice = Items.Prices.SellPrice(party.Bag[newIndex]!);
+                    var goldPre = party.Gold;
+                    var bagPre = party.Bag.Items.Count();
+                    var sold = party.ShopSell(Party.BagSlot.Bag(newIndex));
+                    if (sold == null && party.Gold == goldPre + sellPrice && party.Bag.Items.Count() == bagPre - 1) GD.Print($"[saferoom] sell: OK ({sellPrice} gold)");
+                    else Fail($"sell: refusal \"{sold}\", gold {goldPre} -> {party.Gold} (price {sellPrice}), bag {bagPre} -> {party.Bag.Items.Count()}");
+                }
+                // (e) the sold slot through a save
+                main.SaveGame("shop");
+                if (!main.LoadGame("shop")) { Fail("the shop save would not load"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 41 when since >= 2.0:
+            {
+                if (party.ShopSoldOnFloor.Contains(0)) GD.Print($"[saferoom] sold slots survive a reload: OK ([{string.Join(",", party.ShopSoldOnFloor.OrderBy(i => i))}])");
+                else Fail($"sold slots after the reload: [{string.Join(",", party.ShopSoldOnFloor)}], want 0 among them");
+                // (f) the shop screen opens and closes
+                try
+                {
+                    var hud = main.Hud;
+                    var shop = hud.Shop;
+                    var floor = Game.Instance.CurrentFloor;
+                    shop.Open(floor);
+                    var stockCells = shop.StockCount;
+                    var soldDim = shop.StockCell(0).Modulate.A;
+                    var price = shop.StockCell(1).Caption;
+                    var wantPrice = $"{Items.Prices.BuyPrice(party.ShopStockFor(floor).Items[1])}g";
+                    var purse = shop.GoldText;
+                    var open = hud.ShopOpen;
+                    var locked = party.InputLocked;
+                    shop.Close();
+                    GD.Print($"[saferoom] shop screen: open={open}, {stockCells} wares, slot 0 alpha {soldDim:0.0}, slot 1 \"{price}\", \"{purse}\", input locked={locked}; closed open={hud.ShopOpen} locked={party.InputLocked}");
+                    if (!open || stockCells != party.ShopStockFor(floor).Items.Count || Math.Abs(soldDim - 0.4f) > 0.01f || price != wantPrice || purse != $"{party.Gold} gold" || !locked || hud.ShopOpen || party.InputLocked)
+                        Fail("the shop screen did not show the stock, the sold slot, the prices and the purse, or did not lock and release the input");
+                    else GD.Print("[saferoom] shop screen opens: OK");
+                }
+                catch (Exception e) { Fail($"shop screen: {e.GetType().Name}: {e.Message}"); }
                 Finish();
                 break;
             }

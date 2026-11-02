@@ -257,7 +257,7 @@ godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, rai
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
 godot --headless --path . -- --purge-voice          # sweep assets/voice/builtin of lines the shipped campaign no longer refers to, and user://voice of lines no campaign, run or save slot refers to; every bake does the same for the bank it wrote unless --keep-old-voice
 godot --headless --path . -- --check-voice-bank     # every voice line the campaign on disk refers to: how many the shipped bank holds and how many load; run it on an exported binary (build/linux/DungeonCrawler.x86_64 --headless -- --check-voice-bank) to prove the bank was packed
-scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, the Press on floor 2 replicated, leave (the server runs at lethality 1 with --hazard=press@2)
+scripts/net_test.sh                                  # dedicated server + client over WebSocket: join, same floor, movement echoed, chat, the Press on floor 2 replicated, a purchase and a sale at the merchant, leave (the server runs at lethality 1 with --hazard=press@2)
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --ai --seed=N   # write a campaign + 20 floors with Claude (or --fake-ai=0 for the offline designer)
 godot --path . -- --ai --record-plans=user://ai/log # force the Claude planner (needs a key in Settings); requests/responses land in that folder
 godot --headless --path . -- --replay-plans=DIR     # answer planning calls from a recorded folder instead of the network
@@ -271,6 +271,7 @@ godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --scree
 godot --headless --path . -- --test-ambush          # floor 2: the first corridor ambush springs when stood on, fights, saves as sprung
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
+godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gathering (plan B) then the merchant: stock, buy, refuse, sell, reload, shop screen
 godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2   # regenerate each floor_NN.json's layout from its campaign and rewrite only its LayoutHash (after a generator change, so the shipped plans load without "adapted")
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
@@ -705,7 +706,7 @@ In a game: T opens the chat line, the floor label shows the round trip and how m
 - Engine-free core in `src/Net/Core/` (linked into the tests): `Protocol`, `PoseBuffer` (100 ms interpolation, 150 ms extrapolation cap), `PlayerRegistry` (name = identity, stored class wins, park/unpark), `ServerHandshake`/`ClientHandshake` (Hello -> Welcome -> Ready), `InMemoryTransport` for tests, `NetRefs` (`chest:3`, `door:1`, `stairs:down`, `loot:<guid>`).
 - Godot glue: `NetSession` autoload (role, transport, command-line flags), `ServerWorld` (registry, welcome from a live `FloorStateCapture`, poses in, snapshots at 20 Hz with interest filtering, vitals at 10 Hz, log/sfx/objective forwarding, status file), `ClientWorld` (poses out at 30 Hz coalesced, snapshot/vitals in, remote bodies through `RemotePose`), `NetTestFlow` (the scripted check).
 - A player who leaves is parked (body out of the world, pose remembered); the same name rejoins into the same character.
-- `scripts/net_test.sh` runs the whole thing headless: join, identical layout hash, movement echoed, chat, a kill through intents, the loot picked up into a synced bag, a chest, the stairs to floor 2, leave and rejoin; then restarts the server on its save and rejoins once more. Both processes print a RESULT line.
+- `scripts/net_test.sh` runs the whole thing headless: join, identical layout hash, movement echoed, chat, a kill through intents, the loot picked up into a synced bag, a chest, the stairs to floor 2, a purchase and a sale at the merchant, leave and rejoin; then restarts the server on its save and rejoins once more. Both processes print a RESULT line.
 
 ## Collision layers
 

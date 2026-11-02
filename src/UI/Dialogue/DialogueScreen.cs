@@ -114,7 +114,7 @@ public partial class DialogueScreen : Control
             case MerchantTrade:
                 GD.Print($"[Dialogue] {npc.Id}: trade");
                 Close();
-                Main.Instance?.Hud?.OpenShop(Game.Instance.CurrentFloor);
+                Main.Instance?.Hud?.Shop.Open(Game.Instance.CurrentFloor);
                 return;
             case MerchantProgress when npc.MerchantLines is { } lines:
                 Show(MerchantNode(lines.Progress));

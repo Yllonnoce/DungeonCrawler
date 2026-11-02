@@ -44,12 +44,19 @@ public partial class NetTestFlow : Node
             if (leftPile != null) leftPile.DroppedByParty = true; // companions leave it alone: only the rejoined client takes it
             GD.Print($"[net-server] left a 37 gold pile at {lastLead:0.0}: {leftPile != null}");
         }
+        if (!_goldGranted && !resumed && world.Trace.Contains("floor:2") && Main.Instance?.Party is { } rich)
+        {
+            // the client buys at the merchant on floor 2: enough gold for any of his wares
+            _goldGranted = true;
+            rich.AddGold(10_000);
+            GD.Print($"[net-server] granted 10000 gold for the shop: purse {rich.Gold}");
+        }
         if ((resumed && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
         {
             var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
             var want = resumed ? new[] { "rejoin:", "ready:", "left:" }
-                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "left:", "rejoin:" }
-                : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "left:", "rejoin:" };
+                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "shop", "left:", "rejoin:" }
+                : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "shop", "left:", "rejoin:" };
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -317,10 +324,49 @@ public partial class NetTestFlow : Node
                 {
                     if (!client.Trace.Contains("shop")) { Finish("[net]", false, "the server never sent the shop's sold slots"); return; }
                     GD.Print($"[net] safe room: HUD shows \"{line}\" {_clock:0.0} s after stepping inside");
-                    me.Teleport(_safeReturn.Value);
-                    _clock = 0; _step = 8;
+                    _clock = 0; _step = 15; // still inside: trade with the merchant before leaving the room
                 }
                 else if (_clock > 6) Finish("[net]", false, $"safe room: the HUD never showed it (line \"{line}\", we stand at {Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition)}, inside={safeLayout.IsInSafeRoom(Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition))})");
+                return;
+            }
+            case 15:
+            {
+                // the merchant: buy his first ware and sell it back, from inside the safe room (the server refuses trades away from him)
+                var me = main.Party.Local!;
+                var bag = main.Party.Bag;
+                var shops = client.Trace.Count(t => t == "shop");
+                if (_shopPhase == 0)
+                {
+                    var stock = main.Party.ShopStockFor(Game.Instance.CurrentFloor);
+                    if (stock.Items.Count == 0) { Finish("[net]", false, "the merchant has no stock"); return; }
+                    var price = Items.Prices.BuyPrice(stock.Items[0]);
+                    if (main.Party.Gold < price) { if (_clock > 8) Finish("[net]", false, $"never had the gold for the shop ({main.Party.Gold} < {price})"); return; }
+                    _shopHeld = Enumerable.Range(0, bag.Capacity).Where(i => bag[i] != null).ToHashSet();
+                    _bagBefore = bag.Items.Count(); _shopsBefore = shops; _goldBefore = main.Party.Gold;
+                    main.Party.ShopBuy(0); // a client sends ShopBuyIntent
+                    _shopPhase = 1; _clock = 0; return;
+                }
+                if (_shopPhase == 1)
+                {
+                    var bought = Enumerable.Range(0, bag.Capacity).FirstOrDefault(i => bag[i] != null && !_shopHeld.Contains(i), -1);
+                    if (shops > _shopsBefore && bag.Items.Count() == _bagBefore + 1 && bought >= 0 && main.Party.Gold < _goldBefore)
+                    {
+                        GD.Print($"[net] bought {bag[bought]} into cell {bought}: gold {_goldBefore} -> {main.Party.Gold}, sold [{string.Join(",", main.Party.ShopSoldOnFloor)}]");
+                        _bagBefore = bag.Items.Count(); _shopsBefore = shops; _goldBefore = main.Party.Gold;
+                        main.Party.ShopSell(Party.BagSlot.Bag(bought)); // a client sends ShopSellIntent
+                        _shopPhase = 2; _clock = 0;
+                    }
+                    else if (_clock > 8) Finish("[net]", false, $"the purchase never landed (bag {bag.Items.Count()} vs {_bagBefore}, gold {main.Party.Gold} vs {_goldBefore}, shop syncs {shops - _shopsBefore}, trace=[{string.Join(", ", client.Trace.Distinct())}])");
+                    return;
+                }
+                if (shops > _shopsBefore && bag.Items.Count() == _bagBefore - 1 && main.Party.Gold > _goldBefore)
+                {
+                    GD.Print($"[net] sold it back: gold {_goldBefore} -> {main.Party.Gold}, bag {_bagBefore} -> {bag.Items.Count()}");
+                    GD.Print("[net] bought and sold at the merchant");
+                    me.Teleport(_safeReturn!.Value);
+                    _clock = 0; _step = 8;
+                }
+                else if (_clock > 8) Finish("[net]", false, $"the sale never landed (bag {bag.Items.Count()} vs {_bagBefore}, gold {main.Party.Gold} vs {_goldBefore}, shop syncs {shops - _shopsBefore})");
                 return;
             }
             case 8:
@@ -383,6 +429,9 @@ public partial class NetTestFlow : Node
     private Vector3? _startAfterPose, _hazardReturn, _safeReturn;
     private int _placements, _placementsAtFloor2;
     private bool _placedJoin;
+    private bool _goldGranted;
+    private int _shopPhase, _shopsBefore;
+    private HashSet<int> _shopHeld = new();
     /// <summary>The server placed our body (a ForcePose): the start position on floor 1, and the arrival spot after a floor change.</summary>
     public void NotePlaced(Vector3 at) { _startAfterPose = at; _placements++; }
 }
