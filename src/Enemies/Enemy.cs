@@ -410,6 +410,15 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         }
     }
 
+    /// <summary>Stands here, awake, until it sees the party (the safe room's gatherers).</summary>
+    public void HoldAt(Vector3 at)
+    {
+        HomePosition = at;
+        Order = OrderKind.HoldPost;
+        IsReinforcement = true;
+        ChangeState(new HoldState());
+    }
+
     public void ChangeState(AiState next)
     {
         if (DebugTools.TraceAi) GD.Print($"[ai] {Name}: {State.Name} -> {next.Name} (hp {Hp:0}, dist {DistanceToParty():0.0})");

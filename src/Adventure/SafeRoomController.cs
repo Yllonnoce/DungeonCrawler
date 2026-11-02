@@ -2,6 +2,7 @@ using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Enemies;
 using Godot;
 
 namespace DungeonCrawler.Adventure;
@@ -27,6 +28,8 @@ public partial class SafeRoomController : Node
 
     private readonly GatheringClock _clock = new();
     private readonly List<string> _enemyIds = new();
+    private readonly List<Enemy> _alive = new();
+    private Random _rng = new();
     private FloorLayout _layout = null!;
     private int _floor;
     private readonly HashSet<int> _inside = new();
@@ -42,6 +45,7 @@ public partial class SafeRoomController : Node
         Name = "SafeRoom";
         _layout = layout;
         _floor = floor;
+        _rng = new Random(layout.Seed ^ 0x6A7E);
         _enemyIds.AddRange(enemyIds);
         if (gathered > 0) _clock.Restore(gathered);
     }
@@ -86,8 +90,30 @@ public partial class SafeRoomController : Node
         }
 
         TickDoor(dt, main, members.Where(m => m.alive).Select(m => m.body.GlobalPosition));
-        // the gatherers themselves are spawned from TakeDue() by the gathering wave (Task 6); none are alive yet
-        if (DebugTools.Instance?.NoGathering != true) _clock.Update(dt, Occupied, 0);
+        _alive.RemoveAll(e => !IsInstanceValid(e) || !e.IsAlive);
+        if (DebugTools.Instance?.NoGathering == true) return;
+        _clock.Update(dt, Occupied, _alive.Count);
+        if (_clock.TakeDue()) SpawnGroup(main);
+    }
+
+    /// <summary>One group of creatures arrives outside the door and holds there, awake.</summary>
+    private void SpawnGroup(Main main)
+    {
+        if (_enemyIds.Count == 0 || SafeRoomRules.GatherCell(_layout) is not { } cell) return;
+        var at = main.Builder.Surface(cell) + Vector3.Up * 0.15f;
+        var count = _rng.Next(2) + 1;
+        var made = 0;
+        for (var i = 0; i < count; i++)
+        {
+            var jitter = new Vector3((float)(_rng.NextDouble() - 0.5) * 1.2f, 0f, (float)(_rng.NextDouble() - 0.5) * 1.2f);
+            var id = _enemyIds[_rng.Next(_enemyIds.Count)];
+            if (main.Builder.SpawnEnemy(id, at + jitter, _floor) is not { } e) continue;
+            e.HoldAt(at);
+            _alive.Add(e);
+            made++;
+        }
+        EventBus.Instance.RaiseGathered(_clock.Spawned);
+        GD.Print($"[gather] floor {_floor}: {made} creature(s) at {cell} (total {_clock.Spawned})");
     }
 
     private void TickDoor(float dt, Main main, IEnumerable<Vector3> living)
