@@ -62,7 +62,9 @@ The owner's words, lightly ordered:
 
 - `Game.CurrentFloor` may be 0. A new game begins on floor 0; `ChangeFloor(+1)` from 0 builds floor 1 exactly as
   today; floor 1 still refuses "up". Saves on floor 0 work like any floor. Co-op: the server starts on floor 0 and
-  players join there until the first descent; the briefing is lead-only like doors and stairs.
+  players join there until the first descent. The briefing is per-screen, not lead-only: each player is greeted at 4 m
+  and briefed on their own machine; each one's deal node reaches the server, which pays the shared purse once; a late
+  joiner is briefed too.
 - The tavern is **one hand-dressed room**, not a generated floor: a `LayoutKind.Tavern` that the generator turns into a
   single room with the down stairs in a corner and no enemies, chests, traps or secrets. It uses the GridMap and a new
   theme `tavern` (wood plank floor, timber-and-plaster walls, beamed ceiling; Poly Haven CC0 textures through the
