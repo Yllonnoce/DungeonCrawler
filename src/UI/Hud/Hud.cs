@@ -403,7 +403,7 @@ public partial class Hud : Control
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;
         var suffix = DungeonCrawler.Dungeon.TierRules.IsEndless(floor) ? "  (endless)" : DungeonCrawler.Dungeon.TierRules.IsBossFloor(floor) ? "  (guardian)" : "";
-        _floorText = tier == "" ? $"Floor {floor}" : $"Floor {floor}  —  {place}{suffix}";
+        _floorText = floor == 0 ? "The Tavern" : tier == "" ? $"Floor {floor}" : $"Floor {floor}  —  {place}{suffix}";
         _floorLabel.Text = _floorText;
     }
 

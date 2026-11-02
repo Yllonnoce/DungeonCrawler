@@ -53,7 +53,7 @@ public partial class Game : Node
     public void PrepareNewGame(ulong? seed = null)
     {
         GameSeed = seed ?? (ulong)Random.Shared.NextInt64(); // the only place Random.Shared is allowed: picking the game seed
-        CurrentFloor = 1;
+        CurrentFloor = DebugTools.Instance?.StartFloor ?? 0; // a new game opens in the tavern; automation and the server open on floor 1
         InGame = true;
         _exploration.Clear();
         Floors.Clear();
@@ -167,7 +167,7 @@ public partial class Game : Node
     {
         if (!FloorIsOurs()) return;
         var delta = Math.Sign(floor - CurrentFloor);
-        CurrentFloor = Math.Max(1, floor);
+        CurrentFloor = Math.Max(0, floor);
         EventBus.Instance.RaiseFloorChanged(CurrentFloor, delta == 0 ? 0 : delta);
     }
 }

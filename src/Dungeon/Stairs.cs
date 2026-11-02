@@ -32,7 +32,7 @@ public partial class Stairs : Area3D, IInteractable
     public string Prompt => "";
 
     /// <summary>What the landing asks.</summary>
-    public string Question => Locked ? LockReason : Direction > 0 ? $"Descend to floor {(Game.Instance?.CurrentFloor ?? 0) + 1}?" : $"Climb back to floor {(Game.Instance?.CurrentFloor ?? 0) - 1}?";
+    public string Question => Locked ? LockReason : Direction > 0 && (Game.Instance?.CurrentFloor ?? 1) == 0 ? "Go down into the tunnels?" : Direction > 0 ? $"Descend to floor {(Game.Instance?.CurrentFloor ?? 0) + 1}?" : $"Climb back to floor {(Game.Instance?.CurrentFloor ?? 0) - 1}?";
 
     public void Unlock()
     {

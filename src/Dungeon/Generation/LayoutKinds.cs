@@ -155,7 +155,7 @@ public static class LayoutKinds
         {
             Width = 11, Height = 9, MinRooms = 1, MaxRooms = 1, MinRoomSize = 5, MaxRoomSize = 7,
             EnemyCount = 0, ChestCount = 0, BreakableCount = 0, TrapCount = 0, VaultCount = 0, LockedChestCount = 0, LedgeCount = 0,
-            PitCount = 0, SecretCount = 0, StructureCount = 0, RubbleCount = 0, NestCount = 0, FireCount = 0,
+            PitCount = 0, SecretCount = 0, StructureCount = 0, RubbleCount = 0, NestCount = 0, FireCount = 0, WaterCount = 0,
             HighRoomChance = 0f, HazardsEnabled = false, Objective = FloorObjectiveKind.None,
         },
         _ => spec,

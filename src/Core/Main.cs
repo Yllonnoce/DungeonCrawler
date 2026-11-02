@@ -389,6 +389,7 @@ public partial class Main : Node
     /// <summary>The floor's design: stored in the run, or produced now by the offline designer.</summary>
     private FloorPlan? PlanFor(int floor)
     {
+        if (floor == 0) return null; // the tavern is never designed
         var adv = Game.Instance.Adventure;
         if (adv.Mode == AdventureMode.Legacy) return null;
         if (adv.FloorPlans.TryGetValue(floor, out var plan)) return plan;
@@ -465,7 +466,7 @@ public partial class Main : Node
             npc.StartFollowing();
             GD.Print($"[Main] {t.Name} comes along to floor {floor}");
         }
-        if (!NetSession.IsClient) EventBus.Instance.Log(delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
+        if (!NetSession.IsClient) EventBus.Instance.Log(floor == 0 ? "The tavern. The way down is in the corner." : delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
         if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null);
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
     }
@@ -545,11 +546,12 @@ public partial class Main : Node
         env.BackgroundColor = env.FogLightColor.Darkened(0.5f);
     }
 
-    /// <summary>The air of a floor shape over the theme's own: flooded floors go cold and green, burning ones hot and thick with smoke.</summary>
+    /// <summary>The air of a floor shape over the theme's own: flooded floors go cold and green, burning ones hot and thick with smoke, the tavern warm and clear.</summary>
     private static (Color fog, Color ambient, float fogScale) LayoutTint(Dungeon.Generation.LayoutKind kind, Dungeon.Defs.ThemeDef look) => kind switch
     {
         Dungeon.Generation.LayoutKind.Flooded => (look.FogColor.Lerp(new Color(0.06f, 0.16f, 0.17f), 0.55f), look.AmbientColor.Lerp(new Color(0.3f, 0.44f, 0.46f), 0.4f), 1.3f),
         Dungeon.Generation.LayoutKind.Burning => (look.FogColor.Lerp(new Color(0.40f, 0.13f, 0.03f), 0.6f), look.AmbientColor.Lerp(new Color(0.62f, 0.32f, 0.12f), 0.45f), 1.6f),
+        Dungeon.Generation.LayoutKind.Tavern => (look.FogColor.Lerp(new Color(0.26f, 0.18f, 0.09f), 0.55f), look.AmbientColor.Lerp(new Color(0.62f, 0.48f, 0.32f), 0.5f), 0.7f),
         _ => (look.FogColor, look.AmbientColor, 1f),
     };
 

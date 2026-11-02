@@ -158,12 +158,13 @@ public partial class DungeonBuilder : Node3D
         return kind;
     }
 
-    /// <summary>The floor's shape: a --layout override, else the campaign's choice when it names one, else the seed's deal.</summary>
+    /// <summary>The floor's shape: the tavern on floor 0, else a --layout override, else the campaign's choice when it names one (never the tavern), else the seed's deal.</summary>
     public LayoutKind LayoutFor(int floor, ulong gameSeed)
     {
+        if (floor == 0) return LayoutKind.Tavern; // the tavern is the tavern, whatever --layout or the outline say
         if (LayoutKinds.TryParse(DebugTools.Instance?.ForcedLayout, out var forced)) return forced;
         var wanted = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.Layout;
-        if (LayoutKinds.TryParse(wanted, out var chosen) && (!TierRules.IsBossFloor(floor) || LayoutKinds.BossKinds.Contains(chosen))) return chosen;
+        if (LayoutKinds.TryParse(wanted, out var chosen) && chosen != LayoutKind.Tavern && (!TierRules.IsBossFloor(floor) || LayoutKinds.BossKinds.Contains(chosen))) return chosen;
         return LayoutKinds.Pick(gameSeed, floor);
     }
 
@@ -453,6 +454,7 @@ public partial class DungeonBuilder : Node3D
     /// <summary>The floor's look: the campaign's choice when it names a valid theme of this tier, else the seed's weighted pick.</summary>
     public ThemeDef? ThemeFor(int floor, ulong gameSeed)
     {
+        if (floor == 0) return _themes.FirstOrDefault(t => t.Id == "tavern"); // null until the theme exists: the tier's default look
         var tierIndex = TierRules.TierIndex(floor);
         if (DebugTools.Instance?.ForcedTheme is { } forced && _themes.FirstOrDefault(t => t.Id == forced) is { } forcedTheme) return forcedTheme;
         var wanted = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.Theme;
@@ -903,11 +905,14 @@ public partial class DungeonBuilder : Node3D
 
     private void PlaceStairs(FloorLayout layout, Node3D root, int floor)
     {
-        var up = _stairsScene.Instantiate<Stairs>();
-        up.Direction = -1;
-        up.Name = "UpStairs";
-        root.AddChild(up);
-        up.GlobalTransform = StairsTransform(layout, layout.UpStairs);
+        if (floor > 0) // the tavern has no way up: the party just stands beside its corner
+        {
+            var up = _stairsScene.Instantiate<Stairs>();
+            up.Direction = -1;
+            up.Name = "UpStairs";
+            root.AddChild(up);
+            up.GlobalTransform = StairsTransform(layout, layout.UpStairs);
+        }
 
         var down = _stairsScene.Instantiate<Stairs>();
         down.Direction = 1;

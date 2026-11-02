@@ -67,6 +67,13 @@ public partial class DebugTools : Node
     public static DebugTools? Instance { get; private set; }
     /// <summary>Any automation flag: skip the title screen and shorten cosmetic waits.</summary>
     public bool Automated => _started;
+    /// <summary>
+    /// The floor a new game opens on: null for an ordinary run (the game's own rule, the tavern), floor 1 for every
+    /// automation and the server, and the tavern too when --floor=0 is given (a deeper --floor= opens on 1 and jumps).
+    /// </summary>
+    public int? StartFloor => _floorGiven ? Math.Clamp(_startFloor, 0, 1) : (Automated || _server ? 1 : null);
+    /// <summary>The floor the scripted checks face and inspect: the --floor= asked for, else floor 1.</summary>
+    private int TargetFloor => _floorGiven ? _startFloor : Math.Max(1, _startFloor); // a scenario that picks its own floor (--test-horde, an objective) still counts
     public string? ReplayDir { get; private set; }
     public string? RecordDir { get; private set; }
     /// <summary>--story-brief=FILE: a campaign bible (markdown) the planner must follow; it rides along every planning call as a cached system block.</summary>
@@ -166,6 +173,7 @@ public partial class DebugTools : Node
     private bool _countProps;
     private bool _counted;
     private int _startFloor;
+    private bool _floorGiven; // --floor= was on the command line: even --floor=0 is asked for, not defaulted
     private bool _faceBoss;
     private bool _faceLedge, _facedRamp;
     private string? _faceRamp;
@@ -240,7 +248,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--possess=")) _possess = int.Parse(arg["--possess=".Length..]);
             else if (arg == "--swing") _swing = true;
             else if (arg == "--count-props") { _countProps = true; _quitAfter = 2; }
-            else if (arg.StartsWith("--floor=")) _startFloor = int.Parse(arg["--floor=".Length..]);
+            else if (arg.StartsWith("--floor=")) { _startFloor = int.Parse(arg["--floor=".Length..]); _floorGiven = true; }
             else if (arg.StartsWith("--seed=")) _seed = ulong.Parse(arg["--seed=".Length..]);
             else if (arg == "--test-path") { _testPath = true; _quitAfter = 8; }
             else if (arg == "--test-skills") { _testSkills = true; _faceEnemy = true; _quitAfter = 7; }
@@ -383,7 +391,7 @@ public partial class DebugTools : Node
         if (_testBakeUi) RunBakeUiTest();
         if (_openSettings && !_openedSettings && _elapsed >= 0.3 && Main.Instance?.Menu != null) { _openedSettings = true; Main.Instance.Menu.OpenSettings(); }
 
-        if ((_faceNode != null || _faceCell != null) && !_facedNode && _possess < 0 && _elapsed >= (_startFloor > 1 ? 1.2 : 0.6) && Game.Instance.CurrentFloor == Math.Max(1, _startFloor) && Main.Instance?.Builder.FloorRoot is { } faceRoot && Main.Instance.Builder.Layout is { } faceLayout)
+        if ((_faceNode != null || _faceCell != null) && !_facedNode && _possess < 0 && _elapsed >= (_startFloor > 1 ? 1.2 : 0.6) && Game.Instance.CurrentFloor == TargetFloor && Main.Instance?.Builder.FloorRoot is { } faceRoot && Main.Instance.Builder.Layout is { } faceLayout)
         {
             _facedNode = true;
             Vector3? look = null;
@@ -720,7 +728,7 @@ public partial class DebugTools : Node
         if (_rehashDir != null && !_rehashed && _elapsed >= 0.3 && Main.Instance != null) RunRehashPlans();
         if (_testSafeRoom) RunSafeRoomTest();
         if (_tremor) RunTremor();
-        if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == Math.Max(1, _startFloor)) { _inspected = true; InspectCell(ins.x, ins.y); }
+        if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == TargetFloor) { _inspected = true; InspectCell(ins.x, ins.y); }
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
         if (_testPath) RunPathTest();
         if (_testSkills) RunSkillsTest();
@@ -728,7 +736,7 @@ public partial class DebugTools : Node
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();
-        if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == Math.Max(1, _startFloor))
+        if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;
             var o = mapLayout.Objective;

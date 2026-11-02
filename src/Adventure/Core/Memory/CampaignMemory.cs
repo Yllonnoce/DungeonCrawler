@@ -48,7 +48,7 @@ public static class MemorySummary
 
     public static string Build(CampaignMemoryDto memory, int upToFloor, int maxChars = 1600)
     {
-        var floors = memory.Floors.Where(f => f.Floor < upToFloor && (f.Completed || f.Kills > 0 || f.Seconds > 5f)).OrderBy(f => f.Floor).ToList();
+        var floors = memory.Floors.Where(f => f.Floor >= 1 && f.Floor < upToFloor && (f.Completed || f.Kills > 0 || f.Seconds > 5f)).OrderBy(f => f.Floor).ToList();
         if (floors.Count == 0) return "";
         var sb = new StringBuilder();
 
