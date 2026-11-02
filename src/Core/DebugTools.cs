@@ -73,8 +73,8 @@ public partial class DebugTools : Node
     /// the tavern too when --floor=0 is given (a deeper --floor= opens on 1 and jumps).
     /// </summary>
     public int? StartFloor => _floorGiven ? Math.Clamp(_startFloor, 0, 1) : (Automated || _testNetServer ? 1 : null);
-    /// <summary>The floor the scripted checks face and inspect: the --floor= asked for, else floor 1.</summary>
-    private int TargetFloor => _floorGiven ? _startFloor : Math.Max(1, _startFloor); // a scenario that picks its own floor (--test-horde, an objective) still counts
+    /// <summary>The floor the scripted checks face and inspect: the --floor= asked for (never below the tavern, 0), else a scenario's own floor, at least 1.</summary>
+    private int TargetFloor => _floorGiven ? Math.Max(0, _startFloor) : Math.Max(1, _startFloor); // a scenario that picks its own floor (--test-horde, an objective) still counts
     public string? ReplayDir { get; private set; }
     public string? RecordDir { get; private set; }
     /// <summary>--story-brief=FILE: a campaign bible (markdown) the planner must follow; it rides along every planning call as a cached system block.</summary>
@@ -252,6 +252,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--floor=")) { _startFloor = int.Parse(arg["--floor=".Length..]); _floorGiven = true; }
             else if (arg.StartsWith("--seed=")) _seed = ulong.Parse(arg["--seed=".Length..]);
             else if (arg == "--test-path") { _testPath = true; _quitAfter = 8; }
+            else if (arg == "--test-tavern" || arg == "--test-tavern-skip") { _testTavern = true; _tavernSkip = arg == "--test-tavern-skip"; _startFloor = 0; _floorGiven = true; _quitAfter = 20; }
             else if (arg == "--test-skills") { _testSkills = true; _faceEnemy = true; _quitAfter = 7; }
             else if (arg == "--test-abilities") { _testAbilities = true; _quitAfter = 150; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
@@ -733,6 +734,7 @@ public partial class DebugTools : Node
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
         if (_testPath) RunPathTest();
         if (_testSkills) RunSkillsTest();
+        if (_testTavern) RunTavernTest();
         if (_testAbilities) RunAbilitiesTest();
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
@@ -3211,6 +3213,189 @@ public partial class DebugTools : Node
     }
     private Enemy? _partyEnemy;
     private float _partyEnemyHp;
+
+    // ---- --test-tavern ------------------------------------------------------------------------------------
+    // The opening end to end: a new game stands in the tavern (one room, no enemies, the merchant, an empty purse, "The
+    // Tavern", the tavern tune); an open inventory holds the merchant's greeting back and closing it lets him brief the
+    // party; the floor survives a save with the purse still empty and the rebuilt merchant greets afresh; the briefing
+    // walked to the deal pays the seed money once; the down flight takes the party to floor 1 without paying again.
+    // --test-tavern-skip never talks: the purse stays empty until the descent stakes it.
+    private bool _testTavern, _tavernSkip;
+    private int _tvStep;
+    private double _tvAt;
+    private readonly List<string> _tvFails = new();
+    private Node3D? _tvSavedRoot;
+
+    private void RunTavernTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || main.Hud is not { } hud || !Game.Instance.InGame) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var game = Game.Instance;
+        var talk = hud.Dialogue;
+        void Next() { _tvStep++; _tvAt = _elapsed; }
+        void Fail(string why) { _tvFails.Add(why); GD.Print($"[tavern] FAIL: {why}"); }
+        void Finish()
+        {
+            GD.Print(_tvFails.Count == 0 ? "[tavern] RESULT ok" : $"[tavern] RESULT FAIL ({string.Join("; ", _tvFails)})");
+            _tvStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        Npc? Merchant() => root.GetNodeOrNull<Npc>("Npc_merchant");
+        void StandBeforeMerchant(Npc merchant)
+        {
+            // two metres in front of the room's centre, where he stands: inside his greeting radius
+            var at = b.Surface(layout.Rooms[0].Center) + new Vector3(0, 0.3f, 2f);
+            party.Teleport(at, merchant.GlobalPosition);
+            var reach = new Vector2(party.Lead.GlobalPosition.X - merchant.GlobalPosition.X, party.Lead.GlobalPosition.Z - merchant.GlobalPosition.Z).Length();
+            GD.Print($"[tavern] party before the merchant: {reach:0.0} m from him (greets within {merchant.GreetRadius:0.0} m)");
+            if (reach > merchant.GreetRadius) Fail($"the party stands {reach:0.0} m from the merchant, outside his {merchant.GreetRadius:0.0} m");
+        }
+        string State() => $"floor={game.CurrentFloor} gold={party.Gold} paid={game.Adventure.SeedMoneyPaid} dialogue={hud.DialogueOpen} node={talk.Node?.Id ?? "-"}";
+        switch (_tvStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                // 1. the tavern as a new game opens it
+                var merchant = Merchant();
+                var enemies = root.GetChildren().OfType<Enemy>().Count();
+                var floorText = hud.GetNodeOrNull<Label>("%FloorLabel")?.Text;
+                GD.Print($"[tavern] floor {game.CurrentFloor} kind={LayoutKinds.Id(layout.Kind)} rooms={layout.Rooms.Count} up={layout.UpStairs} down={layout.DownStairs} enemies={enemies} merchant={(merchant != null ? $"\"{merchant.NpcName}\" at {DungeonBuilder.WorldToCell(merchant.GlobalPosition)}" : "missing")} gold={party.Gold} hud=\"{floorText}\" theme={b.CurrentTheme?.Id}");
+                if (game.CurrentFloor != 0) Fail($"a new game opens on floor {game.CurrentFloor}, not the tavern");
+                if (layout.Kind != LayoutKind.Tavern) Fail($"floor 0 is a {LayoutKinds.Id(layout.Kind)} layout, not the tavern");
+                if (layout.Rooms.Count != 1) Fail($"the tavern has {layout.Rooms.Count} rooms");
+                if (enemies != 0) Fail($"{enemies} enemies in the tavern");
+                if (party.Gold != 0) Fail($"the purse starts with {party.Gold} gold");
+                if (floorText != "The Tavern") Fail($"the HUD says \"{floorText}\"");
+                if (Audio.MusicDirector.Instance is { Enabled: true } music)
+                {
+                    GD.Print($"[tavern] music: mood={music.Mood} track={music.CurrentTrack}");
+                    if (music.Mood != Audio.Mood.Tavern) Fail($"the music mood is {music.Mood}, not Tavern");
+                }
+                else GD.Print("[tavern] music: disabled in this run, mood check skipped");
+                if (merchant == null) { Fail("no Npc_merchant in the tavern"); Finish(); return; }
+                if (merchant.Greeted) Fail("the merchant greeted before the party came near");
+                // 2. an open screen holds the greeting back
+                hud.ToggleInventory();
+                StandBeforeMerchant(merchant);
+                Next();
+                break;
+            }
+            case 1 when _elapsed >= 2.0:
+            {
+                var merchant = Merchant();
+                GD.Print($"[tavern] with the inventory open beside him: inventory={hud.InventoryOpen} greeted={merchant?.Greeted} {State()}");
+                if (!hud.InventoryOpen) Fail("the inventory did not open");
+                if (hud.DialogueOpen || merchant?.Greeted == true) Fail("the merchant greeted over the open inventory");
+                if (hud.InventoryOpen) hud.ToggleInventory();
+                Next();
+                break;
+            }
+            case 2 when _elapsed >= 3.0:
+            {
+                // 3. the inventory closed, he briefs the party
+                var merchant = Merchant();
+                var start = merchant?.Script.Start;
+                GD.Print($"[tavern] inventory closed: inventory={hud.InventoryOpen} greeted={merchant?.Greeted} talking to={talk.Npc?.Id ?? "-"} {State()}");
+                if (!hud.DialogueOpen) { Fail("the merchant did not brief the party once the inventory closed"); Finish(); return; }
+                if (talk.Npc != merchant) Fail($"the open dialogue is {talk.Npc?.Id}'s, not the merchant's");
+                if (start != "hire" || talk.Node?.Id != start) Fail($"the briefing opens on \"{talk.Node?.Id}\" (start \"{start}\", expected \"hire\")");
+                if (_tavernSkip)
+                {
+                    talk.Close(); // never talks
+                    GD.Print($"[tavern] skip: briefing closed unread, {State()}");
+                    if (hud.DialogueOpen) Fail("the briefing did not close");
+                    if (party.Gold != 0 || game.Adventure.SeedMoneyPaid) Fail($"closing the briefing paid: {State()}");
+                    _tvStep = 5; _tvAt = _elapsed;
+                    break;
+                }
+                // a save in the tavern, mid-briefing, and back
+                _tvSavedRoot = root;
+                main.SaveGame("tavern");
+                if (!main.LoadGame("tavern")) { Fail("the tavern save would not load"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 3 when root != _tvSavedRoot && Merchant() != null:
+            {
+                var merchant = Merchant()!;
+                // the session is new (a fresh HUD with no dialogue open); the party comes back where it was saved, beside him,
+                // so the rebuilt merchant (Greeted is not saved) may already have briefed it again on this first tick
+                var loadedAt = new Vector2(party.Lead.GlobalPosition.X - merchant.GlobalPosition.X, party.Lead.GlobalPosition.Z - merchant.GlobalPosition.Z).Length();
+                GD.Print($"[tavern] after the load: kind={LayoutKinds.Id(layout.Kind)} party {loadedAt:0.0} m from the merchant, greeted={merchant.Greeted} {State()}");
+                if (game.CurrentFloor != 0 || layout.Kind != LayoutKind.Tavern) Fail($"the save came back on floor {game.CurrentFloor} ({LayoutKinds.Id(layout.Kind)})");
+                if (party.Gold != 0) Fail($"the purse came back with {party.Gold} gold");
+                if (game.Adventure.SeedMoneyPaid) Fail("the save came back with the seed money paid");
+                if (!hud.DialogueOpen) StandBeforeMerchant(merchant);
+                Next();
+                break;
+            }
+            case 3 when _elapsed >= 5.0:
+                Fail($"the floor was not rebuilt after the load ({State()})");
+                Finish();
+                return;
+            case 4 when _elapsed >= 5.5:
+            {
+                // 4. the rebuilt merchant has greeted afresh; the briefing walked to the deal pays the seed money, once
+                var merchant = Merchant();
+                GD.Print($"[tavern] greeted again after the load: greeted={merchant?.Greeted} {State()}");
+                if (!hud.DialogueOpen || talk.Npc != merchant) { Fail("the rebuilt merchant did not brief the party again"); Finish(); return; }
+                if (party.Gold != 0 || game.Adventure.SeedMoneyPaid) Fail($"the greeting paid before the deal: {State()}");
+                var path = new List<string> { talk.Node?.Id ?? "-" };
+                for (var i = 0; i < 6 && hud.DialogueOpen && talk.Node?.Id != TavernRules.DealNodeId; i++)
+                {
+                    talk.Choose(0);
+                    path.Add(talk.Node?.Id ?? "closed");
+                }
+                GD.Print($"[tavern] briefing walked: {string.Join(" -> ", path)}; at the deal {State()}");
+                if (talk.Node?.Id != TavernRules.DealNodeId) { Fail("the briefing never reached the deal"); Finish(); return; }
+                if (party.Gold != TavernRules.SeedGold || !game.Adventure.SeedMoneyPaid) Fail($"the deal paid {party.Gold} gold (paid={game.Adventure.SeedMoneyPaid}), not {TavernRules.SeedGold}");
+                for (var i = 0; i < 6 && hud.DialogueOpen; i++)
+                {
+                    talk.Choose(0);
+                    path.Add(talk.Node?.Id ?? "closed");
+                }
+                GD.Print($"[tavern] briefing to the end: {string.Join(" -> ", path)}; {State()}");
+                if (hud.DialogueOpen) Fail("the briefing did not close after the sendoff");
+                if (party.Gold != TavernRules.SeedGold) Fail($"the purse holds {party.Gold} after the briefing, not {TavernRules.SeedGold}");
+                Next();
+                break;
+            }
+            case 5 when _elapsed >= 8.0:
+            {
+                // 5. the way down: onto the landing at the bottom of the well
+                var stairs = root.GetNodeOrNull<Stairs>("DownStairs");
+                if (stairs == null) { Fail("no DownStairs in the tavern"); Finish(); return; }
+                if (root.GetNodeOrNull<Stairs>("UpStairs") != null) Fail("the tavern has a way up");
+                var foot = DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs);
+                party.Teleport(stairs.ToGlobal(new Vector3(0, -Stairs.Rise + 0.3f, -1.2f)), b.Surface(foot));
+                GD.Print($"[tavern] on the down landing at {layout.DownStairs} (foot {foot}): {State()}");
+                var expected = _tavernSkip ? 0 : TavernRules.SeedGold;
+                if (party.Gold != expected || game.Adventure.SeedMoneyPaid != !_tavernSkip) Fail($"before the descent {State()}, expected gold {expected}");
+                Next();
+                break;
+            }
+            case 6 when hud.StairsPromptOpen || _elapsed >= 9.0:
+            {
+                var stairs = root.GetNodeOrNull<Stairs>("DownStairs");
+                GD.Print($"[tavern] landing prompt={hud.StairsPromptOpen} question=\"{stairs?.Question}\"");
+                if (!hud.StairsPromptOpen) { Fail("no question on the tavern's down landing"); Finish(); return; }
+                Input.ParseInputEvent(new InputEventAction { Action = "interact", Pressed = true }); // the prompt's Yes: Stairs.Confirm
+                Next();
+                break;
+            }
+            case 7 when _elapsed >= 10.0:
+                // 6. floor 1, staked exactly once
+                GD.Print($"[tavern] after the descent: kind={LayoutKinds.Id(layout.Kind)} {State()}");
+                if (game.CurrentFloor != 1) Fail($"the descent left the party on floor {game.CurrentFloor}");
+                if (layout.Kind == LayoutKind.Tavern) Fail("floor 1 is still the tavern layout");
+                if (party.Gold != TavernRules.SeedGold) Fail($"floor 1 opens with {party.Gold} gold, not {TavernRules.SeedGold} (paid once)");
+                if (!game.Adventure.SeedMoneyPaid) Fail("the seed money is not marked paid on floor 1");
+                Finish();
+                break;
+        }
+    }
 
     // Skills: learn chains, see stats change, use granted/upgraded abilities, respec, save round trip.
     private void RunSkillsTest()

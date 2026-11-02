@@ -53,7 +53,7 @@ public partial class Game : Node
     public void PrepareNewGame(ulong? seed = null)
     {
         GameSeed = seed ?? (ulong)Random.Shared.NextInt64(); // the only place Random.Shared is allowed: picking the game seed
-        CurrentFloor = DebugTools.Instance?.StartFloor ?? 0; // a new game opens in the tavern; automation and the server open on floor 1
+        CurrentFloor = DebugTools.Instance?.StartFloor ?? 0; // a new game opens in the tavern (a plain --server too); automation and --test-net-server open on floor 1 unless --floor=0
         InGame = true;
         _exploration.Clear();
         Floors.Clear();

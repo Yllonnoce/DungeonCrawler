@@ -316,7 +316,7 @@ public partial class ServerWorld : Node
         }
     }
 
-    /// <summary>A dialogue node id from a client longer than this is ignored: real ids are short words.</summary>
+    /// <summary>A dialogue node id or NPC id from a client longer than this is ignored: real ids are short words.</summary>
     private const int MaxDialogueNodeIdLength = 64;
 
     /// <summary>A player wants to do something: the server's body for them does it, with the same code single-player runs.</summary>
@@ -399,7 +399,7 @@ public partial class ServerWorld : Node
                 break;
             case DialogueNodeIntent dn:
                 // any ready player may reach the deal; AdventureDirector filters (floor 0, the merchant) and pays the shared purse once
-                if (!slot.Ready || string.IsNullOrEmpty(dn.NpcId) || string.IsNullOrEmpty(dn.NodeId) || dn.NodeId.Length > MaxDialogueNodeIdLength) break;
+                if (!slot.Ready || string.IsNullOrEmpty(dn.NpcId) || string.IsNullOrEmpty(dn.NodeId) || dn.NpcId.Length > MaxDialogueNodeIdLength || dn.NodeId.Length > MaxDialogueNodeIdLength) break;
                 EventBus.Instance.RaiseDialogueNode(dn.NpcId, dn.NodeId);
                 if (!NetSession.Instance.TestServer) break;
                 if (dn.NodeId == TavernRules.DealNodeId && !Trace.Contains($"node:{dn.NodeId}")) Trace.Add($"node:{dn.NodeId}"); // the test's mark; never a client-sized list

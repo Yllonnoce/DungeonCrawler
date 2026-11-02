@@ -31,6 +31,9 @@ the planner is shown each tier's theme ids and descriptions and can set `Floors[
 "drowned" can look drowned. The HUD floor label shows the theme name after the tier. Add a look by dropping a texture
 set into `assets/textures/<id>/` (`scripts/fetch_polyhaven.py <id>` downloads a CC0 texture set and `scripts/fetch_polyhaven_model.py <id>` a glTF
 model from Poly Haven, then run the import) and writing a `.tres`; `--theme=ID` forces every floor to it for screenshots.
+One look belongs to no tier: `tavern` (`data/themes/tavern.tres`: plank floor, plaster and timber walls, firelight; the
+builder adds its furniture and hearth, and the title tune plays on) is worn only by floor 0, which takes it by name
+whatever the seed, the campaign or `--theme=` say.
 
 **Floor shapes.** Besides its look, every floor has a shape (`LayoutKind`, `src/Dungeon/Generation/LayoutKinds.cs`):
 *standard* rooms and corridors; *labyrinth*, a maze of one-cell passages with small chambers set into it (flat, most
@@ -44,6 +47,19 @@ that suit it (crypts wind, caves flood and are mined, forges burn). The campaign
 (`Floors[].Layout`, listed to the planner with a line on each), and `--layout=KIND` forces every floor to one shape.
 Everything after room placement (vaults, verticality, structures, water, rubble, nests, spawns, traps) runs unchanged
 on any shape, and the ordinary floor hashes exactly as before, so shipped plans still fit.
+
+**Floor 0: the tavern.** A new game opens above the dungeon, in the tavern: one 7×5 room (`LayoutKind.Tavern`, never
+dealt by the seed nor forced by `--layout=`), theme `tavern`, the up-stairs cell at the room's corner with no flight up
+(climbing from floor 1 is refused) and the down flight in the opposite corner, asking "Go down into the tunnels?".
+No enemies, traps, vaults or safe room. The campaign's merchant (or "The Merchant") stands at the room's centre and,
+the first time the local player comes within 4 m (`TavernRules.GreetRadius`) with no screen open, opens his briefing
+(hire, quakes, deal, sendoff; the campaign's own when it has a `deal` node, else the generic bank's). The seed money is
+150 gold (`TavernRules.SeedGold`), paid once per game into the party purse: when the briefing reaches the `deal` node,
+or else on the first descent (`AdventureDto.SeedMoneyPaid` keeps it in the save; `Greeted` is not saved, so a loaded
+tavern briefs again). `--floor=0` opens on it for checks. The title screen and a plain `--server` start in the tavern;
+every `--test-*` flow, the other automation flags and `--test-net-server` start on floor 1 unless given `--floor=0`
+(`DebugTools.StartFloor`); `--test-tavern` asks for it itself, and `START_FLOOR=0 scripts/net_test.sh` runs the co-op
+check from the tavern (the client joins, strikes the deal and leaves).
 
 ## Floor objectives
 
@@ -272,6 +288,8 @@ godot --headless --path . -- --test-ambush          # floor 2: the first corrido
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
 godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gathering (plan B) then the merchant: stock, buy, refuse, sell, reload, shop screen
+godot --headless --path . -- --test-tavern   # floor 0: one room, no enemies, the merchant, empty purse, "The Tavern", the tavern tune; an open inventory holds his greeting back, closed he briefs within 4 m; a save mid-briefing comes back on floor 0 unpaid and he briefs again; walked to the deal the purse gets 150; the down landing asks and floor 1 opens with 150 (paid once); prints [tavern] RESULT
+godot --headless --path . -- --test-tavern-skip   # the same opening but the briefing is closed unread: the purse stays empty until the descent stakes it with 150 on floor 1
 godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2   # regenerate each floor_NN.json's layout from its campaign and rewrite only its LayoutHash (after a generator change, so the shipped plans load without "adapted")
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
