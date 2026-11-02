@@ -173,6 +173,9 @@ public partial class DungeonBuilder : Node3D
     public void SetDoorOpen(GridPos cell) => _closedDoors.Remove(cell);
     public void SetDoorClosed(GridPos cell) => _closedDoors.Add(cell);
     public void BlockCell(GridPos cell) => _propCells.Add(cell);
+    private readonly HashSet<GridPos> _enemyOnlyCells = new();
+    /// <summary>Everything <see cref="IsCellBlocked"/> blocks, plus the safe room and its door cell: only enemies are kept out of it.</summary>
+    public bool IsCellBlockedForEnemies(GridPos cell) => IsCellBlocked(cell) || _enemyOnlyCells.Contains(cell);
 
     public const float DangerWeightCompanion = 50f;
     public const float DangerWeightSmart = 12f;
@@ -291,6 +294,7 @@ public partial class DungeonBuilder : Node3D
         _closedDoors.Clear();
         _openSecrets.Clear();
         _propCells.Clear();
+        _enemyOnlyCells.Clear();
         _danger.Clear();
         _hazards.Clear();
         FloorTick = 0;
@@ -1236,9 +1240,9 @@ public partial class DungeonBuilder : Node3D
         foreach (var key in layout.KeySpawns) PlaceKey(root, cat, key, keyIndex++);
         if (layout.SafeRoom >= 0)
         {
-            // no enemy may enter the safe room, whatever state its door is in
-            foreach (var c in SafeRoomRules.Cells(layout)) BlockCell(c);
-            BlockCell(layout.SafeRoomDoor);
+            // no enemy may enter the safe room (companions and NPCs may), whatever state its door is in
+            foreach (var c in SafeRoomRules.Cells(layout)) _enemyOnlyCells.Add(c);
+            _enemyOnlyCells.Add(layout.SafeRoomDoor);
         }
 
         foreach (var cellar in layout.Cellars)
@@ -1286,7 +1290,7 @@ public partial class DungeonBuilder : Node3D
                 mouth.GlobalPosition = Surface(cellar.Exit[^1], under: true) + Vector3.Up * 2.4f;
             }
         }
-        if (layout.SafeRoom >= 0 && lantern != null)
+        if (layout.SafeRoom >= 0)
         {
             // a lit lantern on the corridor side of the safe door, facing it
             var door = layout.SafeRoomDoor;
@@ -1299,10 +1303,13 @@ public partial class DungeonBuilder : Node3D
                 var light = new OmniLight3D { LightColor = torchColor, LightEnergy = 1.6f, OmniRange = 9f, OmniAttenuation = 1.3f, ShadowEnabled = false, Name = $"SafeLamp{count++}" };
                 root.AddChild(light);
                 light.GlobalPosition = pos + new Vector3(d.X, 0, d.Y) * 0.4f;
-                var model = lantern.Instantiate<Node3D>();
-                root.AddChild(model);
-                model.GlobalPosition = pos - Vector3.Up * 0.35f;
-                model.RotateY(Mathf.Atan2(d.X, d.Y));
+                if (lantern != null)
+                {
+                    var model = lantern.Instantiate<Node3D>();
+                    root.AddChild(model);
+                    model.GlobalPosition = pos - Vector3.Up * 0.35f;
+                    model.RotateY(Mathf.Atan2(d.X, d.Y));
+                }
                 break;
             }
         }

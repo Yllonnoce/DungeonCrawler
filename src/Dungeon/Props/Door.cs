@@ -53,7 +53,7 @@ public partial class Door : StaticBody3D, IInteractable
         if (!IsOpen) return;
         IsOpen = false;
         if (!silent) EventBus.Instance.PlaySfx("door");
-        CollisionLayer = Detected ? 9u : 1u;
+        CollisionLayer = Detected && Kind != VaultKind.SafeDoor ? 9u : 1u;
         GetNode<MeshInstance3D>("Mesh").Visible = true;
         foreach (var m in _marks) m.Visible = Detected;
         Main.Instance?.Builder.SetDoorClosed(Cell);
