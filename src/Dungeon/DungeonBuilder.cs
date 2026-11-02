@@ -1234,6 +1234,12 @@ public partial class DungeonBuilder : Node3D
             if (v.Key is { } key) PlaceKey(root, cat, key, keyIndex++);
         }
         foreach (var key in layout.KeySpawns) PlaceKey(root, cat, key, keyIndex++);
+        if (layout.SafeRoom >= 0)
+        {
+            // no enemy may enter the safe room, whatever state its door is in
+            foreach (var c in SafeRoomRules.Cells(layout)) BlockCell(c);
+            BlockCell(layout.SafeRoomDoor);
+        }
 
         foreach (var cellar in layout.Cellars)
         {
@@ -1280,6 +1286,26 @@ public partial class DungeonBuilder : Node3D
                 mouth.GlobalPosition = Surface(cellar.Exit[^1], under: true) + Vector3.Up * 2.4f;
             }
         }
+        if (layout.SafeRoom >= 0 && lantern != null)
+        {
+            // a lit lantern on the corridor side of the safe door, facing it
+            var door = layout.SafeRoomDoor;
+            foreach (var d in RampDirs)
+            {
+                var outside = door + d;
+                if (!layout.IsWalkable(outside) || layout.IsInSafeRoom(outside)) continue;
+                var face = Surface(outside) + new Vector3(-d.X, 0, -d.Y) * (CellSize / 2f - 0.25f);
+                var pos = new Vector3(face.X, layout.LevelOf(outside) * LevelHeight + 2.0f, face.Z);
+                var light = new OmniLight3D { LightColor = torchColor, LightEnergy = 1.6f, OmniRange = 9f, OmniAttenuation = 1.3f, ShadowEnabled = false, Name = $"SafeLamp{count++}" };
+                root.AddChild(light);
+                light.GlobalPosition = pos + new Vector3(d.X, 0, d.Y) * 0.4f;
+                var model = lantern.Instantiate<Node3D>();
+                root.AddChild(model);
+                model.GlobalPosition = pos - Vector3.Up * 0.35f;
+                model.RotateY(Mathf.Atan2(d.X, d.Y));
+                break;
+            }
+        }
         foreach (var room in layout.Rooms)
         {
             // candidate wall cells: walls orthogonally adjacent to the room's floor cells, on the room's own level
@@ -1315,7 +1341,7 @@ public partial class DungeonBuilder : Node3D
         }
         if (statue != null)
         {
-            var spots = layout.Vaults.Select(v => v.Room).ToList();
+            var spots = layout.Vaults.Select(v => v.Room).Where(r => layout.SafeRoom < 0 || r != layout.Rooms[layout.SafeRoom]).ToList();
             if (layout.BossArena is { } arena) spots.Add(arena);
             foreach (var room in spots.Where(r => r.W >= 4 && r.H >= 4))
             {
@@ -1490,7 +1516,7 @@ public partial class DungeonBuilder : Node3D
             var width = Math.Min(room.W, room.H);
             var length = Math.Max(room.W, room.H);
             // ground level only: a beam in an upper gallery would be a step onto the tops of the walls
-            if (width > 3 || length < 6 || room == layout.BossArena || layout.LevelOf(room.Center) != 0) continue;
+            if (width > 3 || length < 6 || room == layout.BossArena || (layout.SafeRoom >= 0 && room == layout.Rooms[layout.SafeRoom]) || layout.LevelOf(room.Center) != 0) continue;
             var along = room.W >= room.H; // the long axis runs in x
             var span = width * CellSize;
             var beam = new BoxMesh { Size = new Vector3(along ? 0.34f : span, 0.34f, along ? span : 0.34f) };

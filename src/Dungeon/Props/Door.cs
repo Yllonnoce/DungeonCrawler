@@ -26,7 +26,7 @@ public partial class Door : StaticBody3D, IInteractable
     /// <summary>Whether this door belongs to the floor's objective (index from <see cref="Adventure.FloorContents.ExtraIndexBase"/> up): the objective, not the save's vault list, owns its state.</summary>
     public bool IsObjectiveGate => VaultIndex >= Adventure.FloorContents.ExtraIndexBase;
 
-    public string Prompt => IsOpen || !Detected ? "" : Kind == VaultKind.KeyDoor ? "Locked door: use a key or pick the lock" : IsObjectiveGate ? $"{GateLabel ?? "Gate"}: shut; the levers move it" : "Sealed gate: find its lever";
+    public string Prompt => Kind == VaultKind.SafeDoor ? "" : IsOpen || !Detected ? "" : Kind == VaultKind.KeyDoor ? "Locked door: use a key or pick the lock" : IsObjectiveGate ? $"{GateLabel ?? "Gate"}: shut; the levers move it" : "Sealed gate: find its lever";
 
     public override void _Ready()
     {
@@ -38,7 +38,8 @@ public partial class Door : StaticBody3D, IInteractable
         if (GetNode<CollisionShape3D>("Collision").Shape is BoxShape3D box) box.Size = new Vector3(DungeonBuilder.CellSize, DungeonBuilder.CellSize, DungeonBuilder.CellSize);
         CollisionLayer = 1; // wall, not yet a thing to use
         BuildMarks();
-        if (GateLabel != null)
+        if (Kind == VaultKind.SafeDoor) Detected = true; // revealed from the first frame; never a gate, never labelled
+        else if (GateLabel != null)
             AddChild(new Label3D
             {
                 Text = GateLabel, FontSize = 48, PixelSize = 0.006f, Modulate = new Color(0.85f, 0.8f, 0.6f), OutlineSize = 10,
@@ -56,7 +57,7 @@ public partial class Door : StaticBody3D, IInteractable
         GetNode<MeshInstance3D>("Mesh").Visible = true;
         foreach (var m in _marks) m.Visible = Detected;
         Main.Instance?.Builder.SetDoorClosed(Cell);
-        if (!silent) EventBus.Instance.Log($"{GateLabel ?? "A gate"} grinds shut.");
+        if (!silent && Kind != VaultKind.SafeDoor) EventBus.Instance.Log($"{GateLabel ?? "A gate"} grinds shut.");
         EventBus.Instance.RaisePropChanged(Net.NetRefs.Door(VaultIndex), "closed");
     }
 
@@ -73,13 +74,19 @@ public partial class Door : StaticBody3D, IInteractable
         foreach (var (step, normal, yaw) in dirs)
         {
             if (layout != null ? !layout.IsWalkable(Cell + step) : normal != Vector3.Back) continue;
-            var frame = new Node3D { Position = normal * half, Rotation = new Vector3(0, yaw, 0), Visible = false };
+            var frame = new Node3D { Position = normal * half, Rotation = new Vector3(0, yaw, 0), Visible = Kind == VaultKind.SafeDoor };
             if (Kind == VaultKind.KeyDoor)
             {
                 var brass = new StandardMaterial3D { AlbedoColor = new Color(0.45f, 0.36f, 0.18f), Metallic = 0.8f, Roughness = 0.45f };
                 frame.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.2f, 0.3f, 0.04f) }, MaterialOverride = iron, Position = new Vector3(0.6f, 1.25f, 0) });
                 frame.AddChild(new MeshInstance3D { Mesh = new TorusMesh { InnerRadius = 0.025f, OuterRadius = 0.045f, Rings = 12, RingSegments = 8 }, MaterialOverride = brass, Position = new Vector3(0.6f, 1.29f, 0.025f), Rotation = new Vector3(Mathf.Pi / 2f, 0, 0) });
                 frame.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.035f, 2.2f, 0.05f) }, MaterialOverride = dark, Position = new Vector3(-1.2f, 1.6f, 0), Rotation = new Vector3(0, 0, Mathf.DegToRad(2f)) });
+            }
+            else if (Kind == VaultKind.SafeDoor)
+            {
+                // three iron bands across the slab
+                foreach (var y in new[] { 0.9f, 1.9f, 2.9f })
+                    frame.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(3.2f, 0.12f, 0.05f) }, MaterialOverride = iron, Position = new Vector3(0, y, 0) });
             }
             else
             {
@@ -105,7 +112,7 @@ public partial class Door : StaticBody3D, IInteractable
 
     public void Interact(PartyController party, Adventurer actor)
     {
-        if (IsOpen) return;
+        if (IsOpen || Kind == VaultKind.SafeDoor) return;
         if (Kind == VaultKind.LeverGate)
         {
             EventBus.Instance.Log(IsObjectiveGate ? $"{GateLabel ?? "The gate"} will not budge. The levers on this floor move it." : "The gate will not budge. A lever somewhere on this floor must open it.");
@@ -125,7 +132,7 @@ public partial class Door : StaticBody3D, IInteractable
         GetNode<MeshInstance3D>("Mesh").Visible = false;
         foreach (var m in _marks) m.Visible = false;
         Main.Instance.Builder.SetDoorOpen(Cell);
-        if (!silent) EventBus.Instance.Log(Kind == VaultKind.KeyDoor ? "The door swings open." : GateLabel != null ? $"{GateLabel} grinds open." : "Somewhere, a gate grinds open.");
+        if (!silent && Kind != VaultKind.SafeDoor) EventBus.Instance.Log(Kind == VaultKind.KeyDoor ? "The door swings open." : GateLabel != null ? $"{GateLabel} grinds open." : "Somewhere, a gate grinds open.");
         EventBus.Instance.RaisePropChanged(Net.NetRefs.Door(VaultIndex), "opened");
     }
 }
