@@ -13,6 +13,8 @@ namespace DungeonCrawler.Dungeon.Props;
 public partial class Door : StaticBody3D, IInteractable
 {
     public VaultKind Kind { get; set; } = VaultKind.KeyDoor;
+    /// <summary>The collision layer of an open safe door: only enemies collide with it (see the Collision layers table in docs/development.md).</summary>
+    public const uint SafeDoorBarrierLayer = 16;
     public int VaultIndex { get; set; }
     public GridPos Cell { get; set; }
     public bool IsOpen { get; private set; }
@@ -128,7 +130,9 @@ public partial class Door : StaticBody3D, IInteractable
         IsOpen = true;
         Detected = true;
         if (!silent) EventBus.Instance.PlaySfx("door");
-        CollisionLayer = 0;
+        // an open safe door keeps an enemy-only barrier (bit 16, in every live enemy's mask): adventurers (mask 5),
+        // projectiles and sight rays (mask 1) pass, a creature that follows the party to the doorway does not
+        CollisionLayer = Kind == VaultKind.SafeDoor ? SafeDoorBarrierLayer : 0u;
         GetNode<MeshInstance3D>("Mesh").Visible = false;
         foreach (var m in _marks) m.Visible = false;
         Main.Instance.Builder.SetDoorOpen(Cell);

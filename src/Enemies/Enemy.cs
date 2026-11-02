@@ -329,7 +329,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Hp = 0;
         PlayAnim("Death", force: true);
         CollisionLayer = 0;
-        CollisionMask = 1;
+        CollisionMask = 1 | Dungeon.Props.Door.SafeDoorBarrierLayer; // the world, and the open safe door's barrier
         _material.AlbedoColor = _baseColor.Darkened(0.6f);
         Effects.Clear();
         EventBus.Instance.PlaySfx(IsBoss ? "boss" : "enemy_die");
@@ -786,7 +786,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         EventBus.Instance.PlaySfx(IsBoss ? "boss" : "enemy_die");
         EventBus.Instance.Log(IsBoss ? $"{DisplayName} falls! The way down is open." : $"{DisplayName} dies.");
         CollisionLayer = 0;
-        CollisionMask = 1;
+        CollisionMask = 1 | Dungeon.Props.Door.SafeDoorBarrierLayer; // the world, and the open safe door's barrier
         _material.AlbedoColor = _baseColor.Darkened(0.6f);
         Effects.Clear();
 
