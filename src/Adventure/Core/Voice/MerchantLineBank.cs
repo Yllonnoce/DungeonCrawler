@@ -28,9 +28,9 @@ public static class MerchantLineBank
                 Progress = new Line(lines[i].p),
                 Trade = new Line(lines[i].t),
             });
-        plan.Gathering.Add(new Line("Here! I am here! Please, no need to shout, I have excellent hearing and poor nerves."));
-        plan.Gathering.Add(new Line("Coming, coming, mind the crate. A moment of your time, then, and a little of your coin."));
-        plan.Gathering.Add(new Line("Ah, you called. Everyone calls eventually. What can I put in your hands?"));
+        plan.Gathering.Add(new Line("Something is at the door. Do not mind it. I paid for a very good lock."));
+        plan.Gathering.Add(new Line("More of them outside now. I can hear them breathing through the keyhole."));
+        plan.Gathering.Add(new Line("The door is thick with them! Please, finish your business and go and be brave somewhere else."));
         return plan;
     }
 

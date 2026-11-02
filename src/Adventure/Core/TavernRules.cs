@@ -15,14 +15,33 @@ public static class TavernRules
         => !alreadyPaid && (reachedNodeId == DealNodeId || descending);
 
     /// <summary>
-    /// The merchant's briefing in the tavern: the campaign's own when it reaches the deal, else the bank's generic one
+    /// The merchant's briefing in the tavern: the campaign's own when the deal can be reached from its start, else the bank's generic one
     /// (which always does), so the seed money can always be paid at the deal.
     /// </summary>
     public static NpcScript BriefingFor(CampaignPlan? campaign)
     {
-        if (campaign?.Merchant?.Briefing is { } own && own.Nodes.Any(n => n.Id == DealNodeId)) return own;
+        if (campaign?.Merchant?.Briefing is { } own && ReachesDeal(own)) return own;
         var title = string.IsNullOrWhiteSpace(campaign?.Title) ? "the tunnels" : campaign.Title;
         var villain = string.IsNullOrWhiteSpace(campaign?.Antagonist?.Name) ? "what waits below" : campaign.Antagonist.Name;
         return Voice.MerchantLineBank.Generic(title, villain).Briefing;
+    }
+
+    /// <summary>Whether the deal node can be reached from the script's start by following its choices' <c>Next</c> ids.</summary>
+    public static bool ReachesDeal(NpcScript script)
+    {
+        if (string.IsNullOrEmpty(script.Start)) return false;
+        var byId = new Dictionary<string, DialogueNode>();
+        foreach (var n in script.Nodes) if (n.Id != null) byId.TryAdd(n.Id, n);
+        var seen = new HashSet<string>();
+        var queue = new Queue<string>();
+        queue.Enqueue(script.Start);
+        while (queue.Count > 0)
+        {
+            var id = queue.Dequeue();
+            if (!seen.Add(id) || !byId.TryGetValue(id, out var node)) continue;
+            if (id == DealNodeId) return true;
+            foreach (var c in node.Choices) if (!string.IsNullOrEmpty(c.Next)) queue.Enqueue(c.Next);
+        }
+        return false;
     }
 }

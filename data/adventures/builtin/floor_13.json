@@ -332,8 +332,8 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Three patterns off the shelves, that\u0027s all. The hall, the sand cupboard, and the one they keep by the stair. Don\u0027t drop them; the sand remembers being dropped.",
-          "VoiceId": "6f57eb875a88a136",
+          "Text": "Three patterns off the shelves, that\u0027s all. The hall, the hole behind it, and the one they keep by the stair. Don\u0027t drop them; the sand remembers being dropped.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {

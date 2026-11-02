@@ -59,7 +59,7 @@ Bandits appear only in camps (floors 8 and 11): "the Oddfellows", a crew who cam
 
 ## 4. The cast
 
-Five recurring characters plus the four recruitable fighters. Bodies are the owner's archetypes from the character list. A name pass was done against the other pitches and the party roster (the ranger companion is called Wren, so no cast member is).
+Five recurring characters, the merchant Pellet, and the four recruitable fighters. Bodies are the owner's archetypes from the character list. A name pass was done against the other pitches and the party roster (the ranger companion is called Wren, so no cast member is).
 
 | Name | Role | Secret | Body | Labels (axes) | Floors |
 |---|---|---|---|---|---|
@@ -68,6 +68,9 @@ Five recurring characters plus the four recruitable fighters. Bodies are the own
 | **Deacon Tobit Hale** | The Verger's junior, sent up to greet them; wants to believe | He is being groomed as the next gag; Quill means to stop being human | priest | Pious, Agreeable | 3, 14, 16 |
 | **Grisel Thorn** | Sole survivor of the last four, nineteen years in the Gut | She bought her life by leading her party to the jailers, and still does | prisoner | Cynical, Contrary | 7, 9, 12 |
 | **Old Ulf** | Keeper of the Forge, thinks he casts tools | Knows exactly what he casts; proud of every baby | old man (not Brannock, who stays the floor-1 debug greeter) | Jovial, Proud | 11, 13, 15 |
+| **Master Oswin Pellet** | The factor who financed the council's contract; sells and buys from a locked room on every floor | none; a coward, honestly | merchant | Fussy, Craven | tavern, every floor (safe room) |
+
+**Pellet's story and the one he never tells.** Pellet (added 2026-11-02 with the tavern and the safe rooms) is the merchant, and nobody else's story: no Secret, no quest, never a floor NPC. His public story is the town's: the ground shakes, the quakes come oftener, the council calls it drainage, and he means to clear the tunnels and let them as fine dry lodgings. He financed the council's "plumbing inspection", so the 150 gold he counts out in the tavern is the council's advance passing through his hands, his cut taken (the shipped "paid you four in advance" stays true). His arc is bluster (1-6), unease (7-13: a tunnel not on his survey, quakes keeping time, a door he did not pay for), fear (14-19: he has seen the digging, "they're not spreading out, they're coming up") and a send-off on 20. He never names the god, the Verger, souls, the stone or the nineteen years: he sees only the digging and the shaking, which are Gorm stirring, and he never understands them.
 
 **The fighters** (one per tier, recruitable, with their own traits from the systems design):
 

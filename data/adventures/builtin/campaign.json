@@ -81,6 +81,20 @@
         "Voice": "Orus",
         "IsEmpty": false
       }
+    },
+    {
+      "Id": "cast_pellet",
+      "Name": "Master Oswin Pellet",
+      "Merchant": true,
+      "Role": "The factor who financed the council\u0027s contract and follows the money down, one locked room at a time",
+      "Secret": "",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a Dunmarrow factor: fussy, money-minded, brave in sentences and nowhere else",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Achird",
+        "IsEmpty": false
+      }
     }
   ],
   "Mystery": {
@@ -4427,5 +4441,503 @@
       "FromStock": true
     }
   ],
+  "Merchant": {
+    "Briefing": {
+      "Start": "hire",
+      "Nodes": [
+        {
+          "Id": "hire",
+          "Line": {
+            "Text": "Oswin Pellet, factor. I financed the council\u0027s little contract, and you four are to clear the Gullet to the bottom. I shan\u0027t be going down myself. I have a weak chest and a strong sense of who ought to.",
+            "VoiceId": null,
+            "Delivery": null
+          },
+          "Choices": [
+            {
+              "Text": "A factor, paying for plumbing?",
+              "Next": "quakes",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            },
+            {
+              "Text": "Spare us the chest. What\u0027s the pay?",
+              "Next": "deal",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            }
+          ]
+        },
+        {
+          "Id": "quakes",
+          "Line": {
+            "Text": "You\u0027ll have felt the floor go. The quakes come oftener every month, and the council calls it drainage. I call it opportunity: clear those tunnels and I\u0027ll let them as fine dry lodgings, with a view of nothing.",
+            "VoiceId": null,
+            "Delivery": null
+          },
+          "Choices": [
+            {
+              "Text": "What shakes the ground, then?",
+              "Next": "deal",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            },
+            {
+              "Text": "And where does our money come into it?",
+              "Next": "deal",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            }
+          ]
+        },
+        {
+          "Id": "deal",
+          "Line": {
+            "Text": "To business. The council\u0027s advance, through my hands and less my cut: a hundred and fifty gold, counted. Sell me what you find; buy what I carry. I wait behind a locked door on every floor. I am paying for the door.",
+            "VoiceId": null,
+            "Delivery": null
+          },
+          "Choices": [
+            {
+              "Text": "Count it out, then.",
+              "Next": "sendoff",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            },
+            {
+              "Text": "Your cut looks generous. To you.",
+              "Next": "sendoff",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            }
+          ]
+        },
+        {
+          "Id": "sendoff",
+          "Line": {
+            "Text": "Splendid. Keep every receipt I give you, folded, somewhere dry. Should anything happen to you below, the receipts are how I\u0027ll know what I\u0027ve lost.",
+            "VoiceId": null,
+            "Delivery": null
+          },
+          "Choices": [
+            {
+              "Text": "Lock your door, Pellet.",
+              "Next": null,
+              "Effect": "Farewell",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            },
+            {
+              "Text": "We\u0027ll see you below, factor.",
+              "Next": null,
+              "Effect": "Farewell",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            }
+          ]
+        }
+      ]
+    },
+    "FloorLines": [
+      {
+        "Floor": 1,
+        "Greeting": {
+          "Text": "In here. Quickly, and mind the step.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "One floor down and nothing of mine broken. I\u0027ve paced it out already: three good rooms to the bay, south light, if one brings the light.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Blades on the left, mending on the right. I\u0027ll buy whatever you drag in, provided it has stopped moving.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 2,
+        "Greeting": {
+          "Text": "Ah, my inspectors! Wipe your boots. I\u0027ve had this room swept, by a man I paid not to look at it.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "Moss in the mortar, but moss is rustic, and rustic lets for a third more. I\u0027ve written to my backers with the good news.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Out with the plunder, then. I pay fair, by which I mean I pay, which is more than the previous tenants ever did.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 3,
+        "Greeting": {
+          "Text": "Come in, come in. There\u0027s a deacon about, very civil. I gave him my card.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "A vaulted chapel. Do you know what a vaulted ceiling fetches up top? Nor do I. Nobody\u0027s ever sold one this far down. I mean to be first.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Something special in the case today. I didn\u0027t find it lying about; I paid good money for it, and so will you.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 4,
+        "Greeting": {
+          "Text": "Shut it behind you. The alderman went past with his papers and never once looked at my door. I paid extra for that.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "Rotten timber, which is a builder\u0027s word for cheap. Strip it out, plaster over, call it the Chantry Apartments. My backers adore a name.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Name your price and I\u0027ll name mine, and then we\u0027ll use mine.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 5,
+        "Greeting": {
+          "Text": "There you are. Was that singing? Never mind. Acoustics. A selling point.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "Five floors, or near enough. I\u0027ve had a sign painted: Pellet\u0027s Deep, Quiet Living. The painter wanted paying in advance. Everyone does, lately.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Sell me the bones of whatever that was. I know a man who grinds them for the market gardens.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 6,
+        "Greeting": {
+          "Text": "Mind the puddle. I don\u0027t know what it is either, and I\u0027ve decided not to have it assayed.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "Gold teeth in the walls! Gold, for anyone with pliers. I\u0027ve bought the mineral rights. Bought them yesterday, in a hurry, from a man in a hat.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "A rare piece in the case today, and a rare price beside it. You may admire them both.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 7,
+        "Greeting": {
+          "Text": "There you are. Good. Was it this quiet last time? I thought it was louder. I\u0027m sure it was louder.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "There\u0027s a tunnel past the camp that isn\u0027t on my survey. I paid for that survey. I paid for every inch of it, and somebody has added an inch.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Buy something, would you. It steadies my hands to count.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 8,
+        "Greeting": {
+          "Text": "In, in. Did you feel that one? Never mind. Nor did I.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "The quakes are keeping time. I set my watch by the last three and it hasn\u0027t lost a minute since. Ground has no business being punctual.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Prices have gone up a touch. Carriage, you understand. It all has to be carried down, and the carriers have started asking questions.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 9,
+        "Greeting": {
+          "Text": "Oh, it\u0027s you. Thank heaven. I mean, good day. Good day!",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "My backers write to ask what I\u0027ve seen down here. I write back that I\u0027ve seen the investment. I\u0027ve stopped writing what else.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "One fine piece in the case, kept back for you. I\u0027d like it off my hands. I don\u0027t care for the way it sits there.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 10,
+        "Greeting": {
+          "Text": "Mind your step, and mind mine. I keep hearing it behind me, a little after I take it.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "Ten floors. A round number. I\u0027ve always liked round numbers; there are no corners in them for anything to wait in.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Usual rates. I\u0027ll not haggle today. I haven\u0027t the stomach, and the stomach is the part of me that does the haggling.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 11,
+        "Greeting": {
+          "Text": "Come in. Warm, isn\u0027t it? Nobody lit a fire. I asked.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "This is a forge, and I never bought a forge. There\u0027s a door along here I didn\u0027t pay for. I have a horror of things I didn\u0027t pay for.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Wares are on the bench. The bench was here when I came. I don\u0027t know whose it is, so I\u0027m selling off it quickly.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 12,
+        "Greeting": {
+          "Text": "I hoped it was you. Every footstep, I hoped it was you, and I\u0027ve heard a great many footsteps.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "My backers ask whether the lodgings are safe. I wrote yes. My hand shook so that it reads as no, and I\u0027ve let it stand.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Something fine in the case today. Take it. I\u0027d sooner it went down with you than stayed here with me.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 13,
+        "Greeting": {
+          "Text": "Ah. You. Alive. Good. That makes two of us, and I am counting.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Progress": {
+          "Text": "Thirteen floors. I\u0027m not a superstitious man, but I\u0027ve begun keeping a short list of exits, and it keeps getting shorter.",
+          "VoiceId": null,
+          "Delivery": null
+        },
+        "Trade": {
+          "Text": "Business as usual. Business is a great comfort. I\u0027ve done more of it today than in all my life, every bit of it with myself.",
+          "VoiceId": null,
+          "Delivery": null
+        }
+      },
+      {
+        "Floor": 14,
+        "Greeting": {
+          "Text": "Quickly. Shut it. Quietly, they hear the latch.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Progress": {
+          "Text": "I went and looked. I wish I hadn\u0027t. Fresh spoil, and every pick mark pointing the one way. They\u0027re not spreading out. They\u0027re coming up.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Trade": {
+          "Text": "Take what you need and pay quickly. I shan\u0027t count it now. I\u0027ll count it later. Upstairs.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      {
+        "Floor": 15,
+        "Greeting": {
+          "Text": "You came back. I told myself you would. I didn\u0027t believe me.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Progress": {
+          "Text": "Every night it sounds a little nearer. Not louder; nearer. I\u0027ve stopped talking about lodgings. Nobody will want to live on top of that.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Trade": {
+          "Text": "There\u0027s a fine piece in the case. I\u0027ve priced it, I think. I can\u0027t recall the number. It\u0027s on the tag.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      {
+        "Floor": 16,
+        "Greeting": {
+          "Text": "Oh, thank you. I was talking to the crates, and the crates were starting to answer.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Progress": {
+          "Text": "Marble, all the way along. I never ordered marble. Someone is building down here, and they build faster than I can buy.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Trade": {
+          "Text": "The good stock, all of it. I was keeping it for a better day. There won\u0027t be one, so it may as well be today.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      {
+        "Floor": 17,
+        "Greeting": {
+          "Text": "Don\u0027t mind my hands. They\u0027ve a mind of their own, and it\u0027s a frightened one.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Progress": {
+          "Text": "The wall by my cot was cold yesterday. Today it\u0027s warm, and it hums. I\u0027ve moved the cot. I\u0027ve moved it three times.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Trade": {
+          "Text": "Buy quickly, please. The gas comes in under the door, and I can\u0027t charge it rent.",
+          "VoiceId": null,
+          "Delivery": "frantic"
+        }
+      },
+      {
+        "Floor": 18,
+        "Greeting": {
+          "Text": "Is that you? Say something, so I know it\u0027s you.",
+          "VoiceId": null,
+          "Delivery": "whisper"
+        },
+        "Progress": {
+          "Text": "It was meant to be a short job and a modest profit. Now I sleep in my boots with the takings in my shirt, and I don\u0027t sleep.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Trade": {
+          "Text": "The last fine piece I have. Buy it. Buy all of it, if you can carry it. Only leave me the lamp.",
+          "VoiceId": null,
+          "Delivery": "frantic"
+        }
+      },
+      {
+        "Floor": 19,
+        "Greeting": {
+          "Text": "There you are. There you are. I counted every step you took coming down.",
+          "VoiceId": null,
+          "Delivery": "frantic"
+        },
+        "Progress": {
+          "Text": "It\u0027s under us. I can feel it through my boots, and it\u0027s less under us than it was this morning. Please hurry. Please.",
+          "VoiceId": null,
+          "Delivery": "frantic"
+        },
+        "Trade": {
+          "Text": "Prices are on the tags. I can\u0027t think about prices. I keep counting the coin anyway; it\u0027s the only thing down here that adds up.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        }
+      },
+      {
+        "Floor": 20,
+        "Greeting": {
+          "Text": "The last quiet room, I think. You\u0027ve come further than anyone I ever sold to, and I\u0027ve sold to some very determined people.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Progress": {
+          "Text": "I\u0027m going back up, to count what\u0027s left. Of the money. Of the town. I\u0027d be very much obliged if you came up too, after.",
+          "VoiceId": null,
+          "Delivery": "weary"
+        },
+        "Trade": {
+          "Text": "Everything must go, at prices I\u0027m ashamed of. The last fine piece was always meant for you. Go well, and bring me a receipt.",
+          "VoiceId": null,
+          "Delivery": "warm"
+        }
+      }
+    ],
+    "Gathering": [
+      {
+        "Text": "Something\u0027s at my door. Two somethings. I\u0027m sure the lock is equal to it; I paid for a good one.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      {
+        "Text": "Four of them out there now, by the breathing. Do finish your shopping, would you, and go and be brave at them.",
+        "VoiceId": null,
+        "Delivery": "whisper"
+      },
+      {
+        "Text": "Six at the door! Six! The lock is good, but it was never priced for six. Out you go and see them off, I beg you.",
+        "VoiceId": null,
+        "Delivery": "frantic"
+      }
+    ]
+  },
   "ArcNotes": "Flags: told_tobit (3) pays on 16; grisel_forgiven (9) pays on 12; wake_gorm (18) pays on 19 and 20. Crane\u0027s counterfoil from floor 1 is the first thread of the contract chain: ledger 4, contract 9, moulds 13, letter 16. Crane appears 1, 4, 9, 17 and betrays on 17 only after confessing the memorial stone. Maud is always ahead, always dry, never sits until 18. Ulf never learns what he casts aloud; Tobit\u0027s voice joins the Choir if the party let him keep his saint. Bandits (Oddfellows) only in camps."
 }
