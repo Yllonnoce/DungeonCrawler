@@ -3222,7 +3222,9 @@ public partial class DebugTools : Node
     // --test-tavern-skip never talks: the purse stays empty until the descent stakes it.
     private bool _testTavern, _tavernSkip;
     private int _tvStep;
-    private double _tvAt;
+    private int _tvGreetings; // briefings opened with the floor's Npc_merchant: rising edges of the HUD's dialogue (a new HUD after a load counts afresh)
+    private bool _tvTalking;
+    private UI.Hud.Hud? _tvHud;
     private readonly List<string> _tvFails = new();
     private Node3D? _tvSavedRoot;
 
@@ -3234,7 +3236,7 @@ public partial class DebugTools : Node
         var b = main.Builder;
         var game = Game.Instance;
         var talk = hud.Dialogue;
-        void Next() { _tvStep++; _tvAt = _elapsed; }
+        void Next() => _tvStep++;
         void Fail(string why) { _tvFails.Add(why); GD.Print($"[tavern] FAIL: {why}"); }
         void Finish()
         {
@@ -3243,6 +3245,10 @@ public partial class DebugTools : Node
             _quitAfter = _elapsed + 0.5;
         }
         Npc? Merchant() => root.GetNodeOrNull<Npc>("Npc_merchant");
+        var talkingToMerchant = hud.DialogueOpen && talk.Npc != null && talk.Npc == Merchant();
+        if (talkingToMerchant && (!_tvTalking || hud != _tvHud)) { _tvGreetings++; GD.Print($"[tavern] the merchant's briefing opened (#{_tvGreetings}) on \"{talk.Node?.Id}\""); }
+        _tvTalking = talkingToMerchant;
+        _tvHud = hud;
         void StandBeforeMerchant(Npc merchant)
         {
             // two metres in front of the room's centre, where he stands: inside his greeting radius
@@ -3264,6 +3270,8 @@ public partial class DebugTools : Node
                 GD.Print($"[tavern] floor {game.CurrentFloor} kind={LayoutKinds.Id(layout.Kind)} rooms={layout.Rooms.Count} up={layout.UpStairs} down={layout.DownStairs} enemies={enemies} merchant={(merchant != null ? $"\"{merchant.NpcName}\" at {DungeonBuilder.WorldToCell(merchant.GlobalPosition)}" : "missing")} gold={party.Gold} hud=\"{floorText}\" theme={b.CurrentTheme?.Id}");
                 if (game.CurrentFloor != 0) Fail($"a new game opens on floor {game.CurrentFloor}, not the tavern");
                 if (layout.Kind != LayoutKind.Tavern) Fail($"floor 0 is a {LayoutKinds.Id(layout.Kind)} layout, not the tavern");
+                if (b.CurrentTheme?.Id != "tavern") Fail($"floor 0 wears the {b.CurrentTheme?.Id ?? "default"} theme, not the tavern");
+                if (game.Adventure.SeedMoneyPaid) Fail("a new game starts with the seed money paid");
                 if (layout.Rooms.Count != 1) Fail($"the tavern has {layout.Rooms.Count} rooms");
                 if (enemies != 0) Fail($"{enemies} enemies in the tavern");
                 if (party.Gold != 0) Fail($"the purse starts with {party.Gold} gold");
@@ -3301,13 +3309,15 @@ public partial class DebugTools : Node
                 if (!hud.DialogueOpen) { Fail("the merchant did not brief the party once the inventory closed"); Finish(); return; }
                 if (talk.Npc != merchant) Fail($"the open dialogue is {talk.Npc?.Id}'s, not the merchant's");
                 if (start != "hire" || talk.Node?.Id != start) Fail($"the briefing opens on \"{talk.Node?.Id}\" (start \"{start}\", expected \"hire\")");
+                if (_tvGreetings != 1) Fail($"{_tvGreetings} briefings opened before the save, expected 1");
+                if (party.Gold != 0 || game.Adventure.SeedMoneyPaid) Fail($"the greeting paid before the deal: {State()}");
                 if (_tavernSkip)
                 {
                     talk.Close(); // never talks
                     GD.Print($"[tavern] skip: briefing closed unread, {State()}");
                     if (hud.DialogueOpen) Fail("the briefing did not close");
                     if (party.Gold != 0 || game.Adventure.SeedMoneyPaid) Fail($"closing the briefing paid: {State()}");
-                    _tvStep = 5; _tvAt = _elapsed;
+                    _tvStep = 5;
                     break;
                 }
                 // a save in the tavern, mid-briefing, and back
@@ -3341,6 +3351,8 @@ public partial class DebugTools : Node
                 var merchant = Merchant();
                 GD.Print($"[tavern] greeted again after the load: greeted={merchant?.Greeted} {State()}");
                 if (!hud.DialogueOpen || talk.Npc != merchant) { Fail("the rebuilt merchant did not brief the party again"); Finish(); return; }
+                if (talk.Node?.Id != merchant!.Script.Start || talk.Node?.Id != "hire") Fail($"the briefing after the load opens on \"{talk.Node?.Id}\", not \"hire\"");
+                if (_tvGreetings != 2) Fail($"{_tvGreetings} briefings opened by the reload greeting, expected 2");
                 if (party.Gold != 0 || game.Adventure.SeedMoneyPaid) Fail($"the greeting paid before the deal: {State()}");
                 var path = new List<string> { talk.Node?.Id ?? "-" };
                 for (var i = 0; i < 6 && hud.DialogueOpen && talk.Node?.Id != TavernRules.DealNodeId; i++)
@@ -3382,6 +3394,7 @@ public partial class DebugTools : Node
                 GD.Print($"[tavern] landing prompt={hud.StairsPromptOpen} question=\"{stairs?.Question}\"");
                 if (!hud.StairsPromptOpen) { Fail("no question on the tavern's down landing"); Finish(); return; }
                 Input.ParseInputEvent(new InputEventAction { Action = "interact", Pressed = true }); // the prompt's Yes: Stairs.Confirm
+                Input.ParseInputEvent(new InputEventAction { Action = "interact", Pressed = false });
                 Next();
                 break;
             }
