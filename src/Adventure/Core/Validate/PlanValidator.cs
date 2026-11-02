@@ -353,6 +353,8 @@ public static class PlanValidator
             }
             return false;
         });
+        // an NPC dropped above was counted before its room was checked: only the ones kept may give or join a quest
+        npcIds.IntersectWith(plan.Npcs.Select(n => n.Id));
         var questIds = new HashSet<string>();
         plan.Quests.RemoveAll(q =>
         {
@@ -367,6 +369,8 @@ public static class PlanValidator
             switch (q.Template)
             {
                 case QuestTemplate.Investigate:
+                    var unusable = q.Params.ClueRooms.Distinct().Where(r => !(menu.Room(r) is { IsVault: false, IsSafeRoom: false, IsArena: false, FreeCells: > 0 } && r != start)).ToList();
+                    if (unusable.Count > 0) report.Repairs.Add($"quest {q.Id}: dropped clue room {string.Join(", ", unusable)}");
                     q.Params.ClueRooms = q.Params.ClueRooms.Distinct().Where(r => menu.Room(r) is { IsVault: false, IsSafeRoom: false, IsArena: false, FreeCells: > 0 } && r != start).Take(4).ToList();
                     if (q.Params.ClueRooms.Count == 0) { report.Repairs.Add($"dropped quest {q.Id}: no usable clue rooms"); return true; }
                     q.Params.ClueName = Clip(string.IsNullOrWhiteSpace(q.Params.ClueName) ? "clue" : q.Params.ClueName!, 40);
