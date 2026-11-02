@@ -181,6 +181,9 @@ public sealed class MerchantPlan
     [AiDescription("Three short lines said when he is called to the party in a hurry.")]
     public List<Line> Gathering { get; set; } = new();
 
+    /// <summary>An empty section counts as absent.</summary>
+    public bool IsEmpty => Briefing.Nodes.Count == 0 || FloorLines.Count == 0;
+
     public MerchantFloorLines? For(int floor) => FloorLines.FirstOrDefault(f => f.Floor == floor);
 }
 
@@ -204,7 +207,7 @@ public sealed class CampaignPlan
     public List<BarkSet> Barks { get; set; } = new();
     [AiDescription("The antagonist's taunts, thrown at the party as the floors' trials play out: two or three per trigger, spiteful and theatrical, free to curse (period oaths and modern profanity both), each with a clean twin.")]
     public List<TauntPlan> Taunts { get; set; } = new();
-    [AiDescription("The merchant's lines; leave null, they are added from the stock bank.")]
+    [AiDescription("The merchant's lines: Briefing (nodes hire, quakes, deal, sendoff; two replies on the first three; every path reaches deal), FloorLines for floors 1 to 20 (Greeting, Progress, Trade, each at most 220 characters; floors 1-6 greedy and cheerful, 7-13 uneasy, 14-19 frightened, 20 a send-off), and three Gathering lines. He never states a truth about the dungeon.")]
     [AiNotNull] public MerchantPlan? Merchant { get; set; }
     /// <summary>Free-form continuity notes the planner keeps for itself between floors.</summary>
     public string ArcNotes { get; set; } = "";
