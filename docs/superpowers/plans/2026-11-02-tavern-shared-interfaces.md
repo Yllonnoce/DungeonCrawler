@@ -44,39 +44,60 @@ guards); saves bump `SaveFormat.CurrentVersion` (9 today) with a migration; buil
 
 ## B. Safe room (`src/Adventure/Core/SafeRoomRules.cs`, `src/Adventure/SafeRoomController.cs`, generation, `Door`)
 
-- `FloorLayout.SafeRoom` (int, room index, -1 when none) and `FloorLayout.SafeRoomDoor` (GridPos);
-  `bool FloorLayout.IsInSafeRoom(GridPos p)`.
-- `VaultKind.SafeDoor` added to the enum; the safe room is appended to `layout.Vaults` as
-  `new Vault(index, room, door, VaultKind.SafeDoor, Lever: null, Key: null, Revealed: true)` so the existing vault/door
-  placement builds its `Door`; `Door` with `Kind == SafeDoor` has `Prompt == ""`, opens itself (`Open()`) when a living
-  party member is within `SafeRoomRules.DoorOpenRadius` and closes (`Close()`) `DoorCloseDelay` seconds after the last
-  member is farther than `DoorCloseRadius`; enemies never open it.
+As built (plan B, final review 2026-11-02); where this differs from the first draft of this contract, this is what
+plans C and D consume.
+
+- `FloorLayout.SafeRoom` (int, room index, -1 when none), `FloorLayout.SafeRoomDoor` (GridPos),
+  `bool FloorLayout.IsInSafeRoom(GridPos p)`, and `bool FloorLayout.SafeRoomCarved` (the room was carved for the
+  purpose rather than one the floor had).
+- Generation: `FloorGenerator.PlaceSafeRoom(layout, rng)` runs **after `PlaceObjective`** (the jail, shrine and stairs
+  vault are fixed first and the stairs stand where the objective moved them) and before pits, secrets, structures,
+  water, nests and spawns, from its own salted rng; it returns at once on a floor of fewer than two rooms (the tavern,
+  plan D, has none). The safe room is appended to `layout.Vaults` as
+  `new Vault(index, room, door, VaultKind.SafeDoor, Lever: null, Key: null, Revealed: true)`.
+- `VaultKind.SafeDoor`: the `Door` has `Prompt == ""`, opens itself (`Open()`) when a living party member is within
+  `SafeRoomRules.DoorOpenRadius` and closes (`Close()`) `DoorCloseDelay` seconds after the last member is farther than
+  `DoorCloseRadius`; enemies never open it. **The open safe door keeps an enemy-only barrier**: `Door.Open()` sets
+  `CollisionLayer = Door.SafeDoorBarrierLayer` (bit 16) for a SafeDoor (0 for any other door), and every live enemy's
+  `CollisionMask` includes 16 (the Enemy scene's mask is 19, a corpse's 17); adventurers (mask 5), projectiles
+  (5/3), NPCs (15) and sight rays (1) pass through.
 - `public static class SafeRoomRules` (engine-free): `const float GraceSeconds = 20, IntervalSeconds = 40,
   EmptyResetSeconds = 30, RegenMultiplier = 6, DoorOpenRadius = 2.5, DoorCloseRadius = 3, DoorCloseDelay = 2;
   const int CapAlive = 8, RouteDistanceCells = 10;`
-  `int Choose(FloorLayout layout)` → room index or -1 (dead-end room, not UpStairs/DownStairs room, not a vault, not a
-  nest, door cell within `RouteDistanceCells` of the shortest route between `UpStairs` and `DownStairs`, nearest the
-  route's midpoint wins); `GridPos DoorCell(FloorLayout layout, int room)`; `GridPos MerchantCell(FloorLayout layout)`
-  (the room cell farthest from the door); `IEnumerable<GridPos> Cells(FloorLayout layout)`.
+  `int Choose(FloorLayout layout, int maxRouteDistance = RouteDistanceCells)` → room index or -1: a room with exactly
+  one entrance whose sealing cuts nothing off, not the UpStairs/DownStairs room or the arena, not a vault (the
+  objective's jail and stairs vault are vaults), not the ritual shrine, no `layout.Objective.Reserved` cell in it or at
+  its door, no cellar or ledge, every cell on the ground with no ramp; door within `maxRouteDistance` of the route
+  between `UpStairs` and `DownStairs`; nearest the route's midpoint wins (ties: lower index). The generator falls back
+  to carving, wider distances and walling up one door of a two-door chamber. `GridPos DoorCell(FloorLayout, int room)`;
+  `GridPos MerchantCell(FloorLayout)` (the room's floor cell farthest from the door); `GridPos? GatherCell(FloorLayout)`;
+  `IEnumerable<GridPos> Cells(FloorLayout)`; `bool Occupied(members, layout)`.
 - `public sealed class GatheringClock` (engine-free): `void Update(float dt, bool occupied, int aliveFromGathering)`;
-  `bool TakeDue()` (true once per interval after grace while occupied and alive < cap); `int Spawned { get; }`;
+  `bool TakeDue()` (true once per interval after grace while occupied and alive < cap); `int Spawned { get; }` (groups);
   `float Seconds { get; }`; resets to grace after `EmptyResetSeconds` unoccupied.
-- `SafeRoomController : Node` (server/solo, one per floor with a safe room): owns the door rule, `bool Occupied`
-  (any living party member inside), sets `PartyController.RegenMultiplier = RegenMultiplier` while occupied (1 otherwise;
-  `CharacterState.Tick` multiplies HP, stamina and mana regen by it), runs the `GatheringClock`, spawns a group of 1 or 2
-  floor enemies at the walkable corridor cell nearest the door that is not visible from it, awake and holding position
-  (`Enemy.HoldAt(Vector3)`, world position; the controller converts the cell with `DungeonBuilder.Surface`), raises `EventBus.RaiseGathered(int spawnedTotal)` at each spawn, `EventBus.RaiseSafeRoomChanged(bool inside)`
-  on change; honours `DebugTools --no-gathering`; ignores `Settings.Reinforcements`.
-- Exclusions: generation never puts enemy, chest, trap, breakable, ambush, horde, nest or portal in safe-room cells;
-  `DungeonBuilder` calls `BlockCell` for every safe-room cell and the door cell; `GasField.Build` gives safe-room cells
-  `GasRules.Unreachable`; the HUD air indicator reads clean inside.
-- HUD: `Hud.SafeRoom` (bool) shows the text "Safe room" in the objective line area while true.
-- Save: `FloorStateDto.Gathered` (int, default 0), restored into the clock's `Spawned`. Appending the safe room to `Vaults`
-  before spawns are placed changes `FloorLayout.ContentHash` on some floors; the shipped plans' `LayoutHash` values are
-  refreshed with a new `--rehash-plans=DIR` flag (plan B) and the validator already adapts rather than rejects.
+- `SafeRoomController : Node` (server/solo, one per floor with a safe room): `static SafeRoomController? Instance`;
+  owns the door rule; `bool Occupied` (any living member inside); **`bool IsInside(int memberIndex)`** (that
+  adventurer is alive and inside this tick) replaces the drafted `PartyController.RegenMultiplier`: the regeneration
+  multiplier is applied per member, so a member outside heals normally; `int Gathered` (groups sent, saved) and
+  `int GatheredCreatures` (creatures made since the floor was built or loaded, not saved); runs the `GatheringClock`
+  and spawns a group of 1 or 2 floor enemies at `GatherCell`, awake and holding position (**`Enemy.HoldAt(Vector3)`**,
+  world position; it sets `Enemy.HoldsPost`, so a holder that loses the party after a chase returns to a `HoldState`
+  and walks back to its post instead of falling asleep); raises **`EventBus.RaiseGathered(int creaturesTotal)`**
+  only when the group made at least one creature, carrying the cumulative creatures gathered on the floor (not groups;
+  the merchant's 2/4/6 remarks count these); `EventBus.RaiseSafeRoomChanged(bool inside)` on change; honours
+  `DebugTools --no-gathering`; ignores `Settings.Reinforcements`.
+- Exclusions: generation never puts enemy, chest, trap, breakable, ambush, horde, nest or portal in safe-room cells.
+  Safe-room cells and the door cell are **enemy-only blocked** through `DungeonBuilder.IsCellBlockedForEnemies(GridPos)`
+  (the enemy A* consults it; `BlockCell` is not used, so the party's own paths and the companions walk in
+  freely); cast bodies (`DungeonBuilder.StepsFrom`) skip safe-room and vault cells; `GasField.Build` gives safe-room
+  cells `GasRules.Unreachable`; the HUD air indicator reads clean inside.
+- HUD: `Hud.SafeRoom` (bool) ends the objective line with "Safe room" while true.
+- Save: `FloorStateDto.Gathered` (int, default 0), restored into the clock's `Spawned`. The safe room changes
+  `FloorLayout.ContentHash`; the shipped plans' `LayoutHash` values are refreshed with `--rehash-plans=DIR`, and every
+  shipped floor must load with no `plan repaired` line (the per-floor sweep in `docs/development.md`).
 - Net: door state travels as today via `PropChanged(NetRefs.Door(index), "opened"/"closed")`; `SafeRoomChanged` and
-  regen are server-side, visible to clients through `Vitals`/`PartySync`; a `SafeRoomSync(bool Inside)` message tells
-  clients to show the HUD text.
+  regen are server-side, visible to clients through `Vitals`/`PartySync`. **`SafeRoomSync` is withdrawn**: the
+  "Safe room" ending reaches clients inside the objective line, through the existing `ObjectiveMsg`.
 
 ## C. Merchant and shop (`CampaignPlan`, `NpcBodies`, `LegendaryDef`, `src/Items/Core/ShopRules.cs`, `src/UI/Shop/ShopScreen.cs`)
 

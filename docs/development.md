@@ -270,7 +270,7 @@ godot --path . -- --test-horde --screenshot=out.png                 # floor 3 ne
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)
 godot --headless --path . -- --test-ambush          # floor 2: the first corridor ambush springs when stood on, fights, saves as sprung
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
-godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, x6 regen, gathering, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
+godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
 godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2   # regenerate each floor_NN.json's layout from its campaign and rewrite only its LayoutHash (after a generator change, so the shipped plans load without "adapted")
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
@@ -536,23 +536,49 @@ Two layers of pressure sit on top of every floor's planned population (Settings,
 ## Safe rooms
 
 Every floor seals one room as a safe room (`Adventure/Core/SafeRoomRules.cs`, placed by `FloorGenerator.PlaceSafeRoom`
-before anything else so nothing lands inside it): a dead end with a single entrance within ten cells of the
-stairs-to-stairs route, never a stairs room, the arena or a vault; failing that a side room carved off a room on the
-route, a dead end farther away, a side room off any open room, or a small two-door chamber with one door walled up.
+right after the objective, so the jail, shrine and stairs vault are fixed first and the route runs between the stairs
+as the objective left them, and before pits, structures, nests and spawns, so nothing lands inside it): a dead end with
+a single entrance within ten cells of the stairs-to-stairs route, on the ground with no ramp, ledge or cellar, never a
+stairs room, the arena, a vault, the shrine or a room holding an objective's cell; failing that a side room carved off
+a room on the route, a dead end farther away, a side room off any open room, or a small two-door chamber with one door
+walled up. A floor of one room (the tavern) has none. A room the floor already had is shuffled with the others when
+the nests are placed and skipped after, so sealing it leaves the breaches where they were.
 Its iron-banded door (`VaultKind.SafeDoor`, no prompt, a lit lantern on the corridor side) opens by itself when a
 living member comes within 2.5 m and shuts 2 s after all of them are beyond 3 m; no creature passes it, paths into the
-room or spawns there (`DungeonBuilder.IsCellBlockedForEnemies`), and the toxic gas never gets in (`GasField`).
+room or spawns there (`DungeonBuilder.IsCellBlockedForEnemies`), even while it stands open (the open door keeps an
+enemy-only barrier on collision layer 16, below), and the toxic gas never gets in (`GasField`).
 `Adventure/SafeRoomController.cs` runs it on the server or in solo: each living member inside regenerates hp, stamina
 and mana six times faster (a member outside heals normally; a downed body is not revived), and while anyone is inside
 the objective line ends with "Safe room" (the line reaches clients with the objective message). Resting is not free:
 after 20 s inside, one or two of the tier's creatures gather outside, 4 to 8 cells from the door and out of its
-straight line, and hold there awake (`HoldState`, log `[gather] ...`, `EventBus.Gathered`); another group every 40 s,
-never while eight of them are alive. They go for the party when it steps out. An empty room pauses the clock and after
+straight line, and hold there awake (`HoldState`, log `[gather] ... (groups G, creatures C)`; `EventBus.Gathered`
+carries the creatures gathered on the floor so far, for the merchant's remarks); another group every 40 s, never while
+eight of them are alive. They go for the party when it steps out, and one that loses it walks back to its post and
+holds there again, awake (`Enemy.HoldsPost`). An empty room pauses the clock and after
 30 s starts it over; the count of groups sent is saved with the floor (`FloorStateDto.Gathered`), the creatures
 themselves are dynamic and not saved. The gathering ignores the "Reinforcement pressure" setting; `--no-gathering`
 turns it off for a run. A safe room changes a floor's `ContentHash`, so plans written before it log "adapted";
 `--rehash-plans=DIR` refreshes the `LayoutHash` of every `floor_NN.json` in DIR (the shipped plans in
-`data/adventures/builtin` were rehashed when safe rooms arrived). `--test-safe-room` checks all of it headless.
+`data/adventures/builtin` were rehashed when safe rooms arrived, and on five floors what stood in the room the safe
+room took was moved by hand). `--test-safe-room` checks all of it headless, including a creature held at the open
+door and a gatherer going back to its post.
+
+**After any generator change, sweep the shipped floors.** A rehash only stops "adapted"; a plan whose rooms changed
+role still loads with its pieces silently dropped. Every shipped floor must load with no repair line:
+
+```bash
+dotnet build DungeonCrawler.csproj --no-incremental -v q --nologo -clp:ErrorsOnly
+godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2
+for N in $(seq 1 20); do echo "== floor $N"; timeout 60 godot --headless --path . -- --builtin --floor=$N --quit-after=4 --no-ambush --no-portals --no-gathering 2>&1 | grep -iE "repaired|dropped|demoted|adapted"; done
+timeout 120 godot --headless --path . -- --builtin --quit-after=4 2>&1 | grep -c adapted   # 0
+```
+
+Any floor that prints a line gets its `floor_NN.json` edited by hand, minimally, keeping the story: move what was
+dropped to a live room (not the safe room, start, a vault, the jail or the shrine), and when a room named in
+narration, a quest's lines or a horde's line lost its role, move the room's identity (role, name, its narration,
+traps and clue) with its contents rather than re-pointing the story. Edit with a .NET-compatible JSON writer (two-space
+indent, `\u0027`-style escapes) so only the edited values change. `could not place: npc ...: waits on flag ...` lines
+are expected (NPCs gated on an earlier floor's choice).
 
 ## Floors are designed, not just rolled
 
@@ -689,3 +715,4 @@ In a game: T opens the chat line, the floor label shows the round trip and how m
 | 2 | Party body |
 | 4 | Enemies |
 | 8 | Interactables (loot, stairs, NPCs) |
+| 16 | Open safe door: an enemy-only barrier (`Door.SafeDoorBarrierLayer`; in every enemy's mask, 19 alive and 17 dead; adventurers, projectiles, NPCs and sight rays do not collide with it) |
