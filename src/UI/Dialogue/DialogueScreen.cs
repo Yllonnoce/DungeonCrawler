@@ -67,6 +67,7 @@ public partial class DialogueScreen : Control
     public void Open(Npc npc)
     {
         Npc = npc;
+        _merchant = false;
         Visible = true;
         EventBus.Instance.PlaySfx("ui_open");
         // floors built from an older plan may still carry a script with no way to hand the quest in; mend it on the spot
@@ -75,6 +76,53 @@ public partial class DialogueScreen : Control
         var start = npc.Script.Nodes.FirstOrDefault(n => n.Id == npc.Script.Start) ?? npc.Script.Nodes.FirstOrDefault();
         if (start == null) { Close(); return; }
         Show(start);
+    }
+
+    /// <summary>The merchant's talk: his trade line and exactly three choices, Trade, How is it going? and Leave. All local.</summary>
+    public void OpenMerchant(Npc npc)
+    {
+        Npc = npc;
+        _merchant = true;
+        Visible = true;
+        EventBus.Instance.PlaySfx("ui_open");
+        var opening = npc.MerchantLines?.Trade ?? npc.Script.Nodes.FirstOrDefault()?.Line;
+        if (opening == null) { Close(); return; }
+        Show(MerchantNode(opening));
+    }
+
+    private bool _merchant; // the open conversation is the merchant's three choices, not a script
+    private const string MerchantTrade = "merchant:trade", MerchantProgress = "merchant:progress";
+
+    private static DialogueNode MerchantNode(Line line) => new()
+    {
+        Id = "merchant",
+        Line = line,
+        Choices =
+        {
+            new ChoicePlan { Text = "Trade", Next = MerchantTrade },
+            new ChoicePlan { Text = "How is it going?", Next = MerchantProgress },
+            new ChoicePlan { Text = "Leave", Effect = DialogueEffect.Farewell },
+        },
+    };
+
+    /// <summary>A merchant choice: the shop for this floor, his word on the descent (the same three choices again), or goodbye.</summary>
+    private void ChooseMerchant(ChoicePlan choice)
+    {
+        var npc = Npc!;
+        switch (choice.Next)
+        {
+            case MerchantTrade:
+                GD.Print($"[Dialogue] {npc.Id}: trade");
+                Close();
+                Main.Instance?.Hud?.OpenShop(Game.Instance.CurrentFloor);
+                return;
+            case MerchantProgress when npc.MerchantLines is { } lines:
+                Show(MerchantNode(lines.Progress));
+                return;
+            default:
+                Close();
+                return;
+        }
     }
 
     private void Show(DialogueNode node)
@@ -155,6 +203,7 @@ public partial class DialogueScreen : Control
     {
         if (Npc == null || index < 0 || index >= _shown.Count || _pendingJoin != null) return;
         var choice = _shown[index];
+        if (_merchant) { ChooseMerchant(choice); return; }
         if (choice.Effect == DialogueEffect.Join && Net.NetSession.IsClient)
         {
             // the server's fighter decides; the yes or no line comes back as a DialogueAnswer
@@ -198,6 +247,7 @@ public partial class DialogueScreen : Control
         if (!Visible) return;
         Visible = false;
         _pendingJoin = null;
+        _merchant = false;
         Npc?.Converse(null); // back to Idle once the conversation ends
         Npc = null;
         Node = null;

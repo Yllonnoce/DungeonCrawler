@@ -163,10 +163,31 @@ public partial class Hud : Control
     public string ObjectiveText => _objective.Text;
     private void OnObjectiveChanged(string text) => _objective.Text = text;
     private void OnQuestChanged(QuestState q) { if (_questLog.Visible) _questLog.Refresh(); }
-    private void OnNarration(string text, string? voiceId)
+    private void OnNarration(string text, string? voiceId) => ShowSubtitle(text);
+
+    /// <summary>A line under the view for as long as it takes to read; local to this screen (narration arrives here too).</summary>
+    public void ShowSubtitle(string text)
     {
         _subtitle.Text = text;
         _subtitleTimer = Math.Clamp(2f + text.Length * 0.06f, 3f, 10f);
+    }
+
+    /// <summary>True while the dialogue is open on this NPC.</summary>
+    public bool InDialogueWith(Npc npc) => _dialogue.Visible && _dialogue.Npc == npc;
+
+    /// <summary>The merchant's three choices: trade, how it goes, leave.</summary>
+    public void OpenMerchant(Npc npc)
+    {
+        if (_pause.Visible) return;
+        _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
+        _dialogue.OpenMerchant(npc);
+        UpdateModalState();
+    }
+
+    /// <summary>The merchant's wares for <paramref name="floor"/>. Task 8 builds the shop screen; until then it only says so.</summary>
+    public void OpenShop(int floor)
+    {
+        GD.Print($"[Hud] shop for floor {floor}: The shop opens here in Task 8");
     }
 
     public void OpenDialogue(Npc npc)

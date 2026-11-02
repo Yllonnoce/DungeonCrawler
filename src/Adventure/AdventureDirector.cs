@@ -451,6 +451,7 @@ public partial class AdventureDirector : Node
         bus.NpcEvent += OnNpcEvent;
         bus.DialogueEffectChosen += OnDialogueEffect;
         bus.FloorChanged += OnFloorChanged;
+        bus.Gathered += OnGathered;
         bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; };
         bus.MemberDamaged += (_, amount) => { if (_record != null) _record.DamageTaken += amount; };
         bus.MemberDowned += _ => { if (_record != null) _record.Downs++; };
@@ -472,6 +473,25 @@ public partial class AdventureDirector : Node
     }
 
     private FloorObjectiveKind? _pendingDescend;
+
+    /// <summary>Creature totals at which the merchant remarks on the crowd outside: Gathering[0], [1], [2].</summary>
+    public static readonly int[] GatheringRemarkAt = { 2, 4, 6 };
+    private int _gatheringRemarks;      // how many of the floor's remarks he has made
+    private int _gatheringRemarksFloor; // the floor they count for
+
+    /// <summary>More creatures gathered outside the safe room: the merchant says the next of his lines, each once per floor.</summary>
+    private void OnGathered(int creaturesTotal)
+    {
+        var floor = Game.Instance.CurrentFloor;
+        if (_gatheringRemarksFloor != floor) { _gatheringRemarksFloor = floor; _gatheringRemarks = 0; }
+        var due = GatheringRemarkAt.Count(t => creaturesTotal >= t);
+        if (due <= _gatheringRemarks) return;
+        _gatheringRemarks = due; // a jump past two totals at once says only the latest
+        var campaign = Game.Instance.Adventure.Campaign;
+        if (campaign == null || Main.Instance?.Builder.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant") is not { } merchant) return;
+        var plan = campaign.Merchant is { IsEmpty: false } m ? m : Voice.MerchantLineBank.Generic(campaign.Title, campaign.Antagonist.Name);
+        if (due - 1 < plan.Gathering.Count) merchant.Say(plan.Gathering[due - 1]);
+    }
 
     /// <summary>Called by Main once a floor's nodes exist and saved state has been applied.</summary>
     public void OnFloorBuilt(FloorContents contents, int floor, bool firstVisit)

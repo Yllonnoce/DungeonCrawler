@@ -27,6 +27,7 @@ public static class BuiltinCampaign
             var dir = Dir;
             var campaign = PlanFormat.Deserialize<CampaignPlan>(Read($"{dir}/campaign.json"));
             campaign.Source = PlanSources.Builtin;
+            RepairMerchant(campaign, dir);
             var floors = new Dictionary<int, FloorPlan>();
             for (var f = 1; f <= TierRules.FinalFloor; f++)
             {
@@ -45,6 +46,18 @@ public static class BuiltinCampaign
         }
     }
 
+    private static readonly HashSet<string> Reported = new();
+
+    /// <summary>
+    /// An older campaign or a user's rebake may have no merchant: he gets the generic one, in memory only
+    /// (<see cref="Write"/> takes it back out). Said once per directory, however often the campaign is read.
+    /// </summary>
+    private static void RepairMerchant(CampaignPlan campaign, string dir)
+    {
+        var repairs = CampaignRepair.MerchantOnLoad(campaign);
+        if (repairs.Count > 0 && Reported.Add(dir)) GD.Print($"[Builtin] campaign repaired in memory: {string.Join("; ", repairs)}");
+    }
+
     private static string Read(string path)
     {
         using var f = Godot.FileAccess.Open(path, Godot.FileAccess.ModeFlags.Read) ?? throw new IOException($"cannot open {path}");
@@ -59,6 +72,7 @@ public static class BuiltinCampaign
         try
         {
             var campaign = PlanFormat.Deserialize<CampaignPlan>(File.ReadAllText(campaignPath));
+            RepairMerchant(campaign, dir);
             var floors = new Dictionary<int, FloorPlan>();
             for (var f = 1; f <= TierRules.FinalFloor; f++)
             {
@@ -74,11 +88,11 @@ public static class BuiltinCampaign
         }
     }
 
-    /// <summary>Write a baked campaign to a directory (absolute path); used by the bake flag.</summary>
+    /// <summary>Write a baked campaign to a directory (absolute path); used by the bake flag. A merchant added when it was read is left out.</summary>
     public static void Write(string dir, CampaignPlan campaign, IReadOnlyDictionary<int, FloorPlan> floors)
     {
         Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "campaign.json"), PlanFormat.Serialize(campaign));
+        File.WriteAllText(Path.Combine(dir, "campaign.json"), PlanFormat.Serialize(CampaignRepair.ForWriting(campaign))); // a load's merchant repair stays in memory
         foreach (var (floor, plan) in floors) File.WriteAllText(Path.Combine(dir, $"floor_{floor:00}.json"), PlanFormat.Serialize(plan));
     }
 }

@@ -263,6 +263,7 @@ public partial class DungeonBuilder : Node3D
         _floorRoot.AddChild(_grid);
         PlaceStairs(layout, _floorRoot, floorIndex);
         PlaceViewerCast(layout, _floorRoot, floorIndex);
+        PlaceMerchant(layout, _floorRoot, floorIndex);
         PlaceEnemies(contents, floorIndex);
         PlaceProps(layout, contents, _floorRoot, floorIndex, seed);
         PlaceFires(layout, _floorRoot, floorIndex);
@@ -341,6 +342,37 @@ public partial class DungeonBuilder : Node3D
             "Then we go together. Stay close to the light. I... I am not brave, but I am not alone now.",
             "Forgive me. I cannot. Not yet."),
     };
+
+    /// <summary>
+    /// The campaign's merchant, on the safe room's cell farthest from the door and facing it. Every machine builds him
+    /// (the floor build is shared); none on a floor without a safe room or in a campaign without a merchant.
+    /// </summary>
+    private void PlaceMerchant(FloorLayout layout, Node3D root, int floor)
+    {
+        var campaign = Game.Instance?.Adventure?.Campaign;
+        if (layout.SafeRoom < 0 || campaign?.MerchantCast() is not { } cast)
+        {
+            GD.Print($"[DungeonBuilder] floor {floor}: no safe room, no merchant");
+            return;
+        }
+        var plan = campaign.Merchant is { IsEmpty: false } m ? m : Adventure.Voice.MerchantLineBank.Generic(campaign.Title, campaign.Antagonist.Name);
+        var lines = plan.For(floor);
+        var npc = _npcScene.Instantiate<Npc>();
+        npc.Id = "merchant";
+        npc.NpcName = cast.Name;
+        npc.IsMerchant = true;
+        npc.MerchantLines = lines;
+        npc.Floor = floor;
+        npc.ModelPath = BodyPath(Adventure.NpcBodies.ForCast(cast));
+        // one node, only the dialogue's opening text: the merchant's talk is the shop dialogue, not a script
+        npc.Script = new NpcScript { Start = "trade", Nodes = { new DialogueNode { Id = "trade", Line = lines?.Trade ?? new Line("") } } };
+        npc.Name = "Npc_merchant";
+        root.AddChild(npc);
+        var cell = SafeRoomRules.MerchantCell(layout);
+        npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
+        npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
+        GD.Print($"[DungeonBuilder] floor {floor}: merchant {cast.Name} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+    }
 
     private void PlaceViewerCast(FloorLayout layout, Node3D root, int floorIndex)
     {
@@ -945,7 +977,8 @@ public partial class DungeonBuilder : Node3D
         npc.NpcName = name;
         npc.Mode = mode;
         var cast = CastWords(null, name);
-        npc.ModelPath = modelPath ?? BodyPath(Adventure.NpcBodies.For(id, name, mode == NpcMode.Prisoner, cast.Role, cast.Style));
+        var body = Adventure.NpcBodies.For(id, name, mode == NpcMode.Prisoner, cast.Role, cast.Style);
+        npc.ModelPath = modelPath ?? BodyPath(body == "npc_merchant" ? "npc_old_man" : body); // the merchant body is his alone
         npc.Floor = CurrentFloor;
         npc.Name = $"Npc_{id}";
         root.AddChild(npc);

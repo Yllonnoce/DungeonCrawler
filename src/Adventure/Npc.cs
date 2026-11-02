@@ -49,11 +49,18 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool Turned { get; private set; }
     public float Hp { get; private set; }
     public float MaxHp { get; private set; }
+    /// <summary>The campaign's trader, standing in the safe room: talks through the shop dialogue, never flees, greets once per floor.</summary>
+    public bool IsMerchant { get; set; }
+    /// <summary>The merchant's lines for this floor (greeting, progress, trade); null for everyone else.</summary>
+    public MerchantFloorLines? MerchantLines { get; set; }
+    /// <summary>How close (metres) the local adventurer comes before the merchant greets them.</summary>
+    public float GreetRadius { get; set; } = 8f;
+    private bool _greeted;
 
     public string DisplayName => NpcName;
     public bool IsAlive => !Dead && !Downed;
     public bool IsUnaware => false;
-    public string Prompt => Dead ? "" : Mode switch
+    public string Prompt => Dead ? "" : IsMerchant ? $"Talk to {NpcName}" : Mode switch
     {
         NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin the ritual with {NpcName}" : "",
         NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.JailbreakController jail ? jail.PromptFor(this) : "",
@@ -123,7 +130,41 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                 (Objectives.ObjectiveController.Instance as Objectives.JailbreakController)?.OnInteract(this, party, actor);
                 return;
         }
-        if (Main.Instance?.Hud is { } hud) hud.OpenDialogue(this); // a dedicated server has no screen; the client opened its own
+        if (Main.Instance?.Hud is not { } hud) return; // a dedicated server has no screen; the client opened its own
+        if (IsMerchant) hud.OpenMerchant(this); // trade, how it goes, leave: all local, the purchases go through the party
+        else hud.OpenDialogue(this);
+    }
+
+    /// <summary>
+    /// Say a line out of a conversation (the merchant's greeting and his remarks on the gathering): its voice if it has
+    /// one, the subtitle and the log line either way, and the talking pose for as long as it takes to say. Local only.
+    /// </summary>
+    public void Say(Line line)
+    {
+        if (Dead || string.IsNullOrWhiteSpace(line.Text)) return;
+        var voiced = VoiceRenderer.Instance?.PlayLine(line, interrupt: false) == true; // the generic merchant's lines have no voice: subtitle only
+        GD.Print($"[Npc] {NpcName}: \"{line.Text}\"{(voiced ? "" : " (no voice)")}");
+        Main.Instance?.Hud?.ShowSubtitle($"{NpcName}: {line.Text}");
+        if (Main.Instance?.Hud?.InDialogueWith(this) == true) return; // the conversation drives the pose
+        Converse(true);
+        var serial = ++_saySerial;
+        GetTree().CreateTimer(TalkPose.EstimateSeconds(line.Text)).Timeout += () =>
+        {
+            if (!IsInstanceValid(this) || serial != _saySerial || Main.Instance?.Hud?.InDialogueWith(this) == true) return;
+            Converse(null);
+        };
+    }
+
+    private int _saySerial;
+
+    /// <summary>The merchant greets the local adventurer the first time they come within <see cref="GreetRadius"/> on this floor.</summary>
+    private void Greet()
+    {
+        if (_greeted || !IsMerchant || Dead || MerchantLines is not { } lines || Main.Instance?.Party is not { } party || !IsInstanceValid(party) || !party.HasBodies) return;
+        var lead = party.Lead;
+        if (new Vector2(lead.GlobalPosition.X - GlobalPosition.X, lead.GlobalPosition.Z - GlobalPosition.Z).Length() > GreetRadius) return;
+        _greeted = true;
+        Say(lines.Greeting);
     }
 
     /// <summary>
@@ -228,13 +269,14 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public override void _PhysicsProcess(double delta)
     {
         var dt = (float)delta;
+        if (!Net.NetSession.IsServer) Greet(); // every player's own screen: a dedicated server has nobody to greet
         if (Net.NetSession.IsClient) { ClientTick(dt); return; }
         var v = Velocity;
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
         var planar = Vector3.Zero;
         var party = Main.Instance?.Party;
         var speed = WalkSpeed;
-        if (!Dead && !Downed && !Escorting && Mode == NpcMode.Quest && MoveTarget == null && Flight(dt, out var away, out speed))
+        if (!Dead && !Downed && !Escorting && !IsMerchant && Mode == NpcMode.Quest && MoveTarget == null && Flight(dt, out var away, out speed))
         {
             if (away is { } d) { FaceToward(d); planar = PathMover.Planar(GlobalPosition, d) * speed; }
         }

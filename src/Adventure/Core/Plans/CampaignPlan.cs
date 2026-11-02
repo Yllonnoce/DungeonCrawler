@@ -211,6 +211,8 @@ public sealed class CampaignPlan
     [AiNotNull] public MerchantPlan? Merchant { get; set; }
     /// <summary>Free-form continuity notes the planner keeps for itself between floors.</summary>
     public string ArcNotes { get; set; } = "";
+    /// <summary>What <see cref="CampaignRepair.MerchantOnLoad"/> changed in memory on a campaign read from disk, so writing it back leaves the file as it was; null when nothing was.</summary>
+    [AiIgnore, System.Text.Json.Serialization.JsonIgnore] public MerchantLoadRepair? LoadRepair { get; set; }
 
     public FloorOutline? OutlineFor(int floor) => Floors.FirstOrDefault(f => f.Floor == floor);
     public CastMember? MerchantCast() => Cast.FirstOrDefault(c => c.Merchant);

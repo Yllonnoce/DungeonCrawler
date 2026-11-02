@@ -51,6 +51,43 @@ public static class CampaignRepair
         if (campaign.Merchant is null or { IsEmpty: true }) { campaign.Merchant = MerchantLineBank.Generic(campaign.Title, campaign.Antagonist.Name); repairs.Add("generic merchant lines added"); }
     }
 
+    /// <summary>
+    /// The merchant repair for a campaign read from disk (the shipped one, a user's rebake, a bake in progress): he and his
+    /// lines are there in memory, and what was changed is kept on <see cref="CampaignPlan.LoadRepair"/> so that
+    /// <see cref="ForWriting"/> hands a writer the campaign as the file had it. The other repairs are not applied here.
+    /// </summary>
+    public static List<string> MerchantOnLoad(CampaignPlan campaign)
+    {
+        var undo = new MerchantLoadRepair
+        {
+            Merchant = campaign.Merchant,
+            Flags = campaign.Cast.ToDictionary<CastMember, CastMember, (bool, string)>(c => c, c => (c.Merchant, c.Secret), ReferenceEqualityComparer.Instance),
+        };
+        var before = campaign.Cast.ToHashSet(ReferenceEqualityComparer.Instance);
+        var repairs = new List<string>();
+        RepairMerchant(campaign, repairs);
+        if (repairs.Count == 0) return repairs;
+        undo.Added = campaign.Cast.Where(c => !before.Contains(c)).Select(c => c.Id).ToList();
+        campaign.LoadRepair = undo;
+        return repairs;
+    }
+
+    /// <summary>
+    /// The campaign to write: itself when nothing was repaired on load, else a copy with the load's merchant repair taken
+    /// back out (the generic merchant and his lines removed, flags and secret as they were). Everything else that changed
+    /// since the load, voice ids and barks among them, is kept.
+    /// </summary>
+    public static CampaignPlan ForWriting(CampaignPlan campaign)
+    {
+        if (campaign.LoadRepair is not { } undo) return campaign;
+        var copy = PlanFormat.Deserialize<CampaignPlan>(PlanFormat.Serialize(campaign));
+        copy.Merchant = undo.Merchant;
+        for (var i = 0; i < campaign.Cast.Count && i < copy.Cast.Count; i++)
+            if (undo.Flags.TryGetValue(campaign.Cast[i], out var was)) { copy.Cast[i].Merchant = was.Merchant; copy.Cast[i].Secret = was.Secret; }
+        copy.Cast.RemoveAll(c => undo.Added.Contains(c.Id));
+        return copy;
+    }
+
     /// <summary>A line's delivery must be one of ours; anything else falls back to the character's default.</summary>
     public static void RepairLine(Line line, List<string> repairs, string what)
     {
@@ -77,4 +114,15 @@ public static class CampaignRepair
     }
 
     private static string Clip(string s) => s.Length <= MaxLine ? s.Trim() : s[..MaxLine].Trim();
+}
+
+/// <summary>What a load-time merchant repair changed, to take it back out before the campaign is written.</summary>
+public sealed class MerchantLoadRepair
+{
+    /// <summary>The merchant section as the file had it (null, or an empty one).</summary>
+    public MerchantPlan? Merchant { get; set; }
+    /// <summary>Each cast member read from the file, with its merchant flag and secret as they were.</summary>
+    public Dictionary<CastMember, (bool Merchant, string Secret)> Flags { get; set; } = new(ReferenceEqualityComparer.Instance);
+    /// <summary>The ids of the cast members the repair added.</summary>
+    public List<string> Added { get; set; } = new();
 }

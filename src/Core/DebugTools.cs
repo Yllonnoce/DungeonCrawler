@@ -2558,7 +2558,7 @@ public partial class DebugTools : Node
     }
 
     // ---- --test-safe-room ---------------------------------------------------------------------------------
-    // The floor's safe room end to end: the room and its door, the door opening for the party and shut against an
+    // The floor's safe room end to end: the room and its door, the merchant standing in it and his three-choice talk, the door opening for the party and shut against an
     // enemy, x6 regeneration inside, the HUD line, the gathering (or none with --no-gathering), the gatherers going for
     // the party when it steps out and back to their post when it is gone again, the open door holding a creature out
     // while a member stands in it, the gathered count through a save, and (with --objective=toxic) clean air inside.
@@ -2628,6 +2628,27 @@ public partial class DebugTools : Node
                 var gather = SafeRoomRules.GatherCell(layout);
                 _srDoor = root.GetChildren().OfType<Door>().FirstOrDefault(d => d.Kind == VaultKind.SafeDoor);
                 GD.Print($"[saferoom] floor {b.CurrentFloor} seed {Game.Instance.GameSeed}: room {layout.SafeRoom} ({layout.Rooms[layout.SafeRoom].Cells().Count()} cells) door {layout.SafeRoomDoor} merchant {SafeRoomRules.MerchantCell(layout)} gather {gather?.ToString() ?? "none"}");
+                // the merchant stands on a safe-room cell
+                var merchantNpc = root.GetChildren().OfType<Adventure.Npc>().FirstOrDefault(n => n.IsMerchant);
+                var merchantAt = merchantNpc == null ? (GridPos?)null : DungeonBuilder.WorldToCell(merchantNpc.GlobalPosition);
+                if (merchantAt is { } mc && layout.IsInSafeRoom(mc)) GD.Print($"[saferoom] merchant: present at {mc} (\"{merchantNpc!.NpcName}\", prompt \"{merchantNpc.Prompt}\", lines {(merchantNpc.MerchantLines != null ? "yes" : "none")})");
+                if (merchantNpc is { MerchantLines: { } ml })
+                {
+                    // his talk: the trade line, exactly Trade / How is it going? / Leave; the second shows his progress line, Trade closes the talk
+                    var talk = main.Hud.Dialogue;
+                    main.Hud.OpenMerchant(merchantNpc);
+                    var offered = string.Join(" / ", talk.Choices.Select(c => c.Text));
+                    var opening = talk.Node?.Line.Text;
+                    talk.Choose(1);
+                    var progress = talk.Node?.Line.Text;
+                    var again = string.Join(" / ", talk.Choices.Select(c => c.Text));
+                    talk.Choose(0);
+                    GD.Print($"[saferoom] merchant talk: \"{opening}\" [{offered}]; how is it going: \"{progress}\" [{again}]; after Trade open={talk.Visible}");
+                    if (offered != "Trade / How is it going? / Leave" || again != offered) Fail($"merchant choices are [{offered}] then [{again}]");
+                    if (opening != ml.Trade.Text || progress != ml.Progress.Text) Fail("merchant lines are not his trade and progress lines");
+                    if (talk.Visible) { Fail("Trade left the dialogue open"); talk.Close(); }
+                }
+                else { GD.Print($"[saferoom] merchant: missing at {SafeRoomRules.MerchantCell(layout)}{(merchantAt is { } wrong ? $" (one stands at {wrong}, outside the room)" : "")}"); Fail("no merchant in the safe room"); }
                 if (_srDoor == null) { Fail("no SafeDoor on the floor"); Finish(); return; }
                 GD.Print($"[saferoom] door at {_srDoor.Cell} open={_srDoor.IsOpen} prompt=\"{_srDoor.Prompt}\"");
                 if (_srDoor.Cell != layout.SafeRoomDoor) Fail($"the door stands at {_srDoor.Cell}, the layout says {layout.SafeRoomDoor}");
