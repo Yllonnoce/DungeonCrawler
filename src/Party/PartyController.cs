@@ -784,10 +784,28 @@ public partial class PartyController : Node3D
         return stock;
     }
 
+    /// <summary>How near the merchant a body must stand to trade outside the safe room (the interact reach).</summary>
+    public const float MerchantReach = 3.5f;
+
+    /// <summary>Whether this body may trade: alive, the floor has a merchant, and it is in the safe room or within reach of him. Logs the refusal. With no floor built (no scene) there is nothing to judge.</summary>
+    public static bool CanTradeAt(Adventurer? body)
+    {
+        var builder = Main.Instance?.Builder;
+        if (builder?.FloorRoot == null) return true;
+        if (body != null && !body.Downed && builder.FloorRoot.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
+        {
+            var inRoom = builder.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
+            if (inRoom || body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return true;
+        }
+        EventBus.Instance.Log($"{body?.State.Name ?? "Nobody"} is not at the merchant.");
+        return false;
+    }
+
     /// <summary>Buy a stock slot on the current floor. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
     public string? ShopBuy(int stockIndex)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopBuyIntent(stockIndex)); return null; }
+        if (!CanTradeAt(Local)) return "Not at the merchant.";
         var gold = Gold;
         var stock = ShopStockFor(Game.Instance.CurrentFloor);
         var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
@@ -804,6 +822,7 @@ public partial class PartyController : Node3D
     public string? ShopSell(BagSlot slot)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopSellIntent(slot)); return null; }
+        if (!CanTradeAt(Local)) return "Not at the merchant.";
         if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
         var item = Bag[slot.BagIndex];
         var gold = Gold;

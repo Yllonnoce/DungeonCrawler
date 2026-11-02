@@ -52,5 +52,7 @@ public enum MsgKind : byte
     // the party purse (plan A): the server sends the total whenever it changes
     GoldSync,
     // the merchant's shop
-    ShopBuyIntent, ShopSellIntent, ShopSync, NpcSay,
+    ShopBuyIntent, ShopSellIntent, ShopSync,
+    // an NPC's line raised on the server
+    NpcSay,
 }
