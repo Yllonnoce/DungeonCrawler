@@ -101,7 +101,15 @@ public partial class InventoryScreen : PanelContainer
         _destroy = MakeSlot(SlotRef.Destroy, "DESTROY");
         _destroy.TooltipText = "Drag an item here to be rid of it for good.";
         side.AddChild(_destroy);
+        EventBus.Instance.GoldChanged += OnGoldChanged;
     }
+
+    public override void _ExitTree() => EventBus.Instance.GoldChanged -= OnGoldChanged;
+
+    private void OnGoldChanged(int total, int delta) { if (Visible) Refresh(); }
+
+    /// <summary>First line of the info panel, e.g. "57 gold" (for the headless tests).</summary>
+    public string PurseLine => _info.Text.Split('\n')[0];
 
     private ItemSlotControl MakeSlot(SlotRef r, string caption)
         => new() { Screen = this, Ref = r, Caption = caption };
@@ -132,7 +140,7 @@ public partial class InventoryScreen : PanelContainer
             cell.TooltipText = cell.Item == null ? "" : ItemText.Describe(cell.Item, compare);
             cell.QueueRedraw();
         }
-        _info.Text = $"Focused: {focused.Name} (F to change)\nDouble-click a bag item to equip it on {focused.Name} or drink it.\nArrows: {_party.ArrowCount}   Free cells: {_party.Bag.FreeSlots}";
+        _info.Text = $"{_party.Gold} gold\nFocused: {focused.Name} (F to change)\nDouble-click a bag item to equip it on {focused.Name} or drink it.\nArrows: {_party.ArrowCount}   Free cells: {_party.Bag.FreeSlots}";
         _drop.QueueRedraw();
         _destroy.QueueRedraw();
     }

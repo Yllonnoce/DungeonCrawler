@@ -2597,6 +2597,8 @@ public partial class DebugTools : Node
                 break;
             case 4 when _elapsed >= 5.5:
                 _goldStep++;
+                if (_screenshotPath != null) Main.Instance!.Hud.ToggleInventory(); // the screenshot shows the purse
+                else { Main.Instance!.Hud.ToggleInventory(); var line = Main.Instance.Hud.Inventory.PurseLine; Main.Instance.Hud.ToggleInventory(); GD.Print($"[gold] inventory shows: \"{line}\""); Check("inventory purse line", System.Text.RegularExpressions.Regex.IsMatch(line, @"^\d+ gold")); }
                 var b = main.Builder;
                 var def = b.RegularEnemies(b.CurrentFloor)[0];
                 var at = party.Lead.GlobalPosition + new Vector3(0, 0, -40f); // far from every companion's reach

@@ -318,7 +318,7 @@ You possess one of the four characters at a time (the local body); the other thr
 | Inventory DROP / DESTROY cells | Drag a bag item onto DROP to leave it on the floor (companions leave it alone) or onto DESTROY to be rid of it for good; quest items cannot be destroyed |
 | C | Character sheet (spend stat points) |
 | K | Skill tree (spend skill points). F switches character |
-| Tab or I | Inventory: drag to move or equip, double-click or right-click to equip, unequip, or drink. Drag to DROP to throw away |
+| Tab or I | Inventory: drag to move or equip, double-click or right-click to equip, unequip, or drink. Drag to DROP to throw away. The party's gold shows at the top of the info panel |
 | E | Interact (pick up loot, use stairs, open doors and chests, disarm traps, push secret walls) |
 | M | Toggle full-floor map (corner minimap is always on) |
 | J | Journal: quests on this floor and the rest of the run |
