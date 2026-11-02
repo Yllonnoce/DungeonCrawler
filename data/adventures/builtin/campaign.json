@@ -4568,7 +4568,7 @@
           "Delivery": null
         },
         "Progress": {
-          "Text": "One floor down and nothing of mine broken. I\u0027ve paced it out already: three good rooms to the bay, south light, if one brings the light.",
+          "Text": "One floor down and nothing of mine broken. I\u0027ve paced it out already: three good rooms off the passage, south light if one brings the light.",
           "VoiceId": null,
           "Delivery": null
         },
@@ -4617,7 +4617,7 @@
       {
         "Floor": 4,
         "Greeting": {
-          "Text": "Shut it behind you. The alderman went past with his papers and never once looked at my door. I paid extra for that.",
+          "Text": "Shut it behind you. The alderman went past with his papers and never once looked at my door. I don\u0027t care to be seen by the council in a cellar.",
           "VoiceId": null,
           "Delivery": null
         },
@@ -4635,12 +4635,12 @@
       {
         "Floor": 5,
         "Greeting": {
-          "Text": "There you are. Was that singing? Never mind. Acoustics. A selling point.",
+          "Text": "There you are. Was that singing? Never mind. Acoustics. I shall put it in the particulars.",
           "VoiceId": null,
           "Delivery": null
         },
         "Progress": {
-          "Text": "Five floors, or near enough. I\u0027ve had a sign painted: Pellet\u0027s Deep, Quiet Living. The painter wanted paying in advance. Everyone does, lately.",
+          "Text": "Five floors. I\u0027ve had a sign painted: Pellet\u0027s Deep, Quiet Living. The painter wanted paying in advance. Everyone does, lately.",
           "VoiceId": null,
           "Delivery": null
         },
@@ -4663,7 +4663,7 @@
           "Delivery": null
         },
         "Trade": {
-          "Text": "A rare piece in the case today, and a rare price beside it. You may admire them both.",
+          "Text": "Have a look under the cloth. One piece, priced like a dowry, and worth every penny of it, I\u0027m told. You may admire it for nothing.",
           "VoiceId": null,
           "Delivery": null
         }
@@ -4717,7 +4717,7 @@
           "Delivery": null
         },
         "Trade": {
-          "Text": "One fine piece in the case, kept back for you. I\u0027d like it off my hands. I don\u0027t care for the way it sits there.",
+          "Text": "I kept one back for you, wrapped in sacking. I\u0027d like it off my hands. I don\u0027t care for the way it sits there.",
           "VoiceId": null,
           "Delivery": null
         }
@@ -4727,7 +4727,7 @@
         "Greeting": {
           "Text": "Mind your step, and mind mine. I keep hearing it behind me, a little after I take it.",
           "VoiceId": null,
-          "Delivery": null
+          "Delivery": "whisper"
         },
         "Progress": {
           "Text": "Ten floors. A round number. I\u0027ve always liked round numbers; there are no corners in them for anything to wait in.",
@@ -4763,7 +4763,7 @@
         "Greeting": {
           "Text": "I hoped it was you. Every footstep, I hoped it was you, and I\u0027ve heard a great many footsteps.",
           "VoiceId": null,
-          "Delivery": null
+          "Delivery": "weary"
         },
         "Progress": {
           "Text": "My backers ask whether the lodgings are safe. I wrote yes. My hand shook so that it reads as no, and I\u0027ve let it stand.",
@@ -4771,7 +4771,7 @@
           "Delivery": null
         },
         "Trade": {
-          "Text": "Something fine in the case today. Take it. I\u0027d sooner it went down with you than stayed here with me.",
+          "Text": "The pick of the stock is under the counter today. Take it. I\u0027d sooner it went down with you than stayed here with me.",
           "VoiceId": null,
           "Delivery": null
         }
@@ -4789,7 +4789,7 @@
           "Delivery": null
         },
         "Trade": {
-          "Text": "Business as usual. Business is a great comfort. I\u0027ve done more of it today than in all my life, every bit of it with myself.",
+          "Text": "Business as usual. Business is a great comfort. I\u0027ve been buying my own stock off myself all morning, for the nerves.",
           "VoiceId": null,
           "Delivery": null
         }
@@ -4815,7 +4815,7 @@
       {
         "Floor": 15,
         "Greeting": {
-          "Text": "You came back. I told myself you would. I didn\u0027t believe me.",
+          "Text": "Another floor, and you\u0027re still with me. I told myself you would be. I didn\u0027t believe me.",
           "VoiceId": null,
           "Delivery": "weary"
         },
@@ -4879,7 +4879,7 @@
           "Delivery": "weary"
         },
         "Trade": {
-          "Text": "The last fine piece I have. Buy it. Buy all of it, if you can carry it. Only leave me the lamp.",
+          "Text": "The best I have left, and I\u0027ve little left. Buy it. Buy all of it, if you can carry it. Only leave me the lamp.",
           "VoiceId": null,
           "Delivery": "frantic"
         }
@@ -4915,7 +4915,7 @@
           "Delivery": "weary"
         },
         "Trade": {
-          "Text": "Everything must go, at prices I\u0027m ashamed of. The last fine piece was always meant for you. Go well, and bring me a receipt.",
+          "Text": "I\u0027m selling off the lot, at prices I\u0027m ashamed of. The last fine piece was always meant for you. Go well, and bring me a receipt.",
           "VoiceId": null,
           "Delivery": "warm"
         }
