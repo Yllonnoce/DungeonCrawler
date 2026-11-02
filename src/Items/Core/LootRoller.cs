@@ -50,7 +50,7 @@ public static class LootRoller
         if (rarity == Rarity.Legendary)
         {
             var legs = cat.Legendaries.Values
-                .Where(l => l.ItemLevelMin <= itemLevel && cat.Bases.TryGetValue(l.BaseId, out var lb) && entry.Matches(lb))
+                .Where(l => l.ItemLevelMin <= itemLevel && cat.Bases.TryGetValue(l.BaseId, out var lb) && lb.ItemLevelMin <= itemLevel && entry.Matches(lb))
                 .OrderBy(l => l.Id).ToList();
             if (legs.Count > 0)
                 return MakeLegendary(cat, legs[WeightedIndex(legs.Select(l => l.Weight).ToArray(), rng)], itemLevel, rng);
@@ -122,7 +122,8 @@ public static class LootRoller
             tierIndex = pick.i + 1;
             var raw = pick.t.Min + (float)rng.NextDouble() * (pick.t.Max - pick.t.Min);
             var value = affix.Op == ModOp.Mul ? 1f + MathF.Round(raw) / 100f : MathF.Round(raw, StatIsWhole(affix.Stat) ? 0 : 1);
-            mods.Add(new StatModifier(affix.Stat, affix.Op, value, affix.Name));
+            // an on-hit affix (Flaming, Freezing, Venomous) carries a 0..0 tier as a level gate only: no "+0" stat line for it
+            if (affix.Op == ModOp.Mul ? value != 1f : value != 0f) mods.Add(new StatModifier(affix.Stat, affix.Op, value, affix.Name));
         }
         return new RolledAffix { AffixId = affix.Id, Name = affix.Name, IsPrefix = affix.IsPrefix, Tier = tierIndex, Modifiers = mods, OnHit = affix.OnHit };
     }
