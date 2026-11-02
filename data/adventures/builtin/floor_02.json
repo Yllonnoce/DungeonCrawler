@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 2,
   "Source": "claude",
-  "LayoutHash": 13950274190387996748,
+  "LayoutHash": 12540576795050868960,
   "Title": "The Vestibule",
   "IntroLine": {
     "Text": "Moss in the mortar, and the sexton\u0027s lot gone wandering through it. The Vestry walks them back politely, one at a time, and locks the door behind.",
@@ -32,8 +32,8 @@
     },
     {
       "Index": 4,
-      "Role": "Barracks",
-      "Name": "Coat-Room of the Dead"
+      "Role": "Passage",
+      "Name": "The Damp Ambulatory"
     },
     {
       "Index": 5,
@@ -47,8 +47,8 @@
     },
     {
       "Index": 7,
-      "Role": "Passage",
-      "Name": "The Damp Ambulatory"
+      "Role": "Barracks",
+      "Name": "Coat-Room of the Dead"
     }
   ],
   "Collectives": [
@@ -64,16 +64,15 @@
       ],
       "Goal": {
         "Kind": "Patrol",
-        "Room": 4,
+        "Room": 7,
         "Objective": null,
         "Route": [
-          4,
           7,
           0,
           3
         ],
         "AlarmTarget": null,
-        "RallyRoom": 4
+        "RallyRoom": 7
       }
     },
     {
@@ -163,7 +162,7 @@
       "Kind": "Spikes"
     },
     {
-      "Room": 4,
+      "Room": 7,
       "Kind": "Gas"
     }
   ],
@@ -172,7 +171,7 @@
   "Narration": [
     {
       "Trigger": "RoomEnter",
-      "Room": 4,
+      "Room": 7,
       "Line": {
         "Text": "Coats on pegs, nineteen years of them, each with a name stitched inside the collar. Something is wearing the oldest.",
         "VoiceId": null,

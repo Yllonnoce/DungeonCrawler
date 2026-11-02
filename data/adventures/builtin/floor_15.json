@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 15,
   "Source": "claude",
-  "LayoutHash": 15780021916847233747,
+  "LayoutHash": 7371685180800806058,
   "Title": "The Bellows",
   "IntroLine": {
     "Text": "Red air, and under it a beat that loses count. Something ahead is doing the work of a heart, over and over, and has never once been thanked for it.",
@@ -164,7 +164,7 @@
   "Loners": [
     {
       "EnemyId": "enemy.ember_hound",
-      "Room": 10
+      "Room": 4
     }
   ],
   "Hordes": [
@@ -213,7 +213,7 @@
   },
   "Chests": [
     {
-      "Room": 10,
+      "Room": 4,
       "Locked": true,
       "QuestId": null
     }

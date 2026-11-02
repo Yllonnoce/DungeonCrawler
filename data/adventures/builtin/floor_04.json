@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 4,
   "Source": "claude",
-  "LayoutHash": 6348918507249226062,
+  "LayoutHash": 16920868162386183315,
   "Title": "The Chantry",
   "IntroLine": {
     "Text": "Rotten timber, a green air rising out of the cellars, and somewhere in it a man with a ledger apologising to nobody.",
@@ -32,8 +32,8 @@
     },
     {
       "Index": 4,
-      "Role": "Treasury",
-      "Name": "The Alms Drift"
+      "Role": "Passage",
+      "Name": "The Candle Drift"
     },
     {
       "Index": 5,
@@ -47,8 +47,8 @@
     },
     {
       "Index": 7,
-      "Role": "Passage",
-      "Name": "The Candle Drift"
+      "Role": "Treasury",
+      "Name": "The Alms Drift"
     },
     {
       "Index": 8,
@@ -69,7 +69,7 @@
       ],
       "Goal": {
         "Kind": "Defend",
-        "Room": 4,
+        "Room": 7,
         "Objective": {
           "Kind": "Chest",
           "Ref": "1"
@@ -306,7 +306,7 @@
         "Waves": null,
         "WaveCollective": null,
         "ClueRooms": [
-          4,
+          7,
           6,
           1
         ],

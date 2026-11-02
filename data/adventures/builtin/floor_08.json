@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 8,
   "Source": "claude",
-  "LayoutHash": 15193469940318858549,
+  "LayoutHash": 2954229024822347568,
   "Title": "The Craw",
   "IntroLine": {
     "Text": "The passages narrow until the walls touch your shoulders, and every so often the whole craw shifts a hand\u0027s breadth, grinding boulders like a mouth that has not finished chewing.",
@@ -131,7 +131,7 @@
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 4,
+        "Room": 5,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,

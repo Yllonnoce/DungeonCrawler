@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 13,
   "Source": "claude",
-  "LayoutHash": 3104561731406186521,
+  "LayoutHash": 14045766140948457824,
   "Title": "The Mould Room",
   "IntroLine": {
     "Text": "Cold steel plate, white lamps that never gutter, and shelf upon shelf of casting sand pressed with faces. Someone down here knows what Dunmarrow will look like before Dunmarrow does.",
@@ -32,8 +32,8 @@
     },
     {
       "Index": 4,
-      "Role": "Passage",
-      "Name": "The Sand Cupboard"
+      "Role": "Hall",
+      "Name": "The Shelves of Faces"
     },
     {
       "Index": 5,
@@ -42,8 +42,8 @@
     },
     {
       "Index": 6,
-      "Role": "Hall",
-      "Name": "The Shelves of Faces"
+      "Role": "Passage",
+      "Name": "The Sand Cupboard"
     }
   ],
   "Collectives": [
@@ -108,11 +108,11 @@
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 6,
+        "Room": 4,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 6
+        "RallyRoom": 4
       }
     },
     {
@@ -132,7 +132,6 @@
         "Route": [
           4,
           1,
-          6,
           2
         ],
         "AlarmTarget": null,
@@ -174,7 +173,7 @@
   "Boss": null,
   "Chests": [
     {
-      "Room": 6,
+      "Room": 4,
       "Locked": false,
       "QuestId": null
     }
@@ -193,7 +192,7 @@
     {
       "Id": "npc_ulf",
       "Name": "Old Ulf",
-      "Room": 6,
+      "Room": 4,
       "VoiceId": "Orus",
       "Script": {
         "Start": "u1",
@@ -320,8 +319,8 @@
         "Waves": null,
         "WaveCollective": null,
         "ClueRooms": [
-          6,
           4,
+          1,
           2
         ],
         "ClueName": "a casting mould with a face in it"
