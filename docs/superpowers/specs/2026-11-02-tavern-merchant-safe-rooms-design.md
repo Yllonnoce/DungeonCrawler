@@ -75,6 +75,10 @@ The owner's words, lightly ordered:
   the outcome. **The purse is credited when the dialogue reaches the deal node, or on the first descent if the player
   never talked**, so the money cannot be missed and the tavern cannot block anyone.
 - The stairs prompt reads "Go down into the tunnels?" on floor 0.
+- **The briefing fits the shipped campaign's frame**, so no shipped line changes and nothing already voiced is
+  re-rendered: the merchant speaks of the council's plumbing contract he has financed, the fee he is advancing, his own
+  property hopes, and the quakes; the dungeon's own first lines ("Nobody said god. I said plumbing.") then follow
+  naturally.
 
 ### 2. Money
 
@@ -99,6 +103,10 @@ The owner's words, lightly ordered:
   lamp beside it. It **opens when a living party member comes within 2.5 m and closes 2 s after the last member is
   more than 3 m away**; enemies never open it, never path through it (safe room cells are blocked in the enemy A*
   grid like prop cells) and are never placed, ambushed, portalled or horded inside it.
+- The room is **sealed against rising gas**: on Toxic floors its cells never gas (`GasField` exempts them) and the
+  HUD shows clean air inside; the merchant stands in clean air. On floors where the objective moves the stairs, the
+  route used for placing the room is the one between the arrival stairs and the down stairs as they stand when the
+  floor is built.
 - Inside: the merchant, his table, a bedroll and a lantern; the party's HUD shows "Safe room" while any member is
   inside. From the corridor, the lamp and a line from the merchant when the party first comes within 8 m ("In here.
   Quickly, and mind the step.") announce him.
@@ -110,14 +118,24 @@ The owner's words, lightly ordered:
   source per floor; above the cap the clock keeps running but spawns nothing. The clock resets to grace when the room
   is empty for 30 s. Leaving the room means walking into whatever gathered. The merchant remarks at 2, 4 and 6
   gathered ("That is a lot of footsteps for a corridor."). Numbers live in an engine-free `SafeRoomRules` and are
-  tested; the builder may tune them by playtest within ±50%.
+  tested; the builder may tune them by playtest within ±50%. The clock is **independent of the Settings
+  "Reinforcement pressure" slider**: turning portals off does not make the safe room a free heal; the room's price is
+  always paid. A debug flag `--no-gathering` switches it off for tests that need a quiet floor.
 
 ### 4. The merchant
 
-- He is a campaign **Cast** member flagged `Merchant: true`. In the shipped campaign that is **Alderman Hesketh
-  Crane**, who already wears the merchant body and has the voice `Umbriel`. The offline designer invents a merchant for
-  offline campaigns; the planner prompt asks Claude for one in AI campaigns. His name, voice and persona come from the
-  cast entry; the tavern briefing and his floor lines come from a new campaign section `Merchant` (see 6).
+- He is a campaign **Cast** member flagged `Merchant: true`, and he is **nobody else's story**: the merchant never
+  carries a Secret, a quest or a Betray choice and is never placed as a story NPC on a floor; the campaign validator
+  enforces this and the planner prompt states it. In the shipped campaign he is a **new sixth cast member, Master
+  Oswin Pellet**, a Dunmarrow factor and property speculator who has bought the council's "plumbing inspection"
+  contract as its financier: the council's advance passes through him (his cut taken) as the seed money, which keeps
+  every shipped line about the council having "paid you four in advance" true, and the property plan is his private
+  sideline. He is a man; his voice is `Achird` (Runware: Oliver), unused by the rest of the cast. Alderman Crane keeps
+  his existing role untouched (floors 1, 4, 9 and 17, the memorial stone, the betrayal). The merchant always wears the
+  `npc_merchant` body; any other cast member who would match that body (Crane's "alderman", "plump") wears
+  `npc_old_man` instead, one shopkeeper look per campaign. The offline designer invents a merchant for offline
+  campaigns; the planner prompt asks Claude for one in AI campaigns. Name, voice and persona come from the cast entry;
+  the tavern briefing and his floor lines from the new campaign section `Merchant` (see 6).
 - E on him opens a dialogue with three choices: **Trade**, **How is it going?** (his floor line), **Leave**. Trade
   opens the shop screen. While the shop is open he faces the player and talks (the existing talk pose rules apply).
 
@@ -132,13 +150,16 @@ The owner's words, lightly ordered:
   purchases (a bought item is gone until the next floor). Each floor's stock: two weapons, one piece of armour and one
   offhand or jewellery, all rolled by `LootRoller` at item level `floor + 2` with rarity Magic or better; five health
   potions, three mana potions, two antidotes, two arrow bundles of 20, one scroll, one trap kit; and **on floors 3, 6,
-  9, 12, 15 and 18 one unique weapon** (a Legendary) chosen so that over a run every weapon kind the party's classes can
-  wield is offered at least once. The merchant buys anything sellable at any floor.
-- **New unique weapons:** six hand-written legendaries in `data/legendaries`, one each for sword, axe, mace, polearm
-  and shortbow and a second staff, each with a name, a flavour line, fixed powers in the spirit of the existing five
-  (two or three modifiers and usually an on-hit) and an `ItemLevelMin` placing it on the floor it is first offered.
-  Names and powers are the builder's, within those constraints; they also enter the dungeon's own legendary drop
-  pool.
+  9, 12, 15 and 18 one unique weapon** (a Legendary), and one more on floor 20: seven unique slots for the seven wieldable kinds
+  (Sword, Axe, Mace, Dagger, Polearm, Bow, Staff), each kind offered exactly once per run in a seeded order. The
+  merchant buys anything sellable at any floor.
+- **New unique weapons:** seven hand-written legendaries in `data/legendaries`, one each for sword, axe, mace,
+  polearm and shortbow, a second dagger and a second staff, each with a name, a flavour line, fixed powers in the
+  spirit of the existing five (two or three modifiers and usually an on-hit) and an `ItemLevelMin` at or below the
+  floor it is first offered. They are **shop-only**: a `ShopOnly` flag on the legendary definition keeps them out of
+  the dungeon's legendary roll, so the shop's prize stays the shop's (the owner's "weapons the dungeon does not drop").
+  The existing five legendaries keep dropping and are never in the shop's unique slot. Names and powers are the
+  builder's, within those constraints.
 
 ### 6. The merchant's lines and the story arc
 
@@ -174,6 +195,11 @@ Tavern dressing and theme textures; shop screen layout; the six unique weapons' 
 (the owner may want to read them before the voice bake); pressure numbers within the stated range; where exactly the
 merchant's remarks fire; whether the HUD shows the gathered count or only the log line.
 
-## Open questions for the owner
+## Calls made after the builder check (owner asked for judgment; veto any)
 
-Listed in the hand-over message; answers are folded in here when given.
+1. The shipped merchant is a new cast member (Oswin Pellet), not Crane, whose betrayal arc stays as written.
+2. The briefing is framed inside the council contract; no shipped voiced line changes.
+3. Seven unique slots (floors 3, 6, 9, 12, 15, 18, 20) for seven weapon kinds; seven new shop-only legendaries.
+4. The safe room is sealed against gas on Toxic floors.
+5. The safe room's gathering clock ignores the Reinforcement pressure setting (a debug flag quiets it for tests).
+6. Seed money 150 gold; the coin name is "gold".
