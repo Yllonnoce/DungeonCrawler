@@ -49,7 +49,6 @@ public partial class ServerWorld : Node
         bus.Message += line => _logBatch.Add(line);
         bus.Sfx += cue => { if (!LocalCues.Contains(cue) && !Quiet) Broadcast(new SfxMsg(cue)); };
         bus.ObjectiveChanged += text => Broadcast(new ObjectiveMsg(text));
-        bus.SafeRoomChanged += inside => { if (!Quiet) Broadcast(new SafeRoomSync(inside)); };
         bus.MemberChanged += i => _dirtyMembers.Add(i);
         bus.LootSpawned += drop => { if (!Quiet) Broadcast(new LootSpawned(SaveMapper.ToDto(drop.Item), Vec(drop.GlobalPosition), drop.KeyIndex, drop.QuestId, drop.Coins)); };
         bus.LootRemoved += (id, by) => { if (!Quiet) Broadcast(new LootRemoved(id, by)); };
@@ -275,7 +274,6 @@ public partial class ServerWorld : Node
         {
             var reply = Handshake.OnMessage(from, m, out var drop);
             if (reply != null) _t.Send(from, NetCodec.Encode(reply));
-            if (reply is Welcome) SendTo(from, new SafeRoomSync(SafeRoomController.Instance?.Occupied == true));
             if (drop) (_t as WebSocketTransport)?.Disconnect(from);
             return;
         }

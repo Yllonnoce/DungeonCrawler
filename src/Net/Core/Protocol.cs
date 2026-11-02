@@ -51,6 +51,4 @@ public enum MsgKind : byte
     DialogueAnswer,
     // the party purse (plan A): the server sends the total whenever it changes
     GoldSync,
-    // the safe room (plan B): whether the party is inside, for the HUD line
-    SafeRoomSync,
 }

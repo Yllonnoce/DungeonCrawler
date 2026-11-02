@@ -65,7 +65,6 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
 [Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;
-[Msg(MsgKind.SafeRoomSync)] public sealed record SafeRoomSync(bool Inside) : NetMessage;
 [Msg(MsgKind.QuestSync)] public sealed record QuestSync(QuestState Quest) : NetMessage;
 [Msg(MsgKind.Objective)] public sealed record ObjectiveMsg(string Text) : NetMessage;
 [Msg(MsgKind.Log)] public sealed record LogMsg(List<string> Lines) : NetMessage;
