@@ -24,6 +24,9 @@ public static partial class FloorGenerator
     /// Jailbreak: the jail is a dead end sealed by a key door with no key of its own (the jailers carry them, and a
     /// spare or two lie about); an existing treasure vault becomes the reward that opens when every prisoner is free.
     /// </summary>
+    /// <summary>Side rooms tried for a jail or the stairs vault; vaults and the safe room are no hosts, so it takes a good many.</summary>
+    private const int VaultRoomCarveAttempts = 300;
+
     private static void PlaceJail(Random rng, FloorLayout layout, ObjectiveLayout objective)
     {
         var rooms = layout.Rooms;
@@ -36,7 +39,7 @@ public static partial class FloorGenerator
         foreach (var r in rooms.Where(Usable).OrderBy(r => r.W * r.H).ThenByDescending(r => hops[rooms.IndexOf(r)]).ThenBy(rooms.IndexOf))
             if (IsSealable(layout, r, out door)) { jail = r; break; }
         if (jail == null)
-            for (var attempt = 0; attempt < 60 && jail == null; attempt++)
+            for (var attempt = 0; attempt < VaultRoomCarveAttempts && jail == null; attempt++)
                 if (TryCarveVaultRoom(rng, layout) is { } side) { jail = side.room; door = side.entrance; }
         if (jail == null) { layout.Objective = null; return; }
         var index = layout.Vaults.Count;
@@ -46,7 +49,7 @@ public static partial class FloorGenerator
         objective.JailVault = index;
         objective.Reserved.Add(door);
         // the reward: the first treasure vault the floor already has
-        var reward = layout.Vaults.FirstOrDefault(v => v.Index != index && v.Room != jail);
+        var reward = layout.Vaults.FirstOrDefault(v => v.Index != index && v.Room != jail && v.Kind != VaultKind.SafeDoor);
         objective.RewardVault = reward?.Index ?? -1;
     }
 
@@ -94,7 +97,7 @@ public static partial class FloorGenerator
             && !layout.ChestSpawns.Contains(p) && !layout.EnemySpawns.Contains(p) && !layout.TrapSpawns.Contains(p) && !layout.BreakableSpawns.Contains(p) && !layout.KeySpawns.Contains(p)
             && layout.Vaults.All(v => v.Key != p && v.Lever != p && v.Door != p) && !layout.Ledges.Any(l => l.Cells.Contains(p) || l.RampBottom == p || l.RampTop == p);
         var spots = new List<GridPos>();
-        foreach (var v in layout.Vaults.Where(v => v.Room != jail))
+        foreach (var v in layout.Vaults.Where(v => v.Room != jail && v.Kind != VaultKind.SafeDoor))
             foreach (var p in v.Room.Cells().Where(Free).OrderBy(_ => rng.Next()).Take(1)) spots.Add(p);
         foreach (var i in layout.LockedChests)
         {
@@ -188,7 +191,7 @@ public static partial class FloorGenerator
         }
         if (vaultRoom == null)
         {
-            for (var attempt = 0; attempt < 60 && vaultRoom == null; attempt++)
+            for (var attempt = 0; attempt < VaultRoomCarveAttempts && vaultRoom == null; attempt++)
                 if (TryCarveVaultRoom(rng, layout) is { } side) { vaultRoom = side.room; door = side.entrance; }
         }
         if (vaultRoom == null || StairsCell(layout, vaultRoom) is not { } stairs) { layout.Objective = null; return; } // nowhere to seal the stairs: an ordinary floor after all

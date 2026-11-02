@@ -123,8 +123,8 @@ public static class OfflineDesigner
         }
         string RoomName(int i) => plan.RoomPlanFor(i)?.Name ?? "chamber";
 
-        var candidates = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsShrine && !r.IsJail && r.FreeCells >= 2).ToList();
-        if (candidates.Count == 0) candidates = menu.Rooms.Where(r => !r.IsStart && r.FreeCells >= 1).ToList();
+        var candidates = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsSafeRoom && !r.IsArena && !r.IsShrine && !r.IsJail && r.FreeCells >= 2).ToList();
+        if (candidates.Count == 0) candidates = menu.Rooms.Where(r => !r.IsStart && !r.IsSafeRoom && r.FreeCells >= 1).ToList();
         if (candidates.Count == 0 || menu.Roster.Count == 0) { plan.IntroLine = new Line(Intro(rng, menu, plan, "no one")); return plan; }
 
         var target = Math.Clamp((int)MathF.Round(menu.TargetEnemies * difficulty), menu.MinEnemies, menu.MaxEnemies);
@@ -264,7 +264,7 @@ public static class OfflineDesigner
         {
             var hasAlarm = plan.Collectives.Any(c => c.Goal.Kind == GoalKind.Alarm);
             var n = 0;
-            foreach (var nestRoom in menu.NestRooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsShrine).OrderBy(r => r.HopsFromStart))
+            foreach (var nestRoom in menu.NestRooms.Where(r => !r.IsStart && !r.IsVault && !r.IsSafeRoom && !r.IsArena && !r.IsShrine).OrderBy(r => r.HopsFromStart))
             {
                 if (n >= PlanValidator.MaxHordes) break;
                 n++;
@@ -340,9 +340,9 @@ public static class OfflineDesigner
         var name = Pick(rng, NpcNames[tier]);
         var options = new List<QuestTemplate>();
         if (plan.Collectives.Count > 0) { options.Add(QuestTemplate.KillTarget); options.Add(QuestTemplate.HoldOut); }
-        if (menu.Rooms.Any(r => r.Index != npcRoom.Index && !r.IsStart && !r.IsVault && !r.IsArena && r.HopsFromStart >= 2 && r.FreeCells > 2)) options.Add(QuestTemplate.Recover);
+        if (menu.Rooms.Any(r => r.Index != npcRoom.Index && !r.IsStart && !r.IsVault && !r.IsSafeRoom && !r.IsArena && r.HopsFromStart >= 2 && r.FreeCells > 2)) options.Add(QuestTemplate.Recover);
         options.Add(QuestTemplate.Escort);
-        var clueRooms = menu.Rooms.Where(r => r.Index != npcRoom.Index && !r.IsStart && !r.IsVault && !r.IsArena && r.FreeCells > 2).ToList();
+        var clueRooms = menu.Rooms.Where(r => r.Index != npcRoom.Index && !r.IsStart && !r.IsVault && !r.IsSafeRoom && !r.IsArena && r.FreeCells > 2).ToList();
         if (clueRooms.Count >= 2) options.Add(QuestTemplate.Investigate);
         options.Add(QuestTemplate.Decide);
         var template = ForcedTemplate ?? Pick(rng, options);
@@ -403,7 +403,7 @@ public static class OfflineDesigner
             }
             case QuestTemplate.Recover:
             {
-                var place = menu.Rooms.Where(r => r.Index != npcRoom.Index && !r.IsStart && !r.IsVault && !r.IsArena && r.HopsFromStart >= 2 && r.FreeCells > 2).OrderByDescending(r => r.HopsFromStart).ThenBy(_ => rng.Next()).First();
+                var place = menu.Rooms.Where(r => r.Index != npcRoom.Index && !r.IsStart && !r.IsVault && !r.IsSafeRoom && !r.IsArena && r.HopsFromStart >= 2 && r.FreeCells > 2).OrderByDescending(r => r.HopsFromStart).ThenBy(_ => rng.Next()).First();
                 q.Params.ItemRoom = place.Index;
                 q.Params.ItemName = Pick(rng, RelicNames);
                 title = $"The {q.Params.ItemName}";

@@ -10,12 +10,13 @@ public sealed record PartySnapshot(float AverageLevel, float AverageItemLevel, i
     public static PartySnapshot Expected(int floor) => new(floor, floor, 4);
 }
 
+/// <param name="IsSafeRoom">The floor's safe room: listed as no vault, and nothing of a plan's (enemies, NPCs, chests, traps, quest items) goes in it.</param>
 public sealed record RoomInfo(
     int Index, int X, int Y, int W, int H, int Level,
     bool IsStart, bool IsExit, bool IsArena, string? VaultKind,
     bool HasLedge, bool HasCellar, bool HasSecret, bool DeadEnd,
     int Degree, int HopsFromStart, IReadOnlyList<int> Neighbours, int FreeCells, IReadOnlyList<int> Chests,
-    string? Structure = null, string? Water = null, int Mouths = 0, bool IsJail = false, bool IsShrine = false)
+    string? Structure = null, string? Water = null, int Mouths = 0, bool IsJail = false, bool IsShrine = false, bool IsSafeRoom = false)
 {
     public int Area => W * H;
     public bool IsVault => VaultKind != null;
@@ -118,7 +119,7 @@ public sealed class FloorMenu
         for (var i = 0; i < layout.Rooms.Count; i++)
         {
             var room = layout.Rooms[i];
-            var vault = layout.Vaults.FirstOrDefault(v => v.Room == room);
+            var vault = layout.Vaults.FirstOrDefault(v => v.Room == room && v.Kind != VaultKind.SafeDoor); // the safe room is no vault to guard
             var chests = new List<int>();
             for (var c = 0; c < layout.ChestSpawns.Count; c++) if (room.Contains(layout.ChestSpawns[c])) chests.Add(c);
             var structure = layout.StructureAt(room);
@@ -129,7 +130,7 @@ public sealed class FloorMenu
                 layout.Ledges.Any(l => l.Room == room), layout.Cellars.Any(c => c.Room == room), layout.Secrets.Any(s => room.Contains(s.Facing)),
                 neighbours[i].Count == 1, neighbours[i].Count, hops[i], neighbours[i], RoomCells.Free(layout, room).Count, chests,
                 structure?.Kind.ToString(), water?.Kind.ToString(), layout.NestAt(room)?.Mouths.Count ?? 0,
-                layout.Objective?.JailRoom == room, layout.Objective?.ShrineRoom == room));
+                layout.Objective?.JailRoom == room, layout.Objective?.ShrineRoom == room, layout.SafeRoom == i));
         }
 
         var options = new List<EnemyOption>();
@@ -159,7 +160,7 @@ public sealed class FloorMenu
             Rooms = rooms, Roster = options,
             TargetEnemies = spec.EnemyCount, MinEnemies = Math.Max(3, spec.EnemyCount / 2), MaxEnemies = 16,
             Budget = spec.EnemyCount * meanCost * PartyPower(party, floor),
-            VaultCount = layout.Vaults.Count, GeneratorChests = layout.ChestSpawns.Count,
+            VaultCount = layout.Vaults.Count(v => v.Kind != VaultKind.SafeDoor), GeneratorChests = layout.ChestSpawns.Count,
             Ascii = layout.ToAscii(),
         };
     }

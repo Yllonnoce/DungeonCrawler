@@ -50,6 +50,7 @@ public static class PlanValidator
             return false;
         });
         bool IsVault(int i) => menu.Room(i)?.IsVault == true;
+        bool IsSafe(int i) => menu.Room(i)?.IsSafeRoom == true; // the safe room: nothing of a plan's goes in it
 
         // rooms: dedupe, drop unknown, fill roles the designer left out
         var seenRooms = new HashSet<int>();
@@ -95,6 +96,7 @@ public static class PlanValidator
             if (c.Members.Count == 0) { report.Repairs.Add($"{c.Id}: dropped, no members"); return true; }
             if (!RoomOk(c.Goal.Room)) { report.Repairs.Add($"{c.Id}: dropped, unknown room {c.Goal.Room}"); return true; }
             if (c.Goal.Room == start) { report.Repairs.Add($"{c.Id}: dropped, posted in the start room"); return true; }
+            if (IsSafe(c.Goal.Room)) { report.Repairs.Add($"{c.Id}: dropped, posted in the safe room"); return true; }
             if (IsVault(c.Goal.Room) && c.Goal.Kind is not (GoalKind.Guard or GoalKind.Defend)) { c.Goal.Kind = GoalKind.Guard; report.Repairs.Add($"{c.Id}: vault group changed to Guard"); }
             return false;
         });
@@ -114,7 +116,7 @@ public static class PlanValidator
                     if (!g.Route.Contains(g.Room)) g.Route.Insert(0, g.Room);
                     foreach (var r in g.Route)
                     {
-                        if (!RoomOk(r) || r == start || IsVault(r) || menu.Room(r)!.IsJail) { report.Repairs.Add($"{c.Id}: dropped route room {r}"); continue; }
+                        if (!RoomOk(r) || r == start || IsVault(r) || IsSafe(r) || menu.Room(r)!.IsJail) { report.Repairs.Add($"{c.Id}: dropped route room {r}"); continue; }
                         if (route.Count > 0 && route[^1] == r) continue;
                         if (route.Count > 0 && !menu.Rooms[route[^1]].Neighbours.Contains(r)) { report.Repairs.Add($"{c.Id}: route hop {route[^1]}->{r} is not connected"); continue; }
                         route.Add(r);
@@ -138,14 +140,14 @@ public static class PlanValidator
             if (g.Kind != GoalKind.Patrol) g.Route.Clear();
             if (g.Kind != GoalKind.Alarm) g.AlarmTarget = null;
             if (g.Kind != GoalKind.Defend) g.Objective = null;
-            if (g.RallyRoom is { } rally && (!RoomOk(rally) || rally == start)) { g.RallyRoom = null; report.Repairs.Add($"{c.Id}: dropped invalid rally room"); }
+            if (g.RallyRoom is { } rally && (!RoomOk(rally) || rally == start || IsSafe(rally))) { g.RallyRoom = null; report.Repairs.Add($"{c.Id}: dropped invalid rally room"); }
         }
 
         // loners
         plan.Loners.RemoveAll(l =>
         {
             if (menu.Enemy(l.EnemyId) == null) { report.Repairs.Add($"dropped loner of unknown enemy {l.EnemyId}"); return true; }
-            if (!RoomOk(l.Room) || l.Room == start || IsVault(l.Room)) { report.Repairs.Add($"dropped loner in room {l.Room}"); return true; }
+            if (!RoomOk(l.Room) || l.Room == start || IsVault(l.Room) || IsSafe(l.Room)) { report.Repairs.Add($"dropped loner in room {l.Room}"); return true; }
             return false;
         });
 
@@ -250,7 +252,7 @@ public static class PlanValidator
         if (enforceBudget && total < menu.MinEnemies && menu.Roster.Count > 0)
         {
             var cheapest = menu.Roster.MinBy(e => e.Cost)!;
-            var rooms = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && r.FreeCells > 0).OrderByDescending(r => r.HopsFromStart).ToList();
+            var rooms = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsSafeRoom && !r.IsArena && r.FreeCells > 0).OrderByDescending(r => r.HopsFromStart).ToList();
             for (var i = 0; total < menu.MinEnemies && rooms.Count > 0; i++)
             {
                 plan.Loners.Add(new LonerPlan { EnemyId = cheapest.Id, Room = rooms[i % rooms.Count].Index });
@@ -275,13 +277,13 @@ public static class PlanValidator
         // chests and traps
         plan.Chests.RemoveAll(ch =>
         {
-            if (!RoomOk(ch.Room) || ch.Room == start) { report.Repairs.Add($"dropped chest in room {ch.Room}"); return true; }
+            if (!RoomOk(ch.Room) || ch.Room == start || IsSafe(ch.Room)) { report.Repairs.Add($"dropped chest in room {ch.Room}"); return true; }
             return false;
         });
         if (plan.Chests.Count > FloorMenu.MaxExtraChests) { plan.Chests.RemoveRange(FloorMenu.MaxExtraChests, plan.Chests.Count - FloorMenu.MaxExtraChests); report.Repairs.Add("too many extra chests"); }
         plan.Traps.RemoveAll(t =>
         {
-            if (!RoomOk(t.Room) || t.Room == start) { report.Repairs.Add($"dropped trap in room {t.Room}"); return true; }
+            if (!RoomOk(t.Room) || t.Room == start || IsSafe(t.Room)) { report.Repairs.Add($"dropped trap in room {t.Room}"); return true; }
             if (!Enum.TryParse<TrapKind>(t.Kind, true, out var kind)) { report.Repairs.Add($"dropped trap of unknown kind {t.Kind}"); return true; }
             t.Kind = kind.ToString();
             return false;
@@ -311,7 +313,7 @@ public static class PlanValidator
             if (string.IsNullOrWhiteSpace(n.Id) || !npcIds.Add(n.Id)) { report.Repairs.Add("dropped NPC with missing or duplicate id"); return true; }
             if (n.Ritualist && !menu.Rooms.Any(r => r.IsShrine)) { n.Ritualist = false; report.Repairs.Add($"NPC {n.Id}: no ritual on this floor to lead"); }
             // the rite's leader stands beside the altar wherever the plan put them; everyone else needs a room people may stand in
-            if (!n.Ritualist && (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsArena || menu.Room(n.Room)!.IsJail || menu.Room(n.Room)!.IsShrine)) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
+            if (!n.Ritualist && (menu.Room(n.Room) == null || menu.Room(n.Room)!.IsVault || menu.Room(n.Room)!.IsSafeRoom || menu.Room(n.Room)!.IsArena || menu.Room(n.Room)!.IsJail || menu.Room(n.Room)!.IsShrine)) { report.Repairs.Add($"dropped NPC {n.Id} in room {n.Room}"); return true; }
             n.Name = Clip(n.Name, 40);
             if (n.CastId != null)
             {
@@ -365,7 +367,7 @@ public static class PlanValidator
             switch (q.Template)
             {
                 case QuestTemplate.Investigate:
-                    q.Params.ClueRooms = q.Params.ClueRooms.Distinct().Where(r => menu.Room(r) is { IsVault: false, IsArena: false, FreeCells: > 0 } && r != start).Take(4).ToList();
+                    q.Params.ClueRooms = q.Params.ClueRooms.Distinct().Where(r => menu.Room(r) is { IsVault: false, IsSafeRoom: false, IsArena: false, FreeCells: > 0 } && r != start).Take(4).ToList();
                     if (q.Params.ClueRooms.Count == 0) { report.Repairs.Add($"dropped quest {q.Id}: no usable clue rooms"); return true; }
                     q.Params.ClueName = Clip(string.IsNullOrWhiteSpace(q.Params.ClueName) ? "clue" : q.Params.ClueName!, 40);
                     break;
@@ -382,7 +384,7 @@ public static class PlanValidator
                     if (q.Params.TargetCollective == null || plan.Collectives.All(c => c.Id != q.Params.TargetCollective)) { report.Repairs.Add($"dropped quest {q.Id}: target collective missing"); return true; }
                     break;
                 case QuestTemplate.Recover:
-                    if (q.Params.ItemRoom is not { } room || menu.Room(room) == null || room == start) { report.Repairs.Add($"dropped quest {q.Id}: item room invalid"); return true; }
+                    if (q.Params.ItemRoom is not { } room || menu.Room(room) == null || menu.Room(room)!.IsSafeRoom || room == start) { report.Repairs.Add($"dropped quest {q.Id}: item room invalid"); return true; }
                     q.Params.ItemName = Clip(string.IsNullOrWhiteSpace(q.Params.ItemName) ? "Relic" : q.Params.ItemName!, 40);
                     break;
                 case QuestTemplate.Escort:

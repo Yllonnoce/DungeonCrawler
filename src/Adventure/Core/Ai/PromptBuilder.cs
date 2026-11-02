@@ -168,6 +168,7 @@ public static class PromptBuilder
             if (r.IsExit) flags.Add("EXIT");
             if (r.IsArena) flags.Add("ARENA");
             if (r.IsVault) flags.Add($"VAULT({r.VaultKind})");
+            if (r.IsSafeRoom) flags.Add("SAFE ROOM (the party's refuge; no enemies, NPCs, chests or traps here)");
             if (r.IsJail) flags.Add("JAIL (the objective's; no NPCs or patrols here)");
             if (r.IsShrine) flags.Add("SHRINE (the objective's; no NPCs or hordes here)");
             if (r.HasLedge) flags.Add("ledge");

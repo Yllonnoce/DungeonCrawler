@@ -356,28 +356,32 @@ public static partial class FloorGenerator
         }
     }
 
-    /// <summary>Side rooms tried before a floor goes without a safe room: most tries fail on space, and a labyrinth's maze leaves little.</summary>
+    /// <summary>Side rooms tried at each carving rung before a floor goes without a safe room: most tries fail on space.</summary>
     private const int SafeRoomCarveAttempts = 400;
+    /// <summary>The first relaxation of <see cref="Adventure.SafeRoomRules.RouteDistanceCells"/> when nothing near the route qualifies.</summary>
+    private const int SafeRoomWiderRoute = 20;
+    /// <summary>A two-door chamber this small (cells) may have one door walled up to become the safe room.</summary>
+    private const int SafeRoomMaxWalledArea = 49;
 
     /// <summary>
-    /// Seal the floor's safe room (see <see cref="Adventure.SafeRoomRules.Choose"/>): a natural dead end when one
-    /// qualifies, else a carved side room. It is a vault with a revealed <see cref="VaultKind.SafeDoor"/> and no prize.
+    /// Seal the floor's safe room (see <see cref="Adventure.SafeRoomRules.Choose"/>), trying in turn: a dead end near the
+    /// route; a side room carved off a room the route runs through; any dead end within twice the distance, then anywhere;
+    /// a side room carved off any open room; a small two-door chamber with one door walled up. It becomes a vault with a
+    /// revealed <see cref="VaultKind.SafeDoor"/> and no prize.
     /// </summary>
     internal static void PlaceSafeRoom(FloorLayout layout, Random rng)
     {
         if (layout.Rooms.Count == 0) return;
+        var route = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, maxExpansions: 20000) ?? new List<GridPos>();
+        // never off the arena or a vault: a side room would open a second way into a vault and sit behind its door
+        var open = layout.Rooms.Where(r => r != layout.BossArena && layout.Vaults.All(v => v.Room != r)).ToList();
+        var routeRooms = open.Where(r => route.Any(r.Contains)).ToList();
         var i = Adventure.SafeRoomRules.Choose(layout);
-        if (i < 0)
-        {
-            // no dead end qualifies: carve one off a room the route runs through, so it lands near the route; never off a
-            // vault (the side room would open a second way into it and sit behind its door)
-            var route = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, maxExpansions: 20000) ?? new List<GridPos>();
-            var open = layout.Rooms.Where(r => r != layout.BossArena && layout.Vaults.All(v => v.Room != r)).ToList();
-            var hosts = open.Where(r => route.Any(r.Contains)).ToList();
-            if (hosts.Count == 0) hosts = open;
-            for (var attempt = 0; attempt < SafeRoomCarveAttempts && i < 0 && hosts.Count > 0; attempt++)
-                if (TryCarveSideRoom(rng, layout, hosts[rng.Next(hosts.Count)]) != null) i = Adventure.SafeRoomRules.Choose(layout);
-        }
+        if (i < 0) i = CarveSafeRoom(rng, layout, routeRooms.Count > 0 ? routeRooms : open, Adventure.SafeRoomRules.RouteDistanceCells);
+        if (i < 0) i = Adventure.SafeRoomRules.Choose(layout, SafeRoomWiderRoute);
+        if (i < 0) i = Adventure.SafeRoomRules.Choose(layout, int.MaxValue);
+        if (i < 0) i = CarveSafeRoom(rng, layout, open, int.MaxValue);
+        if (i < 0) i = WallUpSafeRoom(layout, route.Count > 0 ? route[route.Count / 2] : layout.UpStairs);
         if (i < 0) return;
         var room = layout.Rooms[i];
         var door = Adventure.SafeRoomRules.DoorCell(layout, i);
@@ -387,16 +391,89 @@ public static partial class FloorGenerator
         layout.Vaults.Add(new Vault(layout.Vaults.Count, room, door, VaultKind.SafeDoor, null, null, Revealed: true));
     }
 
+    /// <summary>Carve side rooms off <paramref name="hosts"/> until one qualifies; a carved room that does not is taken out again.</summary>
+    private static int CarveSafeRoom(Random rng, FloorLayout layout, List<Room> hosts, int maxRouteDistance)
+    {
+        for (var attempt = 0; attempt < SafeRoomCarveAttempts && hosts.Count > 0; attempt++)
+        {
+            var cells = (Cell[])layout.Cells.Clone();
+            var connections = layout.Connections.Count;
+            if (TryCarveSideRoom(rng, layout, hosts[rng.Next(hosts.Count)]) == null) continue;
+            var i = Adventure.SafeRoomRules.Choose(layout, maxRouteDistance);
+            if (i >= 0) return i;
+            Array.Copy(cells, layout.Cells, cells.Length);
+            layout.Rooms.RemoveAt(layout.Rooms.Count - 1);
+            while (layout.Connections.Count > connections) layout.Connections.RemoveAt(layout.Connections.Count - 1);
+        }
+        return -1;
+    }
+
     /// <summary>
-    /// Add a 3-5 cell room a short straight corridor away from a host room (<paramref name="onto"/>, or a random one),
-    /// so it has exactly one entrance.
+    /// The last resort (a labyrinth's chambers mostly have two doors and its maze leaves no room to carve): wall up one
+    /// door of a small two-door chamber when every walkable cell stays reachable without it, so the chamber is a dead end.
+    /// Chambers nearest the route's midpoint first; returns the room index, or -1 with the floor untouched.
+    /// </summary>
+    private static int WallUpSafeRoom(FloorLayout layout, GridPos midpoint)
+    {
+        var upRoom = layout.RoomAt(layout.UpStairs);
+        var downRoom = layout.RoomAt(layout.DownStairs);
+        var walkable = 0;
+        for (var y = 0; y < layout.Height; y++) for (var x = 0; x < layout.Width; x++) if (layout.IsWalkable(new GridPos(x, y))) walkable++;
+        var chambers = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena && r.Area <= SafeRoomMaxWalledArea && layout.Vaults.All(v => v.Room != r))
+            .OrderBy(r => r.Center.ManhattanDistance(midpoint)).ThenBy(layout.Rooms.IndexOf);
+        foreach (var room in chambers)
+        {
+            var entrances = Entrances(layout, room);
+            if (entrances.Count != 2) continue;
+            foreach (var shut in entrances)
+            {
+                var was = layout[shut];
+                layout[shut] = Cell.Wall;
+                if (layout.Reachable(layout.UpStairs).Count == walkable - 1 && Adventure.SafeRoomRules.Choose(layout, int.MaxValue) is var i && i >= 0)
+                {
+                    if (layout.Kind == LayoutKind.Labyrinth) DeriveConnections(layout); // the room graph is read off the floor there
+                    else layout.Connections.RemoveAll(c => !Connected(layout, c.A, c.B));
+                    return i;
+                }
+                layout[shut] = was;
+            }
+        }
+        return -1;
+    }
+
+    /// <summary>Whether a walk between the two rooms' entrances exists that passes through no other room.</summary>
+    private static bool Connected(FloorLayout layout, int a, int b)
+    {
+        var from = layout.Rooms[a]; var to = layout.Rooms[b];
+        var seen = new HashSet<GridPos>(from.Cells());
+        var queue = new Queue<GridPos>(from.Cells().Where(layout.IsWalkable));
+        while (queue.Count > 0)
+        {
+            var p = queue.Dequeue();
+            if (to.Contains(p)) return true;
+            foreach (var n in p.Neighbours4())
+            {
+                if (!layout.IsWalkable(n) || !seen.Add(n)) continue;
+                if (layout.RoomAt(n) is { } r && r != to) continue;
+                queue.Enqueue(n);
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Add a 3-5 cell room a short straight corridor away from a host room (<paramref name="onto"/>, or a random one that
+    /// is not a vault), so it has exactly one entrance.
     /// Returns the room and its door cell, or null if nothing fit.
     /// </summary>
     internal static (Room room, GridPos entrance)? TryCarveSideRoom(Random rng, FloorLayout layout, Room? onto = null)
     {
         var rooms = layout.Rooms;
-        var host = onto ?? rooms[rng.Next(rooms.Count)];
-        if (host == layout.BossArena) return null;
+        // never off a vault: the corridor would be its second way in (with no vaults yet this is the plain random pick)
+        var hosts = layout.Vaults.Count == 0 ? rooms : rooms.Where(r => layout.Vaults.All(v => v.Room != r)).ToList();
+        if (onto != null && !hosts.Contains(onto)) return null;
+        var host = onto ?? (hosts.Count > 0 ? hosts[rng.Next(hosts.Count)] : null);
+        if (host == null || host == layout.BossArena) return null;
         var dir = rng.Next(4); // 0 right, 1 left, 2 down, 3 up
         var w = rng.Next(3, 6);
         var h = rng.Next(3, 6);

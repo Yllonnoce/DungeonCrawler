@@ -26,9 +26,10 @@ public static class SafeRoomRules
     /// <summary>
     /// The room to seal: not a stairs room or the arena, not already a vault, with exactly one entrance whose sealing
     /// keeps the down stairs reachable and cuts no other room off, and that entrance within <see cref="RouteDistanceCells"/>
-    /// of the route. Of those, the one whose entrance is nearest the route's midpoint (ties: lower room index); -1 when none.
+    /// of the route (<paramref name="maxRouteDistance"/>; the generator relaxes it when nothing qualifies). Of those, the
+    /// one whose entrance is nearest the route's midpoint (ties: lower room index); -1 when none.
     /// </summary>
-    public static int Choose(FloorLayout layout)
+    public static int Choose(FloorLayout layout, int maxRouteDistance = RouteDistanceCells)
     {
         var rooms = layout.Rooms;
         if (rooms.Count == 0) return -1;
@@ -47,7 +48,7 @@ public static class SafeRoomRules
             var entrances = FloorGenerator.Entrances(layout, room);
             if (entrances.Count != 1) continue;
             var door = entrances[0];
-            if (route.Min(c => c.ManhattanDistance(door)) > RouteDistanceCells) continue;
+            if (route.Min(c => c.ManhattanDistance(door)) > maxRouteDistance) continue;
             var distance = door.ManhattanDistance(mid);
             if (distance >= bestDistance) continue; // ties keep the lower index
             var reach = layout.Reachable(layout.UpStairs, p => p == door);
@@ -64,11 +65,13 @@ public static class SafeRoomRules
 
     public static IEnumerable<GridPos> Cells(FloorLayout layout) => layout.Rooms[layout.SafeRoom].Cells();
 
-    /// <summary>Where the merchant stands: the room cell farthest from the door (ties: lower Y, then lower X).</summary>
+    /// <summary>Where the merchant stands: the room's floor cell farthest from the door (ties: lower Y, then lower X).</summary>
     public static GridPos MerchantCell(FloorLayout layout)
     {
         var door = layout.SafeRoomDoor;
-        return Cells(layout).OrderByDescending(c => c.ManhattanDistance(door)).ThenBy(c => c.Y).ThenBy(c => c.X).First();
+        // floor only: a big room's chamfered corners are wall, and the farthest cell from a side door is always a corner
+        return Cells(layout).Where(c => layout[c] == Cell.Floor).OrderByDescending(c => c.ManhattanDistance(door)).ThenBy(c => c.Y).ThenBy(c => c.X)
+            .DefaultIfEmpty(layout.Rooms[layout.SafeRoom].Center).First();
     }
 
     /// <summary>
