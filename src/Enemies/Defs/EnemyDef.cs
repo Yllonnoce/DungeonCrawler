@@ -37,6 +37,7 @@ public partial class EnemyDef : Resource, IHasId
     [Export] public Color Color { get; set; } = new(0.75f, 0.15f, 0.12f);
     [Export] public float Scale { get; set; } = 1f;
     [Export] public bool IsBoss { get; set; }
+    [Export] public string VoiceSet { get; set; } = "";
     /// <summary>None, Slam, Volley, Charge, Summon.</summary>
     [Export] public string Signature { get; set; } = "None";
     [Export] public float SignatureCooldown { get; set; } = 8f;
@@ -67,7 +68,7 @@ public partial class EnemyDef : Resource, IHasId
             WindupSeconds = WindupSeconds, RecoverSeconds = RecoverSeconds, ProjectileSpeed = ProjectileSpeed, Xp = Xp,
             Accuracy = Accuracy, Evasion = Evasion, Armor = Armor,
             ResistFire = ResistFire, ResistFrost = ResistFrost, ResistPoison = ResistPoison, ResistArcane = ResistArcane,
-            OnHit = onHit, Color = Color.ToHtml(false), Scale = Scale, IsBoss = IsBoss,
+            OnHit = onHit, Color = Color.ToHtml(false), Scale = Scale, IsBoss = IsBoss, VoiceSet = VoiceSet,
             Signature = Enum.TryParse<Signature>(Signature, true, out var sig) ? sig : Enemies.Signature.None,
             SignatureCooldown = SignatureCooldown, SummonId = SummonId, PackHunter = PackHunter, FleeHpFraction = FleeHpFraction, Model = Model, Weapon = Weapon, Faction = Faction, TierIndex = TierIndex,
         };

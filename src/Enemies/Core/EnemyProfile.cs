@@ -37,6 +37,8 @@ public sealed record EnemyProfile
     public string Color { get; init; } = "#bf2620";
     public float Scale { get; init; } = 1f;
     public bool IsBoss { get; init; }
+    /// <summary>Grunt clip set (small, medium, large, boss); empty picks by Scale and IsBoss. See VoiceSets.</summary>
+    public string VoiceSet { get; init; } = "";
     public Signature Signature { get; init; } = Signature.None;
     public float SignatureCooldown { get; init; } = 8f;
     public string SummonId { get; init; } = "";
