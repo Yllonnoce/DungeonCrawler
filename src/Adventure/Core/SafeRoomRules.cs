@@ -17,6 +17,8 @@ public static class SafeRoomRules
     public const float DoorCloseRadius = 3f;
     public const float DoorCloseDelay = 2f;
     public const int CapAlive = 8;
+    /// <summary>Creature totals at which the merchant remarks on the crowd outside: Gathering[0], [1], [2]. His lines name these counts.</summary>
+    public static readonly int[] GatheringRemarkAt = { 2, 4, 6 };
     /// <summary>How far (Manhattan cells) the safe room's door may be from the stairs-to-stairs route.</summary>
     public const int RouteDistanceCells = 10;
 

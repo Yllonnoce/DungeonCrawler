@@ -508,14 +508,12 @@ public partial class AdventureDirector : Node
 
     private FloorObjectiveKind? _pendingDescend;
 
-    /// <summary>Creature totals at which the merchant remarks on the crowd outside: Gathering[0], [1], [2].</summary>
-    public static readonly int[] GatheringRemarkAt = { 2, 4, 6 };
     private int _gatheringRemarks; // how many of this floor build's remarks he has made; reset in OnFloorBuilt (the gathered count restarts there too)
 
     /// <summary>More creatures gathered outside the safe room: the merchant says the next of his lines, each once per floor.</summary>
     private void OnGathered(int creaturesTotal)
     {
-        var due = GatheringRemarkAt.Count(t => creaturesTotal >= t);
+        var due = SafeRoomRules.GatheringRemarkAt.Count(t => creaturesTotal >= t);
         if (due <= _gatheringRemarks) return;
         _gatheringRemarks = due; // a jump past two totals at once says only the latest
         var campaign = Game.Instance.Adventure.Campaign;

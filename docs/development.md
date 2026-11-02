@@ -498,7 +498,8 @@ dawdle, where the line said longest ago comes back. Kill lines (`KillBarks`, ten
 (`IdleBarks`, ten per hero: a companion who is not being played mocks a player who has stood in one place for ten
 seconds with no fight, dialogue or menu open, another one every twenty seconds after) are topped up from stock into
 the campaign's bark sets and voiced with `--bake-kill-barks`. `--bake-cast-voice` also renders the campaign's `Merchant` section (his briefing, his twenty floors of lines and his
-gathering lines) in the merchant cast member's own voice, so Master Oswin Pellet's 67 lines ship in the bank. Without a key the game is silent apart from the shipped bank.
+gathering lines) in the merchant cast member's own voice, so Master Oswin Pellet's 67 lines ship in the bank, beside
+Old Ulf's reworded floor-13 pattern-rooms line, rebaked in his own voice in the same pass. Without a key the game is silent apart from the shipped bank.
 When Gemini answers with a quota error (HTTP 429), rendering stops for the session rather than burning requests: a
 daily-quota error stops at once, a per-minute limit is retried after the delay Google suggests and stops after three
 in a row. Nothing is lost; the lines that were not rendered are queued again the next time you press "Render voice"

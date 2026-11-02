@@ -11,6 +11,8 @@ namespace DungeonCrawler.Adventure;
 public static class CampaignRepair
 {
     public const int MaxLine = 220;
+    /// <summary>The voice a merchant without a known one is given: the stock merchant's (Achird, Inworld Oliver, a man).</summary>
+    public const string MerchantVoice = "Achird";
 
     public static List<string> Apply(CampaignPlan campaign)
     {
@@ -34,6 +36,13 @@ public static class CampaignRepair
         if (added > 0) repairs.Add($"{added} stock taunts added for triggers the campaign had none for");
         RepairPersona(campaign.Antagonist.Persona, repairs, "antagonist");
         foreach (var c in campaign.Cast) RepairPersona(c.Persona, repairs, c.Name);
+        // the merchant never falls back to the placeholder voice (Kore, a woman): an empty or unknown voice gets the stock merchant's
+        if (campaign.Cast.FirstOrDefault(c => c.Merchant) is { } shop && !Voices.IsKnown(shop.Persona?.Voice))
+        {
+            shop.Persona ??= new Persona();
+            shop.Persona.Voice = MerchantVoice;
+            repairs.Add($"{shop.Name}: merchant voice set to {MerchantVoice}");
+        }
         foreach (var t in campaign.Tiers) RepairLine(t.EnterLine, repairs, $"tier {t.Index} entrance");
         foreach (var set in campaign.Barks) foreach (var b in set.Lines) RepairLine(b.Line, repairs, $"{set.Member} bark");
         return repairs;

@@ -4482,7 +4482,7 @@
           },
           "Choices": [
             {
-              "Text": "What shakes the ground, then?",
+              "Text": "Never mind the lodgings. What\u0027s in it for us?",
               "Next": "deal",
               "Effect": "None",
               "Flag": null,
@@ -4861,8 +4861,8 @@
           "Delivery": "whisper"
         },
         "Trade": {
-          "Text": "Buy quickly, please. The gas comes in under the door, and I can\u0027t charge it rent.",
-          "VoiceId": "b219812d988ebc8e",
+          "Text": "Buy quickly, please. The smell of it comes in under the door, and I can\u0027t charge it rent.",
+          "VoiceId": "7cc4ef94105e37d1",
           "Delivery": "frantic"
         }
       },
