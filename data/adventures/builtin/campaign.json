@@ -4449,7 +4449,7 @@
           "Id": "hire",
           "Line": {
             "Text": "Oswin Pellet, factor. I financed the council\u0027s little contract, and you four are to clear the Gullet to the bottom. I shan\u0027t be going down myself. I have a weak chest and a strong sense of who ought to.",
-            "VoiceId": null,
+            "VoiceId": "9777a8eb41ea9839",
             "Delivery": null
           },
           "Choices": [
@@ -4477,7 +4477,7 @@
           "Id": "quakes",
           "Line": {
             "Text": "You\u0027ll have felt the floor go. The quakes come oftener every month, and the council calls it drainage. I call it opportunity: clear those tunnels and I\u0027ll let them as fine dry lodgings, with a view of nothing.",
-            "VoiceId": null,
+            "VoiceId": "acd1159e15f36fd4",
             "Delivery": null
           },
           "Choices": [
@@ -4505,7 +4505,7 @@
           "Id": "deal",
           "Line": {
             "Text": "To business. The council\u0027s advance, through my hands and less my cut: a hundred and fifty gold, counted. Sell me what you find; buy what I carry. I wait behind a locked door on every floor. I am paying for the door.",
-            "VoiceId": null,
+            "VoiceId": "a53dba8dd45c3917",
             "Delivery": null
           },
           "Choices": [
@@ -4533,7 +4533,7 @@
           "Id": "sendoff",
           "Line": {
             "Text": "Splendid. Keep every receipt I give you, folded, somewhere dry. Should anything happen to you below, the receipts are how I\u0027ll know what I\u0027ve lost.",
-            "VoiceId": null,
+            "VoiceId": "4cd0b86e915d2cd0",
             "Delivery": null
           },
           "Choices": [
@@ -4564,17 +4564,17 @@
         "Floor": 1,
         "Greeting": {
           "Text": "In here. Quickly, and mind the step.",
-          "VoiceId": null,
+          "VoiceId": "db4d0dd89a69eb49",
           "Delivery": null
         },
         "Progress": {
           "Text": "One floor down and nothing of mine broken. I\u0027ve paced it out already: three good rooms off the passage, south light if one brings the light.",
-          "VoiceId": null,
+          "VoiceId": "2cfa8a94872e33aa",
           "Delivery": null
         },
         "Trade": {
           "Text": "Blades on the left, mending on the right. I\u0027ll buy whatever you drag in, provided it has stopped moving.",
-          "VoiceId": null,
+          "VoiceId": "79ab7b339a123e5a",
           "Delivery": null
         }
       },
@@ -4582,17 +4582,17 @@
         "Floor": 2,
         "Greeting": {
           "Text": "Ah, my inspectors! Wipe your boots. I\u0027ve had this room swept, by a man I paid not to look at it.",
-          "VoiceId": null,
+          "VoiceId": "60024499f4cd0712",
           "Delivery": null
         },
         "Progress": {
           "Text": "Moss in the mortar, but moss is rustic, and rustic lets for a third more. I\u0027ve written to my backers with the good news.",
-          "VoiceId": null,
+          "VoiceId": "100bda476f3aa899",
           "Delivery": null
         },
         "Trade": {
           "Text": "Out with the plunder, then. I pay fair, by which I mean I pay, which is more than the previous tenants ever did.",
-          "VoiceId": null,
+          "VoiceId": "a57f1e26bad7805b",
           "Delivery": null
         }
       },
@@ -4600,17 +4600,17 @@
         "Floor": 3,
         "Greeting": {
           "Text": "Come in, come in. There\u0027s a deacon about, very civil. I gave him my card.",
-          "VoiceId": null,
+          "VoiceId": "709c1e843381916e",
           "Delivery": null
         },
         "Progress": {
           "Text": "A vaulted chapel. Do you know what a vaulted ceiling fetches up top? Nor do I. Nobody\u0027s ever sold one this far down. I mean to be first.",
-          "VoiceId": null,
+          "VoiceId": "2cb9c2394db8a245",
           "Delivery": null
         },
         "Trade": {
           "Text": "Something special in the case today. I didn\u0027t find it lying about; I paid good money for it, and so will you.",
-          "VoiceId": null,
+          "VoiceId": "17cd74b7119232e5",
           "Delivery": null
         }
       },
@@ -4618,17 +4618,17 @@
         "Floor": 4,
         "Greeting": {
           "Text": "Shut it behind you. The alderman went past with his papers and never once looked at my door. I don\u0027t care to be seen by the council in a cellar.",
-          "VoiceId": null,
+          "VoiceId": "2f685b3a6201e13c",
           "Delivery": null
         },
         "Progress": {
           "Text": "Rotten timber, which is a builder\u0027s word for cheap. Strip it out, plaster over, call it the Chantry Apartments. My backers adore a name.",
-          "VoiceId": null,
+          "VoiceId": "b3ffa3ab7a78b7ff",
           "Delivery": null
         },
         "Trade": {
           "Text": "Name your price and I\u0027ll name mine, and then we\u0027ll use mine.",
-          "VoiceId": null,
+          "VoiceId": "a470079160cb92ed",
           "Delivery": null
         }
       },
@@ -4636,17 +4636,17 @@
         "Floor": 5,
         "Greeting": {
           "Text": "There you are. Was that singing? Never mind. Acoustics. I shall put it in the particulars.",
-          "VoiceId": null,
+          "VoiceId": "5fc4927c7e848185",
           "Delivery": null
         },
         "Progress": {
           "Text": "Five floors. I\u0027ve had a sign painted: Pellet\u0027s Deep, Quiet Living. The painter wanted paying in advance. Everyone does, lately.",
-          "VoiceId": null,
+          "VoiceId": "b8a9d1555bf04a10",
           "Delivery": null
         },
         "Trade": {
           "Text": "Sell me the bones of whatever that was. I know a man who grinds them for the market gardens.",
-          "VoiceId": null,
+          "VoiceId": "3c8f0ecd7250b91c",
           "Delivery": null
         }
       },
@@ -4654,17 +4654,17 @@
         "Floor": 6,
         "Greeting": {
           "Text": "Mind the puddle. I don\u0027t know what it is either, and I\u0027ve decided not to have it assayed.",
-          "VoiceId": null,
+          "VoiceId": "f92855bc7f8d1421",
           "Delivery": null
         },
         "Progress": {
           "Text": "Gold teeth in the walls! Gold, for anyone with pliers. I\u0027ve bought the mineral rights. Bought them yesterday, in a hurry, from a man in a hat.",
-          "VoiceId": null,
+          "VoiceId": "9b9af80e1fb4c202",
           "Delivery": null
         },
         "Trade": {
           "Text": "Have a look under the cloth. One piece, priced like a dowry, and worth every penny of it, I\u0027m told. You may admire it for nothing.",
-          "VoiceId": null,
+          "VoiceId": "b95c3e6b9fe9b9f8",
           "Delivery": null
         }
       },
@@ -4672,17 +4672,17 @@
         "Floor": 7,
         "Greeting": {
           "Text": "There you are. Good. Was it this quiet last time? I thought it was louder. I\u0027m sure it was louder.",
-          "VoiceId": null,
+          "VoiceId": "9a9e9d1b8c292c82",
           "Delivery": null
         },
         "Progress": {
           "Text": "There\u0027s a tunnel past the camp that isn\u0027t on my survey. I paid for that survey. I paid for every inch of it, and somebody has added an inch.",
-          "VoiceId": null,
+          "VoiceId": "f68b99b0901dc741",
           "Delivery": null
         },
         "Trade": {
           "Text": "Buy something, would you. It steadies my hands to count.",
-          "VoiceId": null,
+          "VoiceId": "2c17c6f345a833d1",
           "Delivery": null
         }
       },
@@ -4690,17 +4690,17 @@
         "Floor": 8,
         "Greeting": {
           "Text": "In, in. Did you feel that one? Never mind. Nor did I.",
-          "VoiceId": null,
+          "VoiceId": "4986178153aba49c",
           "Delivery": null
         },
         "Progress": {
           "Text": "The quakes are keeping time. I set my watch by the last three and it hasn\u0027t lost a minute since. Ground has no business being punctual.",
-          "VoiceId": null,
+          "VoiceId": "4fe5f22cefd10bcb",
           "Delivery": null
         },
         "Trade": {
           "Text": "Prices have gone up a touch. Carriage, you understand. It all has to be carried down, and the carriers have started asking questions.",
-          "VoiceId": null,
+          "VoiceId": "769217fb7e1ac958",
           "Delivery": null
         }
       },
@@ -4708,17 +4708,17 @@
         "Floor": 9,
         "Greeting": {
           "Text": "Oh, it\u0027s you. Thank heaven. I mean, good day. Good day!",
-          "VoiceId": null,
+          "VoiceId": "ad677902fd4695cc",
           "Delivery": null
         },
         "Progress": {
           "Text": "My backers write to ask what I\u0027ve seen down here. I write back that I\u0027ve seen the investment. I\u0027ve stopped writing what else.",
-          "VoiceId": null,
+          "VoiceId": "74e02d387df46ec9",
           "Delivery": null
         },
         "Trade": {
           "Text": "I kept one back for you, wrapped in sacking. I\u0027d like it off my hands. I don\u0027t care for the way it sits there.",
-          "VoiceId": null,
+          "VoiceId": "0e9fff8ced00a207",
           "Delivery": null
         }
       },
@@ -4726,17 +4726,17 @@
         "Floor": 10,
         "Greeting": {
           "Text": "Mind your step, and mind mine. I keep hearing it behind me, a little after I take it.",
-          "VoiceId": null,
+          "VoiceId": "71ad2c14ec6768a3",
           "Delivery": "whisper"
         },
         "Progress": {
           "Text": "Ten floors. A round number. I\u0027ve always liked round numbers; there are no corners in them for anything to wait in.",
-          "VoiceId": null,
+          "VoiceId": "3aa2ca3ee4ac8f25",
           "Delivery": null
         },
         "Trade": {
           "Text": "Usual rates. I\u0027ll not haggle today. I haven\u0027t the stomach, and the stomach is the part of me that does the haggling.",
-          "VoiceId": null,
+          "VoiceId": "cba711559f66c5bc",
           "Delivery": null
         }
       },
@@ -4744,17 +4744,17 @@
         "Floor": 11,
         "Greeting": {
           "Text": "Come in. Warm, isn\u0027t it? Nobody lit a fire. I asked.",
-          "VoiceId": null,
+          "VoiceId": "bd56a898652d70b2",
           "Delivery": null
         },
         "Progress": {
           "Text": "This is a forge, and I never bought a forge. There\u0027s a door along here I didn\u0027t pay for. I have a horror of things I didn\u0027t pay for.",
-          "VoiceId": null,
+          "VoiceId": "bd8fc6b379abc641",
           "Delivery": null
         },
         "Trade": {
           "Text": "Wares are on the bench. The bench was here when I came. I don\u0027t know whose it is, so I\u0027m selling off it quickly.",
-          "VoiceId": null,
+          "VoiceId": "32c4c99d856fd4c6",
           "Delivery": null
         }
       },
@@ -4762,17 +4762,17 @@
         "Floor": 12,
         "Greeting": {
           "Text": "I hoped it was you. Every footstep, I hoped it was you, and I\u0027ve heard a great many footsteps.",
-          "VoiceId": null,
+          "VoiceId": "faa8592bd33d7cfc",
           "Delivery": "weary"
         },
         "Progress": {
           "Text": "My backers ask whether the lodgings are safe. I wrote yes. My hand shook so that it reads as no, and I\u0027ve let it stand.",
-          "VoiceId": null,
+          "VoiceId": "79b75554a5f7c614",
           "Delivery": null
         },
         "Trade": {
           "Text": "The pick of the stock is under the counter today. Take it. I\u0027d sooner it went down with you than stayed here with me.",
-          "VoiceId": null,
+          "VoiceId": "a7653f1555db332f",
           "Delivery": null
         }
       },
@@ -4780,17 +4780,17 @@
         "Floor": 13,
         "Greeting": {
           "Text": "Ah. You. Alive. Good. That makes two of us, and I am counting.",
-          "VoiceId": null,
+          "VoiceId": "b995782979c94600",
           "Delivery": null
         },
         "Progress": {
           "Text": "Thirteen floors. I\u0027m not a superstitious man, but I\u0027ve begun keeping a short list of exits, and it keeps getting shorter.",
-          "VoiceId": null,
+          "VoiceId": "8bf1e79bbe3f690a",
           "Delivery": null
         },
         "Trade": {
           "Text": "Business as usual. Business is a great comfort. I\u0027ve been buying my own stock off myself all morning, for the nerves.",
-          "VoiceId": null,
+          "VoiceId": "4d3881e5e503ad12",
           "Delivery": null
         }
       },
@@ -4798,17 +4798,17 @@
         "Floor": 14,
         "Greeting": {
           "Text": "Quickly. Shut it. Quietly, they hear the latch.",
-          "VoiceId": null,
+          "VoiceId": "89a7d2a099f57259",
           "Delivery": "whisper"
         },
         "Progress": {
           "Text": "I went and looked. I wish I hadn\u0027t. Fresh spoil, and every pick mark pointing the one way. They\u0027re not spreading out. They\u0027re coming up.",
-          "VoiceId": null,
+          "VoiceId": "ba62016fe74cfa10",
           "Delivery": "whisper"
         },
         "Trade": {
           "Text": "Take what you need and pay quickly. I shan\u0027t count it now. I\u0027ll count it later. Upstairs.",
-          "VoiceId": null,
+          "VoiceId": "272fda029922886c",
           "Delivery": "weary"
         }
       },
@@ -4816,17 +4816,17 @@
         "Floor": 15,
         "Greeting": {
           "Text": "Another floor, and you\u0027re still with me. I told myself you would be. I didn\u0027t believe me.",
-          "VoiceId": null,
+          "VoiceId": "1f4a9c0943a7e752",
           "Delivery": "weary"
         },
         "Progress": {
           "Text": "Every night it sounds a little nearer. Not louder; nearer. I\u0027ve stopped talking about lodgings. Nobody will want to live on top of that.",
-          "VoiceId": null,
+          "VoiceId": "3be9463202341eed",
           "Delivery": "weary"
         },
         "Trade": {
           "Text": "There\u0027s a fine piece in the case. I\u0027ve priced it, I think. I can\u0027t recall the number. It\u0027s on the tag.",
-          "VoiceId": null,
+          "VoiceId": "84ed6779f5128c37",
           "Delivery": "weary"
         }
       },
@@ -4834,17 +4834,17 @@
         "Floor": 16,
         "Greeting": {
           "Text": "Oh, thank you. I was talking to the crates, and the crates were starting to answer.",
-          "VoiceId": null,
+          "VoiceId": "45a81b8bee396141",
           "Delivery": "whisper"
         },
         "Progress": {
           "Text": "Marble, all the way along. I never ordered marble. Someone is building down here, and they build faster than I can buy.",
-          "VoiceId": null,
+          "VoiceId": "4dd4eff5da15ba2d",
           "Delivery": "whisper"
         },
         "Trade": {
           "Text": "The good stock, all of it. I was keeping it for a better day. There won\u0027t be one, so it may as well be today.",
-          "VoiceId": null,
+          "VoiceId": "497be1eca9692af2",
           "Delivery": "weary"
         }
       },
@@ -4852,17 +4852,17 @@
         "Floor": 17,
         "Greeting": {
           "Text": "Don\u0027t mind my hands. They\u0027ve a mind of their own, and it\u0027s a frightened one.",
-          "VoiceId": null,
+          "VoiceId": "addf1b07232b36fa",
           "Delivery": "weary"
         },
         "Progress": {
           "Text": "The wall by my cot was cold yesterday. Today it\u0027s warm, and it hums. I\u0027ve moved the cot. I\u0027ve moved it three times.",
-          "VoiceId": null,
+          "VoiceId": "f335f2f39c793782",
           "Delivery": "whisper"
         },
         "Trade": {
           "Text": "Buy quickly, please. The gas comes in under the door, and I can\u0027t charge it rent.",
-          "VoiceId": null,
+          "VoiceId": "b219812d988ebc8e",
           "Delivery": "frantic"
         }
       },
@@ -4870,17 +4870,17 @@
         "Floor": 18,
         "Greeting": {
           "Text": "Is that you? Say something, so I know it\u0027s you.",
-          "VoiceId": null,
+          "VoiceId": "6a1f0cd787436c4b",
           "Delivery": "whisper"
         },
         "Progress": {
           "Text": "It was meant to be a short job and a modest profit. Now I sleep in my boots with the takings in my shirt, and I don\u0027t sleep.",
-          "VoiceId": null,
+          "VoiceId": "5985ee50675b9e8c",
           "Delivery": "weary"
         },
         "Trade": {
           "Text": "The best I have left, and I\u0027ve little left. Buy it. Buy all of it, if you can carry it. Only leave me the lamp.",
-          "VoiceId": null,
+          "VoiceId": "8ab0f3d1bd280be6",
           "Delivery": "frantic"
         }
       },
@@ -4888,17 +4888,17 @@
         "Floor": 19,
         "Greeting": {
           "Text": "There you are. There you are. I counted every step you took coming down.",
-          "VoiceId": null,
+          "VoiceId": "7ccdd194b26492c3",
           "Delivery": "frantic"
         },
         "Progress": {
           "Text": "It\u0027s under us. I can feel it through my boots, and it\u0027s less under us than it was this morning. Please hurry. Please.",
-          "VoiceId": null,
+          "VoiceId": "c8bede3a904d3293",
           "Delivery": "frantic"
         },
         "Trade": {
           "Text": "Prices are on the tags. I can\u0027t think about prices. I keep counting the coin anyway; it\u0027s the only thing down here that adds up.",
-          "VoiceId": null,
+          "VoiceId": "a890e684a09fc6ee",
           "Delivery": "weary"
         }
       },
@@ -4906,17 +4906,17 @@
         "Floor": 20,
         "Greeting": {
           "Text": "The last quiet room, I think. You\u0027ve come further than anyone I ever sold to, and I\u0027ve sold to some very determined people.",
-          "VoiceId": null,
+          "VoiceId": "d1d4ad14c6b64767",
           "Delivery": "weary"
         },
         "Progress": {
           "Text": "I\u0027m going back up, to count what\u0027s left. Of the money. Of the town. I\u0027d be very much obliged if you came up too, after.",
-          "VoiceId": null,
+          "VoiceId": "89b719e118d54c31",
           "Delivery": "weary"
         },
         "Trade": {
           "Text": "I\u0027m selling off the lot, at prices I\u0027m ashamed of. The last fine piece was always meant for you. Go well, and bring me a receipt.",
-          "VoiceId": null,
+          "VoiceId": "7f63617b97054961",
           "Delivery": "warm"
         }
       }
@@ -4924,17 +4924,17 @@
     "Gathering": [
       {
         "Text": "Something\u0027s at my door. Two somethings. I\u0027m sure the lock is equal to it; I paid for a good one.",
-        "VoiceId": null,
+        "VoiceId": "27f1a0f3c471748e",
         "Delivery": null
       },
       {
         "Text": "Four of them out there now, by the breathing. Do finish your shopping, would you, and go and be brave at them.",
-        "VoiceId": null,
+        "VoiceId": "2b87a677e4442795",
         "Delivery": "whisper"
       },
       {
         "Text": "Six at the door! Six! The lock is good, but it was never priced for six. Out you go and see them off, I beg you.",
-        "VoiceId": null,
+        "VoiceId": "fa4794ee9a1314e6",
         "Delivery": "frantic"
       }
     ]

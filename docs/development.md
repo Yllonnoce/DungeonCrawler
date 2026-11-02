@@ -267,7 +267,7 @@ godot --path . -- --seed=1 --floor=1 --talk --showcase=Death --screenshot=/tmp/m
 godot --headless --path . -- --test-ai-flow         # stand-in planner: New Game card, prefetch, wait for a plan, timeout fallback, memory summary
 godot --headless --path . -- --builtin              # play the shipped campaign (data/adventures/builtin), no key needed
 godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-model=inworld:tts@1.5-max --voice-model-minor=inworld:tts@1.5-max --bake-kill-barks=assets/voice/builtin   # render every party member's and fighter's kill line into the shipped bank (RUNWARE_API_KEY in the environment), then run the import
-godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-model=inworld:tts@1.5-max --voice-model-minor=inworld:tts@1.5-max --bake-cast-voice=assets/voice/builtin   # render every line of the recurring cast and every boss line (outside the 80-line budget) into the shipped bank; the plans with their ids land in assets/voice/builtin/cast-plans, to merge into data/adventures/builtin by hand, then --import
+godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-model=inworld:tts@1.5-max --voice-model-minor=inworld:tts@1.5-max --bake-cast-voice=assets/voice/builtin   # render every line of the recurring cast, the merchant's Merchant section and every boss line (outside the 80-line budget) into the shipped bank; the plans with their ids land in assets/voice/builtin/cast-plans, to merge into data/adventures/builtin by hand, then --import
 godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an enemy and the lead in the run, crushed and mangled, no auto-revive, a companion pulls the lead free, the villain gloats, a barrel jams the second run, saved, loaded, phase and kills survive
 godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
@@ -497,7 +497,8 @@ line for a trigger is that recent the companion says nothing rather than repeat 
 dawdle, where the line said longest ago comes back. Kill lines (`KillBarks`, ten per hero) and idle razzings
 (`IdleBarks`, ten per hero: a companion who is not being played mocks a player who has stood in one place for ten
 seconds with no fight, dialogue or menu open, another one every twenty seconds after) are topped up from stock into
-the campaign's bark sets and voiced with `--bake-kill-barks`. Without a key the game is silent apart from the shipped bank.
+the campaign's bark sets and voiced with `--bake-kill-barks`. `--bake-cast-voice` also renders the campaign's `Merchant` section (his briefing, his twenty floors of lines and his
+gathering lines) in the merchant cast member's own voice, so Master Oswin Pellet's 67 lines ship in the bank. Without a key the game is silent apart from the shipped bank.
 When Gemini answers with a quota error (HTTP 429), rendering stops for the session rather than burning requests: a
 daily-quota error stops at once, a per-minute limit is retried after the delay Google suggests and stops after three
 in a row. Nothing is lost; the lines that were not rendered are queued again the next time you press "Render voice"
