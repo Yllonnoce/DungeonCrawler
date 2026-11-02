@@ -216,6 +216,8 @@ public sealed class CampaignPlan
 
     public FloorOutline? OutlineFor(int floor) => Floors.FirstOrDefault(f => f.Floor == floor);
     public CastMember? MerchantCast() => Cast.FirstOrDefault(c => c.Merchant);
+    /// <summary>The merchant's lines: the campaign's own, or the generic bank's when the section is missing or empty.</summary>
+    public MerchantPlan MerchantOrGeneric() => Merchant is { IsEmpty: false } m ? m : Voice.MerchantLineBank.Generic(Title, Antagonist.Name);
     public CastMember? CastFor(string? id) => id == null ? null : Cast.FirstOrDefault(c => c.Id == id);
     public bool IsStoryFloor(int floor) => !string.IsNullOrWhiteSpace(OutlineFor(floor)?.Story);
     public TierPlan? TierFor(int tierIndex) => Tiers.FirstOrDefault(t => t.Index == tierIndex);

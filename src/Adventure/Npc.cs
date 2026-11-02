@@ -160,9 +160,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// <summary>The merchant greets the local adventurer the first time they come within <see cref="GreetRadius"/> on this floor.</summary>
     private void Greet()
     {
-        if (_greeted || !IsMerchant || Dead || MerchantLines is not { } lines || Main.Instance?.Party is not { } party || !IsInstanceValid(party) || !party.HasBodies) return;
-        var lead = party.Lead;
-        if (new Vector2(lead.GlobalPosition.X - GlobalPosition.X, lead.GlobalPosition.Z - GlobalPosition.Z).Length() > GreetRadius) return;
+        if (_greeted || !IsMerchant || Dead || MerchantLines is not { } lines || Main.Instance?.Party is not { } party || !IsInstanceValid(party) || party.Local is not { } local) return;
+        if (new Vector2(local.GlobalPosition.X - GlobalPosition.X, local.GlobalPosition.Z - GlobalPosition.Z).Length() > GreetRadius) return;
         _greeted = true;
         Say(lines.Greeting);
     }

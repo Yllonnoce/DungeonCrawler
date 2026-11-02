@@ -476,20 +476,17 @@ public partial class AdventureDirector : Node
 
     /// <summary>Creature totals at which the merchant remarks on the crowd outside: Gathering[0], [1], [2].</summary>
     public static readonly int[] GatheringRemarkAt = { 2, 4, 6 };
-    private int _gatheringRemarks;      // how many of the floor's remarks he has made
-    private int _gatheringRemarksFloor; // the floor they count for
+    private int _gatheringRemarks; // how many of this floor build's remarks he has made; reset in OnFloorBuilt (the gathered count restarts there too)
 
     /// <summary>More creatures gathered outside the safe room: the merchant says the next of his lines, each once per floor.</summary>
     private void OnGathered(int creaturesTotal)
     {
-        var floor = Game.Instance.CurrentFloor;
-        if (_gatheringRemarksFloor != floor) { _gatheringRemarksFloor = floor; _gatheringRemarks = 0; }
         var due = GatheringRemarkAt.Count(t => creaturesTotal >= t);
         if (due <= _gatheringRemarks) return;
         _gatheringRemarks = due; // a jump past two totals at once says only the latest
         var campaign = Game.Instance.Adventure.Campaign;
         if (campaign == null || Main.Instance?.Builder.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant") is not { } merchant) return;
-        var plan = campaign.Merchant is { IsEmpty: false } m ? m : Voice.MerchantLineBank.Generic(campaign.Title, campaign.Antagonist.Name);
+        var plan = campaign.MerchantOrGeneric();
         if (due - 1 < plan.Gathering.Count) merchant.Say(plan.Gathering[due - 1]);
     }
 
@@ -497,6 +494,7 @@ public partial class AdventureDirector : Node
     public void OnFloorBuilt(FloorContents contents, int floor, bool firstVisit)
     {
         _currentFloor = floor;
+        _gatheringRemarks = 0; // every build or load starts the gathering count again
         OpenRecord(floor);
         if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan

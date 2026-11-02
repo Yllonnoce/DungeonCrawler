@@ -355,8 +355,7 @@ public partial class DungeonBuilder : Node3D
             GD.Print($"[DungeonBuilder] floor {floor}: no safe room, no merchant");
             return;
         }
-        var plan = campaign.Merchant is { IsEmpty: false } m ? m : Adventure.Voice.MerchantLineBank.Generic(campaign.Title, campaign.Antagonist.Name);
-        var lines = plan.For(floor);
+        var lines = campaign.MerchantOrGeneric().For(floor);
         var npc = _npcScene.Instantiate<Npc>();
         npc.Id = "merchant";
         npc.NpcName = cast.Name;
@@ -977,14 +976,16 @@ public partial class DungeonBuilder : Node3D
         npc.NpcName = name;
         npc.Mode = mode;
         var cast = CastWords(null, name);
-        var body = Adventure.NpcBodies.For(id, name, mode == NpcMode.Prisoner, cast.Role, cast.Style);
-        npc.ModelPath = modelPath ?? BodyPath(body == "npc_merchant" ? "npc_old_man" : body); // the merchant body is his alone
+        npc.ModelPath = modelPath ?? BodyPath(NotTheMerchants(Adventure.NpcBodies.For(id, name, mode == NpcMode.Prisoner, cast.Role, cast.Style)));
         npc.Floor = CurrentFloor;
         npc.Name = $"Npc_{id}";
         root.AddChild(npc);
         npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
         return npc;
     }
+
+    /// <summary>The merchant body is his alone: anyone else whose words point at it wears the old man (as <see cref="Adventure.NpcBodies.ForCast"/> does for the cast).</summary>
+    private static string NotTheMerchants(string body) => body == "npc_merchant" ? "npc_old_man" : body;
 
     /// <summary>The viewer body file for an archetype, or null when the owner has not exported that one yet (the stock body stays).</summary>
     private static string? BodyPath(string? body) => body != null && ResourceLoader.Exists(Adventure.NpcBodies.Path(body)) ? Adventure.NpcBodies.Path(body) : null;
@@ -1234,7 +1235,7 @@ public partial class DungeonBuilder : Node3D
             npc.Name = $"Npc_{plan.Id}";
             var castMember = Game.Instance?.Adventure?.Campaign?.CastFor(plan.CastId);
             var cast = CastWords(plan.CastId, plan.Name);
-            npc.ModelPath = BodyPath(castMember != null ? Adventure.NpcBodies.ForCast(castMember) : Adventure.NpcBodies.For(plan.Id, plan.Name, false, plan.Persona?.VoiceStyle, cast.Role, cast.Style));
+            npc.ModelPath = BodyPath(castMember != null ? Adventure.NpcBodies.ForCast(castMember) : NotTheMerchants(Adventure.NpcBodies.For(plan.Id, plan.Name, false, plan.Persona?.VoiceStyle, cast.Role, cast.Style)));
             root.AddChild(npc);
             npc.GlobalPosition = Surface(n.Cell) + Vector3.Up * 0.1f;
             npc.RotateY((float)(Rng.Mix((ulong)seed ^ (Rng.StableHash(n.Id) & 0xFFFF)) % 8) * Mathf.Pi / 4f);

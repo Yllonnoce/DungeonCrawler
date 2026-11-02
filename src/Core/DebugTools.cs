@@ -2631,8 +2631,11 @@ public partial class DebugTools : Node
                 // the merchant stands on a safe-room cell
                 var merchantNpc = root.GetChildren().OfType<Adventure.Npc>().FirstOrDefault(n => n.IsMerchant);
                 var merchantAt = merchantNpc == null ? (GridPos?)null : DungeonBuilder.WorldToCell(merchantNpc.GlobalPosition);
-                if (merchantAt is { } mc && layout.IsInSafeRoom(mc)) GD.Print($"[saferoom] merchant: present at {mc} (\"{merchantNpc!.NpcName}\", prompt \"{merchantNpc.Prompt}\", lines {(merchantNpc.MerchantLines != null ? "yes" : "none")})");
-                if (merchantNpc is { MerchantLines: { } ml })
+                var merchantIn = merchantAt is { } mc && layout.IsInSafeRoom(mc);
+                if (merchantIn) GD.Print($"[saferoom] merchant: present at {merchantAt} (\"{merchantNpc!.NpcName}\", prompt \"{merchantNpc.Prompt}\", lines {(merchantNpc.MerchantLines != null ? "yes" : "none")})");
+                else { GD.Print($"[saferoom] merchant: missing at {SafeRoomRules.MerchantCell(layout)}{(merchantAt is { } wrong ? $" (one stands at {wrong}, outside the room)" : "")}"); Fail("no merchant in the safe room"); }
+                if (merchantIn && merchantNpc!.MerchantLines == null) Fail("the merchant has no lines for this floor");
+                if (merchantIn && merchantNpc!.MerchantLines is { } ml)
                 {
                     // his talk: the trade line, exactly Trade / How is it going? / Leave; the second shows his progress line, Trade closes the talk
                     var talk = main.Hud.Dialogue;
@@ -2648,7 +2651,6 @@ public partial class DebugTools : Node
                     if (opening != ml.Trade.Text || progress != ml.Progress.Text) Fail("merchant lines are not his trade and progress lines");
                     if (talk.Visible) { Fail("Trade left the dialogue open"); talk.Close(); }
                 }
-                else { GD.Print($"[saferoom] merchant: missing at {SafeRoomRules.MerchantCell(layout)}{(merchantAt is { } wrong ? $" (one stands at {wrong}, outside the room)" : "")}"); Fail("no merchant in the safe room"); }
                 if (_srDoor == null) { Fail("no SafeDoor on the floor"); Finish(); return; }
                 GD.Print($"[saferoom] door at {_srDoor.Cell} open={_srDoor.IsOpen} prompt=\"{_srDoor.Prompt}\"");
                 if (_srDoor.Cell != layout.SafeRoomDoor) Fail($"the door stands at {_srDoor.Cell}, the layout says {layout.SafeRoomDoor}");

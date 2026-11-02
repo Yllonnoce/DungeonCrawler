@@ -58,16 +58,15 @@ public static class CampaignRepair
     /// </summary>
     public static List<string> MerchantOnLoad(CampaignPlan campaign)
     {
-        var undo = new MerchantLoadRepair
-        {
-            Merchant = campaign.Merchant,
-            Flags = campaign.Cast.ToDictionary<CastMember, CastMember, (bool, string)>(c => c, c => (c.Merchant, c.Secret), ReferenceEqualityComparer.Instance),
-        };
-        var before = campaign.Cast.ToHashSet(ReferenceEqualityComparer.Instance);
+        var merchant = campaign.Merchant;
+        var was = campaign.Cast.Select(c => (Member: c, c.Merchant, c.Secret)).ToList();
         var repairs = new List<string>();
         RepairMerchant(campaign, repairs);
         if (repairs.Count == 0) return repairs;
-        undo.Added = campaign.Cast.Where(c => !before.Contains(c)).Select(c => c.Id).ToList();
+        var undo = new MerchantLoadRepair { Merchant = merchant, LinesReplaced = !ReferenceEquals(merchant, campaign.Merchant) };
+        foreach (var (member, flag, secret) in was)
+            if (member.Merchant != flag || member.Secret != secret) undo.Changed[member] = (flag, secret);
+        undo.Added.AddRange(campaign.Cast.Where(c => !was.Any(w => ReferenceEquals(w.Member, c))));
         campaign.LoadRepair = undo;
         return repairs;
     }
@@ -81,10 +80,16 @@ public static class CampaignRepair
     {
         if (campaign.LoadRepair is not { } undo) return campaign;
         var copy = PlanFormat.Deserialize<CampaignPlan>(PlanFormat.Serialize(campaign));
-        copy.Merchant = undo.Merchant;
+        if (undo.LinesReplaced) copy.Merchant = undo.Merchant;
+        // the copy's cast lines up with the campaign's by index: undo only the members the repair touched, drop only the one it added
+        var drop = new List<CastMember>();
         for (var i = 0; i < campaign.Cast.Count && i < copy.Cast.Count; i++)
-            if (undo.Flags.TryGetValue(campaign.Cast[i], out var was)) { copy.Cast[i].Merchant = was.Merchant; copy.Cast[i].Secret = was.Secret; }
-        copy.Cast.RemoveAll(c => undo.Added.Contains(c.Id));
+        {
+            var member = campaign.Cast[i];
+            if (undo.Added.Any(a => ReferenceEquals(a, member))) drop.Add(copy.Cast[i]);
+            else if (undo.Changed.TryGetValue(member, out var was)) { copy.Cast[i].Merchant = was.Merchant; copy.Cast[i].Secret = was.Secret; }
+        }
+        foreach (var d in drop) copy.Cast.Remove(d);
         return copy;
     }
 
@@ -119,10 +124,12 @@ public static class CampaignRepair
 /// <summary>What a load-time merchant repair changed, to take it back out before the campaign is written.</summary>
 public sealed class MerchantLoadRepair
 {
-    /// <summary>The merchant section as the file had it (null, or an empty one).</summary>
+    /// <summary>The merchant section as the file had it (null, or an empty one); put back only when <see cref="LinesReplaced"/>.</summary>
     public MerchantPlan? Merchant { get; set; }
-    /// <summary>Each cast member read from the file, with its merchant flag and secret as they were.</summary>
-    public Dictionary<CastMember, (bool Merchant, string Secret)> Flags { get; set; } = new(ReferenceEqualityComparer.Instance);
-    /// <summary>The ids of the cast members the repair added.</summary>
-    public List<string> Added { get; set; } = new();
+    /// <summary>True when the repair put the generic lines in place of the file's section.</summary>
+    public bool LinesReplaced { get; set; }
+    /// <summary>The cast members whose merchant flag or secret the repair changed, with the values the file had.</summary>
+    public Dictionary<CastMember, (bool Merchant, string Secret)> Changed { get; } = new(ReferenceEqualityComparer.Instance);
+    /// <summary>The cast members the repair added (by reference: an authored member sharing the id is never dropped).</summary>
+    public List<CastMember> Added { get; } = new();
 }
