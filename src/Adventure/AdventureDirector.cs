@@ -746,7 +746,7 @@ public partial class AdventureDirector : Node
         var q = Quests.Values.Where(q => q.Floor == _currentFloor && q.IsOpen).OrderBy(q => q.Status == QuestStatus.ReadyToTurnIn ? 0 : 1).FirstOrDefault();
         var quest = q == null ? "" : $"{q.Title}: {q.ObjectiveText}";
         var objective = Objectives.ObjectiveController.Instance is { Completed: false } oc ? $"{Objectives.ObjectiveController.Prefix} {oc.HudText}" : null;
-        CurrentObjective = Objectives.ObjectiveLine.Compose(objective, HordeSpawner.HudText, quest, PortalSpawner.HudSuffix);
+        CurrentObjective = Objectives.ObjectiveLine.Compose(objective, HordeSpawner.HudText, quest, PortalSpawner.HudSuffix, SafeRoomController.HudText);
         EventBus.Instance.RaiseObjectiveChanged(CurrentObjective);
     }
 }

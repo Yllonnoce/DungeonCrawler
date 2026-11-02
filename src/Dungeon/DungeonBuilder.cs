@@ -272,6 +272,7 @@ public partial class DungeonBuilder : Node3D
         var floorState = Game.Instance != null && Game.Instance.Floors.TryGetValue(floorIndex, out var fs) ? fs : null;
         PlaceAmbushes(layout, floorIndex, seed, floorState);
         PlacePortals(layout, floorIndex, seed, floorState);
+        PlaceSafeRoom(layout, floorIndex, floorState);
         PlaceObjective(layout, contents, _floorRoot, floorIndex, seed);
         if (layout.Water.Count > 0)
         {
@@ -1052,6 +1053,15 @@ public partial class DungeonBuilder : Node3D
         var spawner = new PortalSpawner();
         _floorRoot!.AddChild(spawner);
         spawner.Setup(layout, floor, RegularEnemies(floor), seed, state?.PressureSeconds ?? 0f, state?.PortalWaves ?? 0);
+    }
+
+    /// <summary>The safe room's keeper (see <see cref="SafeRoomController"/>), with the saved count of groups gathered; none on a floor without a safe room.</summary>
+    public void PlaceSafeRoom(FloorLayout layout, int floor, Save.FloorStateDto? state)
+    {
+        if (layout.SafeRoom < 0) return;
+        var controller = new SafeRoomController();
+        _floorRoot!.AddChild(controller);
+        controller.Setup(layout, floor, RegularEnemies(floor), state?.Gathered ?? 0);
     }
 
     public void PlaceHordes(FloorLayout layout, FloorContents contents, int floor, IReadOnlyCollection<string> spent)

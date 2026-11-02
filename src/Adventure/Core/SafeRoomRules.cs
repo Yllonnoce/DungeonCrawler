@@ -65,6 +65,10 @@ public static class SafeRoomRules
 
     public static IEnumerable<GridPos> Cells(FloorLayout layout) => layout.Rooms[layout.SafeRoom].Cells();
 
+    /// <summary>Whether the party holds the safe room: any living member's cell is inside it. A downed body does not count; false on a floor without one.</summary>
+    public static bool Occupied(IEnumerable<(GridPos cell, bool alive)> members, FloorLayout layout) =>
+        layout.SafeRoom >= 0 && members.Any(m => m.alive && layout.IsInSafeRoom(m.cell));
+
     /// <summary>Where the merchant stands: the room's floor cell farthest from the door (ties: lower Y, then lower X).</summary>
     public static GridPos MerchantCell(FloorLayout layout)
     {

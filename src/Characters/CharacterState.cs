@@ -110,13 +110,13 @@ public sealed class CharacterState
         }
     }
 
-    /// <summary>Natural regeneration. Stamina does not return while the character is holding a block.</summary>
-    public void Regenerate(float dt, bool blocking)
+    /// <summary>Natural regeneration, all three rates times <paramref name="multiplier"/> (the safe room's). Stamina does not return while the character is holding a block.</summary>
+    public void Regenerate(float dt, bool blocking, float multiplier = 1f)
     {
         if (!IsAlive) return;
-        Hp = Math.Min(Stats[Stat.MaxHp], Hp + Stats[Stat.HpRegen] * dt);
-        if (!blocking) Stamina = Math.Min(Stats[Stat.MaxStamina], Stamina + Stats[Stat.StaminaRegen] * dt);
-        Mana = Math.Min(Stats[Stat.MaxMana], Mana + Stats[Stat.ManaRegen] * dt);
+        Hp = Math.Min(Stats[Stat.MaxHp], Hp + Stats[Stat.HpRegen] * multiplier * dt);
+        if (!blocking) Stamina = Math.Min(Stats[Stat.MaxStamina], Stamina + Stats[Stat.StaminaRegen] * multiplier * dt);
+        Mana = Math.Min(Stats[Stat.MaxMana], Mana + Stats[Stat.ManaRegen] * multiplier * dt);
     }
 
     public void TakeDamage(float amount) => Hp = Math.Max(0, Hp - amount);

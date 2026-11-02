@@ -92,6 +92,12 @@ public partial class EventBus : Node
     public event Action<Vector3>? PortalOpened;
     public void RaiseAmbushSprung(int index) => AmbushSprung?.Invoke(index);
     public void RaisePortalOpened(Vector3 at) => PortalOpened?.Invoke(at);
+    /// <summary>The party entered (true) or left (false) the safe room.</summary>
+    public event Action<bool>? SafeRoomChanged;
+    public void RaiseSafeRoomChanged(bool inside) => SafeRoomChanged?.Invoke(inside);
+    /// <summary>The shut-out creatures sent another group to the safe room's door (groups sent so far on this floor).</summary>
+    public event Action<int>? Gathered;
+    public void RaiseGathered(int spawnedTotal) => Gathered?.Invoke(spawnedTotal);
     /// <summary>(member name, line): a companion spoke; a client plays the voice with its own key.</summary>
     public event Action<string, Adventure.Line>? Bark;
 

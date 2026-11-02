@@ -171,6 +171,8 @@ public sealed class FloorStateDto
     /// <summary>Seconds spent on the floor under the reinforcement clock, and portals opened so far.</summary>
     public float PressureSeconds { get; set; }
     public int PortalWaves { get; set; }
+    /// <summary>Groups the shut-out creatures have sent to the safe room's door on this floor.</summary>
+    public int Gathered { get; set; }
     /// <summary>Alert state per enemy collective (v6+).</summary>
     public List<CollectiveDto> Collectives { get; set; } = new();
     public List<NpcDto> NpcStates { get; set; } = new();

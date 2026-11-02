@@ -62,6 +62,8 @@ public partial class PartyController : Node3D
     public Camera3D Camera => Anchor.Camera;
     public bool MouseCaptured => Input.MouseMode == Input.MouseModeEnum.Captured;
     public bool InputLocked { get; set; }
+    /// <summary>Scales every member's natural regeneration: the safe room sets it while the party is inside.</summary>
+    public float RegenMultiplier { get; set; } = 1f;
     /// <summary>Whether the local body is holding block.</summary>
     public bool Guarding => Local?.Guarding ?? false;
     public IInteractable? LookingAt => Local?.LookingAt;
@@ -396,7 +398,7 @@ public partial class PartyController : Node3D
             var body = i < Adventurers.Length ? Adventurers[i] : null;
             if (body == null || body.Parked) continue;
             m.TickCooldowns(dt);
-            m.Regenerate(dt, body.Guarding && m.Class.CanBlock);
+            m.Regenerate(dt, body.Guarding && m.Class.CanBlock, RegenMultiplier);
             var wasAlive = m.IsAlive;
             foreach (var tick in m.Effects.Update(dt))
             {

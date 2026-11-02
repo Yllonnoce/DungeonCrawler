@@ -84,6 +84,8 @@ public partial class DebugTools : Node
     /// <summary>--no-ambush / --no-portals: no corridor ambushers, no reinforcement portals this run.</summary>
     public bool NoAmbush { get; private set; }
     public bool NoPortals { get; private set; }
+    /// <summary>--no-gathering: the safe room's clock never sends creatures to its door.</summary>
+    public bool NoGathering { get; private set; }
     private bool _testAmbush, _testPortal;
     private int _dangerStep;
     private float _dangerClock;
@@ -303,6 +305,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-horde") { _testHorde = true; TraceAi = false; _quitAfter = 40; _startFloor = 3; }
             else if (arg == "--no-ambush") NoAmbush = true;
             else if (arg == "--no-portals") NoPortals = true;
+            else if (arg == "--no-gathering") NoGathering = true;
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
             else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
             else if (arg == "--test-keys") { _testKeys = true; _menuOnly = true; _quitAfter = 2; }

@@ -35,6 +35,13 @@ public partial class Hud : Control
     private PauseMenu _pause = null!;
     private SkillTreeScreen _skills = null!;
     public bool Paused => _pause.Visible;
+    /// <summary>Whether the party is in the safe room; setting it recomposes the objective line, which then ends with "Safe room".</summary>
+    public bool SafeRoom
+    {
+        get => _safeRoom;
+        set { _safeRoom = value; AdventureDirector.Instance?.RefreshObjective(); }
+    }
+    private bool _safeRoom;
     private DialogueScreen _dialogue = null!;
     public DialogueScreen Dialogue => _dialogue;
     private QuestLogScreen _questLog = null!;
