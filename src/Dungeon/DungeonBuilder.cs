@@ -382,7 +382,7 @@ public partial class DungeonBuilder : Node3D
         }
     }
 
-    /// <summary>A plain floor cell exactly <paramref name="steps"/> walkable steps from <paramref name="from"/>, or null when there is none.</summary>
+    /// <summary>A plain floor cell exactly <paramref name="steps"/> walkable steps from <paramref name="from"/>, outside the safe room and every vault, or null when there is none.</summary>
     private static GridPos? StepsFrom(FloorLayout layout, GridPos from, int steps)
     {
         ReadOnlySpan<GridPos> dirs = stackalloc GridPos[] { new(0, 1), new(1, 0), new(0, -1), new(-1, 0) };
@@ -401,7 +401,8 @@ public partial class DungeonBuilder : Node3D
             ring = next;
         }
         foreach (var c in ring)
-            if (layout[c] is Cell.Floor && c != layout.UpStairs && c != layout.DownStairs && !layout.IsWater(c) && !layout.IsUnder(c) && !layout.IsReserved(c)) return c;
+            if (layout[c] is Cell.Floor && c != layout.UpStairs && c != layout.DownStairs && !layout.IsWater(c) && !layout.IsUnder(c) && !layout.IsReserved(c)
+                && !layout.IsInSafeRoom(c) && !layout.IsInVault(c)) return c; // never a body in the safe room or behind a vault door
         return null;
     }
 
