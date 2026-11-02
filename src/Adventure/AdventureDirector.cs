@@ -487,7 +487,10 @@ public partial class AdventureDirector : Node
         var campaign = Game.Instance.Adventure.Campaign;
         if (campaign == null || Main.Instance?.Builder.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant") is not { } merchant) return;
         var plan = campaign.MerchantOrGeneric();
-        if (due - 1 < plan.Gathering.Count) merchant.Say(plan.Gathering[due - 1]);
+        if (due - 1 >= plan.Gathering.Count) return;
+        var line = plan.Gathering[due - 1];
+        merchant.Say(line);
+        if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.NpcSay("merchant", line)); // the clients hear him too
     }
 
     /// <summary>Called by Main once a floor's nodes exist and saved state has been applied.</summary>

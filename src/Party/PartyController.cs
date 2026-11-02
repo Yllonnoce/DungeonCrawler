@@ -787,7 +787,7 @@ public partial class PartyController : Node3D
     /// <summary>Buy a stock slot on the current floor. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
     public string? ShopBuy(int stockIndex)
     {
-        if (Net.NetSession.IsClient) { /* Task 7: send the intent */ return null; }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopBuyIntent(stockIndex)); return null; }
         var gold = Gold;
         var stock = ShopStockFor(Game.Instance.CurrentFloor);
         var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
@@ -803,7 +803,7 @@ public partial class PartyController : Node3D
     /// <summary>Sell a bag item to the merchant. Null on success (or on a client); else the refusal, also logged.</summary>
     public string? ShopSell(BagSlot slot)
     {
-        if (Net.NetSession.IsClient) { /* Task 7: send the intent */ return null; }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopSellIntent(slot)); return null; }
         if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
         var item = Bag[slot.BagIndex];
         var gold = Gold;
@@ -813,6 +813,18 @@ public partial class PartyController : Node3D
         AddGold(gold - Gold);
         Main.Instance?.Hud?.Refresh();
         return null;
+    }
+
+    /// <summary>A client mirrors the server's sold slots (for the floor it is on) and purse.</summary>
+    public void ApplyShopSync(int floor, List<int> sold, int gold)
+    {
+        if (floor == Game.Instance.CurrentFloor)
+        {
+            ShopSoldOnFloor.Clear();
+            foreach (var i in sold) ShopSoldOnFloor.Add(i);
+        }
+        SetGold(gold);
+        Main.Instance?.Hud?.Refresh(); // Task 8: refresh the shop screen
     }
 
     // ---- gold ----------------------------------------------------------------------------------

@@ -88,7 +88,16 @@ public partial class Game : Node
         Floors.Clear();
         foreach (var (floor, state) in data.Floors) Floors[floor] = state;
         Adventure = data.Adventure ?? new AdventureDto();
+        RepairMerchant();
         GD.Print($"[Game] loaded seed={GameSeed} floor={CurrentFloor} floors={Floors.Count} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
+    }
+
+    /// <summary>A campaign carried inside a save or a Welcome may predate the merchant: he is added in memory only (LoadRepair is never serialized and a later BuiltinCampaign.Write strips it).</summary>
+    private void RepairMerchant()
+    {
+        if (Adventure.Campaign is not { } campaign) return;
+        var repairs = CampaignRepair.MerchantOnLoad(campaign);
+        if (repairs.Count > 0) GD.Print($"[Game] campaign repaired in memory: {string.Join("; ", repairs)}");
     }
 
     /// <summary>Adopt the state a server sent in its Welcome. The caller builds the floor.</summary>
@@ -103,6 +112,7 @@ public partial class Game : Node
         Floors.Clear();
         Floors[w.CurrentFloor] = w.FloorState;
         Adventure = w.Adventure ?? new AdventureDto();
+        RepairMerchant();
         GD.Print($"[Game] joined seed={GameSeed} floor={CurrentFloor} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
     }
 

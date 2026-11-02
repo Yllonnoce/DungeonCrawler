@@ -129,6 +129,7 @@ public partial class ServerWorld : Node
         SendSnapshotTo(slot.PeerId, full: true);
         foreach (var q in AdventureDirector.Instance.Quests.Values) SendTo(slot.PeerId, new QuestSync(q));
         SendTo(slot.PeerId, new ObjectiveMsg(AdventureDirector.Instance.CurrentObjective));
+        SendShopSync(slot.PeerId); // the floor is built on both ends now; a join and a floor change both come through here
         if (Adventure.Objectives.ObjectiveController.Instance is { } objective) SendTo(slot.PeerId, new ObjectiveStateMsg(objective.Capture()));
     }
 
@@ -194,6 +195,14 @@ public partial class ServerWorld : Node
         return list;
     }
 
+    /// <summary>The floor's sold stock slots and the purse, to everyone (or just one peer).</summary>
+    private void SendShopSync(int peer = -1)
+    {
+        var party = Main.Instance.Party;
+        var msg = new ShopSync(Game.Instance.CurrentFloor, party.ShopSoldOnFloor.OrderBy(i => i).ToList(), party.Gold);
+        if (peer < 0) Broadcast(msg); else SendTo(peer, msg);
+    }
+
     private void OnPlayerReady(PlayerSlot slot)
     {
         var main = Main.Instance;
@@ -216,6 +225,7 @@ public partial class ServerWorld : Node
         EventBus.Instance.Log($"{slot.Name} joins the party.");
         Broadcast(new PlayerJoined(slot.ToDto()), except: slot.PeerId);
         SendSnapshotTo(slot.PeerId, full: true);
+        SendShopSync(slot.PeerId); // the joiner is in game now, so it will not discard this
         Trace.Add($"ready:{slot.Name}");
         PlayerReady?.Invoke(slot);
         WriteStatus();
@@ -362,6 +372,17 @@ public partial class ServerWorld : Node
             case BagMoveIntent bm:
                 if (!OwnsSlots(slot, bm.From, bm.To)) break;
                 party.BagMove(bm.From, bm.To, body);
+                _bagDirty = true;
+                break;
+            case ShopBuyIntent sb:
+                party.ShopBuy(sb.StockIndex);
+                SendShopSync();
+                _bagDirty = true;
+                break;
+            case ShopSellIntent ss:
+                if (!OwnsSlots(slot, ss.Slot, ss.Slot)) break;
+                party.ShopSell(ss.Slot);
+                SendShopSync();
                 _bagDirty = true;
                 break;
             case QuickActionIntent q:

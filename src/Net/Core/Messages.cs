@@ -65,6 +65,11 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
 [Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;
+[Msg(MsgKind.ShopBuyIntent)] public sealed record ShopBuyIntent(int StockIndex) : NetMessage;
+[Msg(MsgKind.ShopSellIntent)] public sealed record ShopSellIntent(BagSlot Slot) : NetMessage;
+[Msg(MsgKind.ShopSync)] public sealed record ShopSync(int Floor, List<int> Sold, int Gold) : NetMessage;
+/// <summary>An NPC's spoken line, raised on the server (the merchant's remarks): clients show the subtitle, play the voice and move the pose.</summary>
+[Msg(MsgKind.NpcSay)] public sealed record NpcSay(string NpcId, Adventure.Line Line) : NetMessage;
 [Msg(MsgKind.QuestSync)] public sealed record QuestSync(QuestState Quest) : NetMessage;
 [Msg(MsgKind.Objective)] public sealed record ObjectiveMsg(string Text) : NetMessage;
 [Msg(MsgKind.Log)] public sealed record LogMsg(List<string> Lines) : NetMessage;

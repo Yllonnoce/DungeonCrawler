@@ -83,6 +83,7 @@ public partial class NetTestFlow : Node
         {
             case 0:
                 if (!client.Trace.Contains("ready") || main.Party?.Local is not { } local) { if (_elapsed > 40) Finish("[net]", false, $"never ready ({net.Status})"); return; }
+                if (!net.TestRejoinOnly && client.SnapshotsSeen >= 3 && !client.Trace.Contains("shop")) { Finish("[net]", false, "no shop sync arrived on joining"); return; }
                 GD.Print($"[net] in game as member {client.MemberIndex}, floor {Game.Instance.CurrentFloor}, layout hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}, {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies");
                 if (net.TestRejoinOnly)
                 {
@@ -314,6 +315,7 @@ public partial class NetTestFlow : Node
                 var line = main.Hud.ObjectiveText;
                 if (line.EndsWith("Safe room"))
                 {
+                    if (!client.Trace.Contains("shop")) { Finish("[net]", false, "the server never sent the shop's sold slots"); return; }
                     GD.Print($"[net] safe room: HUD shows \"{line}\" {_clock:0.0} s after stepping inside");
                     me.Teleport(_safeReturn.Value);
                     _clock = 0; _step = 8;
