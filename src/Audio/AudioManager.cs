@@ -1,4 +1,5 @@
 using DungeonCrawler.Core;
+using DungeonCrawler.Enemies;
 using Godot;
 
 namespace DungeonCrawler.Audio;
@@ -15,6 +16,9 @@ public partial class AudioManager : Node
     private const string Rpg = "res://assets/audio/kenney/kenney_rpg-audio/Audio/";
     private const string Impact = "res://assets/audio/kenney/kenney_impact-sounds/Audio/";
     private const string Ui = "res://assets/audio/kenney/kenney_interface-sounds/Audio/";
+    /// <summary>CC0 creature grunts, one folder per <see cref="VoiceSets"/> set, fetched by scripts/fetch_grunts.py.</summary>
+    private const string Grunts = "res://assets/audio/grunts/";
+    private const string GruntPrefix = "grunt_";
 
     private static readonly Dictionary<string, string[]> Cues = new()
     {
@@ -99,12 +103,63 @@ public partial class AudioManager : Node
             if (list.Length == 0) GD.PushWarning($"[Audio] no clips found for cue '{cue}'");
             _streams[cue] = list;
         }
+        LoadGrunts();
         EventBus.Instance.Sfx += cue => Play(cue);
         EventBus.Instance.FloorChanged += (_, _) => Play("stairs");
         GD.Print($"[Audio] {_streams.Count(kv => kv.Value.Length > 0)} cues ready");
         StartAmbient();
         AddChild(new MusicDirector { Name = "Music" });
     }
+
+    /// <summary>
+    /// Register <c>grunt_hurt_&lt;set&gt;</c> / <c>grunt_death_&lt;set&gt;</c> from the clips found in each set's folder
+    /// (<c>hurt_*.ogg</c>, <c>death_*.ogg</c>, also <c>.wav</c>). A set with no files registers nothing, so
+    /// <see cref="Has"/> stays false and callers fall back to <c>enemy_hurt</c> / <c>enemy_die</c>.
+    /// </summary>
+    private void LoadGrunts()
+    {
+        var counts = new List<string>();
+        foreach (var set in VoiceSets.All)
+        {
+            var files = ListAudio(Grunts + set);
+            var hurt = Register(VoiceSets.HurtCue(set), files.Where(f => f.StartsWith("hurt_")), Grunts + set);
+            var death = Register(VoiceSets.DeathCue(set), files.Where(f => f.StartsWith("death_")), Grunts + set);
+            counts.Add($"{set}={hurt}/{death}");
+        }
+        GD.Print($"[Audio] grunt sets: {string.Join(' ', counts)}");
+    }
+
+    private int Register(string cue, IEnumerable<string> names, string dir)
+    {
+        var list = names.Select(n => $"{dir}/{n}").Where(f => ResourceLoader.Exists(f))
+            .Select(f => GD.Load<AudioStream>(f)).Where(s => s != null).ToArray();
+        if (list.Length > 0) _streams[cue] = list;
+        return list.Length;
+    }
+
+    /// <summary>
+    /// Audio file names in a res:// folder, sorted, by their source names: an exported build lists the
+    /// <c>.import</c> / <c>.remap</c> siblings instead of the clips, so those suffixes are stripped.
+    /// </summary>
+    private static List<string> ListAudio(string dirPath)
+    {
+        var names = new SortedSet<string>(StringComparer.Ordinal);
+        using var dir = DirAccess.Open(dirPath);
+        if (dir == null) return names.ToList();
+        dir.ListDirBegin();
+        for (var name = dir.GetNext(); name != ""; name = dir.GetNext())
+        {
+            if (dir.CurrentIsDir() || name.StartsWith('.')) continue;
+            if (name.EndsWith(".import")) name = name[..^".import".Length];
+            else if (name.EndsWith(".remap")) name = name[..^".remap".Length];
+            if (name.EndsWith(".ogg") || name.EndsWith(".wav")) names.Add(name);
+        }
+        dir.ListDirEnd();
+        return names.ToList();
+    }
+
+    /// <summary>True when the cue has at least one loaded clip.</summary>
+    public bool Has(string cue) => _streams.TryGetValue(cue, out var list) && list.Length > 0;
 
     private static void EnsureBus(string name)
     {
@@ -123,7 +178,7 @@ public partial class AudioManager : Node
         return true;
     }
 
-    /// <summary>Play a cue at a volume (dB offset) with slight pitch variation.</summary>
+    /// <summary>Play a cue at a volume (dB offset) with slight pitch variation; grunt cues also shift by their set's pitch offset.</summary>
     public void Play(string cue, float volumeDb = 0f)
     {
         if (!_streams.TryGetValue(cue, out var list) || list.Length == 0) return;
@@ -132,7 +187,10 @@ public partial class AudioManager : Node
         var player = _players.FirstOrDefault(p => !p.Playing) ?? _players[_rng.Next(_players.Count)];
         player.Stream = list[idx];
         player.VolumeDb = volumeDb;
-        player.PitchScale = 0.92f + (float)_rng.NextDouble() * 0.16f;
+        var pitch = 0.92f + (float)_rng.NextDouble() * 0.16f;
+        if (cue.StartsWith(GruntPrefix))
+            pitch = Mathf.Clamp(pitch + VoiceSets.PitchOffset(cue[(cue.LastIndexOf('_') + 1)..]), 0.5f, 1.6f);
+        player.PitchScale = pitch;
         player.Play();
     }
 

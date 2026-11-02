@@ -104,3 +104,10 @@ All tracks are CC0 (https://creativecommons.org/publicdomain/zero/1.0/); fetched
 - boss_battle_rpg_theme.ogg: "Boss Battle Theme (variation)" by CleytonKauffman, https://opengameart.org/content/boss-battle-theme
 - sting_victory.mp3: "Medieval: Victory Theme" by RandomMind, https://opengameart.org/content/medieval-victory-theme
 - sting_defeat.mp3: "Medieval: Defeat Theme" by RandomMind, https://opengameart.org/content/medieval-defeat-theme
+
+## Enemy grunts (CC0)
+
+CC0 (https://creativecommons.org/publicdomain/zero/1.0/); fetched by `scripts/fetch_grunts.py` into `assets/audio/grunts/` (per-file origin in its README.md).
+
+- "80 CC0 creature SFX" by rubberduck, https://opengameart.org/content/80-cc0-creature-sfx
+- "80 CC0 creture SFX #2" by rubberduck, https://opengameart.org/content/80-cc0-creture-sfx-2

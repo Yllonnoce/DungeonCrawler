@@ -9,8 +9,9 @@ public static class VoiceSets
     public static string DefaultFor(float scale, bool isBoss)
         => isBoss ? Boss : scale < 0.85f ? Small : scale >= 1.25f ? Large : Medium;
 
+    /// <summary>The named set when it is one of <see cref="All"/>; otherwise (empty, or a typo in a .tres) the default by size.</summary>
     public static string Resolve(string voiceSet, float scale, bool isBoss)
-        => string.IsNullOrEmpty(voiceSet) ? DefaultFor(scale, isBoss) : voiceSet;
+        => Array.IndexOf(All, voiceSet) >= 0 ? voiceSet : DefaultFor(scale, isBoss);
 
     public static string HurtCue(string set) => $"grunt_hurt_{set}";
     public static string DeathCue(string set) => $"grunt_death_{set}";

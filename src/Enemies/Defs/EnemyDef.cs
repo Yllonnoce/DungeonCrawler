@@ -37,6 +37,7 @@ public partial class EnemyDef : Resource, IHasId
     [Export] public Color Color { get; set; } = new(0.75f, 0.15f, 0.12f);
     [Export] public float Scale { get; set; } = 1f;
     [Export] public bool IsBoss { get; set; }
+    /// <summary>Grunt clip set: small, medium, large or boss. Empty (or an unknown name) picks by Scale and IsBoss; see VoiceSets.</summary>
     [Export] public string VoiceSet { get; set; } = "";
     /// <summary>None, Slam, Volley, Charge, Summon.</summary>
     [Export] public string Signature { get; set; } = "None";
