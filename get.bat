@@ -3,7 +3,7 @@ setlocal EnableExtensions
 rem Get DungeonCrawler onto this Windows PC with one double-click. No git, no build tools, no GitHub account.
 rem
 rem   Download this file (get.bat) and double-click it. Or in a Command Prompt:
-rem     curl -fsSL -o get.bat https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/get.bat && get.bat
+rem     curl.exe -fsSL -o get.bat https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/get.bat && get.bat
 rem
 rem It finds the newest game release on GitHub, downloads the Windows archive into Downloads\DungeonCrawler, checks it
 rem against the release's SHA256SUMS, unpacks it and runs Setup.bat inside, which offers Install or Uninstall and can

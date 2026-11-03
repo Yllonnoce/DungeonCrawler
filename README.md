@@ -9,7 +9,7 @@ Pick your system. Each step is one thing to do.
 
 ### Windows 10 or 11
 
-1. Open a Command Prompt: press the **Windows key**, type `cmd`, press **Enter**.
+1. Open a Command Prompt (not PowerShell): press the **Windows key**, type `cmd`, press **Enter**.
 2. Paste these three lines (right-click to paste), then press **Enter**:
    ```
    git clone https://github.com/Yllonnoce/DungeonCrawler.git
@@ -20,11 +20,11 @@ Pick your system. Each step is one thing to do.
 
 - No git on your PC? Paste this one line instead; it fetches git for you and does the three steps:
   ```
-  curl -fsSL -o build.bat https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/build.bat && build.bat
+  curl.exe -fsSL -o build.bat https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/build.bat && build.bat
   ```
 - Only want the finished game, no building? One line, done in minutes:
   ```
-  curl -fsSL -o get.bat https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/get.bat && get.bat
+  curl.exe -fsSL -o get.bat https://raw.githubusercontent.com/Yllonnoce/DungeonCrawler/main/get.bat && get.bat
   ```
 - First start: SmartScreen may warn because the game is unsigned. Click **More info**, then **Run anyway**.
 - **Update later:** double-click `update.bat` in the `DungeonCrawler` folder. It pulls the newest code, rebuilds, reinstalls.
