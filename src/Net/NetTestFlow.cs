@@ -165,9 +165,22 @@ public partial class NetTestFlow : Node
             {
                 // fight: stand in front of the nearest living enemy and swing until the server reports the kill
                 var me = main.Party.Local!;
+                if (!_fightHeard) { _fightHeard = true; _killsBefore = client.Trace.Count(t => t == "kill"); EventBus.Instance.Sfx += FightCue; }
                 if (_target == null || !IsInstanceValid(_target) || !_target.IsAlive)
                 {
-                    if (client.Trace.Contains("kill")) { GD.Print($"[net] kill confirmed after {_swings} swings"); _clock = 0; _step = 5; return; }
+                    if (client.Trace.Contains("kill"))
+                    {
+                        // a second for the EnemyDied messages to land (a killing blow's EnemyHurt shows the death a tick earlier):
+                        // then every death since the fight began was heard exactly once, and the blows were heard as grunts
+                        _settle += delta;
+                        if (_settle < 1.0) return;
+                        EventBus.Instance.Sfx -= FightCue;
+                        var kills = client.Trace.Count(t => t == "kill") - _killsBefore;
+                        GD.Print($"[net] kill confirmed after {_swings} swings; heard {_deathCues} death cue(s) for {kills} kill(s), {_hurtCues} hurt cue(s)");
+                        if (_deathCues != kills) { Finish("[net]", false, $"heard {_deathCues} death cue(s) for {kills} kill(s)"); return; }
+                        if (_hurtCues < 1) { Finish("[net]", false, "heard no hurt cue while fighting"); return; }
+                        _clock = 0; _step = 5; return;
+                    }
                     // a loner, not a camp or a nest: one level-1 warrior against a band would be a different test
                     // the viewer's 280 hp orc by the entrance is a showpiece, not a level-1 fight
                     var candidates = main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Where(e => e.IsAlive && !e.IsBoss && !e.IsHorde && e.Kind == Enemies.EnemyKind.Melee && e.Profile.Id != Dungeon.DungeonBuilder.ViewerOrcId).ToList() ?? new List<Enemies.Enemy>();
@@ -458,6 +471,16 @@ public partial class NetTestFlow : Node
     private bool _placed, _placed2, _placed3, _placed4, _askedPickup, _askedChest, _askedStairs;
     private double _swingClock, _chaseClock;
     private int _swings, _bagBefore, _lootBefore;
+    private bool _fightHeard;
+    private int _killsBefore, _deathCues, _hurtCues;
+    private double _settle;
+
+    /// <summary>The fight's cues on the client: enemy death and hurt sounds, grunts or the generic thuds.</summary>
+    private void FightCue(string cue)
+    {
+        if (cue.StartsWith("grunt_death_") || cue == "enemy_die") _deathCues++;
+        else if (cue.StartsWith("grunt_hurt_") || cue == "enemy_hurt") _hurtCues++;
+    }
     private string _firstRun = "";
     private int _bagAtLeave, _memberAtLeave, _goldBefore, _goldAtLeave;
     private Vector3? _lastLead;

@@ -342,6 +342,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>Cosmetic death: the server already handed out XP and loot.</summary>
     public void ClientDie()
     {
+        if (_clientDead) return; // a killing blow's EnemyHurt (hp 0), or a snapshot, can get here before the EnemyDied message
         _clientDead = true;
         Hp = 0;
         PlayAnim("Death", force: true);

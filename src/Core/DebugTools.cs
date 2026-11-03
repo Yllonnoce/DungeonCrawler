@@ -3499,9 +3499,11 @@ public partial class DebugTools : Node
 
     private void RunHitFxTest()
     {
+        if (_hfxStep >= 99) return;
+        if (_elapsed > 35) { Fail($"timed out at step {_hfxStep}"); Finish(); return; } // before the quit at 40 s, so a stall still prints RESULT
         var main = Main.Instance;
         if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame) return;
-        if (_elapsed < _hfxNext || _hfxStep >= 99) return;
+        if (_elapsed < _hfxNext) return;
         var party = main.Party;
         var b = main.Builder;
         var brand = Math.Max(0, Array.FindIndex(party.Members, m => m.Name == "Brand"));
@@ -3598,6 +3600,25 @@ public partial class DebugTools : Node
                 var noAudio = Enemy.CueOrFallback(VoiceSets.HurtCue(e.VoiceSet), "enemy_hurt", null);
                 if (fallbackHurt != "enemy_hurt" || fallbackDeath != "enemy_die" || noAudio != "enemy_hurt") Fail($"with no clips the cues are {fallbackHurt}/{fallbackDeath} (no audio: {noAudio})");
                 GD.Print($"[hitfx] grunts: hurt={_hfxHurt} death={_hfxDeath} fallback={fallbackHurt}");
+                // a set the definition names wins over the size rule
+                e.OverrideVoiceSet(VoiceSets.Large);
+                _hfxTries = 0;
+                _hfxStep = 6;
+                break;
+            }
+            case 6:
+                Swing();
+                _hfxStep = 7; _hfxNext = _elapsed + 0.6;
+                break;
+            case 7:
+            {
+                var e = _hfxEnemy!;
+                if (!HitLanded() && _hfxTries++ < 2) { GD.Print("[hitfx] no large hurt cue yet, swinging again"); _hfxStep = 6; break; }
+                var want = Audio.AudioManager.Instance?.Has(VoiceSets.HurtCue(VoiceSets.Large)) == true ? VoiceSets.HurtCue(VoiceSets.Large) : "enemy_hurt";
+                var heard = _hfxCues.FirstOrDefault(c => c.StartsWith("grunt_hurt_") || c == "enemy_hurt") ?? "none";
+                GD.Print($"[hitfx] D voice \"large\" -> {e.VoiceSet}, cue {e.HurtCue}, first hurt cue heard {heard}");
+                if (e.VoiceSet != VoiceSets.Large) Fail($"a named set \"large\" resolved to {e.VoiceSet}");
+                if (heard != want) Fail($"after naming the large set the hurt cue heard was {heard}, expected {want}");
                 Finish();
                 break;
             }
