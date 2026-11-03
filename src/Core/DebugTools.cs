@@ -3483,7 +3483,11 @@ public partial class DebugTools : Node
     // What a blow looks and sounds like. Staged like --test-abilities: the party in the largest room, a stunned enemy
     // 1.5 m ahead of Brand, the others parked. A: Brand hits it and its hurt grunt plays; B: it is killed and its death
     // grunt plays; C: an enemy whose definition names a nonsense voice set speaks with the size rule's set, and a set with
-    // no clips falls back to enemy_hurt / enemy_die. Cues are recorded from EventBus.Sfx. Prints [hitfx] lines and RESULT.
+    // no clips falls back to enemy_hurt / enemy_die. Cues are recorded from EventBus.Sfx. Then what a blow looks like:
+    // D: a sword blow leaves one blood OneShotFx under the floor root that is gone 1.2 s later; E: Ilex's fireball bursts
+    // (an OneShotFx with a light) on the enemy and again on a wall face, and no bolt is left; F: a fireball and fresh
+    // bursts are in the air when the party jumps to the next floor, which must load cleanly (the flow ends on floor 2).
+    // Prints [hitfx] lines and RESULT.
     private bool _testHitFx;
     private int _hfxStep;
     private double _hfxNext;
@@ -3494,6 +3498,10 @@ public partial class DebugTools : Node
     private readonly List<string> _hfxFails = new();
     private string _hfxHurt = "", _hfxDeath = "";
     private bool _hfxListening;
+    private double _hfxSwungAt;
+    private int _hfxBlood, _hfxFromFloor;
+    private Vector3 _hfxWallHit;
+    private Node? _hfxOldRoot;
 
     private void HitFxCue(string cue) => _hfxCues.Add(cue);
 
@@ -3515,10 +3523,13 @@ public partial class DebugTools : Node
             _hfxStep = 99;
             _quitAfter = _elapsed + 0.5;
         }
-        Enemy? Spawn(string? voiceSet)
+        var ilex = Math.Max(0, Array.FindIndex(party.Members, m => m.Name == "Ilex"));
+        List<Combat.Fx.OneShotFx> Effects() => root.GetChildren().OfType<Combat.Fx.OneShotFx>().Where(f => !f.IsQueuedForDeletion()).ToList();
+        static bool IsBurst(Combat.Fx.OneShotFx f) => f.GetChildren().OfType<OmniLight3D>().Any();
+        Enemy? Spawn(string? voiceSet, int hero = -1)
         {
             foreach (var stray in root.GetChildren().OfType<Enemy>()) stray.QueueFree();
-            party.Adventurers[brand].Teleport(_hfxStand, _hfxStand + new Vector3(0, 0, -1.5f));
+            party.Adventurers[hero < 0 ? brand : hero].Teleport(_hfxStand, _hfxStand + new Vector3(0, 0, -1.5f));
             var e = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], _hfxStand - Vector3.Up * 0.2f + new Vector3(0, 0, -1.5f), b.CurrentFloor);
             if (e == null) return null;
             if (voiceSet != null) e.OverrideVoiceSet(voiceSet);
@@ -3619,9 +3630,121 @@ public partial class DebugTools : Node
                 GD.Print($"[hitfx] D voice \"large\" -> {e.VoiceSet}, cue {e.HurtCue}, first hurt cue heard {heard}");
                 if (e.VoiceSet != VoiceSets.Large) Fail($"a named set \"large\" resolved to {e.VoiceSet}");
                 if (heard != want) Fail($"after naming the large set the hurt cue heard was {heard}, expected {want}");
-                Finish();
+                _hfxStep = 8; _hfxNext = _elapsed + 1.2; // the blood of the blows above has run its course
                 break;
             }
+            case 8: // D: blood
+                _hfxEnemy = Spawn(null);
+                if (_hfxEnemy == null) { Fail("could not spawn the enemy for blood"); Finish(); return; }
+                _hfxTries = 0;
+                _hfxStep = 9; _hfxNext = _elapsed + 0.35;
+                break;
+            case 9:
+                Swing(); _hfxSwungAt = _elapsed;
+                _hfxStep = 10;
+                break;
+            case 10: // every frame until the blow lands
+                if (!HitLanded())
+                {
+                    if (_elapsed - _hfxSwungAt < 0.8) break;
+                    if (_hfxTries++ < 2) { GD.Print("[hitfx] the blood blow has not landed yet, swinging again"); _hfxStep = 9; break; }
+                    Fail("the blood blow never landed");
+                }
+                _hfxBlood = Effects().Count;
+                _hfxStep = 11; _hfxNext = _elapsed + 1.2;
+                break;
+            case 11:
+            {
+                var gone = Effects().Count == 0;
+                GD.Print($"[hitfx] blood: spawned={_hfxBlood} gone={gone.ToString().ToLowerInvariant()}");
+                if (_hfxBlood != 1) Fail($"a sword blow left {_hfxBlood} effects, expected 1 (blood)");
+                if (!gone) Fail("the blood was still there 1.2 s after the blow");
+                // E: Ilex's fireball on the enemy
+                AbilitiesTakeControl(ilex);
+                party.Adventurers[brand].Teleport(_hfxStand + new Vector3(0, 0, 2.5f), _hfxStand + new Vector3(0, 0, 1f)); // out of Ilex's spot
+                _hfxEnemy = Spawn(null, ilex);
+                if (_hfxEnemy == null) { Fail("could not spawn the enemy for the fireball"); Finish(); return; }
+                _hfxTries = 0;
+                _hfxStep = 12; _hfxNext = _elapsed + 0.35;
+                break;
+            }
+            case 12:
+            {
+                var m = party.Members[ilex];
+                AbilitiesRefill(m);
+                m.ActiveAbilityIndex = Math.Max(0, m.KnownAbilities.IndexOf("ability.fireball"));
+                _hfxCues.Clear();
+                party.Attack(ilex);
+                _hfxStep = 13; _hfxNext = _elapsed + 0.4;
+                break;
+            }
+            case 13:
+            {
+                var bursts = Effects().Count(IsBurst);
+                var hurt = HitLanded();
+                if ((!hurt || bursts == 0) && _hfxTries++ < 2) { GD.Print($"[hitfx] fireball: bursts={bursts} hurt={hurt}, casting again"); _hfxStep = 12; _hfxNext = _elapsed + 0.3; break; }
+                GD.Print($"[hitfx] E fireball on the enemy: bursts={bursts} hurt={hurt.ToString().ToLowerInvariant()} (ability {party.Members[ilex].KnownAbilities.ElementAtOrDefault(party.Members[ilex].ActiveAbilityIndex)})");
+                if (bursts < 1) Fail("the fireball left no burst on the enemy");
+                if (!hurt) Fail("the fireball did not hurt the enemy");
+                // and on a wall: the abilities flow's wall, a room cell with rock to the north
+                GridPos? found = null;
+                for (var y = 1; y < layout.Height && found == null; y++)
+                    for (var x = 0; x < layout.Width && found == null; x++)
+                    {
+                        var c = new GridPos(x, y); var wall = new GridPos(x, y - 1);
+                        if (layout[c] == Cell.Floor && layout[wall] == Cell.Wall && !layout.IsUnder(c) && !layout.IsUnder(wall) && layout.RoomAt(c) != null) found = c;
+                    }
+                if (found == null) { Fail("no room cell with a wall to the north for the wall burst"); Finish(); return; }
+                if (_hfxEnemy != null && IsInstanceValid(_hfxEnemy)) _hfxEnemy.QueueFree();
+                var m = party.Members[ilex];
+                AbilitiesRefill(m);
+                var stand = b.Surface(found.Value) + Vector3.Up * 0.3f;
+                party.Adventurers[ilex].Teleport(stand, stand + new Vector3(0, 0, -2f));
+                var cam = party.Adventurers[ilex].Camera;
+                var rh = cam.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(cam.GlobalPosition, cam.GlobalPosition - cam.GlobalTransform.Basis.Z * 6f, collisionMask: 1));
+                if (rh.Count == 0) { Fail($"no wall within 6 m of the eye at cell {found.Value}"); Finish(); return; }
+                _hfxWallHit = (Vector3)rh["position"];
+                GD.Print($"[hitfx] wall from cell {found.Value}: the face is {_hfxWallHit.DistanceTo(cam.GlobalPosition):0.00} m from the eye");
+                party.Attack(ilex);
+                _hfxStep = 14; _hfxNext = _elapsed + 0.6;
+                break;
+            }
+            case 14:
+            {
+                var bursts = Effects().Where(IsBurst).ToList();
+                var closest = bursts.Select(f => f.GlobalPosition.DistanceTo(_hfxWallHit)).DefaultIfEmpty(float.PositiveInfinity).Min();
+                var bolts = root.GetChildren().OfType<Combat.Projectile>().Count(p => !p.IsQueuedForDeletion());
+                GD.Print($"[hitfx] E fireball on the wall: bursts={bursts.Count} closest={closest:0.00} m from the face, bolts left={bolts}");
+                if (closest > 0.6f) Fail($"no burst within 0.6 m of the wall face (closest {closest:0.00} m)");
+                if (bolts != 0) Fail($"{bolts} bolts still in the scene after hitting the wall");
+                // F: a bolt and fresh effects in the air when the floor changes under them
+                AbilitiesRefill(party.Members[ilex]);
+                party.Attack(ilex);
+                var eye = party.Adventurers[ilex].Camera.GlobalPosition;
+                Combat.Fx.HitFx.SpellBurst(root, eye + new Vector3(0, 0, -1f), new Color(1f, 0.5f, 0.1f));
+                Combat.Fx.HitFx.Blood(root, eye + new Vector3(0.3f, 0, -1f), Vector3.Back);
+                _hfxOldRoot = root;
+                _hfxFromFloor = b.CurrentFloor;
+                var inAir = Effects().Count;
+                var flying = root.GetChildren().OfType<Combat.Projectile>().Count();
+                GD.Print($"[hitfx] F jumping from floor {_hfxFromFloor} with {inAir} effects and {flying} bolts in the air");
+                Game.Instance.JumpToFloor(_hfxFromFloor + 1);
+                _hfxSwungAt = _elapsed;
+                _hfxStep = 15; _hfxNext = _elapsed + 1.0;
+                break;
+            }
+            case 15:
+            {
+                if (b.CurrentFloor != _hfxFromFloor + 1 || root == _hfxOldRoot) { if (_elapsed - _hfxSwungAt < 10) break; Fail("the next floor never loaded"); Finish(); return; }
+                var oldGone = _hfxOldRoot == null || !IsInstanceValid(_hfxOldRoot);
+                GD.Print($"[hitfx] F floor {_hfxFromFloor} -> {b.CurrentFloor} loaded, old floor freed={oldGone.ToString().ToLowerInvariant()}, effects on the new floor={Effects().Count}");
+                if (!oldGone) Fail("the old floor root was not freed");
+                _hfxStep = 16; _hfxNext = _elapsed + 4.0; // the music's crossfade into the new floor settles, or the quit leaves both streams held
+                break;
+            }
+            case 16:
+                Finish();
+                break;
         }
     }
 

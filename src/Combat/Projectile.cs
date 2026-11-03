@@ -120,7 +120,7 @@ public partial class Projectile : Area3D
     private void OnBodyEntered(Node3D body)
     {
         if (_spent) return;
-        if (Cosmetic) { _spent = true; QueueFree(); return; }
+        if (Cosmetic) { _spent = true; if (!IsArrow) Fx.HitFx.SpellBurst(GetParent(), GlobalPosition, Color); QueueFree(); return; }
         if (FromEnemy)
         {
             if (body is Adventurer adv)
@@ -149,6 +149,7 @@ public partial class Projectile : Area3D
                 if (Source != null && IsInstanceValid(Source)) { enemy.NoteThreat(Source, result.Amount + 5f); if (Source.IsLocal) Party.LeadTarget = enemy; }
                 if (IsArrow && result.Hit) enemy.EmbeddedArrows++;
                 else if (IsArrow) Party.SpawnArrowPickup(GlobalPosition, 0.5f);
+                Burst();
                 QueueFree();
                 break;
             case Enemy:
@@ -157,14 +158,22 @@ public partial class Projectile : Area3D
                 _spent = true;
                 var r = target.ReceiveAttack(Attacker.Stats, Attack, HitContext.None, Party.Rng, Attacker.Name);
                 if (IsArrow) Party.SpawnArrowPickup(GlobalPosition, 0.5f);
+                Burst();
                 QueueFree();
                 break;
             default:
                 _spent = true;
                 Main.Instance?.Builder.TripPlateAt(GlobalPosition, this); // an arrow on a plate sets the hazard off from a safe distance
                 if (IsArrow) Party.SpawnArrowPickup(GlobalPosition - Velocity.Normalized() * 0.4f, 0.6f);
+                Burst();
                 QueueFree();
                 break;
         }
+    }
+
+    /// <summary>A spell bolt flares where it lands; arrows do not.</summary>
+    private void Burst()
+    {
+        if (!IsArrow) Fx.HitFx.SpellBurst(GetParent(), GlobalPosition, Color);
     }
 }
