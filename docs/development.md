@@ -209,6 +209,9 @@ three exploration pieces per tier (Crypt, Caves, Forge, Abyss) shuffled with a f
 tracks, a boss track, and victory and defeat stings. `Audio/MusicDirector.cs` crossfades between them: battle music starts the
 moment an enemy is fighting the party within 26 m and holds for six seconds after the last one stops, the boss track runs from
 the guardian noticing you until it falls, and everything ducks under spoken lines. The "Music and ambience" slider covers it all.
+Enemy grunts are CC0 creature SFX from rubberduck's packs, fetched by `scripts/fetch_grunts.py` into `assets/audio/grunts/<set>/`;
+`VoiceSets` picks the set by enemy size and plays a hurt or death clip (pitch varied), and falls back to the old `enemy_hurt` and
+`enemy_die` cues when a set has no clips. They are listed in `assets/LICENSES.md`.
 After adding files under `assets/`, run `godot --headless --import --path .` once so Godot imports them.
 
 ## Build, test, run
@@ -290,6 +293,7 @@ godot --headless --path . -- --test-safe-room   # the floor's safe room: door, e
 godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gathering (plan B) then the merchant: stock, buy, refuse, sell, reload, shop screen
 godot --headless --path . -- --test-tavern   # floor 0: one room, no enemies, the merchant, empty purse, "The Tavern", the tavern tune; an open inventory holds his greeting back, closed he briefs within 4 m; a save mid-briefing comes back on floor 0 unpaid and he briefs again; walked to the deal the purse gets 150; the down landing asks and floor 1 opens with 150 (paid once); prints [tavern] RESULT
 godot --headless --path . -- --test-tavern-skip   # the same opening but the briefing is closed unread: the purse stays empty until the descent stakes it with 150 on floor 1
+godot --headless --path . -- --test-hit-fx   # blood, bursts, stuck arrows, grunts (seed 7); prints [hitfx] RESULT
 godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2   # regenerate each floor_NN.json's layout from its campaign and rewrite only its LayoutHash (after a generator change, so the shipped plans load without "adapted")
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
 godot --headless --path . -- --bake-campaign=data/adventures/builtin --bake-voice=assets/voice/builtin --ai --seed=N --spend-cap=10 --voice-budget=80 --quit-after=5800   # render the budgeted lines with Gemini into the shipped bank
@@ -553,6 +557,14 @@ Two layers of pressure sit on top of every floor's planned population (Settings,
   portal, ten loose). Servers spawn them and clients see the rift (`PortalOpenedEvt`, `AmbushSprungEvt`).
   `--test-portal` hurries the clock on floor 1 and checks a portal opens away from the party, its creatures hunt,
   the clock saves, and a dead tier boss silences it.
+
+## Hit effects
+
+A sword hit spatters a short burst of dark blood (`HitFx.Blood`), none when the shield takes the whole blow. A spell bursts where it
+lands on an enemy or a wall (`HitFx.SpellBurst`), and an arrow stays stuck in the enemy it hits (`HitFx.StickArrow`): at most six are
+drawn, while the true `EmbeddedArrows` count is saved and restored. Enemies grunt when hurt and when they die. In co-op, blood and
+stuck arrows reach clients as one `HitFxEvt` (protocol version 6) and grunts travel through the existing `SfxMsg` relay; spell
+bursts stay local on every machine (each has the bolt) and are never relayed. `--test-hit-fx` checks it all headless.
 
 ## Safe rooms
 
