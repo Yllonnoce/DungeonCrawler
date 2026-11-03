@@ -1,4 +1,5 @@
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Enemies;
 using Godot;
 
 namespace DungeonCrawler.Combat.Fx;
@@ -111,6 +112,60 @@ public static class HitFx
         fx.AddChild(light);
         fx.Flash = light;
         Place(parent, fx, at);
+    }
+
+    private static BoxMesh? _shaftMesh, _fletchMesh;
+    private static StandardMaterial3D? _shaftMat, _fletchMat;
+
+    /// <summary>
+    /// An arrow left standing in <paramref name="enemy"/>: a Node3D named StuckArrow under its <see cref="Enemy.Model"/>
+    /// (so it rides the body's transform), its centre 0.18 m back from <paramref name="worldAt"/> along the flight
+    /// <paramref name="direction"/> so the head is buried, pointing along the flight, 0.55 m long in world units whatever
+    /// the model's scale. Nothing for a stock capsule or a body that already shows <see cref="Enemy.MaxStuckArrows"/>.
+    /// </summary>
+    public static void StickArrow(Enemy enemy, Vector3 worldAt, Vector3 direction)
+    {
+        var model = enemy.Model;
+        if (model == null || !GodotObject.IsInstanceValid(model) || !model.IsInsideTree() || enemy.StuckArrowCount >= Enemy.MaxStuckArrows) return;
+        if (direction.LengthSquared() < 1e-6f) return;
+        var dir = direction.Normalized();
+        _shaftMesh ??= new BoxMesh { Size = new Vector3(0.025f, 0.025f, 0.55f) };
+        _fletchMesh ??= new BoxMesh { Size = new Vector3(0.07f, 0.012f, 0.09f) };
+        _shaftMat ??= new StandardMaterial3D { AlbedoColor = new Color(0.35f, 0.22f, 0.10f), Roughness = 0.9f };
+        _fletchMat ??= new StandardMaterial3D { AlbedoColor = new Color(0.88f, 0.87f, 0.84f), Roughness = 1f };
+        var arrow = new Node3D { Name = "StuckArrow" };
+        // the arrow's -Z is its point; the fletching sits at the tail (+Z)
+        arrow.AddChild(new MeshInstance3D { Name = "Shaft", Mesh = _shaftMesh, MaterialOverride = _shaftMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        arrow.AddChild(new MeshInstance3D { Name = "Fletching", Mesh = _fletchMesh, MaterialOverride = _fletchMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = new Vector3(0, 0, 0.275f - 0.045f) });
+        model.AddChild(arrow, forceReadableName: true);
+        var up = Mathf.Abs(dir.Dot(Vector3.Up)) > 0.98f ? Vector3.Right : Vector3.Up;
+        // the global transform at unit scale: the local one under the scaled model comes out as 1 / model scale
+        arrow.GlobalTransform = new Transform3D(Basis.LookingAt(dir, up), worldAt - dir * 0.18f);
+    }
+
+    /// <summary>The slim body an arrow sinks into, as a share of the collision capsule's 0.45 m radius (times scale).</summary>
+    public const float BodyRadius = 0.22f;
+
+    /// <summary>
+    /// Where an arrow that struck <paramref name="enemy"/>'s collision capsule at <paramref name="hitAt"/> would meet the body
+    /// itself: the capsule is wider than most models, so an arrow left at the capsule's skin floats off a thin neck or a
+    /// hunched back. Carries on along <paramref name="direction"/> to a vertical cylinder of <see cref="BodyRadius"/> times
+    /// the profile scale around the enemy's axis (or to the line's closest approach to it, for a shot that grazes the edge).
+    /// </summary>
+    public static Vector3 BodyEntry(Enemy enemy, Vector3 hitAt, Vector3 direction)
+    {
+        var s = enemy.Profile.Scale;
+        var dir = direction.LengthSquared() > 1e-6f ? direction.Normalized() : Vector3.Forward;
+        var p = new Vector2(hitAt.X - enemy.GlobalPosition.X, hitAt.Z - enemy.GlobalPosition.Z);
+        var d = new Vector2(dir.X, dir.Z);
+        var a = d.Dot(d);
+        if (a < 1e-6f) return hitAt; // straight down or up: no horizontal way in
+        var r = BodyRadius * s;
+        var b = 2f * p.Dot(d);
+        var c = p.Dot(p) - r * r;
+        var disc = b * b - 4f * a * c;
+        var t = disc >= 0f ? (-b - Mathf.Sqrt(disc)) / (2f * a) : -b / (2f * a);
+        return hitAt + dir * Mathf.Clamp(t, 0f, 0.45f * s);
     }
 
     private static bool Usable(Node? parent) => parent != null && GodotObject.IsInstanceValid(parent) && parent.IsInsideTree() && !parent.IsQueuedForDeletion();

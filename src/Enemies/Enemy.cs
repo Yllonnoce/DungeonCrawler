@@ -80,7 +80,12 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public Stats Stats { get; private set; } = Stats.Empty;
     public StatusEffectController Effects { get; } = new();
     public AttackProfile Attack { get; private set; } = new();
+    /// <summary>Arrows that hit and stayed in: half of them (rounded up) drop as pickups on death. Saved.</summary>
     public int EmbeddedArrows { get; set; }
+    /// <summary>The most arrows drawn stuck in one body, however many it took (a pincushion of 40 would cost 40 meshes).</summary>
+    public const int MaxStuckArrows = 6;
+    /// <summary>The arrows drawn in it: <see cref="Model"/>'s children named StuckArrow.</summary>
+    public int StuckArrowCount => _model == null ? 0 : _model.GetChildren().Count(c => c.Name.ToString().StartsWith("StuckArrow") && !c.IsQueuedForDeletion());
     public float AttackRange => Profile.AttackRange;
     public float WindupSeconds => Profile.WindupSeconds;
     public float RecoverSeconds => Profile.RecoverSeconds;
@@ -203,11 +208,37 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (HomePosition == Vector3.Zero) HomePosition = GlobalPosition;
         if (Group != null) State = Group.RestState(this);
         State.Enter(this);
+        if (EmbeddedArrows > 0) RestoreStuckArrows(); // restored before it joined the tree: the model exists only now
+    }
+
+    /// <summary>
+    /// Draws up to <see cref="MaxStuckArrows"/> of the saved <see cref="EmbeddedArrows"/> at torso points seeded by
+    /// <see cref="NetId"/> (the same on every load), replacing any already drawn. Needs the model, so it runs from
+    /// <see cref="RestoreFrom"/> when the enemy is ready and from <c>_Ready</c> otherwise.
+    /// </summary>
+    private void RestoreStuckArrows()
+    {
+        if (_model == null) return;
+        foreach (var old in _model.GetChildren().Where(c => c.Name.ToString().StartsWith("StuckArrow")).ToList()) { _model.RemoveChild(old); old.QueueFree(); }
+        var rng = new Random(NetId);
+        var s = Profile.Scale;
+        var tilt = Mathf.DegToRad(15f);
+        for (var i = 0; i < Math.Min(EmbeddedArrows, MaxStuckArrows); i++)
+        {
+            var angle = rng.NextSingle() * Mathf.Tau;
+            var height = (0.6f + rng.NextSingle() * 0.7f) * s;
+            var outward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            var point = GlobalPosition + Vector3.Up * height + outward * 0.25f * s;
+            var dir = (-outward * Mathf.Cos(tilt) + Vector3.Down * Mathf.Sin(tilt)).Normalized(); // inward, 15 degrees down
+            HitFx.StickArrow(this, point, dir);
+        }
     }
 
     // ---- animated model ------------------------------------------------------------------------
 
     private Node3D? _model;
+    /// <summary>The animated body's root (scaled to the profile's height); null for a stock capsule.</summary>
+    public Node3D? Model => _model;
     private AnimationPlayer? _anim;
     private string _currentAnim = "";
     private readonly List<StandardMaterial3D> _modelMaterials = new();
@@ -773,6 +804,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Hp = Math.Clamp(dto.Hp, 1, MaxHp);
         EmbeddedArrows = dto.EmbeddedArrows;
         GlobalPosition = new Vector3(dto.X, dto.Y, dto.Z);
+        if (IsNodeReady()) RestoreStuckArrows(); // else _Ready draws them
     }
 
     public void Kill()

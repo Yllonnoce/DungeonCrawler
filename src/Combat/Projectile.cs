@@ -149,7 +149,7 @@ public partial class Projectile : Area3D
                 Party.LogResult(Attacker.Name, enemy.DisplayName, result, heavy: false, perfect: false);
                 Party.OnHitLanded(Attacker, enemy, result);
                 if (Source != null && IsInstanceValid(Source)) { enemy.NoteThreat(Source, result.Amount + 5f); if (Source.IsLocal) Party.LeadTarget = enemy; }
-                if (IsArrow && result.Hit) enemy.EmbeddedArrows++;
+                if (IsArrow && result.Hit) { enemy.EmbeddedArrows++; Fx.HitFx.StickArrow(enemy, Fx.HitFx.BodyEntry(enemy, GlobalPosition, Velocity), Velocity.Normalized()); } // server and solo: a client's copy is Cosmetic
                 else if (IsArrow) Party.SpawnArrowPickup(GlobalPosition, 0.5f);
                 Burst();
                 QueueFree();

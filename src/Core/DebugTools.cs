@@ -3485,7 +3485,9 @@ public partial class DebugTools : Node
     // grunt plays; C: an enemy whose definition names a nonsense voice set speaks with the size rule's set, and a set with
     // no clips falls back to enemy_hurt / enemy_die. Cues are recorded from EventBus.Sfx. Then what a blow looks like:
     // D: a sword blow leaves one blood OneShotFx under the floor root that is gone 1.2 s later; E: Ilex's fireball bursts
-    // (an OneShotFx with a light) on the enemy and again on a wall face, and no bolt is left; F: a fireball and fresh
+    // (an OneShotFx with a light) on the enemy and again on a wall face, and no bolt is left; G: three of Wren's arrows stay
+    // stuck in the enemy (StuckArrowCount 3, EmbeddedArrows 3), and an enemy restored with 40 draws six; H: the corpse keeps
+    // its three and drops two arrows as before; F: a fireball and fresh
     // bursts are in the air when the party jumps to the next floor, which must load cleanly (the flow ends on floor 2).
     // Prints [hitfx] lines and RESULT.
     private bool _testHitFx;
@@ -3502,6 +3504,8 @@ public partial class DebugTools : Node
     private int _hfxBlood, _hfxFromFloor, _hfxShieldedBlood = -1;
     private Vector3 _hfxWallHit;
     private Node? _hfxOldRoot;
+    private int _hfxShots, _hfxArrowDrops;
+    private Enemy? _hfxRestored;
 
     private void HitFxCue(string cue) => _hfxCues.Add(cue);
 
@@ -3524,6 +3528,8 @@ public partial class DebugTools : Node
             _quitAfter = _elapsed + 0.5;
         }
         var ilex = Math.Max(0, Array.FindIndex(party.Members, m => m.Name == "Ilex"));
+        var wren = Math.Max(0, Array.FindIndex(party.Members, m => m.Name == "Wren"));
+        IEnumerable<LootDrop> ArrowDrops() => root.GetChildren().OfType<LootDrop>().Where(d => !d.IsQueuedForDeletion() && d.Item.DefId == DungeonCrawler.Party.PartyController.ArrowDefId);
         List<Combat.Fx.OneShotFx> Effects() => root.GetChildren().OfType<Combat.Fx.OneShotFx>().Where(f => !f.IsQueuedForDeletion()).ToList();
         static bool IsBurst(Combat.Fx.OneShotFx f) => f.GetChildren().OfType<OmniLight3D>().Any();
         Enemy? Spawn(string? voiceSet, int hero = -1)
@@ -3731,7 +3737,87 @@ public partial class DebugTools : Node
                 GD.Print($"[hitfx] E fireball on the wall: bursts={bursts.Count} closest={closest:0.00} m from the face, bolts left={bolts}");
                 if (closest > 0.6f) Fail($"no burst within 0.6 m of the wall face (closest {closest:0.00} m)");
                 if (bolts != 0) Fail($"{bolts} bolts still in the scene after hitting the wall");
+                // G: Wren's arrows stay in the enemy they hit
+                var w = party.Members[wren];
+                w.SkillModifiers.Add(new Characters.StatModifier(Characters.Stat.Accuracy, Characters.ModOp.Add, 1000f, "test"));
+                w.Recalculate();
+                if (party.ArrowCount < 10) party.Bag.TryAdd(Game.Instance.Catalog.Create(DungeonCrawler.Party.PartyController.ArrowDefId, 20));
+                AbilitiesTakeControl(wren);
+                party.Adventurers[ilex].Teleport(_hfxStand + new Vector3(0, 0, 2.5f), _hfxStand + new Vector3(0, 0, 1f));
+                party.Adventurers[brand].Teleport(_hfxStand + new Vector3(1.5f, 0, 2.5f), _hfxStand + new Vector3(1.5f, 0, 1f));
+                _hfxEnemy = Spawn(null, wren);
+                if (_hfxEnemy == null) { Fail("could not spawn the enemy for the arrows"); Finish(); return; }
+                _hfxShots = 0;
+                _hfxStep = 20; _hfxNext = _elapsed + 1.5; // the room's surface stands above the floor the bodies land on: both fall first, so the shots fly level
+                break;
+            }
+            case 20: // G: three basic bow shots, 0.5 s apart
+            {
+                var m = party.Members[wren];
+                AbilitiesRefill(m);
+                m.ActiveAbilityIndex = Math.Max(0, m.KnownAbilities.IndexOf(Combat.AbilityProfile.BasicId));
+                party.Attack(wren);
+                _hfxShots++;
+                if (_hfxShots < 3) { _hfxNext = _elapsed + 0.5; break; }
+                _hfxStep = 21; _hfxNext = _elapsed + 0.6;
+                break;
+            }
+            case 21:
+            {
+                var e = _hfxEnemy!;
+                GD.Print($"[hitfx] G arrows: stuck={e.StuckArrowCount} embedded={e.EmbeddedArrows} model={(e.Model == null ? "none" : e.Model.Name)} alive={e.IsAlive}");
+                if (e.Model == null) Fail($"{e.Profile.Id} has no model to stick arrows in");
+                if (e.StuckArrowCount != 3) Fail($"three arrows hit but {e.StuckArrowCount} are drawn stuck");
+                if (e.EmbeddedArrows != 3) Fail($"three arrows hit but EmbeddedArrows is {e.EmbeddedArrows}");
+                if (e.Model != null) GD.Print($"[hitfx] G arrow heights above the feet: {string.Join(", ", e.Model.GetChildren().OfType<Node3D>().Where(c => c.Name.ToString().Contains("StuckArrow")).Select(a => $"{a.GlobalPosition.Y - e.GlobalPosition.Y:0.00}"))} m; eye {party.Adventurers[wren].Camera.GlobalPosition.Y - e.GlobalPosition.Y:0.00} m");
+                if (e.Model != null)
+                    foreach (var a in e.Model.GetChildren().OfType<Node3D>().Where(c => c.Name.ToString().Contains("StuckArrow")))
+                    {
+                        var len = a.GlobalTransform.Basis.Z.Length();
+                        if (Math.Abs(len - 1f) > 0.01f) Fail($"a stuck arrow is scaled {len:0.00} in the world, expected 1");
+                        if (a.GlobalPosition.DistanceTo(e.GlobalPosition + Vector3.Up * 0.9f * e.Profile.Scale) > 1.5f * e.Profile.Scale) Fail($"a stuck arrow is {a.GlobalPosition.DistanceTo(e.GlobalPosition):0.00} m from the body");
+                    }
+                // a pincushion from a save: 40 arrows in, six drawn
+                var at = _hfxStand - Vector3.Up * 0.2f + new Vector3(2.5f, 0, -1.5f);
+                _hfxRestored = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], at, b.CurrentFloor);
+                if (_hfxRestored == null) { Fail("could not spawn the enemy to restore"); Finish(); return; }
+                _hfxRestored.RestoreFrom(new Save.EnemyDto { SpawnIndex = _hfxRestored.SpawnIndex, Hp = _hfxRestored.MaxHp, EmbeddedArrows = 40, X = at.X, Y = at.Y, Z = at.Z });
+                _hfxStep = 22; _hfxNext = _elapsed + 0.05; // a frame passes
+                break;
+            }
+            case 22:
+            {
+                var r = _hfxRestored!;
+                var drawn = r.Model?.GetChildren().Count(c => c.Name.ToString().Contains("StuckArrow")) ?? 0; // queued ones too: none may linger
+                GD.Print($"[hitfx] G restored with 40 arrows: stuck={r.StuckArrowCount} children={drawn} embedded={r.EmbeddedArrows}");
+                if (r.StuckArrowCount != Enemy.MaxStuckArrows) Fail($"an enemy restored with 40 arrows draws {r.StuckArrowCount}, expected {Enemy.MaxStuckArrows}");
+                if (drawn > Enemy.MaxStuckArrows) Fail($"an enemy restored with 40 arrows holds {drawn} arrow nodes");
+                if (r.EmbeddedArrows != 40) Fail($"the restored enemy's EmbeddedArrows is {r.EmbeddedArrows}, expected 40");
+                r.QueueFree();
+                _hfxRestored = null;
+                // H: the corpse keeps its arrows, and half of them (rounded up) drop as before
+                _hfxArrowDrops = ArrowDrops().Sum(d => d.Item.StackCount);
+                _hfxEnemy!.Kill();
+                _hfxStep = 23; _hfxNext = _elapsed + 0.6;
+                break;
+            }
+            case 23:
+            {
+                var e = _hfxEnemy!;
+                var stuck = IsInstanceValid(e) ? e.StuckArrowCount : -1;
+                var dropped = ArrowDrops().Sum(d => d.Item.StackCount) - _hfxArrowDrops;
+                var want = (3 + 1) / 2;
+                GD.Print($"[hitfx] H corpse: alive={(IsInstanceValid(e) && e.IsAlive).ToString().ToLowerInvariant()} stuck={stuck} arrows dropped={dropped} (expected {want})");
+                if (IsInstanceValid(e) && e.IsAlive) Fail("the arrow enemy did not die");
+                if (stuck != 3) Fail($"the corpse holds {stuck} arrows, expected 3");
+                if (dropped != want) Fail($"{dropped} arrows dropped, expected {want}");
+                _hfxStep = 24;
+                break;
+            }
+            case 24:
+            {
                 // F: a bolt and fresh effects in the air when the floor changes under them
+                AbilitiesTakeControl(ilex);
                 AbilitiesRefill(party.Members[ilex]);
                 party.Attack(ilex);
                 var eye = party.Adventurers[ilex].Camera.GlobalPosition;
