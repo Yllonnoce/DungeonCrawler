@@ -200,6 +200,10 @@ public partial class DebugTools : Node
     private int _objectiveStep;
     private float _objectiveHp;
     private bool _objectiveEventSeen;
+    /// <summary>--test-gas-wipe: floor 2 toxic, the gas full and the floor remembered the way the server's autosave does, the party gassed to a wipe; the floor must come back with the gas at its grace and nobody dying again.</summary>
+    private bool _testGasWipe;
+    private int _gasWipeStep, _gasWipes;
+    private double _gasWipeAt;
     private int _villainLines;
     private bool _askStairs, _askedStairsDebug;
     private int _stairsStep;
@@ -258,6 +262,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-hit-fx") { _testHitFx = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 40; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
+            else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
             else if (arg == "--ask-stairs") _askStairs = true;
             else if (arg == "--test-gold") { _testGold = true; _quitAfter = 14; }
@@ -742,6 +747,7 @@ public partial class DebugTools : Node
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();
+        if (_testGasWipe) RunGasWipeTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;
@@ -2496,6 +2502,58 @@ public partial class DebugTools : Node
                 _testObjective = null;
                 break;
             }
+        }
+    }
+
+    // Gas wipe: a dedicated server autosaves the floor every minute, gas clock included, and a wipe brings the floor back from that
+    // remembered state with the party at the up stairs. The gas must come back at its grace there, not lethal in the start room.
+    private void RunGasWipeTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout) return;
+        void Fail(string why) { GD.Print($"[gaswipe] RESULT FAIL ({why})"); _testGasWipe = false; }
+        var game = Game.Instance;
+        switch (_gasWipeStep)
+        {
+            case 0 when _elapsed >= 0.5:
+                _gasWipeStep++;
+                EventBus.Instance.PartyWiped += () => { _gasWipes++; if (_gasWipes == 1) _gasWipeAt = _elapsed; GD.Print($"[gaswipe] wipe {_gasWipes} at {_elapsed:0.0} s"); };
+                game.JumpToFloor(2);
+                break;
+            case 1 when _elapsed >= 2.0:
+            {
+                _gasWipeStep++;
+                if (game.CurrentFloor != 2 || Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.ToxicController toxic) { Fail($"floor {game.CurrentFloor} is not a toxic floor"); return; }
+                toxic.Hurry();
+                // what the server's autosave does every minute: the floor remembered mid-gas
+                game.Floors[2] = Save.FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
+                GD.Print($"[gaswipe] gas full at {toxic.Seconds:0} s, remembered seconds={game.Floors[2].Objective?.Seconds:0}, party hp {main.Party.Members.Sum(m => m.Hp):0}");
+                break;
+            }
+            case 2 when _gasWipes == 0 && _elapsed >= 50:
+                Fail("the gas never wiped the party");
+                break;
+            case 2 or 3 when _gasWipes >= 2:
+                Fail($"wiped again {_elapsed - _gasWipeAt:0.0} s after the reshape: the gas came back lethal");
+                break;
+            case 2 when _gasWipes >= 1 && _elapsed >= _gasWipeAt + 4.0:
+            {
+                _gasWipeStep++;
+                if (game.CurrentFloor != 2 || Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.ToxicController toxic) { Fail("the floor did not come back toxic"); return; }
+                var danger = toxic.DangerAt(DungeonBuilder.WorldToCell(main.Party.Lead.GlobalPosition));
+                var down = main.Party.Active.Count(a => a.Downed);
+                game.Floors.TryGetValue(2, out var remembered);
+                GD.Print($"[gaswipe] after the wipe: gas seconds={toxic.Seconds:0} danger at the stairs={danger} down={down} remembered seconds={remembered?.Objective?.Seconds:0}");
+                if (toxic.Seconds >= Adventure.Objectives.GasRules.Grace) { Fail($"the gas clock came back at {toxic.Seconds:0} s"); return; }
+                if (danger != 0) { Fail($"the air at the stairs is {Adventure.Objectives.GasRules.Describe(danger)}"); return; }
+                if (down > 0) { Fail($"{down} still down after the reshape"); return; }
+                break;
+            }
+            case 3 when _elapsed >= _gasWipeAt + 20.0:
+                _gasWipeStep++;
+                GD.Print("[gaswipe] RESULT ok");
+                _testGasWipe = false;
+                break;
         }
     }
 

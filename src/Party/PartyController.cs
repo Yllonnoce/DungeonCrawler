@@ -502,6 +502,8 @@ public partial class PartyController : Node3D
         foreach (var m in Members) m.FullRestore();
         foreach (var a in Adventurers) a.Revive();
         for (var i = 0; i < Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i);
+        // the floor comes back from its remembered state with the party at the up stairs: its clocks restart with them
+        if (Game.Instance.Floors.TryGetValue(Game.Instance.CurrentFloor, out var remembered)) Adventure.Objectives.WipeRules.RestartClocks(remembered.Objective);
         Game.Instance.ReloadFloor();
     }
 
