@@ -127,12 +127,14 @@ public partial class Projectile : Area3D
             {
                 _spent = true;
                 if (Shooter != null && IsInstanceValid(Shooter)) adv.ReceiveAttack(Shooter.Stats, Attack, Shooter.DisplayName, Shooter);
+                Burst();
                 QueueFree();
             }
             else if (body is not Enemy)
             {
                 _spent = true;
                 Main.Instance?.Builder.TripPlateAt(GlobalPosition, this);
+                Burst();
                 QueueFree();
             }
             return;
@@ -171,7 +173,7 @@ public partial class Projectile : Area3D
         }
     }
 
-    /// <summary>A spell bolt flares where it lands; arrows do not.</summary>
+    /// <summary>A bolt flares where it lands (the party's spells and every enemy shot, as a client's cosmetic copy does); arrows do not.</summary>
     private void Burst()
     {
         if (!IsArrow) Fx.HitFx.SpellBurst(GetParent(), GlobalPosition, Color);

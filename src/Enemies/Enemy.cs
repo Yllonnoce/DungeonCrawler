@@ -718,7 +718,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _flash = 0.25f;
         SinceHurt = 0f;
         EventBus.Instance.RaiseEnemyHurt(this, result.Amount, result.Crit);
-        if (attack.Type == DamageType.Physical && attack.Kind == AttackKind.Melee) Bleed();
+        if (attack.Type == DamageType.Physical && attack.Kind == AttackKind.Melee && result.Amount > 0) Bleed(); // a blow the shield takes whole draws no blood
         if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
         if (Hp <= 0) _dying = true;
         else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx(HurtCue); }
@@ -734,9 +734,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>Blood from a melee blow, thrown toward the nearest adventurer (the enemy is not told who struck it).</summary>
     private void Bleed()
     {
-        var at = GlobalPosition + Vector3.Up * 0.9f * Profile.Scale;
-        var toward = Party?.NearestAlive(GlobalPosition) is { } adv ? adv.GlobalPosition + Vector3.Up * 0.9f - at : -GlobalTransform.Basis.Z;
-        HitFx.Blood(GetParent(), at, toward);
+        var chest = GlobalPosition + Vector3.Up * 0.9f * Profile.Scale;
+        var toward = Party?.NearestAlive(GlobalPosition) is { } adv ? adv.GlobalPosition - GlobalPosition : -GlobalTransform.Basis.Z;
+        var flat = new Vector3(toward.X, 0f, toward.Z);
+        flat = flat.LengthSquared() > 1e-6f ? flat.Normalized() : Vector3.Forward;
+        HitFx.Blood(GetParent(), chest + flat * 0.2f * Profile.Scale, flat); // from the side that faces the striker
     }
 
     public void ApplyStatus(StatusApplication status)

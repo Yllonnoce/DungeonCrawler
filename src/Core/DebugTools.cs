@@ -3499,7 +3499,7 @@ public partial class DebugTools : Node
     private string _hfxHurt = "", _hfxDeath = "";
     private bool _hfxListening;
     private double _hfxSwungAt;
-    private int _hfxBlood, _hfxFromFloor;
+    private int _hfxBlood, _hfxFromFloor, _hfxShieldedBlood = -1;
     private Vector3 _hfxWallHit;
     private Node? _hfxOldRoot;
 
@@ -3643,20 +3643,34 @@ public partial class DebugTools : Node
                 Swing(); _hfxSwungAt = _elapsed;
                 _hfxStep = 10;
                 break;
-            case 10: // every frame until the blow lands
-                if (!HitLanded())
+            case 10: // every frame until the blow lands (hurt cue, or the death cue on a killing blow)
+            {
+                var e = _hfxEnemy!;
+                var landed = IsInstanceValid(e) && (_hfxCues.Contains(e.HurtCue) || _hfxCues.Contains(e.DeathCue));
+                if (!landed)
                 {
                     if (_elapsed - _hfxSwungAt < 0.8) break;
                     if (_hfxTries++ < 2) { GD.Print("[hitfx] the blood blow has not landed yet, swinging again"); _hfxStep = 9; break; }
                     Fail("the blood blow never landed");
                 }
+                if (_hfxShieldedBlood < 0)
+                {
+                    // the first blow lands on the shield whole (0 damage): no blood; then the shield goes and the next one bleeds
+                    _hfxShieldedBlood = Effects().Count;
+                    if (IsInstanceValid(e)) e.Effects.Remove(Combat.StatusKind.Shield);
+                    _hfxTries = 0;
+                    _hfxStep = 9; _hfxNext = _elapsed + 1.0; // the shielded blow's effects (if any) run out first
+                    break;
+                }
                 _hfxBlood = Effects().Count;
                 _hfxStep = 11; _hfxNext = _elapsed + 1.2;
                 break;
+            }
             case 11:
             {
                 var gone = Effects().Count == 0;
-                GD.Print($"[hitfx] blood: spawned={_hfxBlood} gone={gone.ToString().ToLowerInvariant()}");
+                GD.Print($"[hitfx] blood: shielded={_hfxShieldedBlood} spawned={_hfxBlood} gone={gone.ToString().ToLowerInvariant()} (blow at {_hfxSwungAt:0.00} s)");
+                if (_hfxShieldedBlood != 0) Fail($"a blow the shield took whole left {_hfxShieldedBlood} effects, expected none");
                 if (_hfxBlood != 1) Fail($"a sword blow left {_hfxBlood} effects, expected 1 (blood)");
                 if (!gone) Fail("the blood was still there 1.2 s after the blow");
                 // E: Ilex's fireball on the enemy
