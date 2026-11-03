@@ -3769,9 +3769,9 @@ public partial class DebugTools : Node
                 if (e.Model == null) Fail($"{e.Profile.Id} has no model to stick arrows in");
                 if (e.StuckArrowCount != 3) Fail($"three arrows hit but {e.StuckArrowCount} are drawn stuck");
                 if (e.EmbeddedArrows != 3) Fail($"three arrows hit but EmbeddedArrows is {e.EmbeddedArrows}");
-                if (e.Model != null) GD.Print($"[hitfx] G arrow heights above the feet: {string.Join(", ", e.Model.GetChildren().OfType<Node3D>().Where(c => c.Name.ToString().Contains("StuckArrow")).Select(a => $"{a.GlobalPosition.Y - e.GlobalPosition.Y:0.00}"))} m; eye {party.Adventurers[wren].Camera.GlobalPosition.Y - e.GlobalPosition.Y:0.00} m");
+                if (e.Model != null) GD.Print($"[hitfx] G arrow heights above the feet: {string.Join(", ", e.Model.GetChildren().OfType<Node3D>().Where(c => c.Name.ToString().Contains(Combat.Fx.HitFx.StuckArrowName)).Select(a => $"{a.GlobalPosition.Y - e.GlobalPosition.Y:0.00}"))} m; eye {party.Adventurers[wren].Camera.GlobalPosition.Y - e.GlobalPosition.Y:0.00} m");
                 if (e.Model != null)
-                    foreach (var a in e.Model.GetChildren().OfType<Node3D>().Where(c => c.Name.ToString().Contains("StuckArrow")))
+                    foreach (var a in e.Model.GetChildren().OfType<Node3D>().Where(c => c.Name.ToString().Contains(Combat.Fx.HitFx.StuckArrowName)))
                     {
                         var len = a.GlobalTransform.Basis.Z.Length();
                         if (Math.Abs(len - 1f) > 0.01f) Fail($"a stuck arrow is scaled {len:0.00} in the world, expected 1");
@@ -3788,7 +3788,7 @@ public partial class DebugTools : Node
             case 22:
             {
                 var r = _hfxRestored!;
-                var drawn = r.Model?.GetChildren().Count(c => c.Name.ToString().Contains("StuckArrow")) ?? 0; // queued ones too: none may linger
+                var drawn = r.Model?.GetChildren().Count(c => c.Name.ToString().Contains(Combat.Fx.HitFx.StuckArrowName)) ?? 0; // queued ones too: none may linger
                 GD.Print($"[hitfx] G restored with 40 arrows: stuck={r.StuckArrowCount} children={drawn} embedded={r.EmbeddedArrows}");
                 if (r.StuckArrowCount != Enemy.MaxStuckArrows) Fail($"an enemy restored with 40 arrows draws {r.StuckArrowCount}, expected {Enemy.MaxStuckArrows}");
                 if (drawn > Enemy.MaxStuckArrows) Fail($"an enemy restored with 40 arrows holds {drawn} arrow nodes");

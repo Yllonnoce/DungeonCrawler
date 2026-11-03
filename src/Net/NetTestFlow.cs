@@ -165,7 +165,7 @@ public partial class NetTestFlow : Node
             {
                 // fight: stand in front of the nearest living enemy and swing until the server reports the kill
                 var me = main.Party.Local!;
-                if (!_fightHeard) { _fightHeard = true; _killsBefore = client.Trace.Count(t => t == "kill"); EventBus.Instance.Sfx += FightCue; }
+                if (!_fightHeard) { _fightHeard = true; _killsBefore = client.Trace.Count(t => t == "kill"); _hitFxBefore = client.Trace.Count(t => t == "hitfx"); EventBus.Instance.Sfx += FightCue; }
                 if (_target == null || !IsInstanceValid(_target) || !_target.IsAlive)
                 {
                     if (client.Trace.Contains("kill"))
@@ -179,6 +179,10 @@ public partial class NetTestFlow : Node
                         GD.Print($"[net] kill confirmed after {_swings} swings; heard {_deathCues} death cue(s) for {kills} kill(s), {_hurtCues} hurt cue(s)");
                         if (_deathCues != kills) { Finish("[net]", false, $"heard {_deathCues} death cue(s) for {kills} kill(s)"); return; }
                         if (_hurtCues < 1) { Finish("[net]", false, "heard no hurt cue while fighting"); return; }
+                        // our sword blows bleed the enemy on the server, which relays each spatter as a HitFxEvt
+                        var hitFx = client.Trace.Count(t => t == "hitfx") - _hitFxBefore;
+                        GD.Print($"[net] hit fx: {hitFx} events");
+                        if (hitFx < 1) { Finish("[net]", false, "no hit fx (blood) reached this client while fighting"); return; }
                         _clock = 0; _step = 5; return;
                     }
                     // a loner, not a camp or a nest: one level-1 warrior against a band would be a different test
@@ -472,7 +476,7 @@ public partial class NetTestFlow : Node
     private double _swingClock, _chaseClock;
     private int _swings, _bagBefore, _lootBefore;
     private bool _fightHeard;
-    private int _killsBefore, _deathCues, _hurtCues;
+    private int _killsBefore, _deathCues, _hurtCues, _hitFxBefore;
     private double _settle;
 
     /// <summary>The fight's cues on the client: enemy death and hurt sounds, grunts or the generic thuds.</summary>

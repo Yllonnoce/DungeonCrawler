@@ -114,13 +114,21 @@ public static class HitFx
         Place(parent, fx, at);
     }
 
+    /// <summary>The name of an arrow node drawn in an enemy's model (Godot suffixes repeats: StuckArrow2, ...).</summary>
+    public const string StuckArrowName = "StuckArrow";
+
+    /// <summary>How far the arrowhead sits past the point where the arrow met the body.</summary>
+    public const float ArrowBuried = 0.18f;
+
+    private const float ArrowLength = 0.55f;
+
     private static BoxMesh? _shaftMesh, _fletchMesh;
     private static StandardMaterial3D? _shaftMat, _fletchMat;
 
     /// <summary>
     /// An arrow left standing in <paramref name="enemy"/>: a Node3D named StuckArrow under its <see cref="Enemy.Model"/>
-    /// (so it rides the body's transform), its centre 0.18 m back from <paramref name="worldAt"/> along the flight
-    /// <paramref name="direction"/> so the head is buried, pointing along the flight, 0.55 m long in world units whatever
+    /// (so it rides the body's transform), its tip <see cref="ArrowBuried"/> past <paramref name="worldAt"/> along the flight
+    /// <paramref name="direction"/> (so its centre is half the length minus that back), pointing along the flight, 0.55 m long in world units whatever
     /// the model's scale. Nothing for a stock capsule or a body that already shows <see cref="Enemy.MaxStuckArrows"/>.
     /// </summary>
     public static void StickArrow(Enemy enemy, Vector3 worldAt, Vector3 direction)
@@ -129,18 +137,18 @@ public static class HitFx
         if (model == null || !GodotObject.IsInstanceValid(model) || !model.IsInsideTree() || enemy.StuckArrowCount >= Enemy.MaxStuckArrows) return;
         if (direction.LengthSquared() < 1e-6f) return;
         var dir = direction.Normalized();
-        _shaftMesh ??= new BoxMesh { Size = new Vector3(0.025f, 0.025f, 0.55f) };
+        _shaftMesh ??= new BoxMesh { Size = new Vector3(0.025f, 0.025f, ArrowLength) };
         _fletchMesh ??= new BoxMesh { Size = new Vector3(0.07f, 0.012f, 0.09f) };
         _shaftMat ??= new StandardMaterial3D { AlbedoColor = new Color(0.35f, 0.22f, 0.10f), Roughness = 0.9f };
         _fletchMat ??= new StandardMaterial3D { AlbedoColor = new Color(0.88f, 0.87f, 0.84f), Roughness = 1f };
-        var arrow = new Node3D { Name = "StuckArrow" };
+        var arrow = new Node3D { Name = StuckArrowName };
         // the arrow's -Z is its point; the fletching sits at the tail (+Z)
         arrow.AddChild(new MeshInstance3D { Name = "Shaft", Mesh = _shaftMesh, MaterialOverride = _shaftMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
-        arrow.AddChild(new MeshInstance3D { Name = "Fletching", Mesh = _fletchMesh, MaterialOverride = _fletchMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = new Vector3(0, 0, 0.275f - 0.045f) });
+        arrow.AddChild(new MeshInstance3D { Name = "Fletching", Mesh = _fletchMesh, MaterialOverride = _fletchMat, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Position = new Vector3(0, 0, ArrowLength / 2f - 0.045f) });
         model.AddChild(arrow, forceReadableName: true);
         var up = Mathf.Abs(dir.Dot(Vector3.Up)) > 0.98f ? Vector3.Right : Vector3.Up;
         // the global transform at unit scale: the local one under the scaled model comes out as 1 / model scale
-        arrow.GlobalTransform = new Transform3D(Basis.LookingAt(dir, up), worldAt - dir * 0.18f);
+        arrow.GlobalTransform = new Transform3D(Basis.LookingAt(dir, up), worldAt - dir * (ArrowLength / 2f - ArrowBuried)); // the tip, half a length ahead of the centre, ends ArrowBuried in
     }
 
     /// <summary>The slim body an arrow sinks into, as a share of the collision capsule's 0.45 m radius (times scale).</summary>

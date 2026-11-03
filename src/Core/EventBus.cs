@@ -80,6 +80,8 @@ public partial class EventBus : Node
     /// <summary>(net ref such as "door:1", what happened: opened, pulled, revealed, disarmed, sprung, broken).</summary>
     public event Action<string, string>? PropChanged;
     public event Action<Enemies.Enemy, float, bool>? EnemyHurt;
+    /// <summary>(kind, where, direction, the enemy's NetId): blood or a stuck arrow where the server or a solo game resolved a hit.</summary>
+    public event Action<Net.HitFxKind, Vector3, Vector3, int>? HitFx;
     public event Action<Combat.Projectile>? ProjectileFired;
     public event Action<Dungeon.Props.Trap>? TrapPlaced;
     /// <summary>(floor, delta, first visit): Main finished building and restoring a floor.</summary>
@@ -149,6 +151,7 @@ public partial class EventBus : Node
     public void RaiseEnemyKilledByHazard(Enemies.Enemy enemy, string source) => EnemyKilledByHazard?.Invoke(enemy, source);
     public void RaiseMemberRevived(int index) => MemberRevived?.Invoke(index);
     public void RaiseLootSpawned(Items.LootDrop drop) => LootSpawned?.Invoke(drop);
+    public void RaiseHitFx(Net.HitFxKind kind, Vector3 pos, Vector3 dir, int enemyNetId) => HitFx?.Invoke(kind, pos, dir, enemyNetId);
     public void RaiseLootRemoved(Guid id, int byMember) => LootRemoved?.Invoke(id, byMember);
     public void RaisePropChanged(string netRef, string what) => PropChanged?.Invoke(netRef, what);
     public void RaiseEnemyHurt(Enemies.Enemy enemy, float amount, bool crit) => EnemyHurt?.Invoke(enemy, amount, crit);

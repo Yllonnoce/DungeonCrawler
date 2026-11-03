@@ -54,6 +54,7 @@ public partial class ServerWorld : Node
         bus.LootRemoved += (id, by) => { if (!Quiet) Broadcast(new LootRemoved(id, by)); };
         bus.PropChanged += (r, what) => { if (!Quiet) Broadcast(new PropEvt(r, what)); };
         bus.TrapPlaced += trap => { if (!Quiet) Broadcast(new TrapPlacedEvt(new PlacedTrapDto { Kind = trap.Kind.ToString(), X = trap.GlobalPosition.X, Y = trap.GlobalPosition.Y, Z = trap.GlobalPosition.Z })); };
+        bus.HitFx += (kind, pos, dir, netId) => { if (!Quiet) Broadcast(new HitFxEvt((byte)kind, Vec(pos), Vec(dir), netId, 0u)); };
         bus.EnemyHurt += (e, amount, crit) => { if (!Quiet) Broadcast(new EnemyHurt(e.NetId, amount, crit, e.Hp)); };
         bus.EnemyDied += e => { if (!Quiet) { Broadcast(new EnemyDied(e.NetId, -1)); Trace.Add("kill"); } };
         bus.ProjectileFired += p => { if (!Quiet) Broadcast(new ProjectileSpawned(0, Vec(p.GlobalPosition), Vec(p.Velocity), p.IsArrow, p.Color.ToRgba32(), p.SourceMember)); };

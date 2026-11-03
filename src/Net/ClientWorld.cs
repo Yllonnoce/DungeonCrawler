@@ -87,6 +87,7 @@ public partial class ClientWorld : Node
             case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp); break;
             case EnemyDied ed: if (_enemies.TryGetValue(ed.NetId, out var dead) && GodotObject.IsInstanceValid(dead)) dead.ClientDie(); Trace.Add("kill"); break;
             case ProjectileSpawned pr: OnProjectile(pr); break;
+            case HitFxEvt fx: OnHitFx(fx); break;
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
@@ -166,6 +167,27 @@ public partial class ClientWorld : Node
         e.Rotation = new Vector3(0, d.Yaw, 0);
         if (d.HordeId != null) { e.SetSwarmDetail(); e.HordeId = d.HordeId; }
         _enemies[d.NetId] = e;
+    }
+
+    /// <summary>
+    /// The server's blood or stuck arrow, drawn here: blood under the floor root, an arrow on the enemy it names. An arrow
+    /// for an enemy this screen never spawned or has already freed is dropped without a word.
+    /// </summary>
+    private void OnHitFx(HitFxEvt fx)
+    {
+        var pos = new Vector3(fx.Pos.X, fx.Pos.Y, fx.Pos.Z);
+        var dir = new Vector3(fx.Dir.X, fx.Dir.Y, fx.Dir.Z);
+        switch ((HitFxKind)fx.FxKind)
+        {
+            case HitFxKind.Blood:
+                if (Root is { } root) Combat.Fx.HitFx.Blood(root, pos, dir);
+                break;
+            case HitFxKind.Arrow:
+                if (_enemies.TryGetValue(fx.EnemyNetId, out var enemy) && GodotObject.IsInstanceValid(enemy)) Combat.Fx.HitFx.StickArrow(enemy, pos, dir);
+                break;
+            default: return; // a kind this build does not know
+        }
+        Trace.Add("hitfx");
     }
 
     private void OnLootSpawned(LootSpawned ls)

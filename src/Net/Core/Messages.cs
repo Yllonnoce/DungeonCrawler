@@ -134,6 +134,12 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.Emote)] public sealed record EmoteEvt(int Member, string Emote) : NetMessage;
 /// <summary>The server's verdict on a client's "will you fight alongside us?": the fighter said yes (and now follows) or no.</summary>
 [Msg(MsgKind.DialogueAnswer)] public sealed record DialogueAnswer(string NpcId, bool Accepted) : NetMessage;
+/// <summary>
+/// A hit left something to see (<see cref="FxKind"/> is a <see cref="HitFxKind"/>; not `Kind`, which every <see cref="NetMessage"/> already has): blood at <see cref="Pos"/> thrown along
+/// <see cref="Dir"/>, or an arrow stuck at <see cref="Pos"/> along its flight <see cref="Dir"/> in the enemy
+/// <see cref="EnemyNetId"/>. <see cref="Color"/> is reserved (always 0).
+/// </summary>
+[Msg(MsgKind.HitFxEvt)] public sealed record HitFxEvt(byte FxKind, NetVec Pos, NetVec Dir, int EnemyNetId, uint Color) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

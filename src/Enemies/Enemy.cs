@@ -85,7 +85,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>The most arrows drawn stuck in one body, however many it took (a pincushion of 40 would cost 40 meshes).</summary>
     public const int MaxStuckArrows = 6;
     /// <summary>The arrows drawn in it: <see cref="Model"/>'s children named StuckArrow.</summary>
-    public int StuckArrowCount => _model == null ? 0 : _model.GetChildren().Count(c => c.Name.ToString().StartsWith("StuckArrow") && !c.IsQueuedForDeletion());
+    public int StuckArrowCount => _model == null ? 0 : _model.GetChildren().Count(c => c.Name.ToString().StartsWith(HitFx.StuckArrowName) && !c.IsQueuedForDeletion());
     public float AttackRange => Profile.AttackRange;
     public float WindupSeconds => Profile.WindupSeconds;
     public float RecoverSeconds => Profile.RecoverSeconds;
@@ -219,7 +219,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     private void RestoreStuckArrows()
     {
         if (_model == null) return;
-        foreach (var old in _model.GetChildren().Where(c => c.Name.ToString().StartsWith("StuckArrow")).ToList()) { _model.RemoveChild(old); old.QueueFree(); }
+        foreach (var old in _model.GetChildren().Where(c => c.Name.ToString().StartsWith(HitFx.StuckArrowName)).ToList()) { _model.RemoveChild(old); old.QueueFree(); }
         var rng = new Random(NetId);
         var s = Profile.Scale;
         var tilt = Mathf.DegToRad(15f);
@@ -769,7 +769,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var toward = Party?.NearestAlive(GlobalPosition) is { } adv ? adv.GlobalPosition - GlobalPosition : -GlobalTransform.Basis.Z;
         var flat = new Vector3(toward.X, 0f, toward.Z);
         flat = flat.LengthSquared() > 1e-6f ? flat.Normalized() : Vector3.Forward;
-        HitFx.Blood(GetParent(), chest + flat * 0.2f * Profile.Scale, flat); // from the side that faces the striker
+        var at = chest + flat * 0.2f * Profile.Scale; // from the side that faces the striker
+        HitFx.Blood(GetParent(), at, flat);
+        EventBus.Instance.RaiseHitFx(Net.HitFxKind.Blood, at, flat, NetId); // a dedicated server relays it to its clients
     }
 
     public void ApplyStatus(StatusApplication status)
