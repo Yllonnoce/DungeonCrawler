@@ -171,7 +171,8 @@ public partial class ClientWorld : Node
 
     /// <summary>
     /// The server's blood or stuck arrow, drawn here: blood under the floor root, an arrow on the enemy it names. An arrow
-    /// for an enemy this screen never spawned or has already freed is dropped without a word.
+    /// for an enemy this screen never spawned or has already freed, or blood with no live floor root, is dropped without a
+    /// word and leaves no "hitfx" trace.
     /// </summary>
     private void OnHitFx(HitFxEvt fx)
     {
@@ -180,10 +181,16 @@ public partial class ClientWorld : Node
         switch ((HitFxKind)fx.FxKind)
         {
             case HitFxKind.Blood:
-                if (Root is { } root) Combat.Fx.HitFx.Blood(root, pos, dir);
+                if (Root is not { } root || !GodotObject.IsInstanceValid(root) || root.IsQueuedForDeletion()) return;
+                Combat.Fx.HitFx.Blood(root, pos, dir);
                 break;
             case HitFxKind.Arrow:
-                if (_enemies.TryGetValue(fx.EnemyNetId, out var enemy) && GodotObject.IsInstanceValid(enemy)) Combat.Fx.HitFx.StickArrow(enemy, pos, dir);
+                if (!_enemies.TryGetValue(fx.EnemyNetId, out var enemy) || !GodotObject.IsInstanceValid(enemy)) return;
+                // sent in the enemy's frame: back to world space from where this screen draws it
+                var xf = enemy.GlobalTransform;
+                var before = enemy.StuckArrowCount;
+                Combat.Fx.HitFx.StickArrow(enemy, xf * pos, xf.Basis * dir);
+                if (enemy.StuckArrowCount == before) return; // no model, or already showing its six
                 break;
             default: return; // a kind this build does not know
         }

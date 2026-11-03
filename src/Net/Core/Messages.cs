@@ -135,9 +135,11 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 /// <summary>The server's verdict on a client's "will you fight alongside us?": the fighter said yes (and now follows) or no.</summary>
 [Msg(MsgKind.DialogueAnswer)] public sealed record DialogueAnswer(string NpcId, bool Accepted) : NetMessage;
 /// <summary>
-/// A hit left something to see (<see cref="FxKind"/> is a <see cref="HitFxKind"/>; not `Kind`, which every <see cref="NetMessage"/> already has): blood at <see cref="Pos"/> thrown along
-/// <see cref="Dir"/>, or an arrow stuck at <see cref="Pos"/> along its flight <see cref="Dir"/> in the enemy
-/// <see cref="EnemyNetId"/>. <see cref="Color"/> is reserved (always 0).
+/// A hit left something to see (<see cref="FxKind"/> is a <see cref="HitFxKind"/>; not `Kind`, which every
+/// <see cref="NetMessage"/> already has). Blood: <see cref="Pos"/> and <see cref="Dir"/> are world space, where it sprays
+/// and toward whom. Arrow: <see cref="Pos"/> (the entry point) and <see cref="Dir"/> (the flight) are in the local frame of
+/// the enemy <see cref="EnemyNetId"/>'s GlobalTransform, so a client rebuilds them from its own, interpolated copy and the
+/// arrow lands in the body it draws. <see cref="Color"/> is reserved (always 0).
 /// </summary>
 [Msg(MsgKind.HitFxEvt)] public sealed record HitFxEvt(byte FxKind, NetVec Pos, NetVec Dir, int EnemyNetId, uint Color) : NetMessage;
 

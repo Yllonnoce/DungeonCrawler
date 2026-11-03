@@ -154,7 +154,7 @@ public partial class Projectile : Area3D
                     enemy.EmbeddedArrows++;
                     var entry = Fx.HitFx.BodyEntry(enemy, GlobalPosition, Velocity);
                     Fx.HitFx.StickArrow(enemy, entry, Velocity.Normalized());
-                    EventBus.Instance.RaiseHitFx(Net.HitFxKind.Arrow, entry, Velocity.Normalized(), enemy.NetId);
+                    EventBus.Instance.RaiseHitFx(Net.HitFxKind.Arrow, entry, Velocity.Normalized(), enemy);
                 }
                 else if (IsArrow) Party.SpawnArrowPickup(GlobalPosition, 0.5f);
                 Burst();

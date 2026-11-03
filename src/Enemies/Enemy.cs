@@ -771,7 +771,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         flat = flat.LengthSquared() > 1e-6f ? flat.Normalized() : Vector3.Forward;
         var at = chest + flat * 0.2f * Profile.Scale; // from the side that faces the striker
         HitFx.Blood(GetParent(), at, flat);
-        EventBus.Instance.RaiseHitFx(Net.HitFxKind.Blood, at, flat, NetId); // a dedicated server relays it to its clients
+        EventBus.Instance.RaiseHitFx(Net.HitFxKind.Blood, at, flat, this); // a dedicated server relays it to its clients
     }
 
     public void ApplyStatus(StatusApplication status)

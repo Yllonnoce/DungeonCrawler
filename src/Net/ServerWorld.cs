@@ -54,7 +54,7 @@ public partial class ServerWorld : Node
         bus.LootRemoved += (id, by) => { if (!Quiet) Broadcast(new LootRemoved(id, by)); };
         bus.PropChanged += (r, what) => { if (!Quiet) Broadcast(new PropEvt(r, what)); };
         bus.TrapPlaced += trap => { if (!Quiet) Broadcast(new TrapPlacedEvt(new PlacedTrapDto { Kind = trap.Kind.ToString(), X = trap.GlobalPosition.X, Y = trap.GlobalPosition.Y, Z = trap.GlobalPosition.Z })); };
-        bus.HitFx += (kind, pos, dir, netId) => { if (!Quiet) Broadcast(new HitFxEvt((byte)kind, Vec(pos), Vec(dir), netId, 0u)); };
+        bus.HitFx += (kind, pos, dir, enemy) => { if (!Quiet) Broadcast(HitFxMessage(kind, pos, dir, enemy)); };
         bus.EnemyHurt += (e, amount, crit) => { if (!Quiet) Broadcast(new EnemyHurt(e.NetId, amount, crit, e.Hp)); };
         bus.EnemyDied += e => { if (!Quiet) { Broadcast(new EnemyDied(e.NetId, -1)); Trace.Add("kill"); } };
         bus.ProjectileFired += p => { if (!Quiet) Broadcast(new ProjectileSpawned(0, Vec(p.GlobalPosition), Vec(p.Velocity), p.IsArrow, p.Color.ToRgba32(), p.SourceMember)); };
@@ -144,6 +144,22 @@ public partial class ServerWorld : Node
         .Concat(VoiceSets.All.Select(VoiceSets.DeathCue)));
     private static bool Quiet => Main.Instance?.Rebuilding == true;
     private static NetVec Vec(Vector3 v) => new(v.X, v.Y, v.Z);
+
+    /// <summary>
+    /// The wire form of a hit effect. Blood goes in world space; an arrow goes in the enemy's own frame, because a client
+    /// draws its copy of the enemy a little in the past: rebuilt from that copy's transform, the arrow lands in the body
+    /// it shows instead of beside it.
+    /// </summary>
+    private static HitFxEvt HitFxMessage(HitFxKind kind, Vector3 pos, Vector3 dir, Enemies.Enemy enemy)
+    {
+        if (kind == HitFxKind.Arrow)
+        {
+            var xf = enemy.GlobalTransform;
+            pos = xf.AffineInverse() * pos;
+            dir = xf.Basis.Inverse() * dir;
+        }
+        return new HitFxEvt((byte)kind, Vec(pos), Vec(dir), enemy.NetId, 0u);
+    }
     private int _attackLogs;
     private readonly HashSet<int> _dirtyMembers = new();
     private bool _bagDirty;
