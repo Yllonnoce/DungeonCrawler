@@ -94,6 +94,7 @@ public partial class ClientWorld : Node
             case EnemyDied ed: if (_enemies.TryGetValue(ed.NetId, out var dead) && GodotObject.IsInstanceValid(dead)) dead.ClientDie(); Trace.Add("kill"); break;
             case ProjectileSpawned pr: OnProjectile(pr); break;
             case HitFxEvt fx: OnHitFx(fx); break;
+            case DeathCardEvt dc: Main.Instance.Hud?.ShowDeathCard(dc.Card, null); Trace.Add("deathcard"); break;
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;

@@ -1,4 +1,5 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Objectives;
 using DungeonCrawler.Adventure.Run;
 using DungeonCrawler.Save.Profile;
 using DungeonCrawler.Dungeon;
@@ -57,6 +58,81 @@ public partial class Main : Node
 
     public override void _ExitTree() => EventBus.Instance.FloorChanged -= OnFloorChanged;
 
+    // ---- run-structure: the stakes and the solo autosave ---------------------------------------------------
+
+    /// <summary>The Death Clause ended the run: nothing more is saved or autosaved, the bodies stay down.</summary>
+    public bool RunOver { get; private set; }
+    private float _sinceAutosave;
+
+    public override void _Process(double delta)
+    {
+        if (!InGame || NetSession.IsNetworked || RunOver) return;
+        _sinceAutosave += (float)delta;
+        if (!RunRules.AutosaveDue(_sinceAutosave, GetTree().Paused, Rebuilding, NetSession.IsNetworked, Hud?.CardUp == true, RunOver)) return;
+        Autosave("the clock");
+    }
+
+    /// <summary>Write the auto slot quietly (no log line): on every floor change and every three minutes, solo only.</summary>
+    public void Autosave(string why)
+    {
+        _sinceAutosave = 0f;
+        if (!InGame || NetSession.IsNetworked || RunOver) return;
+        SaveManager.Write(SaveManager.AutoSlot, BuildSaveData("Autosave"));
+        GD.Print($"[Main] autosaved ({why})");
+    }
+
+    /// <summary>Remember the current floor as it stands (a wipe does this before the reload, so the dead stay dead).</summary>
+    public void CaptureCurrentFloor()
+    {
+        if (Builder.FloorRoot is { } root && Builder.Layout is { } layout && Exploration != null)
+            Game.Instance.Floors[Game.Instance.CurrentFloor] = FloorStateCapture.Capture(root, layout, Builder.Contents, Exploration);
+    }
+
+    /// <summary>
+    /// The party wiped (solo and server): the floor is captured, a fifth of the gold goes, the Scar is laid until the next
+    /// floor, and the death card shows (and reaches clients). Under the Death Clause the run ends: the memorial is written to
+    /// the auto slot, every slot of this game is marked fallen, the profile records the run, and the card leads to the recap.
+    /// Returns whether the party rises.
+    /// </summary>
+    public bool OnPartyWiped(string cause, string killer)
+    {
+        var game = Game.Instance;
+        var adv = game.Adventure;
+        var floor = game.CurrentFloor;
+        CaptureCurrentFloor();
+        adv.Wipes++;
+        var onFloor = adv.Memory.For(floor).Wipes + 1; // the director counts this wipe on PartyWiped, which fires after us
+        Party.AddGold(WipeRules.GoldAfterWipe(Party.Gold) - Party.Gold);
+        Adventure.Fortune.FortuneRules.Curse(adv, WipeRules.ScarId);
+        adv.ScarUntilFloor = floor + 1;
+        FortuneDirector.Instance?.Refresh();
+        var epitaph = Adventure.Voice.Epitaphs.Pick(cause, onFloor, floor);
+        var hardcore = ClauseRules.Active.Hardcore;
+        var model = new DeathCardModel(epitaph, cause, killer, floor, onFloor, hardcore, hardcore ? RunRules.RecordsButton : RunRules.RiseButton);
+        if (hardcore)
+        {
+            adv.Fallen = true;
+            adv.Epitaph = epitaph;
+            RunOver = true;
+            SaveManager.Write(SaveManager.AutoSlot, BuildSaveData("Memorial"));
+            SaveManager.MarkFallen(game.GameSeed, epitaph);
+            ProfileRules.RecordRun(ProfileStore.Current, RunSummaryOf());
+            if (adv.Run == RunKind.Daily && adv.DailyDate is { } date) ProfileRules.RecordDaily(ProfileStore.Current, date, RunSummaryOf());
+            ProfileStore.Save();
+            EventBus.Instance.Log("The contract is void. The Death Clause holds.");
+        }
+        Hud?.ShowDeathCard(model, hardcore ? () => EndRun(victory: false) : null);
+        if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new DeathCardEvt(model));
+        GD.Print($"[Main] wipe on floor {floor} ({cause} by {killer}), wipe {onFloor} here, gold {Party.Gold}, {(hardcore ? "the run is over" : "the party rises")}");
+        return !hardcore;
+    }
+
+    /// <summary>The Death Clause's end (and, in Task 10, victory): the recap, then the menu. For now the card leads straight back to the menu.</summary>
+    public void EndRun(bool victory)
+    {
+        ReturnToMenu();
+    }
+
     public override void _PhysicsProcess(double delta)
     {
         TickWaiting();
@@ -87,6 +163,8 @@ public partial class Main : Node
     private void CreateSession(IEnumerable<(string Name, string ClassId, Characters.Rank Rank)>? roster = null, int localIndex = 0, bool hud = true)
     {
         TearDownSession();
+        RunOver = false;
+        _sinceAutosave = 0f;
         Party = GD.Load<PackedScene>("res://scenes/Party.tscn").Instantiate<PartyController>();
         Party.Configure(roster ?? PartyController.DefaultRoster, localIndex);
         Party.AllowPossession = !NetSession.IsNetworked;
@@ -499,6 +577,11 @@ public partial class Main : Node
 
         if (game.Floors.TryGetValue(floor, out var saved) && Builder.FloorRoot is { } root)
             FloorStateCapture.Apply(saved, root, Exploration, Party);
+        if (!NetSession.IsClient && RunRules.ScarLifted(game.Adventure.ScarUntilFloor, floor))
+        {   // the Scar lifts on any other floor than the one it was earned on (the FortuneDirector's FloorBuilt refresh recalculates)
+            Adventure.Fortune.FortuneRules.Lift(game.Adventure, WipeRules.ScarId);
+            game.Adventure.ScarUntilFloor = 0;
+        }
         if (delta > 0 && saved == null && !NetSession.IsClient && Adventure.Run.ClauseRules.Active.AuditsAt(floor))
         {   // the Inventory Audit clause: at each tier gate the meanest piece each member wears loses a virtue
             foreach (var line in Adventure.Run.InventoryAudit.Apply(Party.Members)) EventBus.Instance.Log(line);
@@ -530,6 +613,7 @@ public partial class Main : Node
         if (!NetSession.IsClient) EventBus.Instance.Log(floor == 0 ? "The tavern. The way down is in the corner." : delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
         if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null);
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
+        if (delta != 0 && floor >= 1) Autosave($"floor {floor}"); // solo only (Autosave refuses the rest)
     }
 
     /// <summary>A client following the server to another floor: same seed, same plan, same snapshot, then everyone's poses.</summary>

@@ -71,6 +71,14 @@ public partial class Hud : Control
 
     public void Bind(PartyController party) => _party = party;
 
+    private UI.Cards.DeathCard _deathCard = null!;
+    /// <summary>The death card (run-structure): the server decides it, a client only shows it; the button runs <paramref name="onClose"/>.</summary>
+    public void ShowDeathCard(Adventure.Run.DeathCardModel m, Action? onClose) => _deathCard.Open(m, onClose);
+    public UI.Cards.DeathCard DeathCard => _deathCard;
+    /// <summary>A death card or run recap is up: the autosave waits and the input is the card's.</summary>
+    public bool CardUp => _deathCard.Visible;
+    /// <summary>Press the visible card's button (tests).</summary>
+    public void CloseCard() { if (_deathCard.Visible) _deathCard.Press(); }
     private UI.Cards.ClauseCard _clauseCard = null!;
     private bool _clausesPending;
     /// <summary>The factor's "Read them." was chosen (run-structure): the clause card opens when the briefing closes.</summary>
@@ -198,6 +206,9 @@ public partial class Hud : Control
         _clauseCard = new UI.Cards.ClauseCard { Name = "Clauses", Visible = false };
         _clauseCard.VisibilityChanged += UpdateModalState;
         AddChild(_clauseCard);
+        _deathCard = new UI.Cards.DeathCard { Name = "DeathCard", Visible = false };
+        _deathCard.VisibilityChanged += UpdateModalState;
+        AddChild(_deathCard);
         _dialogue.Closed += () => { if (_clausesPending) { _clausesPending = false; _clauseCard.Open(readOnly: Net.NetSession.IsClient || Game.Instance.Adventure.Run == Save.RunKind.Daily); } }; // the factor's offer: the card opens once his talk ends
         _questLog = new QuestLogScreen { Name = "QuestLog", Visible = false };
         AddChild(_questLog);
@@ -338,6 +349,7 @@ public partial class Hud : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
+        if (CardUp) return; // the death card owns the input until its button is pressed
         if (@event.IsActionPressed("pause"))
         {
             TogglePause();
@@ -374,6 +386,7 @@ public partial class Hud : Control
         }
         if (@event.IsActionPressed("quickload") && !Net.NetSession.IsNetworked)
         {
+            if (Adventure.Run.ClauseRules.Active.Hardcore) { EventBus.Instance.Log("The Death Clause allows no second chances."); GetViewport().SetInputAsHandled(); return; }
             if (!Main.Instance.LoadGame(Save.SaveManager.QuickSlot)) EventBus.Instance.Log("No quicksave to load.");
             GetViewport().SetInputAsHandled();
             return;
@@ -498,7 +511,7 @@ public partial class Hud : Control
 
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible || _clauseCard.Visible;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible || _clauseCard.Visible || CardUp;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }

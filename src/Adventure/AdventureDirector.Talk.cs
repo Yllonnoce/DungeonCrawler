@@ -81,14 +81,27 @@ public partial class AdventureDirector
         if (_causeNotes.Count > MaxCauseNotes) _causeNotes.RemoveAt(0);
     }
 
+    private string? _resolvedWipeCause;
+
+    /// <summary>
+    /// The wipe's cause from the last harm taken (run-structure's <c>WipeRules.CauseOf</c>), refined: a generic blow is
+    /// still the horde's, the gas's or the boss's doing when the notes say so. Remembered for the epitaph that follows.
+    /// </summary>
+    public string ResolveWipeCause(string harmCause)
+    {
+        var cause = harmCause != WipeCause.Generic ? harmCause : WipeCause.Infer(_causeNotes, Game.Instance.PlaySeconds, _bossAlive);
+        _resolvedWipeCause = cause;
+        return cause;
+    }
+
     private void OnPartyWipedForEpitaph()
     {
         if (!Authority) return;
-        var cause = WipeCause.Infer(_causeNotes, Game.Instance.PlaySeconds, _bossAlive);
+        var cause = _resolvedWipeCause ?? WipeCause.Infer(_causeNotes, Game.Instance.PlaySeconds, _bossAlive);
+        _resolvedWipeCause = null;
         var count = Math.Max(1, Memory.For(_currentFloor).Wipes);
         LastWipe = new WipeInfo(_currentFloor, cause, count, Epitaphs.Pick(cause, count, _currentFloor));
-        EventBus.Instance.Log(LastWipe.Epitaph);
-        EventBus.Instance.RaisePartyWipedBy(_currentFloor, cause);
+        EventBus.Instance.Log(LastWipe.Epitaph); // PartyController raises PartyWipedBy once the wipe is counted
     }
 
     // ---- banter ----

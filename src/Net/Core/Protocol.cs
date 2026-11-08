@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 8;
+    public const int Version = 9;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 88;
+    public const int MessageKindCount = 89;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -67,4 +67,6 @@ public enum MsgKind : byte
     ShopBuybackIntent,
     // fortune (v8): the shrine's card and the first pick, the party's boons and curses, the merchant's Lucky Dip
     ShrineCard, ShrineChoiceIntent, ShrineClosed, FortuneSync, LuckyDipIntent, LuckyDipSync,
+    // run-structure (v9): the server's death card on a wipe
+    DeathCardEvt,
 }

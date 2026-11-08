@@ -498,10 +498,17 @@ public partial class PartyController : Node3D
         }
     }
 
+    private bool _wipeJudged;
     private void OnPartyWiped()
     {
+        if (_wipeJudged) return; // under the Death Clause the bodies stay down
+        var (cause, killer) = Adventure.Objectives.WipeRules.CauseOf(Members);
+        cause = Adventure.AdventureDirector.Instance?.ResolveWipeCause(cause) ?? cause; // a plain blow may still be the horde's or the gas's doing
+        var rise = Main.Instance.OnPartyWiped(cause, killer); // captures the floor first, takes the gold, scars, shows the card
         EventBus.Instance.Log("The party has fallen. The dungeon shifts...");
         EventBus.Instance.RaisePartyWiped();
+        EventBus.Instance.RaisePartyWipedBy(Game.Instance.CurrentFloor, cause);
+        if (!rise) { _wipeJudged = true; return; }
         foreach (var m in Members) m.FullRestore();
         foreach (var a in Adventurers) a.Revive();
         for (var i = 0; i < Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i);
