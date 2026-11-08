@@ -24,7 +24,8 @@ public abstract record NetMessage
 public sealed record NetPlayerDto(string Name, int MemberIndex, string ClassId, int PeerId, bool Online);
 
 /// <summary>An enemy that was not part of the floor plan (summoned, horde) and so must be described to a joiner.</summary>
-public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, float Z, float Yaw, float Hp, string? HordeId = null);
+/// <summary>A dynamic enemy for a joiner or a spawn message; EliteName/EliteAffixes (v8, comma-joined enum names) when it is an elite.</summary>
+public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, float Z, float Yaw, float Hp, string? HordeId = null, string? EliteName = null, string? EliteAffixes = null);
 
 [Msg(MsgKind.Hello)] public sealed record Hello(int Protocol, string PlayerName, string ClassId, string Build) : NetMessage;
 [Msg(MsgKind.Reject)] public sealed record Reject(string Reason) : NetMessage;

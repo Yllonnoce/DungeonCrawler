@@ -154,6 +154,12 @@ public static class EliteRules
     public static AttackProfile ApplyAttack(AttackProfile attack, IReadOnlyList<EliteAffix> affixes)
         => affixes.Contains(EliteAffix.Cursing) ? attack.WithExtraOnHit(new[] { new StatusApplication(StatusKind.Vulnerable, VulnerableSeconds, 0f) }) : attack;
 
+    /// <summary>The wire form of an affix list: comma-joined enum names.</summary>
+    public static string Encode(IReadOnlyList<EliteAffix> affixes) => string.Join(",", affixes);
+    /// <summary>Back from the wire; unknown names dropped, null or blank → empty.</summary>
+    public static List<EliteAffix> Decode(string? encoded)
+        => string.IsNullOrWhiteSpace(encoded) ? new List<EliteAffix>() : encoded.Split(',').Select(n => Enum.TryParse<EliteAffix>(n.Trim(), true, out var a) ? (EliteAffix?)a : null).Where(a => a != null).Select(a => a!.Value).ToList();
+
     /// <summary>"Swift", "Warded and Vampiric", "Swift, Warded and Vampiric".</summary>
     public static string Describe(IReadOnlyList<EliteAffix> affixes)
     {

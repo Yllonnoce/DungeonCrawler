@@ -167,7 +167,8 @@ public partial class ClientWorld : Node
     {
         var main = Main.Instance;
         if (main?.Builder.FloorRoot == null || _enemies.ContainsKey(d.NetId)) return;
-        var e = main.Builder.SpawnEnemy(d.DefId, new Vector3(d.X, d.Y, d.Z), Game.Instance.CurrentFloor, netId: d.NetId);
+        var e = main.Builder.SpawnEnemy(d.DefId, new Vector3(d.X, d.Y, d.Z), Game.Instance.CurrentFloor, netId: d.NetId,
+            elite: d.EliteName != null ? new EliteRoll(EliteRules.Decode(d.EliteAffixes), d.EliteName) : null);
         if (e == null) return;
         e.Rotation = new Vector3(0, d.Yaw, 0);
         if (d.HordeId != null) { e.SetSwarmDetail(); e.HordeId = d.HordeId; }

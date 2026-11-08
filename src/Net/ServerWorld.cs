@@ -207,13 +207,18 @@ public partial class ServerWorld : Node
             DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main));
     }
 
+    /// <summary>A dynamic enemy on the wire: its elite name and affixes ride along so a client dresses and names it.</summary>
+    public static DynamicEnemyDto EnemyDto(Enemy e)
+        => new(e.NetId, e.Profile.Id, e.GlobalPosition.X, e.GlobalPosition.Y, e.GlobalPosition.Z, e.Rotation.Y, e.Hp, e.HordeId,
+            e.IsElite ? e.Profile.EliteName : null, e.IsElite ? EliteRules.Encode(e.Profile.Affixes) : null);
+
     public static List<DynamicEnemyDto> DynamicEnemies(Node3D? root)
     {
         var list = new List<DynamicEnemyDto>();
         if (root == null) return list;
         foreach (var e in root.GetChildren().OfType<Enemy>())
             if (e.NetId >= Enemy.DynamicNetIdBase && e.IsAlive)
-                list.Add(new DynamicEnemyDto(e.NetId, e.Profile.Id, e.GlobalPosition.X, e.GlobalPosition.Y, e.GlobalPosition.Z, e.Rotation.Y, e.Hp, e.HordeId));
+                list.Add(EnemyDto(e));
         return list;
     }
 
@@ -572,7 +577,7 @@ public partial class ServerWorld : Node
         if (_spawned.Count > 0)
         {
             foreach (var e in _spawned)
-                if (GodotObject.IsInstanceValid(e)) Broadcast(new EnemySpawned(new DynamicEnemyDto(e.NetId, e.Profile.Id, e.GlobalPosition.X, e.GlobalPosition.Y, e.GlobalPosition.Z, e.Rotation.Y, e.Hp, e.HordeId)));
+                if (GodotObject.IsInstanceValid(e)) Broadcast(new EnemySpawned(EnemyDto(e)));
             _spawned.Clear();
         }
         TickBound(dt);
