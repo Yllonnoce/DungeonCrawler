@@ -325,6 +325,7 @@ public partial class DebugTools : Node
             else if (arg == "--no-portals") NoPortals = true;
             else if (arg == "--no-gathering") NoGathering = true;
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
             else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
             else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
@@ -363,6 +364,11 @@ public partial class DebugTools : Node
         if (_testHorde && _seed == null) _seed = HordeSeed();
         if (_testAbilities && _seed == null) _seed = 7; // its fights are flaky on random floors
         if (_testHitFx && _seed == null) _seed = 7; // the abilities flow's floor: a repeatable first regular enemy
+        if (_testItems)
+        {
+            _seed ??= 7;
+            ForcedLethality ??= 1f;
+        }
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -736,6 +742,7 @@ public partial class DebugTools : Node
         if (_testKeys && !_testedKeys && _elapsed >= 0.5) { _testedKeys = true; RunKeysTest(); }
         if (_rehashDir != null && !_rehashed && _elapsed >= 0.3 && Main.Instance != null) RunRehashPlans();
         if (_testSafeRoom) RunSafeRoomTest();
+        if (_testItems) RunItemsAndBuildsTest();
         if (_tremor) RunTremor();
         if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == TargetFloor) { _inspected = true; InspectCell(ins.x, ins.y); }
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
@@ -2641,6 +2648,242 @@ public partial class DebugTools : Node
         }
     }
 
+    // ---- --test-items-and-builds --------------------------------------------------------------------------
+    // Loot curve 8 vs 16, stack prices, buyback, a keystone's price, the duo node from two branches, a legendary trigger,
+    // Burn spread, Gerald, save round trip. Prints [items] lines and [items] RESULT ok / FAIL (why; why).
+
+    private bool _testItems;
+    private int _ibStep;
+    private double _ibAt;
+    private readonly List<string> _ibFails = new();
+    private readonly List<Enemy> _ibSpawned = new();
+    private int _ibGoldBefore;
+    private int _ibPotionIndex = -1;
+
+    private void RunItemsAndBuildsTest()
+    {
+        if (_ibStep >= 99) return;
+        var main = Main.Instance;
+        void Fail(string why) { _ibFails.Add(why); GD.Print($"[items] FAIL: {why}"); }
+        void Finish()
+        {
+            foreach (var e in _ibSpawned) if (IsInstanceValid(e)) e.QueueFree();
+            GD.Print(_ibFails.Count == 0 ? "[items] RESULT ok" : $"[items] RESULT FAIL ({string.Join("; ", _ibFails)})");
+            _ibStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        if (_elapsed > 40) { Fail($"timed out at step {_ibStep}"); Finish(); return; }
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var cat = Game.Instance.Catalog;
+        var skills = Game.Instance.Skills;
+        void Next(double wait = 0.2) { _ibStep++; _ibAt = _elapsed + wait; }
+        if (_elapsed < _ibAt) return;
+        static bool Near(float a, float b, float tol) => Math.Abs(a - b) <= tol;
+        Characters.CharacterState M(string name) => party.Members.First(m => m.Name == name);
+        int Index(string name) => Array.FindIndex(party.Members, m => m.Name == name);
+        Enemy? Spawn(Vector3 at)
+        {
+            var e = b.SpawnEnemy(b.RegularEnemies(b.CurrentFloor)[0], at, b.CurrentFloor);
+            if (e == null) { Fail("could not spawn an enemy"); return null; }
+            e.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Stun, 30f, 0f)); // it stands still for the test
+            _ibSpawned.Add(e);
+            return e;
+        }
+        void SureHit(Characters.CharacterState m) { m.SkillModifiers.Add(new Characters.StatModifier(Characters.Stat.Accuracy, Characters.ModOp.Add, 1000f, "test")); m.Recalculate(); }
+        bool Learn(Characters.CharacterState m, string branchNode)
+        {
+            var s = skills.Get($"skill.{m.Class.Id["class.".Length..]}.{branchNode}");
+            if (s == null) { Fail($"no skill {branchNode}"); return false; }
+            if (Characters.SkillRules.Learn(m, s, skills)) return true;
+            Fail($"{m.Name} could not learn {branchNode}: {Characters.SkillRules.WhyCannotLearn(m, s)}");
+            return false;
+        }
+        switch (_ibStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor
+                // 1. loot curve: a chest roll at item level 16 scores well above one at 8
+                var table = cat.Table("table.chest") with { Rolls = 1 };
+                double Avg(int level) { var rng = new Random(16); var s = 0.0; var n = 0; for (var i = 0; i < 600; i++) if (LootRoller.Roll(cat, table, level, rng) is { IsEquippable: true } it) { s += ItemText.Score(it, cat); n++; } return n == 0 ? 0 : s / n; }
+                var avg8 = Avg(8); var avg16 = Avg(16);
+                GD.Print($"[items] loot curve: avg score level 8 = {avg8:0.0}, level 16 = {avg16:0.0}");
+                if (!(avg16 > avg8 * 1.1)) Fail($"level 16 loot ({avg16:0.0}) is not 10% better than level 8 ({avg8:0.0})");
+                // 2. stack prices
+                var five = cat.Create("item.mana_potion", 5); var one = cat.Create("item.mana_potion");
+                GD.Print($"[items] stack price: 5 potions buy {Prices.BuyPrice(five)} (one {Prices.BuyPrice(one)}), sell {Prices.SellPrice(five)} (unit value {Prices.UnitValue(five)})");
+                if (Prices.BuyPrice(five) != 5 * Prices.BuyPrice(one)) Fail("a 5-stack does not cost five singles");
+                if (Prices.SellPrice(five) != 5 * Prices.UnitValue(five)) Fail("a 5-stack does not sell for five unit values");
+                // 3. buyback: stand at the merchant, sell the stack, buy it back
+                if (root.GetNodeOrNull<Adventure.Npc>("Npc_merchant") is not { } merchant) { Fail("no merchant on the floor"); Finish(); return; }
+                party.Teleport(merchant.GlobalPosition + new Vector3(1.2f, 0f, 0f), merchant.GlobalPosition);
+                party.AddGold(1000);
+                if (!party.Bag.TryAdd(five)) { Fail("the bag refused the potions"); Finish(); return; }
+                _ibPotionIndex = party.Bag.IndexOf(five);
+                _ibGoldBefore = party.Gold;
+                Next();
+                break;
+            }
+            case 1:
+            {
+                var five = party.Bag[_ibPotionIndex];
+                var worth = five == null ? 0 : Prices.SellPrice(five);
+                var refusal = party.ShopSell(DungeonCrawler.Party.BagSlot.Bag(_ibPotionIndex));
+                GD.Print($"[items] sell: {refusal ?? "ok"}, gold {_ibGoldBefore} -> {party.Gold} (worth {worth}), ledger {party.Buyback.Entries.Count}");
+                if (refusal != null) Fail($"sale refused: {refusal}");
+                if (party.Buyback.Entries.Count != 1) Fail($"ledger holds {party.Buyback.Entries.Count} after one sale");
+                if (party.Gold != _ibGoldBefore + worth) Fail("the sale did not pay the sell price");
+                var back = party.ShopBuyback(0);
+                GD.Print($"[items] buyback: {back ?? "ok"}, gold {party.Gold}, mana potions in the bag {party.Bag.Count("item.mana_potion")}, ledger {party.Buyback.Entries.Count}");
+                if (back != null) Fail($"buyback refused: {back}");
+                if (party.Gold != _ibGoldBefore) Fail($"buyback left {party.Gold} gold, not {_ibGoldBefore}");
+                if (party.Bag.Count("item.mana_potion") != 5) Fail("the bag does not hold the 5-stack again");
+                if (party.Buyback.Entries.Count != 0) Fail("the ledger still holds the bought-back stack");
+                // the shop screen: no buyback cells filled, comparisons in the wares, the arrow on a bag plate
+                var plate = cat.Create("item.plate_armor");
+                party.Bag.TryAdd(plate);
+                var plateIndex = party.Bag.IndexOf(plate);
+                var shop = main.Hud.Shop;
+                shop.Open(b.CurrentFloor);
+                var stock = party.ShopStockFor(b.CurrentFloor);
+                var brand = M("Brand");
+                var comparable = Enumerable.Range(0, shop.StockCount).Where(i => i < stock.Items.Count && stock.Items[i].IsWeapon && SmartLoot.Usable(cat.Base(stock.Items[i].DefId), brand.Class)).ToList();
+                var compared = comparable.Count(i => shop.StockCell(i).TooltipText.Contains("Equipped:"));
+                var plateCell = plateIndex >= 0 ? shop.BagCell(plateIndex) : null;
+                GD.Print($"[items] shop: buyback cells {shop.BuybackCount}, wares Brand could wield {comparable.Count}, of them compared {compared}; plate upgrade={plateCell?.Upgrade} glyphs={(plateCell == null ? "" : string.Join(" ", plateCell.Glyphs.Select(g => g.Glyph + (g.Usable ? "+" : "-"))))}; gold label \"{shop.GoldText.Replace("\n", " / ")}\"");
+                if (shop.BuybackCount != 0) Fail("the shop shows a buyback entry after the buyback");
+                if (brand.Equipment[EquipSlot.Weapon] == null) Fail("Brand wears no weapon to compare against");
+                else if (comparable.Count > 0 && compared != comparable.Count) Fail("a wielded-kind stock weapon's tooltip has no Equipped: comparison");
+                if (plateCell is not { Upgrade: true }) Fail("the plate in the bag is not marked as an upgrade for Brand");
+                if (plateCell != null && !(plateCell.Glyphs.Any(g => g.Glyph == "Wa" && g.Usable) && plateCell.Glyphs.Any(g => g.Glyph == "Ma" && !g.Usable))) Fail("the plate's glyph row does not read Wa usable, Ma not");
+                if (!shop.GoldText.Contains("Focused:")) Fail("the gold label has no Focused line");
+                shop.Close();
+                if (plateIndex >= 0) party.Bag.RemoveAt(plateIndex);
+                Next();
+                break;
+            }
+            case 2:
+            {
+                // 4. a keystone's price: Perfect Form trades 20% max HP for attack speed; Red Mist trades the guard for damage
+                var sable = M("Sable"); sable.SkillPoints = 20;
+                foreach (var n in new[] { "duelist.footwork", "duelist.flurry", "duelist.venom_mastery", "duelist.parry", "duelist.cutthroat", "duelist.dance_of_blades" }) Learn(sable, n);
+                var hpBefore = sable.Stats[Characters.Stat.MaxHp]; var asBefore = sable.Stats[Characters.Stat.AttackSpeed];
+                Learn(sable, "duelist.perfect_form");
+                var hpAfter = sable.Stats[Characters.Stat.MaxHp]; var asAfter = sable.Stats[Characters.Stat.AttackSpeed];
+                GD.Print($"[items] Perfect Form: max HP {hpBefore:0} -> {hpAfter:0} (want x0.8), attack speed {asBefore:0.00} -> {asAfter:0.00} (want x1.2)");
+                if (!Near(hpAfter, hpBefore * 0.8f, 1f)) Fail("Perfect Form did not take 20% max HP");
+                if (!Near(asAfter, asBefore * 1.2f, 0.01f)) Fail("Perfect Form did not give 20% attack speed");
+                var brand = M("Brand"); brand.SkillPoints = 20;
+                foreach (var n in new[] { "berserker.brawn", "berserker.cleave", "berserker.heavy_hands", "berserker.bloodlust", "berserker.frenzy", "berserker.executioner" }) Learn(brand, n);
+                var guardBefore = party.CanGuard(brand); var dmgBefore = brand.Stats[Characters.Stat.MeleeDamage];
+                Learn(brand, "berserker.rampage");
+                var dmgAfter = brand.Stats[Characters.Stat.MeleeDamage];
+                GD.Print($"[items] Red Mist: can guard {guardBefore} -> {party.CanGuard(brand)}, melee damage {dmgBefore:0.0} -> {dmgAfter:0.0} (want x1.3)");
+                if (!guardBefore || party.CanGuard(brand)) Fail("Red Mist did not take the guard away");
+                if (!Near(dmgAfter, dmgBefore * 1.3f, 0.05f)) Fail("Red Mist did not give 30% melee damage");
+                // 5. the duo node, from either branch
+                var ilex = M("Ilex"); ilex.SkillPoints = 20;
+                var attunement = skills.Get("skill.mage.duo.attunement");
+                if (attunement == null) { Fail("no Attunement"); Finish(); return; }
+                var why = Characters.SkillRules.WhyCannotLearn(ilex, attunement);
+                foreach (var n in new[] { "fire.kindling", "fire.ember_mind", "fire.meteor" }) Learn(ilex, n);
+                var viaFire = Characters.SkillRules.Learn(ilex, attunement, skills);
+                var siphon = party.Trigger(ilex, Characters.TriggerKind.SoulSiphon);
+                var refund = Characters.SkillRules.Respec(ilex, skills);
+                foreach (var n in new[] { "warding.mana_well", "warding.focus", "warding.arcane_barrier" }) Learn(ilex, n);
+                var viaWarding = Characters.SkillRules.Learn(ilex, attunement, skills);
+                GD.Print($"[items] Attunement: before any branch \"{why}\"; via Fire {viaFire} (SoulSiphon {siphon}); respec refunded {refund}; via Warding {viaWarding}; Ilex learned {string.Join(", ", ilex.LearnedSkills.Select(s => s.Split('.').Last()))}");
+                if (why == null || !why.Contains("one of its branches")) Fail($"Attunement was refused with \"{why}\" instead of the branch rule");
+                if (!viaFire || siphon != 4f) Fail("Attunement through Fire did not grant SoulSiphon 4");
+                if (refund != 4) Fail($"respec refunded {refund}, not 4");
+                if (!viaWarding) Fail("Attunement could not be learned through Warding after a respec");
+                Next();
+                break;
+            }
+            case 3:
+            {
+                // 6. legendary triggers fire: Lantern-Jaw heals on a kill
+                var brand = M("Brand"); var brandIdx = Index("Brand"); SureHit(brand);
+                var axe = LootRoller.MakeLegendary(cat, cat.Legendaries["leg.lantern_jaw"], 8, new Random(1));
+                brand.Equipment.Equip(EquipSlot.Weapon, axe); brand.Recalculate();
+                var fromSkills = Characters.SkillRules.TriggerMagnitude(brand, skills, Characters.TriggerKind.Bloodlust); // the Berserker chain's Bloodlust node (8) adds to the axe's 8
+                var bloodlust = party.Trigger(brand, Characters.TriggerKind.Bloodlust);
+                GD.Print($"[items] Lantern-Jaw: Bloodlust {bloodlust} (want {fromSkills} from skills + 8 from the axe), max damage {axe.Weapon!.MaxDamage:0.00} (want {12 * 1.24f:0.00}: a level-2 axe at item level 8)");
+                if (bloodlust != fromSkills + 8f) Fail($"Bloodlust reads {bloodlust}, not {fromSkills + 8f}");
+                if (!Near(axe.Weapon.MaxDamage, 12 * 1.24f, 0.05f)) Fail("the axe's damage does not scale with its item level");
+                var body = party.Adventurers[brandIdx];
+                var fwd = (-body.GlobalTransform.Basis.Z) with { Y = 0 }; fwd = fwd.LengthSquared() > 1e-4f ? fwd.Normalized() : Vector3.Forward;
+                var enemy = Spawn(body.GlobalPosition - Vector3.Up * 0.2f + fwd * 2f);
+                if (enemy == null) { Finish(); return; }
+                brand.Hp = brand.Stats[Characters.Stat.MaxHp] - 30;
+                var hpBefore = brand.Hp;
+                var r = enemy.ReceiveAttack(brand.Stats, new Combat.AttackProfile { MinDamage = 9999, MaxDamage = 9999 }, new Combat.HitContext { DefenderStunned = true }, party.Rng, brand.Name);
+                party.OnHitLanded(brand, enemy, r);
+                GD.Print($"[items] kill: hit={r.Hit} enemy alive={enemy.IsAlive}, Brand HP {hpBefore:0.0} -> {brand.Hp:0.0} (want +{bloodlust})");
+                if (!r.Hit || enemy.IsAlive) Fail("the test blow did not kill the enemy");
+                if (!Near(brand.Hp, hpBefore + bloodlust, 0.5f)) Fail($"the kill did not heal {bloodlust} (skills + Lantern-Jaw)");
+                // Burn spread: the Candle on Ilex, two enemies a metre apart
+                var ilex = M("Ilex"); var ilexIdx = Index("Ilex"); SureHit(ilex);
+                var candle = LootRoller.MakeLegendary(cat, cat.Legendaries["leg.candle_of_the_congregation"], 8, new Random(2));
+                ilex.Equipment.Equip(EquipSlot.Offhand, candle); ilex.Recalculate();
+                var ilexBody = party.Adventurers[ilexIdx];
+                var ifwd = (-ilexBody.GlobalTransform.Basis.Z) with { Y = 0 }; ifwd = ifwd.LengthSquared() > 1e-4f ? ifwd.Normalized() : Vector3.Forward;
+                var side = new Vector3(-ifwd.Z, 0, ifwd.X);
+                var e1 = Spawn(ilexBody.GlobalPosition - Vector3.Up * 0.2f + ifwd * 3f);
+                var e2 = Spawn(ilexBody.GlobalPosition - Vector3.Up * 0.2f + ifwd * 3f + side * 1f);
+                if (e1 == null || e2 == null) { Finish(); return; }
+                var burn = new Combat.AttackProfile { MinDamage = 1, MaxDamage = 1, OnHit = new[] { new Combat.StatusApplication(Combat.StatusKind.Burn, 4, 2, 1f) } };
+                var r1 = e1.ReceiveAttack(ilex.Stats, burn, new Combat.HitContext { DefenderStunned = true }, party.Rng, ilex.Name);
+                party.OnHitLanded(ilex, e1, r1);
+                GD.Print($"[items] Candle: BurnSpread {party.Trigger(ilex, Characters.TriggerKind.BurnSpread)}, hit={r1.Hit} applied=[{string.Join(",", r1.Applied.Select(a => a.Kind))}], first burning={e1.Effects.Has(Combat.StatusKind.Burn)}, neighbour burning={e2.Effects.Has(Combat.StatusKind.Burn)} at {e1.GlobalPosition.DistanceTo(e2.GlobalPosition):0.0} m");
+                if (!e2.Effects.Has(Combat.StatusKind.Burn)) Fail("the Candle did not spread the Burn to the neighbour");
+                // Gerald: below 30% HP, once per floor, frost bursts from Wren
+                var wren = M("Wren"); var wrenIdx = Index("Wren"); SureHit(wren);
+                var gerald = LootRoller.MakeLegendary(cat, cat.Legendaries["leg.gerald"], 8, new Random(3));
+                wren.Equipment.Equip(EquipSlot.Amulet, gerald); wren.Recalculate();
+                var wrenBody = party.Adventurers[wrenIdx];
+                var wfwd = (-wrenBody.GlobalTransform.Basis.Z) with { Y = 0 }; wfwd = wfwd.LengthSquared() > 1e-4f ? wfwd.Normalized() : Vector3.Forward;
+                var e3 = Spawn(wrenBody.GlobalPosition - Vector3.Up * 0.2f + wfwd * 2f);
+                if (e3 == null) { Finish(); return; }
+                wren.Hp = 0.2f * wren.Stats[Characters.Stat.MaxHp];
+                EventBus.Instance.RaiseMemberDamaged(wrenIdx, 1f);
+                var frosted = e3.Effects.Has(Combat.StatusKind.Frost);
+                e3.Effects.Remove(Combat.StatusKind.Frost);
+                EventBus.Instance.RaiseMemberDamaged(wrenIdx, 1f);
+                var again = e3.Effects.Has(Combat.StatusKind.Frost);
+                GD.Print($"[items] Gerald: LastGasp {party.Trigger(wren, Characters.TriggerKind.LastGasp)}, Wren at {wren.Hp:0}/{wren.Stats[Characters.Stat.MaxHp]:0} HP: frost on the enemy {frosted}, after a second drop {again} (want once per floor)");
+                if (!frosted) Fail("Gerald did not burst frost below 30% HP");
+                if (again) Fail("Gerald fired twice on one floor");
+                wren.Hp = wren.Stats[Characters.Stat.MaxHp];
+                foreach (var e in _ibSpawned) if (IsInstanceValid(e)) e.QueueFree();
+                _ibSpawned.Clear();
+                // 7. save and load
+                main.SaveGame("items");
+                if (!main.LoadGame("items")) { Fail("the save did not load"); Finish(); return; }
+                Next(1.5);
+                break;
+            }
+            case 4:
+            {
+                var loaded = main.Party;
+                if (loaded.Members.Length < 4) { Fail("the loaded party is short"); Finish(); return; }
+                var brand = loaded.Members[0]; var sable = loaded.Members[1];
+                var bloodlust = loaded.Trigger(brand, Characters.TriggerKind.Bloodlust);
+                var fromSkills = Characters.SkillRules.TriggerMagnitude(brand, skills, Characters.TriggerKind.Bloodlust);
+                var fromAxe = LegendaryRules.Trigger(brand.Equipment, cat, Characters.TriggerKind.Bloodlust);
+                GD.Print($"[items] after load: Brand wields {brand.Equipment[EquipSlot.Weapon]?.DisplayName ?? "nothing"} (Bloodlust {bloodlust} = {fromSkills} skills + {fromAxe} axe, max damage {brand.WeaponProfile.MaxDamage:0.00}); Sable knows {sable.LearnedSkills.Count} skills (Perfect Form {sable.LearnedSkills.Contains("skill.rogue.duelist.perfect_form")}); ledger {loaded.Buyback.Entries.Count}");
+                if (fromAxe != 8f || bloodlust != fromSkills + 8f) Fail($"Bloodlust after the load reads {bloodlust} ({fromAxe} from the axe), not {fromSkills + 8f}");
+                if (!Near(brand.WeaponProfile.MaxDamage, 14.88f, 0.05f)) Fail("the axe lost its item-level scaling in the save");
+                if (!sable.LearnedSkills.Contains("skill.rogue.duelist.perfect_form")) Fail("Sable lost Perfect Form in the save");
+                if (loaded.Buyback.Entries.Count != 0) Fail("the ledger came back with entries");
+                Finish();
+                break;
+            }
+        }
+    }
+
     // ---- --test-safe-room ---------------------------------------------------------------------------------
     // The floor's safe room end to end: the room and its door, the merchant standing in it and his three-choice talk, the door opening for the party and shut against an
     // enemy, x6 regeneration inside, the HUD line, the gathering (or none with --no-gathering), the gatherers going for
@@ -3069,7 +3312,7 @@ public partial class DebugTools : Node
                     var soldDim = shop.StockCell(0).Modulate.A;
                     var price = shop.StockCell(1).Caption;
                     var wantPrice = $"{Items.Prices.BuyPrice(party.ShopStockFor(floor).Items[1])}g";
-                    var purse = shop.GoldText;
+                    var purse = shop.GoldText.Split('\n')[0]; // the label's second line names the focused member
                     var open = hud.ShopOpen;
                     var locked = party.InputLocked;
                     shop.Close();
