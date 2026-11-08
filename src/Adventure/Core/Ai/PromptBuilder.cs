@@ -70,7 +70,7 @@ public sealed class PromptTemplates
         """;
 
     public const string DefaultBarksTask = """
-        Write a bark bank for the four party members: for each member exactly 24 lines, three per Trigger (Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived), each at most 90 characters, in the member's own voice given their class and the campaign's tone. Members[].Member is the member's name exactly as given.
+        Write a bark bank for the four party members: for each member exactly 69 lines, three per Trigger (Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, TrapSprung, Fell, PerfectBlow, Parried, Mimic, SecretFound, EliteSeen, Broke, ShrineBoon, ShrineCurse, GambleWin, GambleDud, LowHp, Cheer, CheerAnswer), each at most 90 characters, in the member's own voice given their class and the campaign's tone. Possess is said when the player takes control of that member (a plain hero swap). TrapSprung: a trap sprang under them; Fell: a drop or a pit; PerfectBlow and Parried: their own perfect heavy blow or parry; Mimic: a chest turned out to have teeth; SecretFound: a hidden room opened; EliteSeen: a named creature sighted; Broke: they cannot afford the merchant's price; ShrineBoon and ShrineCurse: what an altar gave them; GambleWin and GambleDud: the merchant's blind bundle; LowHp: first time badly hurt on a floor; Cheer: rallying the others; CheerAnswer: answering a rally. Members[].Member is the member's name exactly as given.
         """;
 }
 
@@ -81,7 +81,7 @@ public static class PromptBuilder
 {
     public const int OutlineMaxTokens = 48000; // thinking counts against it; the outline is 10k tokens of JSON on its own
     public const int FloorMaxTokens = 16000;
-    public const int BarksMaxTokens = 8000;
+    public const int BarksMaxTokens = 16000; // 276 lines of JSON
 
     /// <summary>The system blocks every call shares: the rules, then the author's bible when there is one. Byte-stable so they cache.</summary>
     private static PromptBlock[] SystemBlocks(PromptTemplates t, params PromptBlock[] extra)
