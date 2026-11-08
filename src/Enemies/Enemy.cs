@@ -992,10 +992,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (!IsHorde && _rng.NextDouble() < 0.5 && cat.TryBase("item.bone_shard", out _)) Drop(cat.Create("item.bone_shard"), Vector3.Zero);
         var coins = IsBoss ? CoinRules.BossCoins(TierRules.TierIndex(Floor) + 1) : CoinRules.EnemyCoins(Floor, _rng);
         if (coins > 0) Party?.SpawnCoins(coins, GlobalPosition + Vector3.Up * 0.4f + new Vector3(0.3f, 0, -0.5f));
-        var tableId = IsBoss ? "table.chest" : "table.enemy";
+        var tableId = IsBoss ? Adventure.Fortune.ChestRules.BossTable : "table.enemy"; // fortune: the boss table (3 rolls, no common) two item levels up; elites insert their own table here
         if (cat.Tables.TryGetValue(tableId, out var table))
         {
-            var drops = IsBoss ? LootRoller.RollMany(cat, table with { Rolls = 3, DropChance = 1f }, level + 1, _rng) : LootRoller.RollMany(cat, table, level, _rng);
+            var drops = IsBoss ? LootRoller.RollMany(cat, table, level + Adventure.Fortune.ChestRules.BossItemLevelBonus, _rng) : LootRoller.RollMany(cat, table, level, _rng);
             for (var i = 0; i < drops.Count; i++) Drop(drops[i], new Vector3(-0.6f + i * 0.6f, 0, 0.4f));
         }
         var arrows = (EmbeddedArrows + 1) / 2;

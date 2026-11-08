@@ -63,7 +63,11 @@ public partial class Chest : Area3D, IInteractable
         EventBus.Instance.RaiseChestOpened(GlobalPosition);
 
         var rng = new Random(Rng.ActorSeed(Game.Instance.GameSeed, Game.Instance.CurrentFloor, 5000 + SpawnIndex)); // the same contents on every peer and reload
-        var items = LootRoller.RollMany(Game.Instance.Catalog, Game.Instance.Catalog.Table(TableId), TierRules.ItemLevel(Game.Instance.CurrentFloor), rng);
+        var cat = Game.Instance.Catalog;
+        var table = cat.Table(TableId);
+        var level = TierRules.ItemLevel(Game.Instance.CurrentFloor);
+        var items = LootRoller.RollMany(cat, table, level, rng);
+        if (Adventure.Fortune.ChestRules.GuaranteesConsumable(TableId) && LootRoller.Roll(cat, table with { Entries = new[] { new LootEntry("kind:Consumable", 1) }, Rolls = 1, DropChance = 1f }, level, rng) is { } extra) items.Add(extra); // a secret's chest always holds a draught
         var toward = (actor.GlobalPosition - GlobalPosition); toward.Y = 0;
         toward = toward.LengthSquared() > 0.01f ? toward.Normalized() : Vector3.Forward;
         var side = toward.Cross(Vector3.Up);

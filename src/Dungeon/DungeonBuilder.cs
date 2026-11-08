@@ -1223,6 +1223,7 @@ public partial class DungeonBuilder : Node3D
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = i;
             chest.Locked = layout.LockedChests.Contains(i);
+            chest.TableId = Adventure.Fortune.ChestRules.TableFor(Adventure.Fortune.ChestRules.KindOf(layout, i)); // fortune: a vault's, a secret's, a ledge's or the plain table
             chest.Name = $"Chest{i}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(layout.ChestSpawns[i]);
@@ -1350,6 +1351,7 @@ public partial class DungeonBuilder : Node3D
         {
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = layout.ChestSpawns.Count + cellar.Cells.IndexOf(cellar.Chest);
+            chest.TableId = Adventure.Fortune.ChestRules.TableFor(Adventure.Fortune.ChestRules.CellarKind);
             chest.Name = $"CellarChest{chest.SpawnIndex}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(cellar.Chest, under: true);
