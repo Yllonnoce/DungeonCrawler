@@ -5,7 +5,8 @@ namespace DungeonCrawler.Items;
 /// <summary>Tooltip text for an item. Engine-free so it can be unit tested and reused by any UI.</summary>
 public static class ItemText
 {
-    public static string Describe(ItemInstance item, ItemInstance? compareWith = null)
+    /// <param name="cat">When given, a legendary's effects are named before its flavour line.</param>
+    public static string Describe(ItemInstance item, ItemInstance? compareWith = null, ItemCatalog? cat = null)
     {
         var lines = new List<string> { item.DisplayName, $"{item.Rarity} {KindLabel(item)}   Item level {item.ItemLevel}" };
         if (item.Weapon is { } w)
@@ -34,6 +35,11 @@ public static class ItemText
             lines.Add("Double-click to use");
         }
         if (item.Stackable) lines.Add($"Stack {item.StackCount}/{item.MaxStack}");
+        if (cat != null && LegendaryRules.Of(item, cat) is { } leg)
+        {
+            foreach (var (kind, magnitude) in leg.Triggers) lines.Add($"Effect: {LegendaryRules.EffectText(kind, magnitude)}");
+            foreach (var u in leg.Upgrades) lines.Add($"Effect: {LegendaryRules.UpgradeText(u)}");
+        }
         if (item.Flavor != "") lines.Add($"\"{item.Flavor}\"");
         if (item.Description != "" && item.Flavor == "") lines.Add(item.Description);
         if (compareWith != null && compareWith != item)

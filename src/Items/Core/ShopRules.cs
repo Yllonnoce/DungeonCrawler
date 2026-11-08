@@ -143,6 +143,10 @@ public static class ShopRules
         return null;
     }
 
+    /// <summary>The question asked before a legendary is sold: the price (with any sell bonus) and what the merchant keeps.</summary>
+    public static string SellQuestion(ItemInstance item, float sellBonus = 0f)
+        => $"Sell {item.DisplayName} for {Prices.SellPrice(item, sellBonus)} gold? He keeps only his last three purchases for buyback.";
+
     /// <summary>Buys back ledger entry <paramref name="index"/> for what the merchant paid. Null on success, else the reason (nothing changes then).</summary>
     public static string? TryBuyback(BuybackLedger ledger, int index, Inventory bag, ref int gold)
     {

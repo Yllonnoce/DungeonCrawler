@@ -202,7 +202,7 @@ public partial class ShopScreen : PanelContainer
             cell.Caption = caption;
             cell.Upgrade = item != null && ItemText.IsUpgrade(item, focused, cat);
             cell.Glyphs = item == null ? Array.Empty<(string, bool)>() : ItemText.UsableBy(item, _party.Members);
-            cell.TooltipText = item == null ? "" : $"{ItemText.Describe(item, item.IsEquippable ? focused.Equipment.Worn(focused, item) : null)}\n\n{priceLine}";
+            cell.TooltipText = item == null ? "" : $"{ItemText.Describe(item, item.IsEquippable ? focused.Equipment.Worn(focused, item) : null, cat)}\n\n{priceLine}";
             cell.QueueRedraw();
         }
         var stock = _party.ShopStockFor(_floor);
@@ -268,7 +268,7 @@ public partial class ShopScreen : PanelContainer
             _pendingSellItem = item.Id;
             _pendingBuy = -1;
             _confirm.OkButtonText = "Sell";
-            _confirm.DialogText = $"Sell {item.DisplayName} for {Prices.SellPrice(item)} gold? The merchant never resells.";
+            _confirm.DialogText = ShopRules.SellQuestion(item, _party.SellBonus());
             _confirm.PopupCentered();
             return;
         }
