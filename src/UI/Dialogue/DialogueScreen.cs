@@ -19,6 +19,8 @@ public partial class DialogueScreen : Control
 
     private Label _name = null!;
     private Label _text = null!;
+    private Label _aside = null!;
+    private AsidePlan? _pendingAside; // said once the NPC has finished this line
     private VBoxContainer _choices = null!;
     private CenterContainer _centre = null!;
     private VBoxContainer _moves = null!;
@@ -55,6 +57,9 @@ public partial class DialogueScreen : Control
         _text = new Label { AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(660, 0) };
         _text.AddThemeFontSizeOverride("font_size", 18);
         v.AddChild(_text);
+        _aside = new Label { Name = "Aside", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(660, 0), Modulate = new Color(0.85f, 0.85f, 0.75f) }; // a companion's remark, under the NPC's line
+        _aside.AddThemeFontSizeOverride("font_size", 15);
+        v.AddChild(_aside);
         v.AddChild(new HSeparator());
         _choices = new VBoxContainer();
         _choices.AddThemeConstantOverride("separation", 6);
@@ -140,6 +145,8 @@ public partial class DialogueScreen : Control
         if (Npc != null && Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.DialogueNodeIntent(Npc.Id, node.Id)); // the server pays the deal; a client's purse is the server's
         _name.Text = Npc?.NpcName ?? "";
         _text.Text = node.Line.Text;
+        _aside.Text = "";
+        _pendingAside = node.Aside;
         var voiced = VoiceRenderer.Instance?.PlayLine(node.Line, interrupt: true) == true;
         _speakUntil = Time.GetTicksMsec() / 1000.0 + (voiced ? 0.5 : TalkPose.EstimateSeconds(node.Line.Text));
         Npc?.Converse(true);
@@ -257,6 +264,8 @@ public partial class DialogueScreen : Control
         if (!Visible) return;
         Visible = false;
         _pendingJoin = null;
+        _pendingAside = null;
+        _aside.Text = "";
         _merchant = false;
         if (Main.Instance?.Hud?.Shop is not { IsOpening: true } shop || shop.Keeper != Npc) Npc?.Converse(null); // back to Idle once the conversation ends (a shop he opens keeps him talking)
         Npc = null;
@@ -268,6 +277,21 @@ public partial class DialogueScreen : Control
     public override void _Process(double delta)
     {
         if (Visible && Npc != null) Npc.Converse(Speaking);
+        if (Visible && _pendingAside is { } a && !Speaking) { _pendingAside = null; PlayAside(a); }
+    }
+
+    /// <summary>A companion's remark after the NPC's line: only if they are in the party, standing, and their body is here (not parked); local to this screen, like the dialogue itself.</summary>
+    private void PlayAside(AsidePlan a)
+    {
+        var party = Main.Instance?.Party;
+        if (party == null) return;
+        var index = Array.FindIndex(party.Members, m => m.Name == a.Member);
+        if (index < 0 || !party.Members[index].IsAlive) return;
+        if (index >= party.Adventurers.Length || !party.Active.Contains(party.Adventurers[index])) return;
+        _aside.Text = $"{a.Member}: {a.Line.Text}";
+        EventBus.Instance.Log($"{a.Member}: \"{a.Line.Text}\"");
+        VoiceRenderer.Instance?.PlayLine(a.Line, interrupt: false);
+        GD.Print($"[Dialogue] aside {a.Member}");
     }
 
     public override void _UnhandledInput(InputEvent @event)

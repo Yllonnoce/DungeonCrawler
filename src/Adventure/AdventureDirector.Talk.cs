@@ -51,6 +51,43 @@ public partial class AdventureDirector
         bus.PartyWiped += () => { if (Authority) SetRunFlag("wiped_once"); };
         bus.SafeRoomChanged += inside => { _safeRoomSince = inside ? Game.Instance.PlaySeconds : -1; _safeRoomBantered = false; };
         bus.Cheer += OnCheer;
+        // what might kill the party, noted as it happens, so a wipe can say what did
+        bus.MemberKilledByHazard += (_, src) => NoteDeathCause(WipeCause.FromHazardSource(src));
+        bus.ObjectiveEvent += (_, t, _) => { if (t == Objectives.ObjectiveTrigger.GasLethal) NoteDeathCause(WipeCause.Gas); };
+        bus.HordeTriggered += _ => NoteDeathCause(WipeCause.Horde);
+        bus.MimicSprung += _ => NoteDeathCause(WipeCause.Mimic);
+        bus.EliteSeen += _ => NoteDeathCause(WipeCause.Elite);
+        bus.MemberFell += _ => NoteDeathCause(WipeCause.Fall);
+        bus.BossSeen += _ => _bossAlive = true;
+        bus.BossDefeated += _ => _bossAlive = false;
+        bus.FloorBuilt += (_, _, _) => { _causeNotes.Clear(); _bossAlive = false; };
+        bus.PartyWiped += OnPartyWipedForEpitaph; // wired after _Ready's own handlers, so the record has counted this wipe
+    }
+
+    // ---- the wipe's cause and epitaph ----
+    /// <summary>What a wipe came to: the floor, the inferred cause (a <see cref="WipeCause"/> id), the wipe count on that floor, and the death card's line.</summary>
+    public sealed record WipeInfo(int Floor, string Cause, int Count, string Epitaph);
+    /// <summary>The last wipe's card, set as <c>PartyWiped</c> fires (run-structure's death card reads it on <c>PartyWipedBy</c>).</summary>
+    public WipeInfo? LastWipe { get; private set; }
+    private readonly List<(string Cause, double At)> _causeNotes = new();
+    private bool _bossAlive;
+    private const int MaxCauseNotes = 16;
+
+    /// <summary>Something that could kill the party just happened (a bomber's blast, an elite's blow, the press, the gas): the wipe's cause is the newest note still valid.</summary>
+    public void NoteDeathCause(string cause)
+    {
+        _causeNotes.Add((cause, Game.Instance.PlaySeconds));
+        if (_causeNotes.Count > MaxCauseNotes) _causeNotes.RemoveAt(0);
+    }
+
+    private void OnPartyWipedForEpitaph()
+    {
+        if (!Authority) return;
+        var cause = WipeCause.Infer(_causeNotes, Game.Instance.PlaySeconds, _bossAlive);
+        var count = Math.Max(1, Memory.For(_currentFloor).Wipes);
+        LastWipe = new WipeInfo(_currentFloor, cause, count, Epitaphs.Pick(cause, count, _currentFloor));
+        EventBus.Instance.Log(LastWipe.Epitaph);
+        EventBus.Instance.RaisePartyWipedBy(_currentFloor, cause);
     }
 
     // ---- banter ----

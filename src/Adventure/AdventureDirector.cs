@@ -118,6 +118,11 @@ public partial class AdventureDirector : Node
             var major = npc.CastId != null; // the cast gets the main model; passers-by the minor one
             var persona = npc.Persona ?? campaign?.CastFor(npc.CastId)?.Persona; // how they sound: their own words, else the cast member's
             foreach (var node in npc.Script.Nodes) _voice.Enqueue(node.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
+            foreach (var aside in npc.Script.Nodes.Select(n => n.Aside).OfType<AsidePlan>()) // a companion's remark after the NPC's line, in the companion's voice
+            {
+                var cls = ClassIdOf(aside.Member);
+                _voice.Enqueue(aside.Line, Voices.ForClass(cls), Speaker.Companion, VoicePriority.Bark, major: false, Voices.CompanionPersona(cls));
+            }
             var quest = plan.Quests.FirstOrDefault(q => q.GiverNpc == npc.Id);
             if (quest != null) foreach (var l in new[] { quest.Lines.Offer, quest.Lines.Accept, quest.Lines.Decline, quest.Lines.Complete, quest.Lines.Fail }) _voice.Enqueue(l, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
         }
@@ -150,9 +155,17 @@ public partial class AdventureDirector : Node
         foreach (var line in campaign.Merchant.AllLines()) _voice.Enqueue(line, Voices.Npcs[0], Speaker.Npc, VoicePriority.Npc, major: true, persona: cast.Persona);
     }
 
-    private void EnqueueBarks(CampaignPlan campaign)
+    /// <summary>A roster member's class id: the party's if it has bodies, else the default roster's, else empty.</summary>
+    private static string ClassIdOf(string member)
     {
         var party = Main.Instance?.Party;
+        return (party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
+            ? party.Members.FirstOrDefault(m => m.Name == member)?.Class.Id
+            : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == member).ClassId) ?? "";
+    }
+
+    private void EnqueueBarks(CampaignPlan campaign)
+    {
         Voice.KillBarks.TopUpFighters(campaign); // the fighters' sets live in the campaign beside the party's
         foreach (var set in campaign.Barks)
         {
@@ -160,9 +173,7 @@ public partial class AdventureDirector : Node
             if (Voice.KillBarks.IsFighter(set.Member)) { (voice, persona) = Voices.FighterVoice(set.Member); speaker = Speaker.Npc; }
             else
             {
-                var classId = party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
-                    ? party.Members.FirstOrDefault(m => m.Name == set.Member)?.Class.Id
-                    : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
+                var classId = ClassIdOf(set.Member);
                 voice = Voices.ForClass(classId ?? "");
                 persona = Voices.CompanionPersona(classId ?? "");
                 CampaignRepair.TopUpSet(set, classId ?? ""); // every stock bank (kill, idle, dance, travel, the reactive moments, the cheer) gets ids, and audio when the bank has it, like the written lines
