@@ -398,6 +398,11 @@ public partial class AdventureDirector : Node
     // ---- campaign memory -----------------------------------------------------------------------
     private CampaignMemoryDto Memory => Game.Instance.Adventure.Memory;
     private FloorRecord? _record;
+    private (int Floor, Run.FloorCardModel Card)? _pendingFloorCard;
+    /// <summary>A session is torn down: nothing of its ledger or its pending floor card carries into the next.</summary>
+    public void ForgetSession() { _pendingFloorCard = null; _record = null; _hasFloor = false; }
+    /// <summary>The last floor card shown (tests).</summary>
+    public Run.FloorCardModel? LastFloorCard { get; private set; }
     private double _floorStart;
     private string _leadName = "";
     private readonly Dictionary<int, List<string>> _pendingRepairs = new();
@@ -423,6 +428,14 @@ public partial class AdventureDirector : Node
         if (party != null && party.Members.Length > 0)
             _record.ExitHpFraction = party.Members.Sum(m => m.Hp) / Math.Max(1f, party.Members.Sum(m => m.Stats[Characters.Stat.MaxHp]));
         _record.Completed = true;
+        _record.WorstMoment = Run.LedgerRules.WorstMoment(_record);
+        EventBus.Instance.RaiseFloorLedgerClosed(_record.Floor, (int)_record.Seconds);
+        if (_record.Floor >= 1 && !Net.NetSession.IsClient)
+        {   // the floor card for the floor just left, shown once the next (deeper) floor stands
+            var lead = Game.Instance.Adventure.Campaign?.Barks.FirstOrDefault(b => b.Member == _leadName);
+            var reaction = Run.RecapBuilder.Reaction(lead, Game.Instance.Adventure.BarksSaid, _record.Floor, _barkRng);
+            _pendingFloorCard = (_record.Floor, Run.RecapBuilder.FloorCard(_record, _record.Title != "" ? _record.Title : $"Floor {_record.Floor}", reaction));
+        }
     }
 
     public override void _Process(double delta)
@@ -490,9 +503,16 @@ public partial class AdventureDirector : Node
         bus.DialogueNode += OnDialogueNode;
         bus.FloorChanged += OnFloorChanged;
         bus.Gathered += OnGathered;
-        bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; };
+        bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; _record.DamageBy[m.Name] = _record.DamageBy.GetValueOrDefault(m.Name) + r.Amount; };
         bus.MemberDamaged += (_, amount) => { if (_record != null) _record.DamageTaken += amount; };
         bus.MemberDowned += _ => { if (_record != null) _record.Downs++; };
+        // run-structure's ledger: who did what, what hurt most, who fell to what, what wiped the party
+        bus.MemberKill += m => { if (_record != null) _record.KillsBy[m.Name] = _record.KillsBy.GetValueOrDefault(m.Name) + 1; };
+        bus.MemberDowned += i => { if (_record == null || Member(i) is not { } m) return; _record.DownsBy[m.Name] = _record.DownsBy.GetValueOrDefault(m.Name) + 1; _record.Falls.Add(new FallRecord { Member = m.Name, Cause = m.LastHarm?.CauseId ?? Run.HarmCauses.Generic, Killer = m.LastHarm?.Name ?? "" }); };
+        bus.MemberDamaged += (i, amount) => { if (_record == null || Member(i) is not { } m || amount <= _record.BiggestHit) return; _record.BiggestHit = amount; _record.BiggestHitOn = m.Name; _record.BiggestHitBy = m.LastHarm?.Name ?? ""; };
+        bus.MemberRescued += (_, rescuer) => { if (_record == null) return; _record.Rescues++; if (Member(rescuer) is { } r) _record.RescuesBy[r.Name] = _record.RescuesBy.GetValueOrDefault(r.Name) + 1; };
+        bus.PartyWipedBy += (floor, cause) => { if (_record != null && floor == _record.Floor) _record.WipeCauses.Add(cause); };
+        bus.GoldFound += n => { if (_record != null) _record.GoldFound += n; };
         bus.PartyWiped += () => { if (_record != null) _record.Wipes++; };
         bus.AbilityUsed += (_, kind) => { if (_record == null) return; if (kind is Combat.AbilityKind.WeaponAttack or Combat.AbilityKind.MeleeStrike) _record.WeaponAttacks++; else _record.SpellCasts++; };
         bus.LeadChanged += index => { var p = Main.Instance?.Party; if (p != null && index < p.Members.Length) _leadName = p.Members[index].Name; };
@@ -561,6 +581,17 @@ public partial class AdventureDirector : Node
         _gatheringRemarks = 0; // every build or load starts the gathering count again
         _tavernNext = floor == 0 ? Game.Instance.PlaySeconds + Voice.BanterRules.TavernFirstSeconds : double.MaxValue; // the tavern's first exchange
         OpenRecord(floor);
+        if (_pendingFloorCard is { } pending)
+        {
+            _pendingFloorCard = null;
+            if (floor > pending.Floor)
+            {   // a descent: the card for the floor left behind, on every screen
+                LastFloorCard = pending.Card;
+                Main.Instance?.Hud?.ShowFloorCard(pending.Card);
+                if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.FloorCardEvt(pending.Card));
+                GD.Print($"[Adventure] floor card: {pending.Card.Title} {pending.Card.Time} kills={pending.Card.Kills} elites={pending.Card.Elites} secrets={pending.Card.Secrets} downs={pending.Card.Downs} gold={pending.Card.GoldFound} worst=\"{pending.Card.WorstMoment}\" reaction={pending.Card.Reaction}");
+            }
+        }
         if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
         var objectiveKind = Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;

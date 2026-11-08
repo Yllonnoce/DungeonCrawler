@@ -295,6 +295,7 @@ godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gat
 godot --headless --path . -- --test-elites-and-bosses   # floor 8 seed 8: the two rolled elites by name, the same after a save/load, Warded absorbs and regrows, Volatile bursts (even under the Press), Thorned reflects, the Shrouded dome stops a bolt and an outside nova, x2.5 XP and a table.elite drop, a kiting archer, a shielding shaman, a bomber; floor 5: the Crypt Lord roars at half, speeds up, alternates Slam and Summon, the braziers go out, phase survives a load; floor 23 no boss, floor 25 the First Herald; prints [elites] RESULT
 godot --headless --path . -- --test-items-and-builds   # loot curve 8 vs 16, stack prices, buyback, a keystone's price, the duo node from two branches, a legendary trigger, Burn spread, Gerald, save round trip; prints [items] RESULT
 godot --headless --path . -- --test-fortune   # floor 2 shrine and card, a boon's stat, a gold and a blood price, a curse lifted, vault table odds, a forced mimic (save/load mid-spring), the bound chest's hunt, a secret room found, the third lockpick jams, the Lucky Dip, save round trip (seed 7, lethality 1); prints [fortune] RESULT
+godot --headless --path . -- --test-run-structure   # Story vs New Descent seeds, a stable Daily, clauses saved and priced, a wipe that keeps the floor, costs gold, scars and shows a death card, the Death Clause's memorial and recap, the autosave and floor card on a descent, the recap model, the profile and a deed, Victory saved (seed 7, lethality 1, profile-test.json); prints [runstructure] RESULT
 godot --headless --path . -- --test-tavern   # floor 0: one room, no enemies, the merchant, empty purse, "The Tavern", the tavern tune; an open inventory holds his greeting back, closed he briefs within 4 m; a save mid-briefing comes back on floor 0 unpaid and he briefs again; walked to the deal the purse gets 150; the down landing asks and floor 1 opens with 150 (paid once); prints [tavern] RESULT
 godot --headless --path . -- --test-tavern-skip   # the same opening but the briefing is closed unread: the purse stays empty until the descent stakes it with 150 on floor 1
 godot --headless --path . -- --test-writing   # banter in order and stopped by a fight, a TrapSprung bark from the lazy top-up, narration beats a bark on the subtitle, the cheer and its answers, the press epitaph, floor 3's Crushed taunt, Crane's aside
@@ -921,12 +922,85 @@ Item level is the floor (`TierRules.ItemLevel`). Base damage and the Armor base 
 - `scenes/` `.tscn` files. `data/` definition Resources (`.tres`): `classes/`, `abilities/`, `items/`, `affixes/`, `legendaries/`, `loot_tables/`. Registry loads them by `Id` at startup; `Items/Catalog.cs` turns them into the plain `ItemCatalog` the roller uses. `assets/` third-party art (log licenses in `assets/LICENSES.md`).
 - `tests/` xUnit project, ignored by Godot via `.gdignore`.
 
+## Runs, clauses, deaths and records
+
+The Depths' pillar 5 (`docs/superpowers/specs/2026-11-07-the-depths-update-design.md` section 5). Engine-free rules under
+`src/Adventure/Core/Run/` and `src/Save/Core/Profile/`; the Godot glue in `Main`, `MainMenu`, `Hud`, `src/UI/Cards/`,
+`src/UI/Menus/RecordsScreen.cs`, `src/Adventure/Run/DeedWatcher.cs` and `src/Save/Profile/ProfileStore.cs`.
+
+- **Three title modes** (`AdventureDto.Run`, a `RunKind`; `AdventureDto.Mode` keeps meaning who planned): *Story* plays the
+  campaign on disk (`StartBuiltinCampaign`), *New Descent* rolls a fresh seed through the offline designer or the planner when
+  a key and the toggle allow it (`Main.StartDescent`), *Daily Descent* (`Main.StartDaily`) seeds from the UTC date
+  (`DailyRules.SeedFor`, the same on every machine) with two fixed rank-1 clauses (`DailyRules.ClausesFor`, never the Death
+  Clause); the button is disabled once the day is recorded (`ProfileRules.DailyDone`); the attempt's save still loads and quickloads.
+  Every run carries a fresh `RunId` (a save from before run ids gets one on migration or load); `SaveManager.MarkFallen` marks the
+  slots of that run only (`SaveFormat.SameRun`), never every Story on the shipped seed.
+- **The clauses** (`ClauseRules`, `ClauseSet`; keys `deathclause, conveniencefee, inventoryaudit, fulloccupancy, hostiletenants,
+  expediteddelivery, hazardpaywaived, norest, opendoor, fineprint`, "key:rank" above rank 1). The factor offers them after
+  the deal: `TavernRules.WithClauseNode` splices a `clauses` node between `deal` and `sendoff` ("Not today." at index 0,
+  "Read them." raises `DialogueEffect.Clauses`); the bank and the shipped `campaign.json` carry it (Pellet's line is unvoiced
+  until the voice pass). The `ClauseCard` (Sign/Skip, read-only on a client and in the Daily) caps each rank by the deeds
+  (`ClauseRules.MaxRankAllowed`). `Main.SignClauses` writes `AdventureDto.Clauses` and `Game.ApplyClauses` activates them:
+  `ClauseRules.Active`, `TierRules.ClauseDamageMultiplier`, `DungeonBuilder.ExtraElitesPerFloor`, a fortune `Refresh` for prices.
+  The pause menu shows `ClauseSet.Summary`. `--clauses=a,b:2` binds every new game in the process (a server's world too; the
+  Welcome carries them). Heat multiplies gold and XP found by `1 + 0.1 × heat` (`ClauseSet.ScaleReward` in `AwardXp` and
+  `AddFoundGold`).
+
+| Clause | Heat | Knob |
+|---|---|---|
+| Death Clause | 3 | a wipe ends the run (memorial, recap, quickload refused, the pause menu's Load hidden) |
+| Convenience Fee | 1 | `Prices.BuyFactor` ×1.4 through `FortuneRules.PriceFactor(adv, clauseFactor)` |
+| Inventory Audit | 2 | `InventoryAudit.Apply` at floors 6, 11, 16 (first visit): the lowest-level equipped item per member loses its last rolled affix (never a legendary's own line) |
+| Full Occupancy | 1–2 | `OccupancyRules.Apply` adds round(n × 0.25 × rank) copies to the resolved contents, on free cells of the same room, seeded |
+| Hostile Tenants | 1–2 | `DungeonBuilder.ExtraElitesPerFloor` += rank (summed with fortune's Marked in `ExtraElites`) |
+| Expedited Delivery | 1–2 | `PortalRules.Grace(intensity, rank)` is 45 s at any rank; `Interval`'s ramp halves per rank |
+| Hazard Pay Waived | 1–3 | `TierRules.PartyDamageScale = Lethality × (1 + 0.2 × rank)` at `EnemyProfile.BuildAttack`, `GasRules.Tick`, `TrapRules.Attack` (lethal); the hazards' kill threshold keeps the lethality alone |
+| No Rest for the Hired | 2 | `FloorSpec.SafeRoom = false` below the tavern: no safe room, the merchant at `NoRestRules.MerchantCell` by the up stairs (the layout hash changes, so shipped plans log "adapted" under this clause) |
+| Open-Door Policy | 1 | `AmbushRules.Count(floor, doubled: true)` |
+| Fine Print | 1 | `ClauseSet.ShrineOffers(3)` = 2 in `FortuneDirector.OpenShrine` |
+
+- **The stakes.** `PartyController.OnPartyWiped` reads the cause off `CharacterState.LastHarm` (`WipeRules.CauseOf`: the
+  latest attack or hazard any member took; status ticks never overwrite it, so a poison death blames the biter), lets the
+  director refine a generic one from its notes (`AdventureDirector.ResolveWipeCause`), then `Main.OnPartyWiped` captures the
+  floor (`FloorStateCapture`, so the dead stay dead through the reload), takes a fifth of the gold (`WipeRules.GoldAfterWipe`),
+  lays fortune's `scar` curse (−10% max HP) with `AdventureDto.ScarUntilFloor = floor + 1` (`RunRules.ScarLifted` on any other
+  floor), and shows the `DeathCard` (epitaph from writing's `Epitaphs.Pick`, cause, killer, floor, wipe count; "Rise").
+  Causes: `gas|press|spikes|boss|horde|elite|fall|mimic|bomber|generic` (`HarmCauses`, the same ids as `WipeCause`). Under the
+  Death Clause the button is "To the Records": `Adventure.Fallen`/`Epitaph`, `Main.RunOver`, the memorial written to the auto
+  slot, `SaveManager.MarkFallen` greys every slot of that seed in Load ("Fallen on floor N — epitaph"), `LoadGame` refuses it.
+- **Autosave** (solo): the `auto` slot on every floor change and every 180 s (`RunRules.AutosaveDue`: never while rebuilding,
+  paused, networked, under a card or after the run ended).
+- **The cards.** `FloorCard` (4 s, Esc dismisses, never locks input) from the closed `FloorRecord` once the deeper floor stands
+  (`AdventureDirector.CloseRecord`/`OnFloorBuilt`, `RecapBuilder.FloorCard`; the ledger's `WorstMoment` from `LedgerRules`;
+  the reaction is the lead's Travel line, not marked said). `RunRecap` on victory (`Main.OnBossDefeated` → `ShowRecap`,
+  headline `RecapBuilder.VictoryHeadline(boss, antagonist)` from the floor plan's boss or the last tier's `BossName` and the
+  campaign's antagonist) and on a Death Clause end; per hero (`FloorRecord.KillsBy/DamageBy/DownsBy/RescuesBy/PossessSeconds`),
+  elites, boons, clauses, deepest floor, score; in co-op `RecapRules.RoleLines(floors, players)` (Most rescues, Vanguard,
+  Steadiest, Longest watch; never a damage rank). `Victory` is saved. Score: `depth × 100 × (1 + 0.1 × heat) + 25 × elites
+  + 10 × secrets − 50 × wipes`, never below 0 (`ScoreRules`).
+- **Profile** `user://profile.json` (`ProfileStore`: atomic temp + `.bak` + rename, `.bak` fallback; `ProfileFormat`; the
+  flows use `profile-test.json`): `Records` (best depth, fastest story clear, the first clear per `{run}:{heat}`, victories,
+  elites, runs), the last twenty runs (`ProfileRules.RecordRun`, upsert by `RunId`, written at every floor change and the
+  run's end), the dailies, the deeds and their unlocks. Heat 5 and 10 clears give the title ("Tenant in Good Standing",
+  "Whole Contract") and the gold or ember border on the **Records** page (`RecordsScreen`).
+- **Deeds** (`DeedRules`, 24; `DeedTracker` turns `DeedSignal`s into earned deeds; `DeedWatcher` feeds it from the EventBus,
+  solo and server): each unlocks a clause rank (`ClauseDef.RankUnlockedByDeed`), a legendary (`LegendaryProfile.RequiresDeed`,
+  `ItemCatalog.Unlocked`, the six: Toll Road Boots, Old Ulf's Chin, Gerald, Gorm's Molar, Hush, Pellet's Receipt), a banter set
+  (`BanterBank.Unlockable`, gated by `BanterRules.UnlockedSets`) or a hidden-stall line (`MerchantLineBank.UnlockableLines`,
+  `UnlockedLines`, one extra Rare roll each through `ShopRules.HiddenStallExtraRolls`). `ProfileStore.ApplyUnlocks` applies
+  the legendaries and banter sets at start and after every deed; the stall's lines are fixed at a run's start from the host's
+  profile (`AdventureDto.UnlockedMerchantLines`, in the save and the Welcome, applied by `Game.ApplyClauses` on every peer, so
+  all of them roll the same stall; a line earned mid-run joins the next run). A deed pops a `DeedToast` and a log line.
+- **Co-op**: the server decides and sends `DeathCardEvt`, `FloorCardEvt`, `RunRecapEvt` (protocol 9, 91 kinds); a client
+  shows them and signs nothing (its clause card is read-only). Hooks left for the co-op plan: `RecapRules.RoleLines` is the
+  scoreboard's seam; the stairs ready-check and the ping are not here.
+
 ## Multiplayer (dedicated server)
 
 Co-op runs on a dedicated server (step-by-step setup of one, from a fresh cloud account to a running service, in [server-setup.md](server-setup.md)): the game started headless with `--server`, which any copy of the game joins from the title screen (Join Server) with a name and a class. Each player controls one adventurer; there are no AI companions on a server. The server simulates the world and every combat roll; clients own their own movement and send intents (attack, interact, bag moves, stat points, skills, dialogue choices, chat). Floors are built identically on every machine from the seed and the plan the server sends, so only divergent state crosses the wire. Any player using unlocked stairs takes the whole party down at once. Talking to an NPC is local, but what the talk decides is the server's: a Join choice goes up as a `DialogueChoiceIntent` and the fighter's yes or no comes back as a `DialogueAnswer`, so the asker sees the right line and the follow starts on the server; freeing a prisoner, starting the rite or getting a downed fighter up go up as an `InteractIntent` on the NPC. Fighter NPCs only pick a fight while a standing party member is within 20 m (`NpcFight.PartyNear`), so Foehammer's bout with the orc by the stairs waits for the players instead of being settled while the server sits empty. A client never changes floor on its own: `Game.ChangeFloor`, `ReloadFloor` and `JumpToFloor` refuse on a client (a log line says the server decides), so debug keys, scripts and stray calls cannot leave a machine on a floor the server is not simulating; the only client path is the server's `FloorChange`.
 
 ```
-godot --headless --path . -- --server --port=7777 --bind=0.0.0.0 --campaign=offline|builtin|ai --seed=N --save=server --max-players=4 --autosave=60 --status-file=PATH --quit-when-empty
+godot --headless --path . -- --server --port=7777 --bind=0.0.0.0 --campaign=offline|builtin|ai --seed=N --clauses=a,b:2 --save=server --max-players=4 --autosave=60 --status-file=PATH --quit-when-empty
 godot --path . -- --join=ws://192.168.1.5:7777 --name=Ash --class=class.rogue     # skip the title screen
 scripts/export_server.sh                                                            # "Linux Server" preset (dedicated_server=true) into build/server/
 SERVER_BIN=build/server/DungeonCrawler.x86_64 scripts/net_test.sh                   # the same check against the exported server
@@ -942,7 +1016,7 @@ In a game: T opens the chat line, the floor label shows the round trip and how m
 - Transport: Godot's `WebSocketMultiplayerPeer` used as a raw packet peer (`src/Net/WebSocketTransport.cs`) behind the engine-free `INetTransport`; `ws://` on a LAN, `wss://` through a TLS-terminating host such as Render. No RPC, no `MultiplayerSpawner`: every message is a record in `src/Net/Core/Messages.cs`, encoded by `NetCodec` (one kind byte, JSON with the save layer's options, gzip above 8 KB; `Pose`, `WorldSnapshot` and `Vitals` are binary).
 - Engine-free core in `src/Net/Core/` (linked into the tests): `Protocol`, `PoseBuffer` (100 ms interpolation, 150 ms extrapolation cap), `PlayerRegistry` (name = identity, stored class wins, park/unpark), `ServerHandshake`/`ClientHandshake` (Hello -> Welcome -> Ready), `InMemoryTransport` for tests, `NetRefs` (`chest:3`, `door:1`, `stairs:down`, `loot:<guid>`).
 - Godot glue: `NetSession` autoload (role, transport, command-line flags), `ServerWorld` (registry, welcome from a live `FloorStateCapture`, poses in, snapshots at 20 Hz with interest filtering, vitals at 10 Hz, log/sfx/objective forwarding, status file), `ClientWorld` (poses out at 30 Hz coalesced, snapshot/vitals in, remote bodies through `RemotePose`), `NetTestFlow` (the scripted check).
-- Protocol 7 (the Depths): `PoseFlags.Parry = 64` and `PoseFlags.Dodge = 128` carry a client's defensive windows (the server judges the hit with its own `DefenseState`, fed by `ApplyRemote`); `EnemyHurt(NetId, Amount, Flavor, Hp, ByMember)` replaced the crit flag; `EnemyStateMsg` relays a non-horde enemy's wind-up or signature telegraph. `MessageKindCount` stays 80.
+- Protocol 7 (the Depths): `PoseFlags.Parry = 64` and `PoseFlags.Dodge = 128` carry a client's defensive windows (the server judges the hit with its own `DefenseState`, fed by `ApplyRemote`); `EnemyHurt(NetId, Amount, Flavor, Hp, ByMember)` replaced the crit flag; `EnemyStateMsg` relays a non-horde enemy's wind-up or signature telegraph. `MessageKindCount` stays 80. Protocol 8: elites and fortune (88 kinds). Protocol 9 (run-structure): `DeathCardEvt`, `FloorCardEvt`, `RunRecapEvt` appended (91 kinds); the Welcome's `AdventureDto` carries `Clauses`, `Run` and `DailyDate`.
 - A player who leaves is parked (body out of the world, pose remembered); the same name rejoins into the same character.
 - `scripts/net_test.sh` runs the whole thing headless: join, identical layout hash, movement echoed, chat, a kill through intents, the loot picked up into a synced bag, a chest, the stairs to floor 2, a purchase and a sale at the merchant, leave and rejoin; then restarts the server on its save and rejoins once more. Both processes print a RESULT line.
 

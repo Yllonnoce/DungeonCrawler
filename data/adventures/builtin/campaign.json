@@ -4715,7 +4715,7 @@
           "Choices": [
             {
               "Text": "Count it out, then.",
-              "Next": "sendoff",
+              "Next": "clauses",
               "Effect": "None",
               "Flag": null,
               "RequiresFlag": null,
@@ -4724,8 +4724,36 @@
             },
             {
               "Text": "Your cut looks generous. To you.",
+              "Next": "clauses",
+              "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            }
+          ]
+        },
+        {
+          "Id": "clauses",
+          "Line": {
+            "Text": "One more thing. The contract has clauses, factor\u0027s clauses, every one optional and every one paid for. Will you read them, or shall I fold them away?",
+            "VoiceId": null,
+            "Delivery": null
+          },
+          "Choices": [
+            {
+              "Text": "Not today.",
               "Next": "sendoff",
               "Effect": "None",
+              "Flag": null,
+              "RequiresFlag": null,
+              "ForbidsFlag": null,
+              "NextIfRefused": null
+            },
+            {
+              "Text": "Read them.",
+              "Next": "sendoff",
+              "Effect": "Clauses",
               "Flag": null,
               "RequiresFlag": null,
               "ForbidsFlag": null,

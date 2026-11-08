@@ -20,10 +20,40 @@ public static class TavernRules
     /// </summary>
     public static NpcScript BriefingFor(CampaignPlan? campaign)
     {
-        if (campaign?.Merchant?.Briefing is { } own && ReachesDeal(own)) return own;
+        if (campaign?.Merchant?.Briefing is { } own && ReachesDeal(own)) return WithClauseNode(own);
         var title = string.IsNullOrWhiteSpace(campaign?.Title) ? "the tunnels" : campaign.Title;
         var villain = string.IsNullOrWhiteSpace(campaign?.Antagonist?.Name) ? "what waits below" : campaign.Antagonist.Name;
-        return Voice.MerchantLineBank.Generic(title, villain).Briefing;
+        return WithClauseNode(Voice.MerchantLineBank.Generic(title, villain).Briefing);
+    }
+
+    /// <summary>The node at which the factor offers the clauses (run-structure), between the deal and the sendoff.</summary>
+    public const string ClausesNodeId = "clauses", SendoffNodeId = "sendoff";
+    /// <summary>The stock offer, in the merchant's register; a campaign's own briefing may carry its own words.</summary>
+    public const string ClausesOffer = "One more thing. The contract has clauses, every one optional and every one paid for. Will you read them?";
+
+    /// <summary>
+    /// Splice the clause offer into a briefing that lacks it: a <c>clauses</c> node after the deal with "Not today." (index 0,
+    /// so a Choose(0) walk still closes) and "Read them." (the Clauses effect), both leading to the sendoff, and every deal
+    /// choice that went to the sendoff repointed at it. Idempotent: the script is returned as is when it has the node or no deal.
+    /// </summary>
+    public static NpcScript WithClauseNode(NpcScript script)
+    {
+        if (script.Nodes.Any(n => n.Id == ClausesNodeId)) return script;
+        var deal = script.Nodes.FirstOrDefault(n => n.Id == DealNodeId);
+        if (deal == null) return script;
+        var node = new DialogueNode
+        {
+            Id = ClausesNodeId,
+            Line = new Line(ClausesOffer),
+            Choices =
+            {
+                new ChoicePlan { Text = "Not today.", Next = SendoffNodeId },
+                new ChoicePlan { Text = "Read them.", Effect = DialogueEffect.Clauses, Next = SendoffNodeId },
+            },
+        };
+        foreach (var c in deal.Choices) if (c.Next == SendoffNodeId) c.Next = ClausesNodeId;
+        script.Nodes.Insert(Math.Min(script.Nodes.IndexOf(deal) + 1, script.Nodes.Count), node);
+        return script;
     }
 
     /// <summary>Whether the deal node can be reached from the script's start by following its choices' <c>Next</c> ids.</summary>

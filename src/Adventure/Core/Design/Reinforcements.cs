@@ -22,12 +22,12 @@ public static class AmbushRules
     /// <summary>Corridor cells between two ambushes, so they do not chain into one brawl.</summary>
     public const int Spacing = 6;
 
-    /// <summary>About three on floor 1 rising to about ten on floor 20; endless floors keep the deepest count.</summary>
-    public static int Count(int floor)
+    /// <summary>About three on floor 1 rising to about ten on floor 20; endless floors keep the deepest count. Doubled under the Open-Door Policy clause.</summary>
+    public static int Count(int floor, bool doubled = false)
     {
         if (floor <= 0) return 0;
         var f = Math.Min(floor, TierRules.FinalFloor) - 1;
-        return OnFloorOne + f * (Deepest - OnFloorOne) / (TierRules.FinalFloor - 1);
+        return (OnFloorOne + f * (Deepest - OnFloorOne) / (TierRules.FinalFloor - 1)) * (doubled ? Run.ClauseRules.OpenDoorAmbushFactor : 1);
     }
 
     /// <summary>
@@ -95,11 +95,13 @@ public static class PortalRules
 
     /// <summary>Intensity 1 is normal; 2 halves every wait; 0 (or less) switches reinforcements off.</summary>
     public static bool Enabled(float intensity) => intensity > 0.01f;
-    public static float Grace(float intensity) => GraceSeconds / Math.Max(0.25f, intensity);
+    /// <param name="expedited">Run-structure's Expedited Delivery rank: at any rank the grace is 45 s.</param>
+    public static float Grace(float intensity, int expedited = 0) => (expedited > 0 ? Run.ClauseRules.ExpeditedGraceSeconds : GraceSeconds) / Math.Max(0.25f, intensity);
 
-    public static float Interval(float secondsUnderPressure, float intensity)
+    /// <param name="expedited">Run-structure's Expedited Delivery rank: the ramp halves per rank, so the intervals shrink twice as fast.</param>
+    public static float Interval(float secondsUnderPressure, float intensity, int expedited = 0)
     {
-        var t = Math.Clamp(secondsUnderPressure / RampSeconds, 0f, 1f);
+        var t = Math.Clamp(secondsUnderPressure / (RampSeconds / (1 << Math.Max(0, expedited))), 0f, 1f);
         return (FirstInterval + (LastInterval - FirstInterval) * t) / Math.Max(0.25f, intensity);
     }
 

@@ -61,7 +61,7 @@ public partial class PortalSpawner : Node
     public void Restore(float pressureSeconds, int waves) { PressureSeconds = Math.Max(PressureSeconds, pressureSeconds); Waves = Math.Max(Waves, waves); }
 
     /// <summary>Skip the grace and open the next portal within a second (tests).</summary>
-    public void Hurry() { PressureSeconds = Math.Max(PressureSeconds, PortalRules.Grace(Intensity) + 1f); _timer = 0.5f; }
+    public void Hurry() { PressureSeconds = Math.Max(PressureSeconds, PortalRules.Grace(Intensity, Run.ClauseRules.Active.ExpeditedRank) + 1f); _timer = 0.5f; }
 
     /// <summary>Re-read everything that can silence the reinforcements: the setting, a debug flag, a dead tier boss, no creatures to send.</summary>
     public void RefreshSilence()
@@ -91,7 +91,7 @@ public partial class PortalSpawner : Node
         TickHud(dt);
         if (Silenced) return;
         PressureSeconds += dt;
-        var grace = PortalRules.Grace(Intensity);
+        var grace = PortalRules.Grace(Intensity, Run.ClauseRules.Active.ExpeditedRank); // Expedited Delivery: 45 s, and the ramp halves per rank
         if (PressureSeconds < grace) return;
         _timer -= dt;
         if (_timer > 0f) return;
@@ -100,7 +100,7 @@ public partial class PortalSpawner : Node
         if (main.Exploration == null || party.Count == 0) { _timer = 5f; return; }
         var site = PortalRules.ChooseSite(_layout, main.Exploration.Seen, party, _rng);
         if (site == null) { _timer = 5f; return; }
-        _timer = PortalRules.Interval(PressureSeconds - grace, Intensity);
+        _timer = PortalRules.Interval(PressureSeconds - grace, Intensity, Run.ClauseRules.Active.ExpeditedRank);
         Open(site.Value.Room, site.Value.Cell, PortalRules.GroupSize(PressureSeconds - grace, Intensity, _rng), main);
     }
 

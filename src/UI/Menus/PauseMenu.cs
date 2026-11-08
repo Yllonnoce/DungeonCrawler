@@ -36,6 +36,9 @@ public partial class PauseMenu : Control
         var title = new Label { Text = "Paused", HorizontalAlignment = HorizontalAlignment.Center };
         title.AddThemeFontSizeOverride("font_size", 24);
         v.AddChild(title);
+        _clauses = new Label { HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color(0.85f, 0.75f, 0.55f), AutowrapMode = TextServer.AutowrapMode.WordSmart, CustomMinimumSize = new Vector2(300, 0) };
+        _clauses.AddThemeFontSizeOverride("font_size", 13);
+        v.AddChild(_clauses);
 
         _buttons = new VBoxContainer();
         _buttons.AddThemeConstantOverride("separation", 6);
@@ -77,6 +80,7 @@ public partial class PauseMenu : Control
     private SlotList.Mode _slotsMode;
 
     private Button _save = null!, _load = null!, _leave = null!;
+    private Label _clauses = null!;
 
     private Button AddButton(string text, Action action)
     {
@@ -100,7 +104,8 @@ public partial class PauseMenu : Control
         // on a server the world keeps going and only the server saves
         var net = Net.NetSession.IsNetworked;
         _save.Visible = !net;
-        _load.Visible = !net;
+        _load.Visible = !net && !Adventure.Run.ClauseRules.Active.Hardcore; // the Death Clause allows no second chances
+        _clauses.Text = Adventure.Run.ClauseRules.Active.Summary;
         _leave.Text = net ? "Disconnect" : "Main Menu";
         ShowButtons();
     }

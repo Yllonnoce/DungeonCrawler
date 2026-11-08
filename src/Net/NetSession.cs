@@ -48,6 +48,8 @@ public partial class NetSession : Node
     public bool TestJoinOnly { get; private set; }
     /// <summary>The server resumed a save at start (the scripted check expects a rejoin, not a fresh join).</summary>
     public bool Resumed { get; set; }
+    /// <summary>--clauses=a,b:2 (run-structure): the contract every new game in this process signs (a server's world too), normalized by ClauseRules.</summary>
+    public List<string>? Clauses { get; private set; }
 
     public override void _Ready()
     {
@@ -60,6 +62,7 @@ public partial class NetSession : Node
             else if (arg.StartsWith("--bind=")) Bind = arg["--bind=".Length..];
             else if (arg.StartsWith("--campaign=")) Campaign = arg["--campaign=".Length..];
             else if (arg.StartsWith("--seed=")) Seed = ulong.Parse(arg["--seed=".Length..]);
+            else if (arg.StartsWith("--clauses=")) Clauses = Adventure.Run.ClauseRules.Parse(arg["--clauses=".Length..]);
             else if (arg.StartsWith("--save=")) SaveSlot = arg["--save=".Length..];
             else if (arg.StartsWith("--max-players=")) MaxPlayers = Math.Clamp(int.Parse(arg["--max-players=".Length..]), 1, 8);
             else if (arg == "--quit-when-empty") QuitWhenEmpty = true;

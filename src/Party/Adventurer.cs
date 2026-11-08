@@ -1032,6 +1032,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (r.Blocked) m.Stamina = Math.Max(0, m.Stamina - PartyController.BlockStaminaCost);
         if (Party.StaggerImmune(m) && r.Applied.Any(s => s.Kind == StatusKind.Stun)) m.Effects.Remove(StatusKind.Stun); // an item that will not let this one be stunned
         m.TakeDamage(r.Amount);
+        m.LastHarm = new Adventure.Run.HarmSource(attacker is Enemy e
+            ? Adventure.Run.HarmCauses.ForEnemy(e.IsBoss, e.IsElite, e.IsHorde, e.Profile.Bomber, e.Profile.EliteName == Adventure.Fortune.MimicRules.EliteName)
+            : Adventure.Run.HarmCauses.FromSource(attackerName), attackerName, Game.Instance.PlaySeconds); // the wipe's cause: the last thing that hurt anyone
         if (r.IgniteBurst > 0f) IgniteAround(attackerStats, r.IgniteBurst);
         EventBus.Instance.RaiseMemberDamaged(Index, r.Amount);
         _flash = 0.25f;
@@ -1131,6 +1134,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (Downed) return;
         var m = State;
+        m.LastHarm = new Adventure.Run.HarmSource(kind == HazardDamage.Crush ? Adventure.Run.HarmCauses.Press : Adventure.Run.HarmCauses.Spikes, sourceName, Game.Instance.PlaySeconds);
         if (outcome.Lethal)
         {
             m.Hp = 0;

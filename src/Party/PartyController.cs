@@ -492,15 +492,23 @@ public partial class PartyController : Node3D
             m.Hp = MangledRules.ReviveHp;
             m.Effects.Clear();
             r.Target.Revive();
+            EventBus.Instance.RaiseMemberRescued(r.Target.Index, r.Rescuer.Index);
             EventBus.Instance.Log($"{m.Name} is pulled free.");
             EventBus.Instance.RaiseMemberChanged(r.Target.Index);
         }
     }
 
+    private bool _wipeJudged;
     private void OnPartyWiped()
     {
+        if (_wipeJudged) return; // under the Death Clause the bodies stay down
+        var (cause, killer) = Adventure.Objectives.WipeRules.CauseOf(Members);
+        cause = Adventure.AdventureDirector.Instance?.ResolveWipeCause(cause) ?? cause; // a plain blow may still be the horde's or the gas's doing
+        var rise = Main.Instance.OnPartyWiped(cause, killer); // captures the floor first, takes the gold, scars, shows the card
         EventBus.Instance.Log("The party has fallen. The dungeon shifts...");
         EventBus.Instance.RaisePartyWiped();
+        EventBus.Instance.RaisePartyWipedBy(Game.Instance.CurrentFloor, cause);
+        if (!rise) { _wipeJudged = true; return; }
         foreach (var m in Members) m.FullRestore();
         foreach (var a in Adventurers) a.Revive();
         for (var i = 0; i < Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i);
@@ -561,6 +569,7 @@ public partial class PartyController : Node3D
 
     public void AwardXp(int xp)
     {
+        xp = Adventure.Run.ClauseRules.Active.ScaleReward(xp); // the contract's heat: 1 + 0.1 × heat on XP found
         for (var i = 0; i < Members.Length; i++)
         {
             var m = Members[i];
@@ -939,8 +948,13 @@ public partial class PartyController : Node3D
         if (delta > 0) EventBus.Instance.PlaySfx("coins");
     }
 
-    /// <summary>Coins picked up off the floor: Toll Road's +30% (fortune) and the legendary gold-find bonus both apply.</summary>
-    public void AddFoundGold(int coins) => AddGold((int)LegendaryRules.GoldFound(Adventure.Fortune.FortuneRules.GoldFound(coins, Game.Instance.Adventure), GoldFindBonus()));
+    /// <summary>Coins picked up off the floor: Toll Road's +30% (fortune), the legendary gold-find bonus and the contract's heat all apply; the ledger hears the sum.</summary>
+    public void AddFoundGold(int coins)
+    {
+        var scaled = Adventure.Run.ClauseRules.Active.ScaleReward((int)LegendaryRules.GoldFound(Adventure.Fortune.FortuneRules.GoldFound(coins, Game.Instance.Adventure), GoldFindBonus()));
+        AddGold(scaled);
+        if (scaled > 0 && !Net.NetSession.IsClient) EventBus.Instance.RaiseGoldFound(scaled);
+    }
 
     /// <summary>Pays from the purse; false (and nothing taken) when the party cannot afford it.</summary>
     public bool TrySpendGold(int amount)

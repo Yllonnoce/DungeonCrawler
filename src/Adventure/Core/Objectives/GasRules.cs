@@ -55,7 +55,7 @@ public static class GasRules
     /// <summary>One second of breathing gas at this danger: a little poison damage now and the poison that follows, scaled like a trap.</summary>
     public static AttackProfile Tick(int floor, int danger)
     {
-        var s = TierRules.DamageScale(floor) * TierRules.Lethality;
+        var s = TierRules.DamageScale(floor) * TierRules.PartyDamageScale;
         var d = Math.Clamp(danger, 0, 3);
         return new AttackProfile
         {

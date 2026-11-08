@@ -1,4 +1,7 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Objectives;
+using DungeonCrawler.Adventure.Run;
+using DungeonCrawler.Save.Profile;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Net;
@@ -30,6 +33,8 @@ public partial class Main : Node
     public MainMenu? Menu => _menu;
     private PartyDto? _pendingPartyState;
     public bool InGame => Party != null && IsInstanceValid(Party);
+    /// <summary>The deeds listener of this session (solo and server); null on a client.</summary>
+    public DeedWatcher? Deeds { get; private set; }
 
     public override void _Ready()
     {
@@ -52,6 +57,125 @@ public partial class Main : Node
     }
 
     public override void _ExitTree() => EventBus.Instance.FloorChanged -= OnFloorChanged;
+
+    // ---- run-structure: the stakes and the solo autosave ---------------------------------------------------
+
+    /// <summary>The Death Clause ended the run: nothing more is saved or autosaved, the bodies stay down.</summary>
+    public bool RunOver { get; private set; }
+    private float _sinceAutosave;
+
+    public override void _Process(double delta)
+    {
+        if (!InGame || NetSession.IsNetworked || RunOver) return;
+        _sinceAutosave += (float)delta;
+        if (!RunRules.AutosaveDue(_sinceAutosave, GetTree().Paused, Rebuilding, NetSession.IsNetworked, Hud?.CardUp == true, RunOver)) return;
+        Autosave("the clock");
+    }
+
+    /// <summary>Write the auto slot quietly (no log line): on every floor change and every three minutes, solo only.</summary>
+    public void Autosave(string why)
+    {
+        _sinceAutosave = 0f;
+        if (!InGame || NetSession.IsNetworked || RunOver) return;
+        SaveManager.Write(SaveManager.AutoSlot, BuildSaveData("Autosave"));
+        GD.Print($"[Main] autosaved ({why})");
+    }
+
+    /// <summary>Remember the current floor as it stands (a wipe does this before the reload, so the dead stay dead).</summary>
+    public void CaptureCurrentFloor()
+    {
+        if (Builder.FloorRoot is { } root && Builder.Layout is { } layout && Exploration != null)
+            Game.Instance.Floors[Game.Instance.CurrentFloor] = FloorStateCapture.Capture(root, layout, Builder.Contents, Exploration);
+    }
+
+    /// <summary>
+    /// The party wiped (solo and server): the floor is captured, a fifth of the gold goes, the Scar is laid until the next
+    /// floor, and the death card shows (and reaches clients). Under the Death Clause the run ends: the memorial is written to
+    /// the auto slot, every slot of this game is marked fallen, the profile records the run, and the card leads to the recap.
+    /// Returns whether the party rises.
+    /// </summary>
+    public bool OnPartyWiped(string cause, string killer)
+    {
+        var game = Game.Instance;
+        var adv = game.Adventure;
+        var floor = game.CurrentFloor;
+        CaptureCurrentFloor();
+        adv.Wipes++;
+        var onFloor = adv.Memory.For(floor).Wipes + 1; // the director counts this wipe on PartyWiped, which fires after us
+        Party.AddGold(WipeRules.GoldAfterWipe(Party.Gold) - Party.Gold);
+        Adventure.Fortune.FortuneRules.Curse(adv, WipeRules.ScarId);
+        adv.ScarUntilFloor = floor + 1;
+        FortuneDirector.Instance?.Refresh();
+        var epitaph = Adventure.Voice.Epitaphs.Pick(cause, onFloor, floor);
+        var hardcore = ClauseRules.Active.Hardcore;
+        var model = new DeathCardModel(epitaph, cause, killer, floor, onFloor, hardcore, hardcore ? RunRules.RecordsButton : RunRules.RiseButton);
+        if (hardcore)
+        {
+            adv.Fallen = true;
+            adv.Epitaph = epitaph;
+            RunOver = true;
+            SaveManager.Write(SaveManager.AutoSlot, BuildSaveData("Memorial"));
+            SaveManager.MarkFallen(game.GameSeed, adv.RunId, epitaph);
+            ProfileRules.RecordRun(ProfileStore.Current, RunSummaryOf());
+            if (adv.Run == RunKind.Daily && adv.DailyDate is { } date) ProfileRules.RecordDaily(ProfileStore.Current, date, RunSummaryOf());
+            ProfileStore.Save();
+            EventBus.Instance.Log("The contract is void. The Death Clause holds.");
+        }
+        Hud?.ShowDeathCard(model, hardcore ? () => EndRun(victory: false) : null);
+        if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new DeathCardEvt(model));
+        if (RunRules.EndsRunAtOnce(hardcore, Hud != null)) Callable.From(() => { if (InGame && RunOver) EndRun(victory: false); }).CallDeferred(); // a dedicated server: nobody presses the button, the recap follows the card
+        GD.Print($"[Main] wipe on floor {floor} ({cause} by {killer}), wipe {onFloor} here, gold {Party.Gold}, {(hardcore ? "the run is over" : "the party rises")}");
+        return !hardcore;
+    }
+
+    /// <summary>The Death Clause's end: the recap, whose button leads to the menu and the Records.</summary>
+    public void EndRun(bool victory) => ShowRecap(victory);
+
+    /// <summary>
+    /// The run recap (solo and server): on victory it names the campaign's own boss and antagonist and the button continues
+    /// into the endless depths; on a Death Clause end the headline is the contract voided and the button leads to the Records.
+    /// The profile records the run (and the daily), the deeds hear of the clear.
+    /// </summary>
+    public void ShowRecap(bool victory)
+    {
+        var game = Game.Instance;
+        var adv = game.Adventure;
+        var campaign = adv.Campaign;
+        var headline = victory
+            ? RecapBuilder.VictoryHeadline(Builder.Contents?.Plan?.Boss?.Name is { Length: > 0 } b ? b : campaign?.Tiers.LastOrDefault()?.BossName, campaign?.Antagonist.Name)
+            : $"The contract is void. {adv.Epitaph}";
+        var boons = adv.Boons.Select(id => Adventure.Fortune.Boons.TryGet(id, out var def) ? def.Name : id).ToList();
+        var players = NetSession.Instance?.Server?.Registry.ToDtos().Select(p => p.Name).ToList();
+        var model = RecapBuilder.Build(adv.Memory, Party.Members.Select(m => m.Name).ToList(), adv.Clauses, boons, victory, headline, adv.Wipes, players);
+        var button = victory ? "Continue into the endless depths" : RunRules.RecordsButton;
+        LastRecap = model;
+        Action? onClose = victory ? null : () => { ReturnToMenu(); _menu.OpenRecords(); };
+        Hud?.ShowRunRecap(model, button, onClose);
+        if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new RunRecapEvt(model, button));
+        RecordRunInProfile();
+        if (victory)
+        {
+            var heat = ClauseRules.Active.Heat;
+            if (adv.Run == RunKind.Story) Deeds?.Note(new DeedEvent(DeedSignal.StoryCleared, Flag: ClauseRules.Active.Hardcore));
+            Deeds?.Note(new DeedEvent(DeedSignal.HeatClear, Amount: heat));
+            if (adv.Run == RunKind.Daily) Deeds?.Note(new DeedEvent(DeedSignal.DailyDone));
+        }
+        ProfileStore.Save();
+        GD.Print($"[Main] recap ({(victory ? "victory" : "the run is over")}): \"{headline}\" score {model.Score} deepest {model.DeepestFloor}");
+    }
+
+    /// <summary>The last recap built here (tests).</summary>
+    public RunRecapModel? LastRecap { get; private set; }
+
+    /// <summary>Upsert this run (and its daily) in the profile: at every floor change and at the run's end; solo and server.</summary>
+    private void RecordRunInProfile()
+    {
+        if (NetSession.IsClient || !InGame) return;
+        var adv = Game.Instance.Adventure;
+        var summary = RunSummaryOf();
+        ProfileRules.RecordRun(ProfileStore.Current, summary);
+        if (adv.Run == RunKind.Daily && adv.DailyDate is { } date) ProfileRules.RecordDaily(ProfileStore.Current, date, summary);
+    }
 
     public override void _PhysicsProcess(double delta)
     {
@@ -83,11 +207,14 @@ public partial class Main : Node
     private void CreateSession(IEnumerable<(string Name, string ClassId, Characters.Rank Rank)>? roster = null, int localIndex = 0, bool hud = true)
     {
         TearDownSession();
+        RunOver = false;
+        _sinceAutosave = 0f;
         Party = GD.Load<PackedScene>("res://scenes/Party.tscn").Instantiate<PartyController>();
         Party.Configure(roster ?? PartyController.DefaultRoster, localIndex);
         Party.AllowPossession = !NetSession.IsNetworked;
         _world.AddChild(Party);
         Party.SpawnBodies(_world);
+        if (!NetSession.IsClient) { Deeds = new DeedWatcher { Name = "Deeds" }; _world.AddChild(Deeds); } // the server decides deeds; a client only hears of them
         if (hud)
         {
             Hud = GD.Load<PackedScene>("res://scenes/UI/Hud.tscn").Instantiate<Hud>();
@@ -127,7 +254,7 @@ public partial class Main : Node
         CreateSession(Array.Empty<(string, string, Characters.Rank)>(), -1, hud: false);
         if (net.Campaign == "builtin" && BuiltinCampaign.Load() is { } baked)
         {
-            game.PrepareNewGame(baked.Campaign.GameSeed);
+            game.PrepareNewGame(baked.Campaign.GameSeed, RunKind.Story);
             game.Adventure.Mode = AdventureMode.Builtin;
             game.Adventure.Campaign = baked.Campaign;
             foreach (var (floor, plan) in baked.Floors) game.Adventure.FloorPlans[floor] = plan;
@@ -212,18 +339,21 @@ public partial class Main : Node
         if (Party != null && IsInstanceValid(Party)) { Party.RemoveFromGroup(PartyController.GroupName); Party.FreeBodies(); Party.QueueFree(); }
         Hud = null!;
         Party = null!;
+        Deeds = null;
         Exploration = null;
+        AdventureDirector.Instance?.ForgetSession(); // no floor card from this game shows in the next
     }
 
     public LoadingOverlay Overlay { get; private set; } = null!;
     private (int floor, int delta, ulong sinceMs)? _waitingFor;
 
     /// <param name="aiCampaign">True: ask the live planner for a fresh campaign (automation only; the title screen never plans, see <see cref="StartNewGameFromDisk"/>); false: never plan, the offline designer writes it; null: follow the Settings toggle (automation).</param>
-    public void StartNewGame(ulong? seed = null, bool? aiCampaign = null)
+    /// <param name="run">The title mode (run-structure): a New Descent by default; the Story and the Daily name theirs.</param>
+    public void StartNewGame(ulong? seed = null, bool? aiCampaign = null, RunKind run = RunKind.Descent)
     {
         CreateSession();
         var game = Game.Instance;
-        game.PrepareNewGame(seed);
+        game.PrepareNewGame(seed, run);
         var director = AdventureDirector.Instance;
         director.ConfigurePlanner(forceAi: aiCampaign == true, noAi: aiCampaign == false);
         if (!director.AiEnabled)
@@ -264,6 +394,52 @@ public partial class Main : Node
         if (!StartBuiltinCampaign()) StartNewGame(aiCampaign: false);
     }
 
+    /// <summary>New Descent: a fresh seed through the offline designer, or the AI planner when a key and the Settings toggle allow it.</summary>
+    public void StartDescent() => StartNewGame(null, aiCampaign: null, RunKind.Descent);
+
+    /// <summary>Daily Descent: the UTC date's seed, the day's two clauses, never planned; the day is recorded as attempted at once.</summary>
+    public void StartDaily(DateOnly date)
+    {
+        StartNewGame(DailyRules.SeedFor(date), aiCampaign: false, RunKind.Daily);
+        var game = Game.Instance;
+        game.Adventure.DailyDate = DailyRules.Key(date);
+        game.Adventure.Clauses = DailyRules.ClausesFor(date);
+        game.ApplyClauses();
+        ProfileRules.RecordDaily(ProfileStore.Current, game.Adventure.DailyDate, RunSummaryOf());
+        ProfileStore.Save();
+        EventBus.Instance.Log($"The Daily Descent of {game.Adventure.DailyDate}: {Adventure.Run.ClauseRules.Active.Summary}");
+    }
+
+    /// <summary>The contract is signed (solo and server, in the tavern unless forced): the clauses take effect for the run.</summary>
+    public bool SignClauses(IReadOnlyList<string> clauses, bool force = false)
+    {
+        if (!InGame || NetSession.IsClient) return false;
+        if (Game.Instance.CurrentFloor != 0 && !force) { EventBus.Instance.Log("The contract is signed in the tavern, not below."); return false; }
+        var game = Game.Instance;
+        game.Adventure.Clauses = Adventure.Run.ClauseRules.Normalize(clauses);
+        game.ApplyClauses();
+        EventBus.Instance.Log($"The contract is signed: {Adventure.Run.ClauseRules.Active.Summary}");
+        return true;
+    }
+
+    /// <summary>This run as the profile remembers it: from the adventure, the ledger and the clock.</summary>
+    public RunSummaryDto RunSummaryOf()
+    {
+        var game = Game.Instance;
+        var adv = game.Adventure;
+        var floors = adv.Memory.Floors;
+        var set = new Adventure.Run.ClauseSet(adv.Clauses);
+        var deepest = Math.Max(game.CurrentFloor, floors.Count == 0 ? 0 : floors.Max(f => f.Floor));
+        var elites = floors.Sum(f => f.Elites);
+        var secrets = floors.Sum(f => f.SecretsFound);
+        return new RunSummaryDto
+        {
+            RunId = adv.RunId, Run = adv.Run.ToString(), Seed = game.GameSeed, DeepestFloor = deepest, Heat = set.Heat, ElitesSlain = elites, SecretsFound = secrets,
+            Wipes = adv.Wipes, Score = Adventure.Run.ScoreRules.Score(deepest, set.Heat, elites, secrets, adv.Wipes), Seconds = game.PlaySeconds, Victory = game.Victory,
+            Fallen = adv.Fallen, Epitaph = adv.Epitaph, Clauses = adv.Clauses.ToList(),
+        };
+    }
+
     /// <summary>The overlay's last line before a new game's first floor: a run opens in the tavern (floor 0), not on a stair.</summary>
     private static string ArrivalStatus(int floor) => floor == 0 ? "The tavern..." : "Descending...";
 
@@ -273,7 +449,7 @@ public partial class Main : Node
         if (BuiltinCampaign.Load() is not { } baked) return false;
         CreateSession();
         var game = Game.Instance;
-        game.PrepareNewGame(baked.Campaign.GameSeed);
+        game.PrepareNewGame(baked.Campaign.GameSeed, RunKind.Story);
         game.Adventure.Mode = AdventureMode.Builtin;
         game.Adventure.Campaign = baked.Campaign;
         foreach (var (floor, plan) in baked.Floors) game.Adventure.FloorPlans[floor] = plan;
@@ -323,15 +499,15 @@ public partial class Main : Node
     public SaveData BuildSaveData(string label)
     {
         var game = Game.Instance;
-        if (Builder.FloorRoot is { } root && Builder.Layout is { } layout && Exploration != null)
-            game.Floors[game.CurrentFloor] = FloorStateCapture.Capture(root, layout, Builder.Contents, Exploration);
         var data = new SaveData
         {
-            Label = label, GameSeed = game.GameSeed, CurrentFloor = game.CurrentFloor,
+            Label = label, GameSeed = game.GameSeed, CurrentFloor = game.CurrentFloor, Victory = game.Victory,
             SavedAtUtc = SaveMapper.Now(), PlaySeconds = game.PlaySeconds, Party = Party.CaptureState(), Adventure = game.Adventure,
             Multiplayer = NetSession.IsServer, Players = NetSession.Instance?.Server?.Registry.ToSave() ?? new List<PlayerDto>(),
         };
         foreach (var (floor, state) in game.Floors) data.Floors[floor] = state;
+        if (Builder.FloorRoot is { } current && Builder.Layout is { } currentLayout && Exploration != null)
+            data.Floors[game.CurrentFloor] = FloorStateCapture.Capture(current, currentLayout, Builder.Contents, Exploration); // the live floor goes into the file only: the game's own memory of it is written when it is left (or on a wipe)
         return data;
     }
 
@@ -347,6 +523,7 @@ public partial class Main : Node
     {
         var data = SaveManager.Read(slot);
         if (data == null) return false;
+        if (data.Adventure?.Fallen == true) { EventBus.Instance.Log($"{SaveManager.DisplayName(slot)} is a memorial: {data.Adventure.Epitaph}"); return false; } // the Death Clause's slot is read, never loaded
         CreateSession();
         Game.Instance.BeginLoaded(data);
         AdventureDirector.Instance.ConfigurePlanner();
@@ -447,6 +624,17 @@ public partial class Main : Node
 
         if (game.Floors.TryGetValue(floor, out var saved) && Builder.FloorRoot is { } root)
             FloorStateCapture.Apply(saved, root, Exploration, Party);
+        if (!NetSession.IsClient && RunRules.ScarLifted(game.Adventure.ScarUntilFloor, floor))
+        {   // the Scar lifts on any other floor than the one it was earned on (the FortuneDirector's FloorBuilt refresh recalculates)
+            Adventure.Fortune.FortuneRules.Lift(game.Adventure, WipeRules.ScarId);
+            game.Adventure.ScarUntilFloor = 0;
+        }
+        if (delta > 0 && saved == null && !NetSession.IsClient && Adventure.Run.ClauseRules.Active.AuditsAt(floor))
+        {   // the Inventory Audit clause: at each tier gate the meanest piece each member wears loses a virtue
+            foreach (var line in Adventure.Run.InventoryAudit.Apply(Party.Members)) EventBus.Instance.Log(line);
+            for (var i = 0; i < Party.Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i); // the sheets, and the server's PartySync to every client
+            Hud?.Refresh();
+        }
 
         if (_pendingPartyState is { } pending)
         {
@@ -473,6 +661,8 @@ public partial class Main : Node
         if (!NetSession.IsClient) EventBus.Instance.Log(floor == 0 ? "The tavern. The way down is in the corner." : delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
         if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null);
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
+        if (delta != 0 && floor >= 1 && !NetSession.IsClient) { RecordRunInProfile(); ProfileStore.Save(); }
+        if (delta != 0 && floor >= 1) Autosave($"floor {floor}"); // solo only (Autosave refuses the rest)
     }
 
     /// <summary>A client following the server to another floor: same seed, same plan, same snapshot, then everyone's poses.</summary>
@@ -596,7 +786,7 @@ public partial class Main : Node
         if (TierRules.IsFinalBossFloor(floor) && !Game.Instance.Victory)
         {
             Game.Instance.Victory = true;
-            Hud?.ShowVictory();
+            ShowRecap(victory: true);
         }
     }
 

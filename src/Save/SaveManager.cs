@@ -2,18 +2,14 @@ using Godot;
 
 namespace DungeonCrawler.Save;
 
-public sealed record SlotInfo(string Slot, bool Exists, string Label, int Floor, string SavedAt, double PlaySeconds, List<string> Members, bool Corrupt)
-{
-    public string Summary => !Exists ? "Empty" : Corrupt ? "Unreadable save" : $"{(Floor == 0 ? "The Tavern" : $"Floor {Floor}")}   {string.Join(", ", Members)}   {FormatTime(PlaySeconds)}";
-    public static string FormatTime(double s) => s >= 3600 ? $"{(int)(s / 3600)}h {(int)(s % 3600 / 60)}m" : $"{(int)(s / 60)}m {(int)(s % 60)}s";
-}
-
 /// <summary>Reads and writes save files under user://saves. Writes are atomic (temp + rename) and keep one .bak.</summary>
 public static class SaveManager
 {
     public const string QuickSlot = "quick";
+    /// <summary>Solo autosave (run-structure): every floor change and every three minutes; the Death Clause's memorial is written here too.</summary>
+    public const string AutoSlot = "auto";
     public static readonly string[] ManualSlots = { "slot1", "slot2", "slot3" };
-    public static IEnumerable<string> AllSlots => new[] { QuickSlot }.Concat(ManualSlots);
+    public static IEnumerable<string> AllSlots => new[] { AutoSlot, QuickSlot }.Concat(ManualSlots);
 
     private static string Dir => ProjectSettings.GlobalizePath("user://saves");
     public static string PathFor(string slot) => System.IO.Path.Combine(Dir, slot + ".json");
@@ -56,8 +52,26 @@ public static class SaveManager
         var header = SaveFormat.ReadHeader(System.IO.File.ReadAllText(path));
         if (header == null) return new SlotInfo(slot, true, "", 0, "", 0, new List<string>(), true);
         var h = header.Value;
-        return new SlotInfo(slot, true, h.label, h.floor, h.savedAt, h.playSeconds, h.members, false);
+        return new SlotInfo(slot, true, h.label, h.floor, h.savedAt, h.playSeconds, h.members, false, h.fallen, h.epitaph ?? "", h.run);
     }
 
-    public static string DisplayName(string slot) => slot == QuickSlot ? "Quicksave" : slot.StartsWith("slot") ? $"Slot {slot[4..]}" : slot;
+    public static string DisplayName(string slot) => slot == QuickSlot ? "Quicksave" : slot == AutoSlot ? "Autosave" : slot.StartsWith("slot") ? $"Slot {slot[4..]}" : slot;
+
+    /// <summary>The Death Clause ended the run: every slot holding this run (<see cref="SaveFormat.SameRun"/>) becomes a memorial that Load shows greyed with the epitaph.</summary>
+    public static int MarkFallen(ulong gameSeed, string runId, string epitaph)
+    {
+        var marked = 0;
+        foreach (var slot in AllSlots)
+        {
+            if (!Exists(slot)) continue;
+            var header = SaveFormat.ReadHeader(System.IO.File.ReadAllText(PathFor(slot)));
+            if (header is not { } h || !SaveFormat.SameRun(h.gameSeed, h.runId, gameSeed, runId) || h.fallen) continue;
+            if (Read(slot) is not { Adventure: { } adv } data) continue;
+            adv.Fallen = true;
+            adv.Epitaph = epitaph;
+            Write(slot, data);
+            marked++;
+        }
+        return marked;
+    }
 }

@@ -43,7 +43,8 @@ public partial class SlotList : VBoxContainer
             var info = SaveManager.Info(slot);
             var b = _buttons[i++];
             b.Text = $"{SaveManager.DisplayName(slot)}    {info.Summary}";
-            b.Disabled = mode == Mode.Load && (!info.Exists || info.Corrupt);
+            b.Disabled = mode == Mode.Load && (!info.Exists || info.Corrupt || info.Fallen); // a memorial is read, never loaded
+            b.Modulate = info.Fallen ? new Color(0.55f, 0.55f, 0.6f) : Colors.White;
         }
         Visible = true;
     }

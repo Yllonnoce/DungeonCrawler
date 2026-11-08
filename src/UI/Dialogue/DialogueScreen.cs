@@ -237,6 +237,7 @@ public partial class DialogueScreen : Control
             Show(answer);
             return;
         }
+        if (choice.Effect == DialogueEffect.Clauses) Main.Instance?.Hud?.NoteClausesAsked(); // the card opens on this screen once the talk ends (read-only on a client)
         if (choice.Effect != DialogueEffect.None)
         {
             if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.DialogueChoiceIntent(Npc.Id, choice.Effect, choice.Flag)); // the server keeps the quests

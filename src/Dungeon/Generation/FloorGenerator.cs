@@ -50,7 +50,7 @@ public static partial class FloorGenerator
         PlaceObjective(spec, new Random(seed ^ 0x0B1E), layout); // rooms and doors the objective needs; a no-op without one
         // after the objective has fixed its jail, shrine and stairs vault (and moved the stairs), before pits, secrets,
         // structures, nests and spawns, so nothing lands inside it; from its own seed, so the floor around it is as it was
-        PlaceSafeRoom(layout, new Random(seed ^ 0x5AFE));
+        if (spec.SafeRoom) PlaceSafeRoom(layout, new Random(seed ^ 0x5AFE));
         Verticality.PlacePits(spec, rng, layout);
         Verticality.PlaceSecrets(spec, rng, layout);
         PlaceStructures(spec, new Random(seed ^ 0x57C7), layout);
