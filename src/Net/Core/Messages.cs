@@ -62,7 +62,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.FloorChangeBegin)] public sealed record FloorChangeBegin(int Floor, string Status) : NetMessage;
 [Msg(MsgKind.FloorChange)] public sealed record FloorChange(
     int Floor, int Delta, FloorPlan? Plan, PartySnapshot BuildSnapshot, FloorStateDto? State,
-    List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0, string? Objective = null) : NetMessage;
+    List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0, string? Objective = null,
+    List<int>? EliteSpawns = null) : NetMessage; // EliteSpawns (v10): the floor's elite spawn indices, so a first visit's roster is the server's and never the client's own roll
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
 [Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;

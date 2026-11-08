@@ -108,8 +108,10 @@ public partial class ServerWorld : Node
         game.Adventure.FloorPlans.TryGetValue(floor, out var plan);
         game.Floors.TryGetValue(floor, out var state);
         var snapshot = main.BuildSnapshotFor.TryGetValue(floor, out var s) ? s : party.Snapshot();
+        var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemy>();
+        if (NetSession.Instance.TestServer) GD.Print($"[net-server] elites on floor {floor}: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
         foreach (var peer in Handshake.InGamePeers)
-            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main))));
+            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main), elites.Select(e => e.SpawnIndex).ToList())));
         _lastSent.Clear();
         _firstPose.Clear();
         Trace.Add($"floor:{floor}");
@@ -452,7 +454,7 @@ public partial class ServerWorld : Node
             {
                 if (!slot.Ready || !CanTrade(slot)) break;
                 var reach = PartyController.TradeReachFor(slot.MemberIndex < party.Adventurers.Length ? party.Adventurers[slot.MemberIndex] : null);
-                if (party.LuckyDipBuy(ld.Slot, reach) == null) Trace.Add("dip");
+                if (party.LuckyDipBuy(ld.Slot, reach, slot.MemberIndex) == null) Trace.Add("dip"); // the Gambled bark names the buyer, not the server's focused member
                 SendLuckyDipSync();
                 _bagDirty = true;
                 break;

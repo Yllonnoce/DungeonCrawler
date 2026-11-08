@@ -884,7 +884,7 @@ public partial class PartyController : Node3D
     public HashSet<int> LuckyDipBoughtOnFloor { get; } = new();
 
     /// <summary>Buys bundle <paramref name="slot"/> at the merchant (never at the hidden stall). Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
-    public string? LuckyDipBuy(int slot, TradeReach? reach = null)
+    public string? LuckyDipBuy(int slot, TradeReach? reach = null, int? buyer = null)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.LuckyDipIntent(slot)); return null; }
         reach ??= TradeReachFor(Local);
@@ -903,7 +903,7 @@ public partial class PartyController : Node3D
         TrySpendGold(price);
         LuckyDipBoughtOnFloor.Add(slot);
         EventBus.Instance.Log($"The {Adventure.Fortune.GambleRules.BundleName((Adventure.Fortune.DipSlot)slot).ToLowerInvariant()} holds {item}.");
-        EventBus.Instance.RaiseGambled(FocusedIndex, Adventure.Fortune.GambleRules.IsWin(item));
+        EventBus.Instance.RaiseGambled(buyer ?? FocusedIndex, Adventure.Fortune.GambleRules.IsWin(item));
         Main.Instance?.Hud?.Refresh();
         return null;
     }

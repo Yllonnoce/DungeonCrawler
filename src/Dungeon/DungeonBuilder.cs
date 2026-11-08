@@ -1215,20 +1215,23 @@ public partial class DungeonBuilder : Node3D
     /// <summary>What a floor's elite count adds beyond the schedule: the test hook plus fortune's Marked curse (run-structure's Hostile Tenants adds to the hook).</summary>
     public static int ExtraElites => ExtraElitesPerFloor + Adventure.Fortune.FortuneRules.ExtraElites(Game.Instance?.Adventure);
 
-    /// <summary>A floor seen before (a revisit, a load, a client's Welcome) keeps the elites its state names, whatever the schedule says now.</summary>
+    /// <summary>A client's FloorChange names the server's elites (co-op): while set, these spawn indices are the roster, even when the floor has no saved state yet.</summary>
+    public List<int>? ForcedEliteSpawns { get; set; }
+
+    /// <summary>A floor seen before (a revisit, a load, a client's Welcome) keeps the elites its state names, whatever the schedule says now; a client's first visit keeps the server's (<see cref="ForcedEliteSpawns"/>).</summary>
     private void PlaceEnemies(FloorContents contents, int floor, Save.FloorStateDto? state)
     {
         var registry = new CollectiveRegistry { Name = "Collectives" };
         _floorRoot!.AddChild(registry);
         Collectives = registry;
         foreach (var cc in contents.Collectives) registry.Collectives.Add(new Collective(cc, cell => Surface(cell), registry));
-        var fromState = state?.EliteSpawns is { Count: > 0 };
+        var roster = state?.EliteSpawns is { Count: > 0 } ? state.EliteSpawns : ForcedEliteSpawns;
         var seed = Rng.FloorSeed(GameSeed, floor);
         foreach (var e in contents.Enemies)
         {
             var group = e.CollectiveId == null ? null : registry.Find(e.CollectiveId);
-            var elite = fromState
-                ? state!.EliteSpawns.Contains(e.SpawnIndex) ? e.Elite ?? EliteRules.Roll(seed, floor, e.SpawnIndex, EnemyProfile(e.EnemyId)?.Faction ?? "") : null
+            var elite = roster != null
+                ? roster.Contains(e.SpawnIndex) ? e.Elite ?? EliteRules.Roll(seed, floor, e.SpawnIndex, EnemyProfile(e.EnemyId)?.Faction ?? "") : null
                 : e.Elite;
             SpawnEnemy(e.EnemyId, Surface(e.Cell, e.Under) + Vector3.Up * 0.1f, floor, e.SpawnIndex, group, e.Ordinal, elite: elite);
         }
