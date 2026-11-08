@@ -294,6 +294,7 @@ godot --headless --path . -- --test-safe-room   # the floor's safe room: door, e
 godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gathering (plan B) then the merchant: stock, buy, refuse, sell, reload, shop screen
 godot --headless --path . -- --test-tavern   # floor 0: one room, no enemies, the merchant, empty purse, "The Tavern", the tavern tune; an open inventory holds his greeting back, closed he briefs within 4 m; a save mid-briefing comes back on floor 0 unpaid and he briefs again; walked to the deal the purse gets 150; the down landing asks and floor 1 opens with 150 (paid once); prints [tavern] RESULT
 godot --headless --path . -- --test-tavern-skip   # the same opening but the briefing is closed unread: the purse stays empty until the descent stakes it with 150 on floor 1
+godot --headless --path . -- --test-writing   # banter in order and stopped by a fight, a TrapSprung bark from the lazy top-up, narration beats a bark on the subtitle, the cheer and its answers, the press epitaph, floor 3's Crushed taunt, Crane's aside
 godot --headless --path . -- --test-hit-fx   # blood, bursts, stuck arrows, grunts (seed 7); prints [hitfx] RESULT
 godot --headless --path . -- --rehash-plans=data/adventures/builtin --quit-after=2   # regenerate each floor_NN.json's layout from its campaign and rewrite only its LayoutHash (after a generator change, so the shipped plans load without "adapted")
 godot --headless --path . -- --test-voice           # tone synth: intro line rendered to user://voice, played, rendering paused during a fight
@@ -338,6 +339,7 @@ You possess one of the four characters at a time (the local body); the other thr
 | Right mouse (hold) | Guard (lead only, blocking classes). Absorbs 75% of a hit for 12 stamina; no stamina regen while guarding |
 | Q or mouse wheel | Cycle the lead's active ability |
 | R | Cycle every companion's stance: Defensive, Aggressive, Hold |
+| V | Cheer: the lead rallies, every other living hero answers (20 s cooldown); in co-op everyone's body cheers |
 | Portrait buttons | "Control" possesses that character; the small button cycles their stance |
 | Perception | Hidden pressure plates, loose seams in walls and the locked doors of vaults (a stretch of ordinary wall until someone makes out the lock plate or the gate's seams) are spotted by whichever member has the Perception for the distance: rangers (+40) from across the room, rogues (+25) a few steps out, mages (+15) and warriors (+0) about a step short. A spotted plate is a dull slab of slightly wrong stone and a seam a hairline crack; look at them for the prompt |
 | Inventory icons | Bag and paper-doll cells show the item's own model, rendered once per item kind into a small texture by a hidden viewport (`Items/ItemIcons.cs`) and cached for the session; stack counts overlay it. Headless runs keep the old coloured squares |
@@ -509,6 +511,61 @@ When Gemini answers with a quota error (HTTP 429), rendering stops for the sessi
 daily-quota error stops at once, a per-minute limit is retried after the delay Google suggests and stops after three
 in a row. Nothing is lost; the lines that were not rendered are queued again the next time you press "Render voice"
 or enter a floor that uses them. The reason is shown in the Settings status line and the message log.
+
+## A party that talks
+
+The heroes talk to each other and to what just happened. Everything is engine-free under `src/Adventure/Core/Voice/`
+and poured into a campaign's bark sets the way the kill, idle, dance and travel banks always were
+(`CampaignRepair.TopUpSet` runs every bank at once; `AdventureDirector.Bark` runs it lazily, so a campaign baked before
+a trigger existed still speaks, and a co-op player under their own name gets a stock set for their class). The Godot
+side is `src/Adventure/AdventureDirector.Talk.cs`.
+
+**Banks and sizes.** `ReactiveBarks`: 19 triggers (TrapSprung, Fell, PerfectBlow, Parried, Mimic, SecretFound,
+EliteSeen, Broke, ShrineBoon, ShrineCurse, GambleWin, GambleDud, LowHp, and Hurt, Loot, Downed, Revived, BossSeen,
+LevelUp grown to eight), 8 lines per hero (Brand, Sable, Wren, Ilex), 5 per class, 5 generic. `CheerBarks`: 4 cheers and
+6 answers per hero (4/5 per class and generic). `BanterBank`: 45 exchanges of 2-4 lines, every pair of heroes at least
+five. `Epitaphs`: 10 causes x 4 tiers. `TauntBank`: +12 stock lines (two each for EliteSlain, ShrineUsed, MimicSprung,
+AllyDead, AllyLeft, Gamble; tokens `{elite}` and `{name}`). A perfect block speaks from the Parried bank. Stock banks never
+name the shipped campaign's people or places (`StockBankTests`).
+
+**Rules.** `BarkRules` (5 s global gap, 25 s per member per trigger, LowHp under 25% once per member per floor,
+`QuickChance` 0.4 for PerfectBlow and Parried, subtitle 2.5-6 s, `ChooseOrOldest` for everything but Possess),
+`CheerRules` (answers at 0.8 s then 1.2 s apart, 20 s cooldown), `BanterRules` (1.4 s between lines; one travel grumble
+in three is an exchange; 8 s of rest in the safe room; 5 s after arriving in the tavern, then every 45 s; never through a
+fight: `MusicDirector.AnyoneFighting` aborts the run and a speaker who goes down drops the rest), `WipeCause` (a note's
+validity: 20 s, gas 120, horde 60, elite 30; then the boss if one is up, else generic).
+
+**Gating and state.** Banter is remembered by id through `BarkRepeat` (`banter:<id>`, `SaidForever` for OncePerRun).
+Gag counters live in `AdventureDto.GagCounts` (save v11, defaults only): `gerald` (Ilex's puddles, `{roman}`), `doors`
+(opened vault doors, `{count}`), `empty` (quiet travel ticks). Run flags in `Memory.Flags` set by
+`AdventureDirector.SetRunFlag` (no record entry): `seen_mimic`, `wiped_once`, `took_boon`, `took_curse`, `gambled`.
+`CampaignPlan.Banter` holds hand-authored exchanges beside the stock; the planner is not asked for them.
+
+**Subtitles.** `Hud.ShowBark(speaker, text, seconds)`: one speaker at a time with their name; narration wins (a bark never
+overwrites a narration still on screen, a later bark replaces an earlier bark). `AdventureDirector.Say` is the one exit
+for a companion's line: log, `EventBus.Bark`, subtitle, voice.
+
+**Co-op.** Server-authoritative: every line the server picks reaches clients as a `BarkMsg` (member index, text, voice
+id) and `AdventureDirector.PlayBark(member, line)` shows it with the name. V on a client sends `CheerIntent` (protocol 7);
+the server raises `EventBus.Cheer`, picks the lines and broadcasts `EmoteEvt(member, "cheer")`; `Adventurer.PlayCheer`
+plays the viewer bodies' Cheer clip. `scripts/net_test.sh` sends one cheer after the shop step and expects the hero's own
+line back.
+
+**Asides.** `DialogueNode.Aside { Member, Line }` is a companion's remark once the NPC has finished the line, shown under
+it in the dialogue (label `Aside`) and logged; skipped when the member is not in the party, down or parked. Local to each
+screen. The shipped campaign has six (Crane's "plumbing" earns Sable's "He means us.").
+
+**What other pillars call.** `AdventureDirector.NoteDeathCause(WipeCause.X)` (elites: Bomber, Elite),
+`AdventureDirector.LastWipe` (`WipeInfo(Floor, Cause, Count, Epitaph)`, set as `PartyWiped` fires; run-structure's death
+card reads it on `PartyWipedBy`), and the `EventBus` moments: `RaiseEliteSeen`, `RaiseEliteSlain`, `RaiseMimicSprung`,
+`RaiseShrineUsed`, `RaiseSecretFound`, `RaiseTrapSprung`, `RaiseMemberFell`, `RaisePerfectBlow`, `RaiseParried`,
+`RaisePerfectBlock`, `RaiseGambled`, `RaiseCheer`, `RaiseBrokeAtShop`, `RaiseLowHp`, `RaiseBoonTaken`, `RaiseCurseTaken`,
+`RaisePartyWipedBy`, `RaiseFloorLedgerClosed`. Trap, shop refusal, a fighter's refusal (`NpcEventKind.Refused`) and a
+secret wall's opening are raised today; the rest wait on their pillars.
+
+**Voice.** New text is unvoiced until a bake runs (`--bake-kill-barks` tops up every bank and gives the lines their ids;
+`--bake-cast-voice` for the campaign's own lines); `VoiceBudget` counts asides beside their NPC line. The shipped
+campaign's new Possess lines, the Verger's twelve taunts and the six asides carry `VoiceId: null`.
 
 ## Lethal traps
 
