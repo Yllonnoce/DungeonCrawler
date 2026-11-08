@@ -231,6 +231,7 @@ public partial class ClientWorld : Node
         switch (node, pe.What)
         {
             case (Dungeon.Props.Chest c, "opened"): c.MarkOpened(); Trace.Add("chest"); break;
+            case (Dungeon.Props.Chest c, "mimic"): c.ShowSprung(); Trace.Add("mimic"); break;
             case (Dungeon.Props.Door d, "opened"): d.Open(silent: true); break;
             case (Dungeon.Props.Door d, "revealed"): d.Reveal(); break;
             case (Dungeon.Props.Door d, "closed"): d.Close(silent: true); break;

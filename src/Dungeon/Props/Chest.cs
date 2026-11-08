@@ -1,26 +1,47 @@
+using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Fortune;
 using DungeonCrawler.Core;
+using DungeonCrawler.Enemies;
 using DungeonCrawler.Items;
 using DungeonCrawler.Party;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Props;
 
-/// <summary>A chest: interact once to spill its loot onto the floor.</summary>
+/// <summary>A chest: interact once to spill its loot onto the floor. A mimic (fortune) springs instead and yields its roll when the brute dies.</summary>
 public partial class Chest : Area3D, IInteractable
 {
     [Export] public string TableId { get; set; } = "table.chest";
     public int SpawnIndex { get; set; } = -1;
     public bool Locked { get; set; }
     public bool Opened { get; private set; }
+    /// <summary>A mouth, not a chest: opening it spawns the tier's brute (Hulking, twice the XP); the roll waits for its death.</summary>
+    public bool IsMimic { get; set; }
+    public bool Sprung { get; private set; }
+    public Enemy? Mimic { get; private set; }
+    private bool _hidden;
 
     public void MarkOpened()
     {
         Opened = true;
+        if (_hidden) ShowBody();
         Tint(new Color(0.35f, 0.3f, 0.25f));
         EventBus.Instance.RaisePropChanged(Net.NetRefs.Chest(SpawnIndex), "opened");
     }
 
-    public string Prompt => Opened ? "Empty chest" : Locked ? "Locked chest: use a key or pick the lock" : "Open chest";
+    public string Prompt => Opened ? "Empty chest"
+        : Sprung ? "The chest is elsewhere"
+        : IsMimic && Noticed() ? $"Open chest ({MimicRules.Tell})"
+        : Locked ? "Locked chest: use a key or pick the lock" : "Open chest";
+
+    /// <summary>A living member whose Perception reaches the chest (the secret-wall rule) sees the lock breathe.</summary>
+    private bool Noticed()
+    {
+        if (Main.Instance is not { } main || !main.InGame) return false;
+        foreach (var a in main.Party.Active)
+            if (!a.Downed && a.GlobalPosition.DistanceTo(GlobalPosition) <= TrapRules.DetectRadiusCells(a.State.Stats[Characters.Stat.Perception]) * DungeonBuilder.CellSize + 1f) return true;
+        return false;
+    }
 
     public override void _Ready()
     {
@@ -35,6 +56,7 @@ public partial class Chest : Area3D, IInteractable
             model.RotateY(Mathf.Pi);
         }
         if (Locked) Tint(new Color(0.75f, 0.7f, 0.55f));
+        if (_hidden) HideBody();
     }
 
     private void Tint(Color color)
@@ -50,9 +72,71 @@ public partial class Chest : Area3D, IInteractable
         foreach (var c in n.GetChildren()) foreach (var m in FindMeshes(c)) yield return m;
     }
 
-    public void Interact(PartyController party, Adventurer actor)
+    /// <summary>The lid as a lure, gone: no model, no solid body while the brute stands.</summary>
+    private void HideBody()
+    {
+        _hidden = true;
+        if (!IsNodeReady()) return;
+        if (GetNodeOrNull<Node3D>("Model") is { } model) model.Visible = false;
+        GetNode<MeshInstance3D>("Mesh").Visible = false;
+        if (GetNodeOrNull<StaticBody3D>("Body") is { } body) body.CollisionLayer = 0;
+    }
+
+    private void ShowBody()
+    {
+        _hidden = false;
+        if (!IsNodeReady()) return;
+        if (GetNodeOrNull<Node3D>("Model") is { } model) model.Visible = true;
+        else GetNode<MeshInstance3D>("Mesh").Visible = true;
+        if (GetNodeOrNull<StaticBody3D>("Body") is { } body) body.CollisionLayer = 1;
+    }
+
+    /// <summary>A client's view of a sprung mimic: the chest gone, the brute arriving by EnemySpawned.</summary>
+    public void ShowSprung() { Sprung = true; HideBody(); }
+
+    /// <summary>A reload mid-spring (authority): the chest hidden and the brute back, idle, so the roll is neither lost nor free.</summary>
+    public void RestoreSprung()
+    {
+        Sprung = true;
+        HideBody();
+        if (Net.NetSession.IsClient || Main.Instance?.Builder is not { } builder) return;
+        var floor = Game.Instance.CurrentFloor;
+        if (MimicRules.BruteFor(builder.RegularEnemies(floor), builder.EnemyProfile) is { } id)
+            Mimic = FortuneSpawns.Spawn(builder, id, GlobalPosition + Vector3.Up * 0.1f, floor, MimicRules.EliteName, MimicRules.Affixes, aggro: false, xpFactor: MimicRules.XpFactor);
+    }
+
+    private void Spring(PartyController party)
+    {
+        Sprung = true;
+        HideBody();
+        if (Main.Instance?.Builder is { } builder)
+        {
+            var floor = Game.Instance.CurrentFloor;
+            if (MimicRules.BruteFor(builder.RegularEnemies(floor), builder.EnemyProfile) is { } id)
+                Mimic = FortuneSpawns.Spawn(builder, id, GlobalPosition + Vector3.Up * 0.1f, floor, MimicRules.EliteName, MimicRules.Affixes, aggro: true, xpFactor: MimicRules.XpFactor);
+        }
+        EventBus.Instance.RaisePropChanged(Net.NetRefs.Chest(SpawnIndex), "mimic");
+        EventBus.Instance.RaiseMimicSprung(GlobalPosition);
+        EventBus.Instance.PlaySfx("chest");
+        EventBus.Instance.Log("The chest opens its mouth.");
+    }
+
+    /// <summary>The brute is dead: the chest is back where it stood, open, with its roll on the floor.</summary>
+    public void Yield(PartyController party)
     {
         if (Opened) return;
+        var toward = Mimic != null && IsInstanceValid(Mimic) ? Mimic.GlobalPosition - GlobalPosition : Vector3.Forward;
+        Mimic = null;
+        MarkOpened();
+        EventBus.Instance.PlaySfx("chest");
+        EventBus.Instance.RaiseChestOpened(GlobalPosition);
+        Spill(party, toward);
+    }
+
+    public void Interact(PartyController party, Adventurer actor)
+    {
+        if (Opened || Sprung) return;
+        if (IsMimic) { Spring(party); return; } // a lock on a mouth is part of the lure
         if (Locked)
         {
             if (!party.TryUnlock("the chest")) return;
@@ -61,14 +145,19 @@ public partial class Chest : Area3D, IInteractable
         MarkOpened();
         EventBus.Instance.PlaySfx("chest");
         EventBus.Instance.RaiseChestOpened(GlobalPosition);
+        Spill(party, actor.GlobalPosition - GlobalPosition);
+    }
 
-        var rng = new Random(Rng.ActorSeed(Game.Instance.GameSeed, Game.Instance.CurrentFloor, 5000 + SpawnIndex)); // the same contents on every peer and reload
+    /// <summary>The roll (the chest's own seed, so the same on every peer and reload), spilled toward <paramref name="toward"/>, and the coins.</summary>
+    private void Spill(PartyController party, Vector3 toward)
+    {
+        var rng = new Random(Rng.ActorSeed(Game.Instance.GameSeed, Game.Instance.CurrentFloor, 5000 + SpawnIndex));
         var cat = Game.Instance.Catalog;
         var table = cat.Table(TableId);
         var level = TierRules.ItemLevel(Game.Instance.CurrentFloor);
         var items = LootRoller.RollMany(cat, table, level, rng);
-        if (Adventure.Fortune.ChestRules.GuaranteesConsumable(TableId) && LootRoller.Roll(cat, table with { Entries = new[] { new LootEntry("kind:Consumable", 1) }, Rolls = 1, DropChance = 1f }, level, rng) is { } extra) items.Add(extra); // a secret's chest always holds a draught
-        var toward = (actor.GlobalPosition - GlobalPosition); toward.Y = 0;
+        if (ChestRules.GuaranteesConsumable(TableId) && LootRoller.Roll(cat, table with { Entries = new[] { new LootEntry("kind:Consumable", 1) }, Rolls = 1, DropChance = 1f }, level, rng) is { } extra) items.Add(extra); // a secret's chest always holds a draught
+        toward.Y = 0;
         toward = toward.LengthSquared() > 0.01f ? toward.Normalized() : Vector3.Forward;
         var side = toward.Cross(Vector3.Up);
         for (var i = 0; i < items.Count; i++)

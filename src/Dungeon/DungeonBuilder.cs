@@ -1192,10 +1192,10 @@ public partial class DungeonBuilder : Node3D
     }
 
     /// <summary>Instantiate an enemy by id. SpawnIndex -1 = summoned, -2 = boss.</summary>
-    public Enemy? SpawnEnemy(string id, Vector3 position, int floor, int spawnIndex = -1, Collective? group = null, int ordinal = 0, int netId = -1)
+    public Enemy? SpawnEnemy(string id, Vector3 position, int floor, int spawnIndex = -1, Collective? group = null, int ordinal = 0, int netId = -1, EnemyProfile? profile = null)
     {
         if (_floorRoot == null) return null;
-        var profile = EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile();
+        profile ??= EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile(); // a caller's profile (fortune's mimic brute, the hunter) wins over the lookup
         // the last boss is the campaign's villain in person when the owner built them a body: a tall man, not a 3.8 m demon
         if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = 1.25f };
         var enemy = _enemyScene.Instantiate<Enemy>();
@@ -1223,7 +1223,9 @@ public partial class DungeonBuilder : Node3D
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = i;
             chest.Locked = layout.LockedChests.Contains(i);
-            chest.TableId = Adventure.Fortune.ChestRules.TableFor(Adventure.Fortune.ChestRules.KindOf(layout, i)); // fortune: a vault's, a secret's, a ledge's or the plain table
+            var kind = Adventure.Fortune.ChestRules.KindOf(layout, i);
+            chest.TableId = Adventure.Fortune.ChestRules.TableFor(kind); // fortune: a vault's, a secret's, a ledge's or the plain table
+            chest.IsMimic = Adventure.Fortune.MimicRules.ForcedSpawnIndex == i || Adventure.Fortune.MimicRules.IsMimic(GameSeed, floor, i, kind);
             chest.Name = $"Chest{i}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(layout.ChestSpawns[i]);
@@ -1235,6 +1237,7 @@ public partial class DungeonBuilder : Node3D
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = extra.SpawnIndex;
             chest.Locked = extra.Locked;
+            chest.IsMimic = Adventure.Fortune.MimicRules.IsMimic(GameSeed, floor, extra.SpawnIndex, Adventure.Fortune.ChestKind.Ordinary);
             chest.Name = $"Chest{extra.SpawnIndex}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(extra.Cell);

@@ -38,6 +38,14 @@ public partial class FortuneDirector : Node
         bus.PerfectBlock += BlockHeal;
         bus.Parried += BlockHeal;
         bus.EliteSlain += EliteRewards;
+        bus.EnemyDied += OnEnemyDied;
+    }
+
+    private void OnEnemyDied(Enemy e)
+    {
+        if (!Authority || Party is not { } party || Main.Instance?.Builder.FloorRoot is not { } root) return;
+        foreach (var chest in root.GetChildren().OfType<Chest>())
+            if (chest.Mimic == e) chest.Yield(party);
     }
 
     public override void _ExitTree() { if (Instance == this) Instance = null; }
