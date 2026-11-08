@@ -45,6 +45,55 @@ public static class ItemText
         return string.Join("\n", lines);
     }
 
+    /// <summary>
+    /// One number for "how good is this": average weapon damage x2 plus every modifier weighted by how much a point of that stat is worth
+    /// (Mul values count as percent x0.6, a lower Cooldown is a gain), plus 5 per legendary trigger or upgrade. Only for comparing items of a kind.
+    /// </summary>
+    public static float Score(ItemInstance item, ItemCatalog? cat = null)
+    {
+        var score = 0f;
+        if (item.Weapon is { } w) score += (w.MinDamage + w.MaxDamage) / 2f * 2f;
+        foreach (var m in item.Modifiers)
+        {
+            if (m.Op == ModOp.Mul) score += (m.Stat == Stat.Cooldown ? 1f - m.Value : m.Value - 1f) * 100f * 0.6f;
+            else score += Weight(m.Stat) * m.Value;
+        }
+        if (cat != null && LegendaryRules.Of(item, cat) is { } leg) score += 5f * (leg.Triggers.Count() + leg.Upgrades.Length);
+        return score;
+    }
+
+    /// <summary>How much one point of a stat is worth to the score.</summary>
+    public static float Weight(Stat s) => s switch
+    {
+        _ when StatInfo.IsPrimary(s) => 3f,
+        Stat.MeleeDamage or Stat.RangedDamage or Stat.SpellPower => 2f,
+        Stat.Armor => 1f,
+        Stat.MaxHp => 0.3f,
+        Stat.MaxStamina or Stat.MaxMana => 0.15f,
+        Stat.Accuracy or Stat.Evasion => 0.5f,
+        Stat.CritChance => 100f,
+        Stat.CritMultiplier => 30f,
+        Stat.HpRegen => 10f,
+        Stat.StaminaRegen => 1f,
+        Stat.ManaRegen => 5f,
+        Stat.Stealth or Stat.Perception => 0.2f,
+        Stat.ResistPhysical or Stat.ResistFire or Stat.ResistFrost or Stat.ResistPoison or Stat.ResistArcane => 0.2f,
+        _ => 0f,
+    };
+
+    /// <summary>True when the member could wear it and it beats what they wear there (or the slot is empty).</summary>
+    public static bool IsUpgrade(ItemInstance item, CharacterState c, ItemCatalog? cat = null)
+        => item.IsEquippable && c.Equipment.PreferredSlot(c, item) != null && (c.Equipment.Worn(c, item) is not { } worn || Score(item, cat) > Score(worn, cat));
+
+    /// <summary>A two-letter class glyph per member and whether that member's class can use the item (hands being full does not count against it).</summary>
+    public static IReadOnlyList<(string Glyph, bool Usable)> UsableBy(ItemInstance item, IEnumerable<CharacterState> members)
+        => members.Select(m => (Glyph(m.Class), SlotRules.SlotsFor(item.Kind).Any(s => ClassCanUse(Equipment.WhyCannotEquip(m, item, s))))).ToList();
+
+    /// <summary>A refusal about the hands being full is not a class refusal.</summary>
+    private static bool ClassCanUse(string? why) => why == null || why.StartsWith("Two-handed", StringComparison.Ordinal) || why.StartsWith("Both hands", StringComparison.Ordinal);
+
+    public static string Glyph(ClassProfile cls) => cls.Name[..Math.Min(2, cls.Name.Length)];
+
     public static string KindLabel(ItemInstance item) => item.Kind switch
     {
         SlotKind.Weapon when item.BaseWeapon != null => item.BaseWeapon.Kind.ToString(),

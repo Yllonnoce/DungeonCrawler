@@ -49,6 +49,9 @@ public sealed class Equipment
         return old;
     }
 
+    /// <summary>What the member would take off for <paramref name="item"/>: the item in its preferred slot, or null when that slot is empty or nothing accepts it.</summary>
+    public ItemInstance? Worn(CharacterState c, ItemInstance item) => PreferredSlot(c, item) is { } s ? this[s] : null;
+
     /// <summary>First slot that would accept the item: an empty one if possible, else the first matching slot.</summary>
     public EquipSlot? PreferredSlot(CharacterState c, ItemInstance item)
     {
