@@ -171,6 +171,16 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 /// <summary>The run recap and its button's word (victory, or the Death Clause's end).</summary>
 [Msg(MsgKind.RunRecapEvt)] public sealed record RunRecapEvt(Adventure.Run.RunRecapModel Recap, string Button) : NetMessage;
 
+// ---- friends (v10) ---------------------------------------------------------------------------------------
+/// <summary>A client's Yes or No on the stairs <paramref name="Ref"/> names (e.g. "stairs:down"); the server runs the ready-check.</summary>
+[Msg(MsgKind.StairsReadyIntent)] public sealed record StairsReadyIntent(string Ref, bool Ready) : NetMessage;
+/// <summary>Where the ready-check stands, for every HUD: "Descend? Count/Total ready · SecondsLeft s". Total == 0 means the check is over: hide the line.</summary>
+[Msg(MsgKind.StairsReadyMsg)] public sealed record StairsReadyMsg(int Count, int Total, int SecondsLeft, int Direction) : NetMessage;
+/// <summary>A client pinged this world point (where its camera looked); the server checks the cooldown and the range.</summary>
+[Msg(MsgKind.PingIntent)] public sealed record PingIntent(NetVec At) : NetMessage;
+/// <summary>A player's ping: a 2 s marker with their name, on every screen.</summary>
+[Msg(MsgKind.PingEvt)] public sealed record PingEvt(string Name, NetVec At) : NetMessage;
+
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry
 {

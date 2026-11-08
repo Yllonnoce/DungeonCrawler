@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 9;
+    public const int Version = 10;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 91;
+    public const int MessageKindCount = 95;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -69,4 +69,6 @@ public enum MsgKind : byte
     ShrineCard, ShrineChoiceIntent, ShrineClosed, FortuneSync, LuckyDipIntent, LuckyDipSync,
     // run-structure (v9): the server's death card on a wipe, the floor card on a descent, the run recap on victory or a Death Clause end
     DeathCardEvt, FloorCardEvt, RunRecapEvt,
+    // friends (v10): the stairs ready-check (a client's Yes or No, the server's count for every HUD) and pings
+    StairsReadyIntent, StairsReadyMsg, PingIntent, PingEvt,
 }
