@@ -103,6 +103,9 @@ public sealed class SkillCatalog
 
     public SkillProfile? Get(string id) => Skills.TryGetValue(id, out var s) ? s : null;
     public IEnumerable<SkillProfile> ForClass(string classId) => Skills.Values.Where(s => s.ClassId == classId).OrderBy(s => s.Branch).ThenBy(s => s.Tier);
-    public IEnumerable<string> Branches(string classId) => ForClass(classId).Select(s => s.Branch).Distinct();
+    /// <summary>The class's branch names, the duo node's pseudo-branch excluded.</summary>
+    public IEnumerable<string> Branches(string classId) => ForClass(classId).Where(s => !s.IsDuo).Select(s => s.Branch).Distinct();
+    /// <summary>The class's duo node (tier 3, opens from any branch's second tier), if it has one.</summary>
+    public SkillProfile? Duo(string classId) => ForClass(classId).FirstOrDefault(s => s.IsDuo);
     public IEnumerable<SkillProfile> Learned(CharacterState c) => c.LearnedSkills.Select(Get).Where(s => s != null)!;
 }

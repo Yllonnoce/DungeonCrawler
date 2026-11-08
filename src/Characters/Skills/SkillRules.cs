@@ -10,6 +10,7 @@ public static class SkillRules
         if (c.LearnedSkills.Contains(s.Id)) return $"{s.Name} is already learned";
         foreach (var p in s.Prerequisites)
             if (!c.LearnedSkills.Contains(p)) return $"{s.Name} needs an earlier skill first";
+        if (s.AnyOf.Length > 0 && !s.AnyOf.Any(c.LearnedSkills.Contains)) return $"{s.Name} needs a skill from one of its branches first";
         if (c.SkillPoints < s.Cost) return $"Not enough skill points ({s.Cost} needed)";
         return null;
     }

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.rogue.duo.opportunist"
+DisplayName = "Opportunist"
+Description = "Crits poison; +4% crit chance. Needs a tier-2 skill of any branch."
+ClassId = "class.rogue"
+Branch = "Duo"
+Tier = 3
+Prerequisites = PackedStringArray()
+AnyOf = PackedStringArray("skill.rogue.assassin.venom_crit", "skill.rogue.duelist.venom_mastery", "skill.rogue.trickster.smoke_bomb")
+Cost = 1
+Modifiers = PackedStringArray("CritChance+0.04")
+GrantsAbility = ""
+UpgradeAbility = ""
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+MoreUpgrades = PackedStringArray()
+Trigger = "VenomCrit"
+TriggerMagnitude = 1
+Trigger2 = "None"
+TriggerMagnitude2 = 0

@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="SkillDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Characters/Defs/SkillDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "skill.ranger.duo.quick_draw"
+DisplayName = "Quick Draw"
+Description = "+10% attack speed; bow kills recover an arrow. Needs a tier-2 skill of any branch."
+ClassId = "class.ranger"
+Branch = "Duo"
+Tier = 3
+Prerequisites = PackedStringArray()
+AnyOf = PackedStringArray("skill.ranger.marksman.piercing", "skill.ranger.beastcraft.tracker", "skill.ranger.survivalist.poison_arrow")
+Cost = 1
+Modifiers = PackedStringArray("AttackSpeed*1.1")
+GrantsAbility = ""
+UpgradeAbility = ""
+DamageMul = 1.0
+CooldownMul = 1.0
+CostMul = 1.0
+BuffMul = 1.0
+RadiusAdd = 0.0
+ExtraProjectiles = 0
+AddStatus = ""
+AddStatusDuration = 0
+AddStatusMagnitude = 0
+AddStatusChance = 1.0
+MoreUpgrades = PackedStringArray()
+Trigger = "Scavenger"
+TriggerMagnitude = 1
+Trigger2 = "None"
+TriggerMagnitude2 = 0
