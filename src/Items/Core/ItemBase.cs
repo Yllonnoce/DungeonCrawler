@@ -85,6 +85,22 @@ public sealed record LegendaryProfile
     /// <summary>Sold by the merchant only; the dungeon never rolls it.</summary>
     public bool ShopOnly { get; init; }
     public StatusApplication? OnHit { get; init; }
+    /// <summary>A passive the wearer gains, summed with learned skills by the party (see LegendaryRules).</summary>
+    public TriggerKind Trigger { get; init; } = TriggerKind.None;
+    public float TriggerMagnitude { get; init; }
+    public TriggerKind Trigger2 { get; init; } = TriggerKind.None;
+    public float TriggerMagnitude2 { get; init; }
+    /// <summary>Ability upgrades the wearer gains while it is equipped.</summary>
+    public AbilityUpgrade[] Upgrades { get; init; } = Array.Empty<AbilityUpgrade>();
+    /// <summary>The set triggers of the two.</summary>
+    public IEnumerable<(TriggerKind Kind, float Magnitude)> Triggers
+    {
+        get
+        {
+            if (Trigger != TriggerKind.None) yield return (Trigger, TriggerMagnitude);
+            if (Trigger2 != TriggerKind.None) yield return (Trigger2, TriggerMagnitude2);
+        }
+    }
 }
 
 /// <summary>Filter syntax: "any", "id:item.x", "tag:weapon", "kind:Body".</summary>

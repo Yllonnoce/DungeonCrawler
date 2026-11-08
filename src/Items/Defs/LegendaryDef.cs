@@ -1,3 +1,4 @@
+using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
 using Godot;
@@ -20,6 +21,15 @@ public partial class LegendaryDef : Resource, IHasId
     [Export] public float OnHitChance { get; set; } = 1f;
     [Export] public bool ShopOnly { get; set; }
 
+    [ExportGroup("Effect")]
+    /// <summary>A TriggerKind name (Bloodlust, GoldFind, LastGasp ...); the wearer gains it while the item is equipped.</summary>
+    [Export] public string Trigger { get; set; } = "None";
+    [Export] public float TriggerMagnitude { get; set; }
+    [Export] public string Trigger2 { get; set; } = "None";
+    [Export] public float TriggerMagnitude2 { get; set; }
+    /// <summary>Ability upgrades in the UpgradeParser syntax: "ability.mend: AddEffect=Shield,10,15".</summary>
+    [Export] public string[] Upgrades { get; set; } = Array.Empty<string>();
+
     public LegendaryProfile ToProfile()
     {
         StatusApplication? onHit = null;
@@ -29,6 +39,9 @@ public partial class LegendaryDef : Resource, IHasId
         {
             Id = Id, Name = DisplayName, BaseId = BaseId, Flavor = Flavor, ItemLevelMin = ItemLevelMin, Weight = Weight,
             Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName), OnHit = onHit, ShopOnly = ShopOnly,
+            Trigger = Enum.TryParse<TriggerKind>(Trigger, true, out var t) ? t : TriggerKind.None, TriggerMagnitude = TriggerMagnitude,
+            Trigger2 = Enum.TryParse<TriggerKind>(Trigger2, true, out var t2) ? t2 : TriggerKind.None, TriggerMagnitude2 = TriggerMagnitude2,
+            Upgrades = UpgradeParser.ParseAll(Upgrades),
         };
     }
 }

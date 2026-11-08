@@ -16,6 +16,8 @@ public partial class SkillDef : Resource, IHasId
     [Export] public string Branch { get; set; } = "";
     [Export] public int Tier { get; set; }
     [Export] public string[] Prerequisites { get; set; } = Array.Empty<string>();
+    /// <summary>A duo node: learnable once any one of these is learned.</summary>
+    [Export] public string[] AnyOf { get; set; } = Array.Empty<string>();
     [Export] public int Cost { get; set; } = 1;
     /// <summary>"Armor+6", "AttackSpeed*1.1" ...</summary>
     [Export] public string[] Modifiers { get; set; } = Array.Empty<string>();
@@ -33,11 +35,17 @@ public partial class SkillDef : Resource, IHasId
     [Export] public float AddStatusDuration { get; set; }
     [Export] public float AddStatusMagnitude { get; set; }
     [Export] public float AddStatusChance { get; set; } = 1f;
+    /// <summary>Scales the duration of every status the upgraded ability applies on hit.</summary>
+    [Export] public float OnHitDurationMul { get; set; } = 1f;
+    /// <summary>Further upgrades in the UpgradeParser syntax: "ability.war_cry: CooldownMul=0.8".</summary>
+    [Export] public string[] MoreUpgrades { get; set; } = Array.Empty<string>();
 
     [ExportGroup("Trigger")]
-    /// <summary>Riposte, VenomCrit, Scavenger, SoulSiphon, Bloodlust, Thorns, SecondWind, Momentum.</summary>
+    /// <summary>A TriggerKind name: Riposte, VenomCrit, Scavenger, SoulSiphon, Bloodlust, Thorns, SecondWind, Momentum, NoGuard, ArrowShatter ...</summary>
     [Export] public string Trigger { get; set; } = "None";
     [Export] public float TriggerMagnitude { get; set; }
+    [Export] public string Trigger2 { get; set; } = "None";
+    [Export] public float TriggerMagnitude2 { get; set; }
 
     public SkillProfile ToProfile()
     {
@@ -46,14 +54,15 @@ public partial class SkillDef : Resource, IHasId
         {
             StatusApplication? add = null;
             if (Enum.TryParse<StatusKind>(AddStatus, true, out var sk) && AddStatusDuration > 0) add = new StatusApplication(sk, AddStatusDuration, AddStatusMagnitude, AddStatusChance);
-            upgrade = new AbilityUpgrade { AbilityId = UpgradeAbility, DamageMul = DamageMul, CooldownMul = CooldownMul, CostMul = CostMul, BuffMul = BuffMul, RadiusAdd = RadiusAdd, ExtraProjectiles = ExtraProjectiles, AddStatus = add };
+            upgrade = new AbilityUpgrade { AbilityId = UpgradeAbility, DamageMul = DamageMul, CooldownMul = CooldownMul, CostMul = CostMul, BuffMul = BuffMul, RadiusAdd = RadiusAdd, ExtraProjectiles = ExtraProjectiles, AddStatus = add, OnHitDurationMul = OnHitDurationMul };
         }
         return new SkillProfile
         {
             Id = Id, Name = DisplayName, Description = Description, ClassId = ClassId, Branch = Branch, Tier = Tier,
-            Prerequisites = Prerequisites.ToArray(), Cost = Cost, Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName),
-            GrantsAbility = GrantsAbility, Upgrade = upgrade,
+            Prerequisites = Prerequisites.ToArray(), AnyOf = AnyOf.ToArray(), Cost = Cost, Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName),
+            GrantsAbility = GrantsAbility, Upgrade = upgrade, Upgrades = UpgradeParser.ParseAll(MoreUpgrades),
             Trigger = Enum.TryParse<TriggerKind>(Trigger, true, out var t) ? t : TriggerKind.None, TriggerMagnitude = TriggerMagnitude,
+            Trigger2 = Enum.TryParse<TriggerKind>(Trigger2, true, out var t2) ? t2 : TriggerKind.None, TriggerMagnitude2 = TriggerMagnitude2,
         };
     }
 }
