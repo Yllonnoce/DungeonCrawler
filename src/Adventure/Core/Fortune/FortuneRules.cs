@@ -38,13 +38,28 @@ public static class FortuneRules
     public const string BoundPrompt = "Bound chest: open and be Hunted?";
     public const int HunterActor = 7999;
 
-    /// <summary>Where the hunter spawns: the centre of the nearest room other than the chest's that is open to it (never a sealed secret room, a vault or the safe room); null on a one-room floor.</summary>
-    public static Room? HuntRoom(FloorLayout layout, GridPos chestCell)
+    /// <summary>The rooms the hunter may start from, nearest the chest first: never the chest's own, a sealed secret room, a vault or the safe room.</summary>
+    public static IEnumerable<Room> HuntRooms(FloorLayout layout, GridPos chestCell)
     {
         var own = layout.RoomAt(chestCell);
         var safe = layout.SafeRoom >= 0 && layout.SafeRoom < layout.Rooms.Count ? layout.Rooms[layout.SafeRoom] : null;
         return layout.Rooms.Where(r => r != own && r != safe && layout.Vaults.All(v => v.Room != r) && layout.SecretRooms.All(s => s.Room != r))
-            .OrderBy(r => FloorGenerator.Dist2(r.Center, chestCell)).ThenBy(r => layout.Rooms.IndexOf(r)).FirstOrDefault() ?? own;
+            .OrderBy(r => FloorGenerator.Dist2(r.Center, chestCell)).ThenBy(r => layout.Rooms.IndexOf(r));
+    }
+
+    /// <summary>Where the hunter spawns: in the nearest room the hunt may start from, the free floor cell nearest its centre that can walk to the chest (so it comes); the chest's own room when no other room can reach it; null when nothing can.</summary>
+    public static GridPos? HuntCell(FloorLayout layout, GridPos chestCell)
+    {
+        var reach = layout.Reachable(chestCell);
+        if (reach.Count == 0) return null;
+        bool Free(GridPos p) => layout[p] == Cell.Floor && reach.Contains(p) && !layout.IsReserved(p) && !layout.IsWater(p) && !layout.IsUnder(p) && !layout.Ramps.ContainsKey(p)
+            && !layout.ChestSpawns.Contains(p) && p != layout.UpStairs && p != layout.DownStairs && layout.Vaults.All(v => v.Key != p && v.Lever != p && v.Door != p);
+        foreach (var room in HuntRooms(layout, chestCell).Append(layout.RoomAt(chestCell)!).Where(r => r != null))
+        {
+            var cell = room.Cells().Where(Free).OrderBy(c => c.ManhattanDistance(room.Center)).ThenBy(c => c.Y).ThenBy(c => c.X).FirstOrDefault();
+            if (cell != default || Free(default)) return cell;
+        }
+        return null;
     }
 
     /// <summary>A boon or a curse the party holds.</summary>

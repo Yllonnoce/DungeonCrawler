@@ -135,13 +135,13 @@ public partial class FortuneDirector : Node
         }
         HuntUntil = Game.Instance.PlaySeconds + FortuneRules.HuntedSeconds;
         var chestCell = DungeonBuilder.WorldToCell(at);
-        var room = FortuneRules.HuntRoom(layout, chestCell);
+        var cell = FortuneRules.HuntCell(layout, chestCell);
         var pool = builder.RegularEnemies(floor);
-        if (room != null && pool.Count > 0)
+        if (cell is { } spawnCell && pool.Count > 0)
         {
             var rng = new Random(Rng.ActorSeed(Game.Instance.GameSeed, floor, FortuneRules.HunterActor));
             var id = pool[rng.Next(pool.Count)];
-            FortuneSpawns.Spawn(builder, id, builder.Surface(room.Center) + Vector3.Up * 0.1f, floor, FortuneRules.HunterName, FortuneRules.HunterAffixes, aggro: true);
+            FortuneSpawns.Spawn(builder, id, builder.Surface(spawnCell) + Vector3.Up * 0.1f, floor, FortuneRules.HunterName, FortuneRules.HunterAffixes, aggro: true);
         }
         EventBus.Instance.PlaySfx("alarm");
         EventBus.Instance.Log("Something has your scent.");
