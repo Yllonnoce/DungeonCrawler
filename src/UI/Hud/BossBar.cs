@@ -86,10 +86,13 @@ public partial class BossBar : Control
             _wasAboveHalf = frac > 0.5f;
             if (!_boss.IsAlive) { _hideLeft -= dt; if (_hideLeft <= 0f) { _boss = null; _main.Visible = false; } }
         }
-        if (_elite != null && (!IsInstanceValid(_elite) || !_elite.IsAlive)) HideSlim();
+        if (_elite != null && (!IsInstanceValid(_elite) || !_elite.IsAlive || OutOfSight(_elite))) HideSlim();
         else if (_elite != null) { _slimName.Text = _elite.DisplayName; _slim.Value = Mathf.Clamp(_elite.Hp / Math.Max(1f, _elite.MaxHp), 0f, 1f); }
         Visible = _main.Visible || _slimRoot.Visible; // the control itself reads as shown only while a bar is
     }
+
+    /// <summary>An elite that walked (or was left) beyond the bar's sight range: the slim bar goes until EliteSeen says otherwise.</summary>
+    private bool OutOfSight(Enemy e) => _party != null && IsInstanceValid(_party) && _party.HasBodies && e.GlobalPosition.DistanceTo(_party.Anchor.GlobalPosition) > SightRange;
 
     private void Poll()
     {

@@ -10,6 +10,7 @@ public sealed class FloorRecord
     public string Source { get; set; } = "";
     public float Seconds { get; set; }
     public int Kills { get; set; }
+    public int Elites { get; set; }
     public int SneakHits { get; set; }
     public int SpellCasts { get; set; }
     public int WeaponAttacks { get; set; }

@@ -53,6 +53,12 @@ public sealed record EnemyProfile
     public bool PackHunter { get; init; }
     /// <summary>Below this HP fraction the enemy runs for a while (0 = never).</summary>
     public float FleeHpFraction { get; init; }
+    /// <summary>An elite's affixes (empty for a plain creature); <see cref="EliteRules.Apply"/> stamps them with the roll.</summary>
+    public IReadOnlyList<EliteAffix> Affixes { get; init; } = Array.Empty<EliteAffix>();
+    /// <summary>An elite's name with its title ("Grukk the Swift"); null for a plain creature.</summary>
+    public string? EliteName { get; init; }
+    public bool IsElite => Affixes.Count > 0;
+    public bool Has(EliteAffix a) => Affixes.Contains(a);
 
     public Stats BuildStats() => Stats.FromValues(new Dictionary<Stat, float>
     {

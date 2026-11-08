@@ -191,6 +191,7 @@ public partial class Hud : Control
         bus.MemberDamaged += OnMemberDamaged;
         bus.LevelUp += OnLevelUp;
         bus.ItemPickedUp += OnLootToast;
+        bus.EliteSeen += BossBar.ShowSlim;
         OnFloorChanged(Game.Instance.CurrentFloor, 0);
     }
 
@@ -233,6 +234,7 @@ public partial class Hud : Control
         bus.MemberDamaged -= OnMemberDamaged;
         bus.LevelUp -= OnLevelUp;
         bus.ItemPickedUp -= OnLootToast;
+        bus.EliteSeen -= BossBar.ShowSlim;
         if (IsInstanceValid(DamageNumbers)) DamageNumbers.QueueFree();
         if (IsInstanceValid(EnemyBars)) EnemyBars.QueueFree();
         bus.FloorChanged -= OnFloorChanged;

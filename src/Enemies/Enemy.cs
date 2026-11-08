@@ -36,9 +36,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public string? NameOverride { get; set; }
     /// <summary>Counts for a quest as if part of this collective (a turned NPC's creatures).</summary>
     public string? QuestGroupId { get; set; }
-    public string DisplayName => NameOverride ?? Profile.Name;
+    public string DisplayName => NameOverride ?? Profile.EliteName ?? Profile.Name;
     public EnemyKind Kind => Profile.Kind;
     public bool IsBoss => Profile.IsBoss;
+    public bool IsElite => Profile.IsElite;
     /// <summary>Reeling from a heavy blow, a parry or a perfect block: no swing until it ends.</summary>
     public bool Staggered => _staggerLeft > 0f;
     /// <summary>Never staggers (the elites plan sets it for Juggernaut).</summary>
