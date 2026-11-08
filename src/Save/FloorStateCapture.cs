@@ -25,6 +25,7 @@ public static class FloorStateCapture
             {
                 case Enemy e when e.SpawnIndex >= 0:
                     seenEnemies.Add(e.SpawnIndex);
+                    if (e.IsElite) dto.EliteSpawns.Add(e.SpawnIndex);
                     if (!e.IsAlive) dto.DeadEnemies.Add(e.SpawnIndex);
                     else dto.Enemies.Add(new EnemyDto { SpawnIndex = e.SpawnIndex, Hp = e.Hp, X = e.GlobalPosition.X, Y = e.GlobalPosition.Y, Z = e.GlobalPosition.Z, EmbeddedArrows = e.EmbeddedArrows });
                     break;

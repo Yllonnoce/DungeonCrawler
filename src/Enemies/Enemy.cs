@@ -368,6 +368,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     private Net.PoseBuffer? _net;
     private byte _netState, _netFlags;
     private bool _clientDead;
+    /// <summary>EliteSeen is raised once per body: on the server when it first gives chase, on a client when a snapshot first says aware.</summary>
+    private bool _eliteSeen;
+    private void NoteEliteSeen() { if (!IsElite || _eliteSeen) return; _eliteSeen = true; EventBus.Instance.RaiseEliteSeen(this); }
     private float _corpseTimer;
 
     /// <summary>A snapshot entry for this enemy (client only): where it is, how hurt it is, what it is doing.</summary>
@@ -379,6 +382,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (IsHorde && IsAlive && s.State == Net.EnemyStateCodes.Encode("Attack") && _netState != s.State) BeginWindup(WindupSeconds); // hordes get no telegraph message; the snapshot's state change is their wind-up
         _netState = s.State;
         _netFlags = s.Flags;
+        if ((s.Flags & Net.EntityState.FlagAware) != 0 && IsAlive) NoteEliteSeen();
         if ((s.Flags & Net.EntityState.FlagAlive) == 0 && !_clientDead) ClientDie();
     }
 
@@ -513,7 +517,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         State.Exit(this);
         State = next;
         State.Enter(this);
-        if (wasUnaware && next is ChaseState) { AlertPack(); WakeNearby(); Group?.Notify(this); if (IsBoss) EventBus.Instance.RaiseBossSeen(this); }
+        if (wasUnaware && next is ChaseState) { AlertPack(); WakeNearby(); Group?.Notify(this); if (IsBoss) EventBus.Instance.RaiseBossSeen(this); NoteEliteSeen(); }
     }
 
     /// <summary>Run directly away from the party (used by FleeState).</summary>
@@ -978,20 +982,21 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _material.AlbedoColor = _baseColor.Darkened(0.6f);
         Effects.Clear();
 
-        if (!_environmentalKill || Party?.Active.Any(a => !a.Downed && a.GlobalPosition.DistanceTo(GlobalPosition) <= 10f) == true) Party?.AwardXp(Profile.ScaledXp(Floor));
+        if (!_environmentalKill || Party?.Active.Any(a => !a.Downed && a.GlobalPosition.DistanceTo(GlobalPosition) <= 10f) == true) Party?.AwardXp((int)MathF.Round(Profile.ScaledXp(Floor) * (IsElite ? EliteRules.XpMultiplier : 1f)));
         Group?.OnMemberDied(this);
         EventBus.Instance.RaiseEnemyDied(this);
+        if (IsElite) EventBus.Instance.RaiseEliteSlain(this);
         if (_environmentalKill) { if (IsBoss) Main.Instance?.OnBossDefeated(Floor); return; } // the dungeon's kills leave no loot
 
         var cat = Game.Instance.Catalog;
         var level = TierRules.ItemLevel(Floor);
         if (CarriesJailKey && cat.TryBase("item.iron_key", out _)) Drop(cat.Create("item.iron_key"), new Vector3(0, 0, 0.5f)); // the jailer's key, whatever else it had
         if (IsHorde && _rng.NextDouble() > 0.04) return; // fifty of them would bury the floor in bones
-        if (IsReinforcement && _rng.NextDouble() > 0.15) return; // an endless stream must not be a loot farm
+        if (IsReinforcement && !IsElite && _rng.NextDouble() > 0.15) return; // an endless stream must not be a loot farm; an elite in it still pays
         if (!IsHorde && _rng.NextDouble() < 0.5 && cat.TryBase("item.bone_shard", out _)) Drop(cat.Create("item.bone_shard"), Vector3.Zero);
-        var coins = IsBoss ? CoinRules.BossCoins(TierRules.TierIndex(Floor) + 1) : CoinRules.EnemyCoins(Floor, _rng);
+        var coins = IsBoss ? CoinRules.BossCoins(TierRules.TierIndex(Floor) + 1) : IsElite ? CoinRules.ChestCoins(Floor, _rng) : CoinRules.EnemyCoins(Floor, _rng);
         if (coins > 0) Party?.SpawnCoins(coins, GlobalPosition + Vector3.Up * 0.4f + new Vector3(0.3f, 0, -0.5f));
-        var tableId = IsBoss ? "table.chest" : "table.enemy";
+        var tableId = IsBoss ? "table.chest" : IsElite ? "table.elite" : "table.enemy";
         if (cat.Tables.TryGetValue(tableId, out var table))
         {
             var drops = IsBoss ? LootRoller.RollMany(cat, table with { Rolls = 3, DropChance = 1f }, level + 1, _rng) : LootRoller.RollMany(cat, table, level, _rng);

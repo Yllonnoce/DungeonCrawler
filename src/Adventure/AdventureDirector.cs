@@ -747,6 +747,7 @@ public partial class AdventureDirector : Node
     private void OnEnemyDied(Enemy e)
     {
         if (_record != null && e.Floor == _currentFloor) _record.Kills++;
+        if (_record != null && e.Floor == _currentFloor && e.IsElite) _record.Elites++;
         Apply(new EnemyDiedEvent(e.Group?.Id ?? e.QuestGroupId, e.Profile.Id, e.Floor));
     }
 

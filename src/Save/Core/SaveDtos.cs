@@ -186,6 +186,8 @@ public sealed class FloorStateDto
     public int PortalWaves { get; set; }
     /// <summary>Groups the shut-out creatures have sent to the safe room's door on this floor.</summary>
     public int Gathered { get; set; }
+    /// <summary>Spawn indices of the floor's elites (alive or dead): the roster stands however the schedule has moved since.</summary>
+    public List<int> EliteSpawns { get; set; } = new();
     /// <summary>Merchant stock slots (by index) already bought on this floor.</summary>
     public List<int> ShopSold { get; set; } = new();
     /// <summary>Alert state per enemy collective (v6+).</summary>

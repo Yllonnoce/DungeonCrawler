@@ -246,12 +246,12 @@ public partial class DungeonBuilder : Node3D
         FloorContents? contents = null;
         if (plan != null)
         {
-            contents = AdventurePlanning.ResolveStored(layout, spec, plan, tier?.ToProfile(), _enemies, floorIndex, seed, party ?? PartySnapshot.Expected(floorIndex), out var report, Game.Instance?.Adventure.Memory.Flags);
+            contents = AdventurePlanning.ResolveStored(layout, spec, plan, tier?.ToProfile(), _enemies, floorIndex, seed, party ?? PartySnapshot.Expected(floorIndex), out var report, Game.Instance?.Adventure.Memory.Flags, ExtraElitesPerFloor);
             if (contents == null) GD.PushWarning($"[DungeonBuilder] floor {floorIndex}: stored plan rejected ({report}), using legacy population");
             else if (report.Repairs.Count > 0) GD.Print($"[DungeonBuilder] floor {floorIndex}: plan repaired: {string.Join("; ", report.Repairs)}");
             if (contents is { Dropped.Count: > 0 }) GD.Print($"[DungeonBuilder] floor {floorIndex}: could not place: {string.Join("; ", contents.Dropped)}");
         }
-        contents ??= LegacyPopulator.Populate(layout, tier?.ToProfile(), _enemies, floorIndex, seed);
+        contents ??= LegacyPopulator.Populate(layout, tier?.ToProfile(), _enemies, floorIndex, seed, ExtraElitesPerFloor);
         Contents = contents;
 
         _floorRoot = new Node3D { Name = $"Floor{floorIndex}" };
@@ -265,13 +265,13 @@ public partial class DungeonBuilder : Node3D
         PlaceStairs(layout, _floorRoot, floorIndex);
         PlaceViewerCast(layout, _floorRoot, floorIndex);
         PlaceMerchant(layout, _floorRoot, floorIndex);
-        PlaceEnemies(contents, floorIndex);
+        var floorState = Game.Instance != null && Game.Instance.Floors.TryGetValue(floorIndex, out var fs) ? fs : null;
+        PlaceEnemies(contents, floorIndex, floorState);
         PlaceProps(layout, contents, _floorRoot, floorIndex, seed);
         PlaceFires(layout, _floorRoot, floorIndex);
         PlaceStructures(layout, _floorRoot, seed);
         PlaceNestMouths(layout, _floorRoot, seed);
         PlaceHordes(layout, contents, floorIndex, Game.Instance?.SpentHordes(floorIndex) ?? Array.Empty<string>());
-        var floorState = Game.Instance != null && Game.Instance.Floors.TryGetValue(floorIndex, out var fs) ? fs : null;
         PlaceAmbushes(layout, floorIndex, seed, floorState);
         PlacePortals(layout, floorIndex, seed, floorState);
         PlaceSafeRoom(layout, floorIndex, floorState);
@@ -289,7 +289,7 @@ public partial class DungeonBuilder : Node3D
         tremor.SetStone(Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f));
         _floorRoot.AddChild(tremor);
 
-        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}, {LayoutKinds.Id(layout.Kind)}) seed={seed} rooms={layout.Rooms.Count} fires={layout.Fires.Count} enemies={contents.EnemyCount} plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} objective={FloorObjectives.Id(layout.Objective?.Kind ?? FloorObjectiveKind.None)} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
+        GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}, {LayoutKinds.Id(layout.Kind)}) seed={seed} rooms={layout.Rooms.Count} fires={layout.Fires.Count} enemies={contents.EnemyCount} elites=[{string.Join("; ", _floorRoot.GetChildren().OfType<Enemy>().Where(e => e.IsElite && e.SpawnIndex >= 0).Select(e => e.DisplayName))}] plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} objective={FloorObjectives.Id(layout.Objective?.Kind ?? FloorObjectiveKind.None)} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
         return layout;
     }
 
@@ -1145,16 +1145,25 @@ public partial class DungeonBuilder : Node3D
         }
     }
 
-    private void PlaceEnemies(FloorContents contents, int floor)
+    /// <summary>Elites on top of the floor's schedule (a curse, a clause); read when a floor is resolved.</summary>
+    public static int ExtraElitesPerFloor { get; set; }
+
+    /// <summary>A floor seen before (a revisit, a load, a client's Welcome) keeps the elites its state names, whatever the schedule says now.</summary>
+    private void PlaceEnemies(FloorContents contents, int floor, Save.FloorStateDto? state)
     {
         var registry = new CollectiveRegistry { Name = "Collectives" };
         _floorRoot!.AddChild(registry);
         Collectives = registry;
         foreach (var cc in contents.Collectives) registry.Collectives.Add(new Collective(cc, cell => Surface(cell), registry));
+        var fromState = state?.EliteSpawns is { Count: > 0 };
+        var seed = Rng.FloorSeed(GameSeed, floor);
         foreach (var e in contents.Enemies)
         {
             var group = e.CollectiveId == null ? null : registry.Find(e.CollectiveId);
-            SpawnEnemy(e.EnemyId, Surface(e.Cell, e.Under) + Vector3.Up * 0.1f, floor, e.SpawnIndex, group, e.Ordinal);
+            var elite = fromState
+                ? state!.EliteSpawns.Contains(e.SpawnIndex) ? e.Elite ?? EliteRules.Roll(seed, floor, e.SpawnIndex, EnemyProfile(e.EnemyId)?.Faction ?? "") : null
+                : e.Elite;
+            SpawnEnemy(e.EnemyId, Surface(e.Cell, e.Under) + Vector3.Up * 0.1f, floor, e.SpawnIndex, group, e.Ordinal, elite: elite);
         }
         if (contents.BossId is { } bossId && contents.BossCell is { } bossCell)
         {
@@ -1173,12 +1182,13 @@ public partial class DungeonBuilder : Node3D
     }
 
     /// <summary>Instantiate an enemy by id. SpawnIndex -1 = summoned, -2 = boss.</summary>
-    public Enemy? SpawnEnemy(string id, Vector3 position, int floor, int spawnIndex = -1, Collective? group = null, int ordinal = 0, int netId = -1)
+    public Enemy? SpawnEnemy(string id, Vector3 position, int floor, int spawnIndex = -1, Collective? group = null, int ordinal = 0, int netId = -1, EliteRoll? elite = null)
     {
         if (_floorRoot == null) return null;
         var profile = EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile();
         // the last boss is the campaign's villain in person when the owner built them a body: a tall man, not a 3.8 m demon
         if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = 1.25f };
+        profile = ApplyElite(profile, elite);
         var enemy = _enemyScene.Instantiate<Enemy>();
         enemy.Profile = profile;
         enemy.Floor = floor;
@@ -1195,6 +1205,8 @@ public partial class DungeonBuilder : Node3D
         if (spawnIndex < 0 && spawnIndex != -2) EventBus.Instance.RaiseEnemySpawned(enemy); // dynamic: a server tells its clients
         return enemy;
     }
+
+    private static EnemyProfile ApplyElite(EnemyProfile p, EliteRoll? e) => e == null ? p : EliteRules.Apply(p, e);
 
     private void PlaceProps(FloorLayout layout, FloorContents contents, Node3D root, int floor, int seed)
     {
