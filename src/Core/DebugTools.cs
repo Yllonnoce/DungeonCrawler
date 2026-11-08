@@ -2203,7 +2203,7 @@ public partial class DebugTools : Node
                 _planStep++;
                 var contents = main.Builder.Contents;
                 if (contents?.Plan == null) { GD.Print("[plan] RESULT FAIL: floor 7 was not built from a plan"); break; }
-                var enemies = root.GetChildren().OfType<Enemy>().Count(e => e.SpawnIndex >= 0);
+                var enemies = root.GetChildren().OfType<Enemy>().Count(e => e.SpawnIndex >= 0 && e.SpawnIndex < DungeonBuilder.ViewerOrcSpawnIndex); // the plan's creatures: not the viewer orc, not fortune's drift-cache ambushers (91000+)
                 var extraChests = root.GetChildren().OfType<Dungeon.Props.Chest>().Count(c => c.SpawnIndex >= FloorContents.ExtraIndexBase);
                 var extraTraps = root.GetChildren().OfType<Dungeon.Props.Trap>().Count(t => t.SpawnIndex >= FloorContents.ExtraIndexBase);
                 var grouped = contents.Enemies.Count(e => e.CollectiveId != null);
