@@ -56,6 +56,7 @@ public partial class Hud : Control
     private Label _mangled = null!;
     private float _mangledSince;
     private float _subtitleTimer;
+    private bool _subtitleIsBark; // a bark may replace a bark, never a narration still on screen
 
     public void Bind(PartyController party) => _party = party;
 
@@ -185,6 +186,16 @@ public partial class Hud : Control
     {
         _subtitle.Text = text;
         _subtitleTimer = Math.Clamp(2f + text.Length * 0.06f, 3f, 10f);
+        _subtitleIsBark = false;
+    }
+
+    /// <summary>A companion's bark in the subtitle strip with the speaker's name: narration wins (a bark never overwrites one still showing), a later bark replaces an earlier bark.</summary>
+    public void ShowBark(string speaker, string text, float seconds)
+    {
+        if (_subtitleTimer > 0 && !_subtitleIsBark) return;
+        _subtitle.Text = speaker.Length == 0 ? text : $"{speaker}: {text}";
+        _subtitleTimer = seconds;
+        _subtitleIsBark = true;
     }
 
     /// <summary>True while the dialogue is open on this NPC.</summary>

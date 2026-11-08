@@ -365,6 +365,14 @@
               "VoiceId": "060c1557d4d05aec",
               "Delivery": null
             },
+            "Aside": {
+              "Member": "Brand",
+              "Line": {
+                "Text": "Four for one. I\u0027ve seen officers make that trade. Never one who stayed to pay.",
+                "VoiceId": null,
+                "Delivery": null
+              }
+            },
             "Choices": [
               {
                 "Text": "Nineteen years is paid. It\u0027s forgiven.",

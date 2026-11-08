@@ -445,7 +445,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         _asks++;
         var yes = NpcFight.Decides(Game.Instance?.GameSeed ?? 0, Id, _asks);
         GD.Print($"[Npc] {NpcName} asked to join (ask {_asks}): {(yes ? "yes" : "no")}");
-        if (yes) StartFollowing();
+        if (yes) StartFollowing(); else EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Refused);
         return yes;
     }
 

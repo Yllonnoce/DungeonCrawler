@@ -91,7 +91,10 @@ public partial class ClientWorld : Node
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
-            case EmoteEvt em: if (em.Emote == "victory" && em.Member >= 0 && em.Member < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[em.Member].Celebrate(); break;
+            case EmoteEvt em when em.Member >= 0 && em.Member < Main.Instance.Party.Adventurers.Length:
+                if (em.Emote == "victory") Main.Instance.Party.Adventurers[em.Member].Celebrate();
+                else if (em.Emote == "cheer") Main.Instance.Party.Adventurers[em.Member].PlayCheer();
+                break;
             case BossDefeatedEvt bd: OnBossDefeated(bd.Floor); break;
             case ObjectiveDoneEvt od: OnObjectiveDone(od); break;
             case ObjectiveStateMsg os: Adventure.Objectives.ObjectiveController.Instance?.ApplyNet(os.State); break;
@@ -103,7 +106,7 @@ public partial class ClientWorld : Node
                 if (n.CleanText != null && !Settings.VillainCurses) EventBus.Instance.RaiseNarration(n.CleanText, n.CleanVoiceId);
                 else EventBus.Instance.RaiseNarration(n.Text, n.VoiceId);
                 break;
-            case BarkMsg b: AdventureDirector.Instance.PlayBark(new Line { Text = b.Text, VoiceId = b.VoiceId }); break;
+            case BarkMsg b: AdventureDirector.Instance.PlayBark(b.Member, new Line { Text = b.Text, VoiceId = b.VoiceId }); Trace.Add($"bark:{b.Member}"); break;
             case DialogueAnswer da: Main.Instance.Hud?.Dialogue.OnJoinAnswer(da.NpcId, da.Accepted); Trace.Add(da.Accepted ? "joined" : "refused"); break;
             case EnemySpawned es: OnEnemySpawned(es.Enemy); break;
             case HordeTriggeredEvt ht: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == ht.Id)?.Show(); break;

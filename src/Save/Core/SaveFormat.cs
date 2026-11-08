@@ -6,7 +6,7 @@ namespace DungeonCrawler.Save;
 /// <summary>JSON (de)serialisation with a version stamp and a migration chain. Engine-free.</summary>
 public static class SaveFormat
 {
-    public const int CurrentVersion = 10;
+    public const int CurrentVersion = 11;
 
     public static readonly JsonSerializerOptions Options = new()
     {
@@ -68,6 +68,7 @@ public static class SaveMigrations
                 7 => root, // v8 added Objective per floor (the floor objective's progress); missing means none or not started
                 8 => From8To9(root), // v9 added lethal hazards per floor and Mangled members; floors an old run already visited keep no hazards
                 9 => From9To10(root), // v10 added the party's Gold purse; old saves start with none
+                10 => root, // v11 added Adventure.GagCounts (the banter's running-gag counters); missing means none yet
                 _ => throw new InvalidDataException($"No migration from save version {version}"),
             };
             version++;

@@ -118,6 +118,11 @@ public partial class AdventureDirector : Node
             var major = npc.CastId != null; // the cast gets the main model; passers-by the minor one
             var persona = npc.Persona ?? campaign?.CastFor(npc.CastId)?.Persona; // how they sound: their own words, else the cast member's
             foreach (var node in npc.Script.Nodes) _voice.Enqueue(node.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
+            foreach (var aside in npc.Script.Nodes.Select(n => n.Aside).OfType<AsidePlan>()) // a companion's remark after the NPC's line, in the companion's voice
+            {
+                var cls = ClassIdOf(aside.Member);
+                _voice.Enqueue(aside.Line, Voices.ForClass(cls), Speaker.Companion, VoicePriority.Bark, major: false, Voices.CompanionPersona(cls));
+            }
             var quest = plan.Quests.FirstOrDefault(q => q.GiverNpc == npc.Id);
             if (quest != null) foreach (var l in new[] { quest.Lines.Offer, quest.Lines.Accept, quest.Lines.Decline, quest.Lines.Complete, quest.Lines.Fail }) _voice.Enqueue(l, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
         }
@@ -150,9 +155,17 @@ public partial class AdventureDirector : Node
         foreach (var line in campaign.Merchant.AllLines()) _voice.Enqueue(line, Voices.Npcs[0], Speaker.Npc, VoicePriority.Npc, major: true, persona: cast.Persona);
     }
 
-    private void EnqueueBarks(CampaignPlan campaign)
+    /// <summary>A roster member's class id: the party's if it has bodies, else the default roster's, else empty.</summary>
+    private static string ClassIdOf(string member)
     {
         var party = Main.Instance?.Party;
+        return (party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
+            ? party.Members.FirstOrDefault(m => m.Name == member)?.Class.Id
+            : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == member).ClassId) ?? "";
+    }
+
+    private void EnqueueBarks(CampaignPlan campaign)
+    {
         Voice.KillBarks.TopUpFighters(campaign); // the fighters' sets live in the campaign beside the party's
         foreach (var set in campaign.Barks)
         {
@@ -160,15 +173,10 @@ public partial class AdventureDirector : Node
             if (Voice.KillBarks.IsFighter(set.Member)) { (voice, persona) = Voices.FighterVoice(set.Member); speaker = Speaker.Npc; }
             else
             {
-                var classId = party != null && GodotObject.IsInstanceValid(party) && party.Members.Length > 0
-                    ? party.Members.FirstOrDefault(m => m.Name == set.Member)?.Class.Id
-                    : Party.PartyController.DefaultRoster.FirstOrDefault(r => r.Name == set.Member).ClassId;
+                var classId = ClassIdOf(set.Member);
                 voice = Voices.ForClass(classId ?? "");
                 persona = Voices.CompanionPersona(classId ?? "");
-                Voice.KillBarks.TopUp(set, classId ?? ""); // the stock victory lines get ids (and audio, when the bank has it) like the written ones
-                Voice.IdleBarks.TopUp(set, classId ?? ""); // and the razzings for a player who stands about
-                Voice.DanceBarks.TopUp(set, classId ?? ""); // and the crowing over a kill being danced on
-                Voice.TravelBarks.TopUp(set, classId ?? ""); // and the grumbling over quiet miles
+                CampaignRepair.TopUpSet(set, classId ?? ""); // every stock bank (kill, idle, dance, travel, the reactive moments, the cheer) gets ids, and audio when the bank has it, like the written lines
             }
             foreach (var b in set.Lines)
             {
@@ -182,40 +190,53 @@ public partial class AdventureDirector : Node
     /// <summary>Whether this member's body is in its victory dance (its dance line stands in for the kill bark).</summary>
     private static bool IsDancing(Characters.CharacterState m) => Main.Instance?.Party.Adventurers.FirstOrDefault(a => a.State == m)?.Dancing == true;
 
-    /// <summary>A short in-character line from the bark bank, rate limited, spoken if its audio exists.</summary>
-    private void Bark(Characters.CharacterState? m, BarkTrigger trigger)
+    /// <summary>
+    /// A short in-character line from the bark bank, spoken if its audio exists; returns whether a line was said. Reactive
+    /// barks are rate limited (a global gap, a per-member-per-trigger cooldown, a roll for a kill or a quick moment); a
+    /// scripted line (banter, a cheer and its answers) skips the gaps but still sets the clock so nothing talks over it.
+    /// </summary>
+    private bool Bark(Characters.CharacterState? m, BarkTrigger trigger, bool scripted = false)
     {
-        if (m == null || !Game.Instance.InGame) return;
+        if (m == null || !Game.Instance.InGame) return false;
         var campaign = Game.Instance.Adventure.Campaign;
-        var set = campaign?.Barks.FirstOrDefault(b => b.Member == m.Name);
-        if (set == null) return;
+        if (campaign == null) return false;
+        var set = campaign.Barks.FirstOrDefault(b => b.Member == m.Name);
+        if (set == null) campaign.Barks.Add(set = new BarkSet { Member = m.Name }); // a hero the bank was not written for (a co-op player's own name): the stock speaks for their class
         var now = Game.Instance.PlaySeconds;
         // a kill is remarked on more freely than anything else: a quick cooldown, a roll, and a bank topped up from stock
         var kill = trigger == BarkTrigger.Kill;
-        var razz = trigger == BarkTrigger.Idle;
         var dance = trigger == BarkTrigger.Dance; // every dance gets its word, on the kill's quick gaps and with no roll
-        var travel = trigger == BarkTrigger.Travel;
-        if (kill) Voice.KillBarks.TopUp(set, m.Class.Id);
-        if (razz) Voice.IdleBarks.TopUp(set, m.Class.Id);
-        if (dance) Voice.DanceBarks.TopUp(set, m.Class.Id);
-        if (travel) Voice.TravelBarks.TopUp(set, m.Class.Id);
-        if (now - _lastBark < (kill || dance ? Voice.KillBarks.GlobalGapSeconds : 5)) return;
-        if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill || dance ? Voice.KillBarks.CooldownSeconds : 25)) return;
-        if (kill && _barkRng.NextDouble() >= Voice.KillBarks.Chance) return;
+        CampaignRepair.TopUpSet(set, m.Class.Id); // a campaign written before a trigger existed gets the stock lines for it, in this hero's voice
+        if (!scripted)
+        {
+            if (now - _lastBark < (kill || dance ? Voice.KillBarks.GlobalGapSeconds : Voice.BarkRules.GlobalGapSeconds)) return false;
+            if (_barkCooldown.TryGetValue((m.Name, trigger), out var last) && now - last < (kill || dance ? Voice.KillBarks.CooldownSeconds : Voice.BarkRules.PerTriggerCooldownSeconds)) return false;
+            if (kill && _barkRng.NextDouble() >= Voice.KillBarks.Chance) return false;
+            if (Voice.BarkRules.Quick.Contains(trigger) && _barkRng.NextDouble() >= Voice.BarkRules.QuickChance) return false; // a fight is full of perfect blows and parries
+        }
         var lines = set.Lines.Where(l => l.Trigger == trigger && l.Line.Text != "").ToList();
-        if (lines.Count == 0) return;
-        // a line said in the last two floors stays quiet; when every line for this trigger is that recent, so does the companion,
-        // except over a kill, where the line said longest ago comes back
+        if (lines.Count == 0) return false;
+        // a line said in the last two floors stays quiet; when every line for this trigger is that recent, the line said longest
+        // ago comes back, except over a hero swap, which may go unremarked
         var said = Game.Instance.Adventure.BarksSaid;
         var texts = lines.Select(l => l.Line.Text).ToList();
-        var text = kill || razz || dance || travel ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
-        if (text == null) return;
+        var text = Voice.BarkRules.UsesOldest(trigger) ? Voice.BarkRepeat.ChooseOrOldest(said, texts, _currentFloor, _barkRng) : Voice.BarkRepeat.Choose(said, texts, _currentFloor, _barkRng);
+        if (text == null) return false;
         var line = lines.First(l => l.Line.Text == text).Line;
+        line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(trigger)); // a line topped up after the campaign loaded
         Voice.BarkRepeat.Said(said, text, _currentFloor);
-        _lastBark = now;
         _barkCooldown[(m.Name, trigger)] = now;
-        EventBus.Instance.Log($"{m.Name}: \"{line.Text}\"");
-        EventBus.Instance.RaiseBark(m.Name, line);
+        Say(m.Name, line);
+        return true;
+    }
+
+    /// <summary>A companion's line goes out: the log, the bus (co-op clients hear it as a BarkMsg), the subtitle strip with the speaker's name, and the voice if it has one.</summary>
+    private void Say(string speaker, Line line)
+    {
+        _lastBark = Game.Instance.PlaySeconds;
+        EventBus.Instance.Log($"{speaker}: \"{line.Text}\"");
+        EventBus.Instance.RaiseBark(speaker, line);
+        Main.Instance?.Hud?.ShowBark(speaker, line.Text, Voice.BarkRules.SubtitleSeconds(line.Text));
         _voice.PlaySoon(line); // waits a few seconds for the narrator to finish rather than dropping the line
     }
 
@@ -238,12 +259,9 @@ public partial class AdventureDirector : Node
         var text = Voice.BarkRepeat.ChooseOrOldest(said, lines, _currentFloor, _barkRng);
         if (text == null) return;
         Voice.BarkRepeat.Said(said, text, _currentFloor);
-        _lastBark = now;
         _barkCooldown[(npc.Id, BarkTrigger.Kill)] = now;
         var line = barkLines.First(l => l.Line.Text == text).Line; // carries the id the bank was rendered under
-        EventBus.Instance.Log($"{npc.NpcName}: \"{text}\"");
-        EventBus.Instance.RaiseBark(npc.NpcName, line);
-        _voice.PlaySoon(line);
+        Say(npc.NpcName, line);
     }
 
     /// <summary>
@@ -256,8 +274,14 @@ public partial class AdventureDirector : Node
         return campaign.Barks.Sum(set => set.Lines.Count(l => l.Line.VoiceId != null));
     }
 
-    /// <summary>A client voicing a bark the server chose.</summary>
-    public void PlayBark(Line line) => _voice.PlayLine(line, interrupt: false);
+    /// <summary>A client voicing a bark the server chose: the speaker's name on the subtitle strip, the voice if the line has one.</summary>
+    public void PlayBark(int member, Line line)
+    {
+        var members = Main.Instance?.Party?.Members;
+        var name = members != null && member >= 0 && member < members.Length ? members[member].Name : "";
+        Main.Instance?.Hud?.ShowBark(name, line.Text, Voice.BarkRules.SubtitleSeconds(line.Text));
+        _voice.PlayLine(line, interrupt: false);
+    }
 
     private void LogPlanning(string line)
     {
@@ -405,6 +429,7 @@ public partial class AdventureDirector : Node
         TickIdleTaunt();
         TickIdleRazz();
         TickTravel();
+        TickTalk();
         if (_record == null || !Game.Instance.InGame || _leadName == "") return;
         _record.PossessSeconds[_leadName] = _record.PossessSeconds.GetValueOrDefault(_leadName) + (float)delta;
     }
@@ -441,7 +466,7 @@ public partial class AdventureDirector : Node
         bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
         bus.MemberDance += i => { var members = Main.Instance?.Party.Members; if (members != null && i >= 0 && i < members.Length) Bark(members[i], BarkTrigger.Dance); };
         bus.NpcKill += FighterBark;
-        bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * 0.15f) Bark(m, BarkTrigger.Hurt); };
+        bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * Voice.BarkRules.HurtFraction && !_lowHp.Due(i, m.Hp, m.Stats[Characters.Stat.MaxHp], _currentFloor)) Bark(m, BarkTrigger.Hurt); }; // a hit that leaves them badly hurt is LowHp's to remark on
         bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);
         bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
         bus.LeadChanged += i => Bark(Member(i), BarkTrigger.Possess);
@@ -470,6 +495,7 @@ public partial class AdventureDirector : Node
         bus.AbilityUsed += (_, kind) => { if (_record == null) return; if (kind is Combat.AbilityKind.WeaponAttack or Combat.AbilityKind.MeleeStrike) _record.WeaponAttacks++; else _record.SpellCasts++; };
         bus.LeadChanged += index => { var p = Main.Instance?.Party; if (p != null && index < p.Members.Length) _leadName = p.Members[index].Name; };
         bus.BossDefeated += _ => { if (_record != null) _record.BossSeconds = (float)(Game.Instance.PlaySeconds - _floorStart); };
+        WireTalk(bus); // last: its PartyWiped handler reads the record's wipe count after the line above has counted this one
     }
 
     /// <summary>The tavern merchant's briefing reached the deal: the seed money, once. The server's (or solo's) to pay; a client's gold follows.</summary>
@@ -531,6 +557,7 @@ public partial class AdventureDirector : Node
         _currentFloor = floor;
         _hasFloor = true;
         _gatheringRemarks = 0; // every build or load starts the gathering count again
+        _tavernNext = floor == 0 ? Game.Instance.PlaySeconds + Voice.BanterRules.TavernFirstSeconds : double.MaxValue; // the tavern's first exchange
         OpenRecord(floor);
         if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
@@ -616,6 +643,8 @@ public partial class AdventureDirector : Node
         var hud = main.Hud;
         var action = !party.PartyAlive || lead.Downed || party.InputLocked || hud == null || hud.Paused || hud.DialogueOpen || hud.InventoryOpen || Audio.MusicDirector.AnyoneFighting(main);
         if (!_travel.Update(Game.Instance.PlaySeconds, lead.DistanceTravelled, action)) return;
+        Bump(Voice.BanterRules.EmptyCounter); // Sable's tally of empty rooms: a long quiet way is one
+        if (_travelTurn % Voice.BanterRules.TravelShare == 0 && StartBanter()) { _travelTurn++; return; } // one grumble in three is an exchange instead
         var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
         if (Voice.TravelBarks.Speaker(living, _travelTurn++) is { } who)
             Bark(party.Members.FirstOrDefault(m => m.Name == who), BarkTrigger.Travel);

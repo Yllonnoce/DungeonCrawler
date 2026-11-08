@@ -114,6 +114,7 @@ You control one of the four heroes at a time; the other three follow, fight and 
 | Q or mouse wheel | Cycle your active ability |
 | 1 / 2 / 3 / 4, F | Take control of another hero |
 | R | Cycle the companions' stance: Defensive, Aggressive, Hold |
+| V | Cheer: your hero rallies, the others answer |
 | E | Interact: pick up loot, open doors and chests, talk, disarm traps, push secret walls |
 | Tab or I | Inventory (drag to equip; drop or destroy items) |
 | C, K, J | Character sheet, skill tree, journal |

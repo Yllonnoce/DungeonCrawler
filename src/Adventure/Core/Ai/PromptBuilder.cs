@@ -50,7 +50,7 @@ public sealed class PromptTemplates
 
         Voices: every character sounds like someone. Give each NPC and cast member a Persona: VoiceStyle (a few words on the voice and manner, at most 120 characters; make them distinct people, not everyone frightened), DefaultDelivery (one of whisper, weary, calm, warm, cheerful, sly, pleading, angry, mocking, shout, booming, frantic) and Voice (one of the voice names listed). Any Line may set Delivery to one of those ids when it should not be said in the character's usual manner (a shout, a whisper).
 
-        Taunts: the antagonist runs the dungeon and throws its trials at the party; they yell at, mock and curse the party as things happen. The campaign's Taunts are two or three lines per Trigger (FloorEnter, Capture, Freed, AllFreed, GasThickens, GasLethal, WrongLever, GateShift, VaultOpened, RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle, MemberDowned, PartyWiped, Descend, Reinforcements), FloorEnter ones naming their Objective. Spiteful, theatrical, in the antagonist's own voice; free to curse, period oaths and modern profanity both. Every taunt has a CleanLine: the same line with the cursing taken out. Tokens {party} (the lead's name), {floor} and {prisoner} are filled in.
+        Taunts: the antagonist runs the dungeon and throws its trials at the party; they yell at, mock and curse the party as things happen. The campaign's Taunts are two or three lines per Trigger (FloorEnter, Capture, Freed, AllFreed, GasThickens, GasLethal, WrongLever, GateShift, VaultOpened, RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle, MemberDowned, PartyWiped, Descend, Reinforcements, Crushed, EliteSlain, ShrineUsed, MimicSprung, AllyDead, AllyLeft, Gamble), FloorEnter ones naming their Objective. Crushed is a member killed by the press; EliteSlain a named creature of the antagonist's dead; ShrineUsed a party member took a boon or a curse from an altar; MimicSprung a chest bit them; AllyDead a hired fighter died; AllyLeft a fighter refused to join; Gamble the merchant's blind bundle. Spiteful, theatrical, in the antagonist's own voice; free to curse, period oaths and modern profanity both. Every taunt has a CleanLine: the same line with the cursing taken out. Tokens {party} (the lead's name), {floor}, {prisoner}, {elite} (the dead elite's name) and {name} (the member or fighter concerned) are filled in.
 
         Continuity: the campaign outline is the arc: its Cast are the people who come back, its Mystery is the question the clues answer, its floor Story beats say who appears where. Reference its antagonist, factions and tier beats; carry threads forward from the memory notes (rescued NPCs may reappear, failed quests leave marks, flags set by choices change who is waiting and what they say, the antagonist reacts to how the party fights). Adapt difficulty to the notes: a struggling party gets fewer, weaker groups and a kinder quest; a dominant party gets tighter defences and alarms. Never break the rules to do it.
         """;
@@ -70,7 +70,7 @@ public sealed class PromptTemplates
         """;
 
     public const string DefaultBarksTask = """
-        Write a bark bank for the four party members: for each member exactly 24 lines, three per Trigger (Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived), each at most 90 characters, in the member's own voice given their class and the campaign's tone. Members[].Member is the member's name exactly as given.
+        Write a bark bank for the four party members: for each member exactly 69 lines, three per Trigger (Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, TrapSprung, Fell, PerfectBlow, Parried, Mimic, SecretFound, EliteSeen, Broke, ShrineBoon, ShrineCurse, GambleWin, GambleDud, LowHp, Cheer, CheerAnswer), each at most 90 characters, in the member's own voice given their class and the campaign's tone. Possess is said when the player takes control of that member (a plain hero swap). TrapSprung: a trap sprang under them; Fell: a drop or a pit; PerfectBlow and Parried: their own perfect heavy blow or parry; Mimic: a chest turned out to have teeth; SecretFound: a hidden room opened; EliteSeen: a named creature sighted; Broke: they cannot afford the merchant's price; ShrineBoon and ShrineCurse: what an altar gave them; GambleWin and GambleDud: the merchant's blind bundle; LowHp: first time badly hurt on a floor; Cheer: rallying the others; CheerAnswer: answering a rally. Members[].Member is the member's name exactly as given.
         """;
 }
 
@@ -81,7 +81,7 @@ public static class PromptBuilder
 {
     public const int OutlineMaxTokens = 48000; // thinking counts against it; the outline is 10k tokens of JSON on its own
     public const int FloorMaxTokens = 16000;
-    public const int BarksMaxTokens = 8000;
+    public const int BarksMaxTokens = 16000; // 276 lines of JSON
 
     /// <summary>The system blocks every call shares: the rules, then the author's bible when there is one. Byte-stable so they cache.</summary>
     private static PromptBlock[] SystemBlocks(PromptTemplates t, params PromptBlock[] extra)

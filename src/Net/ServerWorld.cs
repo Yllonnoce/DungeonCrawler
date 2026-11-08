@@ -400,6 +400,10 @@ public partial class ServerWorld : Node
                 EventBus.Instance.Log($"{slot.Name} needs help!");
                 Trace.Add("shout");
                 break;
+            case CheerIntent:
+                EventBus.Instance.RaiseCheer(slot.MemberIndex); // the director picks the lines (relayed as barks) and the bodies' emote
+                Trace.Add("cheer");
+                break;
             case BagMoveIntent bm:
                 if (!OwnsSlots(slot, bm.From, bm.To)) break;
                 party.BagMove(bm.From, bm.To, body);

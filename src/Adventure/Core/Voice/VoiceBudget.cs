@@ -74,7 +74,10 @@ public static class VoiceBudget
         foreach (var (floor, plan) in story)
             foreach (var npc in plan.Npcs)
                 foreach (var node in plan.Npcs.Count == 0 ? Enumerable.Empty<DialogueNode>() : npc.Script.Nodes)
+                {
                     list.Add(new Pick(node.Line, $"{npc.Name}", floor));
+                    if (node.Aside is { } a) list.Add(new Pick(a.Line, $"aside {a.Member}", floor));
+                }
         foreach (var (floor, plan) in story)
             foreach (var n in plan.Narration.Where(n => n.Trigger != NarrationTrigger.Enter)) list.Add(new Pick(n.Line, "story narration", floor));
         foreach (var (floor, plan) in story)
@@ -83,7 +86,11 @@ public static class VoiceBudget
         var quiet = byFloor.Where(f => !campaign.IsStoryFloor(f.Key)).ToList();
         foreach (var (floor, plan) in quiet) list.Add(new Pick(plan.IntroLine, "quiet intro", floor));
         foreach (var (floor, plan) in quiet)
-            foreach (var npc in plan.Npcs) foreach (var node in npc.Script.Nodes) list.Add(new Pick(node.Line, $"{npc.Name}", floor));
+            foreach (var npc in plan.Npcs) foreach (var node in npc.Script.Nodes)
+            {
+                list.Add(new Pick(node.Line, $"{npc.Name}", floor));
+                if (node.Aside is { } a) list.Add(new Pick(a.Line, $"aside {a.Member}", floor));
+            }
         foreach (var (floor, plan) in quiet)
             foreach (var q in plan.Quests) { list.Add(new Pick(q.Lines.Offer, "quest offer", floor)); list.Add(new Pick(q.Lines.Complete, "quest complete", floor)); }
         foreach (var (floor, plan) in byFloor)

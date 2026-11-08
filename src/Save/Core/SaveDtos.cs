@@ -54,6 +54,8 @@ public sealed class AdventureDto
     public string? AiStoppedReason { get; set; }
     /// <summary>Companion barks already said, by text, and the floor they were said on: a line waits two floors before it may repeat.</summary>
     public Dictionary<string, int> BarksSaid { get; set; } = new();
+    /// <summary>Running-gag counters (gerald, doors, empty): what Ilex has named, what Brand has counted, what Sable is owed.</summary>
+    public Dictionary<string, int> GagCounts { get; set; } = new();
     /// <summary>Floors below this were built before the lethal hazards existed (an old save): they stay as they were. New runs start at 1.</summary>
     public int HazardsFromFloor { get; set; } = 1;
 }

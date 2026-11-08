@@ -284,6 +284,14 @@
               "VoiceId": "0712ef2049dc0183",
               "Delivery": null
             },
+            "Aside": {
+              "Member": "Sable",
+              "Line": {
+                "Text": "He means us.",
+                "VoiceId": null,
+                "Delivery": null
+              }
+            },
             "Choices": [
               {
                 "Text": "Then what is breathing down there?",
@@ -435,6 +443,14 @@
               "Text": "Maud. Maud Sorrel, from the lane behind the chandler\u0027s. Thirty-eight years I have been coming down here and I have never once been cold.",
               "VoiceId": "0acf8933cdbf53a4",
               "Delivery": null
+            },
+            "Aside": {
+              "Member": "Wren",
+              "Line": {
+                "Text": "Thirty-eight years and never cold. The place likes her. That\u0027s not good news.",
+                "VoiceId": null,
+                "Delivery": null
+              }
             },
             "Choices": [
               {

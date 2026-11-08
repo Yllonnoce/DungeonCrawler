@@ -181,6 +181,24 @@ public static class CampaignRepair
     }
 
     private static string Clip(string s) => s.Length <= MaxLine ? s.Trim() : s[..MaxLine].Trim();
+
+    /// <summary>Pour every stock bank into one party member's bark set (kill, idle, dance, travel, the reactive moments, the cheer); returns how many lines were added.</summary>
+    public static int TopUpSet(BarkSet set, string classId)
+        => Voice.KillBarks.TopUp(set, classId) + Voice.IdleBarks.TopUp(set, classId) + Voice.DanceBarks.TopUp(set, classId)
+         + Voice.TravelBarks.TopUp(set, classId) + Voice.ReactiveBarks.TopUp(set, classId) + Voice.CheerBarks.TopUp(set, classId);
+
+    /// <summary>Top up every party member's set in a campaign (fighters keep their own stock; a member whose class is unknown is left alone); returns how many lines were added.</summary>
+    public static int TopUpBarks(CampaignPlan campaign, Func<string, string?> classIdOf)
+    {
+        var added = 0;
+        foreach (var set in campaign.Barks)
+        {
+            if (Voice.KillBarks.IsFighter(set.Member)) continue;
+            if (classIdOf(set.Member) is not { } classId) continue;
+            added += TopUpSet(set, classId);
+        }
+        return added;
+    }
 }
 
 /// <summary>What a load-time merchant repair changed, to take it back out before the campaign is written.</summary>

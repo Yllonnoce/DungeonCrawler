@@ -327,6 +327,7 @@ public partial class PartyController : Node3D
         else if (@event.IsActionPressed("focus_next")) Possess(NextAlive(LocalIndex));
         else if (@event.IsActionPressed("ability_next")) CycleAbility(LocalIndex, +1);
         else if (@event.IsActionPressed("swap_rank")) CycleAllStances();
+        else if (@event.IsActionPressed("cheer")) { if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.CheerIntent()); else EventBus.Instance.RaiseCheer(LocalIndex); }
         else if (@event.IsActionPressed("attack_1")) Possess(0);
         else if (@event.IsActionPressed("attack_2")) Possess(1);
         else if (@event.IsActionPressed("attack_3")) Possess(2);
@@ -812,7 +813,12 @@ public partial class PartyController : Node3D
         var stock = ShopStockFor(Game.Instance.CurrentFloor);
         var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
         var refusal = ShopRules.TryBuy(stock, ShopSoldOnFloor, stockIndex, Bag, ref gold);
-        if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
+        if (refusal != null)
+        {
+            EventBus.Instance.Log(refusal);
+            if (stockIndex >= 0 && stockIndex < stock.Items.Count && Gold < Items.Prices.BuyPrice(stock.Items[stockIndex])) EventBus.Instance.RaiseBrokeAtShop(LocalIndex); // the lead's word on an empty purse
+            return refusal;
+        }
         var paid = Gold - gold;
         AddGold(gold - Gold);
         EventBus.Instance.Log($"Bought {bought} for {paid} gold.");
