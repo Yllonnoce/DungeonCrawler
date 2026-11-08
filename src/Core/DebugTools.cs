@@ -1960,8 +1960,8 @@ public partial class DebugTools : Node
                 var plan = OfflineDesigner.PlanFloor(menu, layout, seed3);
                 plan.Npcs.Clear(); plan.Quests.Clear();
                 var target = plan.Collectives.OrderByDescending(c => c.Members.Sum(m => m.Count)).First();
-                var rooms = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsExit && r.FreeCells >= 3).OrderBy(r => r.HopsFromStart).ToList();
-                var itemRoom = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && r.FreeCells > 2).OrderByDescending(r => r.HopsFromStart).First();
+                var rooms = menu.Rooms.Where(r => Authorable(r) && !r.IsExit && r.FreeCells >= 3).OrderBy(r => r.HopsFromStart).ToList(); // the validator drops an NPC in the safe room, the shrine or the jail
+                var itemRoom = menu.Rooms.Where(r => Authorable(r) && r.FreeCells > 2).OrderByDescending(r => r.HopsFromStart).First();
                 string[] ids = { "hermit", "digger", "pilgrim", "sentinel" };
                 var templates = new[] { QuestTemplate.KillTarget, QuestTemplate.Recover, QuestTemplate.Escort, QuestTemplate.HoldOut };
                 for (var i = 0; i < 4; i++)
@@ -1990,7 +1990,7 @@ public partial class DebugTools : Node
             case 1 when _elapsed >= 2.0:
             {
                 _questStep++;
-                var npcs = root.GetChildren().OfType<Npc>().ToList();
+                var npcs = root.GetChildren().OfType<Npc>().Where(n => !n.IsMerchant).ToList(); // the safe room's merchant (and his hidden stall) are the builder's, not the plan's
                 GD.Print($"[quest] floor 3: npcs=[{string.Join(",", npcs.Select(n => n.Id))}] quests=[{string.Join(",", director.Quests.Values.Where(q => q.Floor == 3).Select(q => $"{q.Id}:{q.Status}"))}] questItems={root.GetChildren().OfType<LootDrop>().Count(d => d.QuestId != null)}");
                 if (npcs.Count != 4) Fail("NPCs not placed");
                 if (director.Quests.Values.Count(q => q.Floor == 3) != 4) Fail("quests not registered");
@@ -2055,9 +2055,10 @@ public partial class DebugTools : Node
                 var data = main.BuildSaveData("quest");
                 var back = SaveFormat.Deserialize(SaveFormat.Serialize(data));
                 var floorState = back.Floors.GetValueOrDefault(3);
-                GD.Print($"[quest] save: quests={back.Adventure?.Quests.Count} completed={back.Adventure?.Quests.Values.Count(q => q.Status == QuestStatus.Completed)} npcStates={floorState?.NpcStates.Count} takenItems={floorState?.TakenQuestItems.Count} rescued={floorState?.NpcStates.Count(n => n.Rescued)}");
+                var planNpcStates = floorState?.NpcStates.Where(n => !n.Id.StartsWith("merchant")).ToList() ?? new List<NpcDto>(); // the merchant is saved with the floor too
+                GD.Print($"[quest] save: quests={back.Adventure?.Quests.Count} completed={back.Adventure?.Quests.Values.Count(q => q.Status == QuestStatus.Completed)} npcStates={planNpcStates.Count} (+{(floorState?.NpcStates.Count ?? 0) - planNpcStates.Count} merchant) takenItems={floorState?.TakenQuestItems.Count} rescued={planNpcStates.Count(n => n.Rescued)}");
                 if (back.Adventure?.Quests.Values.Count(q => q.Status == QuestStatus.Completed) != 4) Fail("save does not hold 4 completed quests");
-                if (floorState == null || floorState.NpcStates.Count != 4 || floorState.TakenQuestItems.Count != 1) Fail("floor state missing npc/item records");
+                if (floorState == null || planNpcStates.Count != 4 || floorState.TakenQuestItems.Count != 1) Fail("floor state missing npc/item records");
                 GD.Print($"[quest] RESULT {(_questFails.Count == 0 ? "ok" : "FAIL: " + string.Join("; ", _questFails))}");
                 break;
             }
