@@ -54,8 +54,9 @@ public partial class DebugTools : Node
     private int _collStep;
     private readonly List<string> _collFails = new();
     private Collective? _collBig, _collAlarm;
-    private Enemy? _collPatrol;
+    private Enemy? _collPatrol, _collRunner;
     private Vector3 _collPatrolStart;
+    private double _collAlarmAt; // when the alarm arrived (or the wait for it ended): the regroup check follows it
     private bool _talk;
     private bool _dance, _danced; // --dance: every companion starts the victory dance a second before --after
     private double _wander, _wanderCheck; private Vector3 _wanderLast; // --wander=SECONDS: the lead walks ahead, turning when it bumps into something
@@ -279,7 +280,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-save") { _testSave = true; _faceEnemy = true; _quitAfter = 9; }
             else if (arg == "--test-depth") { _testDepth = true; TraceAi = false; _quitAfter = 16; }
             else if (arg == "--test-plan") { _testPlan = true; TraceAi = false; _quitAfter = 6; }
-            else if (arg == "--test-collectives") { _testCollectives = true; TraceAi = false; _quitAfter = 37; }
+            else if (arg == "--test-collectives") { _testCollectives = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-quest") { _testQuest = true; TraceAi = false; _quitAfter = 14; }
             else if (arg == "--talk") _talk = true;
             else if (arg == "--dance") _dance = true;
@@ -2063,6 +2064,30 @@ public partial class DebugTools : Node
         }
     }
 
+    /// <summary>
+    /// A room a hand-authored test plan may post creatures, NPCs, quest items or clues in. The validator drops anything
+    /// placed in the start room, a vault, the arena, the jail, the shrine or the safe room, so the scripted flows pick
+    /// their rooms from the live layout with the same exclusions the designer uses.
+    /// </summary>
+    private static bool Authorable(RoomInfo r) => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsJail && !r.IsShrine && !r.IsSafeRoom;
+
+    /// <summary>
+    /// Where the party stands to be noticed by <paramref name="e"/> without a fight: a free cell of its room two or three cells
+    /// away (in sight, detect range 14 m, out of the opening melee: the companions kill a ghoul in seconds, and a poisoned
+    /// runner dies on the way) and off its route to <paramref name="toward"/> (a body on the runner's first cell stops it dead).
+    /// </summary>
+    private static GridPos StandOff(Enemy e, Collective group, Vector3? toward)
+    {
+        var layout = Main.Instance.Builder.Layout!;
+        var cell = DungeonBuilder.WorldToCell(e.GlobalPosition);
+        var posts = group.Alive.Select(m => DungeonBuilder.WorldToCell(m.GlobalPosition)).ToHashSet();
+        var route = toward is { } t ? GridPathfinder.FindPath(layout, cell, DungeonBuilder.WorldToCell(t))?.ToHashSet() : null;
+        var stand = layout.RoomAt(cell) is { } room
+            ? RoomCells.Free(layout, room).Where(c => !posts.Contains(c) && route?.Contains(c) != true && c.ManhattanDistance(cell) is >= 2 and <= 3).OrderBy(c => c.ManhattanDistance(cell)).Cast<GridPos?>().FirstOrDefault()
+            : null;
+        return stand ?? DungeonBuilder.WalkableNeighbor(layout, cell);
+    }
+
     /// <summary>--test-collectives: author a floor with guard, patrol and alarm groups, then provoke each behaviour.</summary>
     private void RunCollectivesTest()
     {
@@ -2085,17 +2110,34 @@ public partial class DebugTools : Node
                 var menu = AdventurePlanning.MenuFor(layout, spec, b.TierFor(3)?.ToProfile(), b.Roster, 3, new PartySnapshot(8, 8, 4)); // strong party: a generous budget so nothing is trimmed
                 var plan = OfflineDesigner.PlanFloor(menu, layout, seed3);
                 plan.Collectives.Clear(); plan.Loners.Clear(); plan.Chests.Clear(); plan.Traps.Clear();
-                var rooms = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && r.FreeCells >= 4).OrderByDescending(r => r.HopsFromStart).ToList();
-                var guards = new CollectivePlan { Id = "guards", Name = "Test Guards", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 3 } }, Goal = new GoalPlan { Kind = GoalKind.Guard, Room = rooms[0].Index, RallyRoom = rooms[1].Index } };
-                var pa = rooms.Skip(1).FirstOrDefault(r => r.Neighbours.Any(n => n != rooms[0].Index && rooms.Any(x => x.Index == n)));
-                var pb = pa == null ? null : rooms.First(x => pa.Neighbours.Contains(x.Index) && x.Index != rooms[0].Index);
-                var walkers = new CollectivePlan { Id = "walkers", Name = "Test Walkers", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 2 } }, Goal = pa != null && pb != null ? new GoalPlan { Kind = GoalKind.Patrol, Room = pa.Index, Route = { pa.Index, pb.Index } } : new GoalPlan { Room = rooms[^1].Index } };
-                float Dist2(RoomInfo a, RoomInfo c) { var dx = (a.X + a.W / 2f) - (c.X + c.W / 2f); var dy = (a.Y + a.H / 2f) - (c.Y + c.H / 2f); return dx * dx + dy * dy; }
-                var ar = rooms.Where(r => r.Index != rooms[0].Index && r.Index != pa?.Index && r.Index != pb?.Index).OrderBy(r => Dist2(r, rooms[0])).First(); // closest by distance: a short run for the alarm
-                var sentries = new CollectivePlan { Id = "sentries", Name = "Test Sentries", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 2 } }, Goal = new GoalPlan { Kind = GoalKind.Alarm, Room = ar.Index, AlarmTarget = "guards", RallyRoom = rooms[0].Index } };
+                GD.Print($"[coll] rooms: {string.Join(" ", menu.Rooms.Select(r => $"{r.Index}{(r.IsStart ? "S" : "")}{(r.IsExit ? "E" : "")}{(r.IsVault ? "V" : "")}{(r.IsArena ? "A" : "")}{(r.IsJail ? "J" : "")}{(r.IsShrine ? "R" : "")}{(r.IsSafeRoom ? "H" : "")}(free {r.FreeCells}, hops {r.HopsFromStart}, to {string.Join("/", r.Neighbours)})"))}");
+                var rooms = menu.Rooms.Where(r => Authorable(r) && r.FreeCells >= 4).OrderByDescending(r => r.HopsFromStart).ToList();
+                // the guards and their sentries are the pair of rooms with the shortest walk between them (the deeper one guarded): the runner
+                // gives up after 20 s, 30 cells at a sprint, and a straight-line neighbour can be a long way round a sealed room
+                int Walk(RoomInfo a, RoomInfo c) => GridPathfinder.FindPath(layout, layout.Rooms[a.Index].Center, layout.Rooms[c.Index].Center)?.Count ?? int.MaxValue;
+                // ...leaving a patrol: a room with free cells for its two members and a connected room to walk to (a flooded room with no
+                // free cell will do for the walk; on seed 4242 floor 3 only four rooms have any)
+                var walkable = menu.Rooms.Where(r => Authorable(r) && r.FreeCells >= 2).OrderByDescending(r => r.HopsFromStart).ToList();
+                var anyRoom = menu.Rooms.Where(Authorable).ToList();
+                var pairs = (from a in rooms from c in rooms where a.Index != c.Index && a.HopsFromStart >= c.HopsFromStart select (a, c)).OrderBy(p => Walk(p.a, p.c)).ThenByDescending(p => p.a.HopsFromStart).ToList();
+                RoomInfo? pa = null, pb = null;
+                var (gr, ar) = pairs.First();
+                foreach (var pair in pairs)
+                {
+                    bool Taken(int i) => i == pair.a.Index || i == pair.c.Index;
+                    var first = walkable.FirstOrDefault(r => !Taken(r.Index) && r.Neighbours.Any(n => !Taken(n) && anyRoom.Any(x => x.Index == n)));
+                    if (first == null) continue;
+                    (gr, ar, pa) = (pair.a, pair.c, first);
+                    pb = anyRoom.First(x => !Taken(x.Index) && first.Neighbours.Contains(x.Index));
+                    break;
+                }
+                var rest = rooms.Where(r => r.Index != gr.Index && r.Index != ar.Index).ToList();
+                var guards = new CollectivePlan { Id = "guards", Name = "Test Guards", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 3 } }, Goal = new GoalPlan { Kind = GoalKind.Guard, Room = gr.Index, RallyRoom = (rest.FirstOrDefault() ?? ar).Index } };
+                var walkers = new CollectivePlan { Id = "walkers", Name = "Test Walkers", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 2 } }, Goal = pa != null && pb != null ? new GoalPlan { Kind = GoalKind.Patrol, Room = pa.Index, Route = { pa.Index, pb.Index } } : new GoalPlan { Room = (rest.LastOrDefault() ?? ar).Index } };
+                var sentries = new CollectivePlan { Id = "sentries", Name = "Test Sentries", Members = { new MemberPlan { EnemyId = "enemy.ghoul", Count = 2 } }, Goal = new GoalPlan { Kind = GoalKind.Alarm, Room = ar.Index, AlarmTarget = "guards", RallyRoom = gr.Index } };
                 plan.Collectives.AddRange(new[] { guards, walkers, sentries });
                 var report = PlanValidator.Validate(layout, plan, menu);
-                GD.Print($"[coll] authored floor 3: {report} guards@{rooms[0].Index} patrol {pa?.Index}->{pb?.Index} sentries@{ar.Index} {string.Join("; ", report.Repairs)}");
+                GD.Print($"[coll] authored floor 3: {report} guards@{gr.Index} patrol {pa?.Index}->{pb?.Index} sentries@{ar.Index} (walk {Walk(ar, gr)} cells) {string.Join("; ", report.Repairs)}");
                 game.Adventure.FloorPlans[3] = plan;
                 foreach (var a in party.Adventurers) a.Stance = Characters.Stance.Hold;
                 game.JumpToFloor(3);
@@ -2113,8 +2155,7 @@ public partial class DebugTools : Node
                 _collPatrol = walkers.Alive.FirstOrDefault();
                 _collPatrolStart = _collPatrol?.GlobalPosition ?? Vector3.Zero;
                 var g = guards.Alive.First();
-                var near = DungeonBuilder.WalkableNeighbor(b.Layout!, DungeonBuilder.WorldToCell(g.GlobalPosition));
-                party.Teleport(b.Surface(near) + Vector3.Up * 0.3f, g.GlobalPosition);
+                party.Teleport(b.Surface(StandOff(g, guards, null)) + Vector3.Up * 0.3f, g.GlobalPosition);
                 break;
             }
             case 2 when _elapsed >= 4.5:
@@ -2136,26 +2177,27 @@ public partial class DebugTools : Node
                 GD.Print($"[coll] guards after party left: alert={_collBig.Alert} states=[{States(_collBig)}] distToPost=[{homes}]");
                 if (_collBig.Alive.Any() && !_collBig.Alive.All(m => m.State is ReturnState or GuardState)) Fail("guards did not return to post");
                 var sentry = _collAlarm!.Alive.First();
-                var near = DungeonBuilder.WalkableNeighbor(b.Layout!, DungeonBuilder.WorldToCell(sentry.GlobalPosition));
-                party.Teleport(b.Surface(near) + Vector3.Up * 0.3f, sentry.GlobalPosition);
+                party.Teleport(b.Surface(StandOff(sentry, _collAlarm, _collAlarm.AlarmTargetPosition)) + Vector3.Up * 0.3f, sentry.GlobalPosition);
                 break;
             }
             case 4 when _elapsed >= 15.0:
             {
                 _collStep++;
                 GD.Print($"[coll] sentries: alert={_collAlarm!.Alert} raised={_collAlarm.AlarmRaised} states=[{States(_collAlarm)}]");
-                if (_collAlarm.Members.FirstOrDefault(m => IsInstanceValid(m) && m.State is AlarmRunState) is { } runner && _collAlarm.AlarmTargetPosition is { } tgt)
+                _collRunner = _collAlarm.Members.FirstOrDefault(m => IsInstanceValid(m) && m.State is AlarmRunState);
+                if (_collRunner is { } runner && _collAlarm.AlarmTargetPosition is { } tgt)
                     GD.Print($"[coll] runner: dist to target={runner.GlobalPosition.DistanceTo(tgt):0.0} speed={runner.EffectiveMoveSpeed:0.0} travelled={runner.DistanceTravelled:0.0} {runner.PathDebug}");
-                if (!_collAlarm.AlarmRaised && !_collAlarm.Members.Any(m => IsInstanceValid(m) && m.State is AlarmRunState)) Fail("no runner sent");
+                if (!_collAlarm.AlarmRaised && _collRunner == null) Fail("no runner sent");
                 break;
             }
-            case 5 when _elapsed >= 29.0:
+            case 5 when _collAlarm!.AlarmRaised || _elapsed >= 36.0: // the runner reports back, or gives up at 20 s and reports anyway
             {
                 _collStep++;
-                GD.Print($"[coll] guards after alarm: alert={_collBig!.Alert} raised={_collAlarm!.AlarmRaised} states=[{States(_collBig)}]");
-                if (_collAlarm.Members.FirstOrDefault(m => IsInstanceValid(m) && m.State is AlarmRunState) is { } runner2 && _collAlarm.AlarmTargetPosition is { } tgt2)
-                    GD.Print($"[coll] runner: dist to target={runner2.GlobalPosition.DistanceTo(tgt2):0.0} speed={runner2.EffectiveMoveSpeed:0.0} travelled={runner2.DistanceTravelled:0.0} {runner2.PathDebug}");
+                _collAlarmAt = _elapsed;
+                var runnerDist = _collRunner != null && IsInstanceValid(_collRunner) && _collAlarm.AlarmTargetPosition is { } tgt2 ? _collRunner.GlobalPosition.DistanceTo(new Vector3(tgt2.X, _collRunner.GlobalPosition.Y, tgt2.Z)) : float.NaN;
+                GD.Print($"[coll] guards after alarm (t={_elapsed:0.0}s): alert={_collBig!.Alert} raised={_collAlarm.AlarmRaised} states=[{States(_collBig)}] runner={St(_collRunner)} at {runnerDist:0.0}m from the guards' post");
                 if (!_collAlarm.AlarmRaised) Fail("runner never arrived");
+                else if (!(runnerDist < 6f)) Fail("runner gave up before reaching the guards"); // a real arrival ends within 2.5 m of the post
                 if (_collBig.Alert == AlertLevel.Calm) Fail("guards ignored the alarm");
                 var g = _collBig.Alive.FirstOrDefault();
                 if (g == null) { Fail("no guards left to regroup"); break; }
@@ -2165,7 +2207,7 @@ public partial class DebugTools : Node
                 foreach (var victim in _collBig.Alive.Skip(1).ToList()) victim.Kill();
                 break;
             }
-            case 6 when _elapsed >= 33.0:
+            case 6 when _elapsed >= _collAlarmAt + 4.0:
             {
                 _collStep++;
                 var survivor = _collBig!.Alive.FirstOrDefault();
