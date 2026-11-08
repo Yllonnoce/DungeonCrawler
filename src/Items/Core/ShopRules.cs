@@ -1,5 +1,41 @@
 using DungeonCrawler.Combat;
+using DungeonCrawler.Save;
 namespace DungeonCrawler.Items;
+
+/// <summary>The merchant's last three sales, newest first, each at the price he paid: the party may buy them back for that.</summary>
+public sealed class BuybackLedger
+{
+    public const int Capacity = 3;
+    private readonly List<(ItemInstance Item, int Price)> _entries = new();
+
+    public IReadOnlyList<(ItemInstance Item, int Price)> Entries => _entries;
+
+    /// <summary>Remembers a sale; the fourth push drops the oldest.</summary>
+    public void Push(ItemInstance item, int price)
+    {
+        _entries.Insert(0, (item, price));
+        while (_entries.Count > Capacity) _entries.RemoveAt(_entries.Count - 1);
+    }
+
+    /// <summary>Removes and returns entry <paramref name="index"/>; null when there is none.</summary>
+    public (ItemInstance Item, int Price)? Take(int index)
+    {
+        if (index < 0 || index >= _entries.Count) return null;
+        var e = _entries[index];
+        _entries.RemoveAt(index);
+        return e;
+    }
+
+    public List<SoldDto> ToDto() => _entries.Select(e => new SoldDto { Item = SaveMapper.ToDto(e.Item), Price = e.Price }).ToList();
+
+    /// <summary>Replaces the ledger with a saved one; null (an older save, an empty sync) clears it.</summary>
+    public void Restore(List<SoldDto>? dtos, ItemCatalog cat)
+    {
+        _entries.Clear();
+        if (dtos == null) return;
+        foreach (var d in dtos.Take(Capacity)) _entries.Add((SaveMapper.FromDto(d.Item, cat), d.Price));
+    }
+}
 
 /// <summary>What the merchant has on one floor: the items in order, and where the unique sits (-1 when the floor has none).</summary>
 public sealed class ShopStock
@@ -94,14 +130,29 @@ public static class ShopRules
         return null;
     }
 
-    /// <summary>Sells the bag's item at <paramref name="bagIndex"/>. Null on success, else the reason it was refused.</summary>
-    public static string? TrySell(Inventory bag, int bagIndex, ref int gold)
+    /// <summary>Sells the bag's item at <paramref name="bagIndex"/>, remembering it in the <paramref name="ledger"/> at the price paid. Null on success, else the reason it was refused.</summary>
+    public static string? TrySell(Inventory bag, int bagIndex, ref int gold, BuybackLedger? ledger = null, float sellBonus = 0f)
     {
         var item = bag[bagIndex];
         if (item == null) return "Nothing there.";
         if (!Prices.Sellable(item)) return $"{item.DisplayName} cannot be sold.";
         bag.RemoveAt(bagIndex);
-        gold += Prices.SellPrice(item);
+        var price = Prices.SellPrice(item, sellBonus);
+        gold += price;
+        ledger?.Push(item.Clone(), price);
+        return null;
+    }
+
+    /// <summary>Buys back ledger entry <paramref name="index"/> for what the merchant paid. Null on success, else the reason (nothing changes then).</summary>
+    public static string? TryBuyback(BuybackLedger ledger, int index, Inventory bag, ref int gold)
+    {
+        if (index < 0 || index >= ledger.Entries.Count) return "Nothing there.";
+        var (item, price) = ledger.Entries[index];
+        if (gold < price) return "Not enough gold.";
+        if (!Fits(bag, item)) return "The bag is full.";
+        ledger.Take(index);
+        bag.TryAdd(item);
+        gold -= price;
         return null;
     }
 

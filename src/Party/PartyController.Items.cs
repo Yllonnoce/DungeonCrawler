@@ -17,6 +17,24 @@ public partial class PartyController
     private readonly Dictionary<int, ulong> _gotUpAt = new();
     private readonly HashSet<int> _lastGaspUsed = new();
 
+    /// <summary>The merchant's last three sales, for buyback (saved in PartyDto.Buyback, synced in ShopSync).</summary>
+    public BuybackLedger Buyback { get; } = new();
+
+    /// <summary>Buy back ledger entry <paramref name="index"/> at the price the merchant paid. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
+    public string? ShopBuyback(int index)
+    {
+        if (Net.NetSession.IsClient) return null; // Task 10 sends the intent
+        if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
+        var gold = Gold;
+        var entry = index >= 0 && index < Buyback.Entries.Count ? Buyback.Entries[index] : default;
+        var refusal = ShopRules.TryBuyback(Buyback, index, Bag, ref gold);
+        if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
+        AddGold(gold - Gold);
+        EventBus.Instance.Log($"Bought back {entry.Item} for {entry.Price} gold.");
+        Main.Instance?.Hud?.Refresh();
+        return null;
+    }
+
     /// <summary>Called once from _Ready: smart loot reads the living classes, and the item triggers subscribe to their events.</summary>
     private void HookItemTriggers()
     {

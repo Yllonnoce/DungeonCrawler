@@ -6,17 +6,24 @@ public static class Prices
     /// <summary>Buying from the merchant costs this many times the item's value.</summary>
     public const double BuyMultiplier = 2.5;
 
-    public static int Value(ItemInstance item)
+    /// <summary>One of the item: base by kind, rarity and level factors. An arrow stack is the exception: 0.3 a piece for the whole bundle, nothing else.</summary>
+    public static int UnitValue(ItemInstance item)
     {
-        // An arrow stack is worth 0.3 a piece and nothing else: no rarity or level factor.
         if (item.Kind == SlotKind.Ammo) return (int)Math.Floor(0.3 * item.StackCount);
         var raw = Base(item.Kind) * RarityFactor(item.Rarity) * (1 + 0.15 * item.ItemLevel);
         return (int)Math.Floor(raw + 1e-9); // the epsilon keeps exact products like 144.0 from landing at 143.99999
     }
 
-    public static int SellPrice(ItemInstance item) => Value(item);
+    /// <summary>The whole stack's worth: unit value times count (arrows are already priced as a bundle).</summary>
+    public static int Value(ItemInstance item) => item.Kind == SlotKind.Ammo ? UnitValue(item) : UnitValue(item) * item.StackCount;
 
-    public static int BuyPrice(ItemInstance item) => (int)Math.Floor(BuyMultiplier * Value(item) + 1e-9);
+    /// <summary>What the merchant pays, with an optional bonus fraction (The Alderman's Seal).</summary>
+    public static int SellPrice(ItemInstance item, float bonus = 0f) => (int)Math.Floor(Value(item) * (1 + (double)bonus) + 1e-9);
+
+    public static int UnitBuyPrice(ItemInstance item) => (int)Math.Floor(BuyMultiplier * UnitValue(item) + 1e-9);
+
+    /// <summary>What the merchant charges for the whole stack: the unit price times count (arrows are a bundle already).</summary>
+    public static int BuyPrice(ItemInstance item) => item.Kind == SlotKind.Ammo ? UnitBuyPrice(item) : UnitBuyPrice(item) * item.StackCount;
 
     /// <summary>Keys and Recover-quest relics cannot be sold.</summary>
     public static bool Sellable(ItemInstance item) => item.DefId is not ("item.iron_key" or "item.quest_relic");

@@ -830,7 +830,7 @@ public partial class PartyController : Node3D
         if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
         var item = Bag[slot.BagIndex];
         var gold = Gold;
-        var refusal = ShopRules.TrySell(Bag, slot.BagIndex, ref gold);
+        var refusal = ShopRules.TrySell(Bag, slot.BagIndex, ref gold, Buyback, SellBonus());
         if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
         EventBus.Instance.Log($"Sold {item} for {gold - Gold} gold.");
         AddGold(gold - Gold);
@@ -897,6 +897,7 @@ public partial class PartyController : Node3D
             Members = Members.Select(Save.SaveMapper.ToDto).ToList(),
             Bag = Save.SaveMapper.ToDto(Bag),
             Gold = Gold,
+            Buyback = Buyback.ToDto(),
         };
     }
 
@@ -907,6 +908,7 @@ public partial class PartyController : Node3D
         ClassProfile? Classes(string id) => Registry.Instance.TryGet<ClassDef>(id, out var def) ? def.ToProfile() : null;
         if (dto.Members.Count > 0) Members = dto.Members.Select(m => Save.SaveMapper.FromDto(m, Classes, cat, Game.Instance.Skills)).ToArray();
         Save.SaveMapper.Restore(Bag, dto.Bag, cat);
+        Buyback.Restore(dto.Buyback, cat);
         Gold = Math.Max(0, dto.Gold);
         if (Members.Length != Adventurers.Length && GetParent() is { } world) SpawnBodies(world);
         _effectVersions.Clear();
