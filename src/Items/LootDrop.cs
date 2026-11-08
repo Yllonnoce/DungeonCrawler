@@ -94,7 +94,7 @@ public partial class LootDrop : Area3D, IInteractable
         {
             if (Taken) return;
             _taken = true;
-            party.AddGold((int)LegendaryRules.GoldFound(Coins, party.GoldFindBonus()));
+            party.AddFoundGold(Coins);
             Core.EventBus.Instance.RaiseLootRemoved(Item.Id, actor.Index);
             QueueFree();
             return;

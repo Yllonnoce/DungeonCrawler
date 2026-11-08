@@ -25,7 +25,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public const int BossNetId = 100000;
     public const int DynamicNetIdBase = 200000;
     /// <summary>How much keener than their data enemies are: sight range and how far they will chase.</summary>
-    public const float Aggression = 1.4f;
+    public const float BaseAggression = 1.4f;
+    /// <summary>How far creatures notice: the base times the Loud curse's factor (fortune).</summary>
+    public static float Aggression => BaseAggression * Adventure.Fortune.FortuneRules.DetectFactor(Game.Instance?.Adventure);
     /// <summary>A fight wakes every unaware enemy within this many metres, whatever its kind.</summary>
     public const float NoiseRadius = 10f;
     [Export] public float GiveUpSeconds { get; set; } = 9f;
@@ -878,7 +880,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         foreach (var other in GetTree().GetNodesInGroup("enemies").OfType<Enemy>().ToArray())
         {
             if (other == this || !other.IsAlive || !IsInstanceValid(other)) continue;
-            if (other.GlobalPosition.DistanceTo(GlobalPosition) > CombatRules.IgniteRadius) continue;
+            if (other.GlobalPosition.DistanceTo(GlobalPosition) > Adventure.Fortune.FortuneRules.IgniteRadius(Game.Instance?.Adventure, CombatRules.IgniteRadius)) continue; // Ember Crown: a 4 m nova
             other.ReceiveAttack(attackerStats, fire, new HitContext { DefenderStunned = true }, rng, "the ignition");
         }
     }

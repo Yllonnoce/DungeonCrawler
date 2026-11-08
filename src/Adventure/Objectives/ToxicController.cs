@@ -60,7 +60,7 @@ public partial class ToxicController : ObjectiveController
         foreach (var adv in main.Party.Active)
         {
             if (adv.Downed) continue;
-            var danger = DangerAt(DungeonBuilder.WorldToCell(adv.GlobalPosition));
+            var danger = GasRules.Danger(Field.LevelAt(DungeonBuilder.WorldToCell(adv.GlobalPosition), Seconds) * Fortune.FortuneRules.GasThickness(Game.Instance.Adventure)); // Stone Lungs: half as thick to the party (the tint keeps the true level)
             worst = Math.Max(worst, danger);
             if (danger == 0) continue;
             adv.ReceiveAttack(Trap.TrapStats, GasRules.Tick(Floor, danger), "The gas");

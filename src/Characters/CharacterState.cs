@@ -27,6 +27,12 @@ public sealed class CharacterState
     public HashSet<string> LearnedSkills { get; } = new();
     /// <summary>Derived from LearnedSkills by SkillRules.RebuildSkillEffects; kept so Recalculate stays catalog-free.</summary>
     public List<StatModifier> SkillModifiers { get; } = new();
+    /// <summary>Boons and curses the party holds (fortune): the FortuneDirector rewrites these on every change.</summary>
+    public List<StatModifier> FortuneModifiers { get; } = new();
+    /// <summary>Pennies for the Ferryman: a blow that would kill leaves 1 HP instead, this many times (refilled per floor).</summary>
+    public int DeathWards { get; set; }
+    /// <summary>Second Skin: the next this many damaging hits are negated (refilled per floor).</summary>
+    public int NegateHits { get; set; }
 
     public StatusEffectController Effects { get; } = new();
     public Stats Stats { get; private set; } = Stats.Empty;
@@ -59,7 +65,7 @@ public sealed class CharacterState
     /// <summary>Rebuild <see cref="Stats"/> from class, level, points, weapon and status effects.</summary>
     public void Recalculate()
     {
-        Stats = Stats.Compute(Class, Level, Allocated, Effects.Modifiers().Concat(Equipment.Modifiers()).Concat(SkillModifiers));
+        Stats = Stats.Compute(Class, Level, Allocated, Effects.Modifiers().Concat(Equipment.Modifiers()).Concat(SkillModifiers).Concat(FortuneModifiers));
         ClampResources();
     }
 
@@ -119,6 +125,11 @@ public sealed class CharacterState
         Mana = Math.Min(Stats[Stat.MaxMana], Mana + Stats[Stat.ManaRegen] * multiplier * dt);
     }
 
-    public void TakeDamage(float amount) => Hp = Math.Max(0, Hp - amount);
+    public void TakeDamage(float amount)
+    {
+        if (amount > 0 && NegateHits > 0) { NegateHits--; return; }
+        if (amount > 0 && Hp - amount <= 0 && DeathWards > 0) { DeathWards--; Hp = 1; return; }
+        Hp = Math.Max(0, Hp - amount);
+    }
     public void Heal(float amount) => Hp = Math.Min(Stats[Stat.MaxHp], Hp + amount * Effects.HealingMultiplier);
 }

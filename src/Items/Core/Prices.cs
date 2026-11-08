@@ -5,10 +5,15 @@ public static class Prices
 {
     /// <summary>Buying from the merchant costs this many times the item's value.</summary>
     public const double BuyMultiplier = 2.5;
+    /// <summary>Miser's Mark and run clauses: the FortuneDirector sets it; 1 is the plain price.</summary>
+    public static float BuyFactor { get; set; } = 1f;
+    /// <summary>What a piece of junk fetches: not nothing, so the companions still pick it up.</summary>
+    public const int JunkValue = 2;
 
     /// <summary>One of the item: base by kind, rarity and level factors. An arrow stack is the exception: 0.3 a piece for the whole bundle, nothing else.</summary>
     public static int UnitValue(ItemInstance item)
     {
+        if (item.Kind == SlotKind.Junk) return JunkValue;
         if (item.Kind == SlotKind.Ammo) return (int)Math.Floor(0.3 * item.StackCount);
         var raw = Base(item.Kind) * RarityFactor(item.Rarity) * (1 + 0.15 * item.ItemLevel);
         return (int)Math.Floor(raw + 1e-9); // the epsilon keeps exact products like 144.0 from landing at 143.99999
@@ -20,7 +25,7 @@ public static class Prices
     /// <summary>What the merchant pays, with an optional bonus fraction (The Alderman's Seal).</summary>
     public static int SellPrice(ItemInstance item, float bonus = 0f) => (int)Math.Floor(Value(item) * (1 + (double)bonus) + 1e-9);
 
-    public static int UnitBuyPrice(ItemInstance item) => (int)Math.Floor(BuyMultiplier * UnitValue(item) + 1e-9);
+    public static int UnitBuyPrice(ItemInstance item) => (int)Math.Floor(BuyMultiplier * BuyFactor * UnitValue(item) + 1e-9);
 
     /// <summary>What the merchant charges for the whole stack: the unit price times count (arrows are a bundle already).</summary>
     public static int BuyPrice(ItemInstance item) => item.Kind == SlotKind.Ammo ? UnitBuyPrice(item) : UnitBuyPrice(item) * item.StackCount;

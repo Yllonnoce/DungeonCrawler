@@ -96,7 +96,7 @@ public partial class PartyController : Node3D
     public AbilityProfile GetAbility(string id) => _abilities.TryGetValue(id, out var a) ? a : AbilityProfile.Basic;
     public AbilityProfile GetAbilityFor(CharacterState m, string id) => SkillRules.ApplyUpgrades(GetAbility(id), m, Game.Instance.Skills, LegendaryRules.Upgrades(m.Equipment, Game.Instance.Catalog));
     public string AbilityName(string id) => GetAbility(id).Name;
-    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind) + LegendaryRules.Trigger(m.Equipment, Game.Instance.Catalog, kind);
+    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind) + LegendaryRules.Trigger(m.Equipment, Game.Instance.Catalog, kind) + Adventure.Fortune.Boons.TriggerMagnitude(Game.Instance.Adventure, kind);
 
     public override void _Ready()
     {
@@ -522,6 +522,7 @@ public partial class PartyController : Node3D
     public void OnHitLanded(CharacterState m, ICombatTarget target, DamageResult r)
     {
         if (!r.Hit) return;
+        FortuneDirector.Instance?.OnHit(m, target, r);
         EventBus.Instance.RaiseHitLanded(m, r);
         OnItemHit(m, target, r);
         if (r.Crit && Trigger(m, TriggerKind.VenomCrit) is > 0 and var venom)
@@ -534,6 +535,7 @@ public partial class PartyController : Node3D
         if (index >= 0 && index < Adventurers.Length) Adventurers[index].Celebrate(); // the dance over the kill, before the kill is announced: a dancer crows instead of barking
         EventBus.Instance.RaiseMemberKill(m);
         if (Trigger(m, TriggerKind.Bloodlust) is > 0 and var heal) { m.Heal(heal); EventBus.Instance.Log($"{m.Name} feeds on the kill (+{heal:0} HP)."); }
+        if (Trigger(m, TriggerKind.KillStamina) is > 0 and var stam) m.Stamina = Math.Min(m.Stats[Stat.MaxStamina], m.Stamina + stam);
         if (Trigger(m, TriggerKind.SoulSiphon) is > 0 and var mana) { m.Mana = Math.Min(m.Stats[Stat.MaxMana], m.Mana + mana); EventBus.Instance.Log($"{m.Name} siphons {mana:0} mana."); }
         if (Trigger(m, TriggerKind.Scavenger) is > 0 and var arrows && m.WeaponProfile.IsRanged && Game.Instance.Catalog.TryBase(ArrowDefId, out _))
         {
@@ -871,6 +873,9 @@ public partial class PartyController : Node3D
         EventBus.Instance.Log(delta >= 0 ? $"+{delta} gold" : $"{delta} gold");
         if (delta > 0) EventBus.Instance.PlaySfx("coins");
     }
+
+    /// <summary>Coins picked up off the floor: Toll Road's +30% (fortune) and the legendary gold-find bonus both apply.</summary>
+    public void AddFoundGold(int coins) => AddGold((int)LegendaryRules.GoldFound(Adventure.Fortune.FortuneRules.GoldFound(coins, Game.Instance.Adventure), GoldFindBonus()));
 
     /// <summary>Pays from the purse; false (and nothing taken) when the party cannot afford it.</summary>
     public bool TrySpendGold(int amount)
