@@ -48,12 +48,13 @@ public static class SkillRules
         c.Recalculate();
     }
 
-    /// <summary>The ability as this character casts it, with every learned upgrade applied.</summary>
+    /// <summary>The ability as this character casts it, with every learned upgrade applied and the Cooldown stat (of Alacrity) on its cooldown.</summary>
     public static AbilityProfile ApplyUpgrades(AbilityProfile a, CharacterState c, SkillCatalog cat)
     {
         var upgrades = cat.Learned(c).Where(s => s.Upgrade?.AbilityId == a.Id).Select(s => s.Upgrade!).ToList();
-        if (upgrades.Count == 0) return a;
-        float dmg = 1, cd = 1, cost = 1, buff = 1, radius = 0; var extra = 0;
+        var cooldownStat = c.Stats[Stat.Cooldown] is var cs && cs > 0f ? cs : 1f;
+        if (upgrades.Count == 0) return cooldownStat == 1f ? a : a with { Cooldown = a.Cooldown * cooldownStat };
+        float dmg = 1, cd = cooldownStat, cost = 1, buff = 1, radius = 0; var extra = 0;
         var statuses = new List<StatusApplication>();
         foreach (var u in upgrades)
         {

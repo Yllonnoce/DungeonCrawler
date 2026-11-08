@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_alacrity"
+DisplayName = "of Alacrity"
+IsPrefix = false
+Tags = PackedStringArray("weapon", "jewelry")
+Weight = 0.3
+Stat = "Cooldown"
+Op = "Mul"
+TierMinLevels = PackedInt32Array(12, 16, 20)
+TierMins = PackedFloat32Array(-10, -15, -20)
+TierMaxes = PackedFloat32Array(-10, -15, -20)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

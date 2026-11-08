@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_dimming"
+DisplayName = "of Dimming"
+IsPrefix = false
+Tags = PackedStringArray("armor", "jewelry")
+Weight = 0.8
+Stat = "ResistArcane"
+Op = "Add"
+TierMinLevels = PackedInt32Array(2, 6, 12, 16, 20)
+TierMins = PackedFloat32Array(8, 16, 31, 41, 51)
+TierMaxes = PackedFloat32Array(15, 30, 40, 50, 60)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

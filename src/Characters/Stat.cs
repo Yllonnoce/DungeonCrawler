@@ -14,6 +14,8 @@ public enum Stat
     ResistPhysical, ResistFire, ResistFrost, ResistPoison, ResistArcane,
     /// <summary>Noticing hidden traps and secret seams; the class adds most of it.</summary>
     Perception,
+    /// <summary>Multiplies ability cooldowns; 1 is normal, of Alacrity lowers it.</summary>
+    Cooldown,
 }
 
 public enum ModOp { Add, Mul }
