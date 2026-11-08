@@ -522,6 +522,7 @@ public partial class PartyController : Node3D
     public void OnHitLanded(CharacterState m, ICombatTarget target, DamageResult r)
     {
         if (!r.Hit) return;
+        if (target is Enemies.Enemy { IsElite: true } elite) elite.OnStruckBy(m, r);
         EventBus.Instance.RaiseHitLanded(m, r);
         OnItemHit(m, target, r);
         if (r.Crit && Trigger(m, TriggerKind.VenomCrit) is > 0 and var venom)
