@@ -84,7 +84,7 @@ public partial class ClientWorld : Node
             case LootRemoved lr: OnLootRemoved(lr); break;
             case PropEvt pe: OnProp(pe); break;
             case TrapPlacedEvt tp: OnTrapPlaced(tp.Trap); break;
-            case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp); break;
+            case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp, eh.Crit ? Combat.HitFlavor.Crit : Combat.HitFlavor.Hit, -1); break;
             case EnemyDied ed: if (_enemies.TryGetValue(ed.NetId, out var dead) && GodotObject.IsInstanceValid(dead)) dead.ClientDie(); Trace.Add("kill"); break;
             case ProjectileSpawned pr: OnProjectile(pr); break;
             case HitFxEvt fx: OnHitFx(fx); break;

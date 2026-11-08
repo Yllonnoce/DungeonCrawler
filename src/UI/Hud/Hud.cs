@@ -28,6 +28,9 @@ public partial class Hud : Control
     private PackedScene _portraitScene = null!;
     private MapView _minimap = null!;
     private MapView _fullMap = null!;
+    public DamageNumbers DamageNumbers { get; private set; } = null!;
+    public HitMarker HitMarker { get; private set; } = null!;
+    public EnemyBars EnemyBars { get; private set; } = null!;
     private CharacterSheet _sheet = null!;
     private InventoryScreen _inventory = null!;
     public InventoryScreen Inventory => _inventory;
@@ -129,6 +132,14 @@ public partial class Hud : Control
         _mangled.OffsetLeft = -360; _mangled.OffsetRight = 360; _mangled.OffsetTop = 80; _mangled.OffsetBottom = 110;
         AddChild(_mangled);
 
+        // the combat read-outs: 3D nodes beside the Hud (not under a Control), the marker on the crosshair
+        DamageNumbers = new DamageNumbers { Name = "DamageNumbers" };
+        EnemyBars = new EnemyBars { Name = "EnemyBars" };
+        Main.Instance.AddChild(DamageNumbers);
+        Main.Instance.AddChild(EnemyBars);
+        HitMarker = new HitMarker { Name = "HitMarker" };
+        AddChild(HitMarker);
+
         _dialogue = new DialogueScreen { Name = "Dialogue", Visible = false };
         _dialogue.Closed += UpdateModalState;
         AddChild(_dialogue);
@@ -159,12 +170,24 @@ public partial class Hud : Control
         bus.ObjectiveChanged += OnObjectiveChanged;
         bus.Narration += OnNarration;
         bus.QuestChanged += OnQuestChanged;
+        bus.EnemyHurt += OnEnemyHurt;
         OnFloorChanged(Game.Instance.CurrentFloor, 0);
+    }
+
+    private void OnEnemyHurt(Enemies.Enemy e, float amount, Combat.HitFlavor flavor, int byMember)
+    {
+        if (!IsInstanceValid(e)) return;
+        DamageNumbers.Show(e, amount, flavor);
+        EnemyBars.NoteHurt(e);
+        if (byMember == _party.LocalIndex) HitMarker.Flick(e.Hp <= 0f);
     }
 
     public override void _ExitTree()
     {
         var bus = EventBus.Instance;
+        bus.EnemyHurt -= OnEnemyHurt;
+        if (IsInstanceValid(DamageNumbers)) DamageNumbers.QueueFree();
+        if (IsInstanceValid(EnemyBars)) EnemyBars.QueueFree();
         bus.FloorChanged -= OnFloorChanged;
         bus.MemberChanged -= OnMemberChanged;
         bus.RosterChanged -= BuildPortraits;

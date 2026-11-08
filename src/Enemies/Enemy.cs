@@ -381,10 +381,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     }
 
     /// <summary>A client showing a hit the server resolved.</summary>
-    public void ClientHurt(float amount, float hp)
+    public void ClientHurt(float amount, float hp, HitFlavor flavor, int byMember)
     {
         Hp = hp;
         _flash = 0.25f;
+        EventBus.Instance.RaiseEnemyHurt(this, amount, flavor, byMember);
         if (hp > 0) PlayAnim("HitReact", force: true);
         else if (!_clientDead) ClientDie();
     }
@@ -442,7 +443,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             foreach (var tick in Effects.Update(dt))
             {
                 if (tick.IsHeal) { Hp = Math.Min(MaxHp, Hp + tick.Amount * Effects.HealingMultiplier); continue; }
-                Hp = Math.Max(0, Hp - DamagePipeline.Mitigate(tick.Amount, tick.Type, Stats, Effects));
+                var mitigated = DamagePipeline.Mitigate(tick.Amount, tick.Type, Stats, Effects);
+                Hp = Math.Max(0, Hp - mitigated);
+                EventBus.Instance.RaiseEnemyHurt(this, mitigated, FeedbackRules.TickFlavor(tick.Kind), -1);
                 if (Hp <= 0) { EventBus.Instance.Log($"{DisplayName} succumbs to {tick.Kind.ToString().ToLower()}."); _dying = true; break; }
             }
             _signatureTimer -= dt;
@@ -840,7 +843,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Hp = Math.Max(0, Hp - result.Amount);
         _flash = 0.25f;
         SinceHurt = 0f;
-        EventBus.Instance.RaiseEnemyHurt(this, result.Amount, result.Crit);
+        var by = Party == null ? -1 : Array.FindIndex(Party.Members, x => x.Name == attackerName); // "Brand's thorns" and "the ignition" give -1
+        EventBus.Instance.RaiseEnemyHurt(this, result.Amount, FeedbackRules.FlavorOf(result, ctx.PerfectBlow), by);
         if (attack.Type == DamageType.Physical && attack.Kind == AttackKind.Melee && result.Amount > 0) Bleed(); // a blow the shield takes whole draws no blood
         if (result.IgniteBurst > 0f) IgniteAround(attackerStats, result.IgniteBurst, rng);
         if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
@@ -936,7 +940,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Hp = Math.Max(1, Hp - amount);
         _flash = 0.25f;
         SinceHurt = 0f;
-        EventBus.Instance.RaiseEnemyHurt(this, amount, false);
+        EventBus.Instance.RaiseEnemyHurt(this, amount, HitFlavor.Hit, -1);
         if (outcome.StunSeconds > 0) Effects.Apply(new StatusApplication(StatusKind.Stun, outcome.StunSeconds, 0));
         PlayAnim("HitReact", force: true);
         EventBus.Instance.Log($"{sourceName} staggers {DisplayName} for {amount:0}.");

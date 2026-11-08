@@ -73,6 +73,7 @@ public partial class SettingsScreen : PanelContainer
         Row(v, "Resolution", res);
         Check(v, "Fullscreen", Settings.Fullscreen, x => { Settings.Fullscreen = x; Settings.Apply(); });
         Check(v, "VSync", Settings.VSync, x => { Settings.VSync = x; Settings.Apply(); });
+        Check(v, "Damage numbers over enemies", Settings.DamageNumbers, x => Settings.DamageNumbers = x);
         Slider(v, "Haze in the air", 0f, 1f, Settings.Haze, x => { Settings.Haze = x; Settings.Apply(); }, "P0");
 
         Header(v, "Danger");
