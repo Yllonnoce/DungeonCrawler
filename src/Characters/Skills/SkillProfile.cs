@@ -53,6 +53,9 @@ public sealed record SkillProfile
     public AbilityUpgrade? Upgrade { get; init; }
     public TriggerKind Trigger { get; init; } = TriggerKind.None;
     public float TriggerMagnitude { get; init; }
+    /// <summary>A second trigger the same node grants.</summary>
+    public TriggerKind Trigger2 { get; init; } = TriggerKind.None;
+    public float TriggerMagnitude2 { get; init; }
 }
 
 public sealed class SkillCatalog

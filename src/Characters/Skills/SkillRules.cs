@@ -78,5 +78,5 @@ public static class SkillRules
     }
 
     public static float TriggerMagnitude(CharacterState c, SkillCatalog cat, TriggerKind kind)
-        => cat.Learned(c).Where(s => s.Trigger == kind).Sum(s => s.TriggerMagnitude);
+        => cat.Learned(c).Sum(s => (s.Trigger == kind ? s.TriggerMagnitude : 0f) + (s.Trigger2 == kind ? s.TriggerMagnitude2 : 0f));
 }

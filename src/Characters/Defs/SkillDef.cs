@@ -38,6 +38,9 @@ public partial class SkillDef : Resource, IHasId
     /// <summary>Riposte, VenomCrit, Scavenger, SoulSiphon, Bloodlust, Thorns, SecondWind, Momentum.</summary>
     [Export] public string Trigger { get; set; } = "None";
     [Export] public float TriggerMagnitude { get; set; }
+    /// <summary>A second trigger the same node grants (Second Wind + Thorns).</summary>
+    [Export] public string Trigger2 { get; set; } = "None";
+    [Export] public float TriggerMagnitude2 { get; set; }
 
     public SkillProfile ToProfile()
     {
@@ -54,6 +57,7 @@ public partial class SkillDef : Resource, IHasId
             Prerequisites = Prerequisites.ToArray(), Cost = Cost, Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName),
             GrantsAbility = GrantsAbility, Upgrade = upgrade,
             Trigger = Enum.TryParse<TriggerKind>(Trigger, true, out var t) ? t : TriggerKind.None, TriggerMagnitude = TriggerMagnitude,
+            Trigger2 = Enum.TryParse<TriggerKind>(Trigger2, true, out var t2) ? t2 : TriggerKind.None, TriggerMagnitude2 = TriggerMagnitude2,
         };
     }
 }
