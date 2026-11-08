@@ -75,10 +75,19 @@ public partial class Hud : Control
     /// <summary>The death card (run-structure): the server decides it, a client only shows it; the button runs <paramref name="onClose"/>.</summary>
     public void ShowDeathCard(Adventure.Run.DeathCardModel m, Action? onClose) => _deathCard.Open(m, onClose);
     public UI.Cards.DeathCard DeathCard => _deathCard;
+    private UI.Cards.RunRecap _recap = null!;
+    private UI.Cards.FloorCard _floorCard = null!;
+    /// <summary>The run recap (run-structure): victory, or the Death Clause's end; the button runs <paramref name="onClose"/>.</summary>
+    public void ShowRunRecap(Adventure.Run.RunRecapModel m, string button, Action? onClose) => _recap.Open(m, button, onClose);
+    public UI.Cards.RunRecap Recap => _recap;
+    /// <summary>The floor card (run-structure): four seconds at the top, Esc dismisses, never blocks input.</summary>
+    public void ShowFloorCard(Adventure.Run.FloorCardModel m) { _floorCard.Show(m); LastFloorCard = m; }
+    public bool FloorCardVisible => _floorCard.Visible;
+    public Adventure.Run.FloorCardModel? LastFloorCard { get; private set; }
     /// <summary>A death card or run recap is up: the autosave waits and the input is the card's.</summary>
-    public bool CardUp => _deathCard.Visible;
-    /// <summary>Press the visible card's button (tests).</summary>
-    public void CloseCard() { if (_deathCard.Visible) _deathCard.Press(); }
+    public bool CardUp => _deathCard.Visible || _recap.Visible;
+    /// <summary>Press the visible card's button (tests): the death card first, then the recap.</summary>
+    public void CloseCard() { if (_deathCard.Visible) _deathCard.Press(); else if (_recap.Visible) _recap.Press(); }
     private UI.Cards.ClauseCard _clauseCard = null!;
     private bool _clausesPending;
     /// <summary>The factor's "Read them." was chosen (run-structure): the clause card opens when the briefing closes.</summary>
@@ -209,6 +218,11 @@ public partial class Hud : Control
         _deathCard = new UI.Cards.DeathCard { Name = "DeathCard", Visible = false };
         _deathCard.VisibilityChanged += UpdateModalState;
         AddChild(_deathCard);
+        _recap = new UI.Cards.RunRecap { Name = "Recap", Visible = false };
+        _recap.VisibilityChanged += UpdateModalState;
+        AddChild(_recap);
+        _floorCard = new UI.Cards.FloorCard { Name = "FloorCard", Visible = false };
+        AddChild(_floorCard);
         _dialogue.Closed += () => { if (_clausesPending) { _clausesPending = false; _clauseCard.Open(readOnly: Net.NetSession.IsClient || Game.Instance.Adventure.Run == Save.RunKind.Daily); } }; // the factor's offer: the card opens once his talk ends
         _questLog = new QuestLogScreen { Name = "QuestLog", Visible = false };
         AddChild(_questLog);
@@ -349,7 +363,8 @@ public partial class Hud : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (CardUp) return; // the death card owns the input until its button is pressed
+        if (CardUp) return; // the death card or the recap owns the input until its button is pressed
+        if (_floorCard.Visible && @event.IsActionPressed("pause")) { _floorCard.Dismiss(); GetViewport().SetInputAsHandled(); return; } // Esc dismisses the floor card first
         if (@event.IsActionPressed("pause"))
         {
             TogglePause();
@@ -496,7 +511,7 @@ public partial class Hud : Control
     /// <summary>A landing was reached: ask whether to take the stairs.</summary>
     public void AskStairs(Dungeon.Stairs stairs, Adventurer actor)
     {
-        if (_pause.Visible || _dialogue.Visible || _victory != null) return;
+        if (_pause.Visible || _dialogue.Visible || CardUp) return;
         _shop.Close();
         _sheet.Visible = false; _inventory.Visible = false; _skills.Visible = false; _questLog.Visible = false;
         _prompt.Text = "";
@@ -511,7 +526,7 @@ public partial class Hud : Control
 
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible || _clauseCard.Visible || CardUp;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible || _clauseCard.Visible || CardUp;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }
@@ -548,35 +563,6 @@ public partial class Hud : Control
         _floorLabel.Text = $"{_floorText}   ·   {client.Rtt * 1000:0} ms, {online} online";
     }
 
-    private Control? _victory;
-
-    public void ShowVictory()
-    {
-        if (_victory != null) return;
-        EventBus.Instance.PlaySfx("victory");
-        var game = Game.Instance;
-        _victory = new PanelContainer { Name = "Victory" };
-        AddChild(_victory);
-        _victory.SetAnchorsPreset(LayoutPreset.Center);
-        var margin = new MarginContainer();
-        foreach (var edge in new[] { "margin_left", "margin_right", "margin_top", "margin_bottom" }) margin.AddThemeConstantOverride(edge, 24);
-        _victory.AddChild(margin);
-        var v = new VBoxContainer();
-        v.AddThemeConstantOverride("separation", 10);
-        margin.AddChild(v);
-        var title = new Label { Text = "VICTORY", HorizontalAlignment = HorizontalAlignment.Center };
-        title.AddThemeFontSizeOverride("font_size", 36);
-        v.AddChild(title);
-        v.AddChild(new Label { Text = "The Abyss Herald is slain. The dungeon's heart lies open.", HorizontalAlignment = HorizontalAlignment.Center });
-        v.AddChild(new Label { Text = $"Time: {Save.SlotInfo.FormatTime(game.PlaySeconds)}    Party: {string.Join(", ", _party.Members.Select(m => $"{m.Name} L{m.Level}"))}", HorizontalAlignment = HorizontalAlignment.Center });
-        v.AddChild(new Label { Text = "The stairs still lead down. Beyond here the depths only grow crueler.", HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color(0.75f, 0.75f, 0.75f) });
-        var btn = new Button { Text = "Continue into the endless depths", FocusMode = FocusModeEnum.None };
-        btn.Pressed += () => { _victory.QueueFree(); _victory = null; UpdateModalState(); };
-        v.AddChild(btn);
-        _party.InputLocked = true;
-        _party.SetMouseCaptured(false);
-        Callable.From(() => _victory.Position = (GetViewportRect().Size - _victory.Size) / 2f).CallDeferred();
-    }
     private void OnMemberChanged(int index) { if (index < _panels.Count) _panels[index].Refresh(); }
 
     /// <summary>One portrait per member; rebuilt when players join or leave a server.</summary>

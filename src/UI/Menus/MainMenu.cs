@@ -96,6 +96,9 @@ public partial class MainMenu : Control
 
     public void ShowStatus(string text) => _status.Text = text;
 
+    /// <summary>The Records page (run-structure, Task 11 fills it): for now the buttons stay and the status names it.</summary>
+    public void OpenRecords() => _status.Text = "";
+
     /// <summary>Debug: jump straight to the settings panel.</summary>
     public void OpenSettings() { _buttons.Visible = false; _settings.Visible = true; }
 

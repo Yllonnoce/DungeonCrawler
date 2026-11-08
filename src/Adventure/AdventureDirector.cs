@@ -398,6 +398,9 @@ public partial class AdventureDirector : Node
     // ---- campaign memory -----------------------------------------------------------------------
     private CampaignMemoryDto Memory => Game.Instance.Adventure.Memory;
     private FloorRecord? _record;
+    private (int Floor, Run.FloorCardModel Card)? _pendingFloorCard;
+    /// <summary>The last floor card shown (tests).</summary>
+    public Run.FloorCardModel? LastFloorCard { get; private set; }
     private double _floorStart;
     private string _leadName = "";
     private readonly Dictionary<int, List<string>> _pendingRepairs = new();
@@ -425,6 +428,12 @@ public partial class AdventureDirector : Node
         _record.Completed = true;
         _record.WorstMoment = Run.LedgerRules.WorstMoment(_record);
         EventBus.Instance.RaiseFloorLedgerClosed(_record.Floor, (int)_record.Seconds);
+        if (_record.Floor >= 1 && !Net.NetSession.IsClient)
+        {   // the floor card for the floor just left, shown once the next (deeper) floor stands
+            var lead = Game.Instance.Adventure.Campaign?.Barks.FirstOrDefault(b => b.Member == _leadName);
+            var reaction = Run.RecapBuilder.Reaction(lead, Game.Instance.Adventure.BarksSaid, _record.Floor, _barkRng);
+            _pendingFloorCard = (_record.Floor, Run.RecapBuilder.FloorCard(_record, _record.Title != "" ? _record.Title : $"Floor {_record.Floor}", reaction));
+        }
     }
 
     public override void _Process(double delta)
@@ -570,6 +579,17 @@ public partial class AdventureDirector : Node
         _gatheringRemarks = 0; // every build or load starts the gathering count again
         _tavernNext = floor == 0 ? Game.Instance.PlaySeconds + Voice.BanterRules.TavernFirstSeconds : double.MaxValue; // the tavern's first exchange
         OpenRecord(floor);
+        if (_pendingFloorCard is { } pending)
+        {
+            _pendingFloorCard = null;
+            if (floor > pending.Floor)
+            {   // a descent: the card for the floor left behind, on every screen
+                LastFloorCard = pending.Card;
+                Main.Instance?.Hud?.ShowFloorCard(pending.Card);
+                if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.FloorCardEvt(pending.Card));
+                GD.Print($"[Adventure] floor card: {pending.Card.Title} {pending.Card.Time} kills={pending.Card.Kills} elites={pending.Card.Elites} secrets={pending.Card.Secrets} downs={pending.Card.Downs} gold={pending.Card.GoldFound} worst=\"{pending.Card.WorstMoment}\" reaction={pending.Card.Reaction}");
+            }
+        }
         if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
         var objectiveKind = Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;

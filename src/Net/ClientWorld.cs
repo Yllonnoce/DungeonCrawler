@@ -95,6 +95,8 @@ public partial class ClientWorld : Node
             case ProjectileSpawned pr: OnProjectile(pr); break;
             case HitFxEvt fx: OnHitFx(fx); break;
             case DeathCardEvt dc: Main.Instance.Hud?.ShowDeathCard(dc.Card, null); Trace.Add("deathcard"); break;
+            case FloorCardEvt fc2: Main.Instance.Hud?.ShowFloorCard(fc2.Card); Trace.Add("floorcard"); break;
+            case RunRecapEvt rr: Main.Instance.Hud?.ShowRunRecap(rr.Recap, rr.Button, null); Trace.Add("recap"); break;
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
@@ -277,7 +279,7 @@ public partial class ClientWorld : Node
     {
         if (Root?.GetNodeOrNull<Dungeon.Stairs>("DownStairs") is { } stairs) stairs.Unlock();
         EventBus.Instance.RaiseBossDefeated(floor);
-        if (Dungeon.TierRules.IsFinalBossFloor(floor)) { Game.Instance.Victory = true; Main.Instance.Hud?.ShowVictory(); }
+        if (Dungeon.TierRules.IsFinalBossFloor(floor)) Game.Instance.Victory = true; // the recap comes from the server as a RunRecapEvt
     }
 
     private void OnObjectiveDone(ObjectiveDoneEvt od)

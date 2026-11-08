@@ -127,10 +127,53 @@ public partial class Main : Node
         return !hardcore;
     }
 
-    /// <summary>The Death Clause's end (and, in Task 10, victory): the recap, then the menu. For now the card leads straight back to the menu.</summary>
-    public void EndRun(bool victory)
+    /// <summary>The Death Clause's end: the recap, whose button leads to the menu and the Records.</summary>
+    public void EndRun(bool victory) => ShowRecap(victory);
+
+    /// <summary>
+    /// The run recap (solo and server): on victory it names the campaign's own boss and antagonist and the button continues
+    /// into the endless depths; on a Death Clause end the headline is the contract voided and the button leads to the Records.
+    /// The profile records the run (and the daily), the deeds hear of the clear.
+    /// </summary>
+    public void ShowRecap(bool victory)
     {
-        ReturnToMenu();
+        var game = Game.Instance;
+        var adv = game.Adventure;
+        var campaign = adv.Campaign;
+        var headline = victory
+            ? RecapBuilder.VictoryHeadline(Builder.Contents?.Plan?.Boss?.Name is { Length: > 0 } b ? b : campaign?.Tiers.LastOrDefault()?.BossName, campaign?.Antagonist.Name)
+            : $"The contract is void. {adv.Epitaph}";
+        var boons = adv.Boons.Select(id => Adventure.Fortune.Boons.TryGet(id, out var def) ? def.Name : id).ToList();
+        var players = NetSession.Instance?.Server?.Registry.ToDtos().Select(p => p.Name).ToList();
+        var model = RecapBuilder.Build(adv.Memory, Party.Members.Select(m => m.Name).ToList(), adv.Clauses, boons, victory, headline, adv.Wipes, players);
+        var button = victory ? "Continue into the endless depths" : RunRules.RecordsButton;
+        LastRecap = model;
+        Action? onClose = victory ? null : () => { ReturnToMenu(); _menu.OpenRecords(); };
+        Hud?.ShowRunRecap(model, button, onClose);
+        if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new RunRecapEvt(model, button));
+        RecordRunInProfile();
+        if (victory)
+        {
+            var heat = ClauseRules.Active.Heat;
+            if (adv.Run == RunKind.Story) Deeds?.Note(new DeedEvent(DeedSignal.StoryCleared, Flag: ClauseRules.Active.Hardcore));
+            Deeds?.Note(new DeedEvent(DeedSignal.HeatClear, Amount: heat));
+            if (adv.Run == RunKind.Daily) Deeds?.Note(new DeedEvent(DeedSignal.DailyDone));
+        }
+        ProfileStore.Save();
+        GD.Print($"[Main] recap ({(victory ? "victory" : "the run is over")}): \"{headline}\" score {model.Score} deepest {model.DeepestFloor}");
+    }
+
+    /// <summary>The last recap built here (tests).</summary>
+    public RunRecapModel? LastRecap { get; private set; }
+
+    /// <summary>Upsert this run (and its daily) in the profile: at every floor change and at the run's end; solo and server.</summary>
+    private void RecordRunInProfile()
+    {
+        if (NetSession.IsClient || !InGame) return;
+        var adv = Game.Instance.Adventure;
+        var summary = RunSummaryOf();
+        ProfileRules.RecordRun(ProfileStore.Current, summary);
+        if (adv.Run == RunKind.Daily && adv.DailyDate is { } date) ProfileRules.RecordDaily(ProfileStore.Current, date, summary);
     }
 
     public override void _PhysicsProcess(double delta)
@@ -613,6 +656,7 @@ public partial class Main : Node
         if (!NetSession.IsClient) EventBus.Instance.Log(floor == 0 ? "The tavern. The way down is in the corner." : delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
         if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null);
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
+        if (delta != 0 && floor >= 1 && !NetSession.IsClient) { RecordRunInProfile(); ProfileStore.Save(); }
         if (delta != 0 && floor >= 1) Autosave($"floor {floor}"); // solo only (Autosave refuses the rest)
     }
 
@@ -737,7 +781,7 @@ public partial class Main : Node
         if (TierRules.IsFinalBossFloor(floor) && !Game.Instance.Victory)
         {
             Game.Instance.Victory = true;
-            Hud?.ShowVictory();
+            ShowRecap(victory: true);
         }
     }
 

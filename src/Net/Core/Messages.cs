@@ -166,6 +166,10 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 // ---- run-structure (v9) ---------------------------------------------------------------------------------
 /// <summary>The party wiped: the server's death card (epitaph, cause, killer, floor, wipe count, whether the run is over, the button's word).</summary>
 [Msg(MsgKind.DeathCardEvt)] public sealed record DeathCardEvt(Adventure.Run.DeathCardModel Card) : NetMessage;
+/// <summary>The floor card for the floor just left, sent as the next one is built.</summary>
+[Msg(MsgKind.FloorCardEvt)] public sealed record FloorCardEvt(Adventure.Run.FloorCardModel Card) : NetMessage;
+/// <summary>The run recap and its button's word (victory, or the Death Clause's end).</summary>
+[Msg(MsgKind.RunRecapEvt)] public sealed record RunRecapEvt(Adventure.Run.RunRecapModel Recap, string Button) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry
