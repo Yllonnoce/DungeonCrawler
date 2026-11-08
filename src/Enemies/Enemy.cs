@@ -107,7 +107,24 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public float WindupSeconds => TelegraphRules.Scaled(Profile.WindupSeconds, AttackSpeedFactor);
     public float RecoverSeconds => TelegraphRules.Scaled(Profile.RecoverSeconds, AttackSpeedFactor);
     private float AttackSpeedFactor => Stats[Stat.AttackSpeed] * Effects.Multiplier(Stat.AttackSpeed);
-    public float EffectiveMoveSpeed => Profile.MoveSpeed * Effects.Multiplier(Stat.MoveSpeed) * _speedBoost * RunBoost * (InWater ? WaterSlow : 1f);
+    public float EffectiveMoveSpeed => Profile.MoveSpeed * Effects.Multiplier(Stat.MoveSpeed) * _speedBoost * RunBoost * (InWater ? WaterSlow : 1f) * (Phase == 2 ? BossRules.PhaseTwoSpeed : 1f);
+    /// <summary>A boss's phase: 1 until half health, 2 after the roar (or at once when loaded below half).</summary>
+    public int Phase { get; private set; } = 1;
+    /// <summary>Roaring: every attack misses it.</summary>
+    public bool Untargetable { get; private set; }
+    public void SetUntargetable(bool on) => Untargetable = on;
+    private bool _useSecond;
+    /// <summary>A white body pulse (the roar's flash, a bomber's fuse).</summary>
+    public void FlashWhite(float seconds) => _flash = Math.Max(_flash, seconds);
+
+    /// <summary>Phase two: speed ×1.2, the second kit on the shared cooldown, the arena changed once.</summary>
+    public void EnterPhaseTwo(bool silent)
+    {
+        if (Phase == 2) return;
+        Phase = 2;
+        BossArena.Change(this);
+        if (!silent) EventBus.Instance.Log($"{DisplayName} is enraged!");
+    }
     /// <summary>Wading through a pond or stream costs everyone the same share of their pace.</summary>
     public const float WaterSlow = 0.65f;
     public bool InWater { get; private set; }
@@ -395,6 +412,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void ClientHurt(float amount, float hp, HitFlavor flavor, int byMember)
     {
         Hp = hp;
+        if (IsBoss && Phase == 1 && BossRules.PhaseTwoAt(hp, MaxHp)) EnterPhaseTwo(silent: true); // the arena's cosmetics on a client
         _flash = 0.25f;
         EventBus.Instance.RaiseEnemyHurt(this, amount, flavor, byMember);
         if (hp <= 0f) { if (!_clientDead) ClientDie(); }
@@ -594,7 +612,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         TelegraphId++;
         TelegraphRemaining = TelegraphRules.Delay(sig);
         TelegraphDecal.Show(this, sig, TelegraphRemaining);
-        AnnounceSignature();
+        AnnounceSignature(sig);
         if (!Net.NetSession.IsClient) EventBus.Instance.RaiseEnemyTelegraph(this, State.Name);
     }
 
@@ -879,13 +897,13 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (!IsBoss || Profile.Signature == Signature.None || _signatureTimer > 0f || Party == null || !HasTarget) return false;
         if (DistanceToParty() > 9f || !HasLineOfSight()) return false;
         _signatureTimer = Profile.SignatureCooldown;
-        ChangeState(new SignatureState(Profile.Signature));
+        ChangeState(new SignatureState(BossRules.NextSignature(Profile.Signature, Profile.SecondSignature, Phase, ref _useSecond)));
         return true;
     }
 
-    public void AnnounceSignature()
+    public void AnnounceSignature(Signature sig)
     {
-        EventBus.Instance.Log(Profile.Signature switch
+        EventBus.Instance.Log(sig switch
         {
             Signature.Slam => $"{DisplayName} raises its fists!",
             Signature.Volley => $"{DisplayName} rears back!",
@@ -895,10 +913,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         });
     }
 
-    public void PerformSignature()
+    public void PerformSignature(Signature sig)
     {
         if (Party == null) return;
-        switch (Profile.Signature)
+        switch (sig)
         {
             case Signature.Slam:
                 var victims = Party.AdventurersWithin(GlobalPosition, TelegraphRules.SlamRadius).ToList();
@@ -918,12 +936,13 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
                 break;
             case Signature.Summon:
                 var builder = Main.Instance!.Builder;
-                var alive = GetParent().GetChildren().OfType<Enemy>().Count(e => e.IsAlive && e.Profile.Id == Profile.SummonId);
+                var summonId = BossRules.SummonFor(Profile.SummonId, Floor);
+                var alive = GetParent().GetChildren().OfType<Enemy>().Count(e => e.IsAlive && e.Profile.Id == summonId);
                 var spawned = 0;
                 for (var i = 0; i < 2 && alive + spawned < 4; i++)
                 {
                     var offset = new Vector3(i == 0 ? 1.5f : -1.5f, 0, 1f);
-                    if (builder.SpawnEnemy(Profile.SummonId, GlobalPosition + offset, Floor) is { } minion) { minion.ForceAggro(); spawned++; }
+                    if (builder.SpawnEnemy(summonId, GlobalPosition + offset, Floor) is { } minion) { minion.ForceAggro(); spawned++; }
                 }
                 if (spawned > 0) EventBus.Instance.Log($"{spawned} {(spawned == 1 ? "creature answers" : "creatures answer")} the call.");
                 break;
@@ -936,7 +955,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
-        if (!IsAlive) return DamageResult.Miss(attack.Type);
+        if (!IsAlive || Untargetable) return DamageResult.Miss(attack.Type);
         _lastHitKind = attack.Kind;
         var result = HitResolver.Resolve(attackerStats, Stats, Effects, attack, ctx, rng);
         if (!result.Hit) return result;
@@ -948,7 +967,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         EventBus.Instance.RaiseEnemyHurt(this, result.Amount, FeedbackRules.FlavorOf(result, ctx.PerfectBlow), by);
         if (attack.Type == DamageType.Physical && attack.Kind == AttackKind.Melee && result.Amount > 0) Bleed(); // a blow the shield takes whole draws no blood
         if (result.IgniteBurst > 0f) IgniteAround(attackerStats, result.IgniteBurst, rng);
-        if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
+        if (IsBoss && !_halfSaid && BossRules.PhaseTwoAt(Hp, MaxHp)) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); ChangeState(new RoarState()); }
         if (Hp <= 0) _dying = true;
         else { if (WindupLeft <= 0f) PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx(HurtCue); } // a light hit mid-wind-up flashes but leaves the telegraph clip running
         if (Hp > 0 && State.Unaware) ChangeState(new ChaseState());
@@ -1017,6 +1036,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void RestoreFrom(Save.EnemyDto dto)
     {
         Hp = Math.Clamp(dto.Hp, 1, MaxHp);
+        if (IsBoss && BossRules.PhaseTwoAt(Hp, MaxHp)) { _halfSaid = true; EnterPhaseTwo(silent: true); } // loaded below half: already enraged, no second roar
         EmbeddedArrows = dto.EmbeddedArrows;
         GlobalPosition = new Vector3(dto.X, dto.Y, dto.Z);
         if (IsNodeReady()) RestoreStuckArrows(); // else _Ready draws them

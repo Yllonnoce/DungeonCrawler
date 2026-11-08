@@ -151,14 +151,14 @@ public sealed class SignatureState : AiState
             case Signature.Summon:
                 enemy.FaceToward(partyPos);
                 enemy.MoveToward(enemy.GlobalPosition, dt);
-                if (!_done && _timer >= TelegraphRules.Delay(_sig)) { _done = true; enemy.EndTelegraph(); enemy.PerformSignature(); }
+                if (!_done && _timer >= TelegraphRules.Delay(_sig)) { _done = true; enemy.EndTelegraph(); enemy.PerformSignature(_sig); }
                 if (_timer >= TelegraphRules.Delay(_sig) + TelegraphRules.SignatureRecover) enemy.ChangeState(new ChaseState());
                 break;
             case Signature.Charge:
                 if (_timer < TelegraphRules.ChargeDelay) { enemy.FaceToward(partyPos); enemy.MoveToward(enemy.GlobalPosition, dt); break; }
                 enemy.EndTelegraph();
                 enemy.ChargeStep(dt);
-                if (!_done && enemy.DistanceToParty() <= enemy.AttackRange * 1.3f) { _done = true; enemy.PerformSignature(); enemy.ChangeState(new AttackState()); }
+                if (!_done && enemy.DistanceToParty() <= enemy.AttackRange * 1.3f) { _done = true; enemy.PerformSignature(_sig); enemy.ChangeState(new AttackState()); }
                 else if (_timer >= TelegraphRules.ChargeDelay + TelegraphRules.ChargeRun) enemy.ChangeState(new ChaseState());
                 break;
             default:
@@ -185,6 +185,37 @@ public sealed class FleeState : AiState
         _timer += dt;
         enemy.FleeStep(dt);
         if (_timer >= 3f || enemy.DistanceToParty() > 14f) enemy.ChangeState(new ChaseState());
+    }
+}
+
+/// <summary>A boss at half health: 1.2 s untargetable, roaring, then phase two.</summary>
+public sealed class RoarState : AiState
+{
+    public override string Name => "Roar";
+    private float _timer;
+    private int _pulses;
+
+    public override void Enter(Enemy enemy)
+    {
+        _timer = 0f; _pulses = 0;
+        enemy.SetUntargetable(true);
+        Core.EventBus.Instance.PlaySfx("boss");
+        Core.EventBus.Instance.Log($"{enemy.DisplayName} roars!");
+        enemy.FlashWhite(0.3f);
+    }
+
+    public override void Update(Enemy enemy, float dt)
+    {
+        _timer += dt;
+        enemy.MoveToward(enemy.GlobalPosition, dt);
+        if (_timer >= 0.4f * (_pulses + 1) && _pulses < 2) { _pulses++; enemy.FlashWhite(0.3f); } // three pulses over the roar
+        if (_timer >= BossRules.RoarSeconds) enemy.ChangeState(new ChaseState());
+    }
+
+    public override void Exit(Enemy enemy)
+    {
+        enemy.SetUntargetable(false);
+        enemy.EnterPhaseTwo(silent: false);
     }
 }
 

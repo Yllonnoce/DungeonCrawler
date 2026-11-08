@@ -43,6 +43,10 @@ public partial class EnemyDef : Resource, IHasId
     [Export] public string Signature { get; set; } = "None";
     [Export] public float SignatureCooldown { get; set; } = 8f;
     [Export] public string SummonId { get; set; } = "";
+    /// <summary>Boss: the second signature at phase two (Slam, Volley, Charge, Summon; None for none).</summary>
+    [Export] public string SecondSignature { get; set; } = "None";
+    /// <summary>Boss: the arena change at phase two (None, Darken, Webs, Embers, GravityWell).</summary>
+    [Export] public string ArenaChange { get; set; } = "None";
     /// <summary>Quaternius model name under assets/models/quaternius_monsters (empty = capsule).</summary>
     [Export] public string Model { get; set; } = "";
     /// <summary>KayKit item hung from a viewer-rigged model's right-hand grip (see WeaponGrip); empty = none.</summary>
@@ -71,6 +75,8 @@ public partial class EnemyDef : Resource, IHasId
             ResistFire = ResistFire, ResistFrost = ResistFrost, ResistPoison = ResistPoison, ResistArcane = ResistArcane,
             OnHit = onHit, Color = Color.ToHtml(false), Scale = Scale, IsBoss = IsBoss, VoiceSet = VoiceSet,
             Signature = Enum.TryParse<Signature>(Signature, true, out var sig) ? sig : Enemies.Signature.None,
+            SecondSignature = Enum.TryParse<Signature>(SecondSignature, true, out var sig2) ? sig2 : Enemies.Signature.None,
+            ArenaChange = Enum.TryParse<ArenaChange>(ArenaChange, true, out var arena) ? arena : Enemies.ArenaChange.None,
             SignatureCooldown = SignatureCooldown, SummonId = SummonId, PackHunter = PackHunter, FleeHpFraction = FleeHpFraction, Model = Model, Weapon = Weapon, Faction = Faction, TierIndex = TierIndex,
         };
     }

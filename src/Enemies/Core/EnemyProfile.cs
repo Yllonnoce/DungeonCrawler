@@ -40,6 +40,10 @@ public sealed record EnemyProfile
     /// <summary>Grunt clip set (small, medium, large, boss); empty picks by Scale and IsBoss. See VoiceSets.</summary>
     public string VoiceSet { get; init; } = "";
     public Signature Signature { get; init; } = Signature.None;
+    /// <summary>A boss's second kit, joining the first at phase two (None for none).</summary>
+    public Signature SecondSignature { get; init; } = Signature.None;
+    /// <summary>What a boss does to its arena at phase two.</summary>
+    public ArenaChange ArenaChange { get; init; } = ArenaChange.None;
     public float SignatureCooldown { get; init; } = 8f;
     public string SummonId { get; init; } = "";
     /// <summary>Aggroing one alerts idle kin nearby.</summary>

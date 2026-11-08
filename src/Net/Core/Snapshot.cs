@@ -83,7 +83,7 @@ public static class BinaryLayout
 /// <summary>Enemy AI state names as one byte, for the snapshot. Unknown names map to 0 (Idle).</summary>
 public static class EnemyStateCodes
 {
-    public static readonly string[] Names = { "Idle", "Chase", "Attack", "Shoot", "Signature", "Flee", "Dead", "Guard", "Return", "Patrol", "AlarmRun", "Regroup", "Investigate", "Hunt", "Escort" };
+    public static readonly string[] Names = { "Idle", "Chase", "Attack", "Shoot", "Signature", "Flee", "Dead", "Guard", "Return", "Patrol", "AlarmRun", "Regroup", "Investigate", "Hunt", "Escort", "Roar", "Kite", "Support", "Detonate" };
 
     public static byte Encode(string name)
     {
