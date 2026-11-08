@@ -16,7 +16,7 @@ public static class ItemText
         }
         if (item.ArmorClass != ArmorClass.None) lines.Add($"{item.ArmorClass} armor");
         if (item.Offhand != OffhandKind.None) lines.Add(item.Offhand.ToString());
-        foreach (var m in item.BaseModifiers) lines.Add(StatModifierParser.Describe(m));
+        foreach (var m in item.ScaledBaseModifiers) lines.Add(StatModifierParser.Describe(m));
         foreach (var a in item.Affixes)
         {
             foreach (var m in a.Modifiers) lines.Add($"{StatModifierParser.Describe(m)}  ({a.Name})");

@@ -118,18 +118,17 @@ public static class LootRoller
         if (eligible.Count > 0)
         {
             // favour the best tier, sometimes fall back to a lower one
-            var pick = rng.NextDouble() < 0.6 ? eligible[^1] : eligible[rng.Next(eligible.Count)];
+            var pick = rng.NextDouble() < ItemRules.TopTierChance ? eligible[^1] : eligible[rng.Next(eligible.Count)];
             tierIndex = pick.i + 1;
             var raw = pick.t.Min + (float)rng.NextDouble() * (pick.t.Max - pick.t.Min);
-            var value = affix.Op == ModOp.Mul ? 1f + MathF.Round(raw) / 100f : MathF.Round(raw, StatIsWhole(affix.Stat) ? 0 : 1);
+            var value = affix.Op == ModOp.Mul ? 1f + MathF.Round(raw) / 100f : ItemRules.RoundStat(affix.Stat, raw);
             // an on-hit affix (Flaming, Freezing, Venomous) carries a 0..0 tier as a level gate only: no "+0" stat line for it
             if (affix.Op == ModOp.Mul ? value != 1f : value != 0f) mods.Add(new StatModifier(affix.Stat, affix.Op, value, affix.Name));
         }
-        return new RolledAffix { AffixId = affix.Id, Name = affix.Name, IsPrefix = affix.IsPrefix, Tier = tierIndex, Modifiers = mods, OnHit = affix.OnHit };
+        // an on-hit affix hits harder a tier at a time: +25% status magnitude per tier above the first
+        var onHit = affix.OnHit is { } oh && tierIndex > 1 ? oh with { Magnitude = oh.Magnitude * (1f + ItemRules.OnHitTierStep * (tierIndex - 1)) } : affix.OnHit;
+        return new RolledAffix { AffixId = affix.Id, Name = affix.Name, IsPrefix = affix.IsPrefix, Tier = tierIndex, Modifiers = mods, OnHit = onHit };
     }
-
-    private static bool StatIsWhole(Stat s) => StatInfo.IsPrimary(s) || s is Stat.MaxHp or Stat.MaxStamina or Stat.MaxMana or Stat.Armor or Stat.Accuracy or Stat.Evasion or Stat.Stealth or Stat.Perception
-        or Stat.ResistPhysical or Stat.ResistFire or Stat.ResistFrost or Stat.ResistPoison or Stat.ResistArcane;
 
     public static int WeightedIndex(IReadOnlyList<float> weights, Random rng)
     {
