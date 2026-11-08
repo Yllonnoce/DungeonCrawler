@@ -31,7 +31,6 @@ public static partial class FloorGenerator
                 PlaceGalleries(spec, rng, layout);
                 CarveRooms(layout);
                 ConnectRooms(spec, rng, layout);
-                DigDrifts(spec, new Random(seed ^ 0x0D1F), layout);
                 break;
             case LayoutKind.Tavern:
                 PlaceTavernRoom(spec, layout);
@@ -68,6 +67,7 @@ public static partial class FloorGenerator
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
         // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
         PlaceSecretRooms(spec, new Random(seed ^ 0x5EC2), layout);
+        if (spec.Layout == LayoutKind.Mine) DigDrifts(spec, new Random(seed ^ 0x0D1F), layout); // the drifts after the safe room, vaults and spawns: dead-end tunnels into free rock, nothing else moves
         PlaceCaches(spec, new Random(seed ^ 0xCAC4E), layout);
         PlaceBoundChest(spec, new Random(seed ^ 0xB0D), layout);
         PlaceShrine(spec, layout);

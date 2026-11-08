@@ -77,6 +77,7 @@ public partial class FortuneDirector : Node
     private int _foundFloor = int.MinValue;
     private double _secretTick;
     private const double SecretTickSeconds = 0.25;
+    private CharacterState[]? _refreshedMembers;
     /// <summary>Secret indices found on the current floor: rooms entered, alcove walls opened. Saved per floor.</summary>
     public IReadOnlyCollection<int> FoundSecrets => _found;
 
@@ -90,7 +91,10 @@ public partial class FortuneDirector : Node
 
     public override void _Process(double delta)
     {
-        if (!Authority || Main.Instance is not { } main || !main.InGame || main.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root) return;
+        if (Main.Instance is not { } main || !main.InGame) return;
+        // a load (or a join) rebuilds the members without a FloorBuilt: the new states need the held modifiers too
+        if (!ReferenceEquals(_refreshedMembers, main.Party.Members)) { _refreshedMembers = main.Party.Members; Refresh(); }
+        if (!Authority || main.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root) return;
         _secretTick -= delta;
         if (_secretTick > 0) return;
         _secretTick = SecretTickSeconds;

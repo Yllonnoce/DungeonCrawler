@@ -293,6 +293,7 @@ godot --headless --path . -- --test-portal          # floor 1: hurry the reinfor
 godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
 godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gathering (plan B) then the merchant: stock, buy, refuse, sell, reload, shop screen
 godot --headless --path . -- --test-items-and-builds   # loot curve 8 vs 16, stack prices, buyback, a keystone's price, the duo node from two branches, a legendary trigger, Burn spread, Gerald, save round trip; prints [items] RESULT
+godot --headless --path . -- --test-fortune   # floor 2 shrine and card, a boon's stat, a gold and a blood price, a curse lifted, vault table odds, a forced mimic (save/load mid-spring), the bound chest's hunt, a secret room found, the third lockpick jams, the Lucky Dip, save round trip (seed 7, lethality 1); prints [fortune] RESULT
 godot --headless --path . -- --test-tavern   # floor 0: one room, no enemies, the merchant, empty purse, "The Tavern", the tavern tune; an open inventory holds his greeting back, closed he briefs within 4 m; a save mid-briefing comes back on floor 0 unpaid and he briefs again; walked to the deal the purse gets 150; the down landing asks and floor 1 opens with 150 (paid once); prints [tavern] RESULT
 godot --headless --path . -- --test-tavern-skip   # the same opening but the briefing is closed unread: the purse stays empty until the descent stakes it with 150 on floor 1
 godot --headless --path . -- --test-writing   # banter in order and stopped by a fight, a TrapSprung bark from the lazy top-up, narration beats a bark on the subtitle, the cheer and its answers, the press epitaph, floor 3's Crushed taunt, Crane's aside
@@ -683,6 +684,118 @@ narration, a quest's lines or a horde's line lost its role, move the room's iden
 traps and clue) with its contents rather than re-pointing the story. Edit with a .NET-compatible JSON writer (two-space
 indent, `\u0027`-style escapes) so only the edited values change. `could not place: npc ...: waits on flag ...` lines
 are expected (NPCs gated on an earlier floor's choice).
+
+## Fortune and misfortune
+
+Every floor offers decisions that trade risk for power. The numbers live in `src/Adventure/Core/Fortune/` (engine-free,
+tested in `tests/`); one Godot node, `Adventure/FortuneDirector.cs` (a child of `Game`, `FortuneDirector.Instance`),
+makes them real and is the authority (the server in co-op, solo otherwise).
+
+- **Boons and curses** (`Boons.cs`, `Curses.cs`, `FortuneRules.cs`). 24 boons in four houses of six (the Ember, the Cold,
+  the Toll, the Stone), one crown each; 8 curses, plus `scar` (transient, run-structure's wipe penalty, never offered).
+  The party holds them as id lists in the save (`AdventureDto.Boons`/`Curses`, v11). A boon reaches play one of four
+  ways: plain `StatModifier`s (`Boons.Modifiers`, parsed with `StatModifierParser`) written into every member's
+  `CharacterState.FortuneModifiers` by `FortuneDirector.Refresh` and summed in `Recalculate`; a `TriggerKind`
+  (`KillStamina`: Hungry Edge) summed into `PartyController.Trigger` by `Boons.TriggerMagnitude`; a static factor the
+  director refreshes (`Prices.BuyFactor` from `FortuneRules.PriceFactor` x run-structure's clause factor,
+  `TierRules.HazardFactor` read by `TrapRules`/`HazardRules`, `ConsumableRules.HealFactor`); or a hook the director or a
+  rules class reads (`FortuneHook`: Ember's Due extends a Burn you land, Kindled Blades 20% Burn on a melee hit, Rime
+  Edge Frost on a crit, Stone Crown heals 10 on `PerfectBlock`/`Parried`, Toll Crown pays an elite's XP again and a
+  chest-sized purse on `EliteSlain`, Ferryman and Second Skin refill `CharacterState.DeathWards`/`NegateHits` on every
+  `FloorBuilt` (consumed in `TakeDamage`), Cold Comfort and Slow Blood halve a status on you through
+  `StatusEffectController.DurationScale`, Stone Lungs thins the gas for the party loop only (`ToxicController`), Light
+  Fingers adds 0.25 to `LockRules.Chance`, Ember Crown widens `Enemy.IgniteAround` to 4 m, Cold Crown makes a Shatter
+  leap to the nearest Frosted foes within 4 m (`Adventurer.ShatterChain`), Loud scales `Enemy.Aggression`, Marked is read
+  by the elites plan as `FortuneRules.ExtraElites`). `Refresh` runs on `FloorBuilt`, `RosterChanged`,
+  `BoonTaken`/`CurseTaken` and whenever the party's member array changes (a load rebuilds it), and on the server
+  broadcasts `FortuneSync`.
+- **The shrine** (`ShrineRules.cs`, `Dungeon/Props/Shrine.cs`, `UI/Fortune/ShrineCard.cs`). `FloorGenerator.PlaceShrine`
+  (the last pass, no rng) reserves one cell per floor from floor 2 (`FloorLayout.ShrineCell`, `IsReserved`): a room that
+  is not the stairs', the arena, the safe room, the objective's jail or shrine, a vault or a secret room, with at least
+  five free cells; dead ends first, then nearest the midpoint of the stairs route; the cell nearest the room's centre
+  that holds nothing, is a cell away from every entrance and cuts nothing off when blocked. `DungeonBuilder.PlaceShrine`
+  puts the altar there (`AltarMeshes`, shared with the objective's altar) with its price written over it. One in three
+  shrines is priced (`PriceFor`, actor seed 9001): blood (a quarter of every living member's current HP, straight off the
+  breath), gold (60 + 15 x floor; a broke party is refused and the shrine stays usable) or a curse (then four boons on
+  the card). The card (`ShrineCardMsg`): three boons by `Offer` (actor seed 9000; boons not held, weighted 1 + 2 per
+  boon of the house held; a crown enters when two of its house are held and is always the first offer; two under
+  run-structure's Fine Print, read reflectively until `AdventureDto.Clauses` exists), a lift row for the first curse
+  carried (80 + 20 x floor), and walking away (40 + 10 x floor gold). Keys 1-4, L, Esc or Space; mouse the same; one
+  pick per player. Solo the card calls `FortuneDirector.ResolveShrine`; a client sends `ShrineChoiceIntent`, the server
+  takes the first pick, closes the card everywhere with `ShrineClosedEvt` and sends `FortuneSync`. The shrine is one
+  use (`FloorStateDto.ShrineUsed`, `PropEvt "used"`). `ShrineUsed(member, isBoon)` feeds the barks and the villain.
+- **Chest kinds** (`ChestRules.cs`, `data/loot_tables/{vault,secret,cellar,boss}.tres`). `DungeonBuilder` gives every chest
+  a `TableId` by `ChestRules.KindOf(layout, spawnIndex)`: a vault's prize rolls `table.vault` (0/25/55/20, 3 rolls), a
+  secret alcove's or room's `table.secret` (0/40/45/15, 2 rolls, plus one consumable), a cellar's and a ledge's
+  `table.cellar` (the chest odds with 4 rolls; the spec names no ledge table), the rest `table.chest`. The boss rolls
+  `table.boss` (0/15/50/35, 3 rolls) two item levels up (`BossItemLevelBonus`); the elites plan inserts `table.elite`
+  in the same expression (`Enemy.OnDeath`).
+- **Mimics** (`MimicRules.cs`). From floor 4 a tenth of the ordinary chests (a fifth from floor 12) are mouths, rolled
+  from actor seed 7000 + spawn index (`IsMimic`; `ForcedSpawnIndex` for tests). A living member within
+  `TrapRules.DetectRadiusCells(Perception)` cells + 1 m reads "the lock is breathing" in the prompt. Opening one
+  (`Chest.Spring`) hides the chest and spawns the tier pool's heaviest non-boss melee creature (`BruteFor`; the data's
+  `horde_*_brute` are 34-HP swarm fodder) named "Mimic", Hulking, with twice the XP, awake; `PropEvt "mimic"` hides it
+  on clients; `MimicSprung(at)`. The chest yields its own roll (`Chest.Yield`, the chest's seed 5000 + index) when the
+  brute dies (`FortuneDirector` on `EnemyDied`). A save mid-spring keeps the spawn index in `FloorStateDto.MimicsSprung`
+  and `RestoreSprung` respawns the brute idle at the chest, so the roll is neither lost nor free.
+- **The bound chest** (`FortuneRules.BoundFromFloor` 5). `FloorGenerator.PlaceBoundChest` (seed ^ 0xB0D) picks one
+  ordinary chest outside the boss arena (`FloorLayout.BoundChest`); the builder marks it `Chest.Bound` (a purple seam,
+  never a mimic, never locked, `table.vault`), prompt "Bound chest: open and be Hunted?". Opening it rolls and then
+  `FortuneDirector.StartHunt`: every living member Vulnerable for 60 s (`HuntedSeconds`, magnitude 0.25) and "the
+  Hunter" (the pool creature by actor seed 7999, affixes `HunterAffixes` = Swift, Vampiric: the contract's list has no
+  "Marked") spawns awake at the centre of the nearest other room. `FloorStateDto.BoundOpened` so a reload does not hunt
+  twice.
+- **Elites seam.** `Adventure/FortuneSpawns.cs`: `Elite(builder, baseProfile, name, affixNames)` is TEMPORARY until the
+  elites plan lands `EliteRules.Apply` (it scales HP x2.2, scale x1.3, damage x1.25 for Hulking and move x1.35 for Swift
+  by hand); `Spawn` passes the profile to `DungeonBuilder.SpawnEnemy(..., profile:)` and sets `NameOverride`. A client
+  spawns the brute from `DynamicEnemyDto.DefId`, so the scale and name are server-side until the DTO carries affixes.
+- **Secret rooms** (`SecretRoomRules.cs`, `FloorGenerator.PlaceSecretRooms`/`TryCarveSecretRoom`, seed ^ 0x5EC2). Half
+  the floor's secret alcoves (`RoomTarget`) open into carved 3-5 cell rooms behind their wall: the even indices try
+  first (`WantsRoom`), the odd ones only until half are rooms (alcoves on the map's edge or beside a corridor cannot
+  carve). Every size and doorway offset is tried in a seeded order, flush against the alcove first and then up to
+  three cells of passage behind it; a room may touch no walkable cell but the alcove, so the alcove stays its only way
+  in. Rooms are appended to `Rooms` (plan indices hold) with a `Connections` entry to the host; `FloorLayout.SecretRooms`
+  records `SecretRoom(SecretIndex, Room, Doorway, Chest, Plaque, Merchant)`; the alcove's chest moves to the room's
+  centre (`ChestKind.Secret`); `RoomCells.Free` is empty for a secret room so no planner puts anything in a sealed
+  room, and `ShrineRules.Choose` skips them. `DungeonBuilder.PlaceSecretRooms` (after `PlaceProps`) spawns the plaque
+  (`SpawnPlaque`, index 100 + secret index) with the campaign's clue for the floor (`Mystery.Clues`) or an epigraph
+  (`Epigraphs.For(seed, floor, index)`, forty stock lines that never name a shipped campaign), and on the tier's
+  hidden-stall floor (`HiddenStallFloor(tier, seed)`: the second, third or fourth floor of the tier, never the boss
+  floor) a merchant who was never here in the first room (`PlaceMerchant(..., hidden: true)`: `Npc_merchant_hidden`,
+  `Npc.HiddenStall`, lines from `MerchantLineBank.HiddenGreeting`; the stall is simply absent when that floor carved
+  no room). `ShopRules.Roll(..., hiddenStall)` appends `HiddenStallCount` (6) Rare pieces of gear after the regular
+  wares from its own seed (`ShopStock.HiddenFrom`); `ShopScreen.Open(floor, keeper, hidden)` shows one segment, and
+  `PartyController.TradeReachFor` says which keeper a body reached (`TradeReach`: None/Merchant/SafeRoom/Hidden) so
+  `ShopRules.SellsHere`/`TryBuy` sell only that keeper's segment ("Not sold here."), on the server path too. Finding:
+  `FortuneDirector` (every 0.25 s) raises `SecretFound(floor)` once per secret when a living member stands in a secret
+  room (or its doorway) or an alcove-only secret's wall is open; saved per floor as `FloorStateDto.SecretsFound`;
+  `AdventureDirector` counts `FloorRecord.SecretsFound`/`SecretsTotal` for the floor card ("Secrets 1/3").
+- **Locks** (`LockRules.cs`). `PartyController.TryUnlock(what, out failed)`: a key opens at once; else the best hands pick
+  with `LockRules.Chance` (the trap rule by Dexterity, +0.25 Light Fingers, 0 under Butterfingers; `ForcedChance` for
+  tests). A failed pick (not a cooldown refusal) is a noise: every unaware creature within 10 m of the lead
+  (`NoiseRadius`) wakes. `Chest` counts `LockFails`; the third jams the lock (`Jammed`, "The pick snaps off in the
+  lock.", `PropEvt "jammed"`, `FloorStateDto.JammedChests`), after which only a key opens it; an opened jammed chest is
+  simply open. Doors do not jam (the noise applies).
+- **The Lucky Dip** (`GambleRules.cs`). The shop's third tab: three bundles a floor (`DipSlot` Weapon/Armour/Jewellery)
+  at `Price(floor, discount)` = 120 + 30 x floor less Pellet's Receipt's fraction (`PartyController.LuckyDipDiscount`),
+  each rolled once by `Roll(cat, seed, floor, slot)` (actor seed 8000 + slot) at item level floor + 2 with `table.chest`'s
+  odds under a 10% legendary floor, carried in `ShopStock.Dip` so a reload cannot reroll it. `PartyController.LuckyDipBuy`
+  (refusals "Nothing there.", "Already bought.", "Not enough gold." + `BrokeAtShop`, "The bag is full.", and "Not sold
+  here." at the hidden stall) reveals the item, raises `Gambled(member, win)` (Rare or better wins); bought slots live in
+  `LuckyDipBoughtOnFloor` (saved as `FloorStateDto.LuckyDipBought`, cleared on a floor change, synced by `LuckyDipSync`;
+  a client sends `LuckyDipIntent`). `ShopScreen.BuyDip(slot)` is the tab's path; the tab is hidden at the stall.
+- **Drift caches** (`FloorGenerator.PlaceCaches`, seed ^ 0xCAC4E). `DigDrifts` records each mine drift in
+  `FloorLayout.Drifts` (its first step may touch the gallery's own edge cells: before that check the drifts were never
+  dug). Each drift whose end is free holds a `DriftCache`: one in three an ambusher (an idle pool creature spawned by
+  the builder with spawn index `CacheAmbusherBase` 91000 + cache index; like the viewer orc, a corpse freed before a
+  save returns on reload), else one in three a locked chest (the floor's keys serve) or a breakable crate. Junk sells
+  for 2 gold (`Prices.JunkValue`) so the companions still pick it up.
+- **Save and wire.** Save v11 fields: `AdventureDto.Boons`/`Curses`, `FloorStateDto.ShrineUsed`, `BoundOpened`,
+  `MimicsSprung`, `SecretsFound`, `LuckyDipBought`, `JammedChests`; a v10 save loads with none. Protocol 8 (88 kinds):
+  `ShrineCard`, `ShrineChoiceIntent`, `ShrineClosed`, `FortuneSync`, `LuckyDipIntent`, `LuckyDipSync`;
+  `NetRefs.Shrine(0)` = "shrine:0". Test hooks: `ShrineRules.ForcedPrice`, `MimicRules.ForcedSpawnIndex`,
+  `LockRules.ForcedChance`. Secret rooms and drifts change a floor's `ContentHash`: the shipped plans were rehashed when
+  fortune arrived (see the sweep above), and the same sweep is due after any further generator change.
 
 ## Floors are designed, not just rolled
 
