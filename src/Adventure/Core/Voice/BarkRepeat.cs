@@ -36,4 +36,10 @@ public static class BarkRepeat
 
     /// <summary>Remember that a line was said on a floor.</summary>
     public static void Said(IDictionary<string, int> saidOnFloor, string text, int floor) => saidOnFloor[Key(text)] = floor;
+
+    /// <summary>A floor no run reaches: a key said "forever" is never <see cref="CanSay"/> again this run (<c>floor - Forever</c> is always negative).</summary>
+    public const int Forever = 1 << 20;
+
+    /// <summary>Remember that a line was said for good: it stays out of the draw for the rest of the run.</summary>
+    public static void SaidForever(IDictionary<string, int> saidOnFloor, string text) => saidOnFloor[Key(text)] = Forever;
 }

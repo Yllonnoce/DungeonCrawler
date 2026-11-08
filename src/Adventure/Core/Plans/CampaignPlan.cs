@@ -164,6 +164,33 @@ public sealed class BarkSet
     public List<BarkLine> Lines { get; set; } = new();
 }
 
+/// <summary>One line of a banter exchange: who says it (a roster name) and what.</summary>
+public sealed class BanterLinePlan
+{
+    public string Member { get; set; } = "";
+    public Line Line { get; set; } = new();
+}
+
+/// <summary>
+/// An exchange between heroes on a quiet mile: two to four lines, gated by floor, tier, a run flag, a gag counter, and
+/// whether it may play more than once a run. Said-state is kept by <see cref="Id"/> through <c>BarkRepeat</c>.
+/// </summary>
+public sealed class BanterPlan
+{
+    public string Id { get; set; } = "";
+    public List<BanterLinePlan> Lines { get; set; } = new();
+    public int MinFloor { get; set; } = 1;
+    [AiNotNull] public int? Tier { get; set; }
+    [AiNotNull] public string? RequiresFlag { get; set; }
+    public bool OncePerRun { get; set; }
+    /// <summary>The running-gag counter this exchange reads (gerald, doors, empty); null for none.</summary>
+    [AiNotNull] public string? Counter { get; set; }
+    /// <summary>The counter must have reached this before the exchange plays.</summary>
+    public int MinCount { get; set; }
+    /// <summary>Whether playing this exchange adds one to its counter (a new Gerald) or only reads it (the doors already opened).</summary>
+    public bool Bumps { get; set; } = true;
+}
+
 /// <summary>What the merchant says on one floor: on meeting the party, when asked how it goes, and when opening the shop.</summary>
 public sealed class MerchantFloorLines
 {
@@ -220,6 +247,8 @@ public sealed class CampaignPlan
     public List<FloorOutline> Floors { get; set; } = new();
     [AiDescription("Leave empty in the outline; barks are written in a separate call.")]
     public List<BarkSet> Barks { get; set; } = new();
+    /// <summary>Exchanges written for this campaign, played beside the stock bank; the planner is not asked for these.</summary>
+    [AiIgnore] public List<BanterPlan> Banter { get; set; } = new();
     [AiDescription("The antagonist's taunts, thrown at the party as the floors' trials play out: two or three per trigger, spiteful and theatrical, free to curse (period oaths and modern profanity both), each with a clean twin.")]
     public List<TauntPlan> Taunts { get; set; } = new();
     [AiDescription("The merchant's lines: Briefing (nodes hire, quakes, deal, sendoff; two replies on the first three; every path reaches deal), FloorLines for floors 1 to 20 (Greeting, Progress, Trade, each at most 220 characters; floors 1-6 greedy and cheerful, 7-13 uneasy, 14-19 frightened, 20 a send-off), and three Gathering lines. He never states a truth about the dungeon.")]
