@@ -39,3 +39,5 @@ SummonId = ""
 PackHunter = false
 FleeHpFraction = 0.3
 Model = "MushroomKing"
+Support = true
+SupportKind = "Shield"

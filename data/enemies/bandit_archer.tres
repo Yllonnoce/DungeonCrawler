@@ -41,3 +41,4 @@ Weapon = "crossbow_2handed"
 Faction = "bandits"
 PackHunter = true
 FleeHpFraction = 0.3
+Kites = true

@@ -57,6 +57,13 @@ public sealed record EnemyProfile
     public bool PackHunter { get; init; }
     /// <summary>Below this HP fraction the enemy runs for a while (0 = never).</summary>
     public float FleeHpFraction { get; init; }
+    /// <summary>A shooter that backs off when the party is within half its PreferredRange.</summary>
+    public bool Kites { get; init; }
+    /// <summary>A caster that shields or mends a hurt ally within 8 m instead of attacking.</summary>
+    public bool Support { get; init; }
+    public SupportKind SupportKind { get; init; } = SupportKind.Shield;
+    /// <summary>A horde creature that rushes and detonates (3 m, damage ×3, no corpse).</summary>
+    public bool Bomber { get; init; }
     /// <summary>An elite's affixes (empty for a plain creature); <see cref="EliteRules.Apply"/> stamps them with the roll.</summary>
     public IReadOnlyList<EliteAffix> Affixes { get; init; } = Array.Empty<EliteAffix>();
     /// <summary>An elite's name with its title ("Grukk the Swift"); null for a plain creature.</summary>

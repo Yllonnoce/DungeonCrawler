@@ -483,6 +483,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             }
             _signatureTimer -= dt;
             if (_vampFlash > 0f) _vampFlash -= dt;
+            if (_supportTimer > 0f) _supportTimer -= dt;
             if (SlowAuraRadius > 0f && (_auraTimer -= dt) <= 0f)
             {
                 _auraTimer = BossRules.GravityWellTick;
@@ -822,6 +823,47 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         OnDealtDamage(Target!.ReceiveAttack(Stats, Attack, DisplayName, this));
     }
 
+    // ---- archetypes: Support, Bomber -------------------------------------------------------------
+
+    private float _supportTimer;
+    private bool _noCorpse;
+    /// <summary>A bomber that went off: nothing to leave behind.</summary>
+    public bool NoCorpse => _noCorpse;
+    public bool SupportReady => _supportTimer <= 0f;
+
+    /// <summary>The nearest other living creature within 8 m below 70% HP, or null when there is none to help.</summary>
+    public Enemy? SupportAlly()
+        => GetParent()?.GetChildren().OfType<Enemy>()
+            .Where(e => e != this && e.IsAlive && e.Hp < e.MaxHp * SupportRules.AllyHpFraction && e.GlobalPosition.DistanceTo(GlobalPosition) <= SupportRules.Range)
+            .OrderBy(e => e.GlobalPosition.DistanceSquaredTo(GlobalPosition)).FirstOrDefault();
+
+    /// <summary>The cast: a Shield or a Regen on the ally, by the data's SupportKind; every 8 s.</summary>
+    public void CastSupport(Enemy ally)
+    {
+        _supportTimer = SupportRules.Cooldown;
+        PlayAnim("Punch", force: true);
+        if (Profile.SupportKind == SupportKind.Regen) ally.ApplyStatus(new StatusApplication(StatusKind.Regen, SupportRules.RegenSeconds, SupportRules.RegenPerSecond));
+        else ally.ApplyStatus(new StatusApplication(StatusKind.Shield, SupportRules.ShieldSeconds, SupportRules.ShieldPoints));
+        HitFx.SpellBurst(GetParent(), ally.GlobalPosition + Vector3.Up * 1f, new Color(Profile.Color));
+        EventBus.Instance.Log($"{DisplayName} {(Profile.SupportKind == SupportKind.Regen ? "mends" : "shields")} {ally.DisplayName}.");
+    }
+
+    /// <summary>A bomber's blast: fire in 3 m at three times its damage, then nothing left of it. Server only.</summary>
+    public void Detonate()
+    {
+        if (!IsAlive) return;
+        if (!Net.NetSession.IsClient && Party != null)
+        {
+            var blast = Attack with { MinDamage = Attack.MinDamage * BomberRules.DamageMultiplier, MaxDamage = Attack.MaxDamage * BomberRules.DamageMultiplier, Type = DamageType.Fire, Kind = AttackKind.Spell };
+            Adventure.AdventureDirector.Instance?.NoteDeathCause(Adventure.Voice.WipeCause.Bomber);
+            foreach (var v in Party.AdventurersWithin(GlobalPosition, BomberRules.Radius).ToList()) v.ReceiveAttack(Stats, blast, $"{DisplayName}'s blast");
+            HitFx.SpellBurst(GetParent(), GlobalPosition + Vector3.Up * 0.6f, new Color(1f, 0.4f, 0.1f));
+            Dungeon.Props.Tremor.ShakeOnly(0.04f, 0.3f);
+        }
+        _noCorpse = true;
+        Kill();
+    }
+
     // ---- elite affixes -----------------------------------------------------------------------
 
     private bool _wardUp;
@@ -1104,6 +1146,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (IsElite) EventBus.Instance.RaiseEliteSlain(this);
         if (IsElite && !Net.NetSession.IsClient) DeathEffects(); // before the hazard return: a Press kill still bursts or splits
         if (_environmentalKill) { if (IsBoss) Main.Instance?.OnBossDefeated(Floor); return; } // the dungeon's kills leave no loot
+        if (_noCorpse) return; // a bomber leaves nothing
 
         var cat = Game.Instance.Catalog;
         var level = TierRules.ItemLevel(Floor);

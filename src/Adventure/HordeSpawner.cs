@@ -168,7 +168,8 @@ public partial class HordeSpawner : Node
         var side = new Vector3(-outward.Z, 0, outward.X);
         var jitter = ((Spawned * 7919) % 100 / 100f - 0.5f) * 1.6f;
         var pos = builder.Surface(mouth) + outward * 0.6f + side * jitter + Vector3.Up * 0.15f;
-        var id = Spawned < _order.Count ? _order[Spawned] : _order[^1];
+        var id = Enemies.BomberRules.IsBomberSlot(_floor, Spawned) && Enemies.BomberRules.BomberFor(builder.Roster, Dungeon.TierRules.TierIndex(_floor)) is { } bomber
+            ? bomber : Spawned < _order.Count ? _order[Spawned] : _order[^1]; // one in eight is a bomber from floor 6
         if (builder.SpawnEnemy(id, pos, _floor) is not { } e) { Spawned = Count; return; }
         e.SetSwarmDetail();
         e.HordeId = Horde.Id;

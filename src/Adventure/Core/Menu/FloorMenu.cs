@@ -149,7 +149,7 @@ public sealed class FloorMenu
         // horde fodder joins where there is a nest; the tier's own swarm, or any without a tier
         var tierIndex = TierRules.TierIndex(floor);
         if (layout.Nests.Count > 0)
-            foreach (var p in roster.Values.Where(p => p.Faction == HordeFaction && !p.IsBoss && (p.TierIndex < 0 || p.TierIndex == tierIndex)).OrderBy(p => p.Id))
+            foreach (var p in roster.Values.Where(p => p.Faction == HordeFaction && !p.IsBoss && !p.Bomber && (p.TierIndex < 0 || p.TierIndex == tierIndex)).OrderBy(p => p.Id)) // bombers are the stream's own share, never planned
                 if (options.All(o => o.Id != p.Id)) options.Add(new EnemyOption(p.Id, p.Name, p.Kind, EnemyCost(p, floor), 0f, p.Faction));
         var bossId = TierRules.IsBossFloor(floor) && tier != null && tier.BossId != "" ? tier.BossId : null;
         return new FloorMenu

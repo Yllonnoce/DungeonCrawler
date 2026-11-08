@@ -57,6 +57,11 @@ public partial class EnemyDef : Resource, IHasId
     [Export] public int TierIndex { get; set; } = -1;
     [Export] public bool PackHunter { get; set; }
     [Export] public float FleeHpFraction { get; set; }
+    /// <summary>Archetypes (data-applied): a kiting shooter, a support caster (SupportKind Shield or Regen), a horde bomber.</summary>
+    [Export] public bool Kites { get; set; }
+    [Export] public bool Support { get; set; }
+    [Export] public string SupportKind { get; set; } = "Shield";
+    [Export] public bool Bomber { get; set; }
 
     public EnemyProfile ToProfile()
     {
@@ -78,6 +83,8 @@ public partial class EnemyDef : Resource, IHasId
             SecondSignature = Enum.TryParse<Signature>(SecondSignature, true, out var sig2) ? sig2 : Enemies.Signature.None,
             ArenaChange = Enum.TryParse<ArenaChange>(ArenaChange, true, out var arena) ? arena : Enemies.ArenaChange.None,
             SignatureCooldown = SignatureCooldown, SummonId = SummonId, PackHunter = PackHunter, FleeHpFraction = FleeHpFraction, Model = Model, Weapon = Weapon, Faction = Faction, TierIndex = TierIndex,
+            Kites = Kites, Support = Support, Bomber = Bomber,
+            SupportKind = Enum.TryParse<SupportKind>(SupportKind, true, out var sup) ? sup : Enemies.SupportKind.Shield,
         };
     }
 }

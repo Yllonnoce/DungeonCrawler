@@ -39,12 +39,14 @@ public sealed class ChaseState : AiState
         var dist = enemy.DistanceToParty();
         if (enemy.Kind == EnemyKind.Melee)
         {
-            if (dist <= enemy.AttackRange) { enemy.ChangeState(new AttackState()); return; }
+            if (enemy.Profile.Bomber) { if (dist <= enemy.AttackRange * 1.2f) { enemy.ChangeState(new DetonateState()); return; } }
+            else if (dist <= enemy.AttackRange) { enemy.ChangeState(new AttackState()); return; }
         }
-        else if (dist <= enemy.Profile.PreferredRange && enemy.HasLineOfSight())
+        else
         {
-            enemy.ChangeState(new ShootState());
-            return;
+            if (enemy.Profile.Support && enemy.SupportReady && enemy.SupportAlly() is { } ally) { enemy.ChangeState(new SupportState(ally)); return; }
+            if (enemy.Profile.Kites && KiteRules.ShouldKite(dist, enemy.Profile.PreferredRange)) { enemy.ChangeState(new KiteState()); return; }
+            if (dist <= enemy.Profile.PreferredRange && enemy.HasLineOfSight()) { enemy.ChangeState(new ShootState()); return; }
         }
 
         if (enemy.CanSeeParty()) _lostTimer = 0f;
@@ -114,6 +116,8 @@ public sealed class ShootState : AiState
             if (enemy.TrySignature()) return;
             if (enemy.Order is Collectives.OrderKind.Regroup or Collectives.OrderKind.RunAlarm && GroupOrders.Apply(enemy, allowChase: false)) return;
             var dist = enemy.DistanceToParty();
+            if (enemy.Profile.Support && enemy.SupportReady && enemy.SupportAlly() is { } ally) { enemy.ChangeState(new SupportState(ally)); return; }
+            if (enemy.Profile.Kites && KiteRules.ShouldKite(dist, enemy.Profile.PreferredRange)) { enemy.ChangeState(new KiteState()); return; }
             if (dist <= enemy.Profile.PreferredRange * 1.3f && enemy.HasLineOfSight()) { _timer = 0f; _fired = false; enemy.BeginWindup(enemy.WindupSeconds); }
             else enemy.ChangeState(new ChaseState());
         }
@@ -188,6 +192,66 @@ public sealed class FleeState : AiState
     }
 }
 
+/// <summary>A shooter backing straight away from a party that got too close, still facing it; back to shooting at range, or chasing when the retreat runs out.</summary>
+public sealed class KiteState : AiState
+{
+    public override string Name => "Kite";
+    private float _timer;
+
+    public override void Update(Enemy enemy, float dt)
+    {
+        if (!enemy.HasTarget && enemy.Party?.NearestAlive(enemy.GlobalPosition) == null) { enemy.ChangeState(enemy.RestState()); return; }
+        _timer += dt;
+        enemy.FleeStep(dt);
+        enemy.FaceToward(enemy.TargetPosition);
+        if (enemy.DistanceToParty() >= enemy.Profile.PreferredRange && enemy.HasLineOfSight()) { enemy.ChangeState(new ShootState()); return; }
+        if (_timer >= KiteRules.MaxSeconds) enemy.ChangeState(new ChaseState());
+    }
+}
+
+/// <summary>A caster turning to a hurt ally: a wind-up, the cast, a recovery, then back to the fight.</summary>
+public sealed class SupportState : AiState
+{
+    public override string Name => "Support";
+    private readonly Enemy _ally;
+    private float _timer;
+    private bool _cast;
+
+    public SupportState(Enemy ally) => _ally = ally;
+
+    public override void Enter(Enemy enemy) { _timer = 0f; _cast = false; enemy.BeginWindup(enemy.WindupSeconds); }
+
+    public override void Update(Enemy enemy, float dt)
+    {
+        _timer += dt;
+        enemy.MoveToward(enemy.GlobalPosition, dt);
+        if (Godot.GodotObject.IsInstanceValid(_ally)) enemy.FaceToward(_ally.GlobalPosition);
+        if (!_cast && _timer >= enemy.WindupSeconds) { _cast = true; if (Godot.GodotObject.IsInstanceValid(_ally) && _ally.IsAlive) enemy.CastSupport(_ally); }
+        if (_timer >= enemy.WindupSeconds + enemy.RecoverSeconds) enemy.ChangeState(new ChaseState());
+    }
+}
+
+/// <summary>A bomber in reach: a hiss, a short fuse, the blast.</summary>
+public sealed class DetonateState : AiState
+{
+    public override string Name => "Detonate";
+    private float _timer;
+
+    public override void Enter(Enemy enemy)
+    {
+        _timer = 0f;
+        Core.EventBus.Instance.Log($"{enemy.DisplayName} hisses!");
+        enemy.FlashWhite(BomberRules.FuseSeconds);
+    }
+
+    public override void Update(Enemy enemy, float dt)
+    {
+        _timer += dt;
+        enemy.MoveToward(enemy.GlobalPosition, dt);
+        if (_timer >= BomberRules.FuseSeconds) enemy.Detonate();
+    }
+}
+
 /// <summary>A boss at half health: 1.2 s untargetable, roaring, then phase two.</summary>
 public sealed class RoarState : AiState
 {
@@ -224,7 +288,7 @@ public sealed class DeadState : AiState
     public override string Name => "Dead";
     private float _timer;
 
-    public override void Enter(Enemy enemy) => enemy.OnDeath();
+    public override void Enter(Enemy enemy) { enemy.OnDeath(); if (enemy.NoCorpse) enemy.QueueFree(); }
 
     public override void Update(Enemy enemy, float dt)
     {

@@ -39,3 +39,4 @@ SummonId = ""
 PackHunter = false
 FleeHpFraction = 0.25
 Model = "Ninja"
+Kites = true
