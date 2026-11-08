@@ -127,7 +127,6 @@ public partial class Trap : Area3D, IInteractable
         EventBus.Instance.PlaySfx("trap");
         EventBus.Instance.Log($"A {Kind.ToString().ToLower()} trap springs under {victim.State.Name}!");
         victim.ApplyTrap(Kind, Floor);
-        EventBus.Instance.RaiseTrapSprung(victim.Index);
         Flash();
         if (SpawnIndex >= 0) EventBus.Instance.RaisePropChanged(Net.NetRefs.Trap(SpawnIndex), "sprung");
     }

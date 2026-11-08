@@ -327,6 +327,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
             else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
+            else if (arg == "--test-combat-feel") { _testCombatFeel = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 75; }
             else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
             else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
@@ -371,6 +372,7 @@ public partial class DebugTools : Node
             _seed ??= 7;
             ForcedLethality ??= 1f;
         }
+        if (_testCombatFeel) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -754,6 +756,7 @@ public partial class DebugTools : Node
         if (_testTavern) RunTavernTest();
         if (_testAbilities) RunAbilitiesTest();
         if (_testHitFx) RunHitFxTest();
+        if (_testCombatFeel) RunCombatFeelTest();
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();

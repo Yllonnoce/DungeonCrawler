@@ -108,9 +108,10 @@ You control one of the four heroes at a time; the other three follow, fight and 
 | W A S D, Shift | Move, sprint (holding forward for two seconds sprints on its own) |
 | Space | Jump (clears a pit at a sprint) |
 | Ctrl (hold) | Crouch: slower, quieter, enemies notice you from closer |
+| Left Alt | Dodge: a short burst you cannot be hit through, 20 stamina |
 | Mouse | Look |
 | Left click | Attack or cast. Tap for a light swing; hold and release for a heavy one |
-| Right mouse (hold) | Guard (blocking classes) |
+| Right mouse | Guard (Warrior; a block in its first moment is perfect and staggers the attacker) or parry (the others: a melee blow in the window is turned and the attacker staggers) |
 | Q or mouse wheel | Cycle your active ability |
 | 1 / 2 / 3 / 4, F | Take control of another hero |
 | R | Cycle the companions' stance: Defensive, Aggressive, Hold |

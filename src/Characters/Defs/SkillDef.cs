@@ -44,6 +44,7 @@ public partial class SkillDef : Resource, IHasId
     /// <summary>A TriggerKind name: Riposte, VenomCrit, Scavenger, SoulSiphon, Bloodlust, Thorns, SecondWind, Momentum, NoGuard, ArrowShatter ...</summary>
     [Export] public string Trigger { get; set; } = "None";
     [Export] public float TriggerMagnitude { get; set; }
+    /// <summary>A second trigger the same node grants (Second Wind + Thorns).</summary>
     [Export] public string Trigger2 { get; set; } = "None";
     [Export] public float TriggerMagnitude2 { get; set; }
 

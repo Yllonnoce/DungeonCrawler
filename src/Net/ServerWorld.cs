@@ -55,7 +55,8 @@ public partial class ServerWorld : Node
         bus.PropChanged += (r, what) => { if (!Quiet) Broadcast(new PropEvt(r, what)); };
         bus.TrapPlaced += trap => { if (!Quiet) Broadcast(new TrapPlacedEvt(new PlacedTrapDto { Kind = trap.Kind.ToString(), X = trap.GlobalPosition.X, Y = trap.GlobalPosition.Y, Z = trap.GlobalPosition.Z })); };
         bus.HitFx += (kind, pos, dir, enemy) => { if (!Quiet) Broadcast(HitFxMessage(kind, pos, dir, enemy)); };
-        bus.EnemyHurt += (e, amount, crit) => { if (!Quiet) Broadcast(new EnemyHurt(e.NetId, amount, crit, e.Hp)); };
+        bus.EnemyHurt += (e, amount, flavor, by) => { if (!Quiet) Broadcast(new EnemyHurt(e.NetId, amount, (byte)flavor, e.Hp, by)); };
+        bus.EnemyTelegraph += (e, state) => { if (!Quiet && !e.IsHorde) Broadcast(new EnemyStateMsg(e.NetId, state)); }; // hordes wind up from the snapshot instead
         bus.EnemyDied += e => { if (!Quiet) { Broadcast(new EnemyDied(e.NetId, -1)); Trace.Add("kill"); } };
         bus.ProjectileFired += p => { if (!Quiet) Broadcast(new ProjectileSpawned(0, Vec(p.GlobalPosition), Vec(p.Velocity), p.IsArrow, p.Color.ToRgba32(), p.SourceMember)); };
         bus.MemberDowned += i => Broadcast(new MemberDownedEvt(i));
@@ -488,6 +489,8 @@ public partial class ServerWorld : Node
         body.Remote.Velocity = new Vector3(pose.Velocity.X, pose.Velocity.Y, pose.Velocity.Z);
         body.Remote.Crouch = pose.Flags.HasFlag(PoseFlags.Crouch);
         body.Remote.Guard = pose.Flags.HasFlag(PoseFlags.Guard);
+        body.Remote.Parry = pose.Flags.HasFlag(PoseFlags.Parry);
+        body.Remote.Dodge = pose.Flags.HasFlag(PoseFlags.Dodge);
         body.Remote.OnFloor = pose.Flags.HasFlag(PoseFlags.OnFloor);
         if (!_moved.Contains(slot.MemberIndex) && _firstPose.TryGetValue(slot.MemberIndex, out var first) && first.DistanceTo(at) > 1f) { _moved.Add(slot.MemberIndex); Trace.Add($"moved:{slot.Name}"); }
         _firstPose.TryAdd(slot.MemberIndex, at);

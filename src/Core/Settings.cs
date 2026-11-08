@@ -18,6 +18,8 @@ public static class Settings
     public static float SfxVolume { get; set; } = 1f;
     public static bool Fullscreen { get; set; }
     public static bool VSync { get; set; } = true;
+    /// <summary>Floating damage numbers over enemies.</summary>
+    public static bool DamageNumbers { get; set; } = true;
     /// <summary>Volumetric haze in the air, 0 (off) to 1 (thick); torchlight shows in it.</summary>
     public static float Haze { get; set; } = 0.5f;
     public static Vector2I Resolution { get; set; } = new(1920, 1080);
@@ -81,7 +83,7 @@ public static class Settings
     public static readonly (string action, string label)[] Rebindable =
     {
         ("move_forward", "Move forward"), ("move_back", "Move back"), ("move_left", "Move left"), ("move_right", "Move right"),
-        ("sprint", "Sprint"), ("jump", "Jump"), ("crouch", "Crouch"), ("interact", "Interact"), ("attack_1", "Member 1 attack"), ("attack_2", "Member 2 attack"),
+        ("sprint", "Sprint"), ("jump", "Jump"), ("crouch", "Crouch"), ("dodge", "Dodge"), ("interact", "Interact"), ("attack_1", "Member 1 attack"), ("attack_2", "Member 2 attack"),
         ("attack_3", "Member 3 attack"), ("attack_4", "Member 4 attack"), ("ability_next", "Cycle ability"), ("focus_next", "Next member"),
         ("swap_rank", "Swap rank"), ("inventory", "Inventory"), ("character", "Character sheet"), ("skills", "Skill tree"),
         ("map", "Map"), ("quest_log", "Quest log"), ("quicksave", "Quicksave"), ("quickload", "Quickload"), ("chat", "Chat (multiplayer)"), ("cheer", "Cheer"),
@@ -115,6 +117,7 @@ public static class Settings
             SfxVolume = (float)cfg.GetValue("audio", "sfx", SfxVolume).AsDouble();
             Fullscreen = cfg.GetValue("display", "fullscreen", Fullscreen).AsBool();
             VSync = cfg.GetValue("display", "vsync", VSync).AsBool();
+            DamageNumbers = cfg.GetValue("display", "damage_numbers", DamageNumbers).AsBool();
             Haze = (float)cfg.GetValue("display", "haze", Haze).AsDouble();
             Resolution = cfg.GetValue("display", "resolution", Resolution).AsVector2I();
             Ambushes = cfg.GetValue("danger", "ambushes", Ambushes).AsBool();
@@ -169,6 +172,7 @@ public static class Settings
         cfg.SetValue("audio", "sfx", SfxVolume);
         cfg.SetValue("display", "fullscreen", Fullscreen);
         cfg.SetValue("display", "vsync", VSync);
+        cfg.SetValue("display", "damage_numbers", DamageNumbers);
         cfg.SetValue("display", "haze", Haze);
         cfg.SetValue("display", "resolution", Resolution);
         cfg.SetValue("danger", "ambushes", Ambushes);

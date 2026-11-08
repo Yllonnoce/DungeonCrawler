@@ -2,7 +2,7 @@ using DungeonCrawler.Characters;
 
 namespace DungeonCrawler.Combat;
 
-public enum StatusKind { Bleed, Poison, Burn, Frost, Stun, Slow, Regen, Haste, Shield }
+public enum StatusKind { Bleed, Poison, Burn, Frost, Stun, Slow, Regen, Haste, Shield, Vulnerable }
 
 public sealed class StatusEffect
 {
@@ -12,7 +12,7 @@ public sealed class StatusEffect
     public int Stacks { get; set; } = 1;
     public float TickTimer { get; set; }
 
-    public bool IsDebuff => Kind is StatusKind.Bleed or StatusKind.Poison or StatusKind.Burn or StatusKind.Frost or StatusKind.Stun or StatusKind.Slow;
+    public bool IsDebuff => Kind is StatusKind.Bleed or StatusKind.Poison or StatusKind.Burn or StatusKind.Frost or StatusKind.Stun or StatusKind.Slow or StatusKind.Vulnerable;
     public override string ToString() => Stacks > 1 ? $"{Kind} x{Stacks} {Remaining:0}s" : $"{Kind} {Remaining:0}s";
 }
 
@@ -38,6 +38,10 @@ public sealed class StatusEffectController
     public float ShieldPoints => _active.Where(e => e.Kind == StatusKind.Shield).Sum(e => e.Magnitude);
     public bool Has(StatusKind kind) => _active.Any(e => e.Kind == kind);
     public StatusEffect? Get(StatusKind kind) => _active.FirstOrDefault(e => e.Kind == kind);
+    /// <summary>Vulnerable: every hit and tick taken is a quarter heavier.</summary>
+    public float DamageTakenMultiplier => Has(StatusKind.Vulnerable) ? CombatRules.VulnerableMultiplier : 1f;
+    /// <summary>Bleeding halves every heal received (potions, regen, Second Wind's kin).</summary>
+    public float HealingMultiplier => Has(StatusKind.Bleed) ? CombatRules.BleedHealingMultiplier : 1f;
 
     /// <summary>Apply an effect. Chance below 1 needs an rng; without one the effect always applies.</summary>
     public bool Apply(StatusApplication app, Random? rng = null)

@@ -24,7 +24,7 @@ public partial class PartyController : Node3D
     public const float HeavyHoldSeconds = 0.35f;
     public const float PerfectWindowStart = 0.6f;
     public const float PerfectWindowEnd = 1.0f;
-    public const float BlockStaminaCost = 12f;
+    public const float BlockStaminaCost = DefenseRules.BlockStamina;
 
     private readonly Dictionary<string, AbilityProfile> _abilities = new();
     private readonly List<int> _effectVersions = new();
@@ -376,7 +376,7 @@ public partial class PartyController : Node3D
     {
         var dt = (float)delta;
         if (Adventurers.Length == 0) return;
-        if (Local is { } local) local.Intent = LocalInput.Read(MouseCaptured, InputLocked, local.ForcedMoveInput);
+        if (Local is { } local) local.Intent = local.DebugIntent ?? LocalInput.Read(MouseCaptured, InputLocked, local.ForcedMoveInput);
         if (HasBodies)
         {
             GlobalPosition = Anchor.GlobalPosition;
@@ -404,7 +404,7 @@ public partial class PartyController : Node3D
             {
                 if (!m.IsAlive) break;
                 if (tick.IsHeal) m.Heal(tick.Amount);
-                else m.TakeDamage(DamagePipeline.Mitigate(tick.Amount, tick.Type, m.Stats));
+                else m.TakeDamage(DamagePipeline.Mitigate(tick.Amount, tick.Type, m.Stats, m.Effects));
             }
             if (wasAlive && !m.IsAlive) { EventBus.Instance.Log($"{m.Name} falls!"); body.CallDeferred(nameof(Adventurer.Revive)); m.Hp = 0; OnMemberDowned(i); }
             if (m.Effects.Version != _effectVersions[i]) { _effectVersions[i] = m.Effects.Version; m.Recalculate(); }
@@ -548,7 +548,7 @@ public partial class PartyController : Node3D
     {
         if (!r.Hit) { EventBus.Instance.Log($"{attacker} misses {target}."); EventBus.Instance.PlaySfx("miss"); return; }
         EventBus.Instance.PlaySfx(r.Type == DamageType.Physical ? (heavy || r.Crit ? "hit_heavy" : "hit_flesh") : "cast_hit");
-        var verb = r.Sneak ? "ambushes" : r.Crit ? "critically hits" : perfect ? "perfectly smashes" : heavy ? "smashes" : "hits";
+        var verb = r.Shatter ? "shatters" : r.Sneak ? "ambushes" : r.Crit ? "critically hits" : perfect ? "perfectly smashes" : heavy ? "smashes" : "hits";
         var text = $"{attacker} {verb} {target} for {r.Amount:0}";
         if (r.Type != DamageType.Physical) text += $" {r.Type.ToString().ToLower()}";
         if (r.Blocked) text += " (blocked)";

@@ -88,7 +88,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 
 [Msg(MsgKind.EnemySpawned)] public sealed record EnemySpawned(DynamicEnemyDto Enemy) : NetMessage;
 [Msg(MsgKind.EnemyDied)] public sealed record EnemyDied(int NetId, int KillerMember) : NetMessage;
-[Msg(MsgKind.EnemyHurt)] public sealed record EnemyHurt(int NetId, float Amount, bool Crit, float Hp) : NetMessage;
+/// <summary>Flavor is a <c>Combat.HitFlavor</c>; ByMember the striker's party index or -1.</summary>
+[Msg(MsgKind.EnemyHurt)] public sealed record EnemyHurt(int NetId, float Amount, byte Flavor, float Hp, int ByMember) : NetMessage;
 [Msg(MsgKind.EnemyState)] public sealed record EnemyStateMsg(int NetId, string State) : NetMessage;
 [Msg(MsgKind.ProjectileSpawned)] public sealed record ProjectileSpawned(int Id, NetVec Position, NetVec Velocity, bool Arrow, uint Color, int SourceMember) : NetMessage;
 [Msg(MsgKind.ProjectileEnded)] public sealed record ProjectileEnded(int Id, NetVec Position) : NetMessage;

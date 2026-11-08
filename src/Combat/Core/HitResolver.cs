@@ -2,10 +2,24 @@ using DungeonCrawler.Characters;
 
 namespace DungeonCrawler.Combat;
 
+/// <summary>The Depths' combat numbers that are not a class's or a weapon's: statuses that change damage taken or healing, and the data clamp on resists.</summary>
+public static class CombatRules
+{
+    public const float VulnerableMultiplier = 1.25f;
+    public const float VulnerableSeconds = 6f;
+    public const float BleedHealingMultiplier = 0.5f;
+    /// <summary>Resists above this are clamped here and in data (the files say what happens).</summary>
+    public const float MaxResist = 75f;
+    public const float ShatterMultiplier = 1.5f;
+    public const float IgniteRadius = 2f;
+    public const float IgniteFactor = 4f;
+}
+
 /// <summary>Mitigation math shared by direct hits and damage-over-time ticks.</summary>
 public static class DamagePipeline
 {
-    public static float Mitigate(float raw, DamageType type, Stats defender)
+    /// <summary>Armor (physical only), then resist, then the defender's damage-taken statuses (Vulnerable).</summary>
+    public static float Mitigate(float raw, DamageType type, Stats defender, StatusEffectController? defenderEffects = null)
     {
         if (raw <= 0) return 0;
         var dmg = raw;
@@ -21,8 +35,10 @@ public static class DamagePipeline
             DamageType.Frost => Stat.ResistFrost,
             DamageType.Poison => Stat.ResistPoison,
             _ => Stat.ResistArcane,
-        }], 0f, 75f);
-        return dmg * (1f - resist / 100f);
+        }], 0f, CombatRules.MaxResist);
+        dmg *= 1f - resist / 100f;
+        if (defenderEffects != null) dmg *= defenderEffects.DamageTakenMultiplier;
+        return dmg;
     }
 
     public static float RollBase(Stats attacker, AttackProfile attack, Random rng)
@@ -40,7 +56,7 @@ public static class DamagePipeline
     }
 
     public static float HitChance(Stats attacker, Stats defender)
-        => Math.Clamp(0.75f + (attacker[Stat.Accuracy] - defender[Stat.Evasion]) * 0.01f, 0.3f, 0.98f);
+        => Math.Clamp(0.72f + (attacker[Stat.Accuracy] - defender[Stat.Evasion]) * 0.006f, 0.35f, 0.95f);
 }
 
 /// <summary>Turns an attack against a defender into a DamageResult, applying on-hit statuses to the defender.</summary>
@@ -59,13 +75,18 @@ public static class HitResolver
         if (crit) dmg *= Math.Max(1f, attacker[Stat.CritMultiplier]);
         if (ctx.SneakAttack) dmg *= Math.Max(1f, ctx.SneakMultiplier);
 
-        dmg = DamagePipeline.Mitigate(dmg, attack.Type, defender);
+        var shatter = (crit || ctx.Heavy) && defenderEffects?.Has(StatusKind.Frost) == true;
+        if (shatter) { dmg *= CombatRules.ShatterMultiplier; defenderEffects!.Remove(StatusKind.Frost); }
+
+        dmg = DamagePipeline.Mitigate(dmg, attack.Type, defender, defenderEffects);
 
         var blocked = ctx.DefenderBlocking && attack.Kind != AttackKind.Spell;
         if (blocked) dmg *= 1f - ctx.BlockReduction;
 
         if (defenderEffects != null) dmg = defenderEffects.AbsorbWithShield(dmg);
 
+        var hadBurn = defenderEffects?.Has(StatusKind.Burn) == true;
+        var ignite = 0f;
         var applied = new List<StatusApplication>();
         foreach (var s in attack.OnHit)
         {
@@ -73,8 +94,15 @@ public static class HitResolver
             if (rng.NextDouble() >= chance) continue;
             defenderEffects?.Apply(s with { Chance = 1f });
             applied.Add(s);
+            if (defenderEffects == null) continue;
+            // Ignite: a Burn landing on a Poisoned target bursts, once (the first Burn only).
+            if (s.Kind == StatusKind.Burn && !hadBurn && ignite <= 0f && defenderEffects.Get(StatusKind.Poison) is { } poison)
+                ignite = poison.Magnitude * CombatRules.IgniteFactor;
+            // Deep Freeze: a spell's stun leaves the target Vulnerable.
+            if (s.Kind == StatusKind.Stun && attack.Kind == AttackKind.Spell)
+                defenderEffects.Apply(new StatusApplication(StatusKind.Vulnerable, CombatRules.VulnerableSeconds, 0));
         }
 
-        return new DamageResult(true, crit, blocked, ctx.SneakAttack, Math.Max(0f, dmg), attack.Type, applied);
+        return new DamageResult(true, crit, blocked, ctx.SneakAttack, Math.Max(0f, dmg), attack.Type, applied) { Shatter = shatter, IgniteBurst = ignite };
     }
 }

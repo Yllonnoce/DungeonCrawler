@@ -79,7 +79,8 @@ public partial class EventBus : Node
     public event Action<Guid, int>? LootRemoved;
     /// <summary>(net ref such as "door:1", what happened: opened, pulled, revealed, disarmed, sprung, broken).</summary>
     public event Action<string, string>? PropChanged;
-    public event Action<Enemies.Enemy, float, bool>? EnemyHurt;
+    /// <summary>An enemy took damage: how much, what it read as, and the party index of the striker (-1 for ticks, hazards, thorns and the ignition).</summary>
+    public event Action<Enemies.Enemy, float, Combat.HitFlavor, int>? EnemyHurt;
     /// <summary>(kind, where, direction, the enemy hit), all world-space: blood or a stuck arrow where the server or a solo game resolved a hit.</summary>
     public event Action<Net.HitFxKind, Vector3, Vector3, Enemies.Enemy>? HitFx;
     public event Action<Combat.Projectile>? ProjectileFired;
@@ -88,6 +89,9 @@ public partial class EventBus : Node
     public event Action<int, int, bool>? FloorBuilt;
     /// <summary>An enemy that was not in the plan appeared (summon, horde).</summary>
     public event Action<Enemies.Enemy>? EnemySpawned;
+    /// <summary>An enemy began a wind-up or a signature telegraph (the state's name: "Attack", "Shoot", "Signature:Slam"); the server relays it to clients.</summary>
+    public event Action<Enemies.Enemy, string>? EnemyTelegraph;
+    public void RaiseEnemyTelegraph(Enemies.Enemy enemy, string state) => EnemyTelegraph?.Invoke(enemy, state);
     public event Action<string>? HordeTriggered;
     public event Action<string>? HordeSpent;
     /// <summary>An ambusher broke cover (its point index on the floor); clients show the burst.</summary>
@@ -210,7 +214,7 @@ public partial class EventBus : Node
     public void RaiseHitFx(Net.HitFxKind kind, Vector3 pos, Vector3 dir, Enemies.Enemy enemy) => HitFx?.Invoke(kind, pos, dir, enemy);
     public void RaiseLootRemoved(Guid id, int byMember) => LootRemoved?.Invoke(id, byMember);
     public void RaisePropChanged(string netRef, string what) => PropChanged?.Invoke(netRef, what);
-    public void RaiseEnemyHurt(Enemies.Enemy enemy, float amount, bool crit) => EnemyHurt?.Invoke(enemy, amount, crit);
+    public void RaiseEnemyHurt(Enemies.Enemy enemy, float amount, Combat.HitFlavor flavor, int byMember) => EnemyHurt?.Invoke(enemy, amount, flavor, byMember);
     public void RaiseProjectileFired(Combat.Projectile p) => ProjectileFired?.Invoke(p);
     public void RaiseTrapPlaced(Dungeon.Props.Trap trap) => TrapPlaced?.Invoke(trap);
     public void RaiseFloorBuilt(int floor, int delta, bool firstVisit) => FloorBuilt?.Invoke(floor, delta, firstVisit);

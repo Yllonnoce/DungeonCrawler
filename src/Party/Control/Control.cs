@@ -23,6 +23,10 @@ public struct InputIntent
     public bool Crouch;
     public bool JumpPressed;
     public bool Guard;
+    /// <summary>Left Alt this tick: a dodge burst (every class).</summary>
+    public bool DodgePressed;
+    /// <summary>Right mouse pressed this tick: a parry attempt for the classes that cannot block (a blocking class guards instead).</summary>
+    public bool ParryPressed;
     /// <summary>False while a menu holds the keys: auto-run and jump ignore stale state.</summary>
     public bool Live;
 
@@ -43,6 +47,8 @@ public static class LocalInput
             Crouch = live && Input.IsActionPressed("crouch"),
             JumpPressed = live && Input.IsActionJustPressed("jump"),
             Guard = live && Input.IsActionPressed("block"),
+            DodgePressed = live && Input.IsActionJustPressed("dodge"),
+            ParryPressed = live && Input.IsActionJustPressed("block"),
             Live = live || forced != null,
         };
     }
@@ -57,5 +63,7 @@ public sealed class RemotePose
     public Vector3 Velocity;
     public bool Crouch;
     public bool Guard;
+    public bool Parry;
+    public bool Dodge;
     public bool OnFloor = true;
 }
