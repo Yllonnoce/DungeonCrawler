@@ -402,7 +402,7 @@ public partial class PartyController : Node3D
             {
                 if (!m.IsAlive) break;
                 if (tick.IsHeal) m.Heal(tick.Amount);
-                else m.TakeDamage(DamagePipeline.Mitigate(tick.Amount, tick.Type, m.Stats));
+                else m.TakeDamage(DamagePipeline.Mitigate(tick.Amount, tick.Type, m.Stats, m.Effects));
             }
             if (wasAlive && !m.IsAlive) { EventBus.Instance.Log($"{m.Name} falls!"); body.CallDeferred(nameof(Adventurer.Revive)); m.Hp = 0; OnMemberDowned(i); }
             if (m.Effects.Version != _effectVersions[i]) { _effectVersions[i] = m.Effects.Version; m.Recalculate(); }

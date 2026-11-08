@@ -2,10 +2,21 @@ using DungeonCrawler.Characters;
 
 namespace DungeonCrawler.Combat;
 
+/// <summary>The Depths' combat numbers that are not a class's or a weapon's: statuses that change damage taken or healing, and the data clamp on resists.</summary>
+public static class CombatRules
+{
+    public const float VulnerableMultiplier = 1.25f;
+    public const float VulnerableSeconds = 6f;
+    public const float BleedHealingMultiplier = 0.5f;
+    /// <summary>Resists above this are clamped here and in data (the files say what happens).</summary>
+    public const float MaxResist = 75f;
+}
+
 /// <summary>Mitigation math shared by direct hits and damage-over-time ticks.</summary>
 public static class DamagePipeline
 {
-    public static float Mitigate(float raw, DamageType type, Stats defender)
+    /// <summary>Armor (physical only), then resist, then the defender's damage-taken statuses (Vulnerable).</summary>
+    public static float Mitigate(float raw, DamageType type, Stats defender, StatusEffectController? defenderEffects = null)
     {
         if (raw <= 0) return 0;
         var dmg = raw;
@@ -21,8 +32,10 @@ public static class DamagePipeline
             DamageType.Frost => Stat.ResistFrost,
             DamageType.Poison => Stat.ResistPoison,
             _ => Stat.ResistArcane,
-        }], 0f, 75f);
-        return dmg * (1f - resist / 100f);
+        }], 0f, CombatRules.MaxResist);
+        dmg *= 1f - resist / 100f;
+        if (defenderEffects != null) dmg *= defenderEffects.DamageTakenMultiplier;
+        return dmg;
     }
 
     public static float RollBase(Stats attacker, AttackProfile attack, Random rng)
@@ -40,7 +53,7 @@ public static class DamagePipeline
     }
 
     public static float HitChance(Stats attacker, Stats defender)
-        => Math.Clamp(0.75f + (attacker[Stat.Accuracy] - defender[Stat.Evasion]) * 0.01f, 0.3f, 0.98f);
+        => Math.Clamp(0.72f + (attacker[Stat.Accuracy] - defender[Stat.Evasion]) * 0.006f, 0.35f, 0.95f);
 }
 
 /// <summary>Turns an attack against a defender into a DamageResult, applying on-hit statuses to the defender.</summary>
@@ -59,7 +72,7 @@ public static class HitResolver
         if (crit) dmg *= Math.Max(1f, attacker[Stat.CritMultiplier]);
         if (ctx.SneakAttack) dmg *= Math.Max(1f, ctx.SneakMultiplier);
 
-        dmg = DamagePipeline.Mitigate(dmg, attack.Type, defender);
+        dmg = DamagePipeline.Mitigate(dmg, attack.Type, defender, defenderEffects);
 
         var blocked = ctx.DefenderBlocking && attack.Kind != AttackKind.Spell;
         if (blocked) dmg *= 1f - ctx.BlockReduction;

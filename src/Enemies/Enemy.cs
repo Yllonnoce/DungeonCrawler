@@ -87,8 +87,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>The arrows drawn in it: <see cref="Model"/>'s children named StuckArrow.</summary>
     public int StuckArrowCount => _model == null ? 0 : _model.GetChildren().Count(c => c.Name.ToString().StartsWith(HitFx.StuckArrowName) && !c.IsQueuedForDeletion());
     public float AttackRange => Profile.AttackRange;
-    public float WindupSeconds => Profile.WindupSeconds;
-    public float RecoverSeconds => Profile.RecoverSeconds;
+    /// <summary>Frost (and Haste) stretch or shorten the wind-up and the recovery with the attack-speed factor.</summary>
+    public float WindupSeconds => TelegraphRules.Scaled(Profile.WindupSeconds, AttackSpeedFactor);
+    public float RecoverSeconds => TelegraphRules.Scaled(Profile.RecoverSeconds, AttackSpeedFactor);
+    private float AttackSpeedFactor => Stats[Stat.AttackSpeed] * Effects.Multiplier(Stat.AttackSpeed);
     public float EffectiveMoveSpeed => Profile.MoveSpeed * Effects.Multiplier(Stat.MoveSpeed) * _speedBoost * RunBoost * (InWater ? WaterSlow : 1f);
     /// <summary>Wading through a pond or stream costs everyone the same share of their pace.</summary>
     public const float WaterSlow = 0.65f;
@@ -421,8 +423,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         {
             foreach (var tick in Effects.Update(dt))
             {
-                if (tick.IsHeal) { Hp = Math.Min(MaxHp, Hp + tick.Amount); continue; }
-                Hp = Math.Max(0, Hp - DamagePipeline.Mitigate(tick.Amount, tick.Type, Stats));
+                if (tick.IsHeal) { Hp = Math.Min(MaxHp, Hp + tick.Amount * Effects.HealingMultiplier); continue; }
+                Hp = Math.Max(0, Hp - DamagePipeline.Mitigate(tick.Amount, tick.Type, Stats, Effects));
                 if (Hp <= 0) { EventBus.Instance.Log($"{DisplayName} succumbs to {tick.Kind.ToString().ToLower()}."); _dying = true; break; }
             }
             _signatureTimer -= dt;

@@ -114,11 +114,11 @@ public sealed class CharacterState
     public void Regenerate(float dt, bool blocking, float multiplier = 1f)
     {
         if (!IsAlive) return;
-        Hp = Math.Min(Stats[Stat.MaxHp], Hp + Stats[Stat.HpRegen] * multiplier * dt);
+        Hp = Math.Min(Stats[Stat.MaxHp], Hp + Stats[Stat.HpRegen] * multiplier * Effects.HealingMultiplier * dt);
         if (!blocking) Stamina = Math.Min(Stats[Stat.MaxStamina], Stamina + Stats[Stat.StaminaRegen] * multiplier * dt);
         Mana = Math.Min(Stats[Stat.MaxMana], Mana + Stats[Stat.ManaRegen] * multiplier * dt);
     }
 
     public void TakeDamage(float amount) => Hp = Math.Max(0, Hp - amount);
-    public void Heal(float amount) => Hp = Math.Min(Stats[Stat.MaxHp], Hp + amount);
+    public void Heal(float amount) => Hp = Math.Min(Stats[Stat.MaxHp], Hp + amount * Effects.HealingMultiplier);
 }
