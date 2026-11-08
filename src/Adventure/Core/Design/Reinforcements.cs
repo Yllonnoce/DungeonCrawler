@@ -115,8 +115,10 @@ public static class PortalRules
 
     public static int MaxAliveFor(float intensity) => intensity >= 1.5f ? MaxAliveHeavy : MaxAlive;
 
-    /// <summary>The floor whose boss commands this tier's reinforcements.</summary>
-    public static int BossFloorFor(int floor) => Math.Min(TierRules.FinalFloor, (TierRules.TierIndex(floor) + 1) * TierRules.FloorsPerTier);
+    /// <summary>The floor whose boss commands this tier's reinforcements; in the endless depths each Herald commands its own five floors (25-29, 30-34, …).</summary>
+    public static int BossFloorFor(int floor) => floor <= TierRules.FinalFloor
+        ? Math.Min(TierRules.FinalFloor, (TierRules.TierIndex(floor) + 1) * TierRules.FloorsPerTier)
+        : Math.Max(TierRules.FinalFloor, floor / TierRules.FloorsPerTier * TierRules.FloorsPerTier);
 
     /// <summary>
     /// Where the next portal opens: an explored room (a third of it seen) holding no adventurer, not the boss arena or a

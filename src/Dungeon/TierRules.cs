@@ -10,7 +10,9 @@ public static class TierRules
     /// <summary>0 = Crypt, 1 = Caves, 2 = Forge, 3 = Abyss. Floors past the final boss stay in the last tier.</summary>
     public static int TierIndex(int floor) => Math.Clamp((floor - 1) / FloorsPerTier, 0, TierCount - 1);
     public static int FloorInTier(int floor) => (floor - 1) % FloorsPerTier + 1;
-    public static bool IsBossFloor(int floor) => floor >= FloorsPerTier && floor % FloorsPerTier == 0 && floor <= FinalFloor;
+    public static bool IsBossFloor(int floor) => (floor >= FloorsPerTier && floor % FloorsPerTier == 0 && floor <= FinalFloor) || IsEndlessBossFloor(floor);
+    /// <summary>Past the final boss a Herald stands every fifth floor (25, 30, …).</summary>
+    public static bool IsEndlessBossFloor(int floor) => floor > FinalFloor && floor % FloorsPerTier == 0;
     public static bool IsFinalBossFloor(int floor) => floor == FinalFloor;
     public static bool IsEndless(int floor) => floor > FinalFloor;
 

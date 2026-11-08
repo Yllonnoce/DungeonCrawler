@@ -73,7 +73,7 @@ public partial class PortalSpawner : Node
             !PortalRules.Enabled(Intensity) ? (true, "reinforcements are off in Settings")
             : DebugTools.Instance?.NoPortals == true ? (true, "--no-portals")
             : _enemyIds.Count == 0 ? (true, "no creatures in the roster")
-            : bossDead ? (true, $"the tier's boss (floor {bossFloor}) is dead")
+            : bossDead ? (true, $"the boss of floor {bossFloor} is dead")
             : Objectives.ObjectiveController.Instance is Objectives.RitualController { Active: true } ? (true, "the ritual's breaches are enough")
             : (false, "");
     }

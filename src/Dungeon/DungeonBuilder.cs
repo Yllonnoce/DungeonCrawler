@@ -1190,6 +1190,7 @@ public partial class DungeonBuilder : Node3D
         var profile = EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile();
         // the last boss is the campaign's villain in person when the owner built them a body: a tall man, not a 3.8 m demon
         if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = 1.25f };
+        if (spawnIndex == -2 && TierRules.IsEndless(floor)) profile = HeraldProfile(profile, floor); // the Nth Herald: the tier boss re-skinned by the floor's tint, a random second kit, no arena change
         profile = ApplyElite(profile, elite);
         var enemy = _enemyScene.Instantiate<Enemy>();
         enemy.Profile = profile;
@@ -1209,6 +1210,19 @@ public partial class DungeonBuilder : Node3D
     }
 
     private static EnemyProfile ApplyElite(EnemyProfile p, EliteRoll? e) => e == null ? p : EliteRules.Apply(p, e);
+
+    /// <summary>An endless-depth boss: named "the Nth Herald", tinted toward the floor's walls, with a second signature drawn from the boss's actor seed (HP and damage already follow the endless scale).</summary>
+    private EnemyProfile HeraldProfile(EnemyProfile profile, int floor)
+    {
+        var baseColor = new Color(profile.Color);
+        var tint = (CurrentTheme?.WallColor ?? baseColor).Lerp(baseColor, 0.5f);
+        return profile with
+        {
+            Name = BossRules.HeraldName(floor), Color = tint.ToHtml(false),
+            SecondSignature = BossRules.RandomSecond(profile.Signature, new Random(Rng.ActorSeed(GameSeed, floor, Enemy.BossNetId))),
+            ArenaChange = ArenaChange.None,
+        };
+    }
 
     private void PlaceProps(FloorLayout layout, FloorContents contents, Node3D root, int floor, int seed)
     {
