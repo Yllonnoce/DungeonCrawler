@@ -66,7 +66,7 @@ public partial class ClauseCard : PanelContainer
         var deeds = ProfileStore.Current.Deeds.Keys.ToHashSet();
         _picked.Clear();
         _rankLabels.Clear();
-        foreach (var child in _rows.GetChildren()) child.QueueFree();
+        foreach (var child in _rows.GetChildren()) { _rows.RemoveChild(child); child.QueueFree(); }
         foreach (var def in ClauseRules.All)
         {
             _picked[def.Id] = active.Rank(def.Id);

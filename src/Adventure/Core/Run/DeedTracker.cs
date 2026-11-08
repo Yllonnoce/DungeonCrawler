@@ -9,7 +9,7 @@ public enum DeedSignal
     CurseTaken, ShrineBoon, Gamble, PerfectBlock, Parried, BossSeen, BossDown, EliteSlain, Rescue, DailyDone,
 }
 
-/// <summary>One signal: StoryCleared's Flag is "under the Death Clause"; HeatClear's Amount the heat; FloorClosed's Amount the seconds; BossSeen/BossDown's At the clock.</summary>
+/// <summary>One signal: StoryCleared's Flag is "under the Death Clause"; HeatClear's Amount the heat; FloorClosed's Amount the seconds and its Flag "left by the down stairs" (cleared); BossSeen/BossDown's At the clock.</summary>
 public sealed record DeedEvent(DeedSignal Signal, int Floor = 0, int Amount = 0, bool Flag = false, double At = 0);
 
 /// <summary>
@@ -47,7 +47,7 @@ public sealed class DeedTracker
             case DeedSignal.GeraldNamed: if (Bump(DeedRules.GeraldTotal) >= DeedRules.GeraldsWidowCount) Earn("geralds_widow"); break;
             case DeedSignal.EliteShattered: Earn("load_bearing"); break;
             case DeedSignal.Wipe: _wipesOnFloor[e.Floor] = _wipesOnFloor.GetValueOrDefault(e.Floor) + 1; if (_wipesOnFloor[e.Floor] >= DeedRules.BangOnScheduleWipes) Earn("bang_on_schedule"); break;
-            case DeedSignal.FloorClosed: if (e.Floor >= DeedRules.ExpressLodgingsFloor && e.Amount < DeedRules.ExpressLodgingsSeconds) Earn("express_lodgings"); break;
+            case DeedSignal.FloorClosed: if (e.Flag && e.Floor >= DeedRules.ExpressLodgingsFloor && e.Amount < DeedRules.ExpressLodgingsSeconds) Earn("express_lodgings"); break; // cleared: the party took the stairs down
             case DeedSignal.SecretFound: if (++_secrets >= DeedRules.WainscotSecrets) Earn("behind_the_wainscot"); break;
             case DeedSignal.FloorSecretsComplete: Earn("nosy"); break;
             case DeedSignal.MimicSprung: if (++_mimics >= DeedRules.BitFirstMimics) Earn("bit_first"); break;

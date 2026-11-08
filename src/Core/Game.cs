@@ -64,17 +64,20 @@ public partial class Game : Node
         Floors.Clear();
         PlaySeconds = 0;
         Victory = false;
-        Adventure = new AdventureDto { Mode = AdventureMode.Offline, Run = run, RunId = Guid.NewGuid().ToString("N") };
+        Adventure = new AdventureDto { Mode = AdventureMode.Offline, Run = run, RunId = Guid.NewGuid().ToString("N"), UnlockedMerchantLines = Save.Profile.ProfileStore.UnlockedMerchantLines() }; // the stall's lines are fixed at the start so every peer rolls the same stall
         if (Net.NetSession.Instance?.Clauses is { } clauses) Adventure.Clauses = ClauseRules.Normalize(clauses); // a server's --clauses= binds every new game in the process
         ApplyClauses();
         GD.Print($"[Game] new game seed={GameSeed} run={run} clauses=[{string.Join(",", Adventure.Clauses)}]");
     }
 
-    /// <summary>The adventure's clauses take effect: the active set, Hostile Tenants' extra elites on the builder, and the fortune refresh that reprices the shop.</summary>
+    /// <summary>The adventure's run settings take effect: the active clauses, Hostile Tenants' extra elites on the builder, the hidden stall's unlocked lines (the same on every peer), and the fortune refresh that reprices the shop.</summary>
     public void ApplyClauses()
     {
         ClauseRules.Activate(Adventure.Clauses);
         DungeonBuilder.ExtraElitesPerFloor = ClauseRules.Active.ExtraElites;
+        DungeonCrawler.Adventure.Voice.MerchantLineBank.UnlockedLines.Clear();
+        foreach (var line in Adventure.UnlockedMerchantLines) DungeonCrawler.Adventure.Voice.MerchantLineBank.UnlockedLines.Add(line);
+        ShopRules.HiddenStallExtraRolls = DungeonCrawler.Adventure.Voice.MerchantLineBank.UnlockedLines.Count;
         DungeonCrawler.Adventure.FortuneDirector.Instance?.Refresh();
     }
 
@@ -103,6 +106,7 @@ public partial class Game : Node
         Floors.Clear();
         foreach (var (floor, state) in data.Floors) Floors[floor] = state;
         Adventure = data.Adventure ?? new AdventureDto();
+        if (string.IsNullOrEmpty(Adventure.RunId)) Adventure.RunId = Guid.NewGuid().ToString("N"); // a save from before run ids keeps its own profile entry
         ApplyClauses();
         RepairMerchant();
         GD.Print($"[Game] loaded seed={GameSeed} floor={CurrentFloor} floors={Floors.Count} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
@@ -141,6 +145,8 @@ public partial class Game : Node
         Adventure = new AdventureDto();
         ClauseRules.Reset();
         Dungeon.DungeonBuilder.ExtraElitesPerFloor = 0;
+        DungeonCrawler.Adventure.Voice.MerchantLineBank.UnlockedLines.Clear();
+        ShopRules.HiddenStallExtraRolls = 0;
     }
 
     public override void _Process(double delta)

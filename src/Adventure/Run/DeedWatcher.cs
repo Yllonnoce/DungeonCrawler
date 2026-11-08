@@ -41,14 +41,18 @@ public partial class DeedWatcher : Node
         bus.HazardPhase += OnHazardPhase; _unsubscribe.Add(() => bus.HazardPhase -= OnHazardPhase);
         bus.Bark += OnBark; _unsubscribe.Add(() => bus.Bark -= OnBark);
         bus.FloorBuilt += OnFloorBuilt; _unsubscribe.Add(() => bus.FloorBuilt -= OnFloorBuilt);
+        bus.FloorChanged += OnFloorChanged; _unsubscribe.Add(() => bus.FloorChanged -= OnFloorChanged);
     }
+
+    private int _lastDelta;
+    private void OnFloorChanged(int _, int delta) => _lastDelta = delta; // raised before the ledger closes: a descent is a floor cleared
 
     public override void _ExitTree() { foreach (var u in _unsubscribe) u(); _unsubscribe.Clear(); }
 
     private void OnWipedBy(int floor, string _) => Note(new DeedEvent(DeedSignal.Wipe, Floor: floor));
     private void OnLedgerClosed(int floor, int seconds)
     {
-        Note(new DeedEvent(DeedSignal.FloorClosed, Floor: floor, Amount: seconds));
+        Note(new DeedEvent(DeedSignal.FloorClosed, Floor: floor, Amount: seconds, Flag: _lastDelta > 0));
         var r = Game.Instance.Adventure.Memory.For(floor);
         if (r.SecretsTotal >= DeedRules.NosyMinSecrets && r.SecretsFound >= r.SecretsTotal) Note(new DeedEvent(DeedSignal.FloorSecretsComplete, Floor: floor));
     }

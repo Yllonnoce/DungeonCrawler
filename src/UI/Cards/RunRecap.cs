@@ -49,7 +49,7 @@ public partial class RunRecap : PanelContainer
         _onClose = onClose;
         _headline.Text = m.Headline;
         _headline.Modulate = m.Victory ? new Color(0.95f, 0.85f, 0.5f) : new Color(0.85f, 0.45f, 0.3f);
-        foreach (var child in _body.GetChildren()) child.QueueFree();
+        foreach (var child in _body.GetChildren()) { _body.RemoveChild(child); child.QueueFree(); }
         void Head(string text) { var l = new Label { Text = text, Modulate = new Color(0.7f, 0.65f, 0.55f) }; l.AddThemeFontSizeOverride("font_size", 13); _body.AddChild(l); }
         void Line(string text) => _body.AddChild(new Label { Text = text, AutowrapMode = TextServer.AutowrapMode.WordSmart });
         if (m.FloorLines.Count > 0) { Head("FLOOR BY FLOOR"); foreach (var f in m.FloorLines) Line(f); }

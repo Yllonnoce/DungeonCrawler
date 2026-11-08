@@ -81,6 +81,8 @@ public sealed class AdventureDto
     public int Wipes { get; set; }
     /// <summary>The Scar curse holds until the party stands on a floor other than floor ScarUntilFloor − 1; 0 for none.</summary>
     public int ScarUntilFloor { get; set; }
+    /// <summary>The hidden stall's deed-unlocked lines this run plays with (fixed at the run's start from the host's profile, so every peer rolls the same stall).</summary>
+    public List<string> UnlockedMerchantLines { get; set; } = new();
 }
 
 public sealed class PartyDto

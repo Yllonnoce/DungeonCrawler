@@ -28,7 +28,7 @@ public static class SaveFormat
     }
 
     /// <summary>Just the header fields, for slot lists. Tolerates any version.</summary>
-    public static (int version, string label, int floor, string savedAt, double playSeconds, List<string> members, ulong gameSeed, bool fallen, string? epitaph, string run)? ReadHeader(string json)
+    public static (int version, string label, int floor, string savedAt, double playSeconds, List<string> members, ulong gameSeed, bool fallen, string? epitaph, string run, string runId)? ReadHeader(string json)
     {
         try
         {
@@ -41,10 +41,15 @@ public static class SaveFormat
             var adventure = node["Adventure"] as JsonObject;
             return (node["Version"]?.GetValue<int>() ?? 0, node["Label"]?.GetValue<string>() ?? "", node["CurrentFloor"]?.GetValue<int>() ?? 1,
                     node["SavedAtUtc"]?.GetValue<string>() ?? "", node["PlaySeconds"]?.GetValue<double>() ?? 0, members,
-                    node["GameSeed"]?.GetValue<ulong>() ?? 0, adventure?["Fallen"]?.GetValue<bool>() ?? false, adventure?["Epitaph"]?.GetValue<string>(), adventure?["Run"]?.GetValue<string>() ?? "Story");
+                    node["GameSeed"]?.GetValue<ulong>() ?? 0, adventure?["Fallen"]?.GetValue<bool>() ?? false, adventure?["Epitaph"]?.GetValue<string>(), adventure?["Run"]?.GetValue<string>() ?? "Story",
+                    adventure?["RunId"]?.GetValue<string>() ?? "");
         }
         catch (JsonException) { return null; }
     }
+
+    /// <summary>Whether a saved header belongs to this run: by RunId, or by seed alone for a save from before run ids (the Story's seed is shared by every Story, so a memorial must not take them all).</summary>
+    public static bool SameRun(ulong headerSeed, string headerRunId, ulong seed, string runId)
+        => headerSeed == seed && (string.IsNullOrEmpty(headerRunId) || headerRunId == runId);
 }
 
 /// <summary>
@@ -70,13 +75,20 @@ public static class SaveMigrations
                 7 => root, // v8 added Objective per floor (the floor objective's progress); missing means none or not started
                 8 => From8To9(root), // v9 added lethal hazards per floor and Mangled members; floors an old run already visited keep no hazards
                 9 => From9To10(root), // v10 added the party's Gold purse; old saves start with none
-                10 => root, // v11 added Adventure.GagCounts (the banter's running-gag counters), Boons/Curses and the fortune floor state (shrine, bound chest, mimics, secrets, dip, jams), and run-structure's Adventure.Run/RunId/Clauses/DailyDate/Fallen/Epitaph/Wipes/ScarUntilFloor; missing means a Story with no clauses, not fallen
+                10 => From10To11(root), // v11 added Adventure.GagCounts (the banter's running-gag counters), Boons/Curses and the fortune floor state (shrine, bound chest, mimics, secrets, dip, jams), and run-structure's Adventure.Run/RunId/Clauses/DailyDate/Fallen/Epitaph/Wipes/ScarUntilFloor; missing means a Story with no clauses, not fallen
                 _ => throw new InvalidDataException($"No migration from save version {version}"),
             };
             version++;
             root["Version"] = version;
         }
         if (version > SaveFormat.CurrentVersion) throw new InvalidDataException($"Save version {version} is newer than this build supports ({SaveFormat.CurrentVersion})");
+        return root;
+    }
+
+    /// <summary>Version 11 (run-structure): a legacy run gets a RunId of its own so the profile keeps it apart from every other old save; the rest of the v11 fields default.</summary>
+    private static JsonObject From10To11(JsonObject root)
+    {
+        if (root["Adventure"] is JsonObject adventure && string.IsNullOrEmpty(adventure["RunId"]?.GetValue<string>())) adventure["RunId"] = Guid.NewGuid().ToString("N");
         return root;
     }
 

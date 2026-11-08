@@ -399,6 +399,8 @@ public partial class AdventureDirector : Node
     private CampaignMemoryDto Memory => Game.Instance.Adventure.Memory;
     private FloorRecord? _record;
     private (int Floor, Run.FloorCardModel Card)? _pendingFloorCard;
+    /// <summary>A session is torn down: nothing of its ledger or its pending floor card carries into the next.</summary>
+    public void ForgetSession() { _pendingFloorCard = null; _record = null; _hasFloor = false; }
     /// <summary>The last floor card shown (tests).</summary>
     public Run.FloorCardModel? LastFloorCard { get; private set; }
     private double _floorStart;

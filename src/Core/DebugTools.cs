@@ -5452,6 +5452,7 @@ public partial class DebugTools : Node
     private float _rsMaxHpBefore;
     private string _rsKiller = "";
     private double _rsCardSeenAt;
+    private string? _rsAutoBackup; // the developer's own auto slot, put back when the flow ends
 
     private void RunRunStructureTest()
     {
@@ -5466,6 +5467,8 @@ public partial class DebugTools : Node
         {
             Save.Profile.ProfileStore.Delete();
             foreach (var slot in new[] { "rs" }) if (SaveManager.Exists(slot)) System.IO.File.Delete(SaveManager.PathFor(slot));
+            if (_rsAutoBackup != null) System.IO.File.WriteAllText(SaveManager.PathFor(SaveManager.AutoSlot), _rsAutoBackup);
+            else if (SaveManager.Exists(SaveManager.AutoSlot)) System.IO.File.Delete(SaveManager.PathFor(SaveManager.AutoSlot));
             GD.Print(_rsFails.Count == 0 ? "[runstructure] RESULT ok" : $"[runstructure] RESULT FAIL ({string.Join("; ", _rsFails)})");
             _rsStep = 99;
             _quitAfter = _elapsed + 0.5;
@@ -5491,6 +5494,7 @@ public partial class DebugTools : Node
                 Save.Profile.ProfileStore.Delete();
                 Save.Profile.ProfileStore.Load();
                 Save.Profile.ProfileStore.ApplyUnlocks(game.Catalog);
+                if (SaveManager.Exists(SaveManager.AutoSlot)) _rsAutoBackup = System.IO.File.ReadAllText(SaveManager.PathFor(SaveManager.AutoSlot));
                 EventBus.Instance.FloorBuilt += (_, _, _) => _rsBuilds++;
                 // 1. the Story: the shipped seed
                 if (!main.StartBuiltinCampaign()) { Fail("no built-in campaign"); Finish(); return; }
@@ -5676,6 +5680,8 @@ public partial class DebugTools : Node
                 GD.Print($"[runstructure] victory: {game.Victory} card up={main.Hud.CardUp} headline=\"{recap?.Headline}\" boss=\"{boss}\" antagonist=\"{campaign?.Antagonist.Name}\" score {recap?.Score}");
                 if (!game.Victory || !main.Hud.CardUp || recap == null) Fail("no victory recap");
                 if (recap != null && boss != "" && !recap.Headline.Contains(boss)) Fail("the recap does not name the boss");
+                if (recap != null && recap.Headline == Adventure.Run.RecapBuilder.VictoryHeadline(null, null)) Fail("the recap fell back to the stock headline");
+                if (recap != null && SaveManager.Exists(SaveManager.QuickSlot)) { var other = SaveManager.Info(SaveManager.QuickSlot); if (other.Fallen && other.Run != "Daily") Fail("the Death Clause marked a save of another run"); }
                 if (recap != null && campaign?.Antagonist.Name is { Length: > 0 } ant && !recap.Headline.Contains(ant)) Fail("the recap does not name the antagonist");
                 if (recap is { Victory: false }) Fail("the victory recap is not a victory");
                 main.Hud.CloseCard();

@@ -198,7 +198,7 @@ public partial class ServerWorld : Node
         {
             Mode = game.Adventure.Mode, Campaign = game.Adventure.Campaign, FloorPlans = game.Adventure.FloorPlans,
             Quests = game.Adventure.Quests, AiStoppedReason = game.Adventure.AiStoppedReason,
-            Clauses = game.Adventure.Clauses, Run = game.Adventure.Run, DailyDate = game.Adventure.DailyDate, // run-structure: the contract rides in the Welcome
+            Clauses = game.Adventure.Clauses, Run = game.Adventure.Run, DailyDate = game.Adventure.DailyDate, UnlockedMerchantLines = game.Adventure.UnlockedMerchantLines, // run-structure: the contract and the stall's lines ride in the Welcome
         };
         var snapshot = main.BuildSnapshotFor.TryGetValue(floor, out var s) ? s : main.Party.Snapshot();
         var objective = AdventureDirector.Instance?.CurrentObjective ?? "";

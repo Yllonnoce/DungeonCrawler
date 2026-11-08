@@ -932,7 +932,9 @@ The Depths' pillar 5 (`docs/superpowers/specs/2026-11-07-the-depths-update-desig
   campaign on disk (`StartBuiltinCampaign`), *New Descent* rolls a fresh seed through the offline designer or the planner when
   a key and the toggle allow it (`Main.StartDescent`), *Daily Descent* (`Main.StartDaily`) seeds from the UTC date
   (`DailyRules.SeedFor`, the same on every machine) with two fixed rank-1 clauses (`DailyRules.ClausesFor`, never the Death
-  Clause); the button is disabled once the day is recorded (`ProfileRules.DailyDone`). Every run carries a fresh `RunId`.
+  Clause); the button is disabled once the day is recorded (`ProfileRules.DailyDone`); the attempt's save still loads and quickloads.
+  Every run carries a fresh `RunId` (a save from before run ids gets one on migration or load); `SaveManager.MarkFallen` marks the
+  slots of that run only (`SaveFormat.SameRun`), never every Story on the shipped seed.
 - **The clauses** (`ClauseRules`, `ClauseSet`; keys `deathclause, conveniencefee, inventoryaudit, fulloccupancy, hostiletenants,
   expediteddelivery, hazardpaywaived, norest, opendoor, fineprint`, "key:rank" above rank 1). The factor offers them after
   the deal: `TavernRules.WithClauseNode` splices a `clauses` node between `deal` and `sendoff` ("Not today." at index 0,
@@ -986,7 +988,9 @@ The Depths' pillar 5 (`docs/superpowers/specs/2026-11-07-the-depths-update-desig
   `ItemCatalog.Unlocked`, the six: Toll Road Boots, Old Ulf's Chin, Gerald, Gorm's Molar, Hush, Pellet's Receipt), a banter set
   (`BanterBank.Unlockable`, gated by `BanterRules.UnlockedSets`) or a hidden-stall line (`MerchantLineBank.UnlockableLines`,
   `UnlockedLines`, one extra Rare roll each through `ShopRules.HiddenStallExtraRolls`). `ProfileStore.ApplyUnlocks` applies
-  them at start and after every deed; a deed pops a `DeedToast` and a log line.
+  the legendaries and banter sets at start and after every deed; the stall's lines are fixed at a run's start from the host's
+  profile (`AdventureDto.UnlockedMerchantLines`, in the save and the Welcome, applied by `Game.ApplyClauses` on every peer, so
+  all of them roll the same stall; a line earned mid-run joins the next run). A deed pops a `DeedToast` and a log line.
 - **Co-op**: the server decides and sends `DeathCardEvt`, `FloorCardEvt`, `RunRecapEvt` (protocol 9, 91 kinds); a client
   shows them and signs nothing (its clause card is read-only). Hooks left for the co-op plan: `RecapRules.RoleLines` is the
   scoreboard's seam; the stairs ready-check and the ping are not here.

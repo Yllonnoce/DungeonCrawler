@@ -16,6 +16,9 @@ public static class RunRules
     public static bool AutosaveDue(float sinceLast, bool paused, bool rebuilding, bool networked, bool cardUp, bool runOver)
         => sinceLast >= AutosaveSeconds && !paused && !rebuilding && !networked && !cardUp && !runOver;
 
+    /// <summary>Under the Death Clause the run ends from the card's button; with no HUD (a dedicated server) nobody presses it, so it ends at once.</summary>
+    public static bool EndsRunAtOnce(bool hardcore, bool hasHud) => hardcore && !hasHud;
+
     /// <summary>The Scar (earned on floor untilFloor − 1) lifts the moment the party stands on any other floor; 0 is no scar.</summary>
     public static bool ScarLifted(int untilFloor, int floor) => untilFloor > 0 && floor != untilFloor - 1;
 

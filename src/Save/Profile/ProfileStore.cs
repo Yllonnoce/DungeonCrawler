@@ -38,12 +38,15 @@ public static class ProfileStore
         System.IO.File.Move(temp, path, overwrite: true);
     }
 
-    /// <summary>What the deeds unlocked, applied to the live game: legendaries into the catalog's pool, banter sets, the hidden stall's lines and its extra rolls.</summary>
+    /// <summary>
+    /// What the deeds unlocked, applied to the live game: legendaries into the catalog's pool and banter sets (both server-side).
+    /// The hidden stall's lines are not applied here: every peer rolls the stall, so they travel in the adventure
+    /// (<see cref="UnlockedMerchantLines"/> at a run's start, <c>Game.ApplyClauses</c> on every peer).
+    /// </summary>
     public static void ApplyUnlocks(Items.ItemCatalog cat)
     {
         cat.Unlocked.Clear();
         Adventure.Voice.BanterRules.UnlockedSets.Clear();
-        Adventure.Voice.MerchantLineBank.UnlockedLines.Clear();
         foreach (var u in Current.Unlocks)
         {
             var sep = u.IndexOf(':');
@@ -53,11 +56,12 @@ public static class ProfileStore
             {
                 case "legendary": cat.Unlocked.Add(id); break;
                 case "banter": Adventure.Voice.BanterRules.UnlockedSets.Add(id); break;
-                case "merchantline": Adventure.Voice.MerchantLineBank.UnlockedLines.Add(id); break;
             }
         }
-        Items.ShopRules.HiddenStallExtraRolls = Adventure.Voice.MerchantLineBank.UnlockedLines.Count;
     }
+
+    /// <summary>The hidden-stall lines this profile's deeds unlocked (for a new run's adventure).</summary>
+    public static List<string> UnlockedMerchantLines() => Current.Unlocks.Where(u => u.StartsWith("merchantline:")).Select(u => u["merchantline:".Length..]).OrderBy(x => x, StringComparer.Ordinal).ToList();
 
     /// <summary>Forget the profile on disk and in memory (tests).</summary>
     public static void Delete()

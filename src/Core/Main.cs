@@ -115,7 +115,7 @@ public partial class Main : Node
             adv.Epitaph = epitaph;
             RunOver = true;
             SaveManager.Write(SaveManager.AutoSlot, BuildSaveData("Memorial"));
-            SaveManager.MarkFallen(game.GameSeed, epitaph);
+            SaveManager.MarkFallen(game.GameSeed, adv.RunId, epitaph);
             ProfileRules.RecordRun(ProfileStore.Current, RunSummaryOf());
             if (adv.Run == RunKind.Daily && adv.DailyDate is { } date) ProfileRules.RecordDaily(ProfileStore.Current, date, RunSummaryOf());
             ProfileStore.Save();
@@ -123,6 +123,7 @@ public partial class Main : Node
         }
         Hud?.ShowDeathCard(model, hardcore ? () => EndRun(victory: false) : null);
         if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new DeathCardEvt(model));
+        if (RunRules.EndsRunAtOnce(hardcore, Hud != null)) Callable.From(() => { if (InGame && RunOver) EndRun(victory: false); }).CallDeferred(); // a dedicated server: nobody presses the button, the recap follows the card
         GD.Print($"[Main] wipe on floor {floor} ({cause} by {killer}), wipe {onFloor} here, gold {Party.Gold}, {(hardcore ? "the run is over" : "the party rises")}");
         return !hardcore;
     }
@@ -338,7 +339,9 @@ public partial class Main : Node
         if (Party != null && IsInstanceValid(Party)) { Party.RemoveFromGroup(PartyController.GroupName); Party.FreeBodies(); Party.QueueFree(); }
         Hud = null!;
         Party = null!;
+        Deeds = null;
         Exploration = null;
+        AdventureDirector.Instance?.ForgetSession(); // no floor card from this game shows in the next
     }
 
     public LoadingOverlay Overlay { get; private set; } = null!;
@@ -496,8 +499,6 @@ public partial class Main : Node
     public SaveData BuildSaveData(string label)
     {
         var game = Game.Instance;
-        if (Builder.FloorRoot is { } root && Builder.Layout is { } layout && Exploration != null)
-            game.Floors[game.CurrentFloor] = FloorStateCapture.Capture(root, layout, Builder.Contents, Exploration);
         var data = new SaveData
         {
             Label = label, GameSeed = game.GameSeed, CurrentFloor = game.CurrentFloor, Victory = game.Victory,
@@ -505,6 +506,8 @@ public partial class Main : Node
             Multiplayer = NetSession.IsServer, Players = NetSession.Instance?.Server?.Registry.ToSave() ?? new List<PlayerDto>(),
         };
         foreach (var (floor, state) in game.Floors) data.Floors[floor] = state;
+        if (Builder.FloorRoot is { } current && Builder.Layout is { } currentLayout && Exploration != null)
+            data.Floors[game.CurrentFloor] = FloorStateCapture.Capture(current, currentLayout, Builder.Contents, Exploration); // the live floor goes into the file only: the game's own memory of it is written when it is left (or on a wipe)
         return data;
     }
 
@@ -629,6 +632,7 @@ public partial class Main : Node
         if (delta > 0 && saved == null && !NetSession.IsClient && Adventure.Run.ClauseRules.Active.AuditsAt(floor))
         {   // the Inventory Audit clause: at each tier gate the meanest piece each member wears loses a virtue
             foreach (var line in Adventure.Run.InventoryAudit.Apply(Party.Members)) EventBus.Instance.Log(line);
+            for (var i = 0; i < Party.Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i); // the sheets, and the server's PartySync to every client
             Hud?.Refresh();
         }
 

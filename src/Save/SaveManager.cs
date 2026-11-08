@@ -57,15 +57,15 @@ public static class SaveManager
 
     public static string DisplayName(string slot) => slot == QuickSlot ? "Quicksave" : slot == AutoSlot ? "Autosave" : slot.StartsWith("slot") ? $"Slot {slot[4..]}" : slot;
 
-    /// <summary>The Death Clause ended the run: every slot holding this game (by seed) becomes a memorial that Load shows greyed with the epitaph.</summary>
-    public static int MarkFallen(ulong gameSeed, string epitaph)
+    /// <summary>The Death Clause ended the run: every slot holding this run (<see cref="SaveFormat.SameRun"/>) becomes a memorial that Load shows greyed with the epitaph.</summary>
+    public static int MarkFallen(ulong gameSeed, string runId, string epitaph)
     {
         var marked = 0;
         foreach (var slot in AllSlots)
         {
             if (!Exists(slot)) continue;
             var header = SaveFormat.ReadHeader(System.IO.File.ReadAllText(PathFor(slot)));
-            if (header is not { } h || h.gameSeed != gameSeed || h.fallen) continue;
+            if (header is not { } h || !SaveFormat.SameRun(h.gameSeed, h.runId, gameSeed, runId) || h.fallen) continue;
             if (Read(slot) is not { Adventure: { } adv } data) continue;
             adv.Fallen = true;
             adv.Epitaph = epitaph;
