@@ -1577,11 +1577,25 @@ public partial class DebugTools : Node
                 main.Party.Teleport(main.Builder.Surface(inside) + Vector3.Up * 0.3f, main.Builder.Surface(spawner.Horde.Mouths[0]) + Vector3.Up * 0.5f);
                 foreach (var m in main.Party.Members) m.Hp = m.Stats[Characters.Stat.MaxHp] * 50; // stand through it
                 GD.Print($"[horde] seed={_seed} planned: {spawner.Horde.Name} {string.Join(" + ", spawner.Horde.Members.Select(m => $"{m.Count} x {m.EnemyId}"))} trigger={spawner.Horde.Trigger} mouths={spawner.Horde.Mouths.Count} room={spawner.Horde.Room}");
+                // the seed search predicts an Enter trigger from the tier's default spec, but the live floor may take another layout kind and party, so the
+                // plan it gets can say Chest or Alarm instead: pull that trigger the way play would (a chest in the room, the alarm) and test the stream
+                if (spawner.Horde.Trigger == Adventure.HordeTrigger.Chest)
+                {
+                    var chest = root.GetChildren().OfType<Chest>().FirstOrDefault(c => room.Contains(DungeonBuilder.WorldToCell(c.GlobalPosition)) && !c.Opened);
+                    if (chest != null)
+                    {
+                        chest.Interact(main.Party, main.Party.Lead);
+                        if (!chest.Opened) EventBus.Instance.RaiseChestOpened(chest.GlobalPosition); // a locked chest and a failed pick: the event is what the horde listens for
+                        GD.Print($"[horde] {(chest.Opened ? "opened" : "failed to pick, so raised the chest event at")} the room's chest (locked={chest.Locked}) to pull the trigger");
+                    }
+                    else { GD.Print("[horde] no chest in the room: raising the chest event at the room's centre"); EventBus.Instance.RaiseChestOpened(main.Builder.Surface(inside)); }
+                }
+                else if (spawner.Horde.Trigger == Adventure.HordeTrigger.Alarm) { GD.Print("[horde] raising the alarm to pull the trigger"); EventBus.Instance.RaiseAlarmRaised(""); }
                 break;
             case 1 when spawner != null && spawner.Triggered:
                 _hordeStep++;
                 _hordeClock = 0f;
-                GD.Print("[horde] triggered on entry");
+                GD.Print($"[horde] triggered ({spawner.Horde.Trigger})");
                 break;
             case 1 when _hordeClock >= 6f:
                 GD.Print("[horde] RESULT FAIL: never triggered"); _done = true; GetTree().Quit();
