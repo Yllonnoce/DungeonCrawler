@@ -4,7 +4,7 @@ namespace DungeonCrawler.Net;
 public static class NetRefs
 {
     public const string ChestKind = "chest", DoorKind = "door", LeverKind = "lever", SecretKind = "secret", TrapKind = "trap",
-        StairsKind = "stairs", NpcKind = "npc", LootKind = "loot", BarrelKind = "barrel", PlaqueKind = "plaque", HazardKind = "hazard";
+        StairsKind = "stairs", NpcKind = "npc", LootKind = "loot", BarrelKind = "barrel", PlaqueKind = "plaque", HazardKind = "hazard", ShrineKind = "shrine";
 
     public static string Chest(int index) => $"{ChestKind}:{index}";
     public static string Door(int vault) => $"{DoorKind}:{vault}";
@@ -14,6 +14,7 @@ public static class NetRefs
     public static string Barrel(int index) => $"{BarrelKind}:{index}";
     public static string Plaque(int index) => $"{PlaqueKind}:{index}";
     public static string Hazard(int index) => $"{HazardKind}:{index}";
+    public static string Shrine(int index) => $"{ShrineKind}:{index}";
     public static string StairsDown => $"{StairsKind}:down";
     public static string StairsUp => $"{StairsKind}:up";
     public static string Npc(string id) => $"{NpcKind}:{id}";

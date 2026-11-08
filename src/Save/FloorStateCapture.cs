@@ -35,6 +35,14 @@ public static class FloorStateCapture
                     break;
                 case Chest ch when ch.Opened:
                     dto.OpenedChests.Add(ch.SpawnIndex);
+                    if (ch.Bound) dto.BoundOpened = true; // the hunt ran once; a reload does not hunt twice
+                    break;
+                case Chest { Sprung: true, Opened: false } mimic:
+                    dto.MimicsSprung.Add(mimic.SpawnIndex); // the brute is dynamic (not in Enemies): RestoreSprung respawns it idle
+                    if (mimic.Jammed) dto.JammedChests.Add(mimic.SpawnIndex);
+                    break;
+                case Chest { Jammed: true, Opened: false } jammed:
+                    dto.JammedChests.Add(jammed.SpawnIndex); // an opened jammed chest is simply open
                     break;
                 case LootDrop { KeyIndex: >= 0 }:
                     break; // generator keys are tracked by TakenKeys, not as world items
@@ -59,6 +67,9 @@ public static class FloorStateCapture
                 case SecretWall { IsOpen: true } secret:
                     dto.OpenedSecrets.Add(secret.Index);
                     break;
+                case Shrine { Used: true }:
+                    dto.ShrineUsed = true;
+                    break;
                 case Press press:
                     dto.Hazards.Add(new HazardStateDto { Index = press.Index, Kind = (byte)Dungeon.HazardKind.Press, Phase = (byte)press.Phase, PhaseTime = press.PhaseTime, Spent = press.Spent, Jammed = press.Jammed });
                     break;
@@ -70,6 +81,13 @@ public static class FloorStateCapture
         // enemies already freed (corpse timer ran out) are dead too
         var enemyCount = contents?.EnemyCount ?? layout.TotalEnemySpawns;
         for (var i = 0; i < enemyCount; i++) if (!seenEnemies.Contains(i) && !dto.DeadEnemies.Contains(i)) dto.DeadEnemies.Add(i);
+        // the drift ambushers (fortune) stand at CacheAmbusherBase + cache index: one whose corpse is gone is dead too
+        for (var i = 0; i < layout.Caches.Count; i++)
+        {
+            if (layout.Caches[i].Kind != CacheKind.Ambusher) continue;
+            var index = DungeonBuilder.CacheAmbusherBase + i;
+            if (!seenEnemies.Contains(index) && !dto.DeadEnemies.Contains(index)) dto.DeadEnemies.Add(index);
+        }
         // barrels that no longer exist were broken
         var barrels = floorRoot.GetChildren().OfType<Breakable>().Select(b => b.SpawnIndex).ToHashSet();
         for (var i = 0; i < layout.BreakableSpawns.Count; i++) if (!barrels.Contains(i)) dto.BrokenBarrels.Add(i);
@@ -86,7 +104,8 @@ public static class FloorStateCapture
         if (floorRoot.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault() is { } ambushes) dto.SprungAmbushes.AddRange(ambushes.Sprung.OrderBy(i => i));
         if (floorRoot.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault() is { } portals) { dto.PressureSeconds = portals.PressureSeconds; dto.PortalWaves = portals.Waves; }
         if (floorRoot.GetChildren().OfType<Adventure.SafeRoomController>().FirstOrDefault() is { } safeRoom) dto.Gathered = safeRoom.Gathered;
-        if (Core.Main.Instance?.Party is { } shopParty) dto.ShopSold = shopParty.ShopSoldOnFloor.OrderBy(i => i).ToList();
+        if (Core.Main.Instance?.Party is { } shopParty) { dto.ShopSold = shopParty.ShopSoldOnFloor.OrderBy(i => i).ToList(); dto.LuckyDipBought = shopParty.LuckyDipBoughtOnFloor.OrderBy(i => i).ToList(); }
+        if (Adventure.FortuneDirector.Instance is { } fortune) dto.SecretsFound = fortune.FoundSecrets.OrderBy(i => i).ToList();
         if (floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault() is { } objective) dto.Objective = objective.Capture();
         dto.BossDefeated = Main.Instance?.BossDefeatedThisFloor == true || floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss && !e.IsAlive) || (layout.BossArena != null && !floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss));
         return dto;
@@ -98,6 +117,8 @@ public static class FloorStateCapture
         var dead = dto.DeadEnemies.ToHashSet();
         var live = dto.Enemies.ToDictionary(e => e.SpawnIndex);
         var opened = dto.OpenedChests.ToHashSet();
+        var sprung = dto.MimicsSprung.ToHashSet();
+        var jammed = dto.JammedChests.ToHashSet();
         var broken = dto.BrokenBarrels.ToHashSet();
         var triggered = dto.TriggeredTraps.ToHashSet();
         var disarmed = dto.DisarmedTraps.ToHashSet();
@@ -118,6 +139,13 @@ public static class FloorStateCapture
                     break;
                 case Chest ch when opened.Contains(ch.SpawnIndex):
                     ch.MarkOpened();
+                    break;
+                case Chest mimic when sprung.Contains(mimic.SpawnIndex):
+                    mimic.RestoreSprung();
+                    if (jammed.Contains(mimic.SpawnIndex)) mimic.ShowJammed();
+                    break;
+                case Chest stuck when jammed.Contains(stuck.SpawnIndex):
+                    stuck.ShowJammed();
                     break;
                 case Breakable b when broken.Contains(b.SpawnIndex):
                     b.QueueFree();
@@ -149,6 +177,9 @@ public static class FloorStateCapture
                 case SecretWall sw when openedSecrets.Contains(sw.Index):
                     sw.Open();
                     break;
+                case Shrine shrine when dto.ShrineUsed:
+                    shrine.MarkUsed(silent: true);
+                    break;
             }
         }
         foreach (var h in floorRoot.GetChildren().OfType<Adventure.HordeSpawner>())
@@ -158,6 +189,9 @@ public static class FloorStateCapture
         floorRoot.GetChildren().OfType<Adventure.SafeRoomController>().FirstOrDefault()?.Restore(dto.Gathered);
         party.ShopSoldOnFloor.Clear();
         foreach (var i in dto.ShopSold) party.ShopSoldOnFloor.Add(i);
+        party.LuckyDipBoughtOnFloor.Clear();
+        foreach (var i in dto.LuckyDipBought) party.LuckyDipBoughtOnFloor.Add(i);
+        Adventure.FortuneDirector.Instance?.RestoreSecrets(dto.SecretsFound);
         if (dto.Objective is { } os)
         {
             floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault()?.Restore(os);

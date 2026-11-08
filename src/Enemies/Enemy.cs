@@ -25,7 +25,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public const int BossNetId = 100000;
     public const int DynamicNetIdBase = 200000;
     /// <summary>How much keener than their data enemies are: sight range and how far they will chase.</summary>
-    public const float Aggression = 1.4f;
+    public const float BaseAggression = 1.4f;
+    /// <summary>How far creatures notice: the base times the Loud curse's factor (fortune).</summary>
+    public static float Aggression => BaseAggression * Adventure.Fortune.FortuneRules.DetectFactor(Game.Instance?.Adventure);
     /// <summary>A fight wakes every unaware enemy within this many metres, whatever its kind.</summary>
     public const float NoiseRadius = 10f;
     [Export] public float GiveUpSeconds { get; set; } = 9f;
@@ -1043,7 +1045,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         foreach (var other in GetTree().GetNodesInGroup("enemies").OfType<Enemy>().ToArray())
         {
             if (other == this || !other.IsAlive || !IsInstanceValid(other)) continue;
-            if (other.GlobalPosition.DistanceTo(GlobalPosition) > CombatRules.IgniteRadius) continue;
+            if (other.GlobalPosition.DistanceTo(GlobalPosition) > Adventure.Fortune.FortuneRules.IgniteRadius(Game.Instance?.Adventure, CombatRules.IgniteRadius)) continue; // Ember Crown: a 4 m nova
             other.ReceiveAttack(attackerStats, fire, new HitContext { DefenderStunned = true }, rng, "the ignition");
         }
     }
@@ -1160,10 +1162,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (!IsHorde && _rng.NextDouble() < 0.5 && cat.TryBase("item.bone_shard", out _)) Drop(cat.Create("item.bone_shard"), Vector3.Zero);
         var coins = IsBoss ? CoinRules.BossCoins(TierRules.TierIndex(Floor) + 1) : IsElite ? CoinRules.ChestCoins(Floor, _rng) : CoinRules.EnemyCoins(Floor, _rng);
         if (coins > 0) Party?.SpawnCoins(coins, GlobalPosition + Vector3.Up * 0.4f + new Vector3(0.3f, 0, -0.5f));
-        var tableId = IsBoss ? "table.chest" : IsElite ? "table.elite" : "table.enemy";
+        var tableId = IsBoss ? Adventure.Fortune.ChestRules.BossTable : IsElite ? "table.elite" : "table.enemy"; // fortune: the boss table (3 rolls, no common) two item levels up; elites: table.elite
         if (cat.Tables.TryGetValue(tableId, out var table))
         {
-            var drops = IsBoss ? LootRoller.RollMany(cat, table with { Rolls = 3, DropChance = 1f }, level + 1, _rng) : LootRoller.RollMany(cat, table, level, _rng);
+            var drops = IsBoss ? LootRoller.RollMany(cat, table, level + Adventure.Fortune.ChestRules.BossItemLevelBonus, _rng) : LootRoller.RollMany(cat, table, level, _rng);
             for (var i = 0; i < drops.Count; i++) Drop(drops[i], new Vector3(-0.6f + i * 0.6f, 0, 0.4f));
         }
         var arrows = (EmbeddedArrows + 1) / 2;

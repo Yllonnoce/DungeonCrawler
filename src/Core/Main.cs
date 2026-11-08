@@ -437,6 +437,7 @@ public partial class Main : Node
         var layout = Builder.Build(floor, game.GameSeed, PlanFor(floor), snapshot);
         NoteFloorBuilt();
         Party.ShopSoldOnFloor.Clear();
+        Party.LuckyDipBoughtOnFloor.Clear();
         ApplyTierLook();
         Hud?.RefreshFloorLabel();
         Exploration = game.ExplorationFor(floor);

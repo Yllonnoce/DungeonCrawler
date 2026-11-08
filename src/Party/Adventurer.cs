@@ -936,6 +936,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 if (result.Hit && (heavy || perfect)) e.Stagger(e.HitReactSeconds, fromDefense: false);
                 if (result.Hit && heavy && Party.HeavyStunSeconds(m) is > 0f and var heavyStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, heavyStun, 0));
                 if (result.Shatter && Party.ShatterStunSeconds(m) is > 0f and var shatterStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, shatterStun, 0));
+                if (result.Shatter && Adventure.Fortune.FortuneRules.ShatterChain(Game.Instance.Adventure) is > 0 and var chain) ShatterChain(e, chain, attack, m);
                 if (result.Hit && perfect && Party.PerfectBlowCleave(m) is > 0f and var cleave) Cleave(e, result.Amount * cleave, attack);
             }
             if (perfect && result.Hit && !perfectSaid) { perfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
@@ -1088,6 +1089,20 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         var m = State;
         // raised by AdventureDirector's LowHpWatch (once per floor, server or solo); kept here only as the flag the floor reset clears
         if (m.IsAlive && m.Hp < m.Stats[Stat.MaxHp] * 0.25f && !_lowHpSaid) _lowHpSaid = true;
+    }
+
+    /// <summary>Cold Crown: the Shatter leaps to the nearest Frosted foes within <see cref="Adventure.Fortune.FortuneRules.ShatterChainRadius"/> m as a heavy blow of the same attack (Frost makes it a Shatter).</summary>
+    private void ShatterChain(Enemy from, int count, AttackProfile attack, CharacterState m)
+    {
+        var next = GetTree().GetNodesInGroup("enemies").OfType<Enemy>()
+            .Where(o => o != from && IsInstanceValid(o) && o.IsAlive && o.Effects.Has(StatusKind.Frost) && o.GlobalPosition.DistanceTo(from.GlobalPosition) <= Adventure.Fortune.FortuneRules.ShatterChainRadius)
+            .OrderBy(o => o.GlobalPosition.DistanceSquaredTo(from.GlobalPosition)).Take(count).ToArray();
+        foreach (var other in next)
+        {
+            var r = other.ReceiveAttack(m.Stats, attack, new HitContext { Heavy = true }, Party.Rng, m.Name);
+            Party.LogResult(m.Name, other.DisplayName, r, heavy: true, perfect: false);
+            Party.OnHitLanded(m, other, r);
+        }
     }
 
     /// <summary>Ignite on a member: the Burn that landed on this poisoned body bursts into the party members within reach (no attacker, so it is neither dodged nor parried).</summary>

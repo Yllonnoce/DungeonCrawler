@@ -31,6 +31,8 @@ public sealed class StatusEffectController
     private readonly List<StatusEffect> _active = new();
 
     public IReadOnlyList<StatusEffect> Active => _active;
+    /// <summary>Scales an incoming effect's duration by kind (fortune's Cold Comfort and Slow Blood on the party); null is 1.</summary>
+    public Func<StatusKind, float>? DurationScale { get; set; }
     /// <summary>Bumps whenever the set of effects (or their modifiers) changes, so owners know to recalculate stats.</summary>
     public int Version { get; private set; }
 
@@ -48,11 +50,13 @@ public sealed class StatusEffectController
     {
         if (app.Chance < 1f && rng != null && rng.NextDouble() >= app.Chance) return false;
         if (app.Duration <= 0) return false;
+        var duration = app.Duration * (DurationScale?.Invoke(app.Kind) ?? 1f);
+        if (duration <= 0) return false;
 
         var e = Get(app.Kind);
         if (e == null)
         {
-            _active.Add(new StatusEffect { Kind = app.Kind, Remaining = app.Duration, Magnitude = app.Magnitude });
+            _active.Add(new StatusEffect { Kind = app.Kind, Remaining = duration, Magnitude = app.Magnitude });
         }
         else
         {
@@ -61,19 +65,28 @@ public sealed class StatusEffectController
                 case StatusKind.Bleed or StatusKind.Poison:
                     e.Stacks = Math.Min(MaxDotStacks, e.Stacks + 1);
                     e.Magnitude = Math.Max(e.Magnitude, app.Magnitude);
-                    e.Remaining = Math.Max(e.Remaining, app.Duration);
+                    e.Remaining = Math.Max(e.Remaining, duration);
                     break;
                 case StatusKind.Shield:
                     e.Magnitude = Math.Min(MaxShield, e.Magnitude + app.Magnitude);
-                    e.Remaining = Math.Max(e.Remaining, app.Duration);
+                    e.Remaining = Math.Max(e.Remaining, duration);
                     break;
                 default:
                     e.Magnitude = Math.Max(e.Magnitude, app.Magnitude);
-                    e.Remaining = Math.Max(e.Remaining, app.Duration);
+                    e.Remaining = Math.Max(e.Remaining, duration);
                     break;
             }
         }
         Version++;
+        return true;
+    }
+
+    /// <summary>Adds seconds to an active effect (Ember's Due on a Burn); false when none of that kind is running.</summary>
+    public bool Extend(StatusKind kind, float seconds)
+    {
+        var e = Get(kind);
+        if (e == null) return false;
+        e.Remaining += seconds;
         return true;
     }
 

@@ -127,6 +127,7 @@ public static class OfflineDesigner
             var role = r.IsStart ? RoomRole.Start : r.IsArena ? RoomRole.Arena : r.IsExit ? RoomRole.Exit : r.IsJail ? RoomRole.Jail : r.IsShrine ? RoomRole.Shrine : r.IsVault ? RoomRole.Treasury
                 : r.IsCamp ? RoomRole.Camp : r.IsRuin ? RoomRole.Ruin : r.HasGate || r.HasLedge ? RoomRole.Gate : r.HasCellar ? RoomRole.Kennel : r.Area >= 49 ? RoomRole.Hall
                 : r.DeadEnd ? Pick(rng, new[] { RoomRole.Cell, RoomRole.Shrine, RoomRole.Lair }) : Pick(rng, new[] { RoomRole.Passage, RoomRole.Barracks, RoomRole.Passage });
+            if (r.HasShrine && role is RoomRole.Cell or RoomRole.Lair or RoomRole.Passage or RoomRole.Barracks or RoomRole.Hall) role = RoomRole.Shrine; // the fortune shrine's room, after the pick so the rng sequence is as it was
             plan.Rooms.Add(new RoomPlan { Index = r.Index, Role = role, Name = $"{Pick(rng, Adjectives[t])} {Pick(rng, Nouns[role])}" });
         }
         string RoomName(int i) => plan.RoomPlanFor(i)?.Name ?? "chamber";

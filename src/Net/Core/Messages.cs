@@ -149,6 +149,20 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 /// <summary>A client pressed Cheer (v7): the server picks the lines and relays the bodies' emote.</summary>
 [Msg(MsgKind.CheerIntent)] public sealed record CheerIntent : NetMessage;
 
+// ---- fortune (v8) ---------------------------------------------------------------------------------------
+/// <summary>The shrine's card: the boons on offer, a curse that may be lifted and its price, what walking away pays, the price line, who touched the altar.</summary>
+[Msg(MsgKind.ShrineCard)] public sealed record ShrineCardMsg(List<string> Boons, string? LiftCurse, int LiftPrice, int SkipGold, string PriceLine, int Opener) : NetMessage;
+/// <summary>A client's pick: 0..n-1 a boon, -1 walk away, -2 lift the curse. The server takes the first.</summary>
+[Msg(MsgKind.ShrineChoiceIntent)] public sealed record ShrineChoiceIntent(int Choice) : NetMessage;
+/// <summary>The card closes everywhere: "boon:id", "skip" or "lift:id".</summary>
+[Msg(MsgKind.ShrineClosed)] public sealed record ShrineClosedEvt(string Outcome) : NetMessage;
+/// <summary>The party's boons and curses, whole, whenever they change.</summary>
+[Msg(MsgKind.FortuneSync)] public sealed record FortuneSync(List<string> Boons, List<string> Curses) : NetMessage;
+/// <summary>A client buys Lucky Dip bundle <paramref name="Slot"/> (0..2) on its floor.</summary>
+[Msg(MsgKind.LuckyDipIntent)] public sealed record LuckyDipIntent(int Slot) : NetMessage;
+/// <summary>The floor's bought bundles and the purse, like ShopSync.</summary>
+[Msg(MsgKind.LuckyDipSync)] public sealed record LuckyDipSync(int Floor, List<int> Bought, int Gold) : NetMessage;
+
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry
 {

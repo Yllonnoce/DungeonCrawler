@@ -68,7 +68,7 @@ public static class SaveMigrations
                 7 => root, // v8 added Objective per floor (the floor objective's progress); missing means none or not started
                 8 => From8To9(root), // v9 added lethal hazards per floor and Mangled members; floors an old run already visited keep no hazards
                 9 => From9To10(root), // v10 added the party's Gold purse; old saves start with none
-                10 => root, // v11 added Adventure.GagCounts (the banter's running-gag counters); missing means none yet
+                10 => root, // v11 added Adventure.GagCounts (the banter's running-gag counters), Boons/Curses and the fortune floor state (shrine, bound chest, mimics, secrets, dip, jams); missing means none yet
                 _ => throw new InvalidDataException($"No migration from save version {version}"),
             };
             version++;

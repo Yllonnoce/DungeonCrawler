@@ -5,7 +5,7 @@ public static class Protocol
 {
     public const int Version = 8;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 82;
+    public const int MessageKindCount = 88;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -65,4 +65,6 @@ public enum MsgKind : byte
     CheerIntent,
     // buy back one of the merchant's last three sales (v7); the ledger itself rides in ShopSync
     ShopBuybackIntent,
+    // fortune (v8): the shrine's card and the first pick, the party's boons and curses, the merchant's Lucky Dip
+    ShrineCard, ShrineChoiceIntent, ShrineClosed, FortuneSync, LuckyDipIntent, LuckyDipSync,
 }

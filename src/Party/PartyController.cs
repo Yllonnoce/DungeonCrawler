@@ -96,7 +96,7 @@ public partial class PartyController : Node3D
     public AbilityProfile GetAbility(string id) => _abilities.TryGetValue(id, out var a) ? a : AbilityProfile.Basic;
     public AbilityProfile GetAbilityFor(CharacterState m, string id) => SkillRules.ApplyUpgrades(GetAbility(id), m, Game.Instance.Skills, LegendaryRules.Upgrades(m.Equipment, Game.Instance.Catalog));
     public string AbilityName(string id) => GetAbility(id).Name;
-    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind) + LegendaryRules.Trigger(m.Equipment, Game.Instance.Catalog, kind);
+    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind) + LegendaryRules.Trigger(m.Equipment, Game.Instance.Catalog, kind) + Adventure.Fortune.Boons.TriggerMagnitude(Game.Instance.Adventure, kind);
 
     public override void _Ready()
     {
@@ -523,6 +523,7 @@ public partial class PartyController : Node3D
     {
         if (!r.Hit) return;
         if (target is Enemies.Enemy { IsElite: true } elite) elite.OnStruckBy(m, r);
+        FortuneDirector.Instance?.OnHit(m, target, r);
         EventBus.Instance.RaiseHitLanded(m, r);
         OnItemHit(m, target, r);
         if (r.Crit && Trigger(m, TriggerKind.VenomCrit) is > 0 and var venom)
@@ -535,6 +536,7 @@ public partial class PartyController : Node3D
         if (index >= 0 && index < Adventurers.Length) Adventurers[index].Celebrate(); // the dance over the kill, before the kill is announced: a dancer crows instead of barking
         EventBus.Instance.RaiseMemberKill(m);
         if (Trigger(m, TriggerKind.Bloodlust) is > 0 and var heal) { m.Heal(heal); EventBus.Instance.Log($"{m.Name} feeds on the kill (+{heal:0} HP)."); }
+        if (Trigger(m, TriggerKind.KillStamina) is > 0 and var stam) m.Stamina = Math.Min(m.Stats[Stat.MaxStamina], m.Stamina + stam);
         if (Trigger(m, TriggerKind.SoulSiphon) is > 0 and var mana) { m.Mana = Math.Min(m.Stats[Stat.MaxMana], m.Mana + mana); EventBus.Instance.Log($"{m.Name} siphons {mana:0} mana."); }
         if (Trigger(m, TriggerKind.Scavenger) is > 0 and var arrows && m.WeaponProfile.IsRanged && Game.Instance.Catalog.TryBase(ArrowDefId, out _))
         {
@@ -592,8 +594,14 @@ public partial class PartyController : Node3D
         return pool.OrderByDescending(m => m.Stats[stat]).First();
     }
 
-    public bool TryUnlock(string what)
+    public bool TryUnlock(string what) => TryUnlock(what, out _);
+    public bool TryUnlock(string what, Vector3 noiseAt) => TryUnlock(what, out _, noiseAt);
+
+    /// <summary>A key opens it at once. Else the best hands pick: a failure is a noise that wakes the unaware within <see cref="Adventure.Fortune.LockRules.NoiseRadius"/> m; <paramref name="failed"/> is true only for a real failed attempt (not a cooldown refusal), so the prop can count toward a jam.</summary>
+    /// <param name="noiseAt">Where the lock is; the noise is measured from there (a dedicated server has no local body at it). The lead's position when null.</param>
+    public bool TryUnlock(string what, out bool failed, Vector3? noiseAt = null)
     {
+        failed = false;
         if (Bag.Count("item.iron_key") > 0)
         {
             Bag.Consume("item.iron_key", 1);
@@ -602,11 +610,15 @@ public partial class PartyController : Node3D
         }
         if (_lockpickCooldown > 0) return false;
         var m = BestBy(Stat.Dexterity);
-        var chance = TrapRules.LockpickChance(m.Stats[Stat.Dexterity]);
+        var chance = Adventure.Fortune.LockRules.ForcedChance ?? Adventure.Fortune.LockRules.Chance(m.Stats[Stat.Dexterity], Game.Instance.Adventure);
         if (Rng.NextDouble() < chance) { EventBus.Instance.Log($"{m.Name} picks the lock on {what}."); return true; }
-        _lockpickCooldown = 1.2f;
+        failed = true;
+        _lockpickCooldown = Adventure.Fortune.LockRules.RetrySeconds;
         EventBus.Instance.PlaySfx("lock_fail");
-        EventBus.Instance.Log($"{m.Name} fumbles the lock ({chance:P0} chance). Try again, or find a key.");
+        EventBus.Instance.Log($"{m.Name} fumbles the lock ({chance:P0} chance). The noise carries.");
+        if (Main.Instance?.Builder.FloorRoot is { } root && (noiseAt ?? (HasBodies ? Lead.GlobalPosition : (Vector3?)null)) is { } at)
+            foreach (var e in root.GetChildren().OfType<Enemy>())
+                if (e.IsAlive && e.IsUnaware && e.GlobalPosition.DistanceTo(at) <= Adventure.Fortune.LockRules.NoiseRadius) e.ForceAggro();
         return false;
     }
 
@@ -786,36 +798,48 @@ public partial class PartyController : Node3D
     public ShopStock ShopStockFor(int floor)
     {
         if (!_shopStock.TryGetValue(floor, out var stock))
-            _shopStock[floor] = stock = ShopRules.Roll(Game.Instance.Catalog, Game.Instance.GameSeed, floor);
+            _shopStock[floor] = stock = ShopRules.Roll(Game.Instance.Catalog, Game.Instance.GameSeed, floor, hiddenStall: Main.Instance?.Builder.Layout is { } l && l.HasHiddenStall);
         return stock;
     }
 
     /// <summary>How near the merchant a body must stand to trade outside the safe room (the interact reach).</summary>
     public const float MerchantReach = 3.5f;
 
-    /// <summary>Whether this body may trade: alive, the floor has a merchant, and it is in the safe room or within reach of him. Logs the refusal. With no game scene at all (no Main) there is nothing to judge; a live Main with no floor built refuses.</summary>
+    /// <summary>Which keeper this body can trade with: the merchant within reach or from inside his safe room, the hidden stall within reach (fortune), or none. With no game scene at all (no Main) there is nothing to judge: the merchant.</summary>
+    public static TradeReach TradeReachFor(Adventurer? body)
+    {
+        if (Main.Instance == null) return TradeReach.Merchant;
+        var builder = Main.Instance.Builder;
+        if (body == null || body.Downed || builder?.FloorRoot is not { } floorRoot) return TradeReach.None;
+        if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
+        {
+            if (builder.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition))) return TradeReach.SafeRoom;
+            if (body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return TradeReach.Merchant;
+        }
+        // the hidden stall: within reach only, there is no room to be "in"
+        if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant_hidden") is { } stall && body.GlobalPosition.DistanceTo(stall.GlobalPosition) <= MerchantReach) return TradeReach.Hidden;
+        return TradeReach.None;
+    }
+
+    /// <summary>Whether this body may trade at all: alive and at a keeper (see <see cref="TradeReachFor"/>). Logs the refusal.</summary>
     public static bool CanTradeAt(Adventurer? body)
     {
-        if (Main.Instance == null) return true;
-        var builder = Main.Instance.Builder;
-        if (body != null && !body.Downed && builder?.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
-        {
-            var inRoom = builder!.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
-            if (inRoom || body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return true;
-        }
+        if (TradeReachFor(body) != TradeReach.None) return true;
         EventBus.Instance.Log($"{body?.State.Name ?? "Nobody"} is not at the merchant.");
         return false;
     }
 
     /// <summary>Buy a stock slot on the current floor. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
-    public string? ShopBuy(int stockIndex)
+    /// <param name="reach">On the server, the asking peer's keeper (ServerWorld judged its body); solo it is the local body's. A keeper sells only its own segment of the stock.</param>
+    public string? ShopBuy(int stockIndex, TradeReach? reach = null)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopBuyIntent(stockIndex)); return null; }
-        if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
+        reach ??= TradeReachFor(Local);
+        if (reach == TradeReach.None) { if (!Net.NetSession.IsServer) CanTradeAt(Local); return "Not at the merchant."; }
         var gold = Gold;
         var stock = ShopStockFor(Game.Instance.CurrentFloor);
         var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
-        var refusal = ShopRules.TryBuy(stock, ShopSoldOnFloor, stockIndex, Bag, ref gold);
+        var refusal = ShopRules.TryBuy(stock, ShopSoldOnFloor, stockIndex, Bag, ref gold, reach.Value);
         if (refusal != null)
         {
             EventBus.Instance.Log(refusal);
@@ -845,6 +869,48 @@ public partial class PartyController : Node3D
         return null;
     }
 
+    // ---- the Lucky Dip (fortune) -------------------------------------------------------------------------
+
+    /// <summary>Lucky Dip slots (0..2) already bought on this floor; cleared on a floor change, saved per floor, synced like ShopSold.</summary>
+    public HashSet<int> LuckyDipBoughtOnFloor { get; } = new();
+
+    /// <summary>Buys bundle <paramref name="slot"/> at the merchant (never at the hidden stall). Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
+    public string? LuckyDipBuy(int slot, TradeReach? reach = null)
+    {
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.LuckyDipIntent(slot)); return null; }
+        reach ??= TradeReachFor(Local);
+        if (reach == TradeReach.None) { if (!Net.NetSession.IsServer) CanTradeAt(Local); return "Not at the merchant."; }
+        var floor = Game.Instance.CurrentFloor;
+        var stock = ShopStockFor(floor);
+        string? Refuse(string why) { EventBus.Instance.Log(why); return why; }
+        if (reach == TradeReach.Hidden) return Refuse("Not sold here.");
+        if (slot < 0 || slot >= stock.Dip.Count) return Refuse("Nothing there.");
+        if (LuckyDipBoughtOnFloor.Contains(slot)) return Refuse("Already bought.");
+        var price = Adventure.Fortune.GambleRules.Price(floor, LuckyDipDiscount());
+        if (Gold < price) { EventBus.Instance.RaiseBrokeAtShop(LocalIndex); return Refuse("Not enough gold."); }
+        if (Bag.FreeSlots <= 0) return Refuse("The bag is full.");
+        var item = stock.Dip[slot];
+        if (!Bag.TryAdd(item.Clone())) return Refuse("The bag is full.");
+        TrySpendGold(price);
+        LuckyDipBoughtOnFloor.Add(slot);
+        EventBus.Instance.Log($"The {Adventure.Fortune.GambleRules.BundleName((Adventure.Fortune.DipSlot)slot).ToLowerInvariant()} holds {item}.");
+        EventBus.Instance.RaiseGambled(FocusedIndex, Adventure.Fortune.GambleRules.IsWin(item));
+        Main.Instance?.Hud?.Refresh();
+        return null;
+    }
+
+    /// <summary>A client mirrors the server's bought bundles (for the floor it is on) and purse.</summary>
+    public void ApplyLuckyDipSync(int floor, List<int> bought, int gold)
+    {
+        if (floor == Game.Instance.CurrentFloor)
+        {
+            LuckyDipBoughtOnFloor.Clear();
+            foreach (var i in bought) LuckyDipBoughtOnFloor.Add(i);
+        }
+        SetGold(gold);
+        Main.Instance?.Hud?.Refresh();
+    }
+
     /// <summary>A client mirrors the server's sold slots (for the floor it is on), purse and buyback ledger.</summary>
     public void ApplyShopSync(int floor, List<int> sold, int gold, List<Save.SoldDto>? buyback = null)
     {
@@ -872,6 +938,9 @@ public partial class PartyController : Node3D
         EventBus.Instance.Log(delta >= 0 ? $"+{delta} gold" : $"{delta} gold");
         if (delta > 0) EventBus.Instance.PlaySfx("coins");
     }
+
+    /// <summary>Coins picked up off the floor: Toll Road's +30% (fortune) and the legendary gold-find bonus both apply.</summary>
+    public void AddFoundGold(int coins) => AddGold((int)LegendaryRules.GoldFound(Adventure.Fortune.FortuneRules.GoldFound(coins, Game.Instance.Adventure), GoldFindBonus()));
 
     /// <summary>Pays from the purse; false (and nothing taken) when the party cannot afford it.</summary>
     public bool TrySpendGold(int amount)

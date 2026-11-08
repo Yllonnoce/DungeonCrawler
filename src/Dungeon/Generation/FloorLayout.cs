@@ -67,7 +67,7 @@ public sealed class FloorLayout
     /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
     public HashSet<GridPos> Fires { get; } = new();
     /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
-    public bool IsReserved(GridPos p) => Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p));
+    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p));
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with
@@ -109,6 +109,18 @@ public sealed class FloorLayout
     public bool IsInSafeRoom(GridPos p) => SafeRoom >= 0 && Rooms[SafeRoom].Contains(p);
     /// <summary>Whether the safe room was carved for the purpose (a side room the floor did not have) rather than a room it already had.</summary>
     public bool SafeRoomCarved { get; internal set; }
+
+    /// <summary>The fortune shrine's cell (floor 2 on), chosen last so nothing else moves; null when no room could hold one. Reserved.</summary>
+    public GridPos? ShrineCell { get; internal set; }
+    /// <summary>Secret alcoves that opened into carved rooms (fortune); appended after every other room so plan indices hold.</summary>
+    public List<SecretRoom> SecretRooms { get; } = new();
+    public bool HasHiddenStall => SecretRooms.Any(r => r.Merchant != null);
+    /// <summary>The bound chest's spawn index (fortune, floor 5 on): a vault roll and sixty seconds Hunted; -1 when none.</summary>
+    public int BoundChest { get; internal set; } = -1;
+    /// <summary>A mine's drifts: the dug cells of each, in order from the gallery out (the last is the dead end).</summary>
+    public List<List<GridPos>> Drifts { get; } = new();
+    /// <summary>What the drifts hold at their ends (fortune).</summary>
+    public List<DriftCache> Caches { get; } = new();
 
     public FloorLayout(int seed, int width, int height)
     {

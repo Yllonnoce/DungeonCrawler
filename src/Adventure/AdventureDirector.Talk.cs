@@ -31,8 +31,7 @@ public partial class AdventureDirector
         bus.PropChanged += (r, what) =>
         {
             if (!Authority || !_floorSettled || what != "opened") return;
-            if (r.StartsWith(Net.NetRefs.SecretKind + ":")) EventBus.Instance.RaiseSecretFound(_currentFloor); // until fortune's plan raises it from the wall itself
-            else if (r.StartsWith(Net.NetRefs.DoorKind + ":")) Bump(BanterRules.DoorsCounter);
+            if (r.StartsWith(Net.NetRefs.DoorKind + ":")) Bump(BanterRules.DoorsCounter); // SecretFound is the FortuneDirector's (a room entered, an alcove's wall opened)
         };
         bus.EliteSeen += e => { if (Authority) Bark(Nearest(e.GlobalPosition, 15f), BarkTrigger.EliteSeen); };
         bus.EliteSlain += e => { if (Authority) Taunt(Objectives.TauntTrigger.EliteSlain, Kind, arg: e.DisplayName); };

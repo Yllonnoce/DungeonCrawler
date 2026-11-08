@@ -31,7 +31,6 @@ public static partial class FloorGenerator
                 PlaceGalleries(spec, rng, layout);
                 CarveRooms(layout);
                 ConnectRooms(spec, rng, layout);
-                DigDrifts(spec, new Random(seed ^ 0x0D1F), layout);
                 break;
             case LayoutKind.Tavern:
                 PlaceTavernRoom(spec, layout);
@@ -66,8 +65,125 @@ public static partial class FloorGenerator
         PlaceTraps(spec, rng, layout);
         HazardPlanner.PlaceHazards(spec, new Random(seed ^ 0x4A2D), layout); // the lethal hazards, last and from their own seed: a floor without them is untouched
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
+        // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
+        PlaceSecretRooms(spec, new Random(seed ^ 0x5EC2), layout);
+        if (spec.Layout == LayoutKind.Mine) DigDrifts(spec, new Random(seed ^ 0x0D1F), layout); // the drifts after the safe room, vaults and spawns: dead-end tunnels into free rock, nothing else moves
+        PlaceCaches(spec, new Random(seed ^ 0xCAC4E), layout);
+        PlaceBoundChest(spec, new Random(seed ^ 0xB0D), layout);
+        PlaceShrine(spec, layout);
 
         return layout;
+    }
+
+    // ---- fortune -----------------------------------------------------------------------------
+
+    /// <summary>One shrine cell per floor from <see cref="Adventure.Fortune.ShrineRules.FromFloor"/>; deterministic, no rng, reserved.</summary>
+    internal static void PlaceShrine(FloorSpec spec, FloorLayout layout)
+        => layout.ShrineCell = spec.Floor >= Adventure.Fortune.ShrineRules.FromFloor ? Adventure.Fortune.ShrineRules.Choose(layout) : null;
+
+    /// <summary>Every other secret alcove opens into a carved room behind its wall (fortune); rooms are appended so every earlier index holds.</summary>
+    internal static void PlaceSecretRooms(FloorSpec spec, Random rng, FloorLayout layout)
+    {
+        var target = Adventure.Fortune.SecretRoomRules.RoomTarget(layout.Secrets.Count);
+        // the even alcoves first; when the rock around them left too few (the map's edge, a corridor behind), the odd ones try, in order, until half the secrets are rooms
+        foreach (var s in layout.Secrets.Where(s => Adventure.Fortune.SecretRoomRules.WantsRoom(s.Index)).Concat(layout.Secrets.Where(s => !Adventure.Fortune.SecretRoomRules.WantsRoom(s.Index))).ToList())
+        {
+            if (layout.SecretRooms.Count >= target) break;
+            TryCarveSecretRoom(rng, layout, s);
+        }
+    }
+
+    /// <summary>
+    /// A 3-5 cell room whose near edge touches the alcove from behind, cut into solid rock: no cell of it may be near any
+    /// walkable cell but the alcove, so the alcove stays its only way in. The alcove's chest moves to the room's centre.
+    /// </summary>
+    internal static bool TryCarveSecretRoom(Random rng, FloorLayout layout, SecretAlcove s)
+    {
+        var n = s.Alcove - s.Wall; // outward
+        var side = n.Perp;
+        // every size and doorway offset once, in a seeded order, flush against the alcove first and then up to MaxGap cells of
+        // passage behind it: a room that can fit is found, and the first fit is the floor's
+        var shapes = new List<(int w, int h, int offset)>();
+        for (var w = Adventure.Fortune.SecretRoomRules.MinSide; w <= Adventure.Fortune.SecretRoomRules.MaxSide; w++)
+            for (var h = Adventure.Fortune.SecretRoomRules.MinSide; h <= Adventure.Fortune.SecretRoomRules.MaxSide; h++)
+                for (var o = 0; o < (n.X != 0 ? h : w); o++) shapes.Add((w, h, o));
+        Shuffle(rng, shapes);
+        for (var gap = 0; gap <= Adventure.Fortune.SecretRoomRules.MaxGap; gap++)
+        foreach (var (w, h, offset) in shapes)
+        {
+            var passage = Enumerable.Range(1, gap).Select(i => new GridPos(s.Alcove.X + n.X * i, s.Alcove.Y + n.Y * i)).ToList();
+            var first = new GridPos(s.Alcove.X + n.X * (gap + 1), s.Alcove.Y + n.Y * (gap + 1)); // the room's edge cell behind the alcove (and the passage)
+            var depth = n.X != 0 ? w : h;   // extent away from the alcove
+            var span = n.X != 0 ? h : w;    // extent along the edge
+            var origin = new GridPos(first.X - side.X * offset, first.Y - side.Y * offset);
+            var far = new GridPos(first.X + n.X * (depth - 1) + side.X * (span - 1 - offset), first.Y + n.Y * (depth - 1) + side.Y * (span - 1 - offset));
+            var room = new Room(Math.Min(origin.X, far.X), Math.Min(origin.Y, far.Y), w, h);
+            if (room.X < 1 || room.Y < 1 || room.Right >= layout.Width - 1 || room.Bottom >= layout.Height - 1) continue;
+            if (!room.Contains(first)) continue;
+            if (layout.Rooms.Any(r => r.Intersects(room, 0))) continue; // the neighbourhood check below keeps a wall between it and every floor; a shared wall is the point
+            var ok = true;
+            foreach (var c in room.Cells().Concat(passage))
+            {
+                if (layout[c] is not (Cell.Void or Cell.Wall) || layout.IsUnder(c)) { ok = false; break; }
+                for (var oy = -1; oy <= 1 && ok; oy++)
+                    for (var ox = -1; ox <= 1; ox++)
+                    {
+                        var q = new GridPos(c.X + ox, c.Y + oy);
+                        if (q == s.Alcove || room.Contains(q) || passage.Contains(q)) continue;
+                        if (!layout.InBounds(q.X, q.Y) || layout.IsWalkable(q) || layout[q] == Cell.Secret || layout.IsUnder(q)) { ok = false; break; }
+                    }
+                if (!ok) break;
+            }
+            if (!ok) continue;
+            var level = layout.LevelOf(s.Alcove);
+            foreach (var c in room.Cells().Concat(passage)) { layout[c] = Cell.Floor; layout.SetLevel(c, level); }
+            layout.Rooms.Add(room);
+            var host = layout.RoomAt(s.Facing);
+            layout.Connections.Add((host != null ? layout.Rooms.IndexOf(host) : 0, layout.Rooms.Count - 1));
+            RaiseWalls(layout);
+            var chest = room.Center;
+            var at = layout.ChestSpawns.IndexOf(s.Alcove);
+            if (at >= 0) layout.ChestSpawns[at] = chest; else layout.ChestSpawns.Add(chest);
+            var plaque = Adventure.Fortune.SecretRoomRules.PlaqueCell(room, s.Alcove, chest);
+            layout.SecretRooms.Add(new SecretRoom(s.Index, room, s.Alcove, chest, plaque, null));
+            return true;
+        }
+        return false;
+    }
+
+    internal const int CacheAmbusherOneIn = 3, CacheLockedChestOneIn = 3;
+
+    /// <summary>Mine drifts end in something (fortune): one in three an ambusher waiting, else a locked chest one in three (the floor's keys serve) or a breakable crate. A drift whose end is taken holds nothing.</summary>
+    internal static void PlaceCaches(FloorSpec spec, Random rng, FloorLayout layout)
+    {
+        foreach (var drift in layout.Drifts)
+        {
+            var cell = drift[^1];
+            if (layout.TrapSpawns.Contains(cell) || layout.ChestSpawns.Contains(cell) || layout.BreakableSpawns.Contains(cell) || layout.EnemySpawns.Contains(cell) || layout.IsReserved(cell) || layout.IsWater(cell)) continue;
+            if (rng.Next(CacheAmbusherOneIn) == 0) { layout.Caches.Add(new DriftCache(cell, CacheKind.Ambusher)); continue; }
+            if (rng.Next(CacheLockedChestOneIn) == 0)
+            {
+                layout.LockedChests.Add(layout.ChestSpawns.Count);
+                layout.ChestSpawns.Add(cell);
+                layout.Caches.Add(new DriftCache(cell, CacheKind.LockedChest));
+            }
+            else
+            {
+                layout.BreakableSpawns.Add(cell);
+                layout.Caches.Add(new DriftCache(cell, CacheKind.Crate));
+            }
+        }
+    }
+
+    /// <summary>One ordinary chest per floor from <see cref="Adventure.Fortune.FortuneRules.BoundFromFloor"/> is bound; never one in the boss arena.</summary>
+    internal static void PlaceBoundChest(FloorSpec spec, Random rng, FloorLayout layout)
+    {
+        layout.BoundChest = -1;
+        if (spec.Floor < Adventure.Fortune.FortuneRules.BoundFromFloor) return;
+        var candidates = new List<int>();
+        for (var i = 0; i < layout.ChestSpawns.Count; i++)
+            if (Adventure.Fortune.ChestRules.KindOf(layout, i) == Adventure.Fortune.ChestKind.Ordinary && layout.BossArena?.Contains(layout.ChestSpawns[i]) != true) candidates.Add(i);
+        if (candidates.Count > 0) layout.BoundChest = candidates[rng.Next(candidates.Count)];
     }
 
     // ---- rooms -------------------------------------------------------------------------------

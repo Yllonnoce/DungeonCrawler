@@ -229,11 +229,20 @@ public partial class ServerWorld : Node
         return PartyController.CanTradeAt(slot.MemberIndex < party.Adventurers.Length ? party.Adventurers[slot.MemberIndex] : null);
     }
 
-    /// <summary>The floor's sold stock slots and the purse, to everyone (or just one peer).</summary>
+    /// <summary>The floor's sold stock slots and the purse, to everyone (or just one peer); the Lucky Dip's bought slots ride along.</summary>
     private void SendShopSync(int peer = -1)
     {
         var party = Main.Instance.Party;
         var msg = new ShopSync(Game.Instance.CurrentFloor, party.ShopSoldOnFloor.OrderBy(i => i).ToList(), party.Gold, party.Buyback.ToDto());
+        if (peer < 0) Broadcast(msg); else SendTo(peer, msg);
+        SendLuckyDipSync(peer);
+    }
+
+    /// <summary>The floor's bought Lucky Dip bundles and the purse (fortune), to everyone (or just one peer).</summary>
+    private void SendLuckyDipSync(int peer = -1)
+    {
+        var party = Main.Instance.Party;
+        var msg = new LuckyDipSync(Game.Instance.CurrentFloor, party.LuckyDipBoughtOnFloor.OrderBy(i => i).ToList(), party.Gold);
         if (peer < 0) Broadcast(msg); else SendTo(peer, msg);
     }
 
@@ -416,17 +425,34 @@ public partial class ServerWorld : Node
                 _bagDirty = true;
                 break;
             case ShopBuyIntent sb:
+            {
                 if (!slot.Ready || !CanTrade(slot)) break;
-                if (party.ShopBuy(sb.StockIndex) == null) Trace.Add("shop");
+                var reach = PartyController.TradeReachFor(slot.MemberIndex < party.Adventurers.Length ? party.Adventurers[slot.MemberIndex] : null); // which keeper: each sells only its own segment
+                if (party.ShopBuy(sb.StockIndex, reach) == null) Trace.Add("shop");
                 SendShopSync();
                 _bagDirty = true;
                 break;
+            }
+            case LuckyDipIntent ld:
+            {
+                if (!slot.Ready || !CanTrade(slot)) break;
+                var reach = PartyController.TradeReachFor(slot.MemberIndex < party.Adventurers.Length ? party.Adventurers[slot.MemberIndex] : null);
+                if (party.LuckyDipBuy(ld.Slot, reach) == null) Trace.Add("dip");
+                SendLuckyDipSync();
+                _bagDirty = true;
+                break;
+            }
             case ShopSellIntent ss:
                 if (!slot.Ready || !CanTrade(slot)) break;
                 if (!OwnsSlots(slot, ss.Slot, ss.Slot)) break;
                 if (party.ShopSell(ss.Slot) == null) Trace.Add("shop");
                 SendShopSync();
                 _bagDirty = true;
+                break;
+            case ShrineChoiceIntent sc:
+                if (!slot.Ready || FortuneDirector.Instance is not { } fortune) break;
+                // the first pick wins and the director closes the card everywhere; a refused pick (a lift the purse cannot pay) hands the asker its card back so its rows come alive again
+                if (!fortune.ResolveShrine(slot.MemberIndex, sc.Choice)) { if (fortune.PendingShrine is { } pending) SendTo(slot.PeerId, pending); else SendTo(slot.PeerId, new ShrineClosedEvt("gone")); }
                 break;
             case ShopBuybackIntent bb:
                 if (!slot.Ready || !CanTrade(slot)) break;

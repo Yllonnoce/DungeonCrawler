@@ -42,7 +42,14 @@ public sealed class ShopStock
 {
     public List<ItemInstance> Items { get; } = new();
     public int UniqueIndex { get; init; } = -1;
+    /// <summary>Where the hidden stall's wares start in <see cref="Items"/> (fortune); -1 when the floor has no stall. The regular wares are [0, HiddenFrom).</summary>
+    public int HiddenFrom { get; init; } = -1;
+    /// <summary>The Lucky Dip's three bundles (fortune), rolled once by floor and slot.</summary>
+    public List<ItemInstance> Dip { get; } = new();
 }
+
+/// <summary>Which keeper a body can trade with: none, the regular merchant (within reach), his safe room, or the hidden stall (fortune).</summary>
+public enum TradeReach { None, Merchant, SafeRoom, Hidden }
 
 /// <summary>Engine-free shop rules: which floors carry a unique weapon, of what kind, and the seeded stock per floor.</summary>
 public static class ShopRules
@@ -70,7 +77,11 @@ public static class ShopRules
 
     public static int StockSeed(ulong gameSeed, int floor) => unchecked((int)Core.Rng.Mix(gameSeed ^ ((ulong)floor * 0x5106_5106UL) ^ 0x5A0BUL));
 
-    public static ShopStock Roll(ItemCatalog cat, ulong gameSeed, int floor)
+    /// <summary>The hidden stall's wares: this many Rare pieces of gear after the regular stock (fortune).</summary>
+    public const int HiddenStallCount = Adventure.Fortune.SecretRoomRules.HiddenStallCount;
+
+    /// <param name="hiddenStall">The floor carries a hidden merchant's stall: its Rare gear is appended after the regular wares, from its own seed, so the wares are as they were.</param>
+    public static ShopStock Roll(ItemCatalog cat, ulong gameSeed, int floor, bool hiddenStall = false)
     {
         var rng = new Random(StockSeed(gameSeed, floor));
         var level = floor + 2;
@@ -110,15 +121,43 @@ public static class ShopRules
             items.Add(LootRoller.MakeLegendary(cat, leg, level, rng));
         }
 
-        var stock = new ShopStock { UniqueIndex = uniqueIndex };
+        var hiddenFrom = -1;
+        if (hiddenStall)
+        {
+            hiddenFrom = items.Count;
+            var stallRng = new Random(StockSeed(gameSeed, floor) ^ 0x41DD);
+            var kinds = new[] { SlotKind.Weapon, SlotKind.Body, SlotKind.Offhand, SlotKind.Ring, SlotKind.Amulet };
+            for (var i = 0; i < HiddenStallCount; i++)
+            {
+                var kind = kinds[i % kinds.Length];
+                var c = cat.Bases.Values.Where(b => b.Kind == kind && b.ItemLevelMin <= level).OrderBy(b => b.Id).ToList();
+                items.Add(LootRoller.Generate(cat, c[stallRng.Next(c.Count)], Rarity.Rare, level, stallRng));
+            }
+        }
+
+        var stock = new ShopStock { UniqueIndex = uniqueIndex, HiddenFrom = hiddenFrom };
         stock.Items.AddRange(items);
+        stock.Dip.AddRange(Adventure.Fortune.GambleRules.RollAll(cat, gameSeed, floor));
         return stock;
     }
 
+    /// <summary>Whether the keeper the body reached sells stock item <paramref name="index"/>: the hidden stall its own segment [HiddenFrom, Count), the merchant (or his room) the wares before it (the whole list when the floor has no stall).</summary>
+    public static bool SellsHere(ShopStock stock, int index, TradeReach reach)
+    {
+        if (index < 0 || index >= stock.Items.Count) return false;
+        return reach switch
+        {
+            TradeReach.Hidden => stock.HiddenFrom >= 0 && index >= stock.HiddenFrom,
+            TradeReach.Merchant or TradeReach.SafeRoom => stock.HiddenFrom < 0 || index < stock.HiddenFrom,
+            _ => false,
+        };
+    }
+
     /// <summary>Buys stock item <paramref name="index"/> into the bag. Null on success, else the reason it was refused (nothing changes then).</summary>
-    public static string? TryBuy(ShopStock stock, ISet<int> sold, int index, Inventory bag, ref int gold)
+    public static string? TryBuy(ShopStock stock, ISet<int> sold, int index, Inventory bag, ref int gold, TradeReach reach = TradeReach.Merchant)
     {
         if (index < 0 || index >= stock.Items.Count) return "Nothing there.";
+        if (!SellsHere(stock, index, reach)) return "Not sold here."; // the other keeper's wares: the stall's from the merchant, the merchant's from the stall
         if (sold.Contains(index)) return "Sold out.";
         var item = stock.Items[index];
         var price = Prices.BuyPrice(item);

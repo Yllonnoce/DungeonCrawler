@@ -246,12 +246,12 @@ public partial class DungeonBuilder : Node3D
         FloorContents? contents = null;
         if (plan != null)
         {
-            contents = AdventurePlanning.ResolveStored(layout, spec, plan, tier?.ToProfile(), _enemies, floorIndex, seed, party ?? PartySnapshot.Expected(floorIndex), out var report, Game.Instance?.Adventure.Memory.Flags, ExtraElitesPerFloor);
+            contents = AdventurePlanning.ResolveStored(layout, spec, plan, tier?.ToProfile(), _enemies, floorIndex, seed, party ?? PartySnapshot.Expected(floorIndex), out var report, Game.Instance?.Adventure.Memory.Flags, ExtraElites);
             if (contents == null) GD.PushWarning($"[DungeonBuilder] floor {floorIndex}: stored plan rejected ({report}), using legacy population");
             else if (report.Repairs.Count > 0) GD.Print($"[DungeonBuilder] floor {floorIndex}: plan repaired: {string.Join("; ", report.Repairs)}");
             if (contents is { Dropped.Count: > 0 }) GD.Print($"[DungeonBuilder] floor {floorIndex}: could not place: {string.Join("; ", contents.Dropped)}");
         }
-        contents ??= LegacyPopulator.Populate(layout, tier?.ToProfile(), _enemies, floorIndex, seed, ExtraElitesPerFloor);
+        contents ??= LegacyPopulator.Populate(layout, tier?.ToProfile(), _enemies, floorIndex, seed, ExtraElites);
         Contents = contents;
 
         _floorRoot = new Node3D { Name = $"Floor{floorIndex}" };
@@ -268,6 +268,7 @@ public partial class DungeonBuilder : Node3D
         var floorState = Game.Instance != null && Game.Instance.Floors.TryGetValue(floorIndex, out var fs) ? fs : null;
         PlaceEnemies(contents, floorIndex, floorState);
         PlaceProps(layout, contents, _floorRoot, floorIndex, seed);
+        PlaceSecretRooms(layout, _floorRoot, floorIndex);
         PlaceFires(layout, _floorRoot, floorIndex);
         PlaceStructures(layout, _floorRoot, seed);
         PlaceNestMouths(layout, _floorRoot, seed);
@@ -275,6 +276,7 @@ public partial class DungeonBuilder : Node3D
         PlaceAmbushes(layout, floorIndex, seed, floorState);
         PlacePortals(layout, floorIndex, seed, floorState);
         PlaceSafeRoom(layout, floorIndex, floorState);
+        PlaceShrine(layout, floorIndex);
         PlaceObjective(layout, contents, _floorRoot, floorIndex, seed);
         if (layout.Water.Count > 0)
         {
@@ -318,6 +320,8 @@ public partial class DungeonBuilder : Node3D
     /// list), and its death is saved with the floor instead of coming back on every server restart.
     /// </summary>
     public const int ViewerOrcSpawnIndex = 90000;
+    /// <summary>Spawn indices of the mine drifts' ambushers (fortune): CacheAmbusherBase + cache index.</summary>
+    public const int CacheAmbusherBase = 91000;
 
     /// <summary>
     /// A fighter who can be asked to join, standing a few steps from the entrance of their floor: Foehammer on floor 1
@@ -349,31 +353,67 @@ public partial class DungeonBuilder : Node3D
     /// The campaign's merchant, on the safe room's cell farthest from the door and facing it. Every machine builds him
     /// (the floor build is shared); none on a floor without a safe room or in a campaign without a merchant.
     /// </summary>
-    private void PlaceMerchant(FloorLayout layout, Node3D root, int floor)
+    /// <param name="at">The hidden stall's cell (fortune): the merchant stands there instead of the safe room.</param>
+    /// <param name="hidden">The stall that is not here: "I was never here", its own wares after the regular stock, and no safe room needed. A campaign without a merchant cast still gets one ("The Merchant", the generic body).</param>
+    private void PlaceMerchant(FloorLayout layout, Node3D root, int floor, GridPos? at = null, bool hidden = false)
     {
         if (layout.Kind == LayoutKind.Tavern) return; // the tavern has its own: PlaceTavernMerchant
         var campaign = Game.Instance?.Adventure?.Campaign;
-        if (layout.SafeRoom < 0 || campaign?.MerchantCast() is not { } cast)
+        var cast = campaign?.MerchantCast();
+        if (!hidden && (layout.SafeRoom < 0 || cast == null))
         {
             GD.Print($"[DungeonBuilder] floor {floor}: no safe room, no merchant");
             return;
         }
-        var lines = campaign.MerchantOrGeneric().For(floor);
+        var lines = campaign?.MerchantOrGeneric().For(floor);
+        if (hidden)
+        {
+            var hiddenLine = new Line(Adventure.Voice.MerchantLineBank.HiddenGreeting[floor % Adventure.Voice.MerchantLineBank.HiddenGreeting.Length]);
+            lines = new MerchantFloorLines { Floor = floor, Greeting = hiddenLine, Progress = lines?.Progress ?? hiddenLine, Trade = hiddenLine };
+        }
         var npc = _npcScene.Instantiate<Npc>();
-        npc.Id = "merchant";
-        npc.NpcName = cast.Name;
+        npc.Id = hidden ? "merchant_hidden" : "merchant";
+        npc.NpcName = cast?.Name ?? "The Merchant";
         npc.IsMerchant = true;
+        npc.HiddenStall = hidden;
         npc.MerchantLines = lines;
         npc.Floor = floor;
-        npc.ModelPath = BodyPath(Adventure.NpcBodies.ForCast(cast));
+        npc.ModelPath = BodyPath(cast != null ? Adventure.NpcBodies.ForCast(cast) : "npc_merchant");
         // one node, only the dialogue's opening text: the merchant's talk is the shop dialogue, not a script
         npc.Script = new NpcScript { Start = "trade", Nodes = { new DialogueNode { Id = "trade", Line = lines?.Trade ?? new Line("") } } };
-        npc.Name = "Npc_merchant";
+        npc.Name = hidden ? "Npc_merchant_hidden" : "Npc_merchant";
         root.AddChild(npc);
-        var cell = SafeRoomRules.MerchantCell(layout);
+        var cell = at ?? SafeRoomRules.MerchantCell(layout);
         npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
-        npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
-        GD.Print($"[DungeonBuilder] floor {floor}: merchant {cast.Name} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+        if (hidden) { if (layout.SecretRooms.FirstOrDefault(r => r.Merchant == cell) is { } room) npc.FaceToward(Surface(room.Doorway)); }
+        else npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
+        GD.Print($"[DungeonBuilder] floor {floor}: {(hidden ? "hidden stall" : "merchant")} {npc.NpcName} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+    }
+
+    /// <summary>
+    /// Secret rooms (fortune): a plaque in each (the campaign's clue for this floor when it carries one, else a stock epigraph)
+    /// and, on the tier's seeded hidden-stall floor, a merchant who was never here in the first room. The merchant cell is
+    /// decided here because the generator has no game seed; the layout records it so the shop knows the floor has a stall.
+    /// </summary>
+    private void PlaceSecretRooms(FloorLayout layout, Node3D root, int floor)
+    {
+        if (layout.SecretRooms.Count == 0) return;
+        var campaign = Game.Instance?.Adventure?.Campaign;
+        var stallFloor = floor == Adventure.Fortune.SecretRoomRules.HiddenStallFloor(TierRules.TierIndex(floor), GameSeed);
+        for (var i = 0; i < layout.SecretRooms.Count; i++)
+        {
+            var r = layout.SecretRooms[i];
+            var clue = campaign?.Mystery.Clues.FirstOrDefault(c => c.Floor == floor)?.Text;
+            var text = !string.IsNullOrWhiteSpace(clue) ? clue! : Adventure.Fortune.Epigraphs.For(GameSeed, floor, r.SecretIndex);
+            SpawnPlaque(root, r.Plaque, 100 + r.SecretIndex, text);
+            if (stallFloor && i == 0)
+            {
+                var cell = Adventure.Fortune.SecretRoomRules.MerchantCell(r.Room, r.Doorway, r.Chest, r.Plaque);
+                layout.SecretRooms[i] = r = r with { Merchant = cell };
+                PlaceMerchant(layout, root, floor, at: cell, hidden: true);
+            }
+            GD.Print($"[DungeonBuilder] floor {floor}: secret room {r.SecretIndex} at {r.Room.Center} (chest {r.Chest}, plaque {r.Plaque}{(r.Merchant != null ? ", stall " + r.Merchant : "")})");
+        }
     }
 
     /// <summary>
@@ -1044,6 +1084,15 @@ public partial class DungeonBuilder : Node3D
     public void SpawnAltar(Node3D root, GridPos cell)
     {
         var altar = new StaticBody3D { Name = "Altar", CollisionLayer = 1, CollisionMask = 0 };
+        AltarMeshes(altar);
+        root.AddChild(altar);
+        altar.GlobalPosition = Surface(cell);
+        _propCells.Add(cell);
+    }
+
+    /// <summary>The altar's stone, cloth, candles and light on any body (the objective's altar and the fortune shrine share them).</summary>
+    public void AltarMeshes(StaticBody3D altar)
+    {
         var stone = Material(CurrentTheme?.WallTexture ?? "", (CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f)).Darkened(0.15f), 1f);
         var cloth = new StandardMaterial3D { AlbedoColor = new Color(0.35f, 0.08f, 0.1f), Roughness = 0.95f };
         altar.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.8f, 1.0f, 1.0f) }, MaterialOverride = stone, Position = new Vector3(0, 0.5f, 0) });
@@ -1053,9 +1102,18 @@ public partial class DungeonBuilder : Node3D
         foreach (var x in new[] { -0.6f, 0.6f })
             altar.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.06f, Height = 0.3f }, MaterialOverride = candle, Position = new Vector3(x, 1.2f, 0.25f) });
         altar.AddChild(new OmniLight3D { LightColor = new Color(1f, 0.75f, 0.4f), LightEnergy = 1.6f, OmniRange = 7f, ShadowEnabled = false, Position = new Vector3(0, 1.8f, 0) });
-        root.AddChild(altar);
-        altar.GlobalPosition = Surface(cell);
-        _propCells.Add(cell);
+    }
+
+    /// <summary>The fortune shrine on its reserved cell (floor 2 on), its price written over it; the saved "used" state is re-applied by FloorStateCapture.</summary>
+    private void PlaceShrine(FloorLayout layout, int floor)
+    {
+        if (layout.ShrineCell is not { } cell || _floorRoot == null) return;
+        var shrine = new Shrine { Price = Adventure.Fortune.ShrineRules.PriceFor(GameSeed, floor), Floor = floor };
+        AltarMeshes(shrine);
+        _floorRoot.AddChild(shrine);
+        shrine.GlobalPosition = Surface(cell);
+        BlockCell(cell);
+        GD.Print($"[DungeonBuilder] floor {floor}: shrine at {cell} (price {shrine.Price})");
     }
 
     /// <summary>A breach mouth falls shut: rubble to the ceiling, the cell blocked for paths.</summary>
@@ -1147,6 +1205,8 @@ public partial class DungeonBuilder : Node3D
 
     /// <summary>Elites on top of the floor's schedule (a curse, a clause); read when a floor is resolved.</summary>
     public static int ExtraElitesPerFloor { get; set; }
+    /// <summary>What a floor's elite count adds beyond the schedule: the test hook plus fortune's Marked curse (run-structure's Hostile Tenants adds to the hook).</summary>
+    public static int ExtraElites => ExtraElitesPerFloor + Adventure.Fortune.FortuneRules.ExtraElites(Game.Instance?.Adventure);
 
     /// <summary>A floor seen before (a revisit, a load, a client's Welcome) keeps the elites its state names, whatever the schedule says now.</summary>
     private void PlaceEnemies(FloorContents contents, int floor, Save.FloorStateDto? state)
@@ -1184,10 +1244,10 @@ public partial class DungeonBuilder : Node3D
     }
 
     /// <summary>Instantiate an enemy by id. SpawnIndex -1 = summoned, -2 = boss.</summary>
-    public Enemy? SpawnEnemy(string id, Vector3 position, int floor, int spawnIndex = -1, Collective? group = null, int ordinal = 0, int netId = -1, EliteRoll? elite = null)
+    public Enemy? SpawnEnemy(string id, Vector3 position, int floor, int spawnIndex = -1, Collective? group = null, int ordinal = 0, int netId = -1, EliteRoll? elite = null, EnemyProfile? profile = null)
     {
         if (_floorRoot == null) return null;
-        var profile = EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile();
+        profile ??= EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile(); // a caller's profile (fortune's mimic brute, the hunter) wins over the lookup
         // the last boss is the campaign's villain in person when the owner built them a body: a tall man, not a 3.8 m demon
         if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = 1.25f };
         if (spawnIndex == -2 && TierRules.IsEndless(floor)) profile = HeraldProfile(profile, floor); // the Nth Herald: the tier boss re-skinned by the floor's tint, a random second kit, no arena change
@@ -1232,6 +1292,10 @@ public partial class DungeonBuilder : Node3D
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = i;
             chest.Locked = layout.LockedChests.Contains(i);
+            var kind = Adventure.Fortune.ChestRules.KindOf(layout, i);
+            chest.TableId = Adventure.Fortune.ChestRules.TableFor(kind); // fortune: a vault's, a secret's, a ledge's or the plain table
+            chest.IsMimic = Adventure.Fortune.MimicRules.ForcedSpawnIndex == i || Adventure.Fortune.MimicRules.IsMimic(GameSeed, floor, i, kind);
+            if (layout.BoundChest == i) { chest.Bound = true; chest.IsMimic = false; chest.Locked = false; chest.TableId = Adventure.Fortune.ChestRules.VaultTable; } // the bound chest: a vault roll, never a mouth, never locked
             chest.Name = $"Chest{i}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(layout.ChestSpawns[i]);
@@ -1243,6 +1307,7 @@ public partial class DungeonBuilder : Node3D
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = extra.SpawnIndex;
             chest.Locked = extra.Locked;
+            chest.IsMimic = Adventure.Fortune.MimicRules.IsMimic(GameSeed, floor, extra.SpawnIndex, Adventure.Fortune.ChestKind.Ordinary);
             chest.Name = $"Chest{extra.SpawnIndex}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(extra.Cell);
@@ -1257,6 +1322,14 @@ public partial class DungeonBuilder : Node3D
             root.AddChild(barrel);
             var jitter = new Vector3(((int)(Rng.Mix((ulong)seed ^ (ulong)(i * 31 + 7)) % 100) - 50) / 100f, 0, ((int)(Rng.Mix((ulong)seed ^ (ulong)(i * 17 + 3)) % 100) - 50) / 100f);
             barrel.GlobalPosition = Surface(layout.BreakableSpawns[i]) + jitter;
+        }
+        // the mine drifts' ambushers (fortune): one of the tier's creatures idle at the dead end, saved by spawn index like the viewer orc
+        var ambushPool = RegularEnemies(floor);
+        for (var i = 0; i < layout.Caches.Count; i++)
+        {
+            if (layout.Caches[i].Kind != CacheKind.Ambusher || ambushPool.Count == 0) continue;
+            var id = ambushPool[(int)(Rng.Mix((ulong)seed ^ (ulong)(i + 77)) % (ulong)ambushPool.Count)];
+            SpawnEnemy(id, Surface(layout.Caches[i].Cell) + Vector3.Up * 0.1f, floor, CacheAmbusherBase + i);
         }
         for (var i = 0; i < layout.TrapSpawns.Count; i++)
         {
@@ -1359,6 +1432,7 @@ public partial class DungeonBuilder : Node3D
         {
             var chest = _chestScene.Instantiate<Chest>();
             chest.SpawnIndex = layout.ChestSpawns.Count + cellar.Cells.IndexOf(cellar.Chest);
+            chest.TableId = Adventure.Fortune.ChestRules.TableFor(Adventure.Fortune.ChestRules.CellarKind);
             chest.Name = $"CellarChest{chest.SpawnIndex}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(cellar.Chest, under: true);

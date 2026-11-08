@@ -126,7 +126,7 @@ public partial class DialogueScreen : Control
             case MerchantTrade:
                 GD.Print($"[Dialogue] {npc.Id}: trade");
                 // the shop opens first and closes this dialogue as it does, so the mouse stays released and he keeps talking
-                Main.Instance?.Hud?.Shop.Open(Game.Instance.CurrentFloor, npc);
+                Main.Instance?.Hud?.Shop.Open(Game.Instance.CurrentFloor, npc, hidden: npc.HiddenStall);
                 Close();
                 return;
             case MerchantProgress when npc.MerchantLines is { } lines:

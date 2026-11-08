@@ -46,6 +46,7 @@ public partial class Game : Node
         Settings.Load();
         Catalog = Items.Catalog.FromRegistry(Registry.Instance);
         foreach (var def in Registry.Instance.All<SkillDef>()) Skills.Skills[def.Id] = def.ToProfile();
+        AddChild(new Adventure.FortuneDirector { Name = "Fortune" });
         GD.Print($"[Game] ready: {Catalog.Bases.Count} item bases, {Catalog.Affixes.Count} affixes, {Catalog.Legendaries.Count} legendaries, {Catalog.Tables.Count} loot tables, {Skills.Skills.Count} skills");
     }
 

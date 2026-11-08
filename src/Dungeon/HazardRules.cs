@@ -35,7 +35,7 @@ public static class HazardRules
     public static bool IsLethal(float lethality) => lethality >= LethalFrom;
 
     /// <summary>Below the lethal threshold: half of max HP at lethality 1, rising linearly.</summary>
-    public static float DamageFraction(float lethality) => 0.5f + 0.25f * (lethality - 1f);
+    public static float DamageFraction(float lethality) => (0.5f + 0.25f * (lethality - 1f)) * TierRules.HazardFactor;
 
     public static HazardOutcome Outcome(VictimKind victim, float lethality) => victim switch
     {

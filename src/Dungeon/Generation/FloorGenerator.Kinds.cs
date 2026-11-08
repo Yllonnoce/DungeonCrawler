@@ -309,21 +309,25 @@ public static partial class FloorGenerator
 
     /// <summary>
     /// Abandoned drifts: dead-end tunnels dug straight out of a gallery wall into solid rock, sometimes with one bend,
-    /// touching nothing else. Traps like them; nothing spawns in them.
+    /// touching nothing else. Dug after everything else is placed (the safe room, vaults, levels and spawns stay as they
+    /// were), never off the safe room, a vault, a secret or an objective's room; their ends hold the fortune caches.
     /// </summary>
-    private static void DigDrifts(FloorSpec spec, Random rng, FloorLayout layout)
+    internal static void DigDrifts(FloorSpec spec, Random rng, FloorLayout layout)
     {
         var want = 5 + rng.Next(4);
         var dug = 0;
+        var safe = layout.SafeRoom >= 0 && layout.SafeRoom < layout.Rooms.Count ? layout.Rooms[layout.SafeRoom] : null;
         for (var attempt = 0; attempt < 120 && dug < want; attempt++)
         {
             var room = layout.Rooms[rng.Next(layout.Rooms.Count)];
-            if (room == layout.BossArena) continue;
+            if (room == layout.BossArena || room == safe || room == layout.Objective?.JailRoom || room == layout.Objective?.ShrineRoom) continue;
+            if (layout.Vaults.Any(v => v.Room == room) || layout.SecretRooms.Any(s => s.Room == room)) continue;
             var d = Dirs4[rng.Next(4)];
             var c = d.X != 0
                 ? new GridPos(d.X > 0 ? room.Right : room.X, room.Y + rng.Next(room.H))
                 : new GridPos(room.X + rng.Next(room.W), d.Y > 0 ? room.Bottom : room.Y);
-            if (layout[c] != Cell.Floor) continue;
+            if (layout[c] != Cell.Floor || layout.IsUnder(c) || layout.IsWater(c) || layout.Ramps.ContainsKey(c)) continue;
+            var level = layout.LevelOf(c);
             var path = new List<GridPos>();
             var p = c;
             var dir = d;
@@ -334,22 +338,24 @@ public static partial class FloorGenerator
             {
                 if (i == bendAt) dir = rng.Next(2) == 0 ? dir.Perp : -dir.Perp;
                 p += dir;
-                if (p.X < 1 || p.Y < 1 || p.X >= layout.Width - 1 || p.Y >= layout.Height - 1 || layout[p] != Cell.Void) { ok = false; break; }
+                if (p.X < 1 || p.Y < 1 || p.X >= layout.Width - 1 || p.Y >= layout.Height - 1 || layout[p] is not (Cell.Void or Cell.Wall) || layout.IsUnder(p)) { ok = false; break; }
                 // the tunnel keeps rock on every side: no cell of it may touch any floor but its own
                 for (var oy = -1; oy <= 1 && ok; oy++)
                     for (var ox = -1; ox <= 1; ox++)
                     {
                         var q = new GridPos(p.X + ox, p.Y + oy);
-                        if (q == p || path.Contains(q) || q == c) continue;
-                        if (layout[q] != Cell.Void || layout.RoomAt(q) != null) { ok = false; break; }
+                        if (q == p || path.Contains(q) || q == c || (i == 0 && room.Contains(q))) continue; // the mouth sits against the gallery's own edge cells
+                        if (layout[q] is not (Cell.Void or Cell.Wall) || layout.RoomAt(q) != null || layout.IsUnder(q)) { ok = false; break; }
                     }
                 if (!ok) break;
                 path.Add(p);
             }
             if (!ok || path.Count < 3) continue;
-            foreach (var cell in path) layout[cell] = Cell.Floor;
+            foreach (var cell in path) { layout[cell] = Cell.Floor; layout.SetLevel(cell, level); }
+            layout.Drifts.Add(path);
             dug++;
         }
+        if (dug > 0) RaiseWalls(layout);
     }
 
     // ---- flooding ------------------------------------------------------------------------------

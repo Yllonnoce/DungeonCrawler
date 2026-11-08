@@ -21,6 +21,7 @@ public static class NetRefResolver
         LootDrop ld => NetRefs.Loot(ld.Item.Id),
         Npc n => NetRefs.Npc(n.Id),
         Plaque pl => NetRefs.Plaque(pl.Index),
+        Shrine => NetRefs.Shrine(0),
         _ => null,
     };
 
@@ -41,6 +42,7 @@ public static class NetRefResolver
             case NetRefs.StairsKind: return root.GetNodeOrNull<Stairs>(id == "down" ? "DownStairs" : "UpStairs");
             case NetRefs.NpcKind: return children.OfType<Npc>().FirstOrDefault(n => n.Id == id);
             case NetRefs.HazardKind: return NetRefs.TryIndex(id, out var hi) ? children.FirstOrDefault(n => n is Press { Index: var pi } && pi == hi || n is SpikeBed { Index: var bi2 } && bi2 == hi) as Node3D : null;
+            case NetRefs.ShrineKind: return children.OfType<Shrine>().FirstOrDefault();
             case NetRefs.PlaqueKind: return NetRefs.TryIndex(id, out var pi) ? children.OfType<Plaque>().FirstOrDefault(p => p.Index == pi) : null;
             case NetRefs.LootKind: return Guid.TryParseExact(id, "N", out var g) ? children.OfType<LootDrop>().FirstOrDefault(l => l.Item.Id == g && !l.IsQueuedForDeletion()) : null;
             default: return null;

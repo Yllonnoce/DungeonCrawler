@@ -26,6 +26,9 @@ public sealed class FloorRecord
     public List<string> Choices { get; set; } = new();
     public List<string> Repairs { get; set; } = new();
     public Dictionary<string, float> PossessSeconds { get; set; } = new();
+    /// <summary>Secrets found on the floor against the secrets it holds (the floor card's "Secrets 1/3").</summary>
+    public int SecretsFound { get; set; }
+    public int SecretsTotal { get; set; }
     public bool Completed { get; set; }
 }
 

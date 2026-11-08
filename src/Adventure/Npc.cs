@@ -51,6 +51,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public float MaxHp { get; private set; }
     /// <summary>The campaign's trader, standing in the safe room: talks through the shop dialogue, never flees, greets once per floor.</summary>
     public bool IsMerchant { get; set; }
+    /// <summary>The hidden stall in a secret room (fortune): the shop opens on the stall's segment of the stock.</summary>
+    public bool HiddenStall { get; set; }
     /// <summary>The merchant's lines for this floor (greeting, progress, trade); null for everyone else.</summary>
     public MerchantFloorLines? MerchantLines { get; set; }
     /// <summary>How close (metres) the local adventurer comes before the merchant greets them (0 never greets): 8 in a safe room, <see cref="TavernRules.GreetRadius"/> in the tavern.</summary>

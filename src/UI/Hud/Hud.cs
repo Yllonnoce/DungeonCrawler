@@ -44,6 +44,10 @@ public partial class Hud : Control
     /// <summary>The merchant's shop; <see cref="ShopScreen.Open"/> closes the dialogue and the other screens first.</summary>
     public ShopScreen Shop => _shop;
     public bool ShopOpen => _shop.Visible;
+    private UI.Fortune.ShrineCard _shrine = null!;
+    /// <summary>The fortune shrine's boon card (fortune): opened by the FortuneDirector solo, by ShrineCardMsg on a client.</summary>
+    public UI.Fortune.ShrineCard Shrine => _shrine;
+    public bool ShrineOpen => _shrine.Visible;
     private PauseMenu _pause = null!;
     private SkillTreeScreen _skills = null!;
     public bool Paused => _pause.Visible;
@@ -173,6 +177,9 @@ public partial class Hud : Control
         };
         _shop.VisibilityChanged += UpdateModalState;
         AddChild(_shop);
+        _shrine = new UI.Fortune.ShrineCard { Name = "Shrine", Visible = false };
+        _shrine.VisibilityChanged += UpdateModalState;
+        AddChild(_shrine);
         _questLog = new QuestLogScreen { Name = "QuestLog", Visible = false };
         AddChild(_questLog);
         _questLog.SetAnchorsPreset(LayoutPreset.CenterTop);
@@ -333,7 +340,7 @@ public partial class Hud : Control
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible) return; // the dialogue / stair question / shop owns input while open
+        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible || _shrine.Visible) return; // the dialogue / stair question / shop / shrine card owns input while open
         if (@event.IsActionPressed("quest_log"))
         {
             ToggleQuestLog();
@@ -472,7 +479,7 @@ public partial class Hud : Control
 
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }
@@ -491,6 +498,7 @@ public partial class Hud : Control
     private void OnFloorChanged(int floor, int delta)
     {
         if (_shop.Visible && floor != _shop.Floor) _shop.Close(); // the merchant's wares are the floor's
+        if (_shrine.Visible) _shrine.Close("gone"); // the altar stayed on the floor we left
         var tier = Main.Instance?.Builder.CurrentTier?.DisplayName ?? "";
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;
