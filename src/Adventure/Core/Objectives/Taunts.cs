@@ -9,6 +9,8 @@ public enum TauntTrigger
     RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle,
     MemberDowned, PartyWiped, Descend, Reinforcements,
     Crushed,
+    // the Depths update: a named creature's death, an altar, a hungry chest, a lost or refusing ally, the merchant's dice
+    EliteSlain, ShrineUsed, MimicSprung, AllyDead, AllyLeft, Gamble,
 }
 
 public static class TauntTriggers

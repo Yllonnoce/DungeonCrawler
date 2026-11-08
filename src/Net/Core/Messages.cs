@@ -142,6 +142,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 /// arrow lands in the body it draws. <see cref="Color"/> is reserved (always 0).
 /// </summary>
 [Msg(MsgKind.HitFxEvt)] public sealed record HitFxEvt(byte FxKind, NetVec Pos, NetVec Dir, int EnemyNetId, uint Color) : NetMessage;
+/// <summary>A client pressed Cheer (v7): the server picks the lines and relays the bodies' emote.</summary>
+[Msg(MsgKind.CheerIntent)] public sealed record CheerIntent : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

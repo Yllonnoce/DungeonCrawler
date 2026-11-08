@@ -110,6 +110,62 @@ public partial class EventBus : Node
     /// <summary>(member name, line): a companion spoke; a client plays the voice with its own key.</summary>
     public event Action<string, Adventure.Line>? Bark;
 
+    // ---- the Depths update: moments the party and the villain react to (plan: writing owns these) ----
+    /// <summary>An elite (named creature) came into the party's sight: the enemy.</summary>
+    public event Action<Enemies.Enemy>? EliteSeen;
+    public void RaiseEliteSeen(Enemies.Enemy e) => EliteSeen?.Invoke(e);
+    /// <summary>An elite died: the enemy.</summary>
+    public event Action<Enemies.Enemy>? EliteSlain;
+    public void RaiseEliteSlain(Enemies.Enemy e) => EliteSlain?.Invoke(e);
+    /// <summary>A chest turned out to have teeth: where it stands.</summary>
+    public event Action<Vector3>? MimicSprung;
+    public void RaiseMimicSprung(Vector3 at) => MimicSprung?.Invoke(at);
+    /// <summary>(member index, isBoon): a member used a shrine and got a boon (true) or a curse (false).</summary>
+    public event Action<int, bool>? ShrineUsed;
+    public void RaiseShrineUsed(int member, bool isBoon) => ShrineUsed?.Invoke(member, isBoon);
+    /// <summary>A hidden room was opened: the floor number.</summary>
+    public event Action<int>? SecretFound;
+    public void RaiseSecretFound(int floor) => SecretFound?.Invoke(floor);
+    /// <summary>A trap sprang under a member: the member index.</summary>
+    public event Action<int>? TrapSprung;
+    public void RaiseTrapSprung(int member) => TrapSprung?.Invoke(member);
+    /// <summary>A member took landing damage from a drop or a pit: the member index.</summary>
+    public event Action<int>? MemberFell;
+    public void RaiseMemberFell(int member) => MemberFell?.Invoke(member);
+    /// <summary>A member landed a perfect heavy blow: the member index.</summary>
+    public event Action<int>? PerfectBlow;
+    public void RaisePerfectBlow(int member) => PerfectBlow?.Invoke(member);
+    /// <summary>A member parried: the member index.</summary>
+    public event Action<int>? Parried;
+    public void RaiseParried(int member) => Parried?.Invoke(member);
+    /// <summary>A member blocked with perfect timing: the member index.</summary>
+    public event Action<int>? PerfectBlock;
+    public void RaisePerfectBlock(int member) => PerfectBlock?.Invoke(member);
+    /// <summary>(member index, win): a member bought the merchant's blind bundle and it was worth it (true) or a dud (false).</summary>
+    public event Action<int, bool>? Gambled;
+    public void RaiseGambled(int member, bool win) => Gambled?.Invoke(member, win);
+    /// <summary>A member pressed Cheer: the member index.</summary>
+    public event Action<int>? Cheer;
+    public void RaiseCheer(int member) => Cheer?.Invoke(member);
+    /// <summary>A member tried to buy something they cannot afford: the member index.</summary>
+    public event Action<int>? BrokeAtShop;
+    public void RaiseBrokeAtShop(int member) => BrokeAtShop?.Invoke(member);
+    /// <summary>A member dropped under a quarter of their health for the first time on this floor: the member index.</summary>
+    public event Action<int>? LowHp;
+    public void RaiseLowHp(int member) => LowHp?.Invoke(member);
+    /// <summary>A boon was taken: its id.</summary>
+    public event Action<string>? BoonTaken;
+    public void RaiseBoonTaken(string id) => BoonTaken?.Invoke(id);
+    /// <summary>A curse was taken: its id.</summary>
+    public event Action<string>? CurseTaken;
+    public void RaiseCurseTaken(string id) => CurseTaken?.Invoke(id);
+    /// <summary>(floor, cause id): the party wiped and the director inferred what killed them (a <c>WipeCause</c> id).</summary>
+    public event Action<int, string>? PartyWipedBy;
+    public void RaisePartyWipedBy(int floor, string cause) => PartyWipedBy?.Invoke(floor, cause);
+    /// <summary>(floor, seconds): a floor's ledger closed with the time spent on it.</summary>
+    public event Action<int, int>? FloorLedgerClosed;
+    public void RaiseFloorLedgerClosed(int floor, int seconds) => FloorLedgerClosed?.Invoke(floor, seconds);
+
     public void PlaySfx(string cue) => Sfx?.Invoke(cue);
 
     public override void _Ready() => Instance = this;

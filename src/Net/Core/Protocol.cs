@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 6;
+    public const int Version = 7;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 80;
+    public const int MessageKindCount = 81;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -61,4 +61,6 @@ public enum MsgKind : byte
     DialogueNodeIntent,
     // blood or a stuck arrow where the server resolved a hit (v6); spell bursts stay local
     HitFxEvt,
+    // a client pressed Cheer (v7): the server picks the lines and relays the bodies' emote
+    CheerIntent,
 }

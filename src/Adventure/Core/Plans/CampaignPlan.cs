@@ -3,7 +3,12 @@ using DungeonCrawler.Dungeon.Generation;
 
 namespace DungeonCrawler.Adventure;
 
-public enum BarkTrigger { Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, Idle, Dance, Travel }
+public enum BarkTrigger
+{
+    Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, Idle, Dance, Travel,
+    // the Depths update (appended in contract order; the shipped campaign stores triggers by name)
+    TrapSprung, Fell, PerfectBlow, Parried, Mimic, SecretFound, EliteSeen, Broke, ShrineBoon, ShrineCurse, GambleWin, GambleDud, LowHp, Cheer, CheerAnswer,
+}
 
 public sealed class VoicedCharacter
 {
