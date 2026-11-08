@@ -45,6 +45,7 @@ public partial class Game : Node
     {
         Instance = this;
         Settings.Load();
+        Save.Profile.ProfileStore.Load();
         Catalog = Items.Catalog.FromRegistry(Registry.Instance);
         foreach (var def in Registry.Instance.All<SkillDef>()) Skills.Skills[def.Id] = def.ToProfile();
         AddChild(new Adventure.FortuneDirector { Name = "Fortune" });
