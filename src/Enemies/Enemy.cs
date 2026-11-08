@@ -375,6 +375,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _net ??= new Net.PoseBuffer(16);
         _net.Push(now, tick, s.Position, s.Yaw, 0f, Net.NetVec.Zero, Net.PoseFlags.None);
         Hp = s.Hp;
+        if (IsHorde && IsAlive && s.State == Net.EnemyStateCodes.Encode("Attack") && _netState != s.State) BeginWindup(WindupSeconds); // hordes get no telegraph message; the snapshot's state change is their wind-up
         _netState = s.State;
         _netFlags = s.Flags;
         if ((s.Flags & Net.EntityState.FlagAlive) == 0 && !_clientDead) ClientDie();

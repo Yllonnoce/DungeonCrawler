@@ -21,6 +21,7 @@ public partial class ClientWorld : Node
     private float _reindexTimer;
     private Vector3 _lastSentPos;
     private float _lastSentYaw;
+    private PoseFlags _lastSentFlags;
     private bool _readySent;
     public Welcome? Welcome => _h.Welcome;
     public ClientHandshake.Phase Phase => _h.State;
@@ -84,7 +85,8 @@ public partial class ClientWorld : Node
             case LootRemoved lr: OnLootRemoved(lr); break;
             case PropEvt pe: OnProp(pe); break;
             case TrapPlacedEvt tp: OnTrapPlaced(tp.Trap); break;
-            case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp, eh.Crit ? Combat.HitFlavor.Crit : Combat.HitFlavor.Hit, -1); break;
+            case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp, (Combat.HitFlavor)eh.Flavor, eh.ByMember); break;
+            case EnemyStateMsg es: if (_enemies.TryGetValue(es.NetId, out var tele) && GodotObject.IsInstanceValid(tele)) tele.ClientTelegraph(es.State); break;
             case EnemyDied ed: if (_enemies.TryGetValue(ed.NetId, out var dead) && GodotObject.IsInstanceValid(dead)) dead.ClientDie(); Trace.Add("kill"); break;
             case ProjectileSpawned pr: OnProjectile(pr); break;
             case HitFxEvt fx: OnHitFx(fx); break;
@@ -352,6 +354,7 @@ public partial class ClientWorld : Node
             if (mv.Member < 0 || mv.Member >= party.Members.Length) continue;
             var m = party.Members[mv.Member];
             var wasAlive = m.IsAlive;
+            if (m.IsAlive && mv.Hp < m.Hp - 0.5f) EventBus.Instance.RaiseMemberDamaged(mv.Member, m.Hp - mv.Hp); // the vignette, the portrait flash and the shake on a client
             m.Hp = mv.Hp; m.Stamina = mv.Stamina; m.Mana = mv.Mana; m.CooldownRemaining = mv.Cooldown;
             if (wasAlive != m.IsAlive) EventBus.Instance.RaiseMemberChanged(mv.Member);
         }
@@ -389,10 +392,12 @@ public partial class ClientWorld : Node
             if (local.Guarding) flags |= PoseFlags.Guard;
             if (local.IsOnFloor()) flags |= PoseFlags.OnFloor;
             if (local.Downed) flags |= PoseFlags.Downed;
-            // coalesce: a body that has not moved sends a pose every half second only
-            if (pos.DistanceSquaredTo(_lastSentPos) > 0.0001f || Math.Abs(local.Rotation.Y - _lastSentYaw) > 0.001f || tick % 30 == 0)
+            if (local.Defense.Parrying) flags |= PoseFlags.Parry;
+            if (local.Defense.Dodging) flags |= PoseFlags.Dodge;
+            // coalesce: a body that has not moved sends a pose every half second only; a window that opens or closes while standing still goes at once
+            if (pos.DistanceSquaredTo(_lastSentPos) > 0.0001f || Math.Abs(local.Rotation.Y - _lastSentYaw) > 0.001f || flags != _lastSentFlags || tick % 30 == 0)
             {
-                _lastSentPos = pos; _lastSentYaw = local.Rotation.Y;
+                _lastSentPos = pos; _lastSentYaw = local.Rotation.Y; _lastSentFlags = flags;
                 _t.Send(NetPeers.Server, NetCodec.Encode(new Pose(tick, local.Index, new NetVec(pos.X, pos.Y, pos.Z), local.Rotation.Y, local.Camera.Rotation.X,
                     new NetVec(local.Velocity.X, local.Velocity.Y, local.Velocity.Z), flags)), NetChannel.State);
             }

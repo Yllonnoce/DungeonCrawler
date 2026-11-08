@@ -3,7 +3,7 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 6;
+    public const int Version = 7;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
     public const int MessageKindCount = 80;
     public const int DefaultPort = 7777;
