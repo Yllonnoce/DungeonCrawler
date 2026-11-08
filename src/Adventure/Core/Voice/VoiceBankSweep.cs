@@ -12,6 +12,7 @@ public static class VoiceRefs
         foreach (var c in VoiceBudget.TauntCandidates(campaign, plans)) Add(ids, c.Line);
         foreach (var t in campaign.Taunts.Concat(plans.Values.SelectMany(p => p.Taunts))) { Add(ids, t.Line); Add(ids, t.CleanLine); }
         foreach (var b in campaign.Banter) foreach (var l in b.Lines) Add(ids, l.Line); // the heroes' exchanges, poured into the campaign by the bake
+        foreach (var p in plans.Values) { Add(ids, p.IntroLine); foreach (var n in p.Narration) Add(ids, n.Line); } // every narration, the Enter-triggered ones the budget leaves out included
         return ids;
     }
 
