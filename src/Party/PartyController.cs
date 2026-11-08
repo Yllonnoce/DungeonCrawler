@@ -593,8 +593,12 @@ public partial class PartyController : Node3D
         return pool.OrderByDescending(m => m.Stats[stat]).First();
     }
 
-    public bool TryUnlock(string what)
+    public bool TryUnlock(string what) => TryUnlock(what, out _);
+
+    /// <summary>A key opens it at once. Else the best hands pick: a failure is a noise that wakes the unaware within <see cref="Adventure.Fortune.LockRules.NoiseRadius"/> m; <paramref name="failed"/> is true only for a real failed attempt (not a cooldown refusal), so the prop can count toward a jam.</summary>
+    public bool TryUnlock(string what, out bool failed)
     {
+        failed = false;
         if (Bag.Count("item.iron_key") > 0)
         {
             Bag.Consume("item.iron_key", 1);
@@ -603,11 +607,15 @@ public partial class PartyController : Node3D
         }
         if (_lockpickCooldown > 0) return false;
         var m = BestBy(Stat.Dexterity);
-        var chance = TrapRules.LockpickChance(m.Stats[Stat.Dexterity]);
+        var chance = Adventure.Fortune.LockRules.ForcedChance ?? Adventure.Fortune.LockRules.Chance(m.Stats[Stat.Dexterity], Game.Instance.Adventure);
         if (Rng.NextDouble() < chance) { EventBus.Instance.Log($"{m.Name} picks the lock on {what}."); return true; }
-        _lockpickCooldown = 1.2f;
+        failed = true;
+        _lockpickCooldown = Adventure.Fortune.LockRules.RetrySeconds;
         EventBus.Instance.PlaySfx("lock_fail");
-        EventBus.Instance.Log($"{m.Name} fumbles the lock ({chance:P0} chance). Try again, or find a key.");
+        EventBus.Instance.Log($"{m.Name} fumbles the lock ({chance:P0} chance). The noise carries.");
+        if (Main.Instance?.Builder.FloorRoot is { } root && Lead is { } lead)
+            foreach (var e in root.GetChildren().OfType<Enemy>())
+                if (e.IsAlive && e.IsUnaware && e.GlobalPosition.DistanceTo(lead.GlobalPosition) <= Adventure.Fortune.LockRules.NoiseRadius) e.ForceAggro();
         return false;
     }
 

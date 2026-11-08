@@ -21,6 +21,10 @@ public partial class Chest : Area3D, IInteractable
     public Enemy? Mimic { get; private set; }
     /// <summary>Iron-banded with a purple seam (fortune): a vault roll, and sixty seconds Hunted for whoever opens it.</summary>
     public bool Bound { get; set; }
+    /// <summary>Failed picks so far; the third jams the lock (fortune).</summary>
+    public int LockFails { get; private set; }
+    /// <summary>The pick snapped off: only a key turns it now.</summary>
+    public bool Jammed { get; private set; }
     private bool _hidden;
 
     public void MarkOpened()
@@ -35,6 +39,7 @@ public partial class Chest : Area3D, IInteractable
         : Bound ? FortuneRules.BoundPrompt
         : Sprung ? "The chest is elsewhere"
         : IsMimic && Noticed() ? $"Open chest ({MimicRules.Tell})"
+        : Locked && Jammed ? "Jammed lock: only a key opens it"
         : Locked ? "Locked chest: use a key or pick the lock" : "Open chest";
 
     /// <summary>A living member whose Perception reaches the chest (the secret-wall rule) sees the lock breathe.</summary>
@@ -105,6 +110,16 @@ public partial class Chest : Area3D, IInteractable
         if (GetNodeOrNull<StaticBody3D>("Body") is { } body) body.CollisionLayer = 1;
     }
 
+    private void Jam()
+    {
+        Jammed = true;
+        EventBus.Instance.Log("The pick snaps off in the lock.");
+        EventBus.Instance.RaisePropChanged(Net.NetRefs.Chest(SpawnIndex), "jammed");
+    }
+
+    /// <summary>A client's or a reload's view of a jammed lock.</summary>
+    public void ShowJammed() => Jammed = true;
+
     /// <summary>A client's view of a sprung mimic: the chest gone, the brute arriving by EnemySpawned.</summary>
     public void ShowSprung() { Sprung = true; HideBody(); }
 
@@ -153,7 +168,12 @@ public partial class Chest : Area3D, IInteractable
         if (IsMimic) { Spring(party); return; } // a lock on a mouth is part of the lure
         if (Locked)
         {
-            if (!party.TryUnlock("the chest")) return;
+            if (Jammed && party.Bag.Count("item.iron_key") == 0) { EventBus.Instance.Log("The lock is jammed. Only a key will turn it."); return; }
+            if (!party.TryUnlock("the chest", out var failed))
+            {
+                if (failed && ++LockFails >= LockRules.JamAfterFails && !Jammed) Jam();
+                return;
+            }
             Locked = false;
         }
         MarkOpened();

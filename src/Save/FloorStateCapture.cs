@@ -34,6 +34,10 @@ public static class FloorStateCapture
                     break;
                 case Chest { Sprung: true, Opened: false } mimic:
                     dto.MimicsSprung.Add(mimic.SpawnIndex); // the brute is dynamic (not in Enemies): RestoreSprung respawns it idle
+                    if (mimic.Jammed) dto.JammedChests.Add(mimic.SpawnIndex);
+                    break;
+                case Chest { Jammed: true, Opened: false } jammed:
+                    dto.JammedChests.Add(jammed.SpawnIndex); // an opened jammed chest is simply open
                     break;
                 case LootDrop { KeyIndex: >= 0 }:
                     break; // generator keys are tracked by TakenKeys, not as world items
@@ -102,6 +106,7 @@ public static class FloorStateCapture
         var live = dto.Enemies.ToDictionary(e => e.SpawnIndex);
         var opened = dto.OpenedChests.ToHashSet();
         var sprung = dto.MimicsSprung.ToHashSet();
+        var jammed = dto.JammedChests.ToHashSet();
         var broken = dto.BrokenBarrels.ToHashSet();
         var triggered = dto.TriggeredTraps.ToHashSet();
         var disarmed = dto.DisarmedTraps.ToHashSet();
@@ -125,6 +130,10 @@ public static class FloorStateCapture
                     break;
                 case Chest mimic when sprung.Contains(mimic.SpawnIndex):
                     mimic.RestoreSprung();
+                    if (jammed.Contains(mimic.SpawnIndex)) mimic.ShowJammed();
+                    break;
+                case Chest stuck when jammed.Contains(stuck.SpawnIndex):
+                    stuck.ShowJammed();
                     break;
                 case Breakable b when broken.Contains(b.SpawnIndex):
                     b.QueueFree();
