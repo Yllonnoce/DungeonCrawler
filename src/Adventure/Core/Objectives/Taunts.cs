@@ -80,12 +80,14 @@ public sealed class TauntDirector
         .Replace("{party}", string.IsNullOrWhiteSpace(party) ? "little rats" : party)
         .Replace("{floor}", floor.ToString())
         .Replace("{prisoner}", string.IsNullOrWhiteSpace(arg) ? "that one" : arg)
+        .Replace("{elite}", string.IsNullOrWhiteSpace(arg) ? "that one" : arg)
+        .Replace("{name}", string.IsNullOrWhiteSpace(arg) ? "that one" : arg)
         .Replace("{room}", string.IsNullOrWhiteSpace(arg) ? "there" : arg);
 }
 
 /// <summary>
 /// The villain's stock lines, for campaigns nobody wrote taunts for (the offline designer, older plans, a planner that
-/// left a trigger empty). Coarse by default, each with a clean twin. Tokens: {party}, {floor}, {prisoner}.
+/// left a trigger empty). Coarse by default, each with a clean twin. Tokens: {party}, {floor}, {prisoner}, {elite}, {name}.
 /// </summary>
 public static class TauntBank
 {
@@ -138,6 +140,19 @@ public static class TauntBank
         (TauntTrigger.Descend, null, "Off you go. Mind the stairs. Wouldn't want you dying of something as boring as a fall, you clumsy sods.", "Off you go. Mind the stairs. Wouldn't want you dying of something as boring as a fall."),
         (TauntTrigger.Reinforcements, null, "Taking your time? Then I'll send company. Behind you, {party}. Always behind you.", "Taking your time? Then I'll send company. Behind you, {party}. Always behind you."),
         (TauntTrigger.Reinforcements, null, "Reinforcements. Push deeper or drown in them. I've got a bloody endless supply.", "Reinforcements. Push deeper or drown in them. I've got an endless supply."),
+        // the Depths update: a dead elite, a used shrine, a mimic, a lost or refusing ally, a gamble
+        (TauntTrigger.EliteSlain, null, "You killed {elite}? {elite} had a NAME, you bastards. Do you know how long it takes to name one of those?", "You killed {elite}? {elite} had a NAME, you wretches. Do you know how long it takes to name one of those?"),
+        (TauntTrigger.EliteSlain, null, "Fine. {elite} was overrated. I have a dozen more with longer names and shorter tempers, you bloody vandals.", "Fine. {elite} was overrated. I have a dozen more with longer names and shorter tempers, you vandals."),
+        (TauntTrigger.ShrineUsed, null, "You touched my altar. MY altar. Whatever it gave you, {name}, I'll have back with interest, and the interest is teeth.", "You touched my altar. MY altar. Whatever it gave you, {name}, I'll have back with interest, and the interest is teeth."),
+        (TauntTrigger.ShrineUsed, null, "Prayer at my shrine? Oh, it answered. It always answers. You'll find out what it said, you greedy little shit.", "Prayer at my shrine? Oh, it answered. It always answers. You'll find out what it said, you greedy little wretch."),
+        (TauntTrigger.MimicSprung, null, "Ha! HA! Did you see your face? The box bit you. The BOX. I'd put that in a book if I could write, you gullible sods.", "Ha! HA! Did you see your face? The box bit you. The BOX. I'd put that in a book if I could write, you gullible fools."),
+        (TauntTrigger.MimicSprung, null, "Everything down here is hungry, {party}. Even the furniture. Especially the furniture.", "Everything down here is hungry, {party}. Even the furniture. Especially the furniture."),
+        (TauntTrigger.AllyDead, null, "There goes your friend. {name}, was it? Lovely. One less voice in my halls, and it wasn't even yours yet.", "There goes your friend. {name}, was it? Lovely. One less voice in my halls, and it wasn't even yours yet."),
+        (TauntTrigger.AllyDead, null, "Your hired help is dead, {party}. Hired help always is. That's why it's cheap, you bloody misers.", "Your hired help is dead, {party}. Hired help always is. That's why it's cheap, you misers."),
+        (TauntTrigger.AllyLeft, null, "Your friend said no. Even the desperate won't follow you, {party}. Think about that on the stairs.", "Your friend said no. Even the desperate won't follow you, {party}. Think about that on the stairs."),
+        (TauntTrigger.AllyLeft, null, "Walked off, did they? Smart. Smarter than you lot, which is a low fucking bar.", "Walked off, did they? Smart. Smarter than you lot, which is a low bar."),
+        (TauntTrigger.Gamble, null, "Rolling dice in my house, {party}? Go on. The house always wins, and I AM the house.", "Rolling dice in my house, {party}? Go on. The house always wins, and I AM the house."),
+        (TauntTrigger.Gamble, null, "Cloth and luck. The merchant's robbing you blind and you're thanking him. Bloody marvellous.", "Cloth and luck. The merchant's robbing you blind and you're thanking him. Marvellous."),
     };
 
     /// <summary>Every stock line as a plan entry.</summary>

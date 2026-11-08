@@ -137,7 +137,7 @@ public sealed class FloorOutline
 /// <summary>One thing the antagonist says when something happens. Coarse by default; the clean twin is used when cursing is off or a voice provider refuses the words.</summary>
 public sealed class TauntPlan
 {
-    [AiDescription("When it is said: FloorEnter, Capture, Freed, AllFreed, GasThickens, GasLethal, WrongLever, GateShift, VaultOpened, RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle, MemberDowned, PartyWiped, Descend, Reinforcements.")]
+    [AiDescription("When it is said: FloorEnter, Capture, Freed, AllFreed, GasThickens, GasLethal, WrongLever, GateShift, VaultOpened, RitualStart, RitualistDown, WaveBreak, RitualDone, ObjectiveDone, Idle, MemberDowned, PartyWiped, Descend, Reinforcements, Crushed, EliteSlain, ShrineUsed, MimicSprung, AllyDead, AllyLeft, Gamble.")]
     public string Trigger { get; set; } = "";
     [AiDescription("The objective kind the line belongs to (jailbreak, toxic, ritual, shiftingvault) or null for any floor; FloorEnter lines should name one.")]
     [AiNotNull] public string? Objective { get; set; }
