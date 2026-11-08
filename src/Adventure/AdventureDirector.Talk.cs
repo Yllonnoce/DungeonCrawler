@@ -13,6 +13,7 @@ namespace DungeonCrawler.Adventure;
 public partial class AdventureDirector
 {
     private readonly LowHpWatch _lowHp = new();
+    private bool _floorSettled; // true from a floor's build until the next floor change: prop events before that are the save being restored
 
     private static bool Authority => !Net.NetSession.IsClient;
     private static FloorObjectiveKind Kind => Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;
@@ -26,9 +27,10 @@ public partial class AdventureDirector
         bus.PerfectBlock += i => { if (Authority) Bark(Member(i), BarkTrigger.Parried); }; // a perfect block shares the parry bank (the spec lists no PerfectBlock bark)
         bus.MimicSprung += at => { if (!Authority) return; Bark(Nearest(at, 12f), BarkTrigger.Mimic); SetRunFlag("seen_mimic"); Taunt(Objectives.TauntTrigger.MimicSprung, Kind); };
         bus.SecretFound += _ => { if (Authority) Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.SecretFound); };
+        bus.FloorChanged += (_, _) => _floorSettled = false; // a floor's saved state is re-applied through the same prop events: not the party's doing
         bus.PropChanged += (r, what) =>
         {
-            if (!Authority || what != "opened") return;
+            if (!Authority || !_floorSettled || what != "opened") return;
             if (r.StartsWith(Net.NetRefs.SecretKind + ":")) EventBus.Instance.RaiseSecretFound(_currentFloor); // until fortune's plan raises it from the wall itself
             else if (r.StartsWith(Net.NetRefs.DoorKind + ":")) Bump(BanterRules.DoorsCounter);
         };
@@ -39,15 +41,15 @@ public partial class AdventureDirector
         bus.BoonTaken += _ => { if (Authority) SetRunFlag("took_boon"); };
         bus.CurseTaken += _ => { if (Authority) SetRunFlag("took_curse"); };
         bus.Gambled += (i, win) => { if (!Authority) return; Bark(Member(i), win ? BarkTrigger.GambleWin : BarkTrigger.GambleDud); SetRunFlag("gambled"); Taunt(Objectives.TauntTrigger.Gamble, Kind); };
-        bus.MemberDamaged += (i, _) => { if (Authority && Member(i) is { } m && _lowHp.Note(i, m.Hp, m.Stats[Characters.Stat.MaxHp], _currentFloor)) EventBus.Instance.RaiseLowHp(i); };
-        bus.LowHp += i => { if (Authority) Bark(Member(i), BarkTrigger.LowHp); };
+        bus.MemberDamaged += (i, _) => { if (Authority && Member(i) is { } m && _lowHp.Due(i, m.Hp, m.Stats[Characters.Stat.MaxHp], _currentFloor)) EventBus.Instance.RaiseLowHp(i); };
+        bus.LowHp += i => { if (Authority && Member(i) is { } m && Bark(m, BarkTrigger.LowHp)) _lowHp.Note(i, m.Hp, m.Stats[Characters.Stat.MaxHp], _currentFloor); }; // noted once said: a line held back by a gap comes at the next hit
         bus.NpcEvent += (id, k) =>
         {
             if (!Authority || !KillBarks.IsFighter(id)) return;
             if (k == NpcEventKind.Died) Taunt(Objectives.TauntTrigger.AllyDead, Kind, arg: FindNpc(id)?.NpcName ?? id);
             else if (k == NpcEventKind.Refused) Taunt(Objectives.TauntTrigger.AllyLeft, Kind, arg: FindNpc(id)?.NpcName ?? id);
         };
-        bus.FloorBuilt += (_, _, _) => _lowHp.Reset();
+        bus.FloorBuilt += (_, _, _) => { _lowHp.Reset(); _floorSettled = true; };
         bus.PartyWiped += () => { if (Authority) SetRunFlag("wiped_once"); };
         bus.SafeRoomChanged += inside => { _safeRoomSince = inside ? Game.Instance.PlaySeconds : -1; _safeRoomBantered = false; };
         bus.Cheer += OnCheer;
@@ -107,6 +109,7 @@ public partial class AdventureDirector
     public bool StartBanter(string? id = null)
     {
         if (!Authority || !Game.Instance.InGame || Main.Instance?.Party is not { } party || !party.HasBodies) return false;
+        if (_banter is { Done: false }) return false; // one exchange at a time: a travel tick never cuts a safe-room or tavern one short
         var campaign = Game.Instance.Adventure.Campaign;
         var bank = BanterBank.Stock.Concat(campaign?.Banter ?? new List<BanterPlan>()).ToList();
         var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();

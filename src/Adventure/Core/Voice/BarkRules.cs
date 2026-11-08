@@ -30,7 +30,11 @@ public sealed class LowHpWatch
 {
     private readonly HashSet<(int Member, int Floor)> _noted = new();
 
-    /// <summary>True the first time a living member is under <see cref="BarkRules.LowHpFraction"/> on this floor.</summary>
+    /// <summary>True while a living member is under <see cref="BarkRules.LowHpFraction"/> and has not yet been noted on this floor; asking consumes nothing (the line may be held back by a gap and come at the next hit).</summary>
+    public bool Due(int member, float hp, float maxHp, int floor)
+        => hp > 0 && maxHp > 0 && hp / maxHp < BarkRules.LowHpFraction && !_noted.Contains((member, floor));
+
+    /// <summary>True the first time a living member is under <see cref="BarkRules.LowHpFraction"/> on this floor; marks them noted.</summary>
     public bool Note(int member, float hp, float maxHp, int floor)
     {
         if (hp <= 0 || maxHp <= 0 || hp / maxHp >= BarkRules.LowHpFraction) return false;

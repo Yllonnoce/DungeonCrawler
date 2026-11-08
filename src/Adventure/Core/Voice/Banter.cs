@@ -52,7 +52,7 @@ public static class BanterPicker
     public static List<BanterPlan> Eligible(IEnumerable<BanterPlan> bank, IReadOnlyCollection<string> living, int floor, int tier, IReadOnlyCollection<string> flags, IReadOnlyDictionary<string, int> said, IReadOnlyDictionary<string, int> counts)
         => bank.Where(p => p.Lines.Count >= BanterRules.MinLines && p.Lines.Count <= BanterRules.MaxLines
                 && p.Lines.All(l => living.Contains(l.Member))
-                && p.MinFloor <= floor
+                && p.MinFloor <= Math.Max(1, floor) // the tavern is floor 0: the floor-1 stock plays there
                 && (p.Tier == null || p.Tier == tier)
                 && FlagRules.Allowed(p.RequiresFlag, null, flags)
                 && (p.Counter == null || p.MinCount <= counts.GetValueOrDefault(p.Counter, 0))

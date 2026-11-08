@@ -466,7 +466,7 @@ public partial class AdventureDirector : Node
         bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
         bus.MemberDance += i => { var members = Main.Instance?.Party.Members; if (members != null && i >= 0 && i < members.Length) Bark(members[i], BarkTrigger.Dance); };
         bus.NpcKill += FighterBark;
-        bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * 0.15f) Bark(m, BarkTrigger.Hurt); };
+        bus.MemberDamaged += (i, amount) => { var m = Member(i); if (m != null && amount >= m.Stats[Characters.Stat.MaxHp] * Voice.BarkRules.HurtFraction && !_lowHp.Due(i, m.Hp, m.Stats[Characters.Stat.MaxHp], _currentFloor)) Bark(m, BarkTrigger.Hurt); }; // a hit that leaves them badly hurt is LowHp's to remark on
         bus.ItemPickedUp += _ => Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.Loot);
         bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
         bus.LeadChanged += i => Bark(Member(i), BarkTrigger.Possess);
