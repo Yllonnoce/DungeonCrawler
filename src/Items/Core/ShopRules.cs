@@ -42,6 +42,8 @@ public sealed class ShopStock
 {
     public List<ItemInstance> Items { get; } = new();
     public int UniqueIndex { get; init; } = -1;
+    /// <summary>Where the hidden stall's wares start in <see cref="Items"/> (fortune); -1 when the floor has no stall. The regular wares are [0, HiddenFrom).</summary>
+    public int HiddenFrom { get; init; } = -1;
 }
 
 /// <summary>Engine-free shop rules: which floors carry a unique weapon, of what kind, and the seeded stock per floor.</summary>
@@ -70,7 +72,11 @@ public static class ShopRules
 
     public static int StockSeed(ulong gameSeed, int floor) => unchecked((int)Core.Rng.Mix(gameSeed ^ ((ulong)floor * 0x5106_5106UL) ^ 0x5A0BUL));
 
-    public static ShopStock Roll(ItemCatalog cat, ulong gameSeed, int floor)
+    /// <summary>The hidden stall's wares: this many Rare pieces of gear after the regular stock (fortune).</summary>
+    public const int HiddenStallCount = Adventure.Fortune.SecretRoomRules.HiddenStallCount;
+
+    /// <param name="hiddenStall">The floor carries a hidden merchant's stall: its Rare gear is appended after the regular wares, from its own seed, so the wares are as they were.</param>
+    public static ShopStock Roll(ItemCatalog cat, ulong gameSeed, int floor, bool hiddenStall = false)
     {
         var rng = new Random(StockSeed(gameSeed, floor));
         var level = floor + 2;
@@ -110,7 +116,21 @@ public static class ShopRules
             items.Add(LootRoller.MakeLegendary(cat, leg, level, rng));
         }
 
-        var stock = new ShopStock { UniqueIndex = uniqueIndex };
+        var hiddenFrom = -1;
+        if (hiddenStall)
+        {
+            hiddenFrom = items.Count;
+            var stallRng = new Random(StockSeed(gameSeed, floor) ^ 0x41DD);
+            var kinds = new[] { SlotKind.Weapon, SlotKind.Body, SlotKind.Offhand, SlotKind.Ring, SlotKind.Amulet };
+            for (var i = 0; i < HiddenStallCount; i++)
+            {
+                var kind = kinds[i % kinds.Length];
+                var c = cat.Bases.Values.Where(b => b.Kind == kind && b.ItemLevelMin <= level).OrderBy(b => b.Id).ToList();
+                items.Add(LootRoller.Generate(cat, c[stallRng.Next(c.Count)], Rarity.Rare, level, stallRng));
+            }
+        }
+
+        var stock = new ShopStock { UniqueIndex = uniqueIndex, HiddenFrom = hiddenFrom };
         stock.Items.AddRange(items);
         return stock;
     }

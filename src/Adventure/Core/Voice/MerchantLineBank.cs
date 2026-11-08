@@ -16,6 +16,9 @@ public static class MerchantLineBank
         Persona = new Persona { VoiceStyle = "a nervous, over-polite trader counting coins under his breath", DefaultDelivery = "calm", Voice = "Achird" },
     };
 
+    /// <summary>What the hidden stall's keeper says (fortune): greeting, remark and trade line alike, by floor.</summary>
+    public static readonly string[] HiddenGreeting = { "I was never here.", "You did not see a stall. You saw a wall with opinions.", "Everything here fell off a cart that does not exist.", "Quickly. The stones are listening, and they gossip." };
+
     public static MerchantPlan Generic(string campaignTitle, string antagonistName)
     {
         var plan = new MerchantPlan { Briefing = Briefing(campaignTitle, antagonistName) };

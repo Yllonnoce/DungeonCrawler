@@ -25,6 +25,7 @@ public partial class ShopScreen : PanelContainer
     private readonly List<ItemSlotControl> _buyback = new();
     private readonly List<ItemSlotControl> _bag = new();
     private TabContainer _tabs = null!;
+    private Label _title = null!;
     private GridContainer _stockGrid = null!;
     private GridContainer _buybackGrid = null!;
     private Label _gold = null!;
@@ -67,9 +68,9 @@ public partial class ShopScreen : PanelContainer
         margin.AddChild(root);
 
         var header = new HBoxContainer();
-        var title = new Label { Text = "The Merchant" };
-        title.AddThemeFontSizeOverride("font_size", 20);
-        header.AddChild(title);
+        _title = new Label { Text = "The Merchant" };
+        _title.AddThemeFontSizeOverride("font_size", 20);
+        header.AddChild(_title);
         var hint = new Label { Text = "   Click an item to buy or sell it, or drag it across.  Esc: leave", Modulate = new Color(0.7f, 0.7f, 0.7f) };
         hint.AddThemeFontSizeOverride("font_size", 12);
         header.AddChild(hint);
@@ -143,11 +144,19 @@ public partial class ShopScreen : PanelContainer
 
     private void OnGoldChanged(int total, int delta) { if (Visible) Refresh(); }
 
-    /// <summary>Shows the merchant's stock for <paramref name="floor"/> beside the bag.</summary>
-    public void Open(int floor, Adventure.Npc? keeper = null)
+    private bool _hidden;
+    /// <summary>The first stock index this screen shows: 0 for the merchant's wares, <see cref="ShopStock.HiddenFrom"/> for the hidden stall.</summary>
+    private int _from;
+    /// <summary>How many stock items this screen shows: the wares before the stall's, or the stall's.</summary>
+    private int SegmentCount(ShopStock stock) => _hidden ? (stock.HiddenFrom >= 0 ? stock.Items.Count - stock.HiddenFrom : 0) : (stock.HiddenFrom >= 0 ? stock.HiddenFrom : stock.Items.Count);
+
+    /// <summary>Shows the merchant's stock for <paramref name="floor"/> beside the bag; <paramref name="hidden"/> shows the hidden stall's segment instead (fortune).</summary>
+    public void Open(int floor, Adventure.Npc? keeper = null, bool hidden = false)
     {
         _floor = floor;
         Keeper = keeper;
+        _hidden = hidden;
+        _title.Text = hidden ? "A stall that is not here" : "The Merchant";
         IsOpening = true;
         try
         {
@@ -179,10 +188,12 @@ public partial class ShopScreen : PanelContainer
     private void BuildStock()
     {
         var stock = _party.ShopStockFor(_floor);
-        if (_stock.Count == stock.Items.Count) return;
+        _from = _hidden && stock.HiddenFrom >= 0 ? stock.HiddenFrom : 0;
+        var count = SegmentCount(stock);
+        if (_stock.Count == count) return;
         foreach (var c in _stock) c.QueueFree();
         _stock.Clear();
-        for (var i = 0; i < stock.Items.Count; i++)
+        for (var i = 0; i < count; i++)
         {
             var cell = new ItemSlotControl { Shop = this, Section = ShopSection.Wares, Ref = SlotRef.Bag(i) };
             _stockGrid.AddChild(cell);
@@ -208,8 +219,8 @@ public partial class ShopScreen : PanelContainer
         var stock = _party.ShopStockFor(_floor);
         for (var i = 0; i < _stock.Count; i++)
         {
-            var item = i < stock.Items.Count ? stock.Items[i] : null;
-            var sold = _party.ShopSoldOnFloor.Contains(i);
+            var item = _from + i < stock.Items.Count ? stock.Items[_from + i] : null;
+            var sold = _party.ShopSoldOnFloor.Contains(_from + i);
             _stock[i].Modulate = sold ? new Color(1f, 1f, 1f, 0.4f) : Colors.White;
             Fill(_stock[i], item, item == null ? "" : $"{Prices.BuyPrice(item)}g", item == null ? "" : sold ? "Sold." : $"Price: {Prices.BuyPrice(item)} gold");
         }
@@ -233,7 +244,7 @@ public partial class ShopScreen : PanelContainer
     {
         switch (from)
         {
-            case ShopSection.Wares: TryBuy(index); break;
+            case ShopSection.Wares: TryBuy(_from + index); break; // cells are the segment's; the stock index is the party's
             case ShopSection.Buyback: _party.ShopBuyback(index); Refresh(); break;
             default: TrySell(index); break;
         }

@@ -71,6 +71,46 @@ public partial class FortuneDirector : Node
         if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new FortuneSync(adv.Boons.ToList(), adv.Curses.ToList()));
     }
 
+    // ---- secrets found -----------------------------------------------------------------------------------
+
+    private readonly HashSet<int> _found = new();
+    private int _foundFloor = int.MinValue;
+    private double _secretTick;
+    private const double SecretTickSeconds = 0.25;
+    /// <summary>Secret indices found on the current floor: rooms entered, alcove walls opened. Saved per floor.</summary>
+    public IReadOnlyCollection<int> FoundSecrets => _found;
+
+    /// <summary>A reload: the floor's found secrets, before FloorBuilt fires (a first visit starts empty).</summary>
+    public void RestoreSecrets(IEnumerable<int> indices)
+    {
+        _found.Clear();
+        foreach (var i in indices) _found.Add(i);
+        _foundFloor = Game.Instance.CurrentFloor;
+    }
+
+    public override void _Process(double delta)
+    {
+        if (!Authority || Main.Instance is not { } main || !main.InGame || main.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root) return;
+        _secretTick -= delta;
+        if (_secretTick > 0) return;
+        _secretTick = SecretTickSeconds;
+        var floor = Game.Instance.CurrentFloor;
+        if (_foundFloor != floor) { _found.Clear(); _foundFloor = floor; }
+        if (layout.Secrets.Count == 0) return;
+        var cells = main.Party.Active.Where(a => !a.Downed && a.State.IsAlive).Select(a => DungeonBuilder.WorldToCell(a.GlobalPosition)).ToList();
+        foreach (var s in layout.Secrets)
+        {
+            if (_found.Contains(s.Index)) continue;
+            var room = layout.SecretRooms.FirstOrDefault(r => r.SecretIndex == s.Index);
+            var found = room != null ? cells.Any(c => room.Room.Contains(c) || c == room.Doorway)
+                : root.GetChildren().OfType<SecretWall>().FirstOrDefault(w => w.Index == s.Index)?.IsOpen == true;
+            if (!found) continue;
+            _found.Add(s.Index);
+            EventBus.Instance.Log(room != null ? "A room nobody was meant to find." : "A hollow behind the stones.");
+            EventBus.Instance.RaiseSecretFound(floor);
+        }
+    }
+
     // ---- the hunt ----------------------------------------------------------------------------------------
 
     /// <summary>Play-seconds until which the party is Hunted; the status itself runs the clock.</summary>

@@ -189,6 +189,7 @@ public static class RoomCells
     {
         var level = layout.LevelOf(room.Center);
         var list = new List<GridPos>();
+        if (layout.SecretRooms.Any(s => s.Room == room)) return list; // sealed behind its wall (fortune): no plan places anything there
         foreach (var p in room.Cells())
         {
             if (layout[p] != Cell.Floor || layout.LevelOf(p) != level) continue;

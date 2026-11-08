@@ -267,6 +267,7 @@ public partial class DungeonBuilder : Node3D
         PlaceMerchant(layout, _floorRoot, floorIndex);
         PlaceEnemies(contents, floorIndex);
         PlaceProps(layout, contents, _floorRoot, floorIndex, seed);
+        PlaceSecretRooms(layout, _floorRoot, floorIndex);
         PlaceFires(layout, _floorRoot, floorIndex);
         PlaceStructures(layout, _floorRoot, seed);
         PlaceNestMouths(layout, _floorRoot, seed);
@@ -350,31 +351,67 @@ public partial class DungeonBuilder : Node3D
     /// The campaign's merchant, on the safe room's cell farthest from the door and facing it. Every machine builds him
     /// (the floor build is shared); none on a floor without a safe room or in a campaign without a merchant.
     /// </summary>
-    private void PlaceMerchant(FloorLayout layout, Node3D root, int floor)
+    /// <param name="at">The hidden stall's cell (fortune): the merchant stands there instead of the safe room.</param>
+    /// <param name="hidden">The stall that is not here: "I was never here", its own wares after the regular stock, and no safe room needed. A campaign without a merchant cast still gets one ("The Merchant", the generic body).</param>
+    private void PlaceMerchant(FloorLayout layout, Node3D root, int floor, GridPos? at = null, bool hidden = false)
     {
         if (layout.Kind == LayoutKind.Tavern) return; // the tavern has its own: PlaceTavernMerchant
         var campaign = Game.Instance?.Adventure?.Campaign;
-        if (layout.SafeRoom < 0 || campaign?.MerchantCast() is not { } cast)
+        var cast = campaign?.MerchantCast();
+        if (!hidden && (layout.SafeRoom < 0 || cast == null))
         {
             GD.Print($"[DungeonBuilder] floor {floor}: no safe room, no merchant");
             return;
         }
-        var lines = campaign.MerchantOrGeneric().For(floor);
+        var lines = campaign?.MerchantOrGeneric().For(floor);
+        if (hidden)
+        {
+            var hiddenLine = new Line(Adventure.Voice.MerchantLineBank.HiddenGreeting[floor % Adventure.Voice.MerchantLineBank.HiddenGreeting.Length]);
+            lines = new MerchantFloorLines { Floor = floor, Greeting = hiddenLine, Progress = lines?.Progress ?? hiddenLine, Trade = hiddenLine };
+        }
         var npc = _npcScene.Instantiate<Npc>();
-        npc.Id = "merchant";
-        npc.NpcName = cast.Name;
+        npc.Id = hidden ? "merchant_hidden" : "merchant";
+        npc.NpcName = cast?.Name ?? "The Merchant";
         npc.IsMerchant = true;
+        npc.HiddenStall = hidden;
         npc.MerchantLines = lines;
         npc.Floor = floor;
-        npc.ModelPath = BodyPath(Adventure.NpcBodies.ForCast(cast));
+        npc.ModelPath = BodyPath(cast != null ? Adventure.NpcBodies.ForCast(cast) : "npc_merchant");
         // one node, only the dialogue's opening text: the merchant's talk is the shop dialogue, not a script
         npc.Script = new NpcScript { Start = "trade", Nodes = { new DialogueNode { Id = "trade", Line = lines?.Trade ?? new Line("") } } };
-        npc.Name = "Npc_merchant";
+        npc.Name = hidden ? "Npc_merchant_hidden" : "Npc_merchant";
         root.AddChild(npc);
-        var cell = SafeRoomRules.MerchantCell(layout);
+        var cell = at ?? SafeRoomRules.MerchantCell(layout);
         npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
-        npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
-        GD.Print($"[DungeonBuilder] floor {floor}: merchant {cast.Name} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+        if (hidden) { if (layout.SecretRooms.FirstOrDefault(r => r.Merchant == cell) is { } room) npc.FaceToward(Surface(room.Doorway)); }
+        else npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
+        GD.Print($"[DungeonBuilder] floor {floor}: {(hidden ? "hidden stall" : "merchant")} {npc.NpcName} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+    }
+
+    /// <summary>
+    /// Secret rooms (fortune): a plaque in each (the campaign's clue for this floor when it carries one, else a stock epigraph)
+    /// and, on the tier's seeded hidden-stall floor, a merchant who was never here in the first room. The merchant cell is
+    /// decided here because the generator has no game seed; the layout records it so the shop knows the floor has a stall.
+    /// </summary>
+    private void PlaceSecretRooms(FloorLayout layout, Node3D root, int floor)
+    {
+        if (layout.SecretRooms.Count == 0) return;
+        var campaign = Game.Instance?.Adventure?.Campaign;
+        var stallFloor = floor == Adventure.Fortune.SecretRoomRules.HiddenStallFloor(TierRules.TierIndex(floor), GameSeed);
+        for (var i = 0; i < layout.SecretRooms.Count; i++)
+        {
+            var r = layout.SecretRooms[i];
+            var clue = campaign?.Mystery.Clues.FirstOrDefault(c => c.Floor == floor)?.Text;
+            var text = !string.IsNullOrWhiteSpace(clue) ? clue! : Adventure.Fortune.Epigraphs.For(GameSeed, floor, r.SecretIndex);
+            SpawnPlaque(root, r.Plaque, 100 + r.SecretIndex, text);
+            if (stallFloor && i == 0)
+            {
+                var cell = Adventure.Fortune.SecretRoomRules.MerchantCell(r.Room, r.Doorway, r.Chest, r.Plaque);
+                layout.SecretRooms[i] = r = r with { Merchant = cell };
+                PlaceMerchant(layout, root, floor, at: cell, hidden: true);
+            }
+            GD.Print($"[DungeonBuilder] floor {floor}: secret room {r.SecretIndex} at {r.Room.Center} (chest {r.Chest}, plaque {r.Plaque}{(r.Merchant != null ? ", stall " + r.Merchant : "")})");
+        }
     }
 
     /// <summary>

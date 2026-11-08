@@ -787,7 +787,7 @@ public partial class PartyController : Node3D
     public ShopStock ShopStockFor(int floor)
     {
         if (!_shopStock.TryGetValue(floor, out var stock))
-            _shopStock[floor] = stock = ShopRules.Roll(Game.Instance.Catalog, Game.Instance.GameSeed, floor);
+            _shopStock[floor] = stock = ShopRules.Roll(Game.Instance.Catalog, Game.Instance.GameSeed, floor, hiddenStall: Main.Instance?.Builder.Layout is { } l && l.HasHiddenStall);
         return stock;
     }
 
@@ -799,10 +799,15 @@ public partial class PartyController : Node3D
     {
         if (Main.Instance == null) return true;
         var builder = Main.Instance.Builder;
-        if (body != null && !body.Downed && builder?.FloorRoot?.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
+        if (body != null && !body.Downed && builder?.FloorRoot is { } floorRoot)
         {
-            var inRoom = builder!.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
-            if (inRoom || body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return true;
+            if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
+            {
+                var inRoom = builder.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
+                if (inRoom || body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return true;
+            }
+            // the hidden stall (fortune): within reach only, there is no room to be "in"
+            if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant_hidden") is { } stall && body.GlobalPosition.DistanceTo(stall.GlobalPosition) <= MerchantReach) return true;
         }
         EventBus.Instance.Log($"{body?.State.Name ?? "Nobody"} is not at the merchant.");
         return false;

@@ -407,6 +407,7 @@ public partial class AdventureDirector : Node
     private void OpenRecord(int floor)
     {
         _record = Memory.For(floor);
+        _record.SecretsTotal = Main.Instance?.Builder.Layout?.Secrets.Count ?? 0; // the floor card's "Secrets 1/3" (fortune)
         _floorStart = Game.Instance.PlaySeconds;
         if (_pendingRepairs.Remove(floor, out var repairs)) _record.Repairs = repairs;
         var party = Main.Instance?.Party;
@@ -463,6 +464,7 @@ public partial class AdventureDirector : Node
         bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); };
         bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); };
         bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
+        bus.SecretFound += _ => { if (_record != null) _record.SecretsFound++; }; // fortune: the floor card's count
         bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
         bus.MemberDance += i => { var members = Main.Instance?.Party.Members; if (members != null && i >= 0 && i < members.Length) Bark(members[i], BarkTrigger.Dance); };
         bus.NpcKill += FighterBark;
