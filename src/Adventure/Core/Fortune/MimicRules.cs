@@ -14,6 +14,7 @@ public static class MimicRules
     public const int FromFloor = 4, DeepFloor = 12;
     public const float Chance = 0.10f, DeepChance = 0.20f;
     public const int Actor = 7000;
+    /// <summary>The XP factor for a brute that no affix made an elite; a Hulking mimic is an elite and pays <c>EliteRules.XpMultiplier</c> instead.</summary>
     public const float XpFactor = 2f;
     public const string Tell = "the lock is breathing";
     public const string EliteName = "Mimic";

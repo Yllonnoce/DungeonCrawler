@@ -246,7 +246,8 @@ public partial class DebugTools
                 if (brute == null) Fail("no enemy named Mimic after the spring");
                 else
                 {
-                    if (brute.Profile.Xp != baseXp * 2) Fail($"the mimic's XP is {brute.Profile.Xp}, want twice {baseXp}");
+                    if (!brute.IsElite || !brute.Profile.Has(EliteAffix.Hulking)) Fail("the mimic is not a Hulking elite"); // an elite pays EliteRules.XpMultiplier at the award, so the profile keeps the base XP
+                    if (brute.Profile.Xp != baseXp) Fail($"the mimic's profile XP is {brute.Profile.Xp}, want the base {baseXp} (the x2.5 is paid at the award)");
                     if (brute.IsUnaware) Fail("the sprung mimic is not hunting");
                 }
                 if (!chest.Sprung || chest.Opened) Fail("the chest is not sprung-and-unopened");
