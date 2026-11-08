@@ -29,7 +29,7 @@ public static class IdleBarks
             "Thinking? Don't strain yourself. Walk and think at the same time; the rest of us manage.",
             "I've held shield walls shorter than this.",
             "Left foot. Then the right. It's a system. Try it.",
-            "Fine. I'll go alone, and you can explain to the alderman why.",
+            "Fine. I'll go alone, and you can explain to whoever's paying why.",
         },
         ["Sable"] = new[]
         {

@@ -23,7 +23,7 @@ public static class TravelBarks
             "Shield's getting heavy. Nothing to hit with it.",
             "Wake me if something growls.",
             "I've had quieter patrols. Not many.",
-            "At this rate the Verger dies of old age before we find him.",
+            "At this rate whoever's down there dies of old age before we find him.",
             "Rations are low. Patience is lower.",
             "A fight would be nice. A chair would be nicer.",
             "Left, left, left again. I'm starting to suspect a circle.",
@@ -32,7 +32,7 @@ public static class TravelBarks
             "My sword is sulking. It hasn't been out in an hour.",
             "Somebody hum something. Not Sable.",
             "Mind the puddle. Mind the other puddle.",
-            "The alderman said dangerous. The alderman lied, or is bad at walking.",
+            "The man who hired us said dangerous. He lied, or he's bad at walking.",
             "Boots. Stone. Boots. Stone. Gripping stuff.",
         },
         ["Sable"] = new[]

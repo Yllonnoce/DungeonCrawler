@@ -35,7 +35,7 @@ public static class KillBarks
         ["Sable"] = new[]
         {
             "Quiet as a kept promise.",
-            "He had nothing on him. Typical of this parish.",
+            "He had nothing on him. Typical of the neighbourhood.",
             "Don't look. I didn't do it neatly.",
             "Oh, you'll want to check his pockets. I already did.",
             "From behind. Where the gold is.",
@@ -136,7 +136,7 @@ public static class KillBarks
             "Forgive me. Forgive me.",
             "The light held. It held.",
             "I did not want that. I did it.",
-            "He would have understood. The Verger. He would.",
+            "He would have understood. He would. He must.",
             "Stay close. Please. Stay close to the lantern.",
             "Is it... it is. All right. All right.",
             "Saints keep it, whatever it was.",
