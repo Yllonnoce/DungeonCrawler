@@ -117,6 +117,10 @@ public sealed class FloorLayout
     public bool HasHiddenStall => SecretRooms.Any(r => r.Merchant != null);
     /// <summary>The bound chest's spawn index (fortune, floor 5 on): a vault roll and sixty seconds Hunted; -1 when none.</summary>
     public int BoundChest { get; internal set; } = -1;
+    /// <summary>A mine's drifts: the dug cells of each, in order from the gallery out (the last is the dead end).</summary>
+    public List<List<GridPos>> Drifts { get; } = new();
+    /// <summary>What the drifts hold at their ends (fortune).</summary>
+    public List<DriftCache> Caches { get; } = new();
 
     public FloorLayout(int seed, int width, int height)
     {

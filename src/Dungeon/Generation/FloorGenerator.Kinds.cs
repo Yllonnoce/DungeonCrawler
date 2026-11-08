@@ -340,7 +340,7 @@ public static partial class FloorGenerator
                     for (var ox = -1; ox <= 1; ox++)
                     {
                         var q = new GridPos(p.X + ox, p.Y + oy);
-                        if (q == p || path.Contains(q) || q == c) continue;
+                        if (q == p || path.Contains(q) || q == c || (i == 0 && room.Contains(q))) continue; // the mouth sits against the gallery's own edge cells
                         if (layout[q] != Cell.Void || layout.RoomAt(q) != null) { ok = false; break; }
                     }
                 if (!ok) break;
@@ -348,6 +348,7 @@ public static partial class FloorGenerator
             }
             if (!ok || path.Count < 3) continue;
             foreach (var cell in path) layout[cell] = Cell.Floor;
+            layout.Drifts.Add(path);
             dug++;
         }
     }

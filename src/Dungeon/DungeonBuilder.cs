@@ -320,6 +320,8 @@ public partial class DungeonBuilder : Node3D
     /// list), and its death is saved with the floor instead of coming back on every server restart.
     /// </summary>
     public const int ViewerOrcSpawnIndex = 90000;
+    /// <summary>Spawn indices of the mine drifts' ambushers (fortune): CacheAmbusherBase + cache index.</summary>
+    public const int CacheAmbusherBase = 91000;
 
     /// <summary>
     /// A fighter who can be asked to join, standing a few steps from the entrance of their floor: Foehammer on floor 1
@@ -1290,6 +1292,14 @@ public partial class DungeonBuilder : Node3D
             root.AddChild(barrel);
             var jitter = new Vector3(((int)(Rng.Mix((ulong)seed ^ (ulong)(i * 31 + 7)) % 100) - 50) / 100f, 0, ((int)(Rng.Mix((ulong)seed ^ (ulong)(i * 17 + 3)) % 100) - 50) / 100f);
             barrel.GlobalPosition = Surface(layout.BreakableSpawns[i]) + jitter;
+        }
+        // the mine drifts' ambushers (fortune): one of the tier's creatures idle at the dead end, saved by spawn index like the viewer orc
+        var ambushPool = RegularEnemies(floor);
+        for (var i = 0; i < layout.Caches.Count; i++)
+        {
+            if (layout.Caches[i].Kind != CacheKind.Ambusher || ambushPool.Count == 0) continue;
+            var id = ambushPool[(int)(Rng.Mix((ulong)seed ^ (ulong)(i + 77)) % (ulong)ambushPool.Count)];
+            SpawnEnemy(id, Surface(layout.Caches[i].Cell) + Vector3.Up * 0.1f, floor, CacheAmbusherBase + i);
         }
         for (var i = 0; i < layout.TrapSpawns.Count; i++)
         {

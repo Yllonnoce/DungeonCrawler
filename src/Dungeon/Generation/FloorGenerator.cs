@@ -68,6 +68,7 @@ public static partial class FloorGenerator
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
         // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
         PlaceSecretRooms(spec, new Random(seed ^ 0x5EC2), layout);
+        PlaceCaches(spec, new Random(seed ^ 0xCAC4E), layout);
         PlaceBoundChest(spec, new Random(seed ^ 0xB0D), layout);
         PlaceShrine(spec, layout);
 
@@ -148,6 +149,30 @@ public static partial class FloorGenerator
             return true;
         }
         return false;
+    }
+
+    internal const int CacheAmbusherOneIn = 3, CacheLockedChestOneIn = 3;
+
+    /// <summary>Mine drifts end in something (fortune): one in three an ambusher waiting, else a locked chest one in three (the floor's keys serve) or a breakable crate. A drift whose end is taken holds nothing.</summary>
+    internal static void PlaceCaches(FloorSpec spec, Random rng, FloorLayout layout)
+    {
+        foreach (var drift in layout.Drifts)
+        {
+            var cell = drift[^1];
+            if (layout.TrapSpawns.Contains(cell) || layout.ChestSpawns.Contains(cell) || layout.BreakableSpawns.Contains(cell) || layout.EnemySpawns.Contains(cell) || layout.IsReserved(cell) || layout.IsWater(cell)) continue;
+            if (rng.Next(CacheAmbusherOneIn) == 0) { layout.Caches.Add(new DriftCache(cell, CacheKind.Ambusher)); continue; }
+            if (rng.Next(CacheLockedChestOneIn) == 0)
+            {
+                layout.LockedChests.Add(layout.ChestSpawns.Count);
+                layout.ChestSpawns.Add(cell);
+                layout.Caches.Add(new DriftCache(cell, CacheKind.LockedChest));
+            }
+            else
+            {
+                layout.BreakableSpawns.Add(cell);
+                layout.Caches.Add(new DriftCache(cell, CacheKind.Crate));
+            }
+        }
     }
 
     /// <summary>One ordinary chest per floor from <see cref="Adventure.Fortune.FortuneRules.BoundFromFloor"/> is bound; never one in the boss arena.</summary>
