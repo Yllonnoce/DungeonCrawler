@@ -48,6 +48,7 @@ public partial class MainMenu : Control
         _daily = AddButton("Daily Descent", () => Main.Instance.StartDaily(DailyRules.Today()));
         AddButton("Load Game", () => { _buttons.Visible = false; _slots.Show(SlotList.Mode.Load); });
         AddButton("Join Server", () => { _buttons.Visible = false; _join.Open(); EventBus.Instance.PlaySfx("ui_open"); });
+        AddButton("Records", () => { OpenRecords(); EventBus.Instance.PlaySfx("ui_open"); });
         AddButton("Settings", () => { _buttons.Visible = false; _settings.Visible = true; EventBus.Instance.PlaySfx("ui_open"); });
         AddButton("Quit", () => GetTree().Quit());
         RefreshSubtitle();
@@ -59,6 +60,10 @@ public partial class MainMenu : Control
         _join = new JoinScreen { Visible = false };
         _join.Cancelled += () => { _join.Visible = false; _buttons.Visible = true; };
         v.AddChild(_join);
+
+        _records = new RecordsScreen { Visible = false };
+        _records.Closed += () => { _records.Visible = false; _buttons.Visible = true; };
+        v.AddChild(_records);
 
         _slots = new SlotList { Visible = false };
         _slots.SlotChosen += slot => { if (!Main.Instance.LoadGame(slot)) _status.Text = "Could not load that slot."; };
@@ -96,8 +101,10 @@ public partial class MainMenu : Control
 
     public void ShowStatus(string text) => _status.Text = text;
 
-    /// <summary>The Records page (run-structure, Task 11 fills it): for now the buttons stay and the status names it.</summary>
-    public void OpenRecords() => _status.Text = "";
+    private RecordsScreen _records = null!;
+    public RecordsScreen Records => _records;
+    /// <summary>The Records page (run-structure): refreshed from the profile and shown in place of the buttons.</summary>
+    public void OpenRecords() { _buttons.Visible = false; _slots.Visible = false; _settings.Visible = false; _join.Visible = false; _records.Refresh(); _records.Visible = true; }
 
     /// <summary>Debug: jump straight to the settings panel.</summary>
     public void OpenSettings() { _buttons.Visible = false; _settings.Visible = true; }
@@ -109,6 +116,7 @@ public partial class MainMenu : Control
         _slots.Visible = false;
         _settings.Visible = false;
         _join.Visible = false;
+        _records.Visible = false;
         _status.Text = "";
     }
 }
