@@ -48,6 +48,8 @@ public enum TriggerKind
     NoGuard,
     /// <summary>Arrows Shatter a Frosted target on any hit.</summary>
     ArrowShatter,
+    /// <summary>On a kill: restore Magnitude stamina (fortune's Hungry Edge).</summary>
+    KillStamina,
 }
 
 /// <summary>Changes a skill (or a legendary) makes to one ability the character knows; <see cref="AbilityId"/> may list several, comma-separated.</summary>
