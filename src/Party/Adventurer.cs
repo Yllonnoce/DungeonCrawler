@@ -58,6 +58,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     /// <summary>Holding block. Only a driven body (local or remote) can guard.</summary>
     public bool Guarding { get; private set; }
     private double _holdStart = -1;
+    /// <summary>This body's dodge, parry and guard windows (engine-free); the server feeds a remote body's from its pose flags.</summary>
+    public DefenseState Defense { get; } = new();
+    public bool Dodging => Defense.Dodging;
+    public bool Parrying => Defense.Parrying;
+    /// <summary>A flow's stand-in for the keyboard: when set, the local body reads this instead of the keys.</summary>
+    public InputIntent? DebugIntent { get; set; }
+    /// <summary>A flow's stand-in for a companion's dodge roll (0 always dodges a telegraph, 1 never).</summary>
+    public float? ForceDodgeRoll { get; set; }
+    public int DodgesMade { get; private set; }
+    private Vector3 _dodgeDir;
+    private bool _lowHpSaid;
     public bool Downed => !State.IsAlive;
     public Stance Stance { get; set; } = Stance.Defensive;
     public Enemy? Target { get; private set; }
@@ -176,7 +187,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_model != null) { _body.Visible = false; _head.Visible = false; }
         RefreshHeldWeapon();
         SetControl(Control);
+        EventBus.Instance.FloorChanged += OnFloorChangedForDefense;
     }
+
+    public override void _ExitTree() => EventBus.Instance.FloorChanged -= OnFloorChangedForDefense;
+
+    private void OnFloorChangedForDefense(int floor, int delta) => _lowHpSaid = false;
 
     /// <summary>Switch who drives this body. Parked bodies leave the world (no collision, invisible, no physics).</summary>
     public void SetControl(ControlKind control)
@@ -337,18 +353,30 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (GlobalPosition.Y < FellOutY) { FellOut(); return; }
 
         Vector3 target;
-        if (Downed) { target = Vector3.Zero; Guarding = false; }
+        if (Downed) { target = Vector3.Zero; Guarding = false; Defense.Update(dt, false); }
         else if (IsLocal)
         {
             var input = Intent;
             _forwardHeld = input.Live && input.Move.Y < -0.5f ? _forwardHeld + dt : 0f;
             AutoRunning = _forwardHeld >= AutoRunSeconds;
             SetCrouch(input.Crouch);
-            Guarding = input.Guard && State.Class.CanBlock;
+            Guarding = input.Guard && Party.CanGuard(State);
+            Defense.Update(dt, Guarding);
             var sprint = !Crouching && (input.Sprint || AutoRunning);
             var wish = (Transform.Basis * new Vector3(input.Move.X, 0, input.Move.Y)).Normalized();
-            var speed = WalkSpeed * State.Stats[Stat.MoveSpeed] * (sprint ? SprintMultiplier : 1f) * (Guarding ? 0.6f : 1f) * (Crouching ? CrouchSpeedMultiplier : 1f) * (InWater ? Enemies.Enemy.WaterSlow : 1f);
-            target = wish * speed;
+            if (input.DodgePressed && Defense.TryDodge(State.Stamina)) StartDodge(wish == Vector3.Zero ? Transform.Basis.Z : wish);
+            if (input.ParryPressed && !Party.CanGuard(State) && Defense.TryParry(State.Stamina, Party.ParryWindowBonus(State)))
+            {
+                if (!Net.NetSession.IsClient) State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.ParryStamina);
+                _fpWeapon.PlayParry();
+                EventBus.Instance.RaiseMemberChanged(Index);
+            }
+            if (Dodging) target = _dodgeDir * DefenseRules.DodgeSpeed; // the burst: sprint, crouch and guard ignored
+            else
+            {
+                var speed = WalkSpeed * State.Stats[Stat.MoveSpeed] * (sprint ? SprintMultiplier : 1f) * (Guarding ? 0.6f : 1f) * (Crouching ? CrouchSpeedMultiplier : 1f) * (InWater ? Enemies.Enemy.WaterSlow : 1f);
+                target = wish * speed;
+            }
             if (input.JumpPressed && IsOnFloor() && !Crouching)
             {
                 velocity.Y = JumpVelocity;
@@ -359,7 +387,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         {
             SetCrouch(false);
             Guarding = false;
-            target = _dance.Active && !FightOn ? Vector3.Zero : CompanionVelocity(dt); // a companion stands for its dance unless the fight is still on
+            Defense.Update(dt, false);
+            target = Dodging ? _dodgeDir * DefenseRules.DodgeSpeed : _dance.Active && !FightOn ? Vector3.Zero : CompanionVelocity(dt); // a companion stands for its dance unless the fight is still on
         }
 
         velocity.X = Mathf.MoveToward(velocity.X, target.X, Acceleration * dt);
@@ -459,7 +488,19 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Camera.Rotation = new Vector3(_pitch, 0, 0);
         Velocity = pose.Velocity;
         SetCrouch(pose.Crouch);
-        Guarding = pose.Guard && State.Class.CanBlock;
+        Guarding = pose.Guard && Party.CanGuard(State);
+        var (dodgeStarted, parryStarted) = Defense.ApplyRemote(pose.Dodge, pose.Parry, dt);
+        Defense.UpdateGuard(dt, Guarding);
+        if (dodgeStarted)
+        {
+            if (State.Stamina >= DefenseRules.DodgeStamina) { State.Stamina -= DefenseRules.DodgeStamina; DodgesMade++; EventBus.Instance.RaiseMemberChanged(Index); }
+            else Defense.CancelDodge(); // the server refuses a start it cannot pay for
+        }
+        if (parryStarted)
+        {
+            if (!Party.CanGuard(State) && State.Stamina >= DefenseRules.ParryStamina) { State.Stamina -= DefenseRules.ParryStamina; EventBus.Instance.RaiseMemberChanged(Index); }
+            else Defense.CancelParry();
+        }
         var wasInWater = InWater;
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
         if (InWater) Wade(dt, !wasInWater);
@@ -513,6 +554,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         EventBus.Instance.Log($"{State.Name} slips into a crack in the dark and claws back out.");
         Teleport(safe + Vector3.Up * 0.5f);
         var dmg = MathF.Round(State.Stats[Stat.MaxHp] * 0.1f);
+        EventBus.Instance.RaiseMemberFell(Index);
         if (!Downed && dmg > 0) ReceiveAttack(Trap.TrapStats, new AttackProfile { MinDamage = dmg, MaxDamage = dmg }, "The fall");
     }
 
@@ -521,6 +563,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         var dmg = MathF.Round((drop - 2.5f) * 3f * TierRules.DamageScale(Game.Instance.CurrentFloor));
         EventBus.Instance.PlaySfx("fall");
         EventBus.Instance.Log(drop >= 3.5f ? $"{State.Name} drops into darkness!" : $"{State.Name} stumbles down a drop.");
+        EventBus.Instance.RaiseMemberFell(Index);
         if (dmg > 0) ReceiveAttack(Trap.TrapStats, new AttackProfile { MinDamage = dmg, MaxDamage = dmg }, "The fall");
         if (Main.Instance.Builder.FloorRoot is { } root)
             foreach (var e in root.GetChildren().OfType<Enemy>())
@@ -852,15 +895,25 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _meleeCast.TargetPosition = new Vector3(0, 0, -Mathf.Max(1.0f, m.WeaponProfile.Range));
         _meleeCast.ForceShapecastUpdate();
         var hitSomething = false;
+        var perfectSaid = false;
         for (var i = 0; i < _meleeCast.GetCollisionCount(); i++)
         {
             if (_meleeCast.GetCollider(i) is not ICombatTarget target || !target.IsAlive) continue;
             hitSomething = true;
-            var ctx = new HitContext { Heavy = heavy, HeavyMultiplier = heavyMultiplier * (perfect ? 1.25f : 1f), SneakAttack = target.IsUnaware, SneakMultiplier = m.Class.SneakAttackMultiplier };
+            var ctx = new HitContext { Heavy = heavy, HeavyMultiplier = heavyMultiplier * (perfect ? 1.25f : 1f), PerfectBlow = perfect, SneakAttack = target.IsUnaware, SneakMultiplier = m.Class.SneakAttackMultiplier * Party.SneakBonus(m, target) };
             var result = target.ReceiveAttack(m.Stats, attack, ctx, Party.Rng, m.Name);
             Party.LogResult(m.Name, target.DisplayName, result, heavy, perfect);
             Party.OnHitLanded(m, target, result);
-            if (target is Enemy e) { e.NoteThreat(this, result.Amount + 5f); if (IsLocal) Party.LeadTarget = e; }
+            if (target is Enemy e)
+            {
+                e.NoteThreat(this, result.Amount + 5f);
+                if (IsLocal) Party.LeadTarget = e;
+                if (result.Hit && (heavy || perfect)) e.Stagger(e.HitReactSeconds, fromDefense: false);
+                if (result.Hit && heavy && Party.HeavyStunSeconds(m) is > 0f and var heavyStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, heavyStun, 0));
+                if (result.Shatter && Party.ShatterStunSeconds(m) is > 0f and var shatterStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, shatterStun, 0));
+                if (result.Hit && perfect && Party.PerfectBlowCleave(m) is > 0f and var cleave) Cleave(e, result.Amount * cleave, attack);
+            }
+            if (perfect && result.Hit && !perfectSaid) { perfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
         }
         if (!hitSomething && IsLocal) EventBus.Instance.Log($"{m.Name} swings at nothing.");
     }
@@ -892,16 +945,64 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (!any && IsLocal) EventBus.Instance.Log("Nothing is close enough.");
     }
 
-    /// <summary>An attack lands on this character. Only a driven body can be guarding.</summary>
+    /// <summary>A perfect blow with a cleaving item: every other living enemy within 2.5 m takes <paramref name="amount"/>.</summary>
+    private void Cleave(Enemy struck, float amount, AttackProfile attack)
+    {
+        if (amount <= 0f || Main.Instance.Builder.FloorRoot is not { } root) return;
+        var splash = attack with { MinDamage = amount, MaxDamage = amount, OnHit = Array.Empty<StatusApplication>() };
+        foreach (var other in root.GetChildren().OfType<Enemy>().ToArray())
+        {
+            if (other == struck || !other.IsAlive || other.GlobalPosition.DistanceTo(struck.GlobalPosition) > 2.5f) continue;
+            var r = other.ReceiveAttack(State.Stats, splash, new HitContext { DefenderStunned = true }, Party.Rng, State.Name);
+            if (r.Hit) EventBus.Instance.Log($"{State.Name}'s blow carries into {other.DisplayName} for {r.Amount:0}.");
+        }
+    }
+
+    /// <summary>The dodge burst: 0.25 s at <see cref="DefenseRules.DodgeSpeed"/> along <paramref name="dir"/>, untouchable by a creature's strikes and bolts.</summary>
+    public void StartDodge(Vector3 dir)
+    {
+        dir.Y = 0f;
+        _dodgeDir = dir.LengthSquared() > 1e-6f ? dir.Normalized() : Transform.Basis.Z;
+        DodgesMade++;
+        if (!Net.NetSession.IsClient) State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.DodgeStamina); // a client's server pays from the pose flag
+        Audio.AudioManager.Instance?.Play("footstep", -4f);
+        EventBus.Instance.RaiseMemberChanged(Index);
+    }
+
+    /// <summary>An attack lands on this character. Only a driven body can be guarding; a hazard (<paramref name="attacker"/> null) is never dodged, parried or blocked.</summary>
     public void ReceiveAttack(Stats attackerStats, AttackProfile attack, string attackerName, ICombatTarget? attacker = null)
     {
         if (Downed) return;
         var m = State;
-        var blocking = Guarding && m.Class.CanBlock && m.Stamina >= PartyController.BlockStaminaCost;
+        var outcome = Defense.Judge(attack.Kind, attacker != null, Party.CanGuard(m), Guarding, m.Stamina);
+        switch (outcome)
+        {
+            case DefenseOutcome.Dodged:
+                EventBus.Instance.Log($"{m.Name} dodges {attackerName}.");
+                EventBus.Instance.PlaySfx("miss");
+                return;
+            case DefenseOutcome.Parried:
+                EventBus.Instance.Log($"{m.Name} parries {attackerName}!");
+                EventBus.Instance.PlaySfx("block");
+                EventBus.Instance.RaiseParried(Index);
+                StaggerAttacker(attacker);
+                Riposte(attacker);
+                return;
+            case DefenseOutcome.PerfectBlock:
+                EventBus.Instance.Log($"{m.Name} perfectly blocks {attackerName}!");
+                EventBus.Instance.PlaySfx("block");
+                EventBus.Instance.RaisePerfectBlock(Index);
+                StaggerAttacker(attacker);
+                SecondWind();
+                Riposte(attacker);
+                return;
+        }
+        var blocking = outcome == DefenseOutcome.Blocked;
         var ctx = new HitContext { DefenderBlocking = blocking, DefenderStunned = m.IsStunned };
         var r = HitResolver.Resolve(attackerStats, m.Stats, m.Effects, attack, ctx, Party.Rng);
         if (!r.Hit) { EventBus.Instance.Log($"{attackerName} misses {m.Name}."); EventBus.Instance.PlaySfx("miss"); return; }
         if (r.Blocked) m.Stamina = Math.Max(0, m.Stamina - PartyController.BlockStaminaCost);
+        if (Party.StaggerImmune(m) && r.Applied.Any(s => s.Kind == StatusKind.Stun)) m.Effects.Remove(StatusKind.Stun); // an item that will not let this one be stunned
         m.TakeDamage(r.Amount);
         if (r.IgniteBurst > 0f) IgniteAround(attackerStats, r.IgniteBurst);
         EventBus.Instance.RaiseMemberDamaged(Index, r.Amount);
@@ -918,23 +1019,46 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         EventBus.Instance.Log(text + (m.IsAlive ? "." : $". {m.Name} falls!"));
 
         if (!m.IsAlive) { OnDowned(); return; }
-        if (r.Blocked && Party.Trigger(m, TriggerKind.SecondWind) is > 0 and var wind) m.Stamina = Math.Min(m.Stats[Stat.MaxStamina], m.Stamina + wind);
+        NoteLowHp();
+        if (r.Blocked) SecondWind();
         if (attacker is { IsAlive: true })
         {
-            if (r.Blocked && Party.Trigger(m, TriggerKind.Riposte) is > 0 and var riposte)
-            {
-                var w = m.WeaponProfile;
-                var counter = w.ToAttack() with { MinDamage = w.MinDamage * riposte, MaxDamage = w.MaxDamage * riposte };
-                var cr = attacker.ReceiveAttack(m.Stats, counter, new HitContext { DefenderStunned = true }, Party.Rng, m.Name);
-                if (cr.Hit) EventBus.Instance.Log($"{m.Name} ripostes for {cr.Amount:0}.");
-                Party.OnHitLanded(m, attacker, cr);
-            }
+            if (r.Blocked) Riposte(attacker);
             if (Party.Trigger(m, TriggerKind.Thorns) is > 0 and var thorns)
             {
                 var tr = attacker.ReceiveAttack(m.Stats, new AttackProfile { MinDamage = thorns, MaxDamage = thorns }, new HitContext { DefenderStunned = true }, Party.Rng, $"{m.Name}'s thorns");
                 if (tr.Hit) EventBus.Instance.Log($"{attackerName} is torn by thorns for {tr.Amount:0}.");
             }
         }
+    }
+
+    /// <summary>A parry or a perfect block staggers the creature that swung.</summary>
+    private static void StaggerAttacker(ICombatTarget? a) { if (a is Enemy e) e.Stagger(DefenseRules.StaggerSeconds, fromDefense: true); }
+
+    /// <summary>Second Wind: a block (ordinary or perfect) gives back stamina.</summary>
+    private void SecondWind()
+    {
+        var m = State;
+        if (Party.Trigger(m, TriggerKind.SecondWind) is > 0 and var wind) { m.Stamina = Math.Min(m.Stats[Stat.MaxStamina], m.Stamina + wind); EventBus.Instance.RaiseMemberChanged(Index); }
+    }
+
+    /// <summary>Riposte: a block, perfect block or parry answers with a fraction of a weapon blow.</summary>
+    private void Riposte(ICombatTarget? attacker)
+    {
+        var m = State;
+        if (attacker is not { IsAlive: true } || Party.Trigger(m, TriggerKind.Riposte) is not (> 0 and var riposte)) return;
+        var w = m.WeaponProfile;
+        var counter = w.ToAttack() with { MinDamage = w.MinDamage * riposte, MaxDamage = w.MaxDamage * riposte };
+        var cr = attacker.ReceiveAttack(m.Stats, counter, new HitContext { DefenderStunned = true }, Party.Rng, m.Name);
+        if (cr.Hit) EventBus.Instance.Log($"{m.Name} ripostes for {cr.Amount:0}.");
+        Party.OnHitLanded(m, attacker, cr);
+    }
+
+    /// <summary>Below a quarter of max HP: the bus hears it once per floor (the writing plan's barks).</summary>
+    private void NoteLowHp()
+    {
+        var m = State;
+        if (m.IsAlive && m.Hp < m.Stats[Stat.MaxHp] * 0.25f && !_lowHpSaid) { _lowHpSaid = true; EventBus.Instance.RaiseLowHp(Index); }
     }
 
     /// <summary>Ignite on a member: the Burn that landed on this poisoned body bursts into the party members within reach (no attacker, so it is neither dodged nor parried).</summary>
@@ -949,6 +1073,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void ApplyTrap(TrapKind kind, int floor)
     {
+        EventBus.Instance.RaiseTrapSprung(Index);
         var attack = TrapRules.Attack(kind, floor);
         if (!TrapRules.HitsWholeParty(kind)) { ReceiveAttack(Trap.TrapStats, attack, $"The {kind.ToString().ToLower()} trap"); return; }
         foreach (var adv in Party.Active)
@@ -984,6 +1109,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         EventBus.Instance.PlaySfx("hit_flesh");
         EventBus.Instance.RaiseMemberChanged(Index);
         EventBus.Instance.Log($"{sourceName} hits {m.Name} for {amount:0}{(m.IsAlive ? "." : $". {m.Name} falls!")}");
+        NoteLowHp();
         if (!m.IsAlive) OnDowned();
     }
 

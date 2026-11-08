@@ -39,6 +39,15 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public string DisplayName => NameOverride ?? Profile.Name;
     public EnemyKind Kind => Profile.Kind;
     public bool IsBoss => Profile.IsBoss;
+    /// <summary>Reeling from a heavy blow, a parry or a perfect block: no swing until it ends.</summary>
+    public bool Staggered => _staggerLeft > 0f;
+    /// <summary>Never staggers (the elites plan sets it for Juggernaut).</summary>
+    public bool StaggerImmune { get; set; }
+    private float _staggerLeft;
+    /// <summary>Seconds left of the current wind-up; -1 when not winding up.</summary>
+    public float WindupLeft { get; private set; } = -1f;
+    /// <summary>How long the hit-react clip plays, which is how long a blow staggers.</summary>
+    public float HitReactSeconds => ClipLength("HitReact") ?? TelegraphRules.DefaultHitReactSeconds;
 
     /// <summary>The grunt set this enemy speaks with: its definition's, or by size and boss flag (resolved in <c>_Ready</c>).</summary>
     public string VoiceSet { get; private set; } = VoiceSets.Medium;
@@ -433,7 +442,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (_dying && State is not DeadState) ChangeState(new DeadState());
 
         if (IsAlive && !State.Unaware) Retarget(dt);
-        if (IsAlive && Effects.IsStunned) MoveToward(GlobalPosition, dt);
+        if (IsAlive && (Effects.IsStunned || _staggerLeft > 0f)) { _staggerLeft -= dt; MoveToward(GlobalPosition, dt); }
         else State.Update(this, dt);
 
         UpdateTint(dt);
@@ -494,6 +503,29 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     /// <summary>Debug: notice the party regardless of range.</summary>
     public void ForceAggro() { if (IsAlive && State.Unaware) ChangeState(new ChaseState()); }
+
+    /// <summary>
+    /// Reel for <paramref name="seconds"/>: the wind-up is lost and the attack cycle starts over afterwards. A boss reels only for a parry or a
+    /// perfect block (<paramref name="fromDefense"/>); a Juggernaut never does.
+    /// </summary>
+    public void Stagger(float seconds, bool fromDefense)
+    {
+        if (!IsAlive || StaggerImmune) return;
+        if (IsBoss && !fromDefense) return;
+        _staggerLeft = Math.Max(_staggerLeft, seconds);
+        PlayAnim("HitReact", force: true);
+        WindupLeft = -1f;
+        if (State is SignatureState) ChangeState(new ChaseState());
+        else if (State is AttackState or ShootState) State.Enter(this); // Enter resets the wind-up timers
+    }
+
+    /// <summary>The length of the first clip the model has for <paramref name="key"/>, or null when it has none.</summary>
+    public float? ClipLength(string key)
+    {
+        if (_anim == null) return null;
+        var clip = (Clips.TryGetValue(key, out var options) ? options : new[] { key }).FirstOrDefault(c => _anim.HasAnimation(c));
+        return clip == null ? null : (float)_anim.GetAnimation(clip).Length;
+    }
 
     // ---- perception --------------------------------------------------------------------------
 

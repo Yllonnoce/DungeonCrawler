@@ -81,7 +81,7 @@ public static class Settings
     public static readonly (string action, string label)[] Rebindable =
     {
         ("move_forward", "Move forward"), ("move_back", "Move back"), ("move_left", "Move left"), ("move_right", "Move right"),
-        ("sprint", "Sprint"), ("jump", "Jump"), ("crouch", "Crouch"), ("interact", "Interact"), ("attack_1", "Member 1 attack"), ("attack_2", "Member 2 attack"),
+        ("sprint", "Sprint"), ("jump", "Jump"), ("crouch", "Crouch"), ("dodge", "Dodge"), ("interact", "Interact"), ("attack_1", "Member 1 attack"), ("attack_2", "Member 2 attack"),
         ("attack_3", "Member 3 attack"), ("attack_4", "Member 4 attack"), ("ability_next", "Cycle ability"), ("focus_next", "Next member"),
         ("swap_rank", "Swap rank"), ("inventory", "Inventory"), ("character", "Character sheet"), ("skills", "Skill tree"),
         ("map", "Map"), ("quest_log", "Quest log"), ("quicksave", "Quicksave"), ("quickload", "Quickload"), ("chat", "Chat (multiplayer)"),

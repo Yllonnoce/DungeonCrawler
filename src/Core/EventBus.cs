@@ -46,6 +46,24 @@ public partial class EventBus : Node
     public event Action<Dungeon.Generation.FloorObjectiveKind, Adventure.Objectives.ObjectiveTrigger, string?>? ObjectiveEvent;
     /// <summary>One of ours hit something (member, result).</summary>
     public event Action<Characters.CharacterState, Combat.DamageResult>? HitLanded;
+    /// <summary>A member's perfect blow landed (the party index).</summary>
+    public event Action<int>? PerfectBlow;
+    /// <summary>A member parried a melee blow.</summary>
+    public event Action<int>? Parried;
+    /// <summary>A member blocked in the first window of the guard: no stamina, no damage, the attacker staggered.</summary>
+    public event Action<int>? PerfectBlock;
+    /// <summary>A member took a fall (a hard landing or a crack in the world).</summary>
+    public event Action<int>? MemberFell;
+    /// <summary>A member set off a trap.</summary>
+    public event Action<int>? TrapSprung;
+    /// <summary>A member fell below a quarter of their HP (once per floor).</summary>
+    public event Action<int>? LowHp;
+    public void RaisePerfectBlow(int member) => PerfectBlow?.Invoke(member);
+    public void RaiseParried(int member) => Parried?.Invoke(member);
+    public void RaisePerfectBlock(int member) => PerfectBlock?.Invoke(member);
+    public void RaiseMemberFell(int member) => MemberFell?.Invoke(member);
+    public void RaiseTrapSprung(int member) => TrapSprung?.Invoke(member);
+    public void RaiseLowHp(int member) => LowHp?.Invoke(member);
     public event Action<int, float>? MemberDamaged;
     public event Action<int>? MemberDowned;
     public event Action? PartyWiped;

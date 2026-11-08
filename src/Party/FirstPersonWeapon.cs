@@ -102,6 +102,19 @@ public partial class FirstPersonWeapon : Node3D
         }
     }
 
+    /// <summary>A parry: a quick outward flick, mirrored from the light swing, 0.25 s in all.</summary>
+    public void PlayParry()
+    {
+        if (_model == null) return;
+        _tween?.Kill();
+        _tween = CreateTween();
+        var m = _model;
+        _tween.TweenProperty(m, "rotation_degrees", _restRot + new Vector3(-20, -35, 25), 0.08).SetEase(Tween.EaseType.Out);
+        _tween.TweenProperty(m, "position", _restPos + new Vector3(0.10f, 0.03f, -0.08f), 0.08);
+        _tween.Parallel().TweenProperty(m, "rotation_degrees", _restRot, 0.17).SetEase(Tween.EaseType.In);
+        _tween.TweenProperty(m, "position", _restPos, 0.17).SetEase(Tween.EaseType.In);
+    }
+
     /// <summary>Raise the weapon while guarding.</summary>
     public void SetGuard(bool guarding)
     {

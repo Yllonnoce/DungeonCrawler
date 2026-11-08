@@ -125,6 +125,7 @@ public partial class Projectile : Area3D
         {
             if (body is Adventurer adv)
             {
+                if (adv.Dodging) return; // the bolt is not spent: it flies on through the dodge
                 _spent = true;
                 if (Shooter != null && IsInstanceValid(Shooter)) adv.ReceiveAttack(Shooter.Stats, Attack, Shooter.DisplayName, Shooter);
                 Burst();
@@ -144,7 +145,8 @@ public partial class Projectile : Area3D
         {
             case Enemy { IsAlive: true } enemy:
                 _spent = true;
-                var ctx = new HitContext { SneakAttack = enemy.IsUnaware, SneakMultiplier = Attacker.Class.SneakAttackMultiplier };
+                var shatters = IsArrow && Party.ArrowsShatter(Attacker) && enemy.Effects.Has(StatusKind.Frost); // an arrow that counts as heavy for Shatter only
+                var ctx = new HitContext { SneakAttack = enemy.IsUnaware, SneakMultiplier = Attacker.Class.SneakAttackMultiplier * Party.SneakBonus(Attacker, enemy), Heavy = shatters, HeavyMultiplier = 1f };
                 var result = enemy.ReceiveAttack(Attacker.Stats, Attack, ctx, Party.Rng, Attacker.Name);
                 Party.LogResult(Attacker.Name, enemy.DisplayName, result, heavy: false, perfect: false);
                 Party.OnHitLanded(Attacker, enemy, result);

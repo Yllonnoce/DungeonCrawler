@@ -26,6 +26,8 @@ public sealed record HitContext
     public bool DefenderBlocking { get; init; }
     public float BlockReduction { get; init; } = 0.75f;
     public bool DefenderStunned { get; init; }
+    /// <summary>A melee swing released in the perfect window: the hit reads as a perfect blow.</summary>
+    public bool PerfectBlow { get; init; }
 
     public static HitContext None { get; } = new();
 }

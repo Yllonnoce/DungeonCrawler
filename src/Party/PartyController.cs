@@ -374,7 +374,7 @@ public partial class PartyController : Node3D
     {
         var dt = (float)delta;
         if (Adventurers.Length == 0) return;
-        if (Local is { } local) local.Intent = LocalInput.Read(MouseCaptured, InputLocked, local.ForcedMoveInput);
+        if (Local is { } local) local.Intent = local.DebugIntent ?? LocalInput.Read(MouseCaptured, InputLocked, local.ForcedMoveInput);
         if (HasBodies)
         {
             GlobalPosition = Anchor.GlobalPosition;

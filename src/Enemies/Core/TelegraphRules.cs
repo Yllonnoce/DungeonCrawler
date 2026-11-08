@@ -5,4 +5,5 @@ public static class TelegraphRules
 {
     /// <summary>A wind-up or recovery scaled by the attacker's attack-speed factor; the floor keeps a frozen giant from winding up forever.</summary>
     public static float Scaled(float seconds, float attackSpeed) => seconds / Math.Max(0.2f, attackSpeed);
+    public const float DefaultHitReactSeconds = 0.6f;
 }

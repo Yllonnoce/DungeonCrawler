@@ -45,10 +45,11 @@ public sealed class DefenseState
         return true;
     }
 
-    public bool TryParry(float stamina)
+    /// <param name="windowBonus">Seconds an item adds to the window.</param>
+    public bool TryParry(float stamina, float windowBonus = 0f)
     {
         if (!CanParry(stamina)) return false;
-        ParryLeft = DefenseRules.ParrySeconds;
+        ParryLeft = DefenseRules.ParrySeconds + Math.Max(0f, windowBonus);
         ParryCooldownLeft = DefenseRules.ParryCooldown;
         return true;
     }
