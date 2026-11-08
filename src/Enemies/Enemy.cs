@@ -752,6 +752,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         SinceHurt = 0f;
         EventBus.Instance.RaiseEnemyHurt(this, result.Amount, result.Crit);
         if (attack.Type == DamageType.Physical && attack.Kind == AttackKind.Melee && result.Amount > 0) Bleed(); // a blow the shield takes whole draws no blood
+        if (result.IgniteBurst > 0f) IgniteAround(attackerStats, result.IgniteBurst, rng);
         if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
         if (Hp <= 0) _dying = true;
         else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx(HurtCue); }
@@ -762,6 +763,20 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             ChangeState(new FleeState());
         }
         return result;
+    }
+
+    /// <summary>Ignite: the Burn that just landed on this poisoned body bursts into every other living enemy within <see cref="CombatRules.IgniteRadius"/>.</summary>
+    private void IgniteAround(Stats attackerStats, float burst, Random rng)
+    {
+        EventBus.Instance.Log($"{DisplayName} ignites!");
+        HitFx.SpellBurst(GetParent(), GlobalPosition + Vector3.Up * 0.9f, new Color("#ff8a20"));
+        var fire = new AttackProfile { MinDamage = burst, MaxDamage = burst, Type = DamageType.Fire, Kind = AttackKind.Spell };
+        foreach (var other in GetTree().GetNodesInGroup("enemies").OfType<Enemy>().ToArray())
+        {
+            if (other == this || !other.IsAlive || !IsInstanceValid(other)) continue;
+            if (other.GlobalPosition.DistanceTo(GlobalPosition) > CombatRules.IgniteRadius) continue;
+            other.ReceiveAttack(attackerStats, fire, new HitContext { DefenderStunned = true }, rng, "the ignition");
+        }
     }
 
     /// <summary>Blood from a melee blow, thrown toward the nearest adventurer (the enemy is not told who struck it).</summary>

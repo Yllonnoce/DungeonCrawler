@@ -903,6 +903,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (!r.Hit) { EventBus.Instance.Log($"{attackerName} misses {m.Name}."); EventBus.Instance.PlaySfx("miss"); return; }
         if (r.Blocked) m.Stamina = Math.Max(0, m.Stamina - PartyController.BlockStaminaCost);
         m.TakeDamage(r.Amount);
+        if (r.IgniteBurst > 0f) IgniteAround(attackerStats, r.IgniteBurst);
         EventBus.Instance.RaiseMemberDamaged(Index, r.Amount);
         _flash = 0.25f;
         _dance.Cancel();
@@ -934,6 +935,16 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 if (tr.Hit) EventBus.Instance.Log($"{attackerName} is torn by thorns for {tr.Amount:0}.");
             }
         }
+    }
+
+    /// <summary>Ignite on a member: the Burn that landed on this poisoned body bursts into the party members within reach (no attacker, so it is neither dodged nor parried).</summary>
+    private void IgniteAround(Stats attackerStats, float burst)
+    {
+        EventBus.Instance.Log($"{State.Name} ignites!");
+        Combat.Fx.HitFx.SpellBurst(GetParent(), GlobalPosition + Vector3.Up * 0.9f, new Color("#ff8a20"));
+        var fire = new AttackProfile { MinDamage = burst, MaxDamage = burst, Type = DamageType.Fire, Kind = AttackKind.Spell };
+        foreach (var other in Party.AdventurersWithin(GlobalPosition, CombatRules.IgniteRadius).ToArray())
+            if (other != this) other.ReceiveAttack(attackerStats, fire, "the ignition");
     }
 
     public void ApplyTrap(TrapKind kind, int floor)

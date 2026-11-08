@@ -32,5 +32,9 @@ public sealed record HitContext
 
 public sealed record DamageResult(bool Hit, bool Crit, bool Blocked, bool Sneak, float Amount, DamageType Type, IReadOnlyList<StatusApplication> Applied)
 {
+    /// <summary>A crit or heavy blow on a Frosted target: +50% and the Frost is spent.</summary>
+    public bool Shatter { get; init; }
+    /// <summary>Burn landing on a Poisoned target: fire damage to everything within <see cref="CombatRules.IgniteRadius"/>; 0 when nothing ignited.</summary>
+    public float IgniteBurst { get; init; }
     public static DamageResult Miss(DamageType type) => new(false, false, false, false, 0, type, Array.Empty<StatusApplication>());
 }

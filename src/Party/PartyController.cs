@@ -545,7 +545,7 @@ public partial class PartyController : Node3D
     {
         if (!r.Hit) { EventBus.Instance.Log($"{attacker} misses {target}."); EventBus.Instance.PlaySfx("miss"); return; }
         EventBus.Instance.PlaySfx(r.Type == DamageType.Physical ? (heavy || r.Crit ? "hit_heavy" : "hit_flesh") : "cast_hit");
-        var verb = r.Sneak ? "ambushes" : r.Crit ? "critically hits" : perfect ? "perfectly smashes" : heavy ? "smashes" : "hits";
+        var verb = r.Shatter ? "shatters" : r.Sneak ? "ambushes" : r.Crit ? "critically hits" : perfect ? "perfectly smashes" : heavy ? "smashes" : "hits";
         var text = $"{attacker} {verb} {target} for {r.Amount:0}";
         if (r.Type != DamageType.Physical) text += $" {r.Type.ToString().ToLower()}";
         if (r.Blocked) text += " (blocked)";
