@@ -58,6 +58,10 @@ public sealed class AdventureDto
     public Dictionary<string, int> GagCounts { get; set; } = new();
     /// <summary>Floors below this were built before the lethal hazards existed (an old save): they stay as they were. New runs start at 1.</summary>
     public int HazardsFromFloor { get; set; } = 1;
+    /// <summary>Boon ids the party holds (v11+, fortune): run-long, applied through <c>FortuneRules</c>.</summary>
+    public List<string> Boons { get; set; } = new();
+    /// <summary>Curse ids the party carries (v11+, fortune) until lifted at a shrine.</summary>
+    public List<string> Curses { get; set; } = new();
 }
 
 public sealed class PartyDto
@@ -197,6 +201,18 @@ public sealed class FloorStateDto
     public ObjectiveStateDto? Objective { get; set; }
     /// <summary>The lethal hazards' state (v9+): phase, time into it, kills, jam.</summary>
     public List<HazardStateDto> Hazards { get; set; } = new();
+    /// <summary>The floor's shrine has been touched (v11+, fortune): it is one use.</summary>
+    public bool ShrineUsed { get; set; }
+    /// <summary>The bound chest was opened and its hunt started: a reload does not hunt twice.</summary>
+    public bool BoundOpened { get; set; }
+    /// <summary>Chest spawn indices whose mimic sprang but has not died yet (the chest still owes its roll).</summary>
+    public List<int> MimicsSprung { get; set; } = new();
+    /// <summary>Secret indices the party has found on this floor (rooms entered, alcoves opened).</summary>
+    public List<int> SecretsFound { get; set; } = new();
+    /// <summary>Lucky Dip slots (0..2) already bought on this floor.</summary>
+    public List<int> LuckyDipBought { get; set; } = new();
+    /// <summary>Chest spawn indices whose lock was jammed by a third failed pick (a key still opens them).</summary>
+    public List<int> JammedChests { get; set; } = new();
 }
 
 /// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>
