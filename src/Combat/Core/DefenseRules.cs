@@ -27,9 +27,10 @@ public sealed class DefenseState
     /// <summary>Seconds the guard has been held; -1 when not guarding.</summary>
     public float GuardHeld { get; private set; } = -1f;
 
+    // Remote flags: the edge opens a window, never the level. A rise the server refused (cooldown, stamina, class) stays consumed until the flag drops.
     private bool _remoteDodgeFlag, _remoteParryFlag;
+    private bool _remoteDodgeLive, _remoteParryLive;     // the current rise opened a window that a held flag may keep open
     private float _remoteDodgeAge, _remoteParryAge;
-
     public bool Dodging => DodgeLeft > 0f;
     public bool Parrying => ParryLeft > 0f;
     public bool InPerfectWindow => GuardHeld >= 0f && GuardHeld <= DefenseRules.PerfectBlockSeconds;
@@ -92,23 +93,35 @@ public sealed class DefenseState
 
     /// <summary>
     /// Server side, for a remote body: mirror the flags the client sent and tick the windows by <paramref name="dt"/>.
-    /// A rising flag opens its window for Seconds + <see cref="DefenseRules.RemoteGraceSeconds"/>; a held flag keeps it open at least the grace,
-    /// never past that total from the rise; a dropped flag lets the window run out. Returns which windows began this call.
+    /// Only a rising flag opens a window, and only when the cooldown is over and <paramref name="stamina"/> covers the cost (a parry also needs
+    /// <paramref name="canParry"/>): the caller charges the stamina when a start is reported, in this same step. A refused rise stays refused until the
+    /// flag drops. An opened window lasts Seconds + <see cref="DefenseRules.RemoteGraceSeconds"/>; a held flag keeps it open at least the grace, never past
+    /// that total from the rise; a dropped flag lets it run out. Returns which windows began this call.
     /// </summary>
-    public (bool dodgeStarted, bool parryStarted) ApplyRemote(bool dodgeFlag, bool parryFlag, float dt)
+    public (bool dodgeStarted, bool parryStarted) ApplyRemote(bool dodgeFlag, bool parryFlag, float dt, float stamina = float.MaxValue, bool canParry = true)
     {
         var dodgeStarted = false;
         var parryStarted = false;
         if (dodgeFlag)
         {
-            if (!_remoteDodgeFlag) { DodgeLeft = DefenseRules.DodgeSeconds + DefenseRules.RemoteGraceSeconds; _remoteDodgeAge = 0f; dodgeStarted = true; }
-            else DodgeLeft = HeldWindow(DodgeLeft, DefenseRules.DodgeSeconds, _remoteDodgeAge);
+            if (!_remoteDodgeFlag)
+            {
+                _remoteDodgeLive = CanDodge(stamina);
+                if (_remoteDodgeLive) { DodgeLeft = DefenseRules.DodgeSeconds + DefenseRules.RemoteGraceSeconds; DodgeCooldownLeft = DefenseRules.DodgeCooldown; _remoteDodgeAge = 0f; dodgeStarted = true; }
+            }
+            else if (_remoteDodgeLive) DodgeLeft = HeldWindow(DodgeLeft, DefenseRules.DodgeSeconds, _remoteDodgeAge);
         }
+        else _remoteDodgeLive = false;
         if (parryFlag)
         {
-            if (!_remoteParryFlag) { ParryLeft = DefenseRules.ParrySeconds + DefenseRules.RemoteGraceSeconds; _remoteParryAge = 0f; parryStarted = true; }
-            else ParryLeft = HeldWindow(ParryLeft, DefenseRules.ParrySeconds, _remoteParryAge);
+            if (!_remoteParryFlag)
+            {
+                _remoteParryLive = canParry && CanParry(stamina);
+                if (_remoteParryLive) { ParryLeft = DefenseRules.ParrySeconds + DefenseRules.RemoteGraceSeconds; ParryCooldownLeft = DefenseRules.ParryCooldown; _remoteParryAge = 0f; parryStarted = true; }
+            }
+            else if (_remoteParryLive) ParryLeft = HeldWindow(ParryLeft, DefenseRules.ParrySeconds, _remoteParryAge);
         }
+        else _remoteParryLive = false;
         _remoteDodgeFlag = dodgeFlag;
         _remoteParryFlag = parryFlag;
         TickWindows(dt);
@@ -121,7 +134,7 @@ public sealed class DefenseState
         return budget <= 0f ? left : Math.Max(left, Math.Min(DefenseRules.RemoteGraceSeconds, budget));
     }
 
-    /// <summary>The server refusing a start it cannot pay for.</summary>
-    public void CancelDodge() => DodgeLeft = 0f;
-    public void CancelParry() => ParryLeft = 0f;
+    /// <summary>Close a window the server will not honour; a held remote flag cannot reopen it.</summary>
+    public void CancelDodge() { DodgeLeft = 0f; _remoteDodgeLive = false; }
+    public void CancelParry() { ParryLeft = 0f; _remoteParryLive = false; }
 }

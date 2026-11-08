@@ -489,18 +489,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Velocity = pose.Velocity;
         SetCrouch(pose.Crouch);
         Guarding = pose.Guard && Party.CanGuard(State);
-        var (dodgeStarted, parryStarted) = Defense.ApplyRemote(pose.Dodge, pose.Parry, dt);
+        // the window opens only when the server can charge for it, in the same step: a start reported here is one already judged payable
+        var (dodgeStarted, parryStarted) = Defense.ApplyRemote(pose.Dodge, pose.Parry, dt, State.Stamina, canParry: !Party.CanGuard(State));
         Defense.UpdateGuard(dt, Guarding);
-        if (dodgeStarted)
-        {
-            if (State.Stamina >= DefenseRules.DodgeStamina) { State.Stamina -= DefenseRules.DodgeStamina; DodgesMade++; EventBus.Instance.RaiseMemberChanged(Index); }
-            else Defense.CancelDodge(); // the server refuses a start it cannot pay for
-        }
-        if (parryStarted)
-        {
-            if (!Party.CanGuard(State) && State.Stamina >= DefenseRules.ParryStamina) { State.Stamina -= DefenseRules.ParryStamina; EventBus.Instance.RaiseMemberChanged(Index); }
-            else Defense.CancelParry();
-        }
+        if (dodgeStarted) { State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.DodgeStamina); DodgesMade++; EventBus.Instance.RaiseMemberChanged(Index); }
+        if (parryStarted) { State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.ParryStamina); EventBus.Instance.RaiseMemberChanged(Index); }
         var wasInWater = InWater;
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
         if (InWater) Wade(dt, !wasInWater);
