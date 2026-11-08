@@ -126,6 +126,31 @@ You control one of the four heroes at a time; the other three follow, fight and 
 Stairs ask whether to go down when you stand on the landing at the top of them. Keep an eye on the floor: hidden
 plates, spike beds and presses kill, and a companion who falls to one can be pulled clear by the others.
 
+## Ways to play
+
+- **Story** is the voiced twenty-floor campaign, the same every time, saved as you go.
+- **New Descent** rolls a fresh dungeon from a new seed: different floors, different elites, different shrines. Before you go
+  down, the factor in the tavern offers the **contract**: ten clauses, each worth some *heat*. Heat raises the gold and
+  experience you find by a tenth per point; the clauses are the price (prices up by forty per cent, a quarter more creatures,
+  one more elite a floor, no safe rooms, a fifth more of every blow, and the **Death Clause**: a wipe ends the run and leaves
+  a memorial in the save list).
+- **Daily Descent** is one seed and two clauses for everyone, the same for the whole day, scored once. Your best shows on
+  the button.
+- **Records** keeps your deepest floor, clears, dailies, elites slain, the last twenty runs and twenty-four **deeds**. Deeds
+  unlock clauses, legendaries, new banter and new lines from the hidden merchant.
+
+Every descent prints a floor card when you take the stairs: who killed what, who was hurt most, what nearly ended you. A wipe
+without the Death Clause costs a fifth of your gold and scars the party until the next floor; the death card says what did it
+and who was last standing. Beating the final boss prints a recap that names the boss by name, and the victory is saved.
+
+Down there, from floor 2 on, one creature a floor is an **elite** with a name and a tell: a swift one, a hulking one, one
+shelled in a ward, one that heals on your blood, one that bursts, one that splits, one you cannot hit from range or at all
+from outside its dome. Bosses roar at half health and change the room. Every floor from the second has a **shrine** that
+offers three boons for a price (your blood, your gold, or a curse); a party that holds two of a house is offered its crown.
+Some chests breathe. One chest a floor from floor 5 is bound: open it and something hunts you for a minute. Half the secret
+alcoves open into rooms with a plaque, a chest worth the search and, once a tier, a merchant who was never there. The
+merchant's third tab sells three cloth-wrapped bundles a floor, sight unseen.
+
 ## For developers
 
 The engineering manual is [docs/development.md](docs/development.md): building from source, the test suite, exports,
