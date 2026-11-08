@@ -19,6 +19,7 @@ public partial class Projectile : Area3D
     public float Lifetime { get; set; } = 3f;
 
     private bool _spent;
+    private Vector3? _origin; // where the flight began (first physics step)
 
     public Adventurer? Source { get; private set; }
 
@@ -90,7 +91,11 @@ public partial class Projectile : Area3D
         // The area's overlap test never reports the GridMap that the dungeon's walls are built from, and at 40 m/s a bolt
         // can cross a thin body between two steps, so every step is swept with a ray first: whatever it finds is what the
         // bolt touched, at the point it touched it.
-        if (!Cosmetic && Enemy.ShroudBlocks(from, to, Shooter)) // a Shrouded elite's dome: the bolt fizzles at its edge (a client copy stops where the server says)
+        // A Shrouded elite's dome: a bolt loosed outside it fizzles at its edge; one loosed inside flies free. Judged on the whole flight from where
+        // the bolt began, not on this step alone: the dome walks with its elite, and a step can end a hair outside and the next begin inside.
+        // (A client's cosmetic copy stops where the server's ProjectileEnded says, as today.)
+        _origin ??= from;
+        if (!Cosmetic && Enemy.ShroudBlocks(_origin.Value, to, Shooter))
         {
             _spent = true;
             Fx.HitFx.SpellBurst(GetParent(), to, Color);

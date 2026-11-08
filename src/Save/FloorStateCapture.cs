@@ -23,6 +23,10 @@ public static class FloorStateCapture
         {
             switch (child)
             {
+                case Enemy { IsBoss: true, SpawnIndex: -2, IsAlive: true } boss:
+                    // the boss's wounds come back with the floor: a boss loaded below half is already in its second phase
+                    dto.Enemies.Add(new EnemyDto { SpawnIndex = -2, Hp = boss.Hp, X = boss.GlobalPosition.X, Y = boss.GlobalPosition.Y, Z = boss.GlobalPosition.Z, EmbeddedArrows = boss.EmbeddedArrows });
+                    break;
                 case Enemy e when e.SpawnIndex >= 0:
                     seenEnemies.Add(e.SpawnIndex);
                     if (e.IsElite) dto.EliteSpawns.Add(e.SpawnIndex);

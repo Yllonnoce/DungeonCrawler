@@ -292,6 +292,7 @@ godot --headless --path . -- --test-ambush          # floor 2: the first corrido
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
 godot --headless --path . -- --test-safe-room --no-gathering   # door, rest, gathering (plan B) then the merchant: stock, buy, refuse, sell, reload, shop screen
+godot --headless --path . -- --test-elites-and-bosses   # floor 8 seed 8: the two rolled elites by name, the same after a save/load, Warded absorbs and regrows, Volatile bursts (even under the Press), Thorned reflects, the Shrouded dome stops a bolt and an outside nova, x2.5 XP and a table.elite drop, a kiting archer, a shielding shaman, a bomber; floor 5: the Crypt Lord roars at half, speeds up, alternates Slam and Summon, the braziers go out, phase survives a load; floor 23 no boss, floor 25 the First Herald; prints [elites] RESULT
 godot --headless --path . -- --test-items-and-builds   # loot curve 8 vs 16, stack prices, buyback, a keystone's price, the duo node from two branches, a legendary trigger, Burn spread, Gerald, save round trip; prints [items] RESULT
 godot --headless --path . -- --test-tavern   # floor 0: one room, no enemies, the merchant, empty purse, "The Tavern", the tavern tune; an open inventory holds his greeting back, closed he briefs within 4 m; a save mid-briefing comes back on floor 0 unpaid and he briefs again; walked to the deal the purse gets 150; the down landing asks and floor 1 opens with 150 (paid once); prints [tavern] RESULT
 godot --headless --path . -- --test-tavern-skip   # the same opening but the briefing is closed unread: the purse stays empty until the descent stakes it with 150 on floor 1
@@ -683,6 +684,22 @@ narration, a quest's lines or a horde's line lost its role, move the room's iden
 traps and clue) with its contents rather than re-pointing the story. Edit with a .NET-compatible JSON writer (two-space
 indent, `\u0027`-style escapes) so only the edited values change. `could not place: npc ...: waits on flag ...` lines
 are expected (NPCs gated on an earlier floor's choice).
+
+## Elites, boss phases and the endless Heralds
+
+From floor 2 one planned creature per floor is an elite (two from 8, three from 14; `EliteRules.CountFor`, plus whatever *Hostile
+Tenants* and *Marked* add through `DungeonBuilder.ExtraElitesPerFloor`), chosen and rolled in `PlanResolver` from the floor seed and
+the spawn index (`src/Enemies/Core/Elites/EliteRules.cs`, names from `EliteNames`), so peers and reloads agree; the save keeps the
+floor's `EliteSpawns` so a lifted curse never changes who stands there. Twelve affixes (table in the spec) each with a tell
+(`EliteVisuals`); Shrouded's dome is checked in `Projectile` and `Adventurer.Nova` (`ShroudRules`), Thorned and Hexed answer through
+`PartyController.OnHitLanded` → `Enemy.OnStruckBy`. Reward ×2.5 XP, `table.elite`, coins; events `EliteSeen` (once per enemy) and
+`EliteSlain`. The planner may name an elite (`MemberPlan.Elite`/`LonerPlan.Elite`); the validator fills and trims. Bosses: at half
+health a 1.2 s roar (untargetable), then speed ×1.2, the data's `SecondSignature` alternating with the first, and the `ArenaChange`
+(`BossArena`: braziers out, webs, moving embers, gravity well); the boss's HP is saved with the floor, so a boss loaded below half is
+already in phase two. Endless floors 25, 30, … seat "the Nth Herald" (`TierRules.IsEndlessBossFloor`), whose death silences portals on
+its five floors (`PortalRules.BossFloorFor`). Archetype flags on `EnemyDef`: `Kites` (archers back off inside half their range),
+`Support` (`SupportKind` Shield or Regen on a hurt ally within 8 m every 8 s), `Bomber` (`horde_*_bomber`, one in eight of a stream
+from floor 6, 3 m blast ×3, no corpse; never a planned member).
 
 ## Floors are designed, not just rolled
 

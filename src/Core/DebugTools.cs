@@ -2,6 +2,7 @@ using DungeonCrawler.Adventure;
 using DungeonCrawler.Adventure.Ai;
 using DungeonCrawler.Adventure.AiClients;
 using DungeonCrawler.Adventure.Voice;
+using DungeonCrawler.Combat;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
@@ -325,6 +326,7 @@ public partial class DebugTools : Node
             else if (arg == "--no-portals") NoPortals = true;
             else if (arg == "--no-gathering") NoGathering = true;
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg == "--test-elites-and-bosses") { _testElites = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; _startFloor = 8; _floorGiven = true; }
             else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
             else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-combat-feel") { _testCombatFeel = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 75; }
@@ -373,6 +375,7 @@ public partial class DebugTools : Node
             ForcedLethality ??= 1f;
         }
         if (_testCombatFeel) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
+        if (_testElites) { _seed ??= 8; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -746,6 +749,7 @@ public partial class DebugTools : Node
         if (_testKeys && !_testedKeys && _elapsed >= 0.5) { _testedKeys = true; RunKeysTest(); }
         if (_rehashDir != null && !_rehashed && _elapsed >= 0.3 && Main.Instance != null) RunRehashPlans();
         if (_testSafeRoom) RunSafeRoomTest();
+        if (_testElites) RunElitesAndBossesTest();
         if (_testWriting) RunWritingTest();
         if (_testItems) RunItemsAndBuildsTest();
         if (_tremor) RunTremor();
@@ -4981,5 +4985,448 @@ public partial class DebugTools : Node
         var img = GetViewport().GetTexture().GetImage();
         var err = img.SavePng(path);
         GD.Print($"[debug] screenshot {path}: {err}");
+    }
+
+    // ---- --test-elites-and-bosses -----------------------------------------------------------------------
+    // Floor 8, seed 8: the two rolled elites by name, the same two after a save/load with a curse's extras pending, Warded absorbing and regrowing,
+    // Volatile bursting (also under the Press), Thorned paying melee back, Hexed slowing, the Shrouded dome stopping a bolt and an outside nova,
+    // x2.5 XP and a table.elite drop, a kiting archer, a shielding shaman, a bomber; floor 5: the Crypt Lord roaring at half, phase two speed,
+    // Slam and Summon alternating, the braziers out, phase surviving a load; floor 23 no boss; floor 25 the First Herald; floor 27 silent portals.
+    private bool _testElites;
+    private int _elStep;
+    private double _elAt;
+    private readonly List<string> _elFails = new();
+    private readonly List<(int Index, string Name)> _elRoster = new();
+    private readonly HashSet<string> _elStates = new();
+    private readonly List<LootDrop> _elDrops = new();
+    private Enemy? _elEnemy, _elEnemy2;
+    private float _elLeadHp, _elWard;
+    private int _elSlain, _elRoars, _elLevel, _elXp;
+    private bool _elShroudHurt, _elWardLog, _elSpinesLog, _elSubscribed;
+    private Combat.Projectile? _elBolt;
+    private Vector3 _elAxis = Vector3.Right, _elHome;
+    private float _elLeadDamage;
+    private readonly List<Party.Adventurer> _elFrozen = new();
+
+    private void RunElitesAndBossesTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var since = _elapsed - _elAt;
+        void Next() { _elStep++; _elAt = _elapsed; }
+        void Fail(string why) { _elFails.Add(why); GD.Print($"[elites] FAIL: {why}"); }
+        void Thaw() { foreach (var a in _elFrozen.Where(IsInstanceValid)) a.ProcessMode = ProcessModeEnum.Inherit; _elFrozen.Clear(); }
+        void Freeze() { Thaw(); foreach (var a in party.Active.Where(a => a != party.Lead)) { a.ProcessMode = ProcessModeEnum.Disabled; _elFrozen.Add(a); } } // only the test's own blows land
+        void Finish()
+        {
+            Thaw();
+            GD.Print(_elFails.Count == 0 ? "[elites] RESULT ok" : $"[elites] RESULT FAIL ({string.Join("; ", _elFails)})");
+            _elStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        if (_elStep < 99 && since > 30) { Fail($"step {_elStep} stuck for {since:0}s"); Finish(); return; }
+        var lead = party.Lead;
+        float MaxHpOf(Party.Adventurer a) => a.State.Stats[Characters.Stat.MaxHp];
+        void Heal(Party.Adventurer a) { a.State.Hp = MaxHpOf(a); a.State.Effects.Clear(); }
+        Vector3 Along(Vector3 from, float metres) { var at = from + _elAxis * metres; while (metres > 2f && !layout.IsWalkable(DungeonBuilder.WorldToCell(at))) { metres -= 1f; at = from + _elAxis * metres; } return at; }
+        Enemy? Spawn(string id, Vector3 at, EliteRoll? elite = null) { var e = b.SpawnEnemy(id, at, b.CurrentFloor, elite: elite); if (e == null) Fail($"could not spawn {id}"); return e; }
+        DamageResult Hit(Enemy e, float dmg) => e.ReceiveAttack(Trap.TrapStats, new AttackProfile { MinDamage = dmg, MaxDamage = dmg }, new HitContext { DefenderStunned = true }, party.Rng, "the test");
+        int XpGained(Party.Adventurer a) { var gained = a.State.Xp - _elXp; for (var l = _elLevel; l < a.State.Level; l++) gained += Characters.Leveling.XpToNext(l); return gained; }
+        List<Enemy> Elites() => root.GetChildren().OfType<Enemy>().Where(e => e.IsElite && e.SpawnIndex >= 0).OrderBy(e => e.SpawnIndex).ToList();
+        Enemy? Boss() => root.GetChildren().OfType<Enemy>().FirstOrDefault(e => e.IsBoss && e.IsAlive);
+        Stairs? Down() => root.GetNodeOrNull<Stairs>("DownStairs");
+        List<Brazier> Braziers() => root.GetChildren().OfType<Brazier>().Where(x => x.Name.ToString().StartsWith("ArenaBrazier")).ToList();
+        bool Lit(Brazier br) => br.GetChildren().OfType<Fire>().Any(f => f.Visible);
+        if (!_elSubscribed)
+        {
+            _elSubscribed = true;
+            var bus = EventBus.Instance;
+            bus.EnemyHurt += (e, amount, flavor, by) => { if (e == _elEnemy && _elStep is 12 or 13) { _elShroudHurt = true; GD.Print($"[elites] Shrouded was hurt: {amount:0.0} {flavor} by member {by}, {e.State.Name}, {e.GlobalPosition.DistanceTo(Main.Instance!.Party.Lead.GlobalPosition):0.0} m from the lead; bolt alive={_elBolt != null && IsInstanceValid(_elBolt)} at {( _elBolt != null && IsInstanceValid(_elBolt) ? _elBolt.GlobalPosition.DistanceTo(e.GlobalPosition) : -1f):0.0} m from it"); } };
+            bus.EliteSlain += _ => _elSlain++;
+            bus.LootSpawned += d => _elDrops.Add(d);
+            bus.Message += m => { if (m.Contains("ward shatters")) _elWardLog = true; if (m.Contains("spines")) _elSpinesLog = true; if (m.Contains("roars!")) _elRoars++; };
+            bus.MemberDamaged += (i, amount) => { if (Main.Instance?.Party.Lead is { } l && i == l.Index) _elLeadDamage += amount; };
+        }
+        switch (_elStep)
+        {
+            case 0 when _elapsed >= 1.0 && b.CurrentFloor == 8:
+            {
+                var elites = Elites();
+                var seed = Rng.FloorSeed(Game.Instance.GameSeed, 8);
+                GD.Print($"[elites] floor 8 seed {Game.Instance.GameSeed}: {elites.Count} elites: {string.Join("; ", elites.Select(e => $"#{e.SpawnIndex} {e.DisplayName} ({EliteRules.Describe(e.Profile.Affixes)})"))}");
+                if (elites.Count != EliteRules.CountFor(8, 0)) Fail($"floor 8 has {elites.Count} elites, the schedule says {EliteRules.CountFor(8, 0)}");
+                foreach (var e in elites)
+                {
+                    var roll = EliteRules.Roll(seed, 8, e.SpawnIndex, b.EnemyProfile(e.Profile.Id)?.Faction ?? "");
+                    if (e.Profile.EliteName != roll.Name || !e.Profile.Affixes.SequenceEqual(roll.Affixes)) Fail($"#{e.SpawnIndex} is {e.Profile.EliteName}, the roll says {roll.Name}");
+                    _elRoster.Add((e.SpawnIndex, e.DisplayName));
+                }
+                if (Game.Instance.Floors.TryGetValue(8, out var early) && early.EliteSpawns.Count > 0) Fail("the floor state already lists elite spawns before any capture");
+                Next();
+                break;
+            }
+            case 1:
+                main.SaveGame("elites");
+                DungeonBuilder.ExtraElitesPerFloor = 2; // as if Marked had been taken after the save
+                main.LoadGame("elites");
+                Next();
+                break;
+            case 2 when since >= 1.5 && b.CurrentFloor == 8:
+            {
+                DungeonBuilder.ExtraElitesPerFloor = 0;
+                var elites = Elites();
+                var now = elites.Select(e => (e.SpawnIndex, e.DisplayName)).ToList();
+                GD.Print($"[elites] after save/load: {string.Join("; ", now.Select(n => $"#{n.SpawnIndex} {n.DisplayName}"))}");
+                if (!now.SequenceEqual(_elRoster)) Fail("the loaded floor does not seat the same elites at the same spawns");
+                var saved = Game.Instance.Floors.TryGetValue(8, out var st) ? st.EliteSpawns.OrderBy(x => x).ToList() : new List<int>();
+                if (!saved.SequenceEqual(_elRoster.Select(r => r.Index))) Fail($"FloorStateDto.EliteSpawns is [{string.Join(",", saved)}], expected [{string.Join(",", _elRoster.Select(r => r.Index))}]");
+                Next();
+                break;
+            }
+            case 3:
+            {
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor
+                var big = layout.Rooms.Select((r, i) => (r, i)).OrderByDescending(t => t.r.Area).First();
+                _elAxis = big.r.W >= big.r.H ? Vector3.Right : Vector3.Back;
+                var cell = PlanResolver.Anchor(layout, big.i) ?? big.r.Center;
+                _elHome = b.Surface(cell) + Vector3.Up * 0.3f;
+                party.Teleport(_elHome, _elHome + _elAxis);
+                Freeze();
+                Next();
+                break;
+            }
+            case 4 when since >= 0.5:
+                foreach (var a in party.Active) Heal(a);
+                _elEnemy = Spawn("enemy.ghoul", Along(lead.GlobalPosition, 4f), new EliteRoll(new[] { EliteAffix.Warded }, "Test, Warded"));
+                Next();
+                break;
+            case 5 when since >= 0.2:
+            {
+                if (_elEnemy == null) { Next(); break; }
+                var e = _elEnemy;
+                _elWard = e.WardPoints;
+                var expected = Math.Min(e.MaxHp * EliteRules.WardFraction, StatusEffectController.MaxShield);
+                GD.Print($"[elites] Warded: ward {_elWard:0.0} of max HP {e.MaxHp:0} (expected {expected:0.0})");
+                if (_elWard <= 0f || Math.Abs(_elWard - expected) > 0.5f) Fail($"ward is {_elWard:0.0}, expected {expected:0.0}");
+                Hit(e, 5f);
+                GD.Print($"[elites] Warded: after a 5 hit: hp {e.Hp:0}/{e.MaxHp:0}, ward {e.WardPoints:0.0}");
+                if (e.Hp < e.MaxHp) Fail("a 5 hit got through the ward");
+                if (!(e.WardPoints < _elWard && e.WardPoints >= _elWard - 5.5f)) Fail($"the ward took {_elWard - e.WardPoints:0.0} from a 5 hit");
+                var heavy = e.WardPoints + e.MaxHp * 0.4f;
+                Hit(e, heavy);
+                GD.Print($"[elites] Warded: after a {heavy:0} hit: hp {e.Hp:0}/{e.MaxHp:0}, ward {e.WardPoints:0.0}");
+                if (e.WardPoints > 0f) Fail($"a {heavy:0} hit left the ward standing");
+                if (e.Hp >= e.MaxHp || !e.IsAlive) Fail($"a {heavy:0} hit on the ward should wound but not kill");
+                Next();
+                break;
+            }
+            case 6 when since >= 0.3:
+                if (!_elWardLog) Fail("no 'ward shatters' line");
+                Next();
+                break;
+            case 7 when since >= EliteRules.WardRegrowSeconds + 0.5:
+                GD.Print($"[elites] Warded: ward after {since:0.0}s: {_elEnemy?.WardPoints:0.0}");
+                if (_elEnemy == null || _elEnemy.WardPoints <= 0f) Fail("the ward did not regrow");
+                _elEnemy?.Kill();
+                Next();
+                break;
+            case 8 when since >= 0.5:
+                Heal(lead);
+                _elLeadDamage = 0f;
+                _elEnemy = Spawn("enemy.ghoul", Along(lead.GlobalPosition, 1.5f), new EliteRoll(new[] { EliteAffix.Volatile }, "Test, Volatile"));
+                _elEnemy?.Kill();
+                Next();
+                break;
+            case 9 when since >= 0.3:
+                GD.Print($"[elites] Volatile: lead took {_elLeadDamage:0.0}, burn={lead.State.Effects.Has(StatusKind.Burn)}");
+                if (_elLeadDamage <= 0f) Fail("the Volatile burst did not hurt the lead");
+                if (!lead.State.Effects.Has(StatusKind.Burn)) Fail("the Volatile burst did not burn the lead");
+                Heal(lead);
+                _elLeadDamage = 0f;
+                _elEnemy = Spawn("enemy.ghoul", Along(lead.GlobalPosition, 1.5f), new EliteRoll(new[] { EliteAffix.Volatile }, "Test, Volatile"));
+                _elEnemy?.KillByEnvironment("the test press", HazardDamage.Crush);
+                Next();
+                break;
+            case 10 when since >= 0.3:
+                GD.Print($"[elites] Volatile under the press: lead took {_elLeadDamage:0.0}");
+                if (_elLeadDamage <= 0f) Fail("a hazard kill did not detonate the Volatile elite");
+                Next();
+                break;
+            case 11:
+            {
+                Heal(lead);
+                var thorned = Spawn("enemy.ghoul", Along(lead.GlobalPosition, 1.2f), new EliteRoll(new[] { EliteAffix.Thorned }, "Test, Thorned"));
+                if (thorned != null)
+                {
+                    _elLeadDamage = 0f;
+                    var r = thorned.ReceiveAttack(lead.State.Stats, lead.State.WeaponProfile.ToAttack(), new HitContext { DefenderStunned = true }, party.Rng, lead.State.Name);
+                    party.OnHitLanded(lead.State, thorned, r);
+                    GD.Print($"[elites] Thorned: {lead.State.Name} hit for {r.Amount:0.0}, spines paid back {_elLeadDamage:0.0}, spines line={_elSpinesLog}");
+                    if (!r.Hit) Fail("the melee test hit missed");
+                    else if (_elLeadDamage < r.Amount * EliteRules.ThornedFraction * 0.5f) Fail($"spines paid back {_elLeadDamage:0.0} of a {r.Amount:0.0} hit");
+                    if (!_elSpinesLog) Fail("no 'spines' line");
+                    thorned.Kill();
+                }
+                Heal(lead);
+                var hexed = Spawn("enemy.ghoul", Along(lead.GlobalPosition, 1.2f), new EliteRoll(new[] { EliteAffix.Hexed }, "Test, Hexed"));
+                if (hexed != null)
+                {
+                    var r = hexed.ReceiveAttack(lead.State.Stats, lead.State.WeaponProfile.ToAttack(), new HitContext { DefenderStunned = true }, party.Rng, lead.State.Name);
+                    party.OnHitLanded(lead.State, hexed, r);
+                    GD.Print($"[elites] Hexed: hit={r.Hit}, lead slowed={lead.State.Effects.Has(StatusKind.Slow)}");
+                    if (!lead.State.Effects.Has(StatusKind.Slow)) Fail("a melee hit on the Hexed elite did not slow the striker");
+                    hexed.Kill();
+                }
+                Heal(lead);
+                Next();
+                break;
+            }
+            case 12 when since >= 0.5:
+            {
+                var at = Along(lead.GlobalPosition, 8f);
+                if (at.DistanceTo(lead.GlobalPosition) < 6f) { Fail("no room for the dome test"); Next(); break; }
+                _elEnemy = Spawn("enemy.ghoul", at, new EliteRoll(new[] { EliteAffix.Shrouded }, "Test, Shrouded"));
+                _elShroudHurt = false;
+                if (_elEnemy != null)
+                {
+                    var from = lead.GlobalPosition + Vector3.Up * 1.2f;
+                    var dir = (_elEnemy.GlobalPosition + Vector3.Up * 0.9f - from).Normalized();
+                    GD.Print($"[elites] Shrouded: {_elEnemy.DisplayName} [{EliteRules.Describe(_elEnemy.Profile.Affixes)}] at {from.DistanceTo(_elEnemy.GlobalPosition):0.0} m, shrouds registered {Enemy.Shrouds.Count}, a straight bolt blocked={Enemy.ShroudBlocks(from, _elEnemy.GlobalPosition, null)}");
+                    _elBolt = GD.Load<PackedScene>("res://scenes/Props/Projectile.tscn").Instantiate<Combat.Projectile>();
+                    root.AddChild(_elBolt);
+                    _elBolt.GlobalPosition = from + dir * 0.6f;
+                    _elBolt.Setup(party, lead.State, lead.State.WeaponProfile.ToAttack() with { Kind = AttackKind.Ranged }, dir * 20f, true, Colors.White, lead);
+                }
+                Next();
+                break;
+            }
+            case 13 when since >= 1.0:
+            {
+                var freed = _elBolt == null || !IsInstanceValid(_elBolt);
+                GD.Print($"[elites] Shrouded: bolt freed={freed}, shrouded hurt={_elShroudHurt}");
+                if (!freed) { Fail("the arrow is still flying after a second"); _elBolt?.QueueFree(); }
+                if (_elShroudHurt) Fail("an arrow from outside the dome hit the Shrouded elite");
+                if (_elEnemy != null)
+                {
+                    var s = _elEnemy.GlobalPosition;
+                    var inside = s - _elAxis * 2f; var outside = s - _elAxis * 7f;
+                    var sepIn = Enemy.ShroudSeparates(inside, s); var sepOut = Enemy.ShroudSeparates(outside, s);
+                    GD.Print($"[elites] Shrouded: nova from 2 m separated={sepIn}, from 7 m separated={sepOut}");
+                    if (sepIn) Fail("a nova cast inside the dome is blocked");
+                    if (!sepOut) Fail("a nova cast from outside the dome reaches in");
+                    _elEnemy.Kill();
+                }
+                Next();
+                break;
+            }
+            case 14 when since >= 0.5:
+            {
+                party.Teleport(_elHome, _elHome + _elAxis);
+                _elEnemy = Spawn("enemy.ghoul", Along(lead.GlobalPosition, 3f), new EliteRoll(new[] { EliteAffix.Swift }, "Test the Swift"));
+                _elLevel = lead.State.Level; _elXp = lead.State.Xp; _elSlain = 0; _elDrops.Clear();
+                _elEnemy?.Kill();
+                Next();
+                break;
+            }
+            case 15 when since >= 0.5:
+            {
+                if (_elEnemy == null) { Next(); break; }
+                var expected = (int)MathF.Round(_elEnemy.Profile.ScaledXp(8) * EliteRules.XpMultiplier);
+                var gained = XpGained(lead);
+                var items = _elDrops.Where(d => IsInstanceValid(d) && d.Coins == 0).ToList();
+                var coins = _elDrops.Any(d => IsInstanceValid(d) && d.Coins > 0);
+                GD.Print($"[elites] reward: xp +{gained} (expected {expected}), drops [{string.Join(", ", items.Select(d => $"{d.Item} ({d.Item.Rarity})"))}], coins={coins}, EliteSlain={_elSlain}, table.elite loaded={Game.Instance.Catalog.Tables.ContainsKey("table.elite")}");
+                if (gained != expected) Fail($"an elite kill gave {gained} XP, expected {expected}");
+                if (!items.Any(d => d.Item.Rarity != Rarity.Common)) Fail("no non-Common drop from the elite");
+                if (!coins) Fail("no coins from the elite");
+                if (_elSlain != 1) Fail($"EliteSlain fired {_elSlain} times");
+                Next();
+                break;
+            }
+            case 16 when since >= 0.5:
+                _elEnemy = Spawn("enemy.skeleton_archer", Along(lead.GlobalPosition, 2f));
+                _elEnemy?.ForceAggro();
+                _elStates.Clear();
+                Next();
+                break;
+            case 17:
+            {
+                if (_elEnemy == null || !IsInstanceValid(_elEnemy)) { Fail("the archer vanished"); Next(); break; }
+                _elStates.Add(_elEnemy.State.Name);
+                var dist = _elEnemy.GlobalPosition.DistanceTo(lead.GlobalPosition);
+                if (_elStates.Contains("Kite") && dist > 3.5f) { GD.Print($"[elites] kite: archer kited to {dist:0.0} m after {since:0.0}s (states {string.Join(",", _elStates)})"); _elEnemy.Kill(); Next(); }
+                else if (since >= 3.0) { Fail($"the archer never kited (states {string.Join(",", _elStates)}, dist {dist:0.0})"); _elEnemy.Kill(); Next(); }
+                break;
+            }
+            case 18 when since >= 0.5:
+            {
+                var far = Along(lead.GlobalPosition, 14f);
+                _elEnemy = Spawn("enemy.cave_shaman", far);
+                _elEnemy2 = Spawn("enemy.ghoul", far - _elAxis * 3f);
+                if (_elEnemy2 != null) for (var i = 0; i < 12 && _elEnemy2.Hp > _elEnemy2.MaxHp * 0.4f; i++) Hit(_elEnemy2, _elEnemy2.Hp - _elEnemy2.MaxHp * 0.4f + 1f);
+                _elEnemy?.ForceAggro(); _elEnemy2?.ForceAggro();
+                _elStates.Clear();
+                Next();
+                break;
+            }
+            case 19:
+            {
+                if (_elEnemy == null || _elEnemy2 == null || !IsInstanceValid(_elEnemy) || !IsInstanceValid(_elEnemy2)) { Fail("the shaman or its ally vanished"); Next(); break; }
+                _elStates.Add(_elEnemy.State.Name);
+                if (_elEnemy2.Effects.Has(StatusKind.Shield) && _elStates.Contains("Support")) { GD.Print($"[elites] support: the ghoul is shielded after {since:0.0}s (shaman states {string.Join(",", _elStates)})"); _elEnemy.Kill(); _elEnemy2.Kill(); Next(); }
+                else if (since >= 10.0) { Fail($"the shaman never shielded its ally (states {string.Join(",", _elStates)}, ally hp {_elEnemy2.Hp:0}/{_elEnemy2.MaxHp:0})"); _elEnemy.Kill(); _elEnemy2.Kill(); Next(); }
+                break;
+            }
+            case 20 when since >= 0.5:
+                Heal(lead);
+                _elLeadDamage = 0f;
+                _elDrops.Clear();
+                _elEnemy = Spawn("enemy.horde_husk_bomber", Along(lead.GlobalPosition, 3f));
+                _elEnemy?.ForceAggro();
+                Next();
+                break;
+            case 21:
+            {
+                var gone = _elEnemy == null || !IsInstanceValid(_elEnemy);
+                if (gone) { GD.Print($"[elites] bomber: gone after {since:0.0}s, lead took {_elLeadDamage:0.0}, drops {_elDrops.Count}"); if (_elLeadDamage <= 0f) Fail("the bomber's blast did not hurt the lead"); if (_elDrops.Count > 0) Fail("the bomber left loot"); Next(); }
+                else if (since >= 4.0) { Fail($"the bomber never went off (state {_elEnemy!.State.Name}, dist {_elEnemy.GlobalPosition.DistanceTo(lead.GlobalPosition):0.0})"); _elEnemy.QueueFree(); Next(); }
+                break;
+            }
+            case 22:
+                Thaw();
+                Game.Instance.JumpToFloor(5);
+                Next();
+                break;
+            case 23 when since >= 1.5 && b.CurrentFloor == 5:
+            {
+                var boss = Boss();
+                if (boss == null || layout.BossArena is not { } arena) { Fail("no boss on floor 5"); Finish(); return; }
+                var braziers = Braziers();
+                GD.Print($"[elites] boss {boss.DisplayName}: sig {boss.Profile.Signature}/{boss.Profile.SecondSignature}, arena {boss.Profile.ArenaChange}, braziers {braziers.Count} lit {braziers.Count(Lit)}");
+                if (boss.Profile.SecondSignature != Signature.Summon) Fail($"the Crypt Lord's second signature is {boss.Profile.SecondSignature}");
+                if (boss.Profile.ArenaChange != ArenaChange.Darken) Fail($"the Crypt Lord's arena change is {boss.Profile.ArenaChange}");
+                if (braziers.Count != 4 || braziers.Count(Lit) != 4) Fail($"{braziers.Count} arena braziers, {braziers.Count(Lit)} lit");
+                foreach (var e in root.GetChildren().OfType<Enemy>().Where(e => !e.IsBoss)) e.QueueFree();
+                foreach (var a in party.Active) { a.State.Hp = MaxHpOf(a) * 50; } // stand through the fight
+                var spot = b.Surface(arena.Center) + new Vector3(0, 0.3f, -4f);
+                party.Teleport(spot, boss.GlobalPosition);
+                Freeze();
+                for (var i = 0; i < _elFrozen.Count; i++) _elFrozen[i].GlobalPosition = spot + new Vector3(0.9f * (i - 1), 0, -1.2f); // a frozen body stays where it is put: beside the lead, in the boss's reach
+                for (var i = 0; i < 20 && boss.Hp > boss.MaxHp * 0.45f && !boss.Untargetable; i++) Hit(boss, boss.Hp - boss.MaxHp * 0.45f);
+                var r = Hit(boss, 1f);
+                GD.Print($"[elites] boss at {boss.Hp / boss.MaxHp:P0}: state {boss.State.Name}, untargetable={boss.Untargetable}, further hit={r.Hit}");
+                if (boss.State.Name != "Roar") Fail($"the boss is in {boss.State.Name}, not Roar");
+                if (!boss.Untargetable) Fail("the roaring boss can be targeted");
+                if (r.Hit) Fail("a hit landed during the roar");
+                Next();
+                break;
+            }
+            case 24 when since >= 1.5:
+            {
+                var boss = Boss();
+                if (boss == null) { Fail("the boss vanished"); Finish(); return; }
+                var braziers = Braziers();
+                var expectedSpeed = boss.Profile.MoveSpeed * boss.Effects.Multiplier(Characters.Stat.MoveSpeed) * (boss.InWater ? Enemy.WaterSlow : 1f) * BossRules.PhaseTwoSpeed;
+                GD.Print($"[elites] after the roar: phase {boss.Phase}, speed {boss.EffectiveMoveSpeed:0.00} (expected {expectedSpeed:0.00}, base {boss.Profile.MoveSpeed:0.00}), lit braziers {braziers.Count(Lit)}, roars {_elRoars}");
+                if (boss.Phase != 2) Fail("the boss is not in phase two");
+                if (Math.Abs(boss.EffectiveMoveSpeed - expectedSpeed) > boss.Profile.MoveSpeed * 0.05f) Fail($"phase two speed is {boss.EffectiveMoveSpeed:0.00}, expected {expectedSpeed:0.00}");
+                if (braziers.Count(Lit) != 0) Fail("the braziers are still lit in phase two");
+                if (_elRoars != 1) Fail($"{_elRoars} roar lines");
+                _elStates.Clear();
+                boss.ForceSignature();
+                Next();
+                break;
+            }
+            case 25:
+            {
+                var boss = Boss();
+                if (boss == null) { Fail("the boss died in the signature test"); Finish(); return; }
+                _elStates.Add(boss.State.Name);
+                if (boss.State.Name == "Chase" && boss.GlobalPosition.DistanceTo(lead.GlobalPosition) <= 9f) boss.ForceSignature();
+                if ((int)(since * 2) != (int)((since - GetProcessDeltaTime()) * 2) && (int)(since * 2) % 4 == 0)
+                    GD.Print($"[elites] boss watch {since:0.0}s: {boss.State.Name}, {boss.GlobalPosition.DistanceTo(lead.GlobalPosition):0.0} m from the lead, target={boss.HasTarget}, los={boss.HasLineOfSight()}, dist-to-party={boss.DistanceToParty():0.0}");
+                var husks = root.GetChildren().OfType<Enemy>().Count(e => e.Profile.Id == "enemy.horde_husk");
+                if (_elStates.Contains("Signature:Slam") && _elStates.Contains("Signature:Summon") && husks > 0)
+                {
+                    GD.Print($"[elites] signatures after {since:0.0}s: {string.Join(",", _elStates)}; husks summoned {husks}");
+                    foreach (var e in root.GetChildren().OfType<Enemy>().Where(e => !e.IsBoss)) e.QueueFree();
+                    _elRoars = 0;
+                    Thaw();
+                    main.SaveGame("boss");
+                    main.LoadGame("boss");
+                    Next();
+                }
+                else if (since >= 20.0) { Fail($"phase two signatures: {string.Join(",", _elStates)}, husks {husks}"); Finish(); return; }
+                break;
+            }
+            case 26 when since >= 1.5 && b.CurrentFloor == 5:
+            {
+                var boss = Boss();
+                if (boss == null) { Fail("no boss after the load"); Finish(); return; }
+                Freeze();
+                GD.Print($"[elites] loaded boss at {boss.Hp / boss.MaxHp:P0}: phase {boss.Phase}, lit braziers {Braziers().Count(Lit)}, roars since load {_elRoars}");
+                if (boss.Phase != 2) Fail("a boss loaded below half is not in phase two");
+                if (Braziers().Count(Lit) != 0) Fail("the braziers relit on load");
+                if (_elRoars != 0) Fail("the boss roared again on load");
+                boss.Kill();
+                Next();
+                break;
+            }
+            case 27 when since >= 0.5:
+                GD.Print($"[elites] boss dead: stairs locked={Down()?.Locked}, victory={Game.Instance.Victory}");
+                if (Down()?.Locked != false) Fail("the stairs stayed locked after the boss died");
+                if (Game.Instance.Victory) Fail("victory declared on floor 5");
+                Next();
+                break;
+            case 28:
+                Thaw();
+                Game.Instance.JumpToFloor(23);
+                Next();
+                break;
+            case 29 when since >= 1.5 && b.CurrentFloor == 23:
+                GD.Print($"[elites] floor 23: boss={Boss()?.DisplayName ?? "none"}, stairs locked={Down()?.Locked}");
+                if (Boss() != null) Fail("floor 23 has a boss");
+                if (Down()?.Locked != false) Fail("floor 23's stairs are locked");
+                Game.Instance.JumpToFloor(25);
+                Next();
+                break;
+            case 30 when since >= 1.5 && b.CurrentFloor == 25:
+            {
+                var boss = Boss();
+                GD.Print($"[elites] floor 25: boss={boss?.DisplayName ?? "none"} sig {boss?.Profile.Signature}/{boss?.Profile.SecondSignature} arena {boss?.Profile.ArenaChange}, stairs locked={Down()?.Locked}, BossFloorFor(25)={PortalRules.BossFloorFor(25)}");
+                if (boss == null) { Fail("floor 25 has no boss"); Finish(); return; }
+                if (boss.DisplayName != "the First Herald") Fail($"floor 25's boss is {boss.DisplayName}");
+                if (boss.Profile.SecondSignature == Signature.None) Fail("the Herald has no second signature");
+                if (boss.Profile.ArenaChange != ArenaChange.None) Fail("the Herald changes the arena");
+                if (Down()?.Locked != true) Fail("floor 25's stairs are not sealed");
+                if (PortalRules.BossFloorFor(25) != 25) Fail("floor 25 is not its own boss floor for the portals");
+                if (Game.Instance.Floors.TryGetValue(25, out var st) && st.BossDefeated) Fail("floor 25 counts its boss dead already");
+                boss.Kill();
+                Next();
+                break;
+            }
+            case 31 when since >= 0.5:
+                GD.Print($"[elites] Herald dead: stairs locked={Down()?.Locked}, victory={Game.Instance.Victory}, defeated this floor={main.BossDefeatedThisFloor}");
+                if (!main.BossDefeatedThisFloor) Fail("the Herald's death was not counted");
+                if (Down()?.Locked != false) Fail("the stairs stayed locked after the Herald died");
+                if (Game.Instance.Victory) Fail("victory declared on floor 25");
+                Game.Instance.JumpToFloor(27);
+                Next();
+                break;
+            case 32 when since >= 1.5 && b.CurrentFloor == 27:
+            {
+                var defeated = Game.Instance.Floors.TryGetValue(25, out var st) && st.BossDefeated;
+                var portals = root.GetChildren().OfType<PortalSpawner>().FirstOrDefault();
+                string why = "no spawner";
+                if (portals != null) { NoPortals = false; portals.RefreshSilence(); why = portals.SilencedWhy; NoPortals = true; portals.RefreshSilence(); }
+                GD.Print($"[elites] floor 27: floor 25 BossDefeated={defeated}, portals silenced because \"{why}\"");
+                if (!defeated) Fail("floor 25's state does not record the Herald's death");
+                if (!why.Contains("floor 25")) Fail($"portals on 27 are not silenced by the Herald of 25 (\"{why}\")");
+                Finish();
+                break;
+            }
+        }
     }
 }
