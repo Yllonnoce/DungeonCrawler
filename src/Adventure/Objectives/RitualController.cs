@@ -69,7 +69,7 @@ public partial class RitualController : ObjectiveController
             _levers.Add(builder.SpawnLever(root, objective.BreachLevers[i].Lever, FloorContents.ExtraIndexBase + i, toggle: false, label: "breach lever"));
         // who comes through: the tier's swarm first, the floor's own creatures for the rest
         var tier = TierRules.TierIndex(Floor);
-        foreach (var p in builder.Roster.Values.Where(p => p.Faction == FloorMenu.HordeFaction && !p.IsBoss && (p.TierIndex < 0 || p.TierIndex == tier)).OrderBy(p => p.Id)) _fodder.Add(p.Id);
+        foreach (var p in builder.Roster.Values.Where(p => Enemies.BomberRules.IsPlainFodder(p, tier)).OrderBy(p => p.Id)) _fodder.Add(p.Id); // bombers are a horde stream's own share, never the rite's
         foreach (var id in (builder.Contents?.Enemies ?? new List<EnemyPlacement>()).Select(e => e.EnemyId).Distinct())
             if (builder.Roster.TryGetValue(id, out var p) && !p.IsBoss && p.Faction != FloorMenu.HordeFaction) _regulars.Add(id);
         if (_fodder.Count == 0 && _regulars.Count == 0) _regulars.Add(LegacyPopulator.FallbackEnemy);

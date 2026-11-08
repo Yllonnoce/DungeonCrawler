@@ -45,7 +45,7 @@ public sealed class ChaseState : AiState
         else
         {
             if (enemy.Profile.Support && enemy.SupportReady && enemy.SupportAlly() is { } ally) { enemy.ChangeState(new SupportState(ally)); return; }
-            if (enemy.Profile.Kites && KiteRules.ShouldKite(dist, enemy.Profile.PreferredRange)) { enemy.ChangeState(new KiteState()); return; }
+            if (enemy.Profile.Kites && KiteRules.MayKite(dist, enemy.Profile.PreferredRange, enemy.KiteCooldownLeft)) { enemy.ChangeState(new KiteState()); return; }
             if (dist <= enemy.Profile.PreferredRange && enemy.HasLineOfSight()) { enemy.ChangeState(new ShootState()); return; }
         }
 
@@ -117,7 +117,7 @@ public sealed class ShootState : AiState
             if (enemy.Order is Collectives.OrderKind.Regroup or Collectives.OrderKind.RunAlarm && GroupOrders.Apply(enemy, allowChase: false)) return;
             var dist = enemy.DistanceToParty();
             if (enemy.Profile.Support && enemy.SupportReady && enemy.SupportAlly() is { } ally) { enemy.ChangeState(new SupportState(ally)); return; }
-            if (enemy.Profile.Kites && KiteRules.ShouldKite(dist, enemy.Profile.PreferredRange)) { enemy.ChangeState(new KiteState()); return; }
+            if (enemy.Profile.Kites && KiteRules.MayKite(dist, enemy.Profile.PreferredRange, enemy.KiteCooldownLeft)) { enemy.ChangeState(new KiteState()); return; }
             if (dist <= enemy.Profile.PreferredRange * 1.3f && enemy.HasLineOfSight()) { _timer = 0f; _fired = false; enemy.BeginWindup(enemy.WindupSeconds); }
             else enemy.ChangeState(new ChaseState());
         }
@@ -205,7 +205,11 @@ public sealed class KiteState : AiState
         enemy.FleeStep(dt);
         enemy.FaceToward(enemy.TargetPosition);
         if (enemy.DistanceToParty() >= enemy.Profile.PreferredRange && enemy.HasLineOfSight()) { enemy.ChangeState(new ShootState()); return; }
-        if (_timer >= KiteRules.MaxSeconds) enemy.ChangeState(new ChaseState());
+        if (_timer >= KiteRules.MaxSeconds) // cornered or outrun: stand and fight for a while instead of backing off again next frame
+        {
+            enemy.NoteKiteGaveUp();
+            enemy.ChangeState(enemy.HasLineOfSight() ? new ShootState() : new ChaseState());
+        }
     }
 }
 

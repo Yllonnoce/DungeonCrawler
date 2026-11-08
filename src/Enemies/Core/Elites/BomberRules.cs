@@ -12,6 +12,9 @@ public static class BomberRules
     /// <summary>The ordinal in a stream that comes out a bomber (the eighth, sixteenth, …) from <see cref="FromFloor"/>.</summary>
     public static bool IsBomberSlot(int floor, int ordinal) => floor >= FromFloor && ordinal % OneIn == OneIn - 1;
 
+    /// <summary>A stream's ordinary fodder for a tier: the tier's horde creatures that are not bombers (bombers come only through <see cref="IsBomberSlot"/>).</summary>
+    public static bool IsPlainFodder(EnemyProfile p, int tierIndex) => p.Faction == "horde" && !p.IsBoss && !p.Bomber && (p.TierIndex < 0 || p.TierIndex == tierIndex);
+
     /// <summary>The tier's bomber on the roster, or null when it has none.</summary>
     public static string? BomberFor(IReadOnlyDictionary<string, EnemyProfile> roster, int tierIndex)
         => roster.Where(kv => kv.Value.Bomber && kv.Value.Faction == "horde" && kv.Value.TierIndex == tierIndex).Select(kv => kv.Key).OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
@@ -27,5 +30,8 @@ public static class SupportRules
 public static class KiteRules
 {
     public const float RetreatFraction = 0.5f, MaxSeconds = 2.5f;
+    /// <summary>After a retreat that ran out of time (a wall, a faster party) the shooter stands and fights this long before trying again.</summary>
+    public const float CooldownSeconds = 4f;
     public static bool ShouldKite(float dist, float preferred) => dist < preferred * RetreatFraction;
+    public static bool MayKite(float dist, float preferred, float cooldownLeft) => cooldownLeft <= 0f && ShouldKite(dist, preferred);
 }

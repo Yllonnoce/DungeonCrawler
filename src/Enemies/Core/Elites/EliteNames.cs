@@ -41,6 +41,14 @@ public static class EliteNames
         return Title(honorific == null ? baseName : honorific + " " + baseName, affixes);
     }
 
+    /// <summary>The name with its affixes spelled out, added only when the name does not already carry them (a planner's bare name on the HUD).</summary>
+    public static string Titled(string name, IReadOnlyList<EliteAffix> affixes)
+    {
+        if (affixes.Count == 0) return name;
+        var tail = affixes.Count == 1 ? $" the {affixes[0]}" : EliteRules.Describe(affixes);
+        return name.EndsWith(tail, StringComparison.Ordinal) ? name : Title(name, affixes);
+    }
+
     /// <summary>"Grukk the Swift" for one affix, "Mother Hask, Warded and Vampiric" for more.</summary>
     public static string Title(string name, IReadOnlyList<EliteAffix> affixes)
         => affixes.Count == 0 ? name : affixes.Count == 1 ? $"{name} the {affixes[0]}" : $"{name}, {EliteRules.Describe(affixes)}";

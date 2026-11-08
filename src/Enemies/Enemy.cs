@@ -484,6 +484,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             _signatureTimer -= dt;
             if (_vampFlash > 0f) _vampFlash -= dt;
             if (_supportTimer > 0f) _supportTimer -= dt;
+            if (_kiteCooldown > 0f) _kiteCooldown -= dt;
             if (SlowAuraRadius > 0f && (_auraTimer -= dt) <= 0f)
             {
                 _auraTimer = BossRules.GravityWellTick;
@@ -825,8 +826,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     // ---- archetypes: Support, Bomber -------------------------------------------------------------
 
-    private float _supportTimer;
+    private float _supportTimer, _kiteCooldown;
     private bool _noCorpse;
+    /// <summary>Seconds before a kiting shooter may back off again (set when a retreat ran out of time).</summary>
+    public float KiteCooldownLeft => _kiteCooldown;
+    public void NoteKiteGaveUp() => _kiteCooldown = KiteRules.CooldownSeconds;
     /// <summary>A bomber that went off: nothing to leave behind.</summary>
     public bool NoCorpse => _noCorpse;
     public bool SupportReady => _supportTimer <= 0f;

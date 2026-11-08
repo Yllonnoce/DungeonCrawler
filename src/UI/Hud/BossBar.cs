@@ -87,7 +87,7 @@ public partial class BossBar : Control
             if (!_boss.IsAlive) { _hideLeft -= dt; if (_hideLeft <= 0f) { _boss = null; _main.Visible = false; } }
         }
         if (_elite != null && (!IsInstanceValid(_elite) || !_elite.IsAlive || OutOfSight(_elite))) HideSlim();
-        else if (_elite != null) { _slimName.Text = _elite.DisplayName; _slim.Value = Mathf.Clamp(_elite.Hp / Math.Max(1f, _elite.MaxHp), 0f, 1f); }
+        else if (_elite != null) { _slimName.Text = EliteNames.Titled(_elite.DisplayName, _elite.Profile.Affixes); _slim.Value = Mathf.Clamp(_elite.Hp / Math.Max(1f, _elite.MaxHp), 0f, 1f); } // a planner's bare name still spells its affixes
         Visible = _main.Visible || _slimRoot.Visible; // the control itself reads as shown only while a bar is
     }
 
@@ -98,6 +98,13 @@ public partial class BossBar : Control
     {
         if (_party == null || !IsInstanceValid(_party) || !_party.HasBodies || Main.Instance?.Builder.FloorRoot is not { } root) { if (_boss == null) _main.Visible = false; return; }
         var anchor = _party.Anchor.GlobalPosition;
+        if (_elite == null) // an elite back in sight after the bar hid it (EliteSeen fires once per body)
+        {
+            var elite = root.GetChildren().OfType<Enemy>()
+                .Where(e => e.IsElite && e.IsAlive && !e.IsUnaware && e.GlobalPosition.DistanceTo(anchor) <= SightRange)
+                .OrderBy(e => e.GlobalPosition.DistanceSquaredTo(anchor)).FirstOrDefault();
+            if (elite != null) ShowSlim(elite);
+        }
         var seen = root.GetChildren().OfType<Enemy>()
             .Where(e => e.IsBoss && e.IsAlive && !e.IsUnaware && e.GlobalPosition.DistanceTo(anchor) <= SightRange)
             .OrderBy(e => e.GlobalPosition.DistanceSquaredTo(anchor)).FirstOrDefault();
