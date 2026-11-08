@@ -41,6 +41,12 @@ public static class LootRoller
         var entry = table.Entries[WeightedIndex(table.Entries.Select(e => e.Weight).ToArray(), rng)];
         var candidates = cat.Bases.Values.Where(b => entry.Matches(b) && b.ItemLevelMin <= itemLevel).OrderBy(b => b.Id).ToList();
         if (candidates.Count == 0) return null;
+        // smart loot: one draw whenever a provider is set (so a seed stays deterministic), six in ten narrow the pool to what a living member can use
+        if (cat.SmartLootClasses?.Invoke().ToList() is { Count: > 0 } living && rng.NextDouble() < ItemRules.SmartLootChance)
+        {
+            var fit = candidates.Where(b => SmartLoot.UsableByAny(b, living)).ToList();
+            if (fit.Count > 0) candidates = fit;
+        }
         var b = candidates[rng.Next(candidates.Count)];
 
         if (!b.IsEquippable)

@@ -125,6 +125,8 @@ public sealed class ItemCatalog
     public Dictionary<string, AffixProfile> Affixes { get; } = new();
     public Dictionary<string, LegendaryProfile> Legendaries { get; } = new();
     public Dictionary<string, LootTableProfile> Tables { get; } = new();
+    /// <summary>The living party's classes, for smart loot; null (tests) rolls from the whole pool.</summary>
+    public Func<IEnumerable<ClassProfile>>? SmartLootClasses { get; set; }
 
     public ItemBase Base(string id) => Bases.TryGetValue(id, out var b) ? b : throw new KeyNotFoundException($"No item base '{id}'");
     public bool TryBase(string id, out ItemBase b) => Bases.TryGetValue(id, out b!);
