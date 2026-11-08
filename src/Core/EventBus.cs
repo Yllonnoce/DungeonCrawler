@@ -106,6 +106,9 @@ public partial class EventBus : Node
     public event Action<int, int, bool>? FloorBuilt;
     /// <summary>An enemy that was not in the plan appeared (summon, horde).</summary>
     public event Action<Enemies.Enemy>? EnemySpawned;
+    /// <summary>An enemy began a wind-up or a signature telegraph (the state's name: "Attack", "Shoot", "Signature:Slam"); the server relays it to clients.</summary>
+    public event Action<Enemies.Enemy, string>? EnemyTelegraph;
+    public void RaiseEnemyTelegraph(Enemies.Enemy enemy, string state) => EnemyTelegraph?.Invoke(enemy, state);
     public event Action<string>? HordeTriggered;
     public event Action<string>? HordeSpent;
     /// <summary>An ambusher broke cover (its point index on the floor); clients show the burst.</summary>

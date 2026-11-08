@@ -60,7 +60,7 @@ public sealed class AttackState : AiState
     private float _timer;
     private bool _swung;
 
-    public override void Enter(Enemy enemy) { _timer = 0f; _swung = false; }
+    public override void Enter(Enemy enemy) { _timer = 0f; _swung = false; enemy.BeginWindup(enemy.WindupSeconds); }
 
     public override void Update(Enemy enemy, float dt)
     {
@@ -80,7 +80,7 @@ public sealed class AttackState : AiState
         {
             if (enemy.TrySignature()) return;
             if (enemy.Order is Collectives.OrderKind.Regroup or Collectives.OrderKind.RunAlarm && GroupOrders.Apply(enemy, allowChase: false)) return;
-            if (enemy.DistanceToParty() <= enemy.AttackRange) { _timer = 0f; _swung = false; }
+            if (enemy.DistanceToParty() <= enemy.AttackRange) { _timer = 0f; _swung = false; enemy.BeginWindup(enemy.WindupSeconds); }
             else enemy.ChangeState(new ChaseState());
         }
     }
@@ -93,7 +93,7 @@ public sealed class ShootState : AiState
     private float _timer;
     private bool _fired;
 
-    public override void Enter(Enemy enemy) { _timer = 0f; _fired = false; }
+    public override void Enter(Enemy enemy) { _timer = 0f; _fired = false; enemy.BeginWindup(enemy.WindupSeconds); }
 
     public override void Update(Enemy enemy, float dt)
     {
@@ -114,13 +114,13 @@ public sealed class ShootState : AiState
             if (enemy.TrySignature()) return;
             if (enemy.Order is Collectives.OrderKind.Regroup or Collectives.OrderKind.RunAlarm && GroupOrders.Apply(enemy, allowChase: false)) return;
             var dist = enemy.DistanceToParty();
-            if (dist <= enemy.Profile.PreferredRange * 1.3f && enemy.HasLineOfSight()) { _timer = 0f; _fired = false; }
+            if (dist <= enemy.Profile.PreferredRange * 1.3f && enemy.HasLineOfSight()) { _timer = 0f; _fired = false; enemy.BeginWindup(enemy.WindupSeconds); }
             else enemy.ChangeState(new ChaseState());
         }
     }
 }
 
-/// <summary>Boss signature abilities. Slam and Volley are instant after a windup; Charge and Summon run for a while.</summary>
+/// <summary>Boss signature abilities, each drawn on the floor for its delay (<see cref="TelegraphRules"/>): Slam, Volley and Summon land at the delay; Charge winds up then runs.</summary>
 public sealed class SignatureState : AiState
 {
     public override string Name => $"Signature:{_sig}";
@@ -134,8 +134,10 @@ public sealed class SignatureState : AiState
     {
         _timer = 0f;
         _done = false;
-        enemy.AnnounceSignature();
+        enemy.BeginSignatureTelegraph(_sig);
     }
+
+    public override void Exit(Enemy enemy) => enemy.EndTelegraph(); // a stagger mid-telegraph takes the decal with it
 
     public override void Update(Enemy enemy, float dt)
     {
@@ -149,14 +151,15 @@ public sealed class SignatureState : AiState
             case Signature.Summon:
                 enemy.FaceToward(partyPos);
                 enemy.MoveToward(enemy.GlobalPosition, dt);
-                if (!_done && _timer >= 0.8f) { _done = true; enemy.PerformSignature(); }
-                if (_timer >= 1.6f) enemy.ChangeState(new ChaseState());
+                if (!_done && _timer >= TelegraphRules.Delay(_sig)) { _done = true; enemy.EndTelegraph(); enemy.PerformSignature(); }
+                if (_timer >= TelegraphRules.Delay(_sig) + TelegraphRules.SignatureRecover) enemy.ChangeState(new ChaseState());
                 break;
             case Signature.Charge:
-                if (_timer < 0.4f) { enemy.FaceToward(partyPos); enemy.MoveToward(enemy.GlobalPosition, dt); break; }
+                if (_timer < TelegraphRules.ChargeDelay) { enemy.FaceToward(partyPos); enemy.MoveToward(enemy.GlobalPosition, dt); break; }
+                enemy.EndTelegraph();
                 enemy.ChargeStep(dt);
                 if (!_done && enemy.DistanceToParty() <= enemy.AttackRange * 1.3f) { _done = true; enemy.PerformSignature(); enemy.ChangeState(new AttackState()); }
-                else if (_timer >= 2.0f) enemy.ChangeState(new ChaseState());
+                else if (_timer >= TelegraphRules.ChargeDelay + TelegraphRules.ChargeRun) enemy.ChangeState(new ChaseState());
                 break;
             default:
                 enemy.ChangeState(new ChaseState());

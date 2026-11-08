@@ -46,6 +46,12 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     private float _staggerLeft;
     /// <summary>Seconds left of the current wind-up; -1 when not winding up.</summary>
     public float WindupLeft { get; private set; } = -1f;
+    /// <summary>Counts the signatures this body has telegraphed; -1 before the first. Companions decide once per id.</summary>
+    public int TelegraphId { get; private set; } = -1;
+    /// <summary>Seconds until the telegraphed signature lands; -1 when none is drawn.</summary>
+    public float TelegraphRemaining { get; private set; } = -1f;
+    public string CurrentAnim => _currentAnim;
+    private bool _reenterAfterStagger;
     /// <summary>How long the hit-react clip plays, which is how long a blow staggers.</summary>
     public float HitReactSeconds => ClipLength("HitReact") ?? TelegraphRules.DefaultHitReactSeconds;
 
@@ -331,7 +337,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     }
 
     /// <summary>Play a clip if the model has it; Idle/Walk/Run loop, the rest play once.</summary>
-    public void PlayAnim(string name, bool force = false)
+    public void PlayAnim(string name, bool force = false, float speed = 1f)
     {
         if (_anim == null || (!force && _currentAnim == name)) return;
         var key = name == "Punch" && Profile.Kind == EnemyKind.Ranged ? "Shoot" : name;
@@ -339,6 +345,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (clip == null) return;
         var loop = name is "Idle" or "Walk" or "Run";
         _anim.GetAnimation(clip).LoopMode = loop ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None;
+        _anim.SpeedScale = speed;
         _anim.Play(clip, customBlend: 0.15);
         _currentAnim = name;
     }
@@ -346,7 +353,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     private void UpdateAnimation()
     {
         if (_anim == null || !IsAlive) return;
-        if (_currentAnim is "Punch" or "HitReact" && _anim.IsPlaying()) { _anim.SpeedScale = 1f; return; }   // one-shots play at their own pace
+        if (_currentAnim is "Punch" or "HitReact" && _anim.IsPlaying()) return;   // one-shots keep the pace they were started at (a wind-up's clip is paced to the wind-up)
         var ground = new Vector2(Velocity.X, Velocity.Z).Length();
         var moving = ground > 0.3f;
         var viewer = Profile.Model.StartsWith("viewer/");
@@ -408,6 +415,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         }
         Velocity = (GlobalPosition - before) / Math.Max(dt, 0.0001f);
         if (IsHorde) TickSwarmDetail(dt);
+        if (WindupLeft > 0f) WindupLeft -= dt;
+        if (TelegraphRemaining > 0f) TelegraphRemaining -= dt;
         UpdateAnimation();
         UpdateTint(dt);
         if (!_clientDead) return;
@@ -442,8 +451,18 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (_dying && State is not DeadState) ChangeState(new DeadState());
 
         if (IsAlive && !State.Unaware) Retarget(dt);
-        if (IsAlive && (Effects.IsStunned || _staggerLeft > 0f)) { _staggerLeft -= dt; MoveToward(GlobalPosition, dt); }
-        else State.Update(this, dt);
+        if (IsAlive && (Effects.IsStunned || _staggerLeft > 0f))
+        {
+            _staggerLeft -= dt;
+            MoveToward(GlobalPosition, dt);
+            if (_staggerLeft <= 0f && !Effects.IsStunned && _reenterAfterStagger) { _reenterAfterStagger = false; if (State is AttackState or ShootState) State.Enter(this); } // the attack cycle starts over
+        }
+        else
+        {
+            if (WindupLeft > 0f) WindupLeft -= dt;
+            if (TelegraphRemaining > 0f) TelegraphRemaining -= dt;
+            State.Update(this, dt);
+        }
 
         UpdateTint(dt);
     }
@@ -462,6 +481,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         else if (Effects.Has(StatusKind.Poison)) tint = tint.Lerp(new Color(0.3f, 0.9f, 0.3f), 0.5f);
         else if (Effects.Has(StatusKind.Burn)) tint = tint.Lerp(new Color(1f, 0.6f, 0.1f), 0.5f);
         if (Effects.IsStunned) tint = tint.Lerp(Colors.Yellow, 0.5f);
+        tint = tint.Lerp(Colors.White, TelegraphRules.TintAmount(WindupLeft)); // the flash before the blow
         _material.AlbedoColor = tint;
         foreach (var m in _modelMaterials)
         {
@@ -513,11 +533,49 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (!IsAlive || StaggerImmune) return;
         if (IsBoss && !fromDefense) return;
         _staggerLeft = Math.Max(_staggerLeft, seconds);
-        PlayAnim("HitReact", force: true);
-        WindupLeft = -1f;
+        WindupLeft = -1f; // the wind-up is lost; the attack cycle starts over when the reel ends
+        foreach (var glow in GetChildren().OfType<HandGlowNode>()) glow.QueueFree();
         if (State is SignatureState) ChangeState(new ChaseState());
-        else if (State is AttackState or ShootState) State.Enter(this); // Enter resets the wind-up timers
+        else if (State is AttackState or ShootState) _reenterAfterStagger = true;
+        PlayAnim("HitReact", force: true);
     }
+
+    /// <summary>The attack clip from the start of the wind-up, paced so its strike frame falls at the blow; a shooter's hand glows; the bus hears it (clients are told).</summary>
+    public void BeginWindup(float seconds)
+    {
+        WindupLeft = seconds;
+        var clipKey = Profile.Kind == EnemyKind.Ranged ? "Shoot" : "Punch";
+        PlayAnim("Punch", force: true, TelegraphRules.ClipSpeed(ClipLength(clipKey) ?? seconds / TelegraphRules.StrikeFraction, seconds));
+        if (Kind != EnemyKind.Melee) TelegraphFx.HandGlow(this, seconds);
+        if (!Net.NetSession.IsClient) EventBus.Instance.RaiseEnemyTelegraph(this, State.Name);
+    }
+
+    /// <summary>A boss draws its signature on the floor for the delay and says its line.</summary>
+    public void BeginSignatureTelegraph(Signature sig)
+    {
+        TelegraphId++;
+        TelegraphRemaining = TelegraphRules.Delay(sig);
+        TelegraphDecal.Show(this, sig, TelegraphRemaining);
+        AnnounceSignature();
+        if (!Net.NetSession.IsClient) EventBus.Instance.RaiseEnemyTelegraph(this, State.Name);
+    }
+
+    public void EndTelegraph()
+    {
+        TelegraphRemaining = -1f;
+        TelegraphDecal.Hide(this);
+    }
+
+    /// <summary>Client only: the server said this enemy began a wind-up ("Attack"/"Shoot") or a signature ("Signature:Slam").</summary>
+    public void ClientTelegraph(string state)
+    {
+        if (!IsAlive) return;
+        if (state is "Attack" or "Shoot") BeginWindup(WindupSeconds);
+        else if (state.StartsWith("Signature:") && Enum.TryParse<Signature>(state[10..], out var sig) && sig != Signature.None) BeginSignatureTelegraph(sig);
+    }
+
+    /// <summary>Debug: a boss uses its signature now, cooldown or not.</summary>
+    public void ForceSignature() { _signatureTimer = 0f; TrySignature(); }
 
     /// <summary>The length of the first clip the model has for <paramref name="key"/>, or null when it has none.</summary>
     public float? ClipLength(string key)
@@ -686,7 +744,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public void StrikeParty()
     {
-        PlayAnim("Punch", force: true);
+        WindupLeft = -1f; // the clip has been running since the wind-up began
         if (!HasTarget || DistanceToParty() > AttackRange * 1.15f) return;
         Target!.ReceiveAttack(Stats, Attack, DisplayName, this);
     }
@@ -699,11 +757,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         npc.ReceiveAttack(Stats, Attack, new HitContext(), Party?.Rng ?? new Random(), DisplayName);
     }
 
-    public void FireAtParty() => Fire(Attack, 0f);
+    public void FireAtParty() { WindupLeft = -1f; Fire(Attack, 0f, playClip: false); }
 
-    private void Fire(AttackProfile attack, float yawOffsetDegrees)
+    private void Fire(AttackProfile attack, float yawOffsetDegrees, bool playClip = true)
     {
-        PlayAnim("Punch", force: true);
+        if (playClip) PlayAnim("Punch", force: true);
         if (Party == null || Main.Instance?.Builder.FloorRoot is not { } root) return;
         var from = GlobalPosition + Vector3.Up * (1.3f * Profile.Scale);
         var to = TargetPosition + Vector3.Up * 1.2f;
@@ -741,7 +799,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         switch (Profile.Signature)
         {
             case Signature.Slam:
-                var victims = Party.AdventurersWithin(GlobalPosition, 4.5f).ToList();
+                var victims = Party.AdventurersWithin(GlobalPosition, TelegraphRules.SlamRadius).ToList();
                 if (victims.Count > 0)
                 {
                     var slam = Attack with { MinDamage = Attack.MinDamage * 1.4f, MaxDamage = Attack.MaxDamage * 1.4f, OnHit = Attack.OnHit.Append(new StatusApplication(StatusKind.Stun, 1.2f, 0)).ToArray() };
