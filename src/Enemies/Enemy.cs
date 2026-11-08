@@ -211,7 +211,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
         _mesh = GetNode<MeshInstance3D>("Mesh");
         _material = new StandardMaterial3D { AlbedoColor = new Color(Profile.Color), Roughness = 0.8f };
-        _baseColor = _material.AlbedoColor;
+        _baseColor = EliteVisuals.Tint(_material.AlbedoColor, Profile.Affixes);
+        _material.AlbedoColor = _baseColor;
         _mesh.SetSurfaceOverrideMaterial(0, _material);
         if (Math.Abs(Profile.Scale - 1f) > 0.01f)
         {
@@ -222,6 +223,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             col.Position = new Vector3(0, 0.9f * Profile.Scale, 0);
         }
         LoadModel();
+        if (IsElite) EliteVisuals.Dress(this);
         _gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity", 9.8f).AsDouble();
         Party = Main.Instance?.Party;
         LootDropScene ??= GD.Load<PackedScene>("res://scenes/Props/LootDrop.tscn");
@@ -507,7 +509,13 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             m.EmissionEnabled = _flash > 0f;
             m.Emission = Colors.White * Mathf.Max(0f, _flash * 2f);
         }
+        if (IsElite) EliteVisuals.Tick(this, dt);
     }
+
+    /// <summary>The body's own material and the model's (EliteVisuals glows them); seconds of white hit-flash left.</summary>
+    public StandardMaterial3D BodyMaterial => _material;
+    public IReadOnlyList<StandardMaterial3D> ModelMaterials => _modelMaterials;
+    public float FlashLeft => _flash;
 
     /// <summary>Stands here, awake, until it sees the party (the safe room's gatherers).</summary>
     public void HoldAt(Vector3 at)
