@@ -94,9 +94,9 @@ public partial class PartyController : Node3D
     public Vector2? ForcedMoveInput { get => Local?.ForcedMoveInput; set { if (Local is { } l) l.ForcedMoveInput = value; } }
 
     public AbilityProfile GetAbility(string id) => _abilities.TryGetValue(id, out var a) ? a : AbilityProfile.Basic;
-    public AbilityProfile GetAbilityFor(CharacterState m, string id) => SkillRules.ApplyUpgrades(GetAbility(id), m, Game.Instance.Skills);
+    public AbilityProfile GetAbilityFor(CharacterState m, string id) => SkillRules.ApplyUpgrades(GetAbility(id), m, Game.Instance.Skills, LegendaryRules.Upgrades(m.Equipment, Game.Instance.Catalog));
     public string AbilityName(string id) => GetAbility(id).Name;
-    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind);
+    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind) + LegendaryRules.Trigger(m.Equipment, Game.Instance.Catalog, kind);
 
     public override void _Ready()
     {
@@ -104,6 +104,7 @@ public partial class PartyController : Node3D
         _lootScene = GD.Load<PackedScene>("res://scenes/Props/LootDrop.tscn");
         _abilities[AbilityProfile.BasicId] = AbilityProfile.Basic;
         foreach (var def in Registry.Instance.All<AbilityDef>()) _abilities[def.Id] = def.ToProfile();
+        HookItemTriggers();
         if (!_configured) Configure(DefaultRoster);
         SetMouseCaptured(true);
     }
@@ -521,6 +522,7 @@ public partial class PartyController : Node3D
     {
         if (!r.Hit) return;
         EventBus.Instance.RaiseHitLanded(m, r);
+        OnItemHit(m, target, r);
         if (r.Crit && Trigger(m, TriggerKind.VenomCrit) is > 0 and var venom)
         {
             target.ApplyStatus(new StatusApplication(StatusKind.Poison, 6, venom));

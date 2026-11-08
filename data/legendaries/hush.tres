@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.hush"
+DisplayName = "Hush"
+BaseId = "item.dagger"
+Flavor = "It has never been heard. Not even by its owners."
+ItemLevelMin = 5
+Weight = 1.0
+Modifiers = PackedStringArray("MeleeDamage+3", "Stealth+15", "CritChance+0.05")
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1
+ShopOnly = false
+Trigger = "FrostSneak"
+TriggerMagnitude = 0.5
+Trigger2 = "QuietKill"
+TriggerMagnitude2 = 1
+Upgrades = PackedStringArray()

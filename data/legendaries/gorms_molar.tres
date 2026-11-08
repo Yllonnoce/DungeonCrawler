@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="LegendaryDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/LegendaryDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "leg.gorms_molar"
+DisplayName = "Gorm's Molar"
+BaseId = "item.mace"
+Flavor = "Pulled from a jaw that had already stopped arguing."
+ItemLevelMin = 6
+Weight = 1.0
+Modifiers = PackedStringArray("MeleeDamage+5", "MaxHp+15")
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1
+ShopOnly = false
+Trigger = "HeavyStun"
+TriggerMagnitude = 1
+Trigger2 = "None"
+TriggerMagnitude2 = 0
+Upgrades = PackedStringArray()
