@@ -19,6 +19,8 @@ public partial class Chest : Area3D, IInteractable
     public bool IsMimic { get; set; }
     public bool Sprung { get; private set; }
     public Enemy? Mimic { get; private set; }
+    /// <summary>Iron-banded with a purple seam (fortune): a vault roll, and sixty seconds Hunted for whoever opens it.</summary>
+    public bool Bound { get; set; }
     private bool _hidden;
 
     public void MarkOpened()
@@ -30,6 +32,7 @@ public partial class Chest : Area3D, IInteractable
     }
 
     public string Prompt => Opened ? "Empty chest"
+        : Bound ? FortuneRules.BoundPrompt
         : Sprung ? "The chest is elsewhere"
         : IsMimic && Noticed() ? $"Open chest ({MimicRules.Tell})"
         : Locked ? "Locked chest: use a key or pick the lock" : "Open chest";
@@ -56,7 +59,18 @@ public partial class Chest : Area3D, IInteractable
             model.RotateY(Mathf.Pi);
         }
         if (Locked) Tint(new Color(0.75f, 0.7f, 0.55f));
+        if (Bound) BindSeam();
         if (_hidden) HideBody();
+    }
+
+    /// <summary>The bound chest's look: a thin emissive purple band around the lid.</summary>
+    private void BindSeam()
+    {
+        var seam = new StandardMaterial3D { AlbedoColor = new Color(0.55f, 0.15f, 0.8f), EmissionEnabled = true, Emission = new Color(0.55f, 0.15f, 0.8f), EmissionEnergyMultiplier = 1.4f, Roughness = 0.4f };
+        var model = GetNodeOrNull<Node3D>("Model");
+        var y = model != null ? 0.62f : 0.5f;
+        AddChild(new MeshInstance3D { Name = "Seam", Mesh = new BoxMesh { Size = new Vector3(1.18f, 0.05f, 0.78f) }, MaterialOverride = seam, Position = new Vector3(0, y, 0) });
+        AddChild(new OmniLight3D { LightColor = new Color(0.6f, 0.2f, 0.9f), LightEnergy = 0.6f, OmniRange = 3f, ShadowEnabled = false, Position = new Vector3(0, 0.9f, 0) });
     }
 
     private void Tint(Color color)
@@ -146,6 +160,7 @@ public partial class Chest : Area3D, IInteractable
         EventBus.Instance.PlaySfx("chest");
         EventBus.Instance.RaiseChestOpened(GlobalPosition);
         Spill(party, actor.GlobalPosition - GlobalPosition);
+        if (Bound) FortuneDirector.Instance?.StartHunt(party, GlobalPosition);
     }
 
     /// <summary>The roll (the chest's own seed, so the same on every peer and reload), spilled toward <paramref name="toward"/>, and the coins.</summary>

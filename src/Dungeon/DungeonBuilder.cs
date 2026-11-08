@@ -1226,6 +1226,7 @@ public partial class DungeonBuilder : Node3D
             var kind = Adventure.Fortune.ChestRules.KindOf(layout, i);
             chest.TableId = Adventure.Fortune.ChestRules.TableFor(kind); // fortune: a vault's, a secret's, a ledge's or the plain table
             chest.IsMimic = Adventure.Fortune.MimicRules.ForcedSpawnIndex == i || Adventure.Fortune.MimicRules.IsMimic(GameSeed, floor, i, kind);
+            if (layout.BoundChest == i) { chest.Bound = true; chest.IsMimic = false; chest.Locked = false; chest.TableId = Adventure.Fortune.ChestRules.VaultTable; } // the bound chest: a vault roll, never a mouth, never locked
             chest.Name = $"Chest{i}";
             root.AddChild(chest);
             chest.GlobalPosition = Surface(layout.ChestSpawns[i]);

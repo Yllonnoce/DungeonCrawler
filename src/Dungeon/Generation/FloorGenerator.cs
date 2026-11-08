@@ -67,6 +67,7 @@ public static partial class FloorGenerator
         HazardPlanner.PlaceHazards(spec, new Random(seed ^ 0x4A2D), layout); // the lethal hazards, last and from their own seed: a floor without them is untouched
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
         // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
+        PlaceBoundChest(spec, new Random(seed ^ 0xB0D), layout);
         PlaceShrine(spec, layout);
 
         return layout;
@@ -77,6 +78,17 @@ public static partial class FloorGenerator
     /// <summary>One shrine cell per floor from <see cref="Adventure.Fortune.ShrineRules.FromFloor"/>; deterministic, no rng, reserved.</summary>
     internal static void PlaceShrine(FloorSpec spec, FloorLayout layout)
         => layout.ShrineCell = spec.Floor >= Adventure.Fortune.ShrineRules.FromFloor ? Adventure.Fortune.ShrineRules.Choose(layout) : null;
+
+    /// <summary>One ordinary chest per floor from <see cref="Adventure.Fortune.FortuneRules.BoundFromFloor"/> is bound; never one in the boss arena.</summary>
+    internal static void PlaceBoundChest(FloorSpec spec, Random rng, FloorLayout layout)
+    {
+        layout.BoundChest = -1;
+        if (spec.Floor < Adventure.Fortune.FortuneRules.BoundFromFloor) return;
+        var candidates = new List<int>();
+        for (var i = 0; i < layout.ChestSpawns.Count; i++)
+            if (Adventure.Fortune.ChestRules.KindOf(layout, i) == Adventure.Fortune.ChestKind.Ordinary && layout.BossArena?.Contains(layout.ChestSpawns[i]) != true) candidates.Add(i);
+        if (candidates.Count > 0) layout.BoundChest = candidates[rng.Next(candidates.Count)];
+    }
 
     // ---- rooms -------------------------------------------------------------------------------
 

@@ -27,8 +27,15 @@ public static class FortuneRules
     public const float KindledBurnSeconds = 4f, KindledBurnMagnitude = 3f;
     public const float RimeFrostSeconds = 2f;
     public const float EmberDueExtraSeconds = 3f;
+    // the bound chest and the hunt
+    public const int BoundFromFloor = 5;
     public const float HuntedSeconds = 60f;
     public const float VulnerableMagnitude = 0.25f;
+    /// <summary>The hunter's affixes by name (the contract's list has no "Marked"; the Marked set is this). Elites' EliteRules.Apply reads them at merge.</summary>
+    public static readonly string[] HunterAffixes = { "Swift", "Vampiric" };
+    public const string HunterName = "the Hunter";
+    public const string BoundPrompt = "Bound chest: open and be Hunted?";
+    public const int HunterActor = 7999;
 
     /// <summary>A boon or a curse the party holds.</summary>
     public static bool Has(AdventureDto? adv, string id) => adv != null && (adv.Boons.Contains(id) || adv.Curses.Contains(id));

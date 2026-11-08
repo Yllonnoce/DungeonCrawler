@@ -71,6 +71,39 @@ public partial class FortuneDirector : Node
         if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new FortuneSync(adv.Boons.ToList(), adv.Curses.ToList()));
     }
 
+    // ---- the hunt ----------------------------------------------------------------------------------------
+
+    /// <summary>Play-seconds until which the party is Hunted; the status itself runs the clock.</summary>
+    public double HuntUntil { get; private set; }
+
+    /// <summary>The bound chest opened: every living member Vulnerable for <see cref="FortuneRules.HuntedSeconds"/>, and a hunter at the nearest other room, coming.</summary>
+    public void StartHunt(PartyController party, Vector3 at)
+    {
+        if (!Authority || Main.Instance?.Builder is not { } builder || builder.Layout is not { } layout) return;
+        var floor = Game.Instance.CurrentFloor;
+        for (var i = 0; i < party.Members.Length; i++)
+        {
+            var m = party.Members[i];
+            if (!m.IsAlive) continue;
+            m.Effects.Apply(new StatusApplication(StatusKind.Vulnerable, FortuneRules.HuntedSeconds, FortuneRules.VulnerableMagnitude));
+            m.Recalculate();
+            EventBus.Instance.RaiseMemberChanged(i);
+        }
+        HuntUntil = Game.Instance.PlaySeconds + FortuneRules.HuntedSeconds;
+        var chestCell = DungeonBuilder.WorldToCell(at);
+        var own = layout.RoomAt(chestCell);
+        var room = layout.Rooms.Where(r => r != own && layout.Vaults.All(v => v.Room != r) && !layout.IsInSafeRoom(r.Center)).OrderBy(r => Dungeon.Generation.FloorGenerator.Dist2(r.Center, chestCell)).FirstOrDefault() ?? own;
+        var pool = builder.RegularEnemies(floor);
+        if (room != null && pool.Count > 0)
+        {
+            var rng = new Random(Rng.ActorSeed(Game.Instance.GameSeed, floor, FortuneRules.HunterActor));
+            var id = pool[rng.Next(pool.Count)];
+            FortuneSpawns.Spawn(builder, id, builder.Surface(room.Center) + Vector3.Up * 0.1f, floor, FortuneRules.HunterName, FortuneRules.HunterAffixes, aggro: true);
+        }
+        EventBus.Instance.PlaySfx("alarm");
+        EventBus.Instance.Log("Something has your scent.");
+    }
+
     // ---- the shrine --------------------------------------------------------------------------------------
 
     private ShrineCardMsg? _pendingShrine;

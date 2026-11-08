@@ -115,6 +115,8 @@ public sealed class FloorLayout
     /// <summary>Secret alcoves that opened into carved rooms (fortune); appended after every other room so plan indices hold.</summary>
     public List<SecretRoom> SecretRooms { get; } = new();
     public bool HasHiddenStall => SecretRooms.Any(r => r.Merchant != null);
+    /// <summary>The bound chest's spawn index (fortune, floor 5 on): a vault roll and sixty seconds Hunted; -1 when none.</summary>
+    public int BoundChest { get; internal set; } = -1;
 
     public FloorLayout(int seed, int width, int height)
     {

@@ -30,6 +30,7 @@ public static class FloorStateCapture
                     break;
                 case Chest ch when ch.Opened:
                     dto.OpenedChests.Add(ch.SpawnIndex);
+                    if (ch.Bound) dto.BoundOpened = true; // the hunt ran once; a reload does not hunt twice
                     break;
                 case Chest { Sprung: true, Opened: false } mimic:
                     dto.MimicsSprung.Add(mimic.SpawnIndex); // the brute is dynamic (not in Enemies): RestoreSprung respawns it idle
