@@ -24,7 +24,7 @@ public partial class PartyController : Node3D
     public const float HeavyHoldSeconds = 0.35f;
     public const float PerfectWindowStart = 0.6f;
     public const float PerfectWindowEnd = 1.0f;
-    public const float BlockStaminaCost = 12f;
+    public const float BlockStaminaCost = DefenseRules.BlockStamina;
 
     private readonly Dictionary<string, AbilityProfile> _abilities = new();
     private readonly List<int> _effectVersions = new();
