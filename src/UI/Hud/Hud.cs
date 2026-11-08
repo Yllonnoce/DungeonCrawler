@@ -150,7 +150,7 @@ public partial class Hud : Control
         _chat = new LineEdit { Name = "ChatLine", Visible = false, PlaceholderText = "Say something (Enter to send, Esc to cancel)", MaxLength = Net.Protocol.MaxChatLength, CustomMinimumSize = new Vector2(520, 34) };
         _chat.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         _chat.Position = new Vector2(-260, -120);
-        _chat.TextSubmitted += text => { var t = text.Trim(); if (t.Length > 0 && Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.ChatIntent(t)); CloseChat(); };
+        _chat.TextSubmitted += SubmitChat;
         AddChild(_chat);
         _pause = new PauseMenu { Name = "PauseMenu", Visible = false };
         AddChild(_pause);
@@ -384,12 +384,9 @@ public partial class Hud : Control
             if (@event.IsActionPressed("ui_cancel")) { CloseChat(); GetViewport().SetInputAsHandled(); }
             return; // the chat line owns the keys while open
         }
-        if (@event.IsActionPressed("chat") && Net.NetSession.IsClient && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible)
+        if (@event.IsActionPressed("chat") && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible)
         {
-            _chat.Text = "";
-            _chat.Visible = true;
-            _chat.GrabFocus();
-            UpdateModalState();
+            OpenChat();
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -575,6 +572,30 @@ public partial class Hud : Control
     private LineEdit _chat = null!;
     private string _floorText = "";
     private int _pingFrames;
+
+    /// <summary>T: the chat line, in solo and on the host too (co-op): what is typed goes to the log, on a client through the server.</summary>
+    public void OpenChat()
+    {
+        _chat.Text = "";
+        _chat.Visible = true;
+        _chat.GrabFocus();
+        UpdateModalState();
+    }
+
+    /// <summary>Send the line: a client's goes up as a ChatIntent; anyone else writes "[Name] text" to the log (a server's log line reaches every client).</summary>
+    public void SubmitChat(string text)
+    {
+        var t = text.Trim();
+        if (t.Length > 0)
+        {
+            if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.ChatIntent(t));
+            else EventBus.Instance.Log($"[{_party.Local?.State.Name ?? "Host"}] {t}");
+        }
+        CloseChat();
+    }
+
+    /// <summary>The newest line of the message log ("" when empty).</summary>
+    public string LastLogLine => _lines.Last?.Value ?? "";
 
     private void CloseChat()
     {
