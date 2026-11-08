@@ -275,6 +275,7 @@ public partial class DungeonBuilder : Node3D
         PlaceAmbushes(layout, floorIndex, seed, floorState);
         PlacePortals(layout, floorIndex, seed, floorState);
         PlaceSafeRoom(layout, floorIndex, floorState);
+        PlaceShrine(layout, floorIndex);
         PlaceObjective(layout, contents, _floorRoot, floorIndex, seed);
         if (layout.Water.Count > 0)
         {
@@ -1044,6 +1045,15 @@ public partial class DungeonBuilder : Node3D
     public void SpawnAltar(Node3D root, GridPos cell)
     {
         var altar = new StaticBody3D { Name = "Altar", CollisionLayer = 1, CollisionMask = 0 };
+        AltarMeshes(altar);
+        root.AddChild(altar);
+        altar.GlobalPosition = Surface(cell);
+        _propCells.Add(cell);
+    }
+
+    /// <summary>The altar's stone, cloth, candles and light on any body (the objective's altar and the fortune shrine share them).</summary>
+    public void AltarMeshes(StaticBody3D altar)
+    {
         var stone = Material(CurrentTheme?.WallTexture ?? "", (CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f)).Darkened(0.15f), 1f);
         var cloth = new StandardMaterial3D { AlbedoColor = new Color(0.35f, 0.08f, 0.1f), Roughness = 0.95f };
         altar.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(1.8f, 1.0f, 1.0f) }, MaterialOverride = stone, Position = new Vector3(0, 0.5f, 0) });
@@ -1053,9 +1063,18 @@ public partial class DungeonBuilder : Node3D
         foreach (var x in new[] { -0.6f, 0.6f })
             altar.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.05f, BottomRadius = 0.06f, Height = 0.3f }, MaterialOverride = candle, Position = new Vector3(x, 1.2f, 0.25f) });
         altar.AddChild(new OmniLight3D { LightColor = new Color(1f, 0.75f, 0.4f), LightEnergy = 1.6f, OmniRange = 7f, ShadowEnabled = false, Position = new Vector3(0, 1.8f, 0) });
-        root.AddChild(altar);
-        altar.GlobalPosition = Surface(cell);
-        _propCells.Add(cell);
+    }
+
+    /// <summary>The fortune shrine on its reserved cell (floor 2 on), its price written over it; the saved "used" state is re-applied by FloorStateCapture.</summary>
+    private void PlaceShrine(FloorLayout layout, int floor)
+    {
+        if (layout.ShrineCell is not { } cell || _floorRoot == null) return;
+        var shrine = new Shrine { Price = Adventure.Fortune.ShrineRules.PriceFor(GameSeed, floor), Floor = floor };
+        AltarMeshes(shrine);
+        _floorRoot.AddChild(shrine);
+        shrine.GlobalPosition = Surface(cell);
+        BlockCell(cell);
+        GD.Print($"[DungeonBuilder] floor {floor}: shrine at {cell} (price {shrine.Price})");
     }
 
     /// <summary>A breach mouth falls shut: rubble to the ceiling, the cell blocked for paths.</summary>

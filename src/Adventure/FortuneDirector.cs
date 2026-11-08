@@ -3,7 +3,9 @@ using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon;
+using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Enemies;
+using DungeonCrawler.Net;
 using DungeonCrawler.Items;
 using DungeonCrawler.Party;
 using DungeonCrawler.Save;
@@ -29,7 +31,7 @@ public partial class FortuneDirector : Node
     {
         Instance = this;
         var bus = EventBus.Instance;
-        bus.FloorBuilt += (_, _, _) => { Refresh(); OnFloorStart(); };
+        bus.FloorBuilt += (_, _, _) => { _pendingShrine = null; Refresh(); OnFloorStart(); };
         bus.RosterChanged += Refresh;
         bus.BoonTaken += _ => Refresh();
         bus.CurseTaken += _ => Refresh();
@@ -58,6 +60,88 @@ public partial class FortuneDirector : Node
         TierRules.HazardFactor = FortuneRules.HazardFactor(adv);
         ConsumableRules.HealFactor = FortuneRules.HealFactor(adv);
         if (Party != null) for (var i = 0; i < Party.Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i);
+        if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new FortuneSync(adv.Boons.ToList(), adv.Curses.ToList()));
+    }
+
+    // ---- the shrine --------------------------------------------------------------------------------------
+
+    private ShrineCardMsg? _pendingShrine;
+    private int _pendingFloor;
+    /// <summary>The card the authority is waiting on; null when none is open.</summary>
+    public ShrineCardMsg? PendingShrine => _pendingShrine;
+
+    /// <summary>Run-structure's Fine Print clause (two offers) read without a compile-time dependency: the field may not exist yet.</summary>
+    private static bool FinePrint(AdventureDto adv)
+        => adv.GetType().GetProperty("Clauses")?.GetValue(adv) is IEnumerable<string> clauses && clauses.Contains("fine_print");
+
+    /// <summary>A body touched the altar: pay the price (or refuse, unused), mark it used, and open the card (solo) or broadcast it (server).</summary>
+    public void OpenShrine(Shrine shrine, PartyController party, Adventurer actor)
+    {
+        if (!Authority || shrine.Used || _pendingShrine != null) return;
+        var floor = Game.Instance.CurrentFloor;
+        var adv = Adv;
+        if (shrine.Price == ShrineRules.Price.Gold && !ShrineRules.CanPay(shrine.Price, party.Gold, floor))
+        {
+            EventBus.Instance.Log($"The altar wants {ShrineRules.GoldPrice(floor)} gold you do not have.");
+            return;
+        }
+        switch (shrine.Price)
+        {
+            case ShrineRules.Price.Blood:
+                for (var i = 0; i < party.Members.Length; i++)
+                {
+                    var m = party.Members[i];
+                    if (!m.IsAlive) continue;
+                    m.Hp = Math.Max(1f, m.Hp - m.Hp * ShrineRules.BloodFraction); // straight off the breath: no ward, no negation
+                    EventBus.Instance.RaiseMemberChanged(i);
+                }
+                EventBus.Instance.Log("The altar drinks a quarter of every breath.");
+                break;
+            case ShrineRules.Price.Gold:
+                party.TrySpendGold(ShrineRules.GoldPrice(floor));
+                break;
+            case ShrineRules.Price.Curse:
+                if (FortuneRules.RandomCurse(adv, party.Rng) is { } curse) TakeCurse(curse, actor.Index);
+                else EventBus.Instance.Log("The altar finds nothing left to lay on you.");
+                break;
+        }
+        shrine.MarkUsed();
+        var count = shrine.Price == ShrineRules.Price.Curse ? ShrineRules.OfferCountCursed : FinePrint(adv) ? ShrineRules.OfferCountFinePrint : ShrineRules.OfferCount;
+        var offers = ShrineRules.Offer(Game.Instance.GameSeed, floor, adv.Boons, count);
+        var lift = adv.Curses.FirstOrDefault(c => c != Curses.Scar);
+        var card = new ShrineCardMsg(offers, lift, ShrineRules.LiftPrice(floor), ShrineRules.SkipGold(floor), ShrineRules.PriceLine(shrine.Price, floor), actor.Index);
+        _pendingShrine = card;
+        _pendingFloor = floor;
+        if (NetSession.IsServer) NetSession.Instance.Server?.Broadcast(card);
+        else Main.Instance.Hud.Shrine.Open(card);
+    }
+
+    /// <summary>The pick (the first one, in co-op): a boon, walking away for the skip gold, or lifting a curse for its price. Closes the card everywhere.</summary>
+    public void ResolveShrine(int member, int choice)
+    {
+        if (!Authority || _pendingShrine is not { } card || Party is not { } party) return;
+        var floor = _pendingFloor;
+        string outcome;
+        if (choice >= 0 && choice < card.Boons.Count) { TakeBoon(card.Boons[choice], member); outcome = "boon:" + card.Boons[choice]; }
+        else if (choice == -1)
+        {
+            party.AddGold(card.SkipGold);
+            EventBus.Instance.Log($"You leave the altar alone. It pays you {card.SkipGold} gold to go.");
+            outcome = "skip";
+        }
+        else if (choice == -2 && card.LiftCurse is { } lift)
+        {
+            if (!LiftCurse(lift, member, card.LiftPrice)) return; // short: the card stays open
+            outcome = "lift:" + lift;
+        }
+        else return;
+        _pendingShrine = null;
+        if (NetSession.IsServer)
+        {
+            NetSession.Instance.Server?.Broadcast(new ShrineClosedEvt(outcome));
+            NetSession.Instance.Server?.Broadcast(new FortuneSync(Adv.Boons.ToList(), Adv.Curses.ToList()));
+        }
+        else Main.Instance.Hud.Shrine.Close(outcome);
     }
 
     /// <summary>Per-floor wards: Pennies for the Ferryman and Second Skin are refilled on every floor build.</summary>

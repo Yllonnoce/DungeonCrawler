@@ -423,6 +423,9 @@ public partial class ServerWorld : Node
                 SendShopSync();
                 _bagDirty = true;
                 break;
+            case ShrineChoiceIntent sc:
+                if (slot.Ready) FortuneDirector.Instance?.ResolveShrine(slot.MemberIndex, sc.Choice); // the first pick wins; the director closes the card everywhere
+                break;
             case ShopBuybackIntent bb:
                 if (!slot.Ready || !CanTrade(slot)) break;
                 if (party.ShopBuyback(bb.Index) == null) Trace.Add("shop");

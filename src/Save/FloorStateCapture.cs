@@ -54,6 +54,9 @@ public static class FloorStateCapture
                 case SecretWall { IsOpen: true } secret:
                     dto.OpenedSecrets.Add(secret.Index);
                     break;
+                case Shrine { Used: true }:
+                    dto.ShrineUsed = true;
+                    break;
                 case Press press:
                     dto.Hazards.Add(new HazardStateDto { Index = press.Index, Kind = (byte)Dungeon.HazardKind.Press, Phase = (byte)press.Phase, PhaseTime = press.PhaseTime, Spent = press.Spent, Jammed = press.Jammed });
                     break;
@@ -143,6 +146,9 @@ public static class FloorStateCapture
                     break;
                 case SecretWall sw when openedSecrets.Contains(sw.Index):
                     sw.Open();
+                    break;
+                case Shrine shrine when dto.ShrineUsed:
+                    shrine.MarkUsed(silent: true);
                     break;
             }
         }

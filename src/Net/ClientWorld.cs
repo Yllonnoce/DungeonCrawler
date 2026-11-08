@@ -76,6 +76,9 @@ public partial class ClientWorld : Node
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
             case ShopSync ss: Main.Instance.Party.ApplyShopSync(ss.Floor, ss.Sold, ss.Gold, ss.Buyback); Trace.Add("shop"); break;
+            case ShrineCardMsg sc: Main.Instance.Hud.Shrine.Open(sc); Trace.Add("shrine"); break;
+            case ShrineClosedEvt scl: Main.Instance.Hud.Shrine.Close(scl.Outcome); break;
+            case FortuneSync fs: Game.Instance.Adventure.Boons = fs.Boons; Game.Instance.Adventure.Curses = fs.Curses; FortuneDirector.Instance?.Refresh(); Trace.Add("fortune"); break;
             case NpcSay ns:
                 if (Main.Instance?.Builder.FloorRoot?.GetNodeOrNull<Npc>($"Npc_{ns.NpcId}") is { } npc) npc.Say(ns.Line);
                 Trace.Add("npcsay");
@@ -235,6 +238,7 @@ public partial class ClientWorld : Node
             case (Dungeon.Props.Lever l, "reset"): l.Reset(silent: true); break;
             case (Dungeon.Props.SecretWall s, "revealed"): s.Reveal(); break;
             case (Dungeon.Props.SecretWall s, "opened"): s.Open(silent: true); break;
+            case (Dungeon.Props.Shrine sh, "used"): sh.MarkUsed(silent: true); break;
             case (Dungeon.Props.Trap t, "revealed"): t.Reveal(); break;
             case (Dungeon.Props.Press p, "revealed"): p.Plate.Reveal(); break;
             case (Dungeon.Props.Trap t, "disarmed"): t.Disarm(); break;
