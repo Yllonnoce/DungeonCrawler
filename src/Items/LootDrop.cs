@@ -67,6 +67,18 @@ public partial class LootDrop : Area3D, IInteractable
             if (Item.Rarity >= Rarity.Rare || QuestId != null)
                 AddChild(new OmniLight3D { LightColor = halo, LightEnergy = 0.45f, OmniRange = 2.5f, ShadowEnabled = false });
         }
+        if (Item.Rarity == Rarity.Legendary)
+        {
+            // the fanfare is the scarcity: a beam of the rarity's colour and a chime, local to whoever sees the drop
+            AddChild(new MeshInstance3D
+            {
+                Name = "Beam",
+                Mesh = new CylinderMesh { TopRadius = 0.12f, BottomRadius = 0.12f, Height = 6f, RadialSegments = 12 },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = rarityColor with { A = 0.35f }, EmissionEnabled = true, Emission = rarityColor, EmissionEnergyMultiplier = 1.2f, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, CullMode = BaseMaterial3D.CullModeEnum.Disabled },
+                Position = new Vector3(0, 2.7f, 0), CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+            Audio.AudioManager.Instance?.Play("level_up", -6f);
+        }
     }
 
     public override void _Process(double delta)

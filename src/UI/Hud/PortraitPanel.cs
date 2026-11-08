@@ -18,6 +18,30 @@ public partial class PortraitPanel : PanelContainer
     private Label _status = null!;
     private Button _attack = null!;
     private Button _stance = null!;
+    private float _flashLeft, _pulseLeft, _pulseTotal;
+    private Color _pulseColor = Colors.White;
+
+    /// <summary>A red flash when this member is hurt, easing back over 0.3 s.</summary>
+    public void Flash() => _flashLeft = 0.3f;
+    /// <summary>The portrait oscillates toward <paramref name="c"/> for <paramref name="seconds"/> (a level-up's gold).</summary>
+    public void Pulse(Color c, float seconds) { _pulseColor = c; _pulseLeft = _pulseTotal = seconds; }
+
+    public override void _Process(double delta)
+    {
+        if (_flashLeft <= 0f && _pulseLeft <= 0f) return;
+        var dt = (float)delta;
+        var m = _party.Members[_index];
+        var baseColor = m.IsAlive ? Colors.White : new Color(0.5f, 0.5f, 0.5f);
+        var tint = baseColor;
+        if (_pulseLeft > 0f)
+        {
+            _pulseLeft -= dt;
+            var k = 0.5f + 0.5f * Mathf.Sin((_pulseTotal - _pulseLeft) * 8f);
+            tint = baseColor.Lerp(_pulseColor, k * Math.Min(1f, _pulseLeft / 0.4f));
+        }
+        if (_flashLeft > 0f) { _flashLeft -= dt; tint = tint.Lerp(new Color(1f, 0.6f, 0.6f), Math.Max(0f, _flashLeft / 0.3f)); }
+        Modulate = tint;
+    }
 
     public override void _Ready()
     {
@@ -73,6 +97,6 @@ public partial class PortraitPanel : PanelContainer
             : m.CooldownRemaining > 0 ? $"{ability.Name} ..."
             : ability.Name;
         if (focused && m.WeaponProfile.IsRanged && ability.Kind == DungeonCrawler.Combat.AbilityKind.WeaponAttack) _attack.Text += $"  [{_party.ArrowCount}]";
-        Modulate = m.IsAlive ? Colors.White : new Color(0.5f, 0.5f, 0.5f);
+        if (_flashLeft <= 0f && _pulseLeft <= 0f) Modulate = m.IsAlive ? Colors.White : new Color(0.5f, 0.5f, 0.5f);
     }
 }

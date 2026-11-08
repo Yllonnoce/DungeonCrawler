@@ -31,6 +31,10 @@ public partial class Hud : Control
     public DamageNumbers DamageNumbers { get; private set; } = null!;
     public HitMarker HitMarker { get; private set; } = null!;
     public EnemyBars EnemyBars { get; private set; } = null!;
+    public BossBar BossBar { get; private set; } = null!;
+    public Vignette Vignette { get; private set; } = null!;
+    public LevelUpBanner LevelUpBanner { get; private set; } = null!;
+    public LootToast LootToast { get; private set; } = null!;
     private CharacterSheet _sheet = null!;
     private InventoryScreen _inventory = null!;
     public InventoryScreen Inventory => _inventory;
@@ -139,6 +143,18 @@ public partial class Hud : Control
         Main.Instance.AddChild(EnemyBars);
         HitMarker = new HitMarker { Name = "HitMarker" };
         AddChild(HitMarker);
+        Vignette = new Vignette { Name = "Vignette" };
+        AddChild(Vignette);
+        MoveChild(Vignette, 0); // under everything else
+        BossBar = new BossBar { Name = "BossBar" };
+        BossBar.Bind(_party);
+        AddChild(BossBar);
+        LevelUpBanner = new LevelUpBanner { Name = "LevelUpBanner" };
+        AddChild(LevelUpBanner);
+        LootToast = new LootToast { Name = "LootToast" };
+        AddChild(LootToast);
+        LootToast.AnchorLeft = 0; LootToast.AnchorRight = 0; LootToast.AnchorTop = 1; LootToast.AnchorBottom = 1;
+        LootToast.OffsetLeft = 16; LootToast.OffsetRight = 420; LootToast.OffsetTop = -190; LootToast.OffsetBottom = -164; // beside (above) the portraits
 
         _dialogue = new DialogueScreen { Name = "Dialogue", Visible = false };
         _dialogue.Closed += UpdateModalState;
@@ -171,7 +187,34 @@ public partial class Hud : Control
         bus.Narration += OnNarration;
         bus.QuestChanged += OnQuestChanged;
         bus.EnemyHurt += OnEnemyHurt;
+        bus.MemberDamaged += OnMemberDamaged;
+        bus.LevelUp += OnLevelUp;
+        bus.ItemPickedUp += OnLootToast;
         OnFloorChanged(Game.Instance.CurrentFloor, 0);
+    }
+
+    private void OnMemberDamaged(int index, float amount)
+    {
+        if (index < 0 || index >= _party.Members.Length) return;
+        if (index < _panels.Count) _panels[index].Flash();
+        if (index != _party.LocalIndex) return;
+        var maxHp = Math.Max(1f, _party.Members[index].Stats[Characters.Stat.MaxHp]);
+        Vignette.Hit(amount / maxHp);
+        if (amount >= maxHp * Combat.FeedbackRules.HeavyHitFraction) Dungeon.Props.Tremor.ShakeOnly(Combat.FeedbackRules.ShakeAmplitude, Combat.FeedbackRules.ShakeSeconds);
+    }
+
+    private void OnLevelUp(int index)
+    {
+        if (index < 0 || index >= _party.Members.Length) return;
+        var m = _party.Members[index];
+        LevelUpBanner.Show($"{m.Name} reaches level {m.Level}");
+        if (index < _panels.Count) _panels[index].Pulse(new Color(1f, 0.85f, 0.3f), Combat.FeedbackRules.LevelUpPulseSeconds);
+    }
+
+    private void OnLootToast(ItemInstance item)
+    {
+        if (item.Rarity < Rarity.Rare) return;
+        LootToast.Show(item.DisplayName, new Color(RarityInfo.ColorHex(item.Rarity)));
     }
 
     private void OnEnemyHurt(Enemies.Enemy e, float amount, Combat.HitFlavor flavor, int byMember)
@@ -186,6 +229,9 @@ public partial class Hud : Control
     {
         var bus = EventBus.Instance;
         bus.EnemyHurt -= OnEnemyHurt;
+        bus.MemberDamaged -= OnMemberDamaged;
+        bus.LevelUp -= OnLevelUp;
+        bus.ItemPickedUp -= OnLootToast;
         if (IsInstanceValid(DamageNumbers)) DamageNumbers.QueueFree();
         if (IsInstanceValid(EnemyBars)) EnemyBars.QueueFree();
         bus.FloorChanged -= OnFloorChanged;
