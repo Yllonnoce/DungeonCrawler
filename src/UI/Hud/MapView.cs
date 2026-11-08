@@ -29,6 +29,7 @@ public partial class MapView : Control
     private static readonly Color EnemyColor = new(1f, 0.25f, 0.2f);
     private static readonly Color LootColor = new(1f, 0.8f, 0.2f);
     private static readonly Color PartyColor = new(0.4f, 1f, 0.5f);
+    private static readonly Color PingColor = new(0.45f, 0.9f, 1f);
 
     public override void _Process(double delta) => QueueRedraw();
 
@@ -132,6 +133,15 @@ public partial class MapView : Control
                 }
             }
         }
+
+        // pings: a ring with a dot, for as long as the mark lives
+        if (PingMarkers.Instance is { } pings)
+            foreach (var p in pings.Board.Active)
+            {
+                var c = origin + new Vector2(p.X, p.Z) / DungeonBuilder.CellSize * cell;
+                DrawCircle(c, Mathf.Max(3f, cell * 0.5f), PingColor);
+                DrawArc(c, Mathf.Max(5f, cell * 0.9f), 0, Mathf.Tau, 16, PingColor, 1.5f);
+            }
 
         // companions
         foreach (var adv in main.Party.Adventurers)

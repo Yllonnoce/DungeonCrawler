@@ -154,6 +154,7 @@ public partial class Hud : Control
         AddChild(_chat);
         _pause = new PauseMenu { Name = "PauseMenu", Visible = false };
         AddChild(_pause);
+        AddChild(new PingMarkers { Name = "PingMarkers" });
 
         _objective = new Label { Name = "Objective", Modulate = new Color(0.95f, 0.85f, 0.55f) };
         _objective.AnchorLeft = 0; _objective.AnchorRight = 0; _objective.AnchorTop = 0; _objective.AnchorBottom = 0;
@@ -418,6 +419,11 @@ public partial class Hud : Control
             _minimap.Visible = !_fullMap.Visible;
             GetViewport().SetInputAsHandled();
         }
+        else if (@event.IsActionPressed("ping"))
+        {
+            Ping();
+            GetViewport().SetInputAsHandled();
+        }
         else if (@event.IsActionPressed("character"))
         {
             ToggleSheet();
@@ -541,6 +547,23 @@ public partial class Hud : Control
     public string ReadyCheckText => _readyCheck.Visible ? _readyCheck.Text : "";
 
     public bool StairsPromptOpen => _stairsPrompt.Visible;
+
+    private double _lastPingAt = -1;
+    /// <summary>
+    /// Ping (X): a marker with this player's name where the camera looks, 2 s, 1 s cooldown; on a client the server relays
+    /// it to everyone as a <see cref="Net.PingEvt"/>. False when nothing was pinged (down, cooling down, or looking at nothing).
+    /// </summary>
+    public bool Ping()
+    {
+        if (_party.Local is not { Downed: false } me) return false;
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (!Net.PingRules.CanPing(_lastPingAt, now)) return false;
+        if (me.AimPoint(Net.PingRules.MaxAimDistance) is not { } at) return false;
+        _lastPingAt = now;
+        if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.PingIntent(new Net.NetVec(at.X, at.Y, at.Z)));
+        else PingMarkers.Instance?.Place(me.State.Name, at);
+        return true;
+    }
 
     public void UpdateModalState()
     {

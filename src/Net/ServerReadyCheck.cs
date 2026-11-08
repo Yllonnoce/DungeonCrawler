@@ -79,6 +79,21 @@ public partial class ServerWorld
         Game.Instance.ChangeFloor(stairs.Direction);
     }
 
+    // ---- pings -------------------------------------------------------------------------------------------
+    private readonly Dictionary<int, double> _lastPingAt = new();
+
+    /// <summary>A client's ping: refused inside the 1 s cooldown or farther than <see cref="PingRules.MaxRangeFromBody"/> from its body; otherwise everyone gets the mark.</summary>
+    private void HandlePing(PlayerSlot slot, Party.Adventurer body, PingIntent pi)
+    {
+        var now = NetSession.Instance.Now;
+        var at = new Vector3(pi.At.X, pi.At.Y, pi.At.Z);
+        if (!PingRules.CanPing(_lastPingAt.GetValueOrDefault(slot.MemberIndex, -1), now)) return;
+        if (!PingRules.Accepts(at.DistanceTo(body.GlobalPosition))) return;
+        _lastPingAt[slot.MemberIndex] = now;
+        Broadcast(new PingEvt(slot.Name, pi.At));
+        Trace.Add("ping");
+    }
+
     private void BroadcastReady(int count, int total, int secondsLeft, int direction)
     {
         Broadcast(new StairsReadyMsg(count, total, secondsLeft, direction));

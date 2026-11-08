@@ -422,6 +422,9 @@ public partial class ServerWorld : Node
                 stairs.Interact(party, body);
                 break;
             }
+            case PingIntent pi:
+                HandlePing(slot, body, pi);
+                break;
             case ShoutIntent:
                 if (!body.Downed) break;
                 EventBus.Instance.Log($"{slot.Name} needs help!");

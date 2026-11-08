@@ -96,6 +96,7 @@ public partial class ClientWorld : Node
             case HitFxEvt fx: OnHitFx(fx); break;
             case DeathCardEvt dc: Main.Instance.Hud?.ShowDeathCard(dc.Card, null); Trace.Add("deathcard"); break; // the card closes on its button; under the Death Clause the server's recap follows
             case FloorCardEvt fc2: Main.Instance.Hud?.ShowFloorCard(fc2.Card); Trace.Add("floorcard"); break;
+            case PingEvt pe: UI.Hud.PingMarkers.Instance?.Place(pe.Name, new Vector3(pe.At.X, pe.At.Y, pe.At.Z)); Trace.Add("ping"); break;
             case StairsReadyMsg rm:
                 if (rm.Total == 0) Main.Instance.Hud?.HideReadyCheck(); else Main.Instance.Hud?.ShowReadyCheck(rm.Count, rm.Total, rm.SecondsLeft, rm.Direction);
                 Trace.Add(rm.Total == 0 ? "ready-done" : "ready-check");
