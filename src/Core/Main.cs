@@ -450,6 +450,11 @@ public partial class Main : Node
 
         if (game.Floors.TryGetValue(floor, out var saved) && Builder.FloorRoot is { } root)
             FloorStateCapture.Apply(saved, root, Exploration, Party);
+        if (delta > 0 && saved == null && !NetSession.IsClient && Adventure.Run.ClauseRules.Active.AuditsAt(floor))
+        {   // the Inventory Audit clause: at each tier gate the meanest piece each member wears loses a virtue
+            foreach (var line in Adventure.Run.InventoryAudit.Apply(Party.Members)) EventBus.Instance.Log(line);
+            Hud?.Refresh();
+        }
 
         if (_pendingPartyState is { } pending)
         {

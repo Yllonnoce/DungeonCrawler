@@ -66,8 +66,16 @@ public partial class Game : Node
         Victory = false;
         Adventure = new AdventureDto { Mode = AdventureMode.Offline, Run = run, RunId = Guid.NewGuid().ToString("N") };
         if (Net.NetSession.Instance?.Clauses is { } clauses) Adventure.Clauses = ClauseRules.Normalize(clauses); // a server's --clauses= binds every new game in the process
-        ClauseRules.Activate(Adventure.Clauses);
+        ApplyClauses();
         GD.Print($"[Game] new game seed={GameSeed} run={run} clauses=[{string.Join(",", Adventure.Clauses)}]");
+    }
+
+    /// <summary>The adventure's clauses take effect: the active set, Hostile Tenants' extra elites on the builder, and the fortune refresh that reprices the shop.</summary>
+    public void ApplyClauses()
+    {
+        ClauseRules.Activate(Adventure.Clauses);
+        DungeonBuilder.ExtraElitesPerFloor = ClauseRules.Active.ExtraElites;
+        DungeonCrawler.Adventure.FortuneDirector.Instance?.Refresh();
     }
 
     public List<TierProfile> TierProfiles() => Registry.Instance.All<TierDef>().OrderBy(t => t.Index).Select(t => t.ToProfile()).ToList();
@@ -95,7 +103,7 @@ public partial class Game : Node
         Floors.Clear();
         foreach (var (floor, state) in data.Floors) Floors[floor] = state;
         Adventure = data.Adventure ?? new AdventureDto();
-        ClauseRules.Activate(Adventure.Clauses);
+        ApplyClauses();
         RepairMerchant();
         GD.Print($"[Game] loaded seed={GameSeed} floor={CurrentFloor} floors={Floors.Count} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
     }
@@ -120,7 +128,7 @@ public partial class Game : Node
         Floors.Clear();
         Floors[w.CurrentFloor] = w.FloorState;
         Adventure = w.Adventure ?? new AdventureDto();
-        ClauseRules.Activate(Adventure.Clauses);
+        ApplyClauses();
         RepairMerchant();
         GD.Print($"[Game] joined seed={GameSeed} floor={CurrentFloor} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
     }

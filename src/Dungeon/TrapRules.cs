@@ -17,7 +17,7 @@ public static class TrapRules
     public static bool HitsWholeParty(TrapKind kind) => kind != TrapKind.Spikes;
 
     /// <summary>The floor's depth scaling, times the dungeon's lethality when the party is the victim.</summary>
-    private static float Scale(int floor, bool lethal) => TierRules.DamageScale(floor) * (lethal ? TierRules.Lethality * TierRules.HazardFactor : 1f);
+    private static float Scale(int floor, bool lethal) => TierRules.DamageScale(floor) * (lethal ? TierRules.PartyDamageScale * TierRules.HazardFactor : 1f);
 
     /// <param name="lethal">The party is the victim (the default): the dungeon's <see cref="TierRules.Lethality"/> applies. False for the party's own traps springing on enemies.</param>
     public static AttackProfile Attack(TrapKind kind, int floor, bool lethal = true)

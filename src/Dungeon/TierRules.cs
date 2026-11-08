@@ -25,6 +25,10 @@ public static class TierRules
     public const float DefaultLethality = 3f;
     /// <summary>Brittle: traps and hazards against the party hurt this much more. The FortuneDirector sets it; 1 is plain.</summary>
     public static float HazardFactor { get; set; } = 1f;
+    /// <summary>Run-structure's Hazard Pay Waived: +20% damage taken per rank, set by ClauseRules.Activate; 1 is the plain contract.</summary>
+    public static float ClauseDamageMultiplier { get; set; } = 1f;
+    /// <summary>What incoming damage to the party is scaled by: the lethality times the clause's multiplier (the hazards' kill threshold keeps the lethality alone).</summary>
+    public static float PartyDamageScale => Lethality * ClauseDamageMultiplier;
     public const float MinLethality = 1f, MaxLethality = 3f;
 
     /// <summary>An NPC's hit points on a floor: enemies hit them with the dungeon's lethality, so they carry it too and last as long as they always did.</summary>

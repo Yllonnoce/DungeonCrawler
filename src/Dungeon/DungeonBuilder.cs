@@ -137,7 +137,7 @@ public partial class DungeonBuilder : Node3D
         var seed = gameSeed ?? Game.Instance?.GameSeed ?? GameSeed;
         var layout = LayoutFor(floor, seed);
         // an old save's floors were built before the hazards existed: they stay as they were, reserved cells and all
-        spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout), HazardsEnabled = floor >= (Game.Instance?.Adventure?.HazardsFromFloor ?? 1) };
+        spec = spec with { Layout = layout, Objective = ObjectiveFor(floor, seed, layout), HazardsEnabled = floor >= (Game.Instance?.Adventure?.HazardsFromFloor ?? 1), SafeRoom = floor == 0 || !Adventure.Run.ClauseRules.Active.NoSafeRoom }; // No Rest for the Hired: no safe room below the tavern
         if (DebugTools.Instance?.ForcedHazard is { } fh && (DebugTools.Instance.ForcedHazardFloor is not { } onFloor || onFloor == floor)) spec = spec with { ForceHazard = fh.StartsWith("spike") ? HazardKind.SpikeBed : HazardKind.Press };
         var overrides = Game.Instance?.Adventure?.Campaign?.OutlineFor(floor)?.SpecOverrides;
         return overrides is { IsEmpty: false } ? overrides.Apply(spec) : spec;
@@ -252,6 +252,11 @@ public partial class DungeonBuilder : Node3D
             if (contents is { Dropped.Count: > 0 }) GD.Print($"[DungeonBuilder] floor {floorIndex}: could not place: {string.Join("; ", contents.Dropped)}");
         }
         contents ??= LegacyPopulator.Populate(layout, tier?.ToProfile(), _enemies, floorIndex, seed, ExtraElites);
+        if (Adventure.Run.ClauseRules.Active.Rank(Adventure.Run.Clause.FullOccupancy) is > 0 and var occupancy && layout.Kind != LayoutKind.Tavern)
+        {
+            var added = Adventure.Run.OccupancyRules.Apply(contents, layout, occupancy, seed);
+            GD.Print($"[DungeonBuilder] floor {floorIndex}: Full Occupancy {occupancy} adds {added} creatures");
+        }
         Contents = contents;
 
         _floorRoot = new Node3D { Name = $"Floor{floorIndex}" };
@@ -360,7 +365,8 @@ public partial class DungeonBuilder : Node3D
         if (layout.Kind == LayoutKind.Tavern) return; // the tavern has its own: PlaceTavernMerchant
         var campaign = Game.Instance?.Adventure?.Campaign;
         var cast = campaign?.MerchantCast();
-        if (!hidden && (layout.SafeRoom < 0 || cast == null))
+        var noRest = !hidden && layout.SafeRoom < 0 && Adventure.Run.ClauseRules.Active.NoSafeRoom && cast != null; // No Rest for the Hired: he waits in the open by the stairs
+        if (!hidden && !noRest && (layout.SafeRoom < 0 || cast == null))
         {
             GD.Print($"[DungeonBuilder] floor {floor}: no safe room, no merchant");
             return;
@@ -383,11 +389,12 @@ public partial class DungeonBuilder : Node3D
         npc.Script = new NpcScript { Start = "trade", Nodes = { new DialogueNode { Id = "trade", Line = lines?.Trade ?? new Line("") } } };
         npc.Name = hidden ? "Npc_merchant_hidden" : "Npc_merchant";
         root.AddChild(npc);
-        var cell = at ?? SafeRoomRules.MerchantCell(layout);
+        var cell = at ?? (noRest ? Adventure.Run.NoRestRules.MerchantCell(layout) : SafeRoomRules.MerchantCell(layout));
         npc.GlobalPosition = Surface(cell) + Vector3.Up * 0.1f;
         if (hidden) { if (layout.SecretRooms.FirstOrDefault(r => r.Merchant == cell) is { } room) npc.FaceToward(Surface(room.Doorway)); }
+        else if (noRest) npc.FaceToward(Surface(layout.UpStairs));
         else npc.FaceToward(Surface(SafeRoomRules.DoorCell(layout, layout.SafeRoom)));
-        GD.Print($"[DungeonBuilder] floor {floor}: {(hidden ? "hidden stall" : "merchant")} {npc.NpcName} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
+        GD.Print($"[DungeonBuilder] floor {floor}: {(hidden ? "hidden stall" : noRest ? "merchant in the open by the stairs (No Rest)" : "merchant")} {npc.NpcName} at {cell} (model {(npc.HasModel ? "loaded" : "missing")}, lines {(lines != null ? "yes" : "none")})");
     }
 
     /// <summary>
@@ -1168,7 +1175,7 @@ public partial class DungeonBuilder : Node3D
     public void PlaceAmbushes(FloorLayout layout, int floor, int seed, Save.FloorStateDto? state)
     {
         if (layout.Kind == LayoutKind.Tavern) return; // nothing lies in wait in the tavern
-        var count = Settings.Ambushes && DebugTools.Instance?.NoAmbush != true ? AmbushRules.Count(floor) : 0;
+        var count = Settings.Ambushes && DebugTools.Instance?.NoAmbush != true ? AmbushRules.Count(floor, Adventure.Run.ClauseRules.Active.AmbushesDoubled) : 0;
         var points = AmbushRules.Place(layout, RegularEnemies(floor), seed, count);
         var spawner = new AmbushSpawner();
         _floorRoot!.AddChild(spawner);

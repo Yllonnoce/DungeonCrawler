@@ -64,7 +64,7 @@ public partial class FortuneDirector : Node
                 m.Recalculate();
                 if (m.IsAlive) m.Hp = Math.Min(m.Hp, m.Stats[Stat.MaxHp]);
             }
-        Prices.BuyFactor = FortuneRules.PriceFactor(adv);
+        Prices.BuyFactor = FortuneRules.PriceFactor(adv, Run.ClauseRules.Active.PriceMultiplier); // Miser's Mark times the Convenience Fee
         TierRules.HazardFactor = FortuneRules.HazardFactor(adv);
         ConsumableRules.HealFactor = FortuneRules.HealFactor(adv);
         if (Party != null) for (var i = 0; i < Party.Members.Length; i++) EventBus.Instance.RaiseMemberChanged(i);
@@ -163,10 +163,6 @@ public partial class FortuneDirector : Node
         if (Main.Instance is { } main && main.InGame && main.Hud is { } hud && hud.ShrineOpen) hud.Shrine.Close(outcome);
     }
 
-    /// <summary>Run-structure's Fine Print clause (two offers) read without a compile-time dependency: the field may not exist yet.</summary>
-    private static bool FinePrint(AdventureDto adv)
-        => adv.GetType().GetProperty("Clauses")?.GetValue(adv) is IEnumerable<string> clauses && clauses.Contains("fine_print");
-
     /// <summary>A body touched the altar: pay the price (or refuse, unused), mark it used, and open the card (solo) or broadcast it (server).</summary>
     public void OpenShrine(Shrine shrine, PartyController party, Adventurer actor)
     {
@@ -199,7 +195,7 @@ public partial class FortuneDirector : Node
                 break;
         }
         shrine.MarkUsed();
-        var count = shrine.Price == ShrineRules.Price.Curse ? ShrineRules.OfferCountCursed : FinePrint(adv) ? ShrineRules.OfferCountFinePrint : ShrineRules.OfferCount;
+        var count = shrine.Price == ShrineRules.Price.Curse ? ShrineRules.OfferCountCursed : Run.ClauseRules.Active.ShrineOffers(ShrineRules.OfferCount); // Fine Print: two, not three
         var offers = ShrineRules.Offer(Game.Instance.GameSeed, floor, adv.Boons, count);
         var lift = adv.Curses.FirstOrDefault(c => c != Curses.Scar);
         var card = new ShrineCardMsg(offers, lift, ShrineRules.LiftPrice(floor), ShrineRules.SkipGold(floor), ShrineRules.PriceLine(shrine.Price, floor), actor.Index);

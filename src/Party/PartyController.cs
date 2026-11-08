@@ -562,6 +562,7 @@ public partial class PartyController : Node3D
 
     public void AwardXp(int xp)
     {
+        xp = Adventure.Run.ClauseRules.Active.ScaleReward(xp); // the contract's heat: 1 + 0.1 × heat on XP found
         for (var i = 0; i < Members.Length; i++)
         {
             var m = Members[i];
@@ -940,8 +941,13 @@ public partial class PartyController : Node3D
         if (delta > 0) EventBus.Instance.PlaySfx("coins");
     }
 
-    /// <summary>Coins picked up off the floor: Toll Road's +30% (fortune) and the legendary gold-find bonus both apply.</summary>
-    public void AddFoundGold(int coins) => AddGold((int)LegendaryRules.GoldFound(Adventure.Fortune.FortuneRules.GoldFound(coins, Game.Instance.Adventure), GoldFindBonus()));
+    /// <summary>Coins picked up off the floor: Toll Road's +30% (fortune), the legendary gold-find bonus and the contract's heat all apply; the ledger hears the sum.</summary>
+    public void AddFoundGold(int coins)
+    {
+        var scaled = Adventure.Run.ClauseRules.Active.ScaleReward((int)LegendaryRules.GoldFound(Adventure.Fortune.FortuneRules.GoldFound(coins, Game.Instance.Adventure), GoldFindBonus()));
+        AddGold(scaled);
+        if (scaled > 0 && !Net.NetSession.IsClient) EventBus.Instance.RaiseGoldFound(scaled);
+    }
 
     /// <summary>Pays from the purse; false (and nothing taken) when the party cannot afford it.</summary>
     public bool TrySpendGold(int amount)

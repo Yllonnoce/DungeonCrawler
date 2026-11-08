@@ -96,9 +96,10 @@ public static class ClauseRules
     {
         var list = clauses == null ? new List<string>() : Normalize(clauses);
         Active = list.Count == 0 ? ClauseSet.None : new ClauseSet(list);
+        Dungeon.TierRules.ClauseDamageMultiplier = Active.DamageTakenMultiplier; // Hazard Pay Waived, at the party's three damage sites
     }
 
-    public static void Reset() => Active = ClauseSet.None;
+    public static void Reset() => Activate(null);
 }
 
 /// <summary>A signed set of clauses and the knobs they turn.</summary>
