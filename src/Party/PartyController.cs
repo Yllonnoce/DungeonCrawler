@@ -492,6 +492,7 @@ public partial class PartyController : Node3D
             m.Hp = MangledRules.ReviveHp;
             m.Effects.Clear();
             r.Target.Revive();
+            EventBus.Instance.RaiseMemberRescued(r.Target.Index, r.Rescuer.Index);
             EventBus.Instance.Log($"{m.Name} is pulled free.");
             EventBus.Instance.RaiseMemberChanged(r.Target.Index);
         }

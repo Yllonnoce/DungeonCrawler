@@ -29,7 +29,31 @@ public sealed class FloorRecord
     /// <summary>Secrets found on the floor against the secrets it holds (the floor card's "Secrets 1/3").</summary>
     public int SecretsFound { get; set; }
     public int SecretsTotal { get; set; }
+    /// <summary>Run-structure's ledger: who did what on the floor, what hurt most, who fell to what, and what wiped the party.</summary>
+    public int Rescues { get; set; }
+    public int GoldFound { get; set; }
+    public float BiggestHit { get; set; }
+    public string BiggestHitOn { get; set; } = "";
+    public string BiggestHitBy { get; set; } = "";
+    /// <summary>The floor card's line, written when the record closes (<c>LedgerRules.WorstMoment</c>).</summary>
+    public string WorstMoment { get; set; } = "";
+    public List<FallRecord> Falls { get; set; } = new();
+    /// <summary>The cause id of each wipe on this floor, in order (gas|press|spikes|boss|horde|elite|fall|mimic|bomber|generic).</summary>
+    public List<string> WipeCauses { get; set; } = new();
+    /// <summary>Per member, keyed by roster name.</summary>
+    public Dictionary<string, int> KillsBy { get; set; } = new();
+    public Dictionary<string, int> DownsBy { get; set; } = new();
+    public Dictionary<string, int> RescuesBy { get; set; } = new();
+    public Dictionary<string, float> DamageBy { get; set; } = new();
     public bool Completed { get; set; }
+}
+
+/// <summary>One member going down: who, the cause id, and the name of what did it.</summary>
+public sealed class FallRecord
+{
+    public string Member { get; set; } = "";
+    public string Cause { get; set; } = "";
+    public string Killer { get; set; } = "";
 }
 
 public sealed class CampaignMemoryDto

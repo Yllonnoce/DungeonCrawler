@@ -423,6 +423,8 @@ public partial class AdventureDirector : Node
         if (party != null && party.Members.Length > 0)
             _record.ExitHpFraction = party.Members.Sum(m => m.Hp) / Math.Max(1f, party.Members.Sum(m => m.Stats[Characters.Stat.MaxHp]));
         _record.Completed = true;
+        _record.WorstMoment = Run.LedgerRules.WorstMoment(_record);
+        EventBus.Instance.RaiseFloorLedgerClosed(_record.Floor, (int)_record.Seconds);
     }
 
     public override void _Process(double delta)
@@ -490,9 +492,16 @@ public partial class AdventureDirector : Node
         bus.DialogueNode += OnDialogueNode;
         bus.FloorChanged += OnFloorChanged;
         bus.Gathered += OnGathered;
-        bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; };
+        bus.HitLanded += (m, r) => { if (_record == null) return; _record.DamageDealt += r.Amount; if (r.Sneak) _record.SneakHits++; _record.DamageBy[m.Name] = _record.DamageBy.GetValueOrDefault(m.Name) + r.Amount; };
         bus.MemberDamaged += (_, amount) => { if (_record != null) _record.DamageTaken += amount; };
         bus.MemberDowned += _ => { if (_record != null) _record.Downs++; };
+        // run-structure's ledger: who did what, what hurt most, who fell to what, what wiped the party
+        bus.MemberKill += m => { if (_record != null) _record.KillsBy[m.Name] = _record.KillsBy.GetValueOrDefault(m.Name) + 1; };
+        bus.MemberDowned += i => { if (_record == null || Member(i) is not { } m) return; _record.DownsBy[m.Name] = _record.DownsBy.GetValueOrDefault(m.Name) + 1; _record.Falls.Add(new FallRecord { Member = m.Name, Cause = m.LastHarm?.CauseId ?? Run.HarmCauses.Generic, Killer = m.LastHarm?.Name ?? "" }); };
+        bus.MemberDamaged += (i, amount) => { if (_record == null || Member(i) is not { } m || amount <= _record.BiggestHit) return; _record.BiggestHit = amount; _record.BiggestHitOn = m.Name; _record.BiggestHitBy = m.LastHarm?.Name ?? ""; };
+        bus.MemberRescued += (_, rescuer) => { if (_record == null) return; _record.Rescues++; if (Member(rescuer) is { } r) _record.RescuesBy[r.Name] = _record.RescuesBy.GetValueOrDefault(r.Name) + 1; };
+        bus.PartyWipedBy += (floor, cause) => { if (_record != null && floor == _record.Floor) _record.WipeCauses.Add(cause); };
+        bus.GoldFound += n => { if (_record != null) _record.GoldFound += n; };
         bus.PartyWiped += () => { if (_record != null) _record.Wipes++; };
         bus.AbilityUsed += (_, kind) => { if (_record == null) return; if (kind is Combat.AbilityKind.WeaponAttack or Combat.AbilityKind.MeleeStrike) _record.WeaponAttacks++; else _record.SpellCasts++; };
         bus.LeadChanged += index => { var p = Main.Instance?.Party; if (p != null && index < p.Members.Length) _leadName = p.Members[index].Name; };

@@ -36,6 +36,8 @@ public sealed class CharacterState
 
     public StatusEffectController Effects { get; } = new();
     public Stats Stats { get; private set; } = Stats.Empty;
+    /// <summary>The last attack or hazard that hurt this member (run-structure: the wipe's cause). Status ticks never overwrite it, so a poison death still blames the biter.</summary>
+    public Adventure.Run.HarmSource? LastHarm { get; set; }
 
     /// <summary>Seconds until the next weapon swing or cast is allowed.</summary>
     public float CooldownRemaining { get; set; }

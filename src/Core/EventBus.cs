@@ -169,6 +169,12 @@ public partial class EventBus : Node
     /// <summary>(floor, seconds): a floor's ledger closed with the time spent on it.</summary>
     public event Action<int, int>? FloorLedgerClosed;
     public void RaiseFloorLedgerClosed(int floor, int seconds) => FloorLedgerClosed?.Invoke(floor, seconds);
+    /// <summary>A Mangled member was pulled free (member, rescuer): run-structure's ledger and the Pulled Free deed.</summary>
+    public event Action<int, int>? MemberRescued;
+    public void RaiseMemberRescued(int member, int rescuer) => MemberRescued?.Invoke(member, rescuer);
+    /// <summary>Coins found on the floor (after the heat multiplier): the floor card's gold.</summary>
+    public event Action<int>? GoldFound;
+    public void RaiseGoldFound(int coins) => GoldFound?.Invoke(coins);
 
     public void PlaySfx(string cue) => Sfx?.Invoke(cue);
 
