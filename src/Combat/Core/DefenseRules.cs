@@ -8,6 +8,8 @@ public static class DefenseRules
     public const float DodgeSpeed = 11f;
     public const float ParrySeconds = 0.25f, ParryStamina = 10f, ParryCooldown = 0.8f;
     public const float PerfectBlockSeconds = 0.2f;
+    /// <summary>The guard must have been down this long before raising it opens another perfect window: tapping the guard is not free.</summary>
+    public const float PerfectBlockRearmSeconds = 0.5f;
     /// <summary>An ordinary block's stamina; <c>PartyController.BlockStaminaCost</c> reads this.</summary>
     public const float BlockStamina = 12f;
     public const float StaggerSeconds = 1.2f;
@@ -28,12 +30,14 @@ public sealed class DefenseState
     public float GuardHeld { get; private set; } = -1f;
 
     // Remote flags: the edge opens a window, never the level. A rise the server refused (cooldown, stamina, class) stays consumed until the flag drops.
+    private float _guardDownFor = float.MaxValue; // seconds the guard has been down; a raise arms the perfect window only after the rearm
+    private bool _perfectArmed;
     private bool _remoteDodgeFlag, _remoteParryFlag;
     private bool _remoteDodgeLive, _remoteParryLive;     // the current rise opened a window that a held flag may keep open
     private float _remoteDodgeAge, _remoteParryAge;
     public bool Dodging => DodgeLeft > 0f;
     public bool Parrying => ParryLeft > 0f;
-    public bool InPerfectWindow => GuardHeld >= 0f && GuardHeld <= DefenseRules.PerfectBlockSeconds;
+    public bool InPerfectWindow => _perfectArmed && GuardHeld >= 0f && GuardHeld <= DefenseRules.PerfectBlockSeconds;
 
     public bool CanDodge(float stamina) => !Dodging && DodgeCooldownLeft <= 0f && stamina >= DefenseRules.DodgeStamina;
     public bool CanParry(float stamina) => !Parrying && ParryCooldownLeft <= 0f && stamina >= DefenseRules.ParryStamina;
@@ -65,8 +69,8 @@ public sealed class DefenseState
     /// <summary>The guard half of <see cref="Update"/>, for a remote body whose windows <see cref="ApplyRemote"/> already ticked.</summary>
     public void UpdateGuard(float dt, bool guarding)
     {
-        if (!guarding) GuardHeld = -1f;
-        else if (GuardHeld < 0f) GuardHeld = 0f;
+        if (!guarding) { GuardHeld = -1f; _guardDownFor += dt; }
+        else if (GuardHeld < 0f) { GuardHeld = 0f; _perfectArmed = _guardDownFor >= DefenseRules.PerfectBlockRearmSeconds; _guardDownFor = 0f; }
         else GuardHeld += dt;
     }
 

@@ -66,8 +66,8 @@ public static class CompanionBrain
     public const float RescueCalmDistance = 12f;
     /// <summary>Half the time a companion dodges a telegraphed signature, so bosses still hurt.</summary>
     public const float DodgeChance = 0.5f;
-    /// <summary>The dodge starts this long before the signature lands.</summary>
-    public const float DodgeLead = 0.35f;
+    /// <summary>The dodge starts this long before the signature lands; at most the burst's length, so the body is still untouchable when the blow falls.</summary>
+    public const float DodgeLead = 0.2f;
     /// <summary>Only a signature this close is worth dodging.</summary>
     public const float DodgeReach = 6f;
 

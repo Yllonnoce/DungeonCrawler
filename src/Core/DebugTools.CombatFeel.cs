@@ -373,6 +373,7 @@ public partial class DebugTools
                 Check(e.WindupLeft < 0f, "the stagger did not clear the wind-up");
                 Check(hud.DamageNumbers.ActiveCount >= 1, "no damage number");
                 Check(hud.HitMarker.Active, "the hit marker did not flick");
+                Stun(e, Math.Max(1.0f, e.HitReactSeconds + 0.4f)); // a stun that outlasts the reel (a heavy-stun item, a Deep Freeze): the wind-up must still start over when both end
                 Go(19);
                 break;
             }
@@ -383,8 +384,8 @@ public partial class DebugTools
                 if (since < Tick) break; // the bars place themselves on the next frame
                 if (!hud.EnemyBars.Showing(e) && _cfTries++ < 1) Fail("no health bar over the hurt enemy");
                 if (since > 4) { Fail("the stagger never ended"); Finish(); return; }
-                if (e.Staggered) break;
-                GD.Print($"[combat-feel] 9 after the stagger: state {e.State.Name} windupLeft {e.WindupLeft:0.00} (windup {e.WindupSeconds:0.00}) bar {hud.EnemyBars.Showing(e)}");
+                if (e.Staggered || e.Effects.IsStunned) break;
+                GD.Print($"[combat-feel] 9 after the stagger and the stun past it: state {e.State.Name} windupLeft {e.WindupLeft:0.00} (windup {e.WindupSeconds:0.00}) bar {hud.EnemyBars.Showing(e)}");
                 Check(e.State is not AttackState || e.WindupLeft >= e.WindupSeconds - 0.1f, "the wind-up did not start over after the stagger");
                 Stun(e);
                 _cfPerfectBlows = 0; _cfTries = 0;

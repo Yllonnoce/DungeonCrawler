@@ -387,8 +387,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Hp = hp;
         _flash = 0.25f;
         EventBus.Instance.RaiseEnemyHurt(this, amount, flavor, byMember);
-        if (hp > 0) PlayAnim("HitReact", force: true);
-        else if (!_clientDead) ClientDie();
+        if (hp <= 0f) { if (!_clientDead) ClientDie(); }
+        else if (WindupLeft <= 0f && !FeedbackRules.IsTick(flavor)) PlayAnim("HitReact", force: true); // ticks and mid-wind-up hits only flash
     }
 
     /// <summary>Cosmetic death: the server already handed out XP and loot.</summary>
@@ -459,10 +459,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         {
             _staggerLeft -= dt;
             MoveToward(GlobalPosition, dt);
-            if (_staggerLeft <= 0f && !Effects.IsStunned && _reenterAfterStagger) { _reenterAfterStagger = false; if (State is AttackState or ShootState) State.Enter(this); } // the attack cycle starts over
         }
         else
         {
+            if (_reenterAfterStagger) { _reenterAfterStagger = false; if (State is AttackState or ShootState) State.Enter(this); } // the attack cycle starts over once the reel (and any stun past it) ends
             if (WindupLeft > 0f) WindupLeft -= dt;
             if (TelegraphRemaining > 0f) TelegraphRemaining -= dt;
             State.Update(this, dt);
@@ -542,6 +542,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (State is SignatureState) ChangeState(new ChaseState());
         else if (State is AttackState or ShootState) _reenterAfterStagger = true;
         PlayAnim("HitReact", force: true);
+        if (!Net.NetSession.IsClient) EventBus.Instance.RaiseEnemyTelegraph(this, "Stagger"); // clients drop the decal, the tint and the glow too
     }
 
     /// <summary>The attack clip from the start of the wind-up, paced so its strike frame falls at the blow; a shooter's hand glows; the bus hears it (clients are told).</summary>
@@ -574,6 +575,14 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void ClientTelegraph(string state)
     {
         if (!IsAlive) return;
+        if (state == "Stagger")
+        {
+            WindupLeft = -1f;
+            EndTelegraph();
+            foreach (var glow in GetChildren().OfType<HandGlowNode>()) glow.QueueFree();
+            PlayAnim("HitReact", force: true);
+            return;
+        }
         if (state is "Attack" or "Shoot") BeginWindup(WindupSeconds);
         else if (state.StartsWith("Signature:") && Enum.TryParse<Signature>(state[10..], out var sig) && sig != Signature.None) BeginSignatureTelegraph(sig);
     }
@@ -850,7 +859,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (result.IgniteBurst > 0f) IgniteAround(attackerStats, result.IgniteBurst, rng);
         if (IsBoss && !_halfSaid && Hp > 0 && Hp <= MaxHp * 0.5f) { _halfSaid = true; EventBus.Instance.RaiseBossHalf(this); }
         if (Hp <= 0) _dying = true;
-        else { PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx(HurtCue); }
+        else { if (WindupLeft <= 0f) PlayAnim("HitReact", force: true); EventBus.Instance.PlaySfx(HurtCue); } // a light hit mid-wind-up flashes but leaves the telegraph clip running
         if (Hp > 0 && State.Unaware) ChangeState(new ChaseState());
         else if (!_fled && Profile.FleeHpFraction > 0 && Hp / MaxHp < Profile.FleeHpFraction && State is not FleeState)
         {

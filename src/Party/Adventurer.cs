@@ -575,6 +575,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         _thinkTimer -= dt;
         if (_potionCooldown > 0) _potionCooldown -= dt;
+        // a signature about to land is decided at once, not at the next quarter-second
+        if (_telegraphing != null && IsInstanceValid(_telegraphing) && _telegraphing.TelegraphRemaining >= 0f && _telegraphing.TelegraphRemaining <= CompanionBrain.DodgeLead + 0.05f && _telegraphing.TelegraphId != _lastTelegraphDecided) _thinkTimer = Math.Min(_thinkTimer, 0f);
         if (_thinkTimer <= 0f) { _thinkTimer = 0.25f; Think(); }
 
         var lead = Party.Lead;
