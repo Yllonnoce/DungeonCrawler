@@ -44,7 +44,12 @@ public sealed class ShopStock
     public int UniqueIndex { get; init; } = -1;
     /// <summary>Where the hidden stall's wares start in <see cref="Items"/> (fortune); -1 when the floor has no stall. The regular wares are [0, HiddenFrom).</summary>
     public int HiddenFrom { get; init; } = -1;
+    /// <summary>The Lucky Dip's three bundles (fortune), rolled once by floor and slot.</summary>
+    public List<ItemInstance> Dip { get; } = new();
 }
+
+/// <summary>Which keeper a body can trade with: none, the regular merchant (within reach), his safe room, or the hidden stall (fortune).</summary>
+public enum TradeReach { None, Merchant, SafeRoom, Hidden }
 
 /// <summary>Engine-free shop rules: which floors carry a unique weapon, of what kind, and the seeded stock per floor.</summary>
 public static class ShopRules
@@ -132,13 +137,27 @@ public static class ShopRules
 
         var stock = new ShopStock { UniqueIndex = uniqueIndex, HiddenFrom = hiddenFrom };
         stock.Items.AddRange(items);
+        stock.Dip.AddRange(Adventure.Fortune.GambleRules.RollAll(cat, gameSeed, floor));
         return stock;
     }
 
+    /// <summary>Whether the keeper the body reached sells stock item <paramref name="index"/>: the hidden stall its own segment [HiddenFrom, Count), the merchant (or his room) the wares before it (the whole list when the floor has no stall).</summary>
+    public static bool SellsHere(ShopStock stock, int index, TradeReach reach)
+    {
+        if (index < 0 || index >= stock.Items.Count) return false;
+        return reach switch
+        {
+            TradeReach.Hidden => stock.HiddenFrom >= 0 && index >= stock.HiddenFrom,
+            TradeReach.Merchant or TradeReach.SafeRoom => stock.HiddenFrom < 0 || index < stock.HiddenFrom,
+            _ => false,
+        };
+    }
+
     /// <summary>Buys stock item <paramref name="index"/> into the bag. Null on success, else the reason it was refused (nothing changes then).</summary>
-    public static string? TryBuy(ShopStock stock, ISet<int> sold, int index, Inventory bag, ref int gold)
+    public static string? TryBuy(ShopStock stock, ISet<int> sold, int index, Inventory bag, ref int gold, TradeReach reach = TradeReach.Merchant)
     {
         if (index < 0 || index >= stock.Items.Count) return "Nothing there.";
+        if (!SellsHere(stock, index, reach)) return "Not sold here."; // the other keeper's wares: the stall's from the merchant, the merchant's from the stall
         if (sold.Contains(index)) return "Sold out.";
         var item = stock.Items[index];
         var price = Prices.BuyPrice(item);

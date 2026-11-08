@@ -76,6 +76,7 @@ public partial class ClientWorld : Node
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
             case ShopSync ss: Main.Instance.Party.ApplyShopSync(ss.Floor, ss.Sold, ss.Gold, ss.Buyback); Trace.Add("shop"); break;
+            case LuckyDipSync ld: Main.Instance.Party.ApplyLuckyDipSync(ld.Floor, ld.Bought, ld.Gold); Trace.Add("dip"); break;
             case ShrineCardMsg sc: Main.Instance.Hud.Shrine.Open(sc); Trace.Add("shrine"); break;
             case ShrineClosedEvt scl: Main.Instance.Hud.Shrine.Close(scl.Outcome); break;
             case FortuneSync fs: Game.Instance.Adventure.Boons = fs.Boons; Game.Instance.Adventure.Curses = fs.Curses; FortuneDirector.Instance?.Refresh(); Trace.Add("fortune"); break;

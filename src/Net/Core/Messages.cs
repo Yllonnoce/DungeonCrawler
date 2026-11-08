@@ -157,6 +157,10 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.ShrineClosed)] public sealed record ShrineClosedEvt(string Outcome) : NetMessage;
 /// <summary>The party's boons and curses, whole, whenever they change.</summary>
 [Msg(MsgKind.FortuneSync)] public sealed record FortuneSync(List<string> Boons, List<string> Curses) : NetMessage;
+/// <summary>A client buys Lucky Dip bundle <paramref name="Slot"/> (0..2) on its floor.</summary>
+[Msg(MsgKind.LuckyDipIntent)] public sealed record LuckyDipIntent(int Slot) : NetMessage;
+/// <summary>The floor's bought bundles and the purse, like ShopSync.</summary>
+[Msg(MsgKind.LuckyDipSync)] public sealed record LuckyDipSync(int Floor, List<int> Bought, int Gold) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

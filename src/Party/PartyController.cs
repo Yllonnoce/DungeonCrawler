@@ -802,34 +802,41 @@ public partial class PartyController : Node3D
     /// <summary>How near the merchant a body must stand to trade outside the safe room (the interact reach).</summary>
     public const float MerchantReach = 3.5f;
 
-    /// <summary>Whether this body may trade: alive, the floor has a merchant, and it is in the safe room or within reach of him. Logs the refusal. With no game scene at all (no Main) there is nothing to judge; a live Main with no floor built refuses.</summary>
+    /// <summary>Which keeper this body can trade with: the merchant within reach or from inside his safe room, the hidden stall within reach (fortune), or none. With no game scene at all (no Main) there is nothing to judge: the merchant.</summary>
+    public static TradeReach TradeReachFor(Adventurer? body)
+    {
+        if (Main.Instance == null) return TradeReach.Merchant;
+        var builder = Main.Instance.Builder;
+        if (body == null || body.Downed || builder?.FloorRoot is not { } floorRoot) return TradeReach.None;
+        if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
+        {
+            if (builder.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition))) return TradeReach.SafeRoom;
+            if (body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return TradeReach.Merchant;
+        }
+        // the hidden stall: within reach only, there is no room to be "in"
+        if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant_hidden") is { } stall && body.GlobalPosition.DistanceTo(stall.GlobalPosition) <= MerchantReach) return TradeReach.Hidden;
+        return TradeReach.None;
+    }
+
+    /// <summary>Whether this body may trade at all: alive and at a keeper (see <see cref="TradeReachFor"/>). Logs the refusal.</summary>
     public static bool CanTradeAt(Adventurer? body)
     {
-        if (Main.Instance == null) return true;
-        var builder = Main.Instance.Builder;
-        if (body != null && !body.Downed && builder?.FloorRoot is { } floorRoot)
-        {
-            if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant") is { } merchant)
-            {
-                var inRoom = builder.Layout is { } layout && layout.IsInSafeRoom(DungeonBuilder.WorldToCell(body.GlobalPosition));
-                if (inRoom || body.GlobalPosition.DistanceTo(merchant.GlobalPosition) <= MerchantReach) return true;
-            }
-            // the hidden stall (fortune): within reach only, there is no room to be "in"
-            if (floorRoot.GetNodeOrNull<Npc>("Npc_merchant_hidden") is { } stall && body.GlobalPosition.DistanceTo(stall.GlobalPosition) <= MerchantReach) return true;
-        }
+        if (TradeReachFor(body) != TradeReach.None) return true;
         EventBus.Instance.Log($"{body?.State.Name ?? "Nobody"} is not at the merchant.");
         return false;
     }
 
     /// <summary>Buy a stock slot on the current floor. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
-    public string? ShopBuy(int stockIndex)
+    /// <param name="reach">On the server, the asking peer's keeper (ServerWorld judged its body); solo it is the local body's. A keeper sells only its own segment of the stock.</param>
+    public string? ShopBuy(int stockIndex, TradeReach? reach = null)
     {
         if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopBuyIntent(stockIndex)); return null; }
-        if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
+        reach ??= TradeReachFor(Local);
+        if (reach == TradeReach.None) { if (!Net.NetSession.IsServer) CanTradeAt(Local); return "Not at the merchant."; }
         var gold = Gold;
         var stock = ShopStockFor(Game.Instance.CurrentFloor);
         var bought = stockIndex >= 0 && stockIndex < stock.Items.Count ? stock.Items[stockIndex].ToString() : "";
-        var refusal = ShopRules.TryBuy(stock, ShopSoldOnFloor, stockIndex, Bag, ref gold);
+        var refusal = ShopRules.TryBuy(stock, ShopSoldOnFloor, stockIndex, Bag, ref gold, reach.Value);
         if (refusal != null)
         {
             EventBus.Instance.Log(refusal);
@@ -857,6 +864,48 @@ public partial class PartyController : Node3D
         AddGold(gold - Gold);
         Main.Instance?.Hud?.Refresh();
         return null;
+    }
+
+    // ---- the Lucky Dip (fortune) -------------------------------------------------------------------------
+
+    /// <summary>Lucky Dip slots (0..2) already bought on this floor; cleared on a floor change, saved per floor, synced like ShopSold.</summary>
+    public HashSet<int> LuckyDipBoughtOnFloor { get; } = new();
+
+    /// <summary>Buys bundle <paramref name="slot"/> at the merchant (never at the hidden stall). Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
+    public string? LuckyDipBuy(int slot, TradeReach? reach = null)
+    {
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.LuckyDipIntent(slot)); return null; }
+        reach ??= TradeReachFor(Local);
+        if (reach == TradeReach.None) { if (!Net.NetSession.IsServer) CanTradeAt(Local); return "Not at the merchant."; }
+        var floor = Game.Instance.CurrentFloor;
+        var stock = ShopStockFor(floor);
+        string? Refuse(string why) { EventBus.Instance.Log(why); return why; }
+        if (reach == TradeReach.Hidden) return Refuse("Not sold here.");
+        if (slot < 0 || slot >= stock.Dip.Count) return Refuse("Nothing there.");
+        if (LuckyDipBoughtOnFloor.Contains(slot)) return Refuse("Already bought.");
+        var price = Adventure.Fortune.GambleRules.Price(floor, LuckyDipDiscount());
+        if (Gold < price) { EventBus.Instance.RaiseBrokeAtShop(LocalIndex); return Refuse("Not enough gold."); }
+        if (Bag.FreeSlots <= 0) return Refuse("The bag is full.");
+        var item = stock.Dip[slot];
+        if (!Bag.TryAdd(item.Clone())) return Refuse("The bag is full.");
+        TrySpendGold(price);
+        LuckyDipBoughtOnFloor.Add(slot);
+        EventBus.Instance.Log($"The {Adventure.Fortune.GambleRules.BundleName((Adventure.Fortune.DipSlot)slot).ToLowerInvariant()} holds {item}.");
+        EventBus.Instance.RaiseGambled(FocusedIndex, Adventure.Fortune.GambleRules.IsWin(item));
+        Main.Instance?.Hud?.Refresh();
+        return null;
+    }
+
+    /// <summary>A client mirrors the server's bought bundles (for the floor it is on) and purse.</summary>
+    public void ApplyLuckyDipSync(int floor, List<int> bought, int gold)
+    {
+        if (floor == Game.Instance.CurrentFloor)
+        {
+            LuckyDipBoughtOnFloor.Clear();
+            foreach (var i in bought) LuckyDipBoughtOnFloor.Add(i);
+        }
+        SetGold(gold);
+        Main.Instance?.Hud?.Refresh();
     }
 
     /// <summary>A client mirrors the server's sold slots (for the floor it is on), purse and buyback ledger.</summary>

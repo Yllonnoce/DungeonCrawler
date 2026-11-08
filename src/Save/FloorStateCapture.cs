@@ -92,7 +92,7 @@ public static class FloorStateCapture
         if (floorRoot.GetChildren().OfType<Adventure.AmbushSpawner>().FirstOrDefault() is { } ambushes) dto.SprungAmbushes.AddRange(ambushes.Sprung.OrderBy(i => i));
         if (floorRoot.GetChildren().OfType<Adventure.PortalSpawner>().FirstOrDefault() is { } portals) { dto.PressureSeconds = portals.PressureSeconds; dto.PortalWaves = portals.Waves; }
         if (floorRoot.GetChildren().OfType<Adventure.SafeRoomController>().FirstOrDefault() is { } safeRoom) dto.Gathered = safeRoom.Gathered;
-        if (Core.Main.Instance?.Party is { } shopParty) dto.ShopSold = shopParty.ShopSoldOnFloor.OrderBy(i => i).ToList();
+        if (Core.Main.Instance?.Party is { } shopParty) { dto.ShopSold = shopParty.ShopSoldOnFloor.OrderBy(i => i).ToList(); dto.LuckyDipBought = shopParty.LuckyDipBoughtOnFloor.OrderBy(i => i).ToList(); }
         if (Adventure.FortuneDirector.Instance is { } fortune) dto.SecretsFound = fortune.FoundSecrets.OrderBy(i => i).ToList();
         if (floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault() is { } objective) dto.Objective = objective.Capture();
         dto.BossDefeated = Main.Instance?.BossDefeatedThisFloor == true || floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss && !e.IsAlive) || (layout.BossArena != null && !floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss));
@@ -177,6 +177,8 @@ public static class FloorStateCapture
         floorRoot.GetChildren().OfType<Adventure.SafeRoomController>().FirstOrDefault()?.Restore(dto.Gathered);
         party.ShopSoldOnFloor.Clear();
         foreach (var i in dto.ShopSold) party.ShopSoldOnFloor.Add(i);
+        party.LuckyDipBoughtOnFloor.Clear();
+        foreach (var i in dto.LuckyDipBought) party.LuckyDipBoughtOnFloor.Add(i);
         Adventure.FortuneDirector.Instance?.RestoreSecrets(dto.SecretsFound);
         if (dto.Objective is { } os)
         {
