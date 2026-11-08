@@ -344,6 +344,8 @@ public sealed class EscortCaptiveState : AiState
     public override string Name => "Escort";
     public override bool Unaware => true; // busy with its prize: the party can get the drop on it
     private readonly Godot.Vector3 _jail;
+    private Godot.Vector3? _lastPos;
+    private float _stuck;
     public EscortCaptiveState(Godot.Vector3 jail) => _jail = jail;
 
     public override void Update(Enemy enemy, float dt)
@@ -352,6 +354,11 @@ public sealed class EscortCaptiveState : AiState
         if (enemy.SinceHurt < 4f) { enemy.ChangeState(new ChaseState()); return; }
         var flat = new Godot.Vector3(_jail.X, enemy.GlobalPosition.Y, _jail.Z);
         if (enemy.GlobalPosition.DistanceTo(flat) < Adventure.Objectives.JailbreakRules.DeliverRange) { enemy.MoveToward(enemy.GlobalPosition, dt); return; } // the controller delivers
+        // no way to the jail (a door it cannot pass, a corridor it cannot read): rather than stand with its face in the wall, it lets the prisoner go and walks home
+        var here = new Godot.Vector3(enemy.GlobalPosition.X, 0, enemy.GlobalPosition.Z);
+        _stuck = _lastPos is { } last && here.DistanceTo(last) < 0.05f ? _stuck + dt : 0f;
+        _lastPos = here;
+        if (_stuck >= Adventure.Objectives.JailbreakRules.EscortStuckSeconds) { enemy.ChangeState(new ReturnState()); return; }
         enemy.MoveAlongPathToward(_jail, dt);
     }
 }

@@ -79,6 +79,13 @@ reinforcement count) tracks them. Each runs in a server-only `ObjectiveControlle
   beside locked chests. Open the door with a key or a pick, unshackle each prisoner the same way (a wandering one is
   rescued by talking); the freed follow the party, give XP, set `freed:<id>` and `jailbreak_freed_all` flags, and the
   last one opens a treasure vault and the stairs. A jailer killed mid-escort drops its key and its captive slips free.
+  The jail's key door answers to its jailers (`JailbreakController.TendJailDoor`): the enemy pathfinder treats closed doors as walls, so a
+  creature that carries the jail key may path through the jail door alone (`JailbreakRules.BlockedFor`, `DungeonBuilder.JailDoorCell`); the
+  door unlocks for an escort within `DoorUnlockRange` (5.5 m, cells are 4 m), and locks again once no creature stands inside or within
+  `DoorLockClearance` and no adventurer is at it. A delivering jailer leaves its collective (its post could lie behind a vault door) and
+  holds the doorstep; an escort that makes no progress for `EscortStuckSeconds` lets the prisoner go and walks home instead of standing
+  with its face in the wall (the anomaly a player reported on floor 2, 2026-11-08). `--test-jailer` (with `--builtin --floor=2` and the
+  calm flags) proves the whole march: seize, unlock, deliver, lock, post.
 - **Rising gas** (`ToxicController`, `GasRules`, `GasField`): poison rises from the low rooms, from the start room
   outward (45 s grace, 14 s a room, 40 s to thicken), the high ground last; corridors take their nearest room's time.
   The stairs move to the low room farthest from the start, behind a lever gate whose lever stands on the high ground
@@ -273,6 +280,8 @@ godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-mod
 godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-model=inworld:tts@1.5-max --voice-model-minor=inworld:tts@1.5-max --bake-cast-voice=assets/voice/builtin   # render every line of the recurring cast, the merchant's Merchant section and every boss line (outside the 80-line budget) into the shipped bank; the plans with their ids land in assets/voice/builtin/cast-plans, to merge into data/adventures/builtin by hand, then --import
 godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an enemy and the lead in the run, crushed and mangled, no auto-revive, a companion pulls the lead free, the villain gloats, a barrel jams the second run, saved, loaded, phase and kills survive
 godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
+godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
+godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
 godot --headless --path . -- --test-gas-wipe        # floor 2 toxic, lethality 3: the gas full and the floor remembered as the server autosaves it, the party gassed to a wipe; the floor comes back with the gas at its grace and nobody falls again
 godot --headless --path . -- --purge-voice          # sweep assets/voice/builtin of lines the shipped campaign no longer refers to, and user://voice of lines no campaign, run or save slot refers to; every bake does the same for the bank it wrote unless --keep-old-voice

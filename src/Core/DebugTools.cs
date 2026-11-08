@@ -351,6 +351,8 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--bake-kill-barks=")) { _bakeKillBarksDir = ProjectSettings.GlobalizePath(arg["--bake-kill-barks=".Length..]); _quitAfter = Math.Max(_quitAfter, 900); }
             else if (arg.StartsWith("--bake-cast-voice=")) { _bakeCastVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-cast-voice=".Length..]); _quitAfter = Math.Max(_quitAfter, 900); }
             else if (arg.StartsWith("--bake-all-voice=")) { _bakeAllVoiceDir = ProjectSettings.GlobalizePath(arg["--bake-all-voice=".Length..]); _quitAfter = Math.Max(_quitAfter, 3600); }
+            else if (arg == "--test-jailer") { _testJailer = true; _quitAfter = Math.Max(_quitAfter, 160); }
+            else if (arg.StartsWith("--dump-enemies=")) { foreach (var t in arg["--dump-enemies=".Length..].Split(',')) _dumpAt.Add(float.Parse(t, System.Globalization.CultureInfo.InvariantCulture)); _dumpAt.Sort(); }
             else if (arg.StartsWith("--voice-concurrent=")) VoiceRenderer.MaxConcurrent = Math.Clamp(int.Parse(arg["--voice-concurrent=".Length..]), 1, 8);
             else if (arg.StartsWith("--voice-budget=")) CampaignBaker.VoiceBudgetLines = int.Parse(arg["--voice-budget=".Length..]);
             else if (arg.StartsWith("--spend-cap=")) Settings.SpendCapUsd = double.Parse(arg["--spend-cap=".Length..], System.Globalization.CultureInfo.InvariantCulture); // this run only; not saved
@@ -883,6 +885,8 @@ public partial class DebugTools : Node
             else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[cast-voice] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
         }
         TickBakeAllVoice();
+        TickDumpEnemies();
+        TickJailerTest();
         if (_bakeKillBarksDir != null && Main.Instance?.InGame == true && Game.Instance.Adventure.Campaign is { } killCampaign && _elapsed >= 2.0)
         {
             // --bake-kill-barks=DIR (with --builtin --ai and the voice flags): render every kill line into DIR, then quit

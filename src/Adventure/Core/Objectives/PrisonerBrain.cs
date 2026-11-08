@@ -64,6 +64,14 @@ public static class JailbreakRules
     public const float CaptureRange = 1.6f;
     /// <summary>The jailer has delivered its captive when this close to the jail's middle.</summary>
     public const float DeliverRange = 1.8f;
+    /// <summary>How close to the jail door (in metres) a key-carrying jailer must be for it to unlock, and how far everyone must stand before it locks again.</summary>
+    public const float DoorUnlockRange = 5.5f, DoorLockClearance = 6.5f; // cells are 4 m: the doorstep is one cell out
+    /// <summary>How long an escort may make no progress before the jailer gives the prisoner up.</summary>
+    public const float EscortStuckSeconds = 8f;
+
+    /// <summary>A creature's blocked-cell test: the floor's rule, except that the jail door is open ground to whoever carries the jail key.</summary>
+    public static Func<Dungeon.Generation.GridPos, bool> BlockedFor(bool carriesJailKey, Dungeon.Generation.GridPos? jailDoor, Func<Dungeon.Generation.GridPos, bool> blocked)
+        => carriesJailKey && jailDoor is { } door ? c => c != door && blocked(c) : blocked;
 
     public static PrisonerState Apply(PrisonerState state, PrisonerEvent e) => (state, e) switch
     {

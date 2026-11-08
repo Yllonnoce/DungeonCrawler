@@ -105,6 +105,7 @@ public partial class JailbreakController : ObjectiveController
         var perRoom = new int[_neighbours.Count];
         foreach (var e in enemies) { var r = RoomIndex(e.GlobalPosition); if (r >= 0) perRoom[r]++; }
         var jailIndex = Layout.Objective!.JailRoom is { } jail ? Layout.Rooms.IndexOf(jail) : -1;
+        TendJailDoor(main, enemies, jailIndex);
 
         foreach (var npc in _prisoners)
         {
@@ -151,6 +152,43 @@ public partial class JailbreakController : ObjectiveController
         }
     }
 
+    private bool _doorHeldOpen;
+
+    /// <summary>
+    /// The jail's key door answers to the jailers: it unlocks for a key-carrying escort within reach and locks again once no captive, jailer or
+    /// adventurer is at it and nobody but prisoners stands inside. A door the party opened is left as they left it.
+    /// </summary>
+    private void TendJailDoor(Main main, List<Enemy> enemies, int jailIndex)
+    {
+        if (_jailDoor == null || !IsInstanceValid(_jailDoor)) return;
+        var at = _jailDoor.GlobalPosition;
+        float Flat(Vector3 p) => new Vector2(p.X - at.X, p.Z - at.Z).Length();
+        if (!_jailDoor.IsOpen)
+        {
+            var arriving = enemies.FirstOrDefault(e => e.Captive != null && e.CarriesJailKey && e.State is Enemies.Ai.EscortCaptiveState && Flat(e.GlobalPosition) <= JailbreakRules.DoorUnlockRange);
+            if (arriving != null)
+            {
+                _jailDoor.Open(silent: true);
+                _doorHeldOpen = true;
+                EventBus.Instance.PlaySfx("door");
+                EventBus.Instance.Log($"{arriving.DisplayName} unlocks the jail door.");
+            }
+            return;
+        }
+        if (!_doorHeldOpen) return;
+        // nobody inside but prisoners, nobody in the doorway, no escort or returning jailer within reach (a jailer resting at its doorstep post is not in the way)
+        var doorCell = _jailDoor.Cell;
+        var busy = enemies.Any(e => RoomIndex(e.GlobalPosition) == jailIndex || DungeonBuilder.WorldToCell(e.GlobalPosition) == doorCell
+                || ((e.Captive != null || e.State is Enemies.Ai.EscortCaptiveState or Enemies.Ai.ReturnState) && Flat(e.GlobalPosition) <= JailbreakRules.DoorLockClearance))
+            || _prisoners.Any(p => IsInstanceValid(p) && p.Captured && Flat(p.GlobalPosition) <= JailbreakRules.DoorLockClearance)
+            || main.Party.Active.Any(a => RoomIndex(a.GlobalPosition) == jailIndex || Flat(a.GlobalPosition) <= JailbreakRules.DoorLockClearance);
+        if (busy) return;
+        _jailDoor.Close(silent: true);
+        _doorHeldOpen = false;
+        EventBus.Instance.PlaySfx("door");
+        EventBus.Instance.Log("The jail door locks again.");
+    }
+
     private void WalkTo(Npc npc, int room)
     {
         if (room < 0 || room >= _roomCells.Count || _roomCells[room].Count == 0 || Main.Instance?.Builder is not { } builder) return;
@@ -193,7 +231,9 @@ public partial class JailbreakController : ObjectiveController
         var jail = Layout.Objective!.JailRoom!;
         var cells = _roomCells[Layout.Rooms.IndexOf(jail)];
         if (cells.Count > 0 && Main.Instance?.Builder is { } builder) npc.MoveTarget = builder.Surface(cells[Rng.Next(cells.Count)]);
-        // the jailer takes up a post outside the door
+        // the jailer takes up a post outside the door: it leaves its group (whose post may lie behind a vault door it cannot path back through) and holds the doorstep
+        if (jailer.Group is { } group) { group.Remove(jailer); jailer.Group = null; }
+        jailer.Order = DungeonCrawler.Enemies.Collectives.OrderKind.HoldPost;
         if (_jailDoor != null && VaultPuzzles.Doorstep(Layout, _jailDoor.Cell, jail) is { } step && Main.Instance?.Builder is { } b) jailer.HomePosition = b.Surface(step);
         jailer.ChangeState(new Enemies.Ai.ReturnState());
         EventBus.Instance.Log($"{npc.NpcName} is thrown into the jail. The jailer keeps the key.");

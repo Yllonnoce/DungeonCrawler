@@ -300,8 +300,12 @@ public partial class DungeonBuilder : Node3D
         return layout;
     }
 
+    /// <summary>The jail's key door (Jailbreak floors), or null: a creature that carries the jail key paths through it, nobody else.</summary>
+    public GridPos? JailDoorCell { get; private set; }
+
     public void Clear()
     {
+        JailDoorCell = null;
         _closedDoors.Clear();
         _openSecrets.Clear();
         _propCells.Clear();
@@ -1418,6 +1422,7 @@ public partial class DungeonBuilder : Node3D
             root.AddChild(door);
             door.GlobalPosition = Surface(v.Door) with { Y = layout.LevelOf(v.Door) * LevelHeight }; // a full cube: no orientation to worry about
             _closedDoors.Add(v.Door);
+            if (layout.Objective is { } jailObjective && v.Index == jailObjective.JailVault) JailDoorCell = v.Door; // the one closed door a key-carrying jailer may path through
             if (v.Revealed) door.Reveal();
 
             if (v.Lever is { } lever)

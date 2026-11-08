@@ -79,6 +79,12 @@ public sealed class Collective
         InitialCount = Members.Count;
     }
 
+    /// <summary>A member leaves for other duties (a jailer posting itself at the jail door): no longer counted, not a loss.</summary>
+    public void Remove(Enemy e)
+    {
+        if (Members.Remove(e)) InitialCount = Math.Max(1, Members.Count);
+    }
+
     public IEnumerable<Enemy> Alive => Members.Where(m => Godot.GodotObject.IsInstanceValid(m) && m.IsAlive);
     public Collective? AlarmTarget => AlarmTargetId == null ? null : _registry.Find(AlarmTargetId);
     /// <summary>Where a runner heads: the target group's post (its members may be off chasing).</summary>

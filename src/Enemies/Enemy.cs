@@ -787,7 +787,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _repathTimer -= dt;
         if (_path == null || goal.Cell != _pathTarget || _repathTimer <= 0f)
         {
-            _path = GridPathfinder.FindPath(layout, me, goal, builder.IsCellBlockedForEnemies, builder.IsSecretOpen, danger: builder.DangerAt, dangerWeight: DangerWeight);
+            _path = GridPathfinder.FindPath(layout, me, goal, Adventure.Objectives.JailbreakRules.BlockedFor(CarriesJailKey, builder.JailDoorCell, builder.IsCellBlockedForEnemies), builder.IsSecretOpen, danger: builder.DangerAt, dangerWeight: DangerWeight);
             _pathIndex = 1;
             _pathTarget = goal.Cell;
             _repathTimer = IsHorde ? 0.9f : 0.5f; // a swarm can afford a staler path
