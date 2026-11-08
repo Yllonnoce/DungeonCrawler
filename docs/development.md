@@ -86,6 +86,11 @@ reinforcement count) tracks them. Each runs in a server-only `ObjectiveControlle
   holds the doorstep; an escort that makes no progress for `EscortStuckSeconds` lets the prisoner go and walks home instead of standing
   with its face in the wall (the anomaly a player reported on floor 2, 2026-11-08). `--test-jailer` (with `--builtin --floor=2` and the
   calm flags) proves the whole march: seize, unlock, deliver, lock, post.
+  Two more rules from the same hunt: nothing solid stands in a **doorway cell** (`FloorLayout.IsDoorway`: a room cell that opens onto
+  walkable ground outside its room), neither the generator's chests and crates nor a plan's extra chests (`PlanResolver.TakeSolid`, which
+  also spares the room's anchor), because creatures path around props and cannot move what the party can (a chest in a doorway on floor 8
+  cut a patrol off from its stop and the whole group stood in a wall); and `PatrolState` skips a stop it has had no path to for
+  `NoPathSkipSeconds` (3 s, `Enemy.PathFailed`), becoming a guard when no stop is reachable.
 - **Rising gas** (`ToxicController`, `GasRules`, `GasField`): poison rises from the low rooms, from the start room
   outward (45 s grace, 14 s a room, 40 s to thicken), the high ground last; corridors take their nearest room's time.
   The stairs move to the low room farthest from the start, behind a lever gate whose lever stands on the high ground

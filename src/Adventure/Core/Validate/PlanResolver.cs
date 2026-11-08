@@ -24,6 +24,17 @@ public static class PlanResolver
             if (layout.StructureAt(layout.Rooms[i]) is { } s)
                 pools[i] = pools[i].OrderByDescending(c => c.ManhattanDistance(s.Anchor)).ToList();
         GridPos? Take(int room) { if (room < 0 || room >= pools.Count || pools[room].Count == 0) return null; var p = pools[room][^1]; pools[room].RemoveAt(pools[room].Count - 1); return p; }
+        // a solid prop (a chest) never takes a doorway cell: creatures path around props and would lose the room behind it
+        // (nor the room's anchor, where a patrol stops and a group rallies, while another cell is free)
+        GridPos? TakeSolid(int room)
+        {
+            if (room < 0 || room >= pools.Count) return null;
+            var anchor = Anchor(layout, room);
+            var at = pools[room].FindLastIndex(c => !layout.IsDoorway(c) && c != anchor);
+            if (at < 0) at = pools[room].FindLastIndex(c => !layout.IsDoorway(c));
+            if (at < 0) return null;
+            var p = pools[room][at]; pools[room].RemoveAt(at); return p;
+        }
 
         for (var i = 0; i < layout.Rooms.Count; i++)
         {
@@ -72,7 +83,7 @@ public static class PlanResolver
         for (var i = 0; i < plan.Chests.Count; i++)
         {
             var ch = plan.Chests[i];
-            if (Take(ch.Room) is not { } cell) { contents.Dropped.Add($"chest {i}: room {ch.Room} full"); continue; }
+            if (TakeSolid(ch.Room) is not { } cell) { contents.Dropped.Add($"chest {i}: room {ch.Room} full"); continue; }
             contents.ExtraChests.Add(new ChestPlacement(FloorContents.ExtraIndexBase + i, cell, ch.Locked, ch.QuestId));
         }
         for (var i = 0; i < plan.Traps.Count; i++)

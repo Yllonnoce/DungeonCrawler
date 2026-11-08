@@ -173,6 +173,18 @@ public sealed class FloorLayout
 
     public Room? RoomAt(GridPos p) => Rooms.FirstOrDefault(r => r.Contains(p));
 
+    /// <summary>
+    /// A room cell that opens onto walkable ground outside its room: the cell a corridor meets. Nothing solid (a chest, a crate) may stand on one,
+    /// or creatures, which path around props and cannot open what the party can, lose the room (a patrol on floor 8 stood in a wall for it, 2026-11-08).
+    /// </summary>
+    public bool IsDoorway(GridPos p)
+    {
+        if (!IsWalkable(p) || RoomAt(p) is not { } room) return false;
+        foreach (var n in new[] { new GridPos(p.X + 1, p.Y), new GridPos(p.X - 1, p.Y), new GridPos(p.X, p.Y + 1), new GridPos(p.X, p.Y - 1) })
+            if (IsWalkable(n) && !room.Contains(n)) return true;
+        return false;
+    }
+
     /// <summary>A ground-level room with a ledge is built twice as tall, so the gallery at 4 m really overlooks it.</summary>
     public bool IsTall(GridPos p) => LevelOf(p) == 0 && RoomAt(p) is { } r && Ledges.Any(l => l.Room == r);
 

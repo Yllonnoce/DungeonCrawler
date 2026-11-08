@@ -436,8 +436,13 @@ public static partial class FloorGenerator
         var dry = pool.Skip(take).Where(p => !layout.IsWater(p)).ToList();
         take = 0;
         var firstOrdinaryChest = layout.ChestSpawns.Count;
-        for (var i = 0; i < spec.ChestCount && take < dry.Count; i++) layout.ChestSpawns.Add(dry[take++]);
-        for (var i = 0; i < spec.BreakableCount && take < dry.Count; i++) layout.BreakableSpawns.Add(dry[take++]);
+        // solid things never stand in a doorway cell: creatures path around props and would lose the room behind it
+        var solid = dry.Where(p => !layout.IsDoorway(p)).ToList();
+        var solidTake = 0;
+        for (var i = 0; i < spec.ChestCount && solidTake < solid.Count; i++) { layout.ChestSpawns.Add(solid[solidTake++]); }
+        for (var i = 0; i < spec.BreakableCount && solidTake < solid.Count; i++) { layout.BreakableSpawns.Add(solid[solidTake++]); }
+        var placed = solid.Take(solidTake).ToHashSet();
+        dry = dry.Where(p => !placed.Contains(p)).ToList();
         for (var i = 0; i < spec.LockedChestCount && firstOrdinaryChest + i < layout.ChestSpawns.Count && take < dry.Count; i++)
         {
             layout.LockedChests.Add(firstOrdinaryChest + i);

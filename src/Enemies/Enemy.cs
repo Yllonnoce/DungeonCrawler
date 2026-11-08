@@ -773,6 +773,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>How much this creature avoids an arming hazard: a swarm or a bandit pours straight in, a thinking creature detours when the detour is short.</summary>
     public float DangerWeight => IsHorde || Profile.Faction == "bandits" ? DungeonBuilder.DangerWeightMindless : DungeonBuilder.DangerWeightSmart;
 
+    /// <summary>The last path request found no way (a closed door, a prop in a doorway): states that walk a fixed route read it to skip the stop.</summary>
+    public bool PathFailed { get; private set; }
+
     public void MoveAlongPathToward(Vector3 target, float dt)
     {
         var builder = Main.Instance?.Builder;
@@ -792,6 +795,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             _pathTarget = goal.Cell;
             _repathTimer = IsHorde ? 0.9f : 0.5f; // a swarm can afford a staler path
         }
+        PathFailed = _path == null;
         if (_path == null || _path.Count < 2) { MoveToward(target, dt); return; }
 
         _pathIndex = Math.Clamp(_pathIndex, 1, _path.Count - 1);

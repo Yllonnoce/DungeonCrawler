@@ -65,8 +65,9 @@ public sealed class PatrolState : AiState
 {
     public override string Name => "Patrol";
     public override bool Unaware => true;
-    public const float PauseSeconds = 1.5f;
-    private float _pause;
+    public const float PauseSeconds = 1.5f, NoPathSkipSeconds = 3f;
+    private float _pause, _noPath;
+    private int _skipped;
 
     public override void Update(Enemy enemy, float dt)
     {
@@ -79,11 +80,19 @@ public sealed class PatrolState : AiState
         if (enemy.GlobalPosition.DistanceTo(flat) < 1.2f)
         {
             enemy.MoveToward(enemy.GlobalPosition, dt);
-            _pause += dt;
+            _pause += dt; _skipped = 0;
             if (_pause >= PauseSeconds) { _pause = 0f; enemy.PatrolIndex = (enemy.PatrolIndex + 1) % route.Count; }
             return;
         }
         enemy.MoveAlongPathToward(wp, dt);
+        // a stop with no way to it (a prop in a doorway, a door it cannot open) is skipped rather than walked into; a route with no reachable stop becomes a guard post
+        _noPath = enemy.PathFailed ? _noPath + dt : 0f;
+        if (_noPath >= NoPathSkipSeconds)
+        {
+            _noPath = 0f;
+            if (++_skipped >= route.Count) { enemy.ChangeState(new GuardState()); return; }
+            enemy.PatrolIndex = (enemy.PatrolIndex + 1) % route.Count;
+        }
     }
 }
 
