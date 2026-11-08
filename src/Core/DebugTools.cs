@@ -325,6 +325,7 @@ public partial class DebugTools : Node
             else if (arg == "--no-portals") NoPortals = true;
             else if (arg == "--no-gathering") NoGathering = true;
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
+            else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
             else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
             else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
@@ -363,6 +364,7 @@ public partial class DebugTools : Node
         if (_testHorde && _seed == null) _seed = HordeSeed();
         if (_testAbilities && _seed == null) _seed = 7; // its fights are flaky on random floors
         if (_testHitFx && _seed == null) _seed = 7; // the abilities flow's floor: a repeatable first regular enemy
+        if (_testWriting) Dungeon.TierRules.Lethality = ForcedLethality!.Value; // the shipped campaign's floor 1: Crane with his aside; no seed needed
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -736,6 +738,7 @@ public partial class DebugTools : Node
         if (_testKeys && !_testedKeys && _elapsed >= 0.5) { _testedKeys = true; RunKeysTest(); }
         if (_rehashDir != null && !_rehashed && _elapsed >= 0.3 && Main.Instance != null) RunRehashPlans();
         if (_testSafeRoom) RunSafeRoomTest();
+        if (_testWriting) RunWritingTest();
         if (_tremor) RunTremor();
         if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == TargetFloor) { _inspected = true; InspectCell(ins.x, ins.y); }
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
@@ -3103,6 +3106,217 @@ public partial class DebugTools : Node
         }
     }
 
+
+    // ---- --test-writing ---------------------------------------------------------------------------------
+    // A party that talks, end to end on the shipped campaign's floor 1: a banter exchange in order and 1.4 s apart, one
+    // aborted by a fight, a TrapSprung bark from the lazy stock top-up with the speaker on the subtitle, narration
+    // beating a bark on the subtitle, the cheer and its answers (and the cooldown), the press epitaph on a wipe, floor 3's
+    // press taunt on Crushed only, and Crane's aside.
+    private bool _testWriting;
+    private int _wrStep;
+    private double _wrAt;
+    private readonly List<string> _wrFails = new();
+    private readonly List<(string Who, string Text)> _wrHeard = new();
+    private int _wrHeardBefore;
+    private bool _wrListening;
+    private Enemy? _wrEnemy;
+
+    private void RunWritingTest()
+    {
+        if (_wrStep >= 99) return;
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || !Game.Instance.InGame || main.Builder.CurrentFloor != 1) return;
+        var party = main.Party;
+        if (!party.HasBodies) return;
+        var director = AdventureDirector.Instance!;
+        var since = _elapsed - _wrAt;
+        void Next() { _wrStep++; _wrAt = _elapsed; }
+        void Fail(string why) { _wrFails.Add(why); GD.Print($"[writing] FAIL: {why}"); }
+        void Finish()
+        {
+            GD.Print(_wrFails.Count == 0 ? "[writing] RESULT ok" : $"[writing] RESULT FAIL ({string.Join("; ", _wrFails)})");
+            _wrStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        if (_elapsed > 80) { Fail($"timed out at step {_wrStep}"); Finish(); return; }
+        IEnumerable<(string Who, string Text)> Since() => _wrHeard.Skip(_wrHeardBefore);
+        string Subtitle() => main.Hud.GetNode<Label>("Subtitle").Text;
+        var lead = party.Lead.State;
+        switch (_wrStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                if (!_wrListening) { EventBus.Instance.Bark += (who, line) => _wrHeard.Add((who, line.Text)); _wrListening = true; }
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor: only the test's creature moves
+                foreach (var m in party.Members) m.Hp = m.Stats[Characters.Stat.MaxHp] * 10; // nobody goes down to the test's own creature
+                GD.Print($"[writing] floor {main.Builder.CurrentFloor} campaign \"{Game.Instance.Adventure.Campaign?.Title}\" lead {lead.Name}");
+                _wrHeardBefore = _wrHeard.Count;
+                if (!director.StartBanter("bs_corporal") || !director.BanterPlaying) { Fail("StartBanter(bs_corporal) did not start"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 1:
+            {
+                // the four lines in order, then the exchange is remembered by id
+                if (director.BanterPlaying) { if (since > 7) { Fail("banter never finished"); Finish(); } return; }
+                var want = new[] { ("Sable", "You were a sergeant."), ("Brand", "Corporal. Twice."), ("Sable", "Twice?"), ("Brand", "They kept taking it back.") };
+                var got = Since().ToList();
+                GD.Print($"[writing] banter heard: {string.Join(" | ", got.Select(g => $"{g.Who}: {g.Text}"))}");
+                if (!got.SequenceEqual(want)) Fail("banter lines out of order or missing");
+                if (!Game.Instance.Adventure.BarksSaid.ContainsKey("banter:bs_corporal")) Fail("the exchange was not marked said by id");
+                _wrHeardBefore = _wrHeard.Count;
+                if (!director.StartBanter("grp_alive")) { Fail("StartBanter(grp_alive) did not start"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 2 when since >= 0.2:
+            {
+                // a creature joins the conversation: the rest of the exchange is dropped
+                var at = party.Lead.GlobalPosition + party.Lead.GlobalTransform.Basis.Z * -3f;
+                _wrEnemy = main.Builder.SpawnEnemy(main.Builder.RegularEnemies(main.Builder.CurrentFloor)[0], at with { Y = party.Lead.GlobalPosition.Y - 0.2f }, main.Builder.CurrentFloor);
+                if (_wrEnemy == null) { Fail("could not spawn a creature"); Finish(); return; }
+                _wrEnemy.ForceAggro();
+                Next();
+                break;
+            }
+            case 3 when since >= 2.5:
+            {
+                var lines = Since().Count();
+                if (!director.BanterPlaying && lines < 4) GD.Print($"[writing] banter aborted by the fight after {lines} lines");
+                else Fail($"banter did not stop for the fight ({lines} lines, playing {director.BanterPlaying})");
+                if (_wrEnemy != null && IsInstanceValid(_wrEnemy)) _wrEnemy.QueueFree();
+                _wrEnemy = null;
+                Next();
+                break;
+            }
+            case 4 when since >= 6.0:
+            {
+                // a new trigger the shipped campaign has no lines for: the lazy top-up supplies one in the hero's voice
+                _wrHeardBefore = _wrHeard.Count;
+                EventBus.Instance.RaiseTrapSprung(0);
+                Next();
+                break;
+            }
+            case 5 when since >= 0.5:
+            {
+                var m = party.Members[0];
+                var stock = Adventure.Voice.ReactiveBarks.For(BarkTrigger.TrapSprung, m.Name, m.Class.Id);
+                var bark = Since().FirstOrDefault(h => h.Who == m.Name);
+                GD.Print($"[writing] trap bark: {(bark.Text == null ? "none" : $"{bark.Who}: {bark.Text}")}; subtitle \"{Subtitle()}\"");
+                if (bark.Text == null || !stock.Contains(bark.Text)) Fail("no TrapSprung bark from the stock bank");
+                if (!Subtitle().StartsWith($"{m.Name}: ")) Fail("the subtitle does not carry the speaker's name");
+                Next();
+                break;
+            }
+            case 6 when since >= 5.5:
+            {
+                // narration wins the subtitle; the bark is still heard and logged
+                _wrHeardBefore = _wrHeard.Count;
+                EventBus.Instance.RaiseNarration("The narrator speaks.", null);
+                EventBus.Instance.RaiseTrapSprung(1);
+                var m = party.Members[1];
+                var heard = Since().Any(h => h.Who == m.Name);
+                GD.Print($"[writing] narration then bark: bark heard={heard}, subtitle \"{Subtitle()}\"");
+                if (!heard) Fail("no bark for member 1 beside the narration");
+                if (Subtitle() != "The narrator speaks.") Fail("a bark overwrote the narration on the subtitle");
+                Next();
+                break;
+            }
+            case 7 when since >= 5.5:
+            {
+                _wrHeardBefore = _wrHeard.Count;
+                EventBus.Instance.RaiseCheer(party.LocalIndex);
+                Next();
+                break;
+            }
+            case 8 when since >= 0.5:
+            {
+                var cheers = Adventure.Voice.CheerBarks.Cheers(lead.Name, lead.Class.Id);
+                var first = Since().FirstOrDefault();
+                GD.Print($"[writing] cheer: {(first.Text == null ? "none" : $"{first.Who}: {first.Text}")}");
+                if (first.Text == null || first.Who != lead.Name || !cheers.Contains(first.Text)) Fail("the cheer line did not come from the lead's Cheer bank");
+                EventBus.Instance.RaiseCheer(party.LocalIndex); // inside the cooldown: nothing more
+                Next();
+                break;
+            }
+            case 9 when since >= Adventure.Voice.CheerRules.AnswerDelay(2) + 0.6:
+            {
+                var others = party.Active.Where(a => !a.Downed && a.State.Name != lead.Name).Select(a => a.State).ToList();
+                var answers = Since().Skip(1).ToList();
+                GD.Print($"[writing] answers: {string.Join(" | ", answers.Select(a => $"{a.Who}: {a.Text}"))}");
+                if (answers.Count != others.Count) Fail($"{answers.Count} answers for {others.Count} other living heroes");
+                for (var i = 0; i < Math.Min(answers.Count, others.Count); i++)
+                {
+                    if (answers[i].Who != others[i].Name) Fail($"answer {i} came from {answers[i].Who}, expected {others[i].Name}");
+                    if (!Adventure.Voice.CheerBarks.Answers(others[i].Name, others[i].Class.Id).Contains(answers[i].Text)) Fail($"{answers[i].Who}'s answer is not from the CheerAnswer bank");
+                }
+                var cheers = Adventure.Voice.CheerBarks.Cheers(lead.Name, lead.Class.Id);
+                if (answers.Any(a => a.Who == lead.Name && cheers.Contains(a.Text))) Fail("a second cheer spoke inside the cooldown");
+                Next();
+                break;
+            }
+            case 10:
+            {
+                // the epitaph: the press was the last thing that killed anyone, so the wipe is the press's
+                EventBus.Instance.RaiseMemberKilledByHazard(0, "The Press");
+                EventBus.Instance.RaisePartyWiped();
+                var wipe = director.LastWipe;
+                GD.Print($"[writing] wipe: {(wipe == null ? "none" : $"floor {wipe.Floor} cause {wipe.Cause} count {wipe.Count} \"{wipe.Epitaph}\"")}");
+                if (wipe is not { Cause: "press", Floor: 1, Count: 1 }) Fail("LastWipe is not the press on floor 1, first time");
+                if (wipe != null && wipe.Epitaph != Adventure.Voice.Epitaphs.Pick("press", 1, 1)) Fail("the epitaph is not the press's first line");
+                if (!Game.Instance.Adventure.Memory.Flags.Contains("wiped_once")) Fail("wiped_once was not set");
+                if (!Adventure.Voice.Epitaphs.Pick("press", 4, 9).StartsWith("Fourth time on floor 9.")) Fail("the fourth press epitaph does not escalate");
+                Next();
+                break;
+            }
+            case 11:
+            {
+                // floor 3's press line fires on a crushing, not a downing
+                var loaded = BuiltinCampaign.LoadFrom(ProjectSettings.GlobalizePath("res://data/adventures/builtin"));
+                if (loaded == null) { Fail("the builtin campaign did not load"); Next(); break; }
+                var taunts = loaded.Value.Floors[3].Taunts;
+                var td = new Adventure.Objectives.TauntDirector();
+                var downed = td.Pick(taunts, Adventure.Objectives.TauntTrigger.MemberDowned, FloorObjectiveKind.None, new Dictionary<string, int>(), new List<string>(), 3, 0, new Random(1), urgent: true);
+                var crushed = td.Pick(taunts, Adventure.Objectives.TauntTrigger.Crushed, FloorObjectiveKind.None, new Dictionary<string, int>(), new List<string>(), 3, 0, new Random(1), urgent: true);
+                GD.Print($"[writing] floor 3: MemberDowned -> {(downed == null ? "nothing" : downed.Line.Text)}; Crushed -> {(crushed == null ? "nothing" : crushed.Line.Text)}");
+                if (downed != null) Fail("floor 3 still has a MemberDowned taunt");
+                if (crushed == null) Fail("floor 3 has no Crushed taunt");
+                Next();
+                break;
+            }
+            case 12:
+            {
+                // Crane's aside: Sable speaks once he has had his say
+                var crane = root.GetChildren().OfType<Adventure.Npc>().FirstOrDefault(n => n.Id == "npc_crane");
+                if (crane == null) { Fail("npc_crane is not on floor 1"); Finish(); return; }
+                var at = crane.GlobalPosition + crane.GlobalTransform.Basis.Z * 1.5f;
+                party.Teleport(at with { Y = crane.GlobalPosition.Y + 0.3f }, crane.GlobalPosition);
+                main.Hud.OpenDialogue(crane);
+                var node = main.Hud.Dialogue.Node;
+                GD.Print($"[writing] Crane: node {node?.Id} aside {node?.Aside?.Member}");
+                if (node?.Id != "gate") Fail($"Crane opened on {node?.Id}, not gate");
+                if (node?.Aside?.Member != "Sable") Fail("the gate node has no aside for Sable");
+                Next();
+                break;
+            }
+            case 13:
+            {
+                if (main.Hud.Dialogue.Speaking) { if (since > 20) { Fail("Crane never stopped speaking"); Finish(); } return; }
+                if (since < 0.3) return; // the aside lands the tick after the line ends
+                _wrAt = _elapsed; _wrStep = 14; // one more tick for the aside's own frame
+                break;
+            }
+            case 14 when since >= 0.3:
+            {
+                var label = main.Hud.Dialogue.FindChild("Aside", recursive: true, owned: false) as Label;
+                GD.Print($"[writing] aside label: \"{label?.Text}\"");
+                if (label?.Text != "Sable: He means us.") Fail("the aside label does not read \"Sable: He means us.\"");
+                main.Hud.Dialogue.Close();
+                Finish();
+                break;
+            }
+        }
+    }
     // ---- --rehash-plans=DIR --------------------------------------------------------------------------------
     private string? _rehashDir;
     private bool _rehashed;
