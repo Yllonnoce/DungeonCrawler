@@ -16,6 +16,8 @@ public partial class PartyController
 {
     private readonly Dictionary<int, ulong> _gotUpAt = new();
     private readonly HashSet<int> _lastGaspUsed = new();
+    private Action<int>? _onItemMemberRevived;
+    private Action<int, int>? _onItemFloorChanged;
 
     /// <summary>The merchant's last three sales, for buyback (saved in PartyDto.Buyback, synced in ShopSync).</summary>
     public BuybackLedger Buyback { get; } = new();
@@ -35,19 +37,32 @@ public partial class PartyController
         return null;
     }
 
-    /// <summary>Called once from _Ready: smart loot reads the living classes, and the item triggers subscribe to their events.</summary>
+    /// <summary>
+    /// Called once from _Ready: smart loot reads the living classes, and the item triggers subscribe to their events. The EventBus
+    /// outlives this node (a load builds a new party), so the handlers come off again as the node leaves the tree.
+    /// </summary>
     private void HookItemTriggers()
     {
         Game.Instance.Catalog.SmartLootClasses = () => Members.Where(m => m.IsAlive).Select(m => m.Class);
+        _onItemMemberRevived = i => _gotUpAt[i] = Time.GetTicksMsec();
+        _onItemFloorChanged = (_, _) => _lastGaspUsed.Clear();
         EventBus.Instance.MemberDamaged += OnItemMemberDamaged;
-        EventBus.Instance.MemberRevived += i => { if (IsInsideTree()) _gotUpAt[i] = Time.GetTicksMsec(); };
-        EventBus.Instance.FloorChanged += (_, _) => _lastGaspUsed.Clear();
+        EventBus.Instance.MemberRevived += _onItemMemberRevived;
+        EventBus.Instance.FloorChanged += _onItemFloorChanged;
+        TreeExiting += UnhookItemTriggers;
+    }
+
+    private void UnhookItemTriggers()
+    {
+        EventBus.Instance.MemberDamaged -= OnItemMemberDamaged;
+        if (_onItemMemberRevived != null) EventBus.Instance.MemberRevived -= _onItemMemberRevived;
+        if (_onItemFloorChanged != null) EventBus.Instance.FloorChanged -= _onItemFloorChanged;
     }
 
     /// <summary>Candle of the Congregation: a Burn one of ours applies leaps to the nearest neighbours within 3 m.</summary>
     private void OnItemHit(CharacterState m, ICombatTarget target, DamageResult r)
     {
-        if (!IsInsideTree() || Trigger(m, TriggerKind.BurnSpread) is not (> 0 and var n) || target is not Enemy e) return;
+        if (!IsInstanceValid(this) || !IsInsideTree() || Trigger(m, TriggerKind.BurnSpread) is not (> 0 and var n) || target is not Enemy e) return;
         if (r.Applied.FirstOrDefault(s => s.Kind == StatusKind.Burn) is not { Kind: StatusKind.Burn } burn) return;
         if (Main.Instance.Builder.FloorRoot is not { } root) return;
         var others = root.GetChildren().OfType<Enemy>()
@@ -63,7 +78,7 @@ public partial class PartyController
     /// <summary>Gerald: below 30% HP, once per floor, a Frost Nova bursts from the wearer. Server and solo only.</summary>
     private void OnItemMemberDamaged(int index, float amount)
     {
-        if (!IsInsideTree() || Net.NetSession.IsClient || index < 0 || index >= Members.Length) return;
+        if (!IsInstanceValid(this) || !IsInsideTree() || Net.NetSession.IsClient || index < 0 || index >= Members.Length) return;
         var m = Members[index];
         if (Trigger(m, TriggerKind.LastGasp) <= 0 || !m.IsAlive || m.Hp >= 0.3f * m.Stats[Stat.MaxHp] || _lastGaspUsed.Contains(index)) return;
         if (index >= Adventurers.Length || Main.Instance.Builder.FloorRoot is not { } root) return;
