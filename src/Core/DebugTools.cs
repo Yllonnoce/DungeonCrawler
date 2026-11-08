@@ -333,6 +333,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-fortune") { _testFortune = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; _startFloor = 2; _floorGiven = true; }
             else if (arg == "--test-run-structure") { _testRunStructure = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
             else if (arg == "--test-combat-feel") { _testCombatFeel = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 75; }
+            else if (arg == "--test-co-op") { _testCoOp = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 40; }
             else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
             else if (arg == "--test-portal") { _testPortal = true; TraceAi = false; _quitAfter = 60; }
@@ -381,6 +382,7 @@ public partial class DebugTools : Node
         if (_testElites) { _seed ??= 8; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testFortune) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testRunStructure) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
+        if (_testCoOp) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -759,6 +761,7 @@ public partial class DebugTools : Node
         if (_testItems) RunItemsAndBuildsTest();
         if (_testFortune) RunFortuneTest();
         if (_testRunStructure) RunRunStructureTest();
+        if (_testCoOp) RunCoOpTest();
         if (_tremor) RunTremor();
         if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == TargetFloor) { _inspected = true; InspectCell(ins.x, ins.y); }
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
@@ -5492,6 +5495,162 @@ public partial class DebugTools : Node
                 Finish();
                 break;
             }
+        }
+    }
+
+    // ---- --test-co-op --------------------------------------------------------------------------------------
+    // Friends, the solo-provable half: the ping key is bound to X and the markers node exists; a ping places a mark and a
+    // Label3D with the lead's name that the cooldown refuses to repeat and that expires after 2 s; the ready-check's rule
+    // table (pure); the HUD line; the chat line in solo writing to the log; and solo stairs still changing floor at once.
+    // The wire side (a ping relayed, one player's stairs at once) is scripts/net_test.sh; the multi-player vote is the
+    // engine-free ReadyCheckTests.
+    private bool _testCoOp;
+    private int _coStep;
+    private double _coAt, _coPingAt;
+    private readonly List<string> _coFails = new();
+
+    private void RunCoOpTest()
+    {
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot is not { } root || main.Builder.Layout is not { } layout || !Game.Instance.InGame || main.Hud is not { } hud) return;
+        var party = main.Party;
+        var b = main.Builder;
+        var since = _elapsed - _coAt;
+        void Next() { _coStep++; _coAt = _elapsed; }
+        void Fail(string why) { _coFails.Add(why); GD.Print($"[co-op] FAIL: {why}"); }
+        void Finish()
+        {
+            GD.Print(_coFails.Count == 0 ? "[co-op] RESULT ok" : $"[co-op] RESULT FAIL ({string.Join("; ", _coFails)})");
+            _coStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        var pings = UI.Hud.PingMarkers.Instance;
+        bool LabelFor(string name) => root.GetChildren().OfType<Label3D>().Any(l => l.Text == name && !l.IsQueuedForDeletion());
+        switch (_coStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                // 1. the key and the node
+                var bound = Settings.Rebindable.Any(r => r.action == "ping");
+                var inMap = InputMap.HasAction("ping");
+                var key = Settings.KeyFor("ping");
+                GD.Print($"[co-op] ping key: rebindable={bound} inInputMap={inMap} key={key} markers={(pings != null)}");
+                if (!bound) Fail("\"ping\" is not in Settings.Rebindable");
+                if (!inMap) Fail("no \"ping\" input action");
+                if (key != Key.X) Fail($"ping is bound to {key}, not X");
+                if (pings == null) { Fail("no PingMarkers node under the HUD"); Finish(); return; }
+                // 2. a ping at a creature lands on the creature, not on the wall behind it: stand 2 m in front of the nearest one, looking at it
+                var target = root.GetChildren().OfType<Enemy>().Where(e => e.IsAlive && !e.IsBoss).OrderBy(e => e.GlobalPosition.DistanceSquaredTo(party.Local!.GlobalPosition)).FirstOrDefault();
+                if (target == null) Fail("no creature on the floor to ping at");
+                else
+                {
+                    var toward = (party.Local!.GlobalPosition - target.GlobalPosition) with { Y = 0 };
+                    var stand = target.GlobalPosition + (toward.LengthSquared() > 0.01f ? toward.Normalized() : Vector3.Forward) * 2f;
+                    party.Teleport(stand with { Y = target.GlobalPosition.Y + 0.3f }, target.GlobalPosition + Vector3.Up * 1.0f);
+                    var hit = hud.Ping();
+                    var at = pings.Board.Active.FirstOrDefault(m => m.Name == party.Local!.State.Name);
+                    var gap = (new Vector3(at.X, 0, at.Z) - target.GlobalPosition with { Y = 0 }).Length(); // the hit is on the body's surface, above its feet: judge the footprint
+                    GD.Print($"[co-op] ping at a creature: {target.DisplayName} {target.GlobalPosition:0.0}, mark {at.X:0.0},{at.Y:0.0},{at.Z:0.0}, {gap:0.0} m from its footprint (returned {hit})");
+                    if (!hit) Fail("Hud.Ping() returned false in front of a creature");
+                    else if (gap > 1.5f) Fail($"the ping at a creature landed {gap:0.0} m from it (the wall behind it?)");
+                    pings.Board.Clear();
+                }
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor from here
+                Next();
+                break;
+            }
+            case 1 when since >= Net.PingRules.CooldownSeconds + 0.2:
+            {
+                // 3. a ping from beside the up stairs, facing them (the flight's parapets are within the aim ray)
+                var me = party.Local!;
+                party.Teleport(b.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.UpStairs)) + Vector3.Up * 0.3f, b.Surface(layout.UpStairs));
+                var pinged = hud.Ping();
+                _coPingAt = _elapsed;
+                var mark = pings.Board.Active.FirstOrDefault(m => m.Name == me.State.Name);
+                var label = LabelFor(me.State.Name);
+                GD.Print($"[co-op] ping: \"{me.State.Name}\" at {mark.X:0.0},{mark.Y:0.0},{mark.Z:0.0} (returned {pinged}, marks {pings.Board.Active.Count}, label {label})");
+                if (!pinged) Fail("Hud.Ping() returned false beside the up stairs");
+                if (pings.Board.Active.Count != 1 || mark.Name != me.State.Name) Fail("the board does not hold one mark with the lead's name");
+                if (!label) Fail("no Label3D with the lead's name under the floor root");
+                Next();
+                break;
+            }
+            case 2 when since >= 0.3:
+            {
+                var again = hud.Ping();
+                GD.Print($"[co-op] ping again at +{_elapsed - _coPingAt:0.0} s: {again} (cooldown {Net.PingRules.CooldownSeconds} s)");
+                if (again) Fail("a second ping inside the 1 s cooldown was not refused");
+                Next();
+                break;
+            }
+            case 3 when _elapsed - _coPingAt >= Net.PingRules.LifetimeSeconds + 0.3:
+            {
+                var name = party.Local!.State.Name;
+                var label = LabelFor(name);
+                GD.Print($"[co-op] ping expired after {Net.PingRules.LifetimeSeconds} s: marks {pings!.Board.Active.Count}, label {label}");
+                if (pings.Board.Active.Count != 0) Fail("the mark did not expire after 2 s");
+                if (label) Fail("the Label3D did not go with the mark");
+                // 3. the ready-check's rule table (pure)
+                int[] three = { 0, 1, 2 }, two = { 0, 1 };
+                var rows = new List<(string Case, Net.ReadyVerdict Got, Net.ReadyVerdict Want)>();
+                var c = new Net.ReadyCheck(); c.Vote(0, true, "stairs:down", 1, three, 0); c.Vote(1, true, "stairs:down", 1, three, 1);
+                rows.Add(("3 living all Yes", c.Vote(2, true, "stairs:down", 1, three, 2), Net.ReadyVerdict.Go));
+                c = new Net.ReadyCheck(); c.Vote(0, true, "stairs:down", 1, three, 0);
+                rows.Add(("1 of 3 at 15 s", c.Tick(three, 15), Net.ReadyVerdict.Cancelled));
+                c = new Net.ReadyCheck(); c.Vote(0, true, "stairs:down", 1, three, 0); c.Vote(1, true, "stairs:down", 1, three, 1);
+                rows.Add(("2 of 3 at 15 s", c.Tick(three, 15), Net.ReadyVerdict.Go));
+                c = new Net.ReadyCheck(); c.Vote(0, true, "stairs:down", 1, three, 0);
+                rows.Add(("Yes then a No", c.Vote(1, false, "stairs:down", 1, three, 1), Net.ReadyVerdict.Cancelled));
+                c = new Net.ReadyCheck(); c.Vote(0, true, "stairs:down", 1, two, 0);
+                rows.Add(("1 of 2 at 15 s", c.Tick(two, 15), Net.ReadyVerdict.Cancelled));
+                c = new Net.ReadyCheck(); c.Vote(0, true, "stairs:down", 1, three, 0);
+                rows.Add(("a downed player's No", c.Vote(5, false, "stairs:down", 1, three, 1), Net.ReadyVerdict.Pending));
+                foreach (var row in rows)
+                {
+                    GD.Print($"[co-op] rule: {row.Case} -> {row.Got}");
+                    if (row.Got != row.Want) Fail($"rule \"{row.Case}\" gave {row.Got}, wanted {row.Want}");
+                }
+                GD.Print($"[co-op] rule: Needed(1)={Net.ReadyCheckRules.Needed(1)} Needed(2)={Net.ReadyCheckRules.Needed(2)}");
+                if (Net.ReadyCheckRules.Needed(1) || !Net.ReadyCheckRules.Needed(2)) Fail("Needed is wrong for 1 or 2 players");
+                // 4. the HUD line
+                hud.ShowReadyCheck(1, 3, 12, +1);
+                var line = hud.ReadyCheckText;
+                hud.HideReadyCheck();
+                GD.Print($"[co-op] hud line: \"{line}\" then \"{hud.ReadyCheckText}\"");
+                if (line != "Descend? 1/3 ready · 12 s") Fail($"the HUD line reads \"{line}\"");
+                if (hud.ReadyCheckText != "") Fail("the HUD line did not hide");
+                // 5. chat in solo
+                hud.OpenChat();
+                var opened = party.InputLocked;
+                hud.SubmitChat("hello from solo");
+                GD.Print($"[co-op] chat: opened (input locked {opened}), log \"{hud.LastLogLine}\", input locked after {party.InputLocked}");
+                if (!opened) Fail("the chat line did not open in solo");
+                if (hud.LastLogLine != $"[{name}] hello from solo") Fail($"the chat line went to the log as \"{hud.LastLogLine}\"");
+                if (party.InputLocked) Fail("the chat line stayed open after Enter");
+                // 6. the chat key while the stairs question is up: the question keeps the keys (Esc must answer it, not the chat line)
+                if (root.GetNodeOrNull<Stairs>("DownStairs") is not { } stairs) { Fail("no DownStairs node"); Finish(); return; }
+                hud.AskStairs(stairs, party.Local!);
+                Input.ParseInputEvent(new InputEventAction { Action = "chat", Pressed = true });
+                Next();
+                break;
+            }
+            case 4 when since >= 0.3:
+            {
+                GD.Print($"[co-op] chat key over the stairs question: question open {hud.StairsPromptOpen}, chat open {hud.ChatOpen}");
+                if (!hud.StairsPromptOpen) Fail("the stairs question closed when T was pressed");
+                if (hud.ChatOpen) Fail("T opened the chat line over the stairs question (Esc would then send a No)");
+                if (root.GetNodeOrNull<Stairs>("DownStairs") is { } asked) hud.DismissStairs(asked); // stepping off, not a No
+                // 7. solo stairs: a Yes changes the floor at once (no ready-check without a server)
+                if (root.GetNodeOrNull<Stairs>("DownStairs") is not { } stairs) { Fail("no DownStairs node"); Finish(); return; }
+                party.Teleport(b.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs)) + Vector3.Up * 0.3f, b.Surface(layout.DownStairs));
+                stairs.Confirm(party, party.Local!);
+                Next();
+                break;
+            }
+            case 5:
+                if (Game.Instance.CurrentFloor == 2) { GD.Print($"[co-op] solo stairs: floor 2 at once ({since:0.0} s)"); Finish(); }
+                else if (since > 4) { Fail($"solo stairs did not change floor within 4 s (floor {Game.Instance.CurrentFloor})"); Finish(); }
+                break;
         }
     }
 

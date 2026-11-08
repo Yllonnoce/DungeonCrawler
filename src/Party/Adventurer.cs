@@ -638,6 +638,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         return Planar(d) * speed + Separation() * speed * 0.5f;
     }
 
+    /// <summary>Where the camera looks: the first hit on the world, a creature or an interactable (layers 1, 4, 8) within <paramref name="maxDistance"/>, or null when nothing is hit (co-op's ping).</summary>
+    public Vector3? AimPoint(float maxDistance)
+    {
+        var from = Camera.GlobalPosition;
+        var to = from - Camera.GlobalTransform.Basis.Z * maxDistance;
+        var hit = GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(from, to, collisionMask: 1 | 4 | 8));
+        return hit.Count == 0 ? null : (Vector3)hit["position"];
+    }
+
     private bool ClearLine(Vector3 target)
     {
         var space = GetWorld3D().DirectSpaceState;

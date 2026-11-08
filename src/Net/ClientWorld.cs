@@ -96,6 +96,11 @@ public partial class ClientWorld : Node
             case HitFxEvt fx: OnHitFx(fx); break;
             case DeathCardEvt dc: Main.Instance.Hud?.ShowDeathCard(dc.Card, null); Trace.Add("deathcard"); break; // the card closes on its button; under the Death Clause the server's recap follows
             case FloorCardEvt fc2: Main.Instance.Hud?.ShowFloorCard(fc2.Card); Trace.Add("floorcard"); break;
+            case PingEvt pe: UI.Hud.PingMarkers.Instance?.Place(pe.Name, new Vector3(pe.At.X, pe.At.Y, pe.At.Z)); Trace.Add("ping"); break;
+            case StairsReadyMsg rm:
+                if (rm.Total == 0) Main.Instance.Hud?.HideReadyCheck(); else Main.Instance.Hud?.ShowReadyCheck(rm.Count, rm.Total, rm.SecondsLeft, rm.Direction);
+                Trace.Add(rm.Total == 0 ? "ready-done" : "ready-check");
+                break;
             case RunRecapEvt rr: Main.Instance.Hud?.ShowRunRecap(rr.Recap, rr.Button, rr.Recap.Victory ? null : () => { Main.Instance.OnClientLeft("The contract is void."); Main.Instance.Menu?.OpenRecords(); }); Trace.Add("recap"); break; // a dead world is nothing to stay in
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;

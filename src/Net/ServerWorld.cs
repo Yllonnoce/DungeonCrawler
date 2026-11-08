@@ -108,8 +108,10 @@ public partial class ServerWorld : Node
         game.Adventure.FloorPlans.TryGetValue(floor, out var plan);
         game.Floors.TryGetValue(floor, out var state);
         var snapshot = main.BuildSnapshotFor.TryGetValue(floor, out var s) ? s : party.Snapshot();
+        var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemy>();
+        if (NetSession.Instance.TestServer) GD.Print($"[net-server] elites on floor {floor}: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
         foreach (var peer in Handshake.InGamePeers)
-            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main))));
+            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main), elites.Select(e => e.SpawnIndex).ToList())));
         _lastSent.Clear();
         _firstPose.Clear();
         Trace.Add($"floor:{floor}");
@@ -411,6 +413,20 @@ public partial class ServerWorld : Node
                 if (started) Trace.Add("rescue");
                 break;
             }
+            case StairsReadyIntent sr:
+            {
+                // a Yes needs the voter within reach of the stairs (as InteractIntent) and runs the gate through Stairs.Interact; a No needs no reach
+                if (main.Builder.FloorRoot is not { } root || NetRefResolver.Resolve(root, sr.Ref) is not Dungeon.Stairs stairs) break;
+                if (!sr.Ready) { StairsVote(stairs, slot.MemberIndex, false); break; }
+                var dist = Math.Min(stairs.GlobalPosition.DistanceTo(body.GlobalPosition), stairs.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
+                if (NetSession.Instance.TestServer) GD.Print($"[net-server] stairs vote {sr.Ref} from {slot.Name}: {dist:0.0} m");
+                if (dist > 3.5f) break;
+                stairs.Interact(party, body);
+                break;
+            }
+            case PingIntent pi:
+                HandlePing(slot, body, pi);
+                break;
             case ShoutIntent:
                 if (!body.Downed) break;
                 EventBus.Instance.Log($"{slot.Name} needs help!");
@@ -438,7 +454,7 @@ public partial class ServerWorld : Node
             {
                 if (!slot.Ready || !CanTrade(slot)) break;
                 var reach = PartyController.TradeReachFor(slot.MemberIndex < party.Adventurers.Length ? party.Adventurers[slot.MemberIndex] : null);
-                if (party.LuckyDipBuy(ld.Slot, reach) == null) Trace.Add("dip");
+                if (party.LuckyDipBuy(ld.Slot, reach, slot.MemberIndex) == null) Trace.Add("dip"); // the Gambled bark names the buyer, not the server's focused member
                 SendLuckyDipSync();
                 _bagDirty = true;
                 break;
@@ -608,6 +624,7 @@ public partial class ServerWorld : Node
             _spawned.Clear();
         }
         TickBound(dt);
+        TickReadyCheck(dt);
         _statusTimer -= dt;
         if (_statusTimer <= 0f) { _statusTimer = 10f; WriteStatus(); }
         _autosaveTimer += dt;

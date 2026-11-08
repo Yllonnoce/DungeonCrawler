@@ -82,6 +82,7 @@ Pick your system. Each step is one thing to do.
 
 - Friends outside your home network need the second address the Host script prints, and your router must forward
   TCP port 7777 to your computer.
+- The stairs are a vote: when someone says yes on a landing, everyone sees "Descend? 1/3 ready"; you go down when all living players are ready, or after 15 s if most are. A "No" calls it off. Press X to point at something for your friends, T to type to them.
 - Windows and macOS ask once to allow the game through the firewall: say yes.
 - Closing the Host window stops the server. The game is saved and continues next time.
 - Want a server that stays up when your computer is off? [docs/server-setup.md](docs/server-setup.md) has it step by step.
@@ -116,6 +117,8 @@ You control one of the four heroes at a time; the other three follow, fight and 
 | 1 / 2 / 3 / 4, F | Take control of another hero |
 | R | Cycle the companions' stance: Defensive, Aggressive, Hold |
 | V | Cheer: your hero rallies, the others answer |
+| X | Ping: mark what you are looking at for your friends (2 s, in the world and on the map) |
+| T | Chat: type a line into the log (on a server everyone reads it) |
 | E | Interact: pick up loot, open doors and chests, talk, disarm traps, push secret walls |
 | Tab or I | Inventory (drag to equip; drop or destroy items) |
 | C, K, J | Character sheet, skill tree, journal |

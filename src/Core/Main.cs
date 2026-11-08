@@ -676,8 +676,15 @@ public partial class Main : Node
         if (fc.State != null) game.Floors[fc.Floor] = fc.State; else game.Floors.Remove(fc.Floor);
         _pendingPartyState = null;
         _forcedSnapshot = fc.BuildSnapshot;
-        RebuildFloor(fc.Floor, fc.Delta);
-        _forcedSnapshot = null;
+        Builder.ForcedEliteSpawns = fc.EliteSpawns; // the server's roster, whatever this machine's own roll would say
+        try { RebuildFloor(fc.Floor, fc.Delta); }
+        finally { _forcedSnapshot = null; Builder.ForcedEliteSpawns = null; }
+        if (fc.EliteSpawns != null && Builder.FloorRoot is { } builtRoot)
+        {
+            var built = builtRoot.GetChildren().OfType<Enemies.Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList();
+            var same = built.Select(e => e.SpawnIndex).SequenceEqual(fc.EliteSpawns.OrderBy(i => i));
+            GD.Print($"[net] floor {fc.Floor} elites {(same ? "match" : "MISMATCH")}: [{string.Join(", ", built.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
+        }
         for (var i = 0; i < Party.Adventurers.Length && i < fc.SpawnPoses.Count; i++)
         {
             var p = fc.SpawnPoses[i];

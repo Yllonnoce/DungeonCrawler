@@ -53,6 +53,17 @@ fi
 if ! grep -q "\[net\] safe room: HUD shows" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's HUD never showed the safe room)"; exit 1; fi
 # the merchant in that safe room: a purchase and a sale through the server, each answered with a shop sync
 if ! grep -q "\[net\] bought and sold at the merchant" "$TMP/client.log"; then echo "NET TEST: FAIL (no purchase and sale at the merchant)"; exit 1; fi
+# co-op: the client's ping came back through the server with its name, and one player online took the stairs at once (no ready-check)
+if ! grep -q "\[net\] ping relayed" "$TMP/client.log"; then echo "NET TEST: FAIL (the ping never came back to the client)"; exit 1; fi
+if [ "$MODE" = direct ] && ! grep -q "stairs:immediate" "$TMP/server.log"; then echo "NET TEST: FAIL (one player online did not take the stairs at once)"; exit 1; fi
+# the elite roster of a first-visit floor is the server's: both sides name the same spawn indices and elite names on floor 2
+if [ "$MODE" = direct ]; then
+  SERVER_ELITES=$(grep -m1 "\[net-server\] elites on floor 2:" "$TMP/server.log" | sed 's/.*elites on floor 2: //')
+  CLIENT_ELITES=$(grep -m1 "\[net\] elites on floor 2:" "$TMP/client.log" | sed 's/.*elites on floor 2: //')
+  echo "--- elites on floor 2: server $SERVER_ELITES client $CLIENT_ELITES"
+  if [ -z "$SERVER_ELITES" ] || [ "$SERVER_ELITES" != "$CLIENT_ELITES" ]; then echo "NET TEST: FAIL (the client's elite roster differs from the server's)"; exit 1; fi
+  if grep -q "elites MISMATCH" "$TMP/client.log"; then echo "NET TEST: FAIL (the client built a roster other than the FloorChange named)"; exit 1; fi
+fi
 
 if [ "$MODE" = direct ]; then
   # second pass: the server restarts on its own save; the same name gets its character, bag and floor back

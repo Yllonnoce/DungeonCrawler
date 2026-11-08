@@ -65,6 +65,7 @@ public partial class Hud : Control
     private Label _objective = null!;
     private Label _subtitle = null!;
     private Label _mangled = null!;
+    private Label _readyCheck = null!;
     private float _mangledSince;
     private float _subtitleTimer;
     private bool _subtitleIsBark; // a bark may replace a bark, never a narration still on screen
@@ -149,10 +150,11 @@ public partial class Hud : Control
         _chat = new LineEdit { Name = "ChatLine", Visible = false, PlaceholderText = "Say something (Enter to send, Esc to cancel)", MaxLength = Net.Protocol.MaxChatLength, CustomMinimumSize = new Vector2(520, 34) };
         _chat.SetAnchorsPreset(Control.LayoutPreset.CenterBottom);
         _chat.Position = new Vector2(-260, -120);
-        _chat.TextSubmitted += text => { var t = text.Trim(); if (t.Length > 0 && Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.ChatIntent(t)); CloseChat(); };
+        _chat.TextSubmitted += SubmitChat;
         AddChild(_chat);
         _pause = new PauseMenu { Name = "PauseMenu", Visible = false };
         AddChild(_pause);
+        AddChild(new PingMarkers { Name = "PingMarkers" });
 
         _objective = new Label { Name = "Objective", Modulate = new Color(0.95f, 0.85f, 0.55f) };
         _objective.AnchorLeft = 0; _objective.AnchorRight = 0; _objective.AnchorTop = 0; _objective.AnchorBottom = 0;
@@ -168,6 +170,11 @@ public partial class Hud : Control
         _mangled.AnchorLeft = 0.5f; _mangled.AnchorRight = 0.5f; _mangled.AnchorTop = 0; _mangled.AnchorBottom = 0;
         _mangled.OffsetLeft = -360; _mangled.OffsetRight = 360; _mangled.OffsetTop = 80; _mangled.OffsetBottom = 110;
         AddChild(_mangled);
+        _readyCheck = new Label { Name = "ReadyCheck", HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color(0.95f, 0.85f, 0.55f), Visible = false };
+        _readyCheck.AddThemeFontSizeOverride("font_size", 20);
+        _readyCheck.AnchorLeft = 0.5f; _readyCheck.AnchorRight = 0.5f; _readyCheck.AnchorTop = 0; _readyCheck.AnchorBottom = 0;
+        _readyCheck.OffsetLeft = -360; _readyCheck.OffsetRight = 360; _readyCheck.OffsetTop = 116; _readyCheck.OffsetBottom = 146;
+        AddChild(_readyCheck);
 
         // the combat read-outs: 3D nodes beside the Hud (not under a Control), the marker on the crosshair
         DamageNumbers = new DamageNumbers { Name = "DamageNumbers" };
@@ -377,12 +384,9 @@ public partial class Hud : Control
             if (@event.IsActionPressed("ui_cancel")) { CloseChat(); GetViewport().SetInputAsHandled(); }
             return; // the chat line owns the keys while open
         }
-        if (@event.IsActionPressed("chat") && Net.NetSession.IsClient && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible)
+        if (@event.IsActionPressed("chat") && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible && !_stairsPrompt.Visible && !_shrine.Visible && !_clauseCard.Visible) // a stairs question keeps the keys: Esc answers it, never the chat
         {
-            _chat.Text = "";
-            _chat.Visible = true;
-            _chat.GrabFocus();
-            UpdateModalState();
+            OpenChat();
             GetViewport().SetInputAsHandled();
             return;
         }
@@ -410,6 +414,11 @@ public partial class Hud : Control
         {
             _fullMap.Visible = !_fullMap.Visible;
             _minimap.Visible = !_fullMap.Visible;
+            GetViewport().SetInputAsHandled();
+        }
+        else if (@event.IsActionPressed("ping"))
+        {
+            Ping();
             GetViewport().SetInputAsHandled();
         }
         else if (@event.IsActionPressed("character"))
@@ -522,7 +531,36 @@ public partial class Hud : Control
     /// <summary>The player stepped off the landing: the question goes away.</summary>
     public void DismissStairs(Dungeon.Stairs stairs) => _stairsPrompt.Dismiss(stairs);
 
+    /// <summary>The server's stairs ready-check (co-op): "Descend? 1/3 ready · 12 s" under the objective line.</summary>
+    public void ShowReadyCheck(int count, int total, int secondsLeft, int direction)
+    {
+        _readyCheck.Text = Net.ReadyCheckRules.HudLine(count, total, secondsLeft, direction);
+        _readyCheck.Visible = _readyCheck.Text.Length > 0;
+    }
+
+    public void HideReadyCheck() { _readyCheck.Visible = false; _readyCheck.Text = ""; }
+
+    /// <summary>What the ready-check line shows ("" when hidden).</summary>
+    public string ReadyCheckText => _readyCheck.Visible ? _readyCheck.Text : "";
+
     public bool StairsPromptOpen => _stairsPrompt.Visible;
+
+    private double _lastPingAt = -1;
+    /// <summary>
+    /// Ping (X): a marker with this player's name where the camera looks, 2 s, 1 s cooldown; on a client the server relays
+    /// it to everyone as a <see cref="Net.PingEvt"/>. False when nothing was pinged (down, cooling down, or looking at nothing).
+    /// </summary>
+    public bool Ping()
+    {
+        if (_party.Local is not { Downed: false } me) return false;
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (!Net.PingRules.CanPing(_lastPingAt, now)) return false;
+        if (me.AimPoint(Net.PingRules.MaxAimDistance) is not { } at) return false;
+        _lastPingAt = now;
+        if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.PingIntent(new Net.NetVec(at.X, at.Y, at.Z)));
+        else PingMarkers.Instance?.Place(me.State.Name, at);
+        return true;
+    }
 
     public void UpdateModalState()
     {
@@ -535,6 +573,33 @@ public partial class Hud : Control
     private string _floorText = "";
     private int _pingFrames;
 
+    /// <summary>T: the chat line, in solo and on the host too (co-op): what is typed goes to the log, on a client through the server.</summary>
+    public void OpenChat()
+    {
+        _chat.Text = "";
+        _chat.Visible = true;
+        _chat.GrabFocus();
+        UpdateModalState();
+    }
+
+    /// <summary>Send the line: a client's goes up as a ChatIntent; anyone else writes "[Name] text" to the log (a server's log line reaches every client).</summary>
+    public void SubmitChat(string text)
+    {
+        var t = text.Trim();
+        if (t.Length > 0)
+        {
+            if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.ChatIntent(t));
+            else EventBus.Instance.Log($"[{_party.Local?.State.Name ?? "Host"}] {t}");
+        }
+        CloseChat();
+    }
+
+    /// <summary>Whether the chat line is open (tests).</summary>
+    public bool ChatOpen => _chat.Visible;
+
+    /// <summary>The newest line of the message log ("" when empty).</summary>
+    public string LastLogLine => _lines.Last?.Value ?? "";
+
     private void CloseChat()
     {
         _chat.Visible = false;
@@ -546,6 +611,7 @@ public partial class Hud : Control
     {
         if (_shop.Visible && floor != _shop.Floor) _shop.Close(); // the merchant's wares are the floor's
         if (_shrine.Visible) _shrine.Close("gone"); // the altar stayed on the floor we left
+        HideReadyCheck(); // the vote is over once the floor changes
         var tier = Main.Instance?.Builder.CurrentTier?.DisplayName ?? "";
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;
