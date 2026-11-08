@@ -28,7 +28,7 @@ public static class SaveFormat
     }
 
     /// <summary>Just the header fields, for slot lists. Tolerates any version.</summary>
-    public static (int version, string label, int floor, string savedAt, double playSeconds, List<string> members)? ReadHeader(string json)
+    public static (int version, string label, int floor, string savedAt, double playSeconds, List<string> members, ulong gameSeed, bool fallen, string? epitaph, string run)? ReadHeader(string json)
     {
         try
         {
@@ -38,8 +38,10 @@ public static class SaveFormat
             if (node["Party"]?["Members"] is JsonArray arr)
                 foreach (var m in arr)
                     members.Add($"{m?["Name"]?.GetValue<string>() ?? "?"} L{m?["Level"]?.GetValue<int>() ?? 1}");
+            var adventure = node["Adventure"] as JsonObject;
             return (node["Version"]?.GetValue<int>() ?? 0, node["Label"]?.GetValue<string>() ?? "", node["CurrentFloor"]?.GetValue<int>() ?? 1,
-                    node["SavedAtUtc"]?.GetValue<string>() ?? "", node["PlaySeconds"]?.GetValue<double>() ?? 0, members);
+                    node["SavedAtUtc"]?.GetValue<string>() ?? "", node["PlaySeconds"]?.GetValue<double>() ?? 0, members,
+                    node["GameSeed"]?.GetValue<ulong>() ?? 0, adventure?["Fallen"]?.GetValue<bool>() ?? false, adventure?["Epitaph"]?.GetValue<string>(), adventure?["Run"]?.GetValue<string>() ?? "Story");
         }
         catch (JsonException) { return null; }
     }
@@ -68,7 +70,7 @@ public static class SaveMigrations
                 7 => root, // v8 added Objective per floor (the floor objective's progress); missing means none or not started
                 8 => From8To9(root), // v9 added lethal hazards per floor and Mangled members; floors an old run already visited keep no hazards
                 9 => From9To10(root), // v10 added the party's Gold purse; old saves start with none
-                10 => root, // v11 added Adventure.GagCounts (the banter's running-gag counters), Boons/Curses and the fortune floor state (shrine, bound chest, mimics, secrets, dip, jams); missing means none yet
+                10 => root, // v11 added Adventure.GagCounts (the banter's running-gag counters), Boons/Curses and the fortune floor state (shrine, bound chest, mimics, secrets, dip, jams), and run-structure's Adventure.Run/RunId/Clauses/DailyDate/Fallen/Epitaph/Wipes/ScarUntilFloor; missing means a Story with no clauses, not fallen
                 _ => throw new InvalidDataException($"No migration from save version {version}"),
             };
             version++;

@@ -1,4 +1,5 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Run;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Defs;
 using DungeonCrawler.Characters;
@@ -51,7 +52,8 @@ public partial class Game : Node
     }
 
     /// <summary>Reset session state for a new run. The campaign is filled in by the caller before <see cref="BeginFloor"/>.</summary>
-    public void PrepareNewGame(ulong? seed = null)
+    /// <param name="run">The title mode that starts the run (saved in the adventure); the Story is the shipped campaign, a Descent a fresh seed, the Daily the date's seed.</param>
+    public void PrepareNewGame(ulong? seed = null, RunKind run = RunKind.Descent)
     {
         GameSeed = seed ?? (ulong)Random.Shared.NextInt64(); // the only place Random.Shared is allowed: picking the game seed
         CurrentFloor = DebugTools.Instance?.StartFloor ?? 0; // a new game opens in the tavern (a plain --server too); automation and --test-net-server open on floor 1 unless --floor=0
@@ -60,8 +62,10 @@ public partial class Game : Node
         Floors.Clear();
         PlaySeconds = 0;
         Victory = false;
-        Adventure = new AdventureDto { Mode = AdventureMode.Offline };
-        GD.Print($"[Game] new game seed={GameSeed}");
+        Adventure = new AdventureDto { Mode = AdventureMode.Offline, Run = run, RunId = Guid.NewGuid().ToString("N") };
+        if (Net.NetSession.Instance?.Clauses is { } clauses) Adventure.Clauses = ClauseRules.Normalize(clauses); // a server's --clauses= binds every new game in the process
+        ClauseRules.Activate(Adventure.Clauses);
+        GD.Print($"[Game] new game seed={GameSeed} run={run} clauses=[{string.Join(",", Adventure.Clauses)}]");
     }
 
     public List<TierProfile> TierProfiles() => Registry.Instance.All<TierDef>().OrderBy(t => t.Index).Select(t => t.ToProfile()).ToList();
@@ -89,6 +93,7 @@ public partial class Game : Node
         Floors.Clear();
         foreach (var (floor, state) in data.Floors) Floors[floor] = state;
         Adventure = data.Adventure ?? new AdventureDto();
+        ClauseRules.Activate(Adventure.Clauses);
         RepairMerchant();
         GD.Print($"[Game] loaded seed={GameSeed} floor={CurrentFloor} floors={Floors.Count} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
     }
@@ -113,6 +118,7 @@ public partial class Game : Node
         Floors.Clear();
         Floors[w.CurrentFloor] = w.FloorState;
         Adventure = w.Adventure ?? new AdventureDto();
+        ClauseRules.Activate(Adventure.Clauses);
         RepairMerchant();
         GD.Print($"[Game] joined seed={GameSeed} floor={CurrentFloor} adventure={Adventure.Mode} plans={Adventure.FloorPlans.Count}");
     }
@@ -123,6 +129,8 @@ public partial class Game : Node
         Floors.Clear();
         _exploration.Clear();
         Adventure = new AdventureDto();
+        ClauseRules.Reset();
+        Dungeon.DungeonBuilder.ExtraElitesPerFloor = 0;
     }
 
     public override void _Process(double delta)

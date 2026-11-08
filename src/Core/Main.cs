@@ -127,7 +127,7 @@ public partial class Main : Node
         CreateSession(Array.Empty<(string, string, Characters.Rank)>(), -1, hud: false);
         if (net.Campaign == "builtin" && BuiltinCampaign.Load() is { } baked)
         {
-            game.PrepareNewGame(baked.Campaign.GameSeed);
+            game.PrepareNewGame(baked.Campaign.GameSeed, RunKind.Story);
             game.Adventure.Mode = AdventureMode.Builtin;
             game.Adventure.Campaign = baked.Campaign;
             foreach (var (floor, plan) in baked.Floors) game.Adventure.FloorPlans[floor] = plan;
@@ -273,7 +273,7 @@ public partial class Main : Node
         if (BuiltinCampaign.Load() is not { } baked) return false;
         CreateSession();
         var game = Game.Instance;
-        game.PrepareNewGame(baked.Campaign.GameSeed);
+        game.PrepareNewGame(baked.Campaign.GameSeed, RunKind.Story);
         game.Adventure.Mode = AdventureMode.Builtin;
         game.Adventure.Campaign = baked.Campaign;
         foreach (var (floor, plan) in baked.Floors) game.Adventure.FloorPlans[floor] = plan;
@@ -327,7 +327,7 @@ public partial class Main : Node
             game.Floors[game.CurrentFloor] = FloorStateCapture.Capture(root, layout, Builder.Contents, Exploration);
         var data = new SaveData
         {
-            Label = label, GameSeed = game.GameSeed, CurrentFloor = game.CurrentFloor,
+            Label = label, GameSeed = game.GameSeed, CurrentFloor = game.CurrentFloor, Victory = game.Victory,
             SavedAtUtc = SaveMapper.Now(), PlaySeconds = game.PlaySeconds, Party = Party.CaptureState(), Adventure = game.Adventure,
             Multiplayer = NetSession.IsServer, Players = NetSession.Instance?.Server?.Registry.ToSave() ?? new List<PlayerDto>(),
         };

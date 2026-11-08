@@ -36,6 +36,9 @@ public sealed class PlayerDto
 
 public enum AdventureMode { Legacy, Offline, Claude, Builtin }
 
+/// <summary>Which title-screen mode started the run (v11, run-structure): the shipped Story, a New Descent on a fresh seed, or the Daily on the UTC date's seed.</summary>
+public enum RunKind { Story, Descent, Daily }
+
 /// <summary>Who authored this run and what they decided so far. Floor plans are kept so reloads rebuild the same floor.</summary>
 public sealed class AdventureDto
 {
@@ -62,6 +65,22 @@ public sealed class AdventureDto
     public List<string> Boons { get; set; } = new();
     /// <summary>Curse ids the party carries (v11+, fortune) until lifted at a shrine.</summary>
     public List<string> Curses { get; set; } = new();
+    /// <summary>Run-structure (v11+): the title mode that started the run; an older save is a Story.</summary>
+    public RunKind Run { get; set; } = RunKind.Story;
+    /// <summary>A fresh id per run: the profile's last-twenty list upserts by it.</summary>
+    public string RunId { get; set; } = "";
+    /// <summary>The signed clauses ("key" or "key:rank", normalized by <c>ClauseRules</c>); empty for none.</summary>
+    public List<string> Clauses { get; set; } = new();
+    /// <summary>The Daily's date key (yyyy-MM-dd, UTC); null for the other modes.</summary>
+    public string? DailyDate { get; set; }
+    /// <summary>The Death Clause ended this run: the slot is a memorial and never loads.</summary>
+    public bool Fallen { get; set; }
+    /// <summary>The death card's line, kept for the memorial and the records.</summary>
+    public string? Epitaph { get; set; }
+    /// <summary>Wipes this run, all floors.</summary>
+    public int Wipes { get; set; }
+    /// <summary>The Scar curse holds until the party stands on a floor other than floor ScarUntilFloor − 1; 0 for none.</summary>
+    public int ScarUntilFloor { get; set; }
 }
 
 public sealed class PartyDto
