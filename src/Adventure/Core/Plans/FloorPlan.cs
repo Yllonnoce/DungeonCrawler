@@ -29,10 +29,20 @@ public sealed class RoomPlan
     public string Name { get; set; } = "";
 }
 
+/// <summary>The planner's named champion on a roster entry; the validator sanitises it and the resolver fills whatever is left blank.</summary>
+[AiDescription("A named champion: Name (at most 40 characters) and one to three affixes from Swift, Hulking, Warded, Vampiric, Volatile, Splitting, Thorned, Cursing, Shrouded, Hexed, Alarmist, Juggernaut; leave Name empty or Affixes empty for the game to fill them.")]
+public sealed class ElitePlan
+{
+    public string Name { get; set; } = "";
+    public List<string> Affixes { get; set; } = new();
+}
+
 public sealed class MemberPlan
 {
     public string EnemyId { get; set; } = "";
     public int Count { get; set; } = 1;
+    /// <summary>Applies to the first creature of the entry.</summary>
+    [AiNotNull] public ElitePlan? Elite { get; set; }
 }
 
 public sealed class ObjectivePlan
@@ -88,6 +98,7 @@ public sealed class LonerPlan
 {
     public string EnemyId { get; set; } = "";
     public int Room { get; set; }
+    [AiNotNull] public ElitePlan? Elite { get; set; }
 }
 
 public sealed class BossPlan

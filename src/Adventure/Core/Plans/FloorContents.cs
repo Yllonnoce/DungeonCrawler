@@ -1,9 +1,10 @@
 using DungeonCrawler.Dungeon.Generation;
+using DungeonCrawler.Enemies;
 
 namespace DungeonCrawler.Adventure;
 
-/// <summary>One enemy to instantiate. SpawnIndex is the save key and must be stable for a given layout and plan.</summary>
-public sealed record EnemyPlacement(int SpawnIndex, string EnemyId, GridPos Cell, bool Under, string? CollectiveId = null, int Ordinal = 0);
+/// <summary>One enemy to instantiate. SpawnIndex is the save key and must be stable for a given layout and plan. Elite is the roll when this one is an elite.</summary>
+public sealed record EnemyPlacement(int SpawnIndex, string EnemyId, GridPos Cell, bool Under, string? CollectiveId = null, int Ordinal = 0, EliteRoll? Elite = null);
 
 /// <summary>A chest added by the plan on top of the generator's. Indices start at <see cref="FloorContents.ExtraIndexBase"/>.</summary>
 public sealed record ChestPlacement(int SpawnIndex, GridPos Cell, bool Locked, string? QuestId);

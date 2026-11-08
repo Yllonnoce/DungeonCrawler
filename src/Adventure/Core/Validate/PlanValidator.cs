@@ -220,6 +220,7 @@ public static class PlanValidator
                 if (menu.IsBandit(m.EnemyId) || menu.Enemy(m.EnemyId)!.Id == menu.BossId) { report.Repairs.Add($"horde {h.Id}: {m.EnemyId} does not march with a horde, dropped"); return true; }
                 return false;
             });
+            foreach (var m in h.Members.Where(m => m.Elite != null)) { m.Elite = null; report.Repairs.Add($"horde {h.Id}: {m.EnemyId} cannot be an elite"); }
             // merge duplicates
             h.Members = h.Members.GroupBy(m => m.EnemyId).Select(g => new MemberPlan { EnemyId = g.Key, Count = g.Sum(m => m.Count) }).ToList();
             if (h.Members.All(m => !menu.IsHorde(m.EnemyId))) { h.Members.Insert(0, new MemberPlan { EnemyId = fodder.Id, Count = Math.Max(FloorMenu.MinHorde, h.Members.Sum(m => m.Count) * 3) }); report.Repairs.Add($"horde {h.Id}: no swarm creatures, added {fodder.Id}"); }
@@ -243,6 +244,24 @@ public static class PlanValidator
             return false;
         });
         if (plan.Hordes.Count > MaxHordes) { plan.Hordes.RemoveRange(MaxHordes, plan.Hordes.Count - MaxHordes); report.Repairs.Add($"kept only {MaxHordes} hordes"); }
+
+        // elites: the planner's champions sanitised, never on a horde creature, never more than the floor allows
+        var eliteBudget = EliteRules.CountFor(menu.Floor, 0);
+        foreach (var c in plan.Collectives)
+            foreach (var m in c.Members)
+            {
+                if (m.Elite == null) continue;
+                if (menu.IsHorde(m.EnemyId)) { m.Elite = null; report.Repairs.Add($"{c.Id}: {m.EnemyId} cannot be an elite (horde creature)"); continue; }
+                if (eliteBudget-- <= 0) { m.Elite = null; report.Repairs.Add($"floor allows {EliteRules.CountFor(menu.Floor, 0)} elites, dropped the rest"); continue; }
+                SanitizeElite(m.Elite, menu.Floor);
+            }
+        foreach (var l in plan.Loners)
+        {
+            if (l.Elite == null) continue;
+            if (menu.IsHorde(l.EnemyId)) { l.Elite = null; report.Repairs.Add($"loner {l.EnemyId} cannot be an elite (horde creature)"); continue; }
+            if (eliteBudget-- <= 0) { l.Elite = null; report.Repairs.Add($"floor allows {EliteRules.CountFor(menu.Floor, 0)} elites, dropped the rest"); continue; }
+            SanitizeElite(l.Elite, menu.Floor);
+        }
 
         // budget and counts
         var total = plan.EnemyTotal;
@@ -481,6 +500,12 @@ public static class PlanValidator
         if (m.Count > 1) m.Count--; else c.Members.Remove(m);
         report.Repairs.Add($"{why}: trimmed {c.Id}");
         return true;
+    }
+
+    private static void SanitizeElite(ElitePlan e, int floor)
+    {
+        e.Affixes = EliteRules.Sanitize(e.Affixes, floor).Select(a => a.ToString()).ToList();
+        e.Name = Clip(e.Name ?? "", EliteRules.MaxNameLength);
     }
 
     private static string Clip(string s, int max) => s.Length <= max ? s : s[..max];

@@ -20,11 +20,11 @@ public static class AdventurePlanning
     }
 
     /// <summary>Resolve a stored plan against a freshly generated layout; null when the plan no longer fits (fall back to legacy).</summary>
-    public static FloorContents? ResolveStored(FloorLayout layout, FloorSpec spec, FloorPlan plan, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed, PartySnapshot party, out ValidationReport report, IReadOnlyCollection<string>? flags = null)
+    public static FloorContents? ResolveStored(FloorLayout layout, FloorSpec spec, FloorPlan plan, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed, PartySnapshot party, out ValidationReport report, IReadOnlyCollection<string>? flags = null, int extraElites = 0)
     {
         var menu = MenuFor(layout, spec, tier, roster, floor, party);
         report = PlanValidator.Validate(layout, plan, menu, enforceBudget: false);
         if (!report.Ok) return null;
-        return PlanResolver.Resolve(layout, plan, tier, roster, floor, seed, flags);
+        return PlanResolver.Resolve(layout, plan, tier, roster, floor, seed, flags, extraElites);
     }
 }

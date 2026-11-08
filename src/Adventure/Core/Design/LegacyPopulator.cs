@@ -14,7 +14,7 @@ public static class LegacyPopulator
     public const string FallbackEnemy = "enemy.ghoul";
     public const string FallbackRanged = "enemy.skeleton_archer";
 
-    public static FloorContents Populate(FloorLayout layout, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed)
+    public static FloorContents Populate(FloorLayout layout, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed, int extraElites = 0)
     {
         var contents = new FloorContents();
         var rng = new Random(seed ^ 0x5EED);
@@ -25,6 +25,7 @@ public static class LegacyPopulator
             contents.Enemies.Add(new EnemyPlacement(index++, PickRanged(tier, roster, rng), cell, Under: false));
         foreach (var cell in layout.CellarSpawns)
             contents.Enemies.Add(new EnemyPlacement(index++, tier?.PickEnemy(rng) ?? FallbackEnemy, cell, Under: true));
+        EliteRules.Assign(contents.Enemies, roster, seed, floor, extraElites);
         if (TierRules.IsBossFloor(floor) && layout.BossArena is { } arena && tier != null && tier.BossId != "")
         {
             contents.BossId = tier.BossId;

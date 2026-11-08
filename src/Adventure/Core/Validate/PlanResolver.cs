@@ -12,7 +12,8 @@ namespace DungeonCrawler.Adventure;
 public static class PlanResolver
 {
     /// <param name="flags">Flags the run has set so far: NPCs gated on them are placed or left out.</param>
-    public static FloorContents Resolve(FloorLayout layout, FloorPlan plan, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed, IReadOnlyCollection<string>? flags = null)
+    /// <param name="extraElites">Elites on top of the floor's schedule (a curse, a clause).</param>
+    public static FloorContents Resolve(FloorLayout layout, FloorPlan plan, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed, IReadOnlyCollection<string>? flags = null, int extraElites = 0)
     {
         var contents = new FloorContents { Plan = plan };
         var rng = new Random(seed ^ 0xC011);
@@ -40,7 +41,8 @@ public static class PlanResolver
                 for (var k = 0; k < m.Count; k++)
                 {
                     if (Take(c.Goal.Room) is not { } cell) { contents.Dropped.Add($"{c.Id}: no room for {m.EnemyId}"); continue; }
-                    contents.Enemies.Add(new EnemyPlacement(index, m.EnemyId, cell, false, c.Id, ordinal++));
+                    var elite = k == 0 && m.Elite is { } ep ? EliteRules.Complete(EliteRules.Sanitize(ep.Affixes, floor), ep.Name, seed, floor, index, FactionOf(roster, m.EnemyId)) : null;
+                    contents.Enemies.Add(new EnemyPlacement(index, m.EnemyId, cell, false, c.Id, ordinal++, elite));
                     placed.Add((cell, index));
                     index++;
                 }
@@ -49,7 +51,8 @@ public static class PlanResolver
         foreach (var l in plan.Loners)
         {
             if (Take(l.Room) is not { } cell) { contents.Dropped.Add($"loner: no room for {l.EnemyId}"); continue; }
-            contents.Enemies.Add(new EnemyPlacement(index++, l.EnemyId, cell, false));
+            var elite = l.Elite is { } ep ? EliteRules.Complete(EliteRules.Sanitize(ep.Affixes, floor), ep.Name, seed, floor, index, FactionOf(roster, l.EnemyId)) : null;
+            contents.Enemies.Add(new EnemyPlacement(index++, l.EnemyId, cell, false, Elite: elite));
         }
         // ledge and cellar picks match legacy population for the same layout: burn the picks it would have made first
         var legacyRng = new Random(seed ^ 0x5EED);
@@ -58,6 +61,7 @@ public static class PlanResolver
             contents.Enemies.Add(new EnemyPlacement(index++, LegacyPopulator.PickRanged(tier, roster, legacyRng), cell, false));
         foreach (var cell in layout.CellarSpawns)
             contents.Enemies.Add(new EnemyPlacement(index++, tier?.PickEnemy(legacyRng) ?? LegacyPopulator.FallbackEnemy, cell, true));
+        EliteRules.Assign(contents.Enemies, roster, seed, floor, extraElites);
         if (TierRules.IsBossFloor(floor) && layout.BossArena is { } arena && tier != null && tier.BossId != "")
         {
             contents.BossId = tier.BossId;
@@ -140,6 +144,8 @@ public static class PlanResolver
         Objectives.ObjectivePlanner.Attach(contents, layout, floor, seed, ritualist == null ? null : (ritualist.Id, ritualist.Name));
         return contents;
     }
+
+    private static string FactionOf(IReadOnlyDictionary<string, EnemyProfile> roster, string id) => roster.TryGetValue(id, out var p) ? p.Faction : "";
 
     /// <summary>
     /// A cell a body can stand on that represents a room: the free cell nearest its centre. Never the centre itself when

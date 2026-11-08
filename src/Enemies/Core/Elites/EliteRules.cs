@@ -86,6 +86,25 @@ public static class EliteRules
         return chosen;
     }
 
+    /// <summary>
+    /// Stamp the floor's elites onto the placements: the planner's (already carrying a roll) count first, the rest are chosen from the eligible
+    /// spawns (a roster profile, not horde, not a boss) by the floor seed and rolled by their spawn index. Never moves or renumbers a spawn.
+    /// </summary>
+    public static void Assign(List<Adventure.EnemyPlacement> enemies, IReadOnlyDictionary<string, EnemyProfile> roster, int floorSeed, int floor, int extra)
+    {
+        var preset = enemies.Count(e => e.Elite != null);
+        var want = CountFor(floor, extra) - preset;
+        if (want <= 0) return;
+        var eligible = enemies.Where(e => e.Elite == null && roster.TryGetValue(e.EnemyId, out var p) && p.Faction != "horde" && !p.IsBoss).Select(e => e.SpawnIndex).ToList();
+        var chosen = Choose(floorSeed, eligible, want).ToHashSet();
+        for (var i = 0; i < enemies.Count; i++)
+        {
+            var e = enemies[i];
+            if (!chosen.Contains(e.SpawnIndex)) continue;
+            enemies[i] = e with { Elite = Roll(floorSeed, floor, e.SpawnIndex, roster[e.EnemyId].Faction) };
+        }
+    }
+
     /// <summary>The planner's elite, finished: its affixes when it gave sane ones, else rolled; its name when it gave one, else made.</summary>
     public static EliteRoll Complete(IReadOnlyList<EliteAffix>? wanted, string? name, int floorSeed, int floor, int spawnIndex, string faction = "")
     {
