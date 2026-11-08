@@ -56,8 +56,8 @@ public partial class NetTestFlow : Node
             var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
             var want = resumed ? new[] { "rejoin:", "ready:", "left:" }
                 : Game.Instance.CurrentFloor == 0 ? new[] { "join:", "ready:", "node:deal", "left:" } // --floor=0: the client joins the tavern, strikes the deal and leaves
-                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "shop", "left:", "rejoin:" }
-                : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "shop", "left:", "rejoin:" };
+                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "shop", "cheer", "left:", "rejoin:" }
+                : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "shop", "cheer", "left:", "rejoin:" };
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -418,9 +418,17 @@ public partial class NetTestFlow : Node
                     GD.Print($"[net] sold it back: gold {_goldBefore} -> {main.Party.Gold}, bag {_bagBefore} -> {bag.Items.Count()}");
                     GD.Print("[net] bought and sold at the merchant");
                     me.Teleport(_safeReturn!.Value);
-                    _clock = 0; _step = 8;
+                    _clock = 0; _step = 16;
                 }
                 else if (_clock > 8) Finish("[net]", false, $"the sale never landed (bag {bag.Items.Count()} vs {_bagBefore}, gold {main.Party.Gold} vs {_goldBefore}, shop syncs {shops - _shopsBefore})");
+                return;
+            }
+            case 16:
+            {
+                // cheer: V goes to the server as a CheerIntent; the server picks our hero's line and it comes back as a BarkMsg for our member
+                if (!_cheerSent) { _cheerSent = true; _barksBefore = client.Trace.Count(t => t == $"bark:{client.MemberIndex}"); net.Send(new CheerIntent()); _clock = 0; return; }
+                if (client.Trace.Count(t => t == $"bark:{client.MemberIndex}") > _barksBefore) { GD.Print($"[net] cheered: our hero's line came back from the server"); _clock = 0; _step = 8; }
+                else if (_clock > 3) Finish("[net]", false, $"the cheer never came back as our bark (trace=[{string.Join(", ", client.Trace.Distinct())}])");
                 return;
             }
             case 8:
@@ -476,6 +484,8 @@ public partial class NetTestFlow : Node
     private double _swingClock, _chaseClock;
     private int _swings, _bagBefore, _lootBefore;
     private bool _fightHeard;
+    private bool _cheerSent;
+    private int _barksBefore;
     private int _killsBefore, _deathCues, _hurtCues, _hitFxBefore;
     private double _settle;
 

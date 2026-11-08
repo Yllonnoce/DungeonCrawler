@@ -49,10 +49,116 @@ public partial class AdventureDirector
         };
         bus.FloorBuilt += (_, _, _) => _lowHp.Reset();
         bus.PartyWiped += () => { if (Authority) SetRunFlag("wiped_once"); };
+        bus.SafeRoomChanged += inside => { _safeRoomSince = inside ? Game.Instance.PlaySeconds : -1; _safeRoomBantered = false; };
+        bus.Cheer += OnCheer;
+    }
+
+    // ---- banter ----
+    private BanterRun? _banter;
+    private double _safeRoomSince = -1;
+    private bool _safeRoomBantered;
+    private double _tavernNext = double.MaxValue;
+
+    /// <summary>An exchange is in flight (its lines are still coming).</summary>
+    public bool BanterPlaying => _banter is { Done: false };
+
+    /// <summary>
+    /// Start an exchange (server/solo only): one chosen for the living speakers, the floor, the tier, the run's flags and
+    /// gag counters, or the one named (a test's hook: its gating is ignored). Marks it said, bumps its counter, and
+    /// returns whether anything started.
+    /// </summary>
+    public bool StartBanter(string? id = null)
+    {
+        if (!Authority || !Game.Instance.InGame || Main.Instance?.Party is not { } party || !party.HasBodies) return false;
+        var campaign = Game.Instance.Adventure.Campaign;
+        var bank = BanterBank.Stock.Concat(campaign?.Banter ?? new List<BanterPlan>()).ToList();
+        var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
+        var said = Game.Instance.Adventure.BarksSaid;
+        var plan = id != null
+            ? bank.FirstOrDefault(b => b.Id == id)
+            : BanterPicker.Choose(bank, living, _currentFloor, Dungeon.TierRules.TierIndex(Math.Max(1, _currentFloor)), Memory.Flags, said, GagCounts, _barkRng);
+        if (plan == null) return false;
+        if (plan.OncePerRun) BarkRepeat.SaidForever(said, BanterRules.SaidKey(plan)); else BarkRepeat.Said(said, BanterRules.SaidKey(plan), _currentFloor);
+        var count = BanterPicker.CountFor(plan, GagCounts);
+        if (plan.Bumps && plan.Counter != null) Bump(plan.Counter);
+        _banter = new BanterRun(plan, Game.Instance.PlaySeconds, BanterRules.LineGapSeconds, count);
+        GD.Print($"[Banter] {plan.Id}");
+        return true;
+    }
+
+    /// <summary>A line whose words are fixed (banter, a cheer's answer): the written line when the text is untouched, else a fresh unvoiced one (a rendered token means no audio), in the trigger's delivery.</summary>
+    private void SayScripted(Characters.CharacterState m, Line source, string text, BarkTrigger trigger)
+    {
+        var line = text == source.Text ? source : new Line(text) { Delivery = source.Delivery };
+        line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(trigger));
+        Say(m.Name, line);
     }
 
     private void TickTalk()
     {
+        if (!Authority || !Game.Instance.InGame || Main.Instance is not { } main || main.Party is not { } party || !party.HasBodies) return;
+        var now = Game.Instance.PlaySeconds;
+        var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
+        // (a) the exchange in flight: its next line when due, dropped the moment a speaker is down or a fight starts
+        if (_banter != null)
+        {
+            if (Audio.MusicDirector.AnyoneFighting(main)) { _banter.Abort(); _banter = null; }
+            else
+            {
+                if (_banter.Next(now, name => living.Contains(name)) is { } next && party.Members.FirstOrDefault(m => m.Name == next.Member) is { } who)
+                    SayScripted(who, _banter.Plan.Lines[_banter.Index - 1].Line, next.Text, BarkTrigger.Travel);
+                if (_banter.Done) _banter = null;
+            }
+        }
+        // (b) a rest in the safe room earns one exchange
+        if (_safeRoomSince >= 0 && !_safeRoomBantered && now - _safeRoomSince >= BanterRules.SafeRoomRestSeconds && _banter == null && StartBanter()) _safeRoomBantered = true;
+        // (c) the tavern: one soon after arriving, then now and again, never over the merchant's talk or his shop
+        if (_currentFloor == 0 && now >= _tavernNext && _banter == null && main.Hud is { DialogueOpen: false, ShopOpen: false })
+        {
+            StartBanter();
+            _tavernNext = now + BanterRules.TavernRepeatSeconds;
+        }
+        // (d) the cheer's answers, one each, as their moments come
+        for (var i = _cheerAnswers.Count - 1; i >= 0; i--)
+        {
+            var (at, member) = _cheerAnswers[i];
+            if (at > now) continue;
+            _cheerAnswers.RemoveAt(i);
+            if (Member(member) is { IsAlive: true } m && living.Contains(m.Name) && Bark(m, BarkTrigger.CheerAnswer, scripted: true)) CheerBody(member);
+        }
+    }
+
+    // ---- the cheer ----
+    private double _lastCheer = -100;
+    private readonly List<(double At, int Member)> _cheerAnswers = new();
+
+    /// <summary>A member pressed Cheer (server/solo): their line, their body's cheer, and every other living hero's answer in turn; once per <see cref="CheerRules.CooldownSeconds"/>.</summary>
+    private void OnCheer(int member)
+    {
+        if (!Authority || !Game.Instance.InGame || Main.Instance?.Party is not { } party) return;
+        var now = Game.Instance.PlaySeconds;
+        if (now - _lastCheer < CheerRules.CooldownSeconds) return;
+        var m = Member(member);
+        if (m is not { IsAlive: true }) return;
+        _lastCheer = now;
+        Bark(m, BarkTrigger.Cheer, scripted: true);
+        CheerBody(member);
+        var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
+        var i = 0;
+        foreach (var who in CheerRules.Answerers(living, m.Name))
+        {
+            var index = Array.FindIndex(party.Members, x => x.Name == who);
+            if (index >= 0) _cheerAnswers.Add((now + CheerRules.AnswerDelay(i++), index));
+        }
+    }
+
+    /// <summary>The body's Cheer clip here and, from a server, on every client.</summary>
+    private static void CheerBody(int member)
+    {
+        var party = Main.Instance?.Party;
+        if (party == null || member < 0 || member >= party.Adventurers.Length) return;
+        party.Adventurers[member].PlayCheer();
+        if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.EmoteEvt(member, "cheer"));
     }
 
     /// <summary>A flag the run sets for itself (a mimic seen, a wipe, a shrine, a gamble): banter gates on it; unlike <see cref="SetFlag"/> it is nobody's choice and goes in no record.</summary>

@@ -327,6 +327,7 @@ public partial class PartyController : Node3D
         else if (@event.IsActionPressed("focus_next")) Possess(NextAlive(LocalIndex));
         else if (@event.IsActionPressed("ability_next")) CycleAbility(LocalIndex, +1);
         else if (@event.IsActionPressed("swap_rank")) CycleAllStances();
+        else if (@event.IsActionPressed("cheer")) { if (Net.NetSession.IsClient) Net.NetSession.Instance.Send(new Net.CheerIntent()); else EventBus.Instance.RaiseCheer(LocalIndex); }
         else if (@event.IsActionPressed("attack_1")) Possess(0);
         else if (@event.IsActionPressed("attack_2")) Possess(1);
         else if (@event.IsActionPressed("attack_3")) Possess(2);

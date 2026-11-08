@@ -188,8 +188,9 @@ public partial class AdventureDirector : Node
     {
         if (m == null || !Game.Instance.InGame) return false;
         var campaign = Game.Instance.Adventure.Campaign;
-        var set = campaign?.Barks.FirstOrDefault(b => b.Member == m.Name);
-        if (set == null) return false;
+        if (campaign == null) return false;
+        var set = campaign.Barks.FirstOrDefault(b => b.Member == m.Name);
+        if (set == null) campaign.Barks.Add(set = new BarkSet { Member = m.Name }); // a hero the bank was not written for (a co-op player's own name): the stock speaks for their class
         var now = Game.Instance.PlaySeconds;
         // a kill is remarked on more freely than anything else: a quick cooldown, a roll, and a bank topped up from stock
         var kill = trigger == BarkTrigger.Kill;
@@ -545,6 +546,7 @@ public partial class AdventureDirector : Node
         _currentFloor = floor;
         _hasFloor = true;
         _gatheringRemarks = 0; // every build or load starts the gathering count again
+        _tavernNext = floor == 0 ? Game.Instance.PlaySeconds + Voice.BanterRules.TavernFirstSeconds : double.MaxValue; // the tavern's first exchange
         OpenRecord(floor);
         if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
@@ -630,6 +632,8 @@ public partial class AdventureDirector : Node
         var hud = main.Hud;
         var action = !party.PartyAlive || lead.Downed || party.InputLocked || hud == null || hud.Paused || hud.DialogueOpen || hud.InventoryOpen || Audio.MusicDirector.AnyoneFighting(main);
         if (!_travel.Update(Game.Instance.PlaySeconds, lead.DistanceTravelled, action)) return;
+        Bump(Voice.BanterRules.EmptyCounter); // Sable's tally of empty rooms: a long quiet way is one
+        if (_travelTurn % Voice.BanterRules.TravelShare == 0 && StartBanter()) { _travelTurn++; return; } // one grumble in three is an exchange instead
         var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
         if (Voice.TravelBarks.Speaker(living, _travelTurn++) is { } who)
             Bark(party.Members.FirstOrDefault(m => m.Name == who), BarkTrigger.Travel);

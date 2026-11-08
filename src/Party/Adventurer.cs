@@ -420,6 +420,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (!Net.NetSession.IsClient) EventBus.Instance.RaiseMemberDance(Index); // the crowing (the server's word reaches co-op clients as a bark)
     }
 
+    /// <summary>The Cheer clip for a cheer or its answer: viewer bodies only (the stock models have no clip), never over a dance, never the hidden first-person body.</summary>
+    public void PlayCheer()
+    {
+        if (_model == null || !_viewerModel || Downed || _dance.Active) return;
+        if (IsLocal && !Net.NetSession.IsClient) return;
+        _model.Play("Cheer", force: true);
+    }
+
     /// <summary>An engaged enemy within earshot of the party: the fight is still on.</summary>
     private static bool FightOn => Main.Instance is { } main && Audio.MusicDirector.AnyoneFighting(main);
 
