@@ -66,9 +66,17 @@ public static partial class FloorGenerator
         PlaceTraps(spec, rng, layout);
         HazardPlanner.PlaceHazards(spec, new Random(seed ^ 0x4A2D), layout); // the lethal hazards, last and from their own seed: a floor without them is untouched
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
+        // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
+        PlaceShrine(spec, layout);
 
         return layout;
     }
+
+    // ---- fortune -----------------------------------------------------------------------------
+
+    /// <summary>One shrine cell per floor from <see cref="Adventure.Fortune.ShrineRules.FromFloor"/>; deterministic, no rng, reserved.</summary>
+    internal static void PlaceShrine(FloorSpec spec, FloorLayout layout)
+        => layout.ShrineCell = spec.Floor >= Adventure.Fortune.ShrineRules.FromFloor ? Adventure.Fortune.ShrineRules.Choose(layout) : null;
 
     // ---- rooms -------------------------------------------------------------------------------
 

@@ -16,7 +16,7 @@ public sealed record RoomInfo(
     bool IsStart, bool IsExit, bool IsArena, string? VaultKind,
     bool HasLedge, bool HasCellar, bool HasSecret, bool DeadEnd,
     int Degree, int HopsFromStart, IReadOnlyList<int> Neighbours, int FreeCells, IReadOnlyList<int> Chests,
-    string? Structure = null, string? Water = null, int Mouths = 0, bool IsJail = false, bool IsShrine = false, bool IsSafeRoom = false)
+    string? Structure = null, string? Water = null, int Mouths = 0, bool IsJail = false, bool IsShrine = false, bool IsSafeRoom = false, bool HasShrine = false)
 {
     public int Area => W * H;
     public bool IsVault => VaultKind != null;
@@ -130,7 +130,7 @@ public sealed class FloorMenu
                 layout.Ledges.Any(l => l.Room == room), layout.Cellars.Any(c => c.Room == room), layout.Secrets.Any(s => room.Contains(s.Facing)),
                 neighbours[i].Count == 1, neighbours[i].Count, hops[i], neighbours[i], RoomCells.Free(layout, room).Count, chests,
                 structure?.Kind.ToString(), water?.Kind.ToString(), layout.NestAt(room)?.Mouths.Count ?? 0,
-                layout.Objective?.JailRoom == room, layout.Objective?.ShrineRoom == room, layout.SafeRoom == i));
+                layout.Objective?.JailRoom == room, layout.Objective?.ShrineRoom == room, layout.SafeRoom == i, layout.ShrineCell is { } shrineCell && room.Contains(shrineCell)));
         }
 
         var options = new List<EnemyOption>();
