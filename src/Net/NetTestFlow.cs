@@ -323,7 +323,8 @@ public partial class NetTestFlow : Node
                 }
                 if (client.Trace.Contains("floor:2") && Game.Instance.CurrentFloor == 2 && main.Builder.Layout != null)
                 {
-                    GD.Print($"[net] on floor 2: {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies, hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}");
+                    GD.Print($"[net] on floor 2: {main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Count()} enemies, hash {(main.LayoutHashMatched ? "match" : "MISMATCH")}, floor card {(client.Trace.Contains("floorcard") ? "received" : "MISSING")}: {main.Hud?.LastFloorCard}");
+                    if (!client.Trace.Contains("floorcard")) { Finish("[net]", false, "the floor card for floor 1 never reached the client (run-structure's FloorCardEvt)"); return; }
                     _placementsAtFloor2 = _placements; _clock = 0; _step = 11;
                 }
                 else if (_clock > 20) Finish("[net]", false, $"floor 2 never came (floor {Game.Instance.CurrentFloor}, trace=[{string.Join(", ", client.Trace)}])");

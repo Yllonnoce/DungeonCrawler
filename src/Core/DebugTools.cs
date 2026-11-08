@@ -330,6 +330,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
             else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-fortune") { _testFortune = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; _startFloor = 2; _floorGiven = true; }
+            else if (arg == "--test-run-structure") { _testRunStructure = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
             else if (arg == "--test-combat-feel") { _testCombatFeel = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 75; }
             else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
@@ -378,6 +379,7 @@ public partial class DebugTools : Node
         if (_testCombatFeel) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testElites) { _seed ??= 8; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testFortune) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
+        if (_testRunStructure) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testSafeRoom)
         {
             _seed ??= 7;
@@ -755,6 +757,7 @@ public partial class DebugTools : Node
         if (_testWriting) RunWritingTest();
         if (_testItems) RunItemsAndBuildsTest();
         if (_testFortune) RunFortuneTest();
+        if (_testRunStructure) RunRunStructureTest();
         if (_tremor) RunTremor();
         if (_inspect is { } ins && !_inspected && _elapsed >= 1.2 && Main.Instance?.Builder.Layout != null && Main.Instance.Builder.CurrentFloor == TargetFloor) { _inspected = true; InspectCell(ins.x, ins.y); }
         if (_builtin && _elapsed >= 2.5 && !_builtinChecked) { _builtinChecked = true; var m = Main.Instance!; GD.Print($"[builtin] campaign=\"{Game.Instance.Adventure.Campaign?.Title}\" mode={Game.Instance.Adventure.Mode} floor={m.Builder.CurrentFloor} src={m.Builder.Contents?.Plan?.Source} plans={Game.Instance.Adventure.FloorPlans.Count}"); GD.Print($"[builtin] RESULT {(Game.Instance.Adventure.Mode == AdventureMode.Builtin && m.Builder.Contents?.Plan?.Source == PlanSources.Builtin ? "ok" : "FAIL")}"); }
@@ -5430,6 +5433,270 @@ public partial class DebugTools : Node
                 Finish();
                 break;
             }
+        }
+    }
+
+    // ---- --test-run-structure ------------------------------------------------------------------------------
+    // The Depths' run structure end to end: Story vs New Descent seeds, a stable Daily with its two clauses, clauses signed,
+    // priced and saved, a wipe that keeps the floor as it was, costs a fifth of the gold, scars and shows a death card, the
+    // Death Clause's memorial and recap, the autosave and the floor card on a descent, the recap model, the profile and a
+    // deed, and a victory whose recap names the campaign's boss and whose Victory flag survives a save.
+    private bool _testRunStructure;
+    private int _rsStep;
+    private double _rsAt;
+    private int _rsBuilds;
+    private Node3D? _rsRootBefore, _rsRootMark;
+    private readonly List<string> _rsFails = new();
+    private ulong _rsStorySeed;
+    private int _rsGoldBefore, _rsSpawnIndex = -1;
+    private float _rsMaxHpBefore;
+    private string _rsKiller = "";
+    private double _rsCardSeenAt;
+
+    private void RunRunStructureTest()
+    {
+        var main = Main.Instance;
+        if (main == null) return;
+        var game = Game.Instance;
+        var since = _elapsed - _rsAt;
+        void Next() { _rsStep++; _rsAt = _elapsed; _rsBuilds = 0; _rsRootBefore = _rsRootMark ?? main.Builder.FloorRoot; _rsRootMark = null; }
+        void Mark() => _rsRootMark = main.Builder.FloorRoot; // before an action that rebuilds synchronously (a load), so Next() waits for the root it made
+        void Fail(string why) { _rsFails.Add(why); GD.Print($"[runstructure] FAIL: {why}"); }
+        void Finish()
+        {
+            Save.Profile.ProfileStore.Delete();
+            foreach (var slot in new[] { "rs" }) if (SaveManager.Exists(slot)) System.IO.File.Delete(SaveManager.PathFor(slot));
+            GD.Print(_rsFails.Count == 0 ? "[runstructure] RESULT ok" : $"[runstructure] RESULT FAIL ({string.Join("; ", _rsFails)})");
+            _rsStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        // a new floor root stands (a build, a load or a wipe's reload all make one), on the floor asked for
+        bool Built(int floor) => game.InGame && !main.Rebuilding && main.Builder.FloorRoot is { } root && root != _rsRootBefore && GodotObject.IsInstanceValid(root) && main.Builder.CurrentFloor == floor && game.CurrentFloor == floor;
+        void WipeTheParty()
+        {
+            var party = main.Party;
+            var enemy = main.Builder.FloorRoot!.GetChildren().OfType<Enemy>().FirstOrDefault(e => !e.IsBoss && e.IsAlive);
+            if (enemy == null) { Fail("no creature to wipe the party with"); return; }
+            _rsKiller = enemy.DisplayName;
+            foreach (var adv in party.Adventurers)
+                for (var i = 0; i < 12 && !adv.Downed; i++) adv.ReceiveAttack(enemy.Stats, new Combat.AttackProfile { MinDamage = 9999, MaxDamage = 9999 }, enemy.DisplayName, enemy);
+            GD.Print($"[runstructure] {_rsKiller} strikes every member down: {party.Adventurers.Count(a => a.Downed)} down");
+        }
+        switch (_rsStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                // a profile of its own, so the player's is never touched
+                Save.Profile.ProfileStore.FileName = "profile-test.json";
+                Save.Profile.ProfileStore.Delete();
+                Save.Profile.ProfileStore.Load();
+                Save.Profile.ProfileStore.ApplyUnlocks(game.Catalog);
+                EventBus.Instance.FloorBuilt += (_, _, _) => _rsBuilds++;
+                // 1. the Story: the shipped seed
+                if (!main.StartBuiltinCampaign()) { Fail("no built-in campaign"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 1 when Built(game.CurrentFloor):
+            {
+                _rsStorySeed = game.GameSeed;
+                GD.Print($"[runstructure] story: seed {_rsStorySeed} run={game.Adventure.Run} floor={game.CurrentFloor} clauses=[{string.Join(",", game.Adventure.Clauses)}]");
+                if (game.Adventure.Run != RunKind.Story) Fail($"the Story runs as {game.Adventure.Run}");
+                if (game.Adventure.Clauses.Count != 0) Fail("the Story opened with clauses");
+                // 2. New Descent: another seed
+                main.StartDescent();
+                Next();
+                break;
+            }
+            case 2 when Built(game.CurrentFloor):
+            {
+                GD.Print($"[runstructure] descent: seed {game.GameSeed} run={game.Adventure.Run}");
+                if (game.GameSeed == _rsStorySeed) Fail("New Descent rolled the Story's seed");
+                if (game.Adventure.Run != RunKind.Descent) Fail($"New Descent runs as {game.Adventure.Run}");
+                // 3. the Daily: the date's seed and clauses, recorded as attempted
+                main.StartDaily(new DateOnly(2026, 11, 7));
+                Next();
+                break;
+            }
+            case 3 when Built(game.CurrentFloor):
+            {
+                var date = new DateOnly(2026, 11, 7);
+                GD.Print($"[runstructure] daily: seed {game.GameSeed} (expected {Adventure.Run.DailyRules.SeedFor(date)}) clauses=[{string.Join(",", game.Adventure.Clauses)}] date={game.Adventure.DailyDate} done={Save.Profile.ProfileRules.DailyDone(Save.Profile.ProfileStore.Current, "2026-11-07")}");
+                if (game.GameSeed != Adventure.Run.DailyRules.SeedFor(date)) Fail("the Daily's seed is not the date's");
+                if (!game.Adventure.Clauses.SequenceEqual(Adventure.Run.DailyRules.ClausesFor(date))) Fail("the Daily's clauses are not the date's");
+                if (game.Adventure.Run != RunKind.Daily || game.Adventure.DailyDate != "2026-11-07") Fail("the Daily is not marked as one");
+                if (!Save.Profile.ProfileRules.DailyDone(Save.Profile.ProfileStore.Current, "2026-11-07")) Fail("the Daily was not recorded as attempted");
+                if (Adventure.Run.ClauseRules.Active.Heat == 0) Fail("the Daily's clauses are not active");
+                var seed = game.GameSeed;
+                main.StartDaily(date);
+                if (game.GameSeed != seed) Fail("the Daily's seed changed between two starts");
+                // 4. clauses and prices on a plain floor 1
+                main.StartNewGame(7, false);
+                Next();
+                break;
+            }
+            case 4 when Built(1):
+            {
+                if (!main.SignClauses(new[] { "conveniencefee" }, force: true)) Fail("the clause could not be signed");
+                var stock = Items.ShopRules.Roll(game.Catalog, game.GameSeed, 1);
+                var item = stock.Items[0];
+                var expected = (int)Math.Floor(2.5 * 1.4 * Items.Prices.Value(item) + 1e-9);
+                GD.Print($"[runstructure] clauses: {Adventure.Run.ClauseRules.Active.Summary}; buy factor {Items.Prices.BuyFactor}; {item.DisplayName} costs {Items.Prices.BuyPrice(item)} (expected {expected})");
+                if (Math.Abs(Items.Prices.BuyFactor - 1.4f) > 0.001f) Fail($"the Convenience Fee left the buy factor at {Items.Prices.BuyFactor}");
+                if (Items.Prices.BuyPrice(item) != expected) Fail("the Convenience Fee did not price the stock");
+                main.SaveGame("rs");
+                Adventure.Run.ClauseRules.Reset();
+                Mark();
+                if (!main.LoadGame("rs")) { Fail("the clause save would not load"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 5 when Built(1):
+            {
+                GD.Print($"[runstructure] after the load: clauses=[{string.Join(",", game.Adventure.Clauses)}] buy factor {Items.Prices.BuyFactor}");
+                if (!game.Adventure.Clauses.SequenceEqual(new[] { "conveniencefee" })) Fail("the clauses did not survive the save");
+                if (Math.Abs(Items.Prices.BuyFactor - 1.4f) > 0.001f) Fail("the loaded clause did not reprice the shop");
+                // 5. the wipe: a creature killed first stays dead; the gold, the Scar, the card
+                var party = main.Party;
+                var root = main.Builder.FloorRoot!;
+                var first = root.GetChildren().OfType<Enemy>().FirstOrDefault(e => e.SpawnIndex >= 0 && !e.IsBoss);
+                if (first == null) { Fail("no creature on floor 1"); Finish(); return; }
+                _rsSpawnIndex = first.SpawnIndex;
+                first.ReceiveAttack(party.Members[0].Stats, new Combat.AttackProfile { MinDamage = 9999, MaxDamage = 9999 }, new Combat.HitContext { DefenderStunned = true }, party.Rng, "the test");
+                party.AddGold(100 - party.Gold);
+                _rsGoldBefore = party.Gold;
+                _rsMaxHpBefore = party.Members[0].Stats[Characters.Stat.MaxHp];
+                GD.Print($"[runstructure] wipe setup: killed spawn {_rsSpawnIndex} (alive={first.IsAlive}), gold {_rsGoldBefore}, max hp {_rsMaxHpBefore:0.0}");
+                WipeTheParty();
+                Next();
+                break;
+            }
+            case 6 when Built(1):
+            {
+                var party = main.Party;
+                var adv = game.Adventure;
+                var card = main.Hud.DeathCard.Model;
+                var memory = adv.Memory.For(1);
+                var remembered = game.Floors.TryGetValue(1, out var fs) ? fs : null;
+                var stillThere = main.Builder.FloorRoot!.GetChildren().OfType<Enemy>().Any(e => e.SpawnIndex == _rsSpawnIndex);
+                GD.Print($"[runstructure] after the wipe: gold {party.Gold} (expected {Adventure.Objectives.WipeRules.GoldAfterWipe(_rsGoldBefore)}), curses=[{string.Join(",", adv.Curses)}] scar until {adv.ScarUntilFloor}, max hp {party.Members[0].Stats[Characters.Stat.MaxHp]:0.0} (was {_rsMaxHpBefore:0.0}), card up={main.Hud.CardUp} epitaph=\"{card?.Epitaph}\" cause={card?.Cause} killer={card?.Killer} button={card?.Button}, wipes on floor {memory.Wipes}, dead remembered={remembered?.DeadEnemies.Contains(_rsSpawnIndex)}, spawn {_rsSpawnIndex} present={stillThere}, worst=\"{Adventure.Run.LedgerRules.WorstMoment(memory)}\"");
+                if (party.Gold != Adventure.Objectives.WipeRules.GoldAfterWipe(_rsGoldBefore)) Fail("the wipe did not take a fifth of the gold");
+                if (!adv.Curses.Contains("scar") || adv.ScarUntilFloor != 2) Fail("the Scar was not laid until floor 2");
+                if (Math.Abs(party.Members[0].Stats[Characters.Stat.MaxHp] - _rsMaxHpBefore * 0.9f) > 1f) Fail("the Scar did not take a tenth of the max HP");
+                if (!main.Hud.CardUp || card == null) Fail("no death card");
+                if (card != null && (card.Epitaph == "" || card.Cause != "generic" || card.Killer != _rsKiller || card.Floor != 1 || card.WipesOnFloor != 1 || card.Button != "Rise")) Fail($"the death card reads wrong: {card}");
+                if (memory.Wipes != 1 || memory.WipeCauses.Count != 1) Fail($"the ledger counts {memory.Wipes} wipes and {memory.WipeCauses.Count} causes");
+                if (remembered == null || !remembered.DeadEnemies.Contains(_rsSpawnIndex)) Fail("the floor was not captured before the reload");
+                if (stillThere) Fail("the creature killed before the wipe came back");
+                if (party.Adventurers.Any(a => a.Downed)) Fail("the party did not rise");
+                main.Hud.CloseCard();
+                if (main.Hud.CardUp) Fail("the death card did not close on its button");
+                // 6. the Death Clause: the run ends with a memorial
+                main.SignClauses(new[] { "deathclause" }, force: true);
+                if (!Adventure.Run.ClauseRules.Active.Hardcore) Fail("the Death Clause was not signed");
+                if (SaveManager.Exists(SaveManager.AutoSlot)) System.IO.File.Delete(SaveManager.PathFor(SaveManager.AutoSlot));
+                WipeTheParty();
+                Next();
+                break;
+            }
+            case 7 when since >= 0.5:
+            {
+                var adv = game.Adventure;
+                var card = main.Hud.DeathCard.Model;
+                var info = SaveManager.Info(SaveManager.AutoSlot);
+                GD.Print($"[runstructure] death clause: fallen={adv.Fallen} run over={main.RunOver} auto fallen={info.Fallen} \"{info.Epitaph}\" summary=\"{info.Summary}\" button={card?.Button} down={main.Party.Adventurers.Count(a => a.Downed)} profile runs={Save.Profile.ProfileStore.Current.Records.Runs}");
+                if (!adv.Fallen || !main.RunOver) Fail("the Death Clause did not end the run");
+                if (!info.Exists || !info.Fallen || info.Epitaph == "") Fail("the memorial was not written to the auto slot");
+                if (card?.Button != "To the Records") Fail("the card's button is not To the Records");
+                if (main.Party.Adventurers.Any(a => !a.Downed)) Fail("the bodies rose under the Death Clause");
+                main.Hud.CloseCard();
+                var recap = main.Hud.Recap.Model;
+                GD.Print($"[runstructure] after the card: recap up={main.Hud.Recap.Visible} victory={recap?.Victory} headline=\"{recap?.Headline}\" button={main.Hud.Recap.ButtonText}");
+                if (recap == null || recap.Victory) Fail("the Death Clause's recap did not follow the card");
+                if (recap != null && !recap.Headline.StartsWith("The contract is void.")) Fail("the recap's headline is not the voided contract");
+                var loadedFallen = main.LoadGame(SaveManager.AutoSlot);
+                if (loadedFallen) Fail("the memorial loaded");
+                if (!main.InGame) { Fail("refusing the memorial tore the session down"); Finish(); return; }
+                main.Hud.CloseCard();
+                GD.Print($"[runstructure] after the recap: in game={main.InGame} menu={main.Menu?.Visible} records={main.Menu?.Records.Visible} deed rows={main.Menu?.Records.DeedRows}");
+                if (main.InGame || main.Menu?.Visible != true || main.Menu.Records.Visible != true) Fail("the recap did not lead to the menu and the Records");
+                if (main.Menu?.Records.DeedRows != 24) Fail($"the Records list {main.Menu?.Records.DeedRows} deeds");
+                // 7. autosave and the floor card on a descent
+                main.StartNewGame(7, false);
+                Next();
+                break;
+            }
+            case 8 when Built(1):
+            {
+                if (SaveManager.Exists(SaveManager.AutoSlot)) System.IO.File.Delete(SaveManager.PathFor(SaveManager.AutoSlot));
+                if (!game.ChangeFloor(+1)) Fail("could not descend");
+                Next();
+                break;
+            }
+            case 9 when Built(2):
+            {
+                var card = main.Hud.LastFloorCard;
+                GD.Print($"[runstructure] floor 2: autosave={SaveManager.Exists(SaveManager.AutoSlot)} floor card up={main.Hud.FloorCardVisible} {card}");
+                if (!SaveManager.Exists(SaveManager.AutoSlot)) Fail("no autosave on the floor change");
+                if (!main.Hud.FloorCardVisible || card == null) Fail("no floor card on the descent");
+                if (card != null && (!System.Text.RegularExpressions.Regex.IsMatch(card.Secrets, "^\\d+/\\d+$") || card.Elites < 0 || card.Title == "" || card.Time == "")) Fail($"the floor card reads wrong: {card}");
+                if (main.Party.InputLocked) Fail("the floor card locked the input");
+                _rsCardSeenAt = _elapsed;
+                Next();
+                break;
+            }
+            case 10 when _elapsed >= _rsCardSeenAt + 4.5:
+            {
+                if (main.Hud.FloorCardVisible) Fail("the floor card did not go after four seconds");
+                // 8. the recap model
+                var recap = Adventure.Run.RecapBuilder.Build(game.Adventure.Memory, main.Party.Members.Select(m => m.Name).ToList(), game.Adventure.Clauses, Array.Empty<string>(), false, "h", 0);
+                if (recap.Heroes.Count != 4) Fail($"the recap has {recap.Heroes.Count} heroes");
+                // 9. the profile and a deed
+                var profile = Save.Profile.ProfileStore.Current;
+                GD.Print($"[runstructure] profile: best depth {profile.Records.BestDepth}, runs {profile.Records.Runs}, deeds {profile.Deeds.Count}");
+                if (profile.Records.BestDepth < 2) Fail($"the profile's best depth is {profile.Records.BestDepth}");
+                for (var i = 0; i < 4; i++) EventBus.Instance.RaisePartyWipedBy(2, "generic");
+                GD.Print($"[runstructure] deeds: [{string.Join(",", profile.Deeds.Keys)}] unlocks [{string.Join(",", profile.Unlocks)}] toast={main.Hud.DeedToastVisible}");
+                if (!profile.Deeds.ContainsKey("bang_on_schedule")) Fail("four wipes on one floor did not earn Bang on Schedule");
+                if (!profile.Unlocks.Contains("banter:wipes") || !Adventure.Voice.BanterRules.UnlockedSets.Contains("wipes")) Fail("the deed did not unlock its banter set");
+                if (!main.Hud.DeedToastVisible) Fail("no deed toast");
+                var onDisk = Save.Profile.ProfileFormat.Deserialize(System.IO.File.ReadAllText(Save.Profile.ProfileStore.Path));
+                if (onDisk == null || !onDisk.Deeds.ContainsKey("bang_on_schedule")) Fail("the deed was not saved to the profile file");
+                // 10. victory on floor 20
+                game.JumpToFloor(20);
+                Next();
+                break;
+            }
+            case 11 when Built(20):
+            {
+                main.OnBossDefeated(20);
+                var recap = main.Hud.Recap.Model;
+                var campaign = game.Adventure.Campaign;
+                var boss = main.Builder.Contents?.Plan?.Boss?.Name is { Length: > 0 } b ? b : campaign?.Tiers.LastOrDefault()?.BossName ?? "";
+                GD.Print($"[runstructure] victory: {game.Victory} card up={main.Hud.CardUp} headline=\"{recap?.Headline}\" boss=\"{boss}\" antagonist=\"{campaign?.Antagonist.Name}\" score {recap?.Score}");
+                if (!game.Victory || !main.Hud.CardUp || recap == null) Fail("no victory recap");
+                if (recap != null && boss != "" && !recap.Headline.Contains(boss)) Fail("the recap does not name the boss");
+                if (recap != null && campaign?.Antagonist.Name is { Length: > 0 } ant && !recap.Headline.Contains(ant)) Fail("the recap does not name the antagonist");
+                if (recap is { Victory: false }) Fail("the victory recap is not a victory");
+                main.Hud.CloseCard();
+                if (main.Hud.CardUp) Fail("the recap did not close");
+                main.SaveGame("rs");
+                Mark();
+                if (!main.LoadGame("rs")) { Fail("the victory save would not load"); Finish(); return; }
+                Next();
+                break;
+            }
+            case 12 when Built(20):
+            {
+                GD.Print($"[runstructure] after the load: victory={game.Victory}");
+                if (!game.Victory) Fail("Victory did not survive the save");
+                Finish();
+                break;
+            }
+            case < 99 when since > 40:
+                Fail($"step {_rsStep} timed out (floor {game.CurrentFloor}, builds {_rsBuilds}, in game {game.InGame})");
+                Finish();
+                break;
         }
     }
 }

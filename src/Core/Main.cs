@@ -520,6 +520,7 @@ public partial class Main : Node
     {
         var data = SaveManager.Read(slot);
         if (data == null) return false;
+        if (data.Adventure?.Fallen == true) { EventBus.Instance.Log($"{SaveManager.DisplayName(slot)} is a memorial: {data.Adventure.Epitaph}"); return false; } // the Death Clause's slot is read, never loaded
         CreateSession();
         Game.Instance.BeginLoaded(data);
         AdventureDirector.Instance.ConfigurePlanner();
