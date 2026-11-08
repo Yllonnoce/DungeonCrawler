@@ -227,7 +227,7 @@ public partial class ServerWorld : Node
     private void SendShopSync(int peer = -1)
     {
         var party = Main.Instance.Party;
-        var msg = new ShopSync(Game.Instance.CurrentFloor, party.ShopSoldOnFloor.OrderBy(i => i).ToList(), party.Gold);
+        var msg = new ShopSync(Game.Instance.CurrentFloor, party.ShopSoldOnFloor.OrderBy(i => i).ToList(), party.Gold, party.Buyback.ToDto());
         if (peer < 0) Broadcast(msg); else SendTo(peer, msg);
     }
 
@@ -415,6 +415,12 @@ public partial class ServerWorld : Node
                 if (!slot.Ready || !CanTrade(slot)) break;
                 if (!OwnsSlots(slot, ss.Slot, ss.Slot)) break;
                 if (party.ShopSell(ss.Slot) == null) Trace.Add("shop");
+                SendShopSync();
+                _bagDirty = true;
+                break;
+            case ShopBuybackIntent bb:
+                if (!slot.Ready || !CanTrade(slot)) break;
+                if (party.ShopBuyback(bb.Index) == null) Trace.Add("shop");
                 SendShopSync();
                 _bagDirty = true;
                 break;

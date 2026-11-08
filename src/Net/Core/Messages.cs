@@ -67,7 +67,9 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;
 [Msg(MsgKind.ShopBuyIntent)] public sealed record ShopBuyIntent(int StockIndex) : NetMessage;
 [Msg(MsgKind.ShopSellIntent)] public sealed record ShopSellIntent(BagSlot Slot) : NetMessage;
-[Msg(MsgKind.ShopSync)] public sealed record ShopSync(int Floor, List<int> Sold, int Gold) : NetMessage;
+/// <summary>The floor's sold slots, the purse and (v7) the merchant's buyback ledger; a null ledger leaves the client's as it is.</summary>
+[Msg(MsgKind.ShopSync)] public sealed record ShopSync(int Floor, List<int> Sold, int Gold, List<Save.SoldDto>? Buyback = null) : NetMessage;
+[Msg(MsgKind.ShopBuybackIntent)] public sealed record ShopBuybackIntent(int Index) : NetMessage;
 /// <summary>An NPC's spoken line, raised on the server (the merchant's remarks): clients show the subtitle, play the voice and move the pose.</summary>
 [Msg(MsgKind.NpcSay)] public sealed record NpcSay(string NpcId, Adventure.Line Line) : NetMessage;
 /// <summary>A client's dialogue reached a node (the briefing is local to each screen): the server raises it as <c>EventBus.DialogueNode</c>, and the director decides what it pays.</summary>

@@ -838,14 +838,15 @@ public partial class PartyController : Node3D
         return null;
     }
 
-    /// <summary>A client mirrors the server's sold slots (for the floor it is on) and purse.</summary>
-    public void ApplyShopSync(int floor, List<int> sold, int gold)
+    /// <summary>A client mirrors the server's sold slots (for the floor it is on), purse and buyback ledger.</summary>
+    public void ApplyShopSync(int floor, List<int> sold, int gold, List<Save.SoldDto>? buyback = null)
     {
         if (floor == Game.Instance.CurrentFloor)
         {
             ShopSoldOnFloor.Clear();
             foreach (var i in sold) ShopSoldOnFloor.Add(i);
         }
+        if (buyback != null) Buyback.Restore(buyback, Game.Instance.Catalog);
         SetGold(gold);
         Main.Instance?.Hud?.Refresh(); // refreshes an open shop screen too
     }

@@ -23,7 +23,7 @@ public partial class PartyController
     /// <summary>Buy back ledger entry <paramref name="index"/> at the price the merchant paid. Null on success (or on a client, where the server answers); else the refusal, also logged.</summary>
     public string? ShopBuyback(int index)
     {
-        if (Net.NetSession.IsClient) return null; // Task 10 sends the intent
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopBuybackIntent(index)); return null; }
         if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
         var gold = Gold;
         var entry = index >= 0 && index < Buyback.Entries.Count ? Buyback.Entries[index] : default;

@@ -74,7 +74,7 @@ public partial class ClientWorld : Node
             case ForcePose fp: ApplyForcePose(fp); break;
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
-            case ShopSync ss: Main.Instance.Party.ApplyShopSync(ss.Floor, ss.Sold, ss.Gold); Trace.Add("shop"); break;
+            case ShopSync ss: Main.Instance.Party.ApplyShopSync(ss.Floor, ss.Sold, ss.Gold, ss.Buyback); Trace.Add("shop"); break;
             case NpcSay ns:
                 if (Main.Instance?.Builder.FloorRoot?.GetNodeOrNull<Npc>($"Npc_{ns.NpcId}") is { } npc) npc.Say(ns.Line);
                 Trace.Add("npcsay");
