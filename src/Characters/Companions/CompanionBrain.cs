@@ -35,9 +35,18 @@ public sealed record CompanionContext
     public float MangledDistance { get; init; }
     /// <summary>How far the nearest living enemy is; nothing in sight reads as very far.</summary>
     public float NearestEnemyDistance { get; init; } = float.MaxValue;
+    /// <summary>The nearest telegraphed boss signature: its id (-1 when none), seconds until it lands, how far the boss is, and the last id this companion rolled for.</summary>
+    public int TelegraphId { get; init; } = -1;
+    public float TelegraphRemaining { get; init; } = -1f;
+    public float TelegraphDistance { get; init; } = float.MaxValue;
+    public int LastTelegraphDecided { get; init; } = -1;
+    /// <summary>Whether a dodge can start now (off cooldown, stamina enough).</summary>
+    public bool DodgeReady { get; init; }
+    /// <summary>The roll against <see cref="CompanionBrain.DodgeChance"/>; below it the companion dodges.</summary>
+    public float DodgeRoll { get; init; } = 1f;
 }
 
-public enum ActionKind { Idle, Follow, Hold, DrinkPotion, Approach, Retreat, Attack, Regroup, Rescue }
+public enum ActionKind { Idle, Follow, Hold, DrinkPotion, Approach, Retreat, Attack, Regroup, Rescue, Dodge }
 
 public sealed record CompanionAction(ActionKind Kind, int TargetId = -1, int AbilityIndex = -1, bool Heavy = false)
 {
@@ -55,11 +64,23 @@ public static class CompanionBrain
     public const float RangedTooClose = 3f;
     /// <summary>No enemy closer than this: calm enough to kneel and pull.</summary>
     public const float RescueCalmDistance = 12f;
+    /// <summary>Half the time a companion dodges a telegraphed signature, so bosses still hurt.</summary>
+    public const float DodgeChance = 0.5f;
+    /// <summary>The dodge starts this long before the signature lands.</summary>
+    public const float DodgeLead = 0.35f;
+    /// <summary>Only a signature this close is worth dodging.</summary>
+    public const float DodgeReach = 6f;
+
+    /// <summary>True once per telegraph, in its last <see cref="DodgeLead"/> seconds, within reach, for a companion that is not holding.</summary>
+    public static bool DodgeDecisionDue(CompanionContext ctx)
+        => ctx.TelegraphId >= 0 && ctx.TelegraphId != ctx.LastTelegraphDecided && ctx.TelegraphRemaining >= 0f && ctx.TelegraphRemaining <= DodgeLead
+           && ctx.TelegraphDistance <= DodgeReach && ctx.Stance != Stance.Hold;
 
     public static CompanionAction Decide(CompanionContext ctx)
     {
         if (ctx.HpFraction < PotionThreshold && ctx.HasHealingPotion) return CompanionAction.Drink;
         if (ctx.MangledMemberId >= 0 && ctx.NearestEnemyDistance > RescueCalmDistance && ctx.Stance != Stance.Hold) return new CompanionAction(ActionKind.Rescue, ctx.MangledMemberId);
+        if (DodgeDecisionDue(ctx) && ctx.DodgeReady && ctx.DodgeRoll < DodgeChance) return new CompanionAction(ActionKind.Dodge); // a lost roll falls through to the usual fight
 
         var target = PickTarget(ctx);
         if (target == null)

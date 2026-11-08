@@ -69,6 +69,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public int DodgesMade { get; private set; }
     private Vector3 _dodgeDir;
     private bool _lowHpSaid;
+    private int _lastTelegraphDecided = -1;
+    private Enemy? _telegraphing;
     public bool Downed => !State.IsAlive;
     public Stance Stance { get; set; } = Stance.Defensive;
     public Enemy? Target { get; private set; }
@@ -695,8 +697,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         var alive = Party.Members.Where(m => m.IsAlive).ToList();
         var spot = FormationSpot();
         var mangled = Party.Active.Where(a => a != this && a.Downed && a.State.Mangled).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(GlobalPosition)).FirstOrDefault();
+        _telegraphing = byId.Where(e => e.TelegraphId >= 0 && e.TelegraphRemaining >= 0f).OrderBy(e => e.GlobalPosition.DistanceSquaredTo(GlobalPosition)).FirstOrDefault();
         var ctx = new CompanionContext
         {
+            TelegraphId = _telegraphing?.TelegraphId ?? -1,
+            TelegraphRemaining = _telegraphing?.TelegraphRemaining ?? -1f,
+            TelegraphDistance = _telegraphing?.GlobalPosition.DistanceTo(GlobalPosition) ?? float.MaxValue,
+            LastTelegraphDecided = _lastTelegraphDecided,
+            DodgeReady = Defense.CanDodge(State.Stamina),
+            DodgeRoll = ForceDodgeRoll ?? (float)Party.Rng.NextDouble(),
             HpFraction = State.Hp / Math.Max(1f, State.Stats[Stat.MaxHp]),
             HasHealingPotion = _potionCooldown <= 0 && Party.Bag.Items.Any(i => i.Consumable is { HealHp: > 0 }),
             Stance = Stance,
@@ -718,6 +727,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         };
 
         _action = CompanionBrain.Decide(ctx);
+        if (CompanionBrain.DodgeDecisionDue(ctx)) _lastTelegraphDecided = ctx.TelegraphId; // one roll per signature, win or lose
         RescueTarget = _action.Kind == ActionKind.Rescue ? mangled : null;
         Target = _action.Kind != ActionKind.Rescue && _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;
         if (DebugTools.TraceAi && enemies.Count > 0)
@@ -727,6 +737,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         {
             case ActionKind.DrinkPotion:
                 DrinkPotion();
+                _action = CompanionAction.Idle;
+                break;
+            case ActionKind.Dodge:
+                if (Defense.TryDodge(State.Stamina))
+                {
+                    var away = _telegraphing != null && IsInstanceValid(_telegraphing) ? GlobalPosition - _telegraphing.GlobalPosition : Transform.Basis.Z;
+                    StartDodge(away);
+                }
                 _action = CompanionAction.Idle;
                 break;
             case ActionKind.Attack when Target != null:
