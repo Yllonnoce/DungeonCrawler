@@ -7,7 +7,7 @@ public enum GoalKind { Guard, Defend, Patrol, Alarm }
 public enum ObjectiveKind { Chest, Lever, Door, Stairs, Npc, Gate }
 public enum QuestTemplate { KillTarget, Recover, Escort, HoldOut, Investigate, Decide, Betrayal }
 public enum NarrationTrigger { Enter, RoomEnter, BossSeen, BossDead, QuestDone, QuestFailed }
-public enum DialogueEffect { None, AcceptQuest, DeclineQuest, TurnIn, Farewell, Choose, Betray, Join }
+public enum DialogueEffect { None, AcceptQuest, DeclineQuest, TurnIn, Farewell, Choose, Betray, Join, Clauses }
 /// <summary>What lets a horde loose: the party stepping into the nest room, any collective raising the alarm, or a chest opened in the nest room.</summary>
 public enum HordeTrigger { Enter, Alarm, Chest }
 

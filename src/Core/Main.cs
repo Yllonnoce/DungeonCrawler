@@ -1,4 +1,6 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Run;
+using DungeonCrawler.Save.Profile;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Net;
@@ -222,11 +224,12 @@ public partial class Main : Node
     private (int floor, int delta, ulong sinceMs)? _waitingFor;
 
     /// <param name="aiCampaign">True: ask the live planner for a fresh campaign (automation only; the title screen never plans, see <see cref="StartNewGameFromDisk"/>); false: never plan, the offline designer writes it; null: follow the Settings toggle (automation).</param>
-    public void StartNewGame(ulong? seed = null, bool? aiCampaign = null)
+    /// <param name="run">The title mode (run-structure): a New Descent by default; the Story and the Daily name theirs.</param>
+    public void StartNewGame(ulong? seed = null, bool? aiCampaign = null, RunKind run = RunKind.Descent)
     {
         CreateSession();
         var game = Game.Instance;
-        game.PrepareNewGame(seed);
+        game.PrepareNewGame(seed, run);
         var director = AdventureDirector.Instance;
         director.ConfigurePlanner(forceAi: aiCampaign == true, noAi: aiCampaign == false);
         if (!director.AiEnabled)
@@ -265,6 +268,52 @@ public partial class Main : Node
     public void StartNewGameFromDisk()
     {
         if (!StartBuiltinCampaign()) StartNewGame(aiCampaign: false);
+    }
+
+    /// <summary>New Descent: a fresh seed through the offline designer, or the AI planner when a key and the Settings toggle allow it.</summary>
+    public void StartDescent() => StartNewGame(null, aiCampaign: null, RunKind.Descent);
+
+    /// <summary>Daily Descent: the UTC date's seed, the day's two clauses, never planned; the day is recorded as attempted at once.</summary>
+    public void StartDaily(DateOnly date)
+    {
+        StartNewGame(DailyRules.SeedFor(date), aiCampaign: false, RunKind.Daily);
+        var game = Game.Instance;
+        game.Adventure.DailyDate = DailyRules.Key(date);
+        game.Adventure.Clauses = DailyRules.ClausesFor(date);
+        game.ApplyClauses();
+        ProfileRules.RecordDaily(ProfileStore.Current, game.Adventure.DailyDate, RunSummaryOf());
+        ProfileStore.Save();
+        EventBus.Instance.Log($"The Daily Descent of {game.Adventure.DailyDate}: {Adventure.Run.ClauseRules.Active.Summary}");
+    }
+
+    /// <summary>The contract is signed (solo and server, in the tavern unless forced): the clauses take effect for the run.</summary>
+    public bool SignClauses(IReadOnlyList<string> clauses, bool force = false)
+    {
+        if (!InGame || NetSession.IsClient) return false;
+        if (Game.Instance.CurrentFloor != 0 && !force) { EventBus.Instance.Log("The contract is signed in the tavern, not below."); return false; }
+        var game = Game.Instance;
+        game.Adventure.Clauses = Adventure.Run.ClauseRules.Normalize(clauses);
+        game.ApplyClauses();
+        EventBus.Instance.Log($"The contract is signed: {Adventure.Run.ClauseRules.Active.Summary}");
+        return true;
+    }
+
+    /// <summary>This run as the profile remembers it: from the adventure, the ledger and the clock.</summary>
+    public RunSummaryDto RunSummaryOf()
+    {
+        var game = Game.Instance;
+        var adv = game.Adventure;
+        var floors = adv.Memory.Floors;
+        var set = new Adventure.Run.ClauseSet(adv.Clauses);
+        var deepest = Math.Max(game.CurrentFloor, floors.Count == 0 ? 0 : floors.Max(f => f.Floor));
+        var elites = floors.Sum(f => f.Elites);
+        var secrets = floors.Sum(f => f.SecretsFound);
+        return new RunSummaryDto
+        {
+            RunId = adv.RunId, Run = adv.Run.ToString(), Seed = game.GameSeed, DeepestFloor = deepest, Heat = set.Heat, ElitesSlain = elites, SecretsFound = secrets,
+            Wipes = adv.Wipes, Score = Adventure.Run.ScoreRules.Score(deepest, set.Heat, elites, secrets, adv.Wipes), Seconds = game.PlaySeconds, Victory = game.Victory,
+            Fallen = adv.Fallen, Epitaph = adv.Epitaph, Clauses = adv.Clauses.ToList(),
+        };
     }
 
     /// <summary>The overlay's last line before a new game's first floor: a run opens in the tavern (floor 0), not on a stair.</summary>

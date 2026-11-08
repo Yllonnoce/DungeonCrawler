@@ -1,4 +1,5 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Run;
 using DungeonCrawler.Core;
 using DungeonCrawler.Save;
 using Godot;
@@ -42,7 +43,9 @@ public partial class MainMenu : Control
         v.AddChild(_buttons);
         // New Game never plans: it plays the campaign on disk (your rebake, else the shipped one). A fresh AI-written
         // campaign is only ever made from Settings ("Rebuild campaign"), where its cost is spelled out.
-        AddButton("New Game", () => Main.Instance.StartNewGameFromDisk());
+        AddButton("Story", () => Main.Instance.StartNewGameFromDisk());
+        AddButton("New Descent", () => Main.Instance.StartDescent());
+        _daily = AddButton("Daily Descent", () => Main.Instance.StartDaily(DailyRules.Today()));
         AddButton("Load Game", () => { _buttons.Visible = false; _slots.Show(SlotList.Mode.Load); });
         AddButton("Join Server", () => { _buttons.Visible = false; _join.Open(); EventBus.Instance.PlaySfx("ui_open"); });
         AddButton("Settings", () => { _buttons.Visible = false; _settings.Visible = true; EventBus.Instance.PlaySfx("ui_open"); });
@@ -76,13 +79,19 @@ public partial class MainMenu : Control
 
     private JoinScreen _join = null!;
     private Label _subtitle = null!;
+    private Button _daily = null!;
     public void RefreshSubtitle()
     {
         var plays = BuiltinCampaign.IsUserCopy ? "your rebaked campaign" : BuiltinCampaign.Exists ? "the built-in campaign" : "a campaign from the offline designer";
         var canPlan = Settings.HasPlannerKey && DebugTools.Instance?.NoAi != true;
-        _subtitle.Text = canPlan
-            ? $"New Game plays {plays}. To write a fresh one with {Settings.PlannerLabel}, use Rebuild campaign in Settings."
-            : $"New Game plays {plays}. Add a {Settings.PlannerLabel} key in Settings to rebuild it with an AI-written one.";
+        _subtitle.Text = $"Story plays {plays}. New Descent rolls a fresh seed{(canPlan ? $" and lets {Settings.PlannerLabel} write it" : "")}. Daily Descent: everyone gets today's dungeon and two clauses.";
+        if (_daily != null)
+        {
+            var key = DailyRules.Key(DailyRules.Today());
+            var done = Save.Profile.ProfileRules.DailyDone(Save.Profile.ProfileStore.Current, key);
+            _daily.Disabled = done;
+            _daily.Text = done && Save.Profile.ProfileStore.Current.Daily.TryGetValue(key, out var d) ? $"Daily Descent — done: floor {d.Depth}, score {d.Score}" : "Daily Descent";
+        }
     }
 
     public void ShowStatus(string text) => _status.Text = text;

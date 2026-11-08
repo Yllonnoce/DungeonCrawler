@@ -71,6 +71,12 @@ public partial class Hud : Control
 
     public void Bind(PartyController party) => _party = party;
 
+    private UI.Cards.ClauseCard _clauseCard = null!;
+    private bool _clausesPending;
+    /// <summary>The factor's "Read them." was chosen (run-structure): the clause card opens when the briefing closes.</summary>
+    public void NoteClausesAsked() => _clausesPending = true;
+    public UI.Cards.ClauseCard ClauseCard => _clauseCard;
+    public bool ClauseCardVisible => _clauseCard.Visible;
     private UI.Cards.DeedToast _deedToast = null!;
     /// <summary>A deed earned (run-structure): name and unlock, bottom-right, four seconds, never blocking input.</summary>
     public void ShowDeedToast(string name, string unlockText) => _deedToast.Show(name, unlockText);
@@ -189,6 +195,10 @@ public partial class Hud : Control
         _shrine = new UI.Fortune.ShrineCard { Name = "Shrine", Visible = false };
         _shrine.VisibilityChanged += UpdateModalState;
         AddChild(_shrine);
+        _clauseCard = new UI.Cards.ClauseCard { Name = "Clauses", Visible = false };
+        _clauseCard.VisibilityChanged += UpdateModalState;
+        AddChild(_clauseCard);
+        _dialogue.Closed += () => { if (_clausesPending) { _clausesPending = false; _clauseCard.Open(readOnly: Net.NetSession.IsClient || Game.Instance.Adventure.Run == Save.RunKind.Daily); } }; // the factor's offer: the card opens once his talk ends
         _questLog = new QuestLogScreen { Name = "QuestLog", Visible = false };
         AddChild(_questLog);
         _questLog.SetAnchorsPreset(LayoutPreset.CenterTop);
@@ -349,7 +359,7 @@ public partial class Hud : Control
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible || _shrine.Visible) return; // the dialogue / stair question / shop / shrine card owns input while open
+        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible || _shrine.Visible || _clauseCard.Visible) return; // the dialogue / stair question / shop / shrine card / clause card owns input while open
         if (@event.IsActionPressed("quest_log"))
         {
             ToggleQuestLog();
@@ -488,7 +498,7 @@ public partial class Hud : Control
 
     public void UpdateModalState()
     {
-        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible;
+        var modal = _sheet.Visible || _inventory.Visible || _skills.Visible || _pause.Visible || _victory != null || _dialogue.Visible || _questLog.Visible || _chat.Visible || _stairsPrompt.Visible || _shop.Visible || _shop.IsOpening || _shrine.Visible || _clauseCard.Visible;
         _party.InputLocked = modal;
         _party.SetMouseCaptured(!modal);
     }
