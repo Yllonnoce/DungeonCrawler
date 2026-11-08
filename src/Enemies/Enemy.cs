@@ -117,6 +117,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     /// <summary>A white body pulse (the roar's flash, a bomber's fuse).</summary>
     public void FlashWhite(float seconds) => _flash = Math.Max(_flash, seconds);
 
+    /// <summary>A Slow aura around this creature (the Herald's gravity well); 0 for none.</summary>
+    public float SlowAuraRadius { get; set; }
+    private float _auraTimer;
+
     /// <summary>Phase two: speed ×1.2, the second kit on the shared cooldown, the arena changed once.</summary>
     public void EnterPhaseTwo(bool silent)
     {
@@ -479,6 +483,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             }
             _signatureTimer -= dt;
             if (_vampFlash > 0f) _vampFlash -= dt;
+            if (SlowAuraRadius > 0f && (_auraTimer -= dt) <= 0f)
+            {
+                _auraTimer = BossRules.GravityWellTick;
+                foreach (var adv in Party.AdventurersWithin(GlobalPosition, SlowAuraRadius)) { adv.State.Effects.Apply(new StatusApplication(StatusKind.Slow, BossRules.GravityWellSlowSeconds, 0f)); adv.State.Recalculate(); }
+            }
             if (Profile.Has(EliteAffix.Warded))
             {
                 if (_wardUp && Effects.ShieldPoints <= 0f) { _wardUp = false; _wardTimer = EliteRules.WardRegrowSeconds; EventBus.Instance.Log($"{DisplayName}'s ward shatters."); }

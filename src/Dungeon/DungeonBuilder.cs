@@ -1169,6 +1169,7 @@ public partial class DungeonBuilder : Node3D
         {
             var boss = SpawnEnemy(bossId, Surface(bossCell) + new Vector3(0, 0.1f, 2f), floor, -2);
             if (boss != null && contents.BossSignature is { } sig && Enum.TryParse<Signature>(sig, true, out var parsed)) boss.Profile = boss.Profile with { Signature = parsed };
+            if (boss != null && Layout != null) BossArena.Prepare(boss, Layout, _floorRoot!, Rng.FloorSeed(GameSeed, floor));
             if (boss != null) GD.Print($"[Enemy] boss {boss.DisplayName} sig={boss.Profile.Signature}/{boss.Profile.SecondSignature} arena={boss.Profile.ArenaChange}");
         }
     }
