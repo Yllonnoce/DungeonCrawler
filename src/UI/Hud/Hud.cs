@@ -384,7 +384,7 @@ public partial class Hud : Control
             if (@event.IsActionPressed("ui_cancel")) { CloseChat(); GetViewport().SetInputAsHandled(); }
             return; // the chat line owns the keys while open
         }
-        if (@event.IsActionPressed("chat") && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible)
+        if (@event.IsActionPressed("chat") && !_sheet.Visible && !_inventory.Visible && !_skills.Visible && !_dialogue.Visible && !_questLog.Visible && !_shop.Visible && !_stairsPrompt.Visible && !_shrine.Visible && !_clauseCard.Visible) // a stairs question keeps the keys: Esc answers it, never the chat
         {
             OpenChat();
             GetViewport().SetInputAsHandled();
@@ -593,6 +593,9 @@ public partial class Hud : Control
         }
         CloseChat();
     }
+
+    /// <summary>Whether the chat line is open (tests).</summary>
+    public bool ChatOpen => _chat.Visible;
 
     /// <summary>The newest line of the message log ("" when empty).</summary>
     public string LastLogLine => _lines.Last?.Value ?? "";

@@ -5530,7 +5530,6 @@ public partial class DebugTools : Node
         {
             case 0 when _elapsed >= 1.0:
             {
-                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor
                 // 1. the key and the node
                 var bound = Settings.Rebindable.Any(r => r.action == "ping");
                 var inMap = InputMap.HasAction("ping");
@@ -5540,7 +5539,29 @@ public partial class DebugTools : Node
                 if (!inMap) Fail("no \"ping\" input action");
                 if (key != Key.X) Fail($"ping is bound to {key}, not X");
                 if (pings == null) { Fail("no PingMarkers node under the HUD"); Finish(); return; }
-                // 2. a ping from beside the up stairs, facing them (the flight's parapets are within the aim ray)
+                // 2. a ping at a creature lands on the creature, not on the wall behind it: stand 2 m in front of the nearest one, looking at it
+                var target = root.GetChildren().OfType<Enemy>().Where(e => e.IsAlive && !e.IsBoss).OrderBy(e => e.GlobalPosition.DistanceSquaredTo(party.Local!.GlobalPosition)).FirstOrDefault();
+                if (target == null) Fail("no creature on the floor to ping at");
+                else
+                {
+                    var toward = (party.Local!.GlobalPosition - target.GlobalPosition) with { Y = 0 };
+                    var stand = target.GlobalPosition + (toward.LengthSquared() > 0.01f ? toward.Normalized() : Vector3.Forward) * 2f;
+                    party.Teleport(stand with { Y = target.GlobalPosition.Y + 0.3f }, target.GlobalPosition + Vector3.Up * 1.0f);
+                    var hit = hud.Ping();
+                    var at = pings.Board.Active.FirstOrDefault(m => m.Name == party.Local!.State.Name);
+                    var gap = (new Vector3(at.X, 0, at.Z) - target.GlobalPosition with { Y = 0 }).Length(); // the hit is on the body's surface, above its feet: judge the footprint
+                    GD.Print($"[co-op] ping at a creature: {target.DisplayName} {target.GlobalPosition:0.0}, mark {at.X:0.0},{at.Y:0.0},{at.Z:0.0}, {gap:0.0} m from its footprint (returned {hit})");
+                    if (!hit) Fail("Hud.Ping() returned false in front of a creature");
+                    else if (gap > 1.5f) Fail($"the ping at a creature landed {gap:0.0} m from it (the wall behind it?)");
+                    pings.Board.Clear();
+                }
+                foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor from here
+                Next();
+                break;
+            }
+            case 1 when since >= Net.PingRules.CooldownSeconds + 0.2:
+            {
+                // 3. a ping from beside the up stairs, facing them (the flight's parapets are within the aim ray)
                 var me = party.Local!;
                 party.Teleport(b.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.UpStairs)) + Vector3.Up * 0.3f, b.Surface(layout.UpStairs));
                 var pinged = hud.Ping();
@@ -5554,7 +5575,7 @@ public partial class DebugTools : Node
                 Next();
                 break;
             }
-            case 1 when since >= 0.3:
+            case 2 when since >= 0.3:
             {
                 var again = hud.Ping();
                 GD.Print($"[co-op] ping again at +{_elapsed - _coPingAt:0.0} s: {again} (cooldown {Net.PingRules.CooldownSeconds} s)");
@@ -5562,7 +5583,7 @@ public partial class DebugTools : Node
                 Next();
                 break;
             }
-            case 2 when _elapsed - _coPingAt >= Net.PingRules.LifetimeSeconds + 0.3:
+            case 3 when _elapsed - _coPingAt >= Net.PingRules.LifetimeSeconds + 0.3:
             {
                 var name = party.Local!.State.Name;
                 var label = LabelFor(name);
@@ -5606,14 +5627,27 @@ public partial class DebugTools : Node
                 if (!opened) Fail("the chat line did not open in solo");
                 if (hud.LastLogLine != $"[{name}] hello from solo") Fail($"the chat line went to the log as \"{hud.LastLogLine}\"");
                 if (party.InputLocked) Fail("the chat line stayed open after Enter");
-                // 6. solo stairs: a Yes changes the floor at once (no ready-check without a server)
+                // 6. the chat key while the stairs question is up: the question keeps the keys (Esc must answer it, not the chat line)
+                if (root.GetNodeOrNull<Stairs>("DownStairs") is not { } stairs) { Fail("no DownStairs node"); Finish(); return; }
+                hud.AskStairs(stairs, party.Local!);
+                Input.ParseInputEvent(new InputEventAction { Action = "chat", Pressed = true });
+                Next();
+                break;
+            }
+            case 4 when since >= 0.3:
+            {
+                GD.Print($"[co-op] chat key over the stairs question: question open {hud.StairsPromptOpen}, chat open {hud.ChatOpen}");
+                if (!hud.StairsPromptOpen) Fail("the stairs question closed when T was pressed");
+                if (hud.ChatOpen) Fail("T opened the chat line over the stairs question (Esc would then send a No)");
+                if (root.GetNodeOrNull<Stairs>("DownStairs") is { } asked) hud.DismissStairs(asked); // stepping off, not a No
+                // 7. solo stairs: a Yes changes the floor at once (no ready-check without a server)
                 if (root.GetNodeOrNull<Stairs>("DownStairs") is not { } stairs) { Fail("no DownStairs node"); Finish(); return; }
                 party.Teleport(b.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs)) + Vector3.Up * 0.3f, b.Surface(layout.DownStairs));
                 stairs.Confirm(party, party.Local!);
                 Next();
                 break;
             }
-            case 3:
+            case 5:
                 if (Game.Instance.CurrentFloor == 2) { GD.Print($"[co-op] solo stairs: floor 2 at once ({since:0.0} s)"); Finish(); }
                 else if (since > 4) { Fail($"solo stairs did not change floor within 4 s (floor {Game.Instance.CurrentFloor})"); Finish(); }
                 break;
