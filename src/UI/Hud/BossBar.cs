@@ -30,6 +30,7 @@ public partial class BossBar : Control
     public override void _Ready()
     {
         MouseFilter = MouseFilterEnum.Ignore;
+        Visible = false;
         SetAnchorsPreset(LayoutPreset.CenterTop);
         OffsetLeft = -260; OffsetRight = 260; OffsetTop = 14; OffsetBottom = 14 + 44 + 30;
         _main = new VBoxContainer { Name = "Main", Visible = false, MouseFilter = MouseFilterEnum.Ignore };
@@ -87,6 +88,7 @@ public partial class BossBar : Control
         }
         if (_elite != null && (!IsInstanceValid(_elite) || !_elite.IsAlive)) HideSlim();
         else if (_elite != null) { _slimName.Text = _elite.DisplayName; _slim.Value = Mathf.Clamp(_elite.Hp / Math.Max(1f, _elite.MaxHp), 0f, 1f); }
+        Visible = _main.Visible || _slimRoot.Visible; // the control itself reads as shown only while a bar is
     }
 
     private void Poll()

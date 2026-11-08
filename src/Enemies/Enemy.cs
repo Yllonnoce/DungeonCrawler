@@ -84,7 +84,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public PartyController? Party { get; private set; }
     /// <summary>The party member this enemy is after (by threat and proximity).</summary>
     public Adventurer? Target { get; private set; }
-    public bool HasTarget => Target != null && IsInstanceValid(Target) && !Target.Downed;
+    public bool HasTarget => Target != null && IsInstanceValid(Target) && !Target.Downed && !Target.Parked; // a parked body is out of the world
     /// <summary>Position to chase: the target, else the nearest living member, else our own spot.</summary>
     public Vector3 TargetPosition => HasTarget ? Target!.GlobalPosition : (Party?.NearestAlive(GlobalPosition)?.GlobalPosition ?? GlobalPosition);
     /// <summary>Actively fighting (companions in Defensive stance react to these).</summary>
@@ -642,7 +642,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var bestScore = float.MinValue;
         foreach (var adv in Party.Adventurers)
         {
-            if (adv.Downed) continue;
+            if (adv.Downed || adv.Parked) continue;
             var dist = GlobalPosition.DistanceTo(adv.GlobalPosition);
             if (dist > Profile.DetectRange * Aggression * 1.5f) continue;
             var score = _threat.GetValueOrDefault(adv.Index) + 12f / (dist + 1f) + (LineOfSightTo(adv.GlobalPosition) ? 4f : 0f);

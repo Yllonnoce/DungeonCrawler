@@ -393,8 +393,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             target = Dodging ? _dodgeDir * DefenseRules.DodgeSpeed : _dance.Active && !FightOn ? Vector3.Zero : CompanionVelocity(dt); // a companion stands for its dance unless the fight is still on
         }
 
-        velocity.X = Mathf.MoveToward(velocity.X, target.X, Acceleration * dt);
-        velocity.Z = Mathf.MoveToward(velocity.Z, target.Z, Acceleration * dt);
+        if (Dodging && !Downed) { velocity.X = target.X; velocity.Z = target.Z; } // the burst is instant: 0.25 s at full speed, not a ramp
+        else
+        {
+            velocity.X = Mathf.MoveToward(velocity.X, target.X, Acceleration * dt);
+            velocity.Z = Mathf.MoveToward(velocity.Z, target.Z, Acceleration * dt);
+        }
         Velocity = velocity;
         var before = GlobalPosition;
         MoveAndSlide();
