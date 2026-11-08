@@ -572,8 +572,13 @@ card reads it on `PartyWipedBy`), and the `EventBus` moments: `RaiseEliteSeen`, 
 `RaisePartyWipedBy`, `RaiseFloorLedgerClosed`. Trap, shop refusal, a fighter's refusal (`NpcEventKind.Refused`) and a
 secret wall's opening are raised today; the rest wait on their pillars.
 
-**Voice.** New text is unvoiced until a bake runs (`--bake-kill-barks` tops up every bank and gives the lines their ids;
-`--bake-cast-voice` for the campaign's own lines); `VoiceBudget` counts asides beside their NPC line. The shipped
+**Voice.** New text is unvoiced until a bake runs. `--bake-all-voice=DIR` (with `--builtin --ai` and the voice flags) renders every
+line the shipped campaign can say at once with no budget: tier lines, every taunt, every bark set topped up from every stock bank, the
+banter (the stock and unlockable exchanges are poured into `CampaignPlan.Banter` by id so their ids ship; `BanterBank.BankFor` draws
+from the campaign's copies first), the merchant, and every floor's intro, narration, boss, cast, aside, taunt and horde line; lines the
+bank holds cost nothing, and the campaign and the twenty plans are written with their ids to DIR/all-plans to copy over
+`data/adventures/builtin`. `--voice-concurrent=N` sets the lines in flight (2 by default; Runware takes 4). The older flags remain
+(`--bake-kill-barks` tops up every bank and gives the lines their ids; `--bake-cast-voice` for the campaign's own lines); `VoiceBudget` counts asides beside their NPC line. The shipped
 campaign's new Possess lines, the Verger's twelve taunts and the six asides carry `VoiceId: null`.
 
 ## Lethal traps

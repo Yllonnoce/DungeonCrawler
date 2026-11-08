@@ -127,6 +127,7 @@ public partial class AdventureDirector : Node
             if (quest != null) foreach (var l in new[] { quest.Lines.Offer, quest.Lines.Accept, quest.Lines.Decline, quest.Lines.Complete, quest.Lines.Fail }) _voice.Enqueue(l, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
         }
         foreach (var t in plan.Taunts) EnqueueTaunt(t, campaign);
+        foreach (var h in plan.Hordes) if (h.Line.Text.Length > 0) _voice.Enqueue(h.Line, narrator, Speaker.Narrator, VoicePriority.Narrator); // the nest's line is narrated when the horde pours
     }
 
     /// <summary>The antagonist's line: their voice, their persona, the clean twin rendered under the same id if the words are refused.</summary>
@@ -144,7 +145,24 @@ public partial class AdventureDirector : Node
         Objectives.TauntBank.Fill(campaign);
         foreach (var t in campaign.Taunts) EnqueueTaunt(t, campaign);
         EnqueueBarks(campaign);
+        EnqueueBanterVoice(campaign);
         EnqueueMerchantVoice(campaign);
+    }
+
+    /// <summary>The heroes' exchanges in their own class voices: the stock and unlockable banks are poured into the campaign first so the ids ship with it. Returns the line count.</summary>
+    public int EnqueueBanterVoice(CampaignPlan campaign)
+    {
+        Voice.BanterBank.PourInto(campaign);
+        var n = 0;
+        foreach (var plan in campaign.Banter)
+            foreach (var l in plan.Lines)
+            {
+                var cls = ClassIdOf(l.Member);
+                l.Line.Delivery ??= Deliveries.Id(Voices.BarkDelivery(DungeonCrawler.Adventure.BarkTrigger.Travel));
+                _voice.Enqueue(l.Line, Voices.ForClass(cls), Speaker.Companion, VoicePriority.Bark, major: false, Voices.CompanionPersona(cls));
+                n++;
+            }
+        return n;
     }
 
     /// <summary>The merchant's lines in his cast member's voice: the briefing, every floor's safe-room lines and the gathering calls.</summary>

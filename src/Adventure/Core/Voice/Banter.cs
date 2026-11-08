@@ -128,6 +128,27 @@ public static class BanterBank
         return p;
     }
 
+    /// <summary>
+    /// Pours the stock and unlockable exchanges into a campaign's own list (by id; an exchange the campaign already carries is kept as it is), so a
+    /// voice bake can pin the lines' ids in the shipped campaign the way the bark sets do. Copies, never the static objects. Returns how many were added.
+    /// </summary>
+    public static int PourInto(CampaignPlan campaign)
+    {
+        var have = campaign.Banter.Select(b => b.Id).ToHashSet();
+        var added = 0;
+        foreach (var p in Stock.Concat(Unlockable))
+            if (have.Add(p.Id)) { campaign.Banter.Add(PlanFormat.Deserialize<BanterPlan>(PlanFormat.Serialize(p))); added++; }
+        return added;
+    }
+
+    /// <summary>The exchanges a run draws from: the campaign's own (with whatever ids a bake pinned) and every stock or unlockable exchange it does not carry.</summary>
+    public static List<BanterPlan> BankFor(CampaignPlan? campaign)
+    {
+        var own = campaign?.Banter ?? new List<BanterPlan>();
+        var ids = own.Select(b => b.Id).ToHashSet();
+        return own.Concat(Stock.Concat(Unlockable).Where(p => !ids.Contains(p.Id))).ToList();
+    }
+
     public static IReadOnlyList<BanterPlan> Stock { get; } = new List<BanterPlan>
     {
         // pairs: Brand + Sable

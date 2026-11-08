@@ -17,7 +17,8 @@ public partial class VoiceRenderer : Node
 {
     public static VoiceRenderer? Instance { get; private set; }
     public const string BuiltinDir = "res://assets/voice/builtin";
-    public const int MaxConcurrent = 2;
+    /// <summary>Lines in flight at once; 2 for play, more for a headless bake (--voice-concurrent=N; Runware takes 2-4).</summary>
+    public static int MaxConcurrent { get; set; } = 2;
     public const float CombatRadius = 20f;
 
     private Func<string, IVoiceSynth>? _factory;
