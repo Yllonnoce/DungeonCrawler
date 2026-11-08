@@ -3086,7 +3086,7 @@ public partial class DebugTools : Node
                     var legPrice = Items.Prices.SellPrice(legendary);
                     var goldPre = party.Gold;
                     shop.Open(floor);
-                    shop.Clicked(false, cellIndex);
+                    shop.Clicked(UI.Shop.ShopSection.Bag, cellIndex);
                     var waited = ReferenceEquals(party.Bag[cellIndex], legendary) && party.Gold == goldPre;
                     var asking = shop.Confirming;
                     shop.Confirm();

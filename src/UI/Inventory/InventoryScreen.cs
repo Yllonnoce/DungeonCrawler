@@ -126,6 +126,8 @@ public partial class InventoryScreen : PanelContainer
                 var cell = _equip[(m, slot)];
                 cell.Item = c.Equipment[slot];
                 cell.Highlight = m == _party.FocusedIndex;
+                cell.Upgrade = false;
+                cell.Glyphs = Array.Empty<(string, bool)>();
                 cell.TooltipText = cell.Item == null ? $"{SlotRules.Label(slot)} slot" : ItemText.Describe(cell.Item);
                 cell.QueueRedraw();
             }
@@ -135,8 +137,9 @@ public partial class InventoryScreen : PanelContainer
         {
             var cell = _bag[i];
             cell.Item = _party.Bag[i];
-            ItemInstance? compare = null;
-            if (cell.Item is { IsEquippable: true } it && focused.Equipment.PreferredSlot(focused, it) is { } ps) compare = focused.Equipment[ps];
+            var compare = cell.Item is { IsEquippable: true } it ? focused.Equipment.Worn(focused, it) : null;
+            cell.Upgrade = cell.Item != null && ItemText.IsUpgrade(cell.Item, focused, Game.Instance.Catalog);
+            cell.Glyphs = cell.Item == null ? Array.Empty<(string, bool)>() : ItemText.UsableBy(cell.Item, _party.Members);
             cell.TooltipText = cell.Item == null ? "" : ItemText.Describe(cell.Item, compare);
             cell.QueueRedraw();
         }
