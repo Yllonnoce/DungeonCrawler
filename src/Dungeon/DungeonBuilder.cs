@@ -368,7 +368,7 @@ public partial class DungeonBuilder : Node3D
         var lines = campaign?.MerchantOrGeneric().For(floor);
         if (hidden)
         {
-            var hiddenLine = new Line(Adventure.Voice.MerchantLineBank.HiddenGreeting[floor % Adventure.Voice.MerchantLineBank.HiddenGreeting.Length]);
+            var hiddenLine = new Line(Adventure.Voice.MerchantLineBank.HiddenGreetingFor(floor)); // the deeds' unlocked lines join the stock ones
             lines = new MerchantFloorLines { Floor = floor, Greeting = hiddenLine, Progress = lines?.Progress ?? hiddenLine, Trade = hiddenLine };
         }
         var npc = _npcScene.Instantiate<Npc>();

@@ -30,6 +30,8 @@ public partial class Main : Node
     public MainMenu? Menu => _menu;
     private PartyDto? _pendingPartyState;
     public bool InGame => Party != null && IsInstanceValid(Party);
+    /// <summary>The deeds listener of this session (solo and server); null on a client.</summary>
+    public DeedWatcher? Deeds { get; private set; }
 
     public override void _Ready()
     {
@@ -88,6 +90,7 @@ public partial class Main : Node
         Party.AllowPossession = !NetSession.IsNetworked;
         _world.AddChild(Party);
         Party.SpawnBodies(_world);
+        if (!NetSession.IsClient) { Deeds = new DeedWatcher { Name = "Deeds" }; _world.AddChild(Deeds); } // the server decides deeds; a client only hears of them
         if (hud)
         {
             Hud = GD.Load<PackedScene>("res://scenes/UI/Hud.tscn").Instantiate<Hud>();

@@ -189,6 +189,8 @@ public sealed class BanterPlan
     public int MinCount { get; set; }
     /// <summary>Whether playing this exchange adds one to its counter (a new Gerald) or only reads it (the doors already opened).</summary>
     public bool Bumps { get; set; } = true;
+    /// <summary>The deed-unlocked set this exchange belongs to (run-structure: wipes, mimic, shrines, guard, parry, elites, rescue, hardcore); null for the stock and a campaign's own.</summary>
+    [AiNotNull] public string? Set { get; set; }
 }
 
 /// <summary>What the merchant says on one floor: on meeting the party, when asked how it goes, and when opening the shop.</summary>

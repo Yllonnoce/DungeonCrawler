@@ -71,6 +71,11 @@ public partial class Hud : Control
 
     public void Bind(PartyController party) => _party = party;
 
+    private UI.Cards.DeedToast _deedToast = null!;
+    /// <summary>A deed earned (run-structure): name and unlock, bottom-right, four seconds, never blocking input.</summary>
+    public void ShowDeedToast(string name, string unlockText) => _deedToast.Show(name, unlockText);
+    public bool DeedToastVisible => _deedToast.Visible;
+
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always;
@@ -160,6 +165,10 @@ public partial class Hud : Control
         AddChild(LootToast);
         LootToast.AnchorLeft = 0; LootToast.AnchorRight = 0; LootToast.AnchorTop = 1; LootToast.AnchorBottom = 1;
         LootToast.OffsetLeft = 16; LootToast.OffsetRight = 420; LootToast.OffsetTop = -190; LootToast.OffsetBottom = -164; // beside (above) the portraits
+        _deedToast = new UI.Cards.DeedToast { Name = "DeedToast" };
+        AddChild(_deedToast);
+        _deedToast.AnchorLeft = 1; _deedToast.AnchorRight = 1; _deedToast.AnchorTop = 1; _deedToast.AnchorBottom = 1;
+        _deedToast.OffsetLeft = -380; _deedToast.OffsetRight = -16; _deedToast.OffsetTop = -150; _deedToast.OffsetBottom = -60; // bottom-right
 
         _dialogue = new DialogueScreen { Name = "Dialogue", Visible = false };
         _dialogue.Closed += UpdateModalState;

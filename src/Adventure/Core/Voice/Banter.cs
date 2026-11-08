@@ -23,6 +23,8 @@ public static class BanterRules
     public const string GeraldCounter = "gerald", DoorsCounter = "doors", EmptyCounter = "empty";
     public static readonly string[] Heroes = { "Brand", "Sable", "Wren", "Ilex" };
     public static string SaidKey(BanterPlan p) => SaidPrefix + p.Id;
+    /// <summary>The banter sets the profile's deeds have unlocked (run-structure); an exchange with a Set plays only when its set is here.</summary>
+    public static HashSet<string> UnlockedSets { get; } = new();
 }
 
 /// <summary>Fills the gag tokens in a banter line: <c>{count}</c> with the number, <c>{roman}</c> with its numeral.</summary>
@@ -56,6 +58,7 @@ public static class BanterPicker
                 && (p.Tier == null || p.Tier == tier)
                 && FlagRules.Allowed(p.RequiresFlag, null, flags)
                 && (p.Counter == null || p.MinCount <= counts.GetValueOrDefault(p.Counter, 0))
+                && (p.Set == null || BanterRules.UnlockedSets.Contains(p.Set))
                 && BarkRepeat.CanSay(said, BanterRules.SaidKey(p), floor))
             .ToList();
 
@@ -181,5 +184,39 @@ public static class BanterBank
         E("grp_alive",   ("Brand", "Right. Nobody's dead. Good."), ("Sable", "Low bar."), ("Wren", "Cleared it."), ("Ilex", "Barely.")),
         E("grp_watched", ("Sable", "Does anyone else feel watched?"), ("Wren", "Yes."), ("Ilex", "Constantly."), ("Brand", "Walk faster, then.")).InTier(3).From(16),
         E("bs_halfway",  ("Brand", "Halfway."), ("Sable", "Says who?"), ("Brand", "My knees.")).From(10),
+    };
+
+    private static BanterPlan S(string set, string id, params (string Who, string Text)[] lines) { var p = E(id, lines); p.Set = set; return p; }
+
+    /// <summary>
+    /// The exchanges the deeds unlock (run-structure), by set: they join the stock bank only while <see cref="BanterRules.UnlockedSets"/>
+    /// holds their set. Two per set, the same dry register as the stock, never a campaign's people or places.
+    /// </summary>
+    public static IReadOnlyList<BanterPlan> Unlockable { get; } = new List<BanterPlan>
+    {
+        // wipes: Bang on Schedule
+        S("wipes", "un_wipes_1", ("Brand", "Fourth time I've died on a Tuesday."), ("Sable", "It isn't Tuesday."), ("Brand", "It is down here. It's always Tuesday down here.")),
+        S("wipes", "un_wipes_2", ("Ilex", "Statistically we are improving."), ("Wren", "We died."), ("Ilex", "Later than last time. By a full minute.")),
+        // mimic: Bit First
+        S("mimic", "un_mimic_1", ("Sable", "Knock first."), ("Brand", "On a chest?"), ("Sable", "On anything with a lid, Brand. Manners.")),
+        S("mimic", "un_mimic_2", ("Wren", "That one's breathing."), ("Ilex", "Chests do not breathe."), ("Wren", "Tell it that."), ("Ilex", "I'd rather you did.")),
+        // shrines: Devout
+        S("shrines", "un_shrines_1", ("Ilex", "Six altars. We are practically clergy."), ("Sable", "Clergy don't get paid in gold."), ("Ilex", "You have not met clergy.")),
+        S("shrines", "un_shrines_2", ("Brand", "I don't trust a god that hands out favours."), ("Wren", "You took three."), ("Brand", "I don't trust them. I didn't say I'd refuse.")),
+        // guard: Iron Manners
+        S("guard", "un_guard_1", ("Brand", "Shield up, feet planted, breathe out."), ("Sable", "Is that a prayer?"), ("Brand", "It's a parry. The prayer comes after.")),
+        S("guard", "un_guard_2", ("Wren", "Twenty-five perfect blocks."), ("Brand", "Who's counting?"), ("Wren", "Your shield. There's a notch for each one.")),
+        // parry: Riposte Society
+        S("parry", "un_parry_1", ("Sable", "You turned that one on the edge."), ("Brand", "Luck."), ("Sable", "Twenty-five times. That's not luck, that's a habit.")),
+        S("parry", "un_parry_2", ("Ilex", "There is a geometry to the riposte."), ("Sable", "There's a wrist to it."), ("Ilex", "The wrist is the geometry.")),
+        // elites: Landlord
+        S("elites", "un_elites_1", ("Brand", "Another one with a name."), ("Wren", "They've all got names. We just don't ask."), ("Brand", "Fifty of them never got to say.")),
+        S("elites", "un_elites_2", ("Sable", "The named ones used to scare me."), ("Ilex", "And now?"), ("Sable", "Now they're a ledger entry.")),
+        // rescue: Pulled Free
+        S("rescue", "un_rescue_1", ("Wren", "Hold still. I've done this nine times."), ("Brand", "To me?"), ("Wren", "Mostly to you.")),
+        S("rescue", "un_rescue_2", ("Ilex", "You pulled me out of a Press."), ("Sable", "You were in the way of the loot."), ("Ilex", "That is the kindest thing you have said to me.")),
+        // hardcore: Signed in Blood
+        S("hardcore", "un_hardcore_1", ("Brand", "No second chances this time."), ("Sable", "There never were. We just used to pretend."), ("Brand", "I liked pretending.")),
+        S("hardcore", "un_hardcore_2", ("Wren", "If I go down, leave me."), ("Ilex", "We are contractually obliged to."), ("Wren", "Good."), ("Ilex", "It does not say we have to like it.")),
     };
 }

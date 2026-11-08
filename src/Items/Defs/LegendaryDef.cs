@@ -20,6 +20,8 @@ public partial class LegendaryDef : Resource, IHasId
     [Export] public float OnHitMagnitude { get; set; }
     [Export] public float OnHitChance { get; set; } = 1f;
     [Export] public bool ShopOnly { get; set; }
+    /// <summary>The deed id that puts this legendary in the drop pool (run-structure); empty rolls as ever.</summary>
+    [Export] public string RequiresDeed { get; set; } = "";
 
     [ExportGroup("Effect")]
     /// <summary>A TriggerKind name (Bloodlust, GoldFind, LastGasp ...); the wearer gains it while the item is equipped.</summary>
@@ -38,7 +40,7 @@ public partial class LegendaryDef : Resource, IHasId
         return new LegendaryProfile
         {
             Id = Id, Name = DisplayName, BaseId = BaseId, Flavor = Flavor, ItemLevelMin = ItemLevelMin, Weight = Weight,
-            Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName), OnHit = onHit, ShopOnly = ShopOnly,
+            Modifiers = StatModifierParser.ParseAll(Modifiers, DisplayName), OnHit = onHit, ShopOnly = ShopOnly, RequiresDeed = string.IsNullOrWhiteSpace(RequiresDeed) ? null : RequiresDeed,
             Trigger = Enum.TryParse<TriggerKind>(Trigger, true, out var t) ? t : TriggerKind.None, TriggerMagnitude = TriggerMagnitude,
             Trigger2 = Enum.TryParse<TriggerKind>(Trigger2, true, out var t2) ? t2 : TriggerKind.None, TriggerMagnitude2 = TriggerMagnitude2,
             Upgrades = UpgradeParser.ParseAll(Upgrades),

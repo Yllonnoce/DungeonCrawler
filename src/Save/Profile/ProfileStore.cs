@@ -38,6 +38,27 @@ public static class ProfileStore
         System.IO.File.Move(temp, path, overwrite: true);
     }
 
+    /// <summary>What the deeds unlocked, applied to the live game: legendaries into the catalog's pool, banter sets, the hidden stall's lines and its extra rolls.</summary>
+    public static void ApplyUnlocks(Items.ItemCatalog cat)
+    {
+        cat.Unlocked.Clear();
+        Adventure.Voice.BanterRules.UnlockedSets.Clear();
+        Adventure.Voice.MerchantLineBank.UnlockedLines.Clear();
+        foreach (var u in Current.Unlocks)
+        {
+            var sep = u.IndexOf(':');
+            if (sep < 0) continue;
+            var (kind, id) = (u[..sep], u[(sep + 1)..]);
+            switch (kind)
+            {
+                case "legendary": cat.Unlocked.Add(id); break;
+                case "banter": Adventure.Voice.BanterRules.UnlockedSets.Add(id); break;
+                case "merchantline": Adventure.Voice.MerchantLineBank.UnlockedLines.Add(id); break;
+            }
+        }
+        Items.ShopRules.HiddenStallExtraRolls = Adventure.Voice.MerchantLineBank.UnlockedLines.Count;
+    }
+
     /// <summary>Forget the profile on disk and in memory (tests).</summary>
     public static void Delete()
     {

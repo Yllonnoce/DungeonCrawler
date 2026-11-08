@@ -110,7 +110,7 @@ public partial class AdventureDirector
         if (!Authority || !Game.Instance.InGame || Main.Instance?.Party is not { } party || !party.HasBodies) return false;
         if (_banter is { Done: false }) return false; // one exchange at a time: a travel tick never cuts a safe-room or tavern one short
         var campaign = Game.Instance.Adventure.Campaign;
-        var bank = BanterBank.Stock.Concat(campaign?.Banter ?? new List<BanterPlan>()).ToList();
+        var bank = BanterBank.Stock.Concat(BanterBank.Unlockable).Concat(campaign?.Banter ?? new List<BanterPlan>()).ToList(); // the unlockable sets are gated by BanterPicker on BanterRules.UnlockedSets
         var living = party.Active.Where(a => !a.Downed).Select(a => a.State.Name).ToList();
         var said = Game.Instance.Adventure.BarksSaid;
         var plan = id != null

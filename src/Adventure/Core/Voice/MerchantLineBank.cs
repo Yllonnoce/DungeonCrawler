@@ -19,6 +19,26 @@ public static class MerchantLineBank
     /// <summary>What the hidden stall's keeper says (fortune): greeting, remark and trade line alike, by floor.</summary>
     public static readonly string[] HiddenGreeting = { "I was never here.", "You did not see a stall. You saw a wall with opinions.", "Everything here fell off a cart that does not exist.", "Quickly. The stones are listening, and they gossip." };
 
+    /// <summary>The hidden stall's lines the deeds unlock (run-structure), by merchant-line id.</summary>
+    public static readonly IReadOnlyDictionary<string, string> UnlockableLines = new Dictionary<string, string>
+    {
+        ["merchant.contract"] = "The whole contract, every clause, and still breathing. I keep a shelf for your sort. It was empty until now.",
+        ["merchant.wainscot"] = "You found my other door. Nobody finds my other door. I shall have to move it, and the rent with it.",
+        ["merchant.sineater"] = "You took the curse and kept the gold. Sensible. The gods do not audit; I do.",
+        ["merchant.audience"] = "They say the guardian barely finished its sentence. I sell to the brisk. The brisk pay promptly.",
+        ["merchant.regular"] = "Every day, down you come. Habit or hunger, I do not ask. I do stock accordingly.",
+    };
+
+    /// <summary>The unlocked line ids (run-structure); the profile's deeds fill it, and each one adds a greeting and a Rare roll to the hidden stall.</summary>
+    public static HashSet<string> UnlockedLines { get; } = new();
+
+    /// <summary>The hidden stall's greeting on a floor: the stock lines and the unlocked ones, by floor.</summary>
+    public static string HiddenGreetingFor(int floor)
+    {
+        var pool = HiddenGreeting.Concat(UnlockableLines.Where(kv => UnlockedLines.Contains(kv.Key)).OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Value)).ToList();
+        return pool[Math.Abs(floor) % pool.Count];
+    }
+
     public static MerchantPlan Generic(string campaignTitle, string antagonistName)
     {
         var plan = new MerchantPlan { Briefing = Briefing(campaignTitle, antagonistName) };

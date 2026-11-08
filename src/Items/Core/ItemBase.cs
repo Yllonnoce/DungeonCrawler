@@ -84,6 +84,8 @@ public sealed record LegendaryProfile
     public StatModifier[] Modifiers { get; init; } = Array.Empty<StatModifier>();
     /// <summary>Sold by the merchant only; the dungeon never rolls it.</summary>
     public bool ShopOnly { get; init; }
+    /// <summary>The deed that puts it in the drop pool (run-structure); null rolls as ever. Gated through <see cref="ItemCatalog.Unlocked"/>.</summary>
+    public string? RequiresDeed { get; init; }
     public StatusApplication? OnHit { get; init; }
     /// <summary>A passive the wearer gains, summed with learned skills by the party (see LegendaryRules).</summary>
     public TriggerKind Trigger { get; init; } = TriggerKind.None;
@@ -141,6 +143,8 @@ public sealed class ItemCatalog
     public Dictionary<string, AffixProfile> Affixes { get; } = new();
     public Dictionary<string, LegendaryProfile> Legendaries { get; } = new();
     public Dictionary<string, LootTableProfile> Tables { get; } = new();
+    /// <summary>Legendary ids the profile's deeds have unlocked (run-structure); a legendary with RequiresDeed rolls only when listed here.</summary>
+    public HashSet<string> Unlocked { get; } = new();
     /// <summary>The living party's classes, for smart loot; null (tests) rolls from the whole pool.</summary>
     public Func<IEnumerable<ClassProfile>>? SmartLootClasses { get; set; }
 

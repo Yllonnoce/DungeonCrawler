@@ -81,6 +81,9 @@ public static class ShopRules
     public const int HiddenStallCount = Adventure.Fortune.SecretRoomRules.HiddenStallCount;
 
     /// <param name="hiddenStall">The floor carries a hidden merchant's stall: its Rare gear is appended after the regular wares, from its own seed, so the wares are as they were.</param>
+    /// <summary>Rare rolls the hidden stall carries beyond its six (run-structure: one per unlocked merchant line); appended after the six so the base stock is unchanged.</summary>
+    public static int HiddenStallExtraRolls { get; set; }
+
     public static ShopStock Roll(ItemCatalog cat, ulong gameSeed, int floor, bool hiddenStall = false)
     {
         var rng = new Random(StockSeed(gameSeed, floor));
@@ -127,7 +130,7 @@ public static class ShopRules
             hiddenFrom = items.Count;
             var stallRng = new Random(StockSeed(gameSeed, floor) ^ 0x41DD);
             var kinds = new[] { SlotKind.Weapon, SlotKind.Body, SlotKind.Offhand, SlotKind.Ring, SlotKind.Amulet };
-            for (var i = 0; i < HiddenStallCount; i++)
+            for (var i = 0; i < HiddenStallCount + Math.Max(0, HiddenStallExtraRolls); i++)
             {
                 var kind = kinds[i % kinds.Length];
                 var c = cat.Bases.Values.Where(b => b.Kind == kind && b.ItemLevelMin <= level).OrderBy(b => b.Id).ToList();

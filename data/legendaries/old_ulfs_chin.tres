@@ -16,6 +16,7 @@ OnHitDuration = 0
 OnHitMagnitude = 0
 OnHitChance = 1
 ShopOnly = false
+RequiresDeed = "jammed_it"
 Trigger = "IronChin"
 TriggerMagnitude = 3
 Trigger2 = "None"
