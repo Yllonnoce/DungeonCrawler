@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 7,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 476522169224861389,
   "Title": "The Crop",
   "IntroLine": {
     "Text": "Nineteen years of someone\u0027s housekeeping: a hut roofed with a spider\u0027s back, a banner sewn out of dead men\u0027s coats, and a rite already started without you.",
-    "VoiceId": null,
+    "VoiceId": "e53e623f6e9fe607",
     "Delivery": null
   },
   "Rooms": [
@@ -89,7 +89,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -111,11 +112,13 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -139,7 +142,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -158,11 +162,13 @@
       "Members": [
         {
           "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -187,11 +193,13 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 9
+          "Count": 9,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -200,7 +208,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "Both breaches cough at once, and what the god ate comes back up it on too many legs.",
-        "VoiceId": null,
+        "VoiceId": "11a84e4268921c6c",
         "Delivery": null
       }
     },
@@ -211,15 +219,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 5
+          "Count": 5,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -228,7 +239,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts, the wall behind it does too, and the drift fills with wet scrabbling.",
-        "VoiceId": null,
+        "VoiceId": "e5b1f7bb82f638f1",
         "Delivery": null
       }
     }
@@ -309,7 +320,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "She has lain down before, you know. Rather well. It is the only thing she has ever done promptly.",
-        "VoiceId": null,
+        "VoiceId": "723f2b4de9ccbf2a",
         "Delivery": null
       },
       "CleanLine": {

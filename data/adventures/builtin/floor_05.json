@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 5,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 7397697809543818120,
   "Title": "Canon Ludd",
   "IntroLine": {
     "Text": "Somebody is still saying the office down here, on the hour, to empty pews. Six hundred years of it, and not one amen.",
-    "VoiceId": null,
+    "VoiceId": "b2a1717060af8400",
     "Delivery": null
   },
   "Rooms": [
@@ -74,7 +74,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -96,7 +97,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -118,7 +120,8 @@
       "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -137,11 +140,13 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -169,15 +174,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 9
+          "Count": 9,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -186,7 +194,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The charnel wall gives at both seams, and last generation\u0027s coats come out of it walking.",
-        "VoiceId": null,
+        "VoiceId": "cab4603e47c7da68",
         "Delivery": null
       }
     }
@@ -203,7 +211,11 @@
       "Text": "The liturgy continues without him. It always has.",
       "VoiceId": "3e1115e8bea13498",
       "Delivery": null
-    }
+    },
+    "HalfLine": null,
+    "AltDeathFlag": null,
+    "AltHalfLine": null,
+    "AltDeathLine": null
   },
   "Chests": [
     {
@@ -230,7 +242,7 @@
       "Room": null,
       "Line": {
         "Text": "He raises the censer to a nave of stone benches and no faces, and swings it anyway. The ledge above him is bare of ornament; use it.",
-        "VoiceId": null,
+        "VoiceId": "0b58b7e0ca44700e",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -241,7 +253,7 @@
       "Room": null,
       "Line": {
         "Text": "First Station done. The Skin ends here; below the flagstones the stone turns soft, and warm, and begins to breathe.",
-        "VoiceId": null,
+        "VoiceId": "35cfab5e5d3332d4",
         "Delivery": null
       },
       "RequiresFlag": null,

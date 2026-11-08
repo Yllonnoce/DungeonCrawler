@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 6,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 5999920540184747606,
   "Title": "The Swallow",
   "IntroLine": {
     "Text": "Knee-deep, and warm as a mouth. Dunmarrow draws its drinking water from this, and the council has never once asked what else is in here.",
-    "VoiceId": null,
+    "VoiceId": "1c28242342d2ccb7",
     "Delivery": null
   },
   "Rooms": [
@@ -69,11 +69,13 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -95,7 +97,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -114,11 +117,13 @@
       "Members": [
         {
           "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -145,15 +150,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 10
+          "Count": 10,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -162,7 +170,7 @@
       "Trigger": "Alarm",
       "Line": {
         "Text": "Something runs for the stairs, and the breaches in the shallows answer it: the water boils white with small wet backs.",
-        "VoiceId": null,
+        "VoiceId": "35baff304056dae1",
         "Delivery": null
       }
     }
@@ -229,7 +237,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "m6_ahead",
@@ -248,7 +257,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "m6_tamsin",
@@ -267,7 +277,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -281,7 +292,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [],

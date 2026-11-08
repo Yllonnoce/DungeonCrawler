@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 9,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 11259603139931090582,
   "Title": "The Cistern",
   "IntroLine": {
@@ -99,15 +99,18 @@
       "Members": [
         {
           "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -129,7 +132,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -148,7 +152,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -172,7 +177,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -194,15 +200,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 12
+          "Count": 12,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 4
+          "Count": 4,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -211,7 +220,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The carved verse splits down its middle and the wall behind it is not wall at all; it is legs, and all of them coming.",
-        "VoiceId": null,
+        "VoiceId": "5658b2bbf92848a4",
         "Delivery": null
       }
     },
@@ -222,11 +231,13 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 10
+          "Count": 10,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -235,7 +246,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts, and the hollow behind the stonework answers it: a long wet scrabble, getting closer in the dark.",
-        "VoiceId": null,
+        "VoiceId": "b0e8b25e55ad830f",
         "Delivery": null
       }
     }
@@ -306,7 +317,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "read",
@@ -334,7 +346,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -348,7 +361,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     },
     {
       "Id": "npc_grisel",
@@ -364,14 +378,6 @@
               "Text": "Watch him read it. He knows the seal. Nineteen years ago I walked my four to the jailers and bought these years with them, and I have spent every one of them down here.",
               "VoiceId": "060c1557d4d05aec",
               "Delivery": null
-            },
-            "Aside": {
-              "Member": "Brand",
-              "Line": {
-                "Text": "Four for one. I\u0027ve seen officers make that trade. Never one who stayed to pay.",
-                "VoiceId": null,
-                "Delivery": null
-              }
             },
             "Choices": [
               {
@@ -392,7 +398,15 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": {
+              "Member": "Brand",
+              "Line": {
+                "Text": "Four for one. I\u0027ve seen officers make that trade. Never one who stayed to pay.",
+                "VoiceId": "24e222d1e7bfef35",
+                "Delivery": null
+              }
+            }
           },
           {
             "Id": "forgiven",
@@ -411,7 +425,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "kept",
@@ -430,7 +445,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -444,7 +460,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [

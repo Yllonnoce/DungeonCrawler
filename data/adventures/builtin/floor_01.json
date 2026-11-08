@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 1,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 10909343922383415070,
   "Title": "The Lychgate",
   "IntroLine": {
@@ -64,6 +64,16 @@
       "Index": 10,
       "Role": "Treasury",
       "Name": "The Alms Vault"
+    },
+    {
+      "Index": 11,
+      "Role": "Passage",
+      "Name": ""
+    },
+    {
+      "Index": 12,
+      "Role": "Passage",
+      "Name": ""
     }
   ],
   "Collectives": [
@@ -74,11 +84,13 @@
       "Members": [
         {
           "EnemyId": "enemy.bandit",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.bandit_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -97,11 +109,13 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -127,7 +141,8 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -136,7 +151,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The vestry wall opens along a seam, and dry things come out of it sideways.",
-        "VoiceId": null,
+        "VoiceId": "90dae89e482799ff",
         "Delivery": null
       }
     },
@@ -147,7 +162,8 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 4
+          "Count": 4,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -156,7 +172,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The chest lid lifts, and the cloakroom answers: husks shrugging out of the coats they were buried in.",
-        "VoiceId": null,
+        "VoiceId": "84434fb0b5cfaecf",
         "Delivery": null
       }
     },
@@ -167,7 +183,8 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -176,7 +193,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "Gravediggers\u0027 walk, and the gravediggers come up through their own breaches.",
-        "VoiceId": null,
+        "VoiceId": "dbd984fce8cf9a3a",
         "Delivery": null
       }
     },
@@ -187,11 +204,13 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -200,7 +219,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "Behind the fallen columns the rubble stands up. One of them stands taller than the rest.",
-        "VoiceId": null,
+        "VoiceId": "deafcd18e8139c39",
         "Delivery": null
       }
     },
@@ -211,7 +230,8 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 4
+          "Count": 4,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -220,7 +240,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The font water goes grey, and things wade out of the breaches to meet you in it.",
-        "VoiceId": null,
+        "VoiceId": "6c9edc170ede5497",
         "Delivery": null
       }
     },
@@ -231,7 +251,8 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -240,7 +261,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The squatters\u0027 hut shudders. The breaches behind it cough up neighbours.",
-        "VoiceId": null,
+        "VoiceId": "886fe59ba101a93d",
         "Delivery": null
       }
     }
@@ -284,14 +305,6 @@
               "VoiceId": "0712ef2049dc0183",
               "Delivery": null
             },
-            "Aside": {
-              "Member": "Sable",
-              "Line": {
-                "Text": "He means us.",
-                "VoiceId": null,
-                "Delivery": null
-              }
-            },
             "Choices": [
               {
                 "Text": "Then what is breathing down there?",
@@ -320,7 +333,15 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": {
+              "Member": "Sable",
+              "Line": {
+                "Text": "He means us.",
+                "VoiceId": "d8479177a1a5fac9",
+                "Delivery": null
+              }
+            }
           },
           {
             "Id": "bread",
@@ -357,7 +378,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "done",
@@ -376,7 +398,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -390,7 +413,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     },
     {
       "Id": "npc_maud_1",
@@ -435,7 +459,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "m1_who",
@@ -443,14 +468,6 @@
               "Text": "Maud. Maud Sorrel, from the lane behind the chandler\u0027s. Thirty-eight years I have been coming down here and I have never once been cold.",
               "VoiceId": "0acf8933cdbf53a4",
               "Delivery": null
-            },
-            "Aside": {
-              "Member": "Wren",
-              "Line": {
-                "Text": "Thirty-eight years and never cold. The place likes her. That\u0027s not good news.",
-                "VoiceId": null,
-                "Delivery": null
-              }
             },
             "Choices": [
               {
@@ -471,7 +488,15 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": {
+              "Member": "Wren",
+              "Line": {
+                "Text": "Thirty-eight years and never cold. The place likes her. That\u0027s not good news.",
+                "VoiceId": "baa92330f014d684",
+                "Delivery": null
+              }
+            }
           },
           {
             "Id": "m1_back",
@@ -490,7 +515,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -504,7 +530,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [

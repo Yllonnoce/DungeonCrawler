@@ -708,7 +708,7 @@ public partial class DebugTools : Node
             // Run it on an exported build to prove the bank was packed and is found there.
             _checkedVoiceBank = true;
             var loaded = Adventure.BuiltinCampaign.Load();
-            var ids = loaded is { } bank ? Adventure.Voice.VoiceBudget.Candidates(bank.Campaign, bank.Floors).Select(c => c.Line.VoiceId).Where(id => !string.IsNullOrEmpty(id)).Select(id => id!).ToHashSet() : new HashSet<string>();
+            var ids = loaded is { } bank ? Adventure.Voice.VoiceRefs.Ids(bank.Campaign, bank.Floors) : new HashSet<string>(); // the same set the sweep keeps: candidates, taunts and their clean twins, the banter
             var vr = VoiceRenderer.Instance;
             var builtin = ids.Count(VoiceRenderer.HasBuiltin);
             var has = ids.Count(vr.HasAudio);

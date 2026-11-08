@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 14,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 1469752771637127601,
   "Title": "The Quench",
   "IntroLine": {
     "Text": "Black water stands knee-deep over the quench grates, cold as a font and twice as patient. On the ledges above it, something with a bow waits for the ripples to tell it where you are.",
-    "VoiceId": null,
+    "VoiceId": "4444a4d7709dbfac",
     "Delivery": null
   },
   "Rooms": [
@@ -79,15 +79,18 @@
       "Members": [
         {
           "EnemyId": "enemy.bandit_chief",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.bandit",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.bandit_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -106,11 +109,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -132,7 +137,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -151,11 +157,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -184,15 +192,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 14
+          "Count": 14,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 5
+          "Count": 5,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -201,7 +212,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts, the water hisses, and the breaches in the font wall cough out cinders that walk.",
-        "VoiceId": null,
+        "VoiceId": "482571251d901d22",
         "Delivery": null
       }
     },
@@ -212,15 +223,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 12
+          "Count": 12,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 5
+          "Count": 5,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -229,7 +243,7 @@
       "Trigger": "Alarm",
       "Line": {
         "Text": "Something small and fast reaches the vault, and behind you the grate room empties itself into the flood.",
-        "VoiceId": null,
+        "VoiceId": "35acf4bb5aa74ce7",
         "Delivery": null
       }
     }
@@ -296,7 +310,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "tob_b",
@@ -324,7 +339,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "tob_c",
@@ -352,7 +368,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -366,7 +383,8 @@
       },
       "RequiresFlag": "told_tobit",
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     },
     {
       "Id": "npc_tobit_choir",
@@ -402,7 +420,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "bet_b",
@@ -430,7 +449,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -447,7 +467,8 @@
       "Betrayal": {
         "EnemyId": "enemy.forge_priest",
         "Count": 2
-      }
+      },
+      "Ritualist": false
     }
   ],
   "Quests": [
@@ -559,7 +580,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "The Quench. Mind your footing, congregation; the gates move when I say the verse, and I say it bloody often.",
-        "VoiceId": null,
+        "VoiceId": "56fe13ed784c71b1",
         "Delivery": null
       },
       "CleanLine": {
@@ -576,7 +597,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Correct. Entirely correct. Himself approves.",
-        "VoiceId": null,
+        "VoiceId": "db4100609e71d971",
         "Delivery": null
       },
       "CleanLine": {
@@ -593,7 +614,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Wrong. Himself heard that. So did everything else.",
-        "VoiceId": null,
+        "VoiceId": "fec48f762ab2b2f4",
         "Delivery": null
       },
       "CleanLine": {
@@ -610,7 +631,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "The doors move. They are His throat. Did you think they would hold still for you?",
-        "VoiceId": null,
+        "VoiceId": "c7e890fcaac406a1",
         "Delivery": null
       },
       "CleanLine": {

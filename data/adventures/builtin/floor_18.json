@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 18,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 13582213847784365884,
   "Title": "The Dreaming Hall",
   "IntroLine": {
@@ -69,11 +69,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -95,11 +97,13 @@
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -123,7 +127,8 @@
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -142,11 +147,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -171,15 +178,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 18
+          "Count": 18,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 8
+          "Count": 8,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -188,7 +198,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts and the wall behind it lets go: shades pour out of the breaches like cold poured from a jug, and the corridor into the rotunda fills from end to end.",
-        "VoiceId": null,
+        "VoiceId": "5ebc1276ba644d02",
         "Delivery": null
       }
     },
@@ -199,15 +209,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 17
+          "Count": 17,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 9
+          "Count": 9,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -216,7 +229,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "Two mouths in the marble open together and the singing stops, which is worse. The Dream empties itself at you.",
-        "VoiceId": null,
+        "VoiceId": "37e8ad9640d785e8",
         "Delivery": null
       }
     }
@@ -274,7 +287,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "n_verger",
@@ -293,7 +307,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "n_choose",
@@ -321,7 +336,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -335,7 +351,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [

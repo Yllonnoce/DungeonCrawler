@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 8,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 2954229024822347568,
   "Title": "The Craw",
   "IntroLine": {
     "Text": "The passages narrow until the walls touch your shoulders, and every so often the whole craw shifts a hand\u0027s breadth, grinding boulders like a mouth that has not finished chewing.",
-    "VoiceId": null,
+    "VoiceId": "2e94e6cd0ac5ec85",
     "Delivery": null
   },
   "Rooms": [
@@ -54,11 +54,13 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -80,7 +82,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -99,11 +102,13 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -126,7 +131,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -148,15 +154,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 14
+          "Count": 14,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 4
+          "Count": 4,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -165,7 +174,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts, the shell roof shivers, and both breaches open at once: the hoard was bait, and something has been waiting behind the walls for nineteen years.",
-        "VoiceId": null,
+        "VoiceId": "26c172216bcac9d2",
         "Delivery": null
       }
     }

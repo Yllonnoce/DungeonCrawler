@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 17,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 10547429077170000350,
   "Title": "The Windpipe",
   "IntroLine": {
@@ -74,11 +74,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -100,7 +102,8 @@
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -119,11 +122,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -147,11 +152,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -176,15 +183,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 24
+          "Count": 24,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 10
+          "Count": 10,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 4
+          "Count": 4,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -193,7 +203,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts and the drift exhales: shades spill from every seam in the timbering, singing the same soft note.",
-        "VoiceId": null,
+        "VoiceId": "ba2fc8e2bfe7a684",
         "Delivery": null
       }
     },
@@ -204,15 +214,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 20
+          "Count": 20,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 9
+          "Count": 9,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -221,7 +234,7 @@
       "Trigger": "Alarm",
       "Line": {
         "Text": "The runner\u0027s cry goes down the gallery and the breach answers it, verse for verse, in bodies.",
-        "VoiceId": null,
+        "VoiceId": "050a37118ff1ee62",
         "Delivery": null
       }
     }
@@ -283,7 +296,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "n_confess",
@@ -302,7 +316,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "n_turn",
@@ -330,7 +345,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -347,7 +363,8 @@
       "Betrayal": {
         "EnemyId": "enemy.void_stalker",
         "Count": 3
-      }
+      },
+      "Ritualist": false
     }
   ],
   "Quests": [
@@ -409,7 +426,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Mind the air on this Station. That is Himself breathing out, and your alderman waiting to see whether you take it well.",
-        "VoiceId": null,
+        "VoiceId": "e52198666a7e5f00",
         "Delivery": null
       },
       "CleanLine": {
@@ -426,7 +443,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Crane always did his weeping on the way down. Lie down beside him, {party}; it is the same thing, only sooner.",
-        "VoiceId": null,
+        "VoiceId": "7e270e1b26645bb2",
         "Delivery": null
       },
       "CleanLine": {

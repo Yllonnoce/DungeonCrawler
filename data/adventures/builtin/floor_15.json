@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 15,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 7371685180800806058,
   "Title": "The Bellows",
   "IntroLine": {
     "Text": "Red air, and under it a beat that loses count. Something ahead is doing the work of a heart, over and over, and has never once been thanked for it.",
-    "VoiceId": null,
+    "VoiceId": "e6fc21b5f83b5266",
     "Delivery": null
   },
   "Rooms": [
@@ -74,11 +74,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -100,7 +102,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -119,7 +122,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -138,11 +142,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -164,7 +170,8 @@
   "Loners": [
     {
       "EnemyId": "enemy.ember_hound",
-      "Room": 4
+      "Room": 4,
+      "Elite": null
     }
   ],
   "Hordes": [
@@ -175,15 +182,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 26
+          "Count": 26,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 10
+          "Count": 10,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 4
+          "Count": 4,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -192,7 +202,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall splits along a seam of soot and the heat comes out walking: small burning things, and behind them the ones that stopped being small.",
-        "VoiceId": null,
+        "VoiceId": "20702cf616db622a",
         "Delivery": null
       }
     }
@@ -209,7 +219,11 @@
       "Text": "The beat does not stop. It only loses count for a while.",
       "VoiceId": "406f9dddba9d381b",
       "Delivery": null
-    }
+    },
+    "HalfLine": null,
+    "AltDeathFlag": null,
+    "AltHalfLine": null,
+    "AltDeathLine": null
   },
   "Chests": [
     {

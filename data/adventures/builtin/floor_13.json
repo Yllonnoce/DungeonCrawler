@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 13,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 14045766140948457824,
   "Title": "The Mould Room",
   "IntroLine": {
@@ -54,11 +54,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -80,7 +82,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -99,11 +102,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -122,7 +127,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -148,15 +154,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 24
+          "Count": 24,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 8
+          "Count": 8,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -165,7 +174,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall behind the shelves is all mouths, and every one of them is spitting out something that was poured wrong and crawled off anyway.",
-        "VoiceId": null,
+        "VoiceId": "29f60bddf9a486f8",
         "Delivery": null
       }
     }
@@ -232,7 +241,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "u2",
@@ -260,7 +270,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "u3",
@@ -268,14 +279,6 @@
               "Text": "Carry them flat. Tip one and you\u0027ve lost a chin, and a chin is the hardest thing in the world to put back.",
               "VoiceId": "2e7387bd67cc834e",
               "Delivery": null
-            },
-            "Aside": {
-              "Member": "Sable",
-              "Line": {
-                "Text": "I\u0027ve lifted a bishop\u0027s chin off him in a crowd. Flat is no trouble.",
-                "VoiceId": null,
-                "Delivery": null
-              }
             },
             "Choices": [
               {
@@ -296,7 +299,15 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": {
+              "Member": "Sable",
+              "Line": {
+                "Text": "I\u0027ve lifted a bishop\u0027s chin off him in a crowd. Flat is no trouble.",
+                "VoiceId": "220597bc0a384107",
+                "Delivery": null
+              }
+            }
           }
         ]
       },
@@ -310,7 +321,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [

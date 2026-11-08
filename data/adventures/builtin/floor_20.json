@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 20,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 5018449714008657613,
   "Title": "The Mouth",
   "IntroLine": {
@@ -69,11 +69,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -95,11 +97,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -118,11 +122,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -146,7 +152,8 @@
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -168,11 +175,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -194,15 +203,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 22
+          "Count": 22,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 8
+          "Count": 8,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -211,7 +223,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The gallery\u0027s teeth are hollow. The singing in them stops, which is worse, and the dark pours out between the pillars in one long grey breath.",
-        "VoiceId": null,
+        "VoiceId": "f33269ec55f92d61",
         "Delivery": null
       }
     },
@@ -222,15 +234,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 16
+          "Count": 16,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 6
+          "Count": 6,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -239,7 +254,7 @@
       "Trigger": "Alarm",
       "Line": {
         "Text": "Somewhere behind you a runner reaches the Mouth, and the breach answers: shade on shade, climbing out of the gum like rot leaving a tooth.",
-        "VoiceId": null,
+        "VoiceId": "9679ca36ff4df254",
         "Delivery": null
       }
     }
@@ -263,15 +278,15 @@
       "Delivery": "calm"
     },
     "AltDeathFlag": "wake_gorm",
-    "AltDeathLine": {
-      "Text": "...He is saying something. He is saying thank you. Three hundred years, and that is what He...",
-      "VoiceId": "2736272b311ed58f",
-      "Delivery": "whisper"
-    },
     "AltHalfLine": {
       "Text": "He is turning over. Do you know what a town looks like from underneath? You will.",
       "VoiceId": "575724869af88532",
       "Delivery": "calm"
+    },
+    "AltDeathLine": {
+      "Text": "...He is saying something. He is saying thank you. Three hundred years, and that is what He...",
+      "VoiceId": "2736272b311ed58f",
+      "Delivery": "whisper"
     }
   },
   "Chests": [
@@ -323,7 +338,7 @@
       "Objective": null,
       "Line": {
         "Text": "Fourth Station. Come in. Come in. Mind the teeth.",
-        "VoiceId": null,
+        "VoiceId": "6dfa027852618471",
         "Delivery": "calm"
       },
       "CleanLine": {
@@ -340,7 +355,7 @@
       "Objective": null,
       "Line": {
         "Text": "The Dream. Lower your voices. He hears you now, and He is not fond of shouting.",
-        "VoiceId": null,
+        "VoiceId": "22d6db47e899da64",
         "Delivery": null
       },
       "CleanLine": {
@@ -357,7 +372,7 @@
       "Objective": null,
       "Line": {
         "Text": "Nearly. Nearly there. A little further down and you can stop.",
-        "VoiceId": null,
+        "VoiceId": "8bdfbcc2f5a847bb",
         "Delivery": null
       },
       "CleanLine": {
@@ -374,7 +389,7 @@
       "Objective": null,
       "Line": {
         "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
-        "VoiceId": null,
+        "VoiceId": "ad55cb665fb14d7e",
         "Delivery": null
       },
       "CleanLine": {
@@ -387,5 +402,5 @@
       "FromStock": false
     }
   ],
-  "EnemyTotal": 13
+  "EnemyTotal": 12
 }

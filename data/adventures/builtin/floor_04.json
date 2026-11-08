@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 4,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 6422866093980402035,
   "Title": "The Chantry",
   "IntroLine": {
@@ -64,7 +64,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -86,7 +87,8 @@
       "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -105,7 +107,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -128,11 +131,13 @@
       "Members": [
         {
           "EnemyId": "enemy.bone_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -154,15 +159,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 7
+          "Count": 7,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -171,7 +179,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall of the crossing gives up its mortar, and out come the parish, still wearing last generation\u0027s coats.",
-        "VoiceId": null,
+        "VoiceId": "90e00120475760d2",
         "Delivery": null
       }
     }
@@ -238,7 +246,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "n2",
@@ -275,7 +284,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -289,7 +299,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [
@@ -384,7 +395,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "That is Himself breathing out. Do try not to take it personally.",
-        "VoiceId": null,
+        "VoiceId": "f8ebd124f2b6fe65",
         "Delivery": null
       },
       "CleanLine": {

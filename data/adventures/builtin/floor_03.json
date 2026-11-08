@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 3,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 6719241975167983932,
   "Title": "The Nave",
   "IntroLine": {
@@ -74,7 +74,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -96,7 +97,8 @@
       "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -115,11 +117,13 @@
       "Members": [
         {
           "EnemyId": "enemy.bone_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -146,11 +150,13 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 6
+          "Count": 6,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -159,7 +165,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The stacked bone shifts, and shifts again, and then the wall gives up its tenants all at once.",
-        "VoiceId": null,
+        "VoiceId": "4b59884a0776e1cf",
         "Delivery": null
       }
     }
@@ -202,14 +208,6 @@
               "VoiceId": "4659fe519f848155",
               "Delivery": "warm"
             },
-            "Aside": {
-              "Member": "Brand",
-              "Line": {
-                "Text": "No promises, deacon.",
-                "VoiceId": null,
-                "Delivery": null
-              }
-            },
             "Choices": [
               {
                 "Text": "Regrets for what, exactly?",
@@ -229,7 +227,15 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": {
+              "Member": "Brand",
+              "Line": {
+                "Text": "No promises, deacon.",
+                "VoiceId": "fee26d2b57352991",
+                "Delivery": null
+              }
+            }
           },
           {
             "Id": "ask",
@@ -237,14 +243,6 @@
               "Text": "Pilgrims come down the Gullet every nineteen years. He prepares the Stations himself. You are expected, and that is a comfort, is it not?",
               "VoiceId": "36e0b5664fc79710",
               "Delivery": null
-            },
-            "Aside": {
-              "Member": "Ilex",
-              "Line": {
-                "Text": "Theologically, deacon, \u0027expected\u0027 and \u0027welcome\u0027 are different words.",
-                "VoiceId": null,
-                "Delivery": null
-              }
             },
             "Choices": [
               {
@@ -265,7 +263,15 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": {
+              "Member": "Ilex",
+              "Line": {
+                "Text": "Theologically, deacon, \u0027expected\u0027 and \u0027welcome\u0027 are different words.",
+                "VoiceId": "d5dc12f625da9699",
+                "Delivery": null
+              }
+            }
           },
           {
             "Id": "end",
@@ -284,7 +290,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -298,7 +305,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [
@@ -377,7 +385,7 @@
       "Objective": null,
       "Line": {
         "Text": "Oh, good. The press works. Nobody tells me a sodding thing down here.",
-        "VoiceId": null,
+        "VoiceId": "e431d0d396be58f2",
         "Delivery": null
       },
       "CleanLine": {

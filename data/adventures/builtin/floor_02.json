@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 2,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 12540576795050868960,
   "Title": "The Vestibule",
   "IntroLine": {
     "Text": "Moss in the mortar, and the sexton\u0027s lot gone wandering through it. The Vestry walks them back politely, one at a time, and locks the door behind.",
-    "VoiceId": null,
+    "VoiceId": "5c88fde9aedba947",
     "Delivery": null
   },
   "Rooms": [
@@ -59,7 +59,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -82,11 +83,13 @@
       "Members": [
         {
           "EnemyId": "enemy.bone_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ghoul",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -108,7 +111,8 @@
       "Members": [
         {
           "EnemyId": "enemy.skeleton_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -130,11 +134,13 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_husk",
-          "Count": 5
+          "Count": 5,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_husk_brute",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -143,7 +149,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The mortar splits at both mouths of the vestibule, and the parish comes out of it still wearing its coats.",
-        "VoiceId": null,
+        "VoiceId": "b6cf42c60ba071c1",
         "Delivery": null
       }
     }
@@ -174,7 +180,7 @@
       "Room": 7,
       "Line": {
         "Text": "Coats on pegs, nineteen years of them, each with a name stitched inside the collar. Something is wearing the oldest.",
-        "VoiceId": null,
+        "VoiceId": "7bc003140763c45e",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -204,7 +210,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "{prisoner} goes back in the locker. Everything in its place, and a place for everything.",
-        "VoiceId": null,
+        "VoiceId": "2f1f631e87475883",
         "Delivery": null
       },
       "CleanLine": {

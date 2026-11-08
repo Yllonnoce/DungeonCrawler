@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 16,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 16746443959441144337,
   "Title": "The Dream Door",
   "IntroLine": {
@@ -79,11 +79,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -105,7 +107,8 @@
       "Members": [
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -124,11 +127,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -152,11 +157,13 @@
       "Members": [
         {
           "EnemyId": "enemy.void_caller",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -178,19 +185,23 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_shade",
-          "Count": 26
+          "Count": 26,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_shade_brute",
-          "Count": 10
+          "Count": 10,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.void_stalker",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.abyss_archer",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -199,7 +210,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The note holds, and holds, and then comes apart: shades pour from three mouths in the marble, every one of them still trying to sing.",
-        "VoiceId": null,
+        "VoiceId": "3f9092648eecda85",
         "Delivery": null
       }
     }
@@ -266,7 +277,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "t2",
@@ -303,7 +315,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "t3",
@@ -322,7 +335,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -336,7 +350,8 @@
       },
       "RequiresFlag": "told_tobit",
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     },
     {
       "Id": "npc_maud_16",
@@ -381,7 +396,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "m2",
@@ -418,7 +434,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "m3",
@@ -437,7 +454,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -451,7 +469,8 @@
       },
       "RequiresFlag": null,
       "ForbidsFlag": "told_tobit",
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [

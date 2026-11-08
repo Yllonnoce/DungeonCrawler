@@ -1,7 +1,7 @@
 {
   "SchemaVersion": 1,
   "Floor": 12,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 8643050436140022990,
   "Title": "The Casting Hall",
   "IntroLine": {
@@ -79,11 +79,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_golem",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -105,11 +107,13 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -133,7 +137,8 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -152,15 +157,18 @@
       "Members": [
         {
           "EnemyId": "enemy.bandit",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.bandit_archer",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.bandit_chief",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -179,7 +187,8 @@
       "Members": [
         {
           "EnemyId": "enemy.forge_priest",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -201,15 +210,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 22
+          "Count": 22,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_cinder_brute",
-          "Count": 6
+          "Count": 6,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -218,7 +230,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall cracks like a crust and the kiln empties itself: little burning things with hands, and behind them something that has to stoop.",
-        "VoiceId": null,
+        "VoiceId": "2df21956782ccec1",
         "Delivery": null
       }
     }
@@ -294,7 +306,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "g2",
@@ -313,7 +326,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "g3",
@@ -332,7 +346,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           },
           {
             "Id": "g4",
@@ -351,7 +366,8 @@
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               }
-            ]
+            ],
+            "Aside": null
           }
         ]
       },
@@ -365,7 +381,8 @@
       },
       "RequiresFlag": "grisel_forgiven",
       "ForbidsFlag": null,
-      "Betrayal": null
+      "Betrayal": null,
+      "Ritualist": false
     }
   ],
   "Quests": [
@@ -426,7 +443,7 @@
       "Room": null,
       "Line": {
         "Text": "The head jailer wears a company badge nineteen years out of date, and answers to Grisel Thorn. She does not look up. The keys on her belt do the talking.",
-        "VoiceId": null,
+        "VoiceId": "d69027a1fff2c7e0",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -439,7 +456,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "The Casting Hall. Those in the cages are not finished yet, so kindly stop bloody rattling them. Himself dreams them one at a time.",
-        "VoiceId": null,
+        "VoiceId": "ebe90569ca626f2c",
         "Delivery": null
       },
       "CleanLine": {

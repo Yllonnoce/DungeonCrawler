@@ -1,12 +1,12 @@
 {
   "SchemaVersion": 1,
   "Floor": 10,
-  "Source": "claude",
+  "Source": "builtin",
   "LayoutHash": 4645297898037138726,
   "Title": "Mother Nit",
   "IntroLine": {
     "Text": "Fire creeps across the floor in slow rings, and the lichen pops as it burns. Something back there has been laying eggs in a god for a very long time.",
-    "VoiceId": null,
+    "VoiceId": "fad5670bad6030c3",
     "Delivery": null
   },
   "Rooms": [
@@ -74,11 +74,13 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 3
+          "Count": 3,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -100,7 +102,8 @@
       "Members": [
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -119,11 +122,13 @@
       "Members": [
         {
           "EnemyId": "enemy.rock_thrower",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "Goal": {
@@ -144,11 +149,13 @@
   "Loners": [
     {
       "EnemyId": "enemy.cave_spider",
-      "Room": 7
+      "Room": 7,
+      "Elite": null
     },
     {
       "EnemyId": "enemy.cave_spider",
-      "Room": 3
+      "Room": 3,
+      "Elite": null
     }
   ],
   "Hordes": [
@@ -159,15 +166,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 16
+          "Count": 16,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 6
+          "Count": 6,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_spider",
-          "Count": 2
+          "Count": 2,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -176,7 +186,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall of the crack moves, and keeps moving, and is not a wall.",
-        "VoiceId": null,
+        "VoiceId": "706f436f22932587",
         "Delivery": null
       }
     },
@@ -187,15 +197,18 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_crawler",
-          "Count": 14
+          "Count": 14,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.horde_crawler_brute",
-          "Count": 5
+          "Count": 5,
+          "Elite": null
         },
         {
           "EnemyId": "enemy.cave_shaman",
-          "Count": 1
+          "Count": 1,
+          "Elite": null
         }
       ],
       "EnemyId": null,
@@ -204,7 +217,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts, the silk above it splits, and the ceiling comes down on small wet legs.",
-        "VoiceId": null,
+        "VoiceId": "231d92b722fd7039",
         "Delivery": null
       }
     }
@@ -221,7 +234,11 @@
       "Text": "Her children scatter into the dark and He does not scratch.",
       "VoiceId": "996d50d269f40b0e",
       "Delivery": null
-    }
+    },
+    "HalfLine": null,
+    "AltDeathFlag": null,
+    "AltHalfLine": null,
+    "AltDeathLine": null
   },
   "Chests": [
     {
