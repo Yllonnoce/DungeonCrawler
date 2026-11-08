@@ -65,6 +65,7 @@ public partial class Hud : Control
     private Label _objective = null!;
     private Label _subtitle = null!;
     private Label _mangled = null!;
+    private Label _readyCheck = null!;
     private float _mangledSince;
     private float _subtitleTimer;
     private bool _subtitleIsBark; // a bark may replace a bark, never a narration still on screen
@@ -168,6 +169,11 @@ public partial class Hud : Control
         _mangled.AnchorLeft = 0.5f; _mangled.AnchorRight = 0.5f; _mangled.AnchorTop = 0; _mangled.AnchorBottom = 0;
         _mangled.OffsetLeft = -360; _mangled.OffsetRight = 360; _mangled.OffsetTop = 80; _mangled.OffsetBottom = 110;
         AddChild(_mangled);
+        _readyCheck = new Label { Name = "ReadyCheck", HorizontalAlignment = HorizontalAlignment.Center, Modulate = new Color(0.95f, 0.85f, 0.55f), Visible = false };
+        _readyCheck.AddThemeFontSizeOverride("font_size", 20);
+        _readyCheck.AnchorLeft = 0.5f; _readyCheck.AnchorRight = 0.5f; _readyCheck.AnchorTop = 0; _readyCheck.AnchorBottom = 0;
+        _readyCheck.OffsetLeft = -360; _readyCheck.OffsetRight = 360; _readyCheck.OffsetTop = 116; _readyCheck.OffsetBottom = 146;
+        AddChild(_readyCheck);
 
         // the combat read-outs: 3D nodes beside the Hud (not under a Control), the marker on the crosshair
         DamageNumbers = new DamageNumbers { Name = "DamageNumbers" };
@@ -522,6 +528,18 @@ public partial class Hud : Control
     /// <summary>The player stepped off the landing: the question goes away.</summary>
     public void DismissStairs(Dungeon.Stairs stairs) => _stairsPrompt.Dismiss(stairs);
 
+    /// <summary>The server's stairs ready-check (co-op): "Descend? 1/3 ready · 12 s" under the objective line.</summary>
+    public void ShowReadyCheck(int count, int total, int secondsLeft, int direction)
+    {
+        _readyCheck.Text = Net.ReadyCheckRules.HudLine(count, total, secondsLeft, direction);
+        _readyCheck.Visible = _readyCheck.Text.Length > 0;
+    }
+
+    public void HideReadyCheck() { _readyCheck.Visible = false; _readyCheck.Text = ""; }
+
+    /// <summary>What the ready-check line shows ("" when hidden).</summary>
+    public string ReadyCheckText => _readyCheck.Visible ? _readyCheck.Text : "";
+
     public bool StairsPromptOpen => _stairsPrompt.Visible;
 
     public void UpdateModalState()
@@ -546,6 +564,7 @@ public partial class Hud : Control
     {
         if (_shop.Visible && floor != _shop.Floor) _shop.Close(); // the merchant's wares are the floor's
         if (_shrine.Visible) _shrine.Close("gone"); // the altar stayed on the floor we left
+        HideReadyCheck(); // the vote is over once the floor changes
         var tier = Main.Instance?.Builder.CurrentTier?.DisplayName ?? "";
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;

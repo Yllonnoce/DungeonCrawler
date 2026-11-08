@@ -141,15 +141,26 @@ public partial class Stairs : Area3D, IInteractable
         if (marker.GetParent() == null) AddChild(marker);
     }
 
-    /// <summary>The player said yes on the landing: a client asks the server, everyone else changes the floor here.</summary>
+    /// <summary>The player said yes on the landing: a client asks the server (its vote in the ready-check), everyone else changes the floor here.</summary>
     public void Confirm(PartyController party, Adventurer actor)
     {
         if (Net.NetSession.IsClient)
         {
-            if (Net.NetRefResolver.RefOf(this) is { } netRef) Net.NetSession.Instance.Send(new Net.InteractIntent(netRef));
+            if (Net.NetRefResolver.RefOf(this) is { } netRef) Net.NetSession.Instance.Send(new Net.StairsReadyIntent(netRef, true));
             return;
         }
         Interact(party, actor);
+    }
+
+    /// <summary>The player said no: on a server that calls a running ready-check off; in solo it is nothing.</summary>
+    public void Decline(Adventurer? actor)
+    {
+        if (Net.NetSession.IsClient)
+        {
+            if (Net.NetRefResolver.RefOf(this) is { } netRef) Net.NetSession.Instance.Send(new Net.StairsReadyIntent(netRef, false));
+            return;
+        }
+        if (actor != null && Net.NetSession.IsServer && Net.NetSession.Instance.Server is { } server) server.StairsVote(this, actor.Index, false);
     }
 
     public void Interact(PartyController party, Adventurer actor)
@@ -159,6 +170,8 @@ public partial class Stairs : Area3D, IInteractable
             EventBus.Instance.Log(LockReason);
             return;
         }
+        // two or more players on a server: the ready-check decides; one player (or solo) goes at once
+        if (Net.NetSession.IsServer && Net.NetSession.Instance.Server is { } server && server.StairsVote(this, actor.Index, true)) return;
         Game.Instance.ChangeFloor(Direction);
     }
 }

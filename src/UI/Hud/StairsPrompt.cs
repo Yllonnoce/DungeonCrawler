@@ -45,7 +45,7 @@ public partial class StairsPrompt : Control
         _yes = new Button { Text = "Yes  (E)", CustomMinimumSize = new Vector2(150, 0), FocusMode = FocusModeEnum.None };
         _no = new Button { Text = "No  (Esc)", CustomMinimumSize = new Vector2(150, 0), FocusMode = FocusModeEnum.None };
         _yes.Pressed += Accept;
-        _no.Pressed += Close;
+        _no.Pressed += Decline;
         row.AddChild(_yes);
         row.AddChild(_no);
         box.AddChild(row);
@@ -76,6 +76,15 @@ public partial class StairsPrompt : Control
         Closed?.Invoke();
     }
 
+    /// <summary>No or Esc: a No in a server's ready-check; stepping off the landing (<see cref="Dismiss"/>) is not one.</summary>
+    public void Decline()
+    {
+        var stairs = Current;
+        var actor = _actor;
+        Close();
+        stairs?.Decline(actor);
+    }
+
     private void Accept()
     {
         if (Current is not { } stairs || _actor is not { } actor) { Close(); return; }
@@ -94,7 +103,7 @@ public partial class StairsPrompt : Control
         }
         else if (@event.IsActionPressed("ui_cancel") || @event.IsActionPressed("pause"))
         {
-            Close();
+            Decline();
             GetViewport().SetInputAsHandled();
         }
     }

@@ -411,6 +411,17 @@ public partial class ServerWorld : Node
                 if (started) Trace.Add("rescue");
                 break;
             }
+            case StairsReadyIntent sr:
+            {
+                // a Yes needs the voter within reach of the stairs (as InteractIntent) and runs the gate through Stairs.Interact; a No needs no reach
+                if (main.Builder.FloorRoot is not { } root || NetRefResolver.Resolve(root, sr.Ref) is not Dungeon.Stairs stairs) break;
+                if (!sr.Ready) { StairsVote(stairs, slot.MemberIndex, false); break; }
+                var dist = Math.Min(stairs.GlobalPosition.DistanceTo(body.GlobalPosition), stairs.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
+                if (NetSession.Instance.TestServer) GD.Print($"[net-server] stairs vote {sr.Ref} from {slot.Name}: {dist:0.0} m");
+                if (dist > 3.5f) break;
+                stairs.Interact(party, body);
+                break;
+            }
             case ShoutIntent:
                 if (!body.Downed) break;
                 EventBus.Instance.Log($"{slot.Name} needs help!");
@@ -608,6 +619,7 @@ public partial class ServerWorld : Node
             _spawned.Clear();
         }
         TickBound(dt);
+        TickReadyCheck(dt);
         _statusTimer -= dt;
         if (_statusTimer <= 0f) { _statusTimer = 10f; WriteStatus(); }
         _autosaveTimer += dt;
