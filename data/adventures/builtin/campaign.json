@@ -842,24 +842,24 @@
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Something\u0027s in my head and it\u0027s humming.",
-            "VoiceId": "789d8feca93e2f1f",
+            "Text": "Brand. Right. Try to keep up.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Hold me down. Hold me down, damn you.",
-            "VoiceId": "8aedd122007977c7",
+            "Text": "Shield\u0027s mine again. Stay behind it.",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "My hands aren\u0027t taking orders. Mind the blade.",
-            "VoiceId": "f6c53ca608758bb2",
+            "Text": "Sergeant\u0027s back. Corporal. Whatever. Move.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -1511,24 +1511,24 @@
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Someone else is wearing me. Badly.",
-            "VoiceId": "c9b113ff12cced53",
+            "Text": "Sable. Finally, someone with taste.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Knives out and not by my doing. Run.",
-            "VoiceId": "590bf593c218f4e2",
+            "Text": "Me? Lovely. Everyone check your pockets.",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "It\u0027s singing. Gods, it\u0027s singing in my teeth.",
-            "VoiceId": "5d3801b7a729c719",
+            "Text": "A lady leads. Try to look like you belong.",
+            "VoiceId": null,
             "Delivery": "whisper"
           }
         },
@@ -2292,24 +2292,24 @@
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Something\u0027s drawing my bow for me. Move.",
-            "VoiceId": "2ea530feff98f32a",
+            "Text": "Wren.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Don\u0027t stand in my line. Please don\u0027t.",
-            "VoiceId": "a2c41f091a8639d2",
+            "Text": "Quiet now. I\u0027m in front.",
+            "VoiceId": null,
             "Delivery": "pleading"
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "I see through two sets of eyes and one is His.",
-            "VoiceId": "99d0f38606d36cce",
+            "Text": "Follow. Don\u0027t talk.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -2945,24 +2945,24 @@
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "The lullaby is using my mouth. Gag me.",
-            "VoiceId": "71ed4824e6661d05",
+            "Text": "Ilex. The thinking has arrived.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "I am two people and the other one is old.",
-            "VoiceId": "c1a21da41134f127",
+            "Text": "Ah. The competent hands. At last.",
+            "VoiceId": null,
             "Delivery": "whisper"
           }
         },
         {
           "Trigger": "Possess",
           "Line": {
-            "Text": "Strike my hands. I\u0027ll forgive it. Strike them.",
-            "VoiceId": "2e33f7c65b1cee1d",
+            "Text": "Lead by me. Mind Gerald.",
+            "VoiceId": null,
             "Delivery": "frantic"
           }
         },
@@ -4439,6 +4439,210 @@
       "RequiresFlag": null,
       "ForbidsFlag": null,
       "FromStock": true
+    },
+    {
+      "Trigger": "EliteSlain",
+      "Objective": null,
+      "Line": {
+        "Text": "That one was a sidesman. Twenty years he kept the aisle. You\u0027ll be sweeping it yourselves now, you heathens.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "That one was a sidesman. Twenty years he kept the aisle. You\u0027ll be sweeping it yourselves now, you heathens.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "EliteSlain",
+      "Objective": null,
+      "Line": {
+        "Text": "{elite} is dead. I shall enter it in the book. In ink, because I\u0027m angry. Bloody ink.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "{elite} is dead. I shall enter it in the book. In ink, because I\u0027m angry.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "ShrineUsed",
+      "Objective": null,
+      "Line": {
+        "Text": "You\u0027ve been at the altar. Hands in the collection, were they, {name}? He notices. He always bloody notices.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You\u0027ve been at the altar. Hands in the collection, were they, {name}? He notices. He always notices.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "ShrineUsed",
+      "Objective": null,
+      "Line": {
+        "Text": "Kneel at my shrines all you like. He takes what\u0027s offered and He does not give change.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Kneel at my shrines all you like. He takes what\u0027s offered and He does not give change.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MimicSprung",
+      "Objective": null,
+      "Line": {
+        "Text": "The vestry chest. It\u0027s been peckish since Lent. Mind your fingers, you greedy sods.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The vestry chest. It\u0027s been peckish since Lent. Mind your fingers, you greedy fools.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MimicSprung",
+      "Objective": null,
+      "Line": {
+        "Text": "Nobody told you not to open things in a church? No. Of course not. Nobody tells anybody anything.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Nobody told you not to open things in a church? No. Of course not. Nobody tells anybody anything.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllyDead",
+      "Objective": null,
+      "Line": {
+        "Text": "{name} is dead, then. Pity. They sang. Badly, but they sang, and now the choir\u0027s a voice short, and whose fault is that?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "{name} is dead, then. Pity. They sang. Badly, but they sang, and now the choir\u0027s a voice short, and whose fault is that?",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllyDead",
+      "Objective": null,
+      "Line": {
+        "Text": "Another body for the cellar. Carry it yourselves. The sexton\u0027s got a bad back and I\u0027ve got a damned congregation to run.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Another body for the cellar. Carry it yourselves. The sexton\u0027s got a bad back and I\u0027ve got a congregation to run.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllyLeft",
+      "Objective": null,
+      "Line": {
+        "Text": "Your friend\u0027s gone home. Sensible. Most of my parish is sensible. It\u0027s only the four of you He ever has to fetch.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Your friend\u0027s gone home. Sensible. Most of my parish is sensible. It\u0027s only the four of you He ever has to fetch.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllyLeft",
+      "Objective": null,
+      "Line": {
+        "Text": "Walked out mid-service. I\u0027ll not have it. Not even from the ones who aren\u0027t bloody staying.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Walked out mid-service. I\u0027ll not have it. Not even from the ones who aren\u0027t staying.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Gamble",
+      "Objective": null,
+      "Line": {
+        "Text": "Gambling? In here? That man Pellet sells rags for silver under my roof and you queue for it. Wipe your feet and your conscience.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Gambling? In here? That man Pellet sells rags for silver under my roof and you queue for it. Wipe your feet and your conscience.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Gamble",
+      "Objective": null,
+      "Line": {
+        "Text": "Dice in a church. He\u0027d have had you in the press for that, once. He may yet, you cheap little sinners.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Dice in a church. He\u0027d have had you in the press for that, once. He may yet, you cheap little sinners.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
     }
   ],
   "Merchant": {

@@ -202,6 +202,14 @@
               "VoiceId": "4659fe519f848155",
               "Delivery": "warm"
             },
+            "Aside": {
+              "Member": "Brand",
+              "Line": {
+                "Text": "No promises, deacon.",
+                "VoiceId": null,
+                "Delivery": null
+              }
+            },
             "Choices": [
               {
                 "Text": "Regrets for what, exactly?",
@@ -229,6 +237,14 @@
               "Text": "Pilgrims come down the Gullet every nineteen years. He prepares the Stations himself. You are expected, and that is a comfort, is it not?",
               "VoiceId": "36e0b5664fc79710",
               "Delivery": null
+            },
+            "Aside": {
+              "Member": "Ilex",
+              "Line": {
+                "Text": "Theologically, deacon, \u0027expected\u0027 and \u0027welcome\u0027 are different words.",
+                "VoiceId": null,
+                "Delivery": null
+              }
             },
             "Choices": [
               {
@@ -357,7 +373,7 @@
       "FromStock": false
     },
     {
-      "Trigger": "MemberDowned",
+      "Trigger": "Crushed",
       "Objective": null,
       "Line": {
         "Text": "Oh, good. The press works. Nobody tells me a sodding thing down here.",

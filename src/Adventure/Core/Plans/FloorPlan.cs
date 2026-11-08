@@ -154,11 +154,20 @@ public sealed class ChoicePlan
     [AiIgnore] public string? NextIfRefused { get; set; }
 }
 
+/// <summary>A companion's remark after an NPC's line: who (a roster name) and what.</summary>
+public sealed class AsidePlan
+{
+    public string Member { get; set; } = "";
+    public Line Line { get; set; } = new();
+}
+
 public sealed class DialogueNode
 {
     public string Id { get; set; } = "";
     public Line Line { get; set; } = new();
     public List<ChoicePlan> Choices { get; set; } = new();
+    /// <summary>A companion's remark once the NPC has said this line; hand-authored, the member by roster name. Skipped when they are not in the party or not standing.</summary>
+    [AiIgnore] public AsidePlan? Aside { get; set; }
 }
 
 /// <summary>Flat dialogue graph: nodes reference each other by id, so it fits a non-recursive JSON schema.</summary>

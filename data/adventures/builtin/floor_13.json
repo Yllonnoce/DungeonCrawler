@@ -269,6 +269,14 @@
               "VoiceId": "2e7387bd67cc834e",
               "Delivery": null
             },
+            "Aside": {
+              "Member": "Sable",
+              "Line": {
+                "Text": "I\u0027ve lifted a bishop\u0027s chin off him in a crowd. Flat is no trouble.",
+                "VoiceId": null,
+                "Delivery": null
+              }
+            },
             "Choices": [
               {
                 "Text": "Here. Three faces, flat as you asked.",
