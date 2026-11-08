@@ -4791,8 +4791,10 @@ public partial class DebugTools : Node
             {
                 _storyStep++;
                 var plan = Design(3, out var menu, out var layout);
-                var rooms = menu.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && !r.IsExit && r.FreeCells >= 3).OrderBy(r => r.HopsFromStart).ToList();
-                var clueRooms = rooms.Skip(3).Take(2).Select(r => r.Index).ToList();
+                var rooms = menu.Rooms.Where(r => Authorable(r) && !r.IsExit && r.FreeCells >= 3).OrderBy(r => r.HopsFromStart).ToList(); // the validator drops an NPC or a clue in the safe room, the shrine or the jail
+                // clues may lie in any room with a free cell, the exit room included; rooms without an NPC first (a flooded floor has few with any)
+                var npcRooms = rooms.Take(3).Select(r => r.Index).ToHashSet();
+                var clueRooms = menu.Rooms.Where(r => Authorable(r) && r.FreeCells > 0).OrderBy(r => npcRooms.Contains(r.Index) ? 1 : 0).ThenByDescending(r => r.FreeCells).Take(2).Select(r => r.Index).ToList();
                 var seer = new NpcPlan { Id = "seer", Name = "Seer", Room = rooms[0].Index, Script = OfflineDesigner.StandardScript("Hm.", "Find the seals.", "Go.", "So that is how it was."), QuestId = "q_seer" };
                 plan.Npcs.Add(seer);
                 plan.Quests.Add(new QuestPlan { Id = "q_seer", Template = QuestTemplate.Investigate, Title = "Seals", GiverNpc = "seer", Params = new QuestParams { ClueRooms = clueRooms, ClueName = "wax seals" }, Reward = new QuestReward { Xp = 50 } });
@@ -4821,7 +4823,7 @@ public partial class DebugTools : Node
                 if (plan.Quests.Count != 3) Fail("validator dropped a story quest");
                 game.Adventure.FloorPlans[3] = plan;
                 var plan4 = Design(4, out var menu4, out var layout4);
-                var rooms4 = menu4.Rooms.Where(r => !r.IsStart && !r.IsVault && !r.IsArena && r.FreeCells >= 2).OrderBy(r => r.HopsFromStart).ToList();
+                var rooms4 = menu4.Rooms.Where(r => Authorable(r) && r.FreeCells >= 2).OrderBy(r => r.HopsFromStart).ToList();
                 plan4.Npcs.Add(new NpcPlan { Id = "runner", Name = "Runner", Room = rooms4[0].Index, Script = OfflineDesigner.StandardScript("You told them to run.", "", "", ""), RequiresFlag = "told_to_run" });
                 plan4.Npcs.Add(new NpcPlan { Id = "stayer", Name = "Stayer", Room = rooms4[1 % rooms4.Count].Index, Script = OfflineDesigner.StandardScript("You told them to stay.", "", "", ""), RequiresFlag = "told_to_stay" });
                 plan4.Npcs.Add(new NpcPlan { Id = "unless", Name = "Unless", Room = rooms4[2 % rooms4.Count].Index, Script = OfflineDesigner.StandardScript("Nobody ran.", "", "", ""), ForbidsFlag = "told_to_run" });
