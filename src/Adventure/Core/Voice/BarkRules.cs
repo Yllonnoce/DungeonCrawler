@@ -24,3 +24,18 @@ public static class BarkRules
     /// <summary>"Hurt, Loot, Downed, Revived, BossSeen and LevelUp ... use ChooseOrOldest": every trigger does, except Possess (a hero swap may go unremarked).</summary>
     public static bool UsesOldest(BarkTrigger t) => t != BarkTrigger.Possess;
 }
+
+/// <summary>Remembers which members have already been badly hurt on which floor, so LowHp speaks once per member per floor.</summary>
+public sealed class LowHpWatch
+{
+    private readonly HashSet<(int Member, int Floor)> _noted = new();
+
+    /// <summary>True the first time a living member is under <see cref="BarkRules.LowHpFraction"/> on this floor.</summary>
+    public bool Note(int member, float hp, float maxHp, int floor)
+    {
+        if (hp <= 0 || maxHp <= 0 || hp / maxHp >= BarkRules.LowHpFraction) return false;
+        return _noted.Add((member, floor));
+    }
+
+    public void Reset() => _noted.Clear();
+}

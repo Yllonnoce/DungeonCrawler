@@ -103,7 +103,7 @@ public partial class ClientWorld : Node
                 if (n.CleanText != null && !Settings.VillainCurses) EventBus.Instance.RaiseNarration(n.CleanText, n.CleanVoiceId);
                 else EventBus.Instance.RaiseNarration(n.Text, n.VoiceId);
                 break;
-            case BarkMsg b: AdventureDirector.Instance.PlayBark(new Line { Text = b.Text, VoiceId = b.VoiceId }); break;
+            case BarkMsg b: AdventureDirector.Instance.PlayBark(b.Member, new Line { Text = b.Text, VoiceId = b.VoiceId }); Trace.Add($"bark:{b.Member}"); break;
             case DialogueAnswer da: Main.Instance.Hud?.Dialogue.OnJoinAnswer(da.NpcId, da.Accepted); Trace.Add(da.Accepted ? "joined" : "refused"); break;
             case EnemySpawned es: OnEnemySpawned(es.Enemy); break;
             case HordeTriggeredEvt ht: Root?.GetChildren().OfType<HordeSpawner>().FirstOrDefault(h => h.Horde.Id == ht.Id)?.Show(); break;
