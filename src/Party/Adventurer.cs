@@ -960,6 +960,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         foreach (var child in root.GetChildren())
         {
             if (child is not Enemy { IsAlive: true } e || e.GlobalPosition.DistanceTo(GlobalPosition) > a.Radius) continue;
+            if (Enemy.ShroudSeparates(GlobalPosition, e.GlobalPosition)) continue; // a Shrouded elite's dome swallows a spell cast from outside it
             any = true;
             var ctx = new HitContext { SneakAttack = e.IsUnaware, SneakMultiplier = State.Class.SneakAttackMultiplier };
             var r = e.ReceiveAttack(State.Stats, a.Attack, ctx, Party.Rng, State.Name);
@@ -995,9 +996,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     }
 
     /// <summary>An attack lands on this character. Only a driven body can be guarding; a hazard (<paramref name="attacker"/> null) is never dodged, parried or blocked.</summary>
-    public void ReceiveAttack(Stats attackerStats, AttackProfile attack, string attackerName, ICombatTarget? attacker = null)
+    /// <returns>What landed (a miss for a dodge, parry, perfect block or a downed body), so the attacker can read its own blow (Vampiric).</returns>
+    public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, string attackerName, ICombatTarget? attacker = null)
     {
-        if (Downed) return;
+        if (Downed) return DamageResult.Miss(attack.Type);
         var m = State;
         var outcome = Defense.Judge(attack.Kind, attacker != null, Party.CanGuard(m), Guarding, m.Stamina);
         switch (outcome)
@@ -1005,14 +1007,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             case DefenseOutcome.Dodged:
                 EventBus.Instance.Log($"{m.Name} dodges {attackerName}.");
                 EventBus.Instance.PlaySfx("miss");
-                return;
+                return DamageResult.Miss(attack.Type);
             case DefenseOutcome.Parried:
                 EventBus.Instance.Log($"{m.Name} parries {attackerName}!");
                 EventBus.Instance.PlaySfx("block");
                 EventBus.Instance.RaiseParried(Index);
                 StaggerAttacker(attacker);
                 Riposte(attacker);
-                return;
+                return DamageResult.Miss(attack.Type);
             case DefenseOutcome.PerfectBlock:
                 EventBus.Instance.Log($"{m.Name} perfectly blocks {attackerName}!");
                 EventBus.Instance.PlaySfx("block");
@@ -1020,12 +1022,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 StaggerAttacker(attacker);
                 SecondWind();
                 Riposte(attacker);
-                return;
+                return DamageResult.Miss(attack.Type);
         }
         var blocking = outcome == DefenseOutcome.Blocked;
         var ctx = new HitContext { DefenderBlocking = blocking, DefenderStunned = m.IsStunned };
         var r = HitResolver.Resolve(attackerStats, m.Stats, m.Effects, attack, ctx, Party.Rng);
-        if (!r.Hit) { EventBus.Instance.Log($"{attackerName} misses {m.Name}."); EventBus.Instance.PlaySfx("miss"); return; }
+        if (!r.Hit) { EventBus.Instance.Log($"{attackerName} misses {m.Name}."); EventBus.Instance.PlaySfx("miss"); return r; }
         if (r.Blocked) m.Stamina = Math.Max(0, m.Stamina - PartyController.BlockStaminaCost);
         if (Party.StaggerImmune(m) && r.Applied.Any(s => s.Kind == StatusKind.Stun)) m.Effects.Remove(StatusKind.Stun); // an item that will not let this one be stunned
         m.TakeDamage(r.Amount);
@@ -1043,7 +1045,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (r.Applied.Count > 0) text += $" [{string.Join(", ", r.Applied.Select(s => s.Kind))}]";
         EventBus.Instance.Log(text + (m.IsAlive ? "." : $". {m.Name} falls!"));
 
-        if (!m.IsAlive) { OnDowned(); return; }
+        if (!m.IsAlive) { OnDowned(); return r; }
         NoteLowHp();
         if (r.Blocked) SecondWind();
         if (attacker is { IsAlive: true })
@@ -1055,6 +1057,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 if (tr.Hit) EventBus.Instance.Log($"{attackerName} is torn by thorns for {tr.Amount:0}.");
             }
         }
+        return r;
     }
 
     /// <summary>A parry or a perfect block staggers the creature that swung.</summary>

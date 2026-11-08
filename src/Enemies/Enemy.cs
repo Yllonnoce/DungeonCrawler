@@ -202,7 +202,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         MaxHp = Profile.ScaledHp(Floor);
         Hp = MaxHp;
         Stats = Profile.BuildStats();
-        Attack = Profile.BuildAttack(Floor);
+        Attack = EliteRules.ApplyAttack(Profile.BuildAttack(Floor), Profile.Affixes);
+        if (Profile.Has(EliteAffix.Juggernaut)) StaggerImmune = true;
+        if (Profile.Has(EliteAffix.Warded)) ApplyWard();
+        if (Profile.Has(EliteAffix.Shrouded)) Shrouds.Add(this);
         _signatureTimer = Profile.SignatureCooldown * 0.5f;
         VoiceSet = VoiceSets.Resolve(Profile.VoiceSet, Profile.Scale, IsBoss);
 
@@ -455,6 +458,12 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
                 if (Hp <= 0) { EventBus.Instance.Log($"{DisplayName} succumbs to {tick.Kind.ToString().ToLower()}."); _dying = true; break; }
             }
             _signatureTimer -= dt;
+            if (_vampFlash > 0f) _vampFlash -= dt;
+            if (Profile.Has(EliteAffix.Warded))
+            {
+                if (_wardUp && Effects.ShieldPoints <= 0f) { _wardUp = false; _wardTimer = EliteRules.WardRegrowSeconds; EventBus.Instance.Log($"{DisplayName}'s ward shatters."); }
+                else if (!_wardUp && (_wardTimer -= dt) <= 0f) ApplyWard();
+            }
         }
 
         if (_dying && State is not DeadState) ChangeState(new DeadState());
@@ -517,7 +526,18 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         State.Exit(this);
         State = next;
         State.Enter(this);
-        if (wasUnaware && next is ChaseState) { AlertPack(); WakeNearby(); Group?.Notify(this); if (IsBoss) EventBus.Instance.RaiseBossSeen(this); NoteEliteSeen(); }
+        if (wasUnaware && next is ChaseState)
+        {
+            AlertPack();
+            if (Profile.Has(EliteAffix.Alarmist))
+            {
+                EventBus.Instance.Log($"{DisplayName} sounds the alarm!");
+                if (GetParent() is { } parent) Audio.Synth.PlayAt(parent, Audio.Synth.Horn(), GlobalPosition, 0f, 40f);
+                WakeNearby(EliteRules.AlarmRadius);
+            }
+            else WakeNearby();
+            Group?.Notify(this); if (IsBoss) EventBus.Instance.RaiseBossSeen(this); NoteEliteSeen();
+        }
     }
 
     /// <summary>Run directly away from the party (used by FleeState).</summary>
@@ -764,7 +784,63 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     {
         WindupLeft = -1f; // the clip has been running since the wind-up began
         if (!HasTarget || DistanceToParty() > AttackRange * 1.15f) return;
-        Target!.ReceiveAttack(Stats, Attack, DisplayName, this);
+        OnDealtDamage(Target!.ReceiveAttack(Stats, Attack, DisplayName, this));
+    }
+
+    // ---- elite affixes -----------------------------------------------------------------------
+
+    private bool _wardUp;
+    private float _wardTimer, _vampFlash;
+    /// <summary>A Warded elite's shell, in shield points (0 while it regrows).</summary>
+    public float WardPoints => Effects.ShieldPoints;
+    /// <summary>Seconds left of the red glow a Vampiric elite shows after feeding (EliteVisuals draws it).</summary>
+    public float VampFlash => _vampFlash;
+
+    /// <summary>Every living Shrouded elite on the floor (joined in _Ready, left in _ExitTree): projectiles and novas ask them.</summary>
+    public static readonly List<Enemy> Shrouds = new();
+    /// <summary>A bolt from <paramref name="from"/> to <paramref name="to"/> enters some other living shroud's dome.</summary>
+    public static bool ShroudBlocks(Vector3 from, Vector3 to, Enemy? shooter)
+        => Shrouds.Any(s => s != shooter && IsInstanceValid(s) && s.IsAlive && ShroudRules.SegmentEntersDisc(from.X, from.Z, to.X, to.Z, s.GlobalPosition.X, s.GlobalPosition.Z, ShroudRules.Radius));
+    /// <summary>A spell cast from outside a living shroud's dome at something inside it.</summary>
+    public static bool ShroudSeparates(Vector3 caster, Vector3 target)
+        => Shrouds.Any(s => IsInstanceValid(s) && s.IsAlive && !ShroudRules.Inside(caster.X, caster.Z, s.GlobalPosition.X, s.GlobalPosition.Z, ShroudRules.Radius) && ShroudRules.Inside(target.X, target.Z, s.GlobalPosition.X, s.GlobalPosition.Z, ShroudRules.Radius));
+
+    public override void _ExitTree() => Shrouds.Remove(this);
+
+    private AttackKind _lastHitKind;
+
+    /// <summary>A party member's blow has landed (PartyController.OnHitLanded): Thorned pays melee back, Hexed slows the hand that struck. Server only.</summary>
+    public void OnStruckBy(CharacterState striker, DamageResult r)
+    {
+        if (!r.Hit || _lastHitKind != AttackKind.Melee || Net.NetSession.IsClient || Party == null) return;
+        if (Profile.Has(EliteAffix.Thorned) && r.Amount > 0f)
+        {
+            var adv = Party.Adventurers.FirstOrDefault(a => a.State == striker);
+            var back = r.Amount * EliteRules.ThornedFraction;
+            adv?.ReceiveAttack(Dungeon.Props.Trap.TrapStats, new AttackProfile { MinDamage = back, MaxDamage = back }, $"{DisplayName}'s spines");
+        }
+        if (Profile.Has(EliteAffix.Hexed))
+        {
+            striker.Effects.Apply(new StatusApplication(StatusKind.Slow, EliteRules.HexSlowSeconds, 0f));
+            striker.Recalculate();
+            EventBus.Instance.Log($"{striker.Name} is hexed: slowed.");
+        }
+    }
+
+    private void ApplyWard()
+    {
+        Effects.Apply(new StatusApplication(StatusKind.Shield, 3600f, Math.Min(MaxHp * EliteRules.WardFraction, StatusEffectController.MaxShield)));
+        _wardUp = true;
+    }
+
+    /// <summary>A blow this creature struck has been judged: a Vampiric elite drinks from it; an elite's hit keeps the ledger's cause fresh.</summary>
+    public void OnDealtDamage(DamageResult r)
+    {
+        if (!r.Hit || !IsAlive || Net.NetSession.IsClient) return;
+        if (IsElite && Adventure.AdventureDirector.Instance is { } director) director.NoteDeathCause(Adventure.Voice.WipeCause.Elite);
+        if (!Profile.Has(EliteAffix.Vampiric) || r.Amount <= 0f) return;
+        Hp = Math.Min(MaxHp, Hp + r.Amount * EliteRules.VampiricFraction);
+        _vampFlash = 0.3f;
     }
 
     /// <summary>A blow at the NPC this creature hunts.</summary>
@@ -821,7 +897,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
                 if (victims.Count > 0)
                 {
                     var slam = Attack with { MinDamage = Attack.MinDamage * 1.4f, MaxDamage = Attack.MaxDamage * 1.4f, OnHit = Attack.OnHit.Append(new StatusApplication(StatusKind.Stun, 1.2f, 0)).ToArray() };
-                    foreach (var v in victims) v.ReceiveAttack(Stats, slam, $"{DisplayName}'s slam", this);
+                    foreach (var v in victims) OnDealtDamage(v.ReceiveAttack(Stats, slam, $"{DisplayName}'s slam", this));
                 }
                 else EventBus.Instance.Log("The ground shakes, but no one is in reach.");
                 break;
@@ -830,7 +906,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
                 break;
             case Signature.Charge:
                 var charge = Attack with { MinDamage = Attack.MinDamage * 2f, MaxDamage = Attack.MaxDamage * 2f, OnHit = Attack.OnHit.Append(new StatusApplication(StatusKind.Stun, 1f, 0)).ToArray() };
-                if (HasTarget) Target!.ReceiveAttack(Stats, charge, $"{DisplayName}'s charge", this);
+                if (HasTarget) OnDealtDamage(Target!.ReceiveAttack(Stats, charge, $"{DisplayName}'s charge", this));
                 break;
             case Signature.Summon:
                 var builder = Main.Instance!.Builder;
@@ -853,8 +929,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
         if (!IsAlive) return DamageResult.Miss(attack.Type);
+        _lastHitKind = attack.Kind;
         var result = HitResolver.Resolve(attackerStats, Stats, Effects, attack, ctx, rng);
         if (!result.Hit) return result;
+        if (Profile.Has(EliteAffix.Juggernaut)) Effects.Remove(StatusKind.Stun); // nothing stuns a Juggernaut
         Hp = Math.Max(0, Hp - result.Amount);
         _flash = 0.25f;
         SinceHurt = 0f;
@@ -903,6 +981,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void ApplyStatus(StatusApplication status)
     {
         if (!IsAlive) return;
+        if (status.Kind == StatusKind.Stun && Profile.Has(EliteAffix.Juggernaut)) return;
         Effects.Apply(status);
     }
 
@@ -918,11 +997,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     }
 
     /// <summary>The noise of one enemy joining a fight rouses anything unaware nearby, so rooms answer as a whole.</summary>
-    public void WakeNearby()
+    public void WakeNearby(float radius = NoiseRadius)
     {
         if (GetParent() is not { } parent) return;
         foreach (var other in parent.GetChildren().OfType<Enemy>())
-            if (other != this && other.IsAlive && other.State.Unaware && other.GlobalPosition.DistanceTo(GlobalPosition) < NoiseRadius
+            if (other != this && other.IsAlive && other.State.Unaware && other.GlobalPosition.DistanceTo(GlobalPosition) < radius
                 && Main.Instance?.Builder.IsUnderAt(other.GlobalPosition) == Main.Instance?.Builder.IsUnderAt(GlobalPosition))
                 other.ChangeState(new ChaseState());
     }
@@ -956,7 +1035,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _flash = 0.25f;
         SinceHurt = 0f;
         EventBus.Instance.RaiseEnemyHurt(this, amount, HitFlavor.Hit, -1);
-        if (outcome.StunSeconds > 0) Effects.Apply(new StatusApplication(StatusKind.Stun, outcome.StunSeconds, 0));
+        if (outcome.StunSeconds > 0 && !Profile.Has(EliteAffix.Juggernaut)) Effects.Apply(new StatusApplication(StatusKind.Stun, outcome.StunSeconds, 0));
         PlayAnim("HitReact", force: true);
         EventBus.Instance.Log($"{sourceName} staggers {DisplayName} for {amount:0}.");
     }
@@ -986,6 +1065,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         Group?.OnMemberDied(this);
         EventBus.Instance.RaiseEnemyDied(this);
         if (IsElite) EventBus.Instance.RaiseEliteSlain(this);
+        if (IsElite && !Net.NetSession.IsClient) DeathEffects(); // before the hazard return: a Press kill still bursts or splits
         if (_environmentalKill) { if (IsBoss) Main.Instance?.OnBossDefeated(Floor); return; } // the dungeon's kills leave no loot
 
         var cat = Game.Instance.Catalog;
@@ -1006,6 +1086,29 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (arrows > 0 && cat.TryBase("item.arrow", out _)) Drop(cat.Create("item.arrow", arrows), new Vector3(0.6f, 0, -0.3f));
 
         if (IsBoss) Main.Instance?.OnBossDefeated(Floor);
+    }
+
+    /// <summary>Volatile bursts (fire in 4 m, 60% of its hit, Burn); Splitting leaves two of the tier's horde brutes. Server only.</summary>
+    private void DeathEffects()
+    {
+        if (Profile.Has(EliteAffix.Volatile) && Party != null)
+        {
+            EventBus.Instance.Log($"{DisplayName} bursts!");
+            var burst = Attack with
+            {
+                MinDamage = Attack.MinDamage * EliteRules.VolatileFraction, MaxDamage = Attack.MaxDamage * EliteRules.VolatileFraction, Type = DamageType.Fire, Kind = AttackKind.Spell,
+                OnHit = new[] { new StatusApplication(StatusKind.Burn, EliteRules.VolatileBurnSeconds, Math.Max(1f, Attack.MaxDamage * 0.15f)) },
+            };
+            foreach (var v in Party.AdventurersWithin(GlobalPosition, EliteRules.VolatileRadius).ToList()) v.ReceiveAttack(Stats, burst, $"{DisplayName}'s death");
+            HitFx.SpellBurst(GetParent(), GlobalPosition + Vector3.Up * 0.8f, new Color(1f, 0.5f, 0.1f));
+            Dungeon.Props.Tremor.ShakeOnly(0.05f, 0.4f);
+        }
+        if (Profile.Has(EliteAffix.Splitting) && Main.Instance?.Builder is { } builder && EliteRules.HordeBruteFor(builder.Roster, TierRules.TierIndex(Floor)) is { } brute)
+        {
+            EventBus.Instance.Log($"{DisplayName} splits!");
+            for (var i = 0; i < EliteRules.SplitCount; i++)
+                if (builder.SpawnEnemy(brute, GlobalPosition + (i == 0 ? Vector3.Left : Vector3.Right) * 0.8f, Floor) is { } b) { b.SetSwarmDetail(); b.ForceAggro(); }
+        }
     }
 
     private void Drop(ItemInstance item, Vector3 offset)

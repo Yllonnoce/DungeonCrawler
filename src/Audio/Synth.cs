@@ -6,7 +6,7 @@ namespace DungeonCrawler.Audio;
 public static class Synth
 {
     private const int Rate = 22050;
-    private static AudioStreamWav? _rumble, _thud;
+    private static AudioStreamWav? _rumble, _thud, _horn;
     private static readonly Random Rng = new(); // sound only, nothing a peer must agree on: unseeded so no two sessions sound alike
 
     /// <summary>Stone giving way: a low rolling rumble with grit on top, three seconds, fading out.</summary>
@@ -47,6 +47,28 @@ public static class Synth
             samples[i] = knock * 0.9f + lp * MathF.Exp(-t * 40f) * 0.6f;
         }
         return _thud = Wav(samples, 0.8f);
+    }
+
+    /// <summary>An Alarmist's horn: a 0.9 s two-note brass swell, square-ish, 220 then 330 Hz, 60 ms attack.</summary>
+    public static AudioStreamWav Horn()
+    {
+        if (_horn != null) return _horn;
+        var n = (int)(Rate * 0.9f);
+        var samples = new float[n];
+        var phase = 0f;
+        for (var i = 0; i < n; i++)
+        {
+            var t = (float)i / Rate;
+            var hz = t < 0.4f ? 220f : 330f;
+            phase += hz / Rate;
+            var sq = MathF.Tanh(MathF.Sin(phase * 2f * MathF.PI) * 3f); // rounded square: brass, not buzzer
+            var third = MathF.Sin(phase * 3f * 2f * MathF.PI) * 0.25f;
+            var attack = Math.Min(1f, t / 0.06f);
+            var release = t > 0.75f ? Math.Max(0f, 1f - (t - 0.75f) / 0.15f) : 1f;
+            var dip = t > 0.37f && t < 0.43f ? 0.6f : 1f; // the breath between the notes
+            samples[i] = (sq + third) * attack * release * dip * 0.6f;
+        }
+        return _horn = Wav(samples, 0.7f);
     }
 
     public static AudioStreamWav Wav(float[] samples, float gain, bool loop = false)

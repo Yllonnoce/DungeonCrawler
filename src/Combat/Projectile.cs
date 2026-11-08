@@ -90,6 +90,14 @@ public partial class Projectile : Area3D
         // The area's overlap test never reports the GridMap that the dungeon's walls are built from, and at 40 m/s a bolt
         // can cross a thin body between two steps, so every step is swept with a ray first: whatever it finds is what the
         // bolt touched, at the point it touched it.
+        if (!Cosmetic && Enemy.ShroudBlocks(from, to, Shooter)) // a Shrouded elite's dome: the bolt fizzles at its edge (a client copy stops where the server says)
+        {
+            _spent = true;
+            Fx.HitFx.SpellBurst(GetParent(), to, Color);
+            if (IsArrow && Party != null) Party.SpawnArrowPickup(from, 0.4f);
+            QueueFree();
+            return;
+        }
         if (Sweep(from, to)) return;
         GlobalPosition = to;
         Lifetime -= dt;
@@ -127,7 +135,7 @@ public partial class Projectile : Area3D
             {
                 if (adv.Dodging) return; // the bolt is not spent: it flies on through the dodge
                 _spent = true;
-                if (Shooter != null && IsInstanceValid(Shooter)) adv.ReceiveAttack(Shooter.Stats, Attack, Shooter.DisplayName, Shooter);
+                if (Shooter != null && IsInstanceValid(Shooter)) { var r = adv.ReceiveAttack(Shooter.Stats, Attack, Shooter.DisplayName, Shooter); Shooter.OnDealtDamage(r); }
                 Burst();
                 QueueFree();
             }
