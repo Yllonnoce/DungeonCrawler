@@ -338,7 +338,7 @@ public partial class Hud : Control
             GetViewport().SetInputAsHandled();
             return;
         }
-        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible) return; // the dialogue / stair question / shop owns input while open
+        if (_dialogue.Visible || _stairsPrompt.Visible || _shop.Visible || _shrine.Visible) return; // the dialogue / stair question / shop / shrine card owns input while open
         if (@event.IsActionPressed("quest_log"))
         {
             ToggleQuestLog();
@@ -496,6 +496,7 @@ public partial class Hud : Control
     private void OnFloorChanged(int floor, int delta)
     {
         if (_shop.Visible && floor != _shop.Floor) _shop.Close(); // the merchant's wares are the floor's
+        if (_shrine.Visible) _shrine.Close("gone"); // the altar stayed on the floor we left
         var tier = Main.Instance?.Builder.CurrentTier?.DisplayName ?? "";
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;

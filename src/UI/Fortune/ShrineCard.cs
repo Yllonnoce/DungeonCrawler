@@ -66,7 +66,11 @@ public partial class ShrineCard : PanelContainer
             var crown = def.Crown ? " (crown)" : "";
             Add($"{i + 1}. {def.Name}{crown} — {def.Text}", i);
         }
-        if (card.LiftCurse is { } lift && Curses.TryGet(lift, out var curse)) Add($"L. Lift {curse.Name} ({card.LiftPrice} gold)", -2);
+        if (card.LiftCurse is { } lift && Curses.TryGet(lift, out var curse))
+        {
+            Add($"L. Lift {curse.Name} ({card.LiftPrice} gold)", -2);
+            if (Main.Instance is { } main && main.InGame && main.Party.Gold < card.LiftPrice) _buttons[^1].Disabled = true; // the purse is short: the row shows the price and takes no pick
+        }
         Add($"Esc. Walk away (+{card.SkipGold} gold)", -1);
         Visible = true;
         EventBus.Instance.PlaySfx("ui_open");
@@ -90,6 +94,7 @@ public partial class ShrineCard : PanelContainer
             var o when o.StartsWith("boon:") && Boons.TryGet(o[5..], out var b) => $"The altar gives: {b.Name}.",
             var o when o.StartsWith("lift:") && Curses.TryGet(o[5..], out var c) => $"The altar lifts {c.Name}.",
             "skip" => "You leave the altar alone.",
+            "gone" => "The altar is gone.",
             _ => outcome,
         };
         EventBus.Instance.Log(text);
@@ -99,19 +104,21 @@ public partial class ShrineCard : PanelContainer
         Closed?.Invoke();
     }
 
-    /// <summary>0..3 a boon, -1 walk away, -2 lift. One pick per player until the card closes.</summary>
-    public void Pick(int choice)
+    /// <summary>0..3 a boon, -1 walk away, -2 lift. One pick per player until the card closes. False when the pick was not taken.</summary>
+    public bool Pick(int choice)
     {
-        if (!Visible || _picked || _card == null) return;
-        if (choice >= 0 && choice >= _card.Boons.Count) return;
-        if (choice == -2 && _card.LiftCurse == null) return;
+        if (!Visible || _picked || _card == null) return false;
+        if (choice >= 0 && choice >= _card.Boons.Count) return false;
+        if (choice == -2 && (_card.LiftCurse == null || _buttons.Any(b => b.Disabled && b.Text.StartsWith("L.")))) return false;
         _picked = true;
         foreach (var b in _buttons) b.Disabled = true;
         _outcome.Text = "The altar considers..."; _outcome.Visible = true;
-        if (NetSession.IsClient) { NetSession.Instance.Send(new ShrineChoiceIntent(choice)); return; }
+        if (NetSession.IsClient) { NetSession.Instance.Send(new ShrineChoiceIntent(choice)); return true; } // the server answers: ShrineClosedEvt, or the card again when it refused
         var party = Main.Instance.Party;
-        FortuneDirector.Instance?.ResolveShrine(party.FocusedIndex, choice);
-        if (Visible && _card != null) { _picked = false; foreach (var b in _buttons) b.Disabled = false; } // a refused lift: the card stays open for another pick
+        if (FortuneDirector.Instance is not { } fortune || fortune.PendingShrine == null) { Close("gone"); return true; } // nothing is waiting on this card (the floor changed under it)
+        fortune.ResolveShrine(party.FocusedIndex, choice);
+        if (Visible && _card != null) Open(_card); // a refused lift: the card comes back alive for another pick
+        return true;
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -126,7 +133,6 @@ public partial class ShrineCard : PanelContainer
             _ => int.MinValue,
         };
         if (choice == int.MinValue) return;
-        Pick(choice);
-        GetViewport().SetInputAsHandled();
+        if (Pick(choice)) GetViewport().SetInputAsHandled();
     }
 }

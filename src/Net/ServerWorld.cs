@@ -445,7 +445,9 @@ public partial class ServerWorld : Node
                 _bagDirty = true;
                 break;
             case ShrineChoiceIntent sc:
-                if (slot.Ready) FortuneDirector.Instance?.ResolveShrine(slot.MemberIndex, sc.Choice); // the first pick wins; the director closes the card everywhere
+                if (!slot.Ready || FortuneDirector.Instance is not { } fortune) break;
+                // the first pick wins and the director closes the card everywhere; a refused pick (a lift the purse cannot pay) hands the asker its card back so its rows come alive again
+                if (!fortune.ResolveShrine(slot.MemberIndex, sc.Choice)) { if (fortune.PendingShrine is { } pending) SendTo(slot.PeerId, pending); else SendTo(slot.PeerId, new ShrineClosedEvt("gone")); }
                 break;
             case ShopBuybackIntent bb:
                 if (!slot.Ready || !CanTrade(slot)) break;

@@ -1,5 +1,6 @@
 using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
+using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Save;
 
 namespace DungeonCrawler.Adventure.Fortune;
@@ -36,6 +37,15 @@ public static class FortuneRules
     public const string HunterName = "the Hunter";
     public const string BoundPrompt = "Bound chest: open and be Hunted?";
     public const int HunterActor = 7999;
+
+    /// <summary>Where the hunter spawns: the centre of the nearest room other than the chest's that is open to it (never a sealed secret room, a vault or the safe room); null on a one-room floor.</summary>
+    public static Room? HuntRoom(FloorLayout layout, GridPos chestCell)
+    {
+        var own = layout.RoomAt(chestCell);
+        var safe = layout.SafeRoom >= 0 && layout.SafeRoom < layout.Rooms.Count ? layout.Rooms[layout.SafeRoom] : null;
+        return layout.Rooms.Where(r => r != own && r != safe && layout.Vaults.All(v => v.Room != r) && layout.SecretRooms.All(s => s.Room != r))
+            .OrderBy(r => FloorGenerator.Dist2(r.Center, chestCell)).ThenBy(r => layout.Rooms.IndexOf(r)).FirstOrDefault() ?? own;
+    }
 
     /// <summary>A boon or a curse the party holds.</summary>
     public static bool Has(AdventureDto? adv, string id) => adv != null && (adv.Boons.Contains(id) || adv.Curses.Contains(id));

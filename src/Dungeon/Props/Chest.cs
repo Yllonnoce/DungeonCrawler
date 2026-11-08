@@ -169,7 +169,7 @@ public partial class Chest : Area3D, IInteractable
         if (Locked)
         {
             if (Jammed && party.Bag.Count("item.iron_key") == 0) { EventBus.Instance.Log("The lock is jammed. Only a key will turn it."); return; }
-            if (!party.TryUnlock("the chest", out var failed))
+            if (!party.TryUnlock("the chest", out var failed, GlobalPosition))
             {
                 if (failed && ++LockFails >= LockRules.JamAfterFails && !Jammed) Jam();
                 return;

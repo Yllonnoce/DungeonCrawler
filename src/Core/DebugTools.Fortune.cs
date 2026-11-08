@@ -27,7 +27,7 @@ public partial class DebugTools
     private readonly List<string> _ftLog = new();
     private bool _ftSubscribed;
     private int _ftMimicSprung, _ftSecretFound, _ftGambled, _ftBroke;
-    private int _ftMimicIndex = -1, _ftMimicFloor = -1, _ftBoundFloor = -1, _ftLockIndex = -1, _ftSecretFloor = -1, _ftSecretIndex = -1;
+    private int _ftMimicIndex = -1, _ftMimicFloor = -1, _ftBoundFloor = -1, _ftLockIndex = -1, _ftSecretFloor = -1, _ftSecretIndex = -1, _ftMineFloor = -1, _ftAmbusherIndex = -1;
     private int _ftEnemiesBefore;
     private float _ftArmorBase, _ftPerceptionBase, _ftArmorBeforeSave;
     private int _ftGoldBefore;
@@ -159,7 +159,7 @@ public partial class DebugTools
                 GD.Print($"[fortune] floor 4 blood price: {hp}; card={main.Hud.ShrineOpen}");
                 foreach (var m in party.Members.Where(m => m.IsAlive))
                     if (Math.Abs(m.Hp - m.Stats[Stat.MaxHp] * 0.75f) > 1f) Fail($"{m.Name} has {m.Hp:0.#} of {m.Stats[Stat.MaxHp]:0.#} after the blood price, want three quarters");
-                card.Pick(-1);
+                // the card is left open across the floor change: the next floor must find it closed and nothing pending (a wipe mid-card rebuilds the floor the same way)
                 // 4. a curse laid directly, then lifted at the next altar (any curse an earlier altar laid is cleared first: the lift row names the first one held)
                 if (adv.Curses.Count > 0) { GD.Print($"[fortune] clearing [{string.Join(",", adv.Curses)}] so Dim is the one curse"); foreach (var c in adv.Curses.ToList()) FortuneRules.Lift(adv, c); FortuneDirector.Instance!.Refresh(); _ftPerceptionBase = party.Members[0].Stats[Stat.Perception]; }
                 FortuneDirector.Instance!.TakeCurse("dim", 0);
@@ -173,6 +173,9 @@ public partial class DebugTools
             case 4 when floor == 5:
             {
                 Quiet();
+                GD.Print($"[fortune] floor 5 with floor 4's card left open: card open={main.Hud.ShrineOpen} pending={(FortuneDirector.Instance!.PendingShrine != null)}");
+                if (main.Hud.ShrineOpen) { Fail("the card stayed open across a floor change (a soft-lock: input stays locked)"); card.Close("gone"); }
+                if (FortuneDirector.Instance.PendingShrine != null) Fail("a card is still pending after a floor change");
                 var shrine = ShrineNode();
                 if (shrine == null) { Fail("floor 5 has no shrine"); Next(); return; }
                 party.SetGold(0);
@@ -486,6 +489,10 @@ public partial class DebugTools
                 _ftDipBefore = party.LuckyDipBoughtOnFloor.OrderBy(i => i).ToList();
                 _ftShrineUsedBefore = ShrineNode()?.Used ?? false;
                 _ftArmorBeforeSave = party.Members[0].Stats[Stat.Armor];
+                if (!adv.Boons.Contains("ferryman")) FortuneDirector.Instance!.TakeBoon("ferryman", 0);
+                FortuneDirector.Instance!.OnFloorStart();
+                GD.Print($"[fortune] before the save: death wards {party.Members[0].DeathWards}");
+                _ftBoonsBefore = adv.Boons.ToList();
                 main.SaveGame("fortune");
                 Next(0.3);
                 break;
@@ -497,6 +504,7 @@ public partial class DebugTools
             case 26:
             {
                 var adv2 = Game.Instance.Adventure;
+                if (party.Members[0].DeathWards != 1) Fail($"Pennies for the Ferryman's ward is {party.Members[0].DeathWards} after the load, want 1");
                 var shrine = ShrineNode();
                 GD.Print($"[fortune] round trip: boons [{string.Join(",", adv2.Boons)}] curses [{string.Join(",", adv2.Curses)}] shrine used={shrine?.Used} (was {_ftShrineUsedBefore}) dip [{string.Join(",", party.LuckyDipBoughtOnFloor.OrderBy(i => i))}] armour {party.Members[0].Stats[Stat.Armor]:0.##} (was {_ftArmorBeforeSave:0.##}, base {_ftArmorBase:0.##})");
                 if (!adv2.Boons.SequenceEqual(_ftBoonsBefore)) Fail("the boons changed over the save");
@@ -505,6 +513,28 @@ public partial class DebugTools
                 if (!party.LuckyDipBoughtOnFloor.OrderBy(i => i).SequenceEqual(_ftDipBefore)) Fail("the bought bundles changed over the save");
                 if (Math.Abs(party.Members[0].Stats[Stat.Armor] - _ftArmorBeforeSave) > 0.01f) Fail("the boon's armour did not survive the load (the director did not refresh)");
                 if (party.Members[0].Stats[Stat.Armor] < _ftArmorBase + 12f - 0.01f) Fail("Thick Hide's +12 is gone after the load");
+                // 12. a mine's drift ambusher stays dead once its corpse is gone
+                for (var f = 3; f <= 12 && _ftMineFloor < 0; f++) if (Preview(f) is { Kind: LayoutKind.Mine } l && l.Caches.Any(c => c.Kind == CacheKind.Ambusher)) _ftMineFloor = f;
+                if (_ftMineFloor < 0) { GD.Print("[fortune] no mine with an ambusher cache in 3..12"); Finish(); return; }
+                Jump(_ftMineFloor);
+                break;
+            }
+            case 27 when floor == _ftMineFloor:
+            {
+                var ambusher = root.GetChildren().OfType<Enemy>().FirstOrDefault(e => e.SpawnIndex >= DungeonBuilder.CacheAmbusherBase);
+                GD.Print($"[fortune] mine floor {floor}: {layout.Drifts.Count} drifts, caches [{string.Join(",", layout.Caches.Select(c => c.Kind))}], ambusher {(ambusher != null ? $"{ambusher.Profile.Id} #{ambusher.SpawnIndex} unaware={ambusher.IsUnaware}" : "missing")}");
+                if (ambusher == null) { Fail("no ambusher stands at a drift's end"); Finish(); return; }
+                _ftAmbusherIndex = ambusher.SpawnIndex;
+                ambusher.Kill();
+                Next(6.0); // past the corpse timer: the node is freed
+                break;
+            }
+            case 28:
+            {
+                var still = root.GetChildren().OfType<Enemy>().Any(e => e.SpawnIndex == _ftAmbusherIndex);
+                var state = FloorStateCapture.Capture(root, layout, b.Contents, Game.Instance.ExplorationFor(floor));
+                GD.Print($"[fortune] six seconds later: corpse present={still}, dead list has #{_ftAmbusherIndex}={state.DeadEnemies.Contains(_ftAmbusherIndex)}");
+                if (!state.DeadEnemies.Contains(_ftAmbusherIndex)) Fail("a killed drift ambusher is not saved as dead once its corpse is freed (it would come back)");
                 Finish();
                 break;
             }

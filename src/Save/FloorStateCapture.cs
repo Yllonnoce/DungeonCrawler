@@ -76,6 +76,13 @@ public static class FloorStateCapture
         // enemies already freed (corpse timer ran out) are dead too
         var enemyCount = contents?.EnemyCount ?? layout.TotalEnemySpawns;
         for (var i = 0; i < enemyCount; i++) if (!seenEnemies.Contains(i) && !dto.DeadEnemies.Contains(i)) dto.DeadEnemies.Add(i);
+        // the drift ambushers (fortune) stand at CacheAmbusherBase + cache index: one whose corpse is gone is dead too
+        for (var i = 0; i < layout.Caches.Count; i++)
+        {
+            if (layout.Caches[i].Kind != CacheKind.Ambusher) continue;
+            var index = DungeonBuilder.CacheAmbusherBase + i;
+            if (!seenEnemies.Contains(index) && !dto.DeadEnemies.Contains(index)) dto.DeadEnemies.Add(index);
+        }
         // barrels that no longer exist were broken
         var barrels = floorRoot.GetChildren().OfType<Breakable>().Select(b => b.SpawnIndex).ToHashSet();
         for (var i = 0; i < layout.BreakableSpawns.Count; i++) if (!barrels.Contains(i)) dto.BrokenBarrels.Add(i);

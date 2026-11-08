@@ -31,7 +31,7 @@ public partial class FortuneDirector : Node
     {
         Instance = this;
         var bus = EventBus.Instance;
-        bus.FloorBuilt += (_, _, _) => { _pendingShrine = null; Refresh(); OnFloorStart(); };
+        bus.FloorBuilt += (_, _, _) => { CloseShrine("gone"); Refresh(); OnFloorStart(); };
         bus.RosterChanged += Refresh;
         bus.BoonTaken += _ => Refresh();
         bus.CurseTaken += _ => Refresh();
@@ -92,8 +92,8 @@ public partial class FortuneDirector : Node
     public override void _Process(double delta)
     {
         if (Main.Instance is not { } main || !main.InGame) return;
-        // a load (or a join) rebuilds the members without a FloorBuilt: the new states need the held modifiers too
-        if (!ReferenceEquals(_refreshedMembers, main.Party.Members)) { _refreshedMembers = main.Party.Members; Refresh(); }
+        // a load (or a join) rebuilds the members without a FloorBuilt: the new states need the held modifiers and the floor's wards too, and no card is pending any more
+        if (!ReferenceEquals(_refreshedMembers, main.Party.Members)) { _refreshedMembers = main.Party.Members; CloseShrine("gone"); Refresh(); OnFloorStart(); }
         if (!Authority || main.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root) return;
         _secretTick -= delta;
         if (_secretTick > 0) return;
@@ -135,8 +135,7 @@ public partial class FortuneDirector : Node
         }
         HuntUntil = Game.Instance.PlaySeconds + FortuneRules.HuntedSeconds;
         var chestCell = DungeonBuilder.WorldToCell(at);
-        var own = layout.RoomAt(chestCell);
-        var room = layout.Rooms.Where(r => r != own && layout.Vaults.All(v => v.Room != r) && !layout.IsInSafeRoom(r.Center)).OrderBy(r => Dungeon.Generation.FloorGenerator.Dist2(r.Center, chestCell)).FirstOrDefault() ?? own;
+        var room = FortuneRules.HuntRoom(layout, chestCell);
         var pool = builder.RegularEnemies(floor);
         if (room != null && pool.Count > 0)
         {
@@ -154,6 +153,15 @@ public partial class FortuneDirector : Node
     private int _pendingFloor;
     /// <summary>The card the authority is waiting on; null when none is open.</summary>
     public ShrineCardMsg? PendingShrine => _pendingShrine;
+
+    /// <summary>A floor rebuilt or a session replaced under an open card: nothing stays pending, and every screen closes it (a client learns by ShrineClosedEvt).</summary>
+    private void CloseShrine(string outcome)
+    {
+        var hadCard = _pendingShrine != null;
+        _pendingShrine = null;
+        if (hadCard && NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new ShrineClosedEvt(outcome));
+        if (Main.Instance is { } main && main.InGame && main.Hud is { } hud && hud.ShrineOpen) hud.Shrine.Close(outcome);
+    }
 
     /// <summary>Run-structure's Fine Print clause (two offers) read without a compile-time dependency: the field may not exist yet.</summary>
     private static bool FinePrint(AdventureDto adv)
@@ -201,10 +209,10 @@ public partial class FortuneDirector : Node
         else Main.Instance.Hud.Shrine.Open(card);
     }
 
-    /// <summary>The pick (the first one, in co-op): a boon, walking away for the skip gold, or lifting a curse for its price. Closes the card everywhere.</summary>
-    public void ResolveShrine(int member, int choice)
+    /// <summary>The pick (the first one, in co-op): a boon, walking away for the skip gold, or lifting a curse for its price. Closes the card everywhere. False when nothing was resolved (no card pending, or a lift the purse cannot pay: the card stays open).</summary>
+    public bool ResolveShrine(int member, int choice)
     {
-        if (!Authority || _pendingShrine is not { } card || Party is not { } party) return;
+        if (!Authority || _pendingShrine is not { } card || Party is not { } party) return false;
         var floor = _pendingFloor;
         string outcome;
         if (choice >= 0 && choice < card.Boons.Count) { TakeBoon(card.Boons[choice], member); outcome = "boon:" + card.Boons[choice]; }
@@ -216,10 +224,10 @@ public partial class FortuneDirector : Node
         }
         else if (choice == -2 && card.LiftCurse is { } lift)
         {
-            if (!LiftCurse(lift, member, card.LiftPrice)) return; // short: the card stays open
+            if (!LiftCurse(lift, member, card.LiftPrice)) return false; // short: the card stays open
             outcome = "lift:" + lift;
         }
-        else return;
+        else return false;
         _pendingShrine = null;
         if (NetSession.IsServer)
         {
@@ -227,6 +235,7 @@ public partial class FortuneDirector : Node
             NetSession.Instance.Server?.Broadcast(new FortuneSync(Adv.Boons.ToList(), Adv.Curses.ToList()));
         }
         else Main.Instance.Hud.Shrine.Close(outcome);
+        return true;
     }
 
     /// <summary>Per-floor wards: Pennies for the Ferryman and Second Skin are refilled on every floor build.</summary>

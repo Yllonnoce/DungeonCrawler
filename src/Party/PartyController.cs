@@ -594,9 +594,11 @@ public partial class PartyController : Node3D
     }
 
     public bool TryUnlock(string what) => TryUnlock(what, out _);
+    public bool TryUnlock(string what, Vector3 noiseAt) => TryUnlock(what, out _, noiseAt);
 
     /// <summary>A key opens it at once. Else the best hands pick: a failure is a noise that wakes the unaware within <see cref="Adventure.Fortune.LockRules.NoiseRadius"/> m; <paramref name="failed"/> is true only for a real failed attempt (not a cooldown refusal), so the prop can count toward a jam.</summary>
-    public bool TryUnlock(string what, out bool failed)
+    /// <param name="noiseAt">Where the lock is; the noise is measured from there (a dedicated server has no local body at it). The lead's position when null.</param>
+    public bool TryUnlock(string what, out bool failed, Vector3? noiseAt = null)
     {
         failed = false;
         if (Bag.Count("item.iron_key") > 0)
@@ -613,9 +615,9 @@ public partial class PartyController : Node3D
         _lockpickCooldown = Adventure.Fortune.LockRules.RetrySeconds;
         EventBus.Instance.PlaySfx("lock_fail");
         EventBus.Instance.Log($"{m.Name} fumbles the lock ({chance:P0} chance). The noise carries.");
-        if (Main.Instance?.Builder.FloorRoot is { } root && Lead is { } lead)
+        if (Main.Instance?.Builder.FloorRoot is { } root && (noiseAt ?? (HasBodies ? Lead.GlobalPosition : (Vector3?)null)) is { } at)
             foreach (var e in root.GetChildren().OfType<Enemy>())
-                if (e.IsAlive && e.IsUnaware && e.GlobalPosition.DistanceTo(lead.GlobalPosition) <= Adventure.Fortune.LockRules.NoiseRadius) e.ForceAggro();
+                if (e.IsAlive && e.IsUnaware && e.GlobalPosition.DistanceTo(at) <= Adventure.Fortune.LockRules.NoiseRadius) e.ForceAggro();
         return false;
     }
 
