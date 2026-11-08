@@ -56,8 +56,8 @@ public partial class NetTestFlow : Node
             var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
             var want = resumed ? new[] { "rejoin:", "ready:", "left:" }
                 : Game.Instance.CurrentFloor == 0 ? new[] { "join:", "ready:", "node:deal", "left:" } // --floor=0: the client joins the tavern, strikes the deal and leaves
-                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "hazard:", "shop", "cheer", "left:", "rejoin:" }
-                : new[] { "join:", "ready:", "moved:", "chat", "kill", "floor:2", "shop", "cheer", "left:", "rejoin:" };
+                : pressOnFloor ? new[] { "join:", "ready:", "moved:", "chat", "ping", "kill", "stairs:immediate", "floor:2", "hazard:", "shop", "cheer", "left:", "rejoin:" }
+                : new[] { "join:", "ready:", "moved:", "chat", "ping", "kill", "stairs:immediate", "floor:2", "shop", "cheer", "left:", "rejoin:" };
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -158,9 +158,26 @@ public partial class NetTestFlow : Node
                 else if (_clock > 15) Finish("[net]", false, $"no echo (moved {moved:0.0} m, snapshots {client.SnapshotsSeen}, echo {client.Trace.Contains("echo")})");
                 return;
             case 3:
-                if (client.Trace.Contains("chat")) { _clock = 0; _step = 4; }
+                if (client.Trace.Contains("chat"))
+                {
+                    // a ping: where this body looks (floor 1's walls and floor are within the aim ray), up to the server and back to every screen with our name
+                    var pinged = main.Hud.Ping();
+                    if (!pinged) { Finish("[net]", false, "Hud.Ping() refused (down, cooling down, or looking at nothing)"); return; }
+                    _clock = 0; _step = 30;
+                }
                 else if (_clock > 10) Finish("[net]", false, "chat never came back");
                 return;
+            case 30:
+            {
+                var mark = UI.Hud.PingMarkers.Instance?.Board.Active.FirstOrDefault(m => m.Name == net.JoinName);
+                if (client.Trace.Contains("ping") && mark is { } m)
+                {
+                    GD.Print($"[net] ping relayed: \"{m.Name}\" at {m.X:0.0},{m.Y:0.0},{m.Z:0.0}");
+                    _clock = 0; _step = 4;
+                }
+                else if (_clock > 6) Finish("[net]", false, $"the ping never came back (trace ping {client.Trace.Contains("ping")}, marks {UI.Hud.PingMarkers.Instance?.Board.Active.Count ?? -1})");
+                return;
+            }
             case 4:
             {
                 // fight: stand in front of the nearest living enemy and swing until the server reports the kill

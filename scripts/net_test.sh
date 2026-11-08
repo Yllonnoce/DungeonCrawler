@@ -53,6 +53,9 @@ fi
 if ! grep -q "\[net\] safe room: HUD shows" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's HUD never showed the safe room)"; exit 1; fi
 # the merchant in that safe room: a purchase and a sale through the server, each answered with a shop sync
 if ! grep -q "\[net\] bought and sold at the merchant" "$TMP/client.log"; then echo "NET TEST: FAIL (no purchase and sale at the merchant)"; exit 1; fi
+# co-op: the client's ping came back through the server with its name, and one player online took the stairs at once (no ready-check)
+if ! grep -q "\[net\] ping relayed" "$TMP/client.log"; then echo "NET TEST: FAIL (the ping never came back to the client)"; exit 1; fi
+if [ "$MODE" = direct ] && ! grep -q "stairs:immediate" "$TMP/server.log"; then echo "NET TEST: FAIL (one player online did not take the stairs at once)"; exit 1; fi
 
 if [ "$MODE" = direct ]; then
   # second pass: the server restarts on its own save; the same name gets its character, bag and floor back
