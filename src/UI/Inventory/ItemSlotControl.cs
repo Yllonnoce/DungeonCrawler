@@ -15,8 +15,14 @@ public partial class ItemSlotControl : Control
     public bool Highlight { get; set; }
     /// <summary>Set on the shop's cells: clicks and drags go to the shop instead of <see cref="Screen"/>, and the price caption shows over the item.</summary>
     public UI.Shop.ShopScreen? Shop { get; set; }
-    /// <summary>A shop cell on the merchant's side (else the bag's side); <see cref="SlotRef.BagIndex"/> is the stock or bag index.</summary>
-    public bool StockSide { get; set; }
+    /// <summary>Which part of the shop this cell belongs to; <see cref="SlotRef.BagIndex"/> is the stock, ledger or bag index.</summary>
+    public UI.Shop.ShopSection Section { get; set; }
+    /// <summary>A shop cell on the merchant's side (wares or buyback), else the bag's side.</summary>
+    public bool StockSide => Section != UI.Shop.ShopSection.Bag;
+    /// <summary>Draws a green arrow: the item beats what the focused member wears there.</summary>
+    public bool Upgrade { get; set; }
+    /// <summary>Two-letter class glyphs, lit for the members who can use the item.</summary>
+    public IReadOnlyList<(string Glyph, bool Usable)> Glyphs { get; set; } = Array.Empty<(string, bool)>();
     private bool _armed; // a left press on a shop cell that has not turned into a drag
 
     public override void _Ready()
@@ -55,6 +61,13 @@ public partial class ItemSlotControl : Control
                 DrawString(font, new Vector2(1, 15), count, HorizontalAlignment.Right, Size.X - 3, 12, Colors.Black);
                 DrawString(font, new Vector2(0, 14), count, HorizontalAlignment.Right, Size.X - 3, 12, Colors.White);
             }
+            if (Upgrade) DrawString(font, new Vector2(0, 13), "▲", HorizontalAlignment.Right, Size.X - 3, 12, new Color(0.4f, 1f, 0.45f));
+            var x = 3f;
+            foreach (var (glyph, usable) in Glyphs)
+            {
+                DrawString(font, new Vector2(x, 10), glyph, HorizontalAlignment.Left, -1, 9, usable ? new Color(1f, 1f, 1f, 0.9f) : new Color(0.6f, 0.6f, 0.65f, 0.45f));
+                x += font.GetStringSize(glyph, HorizontalAlignment.Left, -1, 9).X + 2f;
+            }
         }
         if (Item != null && Shop != null && Caption != "")
         {
@@ -81,7 +94,7 @@ public partial class ItemSlotControl : Control
         var preview = new Label { Text = Item.DisplayName };
         preview.AddThemeColorOverride("font_color", new Color(RarityInfo.ColorHex(Item.Rarity)));
         SetDragPreview(preview);
-        if (Shop != null) return new Godot.Collections.Dictionary { ["shop"] = StockSide, ["i"] = Ref.BagIndex };
+        if (Shop != null) return new Godot.Collections.Dictionary { ["shop"] = (int)Section, ["i"] = Ref.BagIndex };
         return Ref.ToDict();
     }
 
@@ -89,14 +102,14 @@ public partial class ItemSlotControl : Control
     {
         if (data.VariantType != Variant.Type.Dictionary) return false;
         var d = data.AsGodotDictionary();
-        if (Shop != null) return d.ContainsKey("shop") && (bool)d["shop"] != StockSide; // stock onto the bag buys, bag onto the stock sells
+        if (Shop != null) return d.ContainsKey("shop") && (int)d["shop"] != (int)Section; // wares or buyback onto the bag buys, bag onto the merchant's side sells
         return !d.ContainsKey("shop") && Screen.CanMove(SlotRef.FromDict(d), Ref);
     }
 
     public override void _DropData(Vector2 atPosition, Variant data)
     {
         var d = data.AsGodotDictionary();
-        if (Shop != null) Shop.Dropped((bool)d["shop"], (int)d["i"]);
+        if (Shop != null) Shop.Dropped((UI.Shop.ShopSection)(int)d["shop"], (int)d["i"]);
         else Screen.Move(SlotRef.FromDict(d), Ref);
     }
 
@@ -107,7 +120,7 @@ public partial class ItemSlotControl : Control
             // a click (press and release without a drag) buys or sells; the action waits for the release so a drag never also clicks
             if (@event is not InputEventMouseButton { ButtonIndex: MouseButton.Left } click) return;
             if (click.Pressed) _armed = Item != null;
-            else if (_armed) { _armed = false; Shop.Clicked(StockSide, Ref.BagIndex); }
+            else if (_armed) { _armed = false; Shop.Clicked(Section, Ref.BagIndex); }
             AcceptEvent();
             return;
         }

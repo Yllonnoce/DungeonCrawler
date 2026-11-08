@@ -126,7 +126,9 @@ public partial class InventoryScreen : PanelContainer
                 var cell = _equip[(m, slot)];
                 cell.Item = c.Equipment[slot];
                 cell.Highlight = m == _party.FocusedIndex;
-                cell.TooltipText = cell.Item == null ? $"{SlotRules.Label(slot)} slot" : ItemText.Describe(cell.Item);
+                cell.Upgrade = false;
+                cell.Glyphs = Array.Empty<(string, bool)>();
+                cell.TooltipText = cell.Item == null ? $"{SlotRules.Label(slot)} slot" : ItemText.Describe(cell.Item, null, Game.Instance.Catalog);
                 cell.QueueRedraw();
             }
         }
@@ -135,9 +137,10 @@ public partial class InventoryScreen : PanelContainer
         {
             var cell = _bag[i];
             cell.Item = _party.Bag[i];
-            ItemInstance? compare = null;
-            if (cell.Item is { IsEquippable: true } it && focused.Equipment.PreferredSlot(focused, it) is { } ps) compare = focused.Equipment[ps];
-            cell.TooltipText = cell.Item == null ? "" : ItemText.Describe(cell.Item, compare);
+            var compare = cell.Item is { IsEquippable: true } it ? focused.Equipment.Worn(focused, it) : null;
+            cell.Upgrade = cell.Item != null && ItemText.IsUpgrade(cell.Item, focused, Game.Instance.Catalog);
+            cell.Glyphs = cell.Item == null ? Array.Empty<(string, bool)>() : ItemText.UsableBy(cell.Item, _party.Members);
+            cell.TooltipText = cell.Item == null ? "" : ItemText.Describe(cell.Item, compare, Game.Instance.Catalog);
             cell.QueueRedraw();
         }
         _info.Text = $"{_party.Gold} gold\nFocused: {focused.Name} (F to change)\nDouble-click a bag item to equip it on {focused.Name} or drink it.\nArrows: {_party.ArrowCount}   Free cells: {_party.Bag.FreeSlots}";

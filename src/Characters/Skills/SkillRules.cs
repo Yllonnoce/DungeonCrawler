@@ -10,6 +10,7 @@ public static class SkillRules
         if (c.LearnedSkills.Contains(s.Id)) return $"{s.Name} is already learned";
         foreach (var p in s.Prerequisites)
             if (!c.LearnedSkills.Contains(p)) return $"{s.Name} needs an earlier skill first";
+        if (s.AnyOf.Length > 0 && !s.AnyOf.Any(c.LearnedSkills.Contains)) return $"{s.Name} needs a skill from one of its branches first";
         if (c.SkillPoints < s.Cost) return $"Not enough skill points ({s.Cost} needed)";
         return null;
     }
@@ -48,22 +49,28 @@ public static class SkillRules
         c.Recalculate();
     }
 
-    /// <summary>The ability as this character casts it, with every learned upgrade applied.</summary>
-    public static AbilityProfile ApplyUpgrades(AbilityProfile a, CharacterState c, SkillCatalog cat)
+    /// <summary>
+    /// The ability as this character casts it: every learned upgrade plus <paramref name="extra"/> ones (equipped legendaries) applied,
+    /// and the Cooldown stat (of Alacrity) on its cooldown.
+    /// </summary>
+    public static AbilityProfile ApplyUpgrades(AbilityProfile a, CharacterState c, SkillCatalog cat, IEnumerable<AbilityUpgrade>? extra = null)
     {
-        var upgrades = cat.Learned(c).Where(s => s.Upgrade?.AbilityId == a.Id).Select(s => s.Upgrade!).ToList();
-        if (upgrades.Count == 0) return a;
-        float dmg = 1, cd = 1, cost = 1, buff = 1, radius = 0; var extra = 0;
+        var upgrades = cat.Learned(c).SelectMany(s => s.AllUpgrades).Concat(extra ?? Enumerable.Empty<AbilityUpgrade>()).Where(u => u.Targets(a.Id)).ToList();
+        var cooldownStat = c.Stats[Stat.Cooldown] is var cs && cs > 0f ? cs : 1f;
+        if (upgrades.Count == 0) return cooldownStat == 1f ? a : a with { Cooldown = a.Cooldown * cooldownStat };
+        float dmg = 1, cd = cooldownStat, cost = 1, buff = 1, radius = 0, onHitDuration = 1; var extraProjectiles = 0;
         var statuses = new List<StatusApplication>();
+        var effects = new List<StatusApplication>();
         foreach (var u in upgrades)
         {
-            dmg *= u.DamageMul; cd *= u.CooldownMul; cost *= u.CostMul; buff *= u.BuffMul; radius += u.RadiusAdd; extra += u.ExtraProjectiles;
+            dmg *= u.DamageMul; cd *= u.CooldownMul; cost *= u.CostMul; buff *= u.BuffMul; radius += u.RadiusAdd; extraProjectiles += u.ExtraProjectiles; onHitDuration *= u.OnHitDurationMul;
             if (u.AddStatus is { } st) statuses.Add(st);
+            if (u.AddEffect is { } ef) effects.Add(ef);
         }
         var attack = a.Attack == null ? null : a.Attack with
         {
             MinDamage = a.Attack.MinDamage * dmg, MaxDamage = a.Attack.MaxDamage * dmg,
-            OnHit = a.Attack.OnHit.Concat(statuses).ToArray(),
+            OnHit = a.Attack.OnHit.Select(s => onHitDuration == 1f ? s : s with { Duration = s.Duration * onHitDuration }).Concat(statuses).ToArray(),
         };
         return a with
         {
@@ -72,11 +79,12 @@ public static class SkillRules
             ManaCost = a.ManaCost * cost,
             StaminaCost = a.StaminaCost * cost,
             Radius = a.Radius + radius,
-            ProjectileCount = a.ProjectileCount + extra,
-            Effects = a.Effects.Select(e => e with { Magnitude = e.Magnitude * buff, Duration = e.Duration * (buff > 1 ? 1 + (buff - 1) * 0.5f : 1) }).ToArray(),
+            ProjectileCount = a.ProjectileCount + extraProjectiles,
+            Effects = a.Effects.Select(e => e with { Magnitude = e.Magnitude * buff, Duration = e.Duration * (buff > 1 ? 1 + (buff - 1) * 0.5f : 1) }).Concat(effects).ToArray(),
         };
     }
 
+    /// <summary>The summed magnitude of every learned skill's first and second trigger of that kind.</summary>
     public static float TriggerMagnitude(CharacterState c, SkillCatalog cat, TriggerKind kind)
-        => cat.Learned(c).Where(s => s.Trigger == kind).Sum(s => s.TriggerMagnitude);
+        => cat.Learned(c).Sum(s => (s.Trigger == kind ? s.TriggerMagnitude : 0f) + (s.Trigger2 == kind ? s.TriggerMagnitude2 : 0f));
 }

@@ -73,6 +73,15 @@ public sealed class PartyDto
     public List<BagCellDto> Bag { get; set; } = new();
     /// <summary>The party's shared gold purse. Saves before version 10 have none, so it loads as 0.</summary>
     public int Gold { get; set; }
+    /// <summary>The merchant's last three sales, newest first, for buyback. Older saves have none, so it loads empty.</summary>
+    public List<SoldDto> Buyback { get; set; } = new();
+}
+
+/// <summary>One sale the merchant remembers: the item and what he paid for it.</summary>
+public sealed class SoldDto
+{
+    public ItemDto Item { get; set; } = new();
+    public int Price { get; set; }
 }
 
 public sealed class PoseDto

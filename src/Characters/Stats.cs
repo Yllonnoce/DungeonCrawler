@@ -55,6 +55,7 @@ public sealed class Stats
         v[Stat.ResistFrost] = wil * 0.5f;
         v[Stat.ResistPoison] = wil * 0.5f;
         v[Stat.ResistArcane] = wil * 0.5f;
+        v[Stat.Cooldown] = 1f;
 
         foreach (var s in StatInfo.All)
         {
@@ -65,6 +66,7 @@ public sealed class Stats
         v[Stat.CritChance] = Math.Clamp(v[Stat.CritChance], 0f, 0.95f);
         v[Stat.MoveSpeed] = Math.Max(0.2f, v[Stat.MoveSpeed]);
         v[Stat.AttackSpeed] = Math.Max(0.2f, v[Stat.AttackSpeed]);
+        v[Stat.Cooldown] = Math.Clamp(v[Stat.Cooldown], 0.5f, 2f);
         foreach (var r in new[] { Stat.ResistPhysical, Stat.ResistFire, Stat.ResistFrost, Stat.ResistPoison, Stat.ResistArcane })
             v[r] = Math.Min(75f, v[r]);
         foreach (var m in new[] { Stat.MaxHp, Stat.MaxStamina, Stat.MaxMana })

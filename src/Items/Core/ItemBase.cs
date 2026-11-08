@@ -85,6 +85,22 @@ public sealed record LegendaryProfile
     /// <summary>Sold by the merchant only; the dungeon never rolls it.</summary>
     public bool ShopOnly { get; init; }
     public StatusApplication? OnHit { get; init; }
+    /// <summary>A passive the wearer gains, summed with learned skills by the party (see LegendaryRules).</summary>
+    public TriggerKind Trigger { get; init; } = TriggerKind.None;
+    public float TriggerMagnitude { get; init; }
+    public TriggerKind Trigger2 { get; init; } = TriggerKind.None;
+    public float TriggerMagnitude2 { get; init; }
+    /// <summary>Ability upgrades the wearer gains while it is equipped.</summary>
+    public AbilityUpgrade[] Upgrades { get; init; } = Array.Empty<AbilityUpgrade>();
+    /// <summary>The set triggers of the two.</summary>
+    public IEnumerable<(TriggerKind Kind, float Magnitude)> Triggers
+    {
+        get
+        {
+            if (Trigger != TriggerKind.None) yield return (Trigger, TriggerMagnitude);
+            if (Trigger2 != TriggerKind.None) yield return (Trigger2, TriggerMagnitude2);
+        }
+    }
 }
 
 /// <summary>Filter syntax: "any", "id:item.x", "tag:weapon", "kind:Body".</summary>
@@ -125,6 +141,8 @@ public sealed class ItemCatalog
     public Dictionary<string, AffixProfile> Affixes { get; } = new();
     public Dictionary<string, LegendaryProfile> Legendaries { get; } = new();
     public Dictionary<string, LootTableProfile> Tables { get; } = new();
+    /// <summary>The living party's classes, for smart loot; null (tests) rolls from the whole pool.</summary>
+    public Func<IEnumerable<ClassProfile>>? SmartLootClasses { get; set; }
 
     public ItemBase Base(string id) => Bases.TryGetValue(id, out var b) ? b : throw new KeyNotFoundException($"No item base '{id}'");
     public bool TryBase(string id, out ItemBase b) => Bases.TryGetValue(id, out b!);

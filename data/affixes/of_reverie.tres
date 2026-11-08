@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.of_reverie"
+DisplayName = "of Reverie"
+IsPrefix = false
+Tags = PackedStringArray("staff", "focus", "jewelry", "armor")
+Weight = 0.7
+Stat = "ManaRegen"
+Op = "Add"
+TierMinLevels = PackedInt32Array(2, 6, 12, 16, 20)
+TierMins = PackedFloat32Array(0.3, 0.7, 1.1, 1.6, 2.1)
+TierMaxes = PackedFloat32Array(0.6, 1, 1.5, 2, 2.6)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

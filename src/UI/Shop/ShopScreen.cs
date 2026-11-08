@@ -6,10 +6,15 @@ using Godot;
 
 namespace DungeonCrawler.UI.Shop;
 
+/// <summary>Where a shop cell lives: the party's bag, the merchant's wares, or his buyback ledger.</summary>
+public enum ShopSection { Bag, Wares, Buyback }
+
 /// <summary>
-/// The merchant's shop: his stock for the floor on the left (price under each item, sold slots greyed), the party's bag on
-/// the right (what each item would fetch), the purse in the middle. A click buys or sells, as does a drag from one side to
-/// the other; buying or selling a legendary asks first. Every trade goes through <see cref="PartyController.ShopBuy"/> / <see cref="PartyController.ShopSell"/>.
+/// The merchant's shop: his stock for the floor on the left (price under each item, sold slots greyed) with a Buyback tab for his last
+/// three purchases, the party's bag on the right (what each item would fetch), the purse in the middle. Cells show a green arrow when the
+/// item beats what the focused member wears and a glyph row for who can use it; tooltips compare against what is worn. A click buys or
+/// sells, as does a drag from one side to the other; buying or selling a legendary asks first. Every trade goes through
+/// <see cref="PartyController.ShopBuy"/> / <see cref="PartyController.ShopSell"/> / <see cref="PartyController.ShopBuyback"/>.
 /// </summary>
 public partial class ShopScreen : PanelContainer
 {
@@ -17,8 +22,11 @@ public partial class ShopScreen : PanelContainer
     private PartyController _party = null!;
     private int _floor;
     private readonly List<ItemSlotControl> _stock = new();
+    private readonly List<ItemSlotControl> _buyback = new();
     private readonly List<ItemSlotControl> _bag = new();
+    private TabContainer _tabs = null!;
     private GridContainer _stockGrid = null!;
+    private GridContainer _buybackGrid = null!;
     private Label _gold = null!;
     private ConfirmationDialog _confirm = null!;
     private int _pendingBuy = -1;
@@ -39,6 +47,8 @@ public partial class ShopScreen : PanelContainer
     public ItemSlotControl StockCell(int index) => _stock[index];
     public ItemSlotControl BagCell(int index) => _bag[index];
     public int StockCount => _stock.Count;
+    public int BuybackCount => _party.Buyback.Entries.Count;
+    public ItemSlotControl BuybackCell(int index) => _buyback[index];
     /// <summary>True while the legendary buy or sell question is up.</summary>
     public bool Confirming => _confirm.Visible;
     /// <summary>Answers the question as the OK button does (the headless flows).</summary>
@@ -69,14 +79,22 @@ public partial class ShopScreen : PanelContainer
         body.AddThemeConstantOverride("separation", 18);
         root.AddChild(body);
 
-        var left = new VBoxContainer();
-        left.AddThemeConstantOverride("separation", 6);
-        left.AddChild(new Label { Text = "His wares" });
-        _stockGrid = new GridContainer { Columns = StockColumns };
+        _tabs = new TabContainer { CustomMinimumSize = new Vector2(StockColumns * (ItemSlotControl.CellSize.X + 4) + 8, 0) };
+        _stockGrid = new GridContainer { Name = "His wares", Columns = StockColumns };
         _stockGrid.AddThemeConstantOverride("h_separation", 4);
         _stockGrid.AddThemeConstantOverride("v_separation", 4);
-        left.AddChild(_stockGrid);
-        body.AddChild(left);
+        _tabs.AddChild(_stockGrid);
+        _buybackGrid = new GridContainer { Name = "Buyback", Columns = BuybackLedger.Capacity };
+        _buybackGrid.AddThemeConstantOverride("h_separation", 4);
+        _buybackGrid.AddThemeConstantOverride("v_separation", 4);
+        for (var i = 0; i < BuybackLedger.Capacity; i++)
+        {
+            var cell = new ItemSlotControl { Shop = this, Section = ShopSection.Buyback, Ref = SlotRef.Bag(i) };
+            _buybackGrid.AddChild(cell);
+            _buyback.Add(cell);
+        }
+        _tabs.AddChild(_buybackGrid);
+        body.AddChild(_tabs);
 
         var centre = new VBoxContainer { CustomMinimumSize = new Vector2(150, 0), Alignment = BoxContainer.AlignmentMode.Center };
         centre.AddThemeConstantOverride("separation", 14);
@@ -100,7 +118,7 @@ public partial class ShopScreen : PanelContainer
         body.AddChild(right);
         for (var i = 0; i < _party.Bag.Capacity; i++)
         {
-            var cell = new ItemSlotControl { Shop = this, StockSide = false, Ref = SlotRef.Bag(i) };
+            var cell = new ItemSlotControl { Shop = this, Section = ShopSection.Bag, Ref = SlotRef.Bag(i) };
             bagGrid.AddChild(cell);
             _bag.Add(cell);
         }
@@ -166,7 +184,7 @@ public partial class ShopScreen : PanelContainer
         _stock.Clear();
         for (var i = 0; i < stock.Items.Count; i++)
         {
-            var cell = new ItemSlotControl { Shop = this, StockSide = true, Ref = SlotRef.Bag(i) };
+            var cell = new ItemSlotControl { Shop = this, Section = ShopSection.Wares, Ref = SlotRef.Bag(i) };
             _stockGrid.AddChild(cell);
             _stock.Add(cell);
         }
@@ -175,39 +193,54 @@ public partial class ShopScreen : PanelContainer
     public void Refresh()
     {
         if (_stock.Count == 0) BuildStock();
+        var focused = _party.Members[_party.FocusedIndex];
+        var cat = Game.Instance.Catalog;
+        // every cell: the upgrade arrow against what the focused member wears, the glyph row, and a tooltip that compares
+        void Fill(ItemSlotControl cell, ItemInstance? item, string caption, string priceLine)
+        {
+            cell.Item = item;
+            cell.Caption = caption;
+            cell.Upgrade = item != null && ItemText.IsUpgrade(item, focused, cat);
+            cell.Glyphs = item == null ? Array.Empty<(string, bool)>() : ItemText.UsableBy(item, _party.Members);
+            cell.TooltipText = item == null ? "" : $"{ItemText.Describe(item, item.IsEquippable ? focused.Equipment.Worn(focused, item) : null, cat)}\n\n{priceLine}";
+            cell.QueueRedraw();
+        }
         var stock = _party.ShopStockFor(_floor);
         for (var i = 0; i < _stock.Count; i++)
         {
-            var cell = _stock[i];
             var item = i < stock.Items.Count ? stock.Items[i] : null;
             var sold = _party.ShopSoldOnFloor.Contains(i);
-            cell.Item = item;
-            cell.Caption = item == null ? "" : $"{Prices.BuyPrice(item)}g";
-            cell.Modulate = sold ? new Color(1f, 1f, 1f, 0.4f) : Colors.White;
-            cell.TooltipText = item == null ? "" : sold ? $"{ItemText.Describe(item)}\n\nSold." : $"{ItemText.Describe(item)}\n\nPrice: {Prices.BuyPrice(item)} gold";
-            cell.QueueRedraw();
+            _stock[i].Modulate = sold ? new Color(1f, 1f, 1f, 0.4f) : Colors.White;
+            Fill(_stock[i], item, item == null ? "" : $"{Prices.BuyPrice(item)}g", item == null ? "" : sold ? "Sold." : $"Price: {Prices.BuyPrice(item)} gold");
+        }
+        var ledger = _party.Buyback.Entries;
+        for (var i = 0; i < _buyback.Count; i++)
+        {
+            var entry = i < ledger.Count ? ledger[i] : default;
+            Fill(_buyback[i], entry.Item, entry.Item == null ? "—" : $"{entry.Price}g", entry.Item == null ? "" : $"Buy back for {entry.Price} gold");
         }
         for (var i = 0; i < _bag.Count; i++)
         {
-            var cell = _bag[i];
             var item = _party.Bag[i];
-            cell.Item = item;
-            cell.Caption = item != null && Prices.Sellable(item) ? $"{Prices.SellPrice(item)}g" : "";
-            cell.TooltipText = item == null ? "" : Prices.Sellable(item) ? $"{ItemText.Describe(item)}\n\nSells for {Prices.SellPrice(item)} gold" : $"{ItemText.Describe(item)}\n\nHe will not buy this.";
-            cell.QueueRedraw();
+            var sellable = item != null && Prices.Sellable(item);
+            Fill(_bag[i], item, sellable ? $"{Prices.SellPrice(item!, _party.SellBonus())}g" : "", item == null ? "" : sellable ? $"Sells for {Prices.SellPrice(item, _party.SellBonus())} gold" : "He will not buy this.");
         }
-        _gold.Text = $"{_party.Gold} gold";
+        _gold.Text = $"{_party.Gold} gold\nFocused: {focused.Name}";
     }
 
-    /// <summary>A click on a cell: a stock cell buys it, a bag cell sells it.</summary>
-    public void Clicked(bool stockSide, int index)
+    /// <summary>A click on a cell: a wares cell buys it, a buyback cell buys it back, a bag cell sells it.</summary>
+    public void Clicked(ShopSection from, int index)
     {
-        if (stockSide) TryBuy(index);
-        else TrySell(index);
+        switch (from)
+        {
+            case ShopSection.Wares: TryBuy(index); break;
+            case ShopSection.Buyback: _party.ShopBuyback(index); Refresh(); break;
+            default: TrySell(index); break;
+        }
     }
 
-    /// <summary>A drag landed on the other side: from the stock it buys, from the bag it sells.</summary>
-    public void Dropped(bool fromStock, int index) => Clicked(fromStock, index);
+    /// <summary>A drag landed on another section: from the merchant's side it buys (or buys back), from the bag it sells.</summary>
+    public void Dropped(ShopSection from, int index) => Clicked(from, index);
 
     /// <summary>Buys stock slot <paramref name="index"/>, asking first when it is a legendary.</summary>
     public void TryBuy(int index)
@@ -235,7 +268,7 @@ public partial class ShopScreen : PanelContainer
             _pendingSellItem = item.Id;
             _pendingBuy = -1;
             _confirm.OkButtonText = "Sell";
-            _confirm.DialogText = $"Sell {item.DisplayName} for {Prices.SellPrice(item)} gold? The merchant never resells.";
+            _confirm.DialogText = ShopRules.SellQuestion(item, _party.SellBonus());
             _confirm.PopupCentered();
             return;
         }

@@ -24,6 +24,8 @@ public sealed class ItemInstance
 
     public Rarity Rarity { get; set; }
     public int ItemLevel { get; set; } = 1;
+    /// <summary>The base's own item level; base damage and armour scale from the gap to <see cref="ItemLevel"/>.</summary>
+    public int BaseLevel { get; init; } = 1;
     public List<RolledAffix> Affixes { get; } = new();
     public string? LegendaryName { get; set; }
     public string Flavor { get; set; } = "";
@@ -46,17 +48,33 @@ public sealed class ItemInstance
         }
     }
 
-    /// <summary>All stat modifiers this item grants while equipped.</summary>
-    public IEnumerable<StatModifier> Modifiers => BaseModifiers.Concat(Affixes.SelectMany(a => a.Modifiers));
+    /// <summary>+4% per item level above the base's level (<see cref="ItemRules.BaseScale"/>); derived, never stored.</summary>
+    public float BaseScale => ItemRules.BaseScale(ItemLevel, BaseLevel);
 
-    /// <summary>The weapon profile including on-hit effects added by affixes.</summary>
+    /// <summary>The base modifiers as worn: the Armor base grows with <see cref="BaseScale"/> (whole numbers), everything else is untouched.</summary>
+    public IEnumerable<StatModifier> ScaledBaseModifiers
+    {
+        get
+        {
+            var scale = BaseScale;
+            foreach (var m in BaseModifiers)
+                yield return m is { Stat: Stat.Armor, Op: ModOp.Add } && scale != 1f ? m with { Value = MathF.Round(m.Value * scale) } : m;
+        }
+    }
+
+    /// <summary>All stat modifiers this item grants while equipped.</summary>
+    public IEnumerable<StatModifier> Modifiers => ScaledBaseModifiers.Concat(Affixes.SelectMany(a => a.Modifiers));
+
+    /// <summary>The weapon profile with base damage scaled by item level and the on-hit effects added by affixes.</summary>
     public WeaponProfile? Weapon
     {
         get
         {
             if (BaseWeapon == null) return null;
+            var scale = BaseScale;
+            var w = scale == 1f ? BaseWeapon : BaseWeapon with { MinDamage = BaseWeapon.MinDamage * scale, MaxDamage = BaseWeapon.MaxDamage * scale };
             var extra = Affixes.Where(a => a.OnHit != null).Select(a => a.OnHit!.Value).ToArray();
-            return extra.Length == 0 ? BaseWeapon : BaseWeapon with { OnHit = BaseWeapon.OnHit.Concat(extra).ToArray() };
+            return extra.Length == 0 ? w : w with { OnHit = w.OnHit.Concat(extra).ToArray() };
         }
     }
 
@@ -66,7 +84,7 @@ public sealed class ItemInstance
         DefId = b.Id, BaseName = b.Name, Description = b.Description, Kind = b.Kind, Tags = b.Tags,
         Stackable = b.Stackable, StackCount = Math.Max(1, count), MaxStack = b.MaxStack, Color = b.Color,
         BaseWeapon = b.Weapon, TwoHanded = b.TwoHanded, ArmorClass = b.ArmorClass, Offhand = b.Offhand,
-        Consumable = b.Consumable, BaseModifiers = b.BaseModifiers.ToList(), ItemLevel = b.ItemLevelMin,
+        Consumable = b.Consumable, BaseModifiers = b.BaseModifiers.ToList(), ItemLevel = b.ItemLevelMin, BaseLevel = b.ItemLevelMin,
     };
 
     /// <summary>Convenience for tests and debug drops.</summary>
@@ -81,7 +99,7 @@ public sealed class ItemInstance
             DefId = DefId, BaseName = BaseName, Description = Description, Kind = Kind, Tags = Tags, Stackable = Stackable,
             StackCount = StackCount, MaxStack = MaxStack, Color = Color, BaseWeapon = BaseWeapon, TwoHanded = TwoHanded,
             ArmorClass = ArmorClass, Offhand = Offhand, Consumable = Consumable, BaseModifiers = new List<StatModifier>(BaseModifiers),
-            Rarity = Rarity, ItemLevel = ItemLevel, LegendaryName = LegendaryName, Flavor = Flavor,
+            Rarity = Rarity, ItemLevel = ItemLevel, BaseLevel = BaseLevel, LegendaryName = LegendaryName, Flavor = Flavor,
         };
         foreach (var a in Affixes)
             c.Affixes.Add(new RolledAffix { AffixId = a.AffixId, Name = a.Name, IsPrefix = a.IsPrefix, Tier = a.Tier, Modifiers = new List<StatModifier>(a.Modifiers), OnHit = a.OnHit });

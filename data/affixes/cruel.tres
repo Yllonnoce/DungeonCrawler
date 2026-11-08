@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="AffixDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/Defs/AffixDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "affix.cruel"
+DisplayName = "Cruel"
+IsPrefix = true
+Tags = PackedStringArray("weapon")
+Weight = 0.6
+Stat = "CritMultiplier"
+Op = "Add"
+TierMinLevels = PackedInt32Array(2, 6, 12, 16, 20)
+TierMins = PackedFloat32Array(0.1, 0.16, 0.26, 0.36, 0.46)
+TierMaxes = PackedFloat32Array(0.15, 0.25, 0.35, 0.45, 0.55)
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1

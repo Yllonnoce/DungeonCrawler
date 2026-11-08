@@ -94,9 +94,9 @@ public partial class PartyController : Node3D
     public Vector2? ForcedMoveInput { get => Local?.ForcedMoveInput; set { if (Local is { } l) l.ForcedMoveInput = value; } }
 
     public AbilityProfile GetAbility(string id) => _abilities.TryGetValue(id, out var a) ? a : AbilityProfile.Basic;
-    public AbilityProfile GetAbilityFor(CharacterState m, string id) => SkillRules.ApplyUpgrades(GetAbility(id), m, Game.Instance.Skills);
+    public AbilityProfile GetAbilityFor(CharacterState m, string id) => SkillRules.ApplyUpgrades(GetAbility(id), m, Game.Instance.Skills, LegendaryRules.Upgrades(m.Equipment, Game.Instance.Catalog));
     public string AbilityName(string id) => GetAbility(id).Name;
-    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind);
+    public float Trigger(CharacterState m, TriggerKind kind) => SkillRules.TriggerMagnitude(m, Game.Instance.Skills, kind) + LegendaryRules.Trigger(m.Equipment, Game.Instance.Catalog, kind);
 
     public override void _Ready()
     {
@@ -104,6 +104,7 @@ public partial class PartyController : Node3D
         _lootScene = GD.Load<PackedScene>("res://scenes/Props/LootDrop.tscn");
         _abilities[AbilityProfile.BasicId] = AbilityProfile.Basic;
         foreach (var def in Registry.Instance.All<AbilityDef>()) _abilities[def.Id] = def.ToProfile();
+        HookItemTriggers();
         if (!_configured) Configure(DefaultRoster);
         SetMouseCaptured(true);
     }
@@ -522,6 +523,7 @@ public partial class PartyController : Node3D
     {
         if (!r.Hit) return;
         EventBus.Instance.RaiseHitLanded(m, r);
+        OnItemHit(m, target, r);
         if (r.Crit && Trigger(m, TriggerKind.VenomCrit) is > 0 and var venom)
         {
             target.ApplyStatus(new StatusApplication(StatusKind.Poison, 6, venom));
@@ -834,7 +836,7 @@ public partial class PartyController : Node3D
         if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
         var item = Bag[slot.BagIndex];
         var gold = Gold;
-        var refusal = ShopRules.TrySell(Bag, slot.BagIndex, ref gold);
+        var refusal = ShopRules.TrySell(Bag, slot.BagIndex, ref gold, Buyback, SellBonus());
         if (refusal != null) { EventBus.Instance.Log(refusal); return refusal; }
         EventBus.Instance.Log($"Sold {item} for {gold - Gold} gold.");
         AddGold(gold - Gold);
@@ -842,14 +844,15 @@ public partial class PartyController : Node3D
         return null;
     }
 
-    /// <summary>A client mirrors the server's sold slots (for the floor it is on) and purse.</summary>
-    public void ApplyShopSync(int floor, List<int> sold, int gold)
+    /// <summary>A client mirrors the server's sold slots (for the floor it is on), purse and buyback ledger.</summary>
+    public void ApplyShopSync(int floor, List<int> sold, int gold, List<Save.SoldDto>? buyback = null)
     {
         if (floor == Game.Instance.CurrentFloor)
         {
             ShopSoldOnFloor.Clear();
             foreach (var i in sold) ShopSoldOnFloor.Add(i);
         }
+        if (buyback != null) Buyback.Restore(buyback, Game.Instance.Catalog);
         SetGold(gold);
         Main.Instance?.Hud?.Refresh(); // refreshes an open shop screen too
     }
@@ -901,6 +904,7 @@ public partial class PartyController : Node3D
             Members = Members.Select(Save.SaveMapper.ToDto).ToList(),
             Bag = Save.SaveMapper.ToDto(Bag),
             Gold = Gold,
+            Buyback = Buyback.ToDto(),
         };
     }
 
@@ -911,6 +915,7 @@ public partial class PartyController : Node3D
         ClassProfile? Classes(string id) => Registry.Instance.TryGet<ClassDef>(id, out var def) ? def.ToProfile() : null;
         if (dto.Members.Count > 0) Members = dto.Members.Select(m => Save.SaveMapper.FromDto(m, Classes, cat, Game.Instance.Skills)).ToArray();
         Save.SaveMapper.Restore(Bag, dto.Bag, cat);
+        Buyback.Restore(dto.Buyback, cat);
         Gold = Math.Max(0, dto.Gold);
         if (Members.Length != Adventurers.Length && GetParent() is { } world) SpawnBodies(world);
         _effectVersions.Clear();
