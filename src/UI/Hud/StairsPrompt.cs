@@ -82,7 +82,7 @@ public partial class StairsPrompt : Control
         var stairs = Current;
         var actor = _actor;
         Close();
-        stairs?.Decline(actor);
+        if (stairs is { Locked: false }) stairs.Decline(actor); // "Turn back" on sealed stairs is no vote
     }
 
     private void Accept()

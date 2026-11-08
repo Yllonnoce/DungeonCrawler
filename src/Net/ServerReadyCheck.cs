@@ -29,7 +29,8 @@ public partial class ServerWorld
         var living = LivingPlayers();
         var now = NetSession.Instance.Now;
         var startsNew = !StairsCheck.Active || StairsCheck.StairsRef != netRef;
-        if (!yes && !StairsCheck.Active) return true; // a No without a check is nothing
+        if (!living.Contains(member)) return true; // a downed or absent player neither starts a check nor vetoes one
+        if (!yes && (!StairsCheck.Active || StairsCheck.StairsRef != netRef)) return true; // a No answers the running check on these stairs, or is nothing
         var verb = stairs.Direction < 0 ? "climb" : "descend";
         var verdict = StairsCheck.Vote(member, yes, netRef, stairs.Direction, living, now);
         if (yes)

@@ -43,14 +43,16 @@ public sealed class ReadyCheck
         => !Active ? ReadyCheckRules.TimeoutSeconds : Math.Clamp(ReadyCheckRules.TimeoutSeconds - (float)(now - StartedAt), 0f, ReadyCheckRules.TimeoutSeconds);
 
     /// <summary>
-    /// A Yes starts the check (or restarts it for other stairs) and counts once per member; a No cancels a running check
-    /// and is nothing without one. Returns the verdict after the vote.
+    /// A Yes starts the check (or restarts it for other stairs) and counts once per member; a No cancels the running check
+    /// on the stairs it names and is nothing without one. Only a living player's vote counts: a downed, parked or unknown
+    /// member can neither start a check nor veto one. Returns the verdict after the vote.
     /// </summary>
     public ReadyVerdict Vote(int member, bool yes, string stairsRef, int direction, IReadOnlyCollection<int> living, double now)
     {
+        if (!living.Contains(member)) return ReadyVerdict.Pending;
         if (!yes)
         {
-            if (!Active) return ReadyVerdict.Pending;
+            if (!Active || StairsRef != stairsRef) return ReadyVerdict.Pending;
             Clear();
             return ReadyVerdict.Cancelled;
         }
