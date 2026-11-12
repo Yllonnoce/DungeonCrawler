@@ -5,8 +5,8 @@
   "LayoutHash": 7371685180800806058,
   "Title": "The Bellows",
   "IntroLine": {
-    "Text": "Red air, and under it a beat that loses count. Something ahead is doing the work of a heart, over and over, and has never once been thanked for it.",
-    "VoiceId": "e6fc21b5f83b5266",
+    "Text": "Red-hot air, and a thump that shakes the floor plates. Ahead, the biggest engine in the works is still running, and under it the third great drain lies choked.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -201,8 +201,8 @@
       "Total": 40,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The wall splits along a seam of soot and the heat comes out walking: small burning things, and behind them the ones that stopped being small.",
-        "VoiceId": "20702cf616db622a",
+        "Text": "The wall splits along a seam of soot and the cinders pour out at you, burning, with the big ones stooping behind. They were Dunmarrow\u0027s, once.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -211,13 +211,13 @@
     "Name": "The Bellows",
     "SignatureOverride": "Charge",
     "IntroLine": {
-      "Text": "The heart-valve knows you are foreign. It beats faster.",
-      "VoiceId": "2f41042e34628cf7",
+      "Text": "The great engine of the pump works, which pushed the water down the third drain for three hundred years. The orc set it to pouring his minions instead.",
+      "VoiceId": null,
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "The beat does not stop. It only loses count for a while.",
-      "VoiceId": "406f9dddba9d381b",
+      "Text": "Its last stroke comes down on an empty ladle, and the orc\u0027s great engine does not lift again.",
+      "VoiceId": null,
       "Delivery": null
     },
     "HalfLine": null,
@@ -244,7 +244,48 @@
   ],
   "Npcs": [],
   "Quests": [],
-  "Narration": [],
-  "Taunts": [],
+  "Narration": [
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "The Bellows heaves over the choked drain, and fresh iron drops hissing from its ladles to come at you. Stop the engine and the drain can run.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "You turn the sluice wheel under the dead engine, and the third great drain runs. The heat goes out of the works, the shaking above you eases, and the god drinks. One great drain left.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Three drains, hirelings. Count your bloody wages. My foundry finished me before you broke it: I am whole again, larger, and waiting for you at the last drain.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Three drains, hirelings. Count your wages. My foundry finished me before you broke it: I am whole again, larger, and waiting for you at the last drain.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
   "EnemyTotal": 12
 }

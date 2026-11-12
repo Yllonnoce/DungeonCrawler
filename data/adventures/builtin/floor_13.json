@@ -5,8 +5,8 @@
   "LayoutHash": 14045766140948457824,
   "Title": "The Mould Room",
   "IntroLine": {
-    "Text": "Cold steel plate, white lamps that never gutter, and shelf upon shelf of casting sand pressed with faces. Someone down here knows what Dunmarrow will look like before Dunmarrow does.",
-    "VoiceId": "fee07b5ed14aa330",
+    "Text": "Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -173,8 +173,8 @@
       "Total": 34,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The wall behind the shelves is all mouths, and every one of them is spitting out something that was poured wrong and crawled off anyway.",
-        "VoiceId": "29f60bddf9a486f8",
+        "Text": "The wall behind the shelves gives way and the cinders pour through, grey and smouldering: townsfolk the orc finished turning.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -233,8 +233,8 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "It is done.",
-                "Next": "u3",
+                "Text": "Your moulds, old man. Look at them properly.",
+                "Next": "u4",
                 "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
@@ -247,8 +247,8 @@
           {
             "Id": "u2",
             "Line": {
-              "Text": "Tools, lad. Ladles, hinges, hasps. Only the patterns have got faces this season, and I can\u0027t read half of them with my eyes gone. Fetch me three off the shelves and I\u0027ll name them for you.",
-              "VoiceId": "52fed9c6bf1e1ca7",
+              "Text": "Tools, lad. Plates, springs, hinges, great iron limbs, all for my customer. My eyes can\u0027t read the patterns any more. Fetch me three off the shelves and I\u0027ll name them under the lamp.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -276,14 +276,14 @@
           {
             "Id": "u3",
             "Line": {
-              "Text": "Carry them flat. Tip one and you\u0027ve lost a chin, and a chin is the hardest thing in the world to put back.",
-              "VoiceId": "2e7387bd67cc834e",
+              "Text": "Carry them flat. Tip one and the sand cracks, and a cracked mould pours crooked.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Here. Three faces, flat as you asked.",
-                "Next": null,
+                "Text": "Here. Three moulds, flat as you asked.",
+                "Next": "u4",
                 "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
@@ -303,20 +303,98 @@
             "Aside": {
               "Member": "Sable",
               "Line": {
-                "Text": "I\u0027ve lifted a bishop\u0027s chin off him in a crowd. Flat is no trouble.",
-                "VoiceId": "220597bc0a384107",
+                "Text": "Flat, darling? I once carried a duke\u0027s mirror down a drainpipe.",
+                "VoiceId": null,
                 "Delivery": null
               }
             }
+          },
+          {
+            "Id": "u4",
+            "Line": {
+              "Text": "That\u0027s a crushing wall. That\u0027s a spike bed. That\u0027s an arm off one of those iron brutes. And the big one I poured by the stair last month is the orc himself, larger. I called every one good work.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "You didn\u0027t know.",
+                "Next": "u5",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "So you built the orc\u0027s traps.",
+                "Next": "u5",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "u5",
+            "Line": {
+              "Text": "No excuses. I took the gold and never once asked what it was for. Help me break them, every mould on these shelves, and the orc\u0027s first.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Your journeyman Oskar knew.",
+                "Next": "u6",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Break them, old man. We\u0027ve a drain to clear.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "u6",
+            "Line": {
+              "Text": "Oskar saw the whole drawings; I only ever saw the parts. If that lad kept quiet, it was the orc made him. Don\u0027t you blame him.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Break them, old man. We\u0027ve a drain to clear.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
           }
         ]
       },
       "QuestId": "q_moulds",
       "CastId": "cast_ulf",
       "Persona": {
-        "VoiceStyle": "a cheerful old founder, soot in his beard, proud of forty years\u0027 work and deaf to what it means",
+        "VoiceStyle": "a jovial old founder, soot in his beard, proud of his work and deaf to what it means",
         "DefaultDelivery": "cheerful",
-        "Voice": null,
+        "Voice": "Orus",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -343,7 +421,7 @@
           1,
           2
         ],
-        "ClueName": "a casting mould with a face in it"
+        "ClueName": "casting moulds"
       },
       "GiverNpc": "npc_ulf",
       "Reward": {
@@ -352,13 +430,13 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Three patterns off the shelves, that\u0027s all. The hall, the hole behind it, and the one they keep by the stair. Don\u0027t drop them; the sand remembers being dropped.",
-          "VoiceId": "4b15e43b5ca0fe5e",
+          "Text": "Three patterns off the shelves, that\u0027s all. The hall, the hole behind it, and the one they keep by the stair. Don\u0027t drop them; a cracked mould pours crooked.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
-          "Text": "Good. Flat, mind, and don\u0027t breathe on them. A breath puts a dimple in a cheek and then he\u0027s got a dimple for life.",
-          "VoiceId": "5d4a4ce2587c0830",
+          "Text": "Good. Flat, mind, and keep your thumbs out of the sand.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
@@ -367,13 +445,13 @@
           "Delivery": null
         },
         "Complete": {
-          "Text": "Ah, now. That\u0027s a Sorrel nose. That\u0027s a Dunmarrow chin, Fenn or Fenwick. And that one\u0027s a Crane; Hesketh\u0027s grandson, by the brow. Not born yet, mind. The sand has him first. Proud work, that.",
-          "VoiceId": "ff36d9df63b1f49d",
+          "Text": "A crushing wall. A spike bed. The orc himself, larger. I poured them all. Help me break them.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Fail": {
-          "Text": "Left them lying, did you. They\u0027ll cool crooked and some poor soul will walk about wrong for sixty years and never know why.",
-          "VoiceId": "a92f73b7f7908a19",
+          "Text": "Left them lying, did you. Well. There\u0027s plenty more on the shelves.",
+          "VoiceId": null,
           "Delivery": null
         }
       },
@@ -381,7 +459,65 @@
       "ForbidsFlag": null
     }
   ],
-  "Narration": [],
-  "Taunts": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 4,
+      "Line": {
+        "Text": "Shelf upon shelf of casting moulds. Up close you can make out what they are for: the face of a crushing wall, the teeth of a spike bed, the limbs of the iron brutes.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 2,
+      "Line": {
+        "Text": "By the stair stands the biggest mould in the works, taller than two men: the orc\u0027s own shape, larger than the body you killed at the gate. This is where he was poured again.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "More of the town in my cages, hirelings, and my old founder minding his shelves next door. Free them if you like. He won\u0027t look up; he never does.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "More of the town in my cages, hirelings, and my old founder minding his shelves next door. Free them if you like. He won\u0027t look up; he never does.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "So now you\u0027ve seen my shelves, hirelings: the walls, the spikes, the iron, all mine. My founder poured every one with his bad eyes, and the big mould by the stair is me.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "So now you\u0027ve seen my shelves, hirelings: the walls, the spikes, the iron, all mine. My founder poured every one with his bad eyes, and the big mould by the stair is me.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
   "EnemyTotal": 11
 }

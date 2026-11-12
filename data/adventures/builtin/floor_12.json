@@ -5,8 +5,8 @@
   "LayoutHash": 8643050436140022990,
   "Title": "The Casting Hall",
   "IntroLine": {
-    "Text": "Kiln brick, and cages. The Forge keeps what it has not finished, and the unfinished press their faces to the bars and watch you walk by.",
-    "VoiceId": "da089ca7501d83ef",
+    "Text": "Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn\u0027s crew, taken first in the spring and turned the furthest.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -229,8 +229,8 @@
       "Total": 30,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The wall cracks like a crust and the kiln empties itself: little burning things with hands, and behind them something that has to stoop.",
-        "VoiceId": "2df21956782ccec1",
+        "Text": "The kiln wall cracks and the cinders pour out at you, grey and burning. The ones finished in these cages run with them now.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -274,13 +274,13 @@
           {
             "Id": "g1",
             "Line": {
-              "Text": "Second lot usually steps over the first lot. You came back instead. I haven\u0027t decided yet whether that\u0027s kindness or bad arithmetic.",
-              "VoiceId": "222db2e1c13beecb",
+              "Text": "You found them. That\u0027s my crew in the cages: taken first, nearly grey, nearly gone. Walk me through to the stair and keep the jailers off me, and I\u0027ll bring them out as we go.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Walk with us. The stairs are down past the cages.",
+                "Text": "Walk with us. We\u0027ll get them out.",
                 "Next": "g2",
                 "Effect": "AcceptQuest",
                 "Flag": null,
@@ -289,7 +289,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Stay here. The spiders were fine with you.",
+                "Text": "Stay put. You\u0027d slow us down.",
                 "Next": "g3",
                 "Effect": "DeclineQuest",
                 "Flag": null,
@@ -312,8 +312,8 @@
           {
             "Id": "g2",
             "Line": {
-              "Text": "Keys on their belts, hooks for hands. Keep me between you and the hooks and I\u0027ll say something generous about you later, when there\u0027s a later.",
-              "VoiceId": "fcb4062da06bec17",
+              "Text": "Right. Keep me between you and the iron. They still know my voice, most of them. I\u0027ll call them out one at a time.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -332,8 +332,8 @@
           {
             "Id": "g3",
             "Line": {
-              "Text": "Fair. I\u0027d have left me too. Mind the kiln wall by the breaches; it has been coughing all week.",
-              "VoiceId": "0c90c09cf0590954",
+              "Text": "Fair. I\u0027d have left me too. Get them out without me, then, and tell them Grisel was here.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -352,13 +352,13 @@
           {
             "Id": "g4",
             "Line": {
-              "Text": "Nineteen years, and it was two rooms over. I walked my own four the other way and I have been paying the difference ever since.",
-              "VoiceId": "f8e6acd9ec83cd0f",
+              "Text": "That\u0027s the stair. I\u0027ll wait here for my crew and take them up myself. Don\u0027t wait for me to thank you properly; I\u0027m out of practice.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Then stop paying.",
+                "Text": "Mind yourself, Grisel.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -374,9 +374,9 @@
       "QuestId": "q_grisel_out",
       "CastId": "cast_grisel",
       "Persona": {
-        "VoiceStyle": "nineteen years underground; flat, dry, contrary, speaks of spiders like neighbours",
+        "VoiceStyle": "a drain-warden months alone underground: flat, wry, short sentences, says the worst about herself first",
         "DefaultDelivery": "weary",
-        "Voice": null,
+        "Voice": "Despina",
         "IsEmpty": false
       },
       "RequiresFlag": "grisel_forgiven",
@@ -389,8 +389,8 @@
     {
       "Id": "q_grisel_out",
       "Template": "Escort",
-      "Title": "Walking Grisel Out",
-      "Objective": "Bring Grisel Thorn down to the stairs alive, past the jailers and their keys.",
+      "Title": "Grisel\u0027s Crew",
+      "Objective": "Bring Grisel Thorn down to the stairs alive, past the jailers, while her crew are freed.",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -408,13 +408,13 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "I know every cage on this floor by the noise it makes. What I don\u0027t know is how to cross the casting floor with company. Take me to the stair.",
-          "VoiceId": "1671ff0dd94e75c2",
+          "Text": "I know every cage on this floor by the noise it makes. Get me across the casting floor to the stair, and I\u0027ll bring my crew out as we go.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
-          "Text": "Right. Slowly, and don\u0027t look in the cages. They look back, and they have my face half-finished in there somewhere.",
-          "VoiceId": "7b19bc446b967038",
+          "Text": "Right. Slowly. They\u0027ll know my voice before they know my face.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
@@ -423,13 +423,13 @@
           "Delivery": null
         },
         "Complete": {
-          "Text": "That\u0027s the stair. I\u0027ve not stood on a step going up since before you were paid. Don\u0027t wait for me to thank you properly; I\u0027m out of practice.",
-          "VoiceId": "8d92cc0783a2041d",
+          "Text": "That\u0027s the stair. I\u0027ll wait here and take my crew up myself, every one you bring me. Don\u0027t wait for thanks; I\u0027m out of practice.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Fail": {
-          "Text": "Should have stayed with the spiders. They at least finish what they start.",
-          "VoiceId": "05936b867fbfdfb4",
+          "Text": "Get them out. Don\u0027t you leave them now.",
+          "VoiceId": null,
           "Delivery": null
         }
       },
@@ -439,11 +439,22 @@
   ],
   "Narration": [
     {
-      "Trigger": "Enter",
-      "Room": null,
+      "Trigger": "RoomEnter",
+      "Room": 11,
       "Line": {
-        "Text": "The head jailer wears a company badge nineteen years out of date, and answers to Grisel Thorn. She does not look up. The keys on her belt do the talking.",
-        "VoiceId": "d69027a1fff2c7e0",
+        "Text": "The cages hold Grisel Thorn\u0027s crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 11,
+      "Line": {
+        "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. She took them to save herself and kept her own crew locked in; when you came for the cages, his iron cut her down.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -455,17 +466,51 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "The Casting Hall. Those in the cages are not finished yet, so kindly stop bloody rattling them. Himself dreams them one at a time.",
-        "VoiceId": "ebe90569ca626f2c",
+        "Text": "My Casting Hall, hirelings. Grisel Thorn\u0027s crew are in my cages, first down and nearly finished. Another week and they run with my bloody cinders.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The Casting Hall. Those in the cages are not finished yet, so kindly stop rattling them. Himself dreams them one at a time.",
+        "Text": "My Casting Hall, hirelings. Grisel Thorn\u0027s crew are in my cages, first down and nearly finished. Another week and they run with my cinders.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own bloody neck, and now she locks her own crew in every night.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own neck, and now she locks her own crew in every night.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "grisel_forgiven",
+      "FromStock": false
+    },
+    {
+      "Trigger": "AllFreed",
+      "Objective": "jailbreak",
+      "Line": {
+        "Text": "Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "grisel_forgiven",
       "FromStock": false
     }
   ],
