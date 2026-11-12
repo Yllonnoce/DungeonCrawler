@@ -29,6 +29,7 @@ public static class NpcBodies
     public static string ForCast(CastMember cast)
     {
         if (cast.Merchant) return "npc_merchant";
+        if (IsVerger($"{cast.Name} {cast.Role}")) return "verger";
         var body = For(cast.Id, cast.Name, false, cast.Role, cast.Persona?.VoiceStyle);
         return body == "npc_merchant" ? "npc_old_man" : body;
     }
@@ -49,7 +50,12 @@ public static class NpcBodies
 
     /// <summary>A villain who has a body of their own; null keeps the boss's creature model.</summary>
     public static string? Villain(string name, string? epithet, string? style)
-        => Any(Normalise($"{name} {epithet} {style}"), new[] { "verger" }) ? "verger" : null;
+    {
+        var text = Normalise($"{name} {epithet} {style}");
+        return Any(text, new[] { "orc", "ashtusk" }) ? "orc1" : IsVerger(text) ? "verger" : null;
+    }
+
+    private static bool IsVerger(string text) => Any(Normalise(text), new[] { "verger" });
 
     private static string Fallback(string id) => Plain[(int)(Rng.StableHash(id) % (ulong)Plain.Length)];
     private static readonly string[] Plain = { "npc_young_man", "npc_young_woman", "npc_old_man" };
