@@ -5,7 +5,7 @@
   "LayoutHash": 6268430995176379719,
   "Title": "The Chantry",
   "IntroLine": {
-    "Text": "Rotten timber, and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.",
+    "Text": "You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.",
     "VoiceId": null,
     "Delivery": null
   },
@@ -178,7 +178,7 @@
       "Total": 9,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The crossing wall gives up its mortar and the pack pours through, grey and alike. A few of them still wear wardens\u0027 boots.",
+        "Text": "The crossing wall gives up its mortar and the pack pours through at you, grey and alike. A few of them still wear wardens\u0027 boots.",
         "VoiceId": null,
         "Delivery": null
       }

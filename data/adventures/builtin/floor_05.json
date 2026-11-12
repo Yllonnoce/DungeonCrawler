@@ -5,7 +5,7 @@
   "LayoutHash": 7397697809543818120,
   "Title": "Canon Ludd",
   "IntroLine": {
-    "Text": "Under the chantry runs the first great drain, or it should. Its grate has been packed solid on purpose, and a dead canon stands over it, still saying the office to empty pews.",
+    "Text": "Under the chantry runs the first great drain, or it should. You find its grate packed solid on purpose, and a dead canon standing over it, still saying the office to empty pews.",
     "VoiceId": null,
     "Delivery": null
   },
@@ -193,7 +193,7 @@
       "Total": 13,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The charnel wall gives at both seams. The church\u0027s dead come out of it walking, and a few greyer things in wardens\u0027 coats among them.",
+        "Text": "The charnel wall gives at both seams, and the church\u0027s dead walk out at you, a few greyer things in wardens\u0027 coats among them.",
         "VoiceId": null,
         "Delivery": null
       }
@@ -208,7 +208,7 @@
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "Turn the wheel, then. Let the water down to him, and the ground will lie still a while. I was a canon here, once.",
+      "Text": "Turn the sluice wheel, then. Let the water down to the god, and the ground will lie still a while. I was a canon here, once.",
       "VoiceId": null,
       "Delivery": null
     },
@@ -252,7 +252,7 @@
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "The first drain runs again. Above, the shaking eases for a while. Far below, the orc\u0027s voice: \u0027One drain, hirelings. I choked three more.\u0027",
+        "Text": "The first drain runs again, and above you the shaking eases for a while. Far below, the orc\u0027s voice: \u0027One drain, hirelings. I choked three more, and your god is still hungry.\u0027",
         "VoiceId": null,
         "Delivery": null
       },

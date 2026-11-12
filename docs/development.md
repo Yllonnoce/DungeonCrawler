@@ -409,6 +409,8 @@ the run. The shipped Gullet of Gorm uses both: Grisel Thorn's Unswearing on floo
 death lines on floor 20 turning on `wake_gorm`. The recurring cast is voiced in full (see `--bake-cast-voice`). Maud Sorrel also stands on floors 1, 6 and 11
 (the bible's cameos) with a few lines and no quest.
 
+A floor's `Narration` entries are played by their trigger (`AdventureDirector`, server and solo only; clients hear them as `NarrationMsg`): `RoomEnter` when any active party body stands in that room, `BossSeen` / `BossDead` four seconds after the boss's own line, `QuestDone` / `QuestFailed` when a quest on the floor ends. `Voice/NarrationRules.cs` decides which entries are due (trigger, room, `RequiresFlag` / `ForbidsFlag`, not yet said) and keys each one by floor, trigger, room and text; the key is kept forever in `AdventureDto.BarksSaid`, so an entry plays once per run across saves and revisits, while one held back by a flag can still play later. Entries due together play four seconds apart, in plan order. A boss named like the campaign's antagonist is queued and voiced as the villain, so the Herald keeps one voice from the floor 1 taunts to the last boss. `--test-narration` checks the once-only rule through a save and load.
+
 Voice is budgeted: `Adventure/Core/Voice/VoiceBudget.cs` picks at most 80 lines of a baked campaign to render (tier entrances and boss lines, then story floors' intros, NPC dialogue and quest lines, quiet floors' intros, barks last); everything else stays a subtitle. `--voice-budget=N` changes it for a bake.
 
 ## Claude as dungeon master (optional)

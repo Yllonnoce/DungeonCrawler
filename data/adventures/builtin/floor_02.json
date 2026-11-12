@@ -5,7 +5,7 @@
   "LayoutHash": 12540576795050868960,
   "Title": "The Vestibule",
   "IntroLine": {
-    "Text": "These cells hold the drain-wardens who went down and never came up, grey and half-turned, already hard to tell apart. Grisel Thorn\u0027s crew went down first. Get them out while you can.",
+    "Text": "These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.",
     "VoiceId": null,
     "Delivery": null
   },
@@ -148,7 +148,7 @@
       "Total": 6,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The mortar splits at both ends of the vestibule, and the grey pack comes through. Some of them were drain-wardens this spring.",
+        "Text": "The mortar splits at both ends of the vestibule, and the grey pack comes at you. Some of them were drain-wardens this spring.",
         "VoiceId": null,
         "Delivery": null
       }
@@ -179,7 +179,7 @@
       "Trigger": "RoomEnter",
       "Room": 7,
       "Line": {
-        "Text": "Freed, the wardens say the traps are new and somebody is building them, and the finished ones go grey and join the packs. Nobody has heard from Old Ulf at the pump works since spring.",
+        "Text": "From the cells, the wardens call to you: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn\u0027s crew, they say, went down first.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -192,12 +192,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "I am Morg Ashtusk, the Herald, and you killed me at the gate. Here I am anyway. Those are drain-wardens in my bloody cages; the ones I finish go grey and join my packs.",
+        "Text": "I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my bloody cages, and the finished ones join my packs.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "I am Morg Ashtusk, the Herald, and you killed me at the gate. Here I am anyway. Those are drain-wardens in my cages; the ones I finish go grey and join my packs.",
+        "Text": "I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my cages, and the finished ones join my packs.",
         "VoiceId": null,
         "Delivery": null
       },

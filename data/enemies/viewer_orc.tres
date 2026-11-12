@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1")
 Id = "enemy.viewer_orc"
-DisplayName = "Orc Brute"
+DisplayName = "Morg Ashtusk"
 Kind = "Melee"
 MaxHp = 280
 MinDamage = 9

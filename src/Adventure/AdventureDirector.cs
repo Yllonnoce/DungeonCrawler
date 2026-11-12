@@ -109,7 +109,12 @@ public partial class AdventureDirector : Node
         foreach (var n in plan.Narration) _voice.Enqueue(n.Line, narrator, Speaker.Narrator, VoicePriority.Narrator);
         if (plan.Boss is { } boss)
         {
-            foreach (var l in boss.AllLines()) _voice.Enqueue(l, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
+            var villain = Game.Instance.Adventure.Campaign is { } c && Voice.NarrationRules.BossIsAntagonist(boss.Name, c.Antagonist.Name); // the antagonist keeps one voice as a boss
+            foreach (var l in boss.AllLines())
+            {
+                if (villain) _voice.Enqueue(l, Voices.Villain, Speaker.Villain, VoicePriority.Boss, major: true, Game.Instance.Adventure.Campaign!.Antagonist.Persona);
+                else _voice.Enqueue(l, Voices.Boss, Speaker.Boss, VoicePriority.Boss);
+            }
         }
         var campaign = Game.Instance.Adventure.Campaign;
         foreach (var npc in plan.Npcs)
@@ -456,8 +461,45 @@ public partial class AdventureDirector : Node
         }
     }
 
+    // ---- floor narration: the entries a floor's plan keeps for rooms, the boss and the quests ----------------------
+    private readonly List<(double At, string Text, string? Voice)> _narrationQueue = new();
+    private double _narrationFree, _roomNarrationCheck;
+    /// <summary>Seconds between narration entries due together, so the subtitle never overwrites one with the next.</summary>
+    public const double NarrationGap = 4.0;
+
+    /// <summary>Play the plan's entries due for this trigger, once each per run, in plan order. Server and solo only: clients hear them as narration messages.</summary>
+    private void PlayNarration(NarrationTrigger trigger, int? room = null, double lead = 0)
+    {
+        if (Net.NetSession.IsClient || !Game.Instance.InGame || Main.Instance?.Builder.Contents?.Plan is not { } plan || plan.Narration.Count == 0) return;
+        var said = Game.Instance.Adventure.BarksSaid;
+        foreach (var n in Voice.NarrationRules.Due(plan, trigger, room, Memory.Flags, new HashSet<string>(said.Keys), _currentFloor))
+        {
+            said[Voice.NarrationRules.Key(_currentFloor, n)] = Voice.BarkRepeat.Forever;
+            var at = Math.Max(Game.Instance.PlaySeconds + lead, _narrationFree);
+            _narrationFree = at + NarrationGap;
+            _narrationQueue.Add((at, n.Line.Text, n.Line.VoiceId));
+        }
+    }
+
+    private void TickNarration()
+    {
+        var now = Game.Instance.PlaySeconds;
+        while (_narrationQueue.Count > 0 && _narrationQueue[0].At <= now)
+        {
+            var (_, text, voice) = _narrationQueue[0];
+            _narrationQueue.RemoveAt(0);
+            EventBus.Instance.RaiseNarration(text, voice);
+        }
+        if (Net.NetSession.IsClient || !Game.Instance.InGame || now < _roomNarrationCheck || Main.Instance is not { } main || main.Party is not { HasBodies: true } party || main.Builder.Layout is not { } layout || main.Builder.Contents?.Plan is not { } plan) return;
+        _roomNarrationCheck = now + 0.25;
+        if (!plan.Narration.Any(n => n.Trigger == NarrationTrigger.RoomEnter)) return;
+        foreach (var body in party.Active.Where(a => !a.Downed))
+            if (layout.RoomAt(DungeonBuilder.WorldToCell(body.GlobalPosition)) is { } room) PlayNarration(NarrationTrigger.RoomEnter, layout.Rooms.IndexOf(room));
+    }
+
     public override void _Process(double delta)
     {
+        TickNarration();
         TickIdleTaunt();
         TickIdleRazz();
         TickTravel();
@@ -492,8 +534,8 @@ public partial class AdventureDirector : Node
         AddChild(_voice);
         AddChild(new CampaignBaker { Name = "Baker" });
         var bus = EventBus.Instance;
-        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); };
-        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); };
+        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); PlayNarration(NarrationTrigger.BossSeen, null, 4); };
+        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); PlayNarration(NarrationTrigger.BossDead, null, 4); };
         bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
         bus.SecretFound += _ => { if (_record != null) _record.SecretsFound++; }; // fortune: the floor card's count
         bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
@@ -757,10 +799,12 @@ public partial class AdventureDirector : Node
                 EventBus.Instance.PlaySfx("level_up");
                 if (q.Template == QuestTemplate.Escort && q.CompleteLine != "") EventBus.Instance.RaiseNarration($"{q.GiverName}: {q.CompleteLine}", null);
                 GrantReward(q);
+                if (q.Floor == _currentFloor) PlayNarration(NarrationTrigger.QuestDone, null, 2);
                 break;
             case QuestStatus.Failed:
                 Memory.For(q.Floor).QuestOutcomes.Add($"{q.Title} failed");
                 EventBus.Instance.Log($"Quest failed: {q.Title}.{(q.FailLine != "" ? $" \"{q.FailLine}\"" : "")}");
+                if (q.Floor == _currentFloor) PlayNarration(NarrationTrigger.QuestFailed, null, 2);
                 break;
         }
     }

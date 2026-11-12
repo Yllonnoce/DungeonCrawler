@@ -5,7 +5,7 @@
   "LayoutHash": 10909343922383415070,
   "Title": "The Lychgate",
   "IntroLine": {
-    "Text": "The crypt stair under the lychgate is the head of the old mines. Up it has come a huge orc, Morg Ashtusk, and the dwarf who keeps the gate is already fighting him.",
+    "Text": "You arrive at the head of the old mines, the crypt stair under the lychgate. A huge orc has come up it, and the dwarf who keeps the gate is already fighting him.",
     "VoiceId": null,
     "Delivery": null
   },
@@ -171,7 +171,7 @@
       "Total": 4,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The chest lid lifts, and the cloakroom answers: grey husks shrugging their way out of the coats on the hooks.",
+        "Text": "You lift the chest lid, and the cloakroom answers: grey husks shrug out of the coats on the hooks and come for you.",
         "VoiceId": null,
         "Delivery": null
       }
@@ -301,7 +301,7 @@
           {
             "Id": "gate",
             "Line": {
-              "Text": "Alderman Crane, for the council. That orc\u0027s dead, and still I heard its voice come back up the shaft, swearing it would be cast again. The drains below need clearing, and I am not the man to do it.",
+              "Text": "Alderman Crane, for the council. That orc came up the shaft shouting that the mines are his master\u0027s now, and that he can\u0027t be killed for good. The drains need clearing, and I am not the man to do it.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -501,7 +501,7 @@
           {
             "Id": "m1_back",
             "Line": {
-              "Text": "Up? Not yet, dear. Thirty-eight years I\u0027ve never missed a round. The wells up top are sour, you know; that\u0027s the grates, packed solid. The water has to go down.",
+              "Text": "Thirty-eight years, dear, and I\u0027ve never missed a round, so I\u0027m not going up now. The wells up top are sour; that\u0027s the grates, packed solid. The water has to go down.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -591,7 +591,7 @@
       "Trigger": "RoomEnter",
       "Room": 0,
       "Line": {
-        "Text": "The orc lies dead at the gate, and still his voice comes back up the shaft from far below: \u0027Kill me, hirelings. My foundry will cast me again, bigger.\u0027 He calls himself the Herald.",
+        "Text": "The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines for his master, and he means to keep you from the drains below.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -599,6 +599,24 @@
       "ForbidsFlag": null
     }
   ],
-  "Taunts": [],
+  "Taunts": [
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Down you come, hirelings. Kill me at the gate or not; my foundry pours another. These mines are my master\u0027s now, and your bloody god is going to wake.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Down you come, hirelings. Kill me at the gate or not; my foundry pours another. These mines are my master\u0027s now, and your god is going to wake.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
   "EnemyTotal": 5
 }

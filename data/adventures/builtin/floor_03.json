@@ -5,7 +5,7 @@
   "LayoutHash": 6719241975167983932,
   "Title": "The Nave",
   "IntroLine": {
-    "Text": "Chalk-white bone stacked to the vaulting, and one candle lit in the chancel, where a young deacon is praying. Some of the walls down here are new, and built to crush.",
+    "Text": "Chalk-white bone stacked to the vaulting, and one candle lit in the chancel, where a young deacon is praying. Mind the walls: some down here are new, and built to crush.",
     "VoiceId": null,
     "Delivery": null
   },
@@ -240,7 +240,7 @@
           {
             "Id": "ask",
             "Line": {
-              "Text": "Quite alone. My master the Verger went below in spring to pray for the town, and I keep the church till he\u0027s back. Tell me true: does Gorm hear us down there?",
+              "Text": "It\u0027s only me now. My master the Verger went below in spring to pray for the town, and I keep the church till he\u0027s back. Tell me true: does Gorm hear us down there?",
               "VoiceId": null,
               "Delivery": null
             },

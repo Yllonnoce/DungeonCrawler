@@ -329,6 +329,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-elites-and-bosses") { _testElites = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; _startFloor = 8; _floorGiven = true; }
             else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
+            else if (arg == "--test-narration") { _testNarration = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 60; }
             else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-fortune") { _testFortune = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; _startFloor = 2; _floorGiven = true; }
             else if (arg == "--test-run-structure") { _testRunStructure = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
@@ -762,6 +763,7 @@ public partial class DebugTools : Node
         if (_testSafeRoom) RunSafeRoomTest();
         if (_testElites) RunElitesAndBossesTest();
         if (_testWriting) RunWritingTest();
+        if (_testNarration) RunNarrationTest();
         if (_testItems) RunItemsAndBuildsTest();
         if (_testFortune) RunFortuneTest();
         if (_testRunStructure) RunRunStructureTest();
@@ -3429,6 +3431,78 @@ public partial class DebugTools : Node
         }
     }
 
+
+    // ---- --test-narration -------------------------------------------------------------------------------
+    // A floor's RoomEnter narration on the shipped campaign's floor 1: the party stands in the entry's room and the entry
+    // is raised exactly once; after a save and a load, standing there again raises nothing.
+    private bool _testNarration;
+    private int _nrStep;
+    private double _nrAt;
+    private readonly List<string> _nrFails = new();
+    private readonly List<string> _nrHeard = new();
+    private bool _nrListening;
+    private NarrationPlan? _nrEntry;
+
+    private void RunNarrationTest()
+    {
+        if (_nrStep >= 99) return;
+        var main = Main.Instance;
+        if (main == null || main.Builder.FloorRoot == null || main.Builder.Layout is not { } layout || !Game.Instance.InGame || main.Builder.CurrentFloor != 1 || !main.Party.HasBodies) return;
+        var since = _elapsed - _nrAt;
+        void Next() { _nrStep++; _nrAt = _elapsed; }
+        void Fail(string why) { _nrFails.Add(why); GD.Print($"[narration] FAIL: {why}"); }
+        void Finish()
+        {
+            GD.Print(_nrFails.Count == 0 ? "[narration] RESULT ok" : $"[narration] RESULT FAIL ({string.Join("; ", _nrFails)})");
+            _nrStep = 99;
+            _quitAfter = _elapsed + 0.5;
+        }
+        int Heard() => _nrHeard.Count(t => t == _nrEntry!.Line.Text);
+        void StandInRoom()
+        {
+            var room = layout.Rooms[_nrEntry!.Room!.Value];
+            foreach (var body in main.Party.Active) body.GlobalPosition = main.Builder.Surface(room.Center);
+        }
+        if (_elapsed > 50) { Fail($"timed out at step {_nrStep}"); Finish(); return; }
+        switch (_nrStep)
+        {
+            case 0 when _elapsed >= 1.0:
+            {
+                if (!_nrListening) { EventBus.Instance.Narration += (text, _) => _nrHeard.Add(text); _nrListening = true; }
+                _nrEntry = main.Builder.Contents?.Plan?.Narration.FirstOrDefault(n => n.Trigger == NarrationTrigger.RoomEnter && n.Room is { } r && r >= 0 && r < layout.Rooms.Count);
+                if (_nrEntry == null) { Fail("floor 1 has no RoomEnter narration"); Finish(); return; }
+                GD.Print($"[narration] entry for room {_nrEntry.Room}: \"{_nrEntry.Line.Text}\"");
+                Game.Instance.Adventure.BarksSaid.Remove(Adventure.Voice.NarrationRules.Key(1, _nrEntry)); // the spawn may already have been in that room
+                _nrHeard.Clear();
+                StandInRoom();
+                Next();
+                break;
+            }
+            case 1 when since >= 6.0:
+            {
+                if (Heard() != 1) Fail($"entering the room raised the entry {Heard()} times, wanted 1");
+                if (!Game.Instance.Adventure.BarksSaid.ContainsKey(Adventure.Voice.NarrationRules.Key(1, _nrEntry!))) Fail("the played entry was not remembered");
+                main.SaveGame("narration-test");
+                GD.Print($"[narration] load -> {main.LoadGame("narration-test")}");
+                _nrHeard.Clear();
+                Next();
+                break;
+            }
+            case 2 when since >= 3.0:
+            {
+                if (!Game.Instance.Adventure.BarksSaid.ContainsKey(Adventure.Voice.NarrationRules.Key(1, _nrEntry!))) Fail("the played entry did not survive the save");
+                StandInRoom();
+                Next();
+                break;
+            }
+            case 3 when since >= 6.0:
+            {
+                if (Heard() != 0) Fail($"after a load the entry played again ({Heard()} times)");
+                Finish();
+                break;
+            }
+        }
+    }
 
     // ---- --test-writing ---------------------------------------------------------------------------------
     // A party that talks, end to end on the shipped campaign's floor 1: a banter exchange in order and 1.4 s apart, one

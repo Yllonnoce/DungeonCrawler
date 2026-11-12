@@ -10,13 +10,13 @@ _Mood: a mine head under a church, a dead orc still talking_
 
 **Narrator:** _(tier 1 entry)_ The lychgate opens on the church's crypts, and the crypts on the mines. Dunmarrow's dead are up and walking, raised to keep you from the drains below. The Skin.
 
-**Narrator:** _(floor intro)_ The crypt stair under the lychgate is the head of the old mines. Up it has come a huge orc, Morg Ashtusk, and the dwarf who keeps the gate is already fighting him.
+**Narrator:** _(floor intro)_ You arrive at the head of the old mines, the crypt stair under the lychgate. A huge orc has come up it, and the dwarf who keeps the gate is already fighting him.
 
-**Narrator:** _(RoomEnter room 0)_ The orc lies dead at the gate, and still his voice comes back up the shaft from far below: 'Kill me, hirelings. My foundry will cast me again, bigger.' He calls himself the Herald.
+**Narrator:** _(RoomEnter room 0)_ The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines for his master, and he means to keep you from the drains below.
 
 ### Alderman Hesketh Crane
 
-**Alderman Hesketh Crane:** _(node gate)_ Alderman Crane, for the council. That orc's dead, and still I heard its voice come back up the shaft, swearing it would be cast again. The drains below need clearing, and I am not the man to do it.
+**Alderman Hesketh Crane:** _(node gate)_ Alderman Crane, for the council. That orc came up the shaft shouting that the mines are his master's now, and that he can't be killed for good. The drains need clearing, and I am not the man to do it.
 
   **Sable:** _(aside)_ He means us.
 
@@ -61,15 +61,19 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
   - **Party (choice):** Thirty-eight years? _[to m1_back]_
   - **Party (choice):** Mind how you go, Maud. _[Farewell]_
 
-**Maud Sorrel:** _(node m1_back)_ Up? Not yet, dear. Thirty-eight years I've never missed a round. The wells up top are sour, you know; that's the grates, packed solid. The water has to go down.
+**Maud Sorrel:** _(node m1_back)_ Thirty-eight years, dear, and I've never missed a round, so I'm not going up now. The wells up top are sour; that's the grates, packed solid. The water has to go down.
 
   - **Party (choice):** Mind how you go, Maud. _[Farewell]_
+
+### Floor taunts
+
+**Morg Ashtusk:** _(Descend)_ Down you come, hirelings. Kill me at the gate or not; my foundry pours another. These mines are my master's now, and your bloody god is going to wake.
 
 ### Hordes
 
 **Narrator:** _(Seam in the Vestry Wall, Enter)_ The vestry wall opens along a seam, and dry things come out of it sideways.
 
-**Narrator:** _(Coats Off Their Hooks, Chest)_ The chest lid lifts, and the cloakroom answers: grey husks shrugging their way out of the coats on the hooks.
+**Narrator:** _(Coats Off Their Hooks, Chest)_ You lift the chest lid, and the cloakroom answers: grey husks shrug out of the coats on the hooks and come for you.
 
 **Narrator:** _(The Diggers Come Up, Enter)_ Gravediggers' walk, and the gravediggers come up through their own breaches.
 
@@ -87,19 +91,19 @@ _Objective: jailbreak_
 
 **Story beat:** Jailbreak: the prisoners are captured drain-wardens, grey and half-turned in the Herald's cages, already hard to tell apart. The ones the party frees say the traps are new and somebody is building them, that the ones they finish go grey and join the packs (husks), that cast_grisel's crew went down first and nobody has seen them since, and that cast_ulf still keeps the pump works but nobody has heard from him since spring.
 
-**Narrator:** _(floor intro)_ These cells hold the drain-wardens who went down and never came up, grey and half-turned, already hard to tell apart. Grisel Thorn's crew went down first. Get them out while you can.
+**Narrator:** _(floor intro)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
 
-**Narrator:** _(RoomEnter room 7)_ Freed, the wardens say the traps are new and somebody is building them, and the finished ones go grey and join the packs. Nobody has heard from Old Ulf at the pump works since spring.
+**Narrator:** _(RoomEnter room 7)_ From the cells, the wardens call to you: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, the Herald, and you killed me at the gate. Here I am anyway. Those are drain-wardens in my bloody cages; the ones I finish go grey and join my packs.
+**Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my bloody cages, and the finished ones join my packs.
 
 **Morg Ashtusk:** _(Capture, jailbreak)_ {prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.
 
 ### Hordes
 
-**Narrator:** _(The Wandered Congregation, Chest)_ The mortar splits at both ends of the vestibule, and the grey pack comes through. Some of them were drain-wardens this spring.
+**Narrator:** _(The Wandered Congregation, Chest)_ The mortar splits at both ends of the vestibule, and the grey pack comes at you. Some of them were drain-wardens this spring.
 
 ## Floor 3: The Nave
 
@@ -107,7 +111,7 @@ _Mood: chalk-white bone chapel, a deacon praying alone_
 
 **Story beat:** cast_tobit prays in the Nave for Gorm to save the town; his master the Verger went below in spring, he says, to pray for it. The first crushing trap is on this floor. Decide: tell him the god is starving and no help is coming (flag told_tobit), or let him pray (flag kept_his_saint). Told, he is shaken and resolves to find out what happened to the drains; not told, he is grateful and keeps praying.
 
-**Narrator:** _(floor intro)_ Chalk-white bone stacked to the vaulting, and one candle lit in the chancel, where a young deacon is praying. Some of the walls down here are new, and built to crush.
+**Narrator:** _(floor intro)_ Chalk-white bone stacked to the vaulting, and one candle lit in the chancel, where a young deacon is praying. Mind the walls: some down here are new, and built to crush.
 
 ### Deacon Tobit Hale
 
@@ -118,7 +122,7 @@ _Mood: chalk-white bone chapel, a deacon praying alone_
   - **Party (choice):** You're down here alone? _[to ask]_
   - **Party (choice):** Talk, deacon. We're listening. _[AcceptQuest; to ask]_
 
-**Deacon Tobit Hale:** _(node ask)_ Quite alone. My master the Verger went below in spring to pray for the town, and I keep the church till he's back. Tell me true: does Gorm hear us down there?
+**Deacon Tobit Hale:** _(node ask)_ It's only me now. My master the Verger went below in spring to pray for the town, and I keep the church till he's back. Tell me true: does Gorm hear us down there?
 
   **Ilex:** _(aside)_ Theologically, deacon, 'hears' and 'answers' are different words.
 
@@ -163,7 +167,7 @@ _Objective: toxic_
 
 **Story beat:** Foul gas rises from the stagnant water while the party searches the chantry. cast_crane has come down to check progress and finds clue_ledger, the wardens' log: the drains cleared every season for three hundred years, until this spring's last entry, 'By the Verger's order, no one below.' Relieved it was the church and not the council, he says so too quickly.
 
-**Narrator:** _(floor intro)_ Rotten timber, and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.
+**Narrator:** _(floor intro)_ You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.
 
 **Narrator:** _(QuestDone)_ Crane holds the pages at arm's length, as a man holds something that has bitten him before.
 
@@ -205,7 +209,7 @@ _Quest: The Wardens' Log (Investigate): Recover the scattered pages of the warde
 
 ### Hordes
 
-**Narrator:** _(The Parish Overflow, Enter)_ The crossing wall gives up its mortar and the pack pours through, grey and alike. A few of them still wear wardens' boots.
+**Narrator:** _(The Parish Overflow, Enter)_ The crossing wall gives up its mortar and the pack pours through at you, grey and alike. A few of them still wear wardens' boots.
 
 ## Floor 5: Canon Ludd
 
@@ -213,18 +217,18 @@ _Mood: a dead canon standing guard on a choked drain_
 
 **Story beat:** Boss: Canon Ludd, the Herald's first lieutenant, raised from the church's dead, guards the first great drain, choked on purpose. When he falls the party turns the sluice wheel, the first drain runs and the shaking eases for a while; the narrator says so. The Herald sneers and promises worse.
 
-**Narrator:** _(floor intro)_ Under the chantry runs the first great drain, or it should. Its grate has been packed solid on purpose, and a dead canon stands over it, still saying the office to empty pews.
+**Narrator:** _(floor intro)_ Under the chantry runs the first great drain, or it should. You find its grate packed solid on purpose, and a dead canon standing over it, still saying the office to empty pews.
 
 **Narrator:** _(BossSeen)_ Canon Ludd, raised from the church's own dead to guard the drain, swings his censer at empty benches. The ledge above him is bare of ornament; use it.
 
-**Narrator:** _(BossDead)_ The first drain runs again. Above, the shaking eases for a while. Far below, the orc's voice: 'One drain, hirelings. I choked three more.'
+**Narrator:** _(BossDead)_ The first drain runs again, and above you the shaking eases for a while. Far below, the orc's voice: 'One drain, hirelings. I choked three more, and your god is still hungry.'
 
 ### Hordes
 
-**Narrator:** _(The Charnel Overflow, Enter)_ The charnel wall gives at both seams. The church's dead come out of it walking, and a few greyer things in wardens' coats among them.
+**Narrator:** _(The Charnel Overflow, Enter)_ The charnel wall gives at both seams, and the church's dead walk out at you, a few greyer things in wardens' coats among them.
 
 ### Boss: Canon Ludd
 
 **Canon Ludd:** _(intro)_ I am the Herald's first lieutenant. He shut this drain, and I keep it shut. Kneel, strangers; the church's dead have room for you.
 
-**Canon Ludd:** _(death)_ Turn the wheel, then. Let the water down to him, and the ground will lie still a while. I was a canon here, once.
+**Canon Ludd:** _(death)_ Turn the sluice wheel, then. Let the water down to the god, and the ground will lie still a while. I was a canon here, once.
