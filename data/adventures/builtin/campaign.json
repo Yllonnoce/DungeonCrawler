@@ -214,7 +214,7 @@
       "BossName": "The Bellows",
       "BossSignature": "Charge",
       "EnterLine": {
-        "Text": "Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. Someone has taught it to cast iron instead. The Heart.",
+        "Text": "Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. The Herald has taught it to cast iron instead. The Heart.",
         "VoiceId": null,
         "Delivery": null
       }
@@ -436,8 +436,8 @@
     {
       "Floor": 9,
       "Title": "The Cistern",
-      "Mood": "warm sandstone, four levers, a seal on a page",
-      "Story": "Vault: the party works the levers and opens the vault, which holds clue_contract, the order dismissing the drain-wardens under the council\u0027s seal. cast_crane arrives and reads his own signature; caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).",
+      "Mood": "warm sandstone, sour standing water, a seal on a page",
+      "Story": "An ordinary floor (no objective generates here on the shipped seed): the Cistern, where the wardens worked, its tanks standing sour. clue_contract, the order dismissing the drain-wardens under the council\u0027s seal, lies torn in three about the cisterns; the party gathers the leaves for cast_crane, who reads his own signature. Caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).",
       "Theme": "caves.sandstone",
       "Layout": "standard",
       "Objective": "shiftingvault",
@@ -512,7 +512,7 @@
       "Floor": 12,
       "Title": "The Casting Hall",
       "Mood": "kiln brick, a grey crew in cages, keys on a belt",
-      "Story": "Jailbreak: cast_grisel\u0027s crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she has taken the Herald\u0027s keys to save herself and stands as his head jailer, and the party takes the keys from her and she dies there.",
+      "Story": "Jailbreak: cast_grisel\u0027s crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she took the Herald\u0027s keys to save herself and stood as his head jailer, and the party finds her dead by the cage door with his keys still on her belt, cut down by his iron when they came for the cages.",
       "Theme": "forge.kiln",
       "Layout": "ring",
       "Objective": "jailbreak",
@@ -562,7 +562,7 @@
       "Floor": 14,
       "Title": "The Quench",
       "Mood": "rusted grates under black water, vestments afloat",
-      "Story": "Flooded vault. cast_tobit has followed the party down and found the Verger\u0027s vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon\u0027s prisoner, summoned below by a message in the Verger\u0027s hand to help with a rite that will save the town; pressed, he runs to the summons and the party fights the minions sent to escort him.",
+      "Story": "Flooded vault. cast_tobit has followed the party down and found the Verger\u0027s vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon\u0027s prisoner, summoned below by a message in the Verger\u0027s hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Either way he is taken for the rite (16, 19).",
       "Theme": "forge.rust",
       "Layout": "flooded",
       "Objective": "shiftingvault",
@@ -587,7 +587,7 @@
       "Floor": 15,
       "Title": "The Bellows",
       "Mood": "red-hot air, an engine casting instead of pumping",
-      "Story": "Boss: the Bellows, the great engine that once pumped the drains and now casts minions, guards the third great drain; fighter_oskar knows its weak points. When it stops the party turns the sluice wheel, the third drain runs, and the heat and the shaking ease.",
+      "Story": "Boss: the Bellows, the great engine that once pumped the drains and now casts minions, guards the third great drain; fighter_oskar knows its weak points. When it stops the party turns the sluice wheel and the third drain runs; the narrator makes plain what it did: the heat goes out of the works, the shaking above eases, and the god drinks.",
       "Theme": "forge.kiln",
       "Layout": "standard",
       "Objective": null,
@@ -712,7 +712,7 @@
       "Floor": 20,
       "Title": "The Mouth",
       "Mood": "the last great drain, braziers, the orc again",
-      "Story": "Boss: the Herald, Morg Ashtusk, recast whole and larger in the same orc body, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.",
+      "Story": "Boss: the Herald, Morg Ashtusk, recast whole and larger in the same orc body, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks and sinks back from waking, the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.",
       "Theme": "abyss.palace",
       "Layout": "ring",
       "Objective": null,
@@ -11424,12 +11424,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Floor {floor}. My parishioners have gone wandering again. Put them back in their boxes, or stop here with them; the stairs keep.",
-        "VoiceId": "93804ed5b49b0b08",
+        "Text": "Floor {floor}, hirelings. More of the town in my cages, turning nicely. Let them out if you like. The ones you miss join my bloody packs.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Floor {floor}. My parishioners have gone wandering again. Put them back in their boxes, or stop here with them; the stairs keep.",
+        "Text": "Floor {floor}, hirelings. More of the town in my cages, turning nicely. Let them out if you like. The ones you miss join my packs.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11441,12 +11441,12 @@
       "Trigger": "FloorEnter",
       "Objective": "toxic",
       "Line": {
-        "Text": "That rising stink on floor {floor} is Himself breathing out. The stairs lie at the bottom of it. Do try not to take it personally.",
-        "VoiceId": "2be8419174c43481",
+        "Text": "Floor {floor} stinks, hirelings. That\u0027s what a choked drain does to standing water. The stairs are at the bottom of the bloody stink. Hold your breath and earn your pay.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That rising stink on floor {floor} is Himself breathing out. The stairs lie at the bottom of it. Do try not to take it personally.",
+        "Text": "Floor {floor} stinks, hirelings. That\u0027s what a choked drain does to standing water. The stairs are at the bottom of the stink. Hold your breath and earn your pay.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11458,12 +11458,12 @@
       "Trigger": "FloorEnter",
       "Objective": "ritual",
       "Line": {
-        "Text": "Someone is singing on floor {floor} without permission. Wipe your bloody feet, {party}, and let the Choir see to her.",
-        "VoiceId": "dbb70c76e3a078a4",
+        "Text": "Floor {floor}. Someone is at work at the shrine, {party}, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the bloody way if you like.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Someone is singing on floor {floor} without permission. Wipe your feet, {party}, and let the Choir see to her.",
+        "Text": "Floor {floor}. Someone is at work at the shrine, {party}, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the way if you like.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11475,12 +11475,12 @@
       "Trigger": "FloorEnter",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "The stairs on floor {floor} sit behind His teeth, and the levers are His. Mind the step. He would like it back eventually.",
-        "VoiceId": "85362f843981f512",
+        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess, hirelings. I\u0027m in no hurry; I\u0027m not the one paid by the floor.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The stairs on floor {floor} sit behind His teeth, and the levers are His. Mind the step. He would like it back eventually.",
+        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess, hirelings. I\u0027m in no hurry; I\u0027m not the one paid by the floor.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11492,12 +11492,12 @@
       "Trigger": "Capture",
       "Objective": null,
       "Line": {
-        "Text": "The sexton goes back in his box. Everything in its place.",
-        "VoiceId": "b44cdb36c37a1d45",
+        "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you, hirelings?",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The sexton goes back in his box. Everything in its place.",
+        "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you, hirelings?",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11509,12 +11509,12 @@
       "Trigger": "Capture",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "{prisoner} is accounted for. I do like the book to balance.",
-        "VoiceId": "e044bc21b827eff4",
+        "Text": "{prisoner} goes back in my cage. The town pays you by the floor, hirelings, not by the head, so why the bloody hurry?",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{prisoner} is accounted for. I do like the book to balance.",
+        "Text": "{prisoner} goes back in my cage. The town pays you by the floor, hirelings, not by the head, so why the hurry?",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11526,12 +11526,12 @@
       "Trigger": "Freed",
       "Objective": null,
       "Line": {
-        "Text": "One of the congregation up and about. He was never going to make deacon.",
-        "VoiceId": "ce9646b8bc7ed2f8",
+        "Text": "One out of my cages. Well done, hirelings. I have more cages than you have hours.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One of the congregation up and about. He was never going to make deacon.",
+        "Text": "One out of my cages. Well done, hirelings. I have more cages than you have hours.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11543,12 +11543,12 @@
       "Trigger": "Freed",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Out you come, {prisoner}. Mind you don\u0027t catch cold. You\u0027ll be back in by vespers.",
-        "VoiceId": "f4534531b4ab4546",
+        "Text": "Out you come, {prisoner}. Run home and thank the town. It didn\u0027t come for you itself; it sent these sods, and paid them by the floor.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Out you come, {prisoner}. Mind you don\u0027t catch cold. You\u0027ll be back in by vespers.",
+        "Text": "Out you come, {prisoner}. Run home and thank the town. It didn\u0027t come for you itself; it sent these fools, and paid them by the floor.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11560,12 +11560,12 @@
       "Trigger": "AllFreed",
       "Objective": null,
       "Line": {
-        "Text": "All of them? Well. They\u0027ll only wander back. They always do.",
-        "VoiceId": "e17545f44372eba8",
+        "Text": "All out. Fine, hirelings. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "All of them? Well. They\u0027ll only wander back. They always do.",
+        "Text": "All out. Fine, hirelings. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11577,12 +11577,12 @@
       "Trigger": "AllFreed",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Every damned box empty. Now I must count them twice, and I hate counting.",
-        "VoiceId": "bc06728fecfe1948",
+        "Text": "All my cages empty. Bloody good work, for day labour. It changes nothing, hirelings: the drains are still mine, and your god is still hungry.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Every box empty. Now I must count them twice, and I hate counting.",
+        "Text": "All my cages empty. Good work, for day labour. It changes nothing, hirelings: the drains are still mine, and your god is still hungry.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11594,12 +11594,12 @@
       "Trigger": "GasThickens",
       "Objective": "toxic",
       "Line": {
-        "Text": "That is Himself breathing out. Do try not to take it personally.",
-        "VoiceId": "f8ebd124f2b6fe65",
+        "Text": "It\u0027s rising, hirelings. That\u0027s the air off my choked drains, and it doesn\u0027t care what the town is paying you.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That is Himself breathing out. Do try not to take it personally.",
+        "Text": "It\u0027s rising, hirelings. That\u0027s the air off my choked drains, and it doesn\u0027t care what the town is paying you.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11611,12 +11611,12 @@
       "Trigger": "GasThickens",
       "Objective": "toxic",
       "Line": {
-        "Text": "Breathe shallow, congregation. It is only parish air, and the parish has been dead some while.",
-        "VoiceId": "fb0b6ab2637a28e7",
+        "Text": "Higher now. Choke on it, you poor sods. I choked those drains on purpose, and this is what standing water does.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Breathe shallow, congregation. It is only parish air, and the parish has been dead some while.",
+        "Text": "Higher now. Choke on it, you poor fools. I choked those drains on purpose, and this is what standing water does.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11628,12 +11628,12 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "Lie down, there\u0027s a good congregation. It is the same thing, only sooner.",
-        "VoiceId": "44d2c5d46df580cf",
+        "Text": "That\u0027s the foul air of my drains in your lungs now, hirelings. Lie down in it. It comes to the same thing, only sooner.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Lie down, there\u0027s a good congregation. It is the same thing, only sooner.",
+        "Text": "That\u0027s the foul air of my drains in your lungs now, hirelings. Lie down in it. It comes to the same thing, only sooner.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11645,12 +11645,12 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "Green to the knees. Kneel, {party}. You were going to anyway.",
-        "VoiceId": "67b1e19aab820454",
+        "Text": "Deep enough to drown in, {party}. Kneel in it. The town won\u0027t pay for the bloody funeral.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Green to the knees. Kneel, {party}. You were going to anyway.",
+        "Text": "Deep enough to drown in, {party}. Kneel in it. The town won\u0027t pay for the funeral.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11662,12 +11662,12 @@
       "Trigger": "WrongLever",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Correct. Entirely correct. Himself approves.",
-        "VoiceId": "db4100609e71d971",
+        "Text": "Wrong one. Keep pulling, hirelings. I could listen to that all day, and I\u0027m not paid by the hour.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Correct. Entirely correct. Himself approves.",
+        "Text": "Wrong one. Keep pulling, hirelings. I could listen to that all day, and I\u0027m not paid by the hour.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11679,12 +11679,12 @@
       "Trigger": "WrongLever",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Wrong. Himself heard that. So did everything else.",
-        "VoiceId": "fec48f762ab2b2f4",
+        "Text": "Wrong again. Did the town hire you for your heads, hirelings, or was counting extra?",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Wrong. Himself heard that. So did everything else.",
+        "Text": "Wrong again. Did the town hire you for your heads, hirelings, or was counting extra?",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11696,12 +11696,12 @@
       "Trigger": "GateShift",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "The doors move. They are His throat. Did you think they would hold still for you?",
-        "VoiceId": "c7e890fcaac406a1",
+        "Text": "Hear that? My gates have moved. The way down is wherever I say it is, hirelings.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The doors move. They are His throat. Did you think they would hold still for you?",
+        "Text": "Hear that? My gates have moved. The way down is wherever I say it is, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11713,12 +11713,12 @@
       "Trigger": "GateShift",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Up, across, down. A throat swallows. That is the whole of the mechanism, and you will not out-think it.",
-        "VoiceId": "9f8f9db20de79ce0",
+        "Text": "The gates have shifted again. You won\u0027t out-think iron I set, hirelings, and the town isn\u0027t paying you enough to try.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Up, across, down. A throat swallows. That is the whole of the mechanism, and you will not out-think it.",
+        "Text": "The gates have shifted again. You won\u0027t out-think iron I set, hirelings, and the town isn\u0027t paying you enough to try.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11730,12 +11730,12 @@
       "Trigger": "VaultOpened",
       "Objective": null,
       "Line": {
-        "Text": "You\u0027ve opened something. Bloody hell. Close it on your way down.",
-        "VoiceId": "b960d9e251289c65",
+        "Text": "So you found the right levers. Bloody hell. Go on down, then, hirelings; it\u0027s all mine further down.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "You\u0027ve opened something. Close it on your way down.",
+        "Text": "So you found the right levers. Go on down, then, hirelings; it\u0027s all mine further down.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11747,12 +11747,12 @@
       "Trigger": "VaultOpened",
       "Objective": null,
       "Line": {
-        "Text": "Take it, take it. Grave goods are only ever on loan in this parish.",
-        "VoiceId": "c57be8815aa47416",
+        "Text": "The gate is open. Take the stairs, and take whatever you found by them. It all belongs to my master; you are only borrowing it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Take it, take it. Grave goods are only ever on loan in this parish.",
+        "Text": "The gate is open. Take the stairs, and take whatever you found by them. It all belongs to my master; you are only borrowing it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11764,12 +11764,12 @@
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "You will not finish the verse. Nobody finishes the verse.",
-        "VoiceId": "4aacb42a2ebc99e2",
+        "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if the town pays for that.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "You will not finish the verse. Nobody finishes the verse.",
+        "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if the town pays for that.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11781,12 +11781,12 @@
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "A rite. In my church. Without a candle lit, a fee paid, or the banns read.",
-        "VoiceId": "69d5eee9a54e5d4d",
+        "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the bloody line, hirelings, if you can.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "A rite. In my church. Without a candle lit, a fee paid, or the banns read.",
+        "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the line, hirelings, if you can.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11798,12 +11798,12 @@
       "Trigger": "RitualistDown",
       "Objective": "ritual",
       "Line": {
-        "Text": "She\u0027s lying down. Sensible. Leave her.",
-        "VoiceId": "778d9f5806a83879",
+        "Text": "She\u0027s down. Leave her lying, hirelings. Her work stops, and mine goes on.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "She\u0027s lying down. Sensible. Leave her.",
+        "Text": "She\u0027s down. Leave her lying, hirelings. Her work stops, and mine goes on.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11815,12 +11815,12 @@
       "Trigger": "RitualistDown",
       "Objective": "ritual",
       "Line": {
-        "Text": "The singer falters. There: silence, and how much better everything sounds.",
-        "VoiceId": "bed5c4ad2110367a",
+        "Text": "There she goes, flat on the stones. Pick her up or don\u0027t, hirelings; my minions won\u0027t wait for you to decide.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The singer falters. There: silence, and how much better everything sounds.",
+        "Text": "There she goes, flat on the stones. Pick her up or don\u0027t, hirelings; my minions won\u0027t wait for you to decide.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11832,12 +11832,12 @@
       "Trigger": "WaveBreak",
       "Objective": "ritual",
       "Line": {
-        "Text": "The Choir takes a breath. So should you. It will be your last for a while.",
-        "VoiceId": "ab7bef94269f8364",
+        "Text": "My minions fall back. Breathe while you can, hirelings. There are more where they came from, and they don\u0027t ask for wages.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The Choir takes a breath. So should you. It will be your last for a while.",
+        "Text": "My minions fall back. Breathe while you can, hirelings. There are more where they came from, and they don\u0027t ask for wages.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11849,12 +11849,12 @@
       "Trigger": "WaveBreak",
       "Objective": null,
       "Line": {
-        "Text": "A pause. Count your dead; I shall count mine, and we will compare the figures.",
-        "VoiceId": "557d9afb7666a66c",
+        "Text": "A lull. Count your wounds, hirelings, and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a bloody wage.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "A pause. Count your dead; I shall count mine, and we will compare the figures.",
+        "Text": "A lull. Count your wounds, hirelings, and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a wage.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11866,12 +11866,12 @@
       "Trigger": "RitualDone",
       "Objective": "ritual",
       "Line": {
-        "Text": "...Finished. Well. There\u0027s a first time, and I shan\u0027t pretend I\u0027m not put out.",
-        "VoiceId": "0a37fdc4e2a57a81",
+        "Text": "So her work is done and my minions are broken. Enjoy it, hirelings. The last drain is still mine, and so are the bloody stairs down to it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "...Finished. Well. There\u0027s a first time, and I shan\u0027t pretend I\u0027m not put out.",
+        "Text": "So her work is done and my minions are broken. Enjoy it, hirelings. The last drain is still mine, and so are the stairs down to it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11883,12 +11883,12 @@
       "Trigger": "RitualDone",
       "Objective": "ritual",
       "Line": {
-        "Text": "The verse stands. Someone has been practising. I do loathe an amateur who improves.",
-        "VoiceId": "f4fc376e624de8dc",
+        "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. The town is paying a great deal for very little, hirelings.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The verse stands. Someone has been practising. I do loathe an amateur who improves.",
+        "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. The town is paying a great deal for very little, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11900,12 +11900,12 @@
       "Trigger": "ObjectiveDone",
       "Objective": null,
       "Line": {
-        "Text": "Tick. I keep the book, you know. Somebody must.",
-        "VoiceId": "b705ce7da1eafb70",
+        "Text": "Done, and done badly, but done. Go on down, hirelings. The next floor is worse; I set its traps myself.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Tick. I keep the book, you know. Somebody must.",
+        "Text": "Done, and done badly, but done. Go on down, hirelings. The next floor is worse; I set its traps myself.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11917,12 +11917,12 @@
       "Trigger": "ObjectiveDone",
       "Objective": null,
       "Line": {
-        "Text": "Done, and done badly, but done. Go down. The next page is worse.",
-        "VoiceId": "ce6492306a843f59",
+        "Text": "Fine. Take the stairs. One more floor of mine behind you, and one more day\u0027s wages the town owes you. I owe you nothing.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Done, and done badly, but done. Go down. The next page is worse.",
+        "Text": "Fine. Take the stairs. One more floor of mine behind you, and one more day\u0027s wages the town owes you. I owe you nothing.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11934,12 +11934,12 @@
       "Trigger": "Idle",
       "Objective": null,
       "Line": {
-        "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
-        "VoiceId": "ad55cb665fb14d7e",
+        "Text": "Resting, hirelings? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
+        "Text": "Resting, hirelings? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11951,12 +11951,12 @@
       "Trigger": "Idle",
       "Objective": null,
       "Line": {
-        "Text": "Are we admiring the brickwork? It is bone, most of it. Dunmarrow\u0027s, chiefly.",
-        "VoiceId": "0a8a5cca67210587",
+        "Text": "Admiring my work, hirelings? Stand still long enough and my minions will come and admire you. Nobody pays you to stand about.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Are we admiring the brickwork? It is bone, most of it. Dunmarrow\u0027s, chiefly.",
+        "Text": "Admiring my work, hirelings? Stand still long enough and my minions will come and admire you. Nobody pays you to stand about.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11968,12 +11968,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "Lie still, that\u0027s it. Don\u0027t make a sodding fuss; the others never did.",
-        "VoiceId": "fee45ed38051b847",
+        "Text": "One down. Lie still, hireling, and don\u0027t make a bloody fuss. The town has had its money\u0027s worth of you already.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Lie still, that\u0027s it. No fuss; the others never made any.",
+        "Text": "One down. Lie still, hireling, and don\u0027t make a fuss. The town has had its money\u0027s worth of you already.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11985,12 +11985,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "One down. Four was always the number, {party}. You are merely ahead of schedule.",
-        "VoiceId": "44fb930892acde95",
+        "Text": "One of you down already, {party}. The town hired cheap. I could have told it so.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One down. Four was always the number, {party}. You are merely ahead of schedule.",
+        "Text": "One of you down already, {party}. The town hired cheap. I could have told it so.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12002,12 +12002,12 @@
       "Trigger": "PartyWiped",
       "Objective": null,
       "Line": {
-        "Text": "There. Four. Bang on schedule. I\u0027ll tell the council to bloody well pay you.",
-        "VoiceId": "a8902b6cbeae39ae",
+        "Text": "There. All of you, down in my mines. I\u0027ll tell the town to stop paying you. It can hire more, and I\u0027ll bloody well have them too.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "There. Four. On schedule. I\u0027ll tell the council to settle your invoice.",
+        "Text": "There. All of you, down in my mines. I\u0027ll tell the town to stop paying you. It can hire more, and I\u0027ll have them too.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12019,12 +12019,12 @@
       "Trigger": "PartyWiped",
       "Objective": null,
       "Line": {
-        "Text": "Rest now. In nineteen years I shall have four more, and they will step over you to reach me.",
-        "VoiceId": "6ed90d6a384e0e81",
+        "Text": "Rest now, hirelings. The town will scrape up the wages for another lot, and they\u0027ll step over you to reach me.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Rest now. In nineteen years I shall have four more, and they will step over you to reach me.",
+        "Text": "Rest now, hirelings. The town will scrape up the wages for another lot, and they\u0027ll step over you to reach me.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12036,12 +12036,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Deeper. Yes. He swallows; you go down. There is no cleverness in it.",
-        "VoiceId": "9f0f7f69ccdc7781",
+        "Text": "Another floor down, hirelings. I\u0027ve had since bloody spring to get this one ready for you.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Deeper. Yes. He swallows; you go down. There is no cleverness in it.",
+        "Text": "Another floor down, hirelings. I\u0027ve had since spring to get this one ready for you.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12053,12 +12053,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Mind the teeth on your way past. They are load-bearing.",
-        "VoiceId": "99ac04cf7a5bdab6",
+        "Text": "Lower still, hirelings. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Mind the teeth on your way past. They are load-bearing.",
+        "Text": "Lower still, hirelings. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12070,12 +12070,12 @@
       "Trigger": "Reinforcements",
       "Objective": null,
       "Line": {
-        "Text": "More of the Choir. Do you hear it yet? You will.",
-        "VoiceId": "14a4d97c8a702541",
+        "Text": "More of mine, hirelings, through my own doors. You can\u0027t kill them as fast as I can send them.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "More of the Choir. Do you hear it yet? You will.",
+        "Text": "More of mine, hirelings, through my own doors. You can\u0027t kill them as fast as I can send them.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12087,12 +12087,12 @@
       "Trigger": "Reinforcements",
       "Objective": null,
       "Line": {
-        "Text": "I have sent for help. Mine comes when it is called. That is the whole difference between us.",
-        "VoiceId": "650d805d918bd6f7",
+        "Text": "I\u0027ve sent for help. Mine comes when it\u0027s called and asks no wages. That is the whole bloody difference between us, hirelings.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "I have sent for help. Mine comes when it is called. That is the whole difference between us.",
+        "Text": "I\u0027ve sent for help. Mine comes when it\u0027s called and asks no wages. That is the whole difference between us, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12104,12 +12104,12 @@
       "Trigger": "Crushed",
       "Objective": null,
       "Line": {
-        "Text": "Oh, good. The Press works. Nobody tells me anything down here.",
-        "VoiceId": "52c3cb31038a2ab3",
+        "Text": "Crushed flat. My walls do good work, hirelings, and they never once asked to be paid for it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Oh, good. The Press works. Nobody tells me anything down here.",
+        "Text": "Crushed flat. My walls do good work, hirelings, and they never once asked to be paid for it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12121,12 +12121,12 @@
       "Trigger": "Crushed",
       "Objective": null,
       "Line": {
-        "Text": "Pressed and filed. Thank you for your custom, and for the spine, you poor bugger.",
-        "VoiceId": "c7e08630fdf839fb",
+        "Text": "Pressed and finished. Thanks for the spine, you poor bugger. The town can come and collect the rest.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Pressed and filed. Thank you for your custom.",
+        "Text": "Pressed and finished. Thanks for the spine, you poor fool. The town can come and collect the rest.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12138,12 +12138,12 @@
       "Trigger": "EliteSlain",
       "Objective": null,
       "Line": {
-        "Text": "That one was a sidesman. Twenty years he kept the aisle. You\u0027ll be sweeping it yourselves now, you heathens.",
-        "VoiceId": "19cbc72f3709473b",
+        "Text": "That was one of my best, you bloody vandals. Never mind. I have more, and I don\u0027t pay them either.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That one was a sidesman. Twenty years he kept the aisle. You\u0027ll be sweeping it yourselves now, you heathens.",
+        "Text": "That was one of my best, you vandals. Never mind. I have more, and I don\u0027t pay them either.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12155,12 +12155,12 @@
       "Trigger": "EliteSlain",
       "Objective": null,
       "Line": {
-        "Text": "{elite} is dead. I shall enter it in the book. In ink, because I\u0027m angry. Bloody ink.",
-        "VoiceId": "a7c7633260d076bf",
+        "Text": "{elite} is dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{elite} is dead. I shall enter it in the book. In ink, because I\u0027m angry.",
+        "Text": "{elite} is dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12172,12 +12172,12 @@
       "Trigger": "ShrineUsed",
       "Objective": null,
       "Line": {
-        "Text": "You\u0027ve been at the altar. Hands in the collection, were they, {name}? He notices. He always bloody notices.",
-        "VoiceId": "f2b3db5ab9594098",
+        "Text": "Help yourselves at the shrine, hirelings. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "You\u0027ve been at the altar. Hands in the collection, were they, {name}? He notices. He always notices.",
+        "Text": "Help yourselves at the shrine, hirelings. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12189,12 +12189,12 @@
       "Trigger": "ShrineUsed",
       "Objective": null,
       "Line": {
-        "Text": "Kneel at my shrines all you like. He takes what\u0027s offered and He does not give change.",
-        "VoiceId": "62b4e44b1b5faf52",
+        "Text": "Pray at my shrines all you like, hirelings. Your god is asleep and starving. He won\u0027t hear a bloody word.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Kneel at my shrines all you like. He takes what\u0027s offered and He does not give change.",
+        "Text": "Pray at my shrines all you like, hirelings. Your god is asleep and starving. He won\u0027t hear a word.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12206,12 +12206,12 @@
       "Trigger": "MimicSprung",
       "Objective": null,
       "Line": {
-        "Text": "The vestry chest. It\u0027s been peckish since Lent. Mind your fingers, you greedy sods.",
-        "VoiceId": "47c317d7ad9a5b21",
+        "Text": "Hungry box, that one. Everything in my mines is hungry, hirelings, your god most of all. Mind your bloody fingers.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The vestry chest. It\u0027s been peckish since Lent. Mind your fingers, you greedy fools.",
+        "Text": "Hungry box, that one. Everything in my mines is hungry, hirelings, your god most of all. Mind your fingers.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12223,12 +12223,12 @@
       "Trigger": "MimicSprung",
       "Objective": null,
       "Line": {
-        "Text": "Nobody told you not to open things in a church? No. Of course not. Nobody tells anybody anything.",
-        "VoiceId": "22635198dfaca86b",
+        "Text": "Nobody told you not to open things down here? No. The town never tells its hired help anything.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Nobody told you not to open things in a church? No. Of course not. Nobody tells anybody anything.",
+        "Text": "Nobody told you not to open things down here? No. The town never tells its hired help anything.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12240,12 +12240,12 @@
       "Trigger": "AllyDead",
       "Objective": null,
       "Line": {
-        "Text": "{name} is dead, then. Pity. They sang. Badly, but they sang, and now the choir\u0027s a voice short, and whose fault is that?",
-        "VoiceId": "1e6dec9aba3b9a04",
+        "Text": "{name} is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{name} is dead, then. Pity. They sang. Badly, but they sang, and now the choir\u0027s a voice short, and whose fault is that?",
+        "Text": "{name} is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12257,12 +12257,12 @@
       "Trigger": "AllyDead",
       "Objective": null,
       "Line": {
-        "Text": "Another body for the cellar. Carry it yourselves. The sexton\u0027s got a bad back and I\u0027ve got a damned congregation to run.",
-        "VoiceId": "dad792cef0bda144",
+        "Text": "Another body for my mines. Carry it yourselves, hirelings. Nobody pays me to clear up after you, you sorry sods.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Another body for the cellar. Carry it yourselves. The sexton\u0027s got a bad back and I\u0027ve got a congregation to run.",
+        "Text": "Another body for my mines. Carry it yourselves, hirelings. Nobody pays me to clear up after you, you sorry fools.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12274,12 +12274,12 @@
       "Trigger": "AllyLeft",
       "Objective": null,
       "Line": {
-        "Text": "Your friend\u0027s gone home. Sensible. Most of my parish is sensible. It\u0027s only the four of you He ever has to fetch.",
-        "VoiceId": "3eaae341dba7f76e",
+        "Text": "Your friend has gone home. Sensible. Nobody follows hirelings far, not for what the town pays.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Your friend\u0027s gone home. Sensible. Most of my parish is sensible. It\u0027s only the four of you He ever has to fetch.",
+        "Text": "Your friend has gone home. Sensible. Nobody follows hirelings far, not for what the town pays.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12291,12 +12291,12 @@
       "Trigger": "AllyLeft",
       "Objective": null,
       "Line": {
-        "Text": "Walked out mid-service. I\u0027ll not have it. Not even from the ones who aren\u0027t bloody staying.",
-        "VoiceId": "0fb7454d01226558",
+        "Text": "Walked out on you, did they? I don\u0027t blame them. I wouldn\u0027t follow you down my bloody stairs either.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Walked out mid-service. I\u0027ll not have it. Not even from the ones who aren\u0027t staying.",
+        "Text": "Walked out on you, did they? I don\u0027t blame them. I wouldn\u0027t follow you down my stairs either.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12308,12 +12308,12 @@
       "Trigger": "Gamble",
       "Objective": null,
       "Line": {
-        "Text": "Gambling? In here? That man Pellet sells rags for silver under my roof and you queue for it. Wipe your feet and your conscience.",
-        "VoiceId": "b1d1118cc8ea5538",
+        "Text": "Dicing with the factor behind his locked door, hirelings? Spend the town\u0027s wages how you like. My drains stay choked.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Gambling? In here? That man Pellet sells rags for silver under my roof and you queue for it. Wipe your feet and your conscience.",
+        "Text": "Dicing with the factor behind his locked door, hirelings? Spend the town\u0027s wages how you like. My drains stay choked.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12325,16 +12325,101 @@
       "Trigger": "Gamble",
       "Objective": null,
       "Line": {
-        "Text": "Dice in a church. He\u0027d have had you in the press for that, once. He may yet, you cheap little sinners.",
-        "VoiceId": "518b6174cb092bdf",
+        "Text": "Gambling your wages already? Good. Lose the lot, you cheap little sods, and see who pays to bury you.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Dice in a church. He\u0027d have had you in the press for that, once. He may yet, you cheap little sinners.",
+        "Text": "Gambling your wages already? Good. Lose the lot, you cheap little fools, and see who pays to bury you.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his bloody god, and it won\u0027t pay you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his god, and it won\u0027t pay you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "You forgave the warden who ran, hirelings. Generous. Now forgive her bloody council: it sacked its own wardens, and they came down to me unpaid.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You forgave the warden who ran, hirelings. Generous. Now forgive her council: it sacked its own wardens, and they came down to me unpaid.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "grisel_forgiven",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "You wouldn\u0027t forgive the warden who ran, hirelings. Hard. Her council sacked every warden it had, and you still work for it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You wouldn\u0027t forgive the warden who ran, hirelings. Hard. Her council sacked every warden it had, and you still work for it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "grisel_condemned",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MemberDowned",
+      "Objective": null,
+      "Line": {
+        "Text": "One down. You asked your god for his strength, hirelings, and he\u0027s half awake for it. Ask again. My master is right behind the bloody door.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "One down. You asked your god for his strength, hirelings, and he\u0027s half awake for it. Ask again. My master is right behind the door.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "MemberDowned",
+      "Objective": null,
+      "Line": {
+        "Text": "One down. You told your god to sleep through this, hirelings, and he is. Nobody is coming to help you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "One down. You told your god to sleep through this, hirelings, and he is. Nobody is coming to help you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "let_him_dream",
       "ForbidsFlag": null,
       "FromStock": false
     }
@@ -12346,13 +12431,13 @@
         {
           "Id": "hire",
           "Line": {
-            "Text": "Oswin Pellet, factor. I financed the council\u0027s little contract, and you four are to clear the Gullet to the bottom. I shan\u0027t be going down myself. I have a weak chest and a strong sense of who ought to.",
-            "VoiceId": "9777a8eb41ea9839",
+            "Text": "Oswin Pellet, factor. The town hired you to clear the traps and creatures out of the mines so the drains can run again, and I lent the council the money. I have a weak chest and a strong sense of who ought to go down.",
+            "VoiceId": null,
             "Delivery": null
           },
           "Choices": [
             {
-              "Text": "A factor, paying for plumbing?",
+              "Text": "A factor, paying for drain work?",
               "Next": "quakes",
               "Effect": "None",
               "Flag": null,
@@ -12375,13 +12460,13 @@
         {
           "Id": "quakes",
           "Line": {
-            "Text": "You\u0027ll have felt the floor go. The quakes come oftener every month, and the council calls it drainage. I call it opportunity: clear those tunnels and I\u0027ll let them as fine dry lodgings, with a view of nothing.",
-            "VoiceId": "acd1159e15f36fd4",
+            "Text": "You\u0027ll have felt the ground go. The drains are backed up, the wells run sour, and the quakes come oftener every month. My carts haven\u0027t run since spring. Clear the mines and I get my money back.",
+            "VoiceId": null,
             "Delivery": null
           },
           "Choices": [
             {
-              "Text": "Never mind the lodgings. What\u0027s in it for us?",
+              "Text": "Never mind your carts. What\u0027s in it for us?",
               "Next": "deal",
               "Effect": "None",
               "Flag": null,
@@ -12512,8 +12597,8 @@
       {
         "Floor": 2,
         "Greeting": {
-          "Text": "Ah, my inspectors! Wipe your boots. I\u0027ve had this room swept, by a man I paid not to look at it.",
-          "VoiceId": "60024499f4cd0712",
+          "Text": "In, and wipe your boots; I paid a man to sweep this room. Old Ulf at the pump works hasn\u0027t paid his coal account since spring. If you see him, remind him.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Progress": {
@@ -12589,8 +12674,8 @@
           "Delivery": null
         },
         "Progress": {
-          "Text": "Gold teeth in the walls! Gold, for anyone with pliers. I\u0027ve bought the mineral rights. Bought them yesterday, in a hurry, from a man in a hat.",
-          "VoiceId": "9b9af80e1fb4c202",
+          "Text": "Young Deacon Tobit has been at my door, asking after his master. I told him I\u0027d seen nobody\u0027s master and sold him a candle. I charged extra for the wick.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Trade": {
@@ -12630,8 +12715,8 @@
           "Delivery": null
         },
         "Trade": {
-          "Text": "Prices have gone up a touch. Carriage, you understand. It all has to be carried down, and the carriers have started asking questions.",
-          "VoiceId": "769217fb7e1ac958",
+          "Text": "Short stock today. Bandits have the rest, paid by that orc to keep the town out, and I want it back. Bring it, and I\u0027ll knock something off the price. Not much. Something.",
+          "VoiceId": null,
           "Delivery": null
         }
       },
@@ -12697,8 +12782,8 @@
           "Delivery": "weary"
         },
         "Progress": {
-          "Text": "My backers ask whether the lodgings are safe. I wrote yes. My hand shook so that it reads as no, and I\u0027ve let it stand.",
-          "VoiceId": "79b75554a5f7c614",
+          "Text": "Word from up top: the alderman has been seen buying a shovel. The council never bought anything without borrowing from me first, so I checked my ledger. It wasn\u0027t me.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Trade": {
@@ -12733,8 +12818,8 @@
           "Delivery": "whisper"
         },
         "Progress": {
-          "Text": "I went and looked. I wish I hadn\u0027t. Fresh spoil, and every pick mark pointing the one way. They\u0027re not spreading out. They\u0027re coming up.",
-          "VoiceId": "ba62016fe74cfa10",
+          "Text": "I went and looked. I wish I hadn\u0027t. Iron things cooling in the black water by the grates, and every one of them the shape of something that walks.",
+          "VoiceId": null,
           "Delivery": "whisper"
         },
         "Trade": {
@@ -12769,8 +12854,8 @@
           "Delivery": "whisper"
         },
         "Progress": {
-          "Text": "Marble, all the way along. I never ordered marble. Someone is building down here, and they build faster than I can buy.",
-          "VoiceId": "4dd4eff5da15ba2d",
+          "Text": "Marble, all the way along, with a blue light in it I can\u0027t account for. I account for everything. I\u0027d sooner not account for this.",
+          "VoiceId": null,
           "Delivery": "whisper"
         },
         "Trade": {
@@ -12870,5 +12955,5 @@
       }
     ]
   },
-  "ArcNotes": "Flags: told_tobit / kept_his_saint (3) pay on 16, and colour Tobit on 14; grisel_forgiven / grisel_condemned (9) pay on 12, and Crane can mention it on 17; wake_gorm / let_him_dream (18) pay on 19 and 20. Clues: log 4, dismissal order 9, moulds 13, letter 16; payoff 18. Nobody says the wardens were sacked to save money before 17. The Herald speaks every taunt: killed on 1, recast, boss on 20. Crane appears 1, 4, 9, 17 and never betrays. The Verger is met only on 19. Each act ends at a great drain: 5, 10, 15, 20."
+  "ArcNotes": "Flags: told_tobit / kept_his_saint (3) pay on 16 and 19, and colour Tobit on 14; grisel_forgiven / grisel_condemned (9) pay on 12, and Crane can mention it on 17; wake_gorm / let_him_dream (18) pay on 19 and 20. Clues: log 4, dismissal order 9, moulds 13, letter 16; payoff 18. Nobody says the wardens were sacked to save money before 17. The Herald speaks every taunt: killed on 1, recast, boss on 20. Crane appears 1, 4, 9, 17 and never betrays. The Verger is met only on 19. Each act ends at a great drain: 5, 10, 15, 20."
 }
