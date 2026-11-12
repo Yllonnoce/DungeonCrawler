@@ -78,7 +78,7 @@ public static class KillBarks
         {
             "Burned clean. Its throat may thank me.",
             "Reduced to component parts. Tidy enough.",
-            "That one had a soul cast in a mould. Pity.",
+            "That one had a soul once. Pity.",
             "Fire answers most theological questions.",
             "Observe: it stops when the heat exceeds the will.",
             "I did warn it. Briefly.",
@@ -113,9 +113,9 @@ public static class KillBarks
         },
         ["fighter_tamsin"] = new[]
         {
-            "Ha! That one had teeth. Gold ones? No. Shame.",
+            "Ha! Went down like a rotten prop. That's a share, that is.",
             "Partners, remember. Even shares of whatever that was.",
-            "Mind the wet, it'll slip you. Not him. He's done slipping.",
+            "Hit him like a hard seam. He cracked first.",
             "I've broken harder rock before breakfast.",
             "Check it for coin. Go on. I'll wait.",
             "Right. Who's next for the lamp?",
@@ -136,7 +136,7 @@ public static class KillBarks
             "Forgive me. Forgive me.",
             "The light held. It held.",
             "I did not want that. I did it.",
-            "He would have understood. He would. He must.",
+            "I was taught the prayers for the dead. I say them anyway.",
             "Stay close. Please. Stay close to the lantern.",
             "Is it... it is. All right. All right.",
             "Saints keep it, whatever it was.",

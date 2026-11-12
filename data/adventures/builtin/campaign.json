@@ -749,8 +749,8 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "That\u0027s one less mouth in the throat.",
-            "VoiceId": "d12750d221d79e6d",
+            "Text": "One less between us and the drains.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -829,8 +829,8 @@
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "Nineteen years of fools taught me that trick.",
-            "VoiceId": "b0dc7d5edd13fdf1",
+            "Text": "Thirty years of sergeants taught me that trick.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -853,8 +853,8 @@
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "Nobody said god. They said plumbing.",
-            "VoiceId": "432001656b3489a8",
+            "Text": "Drains, they said. Nobody mentioned that.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -1229,8 +1229,8 @@
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "Call that a funeral march. A quick one.",
-            "VoiceId": "95ccb222e816d6af",
+            "Text": "The council pays for the sword work. The hips are on the house.",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -1317,8 +1317,8 @@
         {
           "Trigger": "Travel",
           "Line": {
-            "Text": "At this rate the Verger dies of old age before we find him.",
-            "VoiceId": "11f44c55ee1f3408",
+            "Text": "At this rate the orc dies of old age before we reach him.",
+            "VoiceId": null,
             "Delivery": "weary"
           }
         },
@@ -2754,8 +2754,8 @@
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Gold teeth. The god won\u0027t miss a molar.",
-            "VoiceId": "e9562b4ccbe58aa6",
+            "Text": "Silver. Call it an advance on the advance.",
+            "VoiceId": null,
             "Delivery": "sly"
           }
         },
@@ -2866,8 +2866,8 @@
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "Don\u0027t let the verger write my name neat.",
-            "VoiceId": "27db71deb0e02f6f",
+            "Text": "Don\u0027t leave me down here. I\u0027m worth far more alive.",
+            "VoiceId": null,
             "Delivery": "pleading"
           }
         },
@@ -3250,8 +3250,8 @@
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "Dead men tell no tales, but this one\u0027s getting a dance.",
-            "VoiceId": "c77aab9ab51a39e6",
+            "Text": "First dance is free, darlings. The encore goes on the alderman\u0027s bill.",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -4863,8 +4863,8 @@
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "I\u0027m learning His corridors. That frightens me.",
-            "VoiceId": "02c57cad586bc65e",
+            "Text": "I\u0027m learning these tunnels. That frightens me.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -4895,8 +4895,8 @@
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "It\u0027s breathing in time with the walls.",
-            "VoiceId": "963bb655e1bc2d31",
+            "Text": "Ground\u0027s shaking. Not from that one.",
+            "VoiceId": null,
             "Delivery": "whisper"
           }
         },
@@ -4967,8 +4967,8 @@
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "Alive, and still owed nineteen years of wages.",
-            "VoiceId": "1ca16395f1a97c3b",
+            "Text": "Alive, and still owed every penny.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -5207,16 +5207,16 @@
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "Hunt\u0027s over. Hips, you have the floor.",
-            "VoiceId": "e0a37bc658c51b70",
+            "Text": "Don\u0027t tell the trees.",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "Try the hip rock in a treeline. Builds balance.",
-            "VoiceId": "057ac54fdc854125",
+            "Text": "Four thousand bricks. One dance. Fair.",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -6732,8 +6732,8 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Burned clean. His throat may thank me.",
-            "VoiceId": "f1a5df5be55822a7",
+            "Text": "Burned clean. The drains may thank me.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -6748,8 +6748,8 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "That one had a soul cast in a mould. Pity.",
-            "VoiceId": "267f165b60ffba99",
+            "Text": "That one had a soul once. Pity.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -6788,8 +6788,8 @@
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Nineteen years old and still legible. Unlucky.",
-            "VoiceId": "429b55d6ad2308b2",
+            "Text": "Council paper, and still legible. The alderman will be appalled.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -6820,16 +6820,16 @@
         {
           "Trigger": "LevelUp",
           "Line": {
-            "Text": "Power, acquired in a stomach. Note the irony.",
-            "VoiceId": "da88aab345411991",
+            "Text": "Enlightenment, acquired in a drain. Note the irony.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "An organ with opinions. Keep it off me.",
-            "VoiceId": "cbc75fe4ccfdd442",
+            "Text": "A specimen with opinions. Keep it off me.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -6844,8 +6844,8 @@
         {
           "Trigger": "BossSeen",
           "Line": {
-            "Text": "This was never plumbing. It never once was.",
-            "VoiceId": "1e148703d2325f4a",
+            "Text": "A matter of drains, we were told. Observe the matter of drains.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -6884,8 +6884,8 @@
         {
           "Trigger": "Downed",
           "Line": {
-            "Text": "He dreams. I can hear what He dreams of. Us.",
-            "VoiceId": "19f258a278e5c7ce",
+            "Text": "He dreams. I can hear it from here. Thirsty, mostly.",
+            "VoiceId": null,
             "Delivery": "whisper"
           }
         },
@@ -6916,8 +6916,8 @@
         {
           "Trigger": "Revived",
           "Line": {
-            "Text": "I saw the memorial stone. My name was neat.",
-            "VoiceId": "76815ed216a520a1",
+            "Text": "Upright again. The far side was poorly lit and smelt of orc.",
+            "VoiceId": null,
             "Delivery": ""
           }
         },
@@ -7140,8 +7140,8 @@
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "Cinders settle; a scholar sways.",
-            "VoiceId": "ef73958a460f9dd1",
+            "Text": "Footnote seventeen: the author danced. Reviewers were unkind.",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -7156,8 +7156,8 @@
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "Fire, then footwork. Both precise.",
-            "VoiceId": "d2c9070693302d0e",
+            "Text": "Gerald, avert your eyes. This is not for puddles.",
+            "VoiceId": null,
             "Delivery": "cheerful"
           }
         },
@@ -8750,8 +8750,8 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Ha! That one had teeth. Gold ones? No. Shame.",
-            "VoiceId": "78f9e0723849bc8a",
+            "Text": "Ha! Went down like a rotten prop. That\u0027s a share, that is.",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -8766,8 +8766,8 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Mind the wet, it\u0027ll slip you. Not him. He\u0027s done slipping.",
-            "VoiceId": "a2e2ad850f45539b",
+            "Text": "Hit him like a hard seam. He cracked first.",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -8896,8 +8896,8 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "He would have understood. The Verger. He would.",
-            "VoiceId": "f3673d35fc1d079d",
+            "Text": "The Verger taught me the prayers for the dead. I say them anyway.",
+            "VoiceId": null,
             "Delivery": "shout"
           }
         },
@@ -11417,6 +11417,530 @@
       "MinCount": 0,
       "Bumps": true,
       "Set": "hardcore"
+    },
+    {
+      "Id": "bs_extra",
+      "Lines": [
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "Remind me. What\u0027s the job?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Clear the drains. Water runs. Town pays.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "And whatever\u0027s living in the drains?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Costs extra.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 1,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "wi_monograph",
+      "Lines": [
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "A god asleep under a market town. I may get a monograph out of this.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Wrong.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "The monograph?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "The place.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 1,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bw_theory",
+      "Lines": [
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Clear the drains and the wells come sweet again. That\u0027s the theory.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "And the pay?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "That\u0027s the practice.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 1,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "sw_still",
+      "Lines": [
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Water\u0027s standing. Going sour.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "Lovely. The pay\u0027s the same, the water\u0027s worse, and I\u0027m still here. Why am I still here?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "You like us.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "I like your purses. Different thing entirely.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 6,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bi_counting",
+      "Lines": [
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "The grey ones in the packs. The freed wardens said the finished ones join them.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "I heard.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "So, statistically, some of what we have killed used to clear these drains.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "I\u0027m counting them. Somebody should.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 6,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bs_runs",
+      "Lines": [
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "We forgave that warden awfully quick, Brand.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Everybody runs once. Only counts if you stay gone.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "Is that soldier\u0027s wisdom?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Corporal\u0027s. Sergeants don\u0027t run. They send corporals.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 6,
+      "Tier": null,
+      "RequiresFlag": "grisel_forgiven",
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bw_wheat",
+      "Lines": [
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Fields up top. They need this water.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Since when do you care about a town?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Don\u0027t. Care about wheat.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Fine. Shields up for the wheat.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 11,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bi_mould",
+      "Lines": [
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "That mould by the stair is the orc himself, poured larger. It wants smashing.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Foehammer\u0027d want first swing.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "And Ulf\u0027s journeyman saw the whole drawings, and said nothing.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "The orc threatened the old man. You keep quiet for your own.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 13,
+      "Tier": 2,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "wi_bellows",
+      "Lines": [
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Big engine next.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "The Bellows. Oskar would say strike the joints, where the old iron is thinnest. I concur, which he would find tiresome.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Ladles?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "Whatever drops from them, kill before it cools. Then the third drain.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 15,
+      "Tier": 2,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "si_footnote",
+      "Lines": [
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "I came down here for a footnote.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "And now?",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Ilex",
+          "Line": {
+            "Text": "A god whose sleep holds a door shut is not a footnote. It is, at minimum, a chapter. Walk faster.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 16,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bs_sums",
+      "Lines": [
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "I\u0027ve done the sums. This town can\u0027t pay for the last floor.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "So go home.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Sable",
+          "Line": {
+            "Text": "I like the town. Tell anyone and I\u0027ll have your boots.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Wouldn\u0027t fit you.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 16,
+      "Tier": null,
+      "RequiresFlag": null,
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
+    },
+    {
+      "Id": "bw_deacon",
+      "Lines": [
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "We told that deacon his god was starving.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "We did.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Brand",
+          "Line": {
+            "Text": "Lad came down after us anyway. Wanted proof of his own master.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        },
+        {
+          "Member": "Wren",
+          "Line": {
+            "Text": "Good.",
+            "VoiceId": null,
+            "Delivery": "weary"
+          }
+        }
+      ],
+      "MinFloor": 16,
+      "Tier": null,
+      "RequiresFlag": "told_tobit",
+      "OncePerRun": true,
+      "Counter": null,
+      "MinCount": 0,
+      "Bumps": true,
+      "Set": null
     }
   ],
   "Taunts": [
