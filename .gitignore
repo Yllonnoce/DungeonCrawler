@@ -21,3 +21,7 @@ dist/
 data/adventures/*.partial/
 # the test suite lives on the dev machine only (owner's decision 2026-10-30): tests/ is not published
 tests/
+# graphify knowledge graph output (local only)
+graphify-out/
+# superpowers plan workspaces (local scratch)
+.superpowers/
