@@ -69,7 +69,7 @@
   "Collectives": [
     {
       "Id": "col_brood",
-      "Name": "Silk Cellar Brood-Wardens",
+      "Name": "Silk Cellar Brood-Keepers",
       "FactionId": "fac_swallowed",
       "Members": [
         {

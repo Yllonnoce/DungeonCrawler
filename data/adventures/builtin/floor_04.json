@@ -59,7 +59,7 @@
   "Collectives": [
     {
       "Id": "col_alms",
-      "Name": "Wardens of the Alms Drift",
+      "Name": "Keepers of the Alms Drift",
       "FactionId": "fac_vestry",
       "Members": [
         {
