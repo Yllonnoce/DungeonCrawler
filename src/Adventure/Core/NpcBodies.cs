@@ -48,11 +48,11 @@ public static class NpcBodies
         return old && !young ? (woman ? "npc_old_woman" : "npc_old_man") : woman ? "npc_young_woman" : "npc_young_man";
     }
 
-    /// <summary>A villain who has a body of their own; null keeps the boss's creature model.</summary>
+    /// <summary>A villain who has a body of their own (the orc in his true form, big_baddy; floor 1 keeps orc1); null keeps the boss's creature model.</summary>
     public static string? Villain(string name, string? epithet, string? style)
     {
         var text = Normalise($"{name} {epithet} {style}");
-        return Any(text, new[] { "orc", "ashtusk" }) ? "orc1" : IsVerger(text) ? "verger" : null;
+        return Any(text, new[] { "orc", "ashtusk" }) ? "big_baddy" : IsVerger(text) ? "verger" : null;
     }
 
     private static bool IsVerger(string text) => Any(Normalise(text), new[] { "verger" });

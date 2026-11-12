@@ -1263,7 +1263,7 @@ public partial class DungeonBuilder : Node3D
         if (_floorRoot == null) return null;
         profile ??= EnemyProfile(id) ?? EnemyProfile("enemy.ghoul") ?? new EnemyProfile(); // a caller's profile (fortune's mimic brute, the hunter) wins over the lookup
         // the last boss is the campaign's villain in person when the owner built them a body: a tall man, not a 3.8 m demon
-        if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = 1.25f };
+        if (spawnIndex == -2 && VillainBody(floor) is { } villain) profile = profile with { Model = $"viewer/{villain}", Scale = villain == "big_baddy" ? 2f : 1.25f }; // the orc's true form is a hunched, broad body: it needs the scale to read as the last boss
         if (spawnIndex == -2 && TierRules.IsEndless(floor)) profile = HeraldProfile(profile, floor); // the Nth Herald: the tier boss re-skinned by the floor's tint, a random second kit, no arena change
         profile = ApplyElite(profile, elite);
         var enemy = _enemyScene.Instantiate<Enemy>();

@@ -178,6 +178,7 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
   shipped campaign Maud is the old woman, Crane the merchant, Tobit the priest, Grisel the prisoner and Ulf the old man.
 - The villain in person: on the last boss floor the tier's boss wears `verger.glb` (scaled to 2.25 m) when the campaign's
   antagonist is a verger (`NpcBodies.Villain`); other campaigns keep the creature.
+- The orc's true form: on floor 20 the last boss wears `big_baddy.glb` (owner's decision 2026-11-12; `NpcBodies.Villain` returns `big_baddy` for the orc, scaled 2x in `DungeonBuilder.SpawnEnemy`); floor 1 keeps `orc1.glb`.
 - All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger).
 - Victory dance: a hero whose blow kills something opens with a Squat, then two different moves drawn fresh from the rest
   of a pool of fourteen (HipBuck, HipRock, Cheer, Punch, Shrug, HitReact, Cower, Pain, Talk, Flinch, Laugh, Point,
