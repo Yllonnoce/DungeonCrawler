@@ -13,12 +13,12 @@
     {
       "Index": 0,
       "Role": "Hall",
-      "Name": "Gallery of the Dropped Verse"
+      "Name": "The Tiled Gallery"
     },
     {
       "Index": 1,
       "Role": "Shrine",
-      "Name": "The Last Station"
+      "Name": "The Last Altar"
     },
     {
       "Index": 2,
@@ -33,7 +33,7 @@
     {
       "Index": 4,
       "Role": "Exit",
-      "Name": "The Throat Stair"
+      "Name": "The Deep Stair"
     },
     {
       "Index": 5,
@@ -48,13 +48,13 @@
     {
       "Index": 7,
       "Role": "Passage",
-      "Name": "The Antiphon Walk"
+      "Name": "The Marble Walk"
     }
   ],
   "Collectives": [
     {
       "Id": "co_stairwardens",
-      "Name": "Wardens of the Throat",
+      "Name": "Guards of the Deep Stair",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -82,7 +82,7 @@
     },
     {
       "Id": "co_antiphon",
-      "Name": "The Antiphon",
+      "Name": "The Gallery Round",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -126,7 +126,7 @@
     },
     {
       "Id": "co_cellarsingers",
-      "Name": "Singers in the Cellar",
+      "Name": "The Gallery Guard",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -179,7 +179,7 @@
   "Hordes": [
     {
       "Id": "hd_mouths",
-      "Name": "The Breath of the Choir",
+      "Name": "The Breath of the Mouths",
       "Room": 2,
       "Members": [
         {

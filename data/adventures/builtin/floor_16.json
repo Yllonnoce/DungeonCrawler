@@ -23,12 +23,12 @@
     {
       "Index": 2,
       "Role": "Passage",
-      "Name": "Antechamber of Soft Singing"
+      "Name": "The Quiet Antechamber"
     },
     {
       "Index": 3,
       "Role": "Shrine",
-      "Name": "Chorister\u0027s Ledge"
+      "Name": "The Vigil Ledge"
     },
     {
       "Index": 4,
@@ -38,12 +38,12 @@
     {
       "Index": 5,
       "Role": "Ruin",
-      "Name": "Fallen Colonnade of Psalms"
+      "Name": "The Fallen Colonnade"
     },
     {
       "Index": 6,
       "Role": "Exit",
-      "Name": "Descent Beneath the Choir"
+      "Name": "The Deep Descent"
     },
     {
       "Index": 7,
@@ -53,7 +53,7 @@
     {
       "Index": 8,
       "Role": "Barracks",
-      "Name": "Reliquary of Unsung Names"
+      "Name": "The Reliquary Gallery"
     },
     {
       "Index": 9,
@@ -122,7 +122,7 @@
     },
     {
       "Id": "col_ring_patrol",
-      "Name": "The Ambulatory Verse",
+      "Name": "The Ambulatory Round",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -152,7 +152,7 @@
     },
     {
       "Id": "col_reliquary",
-      "Name": "Singers of the Unsung Names",
+      "Name": "The Reliquary Watch",
       "FactionId": "fac_choir",
       "Members": [
         {

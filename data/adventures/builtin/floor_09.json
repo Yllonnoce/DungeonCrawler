@@ -13,7 +13,7 @@
     {
       "Index": 0,
       "Role": "Hall",
-      "Name": "Cistern of the Second Verse"
+      "Name": "The Second Cistern"
     },
     {
       "Index": 1,
@@ -23,7 +23,7 @@
     {
       "Index": 2,
       "Role": "Hall",
-      "Name": "Cistern of the First Verse"
+      "Name": "The First Cistern"
     },
     {
       "Index": 3,
@@ -58,17 +58,17 @@
     {
       "Index": 9,
       "Role": "Lair",
-      "Name": "Breach of the Fourth Verse"
+      "Name": "The Cistern Breach"
     },
     {
       "Index": 10,
       "Role": "Cell",
-      "Name": "The Hollow Behind the Verse"
+      "Name": "The Hollow Behind the Wall"
     },
     {
       "Index": 11,
       "Role": "Shrine",
-      "Name": "Cistern of the Third Verse"
+      "Name": "The Third Cistern"
     },
     {
       "Index": 12,
@@ -78,7 +78,7 @@
     {
       "Index": 13,
       "Role": "Treasury",
-      "Name": "The Verse Vault"
+      "Name": "The Cistern Vault"
     },
     {
       "Index": 14,
@@ -94,7 +94,7 @@
   "Collectives": [
     {
       "Id": "col_vault",
-      "Name": "Keepers of the Last Verse",
+      "Name": "Keepers of the Cistern Vault",
       "FactionId": "fac_swallowed",
       "Members": [
         {
@@ -147,7 +147,7 @@
     },
     {
       "Id": "col_patrol",
-      "Name": "The Verse Walk",
+      "Name": "The Channel Walk",
       "FactionId": "fac_swallowed",
       "Members": [
         {
@@ -172,7 +172,7 @@
     },
     {
       "Id": "col_firstverse",
-      "Name": "Squatter of the First Verse",
+      "Name": "Squatter in the First Cistern",
       "FactionId": "fac_swallowed",
       "Members": [
         {
@@ -195,7 +195,7 @@
   "Hordes": [
     {
       "Id": "horde_fourth",
-      "Name": "The Fourth Verse Breach",
+      "Name": "The Cistern Breach",
       "Room": 9,
       "Members": [
         {
@@ -219,14 +219,14 @@
       "Total": 18,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The carved verse splits down its middle and the wall behind it is not wall at all; it is legs, and all of them coming.",
-        "VoiceId": "5658b2bbf92848a4",
+        "Text": "The cistern wall splits down its middle, and what is behind it is not rock at all; it is legs, and all of them coming.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
     {
       "Id": "horde_hollow",
-      "Name": "What Waited Behind the Hymn",
+      "Name": "What Waited Behind the Wall",
       "Room": 10,
       "Members": [
         {

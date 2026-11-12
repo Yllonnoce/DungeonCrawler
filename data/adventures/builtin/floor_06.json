@@ -13,12 +13,12 @@
     {
       "Index": 0,
       "Role": "Start",
-      "Name": "Lip of the Swallow"
+      "Name": "The Floodwater Landing"
     },
     {
       "Index": 1,
       "Role": "Hall",
-      "Name": "The Tooth Shelf"
+      "Name": "The Silt Shelf"
     },
     {
       "Index": 2,
@@ -38,12 +38,12 @@
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "The Narrow Throat"
+      "Name": "The Narrow Cut"
     },
     {
       "Index": 6,
       "Role": "Exit",
-      "Name": "The Second Swallow"
+      "Name": "The Sinkhole Stair"
     },
     {
       "Index": 7,
@@ -64,7 +64,7 @@
   "Collectives": [
     {
       "Id": "col_teeth",
-      "Name": "Hoarders of the Tooth Shelf",
+      "Name": "Hoarders of the Silt Shelf",
       "FactionId": "fac_swallowed",
       "Members": [
         {
@@ -145,7 +145,7 @@
   "Hordes": [
     {
       "Id": "horde_brood",
-      "Name": "The Swallowed Brood",
+      "Name": "The Shallows Brood",
       "Room": 3,
       "Members": [
         {

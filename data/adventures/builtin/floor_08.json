@@ -23,12 +23,12 @@
     {
       "Index": 2,
       "Role": "Start",
-      "Name": "Swallow\u0027s End"
+      "Name": "The Craw Landing"
     },
     {
       "Index": 3,
       "Role": "Exit",
-      "Name": "Downgullet Stair"
+      "Name": "The Downcast Stair"
     },
     {
       "Index": 4,
@@ -43,7 +43,7 @@
     {
       "Index": 6,
       "Role": "Lair",
-      "Name": "Gravel Throat"
+      "Name": "The Gravel Breach"
     }
   ],
   "Collectives": [

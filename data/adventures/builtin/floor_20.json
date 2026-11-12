@@ -23,32 +23,32 @@
     {
       "Index": 2,
       "Role": "Shrine",
-      "Name": "Tooth Ledge"
+      "Name": "The Brazier Ledge"
     },
     {
       "Index": 3,
       "Role": "Lair",
-      "Name": "The Left Gallery of Teeth"
+      "Name": "The Left Gallery"
     },
     {
       "Index": 4,
       "Role": "Kennel",
-      "Name": "The Breach Behind the Gum"
+      "Name": "The Back Breach"
     },
     {
       "Index": 5,
       "Role": "Passage",
-      "Name": "The Soft Palate"
+      "Name": "The Low Passage"
     },
     {
       "Index": 6,
       "Role": "Hall",
-      "Name": "Hall of the Unsung Verse"
+      "Name": "The Sluice Hall"
     },
     {
       "Index": 7,
       "Role": "Barracks",
-      "Name": "The Choir\u0027s Vestry"
+      "Name": "The Deep Vestry"
     },
     {
       "Index": 8,
@@ -58,13 +58,13 @@
     {
       "Index": 9,
       "Role": "Treasury",
-      "Name": "The Reliquary of Gold Teeth"
+      "Name": "The Herald\u0027s Hoard"
     }
   ],
   "Collectives": [
     {
       "Id": "col_litany",
-      "Name": "The Litany Choir",
+      "Name": "The Herald\u0027s Guard",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -117,7 +117,7 @@
     },
     {
       "Id": "col_descant",
-      "Name": "The Walking Descant",
+      "Name": "The Low Round",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -147,7 +147,7 @@
     },
     {
       "Id": "col_reliquary",
-      "Name": "Keeper of the Gold Teeth",
+      "Name": "Keeper of the Hoard",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -198,7 +198,7 @@
   "Hordes": [
     {
       "Id": "horde_left_gallery",
-      "Name": "The Verse Breaks",
+      "Name": "The Gallery Shades",
       "Room": 3,
       "Members": [
         {
@@ -229,7 +229,7 @@
     },
     {
       "Id": "horde_gum_breach",
-      "Name": "The Answering Stanza",
+      "Name": "The Breach Shades",
       "Room": 4,
       "Members": [
         {

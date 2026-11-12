@@ -178,7 +178,7 @@
   "Hordes": [
     {
       "Id": "horde_breach",
-      "Name": "The Drift Choir",
+      "Name": "The Drift Shades",
       "Room": 4,
       "Members": [
         {
@@ -209,7 +209,7 @@
     },
     {
       "Id": "horde_wheeze",
-      "Name": "The Answering Verse",
+      "Name": "The Wheezing Shades",
       "Room": 6,
       "Members": [
         {

@@ -53,18 +53,18 @@
     {
       "Index": 8,
       "Role": "Passage",
-      "Name": "The Antechoir"
+      "Name": "The Antechamber"
     },
     {
       "Index": 9,
       "Role": "Treasury",
-      "Name": "Reliquary of the Gag"
+      "Name": "The Sleeper\u0027s Reliquary"
     }
   ],
   "Collectives": [
     {
       "Id": "col_reliquary",
-      "Name": "Keepers of the Gag",
+      "Name": "Keepers of the Reliquary",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -92,7 +92,7 @@
     },
     {
       "Id": "col_antiphon",
-      "Name": "The Antiphon",
+      "Name": "The East Round",
       "FactionId": "fac_choir",
       "Members": [
         {
@@ -142,7 +142,7 @@
     },
     {
       "Id": "col_stairs",
-      "Name": "The Descant at the Stair",
+      "Name": "The Watch at the Stair",
       "FactionId": "fac_choir",
       "Members": [
         {

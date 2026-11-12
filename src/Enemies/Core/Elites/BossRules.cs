@@ -43,4 +43,11 @@ public static class BossRules
     }
 
     public static bool PhaseTwoAt(float hp, float maxHp) => hp > 0 && hp <= maxHp * HalfFraction;
+
+    /// <summary>
+    /// The name a boss is shown by: the plan's boss name when it wears the campaign villain's own body (he is there in person,
+    /// not the stock creature), else the creature's. Only the name: the creature's stats stay.
+    /// </summary>
+    public static string ShownName(string creatureName, string? planBossName, bool villainBodied)
+        => villainBodied && !string.IsNullOrWhiteSpace(planBossName) ? planBossName.Trim() : creatureName;
 }
