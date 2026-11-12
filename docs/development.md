@@ -218,7 +218,7 @@ Real materials and models are CC0: Poly Haven PBR textures per tier (triplanar o
 scaled to size and lightly tinted; the possessed character's own model is hidden so it never blocks the camera), and Kenney sound packs for effects. Everything is listed with its source in
 `assets/LICENSES.md`. Ambience is generated in code (a low hum plus filtered noise, coloured per tier). Music is CC0 from
 OpenGameArt, fetched by `scripts/fetch_music.py` into `assets/audio/music/` (about 49 MB): a tavern tune for the title screen,
-three exploration pieces per tier (Crypt, Caves, Forge, Abyss) shuffled with a few seconds of quiet between them, three battle
+three exploration pieces per tier (Crypt, Caves, Forge, Abyss) shuffled with a few seconds of quiet between them (plus one owner-supplied exploration track, `explore_dungeon_walking.mp3`, that plays in every tier), three battle
 tracks, a boss track, and victory and defeat stings. `Audio/MusicDirector.cs` crossfades between them: battle music starts the
 moment an enemy is fighting the party within 26 m and holds for six seconds after the last one stops, the boss track runs from
 the guardian noticing you until it falls, and everything ducks under spoken lines. The "Music and ambience" slider covers it all.

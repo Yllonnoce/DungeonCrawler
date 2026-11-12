@@ -104,6 +104,7 @@ All tracks are CC0 (https://creativecommons.org/publicdomain/zero/1.0/); fetched
 - boss_battle_rpg_theme.ogg: "Boss Battle Theme (variation)" by CleytonKauffman, https://opengameart.org/content/boss-battle-theme
 - sting_victory.mp3: "Medieval: Victory Theme" by RandomMind, https://opengameart.org/content/medieval-victory-theme
 - sting_defeat.mp3: "Medieval: Defeat Theme" by RandomMind, https://opengameart.org/content/medieval-defeat-theme
+- explore_dungeon_walking.mp3: "DungeonWalking", supplied by the project owner (not fetched from OpenGameArt; licence as the owner holds it).
 
 ## Enemy grunts (CC0)
 

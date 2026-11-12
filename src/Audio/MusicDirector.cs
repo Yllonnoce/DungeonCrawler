@@ -25,10 +25,10 @@ public partial class MusicDirector : Node
     private static readonly string[] MenuTracks = { "menu_old_tower_inn.mp3" };
     private static readonly string[][] ExploreByTier =
     {
-        new[] { "crypt_dungeon_theme.mp3", "crypt_dark_theme.ogg", "crypt_medieval_exploration.mp3" },
-        new[] { "caves_dark_cavern_1.ogg", "caves_dark_cavern_2.ogg", "caves_going_deep.ogg" },
-        new[] { "forge_heavy_dungeon.ogg", "forge_cursed_tower_veranda.ogg", "forge_ghosts_and_heroes.ogg" },
-        new[] { "abyss_dark_shrine_loop.ogg", "abyss_dungeon_ambience.ogg", "abyss_dark_intro.ogg" },
+        new[] { "crypt_dungeon_theme.mp3", "crypt_dark_theme.ogg", "crypt_medieval_exploration.mp3", "explore_dungeon_walking.mp3" },
+        new[] { "caves_dark_cavern_1.ogg", "caves_dark_cavern_2.ogg", "caves_going_deep.ogg", "explore_dungeon_walking.mp3" },
+        new[] { "forge_heavy_dungeon.ogg", "forge_cursed_tower_veranda.ogg", "forge_ghosts_and_heroes.ogg", "explore_dungeon_walking.mp3" },
+        new[] { "abyss_dark_shrine_loop.ogg", "abyss_dungeon_ambience.ogg", "abyss_dark_intro.ogg", "explore_dungeon_walking.mp3" },
     };
     private static readonly string[] CombatTracks = { "combat_battle_theme_a.mp3", "combat_battle_theme_b.mp3", "combat_medieval_battle.mp3" };
     private static readonly string[] BossTracks = { "boss_battle_rpg_theme.ogg" };
