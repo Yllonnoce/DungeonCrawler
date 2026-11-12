@@ -1229,8 +1229,8 @@
         {
           "Trigger": "Dance",
           "Line": {
-            "Text": "The council pays for the sword work. The hips are on the house.",
-            "VoiceId": null,
+            "Text": "Call that a funeral march. A quick one.",
+            "VoiceId": "95ccb222e816d6af",
             "Delivery": "cheerful"
           }
         },
@@ -6788,7 +6788,7 @@
         {
           "Trigger": "Loot",
           "Line": {
-            "Text": "Council paper, and still legible. The alderman will be appalled.",
+            "Text": "Council paper, and still legible. Unprecedented.",
             "VoiceId": null,
             "Delivery": ""
           }
@@ -11455,7 +11455,7 @@
         }
       ],
       "MinFloor": 1,
-      "Tier": null,
+      "Tier": 0,
       "RequiresFlag": null,
       "OncePerRun": true,
       "Counter": null,
@@ -11500,7 +11500,7 @@
         }
       ],
       "MinFloor": 1,
-      "Tier": null,
+      "Tier": 0,
       "RequiresFlag": null,
       "OncePerRun": true,
       "Counter": null,
@@ -11537,7 +11537,7 @@
         }
       ],
       "MinFloor": 1,
-      "Tier": null,
+      "Tier": 0,
       "RequiresFlag": null,
       "OncePerRun": true,
       "Counter": null,
@@ -11582,7 +11582,7 @@
         }
       ],
       "MinFloor": 6,
-      "Tier": null,
+      "Tier": 1,
       "RequiresFlag": null,
       "OncePerRun": true,
       "Counter": null,
@@ -11717,7 +11717,7 @@
         }
       ],
       "MinFloor": 11,
-      "Tier": null,
+      "Tier": 2,
       "RequiresFlag": null,
       "OncePerRun": true,
       "Counter": null,
@@ -11731,7 +11731,7 @@
         {
           "Member": "Ilex",
           "Line": {
-            "Text": "That mould by the stair is the orc himself, poured larger. It wants smashing.",
+            "Text": "That mould by the stair back there was the orc himself, poured larger. It wants smashing.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -11761,7 +11761,7 @@
           }
         }
       ],
-      "MinFloor": 13,
+      "MinFloor": 14,
       "Tier": 2,
       "RequiresFlag": null,
       "OncePerRun": true,
@@ -11776,7 +11776,7 @@
         {
           "Member": "Wren",
           "Line": {
-            "Text": "Big engine next.",
+            "Text": "Big engine.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -11784,7 +11784,7 @@
         {
           "Member": "Ilex",
           "Line": {
-            "Text": "The Bellows. Oskar would say strike the joints, where the old iron is thinnest. I concur, which he would find tiresome.",
+            "Text": "The Bellows. Oskar says its joints are where the old iron is thinnest. I concur, which he would find tiresome.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -11800,7 +11800,7 @@
         {
           "Member": "Ilex",
           "Line": {
-            "Text": "Whatever drops from them, kill before it cools. Then the third drain.",
+            "Text": "What drops off them stays soft until it cools, he says. I see no reason to doubt him.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -11919,7 +11919,7 @@
         {
           "Member": "Brand",
           "Line": {
-            "Text": "Lad came down after us anyway. Wanted proof of his own master.",
+            "Text": "Lad came down after us for it. Wanted proof of his own master.",
             "VoiceId": null,
             "Delivery": "weary"
           }
