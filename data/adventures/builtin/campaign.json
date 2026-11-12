@@ -3,15 +3,15 @@
   "Source": "builtin",
   "GameSeed": 7319,
   "Title": "The Gullet of Gorm",
-  "Synopsis": "Hired by the town of Dunmarrow to see to a problem with the plumbing, four inspectors walk twenty floors down the throat of a sleeping god. Each tier is a station of a pilgrimage nobody told them they were on: the Skin, the Gut, the Heart, the Dream. At the bottom waits the verger who has kept Gorm asleep for three hundred years on a diet of four adventurers a generation.",
+  "Synopsis": "A good god, Gorm, sleeps under the town of Dunmarrow, fed by the water that runs down through the old mines, and his dreams hold the Sleepless, an evil god, out of this world. For three hundred years the town\u0027s drain-wardens kept the mine drains clear. Now Morg Ashtusk, the Herald, an orc chieftain serving the Sleepless, has seized the mines, filled them with traps and minions and choked the drains: the lower levels flood, the wells run sour, and the starving god stirs. Dunmarrow hires mercenaries to clear the way so the drains can run again. If Gorm wakes, the Sleepless breaks through; if they fail, the mines collapse and the town perishes.",
   "Antagonist": {
-    "Name": "Absalom Quill",
-    "Epithet": "The Verger",
+    "Name": "Morg Ashtusk",
+    "Epithet": "The Herald",
     "VoiceId": null,
     "Persona": {
-      "VoiceStyle": "a dry, precise church verger of great age; liturgical cadence, offended by noise and blood, never raised",
-      "DefaultDelivery": "calm",
-      "Voice": "Sadaltager",
+      "VoiceStyle": "a huge, contemptuous orc chieftain; deep, plain, full sentences, prices everyone in wages, never begs",
+      "DefaultDelivery": "mocking",
+      "Voice": "Fenrir",
       "IsEmpty": false
     }
   },
@@ -20,11 +20,11 @@
     {
       "Id": "cast_maud",
       "Name": "Maud Sorrel",
-      "Role": "A sleepwalking guide who is always one floor further down than she should be, and always dry",
-      "Secret": "She drowned in the Gullet thirty-eight years ago; what walks and speaks is Gorm\u0027s dream wearing her. It comes out on floor 18 when she sits down and speaks as Him.",
+      "Role": "The oldest of Dunmarrow\u0027s drain-wardens, drowned in the backed-up water and kept walking by the god; she guides the party down, and through her the god\u0027s need reaches them, a little clearer each act",
+      "Secret": "She wants water for the god: \u0027Help me clear the grates, dear, the water has to go down\u0027 in act 1, and from floor 6 \u0027Keep the water going down to him. He is thirsty.\u0027 She does not know she drowned until floor 11, where she says so plainly. On floor 18 she sits down and Gorm speaks through her.",
       "VoiceId": null,
       "Persona": {
-        "VoiceStyle": "an old woman talking in her sleep: unhurried, kind, faintly amused at the size of everything",
+        "VoiceStyle": "an old workwoman soaked to the skin: unhurried, kind, faintly amused at her own state",
         "DefaultDelivery": "calm",
         "Voice": "Gacrux",
         "IsEmpty": false
@@ -34,8 +34,8 @@
     {
       "Id": "cast_crane",
       "Name": "Alderman Hesketh Crane",
-      "Role": "The employer, who follows the party down to check the invoice and keeps finding paperwork he wrote",
-      "Secret": "He carved the party\u0027s names on the memorial stone before they left, and has done it four times. It comes out on floor 17, with the gas rising, just before he sells them.",
+      "Role": "Alderman of Dunmarrow and the party\u0027s employer, honest but guilty: this spring he signed the council\u0027s order that stopped paying the drain-wardens, and he follows the party down to check progress",
+      "Secret": "He wants the drains cleared and every council paper the party finds brought to him unread, before the town asks why the wardens went. Floor 9: the dismissal order carries his own signature and he gives the official excuse, no point paying wardens the Verger had shut out. Floor 17: he owns that the council was glad of the excuse because it saved money, and holds a sluice open for the party. He never betrays them.",
       "VoiceId": null,
       "Persona": {
         "VoiceStyle": "a plump market-town alderman; bluster over panic, speaks in clauses, invoices and apologies",
@@ -48,8 +48,8 @@
     {
       "Id": "cast_tobit",
       "Name": "Deacon Tobit Hale",
-      "Role": "The Verger\u0027s junior, sent up to greet the congregation, desperate for the work to be holy",
-      "Secret": "Quill is grooming him as the next gag in Gorm\u0027s mouth and means to stop being human. It lands on floor 16, by which time he has either defected or been used.",
+      "Role": "A young deacon of Gorm\u0027s church and the Verger\u0027s junior, keeping the church alone since his master went below in spring; he believes that if the town prays properly, Gorm will save it",
+      "Secret": "He wants the god to save the town, and from act 3 proof of what his master did. Told on floor 3 that the god is starving (told_tobit), he asks on 14 whether the Verger did this and brings the Verger\u0027s letter himself on 16. Not told, he believes his master a prisoner, runs to a summons in the Verger\u0027s hand on 14 and is taken for the rite; breaking the rite on 19 lets him go.",
       "VoiceId": null,
       "Persona": {
         "VoiceStyle": "an eager young deacon, polite to a fault, delighted to have visitors at last",
@@ -62,11 +62,11 @@
     {
       "Id": "cast_grisel",
       "Name": "Grisel Thorn",
-      "Role": "Sole survivor of the last four, nineteen years in the Gut, keeps a camp under a spider\u0027s shell",
-      "Secret": "She bought her life by walking her own party to the jailers, and has gone on doing it. It comes out on floor 9 when Crane reads the old contract aloud.",
+      "Role": "The last drain-warden still free: this spring she took her crew down unpaid, against the Verger\u0027s order, ran when the orc\u0027s minions caged them, and has hidden since in a camp by a seized pump in the Crop",
+      "Secret": "She wants her crew back before they turn, or to be forgiven for leaving them. On floor 7 she asks for help finding them; on floor 9 she admits she ran and left them in the cages (grisel_forgiven or grisel_condemned). Floor 12 pays it: forgiven, she helps bring her crew out; condemned, she has taken the Herald\u0027s keys to save herself, stands as his head jailer and dies there.",
       "VoiceId": null,
       "Persona": {
-        "VoiceStyle": "nineteen years alone underground: flat, wry, addresses people like spiders she already knows",
+        "VoiceStyle": "a drain-warden months alone underground: flat, wry, short sentences, says the worst about herself first",
         "DefaultDelivery": "weary",
         "Voice": "Despina",
         "IsEmpty": false
@@ -76,8 +76,8 @@
     {
       "Id": "cast_ulf",
       "Name": "Old Ulf",
-      "Role": "Keeper of the Forge, who will tell you cheerfully that he casts tools",
-      "Secret": "He knows exactly what the moulds cast, and is proud of every baby in Dunmarrow. It comes out on floor 13 when he shows the faces off like plate.",
+      "Role": "Keeper of the old pump works, eighty, who has turned its engine to casting for a customer who sends orders down with gold; his eyes are going, and he calls everything he pours tools",
+      "Secret": "He wants good work and a paying customer. He never sees that he is casting for the Herald until floor 13, when the moulds (clue_moulds) show the crushing walls, the spike beds, the iron minions and the Herald\u0027s own mould, larger; from then on he wants to undo what he made and breaks the moulds himself.",
       "VoiceId": null,
       "Persona": {
         "VoiceStyle": "a jovial old founder, soot in his beard, proud of his work and deaf to what it means",
@@ -88,9 +88,23 @@
       "Merchant": false
     },
     {
+      "Id": "cast_quill",
+      "Name": "Absalom Quill",
+      "Role": "The Verger of Gorm\u0027s church for forty years, keeper of the crypt door to the mines, who let the Herald in and ordered no one below; the party hears of him all the way down and meets him at his rite on floor 19",
+      "Secret": "He wants the god awake: Gorm never answered his prayers, and the Herald promised that the god who comes through will reward the man who opened the door. It comes out in pieces: his order in the wardens\u0027 log (4), his vestments in the water (14), his letter to the Herald (16). On 19 he conducts the rite to wake the god and is left kneeling when it breaks.",
+      "VoiceId": null,
+      "Persona": {
+        "VoiceStyle": "a dry, precise church verger of great age; liturgical cadence, offended by noise and blood, never raised",
+        "DefaultDelivery": "calm",
+        "Voice": "Sadaltager",
+        "IsEmpty": false
+      },
+      "Merchant": false
+    },
+    {
       "Id": "cast_pellet",
       "Name": "Master Oswin Pellet",
-      "Role": "The factor who financed the council\u0027s contract and follows the money down, one locked room at a time",
+      "Role": "The factor who advanced the council the money to hire the party and follows it down, trading from behind a locked door on every floor; he wants his money back and his mine carts running again",
       "Secret": "",
       "VoiceId": null,
       "Persona": {
@@ -103,32 +117,32 @@
     }
   ],
   "Mystery": {
-    "Question": "Why does Dunmarrow send four inspectors down the Gullet every nineteen years?",
-    "Truth": "The council has a standing contract with the Verger: four souls a generation keep Gorm dreaming, and the dream keeps the Forge casting Dunmarrow\u0027s children. The sour wells are not illness; they are a god trying to wake up.",
+    "Question": "Who shut the drains, and why?",
+    "Truth": "Absalom Quill, the Verger, prayed to Gorm all his life and was never answered; the Herald of the Sleepless answered him. He opened the church\u0027s crypts at the lychgate to let the Herald into the mines, and ordered no one below. The council used his order as its excuse to stop paying the drain-wardens, glad of the saving. The Herald choked the drains to starve the god awake by midwinter, so that the Sleepless can break through the dream.",
     "Clues": [
       {
         "Id": "clue_ledger",
         "Floor": 4,
-        "Text": "Sexton\u0027s ledger of plumbing inspections: 1612, 1631, 1650, onward. Four names each, nineteen years apart, and not one return date entered."
+        "Text": "The drain-wardens\u0027 log: the drains cleared every season for three hundred years, entry after entry, until this spring, where it stops with one line: \u0027By the Verger\u0027s order, no one below.\u0027"
       },
       {
         "Id": "clue_contract",
         "Floor": 9,
-        "Text": "The last four\u0027s contract, word for word the party\u0027s own, sealed with Alderman Crane\u0027s ring and the fee paid in advance by the council."
+        "Text": "The order dismissing the drain-wardens, under the council\u0027s seal and signed by Alderman Crane: the wardens are to be paid no longer, since the Verger has forbidden anyone to go below."
       },
       {
         "Id": "clue_moulds",
         "Floor": 13,
-        "Text": "Casting moulds with Dunmarrow faces in them: the miller\u0027s boy, the Crane grandchildren, and faces of people not yet born."
+        "Text": "The foundry\u0027s moulds: patterns for the crushing walls, the spike beds and the iron minions, and one larger mould in the Herald\u0027s own shape."
       },
       {
         "Id": "clue_letter",
         "Floor": 16,
-        "Text": "The Verger\u0027s letter to the council: \u0027Send the usual. Something fierce this time; He stirs.\u0027 Countersigned, and dated this spring."
+        "Text": "The Verger\u0027s letter to the Herald, in his own hand: \u0027The way will be open by midwinter.\u0027"
       }
     ],
     "PayoffFloor": 18,
-    "Payoff": "In the Dreaming Hall Maud stops sleepwalking, sits down on the marble, and Gorm speaks through her: slow, kind, apologetic for the size of Himself, and grateful that anyone came. The four clues laid out at her feet make the contract plain, and the party must choose to finish the pilgrimage and wake Him or burn the contract and let the dream, and Dunmarrow\u0027s souls, go on."
+    "Payoff": "In the Dreaming Hall Maud sits down and Gorm speaks through her: starving, half awake, sorry for the shaking, the sour wells and the people hurt. He asks for water and for sleep, and says plainly that his waking would let the Sleepless in. The party chooses how much to ask of him: \u0027Sleep. We will finish it.\u0027 (let_him_dream) or \u0027Lend us what strength you have.\u0027 (wake_gorm), which helps against the Herald but thins the dream."
   },
   "Factions": [
     {
@@ -160,7 +174,7 @@
     },
     {
       "Id": "fac_choir",
-      "Name": "The Choir",
+      "Name": "The Things from Outside",
       "EnemyIds": [
         "enemy.void_stalker",
         "enemy.abyss_archer",
@@ -172,48 +186,48 @@
     {
       "Index": 0,
       "Theme": "crypt.brick",
-      "Beat": "The Skin: the church Dunmarrow built on a god\u0027s chest. Its dead walk the undercrofts in last generation\u0027s coats, the Verger\u0027s deacon greets you politely, and the alderman\u0027s paperwork starts turning up where it should not.",
+      "Beat": "The Skin, floors 1-5, the church\u0027s ground: crypts, chapel, chantry. The Herald attacks at the mine head and is killed, and his voice comes back from below. The church\u0027s dead walk, the traps are new, and the wardens\u0027 log shows the mines were shut by the Verger\u0027s order. Canon Ludd, the Herald\u0027s first lieutenant, guards the first great drain.",
       "BossName": "Canon Ludd",
       "BossSignature": "Slam",
       "EnterLine": {
-        "Text": "The lychgate stands on His chest. Below it, Dunmarrow laid its dead on Him for six hundred years and called it consecrated ground. First Station: the Skin.",
-        "VoiceId": "dbf415a1abedcb59",
+        "Text": "The lychgate opens on the church\u0027s crypts, and the crypts on the mines. Dunmarrow\u0027s dead are up and walking, raised to keep you from the drains below. The Skin.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
     {
       "Index": 1,
       "Theme": "caves.lichen",
-      "Beat": "The Gut: the swallow, the crop, the craw. Everything Gorm ate is still alive in here, and so is Grisel Thorn, who has been down nineteen years and did something to earn them.",
+      "Beat": "The Gut, floors 6-10, where the water backs up: flooded, stagnant, full of vermin grown huge in it. Maud speaks clearly for the first time, minions hold a rite to hurry the god awake, bandits loot the wardens\u0027 stores, and the dismissal order shows the council let its wardens go. Mother Nit, bloated in the standing water, guards the second great drain.",
       "BossName": "Mother Nit",
       "BossSignature": "Summon",
       "EnterLine": {
-        "Text": "Below the church the stone turns soft and wet and green, and it is warm, and it moves when nothing should. Second Station: the Gut.",
-        "VoiceId": "fc330be54ef8dfd3",
+        "Text": "Below the church the water stands. It should be running down to the god, but the drains beneath it are choked, so it sits here and goes sour. The Gut.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
     {
       "Index": 2,
       "Theme": "forge.iron",
-      "Beat": "The Heart: the Forge that casts Dunmarrow\u0027s souls, tended by men cast without any. Old Ulf shows off the moulds, and the faces in them are known.",
+      "Beat": "The Heart, floors 11-15, the old pump works that once pushed the water down the drains, turned by the Herald into a foundry. Old Ulf casts for a customer who pays in gold, Grisel\u0027s crew are caged and nearly turned, and the moulds show where every trap and iron minion came from. The Bellows, the great pump engine, now casting minions, guards the third great drain.",
       "BossName": "The Bellows",
       "BossSignature": "Charge",
       "EnterLine": {
-        "Text": "Heat, and a beat under the heat. Something here is being made, over and over, and it has never once been asked. Third Station: the Heart.",
-        "VoiceId": "f3a96821293d9df1",
+        "Text": "Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. Someone has taught it to cast iron instead. The Heart.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
     {
       "Index": 3,
       "Theme": "abyss.palace",
-      "Beat": "The Dream: marble halls, the Choir\u0027s lullaby, and the truth of the contract. The god turns over; the Verger tightens the gag; the party decides whether to wake Him.",
-      "BossName": "The Verger",
+      "Beat": "The Dream, floors 16-20, nearest the sleeping god, where the dream is thinnest and the Sleepless\u0027s own kind come through. The Verger\u0027s letter shows who let the Herald in, Crane comes down to hold a sluice, Gorm speaks through Maud, the Verger\u0027s rite to wake the god is broken, and the Herald waits, recast and larger, at the last great drain.",
+      "BossName": "Morg Ashtusk",
       "BossSignature": "Volley",
       "EnterLine": {
-        "Text": "Marble, because He dreams in marble. Somewhere ahead a choir is singing something very old and very soft. Fourth Station: the Dream.",
-        "VoiceId": "cbd731f70f6b0d86",
+        "Text": "This close to the sleeping god, the dream wears thin. It is the only door between this world and the Sleepless, and things from the other side are pressing through. The Dream.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -222,8 +236,8 @@
     {
       "Floor": 1,
       "Title": "The Lychgate",
-      "Mood": "consecrated ground, a brisk employer, bread in a cellar",
-      "Story": "cast_crane sees the party off at the stair with the contract and one sincere line about bread in the first cellar; a Recover quest for his basket plants the counterfoil he would rather nobody read. cast_maud walks past the gate, downward, asleep.",
+      "Mood": "a mine head under a church, a dead orc still talking",
+      "Story": "The Herald (Morg Ashtusk, the orc) attacks at the mine head. viewer_foehammer, who keeps the gate, and the party kill him, and his voice comes straight back up from below: the foundry will recast him. cast_crane hires the party and explains the job (sour wells, shaking ground, wardens who went down and did not return) and asks for the council notices posted at the mine head. cast_maud goes down ahead on her rounds, not knowing she drowned: help me clear the grates, the water has to go down.",
       "Theme": "crypt.brick",
       "Layout": "standard",
       "Objective": null,
@@ -247,8 +261,8 @@
     {
       "Floor": 2,
       "Title": "The Vestibule",
-      "Mood": "moss in the mortar, the sexton\u0027s lot gone wandering",
-      "Story": "",
+      "Mood": "moss in the mortar, grey prisoners who look alike",
+      "Story": "Jailbreak: the prisoners are captured drain-wardens, grey and half-turned in the Herald\u0027s cages, already hard to tell apart. The ones the party frees say the traps are new and somebody is building them, that the ones they finish go grey and join the packs (husks), that cast_grisel\u0027s crew went down first and nobody has seen them since, and that cast_ulf still keeps the pump works but nobody has heard from him since spring.",
       "Theme": "crypt.mossy",
       "Layout": "labyrinth",
       "Objective": "jailbreak",
@@ -272,8 +286,8 @@
     {
       "Floor": 3,
       "Title": "The Nave",
-      "Mood": "chalk-white bone chapel, a candle nobody needs",
-      "Story": "cast_tobit greets the congregation on the Verger\u0027s behalf. Decide: tell him the truth, that you are plumbers and not pilgrims (flag told_tobit), or let him keep his saint. Beyond the chancel the wall-press guards the bone-chapel chest.",
+      "Mood": "chalk-white bone chapel, a deacon praying alone",
+      "Story": "cast_tobit prays in the Nave for Gorm to save the town; his master the Verger went below in spring, he says, to pray for it. The first crushing trap is on this floor. Decide: tell him the god is starving and no help is coming (flag told_tobit), or let him pray (flag kept_his_saint). Told, he is shaken and resolves to find out what happened to the drains; not told, he is grateful and keeps praying.",
       "Theme": "crypt.ossuary",
       "Layout": "standard",
       "Objective": null,
@@ -297,8 +311,8 @@
     {
       "Floor": 4,
       "Title": "The Chantry",
-      "Mood": "rotten timber, rising green air, a flustered alderman",
-      "Story": "cast_crane has followed the party down to check the invoice and drops the sexton\u0027s ledger doing it: clue_ledger, an Investigate across the gas galleries while the chantry fills from the cellars.",
+      "Mood": "rotten timber, rising foul air, a log that stops",
+      "Story": "Foul gas rises from the stagnant water while the party searches the chantry. cast_crane has come down to check progress and finds clue_ledger, the wardens\u0027 log: the drains cleared every season for three hundred years, until this spring\u0027s last entry, \u0027By the Verger\u0027s order, no one below.\u0027 Relieved it was the church and not the council, he says so too quickly.",
       "Theme": "crypt.undercroft",
       "Layout": "mine",
       "Objective": "toxic",
@@ -322,8 +336,8 @@
     {
       "Floor": 5,
       "Title": "Canon Ludd",
-      "Mood": "a liturgy performed by a thing with no congregation",
-      "Story": "",
+      "Mood": "a dead canon standing guard on a choked drain",
+      "Story": "Boss: Canon Ludd, the Herald\u0027s first lieutenant, raised from the church\u0027s dead, guards the first great drain, choked on purpose. When he falls the party turns the sluice wheel, the first drain runs and the shaking eases for a while; the narrator says so. The Herald sneers and promises worse.",
       "Theme": "crypt.brick",
       "Layout": "ring",
       "Objective": null,
@@ -347,8 +361,8 @@
     {
       "Floor": 6,
       "Title": "The Swallow",
-      "Mood": "wading in a god\u0027s spit, gold teeth in the dark",
-      "Story": "",
+      "Mood": "wading in standing water that should be running",
+      "Story": "The backed-up water of the Swallow, stagnant and full of vermin. fighter_tamsin is salvaging the wardens\u0027 abandoned tools; her partner Jory went under ahead of her, and she joins for a share. cast_maud stands in the water and speaks clearly for the first time: \u0027Keep the water going down to him. He is thirsty.\u0027",
       "Theme": "caves.rock",
       "Layout": "flooded",
       "Objective": null,
@@ -372,8 +386,8 @@
     {
       "Floor": 7,
       "Title": "The Crop",
-      "Mood": "a camp roofed with a spider\u0027s shell, a rite nobody asked for",
-      "Story": "",
+      "Mood": "a seized pump, a camp, a rite to wake a god",
+      "Story": "Ritual: the Herald\u0027s minions hold a rite to hurry the god awake. cast_grisel, camped close by, works a seized pump to push water down while the party holds the minions off; getting it turning breaks the rite. She asks for help finding her crew, caged somewhere below, and says nothing more about them.",
       "Theme": "caves.lichen",
       "Layout": "mine",
       "Objective": "ritual",
@@ -397,8 +411,8 @@
     {
       "Floor": 8,
       "Title": "The Craw",
-      "Mood": "tremors, split boulders, strangers who want your teeth",
-      "Story": "",
+      "Mood": "tremors, split boulders, bandits in the stores",
+      "Story": "Bandits paid by the Herald to keep townspeople out are looting the wardens\u0027 abandoned stores, cast_pellet\u0027s stock among them, and he wants it back. Tremors split the boulders: the starving god is stirring.",
       "Theme": "caves.boulder",
       "Layout": "labyrinth",
       "Objective": null,
@@ -422,8 +436,8 @@
     {
       "Floor": 9,
       "Title": "The Cistern",
-      "Mood": "warm sandstone, four levers, a verse carved over each",
-      "Story": "cast_crane arrives wheezing to check progress and reads the last four\u0027s contract under his own seal: clue_contract, with cast_grisel watching him read it. Decide: forgive her for walking her party to the jailers (flag grisel_forgiven).",
+      "Mood": "warm sandstone, four levers, a seal on a page",
+      "Story": "Vault: the party works the levers and opens the vault, which holds clue_contract, the order dismissing the drain-wardens under the council\u0027s seal. cast_crane arrives and reads his own signature; caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).",
       "Theme": "caves.sandstone",
       "Layout": "standard",
       "Objective": "shiftingvault",
@@ -447,8 +461,8 @@
     {
       "Floor": 10,
       "Title": "Mother Nit",
-      "Mood": "a hatchery ringed in fire; the god has lice",
-      "Story": "",
+      "Mood": "a hatchery ringed in fire over a choked drain",
+      "Story": "Boss: Mother Nit, bloated in the stagnant water, breeds her vermin in a nest over the second great drain. When she falls the party turns the sluice wheel, the second drain runs, the water drops and the air clears; the narrator and cast_maud say so.",
       "Theme": "caves.lichen",
       "Layout": "burning",
       "Objective": null,
@@ -473,7 +487,7 @@
       "Floor": 11,
       "Title": "The Hearth",
       "Mood": "riveted plate, ember light, a cheerful old founder",
-      "Story": "",
+      "Story": "The old pump works, now the Herald\u0027s foundry. cast_ulf keeps it, cheerfully casting \u0027tools\u0027 for a customer who pays in gold; his eyes are going and he never sees the whole of what he pours. His journeyman fighter_oskar saw the whole drawings, knows better, and joins the party. cast_maud says plainly that she drowned, that the engine here once sent the water down, and that the god is weaker every day the third drain stays shut.",
       "Theme": "forge.iron",
       "Layout": "standard",
       "Objective": null,
@@ -497,8 +511,8 @@
     {
       "Floor": 12,
       "Title": "The Casting Hall",
-      "Mood": "kiln brick, uncast things in cages, keys on a belt",
-      "Story": "cast_grisel answers for floor 9: with grisel_forgiven she is an Escort walked out past the jailers to the stairs; without it she wears the jailers\u0027 keys herself and the party kills her for them.",
+      "Mood": "kiln brick, a grey crew in cages, keys on a belt",
+      "Story": "Jailbreak: cast_grisel\u0027s crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she has taken the Herald\u0027s keys to save herself and stands as his head jailer, and the party takes the keys from her and she dies there.",
       "Theme": "forge.kiln",
       "Layout": "ring",
       "Objective": "jailbreak",
@@ -522,8 +536,8 @@
     {
       "Floor": 13,
       "Title": "The Mould Room",
-      "Mood": "cold steel plate, white lamps, shelves of faces",
-      "Story": "cast_ulf shows off his work and hands over clue_moulds: Dunmarrow faces in the casting sand, including Crane\u0027s grandchildren, who are not born yet. He is proud of every one.",
+      "Mood": "cold steel plate, white lamps, shelves of moulds",
+      "Story": "cast_ulf shows off his moulds and they are clue_moulds: patterns for the crushing walls, the spike beds, the iron minions, and the Herald\u0027s own mould, larger. He finally sees what he has been making and wants every mould broken. fighter_oskar admits he knew all along and kept quiet because the Herald threatened the old man; viewer_foehammer wants the Herald\u0027s mould smashed and will do it himself.",
       "Theme": "forge.plate",
       "Layout": "labyrinth",
       "Objective": null,
@@ -547,8 +561,8 @@
     {
       "Floor": 14,
       "Title": "The Quench",
-      "Mood": "rusted grates under black water, archers on the ledges",
-      "Story": "",
+      "Mood": "rusted grates under black water, vestments afloat",
+      "Story": "Flooded vault. cast_tobit has followed the party down and found the Verger\u0027s vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon\u0027s prisoner, summoned below by a message in the Verger\u0027s hand to help with a rite that will save the town; pressed, he runs to the summons and the party fights the minions sent to escort him.",
       "Theme": "forge.rust",
       "Layout": "flooded",
       "Objective": "shiftingvault",
@@ -572,8 +586,8 @@
     {
       "Floor": 15,
       "Title": "The Bellows",
-      "Mood": "red-hot air and a beat that loses count",
-      "Story": "",
+      "Mood": "red-hot air, an engine casting instead of pumping",
+      "Story": "Boss: the Bellows, the great engine that once pumped the drains and now casts minions, guards the third great drain; fighter_oskar knows its weak points. When it stops the party turns the sluice wheel, the third drain runs, and the heat and the shaking ease.",
       "Theme": "forge.kiln",
       "Layout": "standard",
       "Objective": null,
@@ -597,8 +611,8 @@
     {
       "Floor": 16,
       "Title": "The Dream Door",
-      "Mood": "veined marble, blue light, singing a long way off",
-      "Story": "clue_letter arrives: with told_tobit, cast_tobit brings the Verger\u0027s letter to the council himself, defecting; without it cast_maud has it and Tobit\u0027s voice is already in the Choir.",
+      "Mood": "veined marble, blue light, the dream wearing thin",
+      "Story": "The dream wears thin here and the Sleepless\u0027s own kind come through. clue_letter, the Verger\u0027s letter to the Herald: \u0027The way will be open by midwinter.\u0027 With told_tobit cast_tobit brings it himself and turns on his master, wanting him stopped; without it cast_maud carries it (it came down to her on the water) and says the deacon has been taken for the rite. fighter_ione, ashamed of what the Verger has done to her church, joins to take back the church\u0027s silver ewer.",
       "Theme": "abyss.palace",
       "Layout": "ring",
       "Objective": null,
@@ -622,8 +636,8 @@
     {
       "Floor": 17,
       "Title": "The Windpipe",
-      "Mood": "purple gloom, gas climbing the galleries, a confession",
-      "Story": "cast_crane admits at the junction that he signed the contract four times and carved the names before the parties left, then betrays the party: Choir stalkers stand where he stood.",
+      "Mood": "purple gloom, gas climbing, an alderman with a shovel",
+      "Story": "Gas climbs the galleries. cast_crane has come down himself with a shovel and owns the truth: the council was glad of the Verger\u0027s order, because stopping the wardens\u0027 pay saved money, and he signed it. He holds a sluice open so the party can get past the gas, and stays holding it; he does not betray them. With grisel_forgiven he can say she and her crew are back on the upper drains.",
       "Theme": "abyss.slate",
       "Layout": "mine",
       "Objective": "toxic",
@@ -647,8 +661,8 @@
     {
       "Floor": 18,
       "Title": "The Dreaming Hall",
-      "Mood": "violet dark, one corridor in, a god turning over",
-      "Story": "Payoff: cast_maud sits down for the first time and Gorm speaks through her, apologetic for the size of Himself. The four clues are laid out; Decide: finish the pilgrimage and wake Him (flag wake_gorm) or burn the contract and let the dream go on.",
+      "Mood": "violet dark, one corridor in, a hungry god speaking",
+      "Story": "Payoff: cast_maud sits down and Gorm speaks through her, starving, half awake and sorry for the damage, asking for water and for sleep and saying plainly what his waking would let in. Decide how much to ask of him: \u0027Lend us what strength you have\u0027 (flag wake_gorm: he strikes at the Herald in his sleep, but the dream thins) or \u0027Sleep. We will finish it\u0027 (flag let_him_dream).",
       "Theme": "abyss.stone",
       "Layout": "ring",
       "Objective": null,
@@ -672,8 +686,8 @@
     {
       "Floor": 19,
       "Title": "The Last Station",
-      "Mood": "cold tiles, three galleries, a verse being finished",
-      "Story": "cast_maud channels the rite at the junction: the Waking with wake_gorm, the Unbinding without it, while the Choir breaks on her in waves and the Verger speaks only through the ritual.",
+      "Mood": "cold tiles, three galleries, a rite to wake a god",
+      "Story": "Ritual: cast_quill, the Verger, conducts the rite to wake the god with the church\u0027s ewer in his hands, while cast_maud steadies the god against it and the party holds off the waves around her; he speaks to the party but is not fought, and fighter_ione faces him. Without told_tobit, cast_tobit is in the rite, half-changed, and breaking it lets him go. With wake_gorm the shaking is worse and more of the Sleepless\u0027s kind come through. When the rite breaks the Verger is left kneeling with nothing answering him.",
       "Theme": "abyss.tiles",
       "Layout": "standard",
       "Objective": "ritual",
@@ -697,8 +711,8 @@
     {
       "Floor": 20,
       "Title": "The Mouth",
-      "Mood": "pillars for teeth, a floor like a tongue, braziers at the back",
-      "Story": "Absalom Quill waits by the throat he has gagged for three hundred years; his half-health and death lines turn on wake_gorm, and so does what the party climbs back into.",
+      "Mood": "the last great drain, braziers, the orc again",
+      "Story": "Boss: the Herald, Morg Ashtusk, recast whole and larger in the same orc body, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.",
       "Theme": "abyss.palace",
       "Layout": "ring",
       "Objective": null,
@@ -12856,5 +12870,5 @@
       }
     ]
   },
-  "ArcNotes": "Flags: told_tobit (3) pays on 16; grisel_forgiven (9) pays on 12; wake_gorm (18) pays on 19 and 20. Crane\u0027s counterfoil from floor 1 is the first thread of the contract chain: ledger 4, contract 9, moulds 13, letter 16. Crane appears 1, 4, 9, 17 and betrays on 17 only after confessing the memorial stone. Maud is always ahead, always dry, never sits until 18. Ulf never learns what he casts aloud; Tobit\u0027s voice joins the Choir if the party let him keep his saint. Bandits (Oddfellows) only in camps."
+  "ArcNotes": "Flags: told_tobit / kept_his_saint (3) pay on 16, and colour Tobit on 14; grisel_forgiven / grisel_condemned (9) pay on 12, and Crane can mention it on 17; wake_gorm / let_him_dream (18) pay on 19 and 20. Clues: log 4, dismissal order 9, moulds 13, letter 16; payoff 18. Nobody says the wardens were sacked to save money before 17. The Herald speaks every taunt: killed on 1, recast, boss on 20. Crane appears 1, 4, 9, 17 and never betrays. The Verger is met only on 19. Each act ends at a great drain: 5, 10, 15, 20."
 }
