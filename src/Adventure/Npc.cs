@@ -47,6 +47,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool Rescued { get; private set; }
     /// <summary>Betrayed the party: gone from the floor, their creatures stand in their place.</summary>
     public bool Turned { get; private set; }
+    /// <summary>An escort betrayal: they ran to the enemy, alive. Gone from this floor (so <see cref="Dead"/> is set to keep them out of the world), but never a corpse.</summary>
+    public bool Fled { get; private set; }
     public float Hp { get; private set; }
     public float MaxHp { get; private set; }
     /// <summary>The campaign's trader, standing in the safe room: talks through the shop dialogue, never flees, greets once per floor.</summary>
@@ -264,7 +266,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (s.Flags != _netFlags)
         {
             _netFlags = s.Flags;
-            Restore((s.Flags & Net.NpcState.FlagDead) != 0, (s.Flags & Net.NpcState.FlagEscorting) != 0, (s.Flags & Net.NpcState.FlagRescued) != 0, Hp, null, (s.Flags & Net.NpcState.FlagDowned) != 0);
+            Restore((s.Flags & Net.NpcState.FlagDead) != 0, (s.Flags & Net.NpcState.FlagEscorting) != 0, (s.Flags & Net.NpcState.FlagRescued) != 0, Hp, null, (s.Flags & Net.NpcState.FlagDowned) != 0, (s.Flags & Net.NpcState.FlagFled) != 0);
             Captured = (s.Flags & Net.NpcState.FlagCaptured) != 0;
             Jailed = (s.Flags & Net.NpcState.FlagJailed) != 0;
             Freed = Escorting && Mode == NpcMode.Prisoner;
@@ -599,21 +601,23 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
     }
 
-    /// <summary>The NPC turns on the party: no death, no fate; they simply are not a person any more.</summary>
-    public void Turn()
+    /// <summary>The NPC turns on the party: no death, no fate; they simply are not a person any more. <paramref name="fled"/>: they ran to the enemy instead, and stay gone (not dead) across a save or on a client.</summary>
+    public void Turn(bool fled = false)
     {
         if (Dead || Turned) return;
         Turned = true;
+        Fled = fled;
         Dead = true;
         Escorting = false;
         CollisionLayer = 0;
         Visible = false;
-        EventBus.Instance.Log($"{NpcName} drops the act.");
+        EventBus.Instance.Log(BetrayalRules.TurnLog(fled, NpcName));
     }
 
-    public void Restore(bool dead, bool escorting, bool rescued, float hp, Vector3? position, bool downed = false)
+    public void Restore(bool dead, bool escorting, bool rescued, float hp, Vector3? position, bool downed = false, bool fled = false)
     {
         if (position is { } p) GlobalPosition = p;
+        if (fled) { Turned = true; Fled = true; Dead = true; Escorting = false; CollisionLayer = 0; Visible = false; return; } // ran to the enemy: gone, not a corpse
         Hp = Math.Clamp(hp, 0, MaxHp);
         Rescued = rescued;
         if (rescued) _label.Text = $"{NpcName} (safe)";

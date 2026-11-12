@@ -277,6 +277,8 @@ public sealed class NpcDto
     public bool Captured { get; set; }
     public bool Jailed { get; set; }
     public bool Freed { get; set; }
+    /// <summary>Ran to the enemy (an escort betrayal): restored gone, not as a corpse.</summary>
+    public bool Fled { get; set; }
     public float Hp { get; set; }
     public float X { get; set; }
     public float Y { get; set; }

@@ -195,6 +195,11 @@ public sealed class BetrayalPlan
     public string EnemyId { get; set; } = "";
     [AiDescription("1 to 4.")]
     public int Count { get; set; } = 1;
+    /// <summary>
+    /// Hand-authored: the NPC is no turncoat but runs to the enemy sent for them. They leave the floor alive, none of the
+    /// creatures wears their name, and the log and the quest say they fled (see <see cref="BetrayalRules"/>).
+    /// </summary>
+    [AiIgnore] public bool Escort { get; set; }
 }
 
 public sealed class NpcPlan

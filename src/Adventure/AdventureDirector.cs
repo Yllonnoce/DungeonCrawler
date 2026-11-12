@@ -927,7 +927,7 @@ public partial class AdventureDirector : Node
         GD.Print($"[Adventure] flag set: {flag}");
     }
 
-    /// <summary>The NPC turns: they vanish and their creatures stand where they stood, the first wearing their name.</summary>
+    /// <summary>The NPC turns: they vanish and their creatures stand where they stood, the first wearing their name. An escort betrayal: the NPC flees to those creatures instead, and none wears their name.</summary>
     private void Betray(string npcId, QuestState? quest)
     {
         var main = Main.Instance;
@@ -935,8 +935,8 @@ public partial class AdventureDirector : Node
         var plan = main?.Builder.Contents?.Plan?.Npcs.FirstOrDefault(n => n.Id == npcId);
         if (main == null || npc == null || npc.Turned || plan?.Betrayal is not { } b) return;
         var at = npc.GlobalPosition;
-        npc.Turn();
-        _record?.NpcFates.Add($"{npc.NpcName} turned on the party");
+        npc.Turn(fled: b.Escort);
+        _record?.NpcFates.Add(BetrayalRules.Fate(b.Escort, npc.NpcName));
         EventBus.Instance.PlaySfx("boss");
         for (var i = 0; i < b.Count; i++)
         {
@@ -944,11 +944,11 @@ public partial class AdventureDirector : Node
             var e = main.Builder.SpawnEnemy(b.EnemyId, at + offset, _currentFloor);
             if (e == null) continue;
             e.QuestGroupId = QuestMachine.BetrayalGroup(npcId);
-            if (i == 0) e.NameOverride = npc.NpcName;
+            if (BetrayalRules.CreatureName(b, npc.NpcName, i) is { } wears) e.NameOverride = wears;
             e.ForceAggro();
         }
         if (quest is { Template: QuestTemplate.Betrayal }) Apply(new BetrayalStarted(quest.Id));
-        else EventBus.Instance.Log($"{npc.NpcName} was never on your side.");
+        else if (BetrayalRules.NoQuestLog(b.Escort, npc.NpcName) is { } never) EventBus.Instance.Log(never);
         RefreshObjective();
     }
 

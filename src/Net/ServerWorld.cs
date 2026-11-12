@@ -662,6 +662,7 @@ public partial class ServerWorld : Node
             if (n.Downed) f |= NpcState.FlagDowned;
             if (n.Captured) f |= NpcState.FlagCaptured;
             if (n.Jailed) f |= NpcState.FlagJailed;
+            if (n.Fled) f |= NpcState.FlagFled;
             return new NpcState(n.Id, new NetVec(n.GlobalPosition.X, n.GlobalPosition.Y, n.GlobalPosition.Z), n.Rotation.Y, f);
         }).ToArray();
         var players = bodies.Select(b =>

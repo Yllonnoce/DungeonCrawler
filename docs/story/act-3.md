@@ -165,7 +165,7 @@ _Mood: cold steel plate, white lamps, shelves of moulds_
   - **Party (choice):** Here. Three moulds, flat as you asked. _[TurnIn; to u4]_
   - **Party (choice):** Later. They're heavy. _[Farewell]_
 
-**Old Ulf:** _(node u4)_ That's a crushing wall. That's a spike bed. That's an arm off one of those iron brutes. And the big one I poured by the stair last month is the orc himself, larger. I called every one good work.
+**Old Ulf:** _(node u4)_ That's a crushing wall. That's a spike bed. That's an arm off one of those iron brutes. And the big one by the stair, the last I poured, is the orc himself, larger. I called every one good work.
 
   - **Party (choice):** You didn't know. _[to u5]_
   - **Party (choice):** So you built the orc's traps. _[to u5]_
@@ -213,7 +213,7 @@ _Objective: shiftingvault_
 
 **Narrator:** _(RoomEnter room 8)_ Church vestments float against the grate, black and gold, thrown off in the water: the Verger's. Beside them a young deacon stands soaked to the waist.
 
-**Narrator:** _(QuestDone)_ The orc's escort lies broken in the water, and the deacon is not among them. He ran on down to his master's summons; the one that wore his name was only the orc's iron.
+**Narrator:** _(QuestDone)_ The orc's escort lies broken in the water, and the deacon is not among them. He ran on down to his master's summons.
 
 ### Deacon Tobit Hale _(needs told_tobit)_
 
@@ -252,12 +252,12 @@ _Quest: The Deacon's Psalter (Recover): Recover Tobit's psalter from the breache
 
 ### Deacon Tobit Hale _(not if told_tobit)_
 
-**Deacon Tobit Hale:** _(node bet_a)_ You're here too! Those are my master's vestments in the water. He's alive, though; he's sent for me. The demon holds him prisoner, doesn't it? Tell me true.
+**Deacon Tobit Hale:** _(node bet_a)_ You're here too! Those are my master's vestments in the water. He's alive, though; he's sent for me. The orc holds him prisoner, doesn't it? Tell me true.
 
   - **Party (choice):** We don't know, deacon. What did he send? _[to bet_b]_
-  - **Party (choice):** He's no prisoner. Don't go. _[to bet_b]_
+  - **Party (choice):** We can't say. Don't go. _[to bet_b]_
 
-**Deacon Tobit Hale:** _(node bet_b)_ A note came down the water to me, in his own hand: 'Come below and help me with a rite that will save the town.' His escort waits for me by the grate. I'm going to him.
+**Deacon Tobit Hale:** _(node bet_b)_ A note came to me at the church, in his own hand: 'Come below and help me with a rite that will save the town.' His escort waits for me by the grate. I'm going to him.
 
   - **Party (choice):** You're not going anywhere, deacon. _[Betray]_
   - **Party (choice):** Go to him, then. _[Farewell]_

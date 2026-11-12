@@ -4859,7 +4859,7 @@ public partial class DebugTools : Node
         }
     }
 
-    // Story: an Investigate quest (clues), a Decide quest (a remembered flag), a Betrayal (the NPC turns), and a flag-gated NPC on the next floor.
+    // Story: an Investigate quest (clues), a Decide quest (a remembered flag), a Betrayal (the NPC turns), an escort Betrayal (the NPC flees to the creatures), and a flag-gated NPC on the next floor.
     private void RunStoryTest()
     {
         var main = Main.Instance;
@@ -4930,9 +4930,18 @@ public partial class DebugTools : Node
                 } });
                 plan.Npcs.Add(guide);
                 plan.Quests.Add(new QuestPlan { Id = "q_guide", Template = QuestTemplate.Betrayal, Title = "Marrow's Shortcut", GiverNpc = "guide", Reward = new QuestReward { Xp = 40 } });
+                var runaway = new NpcPlan { Id = "runaway", Name = "Ash", Room = rooms[Math.Min(3, rooms.Count - 1)].Index, QuestId = "q_runaway", Betrayal = new BetrayalPlan { EnemyId = creature, Count = 2, Escort = true } };
+                runaway.Script.Start = "go";
+                runaway.Script.Nodes.Add(new DialogueNode { Id = "go", Line = new Line("They have come for me. I am going."), Choices =
+                {
+                    new ChoicePlan { Text = "Stay.", Effect = DialogueEffect.Betray },
+                    new ChoicePlan { Text = "Go, then.", Effect = DialogueEffect.Farewell },
+                } });
+                plan.Npcs.Add(runaway);
+                plan.Quests.Add(new QuestPlan { Id = "q_runaway", Template = QuestTemplate.Betrayal, Title = "Ash's Escort", GiverNpc = "runaway", Reward = new QuestReward { Xp = 40 } });
                 var report = PlanValidator.Validate(layout, plan, menu);
                 GD.Print($"[story] floor 3 authored: {report} npcs={plan.Npcs.Count} quests={plan.Quests.Count} clues={string.Join(",", clueRooms)} betrayer={creature} {string.Join("; ", report.Repairs)}");
-                if (plan.Quests.Count != 3) Fail("validator dropped a story quest");
+                if (plan.Quests.Count != 4) Fail("validator dropped a story quest");
                 game.Adventure.FloorPlans[3] = plan;
                 var plan4 = Design(4, out var menu4, out var layout4);
                 var rooms4 = menu4.Rooms.Where(r => Authorable(r) && r.FreeCells >= 2).OrderBy(r => r.HopsFromStart).ToList();
@@ -4970,6 +4979,22 @@ public partial class DebugTools : Node
                 if (turned.Count != 2 || turned.All(t => t.DisplayName != "Marrow")) Fail("betrayal creatures missing or unnamed");
                 if (Q(3, "q_guide")?.Status != QuestStatus.Active) Fail("betrayal quest not active after the turn");
                 foreach (var t in turned) t.Kill();
+                // the escort betrayal: the NPC flees, its creatures keep their own names, the log says so
+                var logged = new List<string>();
+                void Note(string text) => logged.Add(text);
+                EventBus.Instance.Message += Note;
+                Talk("runaway", d => d.Choices.ToList().FindIndex(c => c.Effect == DialogueEffect.Betray));
+                EventBus.Instance.Message -= Note;
+                var escort = root.GetChildren().OfType<Enemy>().Where(e => e.QuestGroupId == QuestMachine.BetrayalGroup("runaway")).ToList();
+                var ash = NpcById("runaway");
+                GD.Print($"[story] runaway fled={ash?.Fled} visible={ash?.Visible} creatures={escort.Count} named=[{string.Join(",", escort.Select(t => t.DisplayName))}] quest={Q(3, "q_runaway")?.Status} objective=\"{Q(3, "q_runaway")?.ObjectiveText}\" log=[{string.Join(" | ", logged)}]");
+                if (ash?.Fled != true || ash.Visible) Fail("escort betrayer did not flee");
+                if (escort.Count != 2) Fail("escort creatures missing");
+                if (escort.Any(t => t.DisplayName.Contains("Ash"))) Fail("an escort creature wears the fled NPC's name");
+                if (!logged.Contains("Ash runs, and the enemy comes for you.")) Fail("the fled wording was not logged");
+                if (logged.Any(l => l.Contains("drops the act") || l.Contains("never on your side"))) Fail("the turncoat wording was logged for an escort");
+                if (Q(3, "q_runaway")?.ObjectiveText.Contains("has fled") != true) Fail("escort quest objective does not say fled");
+                foreach (var t in escort) t.Kill();
                 break;
             }
             case 2 when _elapsed >= 3.5:
@@ -4977,6 +5002,9 @@ public partial class DebugTools : Node
                 _storyStep++;
                 GD.Print($"[story] after killing the turned: {Q(3, "q_guide")?.Status}; memory choices=[{string.Join("; ", game.Adventure.Memory.For(3).Choices)}] fates=[{string.Join("; ", game.Adventure.Memory.For(3).NpcFates)}]");
                 if (Q(3, "q_guide")?.Status != QuestStatus.Completed) Fail("betrayal quest did not complete when its creatures died");
+                if (Q(3, "q_runaway")?.Status != QuestStatus.Completed) Fail("escort betrayal quest did not complete when its creatures died");
+                var fates = game.Adventure.Memory.For(3).NpcFates;
+                if (!fates.Contains("Ash fled to the enemy") || fates.Any(f => f.StartsWith("Ash") && (f.EndsWith("died") || f.Contains("turned")))) Fail("the escort NPC's fate is not a flight");
                 game.JumpToFloor(4);
                 break;
             }

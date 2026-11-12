@@ -426,7 +426,7 @@
           {
             "Id": "bet_a",
             "Line": {
-              "Text": "You\u0027re here too! Those are my master\u0027s vestments in the water. He\u0027s alive, though; he\u0027s sent for me. The demon holds him prisoner, doesn\u0027t it? Tell me true.",
+              "Text": "You\u0027re here too! Those are my master\u0027s vestments in the water. He\u0027s alive, though; he\u0027s sent for me. The orc holds him prisoner, doesn\u0027t it? Tell me true.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -441,7 +441,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "He\u0027s no prisoner. Don\u0027t go.",
+                "Text": "We can\u0027t say. Don\u0027t go.",
                 "Next": "bet_b",
                 "Effect": "None",
                 "Flag": null,
@@ -455,7 +455,7 @@
           {
             "Id": "bet_b",
             "Line": {
-              "Text": "A note came down the water to me, in his own hand: \u0027Come below and help me with a rite that will save the town.\u0027 His escort waits for me by the grate. I\u0027m going to him.",
+              "Text": "A note came to me at the church, in his own hand: \u0027Come below and help me with a rite that will save the town.\u0027 His escort waits for me by the grate. I\u0027m going to him.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -495,7 +495,8 @@
       "ForbidsFlag": "told_tobit",
       "Betrayal": {
         "EnemyId": "enemy.forge_priest",
-        "Count": 2
+        "Count": 2,
+        "Escort": true
       },
       "Ritualist": false
     }
@@ -618,7 +619,7 @@
       "Trigger": "QuestDone",
       "Room": null,
       "Line": {
-        "Text": "The orc\u0027s escort lies broken in the water, and the deacon is not among them. He ran on down to his master\u0027s summons; the one that wore his name was only the orc\u0027s iron.",
+        "Text": "The orc\u0027s escort lies broken in the water, and the deacon is not among them. He ran on down to his master\u0027s summons.",
         "VoiceId": null,
         "Delivery": null
       },

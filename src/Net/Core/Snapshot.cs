@@ -22,7 +22,7 @@ public readonly record struct EntityState(int NetId, NetVec Position, float Yaw,
 
 public readonly record struct NpcState(string Id, NetVec Position, float Yaw, byte Flags)
 {
-    public const byte FlagDead = 1, FlagEscorting = 2, FlagRescued = 4, FlagDowned = 8, FlagCaptured = 16, FlagJailed = 32;
+    public const byte FlagDead = 1, FlagEscorting = 2, FlagRescued = 4, FlagDowned = 8, FlagCaptured = 16, FlagJailed = 32, FlagFled = 64;
 }
 
 public readonly record struct PlayerPoseState(int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags);

@@ -49,7 +49,7 @@ public static class FloorStateCapture
                 case LootDrop { QuestId: not null }:
                     break; // quest items are tracked by TakenQuestItems
                 case Npc npc:
-                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
+                    dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Fled = npc.Fled, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
                     break;
                 case LootDrop drop when !drop.IsQueuedForDeletion():
                     dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), Coins = drop.Coins, X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });
@@ -160,7 +160,7 @@ public static class FloorStateCapture
                     questDrop.QueueFree();
                     break;
                 case Npc npc when npcs.TryGetValue(npc.Id, out var ns):
-                    npc.Restore(ns.Dead, ns.Escorting, ns.Rescued, ns.Hp, new Vector3(ns.X, ns.Y, ns.Z), ns.Downed);
+                    npc.Restore(ns.Dead, ns.Escorting, ns.Rescued, ns.Hp, new Vector3(ns.X, ns.Y, ns.Z), ns.Downed, ns.Fled);
                     break;
                 case Door d when !d.IsObjectiveGate && openedVaults.Contains(d.VaultIndex):
                     d.Open();

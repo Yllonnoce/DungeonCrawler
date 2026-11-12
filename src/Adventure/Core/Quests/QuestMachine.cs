@@ -30,6 +30,8 @@ public sealed class QuestState
     public string? ClueName { get; set; }
     /// <summary>Decide: the flag the party chose.</summary>
     public string? ChosenFlag { get; set; }
+    /// <summary>Betrayal: the giver fled to an escort rather than turning (<see cref="BetrayalPlan.Escort"/>).</summary>
+    public bool Escort { get; set; }
 
     public bool IsTerminal => Status is QuestStatus.Completed or QuestStatus.Failed;
     public bool IsOpen => Status is QuestStatus.Active or QuestStatus.ReadyToTurnIn;
@@ -49,7 +51,7 @@ public sealed class QuestState
             QuestTemplate.HoldOut => $"Hold out with {GiverName} against {Goal} waves ({Progress}/{Goal}).",
             QuestTemplate.Investigate => $"Find the {ClueName ?? "clues"} ({Progress}/{Goal}).",
             QuestTemplate.Decide => $"Decide what to tell {GiverName}.",
-            QuestTemplate.Betrayal => $"{GiverName} has turned. Put them down ({Progress}/{Goal}).",
+            QuestTemplate.Betrayal => BetrayalRules.Objective(Escort, GiverName, Progress, Goal),
             _ => Title,
         },
     };
@@ -90,6 +92,7 @@ public static class QuestMachine
             PlaceName = q.Params.ItemRoom is { } r ? plan.RoomPlanFor(r)?.Name ?? "chamber" : "",
             WaveCollective = q.Params.WaveCollective,
             ClueName = q.Params.ClueName,
+            Escort = q.Template == QuestTemplate.Betrayal && plan.Npcs.FirstOrDefault(n => n.Id == q.GiverNpc)?.Betrayal?.Escort == true,
             Goal = q.Template switch
             {
                 QuestTemplate.KillTarget => Math.Max(1, targetCount),
