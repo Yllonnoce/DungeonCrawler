@@ -109,7 +109,7 @@ public sealed class Collective
         if (Alert == AlertLevel.Calm) Alert = AlertLevel.Suspicious;
         AlarmOrigin = origin;
         SecondsSinceContact = 0f;
-        EventBus.Instance.Log($"The {Name} stir at the alarm.");
+        EventBus.Instance.Log($"{GroupNameWording.WithArticle(Name)} stir at the alarm.");
     }
 
     public void OnRunnerArrived(Enemy runner)
@@ -160,7 +160,7 @@ public sealed class Collective
             Regrouped = true;
             RegroupDone = false;
             _regroupTimer = 0f;
-            EventBus.Instance.Log($"The {Name} fall back!");
+            EventBus.Instance.Log($"{GroupNameWording.WithArticle(Name)} fall back!");
         }
         foreach (var m in alive) m.Order = orders.For(m.GroupOrdinal);
 
