@@ -226,12 +226,12 @@
     "Name": "Mother Nit",
     "SignatureOverride": "Summon",
     "IntroLine": {
-      "Text": "The orc gave me this drain. My water, my nest, my children.",
+      "Text": "Queen of the Gut\u0027s vermin, set here by the orc to keep the second drain choked. Every egg she lays packs the grate tighter.",
       "VoiceId": null,
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "Turn your wheel, then. My children go down with the water.",
+      "Text": "She falls across the grate the orc gave her to keep, and what is left of her brood scatters into the dark.",
       "VoiceId": null,
       "Delivery": null
     },

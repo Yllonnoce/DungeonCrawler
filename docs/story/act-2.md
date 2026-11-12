@@ -121,7 +121,7 @@ _Quest: The Council's Order (Investigate): Gather the torn leaves of a council o
 
 **Alderman Hesketh Crane:** _(quest complete)_ All three. My hand, under the council's seal. I'll keep it, and nobody burns it.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Gone soft in the wet, then. Just as well. Nobody ever profited by reading an old invoice.
+**Alderman Hesketh Crane:** _(quest fail)_ Gone soft in the wet, then. Well. The council keeps its own copy, and I know what it says.
 
 ### Grisel Thorn
 
@@ -178,6 +178,6 @@ _Mood: a hatchery ringed in fire over a choked drain_
 
 ### Boss: Mother Nit
 
-**Mother Nit:** _(intro)_ The orc gave me this drain. My water, my nest, my children.
+**Mother Nit:** _(intro)_ Queen of the Gut's vermin, set here by the orc to keep the second drain choked. Every egg she lays packs the grate tighter.
 
-**Mother Nit:** _(death)_ Turn your wheel, then. My children go down with the water.
+**Mother Nit:** _(death)_ She falls across the grate the orc gave her to keep, and what is left of her brood scatters into the dark.

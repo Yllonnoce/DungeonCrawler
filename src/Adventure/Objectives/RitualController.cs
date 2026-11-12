@@ -39,9 +39,9 @@ public partial class RitualController : ObjectiveController
     {
         get
         {
-            if (Completed) return "The rite is done. Take the stairs.";
-            var name = Ritualist?.NpcName ?? "the ritualist";
-            if (!Started) return $"Speak to {name} at the shrine to begin the ritual. Lay traps and find the breach levers first.";
+            if (Completed) return "The work is done. Take the stairs.";
+            var name = Ritualist?.NpcName ?? "your ally";
+            if (!Started) return $"Speak to {name} at the shrine to begin. Lay traps and find the breach levers first.";
             var down = Ritualist is { Downed: true } ? $" {name} is down: get them up." : "";
             return $"Hold the shrine: {Progress:0}/{Duration:0} s, {Alive} attacking.{down}";
         }
@@ -81,7 +81,7 @@ public partial class RitualController : ObjectiveController
         if (Started || Completed || Ritualist == null || who != Ritualist) return;
         Started = true;
         _waveTimer = RitualRules.FirstWave;
-        EventBus.Instance.Log($"{Ritualist.NpcName} begins the rite. The walls answer.");
+        EventBus.Instance.Log($"{Ritualist.NpcName} sets to work. The walls answer.");
         EventBus.Instance.PlaySfx("lever");
         Raise(ObjectiveTrigger.RitualStart);
         RefreshHud();
@@ -91,7 +91,7 @@ public partial class RitualController : ObjectiveController
     {
         if (!Started || Completed) return;
         Progress = 0f;
-        EventBus.Instance.Log("The rite falters with no one to hold the shrine. It must begin again.");
+        EventBus.Instance.Log("The work falters with no one to hold the shrine. It must begin again.");
     }
 
     protected override void Tick(float dt, Main main)
@@ -177,7 +177,7 @@ public partial class RitualController : ObjectiveController
     private void Finish(Main main)
     {
         Progress = Duration;
-        EventBus.Instance.Log($"{Ritualist?.NpcName ?? "The ritualist"} finishes the rite. The creatures falter.");
+        EventBus.Instance.Log($"{Ritualist?.NpcName ?? "Your ally"} finishes the work. The creatures falter.");
         foreach (var e in _alive.Where(e => IsInstanceValid(e) && e.IsAlive)) { e.NpcTarget = null; e.ForceAggro(); }
         Reward(main);
         Raise(ObjectiveTrigger.RitualDone);

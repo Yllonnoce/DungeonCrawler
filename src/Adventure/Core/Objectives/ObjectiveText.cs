@@ -19,7 +19,7 @@ public static class ObjectiveText
     public static string LockReason(FloorObjectiveKind kind, string? villain) => kind switch
     {
         FloorObjectiveKind.Jailbreak => $"{Villain(villain)} has sealed the stairs. Free every prisoner.",
-        FloorObjectiveKind.Ritual => $"{Villain(villain)} has sealed the stairs until the ritual is done.",
+        FloorObjectiveKind.Ritual => $"{Villain(villain)} has sealed the stairs until the work at the shrine is done.",
         FloorObjectiveKind.ShiftingVault => $"{Villain(villain)} has sealed the stairs. The vault answers only to the levers.",
         _ => "The stairs are sealed until the guardian falls.",
     };
@@ -27,7 +27,7 @@ public static class ObjectiveText
     public static string Completed(FloorObjectiveKind kind) => kind switch
     {
         FloorObjectiveKind.Jailbreak => "The last prisoner is free. The stairs grind open.",
-        FloorObjectiveKind.Ritual => "The rite is done. The stairs grind open.",
+        FloorObjectiveKind.Ritual => "The work at the shrine is done. The stairs grind open.",
         FloorObjectiveKind.ShiftingVault => "The gates stand right. The vault opens and the stairs with it.",
         _ => "The way down opens.",
     };

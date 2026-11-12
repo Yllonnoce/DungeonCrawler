@@ -531,7 +531,7 @@
           11,
           7
         ],
-        "ClueName": "leaves of the last four\u0027s contract"
+        "ClueName": "leaves of the council\u0027s order"
       },
       "GiverNpc": "npc_crane",
       "Reward": {
@@ -560,8 +560,8 @@
           "Delivery": null
         },
         "Fail": {
-          "Text": "Gone soft in the wet, then. Just as well. Nobody ever profited by reading an old invoice.",
-          "VoiceId": "560b504e23141db3",
+          "Text": "Gone soft in the wet, then. Well. The council keeps its own copy, and I know what it says.",
+          "VoiceId": null,
           "Delivery": null
         }
       },

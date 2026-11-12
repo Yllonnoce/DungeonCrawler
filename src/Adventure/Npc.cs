@@ -68,7 +68,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool IsUnaware => false;
     public string Prompt => Dead ? "" : IsMerchant ? $"Talk to {NpcName}" : Mode switch
     {
-        NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin the ritual with {NpcName}" : "",
+        NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin with {NpcName}" : "",
         NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.JailbreakController jail ? jail.PromptFor(this) : "",
         NpcMode.Fighter when Downed => $"Revive {NpcName}",
         _ => Rescued ? $"{NpcName} waits by the stairs" : $"Talk to {NpcName}",
