@@ -745,12 +745,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Bloody priests always write it down. He opened the crypt door for me, and now his deacon kneels in his rite.",
+        "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Bloody priests always write it down. The Verger opened the crypt door for me, and now his deacon kneels in his rite.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Priests always write it down. He opened the crypt door for me, and now his deacon kneels in his rite.",
+        "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Priests always write it down. The Verger opened the crypt door for me, and now his deacon kneels in his rite.",
         "VoiceId": null,
         "Delivery": null
       },

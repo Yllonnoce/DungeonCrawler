@@ -358,7 +358,7 @@
           {
             "Id": "n_verger",
             "Line": {
-              "Text": "Then he opened the door to that orc, and I shut out the wardens who\u0027d have found it. He did it for a god and I did it for the wages. I can\u0027t tell which of us I\u0027m angrier with.",
+              "Text": "Then he opened the door to that orc, and I stopped paying the wardens who\u0027d have found it. He did it for a god and I did it for the wages. I can\u0027t tell which of us I\u0027m angrier with.",
               "VoiceId": null,
               "Delivery": "weary"
             },
@@ -491,12 +491,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved a year of wardens\u0027 wages and bought me the mines with it. Cheapest bloody bargain my master ever got.",
+        "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved a few months of wardens\u0027 wages and left my drains to me. Cheapest bloody bargain my master ever got.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved a year of wardens\u0027 wages and bought me the mines with it. Cheapest bargain my master ever got.",
+        "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved a few months of wardens\u0027 wages and left my drains to me. Cheapest bargain my master ever got.",
         "VoiceId": null,
         "Delivery": null
       },

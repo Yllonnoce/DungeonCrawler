@@ -100,7 +100,7 @@ _Quest: What the Water Brought (Investigate): Gather the Verger's letters from t
 
 **Morg Ashtusk:** _(Descend)_ Your deacon found my letter from the Verger, hirelings: 'The way will be open by midwinter.' Bloody priests always write it down. The Verger opened the crypt door for me in spring.
 
-**Morg Ashtusk:** _(Descend)_ Read my letter from the Verger, hirelings? 'The way will be open by midwinter.' Bloody priests always write it down. He opened the crypt door for me, and now his deacon kneels in his rite.
+**Morg Ashtusk:** _(Descend)_ Read my letter from the Verger, hirelings? 'The way will be open by midwinter.' Bloody priests always write it down. The Verger opened the crypt door for me, and now his deacon kneels in his rite.
 
 ### Hordes
 
@@ -133,7 +133,7 @@ _Objective: toxic_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
   - **Party (choice):** Hold it, then. We're going. _[Farewell]_
 
-**Alderman Hesketh Crane:** _(node n_verger)_ Then he opened the door to that orc, and I shut out the wardens who'd have found it. He did it for a god and I did it for the wages. I can't tell which of us I'm angrier with.
+**Alderman Hesketh Crane:** _(node n_verger)_ Then he opened the door to that orc, and I stopped paying the wardens who'd have found it. He did it for a god and I did it for the wages. I can't tell which of us I'm angrier with.
 
   - **Party (choice):** Why come down yourself, Crane? _[to n_confess]_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
@@ -150,7 +150,7 @@ _Objective: toxic_
 
 **Morg Ashtusk:** _(GasLethal, toxic)_ That's my air in your lungs now, {party}. Your alderman's holding a sluice open for you, and you're still too bloody slow to use it.
 
-**Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved a year of wardens' wages and bought me the mines with it. Cheapest bloody bargain my master ever got.
+**Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved a few months of wardens' wages and left my drains to me. Cheapest bloody bargain my master ever got.
 
 ### Hordes
 
@@ -170,7 +170,7 @@ _Mood: violet dark, one corridor in, a hungry god speaking_
 
 ### Maud Sorrel
 
-**Maud Sorrel:** _(node n_sit)_ Sit a moment. I am Gorm; Maud has lent me her mouth. Forgive the shaking, the sour wells and the people hurt. I am starving, and half awake. Bring the water down to me, and let me sleep.
+**Maud Sorrel:** _(node n_sit)_ I am Gorm; Maud has lent me her mouth. Forgive the shaking and the people hurt. I am starving and half awake, and my hunger will bring the mines down on Dunmarrow. Send the water down, and let me sleep.
 
   - **Party (choice):** What happens if you wake? _[to n_wake]_
   - **Party (choice):** Who did this to you? _[to n_verger]_
@@ -187,7 +187,7 @@ _Mood: violet dark, one corridor in, a hungry god speaking_
   - **Party (choice):** What happens if you wake? _[to n_wake]_
   - **Party (choice):** What do you want from us? _[to n_choose]_
 
-**Maud Sorrel:** _(node n_choose)_ Ask nothing, and I sleep deep and you face the orc alone. Ask for my strength, and I strike at him from my sleep, but I come nearer waking and the door grows thin. Which?
+**Maud Sorrel:** _(node n_choose)_ Ask nothing, and I sleep deep while you face the orc alone. Ask for my strength, and I strike at him, but I come nearer waking; if I wake, the Sleepless comes through and Dunmarrow dies. Which?
 
   - **Party (choice):** Sleep. We will finish it. _[Choose; sets let_him_dream; to n_dream]_
   - **Party (choice):** Lend us what strength you have. _[Choose; sets wake_gorm; to n_lend]_
@@ -235,6 +235,8 @@ _Objective: ritual_
 **Narrator:** _(floor intro)_ Three cold galleries meet at a shrine of white tile. Somewhere ahead the Verger is at his rite to wake the god, and the floor shakes in time with his prayer.
 
 **Narrator:** _(RoomEnter room 1)_ Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep. From the next gallery comes the Verger's voice, praying for the god to wake. Keep the Sleepless's kind off her.
+
+**Narrator:** _(RoomEnter room 1)_ Forty years the Verger prayed to Gorm and was never answered. The orc promised him a god who would answer, and for that the Verger opened the crypt door. Now he prays that god through.
 
 **Narrator:** _(RoomEnter room 1)_ The floor here will not stop shaking. Gorm is nearer waking for the strength he promised you, and more of the Sleepless's kind are getting through.
 
@@ -302,7 +304,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
   - **Party (choice):** Give back the church's ewer. _[to v_ewer]_
   - **Party (choice):** Kneel there, then. _[Farewell]_
 
-**Absalom Quill:** _(node v_sleep)_ He will sleep while that drowned warden holds him, and not a moment longer. Maud Sorrel kept his drains. I keep his door.
+**Absalom Quill:** _(node v_sleep)_ He will sleep while that drowned warden holds him, and not a moment longer. Maud Sorrel kept his drains. I kept the church's crypt door, and I opened it.
 
   - **Party (choice):** Give back the church's ewer. _[to v_ewer]_
   - **Party (choice):** Kneel there, then. _[Farewell]_
@@ -329,7 +331,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(RitualStart, ritual)_ Go on, warden, hold your god steady. He's half awake already, thanks to your hirelings, and every bloody wave I send shakes him further.
+**Morg Ashtusk:** _(RitualStart, ritual)_ Go on, warden, hold your god steady. He's half awake already, thanks to the town's hirelings, and every bloody wave I send shakes him further.
 
 **Morg Ashtusk:** _(RitualStart, ritual)_ So a drowned warden thinks she can hold a god asleep against my priest's rite. Bloody touching. Send them in.
 
@@ -341,9 +343,9 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 **Morg Ashtusk:** _(RitualDone, ritual)_ So the rite breaks. Look at the old priest, hirelings: on his knees, and nothing answering him. Forty years he prayed, and he still can't get a god to come when called.
 
-**Morg Ashtusk:** _(Descend)_ Leave the old priest kneeling, hirelings. He opened my door for a reward, and he'll get nothing; he never was going to. Come down. I'm waiting at the last drain.
+**Morg Ashtusk:** _(Descend)_ So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church's ewer lies where he dropped it. Sister Ione can have her jug back. I'm at the last drain.
 
-**Morg Ashtusk:** _(Descend)_ Your half-grey deacon walked out when the rite broke. Keep him. The old priest is still on his knees with nothing answering. Come down, hirelings. I'm at the last drain.
+**Morg Ashtusk:** _(Descend)_ So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church's ewer to kneel, and nothing answers him. Sister Ione can have her jug back.
 
 ### Hordes
 
@@ -359,7 +361,7 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Narrator:** _(floor intro)_ The last stair brings you down to the Mouth, where the last great drain should pour down to the god. Its grate is packed solid, braziers burn around it, and the orc is waiting there.
 
-**Narrator:** _(BossSeen)_ Morg Ashtusk stands over the last great drain, whole again and a head taller than the orc you killed at the gate. Kill him, clear the grate, and turn the sluice wheel.
+**Narrator:** _(BossSeen)_ Morg Ashtusk stands over the last great drain, whole again and a head taller than the orc you killed at the gate. Kill him and turn the sluice wheel, or the mines come down on Dunmarrow.
 
 **Narrator:** _(BossDead)_ You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks and slowly sinks back from waking. The dream holds; it is thin, but the door stays shut.
 

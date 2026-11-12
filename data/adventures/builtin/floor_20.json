@@ -313,7 +313,7 @@
       "Trigger": "BossSeen",
       "Room": null,
       "Line": {
-        "Text": "Morg Ashtusk stands over the last great drain, whole again and a head taller than the orc you killed at the gate. Kill him, clear the grate, and turn the sluice wheel.",
+        "Text": "Morg Ashtusk stands over the last great drain, whole again and a head taller than the orc you killed at the gate. Kill him and turn the sluice wheel, or the mines come down on Dunmarrow.",
         "VoiceId": null,
         "Delivery": null
       },

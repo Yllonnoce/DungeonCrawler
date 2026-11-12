@@ -264,7 +264,7 @@
           {
             "Id": "n_sit",
             "Line": {
-              "Text": "Sit a moment. I am Gorm; Maud has lent me her mouth. Forgive the shaking, the sour wells and the people hurt. I am starving, and half awake. Bring the water down to me, and let me sleep.",
+              "Text": "I am Gorm; Maud has lent me her mouth. Forgive the shaking and the people hurt. I am starving and half awake, and my hunger will bring the mines down on Dunmarrow. Send the water down, and let me sleep.",
               "VoiceId": null,
               "Delivery": "calm"
             },
@@ -369,7 +369,7 @@
           {
             "Id": "n_choose",
             "Line": {
-              "Text": "Ask nothing, and I sleep deep and you face the orc alone. Ask for my strength, and I strike at him from my sleep, but I come nearer waking and the door grows thin. Which?",
+              "Text": "Ask nothing, and I sleep deep while you face the orc alone. Ask for my strength, and I strike at him, but I come nearer waking; if I wake, the Sleepless comes through and Dunmarrow dies. Which?",
               "VoiceId": null,
               "Delivery": "calm"
             },

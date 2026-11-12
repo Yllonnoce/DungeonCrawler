@@ -563,7 +563,7 @@
           {
             "Id": "v_sleep",
             "Line": {
-              "Text": "He will sleep while that drowned warden holds him, and not a moment longer. Maud Sorrel kept his drains. I keep his door.",
+              "Text": "He will sleep while that drowned warden holds him, and not a moment longer. Maud Sorrel kept his drains. I kept the church\u0027s crypt door, and I opened it.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -789,6 +789,17 @@
       "Trigger": "RoomEnter",
       "Room": 1,
       "Line": {
+        "Text": "Forty years the Verger prayed to Gorm and was never answered. The orc promised him a god who would answer, and for that the Verger opened the crypt door. Now he prays that god through.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 1,
+      "Line": {
         "Text": "The floor here will not stop shaking. Gorm is nearer waking for the strength he promised you, and more of the Sleepless\u0027s kind are getting through.",
         "VoiceId": null,
         "Delivery": null
@@ -835,12 +846,12 @@
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "Go on, warden, hold your god steady. He\u0027s half awake already, thanks to your hirelings, and every bloody wave I send shakes him further.",
+        "Text": "Go on, warden, hold your god steady. He\u0027s half awake already, thanks to the town\u0027s hirelings, and every bloody wave I send shakes him further.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Go on, warden, hold your god steady. He\u0027s half awake already, thanks to your hirelings, and every wave I send shakes him further.",
+        "Text": "Go on, warden, hold your god steady. He\u0027s half awake already, thanks to the town\u0027s hirelings, and every wave I send shakes him further.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -937,12 +948,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Leave the old priest kneeling, hirelings. He opened my door for a reward, and he\u0027ll get nothing; he never was going to. Come down. I\u0027m waiting at the last drain.",
+        "Text": "So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church\u0027s ewer lies where he dropped it. Sister Ione can have her jug back. I\u0027m at the last drain.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Leave the old priest kneeling, hirelings. He opened my door for a reward, and he\u0027ll get nothing; he never was going to. Come down. I\u0027m waiting at the last drain.",
+        "Text": "So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church\u0027s ewer lies where he dropped it. Sister Ione can have her jug back. I\u0027m at the last drain.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -954,12 +965,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Your half-grey deacon walked out when the rite broke. Keep him. The old priest is still on his knees with nothing answering. Come down, hirelings. I\u0027m at the last drain.",
+        "Text": "So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church\u0027s ewer to kneel, and nothing answers him. Sister Ione can have her jug back.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Your half-grey deacon walked out when the rite broke. Keep him. The old priest is still on his knees with nothing answering. Come down, hirelings. I\u0027m at the last drain.",
+        "Text": "So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church\u0027s ewer to kneel, and nothing answers him. Sister Ione can have her jug back.",
         "VoiceId": null,
         "Delivery": null
       },
