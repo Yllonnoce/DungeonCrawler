@@ -5,8 +5,8 @@
   "LayoutHash": 10547429077170000350,
   "Title": "The Windpipe",
   "IntroLine": {
-    "Text": "Purple slate, and the gas climbing the galleries behind you with all night to do it. Somewhere ahead a man in a chain of office is clearing his throat.",
-    "VoiceId": "c4cfe48f5a773179",
+    "Text": "Purple slate, and the gas climbing the galleries off the standing water. Somewhere ahead a sluice wheel groans, and a man out of breath is apologising to it.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -202,8 +202,8 @@
       "Total": 38,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The lid lifts and the drift exhales: shades spill from every seam in the timbering, singing the same soft note.",
-        "VoiceId": "ba2fc8e2bfe7a684",
+        "Text": "The lid lifts and the timbering splits: shades spill out of every seam, grey and alike. Some of them were wardens this spring.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
@@ -233,8 +233,8 @@
       "Total": 32,
       "Trigger": "Alarm",
       "Line": {
-        "Text": "The runner\u0027s cry goes down the gallery and the breach answers it, verse for verse, in bodies.",
-        "VoiceId": "050a37118ff1ee62",
+        "Text": "The runner\u0027s cry goes down the gallery, and the breach answers it: shades, and the archers of the other side behind them.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -273,13 +273,13 @@
           {
             "Id": "n_meet",
             "Line": {
-              "Text": "There you are. I came down to check the invoice. That is all this is. An invoice, and a gentleman seeing to it.",
-              "VoiceId": "7f91bdd71a9d31e9",
-              "Delivery": null
+              "Text": "There you are. I came down myself, shovel and all. Go on through while I hold this sluice open: the water\u0027s running off, and the gas is thinner past the gate.",
+              "VoiceId": null,
+              "Delivery": "weary"
             },
             "Choices": [
               {
-                "Text": "Our names were on the memorial before we left.",
+                "Text": "Why come down yourself, Crane?",
                 "Next": "n_confess",
                 "Effect": "None",
                 "Flag": null,
@@ -288,9 +288,27 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Go up, Crane. The gas is behind us.",
-                "Next": "n_confess",
+                "Text": "The Verger let the orc in. We read his letter.",
+                "Next": "n_verger",
                 "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Did Grisel get her crew out?",
+                "Next": "n_grisel",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": "grisel_forgiven",
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Hold it, then. We\u0027re going.",
+                "Next": null,
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -302,15 +320,33 @@
           {
             "Id": "n_confess",
             "Line": {
-              "Text": "I signed it four times. Each time I thought, this is the last. Each time the wells cleared, and the children drank, and I carved the next four names by candle.",
-              "VoiceId": "29933168bbac186d",
-              "Delivery": "pleading"
+              "Text": "Because I owe it. We were glad of the Verger\u0027s order. Stopping the wardens\u0027 pay saved the council money, and I signed it. That\u0027s what I didn\u0027t tell you at the cistern.",
+              "VoiceId": null,
+              "Delivery": "weary"
             },
             "Choices": [
               {
-                "Text": "Four. And we make the fourth four.",
-                "Next": "n_turn",
+                "Text": "The Verger let the orc in. We read his letter.",
+                "Next": "n_verger",
                 "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Did Grisel get her crew out?",
+                "Next": "n_grisel",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": "grisel_forgiven",
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Hold it, then. We\u0027re going.",
+                "Next": null,
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -320,24 +356,62 @@
             "Aside": null
           },
           {
-            "Id": "n_turn",
+            "Id": "n_verger",
             "Line": {
-              "Text": "He only asks for four, and you have been such a great deal of trouble, and I am so very tired of carving. Lie down. I\u0027ll have the chisel out by Michaelmas.",
-              "VoiceId": "0a5c74209887a8cb",
-              "Delivery": "calm"
+              "Text": "Then he opened the door to that orc, and I shut out the wardens who\u0027d have found it. He did it for a god and I did it for the wages. I can\u0027t tell which of us I\u0027m angrier with.",
+              "VoiceId": null,
+              "Delivery": "weary"
             },
             "Choices": [
               {
-                "Text": "Draw steel. He has already sold us.",
-                "Next": null,
-                "Effect": "Betray",
+                "Text": "Why come down yourself, Crane?",
+                "Next": "n_confess",
+                "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               },
               {
-                "Text": "Walk away from him, down the gallery.",
+                "Text": "Did Grisel get her crew out?",
+                "Next": "n_grisel",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": "grisel_forgiven",
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Hold it, then. We\u0027re going.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "n_grisel",
+            "Line": {
+              "Text": "She did. Grisel Thorn and what\u0027s left of her crew are back on the upper drains, on full pay back to spring. I signed that too, and gladly.",
+              "VoiceId": null,
+              "Delivery": "weary"
+            },
+            "Choices": [
+              {
+                "Text": "Why come down yourself, Crane?",
+                "Next": "n_confess",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Hold it, then. We\u0027re going.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -350,87 +424,45 @@
           }
         ]
       },
-      "QuestId": "q_crane_retainers",
+      "QuestId": null,
       "CastId": "cast_crane",
       "Persona": {
-        "VoiceStyle": "a pompous market-town alderman, chain of office rattling, bluster thinning into a plea",
-        "DefaultDelivery": "weary",
-        "Voice": null,
+        "VoiceStyle": "a plump market-town alderman; bluster over panic, speaks in clauses, invoices and apologies",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Umbriel",
         "IsEmpty": false
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
-      "Betrayal": {
-        "EnemyId": "enemy.void_stalker",
-        "Count": 3
-      },
+      "Betrayal": null,
       "Ritualist": false
     }
   ],
-  "Quests": [
+  "Quests": [],
+  "Narration": [
     {
-      "Id": "q_crane_retainers",
-      "Template": "Betrayal",
-      "Title": "Crane\u0027s Retainers",
-      "Objective": "Put down what the alderman left standing in his place.",
-      "Params": {
-        "TargetCollective": null,
-        "ItemName": null,
-        "ItemRoom": null,
-        "EscortNpc": null,
-        "Waves": null,
-        "WaveCollective": null,
-        "ClueRooms": [],
-        "ClueName": null
-      },
-      "GiverNpc": "npc_crane_17",
-      "Reward": {
-        "Xp": 600,
-        "Table": "table.chest"
-      },
-      "Lines": {
-        "Offer": {
-          "Text": "Don\u0027t look at me like that. The council voted. I only held the pen, and the pen was very heavy, and the wells ran clean for nineteen years.",
-          "VoiceId": "00f317640fc2cac5",
-          "Delivery": null
-        },
-        "Accept": {
-          "Text": "Oh, don\u0027t. You\u0027ll only bleed on the Station, and they\u0027ve only just had it done.",
-          "VoiceId": "0d80150968e87124",
-          "Delivery": null
-        },
-        "Decline": {
-          "Text": "Sensible. Walk on. I\u0027ll follow at my own pace, as I always have.",
-          "VoiceId": "f9ca06094976acdb",
-          "Delivery": null
-        },
-        "Complete": {
-          "Text": "The chain of office lies in the spoil with nobody inside it, and the gas comes up the gallery without hurrying.",
-          "VoiceId": "3e63bf6c70cfcb3e",
-          "Delivery": null
-        },
-        "Fail": {
-          "Text": "The alderman is already climbing, and the carving will be done by candle, same as the last four times.",
-          "VoiceId": "74bae3320528d70f",
-          "Delivery": null
-        }
+      "Trigger": "RoomEnter",
+      "Room": 9,
+      "Line": {
+        "Text": "In the Long Gallery the alderman hangs his whole weight on a sluice wheel, a shovel jammed through the spokes to hold it. The water drains off through the gate, and past it the gas is thinner.",
+        "VoiceId": null,
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null
     }
   ],
-  "Narration": [],
   "Taunts": [
     {
       "Trigger": "FloorEnter",
       "Objective": "toxic",
       "Line": {
-        "Text": "Mind the air on this Station. That is Himself breathing out, and your alderman waiting to see whether you take it well.",
-        "VoiceId": "e52198666a7e5f00",
+        "Text": "Smell that, hirelings? The water stands all the way down now, and the gas comes off it. Your alderman came down after you with a bloody shovel. Hurry, before he hurts himself.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Mind the air on this Station. That is Himself breathing out, and your alderman waiting to see whether you take it well.",
+        "Text": "Smell that, hirelings? The water stands all the way down now, and the gas comes off it. Your alderman came down after you with a shovel. Hurry, before he hurts himself.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -442,12 +474,29 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "Crane always did his weeping on the way down. Lie down beside him, {party}; it is the same thing, only sooner.",
-        "VoiceId": "7e270e1b26645bb2",
+        "Text": "That\u0027s my air in your lungs now, {party}. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too bloody slow to use it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Crane always did his weeping on the way down. Lie down beside him, {party}; it is the same thing, only sooner.",
+        "Text": "That\u0027s my air in your lungs now, {party}. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too slow to use it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved a year of wardens\u0027 wages and bought me the mines with it. Cheapest bloody bargain my master ever got.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved a year of wardens\u0027 wages and bought me the mines with it. Cheapest bargain my master ever got.",
         "VoiceId": null,
         "Delivery": null
       },

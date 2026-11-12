@@ -5,8 +5,8 @@
   "LayoutHash": 16746443959441144337,
   "Title": "The Dream Door",
   "IntroLine": {
-    "Text": "Marble, because He dreams in marble. Blue light on the veins of it, and a long way off a choir holding one note until it thins. Walk softly; the floor is listening.",
-    "VoiceId": "33c60a73cf71b988",
+    "Text": "Blue light runs in the veins of the marble, and the god sleeps close beneath it. Near the foot of the stair, a young sister of Gorm\u0027s church is keeping a lantern lit.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -180,7 +180,7 @@
   "Hordes": [
     {
       "Id": "horde_choir_rotunda",
-      "Name": "The Lullaby Breaks",
+      "Name": "The Door Gives Way",
       "Room": 0,
       "Members": [
         {
@@ -209,8 +209,8 @@
       "Total": 40,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The note holds, and holds, and then comes apart: shades pour from three mouths in the marble, every one of them still trying to sing.",
-        "VoiceId": "3f9092648eecda85",
+        "Text": "The marble splits along its blue veins and the shades pour through at you, grey and alike, with the stalkers from the other side behind them.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -245,13 +245,13 @@
           {
             "Id": "t1",
             "Line": {
-              "Text": "You told me the truth on the flagstones and I have been no use to anyone since. They gave me a letter for the council and told me not to read it. I read it.",
-              "VoiceId": "a57e6dcc71a555db",
+              "Text": "I found it. My master\u0027s letter to the orc, in his own hand: \u0027The way will be open by midwinter.\u0027 He opened the crypt door to that thing. I want him stopped.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "What was in it, deacon?",
+                "Text": "What do you need from us?",
                 "Next": "t2",
                 "Effect": "None",
                 "Flag": null,
@@ -260,18 +260,18 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Keep it. We have stairs to find.",
-                "Next": null,
-                "Effect": "Farewell",
+                "Text": "Your master\u0027s letters, deacon.",
+                "Next": "t4",
+                "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               },
               {
-                "Text": "It is done.",
-                "Next": "t2",
-                "Effect": "TurnIn",
+                "Text": "Stay behind us, deacon.",
+                "Next": null,
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -283,13 +283,13 @@
           {
             "Id": "t2",
             "Line": {
-              "Text": "I tore it into three and scattered it down three halls, which I now see was the act of a coward with very good handwriting. Bring the pieces and I will read it aloud.",
-              "VoiceId": "1a0aac161b6b122a",
+              "Text": "There are more of his letters in these halls, dropped where the orc\u0027s creatures came through. Bring them to me. Before anyone stops him, I want to know why he did it.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "We\u0027ll gather your courage for you.",
+                "Text": "We\u0027ll find them.",
                 "Next": "t3",
                 "Effect": "AcceptQuest",
                 "Flag": null,
@@ -298,8 +298,17 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Three pieces. Here.",
-                "Next": "t3",
+                "Text": "Find them yourself, deacon.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Here. Every letter we found.",
+                "Next": "t4",
                 "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
@@ -307,9 +316,9 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Tear up something else. We\u0027re busy.",
+                "Text": "Later, deacon.",
                 "Next": null,
-                "Effect": "DeclineQuest",
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -321,13 +330,53 @@
           {
             "Id": "t3",
             "Line": {
-              "Text": "Then stand where the pillars fell and let me say it where the Choir can hear. I would rather be wrong out loud than obedient in a whisper.",
-              "VoiceId": "c474da0639f7f08f",
+              "Text": "Thank you. Mind the marble where it\u0027s cracked; things come through the cracks down here.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Say it, then.",
+                "Text": "Keep your head down, deacon.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "t4",
+            "Line": {
+              "Text": "\u0027You promised the god who comes through will reward the man who opens the door. Forty years Gorm never once answered me.\u0027 That\u0027s why. He wanted a god who answers.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Then we\u0027ll stop him.",
+                "Next": "t5",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "t5",
+            "Line": {
+              "Text": "Thank you. I\u0027ll take his letters up to the town, so nobody can say it was a lie. I was thorough. I always am.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Go carefully, deacon.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -343,9 +392,9 @@
       "QuestId": "q_letter_tobit",
       "CastId": "cast_tobit",
       "Persona": {
-        "VoiceStyle": "a young deacon, earnest and bookish, courteous past all sense, voice thinning when he means it",
-        "DefaultDelivery": "pleading",
-        "Voice": null,
+        "VoiceStyle": "an eager young deacon, polite to a fault, delighted to have visitors at last",
+        "DefaultDelivery": "warm",
+        "Voice": "Puck",
         "IsEmpty": false
       },
       "RequiresFlag": "told_tobit",
@@ -364,13 +413,13 @@
           {
             "Id": "m1",
             "Line": {
-              "Text": "I walked this hall asleep an hour ago and something fell out of my sleeve. A letter. I don\u0027t write letters. I only carry things as far as the water.",
-              "VoiceId": "1356428100d7207b",
+              "Text": "There you are, dears. Keep the water going down to Gorm; that\u0027s all I want. And here: this came down to me on the water. The Verger\u0027s letter to the orc: \u0027The way will be open by midwinter.\u0027",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Whose letter, Maud?",
+                "Text": "Where\u0027s the deacon, Maud?",
                 "Next": "m2",
                 "Effect": "None",
                 "Flag": null,
@@ -379,18 +428,27 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Dry feet in a pond. We\u0027ll not ask.",
-                "Next": null,
-                "Effect": "Farewell",
+                "Text": "What else came down the water?",
+                "Next": "m3",
+                "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               },
               {
-                "Text": "It is done.",
-                "Next": "m2",
+                "Text": "The Verger\u0027s letters, Maud.",
+                "Next": "m4",
                 "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -402,33 +460,24 @@
           {
             "Id": "m2",
             "Line": {
-              "Text": "It went to pieces in three halls, the way paper does down here. The young deacon\u0027s voice is in the Choir now, so he cannot fetch them. Fetch them, and I will know what I was carrying.",
-              "VoiceId": "93ac1c9c4a02f13c",
+              "Text": "Taken for the rite, dear. His master sent for him, and he went down gladly. The Verger\u0027s the one who opened the crypt door to the orc, and he means to wake the god.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "We\u0027ll walk the ring for you.",
+                "Text": "What else came down the water?",
                 "Next": "m3",
-                "Effect": "AcceptQuest",
+                "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               },
               {
-                "Text": "Three pieces. Here.",
-                "Next": "m3",
-                "Effect": "TurnIn",
-                "Flag": null,
-                "RequiresFlag": null,
-                "ForbidsFlag": null,
-                "NextIfRefused": null
-              },
-              {
-                "Text": "Carry your own post.",
+                "Text": "Mind how you go, Maud.",
                 "Next": null,
-                "Effect": "DeclineQuest",
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -440,13 +489,80 @@
           {
             "Id": "m3",
             "Line": {
-              "Text": "Read it to me slowly, when you have it. He likes being read to. It is the nearest thing to a voice He has had in three hundred years.",
-              "VoiceId": "ef56ce79dd9b8a6d",
+              "Text": "More of his letters, dear, spread through these halls by the water. Bring them to me. The deacon would want to know why his master did it, and so would I.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Slowly, then.",
+                "Text": "We\u0027ll fetch them.",
+                "Next": "m5",
+                "Effect": "AcceptQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Fetch them yourself, Maud.",
+                "Next": null,
+                "Effect": "DeclineQuest",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Here. Every letter we found.",
+                "Next": "m4",
+                "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Later, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "m4",
+            "Line": {
+              "Text": "\u0027You promised the god who comes through will reward the man who opens the door. Forty years Gorm never once answered me.\u0027 That\u0027s why, dear. He took the first answer that came.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "m5",
+            "Line": {
+              "Text": "Good. Mind the marble where it\u0027s cracked, dears; things come through the cracks down here.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -462,9 +578,9 @@
       "QuestId": "q_letter_maud",
       "CastId": "cast_maud",
       "Persona": {
-        "VoiceStyle": "an old woman speaking half-asleep, unhurried, kind, never startled by anything at all",
+        "VoiceStyle": "an old workwoman soaked to the skin: unhurried, kind, faintly amused at her own state",
         "DefaultDelivery": "calm",
-        "Voice": null,
+        "Voice": "Gacrux",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -477,8 +593,8 @@
     {
       "Id": "q_letter_tobit",
       "Template": "Investigate",
-      "Title": "The Torn Letter",
-      "Objective": "Gather the three pieces of the Verger\u0027s letter from the marble halls and bring them to Tobit.",
+      "Title": "The Verger\u0027s Letters",
+      "Objective": "Gather the Verger\u0027s letters from the marble halls and bring them to Tobit.",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -491,7 +607,7 @@
           8,
           9
         ],
-        "ClueName": "a torn piece of the Verger\u0027s letter"
+        "ClueName": "Verger\u0027s letters"
       },
       "GiverNpc": "npc_tobit_16",
       "Reward": {
@@ -500,28 +616,28 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Three pieces, three halls. I was thorough. I am always thorough; it is my only virtue and it has never once helped anybody.",
-          "VoiceId": "157b217d4f4f0f95",
+          "Text": "More of my master\u0027s letters are lying in these halls. Bring them to me and I\u0027ll read them; I\u0027m thorough. I always am.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
-          "Text": "Thank you. Mind the colonnade; the singers use the fallen pillars the way I used to use the pulpit.",
-          "VoiceId": "b16a90fa22630734",
+          "Text": "Thank you. Mind the marble where it\u0027s cracked; things come through the cracks down here.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "No. Quite right. Letters have done enough damage in this church.",
-          "VoiceId": "0c0bf03c372226c9",
+          "Text": "No. Quite right. I\u0027ll look for them myself, slowly.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Complete": {
-          "Text": "\u0027Send the usual. Something fierce this time; He stirs.\u0027 His hand, your alderman\u0027s seal. The usual, he writes. You are the usual, and so, one day, am I.",
-          "VoiceId": "750e889cf25ef4c3",
+          "Text": "His letters, every one. Now I know why he did it.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Fail": {
-          "Text": "Leave them scattered, then. The Choir will learn the words soon enough; it learns everything eventually.",
-          "VoiceId": "abefa1678366cf4e",
+          "Text": "Then I\u0027ll never know why. I\u0027ll have to make do with knowing that he did.",
+          "VoiceId": null,
           "Delivery": null
         }
       },
@@ -531,8 +647,8 @@
     {
       "Id": "q_letter_maud",
       "Template": "Investigate",
-      "Title": "What She Was Carrying",
-      "Objective": "Gather the three pieces of the Verger\u0027s letter from the marble halls and bring them to Maud.",
+      "Title": "What the Water Brought",
+      "Objective": "Gather the Verger\u0027s letters from the marble halls and bring them to Maud.",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -545,7 +661,7 @@
           8,
           9
         ],
-        "ClueName": "a torn piece of the Verger\u0027s letter"
+        "ClueName": "Verger\u0027s letters"
       },
       "GiverNpc": "npc_maud_16",
       "Reward": {
@@ -554,28 +670,28 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Three pieces in three halls. I would fetch them myself, but I only go downward, and never twice over the same stone.",
-          "VoiceId": "69a438210f16fa27",
+          "Text": "More of the Verger\u0027s letters, dear, wherever the water left them. Bring them to me.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
-          "Text": "Good. Keep to the outer ring. The singers are fond of the middle, and so, I think, is the one beneath it.",
-          "VoiceId": "04d466175fc9811d",
+          "Text": "Good. Mind the marble where it\u0027s cracked, dears.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "As you like. It will still be there when you come back up, and so will I, which is the sadder of the two facts.",
-          "VoiceId": "cdc9745ffd9fd58d",
+          "Text": "As you like, dear. The water keeps what it\u0027s given.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Complete": {
-          "Text": "\u0027Send the usual. Something fierce this time; He stirs.\u0027 The verger\u0027s hand, the council\u0027s seal. You were ordered, dears. You were not hired.",
-          "VoiceId": "a7328cefe612cbb8",
+          "Text": "All his letters. Now we know why.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Fail": {
-          "Text": "Paper rots quickly in a throat. No matter. I remember the wording; I have been carrying it since before you were apprenticed.",
-          "VoiceId": "2f6086bf5fbd4c5e",
+          "Text": "Gone to pulp in the wet, then. No matter, dear. We know what he did.",
+          "VoiceId": null,
           "Delivery": null
         }
       },
@@ -583,7 +699,65 @@
       "ForbidsFlag": "told_tobit"
     }
   ],
-  "Narration": [],
-  "Taunts": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 5,
+      "Line": {
+        "Text": "Deacon Tobit stands among the fallen pillars, soaked from the climb down, with a letter in his hand. He has plainly read it more than once.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 9,
+      "Line": {
+        "Text": "Maud Sorrel stands in the weeping font with water running from her sleeves, holding a wet letter out to you as if it were nothing much.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit"
+    }
+  ],
+  "Taunts": [
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Your deacon found my letter from the Verger, hirelings: \u0027The way will be open by midwinter.\u0027 Bloody priests always write it down. The Verger opened the crypt door for me in spring.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Your deacon found my letter from the Verger, hirelings: \u0027The way will be open by midwinter.\u0027 Priests always write it down. The Verger opened the crypt door for me in spring.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Bloody priests always write it down. He opened the crypt door for me, and now his deacon kneels in his rite.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Priests always write it down. He opened the crypt door for me, and now his deacon kneels in his rite.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit",
+      "FromStock": false
+    }
+  ],
   "EnemyTotal": 9
 }

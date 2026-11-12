@@ -5,8 +5,8 @@
   "LayoutHash": 11277258185512748973,
   "Title": "The Last Station",
   "IntroLine": {
-    "Text": "Three cold galleries meet at a shrine of white tile, and the Choir has stopped singing to listen. Somewhere beneath, the Verger counts verses he believes no one finishes.",
-    "VoiceId": "238c40759fa37286",
+    "Text": "Three cold galleries meet at a shrine of white tile. Somewhere ahead the Verger is at his rite to wake the god, and the floor shakes in time with his prayer.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -234,8 +234,8 @@
       "Total": 24,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The lid lifts, and the wall behind the camp lets go of everything the Oddfellows had been pretending not to hear.",
-        "VoiceId": "2e528d2bdca0d7ed",
+        "Text": "The lid lifts, and the wall behind the old camp gives way: shades come crawling out at you, grey and alike, with a caller of the other side behind them.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -274,13 +274,13 @@
           {
             "Id": "m_open",
             "Line": {
-              "Text": "I have carried this verse since the lychgate and I am tired of the weight of it. Stand in the galleries. The Choir will come for the parts I cannot sing.",
-              "VoiceId": "ffb116a6862cf01d",
+              "Text": "There you are, dears. I\u0027ll sit at the altar and hold him asleep against the Verger\u0027s rite. You keep the Sleepless\u0027s kind off me while I do.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Sing. We\u0027ll hold the three mouths.",
+                "Text": "We\u0027ll hold them off, Maud.",
                 "Next": null,
                 "Effect": "AcceptQuest",
                 "Flag": null,
@@ -289,7 +289,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "What ends when the verse ends?",
+                "Text": "Why does he need holding?",
                 "Next": "m_which",
                 "Effect": "None",
                 "Flag": null,
@@ -298,7 +298,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Keep your mouth shut and walk down with us.",
+                "Text": "Not yet, Maud.",
                 "Next": null,
                 "Effect": "DeclineQuest",
                 "Flag": null,
@@ -307,7 +307,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "It is done.",
+                "Text": "It\u0027s done, Maud.",
                 "Next": "m_done",
                 "Effect": "TurnIn",
                 "Flag": null,
@@ -321,13 +321,13 @@
           {
             "Id": "m_which",
             "Line": {
-              "Text": "Something ends either way, dear. Mine, or His three hundred years of being tucked in. Say which you chose above, and I will sing that one.",
-              "VoiceId": "ac47f848a27bd8ad",
+              "Text": "The Verger is praying him awake, dear, and the orc\u0027s kind are helping. I can keep him asleep if nobody pulls me off the stone.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "The Waking. Sing Him up.",
+                "Text": "We asked for his strength. Hold him anyway.",
                 "Next": null,
                 "Effect": "AcceptQuest",
                 "Flag": null,
@@ -336,7 +336,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "The Unbinding. Let Him lie.",
+                "Text": "We let him sleep. Keep him there.",
                 "Next": null,
                 "Effect": "AcceptQuest",
                 "Flag": null,
@@ -345,7 +345,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Nothing yet. Rest a moment.",
+                "Text": "Rest a moment, Maud.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -359,8 +359,8 @@
           {
             "Id": "m_done",
             "Line": {
-              "Text": "Finished. The tiles are warm; they were never tiles. The stair below remembers it is a throat, and it is opening.",
-              "VoiceId": "db48f2b995c936f0",
+              "Text": "He\u0027s settled, dear. The Verger\u0027s rite has nothing left to pull on. Go on down to the last drain; he\u0027s thirsty.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -381,9 +381,338 @@
       "QuestId": "q_last_verse",
       "CastId": "cast_maud",
       "Persona": {
-        "VoiceStyle": "an old woman speaking from the middle of a dream; unhurried, kind, entirely unsurprised by anything",
+        "VoiceStyle": "an old workwoman soaked to the skin: unhurried, kind, faintly amused at her own state",
         "DefaultDelivery": "calm",
-        "Voice": null,
+        "Voice": "Gacrux",
+        "IsEmpty": false
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "Betrayal": null,
+      "Ritualist": true
+    },
+    {
+      "Id": "npc_quill",
+      "Name": "Absalom Quill",
+      "Room": 7,
+      "VoiceId": "Sadaltager",
+      "Script": {
+        "Start": "v1",
+        "Nodes": [
+          {
+            "Id": "v1",
+            "Line": {
+              "Text": "Do keep your voices down; this is a rite. Forty years I swept Gorm\u0027s church, and he never once answered me. Something else has. Stand aside and let him wake.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "You let the orc in.",
+                "Next": "v_door",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Tobit found your letter.",
+                "Next": "v_letter_t",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": "told_tobit",
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "We read your letter.",
+                "Next": "v_letter",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": "told_tobit",
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Let the deacon go.",
+                "Next": "v_tobit",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": "told_tobit",
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_door",
+            "Line": {
+              "Text": "I opened a door; I did not walk through it. My guest below promised that the god who comes through will reward the man who opened it. Gorm never rewarded anyone for anything.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "If Gorm wakes, the town dies.",
+                "Next": "v_town",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Give back the church\u0027s ewer.",
+                "Next": "v_ewer",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_town",
+            "Line": {
+              "Text": "You will not frighten me with Dunmarrow. I have swept up after that town for forty years, and the god who comes after will find me standing in it, answered at last.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Gorm lent us his strength.",
+                "Next": "v_wake",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": "wake_gorm",
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Gorm is going back to sleep.",
+                "Next": "v_sleep",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": "wake_gorm",
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_wake",
+            "Line": {
+              "Text": "Did he? Then he is nearer waking than my rite could bring him, and you have done my work for me. Thank you. I shall mention you to the god who comes after.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Give back the church\u0027s ewer.",
+                "Next": "v_ewer",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_sleep",
+            "Line": {
+              "Text": "He will sleep while that drowned warden holds him, and not a moment longer. Maud Sorrel kept his drains. I keep his door.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Give back the church\u0027s ewer.",
+                "Next": "v_ewer",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_letter",
+            "Line": {
+              "Text": "Read aloud, I expect, in my own church\u0027s halls. \u0027The way will be open by midwinter.\u0027 Yes, I wrote it, and I would write it again. I only ask that you stop reading my letters to strangers.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "You let the orc in.",
+                "Next": "v_door",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_letter_t",
+            "Line": {
+              "Text": "Tobit. Of course. I taught him to be thorough, and he was. \u0027The way will be open by midwinter.\u0027 I wrote it, and I would write it again. I only wish he had not read it aloud.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "You let the orc in.",
+                "Next": "v_door",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_tobit",
+            "Line": {
+              "Text": "I sent for Tobit and he came, as a good deacon should. He is my deacon. I do not let go of what is mine, and nor, I find, does the rite.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "You let the orc in.",
+                "Next": "v_door",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "v_ewer",
+            "Line": {
+              "Text": "That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. Sister Ione may have it back when the new god has come.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "You let the orc in.",
+                "Next": "v_door",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Kneel there, then.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          }
+        ]
+      },
+      "QuestId": null,
+      "CastId": "cast_quill",
+      "Persona": {
+        "VoiceStyle": "a dry, precise church verger of great age; liturgical cadence, offended by noise and blood, never raised",
+        "DefaultDelivery": "calm",
+        "Voice": "Sadaltager",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -396,8 +725,8 @@
     {
       "Id": "q_last_verse",
       "Template": "HoldOut",
-      "Title": "The Last Verse",
-      "Objective": "Hold the three galleries while Maud Sorrel finishes the verse.",
+      "Title": "Hold Him Steady",
+      "Objective": "Hold the three galleries while Maud Sorrel keeps the god asleep.",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -415,28 +744,28 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Three galleries, three mouths, one old woman with the words. Keep them off me for the length of a hymn and this is done with.",
-          "VoiceId": "cae59e15adb410f0",
+          "Text": "Three galleries and one old woman at the altar, dears. Keep them off me until he settles.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
-          "Text": "Good. Do not listen too closely; the tune gets into people.",
-          "VoiceId": "ebf72f0e60df20b3",
+          "Text": "Good. Don\u0027t let them pull me off the stone.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Decline": {
-          "Text": "Then I shall wait here and hum it, and we shall all be very old before anything changes.",
-          "VoiceId": "8df1ba72bdaf8a8d",
+          "Text": "Then I\u0027ll hold him as long as I can on my own, dear.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Complete": {
-          "Text": "There. Three hundred years of the same line, and someone finally sang the next one.",
-          "VoiceId": "f80b93e985a6bf9b",
+          "Text": "There. He\u0027s settled, and the rite has nothing left to pull on.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Fail": {
-          "Text": "The verse is dropped. Pick me up; the Choir will start again from the top, and so, I am afraid, must we.",
-          "VoiceId": "b1d0faf65c381653",
+          "Text": "I\u0027m down, dears. Pick me up, or the Verger\u0027s rite gets its way.",
+          "VoiceId": null,
           "Delivery": null
         }
       },
@@ -444,18 +773,74 @@
       "ForbidsFlag": null
     }
   ],
-  "Narration": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 1,
+      "Line": {
+        "Text": "Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep. From the next gallery comes the Verger\u0027s voice, praying for the god to wake. Keep the Sleepless\u0027s kind off her.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 1,
+      "Line": {
+        "Text": "The floor here will not stop shaking. Gorm is nearer waking for the strength he promised you, and more of the Sleepless\u0027s kind are getting through.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 1,
+      "Line": {
+        "Text": "Among the voices at the Verger\u0027s rite is Deacon Tobit\u0027s, slow and grey: the rite is turning him, and he repeats his master\u0027s every word. Break it, and it lets him go.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit"
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 7,
+      "Line": {
+        "Text": "Absalom Quill, the Verger, kneels here with the church\u0027s silver ewer in his hands, praying aloud for the god to wake. He is the man who opened the crypt door to the orc.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 7,
+      "Line": {
+        "Text": "Deacon Tobit kneels at his master\u0027s side, grey to the wrists and half turned, his eyes on the ewer.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit"
+    }
+  ],
   "Taunts": [
     {
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "The Waking? In my church? Put the bloody woman down and let Himself sleep, you half-witted congregation.",
-        "VoiceId": "92e0f50d0cfd07ba",
+        "Text": "Go on, warden, hold your god steady. He\u0027s half awake already, thanks to your hirelings, and every bloody wave I send shakes him further.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The Waking? In my church? Put the woman down and let Himself sleep, you half-witted congregation.",
+        "Text": "Go on, warden, hold your god steady. He\u0027s half awake already, thanks to your hirelings, and every wave I send shakes him further.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -467,17 +852,119 @@
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "The Unbinding. Unpicking my knots after three hundred years, and not one of you can tie a lace.",
-        "VoiceId": "253cce2d79627dc6",
+        "Text": "So a drowned warden thinks she can hold a god asleep against my priest\u0027s rite. Bloody touching. Send them in.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The Unbinding. Unpicking my knots after three hundred years, and not one of you can tie a lace.",
+        "Text": "So a drowned warden thinks she can hold a god asleep against my priest\u0027s rite. Touching. Send them in.",
         "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": "wake_gorm",
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "Feel that, hirelings? Your god, turning over. You asked him for his strength, and he\u0027s halfway awake giving it. The old priest only has to finish the bloody job.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Feel that, hirelings? Your god, turning over. You asked him for his strength, and he\u0027s halfway awake giving it. The old priest only has to finish the job.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "FloorEnter",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "The old priest is down here praying your god awake, hirelings, and a drowned warden is trying to keep him asleep. I know which one I\u0027d bloody bet on.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "The old priest is down here praying your god awake, hirelings, and a drowned warden is trying to keep him asleep. I know which one I\u0027d bet on.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "wake_gorm",
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualistDown",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "Down goes the warden. Pick her up, hirelings, or the old priest gets his god.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Down goes the warden. Pick her up, hirelings, or the old priest gets his god.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualDone",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "So the rite breaks. Look at the old priest, hirelings: on his knees, and nothing answering him. Forty years he prayed, and he still can\u0027t get a god to come when called.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "So the rite breaks. Look at the old priest, hirelings: on his knees, and nothing answering him. Forty years he prayed, and he still can\u0027t get a god to come when called.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Leave the old priest kneeling, hirelings. He opened my door for a reward, and he\u0027ll get nothing; he never was going to. Come down. I\u0027m waiting at the last drain.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Leave the old priest kneeling, hirelings. He opened my door for a reward, and he\u0027ll get nothing; he never was going to. Come down. I\u0027m waiting at the last drain.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "told_tobit",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Your half-grey deacon walked out when the rite broke. Keep him. The old priest is still on his knees with nothing answering. Come down, hirelings. I\u0027m at the last drain.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Your half-grey deacon walked out when the rite broke. Keep him. The old priest is still on his knees with nothing answering. Come down, hirelings. I\u0027m at the last drain.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "told_tobit",
       "FromStock": false
     }
   ],

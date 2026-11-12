@@ -353,9 +353,9 @@ public partial class DungeonBuilder : Node3D
             "Good. I'll go in front. Don't thank me, and don't ask about the old man.",
             "Not yet. The old man's fire wants banking, or he'll pour alone and burn himself. Ask me again in a bit."),
         new("fighter_ione", "Sister Ione", "res://assets/models/viewer/sister_ione.glb", 16, "staff",
-            "The Verger lit this lantern for me. He is a saint, whatever they say above. I will walk beside you, if you walk toward him.",
-            "Then we go together. Stay close to the light. I... I am not brave, but I am not alone now.",
-            "Forgive me. I cannot. Not yet."),
+            "Sister Ione. I kept the Verger's candles for six years and never saw what he was. He took the church's silver ewer down to wake the god with. Help me take it back from him. Please.",
+            "Thank you. Let me carry the lantern; I can do that much. Stay close to the light. I am not brave, but I am not alone now.",
+            "Forgive me. My hands won't stop shaking. Give me a moment, and ask me again."),
     };
 
     /// <summary>

@@ -5,8 +5,8 @@
   "LayoutHash": 56700520146409327,
   "Title": "The Dreaming Hall",
   "IntroLine": {
-    "Text": "Violet dark, and one corridor into a rotunda that breathes. Maud Sorrel has stopped walking. She is sitting on the floor of the god\u0027s dream with her hands folded in her lap.",
-    "VoiceId": "edfe261dbab35a5c",
+    "Text": "Violet dark, and one corridor into a round hall where the shaking is worst. Maud Sorrel has stopped walking. She sits on the floor with her hands folded in her lap, waiting for you.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -228,8 +228,8 @@
       "Total": 29,
       "Trigger": "Enter",
       "Line": {
-        "Text": "Two mouths in the marble open together and the singing stops, which is worse. The Dream empties itself at you.",
-        "VoiceId": "37e8ad9640d785e8",
+        "Text": "Two breaches open in the marble together, and the Sleepless\u0027s kind come through at you: shades in front, and the archers of the other side behind.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -264,13 +264,22 @@
           {
             "Id": "n_sit",
             "Line": {
-              "Text": "Forgive the size of me. I have been trying to turn over for three hundred years and a small man keeps his hand across my mouth. Put down the ledger, the contract, the moulds, the letter. Sit.",
-              "VoiceId": "7e3f4b75fe00f4b5",
+              "Text": "Sit a moment. I am Gorm; Maud has lent me her mouth. Forgive the shaking, the sour wells and the people hurt. I am starving, and half awake. Bring the water down to me, and let me sleep.",
+              "VoiceId": null,
               "Delivery": "calm"
             },
             "Choices": [
               {
-                "Text": "Who is holding your mouth shut?",
+                "Text": "What happens if you wake?",
+                "Next": "n_wake",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Who did this to you?",
                 "Next": "n_verger",
                 "Effect": "None",
                 "Flag": null,
@@ -279,7 +288,45 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "We were hired about the plumbing. What do you want of us?",
+                "Text": "What do you want from us?",
+                "Next": "n_choose",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Not yet. We\u0027ll come back.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "n_wake",
+            "Line": {
+              "Text": "My dream is the door that keeps the Sleepless out. If I wake, the door opens, and Dunmarrow is the first thing the Sleepless finds. I would not mean it. It would happen all the same.",
+              "VoiceId": null,
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "Who did this to you?",
+                "Next": "n_verger",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "What do you want from us?",
                 "Next": "n_choose",
                 "Effect": "None",
                 "Flag": null,
@@ -293,13 +340,22 @@
           {
             "Id": "n_verger",
             "Line": {
-              "Text": "A verger. He tends me the way a man tends a grave: tidily, so that nothing ever comes up. Four of you every nineteen years, and your wells run sweet. That is the whole of the arithmetic.",
-              "VoiceId": "3431de2973d82a90",
+              "Text": "My Verger prayed to me for forty years, and I was asleep and could not answer. The orc\u0027s master answered him instead. So the Verger opened the crypt door, and now he is below you, at a rite to wake me.",
+              "VoiceId": null,
               "Delivery": "calm"
             },
             "Choices": [
               {
-                "Text": "And if we take his hand away?",
+                "Text": "What happens if you wake?",
+                "Next": "n_wake",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "What do you want from us?",
                 "Next": "n_choose",
                 "Effect": "None",
                 "Flag": null,
@@ -313,25 +369,65 @@
           {
             "Id": "n_choose",
             "Line": {
-              "Text": "Below is the last station. Finish the pilgrimage and I open my eyes, and Dunmarrow learns what it stands on. Or burn the contract and I dream on, and your town keeps its souls. I will not argue either way.",
-              "VoiceId": "8788be7206fc4857",
+              "Text": "Ask nothing, and I sleep deep and you face the orc alone. Ask for my strength, and I strike at him from my sleep, but I come nearer waking and the door grows thin. Which?",
+              "VoiceId": null,
               "Delivery": "calm"
             },
             "Choices": [
               {
-                "Text": "We finish it. Wake, and let the town take its chances.",
-                "Next": null,
+                "Text": "Sleep. We will finish it.",
+                "Next": "n_dream",
                 "Effect": "Choose",
-                "Flag": "wake_gorm",
+                "Flag": "let_him_dream",
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               },
               {
-                "Text": "Dream on. We burn the contract and leave you sleeping.",
-                "Next": null,
+                "Text": "Lend us what strength you have.",
+                "Next": "n_lend",
                 "Effect": "Choose",
-                "Flag": "let_him_dream",
+                "Flag": "wake_gorm",
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "n_dream",
+            "Line": {
+              "Text": "He\u0027s gone back down, dear, deep and quiet. Good. I\u0027ll go on ahead to the shrine below and hold him there against the Verger\u0027s rite. You keep the Sleepless\u0027s kind off me.",
+              "VoiceId": null,
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "n_lend",
+            "Line": {
+              "Text": "He heard you, dear. He\u0027ll reach for that orc from his sleep when you need it, but he\u0027s nearer waking now. I\u0027ll go ahead to the shrine below and hold him steady. Keep the Sleepless\u0027s kind off me.",
+              "VoiceId": null,
+              "Delivery": "calm"
+            },
+            "Choices": [
+              {
+                "Text": "Mind how you go, Maud.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
@@ -344,9 +440,9 @@
       "QuestId": "q_pilgrimage",
       "CastId": "cast_maud",
       "Persona": {
-        "VoiceStyle": "an old woman speaking slowly for something far larger than herself; dry, kind, unhurried, never startled",
+        "VoiceStyle": "an old workwoman soaked to the skin: unhurried, kind, faintly amused at her own state",
         "DefaultDelivery": "calm",
-        "Voice": null,
+        "Voice": "Gacrux",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -359,8 +455,8 @@
     {
       "Id": "q_pilgrimage",
       "Template": "Decide",
-      "Title": "The End of the Pilgrimage",
-      "Objective": "Tell the sleeper whether to wake",
+      "Title": "What to Ask of Gorm",
+      "Objective": "Tell Gorm how much to ask of him",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -378,28 +474,28 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Four papers and four graves say the same word. Choose it aloud, inspectors: my eyes open, or the contract burns and the dream goes deeper. Either is a kindness; neither is clean.",
-          "VoiceId": "fbbb3587b502e4a6",
+          "Text": "Ask nothing of me, or ask for my strength. Either way, bring the water down.",
+          "VoiceId": null,
           "Delivery": "calm"
         },
         "Accept": {
-          "Text": "Said, then. Carry it down. He will hear it before you reach him; he hears everything that happens in my throat.",
-          "VoiceId": "601bef6eee925901",
+          "Text": "Said, then. Carry it down with you.",
+          "VoiceId": null,
           "Delivery": "calm"
         },
         "Decline": {
-          "Text": "Then stand there a while. I have waited three hundred years; I can wait out a quiet spell from four plumbers.",
-          "VoiceId": "52a14868f86671f1",
+          "Text": "Then sit a while. I have slept three hundred years; I can wait a little longer.",
+          "VoiceId": null,
           "Delivery": "calm"
         },
         "Complete": {
-          "Text": "Thank you for coming. Nobody has, before. They were sent, and that is a different verb.",
-          "VoiceId": "30ff212b4e203785",
+          "Text": "Thank you for coming down to me.",
+          "VoiceId": null,
           "Delivery": "calm"
         },
         "Fail": {
-          "Text": "No matter. The verse finishes itself eventually, with or without a mouth.",
-          "VoiceId": "fdb725a819a6efb7",
+          "Text": "No matter. Bring the water down, and I will sleep either way.",
+          "VoiceId": null,
           "Delivery": "weary"
         }
       },
@@ -407,7 +503,54 @@
       "ForbidsFlag": null
     }
   ],
-  "Narration": [],
-  "Taunts": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 0,
+      "Line": {
+        "Text": "When Maud looks up, it is not Maud looking. Gorm, the god under Dunmarrow, is close enough here to speak through her, and each word comes slowly.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
+  "Taunts": [
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "Your god is half awake, hirelings, and the dream is thin as paper. I can hear my master on the other side of it. You did that for him, and nobody paid you a bloody penny.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Your god is half awake, hirelings, and the dream is thin as paper. I can hear my master on the other side of it. You did that for him, and nobody paid you a penny.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "Descend",
+      "Objective": null,
+      "Line": {
+        "Text": "You told your god to go back to sleep, hirelings. A god too bloody frightened to wake. My master is frightened of nothing, and he is still at the door.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You told your god to go back to sleep, hirelings. A god too frightened to wake. My master is frightened of nothing, and he is still at the door.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "let_him_dream",
+      "ForbidsFlag": null,
+      "FromStock": false
+    }
+  ],
   "EnemyTotal": 10
 }

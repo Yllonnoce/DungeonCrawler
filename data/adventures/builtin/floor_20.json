@@ -5,8 +5,8 @@
   "LayoutHash": 5018449714008657613,
   "Title": "The Mouth",
   "IntroLine": {
-    "Text": "Pillars for teeth, a floor that gives underfoot like a tongue, braziers smouldering at the back of the throat. The alderman called it on the first day, and nobody laughed then either.",
-    "VoiceId": "5ea33933416ed08f",
+    "Text": "The last stair brings you down to the Mouth, where the last great drain should pour down to the god. Its grate is packed solid, braziers burn around it, and the orc is waiting there.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -222,8 +222,8 @@
       "Total": 32,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The gallery\u0027s teeth are hollow. The singing in them stops, which is worse, and the dark pours out between the pillars in one long grey breath.",
-        "VoiceId": "f33269ec55f92d61",
+        "Text": "The gallery wall splits between the pillars, and the shades pour out at you in one long grey rush, with the stalkers of the other side behind them.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
@@ -253,40 +253,40 @@
       "Total": 24,
       "Trigger": "Alarm",
       "Line": {
-        "Text": "Somewhere behind you a runner reaches the Mouth, and the breach answers: shade on shade, climbing out of the gum like rot leaving a tooth.",
-        "VoiceId": "9679ca36ff4df254",
+        "Text": "Somewhere behind you a runner reaches the breach, and it answers: shade on shade, climbing out of the stone with archers at their backs.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
   ],
   "Boss": {
-    "Name": "The Verger",
+    "Name": "Morg Ashtusk",
     "SignatureOverride": "Volley",
     "IntroLine": {
-      "Text": "Fourth Station. You have come a long way to lie down. Kneel; it is the same thing, only sooner.",
-      "VoiceId": "80364500538c56b2",
-      "Delivery": "calm"
+      "Text": "Killed me at the gate, didn\u0027t you? I came back bigger. Your Verger is still upstairs on his knees, waiting for his reward. Priests. Turn that sluice wheel if you can reach it, hirelings.",
+      "VoiceId": null,
+      "Delivery": null
     },
     "DeathLine": {
-      "Text": "Hush. Hush. He\u0027s still... hush.",
-      "VoiceId": "37a14d45489de59a",
-      "Delivery": "whisper"
+      "Text": "Turn your wheel, then. My master will send another. Your god has to sleep for ever, hirelings. My master only has to wait.",
+      "VoiceId": null,
+      "Delivery": null
     },
     "HalfLine": {
-      "Text": "You would keep Him asleep and kill me? Then one of you is the new Verger. I do not make the rules; I only wrote them down.",
-      "VoiceId": "d1cfa9a93481008c",
-      "Delivery": "calm"
+      "Text": "Is this what the town paid for? Your god is hiding in his sleep, hirelings, and you are only day labour. I can do this all night.",
+      "VoiceId": null,
+      "Delivery": null
     },
     "AltDeathFlag": "wake_gorm",
     "AltHalfLine": {
-      "Text": "He is turning over. Do you know what a town looks like from underneath? You will.",
-      "VoiceId": "575724869af88532",
-      "Delivery": "calm"
+      "Text": "That was your god. He reached up out of his sleep and struck me. Good. Every blow he lands wakes him further, and my master is right behind the door.",
+      "VoiceId": null,
+      "Delivery": null
     },
     "AltDeathLine": {
-      "Text": "...He is saying something. He is saying thank you. Three hundred years, and that is what He...",
-      "VoiceId": "2736272b311ed58f",
-      "Delivery": "whisper"
+      "Text": "Your god struck me down from his sleep. Ha. It cost him, hirelings: he\u0027s nearly awake, and my master is almost through. Listen at the door.",
+      "VoiceId": null,
+      "Delivery": null
     }
   },
   "Chests": [
@@ -310,11 +310,22 @@
   "Quests": [],
   "Narration": [
     {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "Morg Ashtusk stands over the last great drain, whole again and a head taller than the orc you killed at the gate. Kill him, clear the grate, and turn the sluice wheel.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "Far above, Dunmarrow lurches on His chest and the wells run clear and cold. The halls below are Gorm\u0027s waking thoughts now, and Maud walks them beside you, awake at last.",
-        "VoiceId": "7c45722abefd86a4",
+        "Text": "You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks and slowly sinks back from waking. The dream holds; it is thin, but the door stays shut.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": "wake_gorm",
@@ -324,12 +335,23 @@
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "The dream goes on. The Forge casts, and so do you. The halls below are only the dream deepening, and a long way down one of them somebody is still carrying a candle.",
-        "VoiceId": "eeafe8cc858b55d6",
+        "Text": "You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks without ever stirring. The dream holds whole, and the door to the Sleepless stays shut.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": "wake_gorm"
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "Far above you the ground goes still, and the wells of Dunmarrow run sweet. The mines will stand. One floor up the Verger kneels on, and nothing answers him. The job is done, and the town lives.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
     }
   ],
   "Taunts": [
@@ -337,14 +359,14 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Fourth Station. Come in. Come in. Mind the teeth.",
-        "VoiceId": "6dfa027852618471",
+        "Text": "Come down to the Mouth, hirelings. The last drain is mine.",
+        "VoiceId": null,
         "Delivery": "calm"
       },
       "CleanLine": {
-        "Text": "Fourth Station. Come in. Come in. Mind the teeth.",
+        "Text": "Come down to the Mouth, hirelings. The last drain is mine.",
         "VoiceId": null,
-        "Delivery": "calm"
+        "Delivery": null
       },
       "RequiresFlag": null,
       "ForbidsFlag": null,
@@ -354,12 +376,12 @@
       "Trigger": "FloorEnter",
       "Objective": null,
       "Line": {
-        "Text": "The Dream. Lower your voices. He hears you now, and He is not fond of shouting.",
-        "VoiceId": "22d6db47e899da64",
+        "Text": "The Mouth, hirelings. The last drain, and your god right under your feet. Mind where you stand.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The Dream. Lower your voices. He hears you now, and He is not fond of shouting.",
+        "Text": "The Mouth, hirelings. The last drain, and your god right under your feet. Mind where you stand.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -371,12 +393,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "Nearly. Nearly there. A little further down and you can stop.",
-        "VoiceId": "8bdfbcc2f5a847bb",
+        "Text": "That\u0027s one of the town\u0027s hired shovels broken. Nobody will pay you for it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Nearly. Nearly there. A little further down and you can stop.",
+        "Text": "That\u0027s one of the town\u0027s hired shovels broken. Nobody will pay you for it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -388,12 +410,12 @@
       "Trigger": "Idle",
       "Objective": null,
       "Line": {
-        "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
-        "VoiceId": "ad55cb665fb14d7e",
+        "Text": "Standing about, hirelings? You\u0027re paid by the floor, and this is the last one. Come and earn it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Standing about in a church. Sit, then. Kneel. Lie down. In that order, ideally.",
+        "Text": "Standing about, hirelings? You\u0027re paid by the floor, and this is the last one. Come and earn it.",
         "VoiceId": null,
         "Delivery": null
       },
