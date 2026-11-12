@@ -465,11 +465,9 @@ public partial class AdventureDirector : Node
     private readonly List<(double At, string Text, string? Voice, string Key)> _narrationQueue = new();
     private readonly HashSet<string> _narrationQueued = new();
     private double _narrationFree, _roomNarrationCheck;
-    /// <summary>Seconds between narration entries due together, so the subtitle never overwrites one with the next.</summary>
-    public const double NarrationGap = 4.0;
 
     /// <summary>Nothing queued survives a floor change, a load or a wipe: the line was not heard, so its key was never recorded.</summary>
-    private void ClearNarrationQueue() { _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; }
+    private void ClearNarrationQueue() { _deferred.Clear(); _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; }
 
     /// <summary>Queue the plan's entries due for this trigger (for RoomEnter, any of the rooms), in plan order. Server and solo only: clients hear them as narration messages. The key is recorded when the line plays.</summary>
     private void PlayNarration(NarrationTrigger trigger, IReadOnlyList<int?> rooms, double lead = 0)
@@ -485,9 +483,17 @@ public partial class AdventureDirector : Node
                 said.Add(key);
                 _narrationQueued.Add(key);
                 var at = Math.Max(Game.Instance.PlaySeconds + lead, _narrationFree);
-                _narrationFree = at + NarrationGap;
+                _narrationFree = at + Voice.NarrationRules.SpeakSeconds(n.Line.Text);
                 _narrationQueue.Add((at, n.Line.Text, n.Line.VoiceId, key));
             }
+    }
+
+    /// <summary>How long the boss's own intro or death line takes to be heard: its narration waits that long.</summary>
+    private double BossSpeakSeconds(bool death)
+    {
+        if (Main.Instance?.Builder.Contents?.Plan?.Boss is not { } b) return 0;
+        var line = death ? b.DeathLineFor(Memory.Flags) : b.IntroLine;
+        return line == null || line.Text == "" ? 0 : Voice.NarrationRules.SpeakSeconds($"{b.Name}: {line.Text}");
     }
 
     private static readonly int?[] NoRoom = { null };
@@ -495,6 +501,8 @@ public partial class AdventureDirector : Node
     private void TickNarration()
     {
         var now = Game.Instance.PlaySeconds;
+        for (var i = 0; i < _deferred.Count; i++)
+            if (_deferred[i].At <= now) { var d = _deferred[i].Do; _deferred.RemoveAt(i--); d(); }
         while (_narrationQueue.Count > 0 && _narrationQueue[0].At <= now)
         {
             var (_, text, voice, key) = _narrationQueue[0];
@@ -547,8 +555,8 @@ public partial class AdventureDirector : Node
         AddChild(_voice);
         AddChild(new CampaignBaker { Name = "Baker" });
         var bus = EventBus.Instance;
-        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); PlayNarration(NarrationTrigger.BossSeen, NoRoom, 4); };
-        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); PlayNarration(NarrationTrigger.BossDead, NoRoom, 4); };
+        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); PlayNarration(NarrationTrigger.BossSeen, NoRoom, BossSpeakSeconds(death: false)); };
+        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); PlayNarration(NarrationTrigger.BossDead, NoRoom, BossSpeakSeconds(death: true)); };
         bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
         bus.SecretFound += _ => { if (_record != null) _record.SecretsFound++; }; // fortune: the floor card's count
         bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
@@ -630,6 +638,8 @@ public partial class AdventureDirector : Node
     }
 
     private FloorObjectiveKind? _pendingDescend;
+    private string _lastTauntSpoken = "";
+    private readonly List<(double At, Action Do)> _deferred = new(); // what opens a floor, held until the parting taunt has been heard
     private List<TauntPlan> _leftDescend = new(); // the floor just left: its own Descend taunts the flags allow
 
     private int _gatheringRemarks; // how many of this floor build's remarks he has made; reset in OnFloorBuilt (the gathered count restarts there too)
@@ -674,7 +684,19 @@ public partial class AdventureDirector : Node
         if (_pendingDescend is { } left) { _pendingDescend = null; if (!ownSpoke) Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
         var objectiveKind = Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;
-        var villainSpoke = firstVisit && objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true);
+        // when the floor just left spoke its parting taunt, the arriving floor's opening waits until that line has been heard
+        var holdOpening = ownSpoke && firstVisit;
+        var villainSpoke = !holdOpening && firstVisit && objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true);
+        if (holdOpening)
+        {
+            var intro = contents.Plan?.IntroLine;
+            _deferred.Add((Game.Instance.PlaySeconds + Voice.NarrationRules.SpeakSeconds(_lastTauntSpoken), () =>
+            {
+                if (_currentFloor != floor) return;
+                if (objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true)) return;
+                if (intro != null && intro.Text != "") EventBus.Instance.RaiseNarration(intro.Text, intro.VoiceId);
+            }));
+        }
         if (contents.Plan is { } plan)
         {
             _record!.Title = plan.Title;
@@ -691,7 +713,7 @@ public partial class AdventureDirector : Node
                 state.Id = key;
                 Quests[key] = state;
             }
-            if (firstVisit && !villainSpoke && plan.IntroLine.Text != "") EventBus.Instance.RaiseNarration(plan.IntroLine.Text, plan.IntroLine.VoiceId);
+            if (firstVisit && !villainSpoke && !holdOpening && plan.IntroLine.Text != "") EventBus.Instance.RaiseNarration(plan.IntroLine.Text, plan.IntroLine.VoiceId);
             foreach (var q in Quests.Values.Where(q => q.Floor == floor && q.Status == QuestStatus.Active))
             {
                 if (q.Template == QuestTemplate.Escort && FindNpc(q.EscortNpc) is { Escorting: false, Rescued: false, Dead: false } npc) npc.StartFollowing();
@@ -730,6 +752,7 @@ public partial class AdventureDirector : Node
         var (text, voice) = Settings.VillainCurses || clean == null ? (coarse, pick.Line.VoiceId) : (clean, pick.CleanLine!.VoiceId);
         if (trigger == Objectives.TauntTrigger.FloorEnter) EventBus.Instance.PlaySfx("boss");
         EventBus.Instance.RaiseNarration(text, voice, clean, pick.CleanLine?.VoiceId);
+        _lastTauntSpoken = text;
         _lastObjectiveActivity = now;
         return true;
     }

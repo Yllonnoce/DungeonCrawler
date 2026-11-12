@@ -3440,6 +3440,7 @@ public partial class DebugTools : Node
     private double _nrAt;
     private readonly List<string> _nrFails = new();
     private readonly List<string> _nrHeard = new();
+    private readonly List<double> _nrHeardAt = new();
     private bool _nrListening;
     private NarrationPlan? _nrEntry;
     private TauntPlan? _nrDescend;
@@ -3469,12 +3470,12 @@ public partial class DebugTools : Node
         {
             case 0 when _elapsed >= 1.0:
             {
-                if (!_nrListening) { EventBus.Instance.Narration += (text, _) => _nrHeard.Add(text); _nrListening = true; }
+                if (!_nrListening) { EventBus.Instance.Narration += (text, _) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); }; _nrListening = true; }
                 _nrEntry = main.Builder.Contents?.Plan?.Narration.FirstOrDefault(n => n.Trigger == NarrationTrigger.RoomEnter && n.Room is { } r && r >= 0 && r < layout.Rooms.Count);
                 if (_nrEntry == null) { Fail("floor 1 has no RoomEnter narration"); Finish(); return; }
                 GD.Print($"[narration] entry for room {_nrEntry.Room}: \"{_nrEntry.Line.Text}\"");
                 Game.Instance.Adventure.BarksSaid.Remove(Adventure.Voice.NarrationRules.Key(1, _nrEntry)); // the spawn may already have been in that room
-                _nrHeard.Clear();
+                _nrHeard.Clear(); _nrHeardAt.Clear();
                 StandInRoom();
                 Next();
                 break;
@@ -3485,7 +3486,7 @@ public partial class DebugTools : Node
                 if (!Game.Instance.Adventure.BarksSaid.ContainsKey(Adventure.Voice.NarrationRules.Key(1, _nrEntry!))) Fail("the played entry was not remembered");
                 main.SaveGame("narration-test");
                 GD.Print($"[narration] load -> {main.LoadGame("narration-test")}");
-                _nrHeard.Clear();
+                _nrHeard.Clear(); _nrHeardAt.Clear();
                 Next();
                 break;
             }
@@ -3502,16 +3503,26 @@ public partial class DebugTools : Node
                 // leaving by the stairs: floor 1's own Descend taunt is heard, and the room line does not replay on the way
                 _nrDescend = Game.Instance.Adventure.FloorPlans[1].Taunts.FirstOrDefault(t => t.Trigger == "Descend");
                 if (_nrDescend == null) { Fail("floor 1 has no Descend taunt"); Finish(); return; }
-                _nrHeard.Clear();
+                _nrHeard.Clear(); _nrHeardAt.Clear();
                 Game.Instance.ChangeFloor(+1);
                 Next();
                 break;
             }
-            case 4 when since >= 8.0:
+            case 4 when since >= 22.0:
             {
                 var taunts = _nrHeard.Count(t => t.Contains(_nrDescend!.Line.Text));
                 if (taunts != 1) Fail($"floor 1's Descend taunt was heard {taunts} times, wanted 1");
                 if (Heard() != 0) Fail($"the room line replayed across the floor change ({Heard()} times)");
+                // the parting taunt, then the new floor's opening, far enough apart for the first to be heard
+                var at = _nrHeard.FindIndex(t => t.Contains(_nrDescend!.Line.Text));
+                if (at >= 0 && at + 1 < _nrHeard.Count)
+                {
+                    var gap = _nrHeardAt[at + 1] - _nrHeardAt[at];
+                    var need = Adventure.Voice.NarrationRules.SpeakSeconds(_nrHeard[at]);
+                    GD.Print($"[narration] parting taunt, then \"{_nrHeard[at + 1]}\" {gap:0.0}s later (needs {need:0.0}s)");
+                    if (gap < need - 0.5) Fail($"the next floor's opening came {gap:0.0}s after the parting taunt, wanted {need:0.0}s");
+                }
+                else Fail("nothing opened floor 2 after the parting taunt");
                 Finish();
                 break;
             }

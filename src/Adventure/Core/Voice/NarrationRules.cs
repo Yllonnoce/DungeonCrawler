@@ -26,4 +26,9 @@ public static class NarrationRules
     /// <summary>Whether a boss is the campaign's antagonist (the same name): then it speaks in the villain's voice, not the stock boss's.</summary>
     public static bool BossIsAntagonist(string bossName, string antagonistName)
         => bossName.Trim().Length > 0 && string.Equals(bossName.Trim(), antagonistName.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    public const double SpeakFloor = 3.0, SpeakPerChar = 0.06, SpeakCap = 12.0;
+
+    /// <summary>Roughly how long a line takes to be heard: a floor of three seconds, 0.06 s a character, capped at twelve. What waits for a line waits this long.</summary>
+    public static double SpeakSeconds(string text) => Math.Min(SpeakCap, SpeakFloor + SpeakPerChar * (text?.Trim().Length ?? 0));
 }

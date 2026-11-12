@@ -75,9 +75,9 @@ public sealed class TauntDirector
         return pick;
     }
 
-    /// <summary>A floor's own Descend taunts that the flags allow: what the villain may say as the party leaves it, objective or not.</summary>
+    /// <summary>A floor's own Descend taunts that the flags allow (general ones only: the Descend taunt is picked with no objective kind): what the villain may say as the party leaves it, objective or not.</summary>
     public static List<TauntPlan> DescendBank(IEnumerable<TauntPlan> floorTaunts, IReadOnlyCollection<string>? flags)
-        => floorTaunts.Where(t => TauntTriggers.TryParse(t.Trigger, out var tt) && tt == TauntTrigger.Descend && t.Line.Text.Trim().Length > 0 && FlagRules.Allowed(t.RequiresFlag, t.ForbidsFlag, flags!)).ToList();
+        => floorTaunts.Where(t => TauntTriggers.TryParse(t.Trigger, out var tt) && tt == TauntTrigger.Descend && t.Line.Text.Trim().Length > 0 && string.IsNullOrWhiteSpace(t.Objective) && FlagRules.Allowed(t.RequiresFlag, t.ForbidsFlag, flags!)).ToList();
 
     /// <summary>Fill the tokens a line may carry.</summary>
     public static string Render(string text, string? party, int floor, string? arg) => text
