@@ -5,8 +5,8 @@
   "LayoutHash": 2954229024822347568,
   "Title": "The Craw",
   "IntroLine": {
-    "Text": "The passages narrow until the walls touch your shoulders, and every so often the whole craw shifts a hand\u0027s breadth, grinding boulders like a mouth that has not finished chewing.",
-    "VoiceId": "2e94e6cd0ac5ec85",
+    "Text": "You squeeze into the Craw, where the wardens kept their stores. Bandits have been looting them, paid by the orc to keep the town out, and vermin nest in what they left. The ground lurches as you go.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -173,8 +173,8 @@
       "Total": 20,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The lid lifts, the shell roof shivers, and both breaches open at once: the hoard was bait, and something has been waiting behind the walls for nineteen years.",
-        "VoiceId": "26c172216bcac9d2",
+        "Text": "The lid lifts, the shell roof shivers, and both breaches open at once: the hoard was bait, and the vermin were waiting behind the walls for whoever came to take it.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -203,7 +203,30 @@
   ],
   "Npcs": [],
   "Quests": [],
-  "Narration": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 4,
+      "Line": {
+        "Text": "Crates broken open and half carted off, some with Master Pellet\u0027s mark on them. On top sits a bandit\u0027s purse full of the orc\u0027s coin: wages for keeping the town out of these stores.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 5,
+      "Line": {
+        "Text": "The floor heaves and a boulder beside you splits in two. That is the god turning over below, starved of water and closer to waking.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Taunts": [],
   "EnemyTotal": 9
 }

@@ -345,7 +345,7 @@ public partial class DungeonBuilder : Node3D
             "Then I'm with you. Keep up, and keep out of the way of my hammer.",
             "Not today. Show me you can hold your own, then ask again."),
         new("fighter_tamsin", "Tamsin Rook", "res://assets/models/viewer/tamsin_rook.glb", 6, "axe_1handed",
-            "Mind the wet. The god's got gold in his teeth down here, and I mean to have it before the water does. You lot look like you could carry.",
+            "Mind the wet. My partner Jory went under in this muck with our tools, and he hasn't come up. Help me find him and I'll fight for a share. You lot look like you could carry.",
             "Ha! Then we're partners. Shares are even, unless I find it first.",
             "No offence, but I've seen your sort go into the dark and not come back with their boots. Prove me wrong."),
         new("fighter_oskar", "Oskar Vell", "res://assets/models/viewer/oskar_vell.glb", 11, "axe_2handed",

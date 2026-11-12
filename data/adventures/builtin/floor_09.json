@@ -5,8 +5,8 @@
   "LayoutHash": 2142391155829441730,
   "Title": "The Cistern",
   "IntroLine": {
-    "Text": "Warm sandstone, and water going sour in the dark. Four levers in four chambers, and over each one a verse, carved by a hand that knew the tune.",
-    "VoiceId": "aa677908b7741c98",
+    "Text": "You come down into the Cistern, where the wardens worked. The water stands in its sandstone tanks, going sour. Ahead, the alderman has come down again, out of breath, and the warden from the Crop has followed you.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -285,8 +285,8 @@
           {
             "Id": "greet",
             "Line": {
-              "Text": "A progress check, that is all. The council likes a tally. Only \u2014 there are papers blown about these cisterns with my seal on them, and I should very much like them gathered up.",
-              "VoiceId": "3c147349ff1d5bcd",
+              "Text": "Progress check, that\u0027s all; the council likes a tally. Only, there\u0027s a council paper torn in three and loose about these cisterns. Bring me the leaves, would you? Unread, if you can manage it.",
+              "VoiceId": null,
               "Delivery": "weary"
             },
             "Choices": [
@@ -323,22 +323,71 @@
           {
             "Id": "read",
             "Line": {
-              "Text": "Same wording as yours. Same hand. Same seal \u2014 mine, nineteen years old. Four names. A date down and no date up. It says plumbing. They always say plumbing.",
-              "VoiceId": "22930f8dc93fc303",
+              "Text": "\u0027The drain-wardens are to be paid no longer, since the Verger has forbidden anyone to go below.\u0027 Under the council\u0027s seal. And that is my hand. I signed it.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Four names. Whose?",
-                "Next": null,
-                "Effect": "Farewell",
+                "Text": "Why stop paying them?",
+                "Next": "excuse",
+                "Effect": "None",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
                 "NextIfRefused": null
               },
               {
-                "Text": "Keep it. We\u0027ll want it read aloud later.",
+                "Text": "You sacked your own wardens.",
+                "Next": "excuse",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "excuse",
+            "Line": {
+              "Text": "The Verger had already shut the mines. What use is a warden who can\u0027t go down? So the council stopped paying them. It seemed only sensible at the time.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "They went down anyway. Unpaid.",
+                "Next": "after",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
+              {
+                "Text": "Go back up, Crane.",
+                "Next": null,
+                "Effect": "Farewell",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "after",
+            "Line": {
+              "Text": "I know. They went down after we stopped paying them, and they never came up. I\u0027ll keep this, and nobody burns it. Go on down.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Go back up, Crane.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -354,9 +403,9 @@
       "QuestId": "q_contract",
       "CastId": "cast_crane",
       "Persona": {
-        "VoiceStyle": "a plump market alderman, wheezing on the stair, chain of office, jokes to cover the sweat",
-        "DefaultDelivery": "weary",
-        "Voice": null,
+        "VoiceStyle": "a plump market-town alderman; bluster over panic, speaks in clauses, invoices and apologies",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Umbriel",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -375,13 +424,13 @@
           {
             "Id": "greet",
             "Line": {
-              "Text": "Watch him read it. He knows the seal. Nineteen years ago I walked my four to the jailers and bought these years with them, and I have spent every one of them down here.",
-              "VoiceId": "060c1557d4d05aec",
+              "Text": "The council dropped us once the Verger shut the mines. We went down anyway, unpaid. Then the orc\u0027s things caged my crew, and I ran. Left them there. Say what you think of that, then help me or don\u0027t.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Nineteen years is paid. It\u0027s forgiven.",
+                "Text": "You were afraid. It\u0027s forgiven.",
                 "Next": "forgiven",
                 "Effect": "Choose",
                 "Flag": "grisel_forgiven",
@@ -390,7 +439,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "You sold four people. That stands.",
+                "Text": "You left them to turn. That stands.",
                 "Next": "kept",
                 "Effect": "Choose",
                 "Flag": "grisel_condemned",
@@ -402,8 +451,8 @@
             "Aside": {
               "Member": "Brand",
               "Line": {
-                "Text": "Four for one. I\u0027ve seen officers make that trade. Never one who stayed to pay.",
-                "VoiceId": "24e222d1e7bfef35",
+                "Text": "Fear does that. What you do after is what counts.",
+                "VoiceId": null,
                 "Delivery": null
               }
             }
@@ -411,13 +460,13 @@
           {
             "Id": "forgiven",
             "Line": {
-              "Text": "Forgiven. By plumbers. Well. The spiders never asked and the stone never answered, so you are an improvement on both. I\u0027ll be lower down when you come through.",
-              "VoiceId": "07f3777fd5e127a4",
+              "Text": "Forgiven. Well. I\u0027ll not waste it. Find where the orc keeps them caged, and I\u0027ll be there to bring them out.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Mind the levers.",
+                "Text": "Mind yourself, Grisel.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -431,8 +480,8 @@
           {
             "Id": "kept",
             "Line": {
-              "Text": "Good. I\u0027d not have believed the other thing. Go on down, then, and when you meet me again, remember you had the chance to say otherwise and spent it.",
-              "VoiceId": "f31936d437613d71",
+              "Text": "Fair. I\u0027d have said the same. Then I\u0027m on my own, and on my own I look after myself. Go on down.",
+              "VoiceId": null,
               "Delivery": "calm"
             },
             "Choices": [
@@ -453,9 +502,9 @@
       "QuestId": "q_grisel",
       "CastId": "cast_grisel",
       "Persona": {
-        "VoiceStyle": "nineteen years underground; flat, dry, contrary, speaks to spiders more easily than to people",
-        "DefaultDelivery": "calm",
-        "Voice": null,
+        "VoiceStyle": "a drain-warden months alone underground: flat, wry, short sentences, says the worst about herself first",
+        "DefaultDelivery": "weary",
+        "Voice": "Despina",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -468,8 +517,8 @@
     {
       "Id": "q_contract",
       "Template": "Investigate",
-      "Title": "The Last Four\u0027s Contract",
-      "Objective": "Gather the scattered leaves of the old contract from the cisterns and bring them to Crane",
+      "Title": "The Council\u0027s Order",
+      "Objective": "Gather the torn leaves of a council order from the cisterns and bring them to Crane",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -506,8 +555,8 @@
           "Delivery": null
         },
         "Complete": {
-          "Text": "All three. Yes. Thank you. I shall file them somewhere the water cannot reach.",
-          "VoiceId": "fa034ba5b3b632e6",
+          "Text": "All three. My hand, under the council\u0027s seal. I\u0027ll keep it, and nobody burns it.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Fail": {
@@ -522,8 +571,8 @@
     {
       "Id": "q_grisel",
       "Template": "Decide",
-      "Title": "The Unforgiven",
-      "Objective": "Answer Grisel Thorn for what she did to the last four",
+      "Title": "What Grisel Did",
+      "Objective": "Answer Grisel Thorn for leaving her crew in the orc\u0027s cages",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -541,8 +590,8 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "Don\u0027t look at me like a jury. Say the thing or don\u0027t say it. I have waited nineteen years; another moment won\u0027t kill me, though plenty else might.",
-          "VoiceId": "5624ff4088ed6199",
+          "Text": "Don\u0027t look at me like a jury. Say the thing or don\u0027t say it. I\u0027ve carried it since spring; another moment won\u0027t kill me, though plenty else might.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
@@ -570,7 +619,19 @@
       "ForbidsFlag": null
     }
   ],
-  "Narration": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 13,
+      "Line": {
+        "Text": "The wardens\u0027 strongroom, stripped of its tools. A leaf of a council order lies on the floor with the council\u0027s seal on it: the drain-wardens are to be paid no longer.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Taunts": [],
   "EnemyTotal": 9
 }

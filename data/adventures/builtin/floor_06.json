@@ -5,8 +5,8 @@
   "LayoutHash": 5999920540184747606,
   "Title": "The Swallow",
   "IntroLine": {
-    "Text": "Knee-deep, and warm as a mouth. Dunmarrow draws its drinking water from this, and the council has never once asked what else is in here.",
-    "VoiceId": "1c28242342d2ccb7",
+    "Text": "You wade into the Swallow. The first drain runs now, but the drains below it are still choked, so the water backs up here, knee-deep and going sour. Ahead, a miner is pulling wardens\u0027 tools out of the muck.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -205,13 +205,13 @@
           {
             "Id": "m6_dry",
             "Line": {
-              "Text": "Dry? Am I? So I am. The water goes round me the way it goes round a stone it has had long enough. Keep wading; the Gut is only a swallow away.",
-              "VoiceId": "37baa6efaa38d3dd",
+              "Text": "Soaked through and cold, dear, and no matter. Keep the water going down to Gorm. He is thirsty. Thirty-eight years I kept it moving, and now it stands here going sour.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "How did you get ahead of us again?",
+                "Text": "Why is the water standing?",
                 "Next": "m6_ahead",
                 "Effect": "None",
                 "Flag": null,
@@ -220,7 +220,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "There is a woman up there mining His teeth.",
+                "Text": "Who else is down here?",
                 "Next": "m6_tamsin",
                 "Effect": "None",
                 "Flag": null,
@@ -243,11 +243,20 @@
           {
             "Id": "m6_ahead",
             "Line": {
-              "Text": "I did not hurry. I never hurry. He is slow, and I go at His pace, and somehow that is always one floor further than yours.",
-              "VoiceId": "595823a292ae196a",
+              "Text": "The drains under us are choked, dear, packed solid like the grates up top, and not by accident. So the water backs up here and the god goes without. Clear them and it runs down to him again.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
+              {
+                "Text": "Who else is down here?",
+                "Next": "m6_tamsin",
+                "Effect": "None",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              },
               {
                 "Text": "Mind how you go, Maud.",
                 "Next": null,
@@ -263,8 +272,8 @@
           {
             "Id": "m6_tamsin",
             "Line": {
-              "Text": "Tamsin. Yes. She thinks He is a vein. Let her; gold is a kinder word than the right one, and she laughs, which He likes.",
-              "VoiceId": "0fcf818636e2bca8",
+              "Text": "Tamsin Rook, dear. Good miner. She came down after the wardens\u0027 tools, and her partner Jory went into this water ahead of her and hasn\u0027t come up. Help her look. The water won\u0027t give him back by itself.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -285,9 +294,9 @@
       "QuestId": null,
       "CastId": "cast_maud",
       "Persona": {
-        "VoiceStyle": "an old woman talking in her sleep: unhurried, kind, faintly amused at the size of everything",
+        "VoiceStyle": "an old workwoman soaked to the skin: unhurried, kind, faintly amused at her own state",
         "DefaultDelivery": "calm",
-        "Voice": null,
+        "Voice": "Gacrux",
         "IsEmpty": false
       },
       "RequiresFlag": null,

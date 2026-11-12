@@ -5,8 +5,8 @@
   "LayoutHash": 476522169224861389,
   "Title": "The Crop",
   "IntroLine": {
-    "Text": "Nineteen years of someone\u0027s housekeeping: a hut roofed with a spider\u0027s back, a banner sewn out of dead men\u0027s coats, and a rite already started without you.",
-    "VoiceId": "e53e623f6e9fe607",
+    "Text": "You come into the Crop: a warden\u0027s camp beside a seized pump, and at the old altar the orc\u0027s minions holding a rite to hurry the god awake.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -207,8 +207,8 @@
       "Total": 11,
       "Trigger": "Enter",
       "Line": {
-        "Text": "Both breaches cough at once, and what the god ate comes back up it on too many legs.",
-        "VoiceId": "11a84e4268921c6c",
+        "Text": "Both breaches cough at once, and the grey pack pours out at you, crawling now. They were townspeople once.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
@@ -284,9 +284,9 @@
       "QuestId": null,
       "CastId": "cast_grisel",
       "Persona": {
-        "VoiceStyle": "nineteen years underground; flat, dry, contrary, speaks to spiders more easily than to people",
-        "DefaultDelivery": "calm",
-        "Voice": null,
+        "VoiceStyle": "a drain-warden months alone underground: flat, wry, short sentences, says the worst about herself first",
+        "DefaultDelivery": "weary",
+        "Voice": "Despina",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -296,18 +296,30 @@
     }
   ],
   "Quests": [],
-  "Narration": [],
+  "Narration": [
+    {
+      "Trigger": "RoomEnter",
+      "Room": 9,
+      "Line": {
+        "Text": "The orc\u0027s minions keep a rite at this altar to hurry the god awake. Beside it, Grisel Thorn, a warden, heaves at a seized pump and shouts to you: hold them off while she frees it, then help her find her crew.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Taunts": [
     {
       "Trigger": "FloorEnter",
       "Objective": "ritual",
       "Line": {
-        "Text": "Somebody down here is singing herself out of an oath. Let her. Nineteen bloody years and she still thinks the verse cares.",
-        "VoiceId": "7aa5428fe306c0be",
+        "Text": "My minions are holding a rite at the altar, hirelings, to hurry your god awake. That warden at the pump thinks a little bloody water will stop it.",
+        "VoiceId": null,
         "Delivery": "calm"
       },
       "CleanLine": {
-        "Text": "Somebody down here is singing herself out of an oath. Let her. Nineteen years and she still thinks the verse cares.",
+        "Text": "My minions are holding a rite at the altar, hirelings, to hurry your god awake. That warden at the pump thinks a little water will stop it.",
         "VoiceId": null,
         "Delivery": "calm"
       },
@@ -319,12 +331,29 @@
       "Trigger": "RitualistDown",
       "Objective": "ritual",
       "Line": {
-        "Text": "She has lain down before, you know. Rather well. It is the only thing she has ever done promptly.",
-        "VoiceId": "723f2b4de9ccbf2a",
+        "Text": "Down goes the warden. Pick her up, hirelings, or the pump stays seized and my rite goes on.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "She has lain down before, you know. Rather well. It is the only thing she has ever done promptly.",
+        "Text": "Down goes the warden. Pick her up, hirelings, or the pump stays seized and my rite goes on.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RitualDone",
+      "Objective": "ritual",
+      "Line": {
+        "Text": "So the pump turns and my rite breaks. Enjoy it, hirelings. Your god is still hungry, and the drains below are still mine.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "So the pump turns and my rite breaks. Enjoy it, hirelings. Your god is still hungry, and the drains below are still mine.",
         "VoiceId": null,
         "Delivery": null
       },

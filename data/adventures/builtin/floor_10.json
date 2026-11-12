@@ -5,8 +5,8 @@
   "LayoutHash": 5847240991001586344,
   "Title": "Mother Nit",
   "IntroLine": {
-    "Text": "Fire creeps across the floor in slow rings, and the lichen pops as it burns. Something back there has been laying eggs in a god for a very long time.",
-    "VoiceId": "fad5670bad6030c3",
+    "Text": "Under a nest of silk and eggs lies the second great drain, choked solid. Mother Nit has bred her vermin in its standing water all season. Mind the lichen; it burns in slow rings across the floor.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -226,13 +226,13 @@
     "Name": "Mother Nit",
     "SignatureOverride": "Summon",
     "IntroLine": {
-      "Text": "The god has lice. The lice have a queen. Everything has a queen.",
-      "VoiceId": "f0960653e6f89fce",
+      "Text": "The orc gave me this drain. My water, my nest, my children.",
+      "VoiceId": null,
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "Her children scatter into the dark and He does not scratch.",
-      "VoiceId": "996d50d269f40b0e",
+      "Text": "Turn your wheel, then. My children go down with the water.",
+      "VoiceId": null,
       "Delivery": null
     },
     "HalfLine": null,
@@ -259,7 +259,30 @@
   ],
   "Npcs": [],
   "Quests": [],
-  "Narration": [],
+  "Narration": [
+    {
+      "Trigger": "BossSeen",
+      "Room": null,
+      "Line": {
+        "Text": "Mother Nit, swollen on the standing water, squats on her nest over the drain. She calls her brood to her; cut them down, or they will bury you.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    },
+    {
+      "Trigger": "BossDead",
+      "Room": null,
+      "Line": {
+        "Text": "Her nest breaks apart and goes down with the water: the second great drain runs. Back up the Gut the standing water drops, the air clears, and above you the shaking eases. Two great drains to go.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null
+    }
+  ],
   "Taunts": [],
   "EnemyTotal": 10
 }
