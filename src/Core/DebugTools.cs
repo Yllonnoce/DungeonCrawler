@@ -3442,12 +3442,13 @@ public partial class DebugTools : Node
     private readonly List<string> _nrHeard = new();
     private bool _nrListening;
     private NarrationPlan? _nrEntry;
+    private TauntPlan? _nrDescend;
 
     private void RunNarrationTest()
     {
         if (_nrStep >= 99) return;
         var main = Main.Instance;
-        if (main == null || main.Builder.FloorRoot == null || main.Builder.Layout is not { } layout || !Game.Instance.InGame || main.Builder.CurrentFloor != 1 || !main.Party.HasBodies) return;
+        if (main == null || main.Builder.FloorRoot == null || main.Builder.Layout is not { } layout || !Game.Instance.InGame || (main.Builder.CurrentFloor != 1 && _nrStep < 4) || !main.Party.HasBodies) return;
         var since = _elapsed - _nrAt;
         void Next() { _nrStep++; _nrAt = _elapsed; }
         void Fail(string why) { _nrFails.Add(why); GD.Print($"[narration] FAIL: {why}"); }
@@ -3498,6 +3499,19 @@ public partial class DebugTools : Node
             case 3 when since >= 6.0:
             {
                 if (Heard() != 0) Fail($"after a load the entry played again ({Heard()} times)");
+                // leaving by the stairs: floor 1's own Descend taunt is heard, and the room line does not replay on the way
+                _nrDescend = Game.Instance.Adventure.FloorPlans[1].Taunts.FirstOrDefault(t => t.Trigger == "Descend");
+                if (_nrDescend == null) { Fail("floor 1 has no Descend taunt"); Finish(); return; }
+                _nrHeard.Clear();
+                Game.Instance.ChangeFloor(+1);
+                Next();
+                break;
+            }
+            case 4 when since >= 8.0:
+            {
+                var taunts = _nrHeard.Count(t => t.Contains(_nrDescend!.Line.Text));
+                if (taunts != 1) Fail($"floor 1's Descend taunt was heard {taunts} times, wanted 1");
+                if (Heard() != 0) Fail($"the room line replayed across the floor change ({Heard()} times)");
                 Finish();
                 break;
             }

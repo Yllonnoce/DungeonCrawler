@@ -462,39 +462,52 @@ public partial class AdventureDirector : Node
     }
 
     // ---- floor narration: the entries a floor's plan keeps for rooms, the boss and the quests ----------------------
-    private readonly List<(double At, string Text, string? Voice)> _narrationQueue = new();
+    private readonly List<(double At, string Text, string? Voice, string Key)> _narrationQueue = new();
+    private readonly HashSet<string> _narrationQueued = new();
     private double _narrationFree, _roomNarrationCheck;
     /// <summary>Seconds between narration entries due together, so the subtitle never overwrites one with the next.</summary>
     public const double NarrationGap = 4.0;
 
-    /// <summary>Play the plan's entries due for this trigger, once each per run, in plan order. Server and solo only: clients hear them as narration messages.</summary>
-    private void PlayNarration(NarrationTrigger trigger, int? room = null, double lead = 0)
+    /// <summary>Nothing queued survives a floor change, a load or a wipe: the line was not heard, so its key was never recorded.</summary>
+    private void ClearNarrationQueue() { _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; }
+
+    /// <summary>Queue the plan's entries due for this trigger (for RoomEnter, any of the rooms), in plan order. Server and solo only: clients hear them as narration messages. The key is recorded when the line plays.</summary>
+    private void PlayNarration(NarrationTrigger trigger, IReadOnlyList<int?> rooms, double lead = 0)
     {
-        if (Net.NetSession.IsClient || !Game.Instance.InGame || Main.Instance?.Builder.Contents?.Plan is not { } plan || plan.Narration.Count == 0) return;
-        var said = Game.Instance.Adventure.BarksSaid;
-        foreach (var n in Voice.NarrationRules.Due(plan, trigger, room, Memory.Flags, new HashSet<string>(said.Keys), _currentFloor))
-        {
-            said[Voice.NarrationRules.Key(_currentFloor, n)] = Voice.BarkRepeat.Forever;
-            var at = Math.Max(Game.Instance.PlaySeconds + lead, _narrationFree);
-            _narrationFree = at + NarrationGap;
-            _narrationQueue.Add((at, n.Line.Text, n.Line.VoiceId));
-        }
+        if (Net.NetSession.IsClient || !Game.Instance.InGame || Main.Instance?.Builder is not { Contents.Plan: { } plan } builder || plan.Narration.Count == 0) return;
+        if (builder.CurrentFloor != _currentFloor) return; // the old floor is still built while the next one is written: it is not this floor's to speak
+        var said = new HashSet<string>(Game.Instance.Adventure.BarksSaid.Keys);
+        said.UnionWith(_narrationQueued);
+        foreach (var room in rooms)
+            foreach (var n in Voice.NarrationRules.Due(plan, trigger, room, Memory.Flags, said, builder.CurrentFloor))
+            {
+                var key = Voice.NarrationRules.Key(builder.CurrentFloor, n);
+                said.Add(key);
+                _narrationQueued.Add(key);
+                var at = Math.Max(Game.Instance.PlaySeconds + lead, _narrationFree);
+                _narrationFree = at + NarrationGap;
+                _narrationQueue.Add((at, n.Line.Text, n.Line.VoiceId, key));
+            }
     }
+
+    private static readonly int?[] NoRoom = { null };
 
     private void TickNarration()
     {
         var now = Game.Instance.PlaySeconds;
         while (_narrationQueue.Count > 0 && _narrationQueue[0].At <= now)
         {
-            var (_, text, voice) = _narrationQueue[0];
+            var (_, text, voice, key) = _narrationQueue[0];
             _narrationQueue.RemoveAt(0);
+            _narrationQueued.Remove(key);
+            Game.Instance.Adventure.BarksSaid[key] = Voice.BarkRepeat.Forever; // heard now: it never plays again this run
             EventBus.Instance.RaiseNarration(text, voice);
         }
         if (Net.NetSession.IsClient || !Game.Instance.InGame || now < _roomNarrationCheck || Main.Instance is not { } main || main.Party is not { HasBodies: true } party || main.Builder.Layout is not { } layout || main.Builder.Contents?.Plan is not { } plan) return;
         _roomNarrationCheck = now + 0.25;
         if (!plan.Narration.Any(n => n.Trigger == NarrationTrigger.RoomEnter)) return;
-        foreach (var body in party.Active.Where(a => !a.Downed))
-            if (layout.RoomAt(DungeonBuilder.WorldToCell(body.GlobalPosition)) is { } room) PlayNarration(NarrationTrigger.RoomEnter, layout.Rooms.IndexOf(room));
+        var rooms = party.Active.Where(a => !a.Downed).Select(a => layout.RoomAt(DungeonBuilder.WorldToCell(a.GlobalPosition))).OfType<Dungeon.Generation.Room>().Select(r => (int?)layout.Rooms.IndexOf(r)).Distinct().ToList();
+        if (rooms.Count > 0) PlayNarration(NarrationTrigger.RoomEnter, rooms);
     }
 
     public override void _Process(double delta)
@@ -534,8 +547,8 @@ public partial class AdventureDirector : Node
         AddChild(_voice);
         AddChild(new CampaignBaker { Name = "Baker" });
         var bus = EventBus.Instance;
-        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); PlayNarration(NarrationTrigger.BossSeen, null, 4); };
-        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); PlayNarration(NarrationTrigger.BossDead, null, 4); };
+        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); PlayNarration(NarrationTrigger.BossSeen, NoRoom, 4); };
+        bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); PlayNarration(NarrationTrigger.BossDead, NoRoom, 4); };
         bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
         bus.SecretFound += _ => { if (_record != null) _record.SecretsFound++; }; // fortune: the floor card's count
         bus.MemberKill += m => { if (!IsDancing(m)) Bark(m, BarkTrigger.Kill); }; // a dancer has already crowed
@@ -552,6 +565,7 @@ public partial class AdventureDirector : Node
             var witness = Main.Instance?.Party?.Active.Where(a => !a.Downed).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(e.GlobalPosition)).FirstOrDefault();
             if (witness != null && witness.GlobalPosition.DistanceTo(e.GlobalPosition) <= 10f) Bark(witness.State, BarkTrigger.Kill);
         };
+        bus.PartyWiped += ClearNarrationQueue;
         bus.PartyWiped += () => Taunt(Objectives.TauntTrigger.PartyWiped, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, urgent: true);
         bus.ObjectiveEvent += OnObjectiveEvent;
         bus.Narration += (_, _) => _taunts.NoteNarration(Game.Instance.PlaySeconds);
@@ -609,12 +623,14 @@ public partial class AdventureDirector : Node
             Apply(new FloorLeft(_currentFloor));
             CloseRecord();
             if (delta > 0 && Objectives.ObjectiveController.Instance is { Completed: true } done) _pendingDescend = done.Kind;
+            if (delta > 0 && Game.Instance.Adventure.FloorPlans.TryGetValue(_currentFloor, out var left)) _leftDescend = Objectives.TauntDirector.DescendBank(left.Taunts, Memory.Flags);
         }
         _currentFloor = floor;
         _hasFloor = true;
     }
 
     private FloorObjectiveKind? _pendingDescend;
+    private List<TauntPlan> _leftDescend = new(); // the floor just left: its own Descend taunts the flags allow
 
     private int _gatheringRemarks; // how many of this floor build's remarks he has made; reset in OnFloorBuilt (the gathered count restarts there too)
 
@@ -638,6 +654,7 @@ public partial class AdventureDirector : Node
     {
         _currentFloor = floor;
         _hasFloor = true;
+        ClearNarrationQueue(); // a descent, a load or a wipe's rebuild: lines queued for the floor before were never heard
         _gatheringRemarks = 0; // every build or load starts the gathering count again
         _tavernNext = floor == 0 ? Game.Instance.PlaySeconds + Voice.BanterRules.TavernFirstSeconds : double.MaxValue; // the tavern's first exchange
         OpenRecord(floor);
@@ -652,7 +669,9 @@ public partial class AdventureDirector : Node
                 GD.Print($"[Adventure] floor card: {pending.Card.Title} {pending.Card.Time} kills={pending.Card.Kills} elites={pending.Card.Elites} secrets={pending.Card.Secrets} downs={pending.Card.Downs} gold={pending.Card.GoldFound} worst=\"{pending.Card.WorstMoment}\" reaction={pending.Card.Reaction}");
             }
         }
-        if (_pendingDescend is { } left) { _pendingDescend = null; Taunt(Objectives.TauntTrigger.Descend, left); }
+        var own = _leftDescend; _leftDescend = new();
+        var ownSpoke = own.Count > 0 && Taunt(Objectives.TauntTrigger.Descend, urgent: true, bankOverride: own); // the left floor's own line, objective or not
+        if (_pendingDescend is { } left) { _pendingDescend = null; if (!ownSpoke) Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
         var objectiveKind = Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;
         var villainSpoke = firstVisit && objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true);
@@ -693,13 +712,13 @@ public partial class AdventureDirector : Node
     /// The antagonist says something about what just happened, if the bank has a fresh line for it and enough time has
     /// passed since anyone spoke. Server only (clients hear it over the wire). True when a line was said.
     /// </summary>
-    public bool Taunt(Objectives.TauntTrigger trigger, FloorObjectiveKind kind = FloorObjectiveKind.None, string? arg = null, bool urgent = false)
+    public bool Taunt(Objectives.TauntTrigger trigger, FloorObjectiveKind kind = FloorObjectiveKind.None, string? arg = null, bool urgent = false, List<TauntPlan>? bankOverride = null)
     {
         if (Net.NetSession.IsClient || !Game.Instance.InGame) return false;
         var campaign = Game.Instance.Adventure.Campaign;
         if (campaign == null) return false;
         if (campaign.Taunts.Count == 0 || !campaign.Taunts.Any(t => t.Trigger == Objectives.TauntTriggers.Id(trigger))) Objectives.TauntBank.Fill(campaign); // a campaign baked before a trigger existed gets the stock line for it
-        var bank = campaign.Taunts.Concat(Main.Instance?.Builder.Contents?.Plan?.Taunts ?? new List<TauntPlan>()).ToList();
+        var bank = bankOverride ?? campaign.Taunts.Concat(Main.Instance?.Builder.Contents?.Plan?.Taunts ?? new List<TauntPlan>()).ToList();
         var now = Game.Instance.PlaySeconds;
         var pick = _taunts.Pick(bank, trigger, kind, Game.Instance.Adventure.BarksSaid, Memory.Flags, _currentFloor, now, _barkRng, urgent);
         if (pick == null) return false;
@@ -799,12 +818,12 @@ public partial class AdventureDirector : Node
                 EventBus.Instance.PlaySfx("level_up");
                 if (q.Template == QuestTemplate.Escort && q.CompleteLine != "") EventBus.Instance.RaiseNarration($"{q.GiverName}: {q.CompleteLine}", null);
                 GrantReward(q);
-                if (q.Floor == _currentFloor) PlayNarration(NarrationTrigger.QuestDone, null, 2);
+                if (q.Floor == _currentFloor) PlayNarration(NarrationTrigger.QuestDone, NoRoom, 2);
                 break;
             case QuestStatus.Failed:
                 Memory.For(q.Floor).QuestOutcomes.Add($"{q.Title} failed");
                 EventBus.Instance.Log($"Quest failed: {q.Title}.{(q.FailLine != "" ? $" \"{q.FailLine}\"" : "")}");
-                if (q.Floor == _currentFloor) PlayNarration(NarrationTrigger.QuestFailed, null, 2);
+                if (q.Floor == _currentFloor) PlayNarration(NarrationTrigger.QuestFailed, NoRoom, 2);
                 break;
         }
     }

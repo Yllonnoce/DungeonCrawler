@@ -14,7 +14,7 @@ public static class NarrationRules
         => $"{Prefix}{floor}:{n.Trigger}:{n.Room?.ToString() ?? "-"}:{n.Line.Text.Trim().ToLowerInvariant()}";
 
     /// <summary>The entries to play for a trigger (for <see cref="NarrationTrigger.RoomEnter"/>, that room), in plan order.</summary>
-    public static IReadOnlyList<NarrationPlan> Due(FloorPlan plan, NarrationTrigger trigger, int? room, IReadOnlyCollection<string> flags, IReadOnlySet<string> said, int floor = 0)
+    public static IReadOnlyList<NarrationPlan> Due(FloorPlan plan, NarrationTrigger trigger, int? room, IReadOnlyCollection<string> flags, IReadOnlySet<string> said, int floor)
         => plan.Narration
             .Where(n => n.Trigger == trigger
                 && (trigger != NarrationTrigger.RoomEnter || (room != null && n.Room == room))
