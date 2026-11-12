@@ -7,6 +7,34 @@ Every writing task on the rewire (floors, taunts, merchant, banter, barks) write
 
 Old lines quoted below are from `docs/story/before.md`. Only their voices and habits carry over; the old plot (a town that sends four people down every few decades, a pilgrimage, a contract that is a trap, names carved in advance, Crane's betrayal, a choir, a mine that is the god's body) is gone.
 
+## Fill-ins to confirm
+
+The design is silent on these facts. They were filled in so that every writer makes the same call, and each one is written below as a fact on the sheet named. "Approved" means the owner approved it on 2026-11-12. "To confirm" means it is the builder's call until the owner reads act 1.
+
+| Fact | Lives on | Status |
+|---|---|---|
+| The Verger's "no one below" came first; the council's dismissal of the wardens came after it | Shared facts; Crane; Verger | approved by the owner 2026-11-12 |
+| The way into the mines runs through the church's crypts at the lychgate, so the Verger could let the Herald in | Shared facts; Verger; Herald | approved by the owner 2026-11-12 |
+| "Now" is early winter, with midwinter close | Shared facts | approved by the owner 2026-11-12 |
+| Tamsin's partner is Jory, a man | Tamsin | approved by the owner 2026-11-12 |
+| Ione's relic is the church's silver ewer that blessed the drains each spring; the Verger takes it into the rite | Ione; Verger | approved by the owner 2026-11-12 |
+| On 9 Crane gives the official excuse (no point paying wardens the Verger had shut out); on 17 he owns that the council was glad of the excuse because it saved money. Nobody says "to save money" before 17 | Shared facts; who-knows table; Crane; Pellet; Herald; Brand | to confirm |
+| The council borrowed the hire money from Pellet; he advanced it and wants it back | Shared facts; Crane; Pellet | to confirm |
+| Tobit, not told, on 14: believes his master is the demon's prisoner, is summoned below by a message in the Verger's hand to help with "a rite that will save the town"; pressed, he runs to the summons and the party fights the minions sent to escort him | Tobit | to confirm |
+| A fully turned townsperson becomes one of the grey pack creatures (husks, crawlers, cinders, shades); learned on 2, confirmed on 12 | Shared facts; creatures; Grisel; Brand; narrator | to confirm |
+| The Verger's motive: Gorm never answered him; the Herald promised the god who comes through will reward the man who opened the door | Verger | to confirm |
+| Maud went down alone after the Verger's order and drowned where the water had backed up; in act 1 she does not know she is dead | Maud | to confirm |
+| Grisel's crew went down unpaid, against the order, and were taken first, which is why they are furthest gone on 12 | Grisel | to confirm |
+| Unforgiven, Grisel stands as the Herald's head jailer on 12 and dies there | Grisel | to confirm |
+| Ulf's eyes are going and he only ever saw parts; the orders came down with gold | Ulf | to confirm |
+| Oskar saw the whole drawings and was coerced by threats against Ulf | Oskar | to confirm |
+| Foehammer keeps the gate at the mine head | Foehammer | to confirm |
+| Pellet's trade is the mine carts | Pellet | to confirm |
+| Tobit, not told, is in the Verger's rite on 19 and breaking the rite lets him go (a line, not a new NPC) | Tobit; Verger | to confirm |
+| When the rite breaks the Verger is left kneeling; the Herald dismisses him on 20 | Verger; Herald | to confirm |
+| The level names are miners' names, not the god's body; Gorm is written "him", lower case | Shared facts; word list | to confirm |
+| Mentions that keep the cast in every act, and who carries them (freed wardens on 2 for Grisel and Ulf; Pellet for Tobit, Ulf's coal and Crane's shovel; Crane on 9 for the Verger) | Each cast sheet | to confirm |
+
 ## Rules for every speaker
 
 1. **Say the want plainly the first time.** Every character's first line on their first floor states what they want from the party in words they would say aloud. The want sentence on each sheet is that line or close to it.
@@ -26,9 +54,9 @@ Old lines quoted below are from `docs/story/before.md`. Only their voices and ha
 
 1. **Three hundred years ago and since.** Gorm, a good god, sleeps under Dunmarrow. His dreams hold the Sleepless, an evil god, out of this world. The water that runs down through the old mines is what feeds him. The town's drain-wardens have cleared the mine drains every season for three hundred years.
 2. **Before this spring.** Absalom Quill, Verger of Gorm's church in Dunmarrow, prayed to Gorm all his life and was never answered. The Herald of the Sleepless answered him. The way down to the mines runs through the church's crypts at the lychgate, and the Verger opened it to the Herald.
-3. **This spring.** The Verger ordered "no one below". The wardens' log stops there. With the wardens unable to go down, the council stopped paying them to save money; Alderman Crane signed the order. Some wardens went down anyway, unpaid, to keep the water moving. Grisel Thorn's crew went first. The Herald's minions took them.
-4. **Since.** The Herald, Morg Ashtusk, made the mines his base. He raised the church's dead, laid traps and filled the tunnels with minions so nobody could reach the drains. He choked the great drains on purpose. Old Ulf at the pump works cast the iron for him, believing it was tools. Captured wardens are being turned into minions in the Herald's cages. Maud Sorrel, the oldest warden, went down alone and drowned in the backed-up water.
-5. **Now, early winter.** The drains have backed up and the lower levels are flooding. Gorm is starving and stirring: the ground shakes, the wells run sour, the mines are close to collapse. The Herald means to have the god awake by midwinter. The town hires mercenaries, with money fronted by Master Pellet, to clear the traps and minions so the drains can run.
+3. **This spring.** The Verger ordered "no one below". The wardens' log stops there. With the wardens unable to go down, the council stopped paying them, and Alderman Crane signed the order. The reason on the paper was the Verger's order: why pay wardens who cannot work? The truth, which Crane owns only on floor 17, is that the council was glad of the excuse because it saved money. Some wardens went down anyway, unpaid, to keep the water moving. Grisel Thorn's crew went first. The Herald's minions took them.
+4. **Since.** The Herald, Morg Ashtusk, made the mines his base. He raised the church's dead, laid traps and filled the tunnels with minions so nobody could reach the drains. He choked the great drains on purpose. Old Ulf at the pump works cast the iron for him, believing it was tools. Captured wardens are being turned in the Herald's cages; the ones fully turned go grey and join the packs. Maud Sorrel, the oldest warden, went down alone and drowned in the backed-up water.
+5. **Now, early winter.** The drains have backed up and the lower levels are flooding. Gorm is starving and stirring: the ground shakes, the wells run sour, the mines are close to collapse. The Herald means to have the god awake by midwinter. The town hires mercenaries to clear the traps and minions so the drains can run. The council borrowed the hire money from Master Pellet; he advanced it and wants it back.
 6. **Floor 1.** The Herald attacks at the mine head. Foehammer and the mercenaries kill him. His voice comes up again from below: the foundry will recast him. From then on he taunts the party all the way down, and waits on floor 20, whole and larger, at the last drain.
 
 ### What is at stake
@@ -52,17 +80,21 @@ Old lines quoted below are from `docs/story/before.md`. Only their voices and ha
 | Floor | What the party learns | Who changes |
 |---|---|---|
 | 1 | The Herald attacked and will be recast; the wells are sour, the ground shakes, wardens went down and did not return | |
-| 2 | The prisoners are captured wardens, turning into minions; the traps are new and somebody is building them | |
+| 2 | The prisoners are captured wardens, being turned; the freed ones say "the ones they finish go grey and join the packs"; the traps are new and somebody is building them | the heroes (Brand first) |
 | 3 | (told_tobit) The god is starving and no help is coming | Tobit |
 | 4 | **Clue 1, the wardens' log:** cleared every season for three hundred years; stops this spring, "By the Verger's order, no one below." | Crane, the Herald, Tobit later |
 | 5 | The first drain was choked on purpose | |
 | 6 | Maud: "He is thirsty." | |
-| 9 | **Clue 2, the dismissal order** under the council's seal, signed by Crane; Grisel left her crew | Crane, Grisel, Pellet, the Herald |
+| 7 | Grisel is camped by a seized pump; her crew are missing below | |
+| 9 | **Clue 2, the dismissal order** under the council's seal, signed by Crane. Only the order and the signature; Crane gives the official excuse (the Verger had already shut the wardens out, so why pay them). Grisel admits she left her crew | Crane, Grisel, Pellet, the Herald |
+| 12 | Grisel's crew, nearly gone: proof that the turned become the packs | the heroes, Grisel |
 | 11 | Ulf casts "tools" for a customer who pays well | |
 | 13 | **Clue 3, the moulds:** crushing walls, spike beds, iron minions, and the Herald's own mould | Ulf, Oskar, the heroes, the Herald |
 | 14 | The Verger's vestments, thrown off in the water | Tobit |
 | 16 | **Clue 4, the Verger's letter to the Herald:** "The way will be open by midwinter." | Everyone; the Verger knows it was read |
-| 17 | Crane: the council stopped paying the wardens to save money | |
+| 17 | Crane owns the truth: the council was glad of the excuse because it saved money | everyone; the money motive may be said from here on |
+
+**The money rule:** before floor 17 nobody (the Herald, Pellet, the heroes, anyone) says the wardens were sacked to save money. They may say the council sacked, dropped or abandoned its wardens. From floor 17 the money motive is fair game.
 | 18 | Gorm, through Maud: starving, half awake, sorry | |
 
 Choices and their flags (ids do not change): floor 3 sets `told_tobit` (paid on 14 and 16); floor 9 sets `grisel_forgiven` (paid on 12); floor 18 sets `wake_gorm` for "Lend us what strength you have" or `let_him_dream` for "Sleep. We will finish it." (paid on 19 and 20).
@@ -76,7 +108,16 @@ Choices and their flags (ids do not change): floor 3 sets `told_tobit` (paid on 
 | Heart | Minions cast in the pump works | "castings", "iron"; Ulf and Oskar judge them as work |
 | Dream | The Sleepless's own kind, through where the dream is thin | "his kind", "the things from outside" |
 
-The prisoners and what they turn into: the change wears away who a person was, so the half-changed look grey and alike. The ones nobody reaches become the minions of the floors below. After floor 13 the heroes know that some of what they have killed were townspeople.
+**The turned (builder's call, to confirm):** the prisoners are townspeople, mostly wardens, being turned in the Herald's cages. The change wears away who a person was, so the half-changed look grey and alike. A townsperson who is fully turned becomes one of the grey pack creatures that come in hordes and out of nests:
+
+| Tier | Pack creature a turned townsperson becomes |
+|---|---|
+| Skin | husks |
+| Gut | crawlers |
+| Heart | cinders |
+| Dream | shades |
+
+The party learns this on floor 2 from the wardens they free ("the ones they finish go grey and join the packs"). Floor 12 confirms it: Grisel's crew are nearly gone. From floor 2 the heroes know some of what they kill used to be townspeople; from floor 12 they cannot pretend otherwise. The moulds on floor 13 are a separate matter: iron castings (crushing walls, spike beds, iron minions) and the Herald's own mould. Nobody is turned in a mould.
 
 ## Shared word list
 
@@ -124,7 +165,9 @@ The prisoners and what they turn into: the change wears away who a person was, s
 
 **Who she is now:** a drain-warden of thirty-eight years who went down alone after the Verger's order, to keep the water moving, and drowned where it had backed up. Gorm keeps her walking. Water runs from her sleeves and hem and never stops. Through her the god's need reaches the party, and her words get clearer each act. She is not a ghost who frightens; she is a kind old workwoman who has not quite noticed she is dead.
 
-**What she wants from the party:** "Keep the water going down to him. He is thirsty."
+**What she wants from the party, by act:**
+- **Act 1 (floor 1, her first line):** "Help me clear the grates, dear. The water has to go down." She does not yet know who the water is for.
+- **From act 2 (floor 6, where she first speaks clearly):** "Keep the water going down to him. He is thirsty."
 
 **Her need (quest, phase 3):** water for the god. Open a blocked sluice.
 
@@ -138,7 +181,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 - Calls everyone "dear". Warden's working words: rounds, grates, culverts, sluices.
 - Unhurried. Never rushes, never raises her voice, faintly amused at her own state ("Wet? I have been wetter.").
 - In act 1 she drifts mid-thought and comes back to the work; from act 2 she finishes every sentence.
-- Sample (act 1): "Mind the step, dear, it's wet. The drains want clearing and I'm late on my rounds. The water has to go down. It always has to go down."
+- Sample (act 1, her first line on floor 1): "Mind the step, dear, it's wet. Help me clear the grates; I'm late on my rounds. The water has to go down. It always has to go down."
 - Sample (act 2): "He is thirsty. That's all it is, dear. Thirty-eight years I kept his water moving, and now it stands here going sour."
 
 **When Gorm speaks through her (floor 18, and only where a beat calls for it):** first person, slow and plain. He is starving, half awake and sorry for the damage: the shaking, the sour wells, the people hurt. He never threatens and never commands. He asks for water and for sleep, and says plainly what his waking would let in. Sample: "Forgive the shaking. I am hungry, and hungry things turn over. Bring the water down and I will sleep, and the door stays shut."
@@ -156,7 +199,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 
 **Sex and voice:** man. Umbriel, rendered as Callum (shared with Wren; Crane talks in long clauses). Default delivery: cheerful, the cheer of bluster.
 
-**Who he is now:** Alderman of Dunmarrow and the party's employer. Honest but guilty. This spring, with the Verger's order keeping the wardens out of the mines, he signed the council's order that stopped paying them, to save the wages. He did not know what was below. Now the wells are sour and the ground shakes, and he wants it put right before the town asks why the wardens went. He does not betray the party. His arc: bluster, then caught by his own seal, then down in the mines with a shovel.
+**Who he is now:** Alderman of Dunmarrow and the party's employer. Honest but guilty. This spring, with the Verger's order keeping the wardens out of the mines, he signed the council's order that stopped paying them. The excuse on paper was that wardens who could not go below need not be paid; the truth, which he owns only on floor 17, is that the council was glad of the excuse because it saved money. The council borrowed the hire money from Pellet; he advanced it and wants it back. He did not know what was below. Now the wells are sour and the ground shakes, and he wants it put right before the town asks why the wardens went. He does not betray the party. His arc: bluster, then caught by his own seal, then down in the mines with a shovel.
 
 **What he wants from the party:** "Clear the drains and get the water running. And any council papers you find down there, bring them to me. Unread, if you can manage it."
 
@@ -164,18 +207,19 @@ The prisoners and what they turn into: the change wears away who a person was, s
 
 **By act:**
 - **Act 1, floors 1 and 4:** On 1, at the mine head just after the Herald falls, he hires the party and explains the job: sour wells, shaking ground, wardens who went down and did not return. He asks for the notices posted at the mine head, for the council's files. On 4 he has come down "to check progress" and finds the wardens' log (clue 1). The Verger's order explains why the wardens stopped working, and he is relieved it was the church and not the council, and says so too quickly.
-- **Act 2, floor 9:** at the Cistern. The dismissal order (clue 2) carries his own signature under the council's seal. Caught. The bluster goes; he admits it is his hand, not yet why. Grisel watches him read it. He can say the council thought it pointless to pay wardens who could not go below.
+- **Act 2, floor 9:** at the Cistern. The dismissal order (clue 2) carries his own signature under the council's seal. Caught. The bluster goes; he admits it is his hand. Grisel watches him read it. He gives the official excuse and believes he means it: the Verger had already forbidden anyone to go below, so the council stopped paying wardens who could not work. He does not mention money.
 - **Act 3, floors 11-15 (by mention):** back in town, deciding. Preferred carrier: Pellet, who says the alderman has stopped coming to council and has bought a shovel.
-- **Act 4, floor 17:** he has come down himself, with a shovel. He admits plainly that the council stopped paying the wardens to save money and that he signed it. He holds a sluice open so the party can get past the gas, and stays holding it. If Grisel was forgiven he can say she and her crew are back on the upper drains.
+- **Act 4, floor 17:** he has come down himself, with a shovel. He owns the truth behind the excuse he gave on 9: the council was glad of the Verger's order because stopping the wardens' pay saved money, and he signed it. He holds a sluice open so the party can get past the gas, and stays holding it. If Grisel was forgiven he can say she and her crew are back on the upper drains.
 
 **How he talks:**
 - Acts 1-2: speaks in clauses, accounts and apologies; "council property", "I account for everything", "the council thanks you in writing". Gives orders while apologising for them.
 - Self-aware about his cowardice, which is where his humour lives ("I would go myself, but I am, frankly, a coward.").
 - After clue 2: short, plain sentences. After act 4 begins: a workman's plainness, out of breath.
 - Sample (act 1): "Sour wells, shaking ground, and wardens who went down and never came up. Clear the drains and the council pays in full. Any papers you find are council property."
-- Sample (act 4): "We stopped paying the wardens to save money. I signed it. Go on through; I'll hold the sluice open as long as my arms do."
+- Sample (act 2, floor 9): "That's my hand. The Verger had shut the mines. What use is a warden who can't go down? So we stopped paying them. That is what we told ourselves."
+- Sample (act 4, floor 17): "We were glad of his order. It saved the wages, and I signed it. Go on through; I'll hold the sluice open as long as my arms do."
 
-**Once the party knows:** after clue 1 he blames the Verger, a little too eagerly. After clue 2 he stops blaming anyone. After clue 4 (on 17) he is angry at the Verger and at himself in the same breath, and says both.
+**Once the party knows:** after clue 1 he blames the Verger, a little too eagerly. After clue 2 he gives the official excuse but stops blaming anyone else for his signature. After clue 4 (on 17) he is angry at the Verger and at himself in the same breath, and says both.
 
 **He would never say:**
 1. Anything that sells out, abandons or lies the party into danger. He does not betray them.
@@ -197,7 +241,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 **By act:**
 - **Act 1, floor 3:** praying in the Nave for the god to save the town, glad of company. The first crushing trap is on this floor. Choice: tell him the god is starving and no help is coming (`told_tobit`), or let him pray. Told: shaken, quiet, then he resolves to find out what happened to the drains. Not told: grateful, and keeps praying.
 - **Act 2 (by mention):** he passes Pellet's door going down, asking after his master. Same mention in both branches.
-- **Act 3, floor 14:** he has followed the party down to the Quench and found the Verger's vestments thrown off in the water. Told: he asks plainly whether the Verger did this, already fearing yes, and wants proof. Not told: he is sure his master was taken by the demon and must be rescued; the Verger has promised him a part in the rite and he has said yes. He asks the party to wait at the water. If they press him (the existing Betrayal on this floor), he runs to his master and what comes up out of the water wearing his coat is the Verger's: the lines must make clear the thing they kill is not Tobit. If they walk away, he goes on down.
+- **Act 3, floor 14:** he has followed the party down to the Quench and found the Verger's vestments thrown off in the water. Told: he asks plainly whether the Verger did this, already fearing yes, and wants proof. Not told (one state, to confirm): he still trusts his master. From the vestments he has concluded that the Verger is the demon's prisoner. A message in the Verger's own hand has summoned him below to help with "a rite that will save the town", and he believes it. He asks the party whether his master is a prisoner. If they press him (the existing Betrayal on this floor), he does not attack them: he runs to the summons, and the Herald's minions sent to escort him are what the party fights. The HUD will say he "has turned", so his last line must make plain that he has gone to them, not become one. If they let him be, he goes on down to the summons. Either way he is "taken for the rite" on 16.
 - **Act 4, floors 16 and 19:** Told: on 16 he brings the Verger's letter himself and turns on his master openly; he wants the Verger stopped. Not told: he has been taken for the rite (Maud says so on 16). On 19 he is in the Verger's rite, heard or mentioned, half-changed like the prisoners; breaking the rite lets him go. No new NPC is needed for this.
 
 **How he talks:**
@@ -205,6 +249,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 - Church words used sincerely: pray, bless, the Verger, my master.
 - Once told the truth: still polite, but he starts asking direct questions and wants direct answers.
 - Sample (act 1): "Pray with me, would you? The wells are sour and the ground shakes, but if we ask him properly, Gorm will save the town. He always has."
+- Sample (act 3, not told, his last line when pressed): "He's sent for me. A rite to save the town, in his own hand. I'm going to him, and you won't stop me. Those are his escort; don't follow."
 - Sample (act 4, told): "I read his letter. 'The way will be open by midwinter.' My master wrote that to the thing in the mines. I want him stopped, and I want to be there."
 
 **Once the party knows:** clue 1 (the Verger's order) reaches him through the party on 14 and is what he is afraid of. Clue 4 breaks him in the told branch and he says it aloud.
@@ -222,24 +267,25 @@ The prisoners and what they turn into: the change wears away who a person was, s
 
 **Who she is now:** the last drain-warden still free. When the wells began to sour this spring, she took her crew down unpaid, against the Verger's order, to clear the drains. The Herald's minions took them. She ran and left them. She has hidden since in a camp in the Crop, near the drains, keeping one seized pump turning when she can. She wants her crew back, or to be forgiven for leaving them.
 
-**What she wants from the party:** "My crew are in that orc's cages, and I left them there. Help me bring them out before they turn."
+**What she wants from the party (floor 7, her first line):** "Keep those things off me while I get this pump turning. Then help me find my crew; that orc has them caged somewhere below." She does not say she left them; that confession is held for floor 9.
 
 **Her need (quest):** her crew back before they turn. Free them on floor 12.
 
 **By act:**
 - **Act 1 (by mention):** the wardens freed on floor 2 say Grisel Thorn's crew went down first and nobody has seen them since.
-- **Act 2, floors 7 and 9:** On 7, minions are holding a rite to hurry the god awake; Grisel works a seized pump near her camp to push water down while the party holds them off. Getting the pump turning breaks the rite. On 9 she watches Crane read his own signature, then admits she left her crew behind. Choice: forgive her (`grisel_forgiven`) or not.
-- **Act 3, floor 12:** her crew are caged in the Casting Hall, further gone than the prisoners on floor 2 because they were taken first. Forgiven: she helps bring them out. Not forgiven: she has taken the Herald's keys to save herself and stands as his head jailer; the party takes the keys from her and she does not survive the floor.
+- **Act 2, floors 7 and 9:** On 7, minions are holding a rite to hurry the god awake; Grisel works a seized pump near her camp to push water down while the party holds them off. Getting the pump turning breaks the rite. She asks for help finding her crew and says no more about them. On 9 she watches Crane read his own signature, then admits she left her crew behind. Choice: forgive her (`grisel_forgiven`) or not.
+- **Act 3, floor 12:** her crew are caged in the Casting Hall, further gone than the prisoners on floor 2 because they were taken first: nearly grey, nearly pack. This is where the party sees for certain that the turned become the packs. Forgiven: she helps bring them out. Not forgiven: she has taken the Herald's keys to save herself and stands as his head jailer; the party takes the keys from her and she does not survive the floor.
 - **Act 4 (by mention):** Forgiven: she and what is left of her crew are back at the upper drains (Crane can say so on 17; the ending narration can too). Not forgiven: the Herald mocks the warden who sold herself for a ring of keys.
 
 **How she talks:**
 - Flat, wry, short sentences. States the worst about herself first so nobody else can.
 - Warden's trade words: culvert, grate, sluice, silt. Practical even when frightened.
 - Never asks for pity; dark humour aimed at herself.
-- Sample (act 2): "I ran. My crew were in the cages and I ran, and I've slept beside this pump ever since. Say what you think of that, then help me or don't."
+- Sample (floor 7): "Pump's seized and the water's standing. Hold them off while I free it. My crew went down ahead of me. I'll want help finding them."
+- Sample (floor 9, the confession): "I ran. My crew were in the cages and I ran, and I've slept beside this pump ever since. Say what you think of that, then help me or don't."
 - Sample (act 3, forgiven): "That's my crew. Grey, but that's them. Keep the jailers off me and I'll bring them out one at a time."
 
-**Once the party knows:** after clue 2 she is bitter at the council (her crew went down unpaid), but never more bitter than she is at herself.
+**Once the party knows:** after clue 2 she is bitter at the council for dropping its wardens (her crew went down unpaid), but never more bitter than she is at herself. Before floor 17 she does not say the council did it for money.
 
 **She would never say:**
 1. Self-pity, or a request to be pitied.
@@ -284,7 +330,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 
 **Sex and voice:** man. Achird, rendered as Oliver. Default delivery: cheerful, getting less so.
 
-**Who he is now:** a Dunmarrow factor who fronted the money for the party's hire (the council's advance, through his hands and less his cut: a hundred and fifty gold). The mine carts were his trade, and the trade has stopped. He follows the party down and trades from behind a locked door on every floor. He wants his money back and the trade reopened. His arc is already in his 68 recorded lines: bluster, unease, fear. Most of them stay.
+**Who he is now:** a Dunmarrow factor. The council borrowed the hire money from him; he advanced it and wants it back. He pays it out to the party himself, less his cut: a hundred and fifty gold. The mine carts were his trade, and the trade has stopped. He follows the party down and trades from behind a locked door on every floor. He wants his money back and the trade reopened. His arc is already in his 68 recorded lines: bluster, unease, fear. Most of them stay.
 
 **What he wants from the party:** "Clear the mines and I get my money back and my carts running again. Until then, sell to me, buy from me, and keep every receipt."
 
@@ -303,7 +349,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 - Sample (existing, keep): "Name your price and I'll name mine, and then we'll use mine."
 - Sample (act 2, floor 8): "Bandits in my stock, paid by that orc to keep the town out. Bring it back and I'll knock something off the price. Not much. Something."
 
-**Once the party knows:** after clue 2 he is quietly furious that the council saved on wages while borrowing from him. He never learns or says who let the demon in.
+**Once the party knows:** after clue 2 he is quietly furious that the council dropped its wardens and then came to him to borrow the money to put it right. Only from floor 17 does he say the council did it to save money ("saving on wages and borrowing from me"). He never learns or says who let the demon in.
 
 **He would never say:**
 1. Who let the demon in (the Verger). He never states the answer to the mystery.
@@ -357,7 +403,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 
 **By act:**
 - **Act 1, floors 1-5:** attacks at the mine head and is killed; from then on a voice from below. Boasts of his traps and his raised dead; calls the jailbreak prisoners his workforce; Canon Ludd is his first lieutenant. When the first drain clears he sneers and promises worse.
-- **Act 2, floors 6-10:** enjoys the water backing up and the god starving; jokes about the town's sour wells. His minions hold the rite on 7. He pays the bandits on 8. After clue 2 he mocks the town for sacking its wardens to save coin. Mother Nit breeds in his stagnant water.
+- **Act 2, floors 6-10:** enjoys the water backing up and the god starving; jokes about the town's sour wells. His minions hold the rite on 7. He pays the bandits on 8. After clue 2 he mocks the town for sacking its own wardens (not yet for money; that waits for floor 17). Mother Nit breeds in his stagnant water.
 - **Act 3, floors 11-15:** his voice comes from the foundry where he is being recast. Proud of the castings and of "my founder", the old man who cast them without looking. On 12 he gloats over the turned crew (and, if Grisel was not forgiven, over the warden who took his keys). After clue 3 he stops pretending: yes, the iron is his, and so is the mould for a bigger him.
 - **Act 4, floors 16-20:** whole again, waiting at the Mouth. After clue 4 he laughs at the Verger ("priests always write it down"). He sneers at Crane holding the sluice on 17. After the floor 18 choice: with `wake_gorm` he gloats that the dream is thin and his master is close; with `let_him_dream` he is contemptuous of a god too frightened to wake. On 19 he scorns the Verger's failed rite. On 20 he fights at the last drain. Half health and death lines change on `wake_gorm`: Gorm, half awake, strikes at him, and he dies defiant, saying his master is almost through. Without it he dies contemptuous, saying the Sleepless will send another.
 
@@ -369,7 +415,7 @@ The prisoners and what they turn into: the change wears away who a person was, s
 - Sample (taunt): "Still walking, hirelings? The town paid you for a day's work. I built these halls to outlast your wages."
 - Sample (floor 20 intro): "Killed me at the gate, didn't you? I came back bigger. Turn that sluice wheel if you can reach it, hirelings. My master is listening."
 
-**Once the party knows:** he never reveals a clue before the party finds it. After each clue he rubs it in: the Verger's order (4), the council's sacking (9), the moulds and his own (13), the letter (16). His taunts also follow `told_tobit`, `grisel_forgiven` and `wake_gorm`.
+**Once the party knows:** he never reveals a clue before the party finds it. After each clue he rubs it in: the Verger's order (4), the council's sacking (9), the moulds and his own (13), the letter (16), and from 17 that the council did it to save money. He also knows the turned join his packs, and says so from floor 2. His taunts also follow `told_tobit`, `grisel_forgiven` and `wake_gorm`.
 
 **He would never say:**
 1. A plea, a surrender or a bargain for his life.
@@ -472,7 +518,7 @@ Companions are fighters the party can ask to join. They are not required in ever
 **His job, as a sentence:** "Here is what this place is, why it is like this, and what changed because you came."
 
 **By act:**
-- **Act 1:** the church's dead, the mine head, traps that are new. When the first drain runs, the shaking eases and he says so.
+- **Act 1:** the church's dead, the mine head, traps that are new. From floor 2 his horde lines may say the grey packs were townspeople once. When the first drain runs, the shaking eases and he says so.
 - **Act 2:** standing water and why it stands (the drains below are choked); stagnant air; vermin; the prisoners who used to be wardens. When the second drain runs, the water drops and the air clears.
 - **Act 3:** heat and the foundry; the minions are cast here, from moulds; the engine that should be pumping. The third drain.
 - **Act 4:** the dream thinning, things from outside coming through, the god close. The ending narration differs on `wake_gorm` and `let_him_dream`.
@@ -506,12 +552,12 @@ Rules for hero lines:
 **What he wants from the party:** "Pay us, point us at it, and stay behind me."
 
 **The thread, by act:**
-- **Act 1:** a job; complains about the walking, the rations and the alderman. The prisoners on floor 2 bother him more than he says.
-- **Act 2:** after clue 2, a soldier's contempt for a council that sacked its wardens to save a wage.
-- **Act 3:** after the moulds he knows some of what they killed were townspeople. Quieter. Nobody gets left in a cage.
+- **Act 1:** a job; complains about the walking, the rations and the alderman. On floor 2 the freed wardens tell him the finished ones go grey and join the packs, so some of what he kills used to be townspeople. It bothers him more than he says.
+- **Act 2:** after clue 2, a soldier's contempt for a council that abandoned its own wardens (from floor 17 he can add that it was for a wage).
+- **Act 3:** on floor 12 he sees Grisel's crew nearly gone and cannot pretend any more. Quieter. Nobody gets left in a cage.
 - **Act 4:** finishing it is no longer about the pay, and he would never say so in those words.
 
-**How he talks:** clipped imperatives; soldier's terms (flank, line, shield up); deadpan; counts things. Sample (new thread): "Cages first, loot after. Those were drain-diggers this spring. Nobody gets left."
+**How he talks:** clipped imperatives; soldier's terms (flank, line, shield up); deadpan; counts things. Sample (new thread, floor 12): "Cages first, loot after. Those were drain-diggers this spring. Nobody gets left."
 
 **He would never say:** 1. A speech of more than two sentences about why it matters. 2. Anything that leaves a captive or a comrade behind. 3. Long or fancy words (that is Ilex).
 
@@ -583,23 +629,23 @@ Every floor where the design names a character, and the sheet that covers it:
 
 | Floor | Named in the design | Covered on |
 |---|---|---|
-| 1 | the Herald, Foehammer, Crane | Herald act 1; Foehammer act 1; Crane act 1 |
-| 2 | prisoners (captured wardens) | shared facts; Grisel and Ulf act 1 mentions |
+| 1 | the Herald, Foehammer, Crane (Maud is on the floor in the data) | Herald act 1; Foehammer act 1; Crane act 1 (want stated first); Maud act 1 (her act 1 want, "Help me clear the grates") |
+| 2 | prisoners (captured wardens), turning | shared facts and the turned; who-knows row 2; Brand act 1; Herald (says it from 2); Grisel and Ulf act 1 mentions |
 | 3 | Tobit, choice | Tobit act 1 |
 | 4 | the wardens' log, the Verger's order | Crane act 1; Verger act 1 |
 | 5 | Canon Ludd, the first drain | Herald act 1; narrator act 1; tier bosses |
 | 6 | Tamsin, Maud ("He is thirsty.") | Tamsin act 2; Maud act 2 |
-| 7 | the minions' rite; Grisel's camp (works a seized pump) | Grisel act 2; Herald act 2 |
+| 7 | the minions' rite; Grisel's camp (works a seized pump) | Grisel act 2 (floor 7 want: the pump, then her crew; no confession); Herald act 2 |
 | 8 | bandits paid by the Herald | Herald act 2; Pellet act 2 |
-| 9 | dismissal order; Crane; Grisel; choice | Crane act 2; Grisel act 2 |
+| 9 | dismissal order; Crane; Grisel; choice | Crane act 2 (official excuse only, no money); Grisel act 2 (the confession); the money rule |
 | 10 | Mother Nit, the second drain | Herald act 2; narrator act 2 |
 | 11 | Ulf; Oskar joins | Ulf act 3; Oskar act 3 |
-| 12 | Grisel's crew; both branches | Grisel act 3; Herald act 3 |
+| 12 | Grisel's crew; both branches | Grisel act 3 (crew nearly pack); Brand act 3; Herald act 3 |
 | 13 | the moulds; Ulf sees; the Herald's own mould | Ulf act 3; Oskar act 3; Herald act 3; Foehammer act 3 |
-| 14 | Tobit, the Verger's vestments | Tobit act 3; Verger act 3 |
+| 14 | Tobit, the Verger's vestments | Tobit act 3 (told: "did the Verger do this?"; not told: summoned, runs to the escort); Verger act 3 |
 | 15 | the Bellows, the third drain | Herald act 3; Oskar act 3; narrator act 3 |
 | 16 | the letter; Tobit or taken; Ione joins | Tobit act 4; Maud act 4; Verger act 4; Ione act 4 |
-| 17 | Crane holds a sluice; no betrayal | Crane act 4 |
+| 17 | Crane holds a sluice; admits the money; no betrayal | Crane act 4; the money rule |
 | 18 | Maud; Gorm speaks; choice | Maud act 4 and Gorm's voice |
 | 19 | the Verger's rite; Maud steadies the god | Verger act 4; Maud act 4; Tobit act 4; Ione act 4 |
 | 20 | the Herald at the last drain | Herald act 4; Foehammer act 4 |
