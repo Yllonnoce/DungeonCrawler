@@ -11948,12 +11948,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Floor {floor}, hirelings. More of the town in my cages, turning nicely. Let them out if you like. The ones you miss join my bloody packs.",
+        "Text": "Floor {floor}, and my cages are full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Floor {floor}, hirelings. More of the town in my cages, turning nicely. Let them out if you like. The ones you miss join my packs.",
+        "Text": "Floor {floor}, and my cages are full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my packs.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11965,12 +11965,12 @@
       "Trigger": "FloorEnter",
       "Objective": "toxic",
       "Line": {
-        "Text": "Floor {floor} stinks, hirelings. That\u0027s what a choked drain does to standing water. The stairs are at the bottom of the bloody stink. Hold your breath and earn your pay.",
+        "Text": "Floor {floor} stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Floor {floor} stinks, hirelings. That\u0027s what a choked drain does to standing water. The stairs are at the bottom of the stink. Hold your breath and earn your pay.",
+        "Text": "Floor {floor} stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the stink. Hold your breath, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11999,12 +11999,12 @@
       "Trigger": "FloorEnter",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess, hirelings. I\u0027m in no hurry; I\u0027m not the one paid by the floor.",
+        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess, hirelings. I\u0027m in no hurry; I\u0027m not the one paid by the floor.",
+        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12016,12 +12016,12 @@
       "Trigger": "Capture",
       "Objective": null,
       "Line": {
-        "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you, hirelings?",
+        "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you?",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you, hirelings?",
+        "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you?",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12033,12 +12033,12 @@
       "Trigger": "Capture",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "{prisoner} goes back in my cage. The town pays you by the floor, hirelings, not by the head, so why the bloody hurry?",
+        "Text": "{prisoner} goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do bloody better than that.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{prisoner} goes back in my cage. The town pays you by the floor, hirelings, not by the head, so why the hurry?",
+        "Text": "{prisoner} goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do better than that.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12050,12 +12050,12 @@
       "Trigger": "Freed",
       "Objective": null,
       "Line": {
-        "Text": "One out of my cages. Well done, hirelings. I have more cages than you have hours.",
+        "Text": "One out of my cages. Enjoy it. I have more cages than you have time.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One out of my cages. Well done, hirelings. I have more cages than you have hours.",
+        "Text": "One out of my cages. Enjoy it. I have more cages than you have time.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12067,12 +12067,12 @@
       "Trigger": "Freed",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Out you come, {prisoner}. Run home and thank the town. It didn\u0027t come for you itself; it sent these sods, and paid them by the floor.",
+        "Text": "Out you come, {prisoner}. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Out you come, {prisoner}. Run home and thank the town. It didn\u0027t come for you itself; it sent these fools, and paid them by the floor.",
+        "Text": "Out you come, {prisoner}. Run home to your frightened town. It never came down for you itself; it hired these fools to do it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12084,12 +12084,12 @@
       "Trigger": "AllFreed",
       "Objective": null,
       "Line": {
-        "Text": "All out. Fine, hirelings. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
+        "Text": "All out. Fine. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "All out. Fine, hirelings. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
+        "Text": "All out. Fine. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12101,12 +12101,12 @@
       "Trigger": "AllFreed",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "All my cages empty. Bloody good work, for day labour. It changes nothing, hirelings: the drains are still mine, and your god is still hungry.",
+        "Text": "All my cages empty. Bloody good work, hirelings. It changes nothing: the drains are still mine, and your god is still hungry.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "All my cages empty. Good work, for day labour. It changes nothing, hirelings: the drains are still mine, and your god is still hungry.",
+        "Text": "All my cages empty. Good work, hirelings. It changes nothing: the drains are still mine, and your god is still hungry.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12118,12 +12118,12 @@
       "Trigger": "GasThickens",
       "Objective": "toxic",
       "Line": {
-        "Text": "It\u0027s rising, hirelings. That\u0027s the air off my choked drains, and it doesn\u0027t care what the town is paying you.",
+        "Text": "It\u0027s rising. That\u0027s the air off my choked drains, and it doesn\u0027t care who hired you.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "It\u0027s rising, hirelings. That\u0027s the air off my choked drains, and it doesn\u0027t care what the town is paying you.",
+        "Text": "It\u0027s rising. That\u0027s the air off my choked drains, and it doesn\u0027t care who hired you.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12152,12 +12152,12 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "That\u0027s the foul air of my drains in your lungs now, hirelings. Lie down in it. It comes to the same thing, only sooner.",
+        "Text": "That\u0027s the foul air of my drains in your lungs now. Lie down in it. It comes to the same thing, only sooner.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That\u0027s the foul air of my drains in your lungs now, hirelings. Lie down in it. It comes to the same thing, only sooner.",
+        "Text": "That\u0027s the foul air of my drains in your lungs now. Lie down in it. It comes to the same thing, only sooner.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12169,12 +12169,12 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "Deep enough to drown in, {party}. Kneel in it. The town won\u0027t pay for the bloody funeral.",
+        "Text": "Deep enough to drown in, {party}. Kneel in it. Your frightened town won\u0027t pay for the bloody funeral.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Deep enough to drown in, {party}. Kneel in it. The town won\u0027t pay for the funeral.",
+        "Text": "Deep enough to drown in, {party}. Kneel in it. Your frightened town won\u0027t pay for the funeral.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12186,12 +12186,12 @@
       "Trigger": "WrongLever",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Wrong one. Keep pulling, hirelings. I could listen to that all day, and I\u0027m not paid by the hour.",
+        "Text": "Wrong one. Keep pulling, hirelings. I set those gates to keep the whole town out, and they\u0027ll keep you out too.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Wrong one. Keep pulling, hirelings. I could listen to that all day, and I\u0027m not paid by the hour.",
+        "Text": "Wrong one. Keep pulling, hirelings. I set those gates to keep the whole town out, and they\u0027ll keep you out too.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12203,12 +12203,12 @@
       "Trigger": "WrongLever",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Wrong again. Did the town hire you for your heads, hirelings, or was counting extra?",
+        "Text": "Wrong. Did the town hire you for your heads, or only for your backs?",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Wrong again. Did the town hire you for your heads, hirelings, or was counting extra?",
+        "Text": "Wrong. Did the town hire you for your heads, or only for your backs?",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12220,12 +12220,12 @@
       "Trigger": "GateShift",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Hear that? My gates have moved. The way down is wherever I say it is, hirelings.",
+        "Text": "Hear that? My gates have moved. The way down is wherever I say it is.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Hear that? My gates have moved. The way down is wherever I say it is, hirelings.",
+        "Text": "Hear that? My gates have moved. The way down is wherever I say it is.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12237,12 +12237,12 @@
       "Trigger": "GateShift",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "The gates have shifted again. You won\u0027t out-think iron I set, hirelings, and the town isn\u0027t paying you enough to try.",
+        "Text": "The gates have shifted. You won\u0027t out-think iron I set, hirelings, and nobody paid you enough to try.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The gates have shifted again. You won\u0027t out-think iron I set, hirelings, and the town isn\u0027t paying you enough to try.",
+        "Text": "The gates have shifted. You won\u0027t out-think iron I set, hirelings, and nobody paid you enough to try.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12254,12 +12254,12 @@
       "Trigger": "VaultOpened",
       "Objective": null,
       "Line": {
-        "Text": "So you found the right levers. Bloody hell. Go on down, then, hirelings; it\u0027s all mine further down.",
+        "Text": "So you found the right levers. Bloody hell. Go on down, then; it\u0027s all mine further down.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "So you found the right levers. Go on down, then, hirelings; it\u0027s all mine further down.",
+        "Text": "So you found the right levers. Go on down, then; it\u0027s all mine further down.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12271,12 +12271,12 @@
       "Trigger": "VaultOpened",
       "Objective": null,
       "Line": {
-        "Text": "The gate is open. Take the stairs, and take whatever you found by them. It all belongs to my master; you are only borrowing it.",
+        "Text": "The gate is open. Take the stairs, and whatever you found by them. It all belongs to my master; you are only borrowing it.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The gate is open. Take the stairs, and take whatever you found by them. It all belongs to my master; you are only borrowing it.",
+        "Text": "The gate is open. Take the stairs, and whatever you found by them. It all belongs to my master; you are only borrowing it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12288,12 +12288,12 @@
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if the town pays for that.",
+        "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if you think you can.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if the town pays for that.",
+        "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if you think you can.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12305,12 +12305,12 @@
       "Trigger": "RitualStart",
       "Objective": "ritual",
       "Line": {
-        "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the bloody line, hirelings, if you can.",
+        "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the bloody line if you can.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the line, hirelings, if you can.",
+        "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the line if you can.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12322,12 +12322,12 @@
       "Trigger": "RitualistDown",
       "Objective": "ritual",
       "Line": {
-        "Text": "She\u0027s down. Leave her lying, hirelings. Her work stops, and mine goes on.",
+        "Text": "She\u0027s down. Leave her lying. Her work stops, and mine goes on.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "She\u0027s down. Leave her lying, hirelings. Her work stops, and mine goes on.",
+        "Text": "She\u0027s down. Leave her lying. Her work stops, and mine goes on.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12356,12 +12356,12 @@
       "Trigger": "WaveBreak",
       "Objective": "ritual",
       "Line": {
-        "Text": "My minions fall back. Breathe while you can, hirelings. There are more where they came from, and they don\u0027t ask for wages.",
+        "Text": "My minions fall back. Breathe while you can. There are more where they came from, and they never tire.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "My minions fall back. Breathe while you can, hirelings. There are more where they came from, and they don\u0027t ask for wages.",
+        "Text": "My minions fall back. Breathe while you can. There are more where they came from, and they never tire.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12373,12 +12373,12 @@
       "Trigger": "WaveBreak",
       "Objective": null,
       "Line": {
-        "Text": "A lull. Count your wounds, hirelings, and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a bloody wage.",
+        "Text": "A lull. Count your wounds and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a bloody fee.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "A lull. Count your wounds, hirelings, and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a wage.",
+        "Text": "A lull. Count your wounds and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a fee.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12390,12 +12390,12 @@
       "Trigger": "RitualDone",
       "Objective": "ritual",
       "Line": {
-        "Text": "So her work is done and my minions are broken. Enjoy it, hirelings. The last drain is still mine, and so are the bloody stairs down to it.",
+        "Text": "So her work is done and my minions are broken. Enjoy it. The drains below are still mine, and so are the bloody stairs down to them.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "So her work is done and my minions are broken. Enjoy it, hirelings. The last drain is still mine, and so are the stairs down to it.",
+        "Text": "So her work is done and my minions are broken. Enjoy it. The drains below are still mine, and so are the stairs down to them.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12407,12 +12407,12 @@
       "Trigger": "RitualDone",
       "Objective": "ritual",
       "Line": {
-        "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. The town is paying a great deal for very little, hirelings.",
+        "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. Your god is still starving, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. The town is paying a great deal for very little, hirelings.",
+        "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. Your god is still starving, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12424,12 +12424,12 @@
       "Trigger": "ObjectiveDone",
       "Objective": null,
       "Line": {
-        "Text": "Done, and done badly, but done. Go on down, hirelings. The next floor is worse; I set its traps myself.",
+        "Text": "Done, and done badly, but done. Go on down. The next floor is worse; I set its traps myself.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Done, and done badly, but done. Go on down, hirelings. The next floor is worse; I set its traps myself.",
+        "Text": "Done, and done badly, but done. Go on down. The next floor is worse; I set its traps myself.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12441,12 +12441,12 @@
       "Trigger": "ObjectiveDone",
       "Objective": null,
       "Line": {
-        "Text": "Fine. Take the stairs. One more floor of mine behind you, and one more day\u0027s wages the town owes you. I owe you nothing.",
+        "Text": "Fine. Take the stairs. One more floor of mine behind you. Every one below is mine too, hirelings, and so is the last drain.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Fine. Take the stairs. One more floor of mine behind you, and one more day\u0027s wages the town owes you. I owe you nothing.",
+        "Text": "Fine. Take the stairs. One more floor of mine behind you. Every one below is mine too, hirelings, and so is the last drain.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12458,12 +12458,12 @@
       "Trigger": "Idle",
       "Objective": null,
       "Line": {
-        "Text": "Resting, hirelings? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
+        "Text": "Resting? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Resting, hirelings? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
+        "Text": "Resting? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12475,12 +12475,12 @@
       "Trigger": "Idle",
       "Objective": null,
       "Line": {
-        "Text": "Admiring my work, hirelings? Stand still long enough and my minions will come and admire you. Nobody pays you to stand about.",
+        "Text": "Admiring my work, hirelings? Take a good look. These are my master\u0027s mines now, and I keep them the way he likes.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Admiring my work, hirelings? Stand still long enough and my minions will come and admire you. Nobody pays you to stand about.",
+        "Text": "Admiring my work, hirelings? Take a good look. These are my master\u0027s mines now, and I keep them the way he likes.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12492,12 +12492,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "One down. Lie still, hireling, and don\u0027t make a bloody fuss. The town has had its money\u0027s worth of you already.",
+        "Text": "One down. Lie still, and don\u0027t make a bloody fuss. Nobody in that frightened town will come down for you.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One down. Lie still, hireling, and don\u0027t make a fuss. The town has had its money\u0027s worth of you already.",
+        "Text": "One down. Lie still, and don\u0027t make a fuss. Nobody in that frightened town will come down for you.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12509,12 +12509,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "One of you down already, {party}. The town hired cheap. I could have told it so.",
+        "Text": "One of you down, {party}. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One of you down already, {party}. The town hired cheap. I could have told it so.",
+        "Text": "One of you down, {party}. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12526,12 +12526,12 @@
       "Trigger": "PartyWiped",
       "Objective": null,
       "Line": {
-        "Text": "There. All of you, down in my mines. I\u0027ll tell the town to stop paying you. It can hire more, and I\u0027ll bloody well have them too.",
+        "Text": "There. All of you, down in my mines. Your town can hire more, and my foundry can pour more. We\u0027ll see who runs out first.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "There. All of you, down in my mines. I\u0027ll tell the town to stop paying you. It can hire more, and I\u0027ll have them too.",
+        "Text": "There. All of you, down in my mines. Your town can hire more, and my foundry can pour more. We\u0027ll see who runs out first.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12543,12 +12543,12 @@
       "Trigger": "PartyWiped",
       "Objective": null,
       "Line": {
-        "Text": "Rest now, hirelings. The town will scrape up the wages for another lot, and they\u0027ll step over you to reach me.",
+        "Text": "Rest now, hirelings. The town will scrape together another fee for another lot, and they\u0027ll step over you to reach me.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Rest now, hirelings. The town will scrape up the wages for another lot, and they\u0027ll step over you to reach me.",
+        "Text": "Rest now, hirelings. The town will scrape together another fee for another lot, and they\u0027ll step over you to reach me.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12560,12 +12560,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Another floor down, hirelings. I\u0027ve had since bloody spring to get this one ready for you.",
+        "Text": "Another floor down. I\u0027ve had since bloody spring to get this one ready for you.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Another floor down, hirelings. I\u0027ve had since spring to get this one ready for you.",
+        "Text": "Another floor down. I\u0027ve had since spring to get this one ready for you.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12577,12 +12577,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "Lower still, hirelings. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
+        "Text": "Lower still. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Lower still, hirelings. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
+        "Text": "Lower still. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12594,12 +12594,12 @@
       "Trigger": "Reinforcements",
       "Objective": null,
       "Line": {
-        "Text": "More of mine, hirelings, through my own doors. You can\u0027t kill them as fast as I can send them.",
+        "Text": "More of mine, through my own doors. You can\u0027t kill them as fast as I can send them.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "More of mine, hirelings, through my own doors. You can\u0027t kill them as fast as I can send them.",
+        "Text": "More of mine, through my own doors. You can\u0027t kill them as fast as I can send them.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12611,12 +12611,12 @@
       "Trigger": "Reinforcements",
       "Objective": null,
       "Line": {
-        "Text": "I\u0027ve sent for help. Mine comes when it\u0027s called and asks no wages. That is the whole bloody difference between us, hirelings.",
+        "Text": "I\u0027ve sent for help, hirelings. Mine comes when it\u0027s called and asks no fee. That is the whole bloody difference between us.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "I\u0027ve sent for help. Mine comes when it\u0027s called and asks no wages. That is the whole difference between us, hirelings.",
+        "Text": "I\u0027ve sent for help, hirelings. Mine comes when it\u0027s called and asks no fee. That is the whole difference between us.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12628,12 +12628,12 @@
       "Trigger": "Crushed",
       "Objective": null,
       "Line": {
-        "Text": "Crushed flat. My walls do good work, hirelings, and they never once asked to be paid for it.",
+        "Text": "Crushed flat. I set that wall myself, and it does its work better than you do yours.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Crushed flat. My walls do good work, hirelings, and they never once asked to be paid for it.",
+        "Text": "Crushed flat. I set that wall myself, and it does its work better than you do yours.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12645,12 +12645,12 @@
       "Trigger": "Crushed",
       "Objective": null,
       "Line": {
-        "Text": "Pressed and finished. Thanks for the spine, you poor bugger. The town can come and collect the rest.",
+        "Text": "Pressed and finished. Thanks for the spine, you poor bugger. Your town can come and collect the rest.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Pressed and finished. Thanks for the spine, you poor fool. The town can come and collect the rest.",
+        "Text": "Pressed and finished. Thanks for the spine, you poor fool. Your town can come and collect the rest.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12662,12 +12662,12 @@
       "Trigger": "EliteSlain",
       "Objective": null,
       "Line": {
-        "Text": "That was one of my best, you bloody vandals. Never mind. I have more, and I don\u0027t pay them either.",
+        "Text": "That was one of my best, you bloody vandals. Never mind. I have more, and they cost me nothing.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That was one of my best, you vandals. Never mind. I have more, and I don\u0027t pay them either.",
+        "Text": "That was one of my best, you vandals. Never mind. I have more, and they cost me nothing.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12696,12 +12696,12 @@
       "Trigger": "ShrineUsed",
       "Objective": null,
       "Line": {
-        "Text": "Help yourselves at the shrine, hirelings. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
+        "Text": "Help yourselves at the shrine. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Help yourselves at the shrine, hirelings. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
+        "Text": "Help yourselves at the shrine. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12723,19 +12723,19 @@
         "Delivery": null
       },
       "RequiresFlag": null,
-      "ForbidsFlag": null,
+      "ForbidsFlag": "wake_gorm",
       "FromStock": false
     },
     {
       "Trigger": "MimicSprung",
       "Objective": null,
       "Line": {
-        "Text": "Hungry box, that one. Everything in my mines is hungry, hirelings, your god most of all. Mind your bloody fingers.",
+        "Text": "Hungry box, that one. Everything in my mines is hungry, and your god most of all. Mind your bloody fingers.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Hungry box, that one. Everything in my mines is hungry, hirelings, your god most of all. Mind your fingers.",
+        "Text": "Hungry box, that one. Everything in my mines is hungry, and your god most of all. Mind your fingers.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12781,12 +12781,12 @@
       "Trigger": "AllyDead",
       "Objective": null,
       "Line": {
-        "Text": "Another body for my mines. Carry it yourselves, hirelings. Nobody pays me to clear up after you, you sorry sods.",
+        "Text": "Another body for my mines. Carry it yourselves, hirelings. I\u0027m not clearing up after you, you sorry sods.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Another body for my mines. Carry it yourselves, hirelings. Nobody pays me to clear up after you, you sorry fools.",
+        "Text": "Another body for my mines. Carry it yourselves, hirelings. I\u0027m not clearing up after you, you sorry fools.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12832,12 +12832,12 @@
       "Trigger": "Gamble",
       "Objective": null,
       "Line": {
-        "Text": "Dicing with the factor behind his locked door, hirelings? Spend the town\u0027s wages how you like. My drains stay choked.",
+        "Text": "Dicing with the factor behind his locked door? Throw the town\u0027s money about while you can. My drains stay choked.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Dicing with the factor behind his locked door, hirelings? Spend the town\u0027s wages how you like. My drains stay choked.",
+        "Text": "Dicing with the factor behind his locked door? Throw the town\u0027s money about while you can. My drains stay choked.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12849,12 +12849,12 @@
       "Trigger": "Gamble",
       "Objective": null,
       "Line": {
-        "Text": "Gambling your wages already? Good. Lose the lot, you cheap little sods, and see who pays to bury you.",
+        "Text": "Gambling your fee? Good. Lose the lot, you cheap little sods, and see who pays to bury you.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Gambling your wages already? Good. Lose the lot, you cheap little fools, and see who pays to bury you.",
+        "Text": "Gambling your fee? Good. Lose the lot, you cheap little fools, and see who pays to bury you.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12866,12 +12866,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his bloody god, and it won\u0027t pay you.",
+        "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his bloody god.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his god, and it won\u0027t pay you.",
+        "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his god.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12883,12 +12883,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "You forgave the warden who ran, hirelings. Generous. Now forgive her bloody council: it sacked its own wardens, and they came down to me unpaid.",
+        "Text": "You forgave the warden who ran. Generous. Now forgive her bloody council: it sacked its own wardens, and they came down to me unpaid.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "You forgave the warden who ran, hirelings. Generous. Now forgive her council: it sacked its own wardens, and they came down to me unpaid.",
+        "Text": "You forgave the warden who ran. Generous. Now forgive her council: it sacked its own wardens, and they came down to me unpaid.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12917,12 +12917,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "One down. You asked your god for his strength, hirelings, and he\u0027s half awake for it. Ask again. My master is right behind the bloody door.",
+        "Text": "One down. You asked your god for his strength, and he\u0027s half awake for it. Ask again, hirelings. The more he wakes, the nearer my master comes.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One down. You asked your god for his strength, hirelings, and he\u0027s half awake for it. Ask again. My master is right behind the door.",
+        "Text": "One down. You asked your god for his strength, and he\u0027s half awake for it. Ask again, hirelings. The more he wakes, the nearer my master comes.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12934,12 +12934,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "One down. You told your god to sleep through this, hirelings, and he is. Nobody is coming to help you.",
+        "Text": "One down. You told your god to sleep through this, and he is. Nobody is coming to help you.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One down. You told your god to sleep through this, hirelings, and he is. Nobody is coming to help you.",
+        "Text": "One down. You told your god to sleep through this, and he is. Nobody is coming to help you.",
         "VoiceId": null,
         "Delivery": null
       },

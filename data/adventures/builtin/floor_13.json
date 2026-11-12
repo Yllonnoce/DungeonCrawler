@@ -522,12 +522,12 @@
       "Trigger": "AllFreed",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Every cage empty, hirelings. Ask my founder\u0027s lad why he kept his bloody mouth shut while the old man poured my iron. I said I\u0027d break the old man\u0027s neck if he talked.",
+        "Text": "So my cages stand empty. Now ask my founder\u0027s lad why he kept his bloody mouth shut while the old man poured my iron. I said I\u0027d break the old man\u0027s neck if the lad talked.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Every cage empty, hirelings. Ask my founder\u0027s lad why he kept his mouth shut while the old man poured my iron. I said I\u0027d break the old man\u0027s neck if he talked.",
+        "Text": "So my cages stand empty. Now ask my founder\u0027s lad why he kept his mouth shut while the old man poured my iron. I said I\u0027d break the old man\u0027s neck if the lad talked.",
         "VoiceId": null,
         "Delivery": null
       },
