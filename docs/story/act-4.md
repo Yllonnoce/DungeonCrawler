@@ -154,9 +154,9 @@ _Objective: toxic_
 
 ### Hordes
 
-**Narrator:** _(The Drift Choir, Chest)_ The lid lifts and the timbering splits: shades spill out of every seam, grey and alike. Some of them were wardens this spring.
+**Narrator:** _(The Drift Shades, Chest)_ The lid lifts and the timbering splits: shades spill out of every seam, grey and alike. Some of them were wardens this spring.
 
-**Narrator:** _(The Answering Verse, Alarm)_ The runner's cry goes down the gallery, and the breach answers it: shades, and the archers of the other side behind them.
+**Narrator:** _(The Wheezing Shades, Alarm)_ The runner's cry goes down the gallery, and the breach answers it: shades, and the archers of the other side behind them.
 
 ## Floor 18: The Dreaming Hall
 
@@ -349,7 +349,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 ### Hordes
 
-**Narrator:** _(The Breath of the Choir, Enter)_ The three mouths in the tilework exhale at once, and the dark comes out of them on its hands and knees.
+**Narrator:** _(The Breath of the Mouths, Enter)_ The three mouths in the tilework exhale at once, and the dark comes out of them on its hands and knees.
 
 **Narrator:** _(What the Oddfellows Dug Into, Chest)_ The lid lifts, and the wall behind the old camp gives way: shades come crawling out at you, grey and alike, with a caller of the other side behind them.
 
@@ -357,11 +357,11 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 _Mood: the last great drain, braziers, the orc again_
 
-**Story beat:** Boss: the Herald, Morg Ashtusk, recast whole and larger in the same orc body, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.
+**Story beat:** Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks and sinks back from waking, the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.
 
 **Narrator:** _(floor intro)_ The last stair brings you down to the Mouth, where the last great drain should pour down to the god. Its grate is packed solid, braziers burn around it, and the orc is waiting there.
 
-**Narrator:** _(BossSeen)_ Morg Ashtusk stands over the last great drain, whole again and a head taller than the orc you killed at the gate. Kill him and turn the sluice wheel, or the mines come down on Dunmarrow.
+**Narrator:** _(BossSeen)_ Morg Ashtusk stands over the last great drain, not the orc body you killed at the gate but what the foundry was building him into: his true form. Kill him and turn the sluice wheel, or the mines come down on Dunmarrow.
 
 **Narrator:** _(BossDead)_ You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks and slowly sinks back from waking. The dream holds; it is thin, but the door stays shut.
 
@@ -381,9 +381,9 @@ _Mood: the last great drain, braziers, the orc again_
 
 ### Hordes
 
-**Narrator:** _(The Verse Breaks, Enter)_ The gallery wall splits between the pillars, and the shades pour out at you in one long grey rush, with the stalkers of the other side behind them.
+**Narrator:** _(The Gallery Shades, Enter)_ The gallery wall splits between the pillars, and the shades pour out at you in one long grey rush, with the stalkers of the other side behind them.
 
-**Narrator:** _(The Answering Stanza, Alarm)_ Somewhere behind you a runner reaches the breach, and it answers: shade on shade, climbing out of the stone with archers at their backs.
+**Narrator:** _(The Breach Shades, Alarm)_ Somewhere behind you a runner reaches the breach, and it answers: shade on shade, climbing out of the stone with archers at their backs.
 
 ### Boss: Morg Ashtusk
 

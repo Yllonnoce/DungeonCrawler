@@ -81,9 +81,9 @@ All Poly Haven assets are CC0 (https://polyhaven.com/license). Kenney packs are 
 - Dungeon Remastered 1.0 (`assets/models/kaykit_dungeon`: key, bottles, bedroll, box, torch, rubble and wall pieces): https://github.com/KayKit-Game-Assets/KayKit-Dungeon-Remastered-1.0
 - Character Pack: Adventurers 1.0 (`assets/models/kaykit_adventurers`: Rogue, Rogue_Hooded and Barbarian used for bandits; `assets/models/kaykit_items`: swords, axes, dagger, staff, wand, spellbook, quiver, arrows, shields, crossbow): https://github.com/KayKit-Game-Assets/KayKit-Character-Pack-Adventures-1.0
 
-## Music (OpenGameArt, CC0)
+## Music (OpenGameArt, CC0, and one owner-supplied track)
 
-All tracks are CC0 (https://creativecommons.org/publicdomain/zero/1.0/); fetched by `scripts/fetch_music.py` into `assets/audio/music/`.
+All tracks but the last are CC0 (https://creativecommons.org/publicdomain/zero/1.0/); those are fetched by `scripts/fetch_music.py` into `assets/audio/music/`.
 
 - menu_old_tower_inn.mp3: "Medieval: The Old Tower Inn" by RandomMind, https://opengameart.org/content/medieval-the-old-tower-inn
 - crypt_dungeon_theme.mp3: "Dungeon theme" by Katana, https://opengameart.org/content/dungeon-theme-0

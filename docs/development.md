@@ -127,6 +127,14 @@ client picks for itself: `NarrationMsg` carries both). The voice provider refusi
 twin under the same id, so nothing goes silent. Taunts have a voice budget of their own (`VoiceBudget.Taunts`, 30 on
 top of the campaign's 80).
 
+In the shipped campaign the antagonist is Morg Ashtusk, the orc Herald: every taunt and his floor 20 boss lines are one voice (Gemini
+name Fenrir, rendered as Inworld Dominus), and on floor 20 the boss is shown as "Morg Ashtusk" (`BossRules.ShownName`). A floor's own
+`Descend` taunt plays when the party leaves it (`AdventureDirector`: `TauntDirector.DescendBank`, objective floor or not, ahead of the
+stock descend line), and the next floor's opening line waits until it has been heard (`NarrationRules.SpeakSeconds`). A boss that is a
+beast or a machine never says "I": its lines are written in the third person, the way the narrator speaks (a writing rule, not code). The
+defend-the-figure objectives word their notice neutrally ("the work at the shrine", `ObjectiveText`), since the figure may be Grisel or
+Maud and not a ritualist.
+
 **Lethality.** Every enemy attack and every trap, floor fire and gas the party suffers is multiplied by
 `TierRules.Lethality` (Settings "Dungeon lethality": 1 normal, 2 hard, 3 brutal, the default; `--lethality=N` pins it
 for a run). The party's own traps against enemies, fall damage and the enemy budgets a floor is planned with are not
@@ -176,10 +184,11 @@ once) writes their `.import` files. A missing file never breaks anything: the sl
   (`npc_guard`), prisoner, captive, survivor (`npc_prisoner`), and failing those for sex and age (`npc_old_man`,
   `npc_old_woman`, `npc_young_man`, `npc_young_woman`; with no clue at all, a plain body picked by the NPC's id). In the
   shipped campaign Maud is the old woman, Crane the merchant, Tobit the priest, Grisel the prisoner and Ulf the old man.
-- The villain in person: on the last boss floor the tier's boss wears `verger.glb` (scaled to 2.25 m) when the campaign's
-  antagonist is a verger (`NpcBodies.Villain`); other campaigns keep the creature.
-- The orc's true form: on floor 20 the last boss wears `big_baddy.glb` (owner's decision 2026-11-12; `NpcBodies.Villain` returns `big_baddy` for the orc, scaled 2x in `DungeonBuilder.SpawnEnemy`); floor 1 keeps `orc1.glb`.
-- All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger).
+- The villain in person: on the last boss floor the tier's boss wears a body of the antagonist's own when the campaign's
+  antagonist is an orc (`big_baddy.glb`, below) or a verger (`verger.glb`, scaled to 2.25 m) (`NpcBodies.Villain`); other
+  campaigns keep the creature. The shipped Verger is an ordinary cast member now (`cast_quill`, floor 19), not the villain.
+- The orc's true form: Morg Ashtusk is `viewer_orc` in `orc1.glb` on floor 1, where the party kills him; on floor 20 the last boss wears `big_baddy.glb` (owner's decision 2026-11-12; `NpcBodies.Villain` returns `big_baddy` for the orc, scaled 2x in `DungeonBuilder.SpawnEnemy`), and the name plate, boss bar and log show "Morg Ashtusk" instead of the stock creature's name (`BossRules.ShownName`; only the name changes, the stats stay).
+- All sixteen bodies from the briefs are in (party, fighters, archetypes, the Verger, the orc's true form).
 - Victory dance: a hero whose blow kills something opens with a Squat, then two different moves drawn fresh from the rest
   of a pool of fourteen (HipBuck, HipRock, Cheer, Punch, Shrug, HitReact, Cower, Pain, Talk, Flinch, Laugh, Point,
   ShakeHead), each done once (the three hip moves at 4x speed, the gestures at their natural pace), then a Wave if
@@ -217,7 +226,7 @@ Real materials and models are CC0: Poly Haven PBR textures per tier (triplanar o
 (treasure chest, wooden wine barrels and crates as breakables, wall lanterns, statue), Quaternius Ultimate Monsters for enemies and Quaternius RPG Characters for the four party members (animated glTF,
 scaled to size and lightly tinted; the possessed character's own model is hidden so it never blocks the camera), and Kenney sound packs for effects. Everything is listed with its source in
 `assets/LICENSES.md`. Ambience is generated in code (a low hum plus filtered noise, coloured per tier). Music is CC0 from
-OpenGameArt, fetched by `scripts/fetch_music.py` into `assets/audio/music/` (about 49 MB): a tavern tune for the title screen,
+OpenGameArt (but for one owner-supplied track), fetched by `scripts/fetch_music.py` into `assets/audio/music/` (about 49 MB): a tavern tune for the title screen,
 three exploration pieces per tier (Crypt, Caves, Forge, Abyss) shuffled with a few seconds of quiet between them (plus one owner-supplied exploration track, `explore_dungeon_walking.mp3`, that plays in every tier), three battle
 tracks, a boss track, and victory and defeat stings. `Audio/MusicDirector.cs` crossfades between them: battle music starts the
 moment an enemy is fighting the party within 26 m and holds for six seconds after the last one stops, the boss track runs from
@@ -400,15 +409,17 @@ seconds, then gets up at 1 HP; if the lead goes down, control passes to the next
 
 ## Story: cast, mystery, choices
 
+The shipped campaign, The Gullet of Gorm (replaced on 2026-11-12; design `docs/superpowers/specs/2026-11-12-gullet-story-arc.md`, cast sheets `docs/story/character-sheets.md`, readable scripts `docs/story/act-N.md` and `after.md`, made by `scripts/story_script.py`): a good god, Gorm, sleeps under the town of Dunmarrow and his dreams keep the evil god, the Sleepless, out; water running down through the mines drains feeds him, and the town's drain-wardens always kept the drains clear. The orc Morg Ashtusk, the Herald of the Sleepless, has seized the mines and filled them with traps and minions, so the drains back up, the god starves and stirs and the mines shake. The town hires the party to clear them. If the god wakes the Sleepless breaks through and the town is destroyed (the god does not do it on purpose); if the party fails the mines collapse. Four acts end at four great drains, one per tier boss (Canon Ludd, Mother Nit, the Bellows, Morg Ashtusk). The cast: Alderman Crane (the employer, whose council dropped the wardens to save money, owned on floor 17), Master Pellet (the merchant who lent the council the hire money), Deacon Tobit, Grisel Thorn (the last warden), Old Ulf (the pump works, now a foundry), Maud Sorrel (a drowned warden the god speaks through) and Absalom Quill, the Verger (who let the orc in; met on floor 19), plus the companions Foehammer, Tamsin Rook, Oskar Vell and Sister Ione. The choices keep their flag ids: floor 3 `told_tobit` / `kept_his_saint` (pays on 14, 16 and 19), floor 9 `grisel_forgiven` / `grisel_condemned` (pays on 12, where a condemned Grisel is found dead), floor 18 `let_him_dream` / `wake_gorm` (pays on 19 and 20). The four clues are the wardens' log (4), the dismissal order (9), the moulds (13) and the Verger's letter (16). Floor 9 deals no objective on the shipped seed and is written as an ordinary floor. The new lines are recorded in a later step; until then they show as subtitles.
+
 A campaign has a recurring **Cast** (four to six people with a role and a secret), a **Mystery** (a question, its hidden truth, clues spread over the descent, a payoff floor) and per-floor **Story** beats; about eight of the twenty floors carry the plot, the rest get one line of narration. Quest templates: KillTarget, Recover, Escort, HoldOut, and three story kinds: **Investigate** (clues lie in two to four rooms; bring them back), **Decide** (a dialogue choice sets a flag the run remembers and completes the quest), **Betrayal** (an NPC with a `Betrayal` turns when you take a `Betray` choice: they vanish, their creatures stand where they stood, the first wearing their name, and killing them completes the quest; a hand-authored `Betrayal.Escort: true` makes it an escort the NPC flees to instead: they leave alive, no creature wears their name, and the log and the quest say they fled). NPCs, quests, dialogue choices and narration can carry `RequiresFlag` / `ForbidsFlag`, so a floor can hold both branches of an earlier decision and only the matching one appears. Flags live in the campaign memory (saved) and reach the planner in the memory notes.
 
 Two hand-authored hooks the designer is never asked for (both `[AiIgnore]`): an NPC with `"Ritualist": true` on a Ritual
 floor leads the rite instead of a stock-named villager (placed beside the altar, no script needed; the validator clears
 the flag with a repair note on a floor with no shrine), and a boss with `HalfLine` speaks once at half health, while
 `AltDeathFlag` with `AltHalfLine` / `AltDeathLine` swaps its middle and last words when that flag was set earlier in
-the run. The shipped Gullet of Gorm uses both: Grisel Thorn's Unswearing on floor 7, and the Verger's half-health and
-death lines on floor 20 turning on `wake_gorm`. The recurring cast is voiced in full (see `--bake-cast-voice`). Maud Sorrel also stands on floors 1, 6 and 11
-(the bible's cameos) with a few lines and no quest.
+the run. The shipped Gullet of Gorm uses both: Grisel Thorn's Unswearing on floor 7, and Morg's half-health and
+death lines on floor 20 turning on `wake_gorm`. The recurring cast's lines are recorded by the voice bake (see `--bake-cast-voice`; the rewritten ones wait for the recording step). Maud Sorrel also stands on floors 1, 6, 11 and 16
+with a few lines and no quest, and speaks for the god on 18 and 19.
 
 A floor's `Narration` entries are played by their trigger (`AdventureDirector`, server and solo only; clients hear them as `NarrationMsg`): `RoomEnter` when any active party body stands in that room, `BossSeen` / `BossDead` four seconds after the boss's own line, `QuestDone` / `QuestFailed` when a quest on the floor ends. `Voice/NarrationRules.cs` decides which entries are due (trigger, room, `RequiresFlag` / `ForbidsFlag`, not yet said) and keys each one by floor, trigger, room and text; the key is kept forever in `AdventureDto.BarksSaid`, so an entry plays once per run across saves and revisits, while one held back by a flag can still play later. Entries due together play four seconds apart, in plan order. A boss named like the campaign's antagonist is queued and voiced as the villain, so the Herald keeps one voice from the floor 1 taunts to the last boss. `--test-narration` checks the once-only rule through a save and load.
 
@@ -596,7 +607,7 @@ from the campaign's copies first), the merchant, and every floor's intro, narrat
 bank holds cost nothing, and the campaign and the twenty plans are written with their ids to DIR/all-plans to copy over
 `data/adventures/builtin`. `--voice-concurrent=N` sets the lines in flight (2 by default; Runware takes 4). The older flags remain
 (`--bake-kill-barks` tops up every bank and gives the lines their ids; `--bake-cast-voice` for the campaign's own lines); `VoiceBudget` counts asides beside their NPC line. The shipped
-campaign's new Possess lines, the Verger's twelve taunts and the six asides carry `VoiceId: null`.
+campaign's new Possess lines, Morg's taunts, the merchant's and heroes' new lines and the six asides carry `VoiceId: null` until the recording step.
 
 ## Lethal traps
 

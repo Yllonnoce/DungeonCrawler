@@ -1,6 +1,6 @@
 # The Gullet of Gorm: story rewire (design)
 
-Status: storyline approved by the owner on 2026-11-12 ("this new story works better", "let's rewire the story with the new storyline"). Nothing in the game has been changed yet.
+Status: storyline approved by the owner on 2026-11-12 ("this new story works better", "let's rewire the story with the new storyline"). Implemented on the branch `story/rewire` (the words, the engine changes and the names); recording the new lines in voice is pending, so they show as subtitles only until then.
 The premise is the owner's. Lines marked (suggested) and the list under "Decisions made for the owner" are fill-ins.
 
 ## Why
@@ -223,6 +223,13 @@ Each phase ships on its own and leaves the campaign playable.
 - **Writing rule 2 is relaxed:** a character must be present in every act by a scene, a letter, a mention or a voice. Only the cast and the Verger are covered, not the companions.
 - **Weapons:** one forged weapon for every three NPC boons, so up to three in a run; it goes to the party's shared loot. Details wait for phase 3.
 - **Stale recordings** of the old AI planning calls under `data/adventures/builtin/authored` are left alone.
+- **The engine plays a floor's narration by trigger** (room entered, boss seen, boss dead, quest done or failed), once per run, where it used to skip it.
+- **A boss that is a beast or a machine speaks in the third person**, as the narrator does, so that no creature that cannot talk says "I".
+- **A condemned Grisel is found dead on floor 12** (the `grisel_condemned` branch of the floor 9 choice).
+- **Floor 9 generates with no objective on the shipped seed**, so it is written as an ordinary floor and the dismissal order is found in the usual way.
+- **An untold Tobit's floor 14 encounter is an escort he flees to**: the tracker says he fled and no creature wears his name.
+- **On-screen room and group names were renamed** to match the new story, and the last boss is shown as Morg Ashtusk on the name plate, the boss bar and the log.
+- **DungeonWalking, the owner's track, plays as exploration music in every tier.**
 
 ## The taunting voice (owner's decision, 2026-11-12)
 

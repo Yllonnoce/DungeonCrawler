@@ -87,15 +87,15 @@ The design is silent on these facts. They were filled in so that every writer ma
 | 6 | Maud: "He is thirsty." | |
 | 7 | Grisel is camped by a seized pump; her crew are missing below | |
 | 9 | **Clue 2, the dismissal order** under the council's seal, signed by Crane. Only the order and the signature; Crane gives the official excuse (the Verger had already shut the wardens out, so why pay them). Grisel admits she left her crew | Crane, Grisel, Pellet, the Herald |
-| 12 | Grisel's crew, nearly gone: proof that the turned become the packs | the heroes, Grisel |
 | 11 | Ulf casts "tools" for a customer who pays well | |
+| 12 | Grisel's crew, nearly gone: proof that the turned become the packs | the heroes, Grisel |
 | 13 | **Clue 3, the moulds:** crushing walls, spike beds, iron minions, and the Herald's own mould | Ulf, Oskar, the heroes, the Herald |
 | 14 | The Verger's vestments, thrown off in the water | Tobit |
 | 16 | **Clue 4, the Verger's letter to the Herald:** "The way will be open by midwinter." | Everyone; the Verger knows it was read |
 | 17 | Crane owns the truth: the council was glad of the excuse because it saved money | everyone; the money motive may be said from here on |
+| 18 | Gorm, through Maud: starving, half awake, sorry | |
 
 **The money rule:** before floor 17 nobody (the Herald, Pellet, the heroes, anyone) says the wardens were sacked to save money. They may say the council sacked, dropped or abandoned its wardens. From floor 17 the money motive is fair game.
-| 18 | Gorm, through Maud: starving, half awake, sorry | |
 
 Choices and their flags (ids do not change): floor 3 sets `told_tobit` (paid on 14 and 16); floor 9 sets `grisel_forgiven` (paid on 12); floor 18 sets `wake_gorm` for "Lend us what strength you have" or `let_him_dream` for "Sleep. We will finish it." (paid on 19 and 20).
 
@@ -241,7 +241,7 @@ The party learns this on floor 2 from the wardens they free ("the ones they fini
 **By act:**
 - **Act 1, floor 3:** praying in the Nave for the god to save the town, glad of company. The first crushing trap is on this floor. Choice: tell him the god is starving and no help is coming (`told_tobit`), or let him pray. Told: shaken, quiet, then he resolves to find out what happened to the drains. Not told: grateful, and keeps praying.
 - **Act 2 (by mention):** he passes Pellet's door going down, asking after his master. Same mention in both branches.
-- **Act 3, floor 14:** he has followed the party down to the Quench and found the Verger's vestments thrown off in the water. Told: he asks plainly whether the Verger did this, already fearing yes, and wants proof. Not told (one state, to confirm): he still trusts his master. From the vestments he has concluded that the Verger is the demon's prisoner. A message in the Verger's own hand has summoned him below to help with "a rite that will save the town", and he believes it. He asks the party whether his master is a prisoner. If they press him (the existing Betrayal on this floor), he does not attack them: he runs to the summons, and the Herald's minions sent to escort him are what the party fights. The HUD will say he "has turned", so his last line must make plain that he has gone to them, not become one. If they let him be, he goes on down to the summons. Either way he is "taken for the rite" on 16.
+- **Act 3, floor 14:** he has followed the party down to the Quench and found the Verger's vestments thrown off in the water. Told: he asks plainly whether the Verger did this, already fearing yes, and wants proof. Not told (one state, to confirm): he still trusts his master. From the vestments he has concluded that the Verger is the demon's prisoner. A message in the Verger's own hand has summoned him below to help with "a rite that will save the town", and he believes it. He asks the party whether his master is a prisoner. If they press him (the existing Betrayal on this floor), he does not attack them: he runs to the summons, and the Herald's minions sent to escort him are what the party fights. This is an escort Betrayal: the tracker says he has fled, and no creature wears his name, so his last line must make plain that he has gone to them, not become one. If they let him be, he goes on down to the summons. Either way he is "taken for the rite" on 16.
 - **Act 4, floors 16 and 19:** Told: on 16 he brings the Verger's letter himself and turns on his master openly; he wants the Verger stopped. Not told: he has been taken for the rite (Maud says so on 16). On 19 he is in the Verger's rite, heard or mentioned, half-changed like the prisoners; breaking the rite lets him go. No new NPC is needed for this.
 
 **How he talks:**

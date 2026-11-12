@@ -1,5 +1,7 @@
 # The Gullet of Gorm: campaign narrative
 
+Superseded by `2026-11-12-gullet-story-arc.md`: the story below was replaced on 2026-11-12 (a new plot, cast roles and antagonist), and this page is kept as history only.
+
 Date: 2026-10-22. Status: narrative bible for review; nothing authored into `campaign.json` yet.
 Written for: the owner, and whoever authors this into the campaign format (by hand through the replay bake, or as the outline Claude expands).
 

@@ -8,7 +8,7 @@ _Mood: riveted plate, ember light, a cheerful old founder_
 
 **Story beat:** The old pump works, now the Herald's foundry. cast_ulf keeps it, cheerfully casting 'tools' for a customer who pays in gold; his eyes are going and he never sees the whole of what he pours. His journeyman fighter_oskar saw the whole drawings, knows better, and joins the party. cast_maud says plainly that she drowned, that the engine here once sent the water down, and that the god is weaker every day the third drain stays shut.
 
-**Narrator:** _(tier 3 entry)_ Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. Someone has taught it to cast iron instead. The Heart.
+**Narrator:** _(tier 3 entry)_ Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. The Herald has taught it to cast iron instead. The Heart.
 
 **Narrator:** _(floor intro)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
 
@@ -81,7 +81,7 @@ _Mood: kiln brick, a grey crew in cages, keys on a belt_
 
 _Objective: jailbreak_
 
-**Story beat:** Jailbreak: cast_grisel's crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she has taken the Herald's keys to save herself and stands as his head jailer, and the party takes the keys from her and she dies there.
+**Story beat:** Jailbreak: cast_grisel's crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she took the Herald's keys to save herself and stood as his head jailer, and the party finds her dead by the cage door with his keys still on her belt, cut down by his iron when they came for the cages.
 
 **Narrator:** _(floor intro)_ Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn's crew, taken first in the spring and turned the furthest.
 
@@ -197,6 +197,8 @@ _Quest: The Good Ones (Investigate): Bring Old Ulf three casting moulds from the
 
 **Morg Ashtusk:** _(Descend)_ So now you've seen my shelves, hirelings: the walls, the spikes, the iron, all mine. My founder poured every one with his bad eyes, and the big mould by the stair is me.
 
+**Morg Ashtusk:** _(AllFreed, jailbreak)_ So my cages stand empty. Now ask my founder's lad why he kept his bloody mouth shut while the old man poured my iron. I said I'd break the old man's neck if the lad talked.
+
 ### Hordes
 
 **Narrator:** _(The Spoiled Casting, Enter)_ The wall behind the shelves gives way and the cinders pour through, grey and smouldering: townsfolk the orc finished turning.
@@ -207,7 +209,7 @@ _Mood: rusted grates under black water, vestments afloat_
 
 _Objective: shiftingvault_
 
-**Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town; pressed, he runs to the summons and the party fights the minions sent to escort him.
+**Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Either way he is taken for the rite (16, 19).
 
 **Narrator:** _(floor intro)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
 
@@ -288,13 +290,13 @@ _Quest: The Deacon's Escort (Betrayal): Put down the escort the orc sent to fetc
 
 **Narrator:** _(The Font Spill, Chest)_ The lid lifts, the water hisses, and the breaches in the font wall cough out cinders that walk.
 
-**Narrator:** _(The Grate Chorus, Alarm)_ Something small and fast reaches the vault, and behind you the grate room empties itself into the flood.
+**Narrator:** _(The Grate Pack, Alarm)_ Something small and fast reaches the vault, and behind you the grate room empties itself into the flood.
 
 ## Floor 15: The Bellows
 
 _Mood: red-hot air, an engine casting instead of pumping_
 
-**Story beat:** Boss: the Bellows, the great engine that once pumped the drains and now casts minions, guards the third great drain; fighter_oskar knows its weak points. When it stops the party turns the sluice wheel, the third drain runs, and the heat and the shaking ease.
+**Story beat:** Boss: the Bellows, the great engine that once pumped the drains and now casts minions, guards the third great drain; fighter_oskar knows its weak points. When it stops the party turns the sluice wheel and the third drain runs; the narrator makes plain what it did: the heat goes out of the works, the shaking above eases, and the god drinks.
 
 **Narrator:** _(floor intro)_ Red-hot air, and a thump that shakes the floor plates. Ahead, the biggest engine in the works is still running, and under it the third great drain lies choked.
 

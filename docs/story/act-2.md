@@ -31,7 +31,7 @@ _Mood: wading in standing water that should be running_
 
 ### Hordes
 
-**Narrator:** _(The Swallowed Brood, Alarm)_ Something runs for the stairs, and the breaches in the shallows answer it: the water boils white with small wet backs.
+**Narrator:** _(The Shallows Brood, Alarm)_ Something runs for the stairs, and the breaches in the shallows answer it: the water boils white with small wet backs.
 
 ## Floor 7: The Crop
 
@@ -79,11 +79,11 @@ _Mood: tremors, split boulders, bandits in the stores_
 
 ## Floor 9: The Cistern
 
-_Mood: warm sandstone, four levers, a seal on a page_
+_Mood: warm sandstone, sour standing water, a seal on a page_
 
 _Objective: shiftingvault_
 
-**Story beat:** Vault: the party works the levers and opens the vault, which holds clue_contract, the order dismissing the drain-wardens under the council's seal. cast_crane arrives and reads his own signature; caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).
+**Story beat:** An ordinary floor (no objective generates here on the shipped seed): the Cistern, where the wardens worked, its tanks standing sour. clue_contract, the order dismissing the drain-wardens under the council's seal, lies torn in three about the cisterns; the party gathers the leaves for cast_crane, who reads his own signature. Caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).
 
 **Narrator:** _(floor intro)_ You come down into the Cistern, where the wardens worked. The water stands in its sandstone tanks, going sour. Ahead, the alderman has come down again, out of breath, and the warden from the Crop has followed you.
 
@@ -154,9 +154,9 @@ _Quest: What Grisel Did (Decide): Answer Grisel Thorn for leaving her crew in th
 
 ### Hordes
 
-**Narrator:** _(The Fourth Verse Breach, Enter)_ The carved verse splits down its middle and the wall behind it is not wall at all; it is legs, and all of them coming.
+**Narrator:** _(The Cistern Breach, Enter)_ The cistern wall splits down its middle, and what is behind it is not rock at all; it is legs, and all of them coming.
 
-**Narrator:** _(What Waited Behind the Hymn, Chest)_ The lid lifts, and the hollow behind the stonework answers it: a long wet scrabble, getting closer in the dark.
+**Narrator:** _(What Waited Behind the Wall, Chest)_ The lid lifts, and the hollow behind the stonework answers it: a long wet scrabble, getting closer in the dark.
 
 ## Floor 10: Mother Nit
 
