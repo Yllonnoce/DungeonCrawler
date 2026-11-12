@@ -29,7 +29,7 @@ public static class NpcBodies
     public static string ForCast(CastMember cast)
     {
         if (cast.Merchant) return "npc_merchant";
-        if (IsVerger($"{cast.Name} {cast.Role}")) return "verger";
+        if (cast.Id == "cast_quill") return "verger"; // the Verger himself; others merely mention him in their roles
         var body = For(cast.Id, cast.Name, false, cast.Role, cast.Persona?.VoiceStyle);
         return body == "npc_merchant" ? "npc_old_man" : body;
     }
