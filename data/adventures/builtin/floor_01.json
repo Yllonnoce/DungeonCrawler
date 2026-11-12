@@ -5,8 +5,8 @@
   "LayoutHash": 10909343922383415070,
   "Title": "The Lychgate",
   "IntroLine": {
-    "Text": "Six hundred years of Dunmarrow\u0027s dead lie overhead. The council calls what breathes beneath them a drainage fault, and has paid you four in advance.",
-    "VoiceId": "56e4778aeea8b8d6",
+    "Text": "The crypt stair under the lychgate is the head of the old mines. Up it has come a huge orc, Morg Ashtusk, and the dwarf who keeps the gate is already fighting him.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -171,8 +171,8 @@
       "Total": 4,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The chest lid lifts, and the cloakroom answers: husks shrugging out of the coats they were buried in.",
-        "VoiceId": "84434fb0b5cfaecf",
+        "Text": "The chest lid lifts, and the cloakroom answers: grey husks shrugging their way out of the coats on the hooks.",
+        "VoiceId": null,
         "Delivery": null
       }
     },
@@ -301,13 +301,13 @@
           {
             "Id": "gate",
             "Line": {
-              "Text": "Nobody said god. I said plumbing. Legally those are very different words, and the contract uses mine.",
-              "VoiceId": "0712ef2049dc0183",
+              "Text": "Alderman Crane, for the council. That orc\u0027s dead, and still I heard its voice come back up the shaft, swearing it would be cast again. The drains below need clearing, and I am not the man to do it.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "Then what is breathing down there?",
+                "Text": "What\u0027s gone wrong down there?",
                 "Next": "bread",
                 "Effect": "None",
                 "Flag": null,
@@ -316,7 +316,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Show us the seal and stand aside.",
+                "Text": "So what\u0027s the job?",
                 "Next": "bread",
                 "Effect": "None",
                 "Flag": null,
@@ -325,8 +325,8 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "It is done.",
-                "Next": "bread",
+                "Text": "Your basket. Notices and all.",
+                "Next": "done",
                 "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
@@ -346,13 +346,13 @@
           {
             "Id": "bread",
             "Line": {
-              "Text": "Sour wells. Nineteen years of silt. That is all it has ever been. There is bread in the first cellar; I put it there myself.",
-              "VoiceId": "392f73989857bf6b",
-              "Delivery": "warm"
+              "Text": "Sour wells, shaking ground, and wardens who went down and never came up. Clear the traps and the dead so the drains can run. And fetch my basket from the first cellar; it has council notices in it. Unread, please.",
+              "VoiceId": null,
+              "Delivery": null
             },
             "Choices": [
               {
-                "Text": "We\u0027ll bring your basket back.",
+                "Text": "We\u0027ll fetch your basket.",
                 "Next": null,
                 "Effect": "AcceptQuest",
                 "Flag": null,
@@ -361,7 +361,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Keep your crumbs, alderman.",
+                "Text": "Fetch your own basket, alderman.",
                 "Next": null,
                 "Effect": "DeclineQuest",
                 "Flag": null,
@@ -370,7 +370,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Your basket. And the paper folded in it.",
+                "Text": "Your basket. Notices and all.",
                 "Next": "done",
                 "Effect": "TurnIn",
                 "Flag": null,
@@ -384,8 +384,8 @@
           {
             "Id": "done",
             "Line": {
-              "Text": "A counterfoil. An old form. Every house in Dunmarrow has one in a drawer. Go down, inspectors; the council thanks you in writing.",
-              "VoiceId": "a57442cfe88282be",
+              "Text": "You didn\u0027t read them? Don\u0027t answer; I\u0027d rather believe it. Council notices, nothing more, and the council thanks you in writing.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -427,8 +427,8 @@
           {
             "Id": "m1_step",
             "Line": {
-              "Text": "Mind the step, inspectors; it is wet where He breathes out. I am going down ahead of you. I always am.",
-              "VoiceId": "2a95db19929538d4",
+              "Text": "Mind the step, dear, it\u0027s wet. Help me clear the grates; I\u0027m late on my rounds. The water has to go down. It always has to go down.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -465,8 +465,8 @@
           {
             "Id": "m1_who",
             "Line": {
-              "Text": "Maud. Maud Sorrel, from the lane behind the chandler\u0027s. Thirty-eight years I have been coming down here and I have never once been cold.",
-              "VoiceId": "0acf8933cdbf53a4",
+              "Text": "Maud Sorrel, dear. Drain-warden, thirty-eight years. I was on my rounds, and then the water... well, never mind. Wet? I\u0027ve been wetter.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -492,8 +492,8 @@
             "Aside": {
               "Member": "Wren",
               "Line": {
-                "Text": "Thirty-eight years and never cold. The place likes her. That\u0027s not good news.",
-                "VoiceId": "baa92330f014d684",
+                "Text": "She\u0027s soaked through. Wrong.",
+                "VoiceId": null,
                 "Delivery": null
               }
             }
@@ -501,8 +501,8 @@
           {
             "Id": "m1_back",
             "Line": {
-              "Text": "Up? No, dear. Up is where the wells are sour. Down is where the sleep is. You will see; everyone does, in the end.",
-              "VoiceId": "bb60a0becf06b58c",
+              "Text": "Up? Not yet, dear. Thirty-eight years I\u0027ve never missed a round. The wells up top are sour, you know; that\u0027s the grates, packed solid. The water has to go down.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -523,9 +523,9 @@
       "QuestId": null,
       "CastId": "cast_maud",
       "Persona": {
-        "VoiceStyle": "an old woman talking in her sleep: unhurried, kind, faintly amused at the size of everything",
+        "VoiceStyle": "an old workwoman soaked to the skin: unhurried, kind, faintly amused at her own state",
         "DefaultDelivery": "calm",
-        "Voice": null,
+        "Voice": "Gacrux",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -539,7 +539,7 @@
       "Id": "q1_basket",
       "Template": "Recover",
       "Title": "Council Property",
-      "Objective": "Fetch the alderman\u0027s bread-basket up from the first cellar.",
+      "Objective": "Fetch the alderman\u0027s bread-basket, and the council notices in it, up from the first cellar.",
       "Params": {
         "TargetCollective": null,
         "ItemName": "the alderman\u0027s bread-basket",
@@ -557,8 +557,8 @@
       },
       "Lines": {
         "Offer": {
-          "Text": "There is bread in the first cellar. I put it there myself. Bring the basket up when it\u0027s empty; the basket is council property, and I account for everything.",
-          "VoiceId": "d3e12ba68b2ea3bf",
+          "Text": "I took the council notices off the board at the mine head this morning and put them in my bread-basket. Then the orc came up the stair, I ran, and the basket stayed in the first cellar. Bring it back. Don\u0027t read them.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Accept": {
@@ -572,8 +572,8 @@
           "Delivery": null
         },
         "Complete": {
-          "Text": "...and the counterfoil folded in the bottom. That is nothing. An old form. Mind the step on your way down, there\u0027s good inspectors.",
-          "VoiceId": "ba9907f5e58039f3",
+          "Text": "Every notice, and the cloth folded on top. Good. Nothing anyone needs to read. The council thanks you in writing.",
+          "VoiceId": null,
           "Delivery": "weary"
         },
         "Fail": {
@@ -591,8 +591,8 @@
       "Trigger": "RoomEnter",
       "Room": 0,
       "Line": {
-        "Text": "Coats on hooks, buttoned, numbered in the sexton\u0027s hand. The last four hung theirs here too; the tickets are still in the pockets.",
-        "VoiceId": "db295055f3c8fb9d",
+        "Text": "The orc lies dead at the gate, and still his voice comes back up the shaft from far below: \u0027Kill me, hirelings. My foundry will cast me again, bigger.\u0027 He calls himself the Herald.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

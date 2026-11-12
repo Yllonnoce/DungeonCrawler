@@ -5,8 +5,8 @@
   "LayoutHash": 12540576795050868960,
   "Title": "The Vestibule",
   "IntroLine": {
-    "Text": "Moss in the mortar, and the sexton\u0027s lot gone wandering through it. The Vestry walks them back politely, one at a time, and locks the door behind.",
-    "VoiceId": "5c88fde9aedba947",
+    "Text": "These cells hold the drain-wardens who went down and never came up, grey and half-turned, already hard to tell apart. Grisel Thorn\u0027s crew went down first. Get them out while you can.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -148,8 +148,8 @@
       "Total": 6,
       "Trigger": "Chest",
       "Line": {
-        "Text": "The mortar splits at both mouths of the vestibule, and the parish comes out of it still wearing its coats.",
-        "VoiceId": "b6cf42c60ba071c1",
+        "Text": "The mortar splits at both ends of the vestibule, and the grey pack comes through. Some of them were drain-wardens this spring.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -179,8 +179,8 @@
       "Trigger": "RoomEnter",
       "Room": 7,
       "Line": {
-        "Text": "Coats on pegs, nineteen years of them, each with a name stitched inside the collar. Something is wearing the oldest.",
-        "VoiceId": "7bc003140763c45e",
+        "Text": "Freed, the wardens say the traps are new and somebody is building them, and the finished ones go grey and join the packs. Nobody has heard from Old Ulf at the pump works since spring.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -192,12 +192,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Second Station. The sexton\u0027s lot wandered off and we fetched them back. Doors are kept shut for a reason; so are mouths.",
-        "VoiceId": "2c8bebde0fbd7414",
+        "Text": "I am Morg Ashtusk, the Herald, and you killed me at the gate. Here I am anyway. Those are drain-wardens in my bloody cages; the ones I finish go grey and join my packs.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Second Station. The sexton\u0027s lot wandered off and we fetched them back. Doors are kept shut for a reason; so are mouths.",
+        "Text": "I am Morg Ashtusk, the Herald, and you killed me at the gate. Here I am anyway. Those are drain-wardens in my cages; the ones I finish go grey and join my packs.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -209,12 +209,12 @@
       "Trigger": "Capture",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "{prisoner} goes back in the locker. Everything in its place, and a place for everything.",
-        "VoiceId": "2f1f631e87475883",
+        "Text": "{prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{prisoner} goes back in the locker. Everything in its place, and a place for everything.",
+        "Text": "{prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.",
         "VoiceId": null,
         "Delivery": null
       },

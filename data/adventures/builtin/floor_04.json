@@ -5,8 +5,8 @@
   "LayoutHash": 6268430995176379719,
   "Title": "The Chantry",
   "IntroLine": {
-    "Text": "Rotten timber, a green air rising out of the cellars, and somewhere in it a man with a ledger apologising to nobody.",
-    "VoiceId": "28fdca3dd672d0cc",
+    "Text": "Rotten timber, and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -178,8 +178,8 @@
       "Total": 9,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The wall of the crossing gives up its mortar, and out come the parish, still wearing last generation\u0027s coats.",
-        "VoiceId": "90e00120475760d2",
+        "Text": "The crossing wall gives up its mortar and the pack pours through, grey and alike. A few of them still wear wardens\u0027 boots.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -214,13 +214,13 @@
           {
             "Id": "n1",
             "Line": {
-              "Text": "Ah. You. I came down to check the invoice, that\u0027s all, and the sexton\u0027s book has gone and shed itself all over these drifts. Pages everywhere. Most irregular.",
-              "VoiceId": "40208744a3b04433",
+              "Text": "Ah. You. I came down to check progress, that\u0027s all, and found the wardens\u0027 log with its last pages torn out and scattered through these drifts. Council property. I\u0027d like them back.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
               {
-                "Text": "What is in the book, Alderman?",
+                "Text": "What\u0027s in the log?",
                 "Next": "n2",
                 "Effect": "None",
                 "Flag": null,
@@ -238,8 +238,8 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "It is done.",
-                "Next": "n2",
+                "Text": "Your pages, alderman.",
+                "Next": "n3",
                 "Effect": "TurnIn",
                 "Flag": null,
                 "RequiresFlag": null,
@@ -252,8 +252,8 @@
           {
             "Id": "n2",
             "Line": {
-              "Text": "Plumbing inspections. Nineteen years apart, four names a time, and a column at the end that nobody ever filled in. Fetch the pages and I shall explain the column.",
-              "VoiceId": "13082166d19a0111",
+              "Text": "Every clearing of the drains, every season, written down by the wardens for three hundred years. The last three pages are in the drifts. Bring them to me before anyone else reads them.",
+              "VoiceId": null,
               "Delivery": null
             },
             "Choices": [
@@ -277,8 +277,28 @@
               },
               {
                 "Text": "The pages are here, Alderman.",
-                "Next": null,
+                "Next": "n3",
                 "Effect": "TurnIn",
+                "Flag": null,
+                "RequiresFlag": null,
+                "ForbidsFlag": null,
+                "NextIfRefused": null
+              }
+            ],
+            "Aside": null
+          },
+          {
+            "Id": "n3",
+            "Line": {
+              "Text": "Cleared every season for three hundred years. Then this spring: \u0027By the Verger\u0027s order, no one below.\u0027 The church stopped them. Not the council. Good. I mean, how dreadful.",
+              "VoiceId": null,
+              "Delivery": null
+            },
+            "Choices": [
+              {
+                "Text": "Whatever you say, alderman.",
+                "Next": null,
+                "Effect": "Farewell",
                 "Flag": null,
                 "RequiresFlag": null,
                 "ForbidsFlag": null,
@@ -292,9 +312,9 @@
       "QuestId": "q_ledger",
       "CastId": "cast_crane",
       "Persona": {
-        "VoiceStyle": "a plump market-town alderman, chain of office, blusters when cornered, apologises to furniture",
-        "DefaultDelivery": "frantic",
-        "Voice": null,
+        "VoiceStyle": "a plump market-town alderman; bluster over panic, speaks in clauses, invoices and apologies",
+        "DefaultDelivery": "cheerful",
+        "Voice": "Umbriel",
         "IsEmpty": false
       },
       "RequiresFlag": null,
@@ -307,8 +327,8 @@
     {
       "Id": "q_ledger",
       "Template": "Investigate",
-      "Title": "The Sexton\u0027s Ledger",
-      "Objective": "Recover the scattered ledger pages from the drifts and bring them to Crane",
+      "Title": "The Wardens\u0027 Log",
+      "Objective": "Recover the scattered pages of the wardens\u0027 log from the drifts and bring them to Crane",
       "Params": {
         "TargetCollective": null,
         "ItemName": null,
@@ -340,14 +360,14 @@
           "Delivery": null
         },
         "Decline": {
-          "Text": "Quite right. Paper is paper. It is only names.",
-          "VoiceId": "f2e8721759459bbc",
+          "Text": "Quite right. Paper is paper, and nobody reads the old ones.",
+          "VoiceId": null,
           "Delivery": null
         },
         "Complete": {
-          "Text": "Sixteen twelve. Four names. Sixteen thirty-one, four names. And so on, every nineteen years, and not one return date. The column says Rendered. I never asked what it meant.",
-          "VoiceId": "aac3580d74ee1c60",
-          "Delivery": "weary"
+          "Text": "Three hundred years of clearings, and then this spring: \u0027By the Verger\u0027s order, no one below.\u0027 So it was the church. Not the council. What a relief. I mean, what a shame.",
+          "VoiceId": null,
+          "Delivery": null
         },
         "Fail": {
           "Text": "Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.",
@@ -377,12 +397,12 @@
       "Trigger": "FloorEnter",
       "Objective": "toxic",
       "Line": {
-        "Text": "The chantry breathes out. It is only the damp, the gas and six hundred years of parish. Do not stand in the low ground, and do not bleed on the pages.",
-        "VoiceId": "7ae2236a6c9afe67",
+        "Text": "Smell that, hirelings? Standing water, gone rotten, rising out of the cellars. The stairs are at the bottom of it. Do hurry; you\u0027re paid by the floor.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The chantry breathes out. It is only the damp, the gas and six hundred years of parish. Do not stand in the low ground, and do not bleed on the pages.",
+        "Text": "Smell that, hirelings? Standing water, gone rotten, rising out of the cellars. The stairs are at the bottom of it. Do hurry; you\u0027re paid by the floor.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -394,12 +414,12 @@
       "Trigger": "GasThickens",
       "Objective": "toxic",
       "Line": {
-        "Text": "That is Himself breathing out. Do try not to take it personally.",
-        "VoiceId": "f8ebd124f2b6fe65",
+        "Text": "Up to your knees now, you poor sods. The town bought your swords, not your lungs.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That is Himself breathing out. Do try not to take it personally.",
+        "Text": "Up to your knees now, hirelings. The town bought your swords, not your lungs.",
         "VoiceId": null,
         "Delivery": null
       },

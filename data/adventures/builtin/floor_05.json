@@ -5,8 +5,8 @@
   "LayoutHash": 7397697809543818120,
   "Title": "Canon Ludd",
   "IntroLine": {
-    "Text": "Somebody is still saying the office down here, on the hour, to empty pews. Six hundred years of it, and not one amen.",
-    "VoiceId": "b2a1717060af8400",
+    "Text": "Under the chantry runs the first great drain, or it should. Its grate has been packed solid on purpose, and a dead canon stands over it, still saying the office to empty pews.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [
@@ -193,8 +193,8 @@
       "Total": 13,
       "Trigger": "Enter",
       "Line": {
-        "Text": "The charnel wall gives at both seams, and last generation\u0027s coats come out of it walking.",
-        "VoiceId": "cab4603e47c7da68",
+        "Text": "The charnel wall gives at both seams. The church\u0027s dead come out of it walking, and a few greyer things in wardens\u0027 coats among them.",
+        "VoiceId": null,
         "Delivery": null
       }
     }
@@ -203,13 +203,13 @@
     "Name": "Canon Ludd",
     "SignatureOverride": "Slam",
     "IntroLine": {
-      "Text": "He is only doing the liturgy.",
-      "VoiceId": "147a674aa75ba70f",
+      "Text": "I am the Herald\u0027s first lieutenant. He shut this drain, and I keep it shut. Kneel, strangers; the church\u0027s dead have room for you.",
+      "VoiceId": null,
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "The liturgy continues without him. It always has.",
-      "VoiceId": "3e1115e8bea13498",
+      "Text": "Turn the wheel, then. Let the water down to him, and the ground will lie still a while. I was a canon here, once.",
+      "VoiceId": null,
       "Delivery": null
     },
     "HalfLine": null,
@@ -241,8 +241,8 @@
       "Trigger": "BossSeen",
       "Room": null,
       "Line": {
-        "Text": "He raises the censer to a nave of stone benches and no faces, and swings it anyway. The ledge above him is bare of ornament; use it.",
-        "VoiceId": "0b58b7e0ca44700e",
+        "Text": "Canon Ludd, raised from the church\u0027s own dead to guard the drain, swings his censer at empty benches. The ledge above him is bare of ornament; use it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -252,8 +252,8 @@
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "First Station done. The Skin ends here; below the flagstones the stone turns soft, and warm, and begins to breathe.",
-        "VoiceId": "35cfab5e5d3332d4",
+        "Text": "The first drain runs again. Above, the shaking eases for a while. Far below, the orc\u0027s voice: \u0027One drain, hirelings. I choked three more.\u0027",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
