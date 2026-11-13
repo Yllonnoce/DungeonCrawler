@@ -592,7 +592,7 @@
       "Room": 0,
       "Line": {
         "Text": "The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines as his master\u0027s base, and everything down here answers to him.",
-        "VoiceId": null,
+        "VoiceId": "b2464eafe0e98a12",
         "Delivery": null
       },
       "RequiresFlag": null,
