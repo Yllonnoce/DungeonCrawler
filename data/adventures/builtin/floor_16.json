@@ -6,7 +6,7 @@
   "Title": "The Dream Door",
   "IntroLine": {
     "Text": "Blue light runs in the veins of the marble, and the god sleeps close beneath it. Near the foot of the stair, a young sister of Gorm\u0027s church is keeping a lantern lit.",
-    "VoiceId": null,
+    "VoiceId": "79965c492cda2644",
     "Delivery": null
   },
   "Rooms": [
@@ -210,7 +210,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The marble splits along its blue veins and the shades pour through at you, grey and alike, with the stalkers from the other side behind them.",
-        "VoiceId": null,
+        "VoiceId": "94242e909024f8f3",
         "Delivery": null
       }
     }
@@ -246,7 +246,7 @@
             "Id": "t1",
             "Line": {
               "Text": "I found it. My master\u0027s letter to the orc, in his own hand: \u0027The way will be open by midwinter.\u0027 He opened the crypt door to that thing. I want him stopped.",
-              "VoiceId": null,
+              "VoiceId": "3bc0b4d21459d4c2",
               "Delivery": null
             },
             "Choices": [
@@ -284,7 +284,7 @@
             "Id": "t2",
             "Line": {
               "Text": "There are more of his letters in these halls, dropped where the orc\u0027s creatures came through. Bring them to me. Before anyone stops him, I want to know why he did it.",
-              "VoiceId": null,
+              "VoiceId": "e5883968e4a89036",
               "Delivery": null
             },
             "Choices": [
@@ -331,7 +331,7 @@
             "Id": "t3",
             "Line": {
               "Text": "Thank you. Mind the marble where it\u0027s cracked; things come through the cracks down here.",
-              "VoiceId": null,
+              "VoiceId": "d2fc68ab442f5e7f",
               "Delivery": null
             },
             "Choices": [
@@ -351,7 +351,7 @@
             "Id": "t4",
             "Line": {
               "Text": "\u0027You promised the god who comes through will reward the man who opens the door. Forty years Gorm never once answered me.\u0027 That\u0027s why. He wanted a god who answers.",
-              "VoiceId": null,
+              "VoiceId": "15c846b8ac1785c1",
               "Delivery": null
             },
             "Choices": [
@@ -371,7 +371,7 @@
             "Id": "t5",
             "Line": {
               "Text": "Thank you. I\u0027ll take his letters up to the town, so nobody can say it was a lie. I was thorough. I always am.",
-              "VoiceId": null,
+              "VoiceId": "1fd454681e67f391",
               "Delivery": null
             },
             "Choices": [
@@ -414,7 +414,7 @@
             "Id": "m1",
             "Line": {
               "Text": "There you are, dears. Keep the water going down to Gorm; that\u0027s all I want. And here: this came down to me on the water. The Verger\u0027s letter to the orc: \u0027The way will be open by midwinter.\u0027",
-              "VoiceId": null,
+              "VoiceId": "f7af0d36e07d535d",
               "Delivery": null
             },
             "Choices": [
@@ -461,7 +461,7 @@
             "Id": "m2",
             "Line": {
               "Text": "Taken for the rite, dear. His master sent for him, and he went down gladly. The Verger\u0027s the one who opened the crypt door to the orc, and he means to wake the god.",
-              "VoiceId": null,
+              "VoiceId": "9bb7eddd38ffc651",
               "Delivery": null
             },
             "Choices": [
@@ -490,7 +490,7 @@
             "Id": "m3",
             "Line": {
               "Text": "More of his letters, dear, spread through these halls by the water. Bring them to me. The deacon would want to know why his master did it, and so would I.",
-              "VoiceId": null,
+              "VoiceId": "35119e2e53dede5f",
               "Delivery": null
             },
             "Choices": [
@@ -537,7 +537,7 @@
             "Id": "m4",
             "Line": {
               "Text": "\u0027You promised the god who comes through will reward the man who opens the door. Forty years Gorm never once answered me.\u0027 That\u0027s why, dear. He took the first answer that came.",
-              "VoiceId": null,
+              "VoiceId": "484b84642f4f9570",
               "Delivery": null
             },
             "Choices": [
@@ -557,7 +557,7 @@
             "Id": "m5",
             "Line": {
               "Text": "Good. Mind the marble where it\u0027s cracked, dears; things come through the cracks down here.",
-              "VoiceId": null,
+              "VoiceId": "c899d050b276963f",
               "Delivery": null
             },
             "Choices": [
@@ -617,27 +617,27 @@
       "Lines": {
         "Offer": {
           "Text": "More of my master\u0027s letters are lying in these halls. Bring them to me and I\u0027ll read them; I\u0027m thorough. I always am.",
-          "VoiceId": null,
+          "VoiceId": "9fc42e559dab0cd3",
           "Delivery": null
         },
         "Accept": {
           "Text": "Thank you. Mind the marble where it\u0027s cracked; things come through the cracks down here.",
-          "VoiceId": null,
+          "VoiceId": "d2fc68ab442f5e7f",
           "Delivery": null
         },
         "Decline": {
           "Text": "No. Quite right. I\u0027ll look for them myself, slowly.",
-          "VoiceId": null,
+          "VoiceId": "5a17fd3cfbfb5697",
           "Delivery": null
         },
         "Complete": {
           "Text": "His letters, every one. Now I know why he did it.",
-          "VoiceId": null,
+          "VoiceId": "bd55d5a662db8a57",
           "Delivery": null
         },
         "Fail": {
           "Text": "Then I\u0027ll never know why. I\u0027ll have to make do with knowing that he did.",
-          "VoiceId": null,
+          "VoiceId": "0542ae9fa5427dcd",
           "Delivery": null
         }
       },
@@ -671,27 +671,27 @@
       "Lines": {
         "Offer": {
           "Text": "More of the Verger\u0027s letters, dear, wherever the water left them. Bring them to me.",
-          "VoiceId": null,
+          "VoiceId": "fb897bfff51338b0",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Mind the marble where it\u0027s cracked, dears.",
-          "VoiceId": null,
+          "VoiceId": "55a2cb7010707b47",
           "Delivery": null
         },
         "Decline": {
           "Text": "As you like, dear. The water keeps what it\u0027s given.",
-          "VoiceId": null,
+          "VoiceId": "d8fa0431145a3417",
           "Delivery": null
         },
         "Complete": {
           "Text": "All his letters. Now we know why.",
-          "VoiceId": null,
+          "VoiceId": "0242a2319d5f8475",
           "Delivery": null
         },
         "Fail": {
           "Text": "Gone to pulp in the wet, then. No matter, dear. We know what he did.",
-          "VoiceId": null,
+          "VoiceId": "82cbcde9eb561a18",
           "Delivery": null
         }
       },
@@ -705,7 +705,7 @@
       "Room": 5,
       "Line": {
         "Text": "Deacon Tobit stands among the fallen pillars, soaked from the climb down, with a letter in his hand. He has plainly read it more than once.",
-        "VoiceId": null,
+        "VoiceId": "c133c916fa6bcf8a",
         "Delivery": null
       },
       "RequiresFlag": "told_tobit",
@@ -716,7 +716,7 @@
       "Room": 9,
       "Line": {
         "Text": "Maud Sorrel stands in the weeping font with water running from her sleeves, holding a wet letter out to you as if it were nothing much.",
-        "VoiceId": null,
+        "VoiceId": "9fc40d2a31b5f072",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -729,7 +729,7 @@
       "Objective": null,
       "Line": {
         "Text": "Your deacon found my letter from the Verger, hirelings: \u0027The way will be open by midwinter.\u0027 Bloody priests always write it down. The Verger opened the crypt door for me in spring.",
-        "VoiceId": null,
+        "VoiceId": "4f6df10bf0f5f188",
         "Delivery": null
       },
       "CleanLine": {
@@ -746,7 +746,7 @@
       "Objective": null,
       "Line": {
         "Text": "Read my letter from the Verger, hirelings? \u0027The way will be open by midwinter.\u0027 Bloody priests always write it down. The Verger opened the crypt door for me, and now his deacon kneels in his rite.",
-        "VoiceId": null,
+        "VoiceId": "8ffbb3e53e7d18cb",
         "Delivery": null
       },
       "CleanLine": {

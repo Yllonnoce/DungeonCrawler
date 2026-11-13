@@ -6,7 +6,7 @@
   "Title": "The Craw",
   "IntroLine": {
     "Text": "You squeeze into the Craw, where the wardens kept their stores. Bandits have been looting them, paid by the orc to keep the town out, and vermin nest in what they left. The ground lurches as you go.",
-    "VoiceId": null,
+    "VoiceId": "abd1ba6f90ae5a92",
     "Delivery": null
   },
   "Rooms": [
@@ -174,7 +174,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts, the shell roof shivers, and both breaches open at once: the hoard was bait, and the vermin were waiting behind the walls for whoever came to take it.",
-        "VoiceId": null,
+        "VoiceId": "4d4642ab88bf8cb7",
         "Delivery": null
       }
     }
@@ -209,7 +209,7 @@
       "Room": 4,
       "Line": {
         "Text": "Crates broken open and half carted off, some with Master Pellet\u0027s mark on them. On top sits a bandit\u0027s purse full of the orc\u0027s coin: wages for keeping the town out of these stores.",
-        "VoiceId": null,
+        "VoiceId": "929fe8060d588f61",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -220,7 +220,7 @@
       "Room": 5,
       "Line": {
         "Text": "The floor heaves and a boulder beside you splits in two. That is the god turning over below, starved of water and closer to waking.",
-        "VoiceId": null,
+        "VoiceId": "af0860400f3fcbad",
         "Delivery": null
       },
       "RequiresFlag": null,

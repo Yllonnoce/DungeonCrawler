@@ -6,7 +6,7 @@
   "Title": "Mother Nit",
   "IntroLine": {
     "Text": "Under a nest of silk and eggs lies the second great drain, choked solid. Mother Nit has bred her vermin in its standing water all season. Mind the lichen; it burns in slow rings across the floor.",
-    "VoiceId": null,
+    "VoiceId": "d5941b58655e0d1f",
     "Delivery": null
   },
   "Rooms": [
@@ -227,12 +227,12 @@
     "SignatureOverride": "Summon",
     "IntroLine": {
       "Text": "Queen of the Gut\u0027s vermin, set here by the orc to keep the second drain choked. Every egg she lays packs the grate tighter.",
-      "VoiceId": null,
+      "VoiceId": "f42d4095aa5c41c7",
       "Delivery": null
     },
     "DeathLine": {
       "Text": "She falls across the grate the orc gave her to keep, and what is left of her brood scatters into the dark.",
-      "VoiceId": null,
+      "VoiceId": "7fed6e2162ab8512",
       "Delivery": null
     },
     "HalfLine": null,
@@ -265,7 +265,7 @@
       "Room": null,
       "Line": {
         "Text": "Mother Nit, swollen on the standing water, squats on her nest over the drain. She calls her brood to her; cut them down, or they will bury you.",
-        "VoiceId": null,
+        "VoiceId": "e20718dc3aa41ae9",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -276,7 +276,7 @@
       "Room": null,
       "Line": {
         "Text": "Her nest breaks apart and goes down with the water: the second great drain runs. Back up the Gut the standing water drops, the air clears, and above you the shaking eases. Two great drains to go.",
-        "VoiceId": null,
+        "VoiceId": "063f259bf12d6cce",
         "Delivery": null
       },
       "RequiresFlag": null,

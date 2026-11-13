@@ -6,7 +6,7 @@
   "Title": "The Vestibule",
   "IntroLine": {
     "Text": "These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.",
-    "VoiceId": null,
+    "VoiceId": "ea75cf71eb929820",
     "Delivery": null
   },
   "Rooms": [
@@ -149,7 +149,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The mortar splits at both ends of the vestibule, and the grey pack comes at you. Some of them were drain-wardens this spring.",
-        "VoiceId": null,
+        "VoiceId": "4c79bc59d8933c43",
         "Delivery": null
       }
     }
@@ -180,7 +180,7 @@
       "Room": 7,
       "Line": {
         "Text": "Even here you can hear the wardens in the cells calling out: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn\u0027s crew, they say, went down first.",
-        "VoiceId": null,
+        "VoiceId": "9ffc986fae100e09",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -193,7 +193,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my bloody cages, hirelings, and the finished ones join my packs.",
-        "VoiceId": null,
+        "VoiceId": "fdba7830ab61cce8",
         "Delivery": null
       },
       "CleanLine": {
@@ -210,7 +210,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "{prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.",
-        "VoiceId": null,
+        "VoiceId": "82450b38aa20a082",
         "Delivery": null
       },
       "CleanLine": {

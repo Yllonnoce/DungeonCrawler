@@ -6,7 +6,7 @@
   "Title": "The Bellows",
   "IntroLine": {
     "Text": "Red-hot air, and a thump that shakes the floor plates. Ahead, the biggest engine in the works is still running, and under it the third great drain lies choked.",
-    "VoiceId": null,
+    "VoiceId": "13be4a657fa580cf",
     "Delivery": null
   },
   "Rooms": [
@@ -202,7 +202,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall splits along a seam of soot and the cinders pour out at you, burning, with the big ones stooping behind. They were Dunmarrow\u0027s, once.",
-        "VoiceId": null,
+        "VoiceId": "cf5586e6c8346539",
         "Delivery": null
       }
     }
@@ -212,12 +212,12 @@
     "SignatureOverride": "Charge",
     "IntroLine": {
       "Text": "The great engine of the pump works, which pushed the water down the third drain for three hundred years. The orc set it to pouring his minions instead.",
-      "VoiceId": null,
+      "VoiceId": "4ab8c71eb1c17a70",
       "Delivery": null
     },
     "DeathLine": {
       "Text": "Its last stroke comes down on an empty ladle, and the orc\u0027s great engine does not lift again.",
-      "VoiceId": null,
+      "VoiceId": "04003fa0cf3ef8f6",
       "Delivery": null
     },
     "HalfLine": null,
@@ -250,7 +250,7 @@
       "Room": null,
       "Line": {
         "Text": "The Bellows heaves over the choked drain, and fresh iron drops hissing from its ladles to come at you. Stop the engine and the drain can run.",
-        "VoiceId": null,
+        "VoiceId": "d6fb2a43a2b42073",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -261,7 +261,7 @@
       "Room": null,
       "Line": {
         "Text": "You turn the sluice wheel under the dead engine, and the third great drain runs. The heat goes out of the works, the shaking above you eases, and the god drinks. One great drain left.",
-        "VoiceId": null,
+        "VoiceId": "a5ac23e0088ec736",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -274,7 +274,7 @@
       "Objective": null,
       "Line": {
         "Text": "Three drains, hirelings. Count your bloody wages. My foundry finished me before you broke it: I am whole again, larger, and waiting for you at the last drain.",
-        "VoiceId": null,
+        "VoiceId": "c6aa256f9d5d48b4",
         "Delivery": null
       },
       "CleanLine": {

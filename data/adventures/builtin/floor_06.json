@@ -6,7 +6,7 @@
   "Title": "The Swallow",
   "IntroLine": {
     "Text": "You wade into the Swallow. The first drain runs, but the drains below are still choked, so the water backs up here, knee-deep and sour, and the god starves. Ahead, a miner pulls wardens\u0027 tools from the muck.",
-    "VoiceId": null,
+    "VoiceId": "c80981798c4bdf3d",
     "Delivery": null
   },
   "Rooms": [
@@ -206,7 +206,7 @@
             "Id": "m6_dry",
             "Line": {
               "Text": "Soaked through and cold, dear, and no matter. Keep the water going down to Gorm. He is thirsty. Thirty-eight years I kept it moving, and now it stands here going sour.",
-              "VoiceId": null,
+              "VoiceId": "443c56824fb52097",
               "Delivery": null
             },
             "Choices": [
@@ -244,7 +244,7 @@
             "Id": "m6_ahead",
             "Line": {
               "Text": "The drains under us are choked, dear, packed solid like the grates up top, and not by accident. So the water backs up here and the god goes without. Clear them and it runs down to him again.",
-              "VoiceId": null,
+              "VoiceId": "4ae4027043655785",
               "Delivery": null
             },
             "Choices": [
@@ -273,7 +273,7 @@
             "Id": "m6_tamsin",
             "Line": {
               "Text": "Tamsin Rook, dear. Good miner. She came down after the wardens\u0027 tools, and her partner Jory went into this water ahead of her and hasn\u0027t come up. Help her look. The water won\u0027t give him back by itself.",
-              "VoiceId": null,
+              "VoiceId": "7f6a16e994f357bc",
               "Delivery": null
             },
             "Choices": [

@@ -6,7 +6,7 @@
   "Title": "The Mould Room",
   "IntroLine": {
     "Text": "Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.",
-    "VoiceId": null,
+    "VoiceId": "8e58c28886e72b99",
     "Delivery": null
   },
   "Rooms": [
@@ -174,7 +174,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The wall behind the shelves gives way and the cinders pour through, grey and smouldering: townsfolk the orc finished turning.",
-        "VoiceId": null,
+        "VoiceId": "090bc06b7cf3345f",
         "Delivery": null
       }
     }
@@ -248,7 +248,7 @@
             "Id": "u2",
             "Line": {
               "Text": "Tools, lad. Plates, springs, hinges, great iron limbs, all for my customer. My eyes can\u0027t read the patterns any more. Fetch me three off the shelves and I\u0027ll name them under the lamp.",
-              "VoiceId": null,
+              "VoiceId": "61dd350e373b1d8c",
               "Delivery": null
             },
             "Choices": [
@@ -277,7 +277,7 @@
             "Id": "u3",
             "Line": {
               "Text": "Carry them flat. Tip one and the sand cracks, and a cracked mould pours crooked.",
-              "VoiceId": null,
+              "VoiceId": "7293313ee3584331",
               "Delivery": null
             },
             "Choices": [
@@ -304,7 +304,7 @@
               "Member": "Sable",
               "Line": {
                 "Text": "Flat, darling? I once carried a duke\u0027s mirror down a drainpipe.",
-                "VoiceId": null,
+                "VoiceId": "a4e65712ccddd436",
                 "Delivery": null
               }
             }
@@ -313,7 +313,7 @@
             "Id": "u4",
             "Line": {
               "Text": "That\u0027s a crushing wall. That\u0027s a spike bed. That\u0027s an arm off one of those iron brutes. And the big one by the stair, the last I poured, is the orc himself, larger. I called every one good work.",
-              "VoiceId": null,
+              "VoiceId": "8d47bc48affbc7a8",
               "Delivery": null
             },
             "Choices": [
@@ -342,7 +342,7 @@
             "Id": "u5",
             "Line": {
               "Text": "No excuses. I took the gold and never once asked what it was for. Help me break them, every mould on these shelves, and the orc\u0027s first.",
-              "VoiceId": null,
+              "VoiceId": "eb10edf0e07a5a04",
               "Delivery": null
             },
             "Choices": [
@@ -371,7 +371,7 @@
             "Id": "u6",
             "Line": {
               "Text": "Oskar saw the whole drawings; I only ever saw the parts. If that lad kept quiet, it was the orc made him. Don\u0027t you blame him.",
-              "VoiceId": null,
+              "VoiceId": "ec8aa00ae8f5bc8c",
               "Delivery": null
             },
             "Choices": [
@@ -431,12 +431,12 @@
       "Lines": {
         "Offer": {
           "Text": "Three patterns off the shelves, that\u0027s all. The hall, the hole behind it, and the one they keep by the stair. Don\u0027t drop them; a cracked mould pours crooked.",
-          "VoiceId": null,
+          "VoiceId": "37cfeb69ff45f948",
           "Delivery": null
         },
         "Accept": {
           "Text": "Good. Flat, mind, and keep your thumbs out of the sand.",
-          "VoiceId": null,
+          "VoiceId": "37c58a6cc6e02664",
           "Delivery": null
         },
         "Decline": {
@@ -446,12 +446,12 @@
         },
         "Complete": {
           "Text": "A crushing wall. A spike bed. The orc himself, larger. I poured them all. Help me break them.",
-          "VoiceId": null,
+          "VoiceId": "2e45f1841bc6dd22",
           "Delivery": null
         },
         "Fail": {
           "Text": "Left them lying, did you. Well. There\u0027s plenty more on the shelves.",
-          "VoiceId": null,
+          "VoiceId": "4abafe6564e2a444",
           "Delivery": null
         }
       },
@@ -465,7 +465,7 @@
       "Room": 4,
       "Line": {
         "Text": "Up close, the moulds on these shelves show what they are for: the plates of a crushing wall, the points of a spike bed, the limbs of the iron brutes.",
-        "VoiceId": null,
+        "VoiceId": "a0231ad3faae5da4",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -476,7 +476,7 @@
       "Room": 2,
       "Line": {
         "Text": "By the stair stands the biggest mould in the works, taller than two men: the orc\u0027s own shape, larger than the body you killed at the gate. This is where he was poured again.",
-        "VoiceId": null,
+        "VoiceId": "2f6958194dbca198",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -489,7 +489,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "More of the town in my cages, hirelings, and my old founder minding his shelves next door. Free them if you like. He won\u0027t look up; he never does.",
-        "VoiceId": null,
+        "VoiceId": "06cf4ce9fc3132f0",
         "Delivery": null
       },
       "CleanLine": {
@@ -506,7 +506,7 @@
       "Objective": null,
       "Line": {
         "Text": "So now you\u0027ve seen my shelves, hirelings: the walls, the spikes, the iron, all mine. My founder poured every one with his bad eyes, and the big mould by the stair is me.",
-        "VoiceId": null,
+        "VoiceId": "e62c4d7fe1d1c24e",
         "Delivery": null
       },
       "CleanLine": {
@@ -523,7 +523,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "So my cages stand empty. Now ask my founder\u0027s lad why he kept his bloody mouth shut while the old man poured my iron. I said I\u0027d break the old man\u0027s neck if the lad talked.",
-        "VoiceId": null,
+        "VoiceId": "0f25d93a7ebe151c",
         "Delivery": null
       },
       "CleanLine": {

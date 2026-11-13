@@ -6,7 +6,7 @@
   "Title": "The Quench",
   "IntroLine": {
     "Text": "Black water stands knee-deep over the quench grates, where the orc\u0027s iron is cooled. A churchman\u0027s robes float against a grate, and the stairs lie behind gates that move.",
-    "VoiceId": null,
+    "VoiceId": "14b533517ef9037c",
     "Delivery": null
   },
   "Rooms": [
@@ -279,7 +279,7 @@
             "Id": "tob_a",
             "Line": {
               "Text": "I followed you down; I had to know. Those are my master\u0027s vestments in the water, thrown off like rags. Tell me plainly: did the Verger do this to the town?",
-              "VoiceId": null,
+              "VoiceId": "3eeb5e61d846bc8c",
               "Delivery": null
             },
             "Choices": [
@@ -326,7 +326,7 @@
             "Id": "tob_b",
             "Line": {
               "Text": "Then I won\u0027t accuse him without proof, and I mean to be thorough. I\u0027ve written down all I\u0027ve found in my psalter, and I dropped it in the font room when the cinders came. Will you fetch it?",
-              "VoiceId": null,
+              "VoiceId": "6239b4512acc6250",
               "Delivery": null
             },
             "Choices": [
@@ -355,7 +355,7 @@
             "Id": "tob_c",
             "Line": {
               "Text": "Thank you. It\u0027s by the font, where the wall broke open. The cinders came out of the breach and I ran. Mind them.",
-              "VoiceId": null,
+              "VoiceId": "8bca491041e07d1d",
               "Delivery": null
             },
             "Choices": [
@@ -384,7 +384,7 @@
             "Id": "tob_d",
             "Line": {
               "Text": "My psalter. I\u0027ll write it all down: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I\u0027ll find it. I\u0027m thorough. I always am.",
-              "VoiceId": null,
+              "VoiceId": "cd925e38c64a99d0",
               "Delivery": null
             },
             "Choices": [
@@ -427,7 +427,7 @@
             "Id": "bet_a",
             "Line": {
               "Text": "You\u0027re here too! Those are my master\u0027s vestments in the water. He\u0027s alive, though; he\u0027s sent for me. The orc holds him prisoner, doesn\u0027t it? Tell me true.",
-              "VoiceId": null,
+              "VoiceId": "144a18f1c97d8926",
               "Delivery": null
             },
             "Choices": [
@@ -456,7 +456,7 @@
             "Id": "bet_b",
             "Line": {
               "Text": "A note came to me at the church, in his own hand: \u0027Come below and help me with a rite that will save the town.\u0027 His escort waits for me by the grate. I\u0027m going to him.",
-              "VoiceId": null,
+              "VoiceId": "48a0b72d226024a0",
               "Delivery": null
             },
             "Choices": [
@@ -525,7 +525,7 @@
       "Lines": {
         "Offer": {
           "Text": "Small black book, water-swollen, dropped by the font where the wall is broken. Everything I\u0027ve found is written in it, in my own bad hand.",
-          "VoiceId": null,
+          "VoiceId": "f982915c9c1b22be",
           "Delivery": null
         },
         "Accept": {
@@ -535,17 +535,17 @@
         },
         "Decline": {
           "Text": "No. Quite right. I dropped it; I should fetch it. I only hoped you\u0027d be quicker.",
-          "VoiceId": null,
+          "VoiceId": "9c466dcd096420fa",
           "Delivery": null
         },
         "Complete": {
           "Text": "My psalter. I\u0027ll write the vestments in, and then I\u0027ll find the rest in his own hand.",
-          "VoiceId": null,
+          "VoiceId": "13b03ab0f8856e3a",
           "Delivery": null
         },
         "Fail": {
           "Text": "Then it stays in the water, and I start again from memory. I have a good memory.",
-          "VoiceId": null,
+          "VoiceId": "5336fd598875dd17",
           "Delivery": null
         }
       },
@@ -575,27 +575,27 @@
       "Lines": {
         "Offer": {
           "Text": "He\u0027s sent for me. A rite to save the town, in his own hand. I\u0027m going to him.",
-          "VoiceId": null,
+          "VoiceId": "82f929fe3c7fdcd2",
           "Delivery": null
         },
         "Accept": {
           "Text": "I\u0027m going to him, and you won\u0027t stop me. Those are his escort; don\u0027t follow.",
-          "VoiceId": null,
+          "VoiceId": "04e67551431740fe",
           "Delivery": null
         },
         "Decline": {
           "Text": "Thank you. Pray for me, if you pray.",
-          "VoiceId": null,
+          "VoiceId": "78b14b9573aa4d94",
           "Delivery": null
         },
         "Complete": {
           "Text": "His escort lies in the water. The deacon is gone on down to his master.",
-          "VoiceId": null,
+          "VoiceId": "65c0c3d0160a0631",
           "Delivery": null
         },
         "Fail": {
           "Text": "I\u0027m going to him. Don\u0027t follow.",
-          "VoiceId": null,
+          "VoiceId": "816113c9dbaa15f5",
           "Delivery": null
         }
       },
@@ -609,7 +609,7 @@
       "Room": 8,
       "Line": {
         "Text": "Church vestments float against the grate, black and gold, thrown off in the water: the Verger\u0027s. Beside them a young deacon stands soaked to the waist.",
-        "VoiceId": null,
+        "VoiceId": "de007654aad121dc",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -620,7 +620,7 @@
       "Room": null,
       "Line": {
         "Text": "The orc\u0027s escort lies broken in the water, and the deacon is not among them. He ran on down to his master\u0027s summons.",
-        "VoiceId": null,
+        "VoiceId": "3714fdad79c935d8",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -633,7 +633,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Your deacon is down here too, hirelings, in my water, fishing out his master\u0027s robes. The stairs are behind my gates; pull the bloody levers and guess.",
-        "VoiceId": null,
+        "VoiceId": "85a44509b34b7159",
         "Delivery": null
       },
       "CleanLine": {
@@ -650,7 +650,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Wrong lever. I built these gates to fool better heads than yours, and they\u0027re doing it for free.",
-        "VoiceId": null,
+        "VoiceId": "7048511c5055edd9",
         "Delivery": null
       },
       "CleanLine": {
@@ -667,7 +667,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Wrong again, hirelings. The town pays you by the floor, not by the lever.",
-        "VoiceId": null,
+        "VoiceId": "365739fd6bf290bd",
         "Delivery": null
       },
       "CleanLine": {
@@ -684,7 +684,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Feel that? My gates have moved. Did you think I\u0027d leave the way down standing still for hired help?",
-        "VoiceId": null,
+        "VoiceId": "7a61768369b2b670",
         "Delivery": null
       },
       "CleanLine": {

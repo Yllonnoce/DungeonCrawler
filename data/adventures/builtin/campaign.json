@@ -191,7 +191,7 @@
       "BossSignature": "Slam",
       "EnterLine": {
         "Text": "The lychgate opens on the church\u0027s crypts, and the crypts on the mines. Dunmarrow\u0027s dead are up and walking, raised to keep you from the drains below. The Skin.",
-        "VoiceId": null,
+        "VoiceId": "17b988e0d34cf9bd",
         "Delivery": null
       }
     },
@@ -203,7 +203,7 @@
       "BossSignature": "Summon",
       "EnterLine": {
         "Text": "Below the church the water stands. It should be running down to the god, but the drains beneath it are choked, so it sits here and goes sour. The Gut.",
-        "VoiceId": null,
+        "VoiceId": "ec83fabc960e785a",
         "Delivery": null
       }
     },
@@ -215,7 +215,7 @@
       "BossSignature": "Charge",
       "EnterLine": {
         "Text": "Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. The Herald has taught it to cast iron instead. The Heart.",
-        "VoiceId": null,
+        "VoiceId": "baa44bd0e7b3216f",
         "Delivery": null
       }
     },
@@ -227,7 +227,7 @@
       "BossSignature": "Volley",
       "EnterLine": {
         "Text": "This close to the sleeping god, the dream wears thin. It is the only door between this world and the Sleepless, and things from the other side are pressing through. The Dream.",
-        "VoiceId": null,
+        "VoiceId": "22bd984949183d4a",
         "Delivery": null
       }
     }
@@ -750,7 +750,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "One less between us and the drains.",
-            "VoiceId": null,
+            "VoiceId": "ac540b1b4099d12d",
             "Delivery": ""
           }
         },
@@ -830,7 +830,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Thirty years of sergeants taught me that trick.",
-            "VoiceId": null,
+            "VoiceId": "fd43f4fe81ffcf06",
             "Delivery": ""
           }
         },
@@ -854,7 +854,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Drains, they said. Nobody mentioned that.",
-            "VoiceId": null,
+            "VoiceId": "0696c29c217fd27f",
             "Delivery": ""
           }
         },
@@ -1318,7 +1318,7 @@
           "Trigger": "Travel",
           "Line": {
             "Text": "At this rate the orc dies of old age before we reach him.",
-            "VoiceId": null,
+            "VoiceId": "2314924d86154a87",
             "Delivery": "weary"
           }
         },
@@ -2755,7 +2755,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Silver. Call it an advance on the advance.",
-            "VoiceId": null,
+            "VoiceId": "6c385a303e155db3",
             "Delivery": "sly"
           }
         },
@@ -2867,7 +2867,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "Don\u0027t leave me down here. I\u0027m worth far more alive.",
-            "VoiceId": null,
+            "VoiceId": "d04a8f7233dd9e78",
             "Delivery": "pleading"
           }
         },
@@ -3251,7 +3251,7 @@
           "Trigger": "Dance",
           "Line": {
             "Text": "First dance is free, darlings. The encore goes on the alderman\u0027s bill.",
-            "VoiceId": null,
+            "VoiceId": "610dc21da7bb444f",
             "Delivery": "cheerful"
           }
         },
@@ -4864,7 +4864,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "I\u0027m learning these tunnels. That frightens me.",
-            "VoiceId": null,
+            "VoiceId": "e37f9411f829d152",
             "Delivery": ""
           }
         },
@@ -4896,7 +4896,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "Ground\u0027s shaking. Not from that one.",
-            "VoiceId": null,
+            "VoiceId": "54fc69e0ec580565",
             "Delivery": "whisper"
           }
         },
@@ -4968,7 +4968,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Alive, and still owed every penny.",
-            "VoiceId": null,
+            "VoiceId": "24a8808e519750c8",
             "Delivery": ""
           }
         },
@@ -5208,7 +5208,7 @@
           "Trigger": "Dance",
           "Line": {
             "Text": "Don\u0027t tell the trees.",
-            "VoiceId": null,
+            "VoiceId": "a84f603aa8bebf4a",
             "Delivery": "cheerful"
           }
         },
@@ -5216,7 +5216,7 @@
           "Trigger": "Dance",
           "Line": {
             "Text": "Four thousand bricks. One dance. Fair.",
-            "VoiceId": null,
+            "VoiceId": "963db5b29e17c9ac",
             "Delivery": "cheerful"
           }
         },
@@ -6733,7 +6733,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "One fewer obstruction. The drains, I suspect, approve.",
-            "VoiceId": null,
+            "VoiceId": "7edee3e180e7d882",
             "Delivery": ""
           }
         },
@@ -6749,7 +6749,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "That one had a soul once. Pity.",
-            "VoiceId": null,
+            "VoiceId": "9fe037764183eefd",
             "Delivery": ""
           }
         },
@@ -6789,7 +6789,7 @@
           "Trigger": "Loot",
           "Line": {
             "Text": "Council paper, and still legible. Unprecedented.",
-            "VoiceId": null,
+            "VoiceId": "d301dcb1b75c032c",
             "Delivery": ""
           }
         },
@@ -6821,7 +6821,7 @@
           "Trigger": "LevelUp",
           "Line": {
             "Text": "Enlightenment, acquired in a drain. Note the irony.",
-            "VoiceId": null,
+            "VoiceId": "9e61a47a2d3c7f8a",
             "Delivery": ""
           }
         },
@@ -6829,7 +6829,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "A specimen with opinions. Keep it off me.",
-            "VoiceId": null,
+            "VoiceId": "e66f40d9df3e6b3d",
             "Delivery": ""
           }
         },
@@ -6845,7 +6845,7 @@
           "Trigger": "BossSeen",
           "Line": {
             "Text": "A matter of drains, we were told. Observe the matter of drains.",
-            "VoiceId": null,
+            "VoiceId": "c5e1282638b5be01",
             "Delivery": ""
           }
         },
@@ -6885,7 +6885,7 @@
           "Trigger": "Downed",
           "Line": {
             "Text": "He dreams. I can hear it from here. Thirsty, mostly.",
-            "VoiceId": null,
+            "VoiceId": "bfd307bebe8131c8",
             "Delivery": "whisper"
           }
         },
@@ -6917,7 +6917,7 @@
           "Trigger": "Revived",
           "Line": {
             "Text": "Upright again. The far side was poorly lit and smelt of orc.",
-            "VoiceId": null,
+            "VoiceId": "72caffc44a365fd0",
             "Delivery": ""
           }
         },
@@ -7141,7 +7141,7 @@
           "Trigger": "Dance",
           "Line": {
             "Text": "Footnote seventeen: the author danced. Reviewers were unkind.",
-            "VoiceId": null,
+            "VoiceId": "473d8f57c0e0f75a",
             "Delivery": "cheerful"
           }
         },
@@ -7157,7 +7157,7 @@
           "Trigger": "Dance",
           "Line": {
             "Text": "Gerald, avert your eyes. This is not for puddles.",
-            "VoiceId": null,
+            "VoiceId": "9b1f0c07059b3614",
             "Delivery": "cheerful"
           }
         },
@@ -8751,7 +8751,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Ha! Went down like a rotten prop. That\u0027s a share, that is.",
-            "VoiceId": null,
+            "VoiceId": "19f52a3021ef5183",
             "Delivery": "shout"
           }
         },
@@ -8767,7 +8767,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "Hit him like a hard seam. He cracked first.",
-            "VoiceId": null,
+            "VoiceId": "a23ca95b0efd50f6",
             "Delivery": "shout"
           }
         },
@@ -8897,7 +8897,7 @@
           "Trigger": "Kill",
           "Line": {
             "Text": "The Verger taught me the prayers for the dead. I say them anyway.",
-            "VoiceId": null,
+            "VoiceId": "c573d64f7a52342d",
             "Delivery": "shout"
           }
         },
@@ -11425,7 +11425,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "Remind me. What\u0027s the job?",
-            "VoiceId": null,
+            "VoiceId": "a6f767823acaafbc",
             "Delivery": "weary"
           }
         },
@@ -11433,7 +11433,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Clear the drains. Water runs. Town pays.",
-            "VoiceId": null,
+            "VoiceId": "f6a5f309fcff2718",
             "Delivery": "weary"
           }
         },
@@ -11441,7 +11441,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "And whatever\u0027s living in the drains?",
-            "VoiceId": null,
+            "VoiceId": "b2cf98dbe260a640",
             "Delivery": "weary"
           }
         },
@@ -11449,7 +11449,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Costs extra.",
-            "VoiceId": null,
+            "VoiceId": "927debac726682cd",
             "Delivery": "weary"
           }
         }
@@ -11470,7 +11470,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "A god asleep under a market town. I may get a monograph out of this.",
-            "VoiceId": null,
+            "VoiceId": "ab43103576f081d9",
             "Delivery": "weary"
           }
         },
@@ -11478,7 +11478,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Wrong.",
-            "VoiceId": null,
+            "VoiceId": "6f0476b5d12eb711",
             "Delivery": "weary"
           }
         },
@@ -11486,7 +11486,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "The monograph?",
-            "VoiceId": null,
+            "VoiceId": "2dd2d9606b35edc8",
             "Delivery": "weary"
           }
         },
@@ -11494,7 +11494,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "The place.",
-            "VoiceId": null,
+            "VoiceId": "065c37c709fd3249",
             "Delivery": "weary"
           }
         }
@@ -11515,7 +11515,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Clear the drains and the wells come sweet again. That\u0027s the theory.",
-            "VoiceId": null,
+            "VoiceId": "32566ddb6e61a052",
             "Delivery": "weary"
           }
         },
@@ -11523,7 +11523,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "And the pay?",
-            "VoiceId": null,
+            "VoiceId": "4a9d03fc5ff02a83",
             "Delivery": "weary"
           }
         },
@@ -11531,7 +11531,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "That\u0027s the practice.",
-            "VoiceId": null,
+            "VoiceId": "e6168673f90f5830",
             "Delivery": "weary"
           }
         }
@@ -11552,7 +11552,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Water\u0027s gone sour.",
-            "VoiceId": null,
+            "VoiceId": "b70a2deec0fdcbea",
             "Delivery": "weary"
           }
         },
@@ -11560,7 +11560,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "Lovely. The pay\u0027s the same, the water\u0027s worse, and I\u0027m still here. Why am I still here?",
-            "VoiceId": null,
+            "VoiceId": "2cd921c7e2d84f7e",
             "Delivery": "weary"
           }
         },
@@ -11568,7 +11568,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "You like us.",
-            "VoiceId": null,
+            "VoiceId": "90aa26a334d3ac49",
             "Delivery": "weary"
           }
         },
@@ -11576,7 +11576,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "I like your purses. Different thing entirely.",
-            "VoiceId": null,
+            "VoiceId": "582cfd9c5454891d",
             "Delivery": "weary"
           }
         }
@@ -11597,7 +11597,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "The grey ones in the packs. The freed wardens said the finished ones join them.",
-            "VoiceId": null,
+            "VoiceId": "80b0a9d388e81787",
             "Delivery": "weary"
           }
         },
@@ -11605,7 +11605,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "I heard.",
-            "VoiceId": null,
+            "VoiceId": "cd6383be98c0c8ef",
             "Delivery": "weary"
           }
         },
@@ -11613,7 +11613,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "So, statistically, some of what we have killed used to clear these drains.",
-            "VoiceId": null,
+            "VoiceId": "d4cec0b24ce5bead",
             "Delivery": "weary"
           }
         },
@@ -11621,7 +11621,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "I\u0027m counting them. Somebody should.",
-            "VoiceId": null,
+            "VoiceId": "831e4742e7804473",
             "Delivery": "weary"
           }
         }
@@ -11642,7 +11642,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "We forgave that warden awfully quick, Brand.",
-            "VoiceId": null,
+            "VoiceId": "f91a2592493c2524",
             "Delivery": "weary"
           }
         },
@@ -11650,7 +11650,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Everybody runs once. Only counts if you stay gone.",
-            "VoiceId": null,
+            "VoiceId": "d8177e2ad4874d61",
             "Delivery": "weary"
           }
         },
@@ -11658,7 +11658,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "Is that soldier\u0027s wisdom?",
-            "VoiceId": null,
+            "VoiceId": "e7e9074ca050fa64",
             "Delivery": "weary"
           }
         },
@@ -11666,7 +11666,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Corporal\u0027s. Sergeants don\u0027t run. They send corporals.",
-            "VoiceId": null,
+            "VoiceId": "98cc8a918a25bdf8",
             "Delivery": "weary"
           }
         }
@@ -11687,7 +11687,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Fields up top. They need this water.",
-            "VoiceId": null,
+            "VoiceId": "d5bbb5e3fbf989ec",
             "Delivery": "weary"
           }
         },
@@ -11695,7 +11695,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Since when do you care about a town?",
-            "VoiceId": null,
+            "VoiceId": "9d82c2f9f9895e01",
             "Delivery": "weary"
           }
         },
@@ -11703,7 +11703,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Don\u0027t. Care about wheat.",
-            "VoiceId": null,
+            "VoiceId": "2069ceff2de547d2",
             "Delivery": "weary"
           }
         },
@@ -11711,7 +11711,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Fine. Shields up for the wheat.",
-            "VoiceId": null,
+            "VoiceId": "d347506c4cebb499",
             "Delivery": "weary"
           }
         }
@@ -11732,7 +11732,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "That mould by the stair back there was the orc himself, poured larger. It wants smashing.",
-            "VoiceId": null,
+            "VoiceId": "5ba50d952d943f3e",
             "Delivery": "weary"
           }
         },
@@ -11740,7 +11740,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Foehammer\u0027d want first swing.",
-            "VoiceId": null,
+            "VoiceId": "29febe0240756fc4",
             "Delivery": "weary"
           }
         },
@@ -11748,7 +11748,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "And Ulf\u0027s journeyman saw the whole drawings, and said nothing.",
-            "VoiceId": null,
+            "VoiceId": "a9f2da7a6c96a3ef",
             "Delivery": "weary"
           }
         },
@@ -11756,7 +11756,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "The orc threatened the old man. You keep quiet for your own.",
-            "VoiceId": null,
+            "VoiceId": "915fefc955916323",
             "Delivery": "weary"
           }
         }
@@ -11777,7 +11777,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Big engine.",
-            "VoiceId": null,
+            "VoiceId": "6b6f88450804d083",
             "Delivery": "weary"
           }
         },
@@ -11785,7 +11785,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "The Bellows. Oskar would tell you its joints are where the old iron is thinnest. I concur, which he would find tiresome.",
-            "VoiceId": null,
+            "VoiceId": "de7bd2336102859f",
             "Delivery": "weary"
           }
         },
@@ -11793,7 +11793,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Ladles?",
-            "VoiceId": null,
+            "VoiceId": "1417b676059e8ce7",
             "Delivery": "weary"
           }
         },
@@ -11801,7 +11801,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "What drops off them stays soft until it cools. Strike before it sets, I would suggest.",
-            "VoiceId": null,
+            "VoiceId": "ba053769bcf62543",
             "Delivery": "weary"
           }
         }
@@ -11822,7 +11822,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "I came down here for a footnote.",
-            "VoiceId": null,
+            "VoiceId": "4a4291c582cf276c",
             "Delivery": "weary"
           }
         },
@@ -11830,7 +11830,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "And now?",
-            "VoiceId": null,
+            "VoiceId": "1d0c1f82e22f2225",
             "Delivery": "weary"
           }
         },
@@ -11838,7 +11838,7 @@
           "Member": "Ilex",
           "Line": {
             "Text": "A god whose sleep holds a door shut is not a footnote. It is, at minimum, a chapter. Walk faster.",
-            "VoiceId": null,
+            "VoiceId": "91e804c342016798",
             "Delivery": "weary"
           }
         }
@@ -11859,7 +11859,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "I\u0027ve done the sums. This town can\u0027t pay for the last floor.",
-            "VoiceId": null,
+            "VoiceId": "88bf603dbcab68a3",
             "Delivery": "weary"
           }
         },
@@ -11867,7 +11867,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "So go home.",
-            "VoiceId": null,
+            "VoiceId": "49b056e3fd31837f",
             "Delivery": "weary"
           }
         },
@@ -11875,7 +11875,7 @@
           "Member": "Sable",
           "Line": {
             "Text": "I like the town. Tell anyone and I\u0027ll have your boots.",
-            "VoiceId": null,
+            "VoiceId": "78302f9ae0c467f0",
             "Delivery": "weary"
           }
         },
@@ -11883,7 +11883,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Wouldn\u0027t fit you.",
-            "VoiceId": null,
+            "VoiceId": "09a1ec6426cc2fdb",
             "Delivery": "weary"
           }
         }
@@ -11904,7 +11904,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "We told that deacon his god was starving.",
-            "VoiceId": null,
+            "VoiceId": "07f46b339ae83a61",
             "Delivery": "weary"
           }
         },
@@ -11912,7 +11912,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "We did.",
-            "VoiceId": null,
+            "VoiceId": "44a0b4dc9ec25eda",
             "Delivery": "weary"
           }
         },
@@ -11920,7 +11920,7 @@
           "Member": "Brand",
           "Line": {
             "Text": "Lad came down after us for it. Wanted proof of his own master.",
-            "VoiceId": null,
+            "VoiceId": "d76e19de612895a8",
             "Delivery": "weary"
           }
         },
@@ -11928,7 +11928,7 @@
           "Member": "Wren",
           "Line": {
             "Text": "Good.",
-            "VoiceId": null,
+            "VoiceId": "27b7406bc1e5be72",
             "Delivery": "weary"
           }
         }
@@ -11949,7 +11949,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "Floor {floor}, and my cages are full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.",
-        "VoiceId": null,
+        "VoiceId": "bb5604b20bcef438",
         "Delivery": null
       },
       "CleanLine": {
@@ -11966,7 +11966,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Floor {floor} stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.",
-        "VoiceId": null,
+        "VoiceId": "85d5853e4a7246b6",
         "Delivery": null
       },
       "CleanLine": {
@@ -11983,7 +11983,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "Floor {floor}. Someone is at work at the shrine, {party}, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the bloody way if you like.",
-        "VoiceId": null,
+        "VoiceId": "bfdaae9f01e3e3ff",
         "Delivery": null
       },
       "CleanLine": {
@@ -12000,7 +12000,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
-        "VoiceId": null,
+        "VoiceId": "d54648dd630bfa71",
         "Delivery": null
       },
       "CleanLine": {
@@ -12017,7 +12017,7 @@
       "Objective": null,
       "Line": {
         "Text": "Caught. Back to the cages, and back to turning. You can\u0027t hold on to anything, can you?",
-        "VoiceId": null,
+        "VoiceId": "8a642b5d0c727509",
         "Delivery": null
       },
       "CleanLine": {
@@ -12034,7 +12034,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "{prisoner} goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do bloody better than that.",
-        "VoiceId": null,
+        "VoiceId": "d60b866e378f3007",
         "Delivery": null
       },
       "CleanLine": {
@@ -12051,7 +12051,7 @@
       "Objective": null,
       "Line": {
         "Text": "One out of my cages. Enjoy it. I have more cages than you have time.",
-        "VoiceId": null,
+        "VoiceId": "5d09b6123978a35b",
         "Delivery": null
       },
       "CleanLine": {
@@ -12068,7 +12068,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "Out you come, {prisoner}. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.",
-        "VoiceId": null,
+        "VoiceId": "1ca6a97dc4ecbc62",
         "Delivery": null
       },
       "CleanLine": {
@@ -12085,7 +12085,7 @@
       "Objective": null,
       "Line": {
         "Text": "All out. Fine. Everyone who comes down after the drains walks into my cages in the end. I\u0027ll fill them again.",
-        "VoiceId": null,
+        "VoiceId": "c1333052b4f83a49",
         "Delivery": null
       },
       "CleanLine": {
@@ -12102,7 +12102,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "All my cages empty. Bloody good work, hirelings. It changes nothing: the drains are still mine, and your god is still hungry.",
-        "VoiceId": null,
+        "VoiceId": "3201df7092fb5534",
         "Delivery": null
       },
       "CleanLine": {
@@ -12119,7 +12119,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "It\u0027s rising. That\u0027s the air off my choked drains, and it doesn\u0027t care who hired you.",
-        "VoiceId": null,
+        "VoiceId": "17ca9a209174be9e",
         "Delivery": null
       },
       "CleanLine": {
@@ -12136,7 +12136,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Higher now. Choke on it, you poor sods. I choked those drains on purpose, and this is what standing water does.",
-        "VoiceId": null,
+        "VoiceId": "f54fb52c14f3e1aa",
         "Delivery": null
       },
       "CleanLine": {
@@ -12153,7 +12153,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "That\u0027s the foul air of my drains in your lungs now. Lie down in it. It comes to the same thing, only sooner.",
-        "VoiceId": null,
+        "VoiceId": "cd648ecdddce6906",
         "Delivery": null
       },
       "CleanLine": {
@@ -12170,7 +12170,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Deep enough to drown in, {party}. Kneel in it. Your frightened town won\u0027t pay for the bloody funeral.",
-        "VoiceId": null,
+        "VoiceId": "9ca1950e9b939615",
         "Delivery": null
       },
       "CleanLine": {
@@ -12187,7 +12187,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Wrong one. Keep pulling, hirelings. I set those gates to keep the whole town out, and they\u0027ll keep you out too.",
-        "VoiceId": null,
+        "VoiceId": "2775289e47ef091a",
         "Delivery": null
       },
       "CleanLine": {
@@ -12204,7 +12204,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Wrong. Did the town hire you for your heads, or only for your backs?",
-        "VoiceId": null,
+        "VoiceId": "8a3f187943d1ab6e",
         "Delivery": null
       },
       "CleanLine": {
@@ -12221,7 +12221,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Hear that? My gates have moved. The way down is wherever I say it is.",
-        "VoiceId": null,
+        "VoiceId": "b598c64b8a64f241",
         "Delivery": null
       },
       "CleanLine": {
@@ -12238,7 +12238,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "The gates have shifted. You won\u0027t out-think iron I set, hirelings, and nobody paid you enough to try.",
-        "VoiceId": null,
+        "VoiceId": "5625c579a065f175",
         "Delivery": null
       },
       "CleanLine": {
@@ -12255,7 +12255,7 @@
       "Objective": null,
       "Line": {
         "Text": "So you found the right levers. Bloody hell. Go on down, then; it\u0027s all mine further down.",
-        "VoiceId": null,
+        "VoiceId": "0c121a0a85195fb5",
         "Delivery": null
       },
       "CleanLine": {
@@ -12272,7 +12272,7 @@
       "Objective": null,
       "Line": {
         "Text": "The gate is open. Take the stairs, and whatever you found by them. It all belongs to my master; you are only borrowing it.",
-        "VoiceId": null,
+        "VoiceId": "7f7ad0f88e55743a",
         "Delivery": null
       },
       "CleanLine": {
@@ -12289,7 +12289,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "So she\u0027s started her work at the shrine. Good. My minions have been waiting for somebody to stand still. Guard her, hirelings, if you think you can.",
-        "VoiceId": null,
+        "VoiceId": "0a301e646cafe730",
         "Delivery": null
       },
       "CleanLine": {
@@ -12306,7 +12306,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "One woman at a shrine, working against everything I\u0027ve done down here. I\u0027ll send everything I have at her. Hold the bloody line if you can.",
-        "VoiceId": null,
+        "VoiceId": "9f240e5613cbf857",
         "Delivery": null
       },
       "CleanLine": {
@@ -12323,7 +12323,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "She\u0027s down. Leave her lying. Her work stops, and mine goes on.",
-        "VoiceId": null,
+        "VoiceId": "9bc5c5a07e6e5e5e",
         "Delivery": null
       },
       "CleanLine": {
@@ -12340,7 +12340,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "There she goes, flat on the stones. Pick her up or don\u0027t, hirelings; my minions won\u0027t wait for you to decide.",
-        "VoiceId": null,
+        "VoiceId": "621269fe24f5851d",
         "Delivery": null
       },
       "CleanLine": {
@@ -12357,7 +12357,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "My minions fall back. Breathe while you can. There are more where they came from, and they never tire.",
-        "VoiceId": null,
+        "VoiceId": "667e7556fdece2e2",
         "Delivery": null
       },
       "CleanLine": {
@@ -12374,7 +12374,7 @@
       "Objective": null,
       "Line": {
         "Text": "A lull. Count your wounds and I\u0027ll count my minions. Then I\u0027ll send the rest. I have a foundry; you have a bloody fee.",
-        "VoiceId": null,
+        "VoiceId": "80cafdab12d4c504",
         "Delivery": null
       },
       "CleanLine": {
@@ -12391,7 +12391,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "So her work is done and my minions are broken. Enjoy it. The drains below are still mine, and so are the bloody stairs down to them.",
-        "VoiceId": null,
+        "VoiceId": "0db77fff780ed05a",
         "Delivery": null
       },
       "CleanLine": {
@@ -12408,7 +12408,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "Finished, then. One woman at one shrine, and it took all of you to guard her. Your god is still starving, hirelings.",
-        "VoiceId": null,
+        "VoiceId": "6b068141693fa2ae",
         "Delivery": null
       },
       "CleanLine": {
@@ -12425,7 +12425,7 @@
       "Objective": null,
       "Line": {
         "Text": "Done, and done badly, but done. Go on down. The next floor is worse; I set its traps myself.",
-        "VoiceId": null,
+        "VoiceId": "e091aabcc19653ce",
         "Delivery": null
       },
       "CleanLine": {
@@ -12442,7 +12442,7 @@
       "Objective": null,
       "Line": {
         "Text": "Fine. Take the stairs. One more floor of mine behind you. Every one below is mine too, hirelings, and so is the last drain.",
-        "VoiceId": null,
+        "VoiceId": "7f9e796d00830df5",
         "Delivery": null
       },
       "CleanLine": {
@@ -12459,7 +12459,7 @@
       "Objective": null,
       "Line": {
         "Text": "Resting? Take your time. Every minute you stand there, your god gets hungrier and nearer waking.",
-        "VoiceId": null,
+        "VoiceId": "682fdd31731f0f6e",
         "Delivery": null
       },
       "CleanLine": {
@@ -12476,7 +12476,7 @@
       "Objective": null,
       "Line": {
         "Text": "Admiring my work, hirelings? Take a good look. These are my master\u0027s mines now, and I keep them the way he likes.",
-        "VoiceId": null,
+        "VoiceId": "f6689a12554067d0",
         "Delivery": null
       },
       "CleanLine": {
@@ -12493,7 +12493,7 @@
       "Objective": null,
       "Line": {
         "Text": "One down. Lie still, and don\u0027t make a bloody fuss. Nobody in that frightened town will come down for you.",
-        "VoiceId": null,
+        "VoiceId": "12de0b08f1b82aa6",
         "Delivery": null
       },
       "CleanLine": {
@@ -12510,7 +12510,7 @@
       "Objective": null,
       "Line": {
         "Text": "One of you down, {party}. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
-        "VoiceId": null,
+        "VoiceId": "0de3a4b400dd2fa8",
         "Delivery": null
       },
       "CleanLine": {
@@ -12527,7 +12527,7 @@
       "Objective": null,
       "Line": {
         "Text": "There. All of you, down in my mines. Your town can hire more, and my foundry can pour more. We\u0027ll see who runs out first.",
-        "VoiceId": null,
+        "VoiceId": "cb17c9f1ef56af3e",
         "Delivery": null
       },
       "CleanLine": {
@@ -12544,7 +12544,7 @@
       "Objective": null,
       "Line": {
         "Text": "Rest now, hirelings. The town will send another lot down after you, and they\u0027ll step over you to reach me.",
-        "VoiceId": null,
+        "VoiceId": "5d3d5444d36ebcb2",
         "Delivery": null
       },
       "CleanLine": {
@@ -12561,7 +12561,7 @@
       "Objective": null,
       "Line": {
         "Text": "Another floor down. I\u0027ve had since bloody spring to get this one ready for you.",
-        "VoiceId": null,
+        "VoiceId": "fb95749e63e1ddcf",
         "Delivery": null
       },
       "CleanLine": {
@@ -12578,7 +12578,7 @@
       "Objective": null,
       "Line": {
         "Text": "Lower still. Down here your god is closer, hungrier, and nearer waking. I like it down here.",
-        "VoiceId": null,
+        "VoiceId": "f03e073d34ecac98",
         "Delivery": null
       },
       "CleanLine": {
@@ -12595,7 +12595,7 @@
       "Objective": null,
       "Line": {
         "Text": "More of mine, through my own doors. You can\u0027t kill them as fast as I can send them.",
-        "VoiceId": null,
+        "VoiceId": "1664318e47924c50",
         "Delivery": null
       },
       "CleanLine": {
@@ -12612,7 +12612,7 @@
       "Objective": null,
       "Line": {
         "Text": "I\u0027ve sent for help, hirelings. Mine comes when it\u0027s called and asks no fee. That is the whole bloody difference between us.",
-        "VoiceId": null,
+        "VoiceId": "1fd5d9a2c6f02202",
         "Delivery": null
       },
       "CleanLine": {
@@ -12629,7 +12629,7 @@
       "Objective": null,
       "Line": {
         "Text": "Crushed flat. I set that wall myself, and it does its work better than you do yours.",
-        "VoiceId": null,
+        "VoiceId": "fbcac8fe872a3a8c",
         "Delivery": null
       },
       "CleanLine": {
@@ -12646,7 +12646,7 @@
       "Objective": null,
       "Line": {
         "Text": "Pressed and finished. Thanks for the spine, you poor bugger. Your town can come and collect the rest.",
-        "VoiceId": null,
+        "VoiceId": "7d59543bc44e949d",
         "Delivery": null
       },
       "CleanLine": {
@@ -12663,7 +12663,7 @@
       "Objective": null,
       "Line": {
         "Text": "That was one of my best, you bloody vandals. Never mind. I have more, and they cost me nothing.",
-        "VoiceId": null,
+        "VoiceId": "a2c806d4ea948bb3",
         "Delivery": null
       },
       "CleanLine": {
@@ -12680,7 +12680,7 @@
       "Objective": null,
       "Line": {
         "Text": "{elite} is dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
-        "VoiceId": null,
+        "VoiceId": "e8daedc72ff4b023",
         "Delivery": null
       },
       "CleanLine": {
@@ -12697,7 +12697,7 @@
       "Objective": null,
       "Line": {
         "Text": "Help yourselves at the shrine. Whatever it gave you, I\u0027ll have back before the bottom, with interest.",
-        "VoiceId": null,
+        "VoiceId": "aa6adc5187456d0a",
         "Delivery": null
       },
       "CleanLine": {
@@ -12714,7 +12714,7 @@
       "Objective": null,
       "Line": {
         "Text": "Pray at my shrines all you like, hirelings. Your god is asleep and starving. He won\u0027t hear a bloody word.",
-        "VoiceId": null,
+        "VoiceId": "4c07a1e5f9e28bb2",
         "Delivery": null
       },
       "CleanLine": {
@@ -12731,7 +12731,7 @@
       "Objective": null,
       "Line": {
         "Text": "Hungry box, that one. Everything in my mines is hungry, and your god most of all. Mind your bloody fingers.",
-        "VoiceId": null,
+        "VoiceId": "8c94db6837af1b25",
         "Delivery": null
       },
       "CleanLine": {
@@ -12748,7 +12748,7 @@
       "Objective": null,
       "Line": {
         "Text": "Nobody told you not to open things down here? No. The town never tells its hired help anything.",
-        "VoiceId": null,
+        "VoiceId": "600f1ccfaeb67369",
         "Delivery": null
       },
       "CleanLine": {
@@ -12765,7 +12765,7 @@
       "Objective": null,
       "Line": {
         "Text": "{name} is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
-        "VoiceId": null,
+        "VoiceId": "edf02d1101a14bcf",
         "Delivery": null
       },
       "CleanLine": {
@@ -12782,7 +12782,7 @@
       "Objective": null,
       "Line": {
         "Text": "Another body for my mines. Carry it yourselves, hirelings. I\u0027m not clearing up after you, you sorry sods.",
-        "VoiceId": null,
+        "VoiceId": "d6316f12133d21a5",
         "Delivery": null
       },
       "CleanLine": {
@@ -12799,7 +12799,7 @@
       "Objective": null,
       "Line": {
         "Text": "Your friend has gone home. Sensible. Nobody who means to live follows hirelings into my mines.",
-        "VoiceId": null,
+        "VoiceId": "797f1ce6ea0678b9",
         "Delivery": null
       },
       "CleanLine": {
@@ -12816,7 +12816,7 @@
       "Objective": null,
       "Line": {
         "Text": "Walked out on you, did they? I don\u0027t blame them. I wouldn\u0027t follow you down my bloody stairs either.",
-        "VoiceId": null,
+        "VoiceId": "258bc8ec6e8a2c0b",
         "Delivery": null
       },
       "CleanLine": {
@@ -12833,7 +12833,7 @@
       "Objective": null,
       "Line": {
         "Text": "Dicing with the factor behind his locked door? Throw the town\u0027s money about while you can. My drains stay choked.",
-        "VoiceId": null,
+        "VoiceId": "c34243c1e0946e67",
         "Delivery": null
       },
       "CleanLine": {
@@ -12850,7 +12850,7 @@
       "Objective": null,
       "Line": {
         "Text": "Gambling your fee? Good. Lose the lot, you cheap little sods, and see who pays to bury you.",
-        "VoiceId": null,
+        "VoiceId": "6882f1463bc667cc",
         "Delivery": null
       },
       "CleanLine": {
@@ -12867,7 +12867,7 @@
       "Objective": null,
       "Line": {
         "Text": "You told the little deacon his god is starving, hirelings. Honest of you. It won\u0027t feed his bloody god.",
-        "VoiceId": null,
+        "VoiceId": "3f5f1b4be2c42f8d",
         "Delivery": null
       },
       "CleanLine": {
@@ -12884,7 +12884,7 @@
       "Objective": null,
       "Line": {
         "Text": "You forgave the warden who ran. Generous. Now forgive her bloody council: it sacked its own wardens, and they came down to me unpaid.",
-        "VoiceId": null,
+        "VoiceId": "574a97e42acfbf03",
         "Delivery": null
       },
       "CleanLine": {
@@ -12901,7 +12901,7 @@
       "Objective": null,
       "Line": {
         "Text": "You wouldn\u0027t forgive the warden who ran, hirelings. Hard. Her council sacked every warden it had, and you still work for it.",
-        "VoiceId": null,
+        "VoiceId": "287911de0724f632",
         "Delivery": null
       },
       "CleanLine": {
@@ -12918,7 +12918,7 @@
       "Objective": null,
       "Line": {
         "Text": "One down. You asked your god for his strength, and he\u0027s half awake for it. Ask again, hirelings. The more he wakes, the nearer my master comes.",
-        "VoiceId": null,
+        "VoiceId": "e85fb23752b144bc",
         "Delivery": null
       },
       "CleanLine": {
@@ -12935,7 +12935,7 @@
       "Objective": null,
       "Line": {
         "Text": "One down. You told your god to sleep through this, and he is. Nobody is coming to help you.",
-        "VoiceId": null,
+        "VoiceId": "47dba940df14724c",
         "Delivery": null
       },
       "CleanLine": {
@@ -12956,7 +12956,7 @@
           "Id": "hire",
           "Line": {
             "Text": "Oswin Pellet, factor. The town hired you to clear the mines so the drains can run again, and I lent the council the money. I want it back. I have a weak chest and a strong sense of who ought to go down.",
-            "VoiceId": null,
+            "VoiceId": "e34c0b1b28cc2861",
             "Delivery": null
           },
           "Choices": [
@@ -12985,7 +12985,7 @@
           "Id": "quakes",
           "Line": {
             "Text": "You\u0027ll have felt the ground go. The drains are backed up, the wells run sour, and the quakes come oftener every month. My carts haven\u0027t run since spring. Clear the mines and they run again.",
-            "VoiceId": null,
+            "VoiceId": "771b7052556cb131",
             "Delivery": null
           },
           "Choices": [
@@ -13122,7 +13122,7 @@
         "Floor": 2,
         "Greeting": {
           "Text": "In, and wipe your boots; I paid a man to sweep this room. Old Ulf at the pump works hasn\u0027t paid his coal account since spring. If you see him, remind him.",
-          "VoiceId": null,
+          "VoiceId": "c13206e65eeb6e76",
           "Delivery": null
         },
         "Progress": {
@@ -13199,7 +13199,7 @@
         },
         "Progress": {
           "Text": "Young Deacon Tobit has been at my door, asking after his master. I told him I\u0027d seen nobody\u0027s master and sold him a candle. I charged extra for the wick.",
-          "VoiceId": null,
+          "VoiceId": "881745b4a8c4d267",
           "Delivery": null
         },
         "Trade": {
@@ -13240,7 +13240,7 @@
         },
         "Trade": {
           "Text": "Short stock today. Bandits have the rest, paid by that orc to keep the town out, and I want it back. Bring it, and I\u0027ll knock something off the price. Not much. Something.",
-          "VoiceId": null,
+          "VoiceId": "e8f8a2ce64bb1ad8",
           "Delivery": null
         }
       },
@@ -13307,7 +13307,7 @@
         },
         "Progress": {
           "Text": "Word from up top: the alderman has been seen buying a shovel. The council never bought anything without borrowing from me first, so I checked my ledger. It wasn\u0027t me.",
-          "VoiceId": null,
+          "VoiceId": "a3bfaa6f399ff469",
           "Delivery": null
         },
         "Trade": {
@@ -13343,7 +13343,7 @@
         },
         "Progress": {
           "Text": "I went and looked. I wish I hadn\u0027t. Iron things cooling in the black water by the grates, and every one of them the shape of something that walks.",
-          "VoiceId": null,
+          "VoiceId": "a405962cd133a0cb",
           "Delivery": "whisper"
         },
         "Trade": {
@@ -13379,7 +13379,7 @@
         },
         "Progress": {
           "Text": "Marble, all the way along, with a blue light in it I can\u0027t put a price on. I can price anything. I\u0027d sooner not price this.",
-          "VoiceId": null,
+          "VoiceId": "e09f6f633676956e",
           "Delivery": "whisper"
         },
         "Trade": {

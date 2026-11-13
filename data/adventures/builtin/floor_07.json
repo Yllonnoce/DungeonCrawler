@@ -6,7 +6,7 @@
   "Title": "The Crop",
   "IntroLine": {
     "Text": "You come into the Crop: a warden\u0027s camp beside a seized pump, and at the old altar the orc\u0027s minions holding a rite to hurry the god awake.",
-    "VoiceId": null,
+    "VoiceId": "9c6ca10923de1ed9",
     "Delivery": null
   },
   "Rooms": [
@@ -208,7 +208,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "Both breaches cough at once, and the grey pack pours out at you, crawling now. They were townspeople once.",
-        "VoiceId": null,
+        "VoiceId": "5dac73789dd46b9a",
         "Delivery": null
       }
     },
@@ -302,7 +302,7 @@
       "Room": 9,
       "Line": {
         "Text": "The orc\u0027s minions keep a rite at this altar to hurry the god awake. Beside it, Grisel Thorn, a warden, heaves at a seized pump and shouts to you: hold them off while she frees it, then help her find her crew.",
-        "VoiceId": null,
+        "VoiceId": "40b5ac7fc4303e15",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -315,7 +315,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "My minions are holding a rite at the altar, hirelings, to hurry your god awake. That warden at the pump thinks a little bloody water will stop it.",
-        "VoiceId": null,
+        "VoiceId": "b4a255148f7c3f1f",
         "Delivery": "calm"
       },
       "CleanLine": {
@@ -332,7 +332,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "Down goes the warden. Pick her up, hirelings, or the pump stays seized and my rite goes on.",
-        "VoiceId": null,
+        "VoiceId": "99cac307b3c80297",
         "Delivery": null
       },
       "CleanLine": {
@@ -349,7 +349,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "So the pump turns and my rite breaks. Enjoy it, hirelings. Your god is still hungry, and the drains below are still mine.",
-        "VoiceId": null,
+        "VoiceId": "dbb189d74e7812f3",
         "Delivery": null
       },
       "CleanLine": {

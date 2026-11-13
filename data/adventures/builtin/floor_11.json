@@ -6,7 +6,7 @@
   "Title": "The Hearth",
   "IntroLine": {
     "Text": "Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.",
-    "VoiceId": null,
+    "VoiceId": "a5895accda5193ef",
     "Delivery": null
   },
   "Rooms": [
@@ -215,7 +215,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts and the wall behind it splits. Out of two breaches pour the cinders, grey and smouldering, and the hounds run with them. The cinders were townsfolk once.",
-        "VoiceId": null,
+        "VoiceId": "9d029a71291a08a2",
         "Delivery": null
       }
     }
@@ -251,7 +251,7 @@
             "Id": "ulf_hail",
             "Line": {
               "Text": "Off the sand, off the sand! I\u0027m Ulf; I keep the pump works. I\u0027ve an order to pour by morning for a customer who pays in gold, and hounds have got at my coal. Clear them off for me, you lot.",
-              "VoiceId": null,
+              "VoiceId": "5d0d2ad9346337ca",
               "Delivery": null
             },
             "Choices": [
@@ -298,7 +298,7 @@
             "Id": "ulf_customer",
             "Line": {
               "Text": "Never met him. The orders come down the shaft wrapped in gold: plates, springs, hinges, great iron limbs. Tools, all of it. My eyes are going, so Oskar reads me the drawings.",
-              "VoiceId": null,
+              "VoiceId": "33186e70bfdd9b74",
               "Delivery": null
             },
             "Choices": [
@@ -327,7 +327,7 @@
             "Id": "ulf_cinders",
             "Line": {
               "Text": "Ember hounds, three of them, up out of the old pit and down the slag run. They eat heat, see, and a cold forge pours slow. I\u0027d see to them myself, but I\u0027m eighty and I\u0027ve an order on.",
-              "VoiceId": null,
+              "VoiceId": "88a0ed79a33a3eb5",
               "Delivery": null
             },
             "Choices": [
@@ -356,7 +356,7 @@
             "Id": "ulf_thanks",
             "Line": {
               "Text": "Hear that? The draw\u0027s come back up, and the order goes out by morning. Take a cup of the small beer; it\u0027s warm on principle. And mind the shelves on your way by.",
-              "VoiceId": null,
+              "VoiceId": "5c7f063caf3d6245",
               "Delivery": null
             },
             "Choices": [
@@ -399,7 +399,7 @@
             "Id": "m11_shh",
             "Line": {
               "Text": "There you are, dear. I worked it out on the way down: I drowned, back in the spring. No matter. Keep the water going down to Gorm. He gets weaker every day the third drain stays shut.",
-              "VoiceId": null,
+              "VoiceId": "21f96fb4f8e722a4",
               "Delivery": null
             },
             "Choices": [
@@ -437,7 +437,7 @@
             "Id": "m11_faces",
             "Line": {
               "Text": "The pump works, dear. That big engine used to push the water down the drains. Now it drives a forge and casts things instead, and the water stands.",
-              "VoiceId": null,
+              "VoiceId": "0ab6f5206381c041",
               "Delivery": null
             },
             "Choices": [
@@ -466,7 +466,7 @@
             "Id": "m11_warm",
             "Line": {
               "Text": "After the Verger\u0027s order, dear. Somebody had to keep the water moving, so I went down alone, and it had backed up deeper than I knew. Thirty-eight years a warden, and I never could swim.",
-              "VoiceId": null,
+              "VoiceId": "199ca11745e914da",
               "Delivery": null
             },
             "Choices": [
@@ -541,12 +541,12 @@
         },
         "Decline": {
           "Text": "Suit yourselves. They\u0027ll eat, the forge runs cool, and my order goes out late. I\u0027ve not sent an order late in sixty years.",
-          "VoiceId": null,
+          "VoiceId": "7549556a2b79acdd",
           "Delivery": null
         },
         "Complete": {
           "Text": "There\u0027s the draw. Here, take this off the shelf for your trouble. Good work, that. Everything off my shelves is.",
-          "VoiceId": null,
+          "VoiceId": "840d0712f3b63446",
           "Delivery": null
         },
         "Fail": {
@@ -565,7 +565,7 @@
       "Room": 8,
       "Line": {
         "Text": "The Great Hearth. The orc\u0027s iron comes warm off the old founder\u0027s sand, and the engine that should be pumping water feeds the fire instead.",
-        "VoiceId": null,
+        "VoiceId": "5c6d36826efe77c5",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -578,7 +578,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "Welcome to my foundry, hirelings. My founder at the hearth pours my iron and never once asks what it\u0027s for. The stairs are behind my gates; work the bloody levers if you can count.",
-        "VoiceId": null,
+        "VoiceId": "a2dbe5a56393c6c3",
         "Delivery": null
       },
       "CleanLine": {

@@ -6,7 +6,7 @@
   "Title": "Canon Ludd",
   "IntroLine": {
     "Text": "Under the chantry runs the first great drain, or it should. You find its grate packed solid on purpose, and a dead canon standing over it, still saying the office to empty pews.",
-    "VoiceId": null,
+    "VoiceId": "8fb5a9b8e8d60f5b",
     "Delivery": null
   },
   "Rooms": [
@@ -194,7 +194,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The charnel wall gives at both seams, and the church\u0027s dead walk out at you, a few greyer things in wardens\u0027 coats among them.",
-        "VoiceId": null,
+        "VoiceId": "3045b0520dc591b1",
         "Delivery": null
       }
     }
@@ -204,12 +204,12 @@
     "SignatureOverride": "Slam",
     "IntroLine": {
       "Text": "I am the Herald\u0027s first lieutenant. He shut this drain, and I keep it shut. Kneel, strangers; the church\u0027s dead have room for you.",
-      "VoiceId": null,
+      "VoiceId": "e5f33d9adb1b8a15",
       "Delivery": null
     },
     "DeathLine": {
       "Text": "Turn the sluice wheel, then. Let the water down to the god, and the ground will lie still a while. I was a canon here, once.",
-      "VoiceId": null,
+      "VoiceId": "7ce5dd1c9164658f",
       "Delivery": null
     },
     "HalfLine": null,
@@ -242,7 +242,7 @@
       "Room": null,
       "Line": {
         "Text": "Canon Ludd, raised from the church\u0027s own dead to guard the drain, swings his censer at empty benches. The ledge above him is bare of ornament; use it.",
-        "VoiceId": null,
+        "VoiceId": "b920a26f74dbda42",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -253,7 +253,7 @@
       "Room": null,
       "Line": {
         "Text": "The first drain runs again, and above you the shaking eases for a while. Far below, the orc\u0027s voice: \u0027One drain, hirelings. I choked three more, and your god is still hungry.\u0027",
-        "VoiceId": null,
+        "VoiceId": "fcb4098975a8eb19",
         "Delivery": null
       },
       "RequiresFlag": null,

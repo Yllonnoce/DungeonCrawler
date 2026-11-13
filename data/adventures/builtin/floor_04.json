@@ -6,7 +6,7 @@
   "Title": "The Chantry",
   "IntroLine": {
     "Text": "You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.",
-    "VoiceId": null,
+    "VoiceId": "0005fb4b155f94cb",
     "Delivery": null
   },
   "Rooms": [
@@ -179,7 +179,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The crossing wall gives up its mortar and the pack pours through at you, grey and alike. A few of them still wear wardens\u0027 boots.",
-        "VoiceId": null,
+        "VoiceId": "abc00f2355484cd7",
         "Delivery": null
       }
     }
@@ -215,7 +215,7 @@
             "Id": "n1",
             "Line": {
               "Text": "Ah. You. I came down to check progress, that\u0027s all, and found the wardens\u0027 log with its last pages torn out and scattered through these drifts. Council property. I\u0027d like them back.",
-              "VoiceId": null,
+              "VoiceId": "ede10abe39d01d2c",
               "Delivery": null
             },
             "Choices": [
@@ -253,7 +253,7 @@
             "Id": "n2",
             "Line": {
               "Text": "Every clearing of the drains, every season, written down by the wardens for three hundred years. The last three pages are in the drifts. Bring them to me before anyone else reads them.",
-              "VoiceId": null,
+              "VoiceId": "faf1a01d264fb8fa",
               "Delivery": null
             },
             "Choices": [
@@ -291,7 +291,7 @@
             "Id": "n3",
             "Line": {
               "Text": "Cleared every season for three hundred years. Then this spring: \u0027By the Verger\u0027s order, no one below.\u0027 The church stopped them. Not the council. Good. I mean, how dreadful.",
-              "VoiceId": null,
+              "VoiceId": "924ed6b2be13db14",
               "Delivery": null
             },
             "Choices": [
@@ -361,12 +361,12 @@
         },
         "Decline": {
           "Text": "Quite right. Paper is paper, and nobody reads the old ones.",
-          "VoiceId": null,
+          "VoiceId": "9df14a8dc990fc81",
           "Delivery": null
         },
         "Complete": {
           "Text": "Three hundred years of clearings, and then this spring: \u0027By the Verger\u0027s order, no one below.\u0027 So it was the church. Not the council. What a relief. I mean, what a shame.",
-          "VoiceId": null,
+          "VoiceId": "048ded58ab93da14",
           "Delivery": null
         },
         "Fail": {
@@ -398,7 +398,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Smell that, hirelings? Standing water, gone rotten, rising out of the cellars. The stairs are at the bottom of it. Do hurry; you\u0027re paid by the floor.",
-        "VoiceId": null,
+        "VoiceId": "c644a5b54166f6d0",
         "Delivery": null
       },
       "CleanLine": {
@@ -415,7 +415,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Up to your knees now, you poor sods. The town bought your swords, not your lungs.",
-        "VoiceId": null,
+        "VoiceId": "e89a8907beccdbb8",
         "Delivery": null
       },
       "CleanLine": {

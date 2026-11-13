@@ -6,7 +6,7 @@
   "Title": "The Windpipe",
   "IntroLine": {
     "Text": "Purple slate, and the gas climbing the galleries off the standing water. Somewhere ahead a sluice wheel groans, and a man out of breath is apologising to it.",
-    "VoiceId": null,
+    "VoiceId": "778b67348b74d658",
     "Delivery": null
   },
   "Rooms": [
@@ -203,7 +203,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "The lid lifts and the timbering splits: shades spill out of every seam, grey and alike. Some of them were wardens this spring.",
-        "VoiceId": null,
+        "VoiceId": "1c9263c9b07426c5",
         "Delivery": null
       }
     },
@@ -234,7 +234,7 @@
       "Trigger": "Alarm",
       "Line": {
         "Text": "The runner\u0027s cry goes down the gallery, and the breach answers it: shades, and the archers of the other side behind them.",
-        "VoiceId": null,
+        "VoiceId": "1325e24c5b575f9e",
         "Delivery": null
       }
     }
@@ -274,7 +274,7 @@
             "Id": "n_meet",
             "Line": {
               "Text": "There you are. I came down myself, shovel and all. Go on through while I hold this sluice open: the water\u0027s running off, and the gas is thinner past the gate.",
-              "VoiceId": null,
+              "VoiceId": "7f764d3e99250622",
               "Delivery": "weary"
             },
             "Choices": [
@@ -321,7 +321,7 @@
             "Id": "n_confess",
             "Line": {
               "Text": "Because I owe it. We were glad of the Verger\u0027s order. Stopping the wardens\u0027 pay saved the council money, and I signed it. That\u0027s what I didn\u0027t tell you at the cistern.",
-              "VoiceId": null,
+              "VoiceId": "c0514b71df262bb4",
               "Delivery": "weary"
             },
             "Choices": [
@@ -359,7 +359,7 @@
             "Id": "n_verger",
             "Line": {
               "Text": "Then he opened the door to that orc. He did it for a god, and I signed away the wardens without once asking why he\u0027d shut the mines. I can\u0027t tell which of us I\u0027m angrier with.",
-              "VoiceId": null,
+              "VoiceId": "886477754e5782f3",
               "Delivery": "weary"
             },
             "Choices": [
@@ -397,7 +397,7 @@
             "Id": "n_grisel",
             "Line": {
               "Text": "She did. Grisel Thorn and what\u0027s left of her crew are back on the upper drains, on full pay back to spring. I signed that too, and gladly.",
-              "VoiceId": null,
+              "VoiceId": "19c617c78e0263ed",
               "Delivery": "weary"
             },
             "Choices": [
@@ -445,7 +445,7 @@
       "Room": 9,
       "Line": {
         "Text": "In the Long Gallery the alderman hangs his whole weight on a sluice wheel, a shovel jammed through the spokes to hold it. The water drains off through the gate, and past it the gas is thinner.",
-        "VoiceId": null,
+        "VoiceId": "bbf5f76ddb7638fd",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -458,7 +458,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Smell that, hirelings? The water stands all the way down now, and the gas comes off it. Your alderman came down after you with a bloody shovel. Hurry, before he hurts himself.",
-        "VoiceId": null,
+        "VoiceId": "2ef28d668da30a2b",
         "Delivery": null
       },
       "CleanLine": {
@@ -475,7 +475,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "That\u0027s my air in your lungs now, {party}. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too bloody slow to use it.",
-        "VoiceId": null,
+        "VoiceId": "d06fa9cfe3aef223",
         "Delivery": null
       },
       "CleanLine": {
@@ -492,7 +492,7 @@
       "Objective": null,
       "Line": {
         "Text": "Your alderman\u0027s still hanging off his wheel up there, hirelings. His council saved itself the wardens\u0027 wages and left my drains to me. Cheapest bloody bargain my master ever got.",
-        "VoiceId": null,
+        "VoiceId": "37b286f1bd805918",
         "Delivery": null
       },
       "CleanLine": {

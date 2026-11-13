@@ -6,7 +6,7 @@
   "Title": "The Casting Hall",
   "IntroLine": {
     "Text": "Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn\u0027s crew, taken first in the spring and turned the furthest.",
-    "VoiceId": null,
+    "VoiceId": "73a2f8c8c3d418c7",
     "Delivery": null
   },
   "Rooms": [
@@ -230,7 +230,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The kiln wall cracks and the cinders pour out at you, grey and burning. The ones finished in these cages run with them now.",
-        "VoiceId": null,
+        "VoiceId": "426b5f643ed65c41",
         "Delivery": null
       }
     }
@@ -275,7 +275,7 @@
             "Id": "g1",
             "Line": {
               "Text": "You found them. That\u0027s my crew in the cages: taken first, nearly grey, nearly gone. Walk me through to the stair and keep the jailers off me, and I\u0027ll bring them out as we go.",
-              "VoiceId": null,
+              "VoiceId": "522945bb1bd90281",
               "Delivery": null
             },
             "Choices": [
@@ -313,7 +313,7 @@
             "Id": "g2",
             "Line": {
               "Text": "Right. Keep me between you and the iron. They still know my voice, most of them. I\u0027ll call them out one at a time.",
-              "VoiceId": null,
+              "VoiceId": "d8190ac52972a026",
               "Delivery": null
             },
             "Choices": [
@@ -333,7 +333,7 @@
             "Id": "g3",
             "Line": {
               "Text": "Fair. I\u0027d have left me too. Get them out without me, then, and tell them Grisel was here.",
-              "VoiceId": null,
+              "VoiceId": "86db6fa6518668b5",
               "Delivery": null
             },
             "Choices": [
@@ -353,7 +353,7 @@
             "Id": "g4",
             "Line": {
               "Text": "That\u0027s the stair. I\u0027ll wait here for my crew and take them up myself. Don\u0027t wait for me to thank you properly; I\u0027m out of practice.",
-              "VoiceId": null,
+              "VoiceId": "bfb33d9942a17145",
               "Delivery": null
             },
             "Choices": [
@@ -409,12 +409,12 @@
       "Lines": {
         "Offer": {
           "Text": "I know every cage on this floor by the noise it makes. Get me across the casting floor to the stair, and I\u0027ll bring my crew out as we go.",
-          "VoiceId": null,
+          "VoiceId": "d92a5d09984c8203",
           "Delivery": null
         },
         "Accept": {
           "Text": "Right. Slowly. They\u0027ll know my voice before they know my face.",
-          "VoiceId": null,
+          "VoiceId": "4edb8a308ad444fa",
           "Delivery": null
         },
         "Decline": {
@@ -424,12 +424,12 @@
         },
         "Complete": {
           "Text": "That\u0027s the stair. I\u0027ll wait here and take my crew up myself, every one you bring me. Don\u0027t wait for thanks; I\u0027m out of practice.",
-          "VoiceId": null,
+          "VoiceId": "ba324915bacea475",
           "Delivery": null
         },
         "Fail": {
           "Text": "Get them out. Don\u0027t you leave them now.",
-          "VoiceId": null,
+          "VoiceId": "14575fa7d90c636a",
           "Delivery": null
         }
       },
@@ -443,7 +443,7 @@
       "Room": 11,
       "Line": {
         "Text": "The cages hold Grisel Thorn\u0027s crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.",
-        "VoiceId": null,
+        "VoiceId": "34001ffef70beef3",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -454,7 +454,7 @@
       "Room": 11,
       "Line": {
         "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.",
-        "VoiceId": null,
+        "VoiceId": "03dc10e7cd4abc5c",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -467,7 +467,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "My Casting Hall, hirelings. Grisel Thorn\u0027s crew are in my cages, first down and nearly finished. Another week and they run with my bloody cinders.",
-        "VoiceId": null,
+        "VoiceId": "65566c449cf41159",
         "Delivery": null
       },
       "CleanLine": {
@@ -484,7 +484,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own bloody neck, and now she locks her own crew in every night.",
-        "VoiceId": null,
+        "VoiceId": "2c738b977e46682c",
         "Delivery": null
       },
       "CleanLine": {
@@ -501,7 +501,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.",
-        "VoiceId": null,
+        "VoiceId": "1d5a7cd5ea354929",
         "Delivery": null
       },
       "CleanLine": {

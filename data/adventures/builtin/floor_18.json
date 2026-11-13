@@ -6,7 +6,7 @@
   "Title": "The Dreaming Hall",
   "IntroLine": {
     "Text": "Violet dark, and one corridor into a round hall where the shaking is worst. Maud Sorrel has stopped walking. She sits on the floor with her hands folded in her lap, waiting for you.",
-    "VoiceId": null,
+    "VoiceId": "b70053f6fc1f8405",
     "Delivery": null
   },
   "Rooms": [
@@ -229,7 +229,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "Two breaches open in the marble together, and the Sleepless\u0027s kind come through at you: shades in front, and the archers of the other side behind.",
-        "VoiceId": null,
+        "VoiceId": "4e807306ce8a26dc",
         "Delivery": null
       }
     }
@@ -265,7 +265,7 @@
             "Id": "n_sit",
             "Line": {
               "Text": "I am Gorm; Maud has lent me her mouth. Forgive the shaking and the people hurt. I am starving and half awake, and my hunger will bring the mines down on Dunmarrow. Send the water down, and let me sleep.",
-              "VoiceId": null,
+              "VoiceId": "64d11a2f254719dd",
               "Delivery": "calm"
             },
             "Choices": [
@@ -312,7 +312,7 @@
             "Id": "n_wake",
             "Line": {
               "Text": "My dream is the door that keeps the Sleepless out. If I wake, the door opens, and Dunmarrow is the first thing the Sleepless finds. I would not mean it. It would happen all the same.",
-              "VoiceId": null,
+              "VoiceId": "18432940c6ee7ffe",
               "Delivery": "calm"
             },
             "Choices": [
@@ -341,7 +341,7 @@
             "Id": "n_verger",
             "Line": {
               "Text": "My Verger prayed to me for forty years, and I was asleep and could not answer. The orc\u0027s master answered him instead. So the Verger opened the crypt door, and now he is below you, at a rite to wake me.",
-              "VoiceId": null,
+              "VoiceId": "65bcd2572aa4cc96",
               "Delivery": "calm"
             },
             "Choices": [
@@ -370,7 +370,7 @@
             "Id": "n_choose",
             "Line": {
               "Text": "Ask nothing, and I sleep deep while you face the orc alone. Ask for my strength, and I strike at him, but I come nearer waking; if I wake, the Sleepless comes through and Dunmarrow dies. Which?",
-              "VoiceId": null,
+              "VoiceId": "d0fa5b70dd618ef3",
               "Delivery": "calm"
             },
             "Choices": [
@@ -399,7 +399,7 @@
             "Id": "n_dream",
             "Line": {
               "Text": "He\u0027s gone back down, dear, deep and quiet. Good. I\u0027ll go on ahead to the shrine below and hold him there against the Verger\u0027s rite. You keep the Sleepless\u0027s kind off me.",
-              "VoiceId": null,
+              "VoiceId": "37df22cda6b07b66",
               "Delivery": "calm"
             },
             "Choices": [
@@ -419,7 +419,7 @@
             "Id": "n_lend",
             "Line": {
               "Text": "He heard you, dear. He\u0027ll reach for that orc from his sleep when you need it, but he\u0027s nearer waking now. I\u0027ll go ahead to the shrine below and hold him steady. Keep the Sleepless\u0027s kind off me.",
-              "VoiceId": null,
+              "VoiceId": "0c02feea033dd0fe",
               "Delivery": "calm"
             },
             "Choices": [
@@ -475,27 +475,27 @@
       "Lines": {
         "Offer": {
           "Text": "Ask nothing of me, or ask for my strength. Either way, bring the water down.",
-          "VoiceId": null,
+          "VoiceId": "cd54cb8193ad56eb",
           "Delivery": "calm"
         },
         "Accept": {
           "Text": "Said, then. Carry it down with you.",
-          "VoiceId": null,
+          "VoiceId": "cc1537b1a51f0700",
           "Delivery": "calm"
         },
         "Decline": {
           "Text": "Then sit a while. I have slept three hundred years; I can wait a little longer.",
-          "VoiceId": null,
+          "VoiceId": "6604efbc654a55f4",
           "Delivery": "calm"
         },
         "Complete": {
           "Text": "Thank you for coming down to me.",
-          "VoiceId": null,
+          "VoiceId": "2873b12f3d84cc3d",
           "Delivery": "calm"
         },
         "Fail": {
           "Text": "No matter. Bring the water down, and I will sleep either way.",
-          "VoiceId": null,
+          "VoiceId": "de02388088a3c376",
           "Delivery": "weary"
         }
       },
@@ -509,7 +509,7 @@
       "Room": 0,
       "Line": {
         "Text": "When Maud looks up, it is not Maud looking. Gorm, the god under Dunmarrow, is close enough here to speak through her, and each word comes slowly.",
-        "VoiceId": null,
+        "VoiceId": "a26ac2e9e38b9407",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -522,7 +522,7 @@
       "Objective": null,
       "Line": {
         "Text": "Your god is half awake, hirelings, and the dream is thin as paper. I can hear my master on the other side of it. You did that for him, and nobody paid you a bloody penny.",
-        "VoiceId": null,
+        "VoiceId": "824b757cce311357",
         "Delivery": null
       },
       "CleanLine": {
@@ -539,7 +539,7 @@
       "Objective": null,
       "Line": {
         "Text": "You told your god to go back to sleep, hirelings. A god too bloody frightened to wake. My master is frightened of nothing, and he is still at the door.",
-        "VoiceId": null,
+        "VoiceId": "b7200e3ec62adfb7",
         "Delivery": null
       },
       "CleanLine": {

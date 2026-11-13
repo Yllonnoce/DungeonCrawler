@@ -6,7 +6,7 @@
   "Title": "The Nave",
   "IntroLine": {
     "Text": "Chalk-white bone stacked to the vaulting, and one candle lit in the chancel, where a young deacon is praying. Mind the walls: some down here are new, and built to crush.",
-    "VoiceId": null,
+    "VoiceId": "5f667b96536ec0b3",
     "Delivery": null
   },
   "Rooms": [
@@ -205,7 +205,7 @@
             "Id": "greet",
             "Line": {
               "Text": "Pray with me, would you? The wells are sour and the ground shakes, but if we ask him properly, Gorm will save the town. He always has.",
-              "VoiceId": null,
+              "VoiceId": "32834acfc2b8e116",
               "Delivery": "warm"
             },
             "Choices": [
@@ -241,7 +241,7 @@
             "Id": "ask",
             "Line": {
               "Text": "It\u0027s only me now. My master the Verger went below in spring to pray for the town, and I keep the church till he\u0027s back. Tell me true: does Gorm hear us down there?",
-              "VoiceId": null,
+              "VoiceId": "783fc324f2e403ae",
               "Delivery": null
             },
             "Choices": [
@@ -268,7 +268,7 @@
               "Member": "Ilex",
               "Line": {
                 "Text": "Theologically, deacon, \u0027hears\u0027 and \u0027answers\u0027 are different words.",
-                "VoiceId": null,
+                "VoiceId": "31892a732a16fe0d",
                 "Delivery": null
               }
             }
@@ -277,7 +277,7 @@
             "Id": "end",
             "Line": {
               "Text": "Starving. And I\u0027ve been asking him to feed us. If the water isn\u0027t reaching him, I\u0027ll find out why; I\u0027m thorough, I always am. Mind the walls past here. Some are new, and they crush.",
-              "VoiceId": null,
+              "VoiceId": "deae0b0a8bccaf93",
               "Delivery": "whisper"
             },
             "Choices": [
@@ -297,7 +297,7 @@
             "Id": "end_kept",
             "Line": {
               "Text": "Thank you. I knew he heard. I\u0027ll keep the candle lit until my master comes back up. Mind the walls past here; some of them are new, and they crush.",
-              "VoiceId": null,
+              "VoiceId": "3141075494a0dc15",
               "Delivery": null
             },
             "Choices": [
@@ -353,12 +353,12 @@
       "Lines": {
         "Offer": {
           "Text": "You\u0027ve seen more of these crypts than I have lately. Tell me plainly how it is. I am told I am a good listener.",
-          "VoiceId": null,
+          "VoiceId": "f1930c771a36ed68",
           "Delivery": null
         },
         "Accept": {
           "Text": "Say it plainly. I would rather be wrong out loud than obedient in a whisper.",
-          "VoiceId": null,
+          "VoiceId": "586a9a4242693e82",
           "Delivery": null
         },
         "Decline": {
@@ -368,12 +368,12 @@
         },
         "Complete": {
           "Text": "Thank you for telling me how it is. I know what I have to do now.",
-          "VoiceId": null,
+          "VoiceId": "d42cb7be63f95c5b",
           "Delivery": null
         },
         "Fail": {
           "Text": "Go down, then. I\u0027ll keep praying. Somebody has to.",
-          "VoiceId": null,
+          "VoiceId": "49f30be78b992639",
           "Delivery": null
         }
       },
@@ -388,7 +388,7 @@
       "Objective": null,
       "Line": {
         "Text": "My dead keep this church now. Let the deacon pray, hirelings; nobody down here is bloody listening but me.",
-        "VoiceId": null,
+        "VoiceId": "881d57d92e4a56b7",
         "Delivery": null
       },
       "CleanLine": {
@@ -405,7 +405,7 @@
       "Objective": null,
       "Line": {
         "Text": "Flat as a coin. I built that press this spring, and it does a better day\u0027s work than you sorry sods.",
-        "VoiceId": null,
+        "VoiceId": "dafb34358a700763",
         "Delivery": null
       },
       "CleanLine": {

@@ -6,7 +6,7 @@
   "Title": "The Lychgate",
   "IntroLine": {
     "Text": "You arrive at the head of the old mines, the crypt stair under the lychgate. A huge orc has come up it, and the dwarf who keeps the gate is already fighting him.",
-    "VoiceId": null,
+    "VoiceId": "ff2e141443051863",
     "Delivery": null
   },
   "Rooms": [
@@ -172,7 +172,7 @@
       "Trigger": "Chest",
       "Line": {
         "Text": "You lift the chest lid, and the cloakroom answers: grey husks shrug out of the coats on the hooks and come for you.",
-        "VoiceId": null,
+        "VoiceId": "d9e5e888827a9446",
         "Delivery": null
       }
     },
@@ -302,7 +302,7 @@
             "Id": "gate",
             "Line": {
               "Text": "Alderman Crane, for the council. That orc came up the shaft shouting that the mines are his master\u0027s now, and that he can\u0027t be killed for good. The drains need clearing, and I am not the man to do it.",
-              "VoiceId": null,
+              "VoiceId": "1902c97929fb1a80",
               "Delivery": null
             },
             "Choices": [
@@ -347,7 +347,7 @@
             "Id": "bread",
             "Line": {
               "Text": "Sour wells, shaking ground, and wardens who went down and never came up. Clear the traps and the dead so the drains can run. And fetch my basket from the first cellar; it has council notices in it. Unread, please.",
-              "VoiceId": null,
+              "VoiceId": "2ead26e6d471952b",
               "Delivery": null
             },
             "Choices": [
@@ -385,7 +385,7 @@
             "Id": "done",
             "Line": {
               "Text": "You didn\u0027t read them? Don\u0027t answer; I\u0027d rather believe it. Council notices, nothing more, and the council thanks you in writing.",
-              "VoiceId": null,
+              "VoiceId": "75cb18dff1e5f8ee",
               "Delivery": null
             },
             "Choices": [
@@ -428,7 +428,7 @@
             "Id": "m1_step",
             "Line": {
               "Text": "Mind the step, dear, it\u0027s wet. Help me clear the grates; I\u0027m late on my rounds. The water has to go down. It always has to go down.",
-              "VoiceId": null,
+              "VoiceId": "a9039cfe6e9c3893",
               "Delivery": null
             },
             "Choices": [
@@ -466,7 +466,7 @@
             "Id": "m1_who",
             "Line": {
               "Text": "Maud Sorrel, dear. Drain-warden, thirty-eight years. I was on my rounds, and then the water... well, never mind. Wet? I\u0027ve been wetter.",
-              "VoiceId": null,
+              "VoiceId": "37bd739b5f31d3e8",
               "Delivery": null
             },
             "Choices": [
@@ -493,7 +493,7 @@
               "Member": "Wren",
               "Line": {
                 "Text": "She\u0027s soaked through. Wrong.",
-                "VoiceId": null,
+                "VoiceId": "dff78a21d0af0ab9",
                 "Delivery": null
               }
             }
@@ -502,7 +502,7 @@
             "Id": "m1_back",
             "Line": {
               "Text": "Thirty-eight years, dear, and I\u0027ve never missed a round, so I\u0027m not going up now. The wells up top are sour; that\u0027s the grates, packed solid. The water has to go down.",
-              "VoiceId": null,
+              "VoiceId": "06608282eb27c8f9",
               "Delivery": null
             },
             "Choices": [
@@ -558,7 +558,7 @@
       "Lines": {
         "Offer": {
           "Text": "I took the council notices off the board at the mine head this morning and put them in my bread-basket. Then the orc came up the stair, I ran, and the basket stayed in the first cellar. Bring it back. Don\u0027t read them.",
-          "VoiceId": null,
+          "VoiceId": "76e50067bb1896aa",
           "Delivery": null
         },
         "Accept": {
@@ -573,7 +573,7 @@
         },
         "Complete": {
           "Text": "Every notice, and the cloth folded on top. Good. Nothing anyone needs to read. The council thanks you in writing.",
-          "VoiceId": null,
+          "VoiceId": "be4a78060099d609",
           "Delivery": "weary"
         },
         "Fail": {
@@ -592,7 +592,7 @@
       "Room": 0,
       "Line": {
         "Text": "The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines for his master, and he means to keep you from the drains below.",
-        "VoiceId": null,
+        "VoiceId": "8f9f5d09cf16b58a",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -605,7 +605,7 @@
       "Objective": null,
       "Line": {
         "Text": "Down you come, hirelings. Kill me at the gate or not; my foundry pours another. These mines are my master\u0027s now, and your bloody god is going to wake.",
-        "VoiceId": null,
+        "VoiceId": "032b7166707b6610",
         "Delivery": null
       },
       "CleanLine": {

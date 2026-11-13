@@ -6,7 +6,7 @@
   "Title": "The Mouth",
   "IntroLine": {
     "Text": "The last stair brings you down to the Mouth, where the last great drain should pour down to the god. Its grate is packed solid, braziers burn around it, and the orc is waiting there.",
-    "VoiceId": null,
+    "VoiceId": "90be2e70f7f11ae4",
     "Delivery": null
   },
   "Rooms": [
@@ -223,7 +223,7 @@
       "Trigger": "Enter",
       "Line": {
         "Text": "The gallery wall splits between the pillars, and the shades pour out at you in one long grey rush, with the stalkers of the other side behind them.",
-        "VoiceId": null,
+        "VoiceId": "1579ee1cb905198b",
         "Delivery": null
       }
     },
@@ -254,7 +254,7 @@
       "Trigger": "Alarm",
       "Line": {
         "Text": "Somewhere behind you a runner reaches the breach, and it answers: shade on shade, climbing out of the stone with archers at their backs.",
-        "VoiceId": null,
+        "VoiceId": "f01fee1f015fef6c",
         "Delivery": null
       }
     }
@@ -264,28 +264,28 @@
     "SignatureOverride": "Volley",
     "IntroLine": {
       "Text": "Killed me at the gate, didn\u0027t you? I came back bigger. Your Verger is still upstairs on his knees, waiting for his reward. Priests. Turn that sluice wheel if you can reach it, hirelings.",
-      "VoiceId": null,
+      "VoiceId": "3d7d22ef8fc3fb74",
       "Delivery": null
     },
     "DeathLine": {
       "Text": "Turn your wheel, then. My master will send another. Your god has to sleep for ever, hirelings. My master only has to wait.",
-      "VoiceId": null,
+      "VoiceId": "85774ad396e0606c",
       "Delivery": null
     },
     "HalfLine": {
       "Text": "Is this what the town paid for? Your god is hiding in his sleep, hirelings, and you are only day labour. I can do this all night.",
-      "VoiceId": null,
+      "VoiceId": "72b388affcf3908e",
       "Delivery": null
     },
     "AltDeathFlag": "wake_gorm",
     "AltHalfLine": {
       "Text": "That was your god. He reached up out of his sleep and struck me. Good. Every blow he lands wakes him further, and my master is right behind the door.",
-      "VoiceId": null,
+      "VoiceId": "58efd4be6fe5d03d",
       "Delivery": null
     },
     "AltDeathLine": {
       "Text": "Your god struck me down from his sleep. Ha. It cost him, hirelings: he\u0027s nearly awake, and my master is almost through. Listen at the door.",
-      "VoiceId": null,
+      "VoiceId": "e3a6765f3ac1c545",
       "Delivery": null
     }
   },
@@ -314,7 +314,7 @@
       "Room": null,
       "Line": {
         "Text": "Morg Ashtusk stands over the last great drain, not the orc body you killed at the gate but what the foundry was building him into: his true form. Kill him and turn the sluice wheel, or the mines come down on Dunmarrow.",
-        "VoiceId": null,
+        "VoiceId": "b917d656db74fc05",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -325,7 +325,7 @@
       "Room": null,
       "Line": {
         "Text": "You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks and slowly sinks back from waking. The dream holds; it is thin, but the door stays shut.",
-        "VoiceId": null,
+        "VoiceId": "f409b2aedb818004",
         "Delivery": null
       },
       "RequiresFlag": "wake_gorm",
@@ -336,7 +336,7 @@
       "Room": null,
       "Line": {
         "Text": "You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks without ever stirring. The dream holds whole, and the door to the Sleepless stays shut.",
-        "VoiceId": null,
+        "VoiceId": "977ad006d839b113",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -347,7 +347,7 @@
       "Room": null,
       "Line": {
         "Text": "Far above you the ground goes still, and the wells of Dunmarrow run sweet. The mines will stand. One floor up the Verger kneels on, and nothing answers him. The job is done, and the town lives.",
-        "VoiceId": null,
+        "VoiceId": "63e459a01f985d0e",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -360,7 +360,7 @@
       "Objective": null,
       "Line": {
         "Text": "Come down to the Mouth, hirelings. The last drain is mine.",
-        "VoiceId": null,
+        "VoiceId": "1416ccd188585c99",
         "Delivery": "calm"
       },
       "CleanLine": {
@@ -377,7 +377,7 @@
       "Objective": null,
       "Line": {
         "Text": "The Mouth, hirelings. The last drain, and your god right under your feet. Mind where you stand.",
-        "VoiceId": null,
+        "VoiceId": "10fb08bcc324e3e0",
         "Delivery": null
       },
       "CleanLine": {
@@ -394,7 +394,7 @@
       "Objective": null,
       "Line": {
         "Text": "That\u0027s one of the town\u0027s hired shovels broken. Nobody will pay you for it.",
-        "VoiceId": null,
+        "VoiceId": "017f911a326f7463",
         "Delivery": null
       },
       "CleanLine": {
@@ -411,7 +411,7 @@
       "Objective": null,
       "Line": {
         "Text": "Standing about, hirelings? You\u0027re paid by the floor, and this is the last one. Come and earn it.",
-        "VoiceId": null,
+        "VoiceId": "3e203a6f9763b2b3",
         "Delivery": null
       },
       "CleanLine": {
