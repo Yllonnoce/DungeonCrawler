@@ -31,4 +31,52 @@ public static class NarrationRules
 
     /// <summary>Roughly how long a line takes to be heard: a floor of three seconds, 0.06 s a character, capped at twelve. What waits for a line waits this long.</summary>
     public static double SpeakSeconds(string text) => Math.Min(SpeakCap, SpeakFloor + SpeakPerChar * (text?.Trim().Length ?? 0));
+
+    /// <summary>
+    /// The tier whose entry line opens this floor: the first floor of each tier of the campaign proper (1, 6, 11, 16),
+    /// when the campaign wrote that tier a line. Never the tavern, never an endless floor past the last.
+    /// </summary>
+    public static TierPlan? TierEntry(CampaignPlan campaign, int floor)
+    {
+        if (floor < 1 || floor > Dungeon.TierRules.FinalFloor || Dungeon.TierRules.FloorInTier(floor) != 1) return null;
+        var tier = campaign.TierFor(Dungeon.TierRules.TierIndex(floor));
+        return tier != null && tier.EnterLine.Text.Trim().Length > 0 ? tier : null;
+    }
+
+    /// <summary>The key a tier's entry line is remembered under in the said record (kept forever, like a narration entry's).</summary>
+    public static string TierKey(TierPlan tier) => $"{Prefix}tier:{tier.Index}:{tier.EnterLine.Text.Trim().ToLowerInvariant()}";
+
+    /// <summary>
+    /// The longest the victory recap waits once the closing narration has all been raised, so it can never hang on an
+    /// estimate. (Counted from the drain, not the death: the death line and two closing lines already take about 35 s.)
+    /// </summary>
+    public const double RecapCapSeconds = 30;
+
+    /// <summary>Whether the last boss's death queued narration the victory recap should wait for; with none it shows at once.</summary>
+    public static bool HoldsRecap(int queuedAtDeath) => queuedAtDeath > 0;
+
+    /// <summary>
+    /// A held victory recap shows once the queue has drained and its last line has been heard, or
+    /// <see cref="RecapCapSeconds"/> after the queue drained (<paramref name="drainedAt"/>, null while entries wait).
+    /// </summary>
+    public static bool RecapDue(double now, double? drainedAt, int queued, double speakingUntil)
+        => queued == 0 && (now >= speakingUntil || (drainedAt is { } d && now - d >= RecapCapSeconds));
+}
+
+/// <summary>
+/// The one voice channel the narrator, the villain and the bosses share: whatever was raised last holds it for its
+/// <see cref="NarrationRules.SpeakSeconds"/>, and a queued narration entry waits until it is free. Engine-free.
+/// </summary>
+public sealed class SpeechClock
+{
+    /// <summary>When the line now being said will have been heard.</summary>
+    public double Until { get; private set; } = double.NegativeInfinity;
+
+    /// <summary>A line was raised now: the channel is held until it has been heard (a shorter line never cuts the wait).</summary>
+    public void Spoke(double now, string text) => Until = Math.Max(Until, now + NarrationRules.SpeakSeconds(text));
+
+    public bool Free(double now) => now >= Until;
+
+    /// <summary>A floor change, a load or a wipe: what was being said no longer holds anything back.</summary>
+    public void Reset() => Until = double.NegativeInfinity;
 }

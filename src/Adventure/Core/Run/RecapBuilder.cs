@@ -45,7 +45,9 @@ public static class RecapBuilder
     public static string VictoryHeadline(string? bossName, string? antagonist)
     {
         var boss = string.IsNullOrWhiteSpace(bossName) ? "The guardian" : bossName.Trim();
-        var hold = string.IsNullOrWhiteSpace(antagonist) ? "The depths lie open." : $"{antagonist.Trim()}'s hold on the depths is broken.";
+        var hold = string.IsNullOrWhiteSpace(antagonist) ? "The depths lie open."
+            : Voice.NarrationRules.BossIsAntagonist(boss, antagonist) ? "The depths are free." // the antagonist is the boss: his name once
+            : $"{antagonist.Trim()}'s hold on the depths is broken.";
         return $"{boss} is slain. {hold}";
     }
 

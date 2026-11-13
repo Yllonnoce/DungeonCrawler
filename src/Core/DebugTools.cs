@@ -329,7 +329,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-elites-and-bosses") { _testElites = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; _startFloor = 8; _floorGiven = true; }
             else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
-            else if (arg == "--test-narration") { _testNarration = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 60; }
+            else if (arg == "--test-narration") { _testNarration = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 170; }
             else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-fortune") { _testFortune = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; _startFloor = 2; _floorGiven = true; }
             else if (arg == "--test-run-structure") { _testRunStructure = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
@@ -402,6 +402,7 @@ public partial class DebugTools : Node
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
         if (automation && !_testFloors && !_builtin && _bakeDir == null && _rehashDir == null && _testObjective == null && ForcedObjective == null) ForcedObjective = "none";
         if (_server || _netClient) NoVoice = true; // a headless server has no speakers; the test client keeps its key in its pocket
+        if (_testNarration && EventBus.Instance != null) { EventBus.Instance.Narration += (text, _) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); }; _nrListening = true; } // from the first floor build: the tier line opens floor 1
     }
 
     public override void _Process(double delta)
@@ -3434,7 +3435,9 @@ public partial class DebugTools : Node
 
     // ---- --test-narration -------------------------------------------------------------------------------
     // A floor's RoomEnter narration on the shipped campaign's floor 1: the party stands in the entry's room and the entry
-    // is raised exactly once; after a save and a load, standing there again raises nothing.
+    // is raised exactly once; after a save and a load, standing there again raises nothing. Floor 1 opens with the Skin's
+    // tier line, then the intro once it has been heard; floor 2 (no tier line) opens after floor 1's parting taunt; on
+    // floor 20 the victory recap waits until the closing narration has been raised and heard.
     private bool _testNarration;
     private int _nrStep;
     private double _nrAt;
@@ -3444,6 +3447,10 @@ public partial class DebugTools : Node
     private bool _nrListening;
     private NarrationPlan? _nrEntry;
     private TauntPlan? _nrDescend;
+    private int _nrBossDeadQueued;
+    private string _nrTierText = "";
+    private double _nrTierAt;
+    private double _nrKilledAt;
 
     private void RunNarrationTest()
     {
@@ -3465,7 +3472,7 @@ public partial class DebugTools : Node
             var room = layout.Rooms[_nrEntry!.Room!.Value];
             foreach (var body in main.Party.Active) body.GlobalPosition = main.Builder.Surface(room.Center);
         }
-        if (_elapsed > 50) { Fail($"timed out at step {_nrStep}"); Finish(); return; }
+        if (_elapsed > 160) { Fail($"timed out at step {_nrStep}"); Finish(); return; }
         switch (_nrStep)
         {
             case 0 when _elapsed >= 1.0:
@@ -3473,15 +3480,37 @@ public partial class DebugTools : Node
                 if (!_nrListening) { EventBus.Instance.Narration += (text, _) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); }; _nrListening = true; }
                 _nrEntry = main.Builder.Contents?.Plan?.Narration.FirstOrDefault(n => n.Trigger == NarrationTrigger.RoomEnter && n.Room is { } r && r >= 0 && r < layout.Rooms.Count);
                 if (_nrEntry == null) { Fail("floor 1 has no RoomEnter narration"); Finish(); return; }
+                // the opening: the tier line first, raised once and remembered
+                var tier = Game.Instance.Adventure.Campaign is { } tc ? Adventure.Voice.NarrationRules.TierEntry(tc, 1) : null;
+                if (tier == null) Fail("the shipped campaign has no tier line for floor 1");
+                else
+                {
+                    var heardTier = _nrHeard.Count(t => t == tier.EnterLine.Text);
+                    GD.Print($"[narration] floor 1 opened with: {string.Join(" | ", _nrHeard.Select(t => t.Length > 50 ? t[..50] + "..." : t))}");
+                    if (heardTier != 1 || _nrHeard.FirstOrDefault() != tier.EnterLine.Text) Fail($"the tier line was not the first thing heard on floor 1 (heard it {heardTier} times)");
+                    if (!Game.Instance.Adventure.BarksSaid.ContainsKey(Adventure.Voice.NarrationRules.TierKey(tier))) Fail("the tier line was not remembered");
+                    var intro = main.Builder.Contents?.Plan?.IntroLine.Text ?? "";
+                    if (_nrHeard.Contains(intro)) Fail("the floor 1 intro came at once, over the tier line");
+                    _nrTierText = tier.EnterLine.Text;
+                }
                 GD.Print($"[narration] entry for room {_nrEntry.Room}: \"{_nrEntry.Line.Text}\"");
                 Game.Instance.Adventure.BarksSaid.Remove(Adventure.Voice.NarrationRules.Key(1, _nrEntry)); // the spawn may already have been in that room
+                _nrTierAt = _nrHeard.Count > 0 ? _nrHeardAt[0] : 0;
                 _nrHeard.Clear(); _nrHeardAt.Clear();
+                _nrHeard.Add(_nrTierText); _nrHeardAt.Add(_nrTierAt); // keep the tier line for step 1's order check
                 StandInRoom();
                 Next();
                 break;
             }
-            case 1 when since >= 6.0:
+            case 1 when (Heard() > 0 && since >= 8.0) || since >= 45.0:
             {
+                // the room line waits its turn behind the opening (the tier line, then the intro): one voice at a time
+                var intro = main.Builder.Contents?.Plan?.IntroLine.Text ?? "";
+                var ti = _nrTierAt; var ii = _nrHeard.IndexOf(intro); var ei = _nrHeard.IndexOf(_nrEntry!.Line.Text);
+                GD.Print($"[narration] tier line at {ti:0.0}s, intro at {(ii >= 0 ? _nrHeardAt[ii] : -1):0.0}s, room line at {(ei >= 0 ? _nrHeardAt[ei] : -1):0.0}s");
+                if (ii < 0) Fail("the floor 1 intro never played after the tier line");
+                else if (_nrHeardAt[ii] - ti < Adventure.Voice.NarrationRules.SpeakSeconds(_nrTierText) - 0.5) Fail($"the intro came {_nrHeardAt[ii] - ti:0.0}s after the tier line, wanted {Adventure.Voice.NarrationRules.SpeakSeconds(_nrTierText):0.0}s");
+                if (ii >= 0 && ei >= 0 && _nrHeardAt[ei] - _nrHeardAt[ii] < Adventure.Voice.NarrationRules.SpeakSeconds(intro) - 0.5) Fail("the room line cut the intro off");
                 if (Heard() != 1) Fail($"entering the room raised the entry {Heard()} times, wanted 1");
                 if (!Game.Instance.Adventure.BarksSaid.ContainsKey(Adventure.Voice.NarrationRules.Key(1, _nrEntry!))) Fail("the played entry was not remembered");
                 main.SaveGame("narration-test");
@@ -3523,6 +3552,45 @@ public partial class DebugTools : Node
                     if (gap < need - 0.5) Fail($"the next floor's opening came {gap:0.0}s after the parting taunt, wanted {need:0.0}s");
                 }
                 else Fail("nothing opened floor 2 after the parting taunt");
+                // floor 2 is no tier's first floor: no tier line there
+                if (Game.Instance.Adventure.Campaign is { } c2 && c2.Tiers.Any(t => _nrHeard.Contains(t.EnterLine.Text))) Fail("a tier line played on floor 2");
+                Game.Instance.JumpToFloor(20);
+                Next();
+                break;
+            }
+            case 5 when main.Builder.CurrentFloor == 20 && since >= 3.0:
+            {
+                var boss = main.Builder.FloorRoot.GetChildren().OfType<Enemy>().FirstOrDefault(e => e.IsBoss);
+                if (boss == null) { Fail("floor 20 has no boss"); Finish(); return; }
+                _nrHeard.Clear(); _nrHeardAt.Clear();
+                _nrKilledAt = _elapsed;
+                boss.Kill();
+                Next();
+                break;
+            }
+            case 6 when since >= 0.5:
+            {
+                var plan = main.Builder.Contents?.Plan;
+                var closing = plan?.Narration.Where(n => n.Trigger == NarrationTrigger.BossDead && FlagRules.Allowed(n.RequiresFlag, n.ForbidsFlag, Game.Instance.Adventure.Memory.Flags)).Select(n => n.Line.Text).ToList() ?? new List<string>();
+                _nrBossDeadQueued = closing.Count;
+                GD.Print($"[narration] floor 20 boss dead: victory={Game.Instance.Victory}, recap shown={main.LastRecap != null}, held={AdventureDirector.Instance.RecapHeld}, closing lines {closing.Count}");
+                if (!Game.Instance.Victory) Fail("killing the last boss did not declare victory");
+                if (closing.Count == 0) Fail("floor 20 has no closing narration to wait for");
+                if (main.LastRecap != null) Fail("the victory recap was shown before the closing narration was raised");
+                Next();
+                break;
+            }
+            case 7 when main.LastRecap != null || since >= 75.0:
+            {
+                var plan = main.Builder.Contents?.Plan;
+                var closing = plan?.Narration.Where(n => n.Trigger == NarrationTrigger.BossDead && FlagRules.Allowed(n.RequiresFlag, n.ForbidsFlag, Game.Instance.Adventure.Memory.Flags)).Select(n => n.Line.Text).ToList() ?? new List<string>();
+                var recapAt = _elapsed;
+                var last = closing.Count > 0 ? _nrHeard.LastIndexOf(closing[^1]) : -1;
+                GD.Print($"[narration] victory recap after {recapAt - _nrKilledAt:0.0}s: \"{main.LastRecap?.Headline}\"; closing lines heard {closing.Count(_nrHeard.Contains)}/{closing.Count}{(last >= 0 ? $", the last at {_nrHeardAt[last] - _nrKilledAt:0.0}s" : "")}");
+                if (main.LastRecap == null) Fail("the victory recap never came");
+                if (closing.Any(t => !_nrHeard.Contains(t))) Fail("the recap came before every closing line was raised");
+                if (last >= 0 && recapAt - _nrHeardAt[last] < Adventure.Voice.NarrationRules.SpeakSeconds(closing[^1]) - 0.5) Fail("the recap came over the last closing line");
+                if (main.LastRecap is { } r && Game.Instance.Adventure.Campaign is { } c && r.Headline.Split(c.Antagonist.Name).Length > 2) Fail($"the headline says {c.Antagonist.Name} twice");
                 Finish();
                 break;
             }

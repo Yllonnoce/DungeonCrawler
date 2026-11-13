@@ -793,7 +793,8 @@ public partial class Main : Node
         if (TierRules.IsFinalBossFloor(floor) && !Game.Instance.Victory)
         {
             Game.Instance.Victory = true;
-            ShowRecap(victory: true);
+            // the closing narration the death just queued is heard first; the card and its sting follow it (at most 30 s)
+            if (AdventureDirector.Instance?.HoldRecapForNarration(() => ShowRecap(victory: true)) != true) ShowRecap(victory: true);
         }
     }
 

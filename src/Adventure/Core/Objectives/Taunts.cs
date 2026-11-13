@@ -43,15 +43,18 @@ public sealed class TauntDirector
 {
     public const double GlobalCooldown = 12, PerTriggerCooldown = 45, NarrationGap = 4, IdleAfter = 60;
 
-    private double _lastAny = double.NegativeInfinity, _lastNarration = double.NegativeInfinity;
+    private double _lastAny = double.NegativeInfinity, _quietUntil = double.NegativeInfinity;
     private readonly Dictionary<TauntTrigger, double> _lastPer = new();
 
-    /// <summary>Someone (narrator, boss, NPC) just spoke: the villain waits its turn.</summary>
-    public void NoteNarration(double now) => _lastNarration = now;
+    /// <summary>Someone (narrator, boss, NPC) just spoke: the villain waits its turn, at least <see cref="NarrationGap"/>.</summary>
+    public void NoteNarration(double now) => NoteNarration(now, NarrationGap);
+
+    /// <summary>A line was raised now that takes <paramref name="seconds"/> to be heard: the villain waits until it has been (a shorter line never cuts the wait).</summary>
+    public void NoteNarration(double now, double seconds) => _quietUntil = Math.Max(_quietUntil, now + seconds);
 
     public bool CanSpeak(TauntTrigger trigger, double now, bool urgent = false)
     {
-        if (now - _lastNarration < NarrationGap && !urgent) return false;
+        if (now < _quietUntil && !urgent) return false;
         if (now - _lastAny < GlobalCooldown && !urgent) return false;
         return !_lastPer.TryGetValue(trigger, out var last) || now - last >= PerTriggerCooldown;
     }
@@ -78,6 +81,22 @@ public sealed class TauntDirector
     /// <summary>A floor's own Descend taunts that the flags allow (general ones only: the Descend taunt is picked with no objective kind): what the villain may say as the party leaves it, objective or not.</summary>
     public static List<TauntPlan> DescendBank(IEnumerable<TauntPlan> floorTaunts, IReadOnlyCollection<string>? flags)
         => floorTaunts.Where(t => TauntTriggers.TryParse(t.Trigger, out var tt) && tt == TauntTrigger.Descend && t.Line.Text.Trim().Length > 0 && string.IsNullOrWhiteSpace(t.Objective) && FlagRules.Allowed(t.RequiresFlag, t.ForbidsFlag, flags!)).ToList();
+
+    /// <summary>
+    /// A floor's own FloorEnter taunts that this objective and the flags allow (the same filters <see cref="Pick"/> applies):
+    /// when there are any, the floor opens with one of them and never with the campaign's general line.
+    /// </summary>
+    public static List<TauntPlan> FloorEnterBank(IEnumerable<TauntPlan> floorTaunts, FloorObjectiveKind kind, IReadOnlyCollection<string>? flags)
+        => floorTaunts.Where(t => TauntTriggers.TryParse(t.Trigger, out var tt) && tt == TauntTrigger.FloorEnter && t.Line.Text.Trim().Length > 0)
+            .Where(t => string.IsNullOrWhiteSpace(t.Objective) || (FloorObjectives.TryParse(t.Objective, out var k) && k == kind))
+            .Where(t => FlagRules.Allowed(t.RequiresFlag, t.ForbidsFlag, flags ?? Array.Empty<string>()))
+            .ToList();
+
+    /// <summary>
+    /// The objective's last words (urgent, never dropped) wait for a line being said instead of cutting it off; the
+    /// openings, a crushing and a wipe keep speaking at once.
+    /// </summary>
+    public static bool HoldsForSpeech(TauntTrigger trigger) => trigger is TauntTrigger.AllFreed or TauntTrigger.RitualDone or TauntTrigger.VaultOpened or TauntTrigger.ObjectiveDone;
 
     /// <summary>Fill the tokens a line may carry.</summary>
     public static string Render(string text, string? party, int floor, string? arg) => text

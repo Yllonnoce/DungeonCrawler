@@ -423,7 +423,7 @@ public partial class AdventureDirector : Node
     private FloorRecord? _record;
     private (int Floor, Run.FloorCardModel Card)? _pendingFloorCard;
     /// <summary>A session is torn down: nothing of its ledger or its pending floor card carries into the next.</summary>
-    public void ForgetSession() { _pendingFloorCard = null; _record = null; _hasFloor = false; }
+    public void ForgetSession() { _pendingFloorCard = null; _record = null; _hasFloor = false; _heldRecap = null; }
     /// <summary>The last floor card shown (tests).</summary>
     public Run.FloorCardModel? LastFloorCard { get; private set; }
     private double _floorStart;
@@ -465,9 +465,27 @@ public partial class AdventureDirector : Node
     private readonly List<(double At, string Text, string? Voice, string Key)> _narrationQueue = new();
     private readonly HashSet<string> _narrationQueued = new();
     private double _narrationFree, _roomNarrationCheck;
+    private readonly Voice.SpeechClock _speech = new(); // every line raised as narration holds the one voice channel for its SpeakSeconds
+    private (double? DrainedAt, Action Show)? _heldRecap; // the victory recap, waiting for the closing narration; DrainedAt once the last entry is raised
 
     /// <summary>Nothing queued survives a floor change, a load or a wipe: the line was not heard, so its key was never recorded.</summary>
-    private void ClearNarrationQueue() { _deferred.Clear(); _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; }
+    private void ClearNarrationQueue() { _deferred.Clear(); _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; _speech.Reset(); }
+
+    /// <summary>
+    /// The last boss is dead: when its death queued narration (the closing lines), the victory recap waits until that has
+    /// drained and been heard (at most <see cref="Voice.NarrationRules.RecapCapSeconds"/> after the drain). False when nothing waits: show it now.
+    /// Server and solo: clients get the narration and then the recap over the wire, as before.
+    /// </summary>
+    public bool HoldRecapForNarration(Action show)
+    {
+        if (Net.NetSession.IsClient || !Voice.NarrationRules.HoldsRecap(_narrationQueue.Count)) return false;
+        _heldRecap = (null, show);
+        GD.Print($"[Adventure] the victory recap waits for {_narrationQueue.Count} closing line(s)");
+        return true;
+    }
+
+    /// <summary>Whether a victory recap is waiting for the closing narration (tests).</summary>
+    public bool RecapHeld => _heldRecap != null;
 
     /// <summary>Queue the plan's entries due for this trigger (for RoomEnter, any of the rooms), in plan order. Server and solo only: clients hear them as narration messages. The key is recorded when the line plays.</summary>
     private void PlayNarration(NarrationTrigger trigger, IReadOnlyList<int?> rooms, double lead = 0)
@@ -503,13 +521,23 @@ public partial class AdventureDirector : Node
         var now = Game.Instance.PlaySeconds;
         for (var i = 0; i < _deferred.Count; i++)
             if (_deferred[i].At <= now) { var d = _deferred[i].Do; _deferred.RemoveAt(i--); d(); }
-        while (_narrationQueue.Count > 0 && _narrationQueue[0].At <= now)
+        // one line at a time: an entry waits until whatever was raised last (a taunt, a boss line, the entry before it) has been heard
+        while (_narrationQueue.Count > 0 && _narrationQueue[0].At <= now && _speech.Free(now))
         {
             var (_, text, voice, key) = _narrationQueue[0];
             _narrationQueue.RemoveAt(0);
             _narrationQueued.Remove(key);
             Game.Instance.Adventure.BarksSaid[key] = Voice.BarkRepeat.Forever; // heard now: it never plays again this run
             EventBus.Instance.RaiseNarration(text, voice);
+        }
+        if (_heldRecap is { } held)
+        {
+            if (held.DrainedAt == null && _narrationQueue.Count == 0) _heldRecap = held = (now, held.Show);
+            if (Voice.NarrationRules.RecapDue(now, held.DrainedAt, _narrationQueue.Count, _speech.Until))
+            {
+                _heldRecap = null;
+                if (Game.Instance.InGame) held.Show();
+            }
         }
         if (Net.NetSession.IsClient || !Game.Instance.InGame || now < _roomNarrationCheck || Main.Instance is not { } main || main.Party is not { HasBodies: true } party || main.Builder.Layout is not { } layout || main.Builder.Contents?.Plan is not { } plan) return;
         _roomNarrationCheck = now + 0.25;
@@ -576,7 +604,7 @@ public partial class AdventureDirector : Node
         bus.PartyWiped += ClearNarrationQueue;
         bus.PartyWiped += () => Taunt(Objectives.TauntTrigger.PartyWiped, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, urgent: true);
         bus.ObjectiveEvent += OnObjectiveEvent;
-        bus.Narration += (_, _) => _taunts.NoteNarration(Game.Instance.PlaySeconds);
+        bus.Narration += (text, _) => { var at = Game.Instance.PlaySeconds; _taunts.NoteNarration(at, Voice.NarrationRules.SpeakSeconds(text)); _speech.Spoke(at, text); }; // the villain waits until a line has been heard, and so does the next queued entry
         bus.MemberRevived += i => Bark(Member(i), BarkTrigger.Revived);
         bus.EnemyDied += OnEnemyDied;
         bus.QuestItemPicked += id => Apply(new QuestItemPicked(QuestKeys.QuestOf(id))); // clue items carry an ordinal after the quest key
@@ -681,19 +709,31 @@ public partial class AdventureDirector : Node
         }
         var own = _leftDescend; _leftDescend = new();
         var ownSpoke = own.Count > 0 && Taunt(Objectives.TauntTrigger.Descend, urgent: true, bankOverride: own); // the left floor's own line, objective or not
-        if (_pendingDescend is { } left) { _pendingDescend = null; if (!ownSpoke) Taunt(Objectives.TauntTrigger.Descend, left); }
+        var partingSpoke = ownSpoke;
+        if (_pendingDescend is { } left) { _pendingDescend = null; if (!ownSpoke) partingSpoke = Taunt(Objectives.TauntTrigger.Descend, left); }
         // an objective floor opens with the villain's line instead of the narrator's, plan or no plan
         var objectiveKind = Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;
-        // when the floor just left spoke its parting taunt, the arriving floor's opening waits until that line has been heard
-        var holdOpening = ownSpoke && firstVisit;
-        var villainSpoke = !holdOpening && firstVisit && objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true);
+        // the order on arrival: the parting taunt of the floor left, then (on a tier's first floor, once a run) the tier's
+        // entry line, then the floor's opening; each waits until the line before it has been heard
+        var now = Game.Instance.PlaySeconds;
+        var openAt = ownSpoke ? now + Voice.NarrationRules.SpeakSeconds(_lastTauntSpoken) : now;
+        if (firstVisit && TierLineDue(floor) is { } tier)
+        {
+            var at = partingSpoke ? now + Voice.NarrationRules.SpeakSeconds(_lastTauntSpoken) : now;
+            if (at <= now) SayTierLine(tier);
+            else _deferred.Add((at, () => { if (_currentFloor == floor) SayTierLine(tier); }));
+            openAt = at + Voice.NarrationRules.SpeakSeconds(tier.EnterLine.Text);
+        }
+        var holdOpening = firstVisit && openAt > now;
+        var villainSpoke = !holdOpening && firstVisit && OpeningTaunt(objectiveKind, contents.Plan);
         if (holdOpening)
         {
             var intro = contents.Plan?.IntroLine;
-            _deferred.Add((Game.Instance.PlaySeconds + Voice.NarrationRules.SpeakSeconds(_lastTauntSpoken), () =>
+            var plan0 = contents.Plan;
+            _deferred.Add((openAt, () =>
             {
                 if (_currentFloor != floor) return;
-                if (objectiveKind != FloorObjectiveKind.None && Taunt(Objectives.TauntTrigger.FloorEnter, objectiveKind, urgent: true)) return;
+                if (OpeningTaunt(objectiveKind, plan0)) return;
                 if (intro != null && intro.Text != "") EventBus.Instance.RaiseNarration(intro.Text, intro.VoiceId);
             }));
         }
@@ -725,6 +765,25 @@ public partial class AdventureDirector : Node
         _lastObjectiveActivity = Game.Instance.PlaySeconds;
     }
 
+    /// <summary>This floor's tier entry line when it opens a tier and has not been heard this run; null otherwise.</summary>
+    private TierPlan? TierLineDue(int floor)
+        => Game.Instance.Adventure.Campaign is { } c && Voice.NarrationRules.TierEntry(c, floor) is { } t && !Game.Instance.Adventure.BarksSaid.ContainsKey(Voice.NarrationRules.TierKey(t)) ? t : null;
+
+    /// <summary>The narrator's tier line, in its own recording; remembered forever so a revisit or a reload stays quiet.</summary>
+    private void SayTierLine(TierPlan tier)
+    {
+        Game.Instance.Adventure.BarksSaid[Voice.NarrationRules.TierKey(tier)] = Voice.BarkRepeat.Forever;
+        EventBus.Instance.RaiseNarration(tier.EnterLine.Text, tier.EnterLine.VoiceId);
+    }
+
+    /// <summary>An objective floor's opening taunt: from the floor's own FloorEnter lines when it has any the objective and flags allow, else from the campaign's.</summary>
+    private bool OpeningTaunt(FloorObjectiveKind kind, FloorPlan? plan)
+    {
+        if (kind == FloorObjectiveKind.None) return false;
+        var own = Objectives.TauntDirector.FloorEnterBank(plan?.Taunts ?? new List<TauntPlan>(), kind, Memory.Flags);
+        return Taunt(Objectives.TauntTrigger.FloorEnter, kind, urgent: true, bankOverride: own.Count > 0 ? own : null);
+    }
+
     // ---- the villain --------------------------------------------------------------------------
 
     private readonly Objectives.TauntDirector _taunts = new();
@@ -742,6 +801,12 @@ public partial class AdventureDirector : Node
         if (campaign.Taunts.Count == 0 || !campaign.Taunts.Any(t => t.Trigger == Objectives.TauntTriggers.Id(trigger))) Objectives.TauntBank.Fill(campaign); // a campaign baked before a trigger existed gets the stock line for it
         var bank = bankOverride ?? campaign.Taunts.Concat(Main.Instance?.Builder.Contents?.Plan?.Taunts ?? new List<TauntPlan>()).ToList();
         var now = Game.Instance.PlaySeconds;
+        if (urgent && Objectives.TauntDirector.HoldsForSpeech(trigger) && !_speech.Free(now))
+        {   // the objective's last word waits for the line being said rather than cutting it off; it is never dropped
+            var floor = _currentFloor;
+            _deferred.Add((_speech.Until, () => { if (_currentFloor == floor) Taunt(trigger, kind, arg, urgent, bankOverride); }));
+            return true;
+        }
         var pick = _taunts.Pick(bank, trigger, kind, Game.Instance.Adventure.BarksSaid, Memory.Flags, _currentFloor, now, _barkRng, urgent);
         if (pick == null) return false;
         Voice.BarkRepeat.Said(Game.Instance.Adventure.BarksSaid, pick.Line.Text, _currentFloor);
