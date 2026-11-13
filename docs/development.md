@@ -318,7 +318,9 @@ godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back
 godot --path . -- --test-horde --screenshot=out.png                 # floor 3 nest room: stream, kill, spent; the screenshot is taken mid-stream
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)
-godot --path . -- --builtin --equip=item.hand_axe --screenshot=out.png --after=3   # put a weapon in the lead's hands half a second in, to check the first-person view (any weapon item id: hand_axe, greatsword, mace, spear, ...)
+godot --path . -- --builtin --equip=item.hand_axe --screenshot=out.png --after=3   # put a weapon in the lead's hands half a second in, to check the first-person view (any weapon item id: hand_axe, greatsword, mace, spear, ...; or a legendary's id, leg.sluicebreaker, to see its glow)
+godot --path . -- --equip=leg.sluicebreaker --auto-attack --screenshot=out.png --after=3.1   # catch a live swing: the streak, the glow (vary --after to land on a different moment)
+godot --path . -- --pose-sheet=/tmp/poses   # every weapon held still at each pose of its light, backhand and heavy swings, one PNG per pose (NN_item_move_K.png); --pose-items=item.wand,item.glaive narrows it, --pose-skills=ability.cleave,ability.meteor adds skill moves
 godot --headless --path . -- --test-ambush          # floor 2: the first corridor ambush springs when stood on, fights, saves as sprung
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT
@@ -402,8 +404,30 @@ You possess one of the four characters at a time (the local body); the other thr
 | F8 | Give 20 arrows (debug) |
 
 The possessed character's weapon is visible in first person (`Party/FirstPersonWeapon.cs`): it bobs as you walk,
-swings on light and heavy attacks, draws back for bow shots, lifts for spells, and rises while guarding. It swaps when
-you equip a different weapon.
+plays a move when you attack, lies across the body while guarding, and swaps when you equip a different weapon.
+The moves are engine-free data in `Items/Core/WeaponMoves.cs`, tested in `tests/Items/WeaponMovesTests.cs`:
+
+- **Styles** (`Items/Core/WeaponStyle.cs`) are finer than weapon kinds: a two-handed sword is a Greatsword, a
+  two-handed mace a War Hammer, and the item tags `sabre`, `glaive`, `wand` and `crossbow` pick those styles. The style
+  picks the model in the hand (`Items/Core/HeldWeapon.cs`) and the move set. Light (dagger, sabre, wand), medium and
+  heavy (greatsword, battle axe, war hammer, glaive) weights set how long a swing winds up and whether it jolts the view.
+- **Moves.** Every style has two light swings that alternate while you keep swinging (a forehand and a backhand, a
+  jab and a flick, ...), a heavy swing of its own, and for bows a draw-and-loose (a crossbow kicks instead). Melee
+  skills have signature moves whatever the weapon (cleave sweeps the whole view, backstab rises from low and twists,
+  venom strike stabs twice, shield bash tucks the weapon and jolts); bow skills draw long, loose three or dip the head;
+  spells thrust (bolts), call down (meteor) or slam (novas); shouts pump the weapon twice and blessings lift it. A move
+  that would outlast the time until the next swing (`AbilityRules.SwingSeconds`) is played faster.
+- **Keys** say where the blade points, not how the model turns: `Up` raises it (+50 cocks it back past upright, −50
+  lays it level ahead), `Left` swings it (−100 out to the right, +60 across to the left), `Twist` turns it about its
+  length, and X/Y/Z move the hand. The view samples the move each frame and turns the hand about the grip so the blade
+  points there, whatever model it holds; Quaternius models are moved so their grip sits on the hand. Every melee blow
+  lands in view above the party bar (blade level or higher, hand raised); a test holds that.
+- **Flourishes.** A heavy weapon's impact shakes the camera. Skills leave a streak in their magic's colour; legendary
+  weapons glow and streak in the colour of what they inflict (gold if nothing); a perfect blow streaks gold.
+
+New weapons with their own styles: Sabre (rogues, warriors, rangers), Battle Axe and War Hammer (warriors), Glaive
+(warriors, rangers), Wand (mages: spell power in one hand), Crossbow (rangers: slow, heavy bolts). Named ones on them:
+Sluicebreaker (war hammer), The Reedcutter (glaive, closes the Polearm gap in the named drops) and Lullaby (wand).
 
 Companions (`Party/Adventurer.cs`, decisions in `Characters/Companions/CompanionBrain.cs`): they keep a formation
 behind the lead (melee classes close, ranged and casters further back), path through corridors and across levels,

@@ -72,9 +72,15 @@ public static class AbilityRules
     {
         c.Stamina = Math.Max(0, c.Stamina - StaminaCost(c, a, heavy));
         c.Mana = Math.Max(0, c.Mana - a.ManaCost);
+        c.CooldownRemaining = SwingSeconds(c, a, heavy);
+        if (a.Cooldown > 0) c.AbilityCooldowns[a.Id] = a.Cooldown;
+    }
+
+    /// <summary>Seconds until the member can act again after using <paramref name="a"/>: the weapon's pace (x1.5 heavy) for an attack, half a second for a skill, both hastened by attack speed.</summary>
+    public static float SwingSeconds(CharacterState c, AbilityProfile a, bool heavy)
+    {
         var speed = Math.Max(0.2f, c.Stats[Stat.AttackSpeed]);
         var swing = a.Kind == AbilityKind.WeaponAttack ? c.WeaponProfile.Cooldown * (heavy ? 1.5f : 1f) : 0.5f;
-        c.CooldownRemaining = swing / speed;
-        if (a.Cooldown > 0) c.AbilityCooldowns[a.Id] = a.Cooldown;
+        return swing / speed;
     }
 }

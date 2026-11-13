@@ -187,6 +187,13 @@ public partial class DebugTools : Node
     private string[]? _dropIds;
     private string? _equipId;
     private bool _equipped;
+    // --pose-sheet=DIR: each weapon (or --pose-items=ids) held at every pose of its moves (and of --pose-skills=ids), one PNG per pose
+    private string? _poseSheetDir;
+    private string[]? _poseItems;
+    private string[] _poseSkills = Array.Empty<string>();
+    private readonly Queue<(string file, Items.MoveKey key)> _poseShots = new();
+    private string? _posePending;
+    private int _poseIndex = -1, _poseFrames;
     private bool _dropped;
     private bool _facedNode;
     private bool _facedPit;
@@ -279,6 +286,9 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--face-cell=")) { var spec = arg["--face-cell=".Length..].Split(':'); var xy = spec[0].Split(','); _faceCell = (int.Parse(xy[0]), int.Parse(xy[1])); if (spec.Length > 1) _faceBack = int.Parse(spec[1]); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--drop=")) _dropIds = arg["--drop=".Length..].Split(',');
             else if (arg.StartsWith("--equip=")) _equipId = arg["--equip=".Length..]; // a weapon in the lead's hands (first-person view checks)
+            else if (arg.StartsWith("--pose-sheet=")) { _poseSheetDir = arg["--pose-sheet=".Length..]; _quitAfter = Math.Max(_quitAfter, 900); }
+            else if (arg.StartsWith("--pose-items=")) _poseItems = arg["--pose-items=".Length..].Split(',');
+            else if (arg.StartsWith("--pose-skills=")) _poseSkills = arg["--pose-skills=".Length..].Split(',');
             else if (arg == "--test-drag") { _testDrag = true; _quitAfter = 6; }
             else if (arg == "--test-save") { _testSave = true; _faceEnemy = true; _quitAfter = 9; }
             else if (arg == "--test-depth") { _testDepth = true; TraceAi = false; _quitAfter = 16; }
@@ -552,15 +562,18 @@ public partial class DebugTools : Node
             _equipped = true;
             var cat = Game.Instance.Catalog;
             var lead = equipLead.State;
-            if (!cat.TryBase(_equipId, out _)) GD.Print($"[equip] unknown item {_equipId}");
+            // a legendary's id (leg.*) equips that legendary on its base, glow and streak included
+            var legendary = cat.Legendaries.TryGetValue(_equipId, out var leg) ? leg : null;
+            if (legendary == null && !cat.TryBase(_equipId, out _)) GD.Print($"[equip] unknown item {_equipId}");
             else
             {
-                var item = cat.Create(_equipId);
+                var item = legendary != null ? Items.LootRoller.MakeLegendary(cat, legendary, Math.Max(1, legendary.ItemLevelMin), new Random(1)) : cat.Create(_equipId);
                 lead.Equipment.Equip(Items.EquipSlot.Weapon, item);
                 lead.Recalculate();
                 GD.Print($"[equip] {lead.Name} now holds {item.DisplayName} ({lead.WeaponProfile.Kind}{(item.TwoHanded ? ", two-handed" : "")})");
             }
         }
+        if (_poseSheetDir != null && _elapsed >= 1.5 && Main.Instance?.Party?.Lead is { } poser) PoseSheetStep(poser);
         if (_dropIds != null && !_dropped && _elapsed >= 0.9 && Main.Instance?.Builder.FloorRoot is { } dropRoot)
         {
             _dropped = true;
@@ -5273,6 +5286,44 @@ public partial class DebugTools : Node
         var pos = main.Builder.Surface(standCell, main.Builder.IsUnderAt(nearest.GlobalPosition)) + Vector3.Up * 0.3f;
         party.Teleport(pos, nearest.GlobalPosition);
         GD.Print($"[debug] facing {nearest.Name} at {nearest.GlobalPosition} from cell {standCell}");
+    }
+
+    /// <summary>
+    /// One step of --pose-sheet: save the pose shown two frames ago, show the next one, or equip the next weapon and queue
+    /// every pose of its light, backhand and heavy swings (and the --pose-skills moves) as DIR/NN_item_move_K.png.
+    /// </summary>
+    private void PoseSheetStep(Party.Adventurer lead)
+    {
+        if (_poseFrames-- > 0) return;
+        if (_posePending != null) { SaveScreenshot(_posePending); _posePending = null; }
+        if (_poseShots.Count > 0)
+        {
+            var (file, key) = _poseShots.Dequeue();
+            lead.FirstPerson.HoldPose(key);
+            _posePending = file;
+            _poseFrames = 2;
+            return;
+        }
+        var cat = Game.Instance.Catalog;
+        _poseItems ??= cat.Bases.Values.Where(b => b.Weapon != null).Select(b => b.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray();
+        if (++_poseIndex >= _poseItems.Length) { GD.Print($"[pose-sheet] done: {_poseItems.Length} weapons in {_poseSheetDir}"); _done = true; GetTree().Quit(); return; }
+        var id = _poseItems[_poseIndex];
+        if (!cat.TryBase(id, out _)) { GD.Print($"[pose-sheet] unknown item {id}"); return; }
+        var item = cat.Create(id);
+        lead.State.Equipment.Equip(Items.EquipSlot.Weapon, item);
+        lead.State.Recalculate();
+        var style = Items.WeaponStyles.Of(item);
+        var moves = new List<Items.WeaponMove?> { Items.WeaponMoves.Attack(style, false, 0), Items.WeaponMoves.Attack(style, false, 1), Items.WeaponMoves.Attack(style, true) };
+        var abilities = Registry.Instance.All<Characters.Defs.AbilityDef>().Select(d => d.ToProfile()).ToDictionary(a => a.Id);
+        foreach (var skill in _poseSkills) if (abilities.TryGetValue(skill, out var a)) moves.Add(Items.WeaponMoves.Skill(a.Id, a.Kind, style));
+        var shortId = id.Replace("item.", "");
+        Directory.CreateDirectory(_poseSheetDir!);
+        _poseShots.Enqueue((Path.Combine(_poseSheetDir!, $"{_poseIndex:00}_{shortId}_rest_0.png"), new Items.MoveKey(0, 0, 0, 0, 0, 0, 0)));
+        foreach (var move in moves.OfType<Items.WeaponMove>())
+            for (var k = 0; k < move.Keys.Length - 1; k++)
+                _poseShots.Enqueue((Path.Combine(_poseSheetDir!, $"{_poseIndex:00}_{shortId}_{move.Name.Replace(' ', '-')}_{k}.png"), move.Keys[k]));
+        GD.Print($"[pose-sheet] {id}: {style}, {_poseShots.Count} poses");
+        _poseFrames = 3; // let the view swap to the new model first
     }
 
     private void SaveScreenshot(string path)

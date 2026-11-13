@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.sabre"
+DisplayName = "Sabre"
+Description = "Light, curved, quick to come back."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "sword", "sabre")
+ItemLevelMin = 3
+Stackable = false
+MaxStack = 1
+Color = Color(0.82,0.8,0.72,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Sword"
+MinDamage = 5
+MaxDamage = 9
+DamageType = "Physical"
+Cooldown = 0.6
+StaminaCost = 8
+HeavyMultiplier = 1.7
+Range = 1.8
+TwoHanded = false
+OnHitStatus = "Bleed"
+OnHitDuration = 4
+OnHitMagnitude = 1
+OnHitChance = 0.15
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

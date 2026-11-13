@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.battle_axe"
+DisplayName = "Battle Axe"
+Description = "Two hands, two heads, no second thoughts."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "axe")
+ItemLevelMin = 6
+Stackable = false
+MaxStack = 1
+Color = Color(0.62,0.6,0.6,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Axe"
+MinDamage = 15
+MaxDamage = 26
+DamageType = "Physical"
+Cooldown = 1.4
+StaminaCost = 18
+HeavyMultiplier = 2.1
+Range = 2.1
+TwoHanded = true
+OnHitStatus = "Bleed"
+OnHitDuration = 5
+OnHitMagnitude = 2
+OnHitChance = 0.2
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

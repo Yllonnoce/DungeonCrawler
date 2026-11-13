@@ -4,8 +4,8 @@ namespace DungeonCrawler.Items;
 
 /// <summary>
 /// What an item looks like lying on the floor: a KayKit model where the pack has one (keys, bottles, blades, shields,
-/// the spellbook, arrows), a small built mesh otherwise (armour, jewellery, scrolls, bows, spears, maces, bones), all
-/// normalised to hand size and centred so they can spin on a drop.
+/// the spellbook, arrows, the wand, the crossbow), a small built mesh otherwise (armour, jewellery, scrolls, bows, spears,
+/// glaives, maces, war hammers, bones), all normalised to hand size and centred so they can spin on a drop.
 /// </summary>
 public static class ItemVisuals
 {
@@ -46,15 +46,22 @@ public static class ItemVisuals
         if (item.BaseWeapon is { } weapon)
         {
             size = 0.95f;
-            switch (weapon.Kind)
+            switch (WeaponStyles.Of(weapon.Kind, item.TwoHanded, item.Tags))
             {
-                case Combat.WeaponKind.Sword: return Model(Gear + (item.TwoHanded ? "sword_2handed.gltf" : "sword_1handed.gltf"));
-                case Combat.WeaponKind.Axe: return Model(Gear + (item.TwoHanded ? "axe_2handed.gltf" : "axe_1handed.gltf"));
-                case Combat.WeaponKind.Dagger: size = 0.6f; return Model(Gear + "dagger.gltf");
-                case Combat.WeaponKind.Staff: size = 1.2f; return Model(Gear + "staff.gltf");
-                case Combat.WeaponKind.Bow: size = 1.1f; return Bow();
-                case Combat.WeaponKind.Polearm: size = 1.5f; return Spear();
-                case Combat.WeaponKind.Mace: size = 0.8f; return Mace();
+                case WeaponStyle.Sword: return Model(Gear + "sword_1handed.gltf");
+                case WeaponStyle.Sabre: size = 0.85f; return Model(Gear + "sword_1handed.gltf");
+                case WeaponStyle.Greatsword: return Model(Gear + "sword_2handed.gltf");
+                case WeaponStyle.Axe: return Model(Gear + "axe_1handed.gltf");
+                case WeaponStyle.BattleAxe: size = 1.05f; return Model(Gear + "axe_2handed.gltf");
+                case WeaponStyle.Dagger: size = 0.6f; return Model(Gear + "dagger.gltf");
+                case WeaponStyle.Staff: size = 1.2f; return Model(Gear + "staff.gltf");
+                case WeaponStyle.Wand: size = 0.5f; return Model(Gear + "wand.gltf");
+                case WeaponStyle.Bow: size = 1.1f; return Bow();
+                case WeaponStyle.Crossbow: size = 0.9f; return Model(Gear + "crossbow_2handed.gltf");
+                case WeaponStyle.Spear: size = 1.5f; return Spear();
+                case WeaponStyle.Glaive: size = 1.5f; return Glaive();
+                case WeaponStyle.Mace: size = 0.8f; return Mace();
+                case WeaponStyle.WarHammer: size = 1.0f; return WarHammer();
             }
             return null;
         }
@@ -84,6 +91,8 @@ public static class ItemVisuals
         HeldSource.KayKit => Model(Gear + model.Name + ".gltf"),
         HeldSource.Built when model.Name == "mace" => Lowered(Mace(), 0.25f),
         HeldSource.Built when model.Name == "spear" => Spear(),
+        HeldSource.Built when model.Name == "war_hammer" => Lowered(WarHammer(), 0.4f),
+        HeldSource.Built when model.Name == "glaive" => Glaive(),
         _ => null,
     };
 
@@ -181,6 +190,33 @@ public static class ItemVisuals
             var spike = Part(n, new CylinderMesh { TopRadius = 0f, BottomRadius = 0.035f, Height = 0.12f }, steel, new Vector3(Mathf.Cos(a) * 0.13f, 0.4f, Mathf.Sin(a) * 0.13f));
             spike.Rotation = new Vector3(Mathf.Sin(a) * Mathf.Pi / 2f, 0, -Mathf.Cos(a) * Mathf.Pi / 2f);
         }
+        return n;
+    }
+
+    /// <summary>A long haft with a square iron head: a flat face one side, a spike the other.</summary>
+    private static Node3D WarHammer()
+    {
+        var n = new Node3D();
+        var wood = new StandardMaterial3D { AlbedoColor = new Color(0.3f, 0.2f, 0.11f), Roughness = 0.85f };
+        var iron = new StandardMaterial3D { AlbedoColor = new Color(0.45f, 0.45f, 0.5f), Metallic = 0.9f, Roughness = 0.45f };
+        Part(n, new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.035f, Height = 1.1f }, wood, Vector3.Zero);
+        Part(n, new BoxMesh { Size = new Vector3(0.34f, 0.17f, 0.17f) }, iron, new Vector3(0.04f, 0.56f, 0));
+        Part(n, new BoxMesh { Size = new Vector3(0.04f, 0.21f, 0.21f) }, iron, new Vector3(0.22f, 0.56f, 0));
+        Part(n, new CylinderMesh { TopRadius = 0f, BottomRadius = 0.06f, Height = 0.18f }, iron, new Vector3(-0.2f, 0.56f, 0), new Vector3(0, 0, Mathf.Pi / 2f));
+        Part(n, new CylinderMesh { TopRadius = 0.045f, BottomRadius = 0.045f, Height = 0.08f }, iron, new Vector3(0, -0.5f, 0));
+        return n;
+    }
+
+    /// <summary>A spear's haft with a long curved blade: a broad base and a swept-back tip.</summary>
+    private static Node3D Glaive()
+    {
+        var n = new Node3D();
+        var wood = new StandardMaterial3D { AlbedoColor = new Color(0.38f, 0.26f, 0.14f), Roughness = 0.85f };
+        var steel = new StandardMaterial3D { AlbedoColor = new Color(0.78f, 0.78f, 0.8f), Metallic = 0.9f, Roughness = 0.3f };
+        Part(n, new CylinderMesh { TopRadius = 0.025f, BottomRadius = 0.03f, Height = 1.6f }, wood, Vector3.Zero);
+        Part(n, new BoxMesh { Size = new Vector3(0.1f, 0.34f, 0.02f) }, steel, new Vector3(0.02f, 0.96f, 0), new Vector3(0, 0, -0.12f));
+        Part(n, new PrismMesh { Size = new Vector3(0.1f, 0.18f, 0.02f) }, steel, new Vector3(0.05f, 1.2f, 0), new Vector3(0, 0, -0.25f));
+        Part(n, new CylinderMesh { TopRadius = 0.04f, BottomRadius = 0.04f, Height = 0.05f }, steel, new Vector3(0, 0.79f, 0));
         return n;
     }
 

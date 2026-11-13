@@ -138,6 +138,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     private WeaponKind? _heldKind;
     private int _heldCheck;
     private FirstPersonWeapon _fpWeapon = null!;
+    /// <summary>The weapon in this member's first-person view (debug pose sheets hold it still).</summary>
+    public FirstPersonWeapon FirstPerson => _fpWeapon;
     private float _flash;
     // clip names differ per Quaternius character: (melee attack, ranged/spell attack, hit reaction)
     private static readonly Dictionary<string, (string melee, string cast, string hit)> ClassClips = new()
@@ -860,7 +862,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             var wp = m.WeaponProfile;
             _dance.Cancel();
             _model?.Play(a.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike ? (wp.IsRanged ? Clips.cast : Clips.melee) : Clips.cast, force: true);
-            _fpWeapon.PlayAttack(a.Kind, heavy, wp.IsRanged && a.Kind == AbilityKind.WeaponAttack);
+            _fpWeapon.PlayAttack(a, heavy, perfect, AbilityRules.SwingSeconds(m, a, heavy));
             var cam = Camera.GlobalPosition;
             Net.NetSession.Instance.Send(new Net.AttackIntent(heavy, perfect, new Net.NetVec(cam.X, cam.Y, cam.Z), Rotation.Y, Camera.Rotation.X));
             return;
@@ -874,7 +876,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         EventBus.Instance.RaiseAbilityUsed(Index, a.Kind);
         _dance.Cancel();
         _model?.Play(a.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike ? (w.IsRanged ? Clips.cast : Clips.melee) : Clips.cast, force: true);
-        if (IsLocal) _fpWeapon.PlayAttack(a.Kind, heavy, w.IsRanged && a.Kind == AbilityKind.WeaponAttack);
+        if (IsLocal) _fpWeapon.PlayAttack(a, heavy, perfect, m.CooldownRemaining);
         EventBus.Instance.PlaySfx(a.Kind switch
         {
             AbilityKind.WeaponAttack when w.IsRanged => "bow",

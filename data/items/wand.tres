@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.wand"
+DisplayName = "Wand"
+Description = "Short, light, and it keeps a hand free."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "staff", "wand")
+ItemLevelMin = 3
+Stackable = false
+MaxStack = 1
+Color = Color(0.55,0.42,0.6,1)
+BaseModifiers = PackedStringArray("SpellPower+4")
+WeaponKind = "Staff"
+MinDamage = 2
+MaxDamage = 4
+DamageType = "Physical"
+Cooldown = 0.6
+StaminaCost = 4
+HeavyMultiplier = 1.4
+Range = 1.6
+TwoHanded = false
+OnHitStatus = ""
+OnHitDuration = 0
+OnHitMagnitude = 0
+OnHitChance = 1.0
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false

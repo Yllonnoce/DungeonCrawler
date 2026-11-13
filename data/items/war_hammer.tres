@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="ItemDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/Items/ItemDef.cs" id="1"]
+
+[resource]
+script = ExtResource("1")
+Id = "item.war_hammer"
+DisplayName = "War Hammer"
+Description = "For doors, grates and anything that thinks it is a door."
+Kind = "Weapon"
+Tags = PackedStringArray("weapon", "melee", "mace", "hammer")
+ItemLevelMin = 7
+Stackable = false
+MaxStack = 1
+Color = Color(0.5,0.5,0.55,1)
+BaseModifiers = PackedStringArray()
+WeaponKind = "Mace"
+MinDamage = 16
+MaxDamage = 28
+DamageType = "Physical"
+Cooldown = 1.5
+StaminaCost = 20
+HeavyMultiplier = 2.3
+Range = 2.0
+TwoHanded = true
+OnHitStatus = "Stun"
+OnHitDuration = 0.8
+OnHitMagnitude = 0
+OnHitChance = 0.3
+ArmorClass = "None"
+Offhand = "None"
+HealHp = 0
+HealMana = 0
+RestoreStamina = 0
+Cures = PackedStringArray()
+BuffStatus = ""
+BuffDuration = 0
+BuffMagnitude = 0
+TargetsParty = false
+PlaceTrap = ""
+Respec = false
