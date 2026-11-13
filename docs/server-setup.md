@@ -156,7 +156,7 @@ then `sudo systemctl restart dungeoncrawler` (and open the new port in the firew
 
 | Command | What it does |
 |---|---|
-| `game.sh restart` | restarts the service; the saved game resumes, players rejoin with the same name |
+| `game.sh restart` | restarts the service; the saved game resumes, players rejoin with the same name (a game saved before the story rewire of 2026-11-12 resumes the old story with many lines silent: use `fresh` once to play the new one) |
 | `game.sh fresh` | starts a new game from floor 1; the old save is kept beside it as `server-<date>.json` |
 | `game.sh update` | fetches and installs the latest published build, then restarts |
 | `game.sh status` | service state, status file, join address |

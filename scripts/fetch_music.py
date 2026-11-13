@@ -52,7 +52,7 @@ def main() -> int:
     lic = os.path.join(ROOT, "assets", "LICENSES.md")
     with open(lic, encoding="utf-8") as f:
         text = f.read()
-    if "## Music (OpenGameArt, CC0)" not in text:
+    if "## Music (OpenGameArt, CC0" not in text:  # the header now reads "(OpenGameArt, CC0, and one owner-supplied track)"
         lines = ["", "## Music (OpenGameArt, CC0)", "", "All tracks are CC0 (https://creativecommons.org/publicdomain/zero/1.0/); fetched by `scripts/fetch_music.py` into `assets/audio/music/`.", ""]
         for name, _, slug, title, author in TRACKS:
             lines.append(f"- {name}: \"{title}\" by {author}, https://opengameart.org/content/{slug}")

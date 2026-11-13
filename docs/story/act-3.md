@@ -6,11 +6,13 @@ _Act 3: floors 11-15_
 
 _Mood: riveted plate, ember light, a cheerful old founder_
 
+_Objective: none in the frame; the shipped seed generates shiftingvault_
+
 **Story beat:** The old pump works, now the Herald's foundry. cast_ulf keeps it, cheerfully casting 'tools' for a customer who pays in gold; his eyes are going and he never sees the whole of what he pours. His journeyman fighter_oskar saw the whole drawings, knows better, and joins the party. cast_maud says plainly that she drowned, that the engine here once sent the water down, and that the god is weaker every day the third drain stays shut.
 
 **Narrator:** _(tier 3 entry)_ Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. The Herald has taught it to cast iron instead. The Heart.
 
-**Narrator:** _(floor intro)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
 
 **Narrator:** _(RoomEnter room 8)_ The Great Hearth. The orc's iron comes warm off the old founder's sand, and the engine that should be pumping water feeds the fire instead.
 
@@ -39,15 +41,15 @@ _Mood: riveted plate, ember light, a cheerful old founder_
 
 _Quest: Hounds in the Coal (KillTarget): Kill the ember hounds loose in the hound pit_
 
-**Old Ulf:** _(quest offer)_ Three hounds out of the pit and into my coal. Kill them and I'll show you a mould I'm proud of, which is all of them, so bring patience.
+**Old Ulf:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three hounds out of the pit and into my coal. Kill them and I'll show you a mould I'm proud of, which is all of them, so bring patience.
 
-**Old Ulf:** _(quest accept)_ Good lad. Go down the slag run and don't let them get behind you; they bite where the armour's thin and they know where that is.
+**Old Ulf:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good lad. Go down the slag run and don't let them get behind you; they bite where the armour's thin and they know where that is.
 
-**Old Ulf:** _(quest decline)_ Suit yourselves. They'll eat, the forge runs cool, and my order goes out late. I've not sent an order late in sixty years.
+**Old Ulf:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Suit yourselves. They'll eat, the forge runs cool, and my order goes out late. I've not sent an order late in sixty years.
 
-**Old Ulf:** _(quest complete)_ There's the draw. Here, take this off the shelf for your trouble. Good work, that. Everything off my shelves is.
+**Old Ulf:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ There's the draw. Here, take this off the shelf for your trouble. Good work, that. Everything off my shelves is.
 
-**Old Ulf:** _(quest fail)_ Still chewing, are they. Well. I've worked colder, and I've worked with worse than you.
+**Old Ulf:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Still chewing, are they. Well. I've worked colder, and I've worked with worse than you.
 
 ### Maud Sorrel
 
@@ -79,15 +81,15 @@ _Quest: Hounds in the Coal (KillTarget): Kill the ember hounds loose in the houn
 
 _Mood: kiln brick, a grey crew in cages, keys on a belt_
 
-_Objective: jailbreak_
+_Objective: jailbreak in the frame; the shipped seed generates jailbreak_
 
 **Story beat:** Jailbreak: cast_grisel's crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she took the Herald's keys to save herself and stood as his head jailer, and the party finds her dead by the cage door with his keys still on her belt, cut down by his iron when they came for the cages.
 
-**Narrator:** _(floor intro)_ Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn's crew, taken first in the spring and turned the furthest.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn's crew, taken first in the spring and turned the furthest.
 
 **Narrator:** _(RoomEnter room 11)_ The cages hold Grisel Thorn's crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.
 
-**Narrator:** _(RoomEnter room 11)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.
+**Narrator:** _(RoomEnter room 11, not if grisel_forgiven)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. To save herself she kept her own crew caged for him, and the moment you reached this floor, he had his iron cut her down.
 
 ### Grisel Thorn _(needs grisel_forgiven)_
 
@@ -111,23 +113,23 @@ _Objective: jailbreak_
 
 _Quest: Grisel's Crew (Escort): Bring Grisel Thorn down to the stairs alive, past the jailers, while her crew are freed._
 
-**Grisel Thorn:** _(quest offer)_ I know every cage on this floor by the noise it makes. Get me across the casting floor to the stair, and I'll bring my crew out as we go.
+**Grisel Thorn:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ I know every cage on this floor by the noise it makes. Get me across the casting floor to the stair, and I'll bring my crew out as we go.
 
-**Grisel Thorn:** _(quest accept)_ Right. Slowly. They'll know my voice before they know my face.
+**Grisel Thorn:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Right. Slowly. They'll know my voice before they know my face.
 
-**Grisel Thorn:** _(quest decline)_ Suit yourself. I've been left in worse rooms by better liars.
+**Grisel Thorn:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Suit yourself. I've been left in worse rooms by better liars.
 
-**Grisel Thorn:** _(quest complete)_ That's the stair. I'll wait here and take my crew up myself, every one you bring me. Don't wait for thanks; I'm out of practice.
+**Grisel Thorn:** _(quest complete; shown as a subtitle when the escort arrives, not voiced)_ That's the stair. I'll wait here and take my crew up myself, every one you bring me. Don't wait for thanks; I'm out of practice.
 
-**Grisel Thorn:** _(quest fail)_ Get them out. Don't you leave them now.
+**Grisel Thorn:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Get them out. Don't you leave them now.
 
 ### Floor taunts
 
 **Morg Ashtusk:** _(FloorEnter, jailbreak)_ My Casting Hall, hirelings. Grisel Thorn's crew are in my cages, first down and nearly finished. Another week and they run with my bloody cinders.
 
-**Morg Ashtusk:** _(FloorEnter, jailbreak)_ Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own bloody neck, and now she locks her own crew in every night.
+**Morg Ashtusk:** _(FloorEnter, jailbreak, not if grisel_forgiven)_ Grisel Thorn was my head jailer, hirelings. She took my keys to save her own bloody neck and kept her crew caged for me. Now you're here I've no more use for a jailer, so she's dead. The keys are on her belt.
 
-**Morg Ashtusk:** _(AllFreed, jailbreak)_ Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.
+**Morg Ashtusk:** _(AllFreed, jailbreak, not if grisel_forgiven)_ Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.
 
 ### Hordes
 
@@ -137,9 +139,11 @@ _Quest: Grisel's Crew (Escort): Bring Grisel Thorn down to the stairs alive, pas
 
 _Mood: cold steel plate, white lamps, shelves of moulds_
 
+_Objective: none in the frame; the shipped seed generates jailbreak_
+
 **Story beat:** cast_ulf shows off his moulds and they are clue_moulds: patterns for the crushing walls, the spike beds, the iron minions, and the Herald's own mould, larger. He finally sees what he has been making and wants every mould broken. fighter_oskar admits he knew all along and kept quiet because the Herald threatened the old man; viewer_foehammer wants the Herald's mould smashed and will do it himself.
 
-**Narrator:** _(floor intro)_ Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.
 
 **Narrator:** _(RoomEnter room 4)_ Up close, the moulds on these shelves show what they are for: the plates of a crushing wall, the points of a spike bed, the limbs of the iron brutes.
 
@@ -181,15 +185,15 @@ _Mood: cold steel plate, white lamps, shelves of moulds_
 
 _Quest: The Good Ones (Investigate): Bring Old Ulf three casting moulds from the shelves of the Mould Room_
 
-**Old Ulf:** _(quest offer)_ Three patterns off the shelves, that's all. The hall, the hole behind it, and the one they keep by the stair. Don't drop them; a cracked mould pours crooked.
+**Old Ulf:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three patterns off the shelves, that's all. The hall, the hole behind it, and the one they keep by the stair. Don't drop them; a cracked mould pours crooked.
 
-**Old Ulf:** _(quest accept)_ Good. Flat, mind, and keep your thumbs out of the sand.
+**Old Ulf:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Flat, mind, and keep your thumbs out of the sand.
 
-**Old Ulf:** _(quest decline)_ Suit yourselves. They'll get poured whether you look at them or not. Everything here does.
+**Old Ulf:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Suit yourselves. They'll get poured whether you look at them or not. Everything here does.
 
-**Old Ulf:** _(quest complete)_ A crushing wall. A spike bed. The orc himself, larger. I poured them all. Help me break them.
+**Old Ulf:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ A crushing wall. A spike bed. The orc himself, larger. I poured them all. Help me break them.
 
-**Old Ulf:** _(quest fail)_ Left them lying, did you. Well. There's plenty more on the shelves.
+**Old Ulf:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Left them lying, did you. Well. There's plenty more on the shelves.
 
 ### Floor taunts
 
@@ -207,15 +211,15 @@ _Quest: The Good Ones (Investigate): Bring Old Ulf three casting moulds from the
 
 _Mood: rusted grates under black water, vestments afloat_
 
-_Objective: shiftingvault_
+_Objective: shiftingvault in the frame; the shipped seed generates shiftingvault_
 
 **Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Pressed or let be, he is taken for the rite (16, 19).
 
-**Narrator:** _(floor intro)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
 
 **Narrator:** _(RoomEnter room 8)_ Church vestments float against the grate, black and gold, thrown off in the water: the Verger's. Beside them a young deacon stands soaked to the waist.
 
-**Narrator:** _(QuestDone)_ The orc's escort lies broken in the water, and the deacon is not among them. He ran on down to his master's summons.
+**Narrator:** _(QuestDone, not if told_tobit)_ The orc's escort lies broken in the water, and the deacon is not among them. He ran on down to his master's summons.
 
 ### Deacon Tobit Hale _(needs told_tobit)_
 
@@ -242,19 +246,19 @@ _Objective: shiftingvault_
 
 _Quest: The Deacon's Psalter (Recover): Recover Tobit's psalter from the breached font room_
 
-**Deacon Tobit Hale:** _(quest offer)_ Small black book, water-swollen, dropped by the font where the wall is broken. Everything I've found is written in it, in my own bad hand.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Small black book, water-swollen, dropped by the font where the wall is broken. Everything I've found is written in it, in my own bad hand.
 
-**Deacon Tobit Hale:** _(quest accept)_ Thank you. Mind the cinders in there; they come out of the wall like wasps out of a loaf.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you. Mind the cinders in there; they come out of the wall like wasps out of a loaf.
 
-**Deacon Tobit Hale:** _(quest decline)_ No. Quite right. I dropped it; I should fetch it. I only hoped you'd be quicker.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ No. Quite right. I dropped it; I should fetch it. I only hoped you'd be quicker.
 
-**Deacon Tobit Hale:** _(quest complete)_ My psalter. I'll write the vestments in, and then I'll find the rest in his own hand.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ My psalter. I'll write the vestments in, and then I'll find the rest in his own hand.
 
-**Deacon Tobit Hale:** _(quest fail)_ Then it stays in the water, and I start again from memory. I have a good memory.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Then it stays in the water, and I start again from memory. I have a good memory.
 
 ### Deacon Tobit Hale _(not if told_tobit)_
 
-**Deacon Tobit Hale:** _(node bet_a)_ You're here too! Those are my master's vestments in the water. He's alive, though; he's sent for me. The orc holds him prisoner, doesn't it? Tell me true.
+**Deacon Tobit Hale:** _(node bet_a)_ You're here too! Those are my master's vestments in the water. He's alive, though; he's sent for me. The orc holds him prisoner, doesn't he? Tell me true.
 
   - **Party (choice):** We don't know, deacon. What did he send? _[to bet_b]_
   - **Party (choice):** We can't say. Don't go. _[to bet_b]_
@@ -266,15 +270,15 @@ _Quest: The Deacon's Psalter (Recover): Recover Tobit's psalter from the breache
 
 _Quest: The Deacon's Escort (Betrayal): Put down the escort the orc sent to fetch the deacon_
 
-**Deacon Tobit Hale:** _(quest offer)_ He's sent for me. A rite to save the town, in his own hand. I'm going to him.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ He's sent for me. A rite to save the town, in his own hand. I'm going to him.
 
-**Deacon Tobit Hale:** _(quest accept)_ I'm going to him, and you won't stop me. Those are his escort; don't follow.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ I'm going to him, and you won't stop me. Those are his escort; don't follow.
 
-**Deacon Tobit Hale:** _(quest decline)_ Thank you. Pray for me, if you pray.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you. Pray for me, if you pray.
 
-**Deacon Tobit Hale:** _(quest complete)_ His escort lies in the water. The deacon is gone on down to his master.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ His escort lies in the water. The deacon is gone on down to his master.
 
-**Deacon Tobit Hale:** _(quest fail)_ I'm going to him. Don't follow.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ I'm going to him. Don't follow.
 
 ### Floor taunts
 
@@ -300,9 +304,9 @@ _Mood: red-hot air, an engine casting instead of pumping_
 
 **Narrator:** _(floor intro)_ Red-hot air, and a thump that shakes the floor plates. Ahead, the biggest engine in the works is still running, and under it the third great drain lies choked.
 
-**Narrator:** _(BossSeen)_ The Bellows heaves over the choked drain, and fresh iron drops hissing from its ladles to come at you. Stop the engine and the drain can run.
+**Narrator:** _(BossSeen)_ The Bellows, the engine that pushed the water down this drain for three hundred years, heaves over it choked. The orc set it to pouring his minions: fresh iron drops hissing from its ladles. Stop it and the drain runs.
 
-**Narrator:** _(BossDead)_ You turn the sluice wheel under the dead engine, and the third great drain runs. The heat goes out of the works, the shaking above you eases, and the god drinks. One great drain left.
+**Narrator:** _(BossDead)_ The engine's last stroke comes down on an empty ladle. You turn the sluice wheel under it, and the third great drain runs: the heat goes out of the works, the shaking above you eases, and the god drinks.
 
 ### Floor taunts
 
@@ -314,6 +318,4 @@ _Mood: red-hot air, an engine casting instead of pumping_
 
 ### Boss: The Bellows
 
-**The Bellows:** _(intro)_ The great engine of the pump works, which pushed the water down the third drain for three hundred years. The orc set it to pouring his minions instead.
-
-**The Bellows:** _(death)_ Its last stroke comes down on an empty ladle, and the orc's great engine does not lift again.
+_No lines of its own: the narrator's BossSeen and BossDead lines speak for it._

@@ -10,9 +10,9 @@ _Mood: a mine head under a church, a dead orc still talking_
 
 **Narrator:** _(tier 1 entry)_ The lychgate opens on the church's crypts, and the crypts on the mines. Dunmarrow's dead are up and walking, raised to keep you from the drains below. The Skin.
 
-**Narrator:** _(floor intro)_ You arrive at the head of the old mines, the crypt stair under the lychgate. A huge orc has come up it, and the dwarf who keeps the gate is already fighting him.
+**Narrator:** _(floor intro)_ You arrive at the head of the old mines. A huge orc has come up the crypt stair, and the dwarf who keeps the gate is already fighting him.
 
-**Narrator:** _(RoomEnter room 0)_ The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines for his master, and he means to keep you from the drains below.
+**Narrator:** _(RoomEnter room 0)_ The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines as his master's base, and everything down here answers to him.
 
 ### Alderman Hesketh Crane
 
@@ -36,15 +36,15 @@ _Mood: a mine head under a church, a dead orc still talking_
 
 _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the council notices in it, up from the first cellar._
 
-**Alderman Hesketh Crane:** _(quest offer)_ I took the council notices off the board at the mine head this morning and put them in my bread-basket. Then the orc came up the stair, I ran, and the basket stayed in the first cellar. Bring it back. Don't read them.
+**Alderman Hesketh Crane:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ I took the council notices off the board at the mine head this morning and put them in my bread-basket. Then the orc came up the stair, I ran, and the basket stayed in the first cellar. Bring it back. Don't read them.
 
-**Alderman Hesketh Crane:** _(quest accept)_ Good. Good. Don't eat the cloth.
+**Alderman Hesketh Crane:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Good. Don't eat the cloth.
 
-**Alderman Hesketh Crane:** _(quest decline)_ Then it rots down there with the rest of the parish's goodwill. Suit yourselves.
+**Alderman Hesketh Crane:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Then it rots down there with the rest of the parish's goodwill. Suit yourselves.
 
-**Alderman Hesketh Crane:** _(quest complete)_ Every notice, and the cloth folded on top. Good. Nothing anyone needs to read. The council thanks you in writing.
+**Alderman Hesketh Crane:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Every notice, and the cloth folded on top. Good. Nothing anyone needs to read. The council thanks you in writing.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Keep it. I shall enter the basket on the loss ledger, under drainage.
+**Alderman Hesketh Crane:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Keep it. I shall enter the basket on the loss ledger, under drainage.
 
 ### Maud Sorrel
 
@@ -87,11 +87,11 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
 
 _Mood: moss in the mortar, grey prisoners who look alike_
 
-_Objective: jailbreak_
+_Objective: jailbreak in the frame; the shipped seed generates jailbreak_
 
 **Story beat:** Jailbreak: the prisoners are captured drain-wardens, grey and half-turned in the Herald's cages, already hard to tell apart. The ones the party frees say the traps are new and somebody is building them, that the ones they finish go grey and join the packs (husks), that cast_grisel's crew went down first and nobody has seen them since, and that cast_ulf still keeps the pump works but nobody has heard from him since spring.
 
-**Narrator:** _(floor intro)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
 
 **Narrator:** _(RoomEnter room 7)_ Even here you can hear the wardens in the cells calling out: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
 
@@ -99,7 +99,7 @@ _Objective: jailbreak_
 
 **Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my bloody cages, hirelings, and the finished ones join my packs.
 
-**Morg Ashtusk:** _(Capture, jailbreak)_ {prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.
+**Morg Ashtusk:** _(Capture, jailbreak)_ Back in the cage. Another week and nobody will tell that one from the rest.
 
 ### Hordes
 
@@ -139,19 +139,19 @@ _Mood: chalk-white bone chapel, a deacon praying alone_
 
 _Quest: What to Tell the Deacon (Decide): Tell Deacon Hale the god is starving and no help is coming, or let him keep praying._
 
-**Deacon Tobit Hale:** _(quest offer)_ You've seen more of these crypts than I have lately. Tell me plainly how it is. I am told I am a good listener.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ You've seen more of these crypts than I have lately. Tell me plainly how it is. I am told I am a good listener.
 
-**Deacon Tobit Hale:** _(quest accept)_ Say it plainly. I would rather be wrong out loud than obedient in a whisper.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Say it plainly. I would rather be wrong out loud than obedient in a whisper.
 
-**Deacon Tobit Hale:** _(quest decline)_ As you wish. The candle will keep until you change your mind. It keeps very well.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ As you wish. The candle will keep until you change your mind. It keeps very well.
 
-**Deacon Tobit Hale:** _(quest complete)_ Thank you for telling me how it is. I know what I have to do now.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you for telling me how it is. I know what I have to do now.
 
-**Deacon Tobit Hale:** _(quest fail)_ Go down, then. I'll keep praying. Somebody has to.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Go down, then. I'll keep praying. Somebody has to.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter)_ My dead keep this church now. Let the deacon pray, hirelings; nobody down here is bloody listening but me.
+**Morg Ashtusk:** _(FloorEnter; not played: only an objective floor opens with a taunt)_ My dead keep this church now. Let the deacon pray, hirelings; nobody down here is bloody listening but me.
 
 **Morg Ashtusk:** _(Crushed)_ Flat as a coin. I built that press this spring, and it does a better day's work than you sorry sods.
 
@@ -163,11 +163,11 @@ _Quest: What to Tell the Deacon (Decide): Tell Deacon Hale the god is starving a
 
 _Mood: rotten timber, rising foul air, a log that stops_
 
-_Objective: toxic_
+_Objective: toxic in the frame; the shipped seed generates toxic_
 
 **Story beat:** Foul gas rises from the stagnant water while the party searches the chantry. cast_crane has come down to check progress and finds clue_ledger, the wardens' log: the drains cleared every season for three hundred years, until this spring's last entry, 'By the Verger's order, no one below.' Relieved it was the church and not the council, he says so too quickly.
 
-**Narrator:** _(floor intro)_ You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.
 
 **Narrator:** _(QuestDone)_ Crane holds the pages at arm's length, as a man holds something that has bitten him before.
 
@@ -191,15 +191,15 @@ _Objective: toxic_
 
 _Quest: The Wardens' Log (Investigate): Recover the scattered pages of the wardens' log from the drifts and bring them to Crane_
 
-**Alderman Hesketh Crane:** _(quest offer)_ Three pages, no more. One in the alms drift, one along the timbering, one up in the chantry. I would go myself, but the chain of office is heavy and I am, frankly, a coward.
+**Alderman Hesketh Crane:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three pages, no more. One in the alms drift, one along the timbering, one up in the chantry. I would go myself, but the chain of office is heavy and I am, frankly, a coward.
 
-**Alderman Hesketh Crane:** _(quest accept)_ Good. Good. I shall stand here and guard the heap, which is important work.
+**Alderman Hesketh Crane:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Good. I shall stand here and guard the heap, which is important work.
 
-**Alderman Hesketh Crane:** _(quest decline)_ Quite right. Paper is paper, and nobody reads the old ones.
+**Alderman Hesketh Crane:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Quite right. Paper is paper, and nobody reads the old ones.
 
-**Alderman Hesketh Crane:** _(quest complete)_ Three hundred years of clearings, and then this spring: 'By the Verger's order, no one below.' So it was the church. Not the council. What a relief. I mean, what a shame.
+**Alderman Hesketh Crane:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three hundred years of clearings, and then this spring: 'By the Verger's order, no one below.' So it was the church. Not the council. What a relief. I mean, what a shame.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.
+**Alderman Hesketh Crane:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.
 
 ### Floor taunts
 
@@ -217,7 +217,7 @@ _Mood: a dead canon standing guard on a choked drain_
 
 **Story beat:** Boss: Canon Ludd, the Herald's first lieutenant, raised from the church's dead, guards the first great drain, choked on purpose. When he falls the party turns the sluice wheel, the first drain runs and the shaking eases for a while; the narrator says so. The Herald sneers and promises worse.
 
-**Narrator:** _(floor intro)_ Under the chantry runs the first great drain, or it should. You find its grate packed solid on purpose, and a dead canon standing over it, still saying the office to empty pews.
+**Narrator:** _(floor intro)_ The mines have stood shut since spring by order of the Verger, who keeps the crypt door. Under the chantry you find the first great drain, its grate packed solid on purpose, and a dead canon saying the office over it.
 
 **Narrator:** _(BossSeen)_ Canon Ludd, raised from the church's own dead to guard the drain, swings his censer at empty benches. The ledge above him is bare of ornament; use it.
 

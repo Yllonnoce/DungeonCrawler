@@ -1,6 +1,6 @@
 # DungeonCrawler
 
-A first-person dungeon crawler: four heroes, twenty floors, play alone or with up to four friends. No programming
+A first-person dungeon crawler: four heroes, twenty voiced floors, play alone or with up to four friends. No programming
 needed to install it.
 
 ## Install in three steps
@@ -131,7 +131,7 @@ plates, spike beds and presses kill, and a companion who falls to one can be pul
 
 ## Ways to play
 
-- **Story** is the twenty-floor campaign, the same every time, saved as you go. A sleeping good god keeps the town of Dunmarrow safe, and an orc herald of an evil god has choked the mine drains that feed him; the town hires you to clear the traps and minions before the mines come down. Three choices along the way change what people say later.
+- **Story** is the voiced twenty-floor campaign, the same every time, saved as you go. A sleeping good god keeps the town of Dunmarrow safe, and an orc herald of an evil god has choked the mine drains that feed him; the town hires you to clear the traps and minions before the mines come down. Three choices along the way change what people say later.
 - **New Descent** rolls a fresh dungeon from a new seed: different floors, different elites, different shrines. Before you go
   down, the factor in the tavern offers the **contract**: ten clauses, each worth some *heat*. Heat raises the gold and
   experience you find by a tenth per point; the clauses are the price (prices up by forty per cent, a quarter more creatures,

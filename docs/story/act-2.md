@@ -10,7 +10,7 @@ _Mood: wading in standing water that should be running_
 
 **Narrator:** _(tier 2 entry)_ Below the church the water stands. It should be running down to the god, but the drains beneath it are choked, so it sits here and goes sour. The Gut.
 
-**Narrator:** _(floor intro)_ You wade into the Swallow. The first drain runs, but the drains below are still choked, so the water backs up here, knee-deep and sour, and the god starves. Ahead, a miner pulls wardens' tools from the muck.
+**Narrator:** _(floor intro)_ You wade into the Swallow, knee-deep. Clearing the first drain was not enough: the god still starves for this water. Ahead, a miner pulls wardens' tools from the muck.
 
 ### Maud Sorrel
 
@@ -37,11 +37,11 @@ _Mood: wading in standing water that should be running_
 
 _Mood: a seized pump, a camp, a rite to wake a god_
 
-_Objective: ritual_
+_Objective: ritual in the frame; the shipped seed generates ritual_
 
 **Story beat:** Ritual: the Herald's minions hold a rite to hurry the god awake. cast_grisel, camped close by, works a seized pump to push water down while the party holds the minions off; getting it turning breaks the rite. She asks for help finding her crew, caged somewhere below, and says nothing more about them.
 
-**Narrator:** _(floor intro)_ You come into the Crop: a warden's camp beside a seized pump, and at the old altar the orc's minions holding a rite to hurry the god awake.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ You come into the Crop: a warden's camp beside a seized pump, and at the old altar the orc's minions holding a rite to hurry the god awake.
 
 **Narrator:** _(RoomEnter room 9)_ The orc's minions keep a rite at this altar to hurry the god awake. Beside it, Grisel Thorn, a warden, heaves at a seized pump and shouts to you: hold them off while she frees it, then help her find her crew.
 
@@ -81,7 +81,7 @@ _Mood: tremors, split boulders, bandits in the stores_
 
 _Mood: warm sandstone, sour standing water, a seal on a page_
 
-_Objective: shiftingvault_
+_Objective: shiftingvault in the frame; the shipped seed generates none_
 
 **Story beat:** An ordinary floor (no objective generates here on the shipped seed): the Cistern, where the wardens worked, its tanks standing sour. clue_contract, the order dismissing the drain-wardens under the council's seal, lies torn in three about the cisterns; the party gathers the leaves for cast_crane, who reads his own signature. Caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).
 
@@ -113,15 +113,15 @@ _Objective: shiftingvault_
 
 _Quest: The Council's Order (Investigate): Gather the torn leaves of a council order from the cisterns and bring them to Crane_
 
-**Alderman Hesketh Crane:** _(quest offer)_ Three leaves, by my count, soaked and scattered. Bring them here and we shall say no more about it. Paperwork out of its folder makes me unwell.
+**Alderman Hesketh Crane:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three leaves, by my count, soaked and scattered. Bring them here and we shall say no more about it. Paperwork out of its folder makes me unwell.
 
-**Alderman Hesketh Crane:** _(quest accept)_ Good. Quickly, and do not read them on the way. They are council property and very dull.
+**Alderman Hesketh Crane:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Quickly, and do not read them on the way. They are council property and very dull.
 
-**Alderman Hesketh Crane:** _(quest decline)_ Then they stay down here getting damp, and so, I suppose, does my peace of mind.
+**Alderman Hesketh Crane:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Then they stay down here getting damp, and so, I suppose, does my peace of mind.
 
-**Alderman Hesketh Crane:** _(quest complete)_ All three. My hand, under the council's seal. I'll keep it, and nobody burns it.
+**Alderman Hesketh Crane:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ All three. My hand, under the council's seal. I'll keep it, and nobody burns it.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Gone soft in the wet, then. Well. The council keeps its own copy, and I know what it says.
+**Alderman Hesketh Crane:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Gone soft in the wet, then. Well. The council keeps its own copy, and I know what it says.
 
 ### Grisel Thorn
 
@@ -142,15 +142,15 @@ _Quest: The Council's Order (Investigate): Gather the torn leaves of a council o
 
 _Quest: What Grisel Did (Decide): Answer Grisel Thorn for leaving her crew in the orc's cages_
 
-**Grisel Thorn:** _(quest offer)_ Don't look at me like a jury. Say the thing or don't say it. I've carried it since spring; another moment won't kill me, though plenty else might.
+**Grisel Thorn:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Don't look at me like a jury. Say the thing or don't say it. I've carried it since spring; another moment won't kill me, though plenty else might.
 
-**Grisel Thorn:** _(quest accept)_ Said, then.
+**Grisel Thorn:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Said, then.
 
-**Grisel Thorn:** _(quest decline)_ Silence is also an answer. A coward's, but an answer.
+**Grisel Thorn:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Silence is also an answer. A coward's, but an answer.
 
-**Grisel Thorn:** _(quest complete)_ That's that. The water's still sour and we're both still standing in it.
+**Grisel Thorn:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ That's that. The water's still sour and we're both still standing in it.
 
-**Grisel Thorn:** _(quest fail)_ Nothing, then. Fine. The spiders are better company and they bite less.
+**Grisel Thorn:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Nothing, then. Fine. The spiders are better company and they bite less.
 
 ### Hordes
 
@@ -166,9 +166,9 @@ _Mood: a hatchery ringed in fire over a choked drain_
 
 **Narrator:** _(floor intro)_ Under a nest of silk and eggs lies the second great drain, choked solid. Mother Nit has bred her vermin in its standing water all season. Mind the lichen; it burns in slow rings across the floor.
 
-**Narrator:** _(BossSeen)_ Mother Nit, swollen on the standing water, squats on her nest over the drain. She calls her brood to her; cut them down, or they will bury you.
+**Narrator:** _(BossSeen)_ Mother Nit, swollen on the standing water, squats on her nest over the second drain. The orc set her here, and every egg she lays packs the grate tighter. Cut her brood down, or they will bury you.
 
-**Narrator:** _(BossDead)_ Her nest breaks apart and goes down with the water: the second great drain runs. Back up the Gut the standing water drops, the air clears, and above you the shaking eases. Two great drains to go.
+**Narrator:** _(BossDead)_ Mother Nit falls across her grate and her brood scatters. Her nest goes down with the water: the second great drain runs. The standing water drops, the air clears, and above you the shaking eases.
 
 ### Hordes
 
@@ -178,6 +178,4 @@ _Mood: a hatchery ringed in fire over a choked drain_
 
 ### Boss: Mother Nit
 
-**Mother Nit:** _(intro)_ Queen of the Gut's vermin, set here by the orc to keep the second drain choked. Every egg she lays packs the grate tighter.
-
-**Mother Nit:** _(death)_ She falls across the grate the orc gave her to keep, and what is left of her brood scatters into the dark.
+_No lines of its own: the narrator's BossSeen and BossDead lines speak for it._

@@ -10,9 +10,9 @@ _Mood: a mine head under a church, a dead orc still talking_
 
 **Narrator:** _(tier 1 entry)_ The lychgate opens on the church's crypts, and the crypts on the mines. Dunmarrow's dead are up and walking, raised to keep you from the drains below. The Skin.
 
-**Narrator:** _(floor intro)_ You arrive at the head of the old mines, the crypt stair under the lychgate. A huge orc has come up it, and the dwarf who keeps the gate is already fighting him.
+**Narrator:** _(floor intro)_ You arrive at the head of the old mines. A huge orc has come up the crypt stair, and the dwarf who keeps the gate is already fighting him.
 
-**Narrator:** _(RoomEnter room 0)_ The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines for his master, and he means to keep you from the drains below.
+**Narrator:** _(RoomEnter room 0)_ The orc at the gate is Morg Ashtusk, Herald of the Sleepless, an evil god. He has taken these mines as his master's base, and everything down here answers to him.
 
 ### Alderman Hesketh Crane
 
@@ -36,15 +36,15 @@ _Mood: a mine head under a church, a dead orc still talking_
 
 _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the council notices in it, up from the first cellar._
 
-**Alderman Hesketh Crane:** _(quest offer)_ I took the council notices off the board at the mine head this morning and put them in my bread-basket. Then the orc came up the stair, I ran, and the basket stayed in the first cellar. Bring it back. Don't read them.
+**Alderman Hesketh Crane:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ I took the council notices off the board at the mine head this morning and put them in my bread-basket. Then the orc came up the stair, I ran, and the basket stayed in the first cellar. Bring it back. Don't read them.
 
-**Alderman Hesketh Crane:** _(quest accept)_ Good. Good. Don't eat the cloth.
+**Alderman Hesketh Crane:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Good. Don't eat the cloth.
 
-**Alderman Hesketh Crane:** _(quest decline)_ Then it rots down there with the rest of the parish's goodwill. Suit yourselves.
+**Alderman Hesketh Crane:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Then it rots down there with the rest of the parish's goodwill. Suit yourselves.
 
-**Alderman Hesketh Crane:** _(quest complete)_ Every notice, and the cloth folded on top. Good. Nothing anyone needs to read. The council thanks you in writing.
+**Alderman Hesketh Crane:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Every notice, and the cloth folded on top. Good. Nothing anyone needs to read. The council thanks you in writing.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Keep it. I shall enter the basket on the loss ledger, under drainage.
+**Alderman Hesketh Crane:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Keep it. I shall enter the basket on the loss ledger, under drainage.
 
 ### Maud Sorrel
 
@@ -87,11 +87,11 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
 
 _Mood: moss in the mortar, grey prisoners who look alike_
 
-_Objective: jailbreak_
+_Objective: jailbreak in the frame; the shipped seed generates jailbreak_
 
 **Story beat:** Jailbreak: the prisoners are captured drain-wardens, grey and half-turned in the Herald's cages, already hard to tell apart. The ones the party frees say the traps are new and somebody is building them, that the ones they finish go grey and join the packs (husks), that cast_grisel's crew went down first and nobody has seen them since, and that cast_ulf still keeps the pump works but nobody has heard from him since spring.
 
-**Narrator:** _(floor intro)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
 
 **Narrator:** _(RoomEnter room 7)_ Even here you can hear the wardens in the cells calling out: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
 
@@ -99,7 +99,7 @@ _Objective: jailbreak_
 
 **Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my bloody cages, hirelings, and the finished ones join my packs.
 
-**Morg Ashtusk:** _(Capture, jailbreak)_ {prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.
+**Morg Ashtusk:** _(Capture, jailbreak)_ Back in the cage. Another week and nobody will tell that one from the rest.
 
 ### Hordes
 
@@ -139,19 +139,19 @@ _Mood: chalk-white bone chapel, a deacon praying alone_
 
 _Quest: What to Tell the Deacon (Decide): Tell Deacon Hale the god is starving and no help is coming, or let him keep praying._
 
-**Deacon Tobit Hale:** _(quest offer)_ You've seen more of these crypts than I have lately. Tell me plainly how it is. I am told I am a good listener.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ You've seen more of these crypts than I have lately. Tell me plainly how it is. I am told I am a good listener.
 
-**Deacon Tobit Hale:** _(quest accept)_ Say it plainly. I would rather be wrong out loud than obedient in a whisper.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Say it plainly. I would rather be wrong out loud than obedient in a whisper.
 
-**Deacon Tobit Hale:** _(quest decline)_ As you wish. The candle will keep until you change your mind. It keeps very well.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ As you wish. The candle will keep until you change your mind. It keeps very well.
 
-**Deacon Tobit Hale:** _(quest complete)_ Thank you for telling me how it is. I know what I have to do now.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you for telling me how it is. I know what I have to do now.
 
-**Deacon Tobit Hale:** _(quest fail)_ Go down, then. I'll keep praying. Somebody has to.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Go down, then. I'll keep praying. Somebody has to.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter)_ My dead keep this church now. Let the deacon pray, hirelings; nobody down here is bloody listening but me.
+**Morg Ashtusk:** _(FloorEnter; not played: only an objective floor opens with a taunt)_ My dead keep this church now. Let the deacon pray, hirelings; nobody down here is bloody listening but me.
 
 **Morg Ashtusk:** _(Crushed)_ Flat as a coin. I built that press this spring, and it does a better day's work than you sorry sods.
 
@@ -163,11 +163,11 @@ _Quest: What to Tell the Deacon (Decide): Tell Deacon Hale the god is starving a
 
 _Mood: rotten timber, rising foul air, a log that stops_
 
-_Objective: toxic_
+_Objective: toxic in the frame; the shipped seed generates toxic_
 
 **Story beat:** Foul gas rises from the stagnant water while the party searches the chantry. cast_crane has come down to check progress and finds clue_ledger, the wardens' log: the drains cleared every season for three hundred years, until this spring's last entry, 'By the Verger's order, no one below.' Relieved it was the church and not the council, he says so too quickly.
 
-**Narrator:** _(floor intro)_ You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ You come into rotten timber and a green air rising from cellars where the water has stood still since spring. Somewhere in it, a man with a ledger is apologising to nobody.
 
 **Narrator:** _(QuestDone)_ Crane holds the pages at arm's length, as a man holds something that has bitten him before.
 
@@ -191,15 +191,15 @@ _Objective: toxic_
 
 _Quest: The Wardens' Log (Investigate): Recover the scattered pages of the wardens' log from the drifts and bring them to Crane_
 
-**Alderman Hesketh Crane:** _(quest offer)_ Three pages, no more. One in the alms drift, one along the timbering, one up in the chantry. I would go myself, but the chain of office is heavy and I am, frankly, a coward.
+**Alderman Hesketh Crane:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three pages, no more. One in the alms drift, one along the timbering, one up in the chantry. I would go myself, but the chain of office is heavy and I am, frankly, a coward.
 
-**Alderman Hesketh Crane:** _(quest accept)_ Good. Good. I shall stand here and guard the heap, which is important work.
+**Alderman Hesketh Crane:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Good. I shall stand here and guard the heap, which is important work.
 
-**Alderman Hesketh Crane:** _(quest decline)_ Quite right. Paper is paper, and nobody reads the old ones.
+**Alderman Hesketh Crane:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Quite right. Paper is paper, and nobody reads the old ones.
 
-**Alderman Hesketh Crane:** _(quest complete)_ Three hundred years of clearings, and then this spring: 'By the Verger's order, no one below.' So it was the church. Not the council. What a relief. I mean, what a shame.
+**Alderman Hesketh Crane:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three hundred years of clearings, and then this spring: 'By the Verger's order, no one below.' So it was the church. Not the council. What a relief. I mean, what a shame.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.
+**Alderman Hesketh Crane:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Burnt, soaked, eaten. Just as well. A ledger is only a ledger if somebody reads it.
 
 ### Floor taunts
 
@@ -217,7 +217,7 @@ _Mood: a dead canon standing guard on a choked drain_
 
 **Story beat:** Boss: Canon Ludd, the Herald's first lieutenant, raised from the church's dead, guards the first great drain, choked on purpose. When he falls the party turns the sluice wheel, the first drain runs and the shaking eases for a while; the narrator says so. The Herald sneers and promises worse.
 
-**Narrator:** _(floor intro)_ Under the chantry runs the first great drain, or it should. You find its grate packed solid on purpose, and a dead canon standing over it, still saying the office to empty pews.
+**Narrator:** _(floor intro)_ The mines have stood shut since spring by order of the Verger, who keeps the crypt door. Under the chantry you find the first great drain, its grate packed solid on purpose, and a dead canon saying the office over it.
 
 **Narrator:** _(BossSeen)_ Canon Ludd, raised from the church's own dead to guard the drain, swings his censer at empty benches. The ledge above him is bare of ornament; use it.
 
@@ -241,7 +241,7 @@ _Mood: wading in standing water that should be running_
 
 **Narrator:** _(tier 2 entry)_ Below the church the water stands. It should be running down to the god, but the drains beneath it are choked, so it sits here and goes sour. The Gut.
 
-**Narrator:** _(floor intro)_ You wade into the Swallow. The first drain runs, but the drains below are still choked, so the water backs up here, knee-deep and sour, and the god starves. Ahead, a miner pulls wardens' tools from the muck.
+**Narrator:** _(floor intro)_ You wade into the Swallow, knee-deep. Clearing the first drain was not enough: the god still starves for this water. Ahead, a miner pulls wardens' tools from the muck.
 
 ### Maud Sorrel
 
@@ -268,11 +268,11 @@ _Mood: wading in standing water that should be running_
 
 _Mood: a seized pump, a camp, a rite to wake a god_
 
-_Objective: ritual_
+_Objective: ritual in the frame; the shipped seed generates ritual_
 
 **Story beat:** Ritual: the Herald's minions hold a rite to hurry the god awake. cast_grisel, camped close by, works a seized pump to push water down while the party holds the minions off; getting it turning breaks the rite. She asks for help finding her crew, caged somewhere below, and says nothing more about them.
 
-**Narrator:** _(floor intro)_ You come into the Crop: a warden's camp beside a seized pump, and at the old altar the orc's minions holding a rite to hurry the god awake.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ You come into the Crop: a warden's camp beside a seized pump, and at the old altar the orc's minions holding a rite to hurry the god awake.
 
 **Narrator:** _(RoomEnter room 9)_ The orc's minions keep a rite at this altar to hurry the god awake. Beside it, Grisel Thorn, a warden, heaves at a seized pump and shouts to you: hold them off while she frees it, then help her find her crew.
 
@@ -312,7 +312,7 @@ _Mood: tremors, split boulders, bandits in the stores_
 
 _Mood: warm sandstone, sour standing water, a seal on a page_
 
-_Objective: shiftingvault_
+_Objective: shiftingvault in the frame; the shipped seed generates none_
 
 **Story beat:** An ordinary floor (no objective generates here on the shipped seed): the Cistern, where the wardens worked, its tanks standing sour. clue_contract, the order dismissing the drain-wardens under the council's seal, lies torn in three about the cisterns; the party gathers the leaves for cast_crane, who reads his own signature. Caught, he gives the official excuse (the Verger had already shut the mines, so why pay wardens who could not go below) and says nothing of money. cast_grisel watches him read it, then admits she ran and left her crew in the cages. Decide: forgive her (flag grisel_forgiven) or not (flag grisel_condemned).
 
@@ -344,15 +344,15 @@ _Objective: shiftingvault_
 
 _Quest: The Council's Order (Investigate): Gather the torn leaves of a council order from the cisterns and bring them to Crane_
 
-**Alderman Hesketh Crane:** _(quest offer)_ Three leaves, by my count, soaked and scattered. Bring them here and we shall say no more about it. Paperwork out of its folder makes me unwell.
+**Alderman Hesketh Crane:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three leaves, by my count, soaked and scattered. Bring them here and we shall say no more about it. Paperwork out of its folder makes me unwell.
 
-**Alderman Hesketh Crane:** _(quest accept)_ Good. Quickly, and do not read them on the way. They are council property and very dull.
+**Alderman Hesketh Crane:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Quickly, and do not read them on the way. They are council property and very dull.
 
-**Alderman Hesketh Crane:** _(quest decline)_ Then they stay down here getting damp, and so, I suppose, does my peace of mind.
+**Alderman Hesketh Crane:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Then they stay down here getting damp, and so, I suppose, does my peace of mind.
 
-**Alderman Hesketh Crane:** _(quest complete)_ All three. My hand, under the council's seal. I'll keep it, and nobody burns it.
+**Alderman Hesketh Crane:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ All three. My hand, under the council's seal. I'll keep it, and nobody burns it.
 
-**Alderman Hesketh Crane:** _(quest fail)_ Gone soft in the wet, then. Well. The council keeps its own copy, and I know what it says.
+**Alderman Hesketh Crane:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Gone soft in the wet, then. Well. The council keeps its own copy, and I know what it says.
 
 ### Grisel Thorn
 
@@ -373,15 +373,15 @@ _Quest: The Council's Order (Investigate): Gather the torn leaves of a council o
 
 _Quest: What Grisel Did (Decide): Answer Grisel Thorn for leaving her crew in the orc's cages_
 
-**Grisel Thorn:** _(quest offer)_ Don't look at me like a jury. Say the thing or don't say it. I've carried it since spring; another moment won't kill me, though plenty else might.
+**Grisel Thorn:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Don't look at me like a jury. Say the thing or don't say it. I've carried it since spring; another moment won't kill me, though plenty else might.
 
-**Grisel Thorn:** _(quest accept)_ Said, then.
+**Grisel Thorn:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Said, then.
 
-**Grisel Thorn:** _(quest decline)_ Silence is also an answer. A coward's, but an answer.
+**Grisel Thorn:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Silence is also an answer. A coward's, but an answer.
 
-**Grisel Thorn:** _(quest complete)_ That's that. The water's still sour and we're both still standing in it.
+**Grisel Thorn:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ That's that. The water's still sour and we're both still standing in it.
 
-**Grisel Thorn:** _(quest fail)_ Nothing, then. Fine. The spiders are better company and they bite less.
+**Grisel Thorn:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Nothing, then. Fine. The spiders are better company and they bite less.
 
 ### Hordes
 
@@ -397,9 +397,9 @@ _Mood: a hatchery ringed in fire over a choked drain_
 
 **Narrator:** _(floor intro)_ Under a nest of silk and eggs lies the second great drain, choked solid. Mother Nit has bred her vermin in its standing water all season. Mind the lichen; it burns in slow rings across the floor.
 
-**Narrator:** _(BossSeen)_ Mother Nit, swollen on the standing water, squats on her nest over the drain. She calls her brood to her; cut them down, or they will bury you.
+**Narrator:** _(BossSeen)_ Mother Nit, swollen on the standing water, squats on her nest over the second drain. The orc set her here, and every egg she lays packs the grate tighter. Cut her brood down, or they will bury you.
 
-**Narrator:** _(BossDead)_ Her nest breaks apart and goes down with the water: the second great drain runs. Back up the Gut the standing water drops, the air clears, and above you the shaking eases. Two great drains to go.
+**Narrator:** _(BossDead)_ Mother Nit falls across her grate and her brood scatters. Her nest goes down with the water: the second great drain runs. The standing water drops, the air clears, and above you the shaking eases.
 
 ### Hordes
 
@@ -409,19 +409,19 @@ _Mood: a hatchery ringed in fire over a choked drain_
 
 ### Boss: Mother Nit
 
-**Mother Nit:** _(intro)_ Queen of the Gut's vermin, set here by the orc to keep the second drain choked. Every egg she lays packs the grate tighter.
-
-**Mother Nit:** _(death)_ She falls across the grate the orc gave her to keep, and what is left of her brood scatters into the dark.
+_No lines of its own: the narrator's BossSeen and BossDead lines speak for it._
 
 ## Floor 11: The Hearth
 
 _Mood: riveted plate, ember light, a cheerful old founder_
 
+_Objective: none in the frame; the shipped seed generates shiftingvault_
+
 **Story beat:** The old pump works, now the Herald's foundry. cast_ulf keeps it, cheerfully casting 'tools' for a customer who pays in gold; his eyes are going and he never sees the whole of what he pours. His journeyman fighter_oskar saw the whole drawings, knows better, and joins the party. cast_maud says plainly that she drowned, that the engine here once sent the water down, and that the god is weaker every day the third drain stays shut.
 
 **Narrator:** _(tier 3 entry)_ Heat, and the thump of an engine. This is the pump works, built to push the water down to the god. The Herald has taught it to cast iron instead. The Heart.
 
-**Narrator:** _(floor intro)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
 
 **Narrator:** _(RoomEnter room 8)_ The Great Hearth. The orc's iron comes warm off the old founder's sand, and the engine that should be pumping water feeds the fire instead.
 
@@ -450,15 +450,15 @@ _Mood: riveted plate, ember light, a cheerful old founder_
 
 _Quest: Hounds in the Coal (KillTarget): Kill the ember hounds loose in the hound pit_
 
-**Old Ulf:** _(quest offer)_ Three hounds out of the pit and into my coal. Kill them and I'll show you a mould I'm proud of, which is all of them, so bring patience.
+**Old Ulf:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three hounds out of the pit and into my coal. Kill them and I'll show you a mould I'm proud of, which is all of them, so bring patience.
 
-**Old Ulf:** _(quest accept)_ Good lad. Go down the slag run and don't let them get behind you; they bite where the armour's thin and they know where that is.
+**Old Ulf:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good lad. Go down the slag run and don't let them get behind you; they bite where the armour's thin and they know where that is.
 
-**Old Ulf:** _(quest decline)_ Suit yourselves. They'll eat, the forge runs cool, and my order goes out late. I've not sent an order late in sixty years.
+**Old Ulf:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Suit yourselves. They'll eat, the forge runs cool, and my order goes out late. I've not sent an order late in sixty years.
 
-**Old Ulf:** _(quest complete)_ There's the draw. Here, take this off the shelf for your trouble. Good work, that. Everything off my shelves is.
+**Old Ulf:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ There's the draw. Here, take this off the shelf for your trouble. Good work, that. Everything off my shelves is.
 
-**Old Ulf:** _(quest fail)_ Still chewing, are they. Well. I've worked colder, and I've worked with worse than you.
+**Old Ulf:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Still chewing, are they. Well. I've worked colder, and I've worked with worse than you.
 
 ### Maud Sorrel
 
@@ -490,15 +490,15 @@ _Quest: Hounds in the Coal (KillTarget): Kill the ember hounds loose in the houn
 
 _Mood: kiln brick, a grey crew in cages, keys on a belt_
 
-_Objective: jailbreak_
+_Objective: jailbreak in the frame; the shipped seed generates jailbreak_
 
 **Story beat:** Jailbreak: cast_grisel's crew are caged here, taken first and further gone than the prisoners on floor 2, nearly grey and nearly pack (cinders): proof the turned become the packs. With grisel_forgiven she helps bring them out one at a time; with grisel_condemned she took the Herald's keys to save herself and stood as his head jailer, and the party finds her dead by the cage door with his keys still on her belt, cut down by his iron when they came for the cages.
 
-**Narrator:** _(floor intro)_ Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn's crew, taken first in the spring and turned the furthest.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn's crew, taken first in the spring and turned the furthest.
 
 **Narrator:** _(RoomEnter room 11)_ The cages hold Grisel Thorn's crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.
 
-**Narrator:** _(RoomEnter room 11)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.
+**Narrator:** _(RoomEnter room 11, not if grisel_forgiven)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. To save herself she kept her own crew caged for him, and the moment you reached this floor, he had his iron cut her down.
 
 ### Grisel Thorn _(needs grisel_forgiven)_
 
@@ -522,23 +522,23 @@ _Objective: jailbreak_
 
 _Quest: Grisel's Crew (Escort): Bring Grisel Thorn down to the stairs alive, past the jailers, while her crew are freed._
 
-**Grisel Thorn:** _(quest offer)_ I know every cage on this floor by the noise it makes. Get me across the casting floor to the stair, and I'll bring my crew out as we go.
+**Grisel Thorn:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ I know every cage on this floor by the noise it makes. Get me across the casting floor to the stair, and I'll bring my crew out as we go.
 
-**Grisel Thorn:** _(quest accept)_ Right. Slowly. They'll know my voice before they know my face.
+**Grisel Thorn:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Right. Slowly. They'll know my voice before they know my face.
 
-**Grisel Thorn:** _(quest decline)_ Suit yourself. I've been left in worse rooms by better liars.
+**Grisel Thorn:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Suit yourself. I've been left in worse rooms by better liars.
 
-**Grisel Thorn:** _(quest complete)_ That's the stair. I'll wait here and take my crew up myself, every one you bring me. Don't wait for thanks; I'm out of practice.
+**Grisel Thorn:** _(quest complete; shown as a subtitle when the escort arrives, not voiced)_ That's the stair. I'll wait here and take my crew up myself, every one you bring me. Don't wait for thanks; I'm out of practice.
 
-**Grisel Thorn:** _(quest fail)_ Get them out. Don't you leave them now.
+**Grisel Thorn:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Get them out. Don't you leave them now.
 
 ### Floor taunts
 
 **Morg Ashtusk:** _(FloorEnter, jailbreak)_ My Casting Hall, hirelings. Grisel Thorn's crew are in my cages, first down and nearly finished. Another week and they run with my bloody cinders.
 
-**Morg Ashtusk:** _(FloorEnter, jailbreak)_ Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own bloody neck, and now she locks her own crew in every night.
+**Morg Ashtusk:** _(FloorEnter, jailbreak, not if grisel_forgiven)_ Grisel Thorn was my head jailer, hirelings. She took my keys to save her own bloody neck and kept her crew caged for me. Now you're here I've no more use for a jailer, so she's dead. The keys are on her belt.
 
-**Morg Ashtusk:** _(AllFreed, jailbreak)_ Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.
+**Morg Ashtusk:** _(AllFreed, jailbreak, not if grisel_forgiven)_ Every cage empty, hirelings. Grisel Thorn sold herself to me for a ring of keys, and died holding them. Cheap at the price.
 
 ### Hordes
 
@@ -548,9 +548,11 @@ _Quest: Grisel's Crew (Escort): Bring Grisel Thorn down to the stairs alive, pas
 
 _Mood: cold steel plate, white lamps, shelves of moulds_
 
+_Objective: none in the frame; the shipped seed generates jailbreak_
+
 **Story beat:** cast_ulf shows off his moulds and they are clue_moulds: patterns for the crushing walls, the spike beds, the iron minions, and the Herald's own mould, larger. He finally sees what he has been making and wants every mould broken. fighter_oskar admits he knew all along and kept quiet because the Herald threatened the old man; viewer_foehammer wants the Herald's mould smashed and will do it himself.
 
-**Narrator:** _(floor intro)_ Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.
 
 **Narrator:** _(RoomEnter room 4)_ Up close, the moulds on these shelves show what they are for: the plates of a crushing wall, the points of a spike bed, the limbs of the iron brutes.
 
@@ -592,15 +594,15 @@ _Mood: cold steel plate, white lamps, shelves of moulds_
 
 _Quest: The Good Ones (Investigate): Bring Old Ulf three casting moulds from the shelves of the Mould Room_
 
-**Old Ulf:** _(quest offer)_ Three patterns off the shelves, that's all. The hall, the hole behind it, and the one they keep by the stair. Don't drop them; a cracked mould pours crooked.
+**Old Ulf:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Three patterns off the shelves, that's all. The hall, the hole behind it, and the one they keep by the stair. Don't drop them; a cracked mould pours crooked.
 
-**Old Ulf:** _(quest accept)_ Good. Flat, mind, and keep your thumbs out of the sand.
+**Old Ulf:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Flat, mind, and keep your thumbs out of the sand.
 
-**Old Ulf:** _(quest decline)_ Suit yourselves. They'll get poured whether you look at them or not. Everything here does.
+**Old Ulf:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Suit yourselves. They'll get poured whether you look at them or not. Everything here does.
 
-**Old Ulf:** _(quest complete)_ A crushing wall. A spike bed. The orc himself, larger. I poured them all. Help me break them.
+**Old Ulf:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ A crushing wall. A spike bed. The orc himself, larger. I poured them all. Help me break them.
 
-**Old Ulf:** _(quest fail)_ Left them lying, did you. Well. There's plenty more on the shelves.
+**Old Ulf:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Left them lying, did you. Well. There's plenty more on the shelves.
 
 ### Floor taunts
 
@@ -618,15 +620,15 @@ _Quest: The Good Ones (Investigate): Bring Old Ulf three casting moulds from the
 
 _Mood: rusted grates under black water, vestments afloat_
 
-_Objective: shiftingvault_
+_Objective: shiftingvault in the frame; the shipped seed generates shiftingvault_
 
 **Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Pressed or let be, he is taken for the rite (16, 19).
 
-**Narrator:** _(floor intro)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
 
 **Narrator:** _(RoomEnter room 8)_ Church vestments float against the grate, black and gold, thrown off in the water: the Verger's. Beside them a young deacon stands soaked to the waist.
 
-**Narrator:** _(QuestDone)_ The orc's escort lies broken in the water, and the deacon is not among them. He ran on down to his master's summons.
+**Narrator:** _(QuestDone, not if told_tobit)_ The orc's escort lies broken in the water, and the deacon is not among them. He ran on down to his master's summons.
 
 ### Deacon Tobit Hale _(needs told_tobit)_
 
@@ -653,19 +655,19 @@ _Objective: shiftingvault_
 
 _Quest: The Deacon's Psalter (Recover): Recover Tobit's psalter from the breached font room_
 
-**Deacon Tobit Hale:** _(quest offer)_ Small black book, water-swollen, dropped by the font where the wall is broken. Everything I've found is written in it, in my own bad hand.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Small black book, water-swollen, dropped by the font where the wall is broken. Everything I've found is written in it, in my own bad hand.
 
-**Deacon Tobit Hale:** _(quest accept)_ Thank you. Mind the cinders in there; they come out of the wall like wasps out of a loaf.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you. Mind the cinders in there; they come out of the wall like wasps out of a loaf.
 
-**Deacon Tobit Hale:** _(quest decline)_ No. Quite right. I dropped it; I should fetch it. I only hoped you'd be quicker.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ No. Quite right. I dropped it; I should fetch it. I only hoped you'd be quicker.
 
-**Deacon Tobit Hale:** _(quest complete)_ My psalter. I'll write the vestments in, and then I'll find the rest in his own hand.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ My psalter. I'll write the vestments in, and then I'll find the rest in his own hand.
 
-**Deacon Tobit Hale:** _(quest fail)_ Then it stays in the water, and I start again from memory. I have a good memory.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Then it stays in the water, and I start again from memory. I have a good memory.
 
 ### Deacon Tobit Hale _(not if told_tobit)_
 
-**Deacon Tobit Hale:** _(node bet_a)_ You're here too! Those are my master's vestments in the water. He's alive, though; he's sent for me. The orc holds him prisoner, doesn't it? Tell me true.
+**Deacon Tobit Hale:** _(node bet_a)_ You're here too! Those are my master's vestments in the water. He's alive, though; he's sent for me. The orc holds him prisoner, doesn't he? Tell me true.
 
   - **Party (choice):** We don't know, deacon. What did he send? _[to bet_b]_
   - **Party (choice):** We can't say. Don't go. _[to bet_b]_
@@ -677,15 +679,15 @@ _Quest: The Deacon's Psalter (Recover): Recover Tobit's psalter from the breache
 
 _Quest: The Deacon's Escort (Betrayal): Put down the escort the orc sent to fetch the deacon_
 
-**Deacon Tobit Hale:** _(quest offer)_ He's sent for me. A rite to save the town, in his own hand. I'm going to him.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ He's sent for me. A rite to save the town, in his own hand. I'm going to him.
 
-**Deacon Tobit Hale:** _(quest accept)_ I'm going to him, and you won't stop me. Those are his escort; don't follow.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ I'm going to him, and you won't stop me. Those are his escort; don't follow.
 
-**Deacon Tobit Hale:** _(quest decline)_ Thank you. Pray for me, if you pray.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you. Pray for me, if you pray.
 
-**Deacon Tobit Hale:** _(quest complete)_ His escort lies in the water. The deacon is gone on down to his master.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ His escort lies in the water. The deacon is gone on down to his master.
 
-**Deacon Tobit Hale:** _(quest fail)_ I'm going to him. Don't follow.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ I'm going to him. Don't follow.
 
 ### Floor taunts
 
@@ -711,9 +713,9 @@ _Mood: red-hot air, an engine casting instead of pumping_
 
 **Narrator:** _(floor intro)_ Red-hot air, and a thump that shakes the floor plates. Ahead, the biggest engine in the works is still running, and under it the third great drain lies choked.
 
-**Narrator:** _(BossSeen)_ The Bellows heaves over the choked drain, and fresh iron drops hissing from its ladles to come at you. Stop the engine and the drain can run.
+**Narrator:** _(BossSeen)_ The Bellows, the engine that pushed the water down this drain for three hundred years, heaves over it choked. The orc set it to pouring his minions: fresh iron drops hissing from its ladles. Stop it and the drain runs.
 
-**Narrator:** _(BossDead)_ You turn the sluice wheel under the dead engine, and the third great drain runs. The heat goes out of the works, the shaking above you eases, and the god drinks. One great drain left.
+**Narrator:** _(BossDead)_ The engine's last stroke comes down on an empty ladle. You turn the sluice wheel under it, and the third great drain runs: the heat goes out of the works, the shaking above you eases, and the god drinks.
 
 ### Floor taunts
 
@@ -725,9 +727,7 @@ _Mood: red-hot air, an engine casting instead of pumping_
 
 ### Boss: The Bellows
 
-**The Bellows:** _(intro)_ The great engine of the pump works, which pushed the water down the third drain for three hundred years. The orc set it to pouring his minions instead.
-
-**The Bellows:** _(death)_ Its last stroke comes down on an empty ladle, and the orc's great engine does not lift again.
+_No lines of its own: the narrator's BossSeen and BossDead lines speak for it._
 
 ## Floor 16: The Dream Door
 
@@ -737,11 +737,11 @@ _Mood: veined marble, blue light, the dream wearing thin_
 
 **Narrator:** _(tier 4 entry)_ This close to the sleeping god, the dream wears thin. It is the only door between this world and the Sleepless, and things from the other side are pressing through. The Dream.
 
-**Narrator:** _(floor intro)_ Blue light runs in the veins of the marble, and the god sleeps close beneath it. Near the foot of the stair, a young sister of Gorm's church is keeping a lantern lit.
+**Narrator:** _(floor intro)_ You come down onto marble with blue light running in its veins. Near the foot of the stair, a young sister of Gorm's church is keeping a lantern lit.
 
-**Narrator:** _(RoomEnter room 5)_ Deacon Tobit stands among the fallen pillars, soaked from the climb down, with a letter in his hand. He has plainly read it more than once.
+**Narrator:** _(RoomEnter room 5, needs told_tobit)_ Deacon Tobit stands among the fallen pillars, soaked from the climb down, with a letter in his hand. He has plainly read it more than once.
 
-**Narrator:** _(RoomEnter room 9)_ Maud Sorrel stands in the weeping font with water running from her sleeves, holding a wet letter out to you as if it were nothing much.
+**Narrator:** _(RoomEnter room 9, not if told_tobit)_ Maud Sorrel stands in the weeping font with water running from her sleeves, holding a wet letter out to you as if it were nothing much.
 
 ### Deacon Tobit Hale _(needs told_tobit)_
 
@@ -772,15 +772,15 @@ _Mood: veined marble, blue light, the dream wearing thin_
 
 _Quest: The Verger's Letters (Investigate): Gather the Verger's letters from the marble halls and bring them to Tobit._
 
-**Deacon Tobit Hale:** _(quest offer)_ More of my master's letters are lying in these halls. Bring them to me and I'll read them; I'm thorough. I always am.
+**Deacon Tobit Hale:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ More of my master's letters are lying in these halls. Bring them to me and I'll read them; I'm thorough. I always am.
 
-**Deacon Tobit Hale:** _(quest accept)_ Thank you. Mind the marble where it's cracked; things come through the cracks down here.
+**Deacon Tobit Hale:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you. Mind the marble where it's cracked; things come through the cracks down here.
 
-**Deacon Tobit Hale:** _(quest decline)_ No. Quite right. I'll look for them myself, slowly.
+**Deacon Tobit Hale:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ No. Quite right. I'll look for them myself, slowly.
 
-**Deacon Tobit Hale:** _(quest complete)_ His letters, every one. Now I know why he did it.
+**Deacon Tobit Hale:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ His letters, every one. Now I know why he did it.
 
-**Deacon Tobit Hale:** _(quest fail)_ Then I'll never know why. I'll have to make do with knowing that he did.
+**Deacon Tobit Hale:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Then I'll never know why. I'll have to make do with knowing that he did.
 
 ### Maud Sorrel _(not if told_tobit)_
 
@@ -813,21 +813,21 @@ _Quest: The Verger's Letters (Investigate): Gather the Verger's letters from the
 
 _Quest: What the Water Brought (Investigate): Gather the Verger's letters from the marble halls and bring them to Maud._
 
-**Maud Sorrel:** _(quest offer)_ More of the Verger's letters, dear, wherever the water left them. Bring them to me.
+**Maud Sorrel:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ More of the Verger's letters, dear, wherever the water left them. Bring them to me.
 
-**Maud Sorrel:** _(quest accept)_ Good. Mind the marble where it's cracked, dears.
+**Maud Sorrel:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Good. Mind the marble where it's cracked, dears.
 
-**Maud Sorrel:** _(quest decline)_ As you like, dear. The water keeps what it's given.
+**Maud Sorrel:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ As you like, dear. The water keeps what it's given.
 
-**Maud Sorrel:** _(quest complete)_ All his letters. Now we know why.
+**Maud Sorrel:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ All his letters. Now we know why.
 
-**Maud Sorrel:** _(quest fail)_ Gone to pulp in the wet, then. No matter, dear. We know what he did.
+**Maud Sorrel:** _(quest fail; shown in the message log if the quest fails, not voiced)_ Gone to pulp in the wet, then. No matter, dear. We know what he did.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(Descend)_ Your deacon found my letter from the Verger, hirelings: 'The way will be open by midwinter.' Bloody priests always write it down. The Verger opened the crypt door for me in spring.
+**Morg Ashtusk:** _(Descend, needs told_tobit)_ Your deacon found my letter from the Verger, hirelings: 'The way will be open by midwinter.' Bloody priests always write it down. The Verger opened the crypt door for me in spring.
 
-**Morg Ashtusk:** _(Descend)_ Read my letter from the Verger, hirelings? 'The way will be open by midwinter.' Bloody priests always write it down. The Verger opened the crypt door for me, and now his deacon kneels in his rite.
+**Morg Ashtusk:** _(Descend, not if told_tobit)_ Read my letter from the Verger, hirelings? 'The way will be open by midwinter.' Bloody priests always write it down. The Verger opened the crypt door for me, and now his deacon kneels in his rite.
 
 ### Hordes
 
@@ -837,11 +837,11 @@ _Quest: What the Water Brought (Investigate): Gather the Verger's letters from t
 
 _Mood: purple gloom, gas climbing, an alderman with a shovel_
 
-_Objective: toxic_
+_Objective: toxic in the frame; the shipped seed generates toxic_
 
 **Story beat:** Gas climbs the galleries. cast_crane has come down himself with a shovel and owns the truth: the council was glad of the Verger's order, because stopping the wardens' pay saved money, and he signed it. He holds a sluice open so the party can get past the gas, and stays holding it; he does not betray them. With grisel_forgiven he can say she and her crew are back on the upper drains.
 
-**Narrator:** _(floor intro)_ Purple slate, and the gas climbing the galleries off the standing water. Somewhere ahead a sluice wheel groans, and a man out of breath is apologising to it.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Purple slate, and the gas climbing the galleries off the standing water. Somewhere ahead a sluice wheel groans, and a man out of breath is apologising to it.
 
 **Narrator:** _(RoomEnter room 9)_ In the Long Gallery the alderman hangs his whole weight on a sluice wheel, a shovel jammed through the spokes to hold it. The water drains off through the gate, and past it the gas is thinner.
 
@@ -866,7 +866,7 @@ _Objective: toxic_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
   - **Party (choice):** Hold it, then. We're going. _[Farewell]_
 
-**Alderman Hesketh Crane:** _(node n_grisel)_ She did. Grisel Thorn and what's left of her crew are back on the upper drains, on full pay back to spring. I signed that too, and gladly.
+**Alderman Hesketh Crane:** _(node n_grisel)_ Her crew got out, what's left of them. They're back on the upper drains, on full pay back to spring. I signed that too, and gladly.
 
   - **Party (choice):** Why come down yourself, Crane? _[to n_confess]_
   - **Party (choice):** Hold it, then. We're going. _[Farewell]_
@@ -875,7 +875,7 @@ _Objective: toxic_
 
 **Morg Ashtusk:** _(FloorEnter, toxic)_ Smell that, hirelings? The water stands all the way down now, and the gas comes off it. Your alderman came down after you with a bloody shovel. Hurry, before he hurts himself.
 
-**Morg Ashtusk:** _(GasLethal, toxic)_ That's my air in your lungs now, {party}. Your alderman's holding a sluice open for you, and you're still too bloody slow to use it.
+**Morg Ashtusk:** _(GasLethal, toxic)_ That's my air in your lungs now, hirelings. Your alderman's holding a sluice open for you, and you're still too bloody slow to use it.
 
 **Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved itself the wardens' wages and left my drains to me. Cheapest bloody bargain my master ever got.
 
@@ -929,21 +929,21 @@ _Mood: violet dark, one corridor in, a hungry god speaking_
 
 _Quest: What to Ask of Gorm (Decide): Tell Gorm how much to ask of him_
 
-**Maud Sorrel:** _(quest offer)_ Ask nothing of me, or ask for my strength. Either way, bring the water down.
+**Maud Sorrel:** _(quest offer; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Ask nothing of me, or ask for my strength. Either way, bring the water down.
 
-**Maud Sorrel:** _(quest accept)_ Said, then. Carry it down with you.
+**Maud Sorrel:** _(quest accept; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Said, then. Carry it down with you.
 
-**Maud Sorrel:** _(quest decline)_ Then sit a while. I have slept three hundred years; I can wait a little longer.
+**Maud Sorrel:** _(quest decline; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Then sit a while. I have slept three hundred years; I can wait a little longer.
 
-**Maud Sorrel:** _(quest complete)_ Thank you for coming down to me.
+**Maud Sorrel:** _(quest complete; not played: quest lines are not spoken, the dialogue nodes carry the scene)_ Thank you for coming down to me.
 
-**Maud Sorrel:** _(quest fail)_ No matter. Bring the water down, and I will sleep either way.
+**Maud Sorrel:** _(quest fail; shown in the message log if the quest fails, not voiced)_ No matter. Bring the water down, and I will sleep either way.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(Descend)_ Your god is half awake, hirelings, and the dream is thin as paper. I can hear my master on the other side of it. You did that for him, and nobody paid you a bloody penny.
+**Morg Ashtusk:** _(Descend, needs wake_gorm)_ Your god is half awake, hirelings, and the dream is thin as paper. I can hear my master on the other side of it. You did that for him, and nobody paid you a bloody penny.
 
-**Morg Ashtusk:** _(Descend)_ You told your god to go back to sleep, hirelings. A god too bloody frightened to wake. My master is frightened of nothing, and he is still at the door.
+**Morg Ashtusk:** _(Descend, needs let_him_dream)_ You told your god to go back to sleep, hirelings. A god too bloody frightened to wake. My master is frightened of nothing, and he is still at the door.
 
 ### Hordes
 
@@ -955,54 +955,54 @@ _Quest: What to Ask of Gorm (Decide): Tell Gorm how much to ask of him_
 
 _Mood: cold tiles, three galleries, a rite to wake a god_
 
-_Objective: ritual_
+_Objective: ritual in the frame; the shipped seed generates ritual_
 
 **Story beat:** Ritual: cast_quill, the Verger, conducts the rite to wake the god with the church's ewer in his hands, while cast_maud steadies the god against it and the party holds off the waves around her; he speaks to the party but is not fought, and fighter_ione faces him. Without told_tobit, cast_tobit is in the rite, half-changed, and breaking it lets him go. With wake_gorm the shaking is worse and more of the Sleepless's kind come through. When the rite breaks the Verger is left kneeling with nothing answering him.
 
-**Narrator:** _(floor intro)_ Three cold galleries meet at a shrine of white tile. Somewhere ahead the Verger is at his rite to wake the god, and the floor shakes in time with his prayer.
+**Narrator:** _(floor intro; not played: the floor opens with its FloorEnter taunt instead)_ Three cold galleries meet at a shrine of white tile. Somewhere ahead the Verger is at his rite to wake the god, and the floor shakes in time with his prayer.
 
-**Narrator:** _(RoomEnter room 1)_ Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep. From the next gallery comes the Verger's voice, praying for the god to wake. Keep the Sleepless's kind off her.
+**Narrator:** _(RoomEnter room 1, not if wake_gorm)_ Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep. From the next gallery comes the Verger's voice, praying for the god to wake. Keep the Sleepless's kind off her.
 
-**Narrator:** _(RoomEnter room 1)_ Forty years the Verger prayed to Gorm and was never answered. The orc promised him a god who would answer, and for that the Verger opened the crypt door. Now he prays that god through.
+**Narrator:** _(RoomEnter room 1, needs wake_gorm)_ Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep, but the floor will not stop shaking: Gorm is nearer waking for the strength he lent you. Keep the Sleepless's kind off her.
 
-**Narrator:** _(RoomEnter room 1)_ The floor here will not stop shaking. Gorm is nearer waking for the strength he promised you, and more of the Sleepless's kind are getting through.
+**Narrator:** _(RoomEnter room 1, needs told_tobit)_ Forty years the Verger prayed to Gorm and was never answered. The orc promised him a god who would answer, and for that the Verger opened the crypt door. Now he prays that god through.
 
-**Narrator:** _(RoomEnter room 1)_ Among the voices at the Verger's rite is Deacon Tobit's, slow and grey: the rite is turning him, and he repeats his master's every word. Break it, and it lets him go.
+**Narrator:** _(RoomEnter room 1, not if told_tobit)_ Forty years the Verger prayed to Gorm unanswered; for the orc's promise of a god who would answer, he opened the crypt door. Deacon Tobit's voice is in that rite, slow and grey. Break it, and it lets the deacon go.
 
 **Narrator:** _(RoomEnter room 7)_ Absalom Quill, the Verger, kneels here with the church's silver ewer in his hands, praying aloud for the god to wake. He is the man who opened the crypt door to the orc.
 
-**Narrator:** _(RoomEnter room 7)_ Deacon Tobit kneels at his master's side, grey to the wrists and half turned, his eyes on the ewer.
+**Narrator:** _(RoomEnter room 7, not if told_tobit)_ Deacon Tobit kneels at his master's side, grey to the wrists and half turned, his eyes on the ewer.
 
 ### Maud Sorrel
 
-**Maud Sorrel:** _(node m_open)_ There you are, dears. I'll sit at the altar and hold him asleep against the Verger's rite. You keep the Sleepless's kind off me while I do.
+**Maud Sorrel:** _(node m_open; not played: the rite's figure, whom the party defends, cannot be talked to)_ There you are, dears. I'll sit at the altar and hold him asleep against the Verger's rite. You keep the Sleepless's kind off me while I do.
 
   - **Party (choice):** We'll hold them off, Maud. _[AcceptQuest]_
   - **Party (choice):** Why does he need holding? _[to m_which]_
   - **Party (choice):** Not yet, Maud. _[DeclineQuest]_
   - **Party (choice):** It's done, Maud. _[TurnIn; to m_done]_
 
-**Maud Sorrel:** _(node m_which)_ The Verger is praying him awake, dear, and the orc's kind are helping. I can keep him asleep if nobody pulls me off the stone.
+**Maud Sorrel:** _(node m_which; not played: the rite's figure, whom the party defends, cannot be talked to)_ The Verger is praying him awake, dear, and the orc's kind are helping. I can keep him asleep if nobody pulls me off the stone.
 
   - **Party (choice):** We asked for his strength. Hold him anyway. _[AcceptQuest; needs wake_gorm]_
   - **Party (choice):** We let him sleep. Keep him there. _[AcceptQuest; not if wake_gorm]_
   - **Party (choice):** Rest a moment, Maud. _[Farewell]_
 
-**Maud Sorrel:** _(node m_done)_ He's settled, dear. The Verger's rite has nothing left to pull on. Go on down to the last drain; he's thirsty.
+**Maud Sorrel:** _(node m_done; not played: the rite's figure, whom the party defends, cannot be talked to)_ He's settled, dear. The Verger's rite has nothing left to pull on. Go on down to the last drain; he's thirsty.
 
   - **Party (choice):** Then we go down. _[TurnIn]_
 
 _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel keeps the god asleep._
 
-**Maud Sorrel:** _(quest offer)_ Three galleries and one old woman at the altar, dears. Keep them off me until he settles.
+**Maud Sorrel:** _(quest offer; not played: the rite's figure, whom the party defends, cannot be talked to)_ Three galleries and one old woman at the altar, dears. Keep them off me until he settles.
 
-**Maud Sorrel:** _(quest accept)_ Good. Don't let them pull me off the stone.
+**Maud Sorrel:** _(quest accept; not played: the rite's figure, whom the party defends, cannot be talked to)_ Good. Don't let them pull me off the stone.
 
-**Maud Sorrel:** _(quest decline)_ Then I'll hold him as long as I can on my own, dear.
+**Maud Sorrel:** _(quest decline; not played: the rite's figure, whom the party defends, cannot be talked to)_ Then I'll hold him as long as I can on my own, dear.
 
-**Maud Sorrel:** _(quest complete)_ There. He's settled, and the rite has nothing left to pull on.
+**Maud Sorrel:** _(quest complete; not played: the rite's figure, whom the party defends, cannot be talked to)_ There. He's settled, and the rite has nothing left to pull on.
 
-**Maud Sorrel:** _(quest fail)_ I'm down, dears. Pick me up, or the Verger's rite gets its way.
+**Maud Sorrel:** _(quest fail; not played: the rite's figure, whom the party defends, cannot be talked to)_ I'm down, dears. Pick me up, or the Verger's rite gets its way.
 
 ### Absalom Quill
 
@@ -1058,21 +1058,21 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(RitualStart, ritual)_ Go on, warden, hold your god steady. He's half awake already, thanks to the town's hirelings, and every bloody wave I send shakes him further.
+**Morg Ashtusk:** _(RitualStart, ritual, needs wake_gorm)_ Go on, warden, hold your god steady. He's half awake already, thanks to the town's hirelings, and every bloody wave I send shakes him further.
 
-**Morg Ashtusk:** _(RitualStart, ritual)_ So a drowned warden thinks she can hold a god asleep against my priest's rite. Bloody touching. Send them in.
+**Morg Ashtusk:** _(RitualStart, ritual, not if wake_gorm)_ So a drowned warden thinks she can hold a god asleep against my priest's rite. Bloody touching. Send them in.
 
-**Morg Ashtusk:** _(FloorEnter, ritual)_ Feel that, hirelings? Your god, turning over. You asked him for his strength, and he's halfway awake giving it. The old priest only has to finish the bloody job.
+**Morg Ashtusk:** _(FloorEnter, ritual, needs wake_gorm)_ My old priest is down here praying your god the rest of the way awake, hirelings. A drowned warden is all that holds your god asleep now. I'd bloody bet on the priest.
 
-**Morg Ashtusk:** _(FloorEnter, ritual)_ The old priest is down here praying your god awake, hirelings, and a drowned warden is trying to keep him asleep. I know which one I'd bloody bet on.
+**Morg Ashtusk:** _(FloorEnter, ritual, not if wake_gorm)_ The old priest is down here praying your god awake, hirelings, and a drowned warden is trying to keep him asleep. I know which one I'd bloody bet on.
 
 **Morg Ashtusk:** _(RitualistDown, ritual)_ Down goes the warden. Pick her up, hirelings, or the old priest gets his god.
 
 **Morg Ashtusk:** _(RitualDone, ritual)_ So the rite breaks. Look at the old priest, hirelings: on his knees, and nothing answering him. Forty years he prayed, and he still can't get a god to come when called.
 
-**Morg Ashtusk:** _(Descend)_ Your old priest dropped the ewer when his rite broke, hirelings. The church can have its jug back. One drain left, and I'm standing on it.
+**Morg Ashtusk:** _(Descend, needs told_tobit)_ Your old priest dropped the ewer when his rite broke, hirelings. The church can have its jug back. One drain left, and I'm standing on it.
 
-**Morg Ashtusk:** _(Descend)_ The rite's broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.
+**Morg Ashtusk:** _(Descend, not if told_tobit)_ The old priest dropped the ewer when his rite broke, hirelings, and your half-grey deacon walked out of it. The church can have its jug back.
 
 ### Hordes
 
@@ -1090,21 +1090,21 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Narrator:** _(BossSeen)_ Morg Ashtusk stands over the last great drain, not the orc body you killed at the gate but what the foundry was building him into: his true form. Kill him and turn the sluice wheel, or the mines come down on Dunmarrow.
 
-**Narrator:** _(BossDead)_ You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks and slowly sinks back from waking. The dream holds; it is thin, but the door stays shut.
+**Narrator:** _(BossDead, needs wake_gorm)_ You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks and slowly sinks back from waking. The dream holds; it is thin, but the door stays shut.
 
-**Narrator:** _(BossDead)_ You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks without ever stirring. The dream holds whole, and the door to the Sleepless stays shut.
+**Narrator:** _(BossDead, not if wake_gorm)_ You turn the sluice wheel, and the last great drain runs. The water pours down to the god, and he drinks without ever stirring. The dream holds whole, and the door to the Sleepless stays shut.
 
 **Narrator:** _(BossDead)_ Far above you the ground goes still, and the wells of Dunmarrow run sweet. The mines will stand. One floor up the Verger kneels on, and nothing answers him. The job is done, and the town lives.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(Descend)_ Come down to the Mouth, hirelings. The last drain is mine.
+**Morg Ashtusk:** _(Descend; not played in the story: it would only be heard going on past floor 20 into the endless depths)_ Come down to the Mouth, hirelings. The last drain is mine.
 
-**Morg Ashtusk:** _(FloorEnter)_ The Mouth, hirelings. The last drain, and your god right under your feet. Mind where you stand.
+**Morg Ashtusk:** _(FloorEnter; not played: only an objective floor opens with a taunt)_ The Mouth, hirelings. The last drain, and your god right under your feet. Mind where you stand.
 
 **Morg Ashtusk:** _(MemberDowned)_ That's one of the town's hired shovels broken. Nobody will pay you for it.
 
-**Morg Ashtusk:** _(Idle)_ Standing about, hirelings? You're paid by the floor, and this is the last one. Come and earn it.
+**Morg Ashtusk:** _(Idle; not played: the dawdle taunt is for objective floors)_ Standing about, hirelings? You're paid by the floor, and this is the last one. Come and earn it.
 
 ### Hordes
 
@@ -1128,21 +1128,21 @@ _Mood: the last great drain, braziers, the orc again_
 
 ### Campaign taunts (Morg Ashtusk)
 
-**Morg Ashtusk:** _(FloorEnter, jailbreak)_ Floor {floor}, and my cages are full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.
+**Morg Ashtusk:** _(FloorEnter, jailbreak; not heard on floors 1-20: every objective floor there opens with its own line)_ More cages, hirelings, and every one of them full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.
 
-**Morg Ashtusk:** _(FloorEnter, toxic)_ Floor {floor} stinks. That's what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.
+**Morg Ashtusk:** _(FloorEnter, toxic; not heard on floors 1-20: every objective floor there opens with its own line)_ This floor stinks. That's what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.
 
-**Morg Ashtusk:** _(FloorEnter, ritual)_ Floor {floor}. Someone is at work at the shrine, {party}, trying to undo what I've done. My minions are coming for her. Stand in the bloody way if you like.
+**Morg Ashtusk:** _(FloorEnter, ritual; not heard on floors 1-20: every objective floor there opens with its own line)_ Someone is at work at the shrine, hirelings, trying to undo what I've done. My minions are coming for her. Stand in the bloody way if you like.
 
-**Morg Ashtusk:** _(FloorEnter, shiftingvault)_ The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess. I'm in no hurry; my master has waited a long time for these mines.
+**Morg Ashtusk:** _(FloorEnter, shiftingvault; not heard on floors 1-20: every objective floor there opens with its own line)_ The stairs on this floor sit behind my gates, and only my levers open them. Pull and guess. I'm in no hurry; my master has waited a long time for these mines.
 
 **Morg Ashtusk:** _(Capture)_ Caught. Back to the cages, and back to turning. You can't hold on to anything, can you?
 
-**Morg Ashtusk:** _(Capture, jailbreak)_ {prisoner} goes back in my cage, and the turning picks up where it stopped. Some rescue. You'll have to do bloody better than that.
+**Morg Ashtusk:** _(Capture, jailbreak)_ That one goes back in my cage, and the turning picks up where it stopped. Some rescue. You'll have to do bloody better than that.
 
 **Morg Ashtusk:** _(Freed)_ One out of my cages. Enjoy it. I have more cages than you have time.
 
-**Morg Ashtusk:** _(Freed, jailbreak)_ Out you come, {prisoner}. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.
+**Morg Ashtusk:** _(Freed, jailbreak)_ Out you come, then. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.
 
 **Morg Ashtusk:** _(AllFreed)_ All out. Fine. Everyone who comes down after the drains walks into my cages in the end. I'll fill them again.
 
@@ -1154,7 +1154,7 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Morg Ashtusk:** _(GasLethal, toxic)_ That's the foul air of my drains in your lungs now. Lie down in it. It comes to the same thing, only sooner.
 
-**Morg Ashtusk:** _(GasLethal, toxic)_ Deep enough to drown in, {party}. Kneel in it. Your frightened town won't pay for the bloody funeral.
+**Morg Ashtusk:** _(GasLethal, toxic)_ Deep enough to drown in, hirelings. Kneel in it. Your frightened town won't pay for the bloody funeral.
 
 **Morg Ashtusk:** _(WrongLever, shiftingvault)_ Wrong one. Keep pulling, hirelings. I set those gates to keep the whole town out, and they'll keep you out too.
 
@@ -1194,7 +1194,7 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Morg Ashtusk:** _(MemberDowned)_ One down. Lie still, and don't make a bloody fuss. Nobody in that frightened town will come down for you.
 
-**Morg Ashtusk:** _(MemberDowned)_ One of you down, {party}. Is that what the town hired? I've seen more fight in my raised dead.
+**Morg Ashtusk:** _(MemberDowned)_ One of you down, hirelings. Is that what the town hired? I've seen more fight in my raised dead.
 
 **Morg Ashtusk:** _(PartyWiped)_ There. All of you, down in my mines. Your town can hire more, and my foundry can pour more. We'll see who runs out first.
 
@@ -1214,17 +1214,17 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Morg Ashtusk:** _(EliteSlain)_ That was one of my best, you bloody vandals. Never mind. I have more, and they cost me nothing.
 
-**Morg Ashtusk:** _(EliteSlain)_ {elite} is dead. I'll remember that, hirelings. I remember everything I'm owed.
+**Morg Ashtusk:** _(EliteSlain)_ So that one's dead. I'll remember that, hirelings. I remember everything I'm owed.
 
 **Morg Ashtusk:** _(ShrineUsed)_ Help yourselves at the shrine. Whatever it gave you, I'll have back before the bottom, with interest.
 
-**Morg Ashtusk:** _(ShrineUsed)_ Pray at my shrines all you like, hirelings. Your god is asleep and starving. He won't hear a bloody word.
+**Morg Ashtusk:** _(ShrineUsed, not if wake_gorm)_ Pray at my shrines all you like, hirelings. Your god is asleep and starving. He won't hear a bloody word.
 
 **Morg Ashtusk:** _(MimicSprung)_ Hungry box, that one. Everything in my mines is hungry, and your god most of all. Mind your bloody fingers.
 
 **Morg Ashtusk:** _(MimicSprung)_ Nobody told you not to open things down here? No. The town never tells its hired help anything.
 
-**Morg Ashtusk:** _(AllyDead)_ {name} is dead, then. One more of the town's own, left lying in my mines. They do pile up.
+**Morg Ashtusk:** _(AllyDead)_ Your friend is dead, then. One more of the town's own, left lying in my mines. They do pile up.
 
 **Morg Ashtusk:** _(AllyDead)_ Another body for my mines. Carry it yourselves, hirelings. I'm not clearing up after you, you sorry sods.
 
@@ -1236,15 +1236,15 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Morg Ashtusk:** _(Gamble)_ Gambling your fee? Good. Lose the lot, you cheap little sods, and see who pays to bury you.
 
-**Morg Ashtusk:** _(Descend)_ You told the little deacon his god is starving, hirelings. Honest of you. It won't feed his bloody god.
+**Morg Ashtusk:** _(Descend, needs told_tobit)_ You told the little deacon his god is starving, hirelings. Honest of you. It won't feed his bloody god.
 
-**Morg Ashtusk:** _(Descend)_ You forgave the warden who ran. Generous. Now forgive her bloody council: it sacked its own wardens, and they came down to me unpaid.
+**Morg Ashtusk:** _(Descend, needs grisel_forgiven)_ You forgave the warden who ran. Generous. Now forgive her bloody council: it sacked its own wardens, and they came down to me unpaid.
 
-**Morg Ashtusk:** _(Descend)_ You wouldn't forgive the warden who ran, hirelings. Hard. Her council sacked every warden it had, and you still work for it.
+**Morg Ashtusk:** _(Descend, needs grisel_condemned)_ You wouldn't forgive the warden who ran, hirelings. Hard. Her council sacked every warden it had, and you still work for it.
 
-**Morg Ashtusk:** _(MemberDowned)_ One down. You asked your god for his strength, and he's half awake for it. Ask again, hirelings. The more he wakes, the nearer my master comes.
+**Morg Ashtusk:** _(MemberDowned, needs wake_gorm)_ One down. You asked your god for his strength, and he's half awake for it. Ask again, hirelings. The more he wakes, the nearer my master comes.
 
-**Morg Ashtusk:** _(MemberDowned)_ One down. You told your god to sleep through this, and he is. Nobody is coming to help you.
+**Morg Ashtusk:** _(MemberDowned, needs let_him_dream)_ One down. You told your god to sleep through this, and he is. Nobody is coming to help you.
 
 ### Merchant (Master Oswin Pellet)
 
@@ -2043,7 +2043,7 @@ _si_footnote floors 16+_
 
 **Ilex:** _(weary)_ A god whose sleep holds a door shut is not a footnote. It is, at minimum, a chapter. Walk faster.
 
-_bs_sums floors 16+_
+_bs_sums floors 18+_
 
 **Sable:** _(weary)_ I've done the sums. This town can't pay for the last floor.
 

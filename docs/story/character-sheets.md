@@ -42,7 +42,7 @@ The design is silent on these facts. They were filled in so that every writer ma
 3. **One image per speech at most.** A speech is one line or one dialogue node.
 4. **220 characters at most** for anything spoken.
 5. **People change when the party learns something.** Each sheet says how its speaker talks after each clue that touches them. The four clues: the wardens' log (floor 4), the dismissal order (floor 9), the moulds (floor 13), the Verger's letter (floor 16).
-6. **No NPC, taunt or narration ever names a hero.** Co-op players name their own heroes. Never write Brand, Sable, Wren or Ilex in a line someone else speaks. Address the party as "you", "mercenaries" or "hired swords" (the Herald says "hirelings"). Do not count them ("you four"); a co-op party can be smaller. Placeholders the game fills are fine: `{party}`, `{name}`, `{floor}`, `{prisoner}`, `{elite}`. The heroes still use each other's names in their own banter, as they do today.
+6. **No NPC, taunt or narration ever names a hero.** Co-op players name their own heroes. Never write Brand, Sable, Wren or Ilex in a line someone else speaks. Address the party as "you", "mercenaries" or "hired swords" (the Herald says "hirelings"). Do not count them ("you four"); a co-op party can be smaller. Do not write the placeholders the game fills (`{party}`, `{name}`, `{floor}`, `{prisoner}`, `{elite}`) into a line that is recorded: the recording would say the raw words while the subtitle shows a name (the `{party}` filler is one player's hero). The heroes still use each other's names in their own banter, as they do today.
 7. **Write in the speaker's own sex.** Sable, Tamsin, Ione, Grisel and Maud are women; everyone else is a man. Other characters refer to them with the right pronouns.
 8. **Tone: dark, with humour.** The humour comes from people, never from the trapped townspeople's suffering. Nobody jokes at a prisoner's expense except the Herald, and he is the villain.
 9. **Delivery.** Each line may carry one delivery: whisper, weary, calm, warm, cheerful, sly, pleading, angry, mocking, shout, booming, frantic. Each sheet gives the speaker's default.
@@ -394,7 +394,7 @@ The party learns this on floor 2 from the wardens they free ("the ones they fini
 **Who he is now:** a huge orc chieftain, the chief minion and herald of the Sleepless. He came in through the church's crypts, which the Verger opened for him, and took the mines as his master's base. He raised the church's dead, laid the traps, choked the great drains, filled the tunnels with minions to keep the townspeople off the drains, and is turning the captured wardens into more. He wants the mines, and the god awake by midwinter, so the Sleepless can come through. He speaks every taunt the party hears on every floor, the sealed-stairs line and the portal lines, and the floor 20 boss lines.
 
 **Required facts:**
-- **He was killed on floor 1 and recast.** Foehammer and the mercenaries kill him at the mine head. His voice comes straight back up from below: the foundry will recast him. His mould is among the moulds on floor 13. He waits on floor 20 whole, larger, in the same body.
+- **He was killed on floor 1 and recast.** Foehammer and the mercenaries kill him at the mine head. His voice comes straight back up from below: the foundry will recast him. His mould is among the moulds on floor 13. He waits on floor 20 whole and larger, in his true form (the owner's model `big_baddy.glb`; floor 1 keeps `orc1.glb`).
 - **He serves the Sleepless.** He speaks of his master with complete devotion and never doubts it will come through.
 - **He mocks the party as hired help:** hirelings, day labour, the town's hired shovels, paid by the floor. He prices their courage in wages.
 - **He never begs.** Not at half health, not dying, not in any branch.
@@ -420,7 +420,7 @@ The party learns this on floor 2 from the wardens they free ("the ones they fini
 **He would never say:**
 1. A plea, a surrender or a bargain for his life.
 2. A riddle, or a word of respect for Gorm or the party. He calls Gorm "your god" or "the sleeper".
-3. Anything that makes the Verger his master or his equal, or a hero's name (the `{name}` and `{party}` placeholders are fine).
+3. Anything that makes the Verger his master or his equal, or a hero's name (and no `{name}` or `{party}` placeholder: see rule 6).
 
 **Voice engineering note:** floor 20's boss lines are spoken through the stock boss voice slot today (`AdventureDirector.cs:112` enqueues them with `Voices.Boss`). For the Herald to sound the same on floor 20 as in his taunts, the bake or the engine must give those lines Fenrir.
 
@@ -531,7 +531,7 @@ Companions are fighters the party can ask to join. They are not required in ever
 
 **He would never say:** 1. A hero's name. 2. The god as the dungeon's body (his chest, his throat, "He" with a capital). 3. A joke at a prisoner's expense, or a riddle.
 
-**Tier bosses:** Canon Ludd, Mother Nit and the Bellows have intro and death lines, spoken through the stock boss voice and written like narration, in the third person. Write them in the narrator's manner and tie them to the drain each boss guards. Floor 20's boss lines are the Herald's own (see his sheet).
+**Tier bosses:** Canon Ludd, the raised canon, speaks his own intro and death lines through the stock boss voice. Mother Nit (a beast) and the Bellows (a machine) say nothing under their own names: their boss lines are empty and the narrator's BossSeen and BossDead lines carry what is to be said, tied to the drain each guards. Floor 20's boss lines are the Herald's own (see his sheet).
 
 ## The heroes
 
