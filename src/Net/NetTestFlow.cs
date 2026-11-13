@@ -173,9 +173,48 @@ public partial class NetTestFlow : Node
                 if (client.Trace.Contains("ping") && mark is { } m)
                 {
                     GD.Print($"[net] ping relayed: \"{m.Name}\" at {m.X:0.0},{m.Y:0.0},{m.Z:0.0}");
-                    _clock = 0; _step = 4;
+                    _clock = 0; _step = net.JoinName.Equals("Sable", StringComparison.OrdinalIgnoreCase) ? 4 : 31;
                 }
                 else if (_clock > 6) Finish("[net]", false, $"the ping never came back (trace ping {client.Trace.Contains("ping")}, marks {UI.Hud.PingMarkers.Instance?.Board.Active.Count ?? -1})");
+                return;
+            }
+            case 31:
+            {
+                // hero bots: call Sable in; the server runs it and it follows us. Walk off and see it come after us.
+                var me = main.Party.Local!;
+                if (!_botAsked) { _botAsked = true; net.Send(new AddBotIntent("Sable")); return; }
+                var entry = client.Roster.Values.FirstOrDefault(p => p.Name == "Sable");
+                if (_botFollowFrom == null)
+                {
+                    if (client.Trace.Contains("bot:Sable") && entry is { Online: true } && entry.BotOwner == net.JoinName && entry.MemberIndex < main.Party.Adventurers.Length)
+                    {
+                        var layout = main.Builder.Layout!;
+                        var start = Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition);
+                        // a cell a few metres off on our own level (a drop to a cellar is a different test)
+                        var away = Enumerable.Range(-2, 5).SelectMany(dx => Enumerable.Range(-2, 5).Select(dz => start + new Dungeon.Generation.GridPos(dx, dz)))
+                            .Where(c => layout.IsWalkable(c) && Math.Abs(main.Builder.Surface(c).Y - me.GlobalPosition.Y) < 0.6f && main.Builder.Surface(c).DistanceTo(me.GlobalPosition) is > 4f and < 9f)
+                            .OrderByDescending(c => main.Builder.Surface(c).DistanceTo(me.GlobalPosition)).FirstOrDefault(start);
+                        me.Teleport(main.Builder.Surface(away) + Vector3.Up * 0.3f);
+                        _botFollowFrom = me.GlobalPosition;
+                        _clock = 0;
+                        GD.Print($"[net] bot Sable joined as member {entry.MemberIndex}, owned by {entry.BotOwner}; walked to {_botFollowFrom:0.0}");
+                    }
+                    else if (_clock > 10) Finish("[net]", false, $"the bot never joined (trace bot {client.Trace.Contains("bot:Sable")}, roster {(entry == null ? "-" : $"{entry.Name} online {entry.Online} owner {entry.BotOwner}")})");
+                    return;
+                }
+                var bot = main.Party.Adventurers[entry!.MemberIndex];
+                var gap = bot.GlobalPosition.DistanceTo(me.GlobalPosition);
+                _botPrint += delta;
+                if (_botPrint > 2) { _botPrint = 0; GD.Print($"[net] bot Sable at {bot.GlobalPosition:0.0}, us at {me.GlobalPosition:0.0}: {gap:0.0} m"); }
+                if (!bot.Parked && gap < 3.5f && _clock > 1.5) { GD.Print($"[net] bot Sable follows: {gap:0.0} m behind us after {_clock:0.0}s"); _clock = 0; _step = 32; net.Send(new DismissBotIntent(entry.MemberIndex)); }
+                else if (_clock > 15) Finish("[net]", false, $"the bot did not follow (parked {bot.Parked}, {gap:0.0} m away)");
+                return;
+            }
+            case 32:
+            {
+                var entry = client.Roster.Values.FirstOrDefault(p => p.Name == "Sable");
+                if (client.Trace.Contains("left:Sable") && entry is { Online: false } && main.Party.Adventurers[entry.MemberIndex].Parked) { GD.Print("[net] bot Sable sent back to town"); _clock = 0; _step = 4; }
+                else if (_clock > 8) Finish("[net]", false, "the bot was never sent away");
                 return;
             }
             case 4:
@@ -200,6 +239,8 @@ public partial class NetTestFlow : Node
                         var hitFx = client.Trace.Count(t => t == "hitfx") - _hitFxBefore;
                         GD.Print($"[net] hit fx: {hitFx} events");
                         if (hitFx < 1) { Finish("[net]", false, "no hit fx (blood) reached this client while fighting"); return; }
+                        // the server tells every screen about each swing (hero bots' and other players' bodies play the clip)
+                        if (!client.Trace.Contains("swing")) { Finish("[net]", false, "no swing event reached this client while fighting"); return; }
                         _clock = 0; _step = 5; return;
                     }
                     // a loner, not a camp or a nest: one level-1 warrior against a band would be a different test
@@ -504,6 +545,9 @@ public partial class NetTestFlow : Node
     private double _swingClock, _chaseClock;
     private int _swings, _bagBefore, _lootBefore;
     private bool _fightHeard;
+    private bool _botAsked;
+    private Vector3? _botFollowFrom;
+    private double _botPrint;
     private bool _cheerSent;
     private int _barksBefore;
     private int _killsBefore, _deathCues, _hurtCues, _hitFxBefore;

@@ -625,8 +625,10 @@ public partial class Hud : Control
     {
         if (!Net.NetSession.IsClient || Net.NetSession.Instance.Client is not { } client) return;
         if (++_pingFrames % 30 != 0) return;
-        var online = _party.Adventurers.Count(a => !a.Parked);
-        _floorLabel.Text = $"{_floorText}   ·   {client.Rtt * 1000:0} ms, {online} online";
+        // players only: hero bots are bodies in the world too, but nobody is at their keyboard
+        var online = client.Roster.Count == 0 ? _party.Adventurers.Count(a => !a.Parked) : client.Roster.Values.Count(p => p.Online && p.BotOwner == null);
+        var bots = client.Roster.Values.Count(p => p.Online && p.BotOwner != null);
+        _floorLabel.Text = $"{_floorText}   ·   {client.Rtt * 1000:0} ms, {online} online{(bots > 0 ? $", {bots} {(bots == 1 ? "bot" : "bots")}" : "")}";
     }
 
     private void OnMemberChanged(int index) { if (index < _panels.Count) _panels[index].Refresh(); }

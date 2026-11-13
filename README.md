@@ -83,6 +83,7 @@ Pick your system. Each step is one thing to do.
 - Friends outside your home network need the second address the Host script prints, and your router must forward
   TCP port 7777 to your computer.
 - The stairs are a vote: when someone says yes on a landing, everyone sees "Descend? 1/3 ready"; you go down when all living players are ready, or after 15 s if most are. A "No" calls it off. Press X to point at something for your friends, T to type to them.
+- Fewer than four of you? Press Esc and pick **Call Brand**, **Call Sable**, **Call Wren** or **Call Ilex** under Heroes: that story hero joins as a bot, follows you and fights on their own. **Send … back to town** sends them away; they keep their level and gear for next time. A friend who joins a full party always gets a place (the newest bot steps aside), and if you leave, your bots follow another player.
 - Windows and macOS ask once to allow the game through the firewall: say yes.
 - Closing the Host window stops the server. The game is saved and continues next time.
 - Want a server that stays up when your computer is off? [docs/server-setup.md](docs/server-setup.md) has it step by step.

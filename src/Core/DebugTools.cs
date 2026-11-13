@@ -189,6 +189,8 @@ public partial class DebugTools : Node
     private bool _equipped;
     // --pose-sheet=DIR: each weapon (or --pose-items=ids) held at every pose of its moves (and of --pose-skills=ids), one PNG per pose
     private string? _poseSheetDir;
+    // --call-bot=Sable: a co-op client calls that story hero in as a bot three seconds into the game (screenshots of bots)
+    private string? _callBot;
     private string[]? _poseItems;
     private string[] _poseSkills = Array.Empty<string>();
     private readonly Queue<(string file, Items.MoveKey key)> _poseShots = new();
@@ -286,6 +288,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--face-cell=")) { var spec = arg["--face-cell=".Length..].Split(':'); var xy = spec[0].Split(','); _faceCell = (int.Parse(xy[0]), int.Parse(xy[1])); if (spec.Length > 1) _faceBack = int.Parse(spec[1]); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--drop=")) _dropIds = arg["--drop=".Length..].Split(',');
             else if (arg.StartsWith("--equip=")) _equipId = arg["--equip=".Length..]; // a weapon in the lead's hands (first-person view checks)
+            else if (arg.StartsWith("--call-bot=")) _callBot = arg["--call-bot=".Length..];
             else if (arg.StartsWith("--pose-sheet=")) { _poseSheetDir = arg["--pose-sheet=".Length..]; _quitAfter = Math.Max(_quitAfter, 900); }
             else if (arg.StartsWith("--pose-items=")) _poseItems = arg["--pose-items=".Length..].Split(',');
             else if (arg.StartsWith("--pose-skills=")) _poseSkills = arg["--pose-skills=".Length..].Split(',');
@@ -572,6 +575,12 @@ public partial class DebugTools : Node
                 lead.Recalculate();
                 GD.Print($"[equip] {lead.Name} now holds {item.DisplayName} ({lead.WeaponProfile.Kind}{(item.TwoHanded ? ", two-handed" : "")})");
             }
+        }
+        if (_callBot != null && _elapsed >= 3 && Net.NetSession.IsClient && Net.NetSession.Instance.Client?.Phase == Net.ClientHandshake.Phase.InGame)
+        {
+            Net.NetSession.Instance.Send(new Net.AddBotIntent(_callBot));
+            GD.Print($"[bot] asked the server for {_callBot}");
+            _callBot = null;
         }
         if (_poseSheetDir != null && _elapsed >= 1.5 && Main.Instance?.Party?.Lead is { } poser) PoseSheetStep(poser);
         if (_dropIds != null && !_dropped && _elapsed >= 0.9 && Main.Instance?.Builder.FloorRoot is { } dropRoot)

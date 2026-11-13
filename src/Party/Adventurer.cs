@@ -42,6 +42,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public CharacterState State => Party.Members[Index];
     /// <summary>Who drives this body; see <see cref="ControlKind"/>.</summary>
     public ControlKind Control { get; private set; } = ControlKind.Companion;
+    /// <summary>A co-op hero bot's player: the body it follows and keeps formation behind (null: the party's lead, as in single-player).</summary>
+    public Adventurer? Leader { get; set; }
+    /// <summary>Who a companion follows: its <see cref="Leader"/> while that body is in the world, else the party's lead.</summary>
+    private Adventurer FollowLead => Leader is { } l && IsInstanceValid(l) && !l.Parked ? l : Party.Lead;
     public bool IsLocal => Control == ControlKind.LocalHuman;
     public bool Parked => Control == ControlKind.Parked;
     [Obsolete("Use IsLocal.")]
@@ -444,6 +448,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _heldWeapon = HeldWeapons.TryGetValue(kind, out var held) ? WeaponGrip.Attach(_model.Root, held.prop, "Right", held.scale) : null;
     }
 
+    /// <summary>Another member swung, shot or cast (a co-op server's word): play the clip on this body, as its own screen did.</summary>
+    public void ShowSwing(AbilityKind kind, bool ranged)
+    {
+        if (Downed) return;
+        _dance.Cancel();
+        _model?.Play(kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike ? (ranged ? Clips.cast : Clips.melee) : Clips.cast, force: true);
+    }
+
     /// <summary>
     /// Start the victory dance over a kill (five quick HipBucks, five quick HipRocks, a Wave if the fight is over): the
     /// party controller calls it for the member whose blow landed, a co-op client for whichever member the server named.
@@ -589,7 +601,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (_telegraphing != null && IsInstanceValid(_telegraphing) && _telegraphing.TelegraphRemaining >= 0f && _telegraphing.TelegraphRemaining <= CompanionBrain.DodgeLead + 0.05f && _telegraphing.TelegraphId != _lastTelegraphDecided) _thinkTimer = Math.Min(_thinkTimer, 0f);
         if (_thinkTimer <= 0f) { _thinkTimer = 0.25f; Think(); }
 
-        var lead = Party.Lead;
+        var lead = FollowLead;
         switch (_action.Kind)
         {
             case ActionKind.Follow:
@@ -673,8 +685,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     private Vector3 FormationSpot()
     {
-        var lead = Party.Lead;
-        var slot = Party.FormationSlot(Index);
+        var lead = FollowLead;
+        var slot = Leader != null ? Party.FormationSlotBehind(lead, Index) : Party.FormationSlot(Index);
         var world = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(slot.X, 0, slot.Y);
         var layout = Main.Instance.Builder.Layout;
         if (layout != null && !layout.IsWalkable(DungeonBuilder.WorldToCell(world))) world = lead.GlobalPosition;
@@ -683,7 +695,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     private void Think()
     {
-        var lead = Party.Lead;
+        var lead = FollowLead;
         var root = Main.Instance.Builder.FloorRoot;
         // enemies are identified by their index in this list (instance ids do not fit an int)
         var enemies = new List<EnemyView>();

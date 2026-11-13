@@ -32,6 +32,10 @@ public sealed class PlayerDto
     public PoseDto? ParkedPose { get; set; }
     public int ParkedFloor { get; set; }
     public string LastSeenUtc { get; set; } = "";
+    /// <summary>A hero bot's owner (null for a player's own character); see Net.PlayerSlot.</summary>
+    public string? BotOwner { get; set; }
+    public bool BotActive { get; set; }
+    public bool BotWaiting { get; set; }
 }
 
 public enum AdventureMode { Legacy, Offline, Claude, Builtin }

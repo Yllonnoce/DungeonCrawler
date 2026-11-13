@@ -21,7 +21,8 @@ public abstract record NetMessage
 
 // ---- handshake and roster ----------------------------------------------------------------------
 
-public sealed record NetPlayerDto(string Name, int MemberIndex, string ClassId, int PeerId, bool Online);
+/// <summary>A hero on the server: a player (PeerId &gt; 0 when online) or a hero bot (<paramref name="BotOwner"/> set, Online while it is in the world).</summary>
+public sealed record NetPlayerDto(string Name, int MemberIndex, string ClassId, int PeerId, bool Online, string? BotOwner = null);
 
 /// <summary>An enemy that was not part of the floor plan (summoned, horde) and so must be described to a joiner.</summary>
 /// <summary>A dynamic enemy for a joiner or a spawn message; EliteName/EliteAffixes (v8, comma-joined enum names) when it is an elite.</summary>
@@ -181,6 +182,12 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.PingIntent)] public sealed record PingIntent(NetVec At) : NetMessage;
 /// <summary>A player's ping: a 2 s marker with their name, on every screen.</summary>
 [Msg(MsgKind.PingEvt)] public sealed record PingEvt(string Name, NetVec At) : NetMessage;
+/// <summary>A player brings a story hero in as a bot (the server runs it; it follows that player).</summary>
+[Msg(MsgKind.AddBotIntent)] public sealed record AddBotIntent(string Hero) : NetMessage;
+/// <summary>A player sends their bot (by member index) out of the party; it keeps its level and gear for next time.</summary>
+[Msg(MsgKind.DismissBotIntent)] public sealed record DismissBotIntent(int Member) : NetMessage;
+/// <summary>A member swung, shot or cast (the server saw it): every other screen plays the clip on that body.</summary>
+[Msg(MsgKind.SwingEvt)] public sealed record SwingEvt(int Member, byte AbilityKind, bool Ranged) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

@@ -72,7 +72,9 @@ public partial class PortraitPanel : PanelContainer
         var focused = _party.LocalIndex == _index;
         var adv = _party.Adventurers.Length > _index ? _party.Adventurers[_index] : null;
         _attack.Visible = focused || (_party.AllowPossession && adv is { Control: ControlKind.Companion });
-        var tag = focused ? "[YOU]" : adv switch { null => "", { Parked: true } => "[away]", { Control: ControlKind.Remote } => "[player]", _ => $"[{adv.CurrentActionName}]" };
+        // a co-op hero bot says whose it is
+        var botOwner = Net.NetSession.Instance?.Client?.Roster.TryGetValue(_index, out var known) == true ? known.BotOwner : null;
+        var tag = focused ? "[YOU]" : adv switch { null => "", { Parked: true } => "[away]", { Control: ControlKind.Remote } => botOwner != null ? $"[{botOwner}'s bot]" : "[player]", _ => $"[{adv.CurrentActionName}]" };
         _name.Text = $"{_index + 1} {m.Name}  L{m.Level}  {tag}";
         _stance.Visible = adv is { Control: ControlKind.Companion };
         if (adv != null) _stance.Text = adv.Stance.ToString();

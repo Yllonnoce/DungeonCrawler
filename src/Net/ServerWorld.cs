@@ -45,6 +45,7 @@ public partial class ServerWorld : Node
         t.PeerConnected += p => { Handshake.OnPeerConnected(p); GD.Print($"[net-server] peer {p} connected"); };
         t.PeerDisconnected += p => { Handshake.OnPeerDisconnected(p); GD.Print($"[net-server] peer {p} disconnected"); if (NetSession.Instance.QuitWhenEmpty && Registry.OnlineCount == 0) CallDeferred(nameof(QuitEmpty)); };
         t.Received += OnReceived;
+        StartBots();
         var bus = EventBus.Instance;
         bus.Message += line => _logBatch.Add(line);
         bus.Sfx += cue => { if (!LocalCues.Contains(cue) && !Quiet) Broadcast(new SfxMsg(cue)); };
@@ -273,6 +274,7 @@ public partial class ServerWorld : Node
         SendSnapshotTo(slot.PeerId, full: true);
         SendShopSync(slot.PeerId); // a join: the joiner is in game now, so it will not discard this (a floor change sends it in OnFloorReady)
         Trace.Add($"ready:{slot.Name}");
+        ResumeBotsOf(slot);
         PlayerReady?.Invoke(slot);
         WriteStatus();
     }
@@ -368,6 +370,8 @@ public partial class ServerWorld : Node
         if (body.Parked) return;
         switch (m)
         {
+            case AddBotIntent ab: OnAddBot(slot, ab.Hero); break;
+            case DismissBotIntent db: OnDismissBot(slot, db.Member); break;
             case AttackIntent a:
             {
                 // aim exactly where the player aimed; the body stays where its poses put it
@@ -716,7 +720,8 @@ public partial class ServerWorld : Node
         if (path == null) return;
         var game = Game.Instance;
         var players = string.Join(",", Registry.Online.Select(s => $"\"{s.Name.Replace("\"", "")}\""));
-        var json = $"{{\"floor\":{game.CurrentFloor},\"online\":{Registry.OnlineCount},\"players\":[{players}],\"known\":{Registry.All.Count},\"uptime\":{(int)(Time.GetTicksMsec() / 1000)},\"layoutHash\":\"{Main.Instance?.Builder.Layout?.ContentHash() ?? 0}\",\"tick\":{NetSession.Instance.Tick}}}";
+        var bots = string.Join(",", Registry.ActiveBots.Select(s => $"\"{s.Name.Replace("\"", "")}\""));
+        var json = $"{{\"floor\":{game.CurrentFloor},\"online\":{Registry.OnlineCount},\"players\":[{players}],\"bots\":[{bots}],\"known\":{Registry.All.Count},\"uptime\":{(int)(Time.GetTicksMsec() / 1000)},\"layoutHash\":\"{Main.Instance?.Builder.Layout?.ContentHash() ?? 0}\",\"tick\":{NetSession.Instance.Tick}}}";
         try { File.WriteAllText(ProjectSettings.GlobalizePath(path), json); } catch (Exception e) { GD.PushWarning($"[net-server] status file: {e.Message}"); }
     }
 }

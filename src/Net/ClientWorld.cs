@@ -26,6 +26,11 @@ public partial class ClientWorld : Node
     public Welcome? Welcome => _h.Welcome;
     public ClientHandshake.Phase Phase => _h.State;
     public int MemberIndex => _h.Welcome?.YourMemberIndex ?? -1;
+    /// <summary>The name this client plays under (the server knows it by this name).</summary>
+    public string PlayerName => _h.PlayerName;
+    private readonly Dictionary<int, NetPlayerDto> _roster = new();
+    /// <summary>Every hero the server knows, by member: players and hero bots, in play or not (the pause menu's party list).</summary>
+    public IReadOnlyDictionary<int, NetPlayerDto> Roster => _roster;
     public int SnapshotsSeen { get; private set; }
     public double Rtt { get; private set; }
     /// <summary>What the scripted client test saw, in order.</summary>
@@ -56,6 +61,8 @@ public partial class ClientWorld : Node
             {
                 NetSession.Instance.SetStatus($"welcome: floor {w.CurrentFloor}, member {w.YourMemberIndex}, {w.Players.Count} known players");
                 Trace.Add("welcome");
+                _roster.Clear();
+                foreach (var p in w.Players) _roster[p.MemberIndex] = p;
                 Main.Instance.StartClientSession(w);
             }
             return;
@@ -105,6 +112,11 @@ public partial class ClientWorld : Node
             case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
+            case SwingEvt sw:
+                if (sw.Member != Main.Instance.Party.LocalIndex && sw.Member >= 0 && sw.Member < Main.Instance.Party.Adventurers.Length)
+                    Main.Instance.Party.Adventurers[sw.Member].ShowSwing((Combat.AbilityKind)sw.AbilityKind, sw.Ranged);
+                if (!Trace.Contains("swing")) Trace.Add("swing");
+                break;
             case EmoteEvt em when em.Member >= 0 && em.Member < Main.Instance.Party.Adventurers.Length:
                 if (em.Emote == "victory") Main.Instance.Party.Adventurers[em.Member].Celebrate();
                 else if (em.Emote == "cheer") Main.Instance.Party.Adventurers[em.Member].PlayCheer();
@@ -312,7 +324,8 @@ public partial class ClientWorld : Node
         if (p.MemberIndex >= party.Members.Length) party.AddMember(p.Name, p.ClassId);
         party.Unpark(p.MemberIndex, ControlKind.Remote);
         _players[p.MemberIndex] = new PoseBuffer();
-        Trace.Add($"joined:{p.Name}");
+        _roster[p.MemberIndex] = p;
+        Trace.Add(p.BotOwner != null ? $"bot:{p.Name}" : $"joined:{p.Name}");
     }
 
     private void OnPlayerLeft(PlayerLeft pl)
@@ -320,6 +333,7 @@ public partial class ClientWorld : Node
         var party = Main.Instance.Party;
         if (pl.MemberIndex < party.Adventurers.Length) party.Park(pl.MemberIndex);
         _players.Remove(pl.MemberIndex);
+        if (_roster.TryGetValue(pl.MemberIndex, out var known)) _roster[pl.MemberIndex] = known with { Online = false, PeerId = 0 };
         Trace.Add($"left:{pl.Name}");
     }
 

@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 10;
+    public const int Version = 11;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 95;
+    public const int MessageKindCount = 98;
     public const int DefaultPort = 7777;
     public const int MaxPlayers = 4;
     public const int PoseHz = 30;
@@ -71,4 +71,6 @@ public enum MsgKind : byte
     DeathCardEvt, FloorCardEvt, RunRecapEvt,
     // friends (v10): the stairs ready-check (a client's Yes or No, the server's count for every HUD) and pings
     StairsReadyIntent, StairsReadyMsg, PingIntent, PingEvt,
+    // hero bots (v11): a player brings a story hero in or sends one away; every member's swing shows on every screen
+    AddBotIntent, DismissBotIntent, SwingEvt,
 }

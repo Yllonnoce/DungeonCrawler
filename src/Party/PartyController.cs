@@ -262,6 +262,18 @@ public partial class PartyController : Node3D
         return pos switch { 0 => new Vector2(-1.3f, 1.5f), 1 => new Vector2(1.3f, 1.5f), 2 => new Vector2(-0.9f, 3.2f), _ => new Vector2(0.9f, 3.2f) };
     }
 
+    /// <summary>
+    /// A co-op hero bot's place behind the player it follows: the same slots as <see cref="FormationSlot"/>, shared only
+    /// among the bots that follow that player (melee first, then by index).
+    /// </summary>
+    public Vector2 FormationSlotBehind(Adventurer leader, int index)
+    {
+        var followers = Adventurers.Where(a => a.Leader == leader && !a.Parked).Select(a => a.Index)
+            .OrderBy(i => Members[i].WeaponProfile.IsRanged || Members[i].Class.Id == "class.mage" ? 1 : 0).ThenBy(i => i).ToList();
+        var pos = Math.Max(0, followers.IndexOf(index));
+        return pos switch { 0 => new Vector2(-1.3f, 1.5f), 1 => new Vector2(1.3f, 1.5f), 2 => new Vector2(-0.9f, 3.2f), _ => new Vector2(0.9f, 3.2f) };
+    }
+
     public void CycleStance(int index)
     {
         var adv = Adventurers[index];
