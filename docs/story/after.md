@@ -52,7 +52,7 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
 
   - **Party (choice):** Who are you, mother? _[to m1_who]_
   - **Party (choice):** You should go back up. It isn't safe. _[to m1_back]_
-  - **Party (choice):** Mind how you go, Maud. _[Farewell]_
+  - **Party (choice):** Mind how you go, mother. _[Farewell]_
 
 **Maud Sorrel:** _(node m1_who)_ Maud Sorrel, dear. Drain-warden, thirty-eight years. I was on my rounds, and then the water... well, never mind. Wet? I've been wetter.
 
@@ -63,7 +63,7 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
 
 **Maud Sorrel:** _(node m1_back)_ Thirty-eight years, dear, and I've never missed a round, so I'm not going up now. The wells up top are sour; that's the grates, packed solid. The water has to go down.
 
-  - **Party (choice):** Mind how you go, Maud. _[Farewell]_
+  - **Party (choice):** Mind how you go, mother. _[Farewell]_
 
 ### Floor taunts
 
@@ -93,11 +93,11 @@ _Objective: jailbreak_
 
 **Narrator:** _(floor intro)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
 
-**Narrator:** _(RoomEnter room 7)_ From the cells, the wardens call to you: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
+**Narrator:** _(RoomEnter room 7)_ Even here you can hear the wardens in the cells calling out: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my bloody cages, and the finished ones join my packs.
+**Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my bloody cages, hirelings, and the finished ones join my packs.
 
 **Morg Ashtusk:** _(Capture, jailbreak)_ {prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.
 
@@ -241,7 +241,7 @@ _Mood: wading in standing water that should be running_
 
 **Narrator:** _(tier 2 entry)_ Below the church the water stands. It should be running down to the god, but the drains beneath it are choked, so it sits here and goes sour. The Gut.
 
-**Narrator:** _(floor intro)_ You wade into the Swallow. The first drain runs now, but the drains below it are still choked, so the water backs up here, knee-deep and going sour. Ahead, a miner is pulling wardens' tools out of the muck.
+**Narrator:** _(floor intro)_ You wade into the Swallow. The first drain runs, but the drains below are still choked, so the water backs up here, knee-deep and sour, and the god starves. Ahead, a miner pulls wardens' tools from the muck.
 
 ### Maud Sorrel
 
@@ -423,7 +423,7 @@ _Mood: riveted plate, ember light, a cheerful old founder_
 
 **Narrator:** _(floor intro)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
 
-**Narrator:** _(RoomEnter room 8)_ The Great Hearth. Its engine pushed the water down to the god for three hundred years; now it drives a foundry, and the orc's iron comes off its sand.
+**Narrator:** _(RoomEnter room 8)_ The Great Hearth. The orc's iron comes warm off the old founder's sand, and the engine that should be pumping water feeds the fire instead.
 
 ### Old Ulf
 
@@ -468,7 +468,7 @@ _Quest: Hounds in the Coal (KillTarget): Kill the ember hounds loose in the houn
   - **Party (choice):** How did you drown? _[to m11_warm]_
   - **Party (choice):** Mind how you go, Maud. _[Farewell]_
 
-**Maud Sorrel:** _(node m11_faces)_ The pump works, dear. That big engine pushed the water down the drains for three hundred years. Now it drives a forge and casts things instead, and the water stands.
+**Maud Sorrel:** _(node m11_faces)_ The pump works, dear. That big engine used to push the water down the drains. Now it drives a forge and casts things instead, and the water stands.
 
   - **Party (choice):** How did you drown? _[to m11_warm]_
   - **Party (choice):** Mind how you go, Maud. _[Farewell]_
@@ -498,7 +498,7 @@ _Objective: jailbreak_
 
 **Narrator:** _(RoomEnter room 11)_ The cages hold Grisel Thorn's crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.
 
-**Narrator:** _(RoomEnter room 11)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. She took them to save herself and kept her own crew locked in; when you came for the cages, his iron cut her down.
+**Narrator:** _(RoomEnter room 11)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.
 
 ### Grisel Thorn _(needs grisel_forgiven)_
 
@@ -552,7 +552,7 @@ _Mood: cold steel plate, white lamps, shelves of moulds_
 
 **Narrator:** _(floor intro)_ Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.
 
-**Narrator:** _(RoomEnter room 4)_ Shelf upon shelf of casting moulds. Up close you can make out what they are for: the face of a crushing wall, the teeth of a spike bed, the limbs of the iron brutes.
+**Narrator:** _(RoomEnter room 4)_ Up close, the moulds on these shelves show what they are for: the plates of a crushing wall, the points of a spike bed, the limbs of the iron brutes.
 
 **Narrator:** _(RoomEnter room 2)_ By the stair stands the biggest mould in the works, taller than two men: the orc's own shape, larger than the body you killed at the gate. This is where he was poured again.
 
@@ -620,7 +620,7 @@ _Mood: rusted grates under black water, vestments afloat_
 
 _Objective: shiftingvault_
 
-**Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Either way he is taken for the rite (16, 19).
+**Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Pressed or let be, he is taken for the rite (16, 19).
 
 **Narrator:** _(floor intro)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
 
@@ -647,7 +647,7 @@ _Objective: shiftingvault_
   - **Party (choice):** Here's your psalter. _[TurnIn; to tob_d]_
   - **Party (choice):** Stay by the grate. We'll be back. _[Farewell]_
 
-**Deacon Tobit Hale:** _(node tob_d)_ Thank you. I'll write it in: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I'll find it. I'm thorough. I always am.
+**Deacon Tobit Hale:** _(node tob_d)_ My psalter. I'll write it all down: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I'll find it. I'm thorough. I always am.
 
   - **Party (choice):** Keep your head down, deacon. _[Farewell]_
 
@@ -689,7 +689,7 @@ _Quest: The Deacon's Escort (Betrayal): Put down the escort the orc sent to fetc
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter, shiftingvault)_ Your deacon followed you down, hirelings. He's in my water, fishing out his master's robes. The stairs are behind my gates; pull the bloody levers and guess.
+**Morg Ashtusk:** _(FloorEnter, shiftingvault)_ Your deacon is down here too, hirelings, in my water, fishing out his master's robes. The stairs are behind my gates; pull the bloody levers and guess.
 
 **Morg Ashtusk:** _(WrongLever, shiftingvault)_ Wrong lever. I built these gates to fool better heads than yours, and they're doing it for free.
 
@@ -860,7 +860,7 @@ _Objective: toxic_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
   - **Party (choice):** Hold it, then. We're going. _[Farewell]_
 
-**Alderman Hesketh Crane:** _(node n_verger)_ Then he opened the door to that orc, and I stopped paying the wardens who'd have found it. He did it for a god and I did it for the wages. I can't tell which of us I'm angrier with.
+**Alderman Hesketh Crane:** _(node n_verger)_ Then he opened the door to that orc. He did it for a god, and I signed away the wardens without once asking why he'd shut the mines. I can't tell which of us I'm angrier with.
 
   - **Party (choice):** Why come down yourself, Crane? _[to n_confess]_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
@@ -877,7 +877,7 @@ _Objective: toxic_
 
 **Morg Ashtusk:** _(GasLethal, toxic)_ That's my air in your lungs now, {party}. Your alderman's holding a sluice open for you, and you're still too bloody slow to use it.
 
-**Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved a few months of wardens' wages and left my drains to me. Cheapest bloody bargain my master ever got.
+**Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved itself the wardens' wages and left my drains to me. Cheapest bloody bargain my master ever got.
 
 ### Hordes
 
@@ -1051,7 +1051,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
   - **Party (choice):** You let the orc in. _[to v_door]_
   - **Party (choice):** Kneel there, then. _[Farewell]_
 
-**Absalom Quill:** _(node v_ewer)_ That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. Sister Ione may have it back when the new god has come.
+**Absalom Quill:** _(node v_ewer)_ That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. The girl who kept my candles may have it back when the new god has come.
 
   - **Party (choice):** You let the orc in. _[to v_door]_
   - **Party (choice):** Kneel there, then. _[Farewell]_
@@ -1070,9 +1070,9 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 **Morg Ashtusk:** _(RitualDone, ritual)_ So the rite breaks. Look at the old priest, hirelings: on his knees, and nothing answering him. Forty years he prayed, and he still can't get a god to come when called.
 
-**Morg Ashtusk:** _(Descend)_ So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church's ewer lies where he dropped it. Sister Ione can have her jug back. I'm at the last drain.
+**Morg Ashtusk:** _(Descend)_ Your old priest dropped the ewer when his rite broke, hirelings. The church can have its jug back. One drain left, and I'm standing on it.
 
-**Morg Ashtusk:** _(Descend)_ So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church's ewer to kneel, and nothing answers him. Sister Ione can have her jug back.
+**Morg Ashtusk:** _(Descend)_ The rite's broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.
 
 ### Hordes
 
@@ -1084,7 +1084,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 _Mood: the last great drain, braziers, the orc again_
 
-**Story beat:** Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks and sinks back from waking, the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.
+**Story beat:** Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks (sinking back from waking with wake_gorm, never stirring without it), the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.
 
 **Narrator:** _(floor intro)_ The last stair brings you down to the Mouth, where the last great drain should pour down to the god. Its grate is packed solid, braziers burn around it, and the orc is waiting there.
 
@@ -1198,7 +1198,7 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Morg Ashtusk:** _(PartyWiped)_ There. All of you, down in my mines. Your town can hire more, and my foundry can pour more. We'll see who runs out first.
 
-**Morg Ashtusk:** _(PartyWiped)_ Rest now, hirelings. The town will scrape together another fee for another lot, and they'll step over you to reach me.
+**Morg Ashtusk:** _(PartyWiped)_ Rest now, hirelings. The town will send another lot down after you, and they'll step over you to reach me.
 
 **Morg Ashtusk:** _(Descend)_ Another floor down. I've had since bloody spring to get this one ready for you.
 
@@ -1228,7 +1228,7 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Morg Ashtusk:** _(AllyDead)_ Another body for my mines. Carry it yourselves, hirelings. I'm not clearing up after you, you sorry sods.
 
-**Morg Ashtusk:** _(AllyLeft)_ Your friend has gone home. Sensible. Nobody follows hirelings far, not for what the town pays.
+**Morg Ashtusk:** _(AllyLeft)_ Your friend has gone home. Sensible. Nobody who means to live follows hirelings into my mines.
 
 **Morg Ashtusk:** _(AllyLeft)_ Walked out on you, did they? I don't blame them. I wouldn't follow you down my bloody stairs either.
 
@@ -1248,12 +1248,12 @@ _Mood: the last great drain, braziers, the orc again_
 
 ### Merchant (Master Oswin Pellet)
 
-**Master Oswin Pellet:** _(node hire)_ Oswin Pellet, factor. The town hired you to clear the traps and creatures out of the mines so the drains can run again, and I lent the council the money. I have a weak chest and a strong sense of who ought to go down.
+**Master Oswin Pellet:** _(node hire)_ Oswin Pellet, factor. The town hired you to clear the mines so the drains can run again, and I lent the council the money. I want it back. I have a weak chest and a strong sense of who ought to go down.
 
   - **Party (choice):** A factor, paying for drain work? _[to quakes]_
   - **Party (choice):** Spare us the chest. What's the pay? _[to deal]_
 
-**Master Oswin Pellet:** _(node quakes)_ You'll have felt the ground go. The drains are backed up, the wells run sour, and the quakes come oftener every month. My carts haven't run since spring. Clear the mines and I get my money back.
+**Master Oswin Pellet:** _(node quakes)_ You'll have felt the ground go. The drains are backed up, the wells run sour, and the quakes come oftener every month. My carts haven't run since spring. Clear the mines and they run again.
 
   - **Party (choice):** Never mind your carts. What's in it for us? _[to deal]_
   - **Party (choice):** And where does our money come into it? _[to deal]_
@@ -1365,7 +1365,7 @@ _Mood: the last great drain, braziers, the orc again_
 
 **Master Oswin Pellet:** _(floor 16 greeting)_ Oh, thank you. I was talking to the crates, and the crates were starting to answer.
 
-**Master Oswin Pellet:** _(floor 16 progress)_ Marble, all the way along, with a blue light in it I can't account for. I account for everything. I'd sooner not account for this.
+**Master Oswin Pellet:** _(floor 16 progress)_ Marble, all the way along, with a blue light in it I can't put a price on. I can price anything. I'd sooner not price this.
 
 **Master Oswin Pellet:** _(floor 16 trade)_ The good stock, all of it. I was keeping it for a better day. There won't be one, so it may as well be today.
 
@@ -1977,7 +1977,7 @@ _bw_theory floors 1+_
 
 _sw_still floors 6+_
 
-**Wren:** _(weary)_ Water's standing. Going sour.
+**Wren:** _(weary)_ Water's gone sour.
 
 **Sable:** _(weary)_ Lovely. The pay's the same, the water's worse, and I'm still here. Why am I still here?
 
@@ -2029,11 +2029,11 @@ _wi_bellows floors 15+_
 
 **Wren:** _(weary)_ Big engine.
 
-**Ilex:** _(weary)_ The Bellows. Oskar says its joints are where the old iron is thinnest. I concur, which he would find tiresome.
+**Ilex:** _(weary)_ The Bellows. Oskar would tell you its joints are where the old iron is thinnest. I concur, which he would find tiresome.
 
 **Wren:** _(weary)_ Ladles?
 
-**Ilex:** _(weary)_ What drops off them stays soft until it cools, he says. I see no reason to doubt him.
+**Ilex:** _(weary)_ What drops off them stays soft until it cools. Strike before it sets, I would suggest.
 
 _si_footnote floors 16+_
 
@@ -3559,7 +3559,7 @@ _bw_deacon floors 16+_
 
 **Wren:** _(CheerAnswer)_ Walk on.
 
-**Ilex:** _(Kill)_ Burned clean. The drains may thank me.
+**Ilex:** _(Kill)_ One fewer obstruction. The drains, I suspect, approve.
 
 **Ilex:** _(Kill)_ Reduced to component parts. Tidy enough.
 

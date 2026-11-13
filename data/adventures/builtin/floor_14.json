@@ -383,7 +383,7 @@
           {
             "Id": "tob_d",
             "Line": {
-              "Text": "Thank you. I\u0027ll write it in: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I\u0027ll find it. I\u0027m thorough. I always am.",
+              "Text": "My psalter. I\u0027ll write it all down: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I\u0027ll find it. I\u0027m thorough. I always am.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -632,12 +632,12 @@
       "Trigger": "FloorEnter",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "Your deacon followed you down, hirelings. He\u0027s in my water, fishing out his master\u0027s robes. The stairs are behind my gates; pull the bloody levers and guess.",
+        "Text": "Your deacon is down here too, hirelings, in my water, fishing out his master\u0027s robes. The stairs are behind my gates; pull the bloody levers and guess.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Your deacon followed you down, hirelings. He\u0027s in my water, fishing out his master\u0027s robes. The stairs are behind my gates; pull the levers and guess.",
+        "Text": "Your deacon is down here too, hirelings, in my water, fishing out his master\u0027s robes. The stairs are behind my gates; pull the levers and guess.",
         "VoiceId": null,
         "Delivery": null
       },

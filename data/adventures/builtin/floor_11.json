@@ -436,7 +436,7 @@
           {
             "Id": "m11_faces",
             "Line": {
-              "Text": "The pump works, dear. That big engine pushed the water down the drains for three hundred years. Now it drives a forge and casts things instead, and the water stands.",
+              "Text": "The pump works, dear. That big engine used to push the water down the drains. Now it drives a forge and casts things instead, and the water stands.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -564,7 +564,7 @@
       "Trigger": "RoomEnter",
       "Room": 8,
       "Line": {
-        "Text": "The Great Hearth. Its engine pushed the water down to the god for three hundred years; now it drives a foundry, and the orc\u0027s iron comes off its sand.",
+        "Text": "The Great Hearth. The orc\u0027s iron comes warm off the old founder\u0027s sand, and the engine that should be pumping water feeds the fire instead.",
         "VoiceId": null,
         "Delivery": null
       },

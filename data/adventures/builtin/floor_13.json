@@ -464,7 +464,7 @@
       "Trigger": "RoomEnter",
       "Room": 4,
       "Line": {
-        "Text": "Shelf upon shelf of casting moulds. Up close you can make out what they are for: the face of a crushing wall, the teeth of a spike bed, the limbs of the iron brutes.",
+        "Text": "Up close, the moulds on these shelves show what they are for: the plates of a crushing wall, the points of a spike bed, the limbs of the iron brutes.",
         "VoiceId": null,
         "Delivery": null
       },

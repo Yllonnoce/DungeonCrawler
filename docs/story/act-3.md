@@ -12,7 +12,7 @@ _Mood: riveted plate, ember light, a cheerful old founder_
 
 **Narrator:** _(floor intro)_ Heat, and the thump of a great engine. This is the pump works, which pushed the water down the drains for three hundred years. The orc has made it his foundry, and somebody at the hearth is singing.
 
-**Narrator:** _(RoomEnter room 8)_ The Great Hearth. Its engine pushed the water down to the god for three hundred years; now it drives a foundry, and the orc's iron comes off its sand.
+**Narrator:** _(RoomEnter room 8)_ The Great Hearth. The orc's iron comes warm off the old founder's sand, and the engine that should be pumping water feeds the fire instead.
 
 ### Old Ulf
 
@@ -57,7 +57,7 @@ _Quest: Hounds in the Coal (KillTarget): Kill the ember hounds loose in the houn
   - **Party (choice):** How did you drown? _[to m11_warm]_
   - **Party (choice):** Mind how you go, Maud. _[Farewell]_
 
-**Maud Sorrel:** _(node m11_faces)_ The pump works, dear. That big engine pushed the water down the drains for three hundred years. Now it drives a forge and casts things instead, and the water stands.
+**Maud Sorrel:** _(node m11_faces)_ The pump works, dear. That big engine used to push the water down the drains. Now it drives a forge and casts things instead, and the water stands.
 
   - **Party (choice):** How did you drown? _[to m11_warm]_
   - **Party (choice):** Mind how you go, Maud. _[Farewell]_
@@ -87,7 +87,7 @@ _Objective: jailbreak_
 
 **Narrator:** _(RoomEnter room 11)_ The cages hold Grisel Thorn's crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.
 
-**Narrator:** _(RoomEnter room 11)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. She took them to save herself and kept her own crew locked in; when you came for the cages, his iron cut her down.
+**Narrator:** _(RoomEnter room 11)_ Grisel Thorn lies dead by the cage door, the orc's keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.
 
 ### Grisel Thorn _(needs grisel_forgiven)_
 
@@ -141,7 +141,7 @@ _Mood: cold steel plate, white lamps, shelves of moulds_
 
 **Narrator:** _(floor intro)_ Cold plate, white lamps, and shelf upon shelf of moulds packed in casting sand. This is where Old Ulf keeps his patterns, and he is proud of every one.
 
-**Narrator:** _(RoomEnter room 4)_ Shelf upon shelf of casting moulds. Up close you can make out what they are for: the face of a crushing wall, the teeth of a spike bed, the limbs of the iron brutes.
+**Narrator:** _(RoomEnter room 4)_ Up close, the moulds on these shelves show what they are for: the plates of a crushing wall, the points of a spike bed, the limbs of the iron brutes.
 
 **Narrator:** _(RoomEnter room 2)_ By the stair stands the biggest mould in the works, taller than two men: the orc's own shape, larger than the body you killed at the gate. This is where he was poured again.
 
@@ -209,7 +209,7 @@ _Mood: rusted grates under black water, vestments afloat_
 
 _Objective: shiftingvault_
 
-**Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Either way he is taken for the rite (16, 19).
+**Story beat:** Flooded vault. cast_tobit has followed the party down and found the Verger's vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon's prisoner, summoned below by a message in the Verger's hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Pressed or let be, he is taken for the rite (16, 19).
 
 **Narrator:** _(floor intro)_ Black water stands knee-deep over the quench grates, where the orc's iron is cooled. A churchman's robes float against a grate, and the stairs lie behind gates that move.
 
@@ -236,7 +236,7 @@ _Objective: shiftingvault_
   - **Party (choice):** Here's your psalter. _[TurnIn; to tob_d]_
   - **Party (choice):** Stay by the grate. We'll be back. _[Farewell]_
 
-**Deacon Tobit Hale:** _(node tob_d)_ Thank you. I'll write it in: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I'll find it. I'm thorough. I always am.
+**Deacon Tobit Hale:** _(node tob_d)_ My psalter. I'll write it all down: his vestments, in the water, thrown off. If he did this, it will be in his own hand somewhere, and I'll find it. I'm thorough. I always am.
 
   - **Party (choice):** Keep your head down, deacon. _[Farewell]_
 
@@ -278,7 +278,7 @@ _Quest: The Deacon's Escort (Betrayal): Put down the escort the orc sent to fetc
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter, shiftingvault)_ Your deacon followed you down, hirelings. He's in my water, fishing out his master's robes. The stairs are behind my gates; pull the bloody levers and guess.
+**Morg Ashtusk:** _(FloorEnter, shiftingvault)_ Your deacon is down here too, hirelings, in my water, fishing out his master's robes. The stairs are behind my gates; pull the bloody levers and guess.
 
 **Morg Ashtusk:** _(WrongLever, shiftingvault)_ Wrong lever. I built these gates to fool better heads than yours, and they're doing it for free.
 

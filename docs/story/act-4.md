@@ -133,7 +133,7 @@ _Objective: toxic_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
   - **Party (choice):** Hold it, then. We're going. _[Farewell]_
 
-**Alderman Hesketh Crane:** _(node n_verger)_ Then he opened the door to that orc, and I stopped paying the wardens who'd have found it. He did it for a god and I did it for the wages. I can't tell which of us I'm angrier with.
+**Alderman Hesketh Crane:** _(node n_verger)_ Then he opened the door to that orc. He did it for a god, and I signed away the wardens without once asking why he'd shut the mines. I can't tell which of us I'm angrier with.
 
   - **Party (choice):** Why come down yourself, Crane? _[to n_confess]_
   - **Party (choice):** Did Grisel get her crew out? _[needs grisel_forgiven; to n_grisel]_
@@ -150,7 +150,7 @@ _Objective: toxic_
 
 **Morg Ashtusk:** _(GasLethal, toxic)_ That's my air in your lungs now, {party}. Your alderman's holding a sluice open for you, and you're still too bloody slow to use it.
 
-**Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved a few months of wardens' wages and left my drains to me. Cheapest bloody bargain my master ever got.
+**Morg Ashtusk:** _(Descend)_ Your alderman's still hanging off his wheel up there, hirelings. His council saved itself the wardens' wages and left my drains to me. Cheapest bloody bargain my master ever got.
 
 ### Hordes
 
@@ -324,7 +324,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
   - **Party (choice):** You let the orc in. _[to v_door]_
   - **Party (choice):** Kneel there, then. _[Farewell]_
 
-**Absalom Quill:** _(node v_ewer)_ That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. Sister Ione may have it back when the new god has come.
+**Absalom Quill:** _(node v_ewer)_ That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. The girl who kept my candles may have it back when the new god has come.
 
   - **Party (choice):** You let the orc in. _[to v_door]_
   - **Party (choice):** Kneel there, then. _[Farewell]_
@@ -343,9 +343,9 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 **Morg Ashtusk:** _(RitualDone, ritual)_ So the rite breaks. Look at the old priest, hirelings: on his knees, and nothing answering him. Forty years he prayed, and he still can't get a god to come when called.
 
-**Morg Ashtusk:** _(Descend)_ So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church's ewer lies where he dropped it. Sister Ione can have her jug back. I'm at the last drain.
+**Morg Ashtusk:** _(Descend)_ Your old priest dropped the ewer when his rite broke, hirelings. The church can have its jug back. One drain left, and I'm standing on it.
 
-**Morg Ashtusk:** _(Descend)_ So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church's ewer to kneel, and nothing answers him. Sister Ione can have her jug back.
+**Morg Ashtusk:** _(Descend)_ The rite's broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.
 
 ### Hordes
 
@@ -357,7 +357,7 @@ _Quest: Hold Him Steady (HoldOut): Hold the three galleries while Maud Sorrel ke
 
 _Mood: the last great drain, braziers, the orc again_
 
-**Story beat:** Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks and sinks back from waking, the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.
+**Story beat:** Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks (sinking back from waking with wake_gorm, never stirring without it), the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.
 
 **Narrator:** _(floor intro)_ The last stair brings you down to the Mouth, where the last great drain should pour down to the god. Its grate is packed solid, braziers burn around it, and the orc is waiting there.
 

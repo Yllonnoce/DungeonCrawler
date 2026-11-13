@@ -679,7 +679,7 @@
           {
             "Id": "v_ewer",
             "Line": {
-              "Text": "That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. Sister Ione may have it back when the new god has come.",
+              "Text": "That ewer blessed the drains every spring for three hundred years. Tonight it pours for the god who comes after. The girl who kept my candles may have it back when the new god has come.",
               "VoiceId": null,
               "Delivery": null
             },
@@ -948,12 +948,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church\u0027s ewer lies where he dropped it. Sister Ione can have her jug back. I\u0027m at the last drain.",
+        "Text": "Your old priest dropped the ewer when his rite broke, hirelings. The church can have its jug back. One drain left, and I\u0027m standing on it.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "So the rite broke, hirelings. The old priest is on his knees with nothing answering, and the church\u0027s ewer lies where he dropped it. Sister Ione can have her jug back. I\u0027m at the last drain.",
+        "Text": "Your old priest dropped the ewer when his rite broke, hirelings. The church can have its jug back. One drain left, and I\u0027m standing on it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -965,12 +965,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church\u0027s ewer to kneel, and nothing answers him. Sister Ione can have her jug back.",
+        "Text": "The rite\u0027s broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "So the rite broke, hirelings, and your half-grey deacon walked out of it. The old priest dropped the church\u0027s ewer to kneel, and nothing answers him. Sister Ione can have her jug back.",
+        "Text": "The rite\u0027s broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.",
         "VoiceId": null,
         "Delivery": null
       },

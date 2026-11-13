@@ -179,7 +179,7 @@
       "Trigger": "RoomEnter",
       "Room": 7,
       "Line": {
-        "Text": "From the cells, the wardens call to you: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn\u0027s crew, they say, went down first.",
+        "Text": "Even here you can hear the wardens in the cells calling out: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn\u0027s crew, they say, went down first.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -192,12 +192,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my bloody cages, and the finished ones join my packs.",
+        "Text": "I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my bloody cages, hirelings, and the finished ones join my packs.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my cages, and the finished ones join my packs.",
+        "Text": "I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my cages, hirelings, and the finished ones join my packs.",
         "VoiceId": null,
         "Delivery": null
       },

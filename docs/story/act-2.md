@@ -10,7 +10,7 @@ _Mood: wading in standing water that should be running_
 
 **Narrator:** _(tier 2 entry)_ Below the church the water stands. It should be running down to the god, but the drains beneath it are choked, so it sits here and goes sour. The Gut.
 
-**Narrator:** _(floor intro)_ You wade into the Swallow. The first drain runs now, but the drains below it are still choked, so the water backs up here, knee-deep and going sour. Ahead, a miner is pulling wardens' tools out of the muck.
+**Narrator:** _(floor intro)_ You wade into the Swallow. The first drain runs, but the drains below are still choked, so the water backs up here, knee-deep and sour, and the god starves. Ahead, a miner pulls wardens' tools from the muck.
 
 ### Maud Sorrel
 

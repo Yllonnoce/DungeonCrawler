@@ -562,7 +562,7 @@
       "Floor": 14,
       "Title": "The Quench",
       "Mood": "rusted grates under black water, vestments afloat",
-      "Story": "Flooded vault. cast_tobit has followed the party down and found the Verger\u0027s vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon\u0027s prisoner, summoned below by a message in the Verger\u0027s hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Either way he is taken for the rite (16, 19).",
+      "Story": "Flooded vault. cast_tobit has followed the party down and found the Verger\u0027s vestments thrown off in the water. With told_tobit he asks plainly whether the Verger did this and wants proof. Without it he believes his master is the demon\u0027s prisoner, summoned below by a message in the Verger\u0027s hand to help with a rite that will save the town. Pressed, he flees to the escort the Herald sent for him: the Betrayal encounter is that escort, the party fights it, not him, and he is alive afterwards and goes on down. Let be, he goes on down to the summons quietly. Pressed or let be, he is taken for the rite (16, 19).",
       "Theme": "forge.rust",
       "Layout": "flooded",
       "Objective": "shiftingvault",
@@ -712,7 +712,7 @@
       "Floor": 20,
       "Title": "The Mouth",
       "Mood": "the last great drain, braziers, the orc again",
-      "Story": "Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks and sinks back from waking, the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.",
+      "Story": "Boss: the Herald, Morg Ashtusk, recast whole and larger in his true form, waits at the last great drain and speaks of the Verger with contempt. Kill him, turn the sluice wheel, and the water runs down to Gorm; the narrator makes plain what it did: the god drinks (sinking back from waking with wake_gorm, never stirring without it), the dream holds, the ground goes still and the wells of Dunmarrow run sweet. With wake_gorm, Gorm, half awake, strikes at him and he dies saying his master is almost through; without it he dies contemptuous, saying the Sleepless will send another. viewer_foehammer finishes the job.",
       "Theme": "abyss.palace",
       "Layout": "ring",
       "Objective": null,
@@ -6732,7 +6732,7 @@
         {
           "Trigger": "Kill",
           "Line": {
-            "Text": "Burned clean. The drains may thank me.",
+            "Text": "One fewer obstruction. The drains, I suspect, approve.",
             "VoiceId": null,
             "Delivery": ""
           }
@@ -11551,7 +11551,7 @@
         {
           "Member": "Wren",
           "Line": {
-            "Text": "Water\u0027s standing. Going sour.",
+            "Text": "Water\u0027s gone sour.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -11784,7 +11784,7 @@
         {
           "Member": "Ilex",
           "Line": {
-            "Text": "The Bellows. Oskar says its joints are where the old iron is thinnest. I concur, which he would find tiresome.",
+            "Text": "The Bellows. Oskar would tell you its joints are where the old iron is thinnest. I concur, which he would find tiresome.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -11800,7 +11800,7 @@
         {
           "Member": "Ilex",
           "Line": {
-            "Text": "What drops off them stays soft until it cools, he says. I see no reason to doubt him.",
+            "Text": "What drops off them stays soft until it cools. Strike before it sets, I would suggest.",
             "VoiceId": null,
             "Delivery": "weary"
           }
@@ -12543,12 +12543,12 @@
       "Trigger": "PartyWiped",
       "Objective": null,
       "Line": {
-        "Text": "Rest now, hirelings. The town will scrape together another fee for another lot, and they\u0027ll step over you to reach me.",
+        "Text": "Rest now, hirelings. The town will send another lot down after you, and they\u0027ll step over you to reach me.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Rest now, hirelings. The town will scrape together another fee for another lot, and they\u0027ll step over you to reach me.",
+        "Text": "Rest now, hirelings. The town will send another lot down after you, and they\u0027ll step over you to reach me.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12798,12 +12798,12 @@
       "Trigger": "AllyLeft",
       "Objective": null,
       "Line": {
-        "Text": "Your friend has gone home. Sensible. Nobody follows hirelings far, not for what the town pays.",
+        "Text": "Your friend has gone home. Sensible. Nobody who means to live follows hirelings into my mines.",
         "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Your friend has gone home. Sensible. Nobody follows hirelings far, not for what the town pays.",
+        "Text": "Your friend has gone home. Sensible. Nobody who means to live follows hirelings into my mines.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12955,7 +12955,7 @@
         {
           "Id": "hire",
           "Line": {
-            "Text": "Oswin Pellet, factor. The town hired you to clear the traps and creatures out of the mines so the drains can run again, and I lent the council the money. I have a weak chest and a strong sense of who ought to go down.",
+            "Text": "Oswin Pellet, factor. The town hired you to clear the mines so the drains can run again, and I lent the council the money. I want it back. I have a weak chest and a strong sense of who ought to go down.",
             "VoiceId": null,
             "Delivery": null
           },
@@ -12984,7 +12984,7 @@
         {
           "Id": "quakes",
           "Line": {
-            "Text": "You\u0027ll have felt the ground go. The drains are backed up, the wells run sour, and the quakes come oftener every month. My carts haven\u0027t run since spring. Clear the mines and I get my money back.",
+            "Text": "You\u0027ll have felt the ground go. The drains are backed up, the wells run sour, and the quakes come oftener every month. My carts haven\u0027t run since spring. Clear the mines and they run again.",
             "VoiceId": null,
             "Delivery": null
           },
@@ -13378,7 +13378,7 @@
           "Delivery": "whisper"
         },
         "Progress": {
-          "Text": "Marble, all the way along, with a blue light in it I can\u0027t account for. I account for everything. I\u0027d sooner not account for this.",
+          "Text": "Marble, all the way along, with a blue light in it I can\u0027t put a price on. I can price anything. I\u0027d sooner not price this.",
           "VoiceId": null,
           "Delivery": "whisper"
         },

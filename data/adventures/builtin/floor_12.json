@@ -453,7 +453,7 @@
       "Trigger": "RoomEnter",
       "Room": 11,
       "Line": {
-        "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. She took them to save herself and kept her own crew locked in; when you came for the cages, his iron cut her down.",
+        "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.",
         "VoiceId": null,
         "Delivery": null
       },

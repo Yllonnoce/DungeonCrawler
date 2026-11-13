@@ -52,7 +52,7 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
 
   - **Party (choice):** Who are you, mother? _[to m1_who]_
   - **Party (choice):** You should go back up. It isn't safe. _[to m1_back]_
-  - **Party (choice):** Mind how you go, Maud. _[Farewell]_
+  - **Party (choice):** Mind how you go, mother. _[Farewell]_
 
 **Maud Sorrel:** _(node m1_who)_ Maud Sorrel, dear. Drain-warden, thirty-eight years. I was on my rounds, and then the water... well, never mind. Wet? I've been wetter.
 
@@ -63,7 +63,7 @@ _Quest: Council Property (Recover): Fetch the alderman's bread-basket, and the c
 
 **Maud Sorrel:** _(node m1_back)_ Thirty-eight years, dear, and I've never missed a round, so I'm not going up now. The wells up top are sour; that's the grates, packed solid. The water has to go down.
 
-  - **Party (choice):** Mind how you go, Maud. _[Farewell]_
+  - **Party (choice):** Mind how you go, mother. _[Farewell]_
 
 ### Floor taunts
 
@@ -93,11 +93,11 @@ _Objective: jailbreak_
 
 **Narrator:** _(floor intro)_ These cells hold the drain-wardens who went down and never came up: grey, half-turned, already hard to tell apart. Get them out while you can. Nobody has heard from Old Ulf at the pump works since spring either.
 
-**Narrator:** _(RoomEnter room 7)_ From the cells, the wardens call to you: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
+**Narrator:** _(RoomEnter room 7)_ Even here you can hear the wardens in the cells calling out: the traps are new and somebody is building them, and anyone who finishes turning goes grey and joins the packs. Grisel Thorn's crew, they say, went down first.
 
 ### Floor taunts
 
-**Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and these mines are his now. Kill me at the gate if you like; I come back. Those are wardens in my bloody cages, and the finished ones join my packs.
+**Morg Ashtusk:** _(FloorEnter, jailbreak)_ I am Morg Ashtusk, Herald of the Sleepless, and you will hear me on every floor down. Those are wardens in my bloody cages, hirelings, and the finished ones join my packs.
 
 **Morg Ashtusk:** _(Capture, jailbreak)_ {prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.
 

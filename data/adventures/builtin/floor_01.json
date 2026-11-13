@@ -451,7 +451,7 @@
                 "NextIfRefused": null
               },
               {
-                "Text": "Mind how you go, Maud.",
+                "Text": "Mind how you go, mother.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
@@ -507,7 +507,7 @@
             },
             "Choices": [
               {
-                "Text": "Mind how you go, Maud.",
+                "Text": "Mind how you go, mother.",
                 "Next": null,
                 "Effect": "Farewell",
                 "Flag": null,
