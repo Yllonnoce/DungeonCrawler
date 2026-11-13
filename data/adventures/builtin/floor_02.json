@@ -209,12 +209,12 @@
       "Trigger": "Capture",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "{prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.",
-        "VoiceId": "82450b38aa20a082",
+        "Text": "Back in the cage. Another week and nobody will tell that one from the rest.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{prisoner} goes back in the cage. Another week and nobody will tell that one from the rest.",
+        "Text": "Back in the cage. Another week and nobody will tell that one from the rest.",
         "VoiceId": null,
         "Delivery": null
       },

@@ -396,8 +396,8 @@
           {
             "Id": "n_grisel",
             "Line": {
-              "Text": "She did. Grisel Thorn and what\u0027s left of her crew are back on the upper drains, on full pay back to spring. I signed that too, and gladly.",
-              "VoiceId": "19c617c78e0263ed",
+              "Text": "Her crew got out, what\u0027s left of them. They\u0027re back on the upper drains, on full pay back to spring. I signed that too, and gladly.",
+              "VoiceId": null,
               "Delivery": "weary"
             },
             "Choices": [
@@ -474,12 +474,12 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "That\u0027s my air in your lungs now, {party}. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too bloody slow to use it.",
-        "VoiceId": "d06fa9cfe3aef223",
+        "Text": "That\u0027s my air in your lungs now, hirelings. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too bloody slow to use it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "That\u0027s my air in your lungs now, {party}. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too slow to use it.",
+        "Text": "That\u0027s my air in your lungs now, hirelings. Your alderman\u0027s holding a sluice open for you, and you\u0027re still too slow to use it.",
         "VoiceId": null,
         "Delivery": null
       },

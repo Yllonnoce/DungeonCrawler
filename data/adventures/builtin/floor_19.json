@@ -783,6 +783,17 @@
         "Delivery": null
       },
       "RequiresFlag": null,
+      "ForbidsFlag": "wake_gorm"
+    },
+    {
+      "Trigger": "RoomEnter",
+      "Room": 1,
+      "Line": {
+        "Text": "Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep, but the floor will not stop shaking: Gorm is nearer waking for the strength he lent you. Keep the Sleepless\u0027s kind off her.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": "wake_gorm",
       "ForbidsFlag": null
     },
     {
@@ -793,26 +804,15 @@
         "VoiceId": "c48028b665bc8576",
         "Delivery": null
       },
-      "RequiresFlag": null,
+      "RequiresFlag": "told_tobit",
       "ForbidsFlag": null
     },
     {
       "Trigger": "RoomEnter",
       "Room": 1,
       "Line": {
-        "Text": "The floor here will not stop shaking. Gorm is nearer waking for the strength he promised you, and more of the Sleepless\u0027s kind are getting through.",
-        "VoiceId": "687831b24ae19f23",
-        "Delivery": null
-      },
-      "RequiresFlag": "wake_gorm",
-      "ForbidsFlag": null
-    },
-    {
-      "Trigger": "RoomEnter",
-      "Room": 1,
-      "Line": {
-        "Text": "Among the voices at the Verger\u0027s rite is Deacon Tobit\u0027s, slow and grey: the rite is turning him, and he repeats his master\u0027s every word. Break it, and it lets him go.",
-        "VoiceId": "bfe6557342ad4ebe",
+        "Text": "Forty years the Verger prayed to Gorm unanswered; for the orc\u0027s promise of a god who would answer, he opened the crypt door. Deacon Tobit\u0027s voice is in that rite, slow and grey. Break it, and it lets the deacon go.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -880,12 +880,12 @@
       "Trigger": "FloorEnter",
       "Objective": "ritual",
       "Line": {
-        "Text": "Feel that, hirelings? Your god, turning over. You asked him for his strength, and he\u0027s halfway awake giving it. The old priest only has to finish the bloody job.",
-        "VoiceId": "36552553957a356d",
+        "Text": "My old priest is down here praying your god the rest of the way awake, hirelings. A drowned warden is all that holds your god asleep now. I\u0027d bloody bet on the priest.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Feel that, hirelings? Your god, turning over. You asked him for his strength, and he\u0027s halfway awake giving it. The old priest only has to finish the job.",
+        "Text": "My old priest is down here praying your god the rest of the way awake, hirelings. A drowned warden is all that holds your god asleep now. I\u0027d bet on the priest.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -965,12 +965,12 @@
       "Trigger": "Descend",
       "Objective": null,
       "Line": {
-        "Text": "The rite\u0027s broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.",
-        "VoiceId": "e4be26751af8101d",
+        "Text": "The old priest dropped the ewer when his rite broke, hirelings, and your half-grey deacon walked out of it. The church can have its jug back.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The rite\u0027s broken, hirelings, and your half-grey deacon walked out of it. The old priest dropped the ewer to kneel, and the church can have its jug back.",
+        "Text": "The old priest dropped the ewer when his rite broke, hirelings, and your half-grey deacon walked out of it. The church can have its jug back.",
         "VoiceId": null,
         "Delivery": null
       },

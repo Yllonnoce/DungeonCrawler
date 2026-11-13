@@ -453,8 +453,8 @@
       "Trigger": "RoomEnter",
       "Room": 11,
       "Line": {
-        "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. She took them to save herself and kept her own crew locked in. When you came, his iron cut her down before she could hand you the keys.",
-        "VoiceId": "03dc10e7cd4abc5c",
+        "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. To save herself she kept her own crew caged for him, and the moment you reached this floor, he had his iron cut her down.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -483,12 +483,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own bloody neck, and now she locks her own crew in every night.",
-        "VoiceId": "2c738b977e46682c",
+        "Text": "Grisel Thorn was my head jailer, hirelings. She took my keys to save her own bloody neck and kept her crew caged for me. Now you\u0027re here I\u0027ve no more use for a jailer, so she\u0027s dead. The keys are on her belt.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Meet my head jailer, hirelings: Grisel Thorn. She took my keys to save her own neck, and now she locks her own crew in every night.",
+        "Text": "Grisel Thorn was my head jailer, hirelings. She took my keys to save her own neck and kept her crew caged for me. Now you\u0027re here I\u0027ve no more use for a jailer, so she\u0027s dead. The keys are on her belt.",
         "VoiceId": null,
         "Delivery": null
       },

@@ -11888,7 +11888,7 @@
           }
         }
       ],
-      "MinFloor": 16,
+      "MinFloor": 18,
       "Tier": null,
       "RequiresFlag": null,
       "OncePerRun": true,
@@ -11948,12 +11948,12 @@
       "Trigger": "FloorEnter",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Floor {floor}, and my cages are full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.",
-        "VoiceId": "bb5604b20bcef438",
+        "Text": "More cages, hirelings, and every one of them full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Floor {floor}, and my cages are full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my packs.",
+        "Text": "More cages, hirelings, and every one of them full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my packs.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11965,12 +11965,12 @@
       "Trigger": "FloorEnter",
       "Objective": "toxic",
       "Line": {
-        "Text": "Floor {floor} stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.",
-        "VoiceId": "85d5853e4a7246b6",
+        "Text": "This floor stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Floor {floor} stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the stink. Hold your breath, hirelings.",
+        "Text": "This floor stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the stink. Hold your breath, hirelings.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11982,12 +11982,12 @@
       "Trigger": "FloorEnter",
       "Objective": "ritual",
       "Line": {
-        "Text": "Floor {floor}. Someone is at work at the shrine, {party}, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the bloody way if you like.",
-        "VoiceId": "bfdaae9f01e3e3ff",
+        "Text": "Someone is at work at the shrine, hirelings, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the bloody way if you like.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Floor {floor}. Someone is at work at the shrine, {party}, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the way if you like.",
+        "Text": "Someone is at work at the shrine, hirelings, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the way if you like.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -11999,12 +11999,12 @@
       "Trigger": "FloorEnter",
       "Objective": "shiftingvault",
       "Line": {
-        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
-        "VoiceId": "d54648dd630bfa71",
+        "Text": "The stairs on this floor sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "The stairs on floor {floor} sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
+        "Text": "The stairs on this floor sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12033,12 +12033,12 @@
       "Trigger": "Capture",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "{prisoner} goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do bloody better than that.",
-        "VoiceId": "d60b866e378f3007",
+        "Text": "That one goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do bloody better than that.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{prisoner} goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do better than that.",
+        "Text": "That one goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do better than that.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12067,12 +12067,12 @@
       "Trigger": "Freed",
       "Objective": "jailbreak",
       "Line": {
-        "Text": "Out you come, {prisoner}. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.",
-        "VoiceId": "1ca6a97dc4ecbc62",
+        "Text": "Out you come, then. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Out you come, {prisoner}. Run home to your frightened town. It never came down for you itself; it hired these fools to do it.",
+        "Text": "Out you come, then. Run home to your frightened town. It never came down for you itself; it hired these fools to do it.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12169,12 +12169,12 @@
       "Trigger": "GasLethal",
       "Objective": "toxic",
       "Line": {
-        "Text": "Deep enough to drown in, {party}. Kneel in it. Your frightened town won\u0027t pay for the bloody funeral.",
-        "VoiceId": "9ca1950e9b939615",
+        "Text": "Deep enough to drown in, hirelings. Kneel in it. Your frightened town won\u0027t pay for the bloody funeral.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "Deep enough to drown in, {party}. Kneel in it. Your frightened town won\u0027t pay for the funeral.",
+        "Text": "Deep enough to drown in, hirelings. Kneel in it. Your frightened town won\u0027t pay for the funeral.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12509,12 +12509,12 @@
       "Trigger": "MemberDowned",
       "Objective": null,
       "Line": {
-        "Text": "One of you down, {party}. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
-        "VoiceId": "0de3a4b400dd2fa8",
+        "Text": "One of you down, hirelings. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "One of you down, {party}. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
+        "Text": "One of you down, hirelings. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12679,12 +12679,12 @@
       "Trigger": "EliteSlain",
       "Objective": null,
       "Line": {
-        "Text": "{elite} is dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
-        "VoiceId": "e8daedc72ff4b023",
+        "Text": "So that one\u0027s dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{elite} is dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
+        "Text": "So that one\u0027s dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
         "VoiceId": null,
         "Delivery": null
       },
@@ -12764,12 +12764,12 @@
       "Trigger": "AllyDead",
       "Objective": null,
       "Line": {
-        "Text": "{name} is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
-        "VoiceId": "edf02d1101a14bcf",
+        "Text": "Your friend is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
+        "VoiceId": null,
         "Delivery": null
       },
       "CleanLine": {
-        "Text": "{name} is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
+        "Text": "Your friend is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
         "VoiceId": null,
         "Delivery": null
       },

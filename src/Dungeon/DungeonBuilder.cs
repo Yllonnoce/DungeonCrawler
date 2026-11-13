@@ -341,9 +341,9 @@ public partial class DungeonBuilder : Node3D
     private static readonly ViewerFighter[] ViewerFighters =
     {
         new("viewer_foehammer", "Foehammer", FoehammerModel, 1, null,
-            "Stand behind me when it comes to blows. Ask, and I'll show you how I move.",
-            "Then I'm with you. Keep up, and keep out of the way of my hammer.",
-            "Not today. Show me you can hold your own, then ask again."),
+            "Ha! That orc came up my mine stair and through my gate, and I mean to finish him at the bottom of these mines, however many times it takes. Take me down with you. Want to see how I swing first? Pick a move.",
+            "Ha! Good. My hammer's wanted that orc since he came through my gate. Down we go, and keep clear of my swing; it doesn't know you yet.",
+            "Not yet! Show me you can hold your own down here first, then ask again. I'm not chasing that orc with folk I'd have to carry."),
         new("fighter_tamsin", "Tamsin Rook", "res://assets/models/viewer/tamsin_rook.glb", 6, "axe_1handed",
             "Mind the wet. My partner Jory went under in this muck with our tools, and he hasn't come up. Help me find him and I'll fight for a share. You lot look like you could carry.",
             "Ha! Done. Keep an eye out for Jory as we go, and I'll keep the vermin off you. Even shares of whatever else we find.",

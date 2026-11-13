@@ -5,8 +5,8 @@
   "LayoutHash": 7397697809543818120,
   "Title": "Canon Ludd",
   "IntroLine": {
-    "Text": "Under the chantry runs the first great drain, or it should. You find its grate packed solid on purpose, and a dead canon standing over it, still saying the office to empty pews.",
-    "VoiceId": "8fb5a9b8e8d60f5b",
+    "Text": "The mines have stood shut since spring by order of the Verger, who keeps the crypt door. Under the chantry you find the first great drain, its grate packed solid on purpose, and a dead canon saying the office over it.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [

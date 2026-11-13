@@ -211,13 +211,13 @@
     "Name": "The Bellows",
     "SignatureOverride": "Charge",
     "IntroLine": {
-      "Text": "The great engine of the pump works, which pushed the water down the third drain for three hundred years. The orc set it to pouring his minions instead.",
-      "VoiceId": "4ab8c71eb1c17a70",
+      "Text": "",
+      "VoiceId": null,
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "Its last stroke comes down on an empty ladle, and the orc\u0027s great engine does not lift again.",
-      "VoiceId": "04003fa0cf3ef8f6",
+      "Text": "",
+      "VoiceId": null,
       "Delivery": null
     },
     "HalfLine": null,
@@ -249,8 +249,8 @@
       "Trigger": "BossSeen",
       "Room": null,
       "Line": {
-        "Text": "The Bellows heaves over the choked drain, and fresh iron drops hissing from its ladles to come at you. Stop the engine and the drain can run.",
-        "VoiceId": "d6fb2a43a2b42073",
+        "Text": "The Bellows, the engine that pushed the water down this drain for three hundred years, heaves over it choked. The orc set it to pouring his minions: fresh iron drops hissing from its ladles. Stop it and the drain runs.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -260,8 +260,8 @@
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "You turn the sluice wheel under the dead engine, and the third great drain runs. The heat goes out of the works, the shaking above you eases, and the god drinks. One great drain left.",
-        "VoiceId": "a5ac23e0088ec736",
+        "Text": "The engine\u0027s last stroke comes down on an empty ladle. You turn the sluice wheel under it, and the third great drain runs: the heat goes out of the works, the shaking above you eases, and the god drinks.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,

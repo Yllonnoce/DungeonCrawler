@@ -5,8 +5,8 @@
   "LayoutHash": 5999920540184747606,
   "Title": "The Swallow",
   "IntroLine": {
-    "Text": "You wade into the Swallow. The first drain runs, but the drains below are still choked, so the water backs up here, knee-deep and sour, and the god starves. Ahead, a miner pulls wardens\u0027 tools from the muck.",
-    "VoiceId": "c80981798c4bdf3d",
+    "Text": "You wade into the Swallow, knee-deep. Clearing the first drain was not enough: the god still starves for this water. Ahead, a miner pulls wardens\u0027 tools from the muck.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [

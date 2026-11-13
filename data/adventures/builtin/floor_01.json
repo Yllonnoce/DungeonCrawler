@@ -5,8 +5,8 @@
   "LayoutHash": 10909343922383415070,
   "Title": "The Lychgate",
   "IntroLine": {
-    "Text": "You arrive at the head of the old mines, the crypt stair under the lychgate. A huge orc has come up it, and the dwarf who keeps the gate is already fighting him.",
-    "VoiceId": "ff2e141443051863",
+    "Text": "You arrive at the head of the old mines. A huge orc has come up the crypt stair, and the dwarf who keeps the gate is already fighting him.",
+    "VoiceId": null,
     "Delivery": null
   },
   "Rooms": [

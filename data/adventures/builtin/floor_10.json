@@ -226,13 +226,13 @@
     "Name": "Mother Nit",
     "SignatureOverride": "Summon",
     "IntroLine": {
-      "Text": "Queen of the Gut\u0027s vermin, set here by the orc to keep the second drain choked. Every egg she lays packs the grate tighter.",
-      "VoiceId": "f42d4095aa5c41c7",
+      "Text": "",
+      "VoiceId": null,
       "Delivery": null
     },
     "DeathLine": {
-      "Text": "She falls across the grate the orc gave her to keep, and what is left of her brood scatters into the dark.",
-      "VoiceId": "7fed6e2162ab8512",
+      "Text": "",
+      "VoiceId": null,
       "Delivery": null
     },
     "HalfLine": null,
@@ -264,8 +264,8 @@
       "Trigger": "BossSeen",
       "Room": null,
       "Line": {
-        "Text": "Mother Nit, swollen on the standing water, squats on her nest over the drain. She calls her brood to her; cut them down, or they will bury you.",
-        "VoiceId": "e20718dc3aa41ae9",
+        "Text": "Mother Nit, swollen on the standing water, squats on her nest over the second drain. The orc set her here, and every egg she lays packs the grate tighter. Cut her brood down, or they will bury you.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -275,8 +275,8 @@
       "Trigger": "BossDead",
       "Room": null,
       "Line": {
-        "Text": "Her nest breaks apart and goes down with the water: the second great drain runs. Back up the Gut the standing water drops, the air clears, and above you the shaking eases. Two great drains to go.",
-        "VoiceId": "063f259bf12d6cce",
+        "Text": "Mother Nit falls across her grate and her brood scatters. Her nest goes down with the water: the second great drain runs. The standing water drops, the air clears, and above you the shaking eases.",
+        "VoiceId": null,
         "Delivery": null
       },
       "RequiresFlag": null,
