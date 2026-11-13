@@ -188,6 +188,10 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.DismissBotIntent)] public sealed record DismissBotIntent(int Member) : NetMessage;
 /// <summary>A member swung, shot or cast (the server saw it): every other screen plays the clip on that body.</summary>
 [Msg(MsgKind.SwingEvt)] public sealed record SwingEvt(int Member, byte AbilityKind, bool Ranged) : NetMessage;
+/// <summary>Every item lying on the server's current floor, by id (the item check): a client drops any it shows that is not listed and asks for the listed ones it lacks.</summary>
+[Msg(MsgKind.LootManifest)] public sealed record LootManifest(int Floor, List<Guid> Ids) : NetMessage;
+/// <summary>A client lacks these listed items (the item check): the server sends each one's LootSpawned to that client.</summary>
+[Msg(MsgKind.LootResyncIntent)] public sealed record LootResyncIntent(int Floor, List<Guid> Missing) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry

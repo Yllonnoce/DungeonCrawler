@@ -816,10 +816,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 pile.Interact(Party, this);
                 return;
             }
-            if (child is LootDrop { DroppedByParty: false } drop && drop.GlobalPosition.DistanceTo(GlobalPosition) < 1.6f && Party.Bag.FreeSlots > 0)
+            if (child is LootDrop { DroppedByParty: false, Taken: false } drop && drop.GlobalPosition.DistanceTo(GlobalPosition) < 1.6f && Party.Bag.FreeSlots > 0)
             {
-                EventBus.Instance.Log($"{State.Name} picks up {drop.Item}.");
-                if (Party.Bag.TryAdd(drop.Item)) { EventBus.Instance.RaiseItemPickedUp(drop.Item); EventBus.Instance.PlaySfx("pickup"); drop.NotifyPicked(); drop.QueueFree(); }
+                if (Party.Bag.TryAdd(drop.Item))
+                {
+                    EventBus.Instance.Log($"{State.Name} picks up {drop.Item}.");
+                    EventBus.Instance.RaiseItemPickedUp(drop.Item);
+                    EventBus.Instance.PlaySfx("pickup");
+                    drop.NotifyPicked();
+                    EventBus.Instance.RaiseLootRemoved(drop.Item.Id, Index); // on a server a bot picks things up: every client must lose the drop too, or it lies there on their screens for good
+                    drop.QueueFree();
+                }
                 return;
             }
             if (child is Chest { Opened: false, Locked: false } chest && chest.GlobalPosition.DistanceTo(GlobalPosition) < 1.8f && Target == null)

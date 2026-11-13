@@ -206,15 +206,50 @@ public partial class NetTestFlow : Node
                 var gap = bot.GlobalPosition.DistanceTo(me.GlobalPosition);
                 _botPrint += delta;
                 if (_botPrint > 2) { _botPrint = 0; GD.Print($"[net] bot Sable at {bot.GlobalPosition:0.0}, us at {me.GlobalPosition:0.0}: {gap:0.0} m"); }
-                if (!bot.Parked && gap < 3.5f && _clock > 1.5) { GD.Print($"[net] bot Sable follows: {gap:0.0} m behind us after {_clock:0.0}s"); _clock = 0; _step = 32; net.Send(new DismissBotIntent(entry.MemberIndex)); }
+                if (!bot.Parked && gap < 3.5f && _clock > 1.5)
+                {
+                    GD.Print($"[net] bot Sable follows: {gap:0.0} m behind us after {_clock:0.0}s");
+                    // the Tab screen was made before we (and the bot) joined the party: it must grow a doll for each of us
+                    var hud = main.Hud;
+                    try { hud.ToggleInventory(); }
+                    catch (Exception e) { Finish("[net]", false, $"the inventory failed to open with a bot in the party: {e.GetType().Name}: {e.Message}"); return; }
+                    var dolls = hud.Inventory.HasDoll(client.MemberIndex) && hud.Inventory.HasDoll(entry.MemberIndex);
+                    if (hud.InventoryOpen) hud.ToggleInventory();
+                    if (!dolls) { Finish("[net]", false, $"the inventory has no doll for us (member {client.MemberIndex}) or the bot (member {entry.MemberIndex})"); return; }
+                    GD.Print("[net] inventory opens with a doll for us and the bot");
+                    _clock = 0; _step = 32; net.Send(new DismissBotIntent(entry.MemberIndex));
+                }
                 else if (_clock > 15) Finish("[net]", false, $"the bot did not follow (parked {bot.Parked}, {gap:0.0} m away)");
                 return;
             }
             case 32:
             {
                 var entry = client.Roster.Values.FirstOrDefault(p => p.Name == "Sable");
-                if (client.Trace.Contains("left:Sable") && entry is { Online: false } && main.Party.Adventurers[entry.MemberIndex].Parked) { GD.Print("[net] bot Sable sent back to town"); _clock = 0; _step = 4; }
+                if (client.Trace.Contains("left:Sable") && entry is { Online: false } && main.Party.Adventurers[entry.MemberIndex].Parked) { GD.Print("[net] bot Sable sent back to town"); _clock = 0; _step = 33; }
                 else if (_clock > 8) Finish("[net]", false, "the bot was never sent away");
+                return;
+            }
+            case 33:
+            {
+                // the item check: a ghost only this screen shows goes, and a real item this screen lost comes back, within one check
+                var root = main.Builder.FloorRoot!;
+                if (_ghostId == Guid.Empty)
+                {
+                    var ghost = GD.Load<PackedScene>("res://scenes/Props/LootDrop.tscn").Instantiate<Items.LootDrop>();
+                    ghost.Item = Items.ItemInstance.Simple("item.unknown", "Ghost", id: Guid.NewGuid());
+                    _ghostId = ghost.Item.Id;
+                    root.AddChild(ghost);
+                    ghost.GlobalPosition = main.Party.Local!.GlobalPosition + Vector3.Forward;
+                    if (root.GetChildren().OfType<Items.LootDrop>().FirstOrDefault(d => !d.Taken && d.Item.Id != _ghostId) is { } real) { _lostId = real.Item.Id; root.RemoveChild(real); real.QueueFree(); }
+                    GD.Print($"[net] item check: made a ghost here{(_lostId == Guid.Empty ? "" : " and hid a real item")}");
+                    _clock = 0;
+                    return;
+                }
+                var drops = root.GetChildren().OfType<Items.LootDrop>().Where(d => !d.Taken).ToList();
+                var ghostGone = drops.All(d => d.Item.Id != _ghostId);
+                var lostBack = _lostId == Guid.Empty || drops.Any(d => d.Item.Id == _lostId);
+                if (ghostGone && lostBack) { GD.Print($"[net] item check: the ghost went{(_lostId == Guid.Empty ? "" : " and the hidden item came back")} after {_clock:0.0}s"); _clock = 0; _step = 4; }
+                else if (_clock > Protocol.LootCheckSeconds * 2 + 2) Finish("[net]", false, $"the item check did not repair this screen (ghost gone {ghostGone}, hidden item back {lostBack})");
                 return;
             }
             case 4:
@@ -546,6 +581,7 @@ public partial class NetTestFlow : Node
     private int _swings, _bagBefore, _lootBefore;
     private bool _fightHeard;
     private bool _botAsked;
+    private Guid _ghostId, _lostId;
     private Vector3? _botFollowFrom;
     private double _botPrint;
     private bool _cheerSent;

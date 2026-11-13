@@ -372,6 +372,7 @@ public partial class ServerWorld : Node
         {
             case AddBotIntent ab: OnAddBot(slot, ab.Hero); break;
             case DismissBotIntent db: OnDismissBot(slot, db.Member); break;
+            case LootResyncIntent lr: OnLootResync(slot, lr); break;
             case AttackIntent a:
             {
                 // aim exactly where the player aimed; the body stays where its poses put it
@@ -396,12 +397,19 @@ public partial class ServerWorld : Node
                 if (resolved is not { } node || node is not IInteractable target)
                 {
                     if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: not found");
+                    // recovery: an item this client still shows that is gone here (whatever let it slip) is taken off its screen now
+                    if (NetRefs.TryParse(i.Ref, out var kind, out var id) && kind == NetRefs.LootKind && Guid.TryParseExact(id, "N", out var gone))
+                    {
+                        SendTo(slot.PeerId, new LootRemoved(gone, -1));
+                        Trace.Add("loot-resync");
+                        GD.Print($"[net-server] {slot.Name} reached for loot {id} that is not on the floor: told them to drop it");
+                    }
                     break;
                 }
-                var reach = node is Items.LootDrop ? 3f : 3.5f;
+                const float reach = 3.5f; // the look ray reaches 3 m to the item's (or prop's) box; its centre can sit half a metre further
                 var dist = Math.Min(node.GlobalPosition.DistanceTo(body.GlobalPosition), node.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
                 if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: {dist:0.0} m (reach {reach}) body={body.GlobalPosition:0.0} node={node.GlobalPosition:0.0}");
-                if (dist > reach) break;
+                if (dist > reach) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
                 target.Interact(party, body);
                 if (node is Items.LootDrop) { _bagDirty = true; Trace.Add("pickup"); }
                 if (node is Dungeon.Props.Chest) Trace.Add("chest");
@@ -628,6 +636,7 @@ public partial class ServerWorld : Node
             _spawned.Clear();
         }
         TickBound(dt);
+        TickLootCheck(dt);
         TickReadyCheck(dt);
         _statusTimer -= dt;
         if (_statusTimer <= 0f) { _statusTimer = 10f; WriteStatus(); }

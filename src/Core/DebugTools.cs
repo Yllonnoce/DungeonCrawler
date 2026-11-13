@@ -289,6 +289,9 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--drop=")) _dropIds = arg["--drop=".Length..].Split(',');
             else if (arg.StartsWith("--equip=")) _equipId = arg["--equip=".Length..]; // a weapon in the lead's hands (first-person view checks)
             else if (arg.StartsWith("--call-bot=")) _callBot = arg["--call-bot=".Length..];
+            else if (arg == "--probe-pickups") _probePickups = true;
+            else if (arg == "--probe-near") _probeNear = true;
+            else if (arg == "--probe-shrine") _probeShrine = true;
             else if (arg.StartsWith("--pose-sheet=")) { _poseSheetDir = arg["--pose-sheet=".Length..]; _quitAfter = Math.Max(_quitAfter, 900); }
             else if (arg.StartsWith("--pose-items=")) _poseItems = arg["--pose-items=".Length..].Split(',');
             else if (arg.StartsWith("--pose-skills=")) _poseSkills = arg["--pose-skills=".Length..].Split(',');
@@ -582,6 +585,9 @@ public partial class DebugTools : Node
             GD.Print($"[bot] asked the server for {_callBot}");
             _callBot = null;
         }
+        TickPickupProbe(delta);
+        TickProbeNear(delta);
+        TickShrineProbe(delta);
         if (_poseSheetDir != null && _elapsed >= 1.5 && Main.Instance?.Party?.Lead is { } poser) PoseSheetStep(poser);
         if (_dropIds != null && !_dropped && _elapsed >= 0.9 && Main.Instance?.Builder.FloorRoot is { } dropRoot)
         {
@@ -882,6 +888,13 @@ public partial class DebugTools : Node
             foreach (var action in _pressActions)
             {
                 if (action == "settings") { Main.Instance.Hud.TogglePause(); Main.Instance.Hud.GetNode<UI.Menus.PauseMenu>("PauseMenu").OpenSettings(); continue; }
+                if (action == "inventory-probe")
+                {
+                    var hud = Main.Instance.Hud;
+                    try { hud.ToggleInventory(); GD.Print($"[inv] open={hud.InventoryOpen} members={Main.Instance.Party.Members.Length} bag={Main.Instance.Party.Bag.Items.Count()} line=\"{hud.Inventory.PurseLine}\""); }
+                    catch (Exception e) { GD.Print($"[inv] THREW {e.GetType().Name}: {e.Message}\n{e.StackTrace}"); }
+                    continue;
+                }
                 Input.ParseInputEvent(new InputEventAction { Action = action, Pressed = true });
             }
             _pressActions.Clear();

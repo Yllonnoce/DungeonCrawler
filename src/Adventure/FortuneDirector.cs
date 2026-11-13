@@ -31,7 +31,7 @@ public partial class FortuneDirector : Node
     {
         Instance = this;
         var bus = EventBus.Instance;
-        bus.FloorBuilt += (_, _, _) => { CloseShrine("gone"); Refresh(); OnFloorStart(); };
+        bus.FloorBuilt += (_, _, _) => { CloseShrine("gone", "a floor was built"); Refresh(); OnFloorStart(); };
         bus.RosterChanged += Refresh;
         bus.BoonTaken += _ => Refresh();
         bus.CurseTaken += _ => Refresh();
@@ -93,7 +93,7 @@ public partial class FortuneDirector : Node
     {
         if (Main.Instance is not { } main || !main.InGame) return;
         // a load (or a join) rebuilds the members without a FloorBuilt: the new states need the held modifiers and the floor's wards too, and no card is pending any more
-        if (!ReferenceEquals(_refreshedMembers, main.Party.Members)) { _refreshedMembers = main.Party.Members; CloseShrine("gone"); Refresh(); OnFloorStart(); }
+        if (!ReferenceEquals(_refreshedMembers, main.Party.Members)) { _refreshedMembers = main.Party.Members; CloseShrine("gone", "the party's members were replaced (a load, a join, or a new member)"); Refresh(); OnFloorStart(); }
         if (!Authority || main.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root) return;
         _secretTick -= delta;
         if (_secretTick > 0) return;
@@ -155,9 +155,10 @@ public partial class FortuneDirector : Node
     public ShrineCardMsg? PendingShrine => _pendingShrine;
 
     /// <summary>A floor rebuilt or a session replaced under an open card: nothing stays pending, and every screen closes it (a client learns by ShrineClosedEvt).</summary>
-    private void CloseShrine(string outcome)
+    private void CloseShrine(string outcome, string why)
     {
         var hadCard = _pendingShrine != null;
+        if (hadCard || (Main.Instance is { InGame: true, Hud: { ShrineOpen: true } })) GD.Print($"[fortune] shrine card closed ({outcome}): {why}");
         _pendingShrine = null;
         if (hadCard && NetSession.IsServer) NetSession.Instance.Server?.Broadcast(new ShrineClosedEvt(outcome));
         if (Main.Instance is { } main && main.InGame && main.Hud is { } hud && hud.ShrineOpen) hud.Shrine.Close(outcome);

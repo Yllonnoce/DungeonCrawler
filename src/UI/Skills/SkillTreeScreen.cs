@@ -17,6 +17,7 @@ public partial class SkillTreeScreen : PanelContainer
     private Label _header = null!;
     private HBoxContainer _columns = null!;
     private readonly List<Button> _tabButtons = new();
+    private int[] _tabMembers = Array.Empty<int>();
     private readonly List<(Button button, SkillProfile skill)> _nodes = new();
 
     public void Bind(PartyController party) => _party = party;
@@ -33,14 +34,7 @@ public partial class SkillTreeScreen : PanelContainer
         _tabs = new HBoxContainer();
         _tabs.AddThemeConstantOverride("separation", 6);
         root.AddChild(_tabs);
-        for (var i = 0; i < _party.Members.Length; i++)
-        {
-            var idx = i;
-            var b = new Button { Text = _party.Members[i].Name, CustomMinimumSize = new Vector2(140, 34), FocusMode = FocusModeEnum.None };
-            b.Pressed += () => { _party.SetFocus(idx); Refresh(); };
-            _tabs.AddChild(b);
-            _tabButtons.Add(b);
-        }
+        BuildTabs();
         var hint = new Label { Text = "   Click a skill to learn it. Branches are chains; the Duo node opens from any branch's second tier. K: close", Modulate = new Color(0.7f, 0.7f, 0.7f) };
         hint.AddThemeFontSizeOverride("font_size", 12);
         _tabs.AddChild(hint);
@@ -53,12 +47,29 @@ public partial class SkillTreeScreen : PanelContainer
         root.AddChild(_columns);
     }
 
+    /// <summary>One tab per member in play, rebuilt when that set changes (in co-op the party grows after this screen is made).</summary>
+    private void BuildTabs()
+    {
+        foreach (var b in _tabButtons) { _tabs.RemoveChild(b); b.QueueFree(); }
+        _tabButtons.Clear();
+        _tabMembers = _party.InPlayIndices();
+        foreach (var idx in _tabMembers)
+        {
+            var b = new Button { Text = _party.Members[idx].Name, CustomMinimumSize = new Vector2(140, 34), FocusMode = FocusModeEnum.None };
+            b.Pressed += () => { _party.SetFocus(idx); Refresh(); };
+            _tabs.AddChild(b);
+            _tabs.MoveChild(b, _tabButtons.Count); // the tabs stay ahead of the hint label
+            _tabButtons.Add(b);
+        }
+    }
+
     public void Refresh()
     {
+        if (!_party.InPlayIndices().SequenceEqual(_tabMembers)) BuildTabs();
         var m = _party.Members[_party.FocusedIndex];
         var cat = Game.Instance.Skills;
         for (var i = 0; i < _tabButtons.Count; i++)
-            _tabButtons[i].AddThemeColorOverride("font_color", i == _party.FocusedIndex ? LearnedColor : Colors.White);
+            _tabButtons[i].AddThemeColorOverride("font_color", _tabMembers[i] == _party.FocusedIndex ? LearnedColor : Colors.White);
         _header.Text = $"{m.Name}  —  {m.Class.Name} L{m.Level}     Skill points: {m.SkillPoints}     Learned: {m.LearnedSkills.Count}";
 
         foreach (var c in _columns.GetChildren()) c.QueueFree();

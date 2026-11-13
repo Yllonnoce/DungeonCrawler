@@ -22,7 +22,9 @@ public partial class InventoryScreen : PanelContainer
     private PartyController _party = null!;
     private readonly List<ItemSlotControl> _bag = new();
     private readonly Dictionary<(int, EquipSlot), ItemSlotControl> _equip = new();
-    private readonly List<Label> _titles = new();
+    private readonly Dictionary<int, Label> _titles = new();
+    private HBoxContainer _dolls = null!;
+    private int[] _dollMembers = Array.Empty<int>();
     private Label _info = null!;
     private ItemSlotControl _drop = null!, _destroy = null!;
 
@@ -30,6 +32,8 @@ public partial class InventoryScreen : PanelContainer
 
     public ItemSlotControl BagCell(int index) => _bag[index];
     public ItemSlotControl EquipCell(int member, EquipSlot slot) => _equip[(member, slot)];
+    /// <summary>Whether the screen shows a paper doll for this member (tests).</summary>
+    public bool HasDoll(int member) => _titles.ContainsKey(member);
 
     public override void _Ready()
     {
@@ -47,31 +51,10 @@ public partial class InventoryScreen : PanelContainer
         header.AddChild(hint);
         root.AddChild(header);
 
-        var dolls = new HBoxContainer();
-        dolls.AddThemeConstantOverride("separation", 12);
-        root.AddChild(dolls);
-        for (var m = 0; m < _party.Members.Length; m++)
-        {
-            var panel = new PanelContainer();
-            var v = new VBoxContainer();
-            v.AddThemeConstantOverride("separation", 4);
-            panel.AddChild(v);
-            var title = new Label();
-            title.AddThemeFontSizeOverride("font_size", 13);
-            v.AddChild(title);
-            _titles.Add(title);
-            var grid = new GridContainer { Columns = 3 };
-            grid.AddThemeConstantOverride("h_separation", 4);
-            grid.AddThemeConstantOverride("v_separation", 2);
-            v.AddChild(grid);
-            foreach (var slot in DollOrder)
-            {
-                var cell = MakeSlot(SlotRef.Equip(m, slot), SlotRules.Label(slot));
-                grid.AddChild(cell);
-                _equip[(m, slot)] = cell;
-            }
-            dolls.AddChild(panel);
-        }
+        _dolls = new HBoxContainer();
+        _dolls.AddThemeConstantOverride("separation", 12);
+        root.AddChild(_dolls);
+        BuildDolls();
 
         var bottom = new HBoxContainer();
         bottom.AddThemeConstantOverride("separation", 16);
@@ -102,9 +85,51 @@ public partial class InventoryScreen : PanelContainer
         _destroy.TooltipText = "Drag an item here to be rid of it for good.";
         side.AddChild(_destroy);
         EventBus.Instance.GoldChanged += OnGoldChanged;
+        EventBus.Instance.RosterChanged += OnRosterChanged;
     }
 
-    public override void _ExitTree() => EventBus.Instance.GoldChanged -= OnGoldChanged;
+    /// <summary>
+    /// One paper doll per member in play, rebuilt whenever that set changes: in co-op the party grows after this screen
+    /// is made (the joining player's own member, other players, hero bots), and a doll row made for the old party
+    /// would leave the newcomers without a doll.
+    /// </summary>
+    private void BuildDolls()
+    {
+        foreach (var child in _dolls.GetChildren()) { _dolls.RemoveChild(child); child.QueueFree(); }
+        _titles.Clear();
+        _equip.Clear();
+        _dollMembers = _party.InPlayIndices();
+        foreach (var m in _dollMembers)
+        {
+            var panel = new PanelContainer();
+            var v = new VBoxContainer();
+            v.AddThemeConstantOverride("separation", 4);
+            panel.AddChild(v);
+            var title = new Label();
+            title.AddThemeFontSizeOverride("font_size", 13);
+            v.AddChild(title);
+            _titles[m] = title;
+            var grid = new GridContainer { Columns = 3 };
+            grid.AddThemeConstantOverride("h_separation", 4);
+            grid.AddThemeConstantOverride("v_separation", 2);
+            v.AddChild(grid);
+            foreach (var slot in DollOrder)
+            {
+                var cell = MakeSlot(SlotRef.Equip(m, slot), SlotRules.Label(slot));
+                grid.AddChild(cell);
+                _equip[(m, slot)] = cell;
+            }
+            _dolls.AddChild(panel);
+        }
+    }
+
+    public override void _ExitTree()
+    {
+        EventBus.Instance.GoldChanged -= OnGoldChanged;
+        EventBus.Instance.RosterChanged -= OnRosterChanged;
+    }
+
+    private void OnRosterChanged() { if (Visible) Refresh(); }
 
     private void OnGoldChanged(int total, int delta) { if (Visible) Refresh(); }
 
@@ -116,7 +141,8 @@ public partial class InventoryScreen : PanelContainer
 
     public void Refresh()
     {
-        for (var m = 0; m < _party.Members.Length; m++)
+        if (!_party.InPlayIndices().SequenceEqual(_dollMembers)) BuildDolls();
+        foreach (var m in _dollMembers)
         {
             var c = _party.Members[m];
             _titles[m].Text = $"{c.Name}  {c.Class.Name} L{c.Level}   Armor {c.Stats[Stat.Armor]:0}";

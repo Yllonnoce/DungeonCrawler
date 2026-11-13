@@ -55,6 +55,14 @@ public partial class PartyController : Node3D
     /// <summary>Bodies that are in the world (not parked).</summary>
     public IEnumerable<Adventurer> Active => Adventurers.Where(a => IsInstanceValid(a) && !a.Parked);
     public bool HasBodies => Local != null || Active.Any();
+    /// <summary>Members the party screens show: every member whose body is in the world (in co-op, offline players and parked bots stay off the screens), all of them before the bodies exist.</summary>
+    public int[] InPlayIndices() => Enumerable.Range(0, Members.Length).Where(i => i >= Adventurers.Length || !IsInstanceValid(Adventurers[i]) || !Adventurers[i].Parked).ToArray();
+    /// <summary>The in-play member after <paramref name="index"/>, wrapping (the screens' "next member" key).</summary>
+    public int NextInPlay(int index)
+    {
+        var shown = InPlayIndices();
+        return shown.Length == 0 ? index : shown.FirstOrDefault(i => i > index, shown[0]);
+    }
     /// <summary>The local body, else the first living body in the world (else any body): what companions, NPCs and cameras follow.</summary>
     public Adventurer Anchor => Local ?? Active.FirstOrDefault(a => !a.Downed) ?? Active.FirstOrDefault() ?? Adventurers.First(IsInstanceValid);
     /// <summary>Older readers: the anchor body.</summary>

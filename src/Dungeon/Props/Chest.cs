@@ -30,6 +30,9 @@ public partial class Chest : Area3D, IInteractable
     public void MarkOpened()
     {
         Opened = true;
+        // nothing is left to use: the look ray goes through the use box to the loot it spilled (the box reaches 0.8 m
+        // out and the spill lands 1 m out, so it hid the pile from E). The solid body stays.
+        CollisionLayer = 0;
         if (_hidden) ShowBody();
         Tint(new Color(0.35f, 0.3f, 0.25f));
         EventBus.Instance.RaisePropChanged(Net.NetRefs.Chest(SpawnIndex), "opened");

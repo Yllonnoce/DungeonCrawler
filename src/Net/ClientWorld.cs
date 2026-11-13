@@ -94,6 +94,7 @@ public partial class ClientWorld : Node
             case GoldSync gs: Main.Instance.Party.SetGold(gs.Gold); Trace.Add("gold"); break;
             case LootSpawned ls: OnLootSpawned(ls); break;
             case LootRemoved lr: OnLootRemoved(lr); break;
+            case LootManifest lm: OnLootManifest(lm); break;
             case PropEvt pe: OnProp(pe); break;
             case TrapPlacedEvt tp: OnTrapPlaced(tp.Trap); break;
             case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp, (Combat.HitFlavor)eh.Flavor, eh.ByMember); break;
@@ -244,7 +245,30 @@ public partial class ClientWorld : Node
     {
         if (Root is not { } root) return;
         foreach (var d in root.GetChildren().OfType<Items.LootDrop>())
-            if (d.Item.Id == lr.Id) { d.QueueFree(); break; }
+            if (d.Item.Id == lr.Id && !d.Taken) d.QueueFree(); // every copy: a drop shown twice must not leave a ghost behind
+    }
+
+    /// <summary>The item check (<see cref="LootManifest"/>): drop what the server no longer has, ask for what we lack.</summary>
+    private void OnLootManifest(LootManifest lm)
+    {
+        if (Root is not { } root || lm.Floor != Game.Instance.CurrentFloor || Main.Instance?.Builder.CurrentFloor != lm.Floor) return;
+        var listed = lm.Ids.ToHashSet();
+        var shown = new HashSet<Guid>();
+        var dropped = 0;
+        foreach (var d in root.GetChildren().OfType<Items.LootDrop>())
+        {
+            if (d.Taken) continue;
+            if (listed.Contains(d.Item.Id) && shown.Add(d.Item.Id)) continue;
+            d.QueueFree(); // not on the server's floor, or a second copy of one that is
+            dropped++;
+        }
+        var missing = listed.Where(id => !shown.Contains(id)).ToList();
+        if (missing.Count > 0) NetSession.Instance.Send(new LootResyncIntent(lm.Floor, missing));
+        if (dropped > 0 || missing.Count > 0)
+        {
+            GD.Print($"[net] item check: removed {dropped} item(s) the server does not have, asked for {missing.Count} missing");
+            Trace.Add("loot-check");
+        }
     }
 
     private void OnProp(PropEvt pe)

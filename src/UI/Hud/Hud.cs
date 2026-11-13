@@ -438,7 +438,7 @@ public partial class Hud : Control
         }
         else if ((_sheet.Visible || _skills.Visible) && @event.IsActionPressed("focus_next"))
         {
-            _party.SetFocus((_party.FocusedIndex + 1) % _party.Members.Length);
+            _party.SetFocus(_party.NextInPlay(_party.FocusedIndex));
             if (_sheet.Visible) _sheet.Refresh();
             if (_skills.Visible) _skills.Refresh();
             GetViewport().SetInputAsHandled();
