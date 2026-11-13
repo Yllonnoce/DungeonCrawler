@@ -74,6 +74,26 @@ public static class ItemVisuals
         return null;
     }
 
+    /// <summary>
+    /// A held weapon's model for the first-person view (see <see cref="HeldWeapon"/>): the KayKit item or the built
+    /// mesh, unscaled, with the hand at the origin and the blade or head along +Y. Null for a Quaternius model (the
+    /// view loads those itself) or a missing file.
+    /// </summary>
+    public static Node3D? Held(HeldModel model) => model.Source switch
+    {
+        HeldSource.KayKit => Model(Gear + model.Name + ".gltf"),
+        HeldSource.Built when model.Name == "mace" => Lowered(Mace(), 0.25f),
+        HeldSource.Built when model.Name == "spear" => Spear(),
+        _ => null,
+    };
+
+    /// <summary>Shifts a built mesh up so the hand sits nearer the end of the haft than its middle.</summary>
+    private static Node3D Lowered(Node3D node, float by)
+    {
+        foreach (var child in node.GetChildren().OfType<Node3D>()) child.Position += new Vector3(0, by, 0);
+        return node;
+    }
+
     // ---- packs -------------------------------------------------------------------------------
 
     private static Node3D? Model(string path) => ResourceLoader.Exists(path) ? GD.Load<PackedScene>(path).Instantiate<Node3D>() : null;

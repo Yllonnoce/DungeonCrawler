@@ -10,15 +10,21 @@ namespace DungeonCrawler.Party;
 /// </summary>
 public partial class FirstPersonWeapon : Node3D
 {
-    private static readonly Dictionary<WeaponKind, (string file, Vector3 pos, Vector3 rotDeg, float scale)> Models = new()
+    /// <summary>Hand-tuned poses for the Quaternius models (see <see cref="HeldWeapon"/>), keyed by file.</summary>
+    private static readonly Dictionary<string, (Vector3 pos, Vector3 rotDeg, float scale)> QuaterniusPoses = new()
     {
-        [WeaponKind.Sword] = ("Warrior_Sword", new Vector3(0.40f, -0.34f, -0.60f), new Vector3(-65, 20, 12), 0.30f),
-        [WeaponKind.Axe] = ("Warrior_Sword", new Vector3(0.40f, -0.34f, -0.60f), new Vector3(-65, 20, 12), 0.30f),
-        [WeaponKind.Mace] = ("Warrior_Sword", new Vector3(0.40f, -0.34f, -0.60f), new Vector3(-65, 20, 12), 0.30f),
-        [WeaponKind.Dagger] = ("Rogue_Dagger", new Vector3(0.30f, -0.28f, -0.50f), new Vector3(-75, 20, 15), 0.35f),
-        [WeaponKind.Polearm] = ("Cleric_Staff", new Vector3(0.28f, -0.40f, -0.60f), new Vector3(-80, 10, 5), 0.40f),
-        [WeaponKind.Staff] = ("Wizard_Staff", new Vector3(0.30f, -0.42f, -0.60f), new Vector3(-80, 10, 5), 0.40f),
-        [WeaponKind.Bow] = ("Ranger_Bow", new Vector3(0.30f, -0.30f, -0.60f), new Vector3(10, -75, 0), 0.34f),
+        ["Warrior_Sword"] = (new Vector3(0.40f, -0.34f, -0.60f), new Vector3(-65, 20, 12), 0.30f),
+        ["Rogue_Dagger"] = (new Vector3(0.30f, -0.28f, -0.50f), new Vector3(-75, 20, 15), 0.35f),
+        ["Wizard_Staff"] = (new Vector3(0.30f, -0.42f, -0.60f), new Vector3(-80, 10, 5), 0.40f),
+        ["Ranger_Bow"] = (new Vector3(0.30f, -0.30f, -0.60f), new Vector3(10, -75, 0), 0.34f),
+    };
+
+    /// <summary>Where the hand holds a KayKit or built weapon, which way its blade points, and how long it looks.</summary>
+    private static readonly Vector3 GripPos = new(0.44f, -0.42f, -0.62f);
+    private static readonly Vector3 BladeDir = new Vector3(-0.26f, 0.80f, -0.54f).Normalized();
+    private static float HeldLength(HeldModel m) => m.Name switch
+    {
+        "axe_1handed" => 0.42f, "axe_2handed" => 0.62f, "sword_2handed" => 0.7f, "mace" => 0.45f, "spear" => 1.1f, _ => 0.5f,
     };
 
     private Adventurer _owner = null!;
@@ -37,7 +43,7 @@ public partial class FirstPersonWeapon : Node3D
         if (_owner == null) return;
         var weapon = _owner.State.Weapon;
         var kind = _owner.State.WeaponProfile.Kind;
-        if (kind != _shownKind || (weapon?.Id ?? Guid.Empty) != _shownItem) Show(kind, weapon?.Id ?? Guid.Empty);
+        if (kind != _shownKind || (weapon?.Id ?? Guid.Empty) != _shownItem) Show(kind, weapon);
         Visible = _owner.IsLocal && !_owner.Downed && _model != null;
         if (_model == null || !Visible) return;
 
@@ -51,23 +57,54 @@ public partial class FirstPersonWeapon : Node3D
         }
     }
 
-    private void Show(WeaponKind kind, Guid itemId)
+    private void Show(WeaponKind kind, ItemInstance? item)
     {
         _shownKind = kind;
-        _shownItem = itemId;
+        _shownItem = item?.Id ?? Guid.Empty;
         _model?.QueueFree();
         _model = null;
-        if (!Models.TryGetValue(kind, out var spec)) return;
-        var path = $"res://assets/models/quaternius_rpg/weapons/{spec.file}.obj";
-        if (!ResourceLoader.Exists(path)) return;
+        if (HeldWeapon.For(kind, item?.TwoHanded ?? false) is not { } held) return;
+        if (held.Source == HeldSource.Quaternius) ShowQuaternius(held.Name);
+        else ShowHeld(held);
+    }
+
+    /// <summary>One of the hand models the view was first tuned for, at its own pose.</summary>
+    private void ShowQuaternius(string file)
+    {
+        var path = $"res://assets/models/quaternius_rpg/weapons/{file}.obj";
+        if (!QuaterniusPoses.TryGetValue(file, out var pose) || !ResourceLoader.Exists(path)) return;
         var mesh = new MeshInstance3D { Mesh = GD.Load<Mesh>(path), Name = "WeaponMesh", CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
         AddChild(mesh);
         _model = mesh;
-        _restPos = spec.pos;
-        _restRot = spec.rotDeg;
+        _restPos = pose.pos;
+        _restRot = pose.rotDeg;
         mesh.Position = _restPos;
         mesh.RotationDegrees = _restRot;
-        mesh.Scale = Vector3.One * spec.scale;
+        mesh.Scale = Vector3.One * pose.scale;
+    }
+
+    /// <summary>
+    /// A KayKit or built weapon (the model the item shows on the floor): hand at the origin and blade along +Y, so a
+    /// pivot at the grip turned to point the blade up and forward holds it like the sword; scaled to its held length.
+    /// </summary>
+    private void ShowHeld(HeldModel held)
+    {
+        if (ItemVisuals.Held(held) is not { } weapon) return;
+        var pivot = new Node3D { Name = "WeaponPivot" };
+        AddChild(pivot);
+        pivot.AddChild(weapon);
+        var box = ItemVisuals.Bounds(weapon);
+        var longest = Math.Max(0.05f, Math.Max(box.Size.X, Math.Max(box.Size.Y, box.Size.Z)));
+        weapon.Scale = Vector3.One * (HeldLength(held) / longest);
+        foreach (var mi in Core.AnimatedModel.Meshes(weapon)) mi.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+        var y = BladeDir;
+        var x = new Vector3(0, 0, -1).Cross(y).Normalized();
+        var z = x.Cross(y).Normalized();
+        _model = pivot;
+        _restPos = GripPos;
+        _restRot = new Basis(x, y, z).GetEuler() * (180f / Mathf.Pi);
+        pivot.Position = _restPos;
+        pivot.RotationDegrees = _restRot;
     }
 
     /// <summary>Swing (melee), thrust (heavy), draw and release (bow), or raise (cast).</summary>

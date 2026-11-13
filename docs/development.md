@@ -318,6 +318,7 @@ godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back
 godot --path . -- --test-horde --screenshot=out.png                 # floor 3 nest room: stream, kill, spent; the screenshot is taken mid-stream
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)
+godot --path . -- --builtin --equip=item.hand_axe --screenshot=out.png --after=3   # put a weapon in the lead's hands half a second in, to check the first-person view (any weapon item id: hand_axe, greatsword, mace, spear, ...)
 godot --headless --path . -- --test-ambush          # floor 2: the first corridor ambush springs when stood on, fights, saves as sprung
 godot --headless --path . -- --test-portal          # floor 1: hurry the reinforcement clock; a portal opens behind the party, creatures hunt, a dead tier boss silences it
 godot --headless --path . -- --test-safe-room   # the floor's safe room: door, exclusion, the open door holding a creature out, x6 regen, gathering, a gatherer back at its post, save, HUD (seed 7, lethality 1, no ambush or portals; add --no-gathering to check none gather, --objective=toxic for floor 2's gas staying out); prints [saferoom] RESULT

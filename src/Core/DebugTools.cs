@@ -185,6 +185,8 @@ public partial class DebugTools : Node
     private int _faceBack = 1;
     private (int x, int y)? _faceCell;
     private string[]? _dropIds;
+    private string? _equipId;
+    private bool _equipped;
     private bool _dropped;
     private bool _facedNode;
     private bool _facedPit;
@@ -276,6 +278,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--face-node=")) { var spec = arg["--face-node=".Length..].Split(':'); _faceNode = spec[0]; if (spec.Length > 1) _faceBack = int.Parse(spec[1]); }
             else if (arg.StartsWith("--face-cell=")) { var spec = arg["--face-cell=".Length..].Split(':'); var xy = spec[0].Split(','); _faceCell = (int.Parse(xy[0]), int.Parse(xy[1])); if (spec.Length > 1) _faceBack = int.Parse(spec[1]); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--drop=")) _dropIds = arg["--drop=".Length..].Split(',');
+            else if (arg.StartsWith("--equip=")) _equipId = arg["--equip=".Length..]; // a weapon in the lead's hands (first-person view checks)
             else if (arg == "--test-drag") { _testDrag = true; _quitAfter = 6; }
             else if (arg == "--test-save") { _testSave = true; _faceEnemy = true; _quitAfter = 9; }
             else if (arg == "--test-depth") { _testDepth = true; TraceAi = false; _quitAfter = 16; }
@@ -543,6 +546,20 @@ public partial class DebugTools : Node
                 GD.Print($"[face] standing at cell {cell} ({b.Surface(cell):0.0}) looking at {at:0.0}");
             }
             else GD.Print($"[face] no node starting with {_faceNode}");
+        }
+        if (_equipId != null && !_equipped && _elapsed >= 0.5 && Main.Instance?.Party?.Lead is { } equipLead)
+        {
+            _equipped = true;
+            var cat = Game.Instance.Catalog;
+            var lead = equipLead.State;
+            if (!cat.TryBase(_equipId, out _)) GD.Print($"[equip] unknown item {_equipId}");
+            else
+            {
+                var item = cat.Create(_equipId);
+                lead.Equipment.Equip(Items.EquipSlot.Weapon, item);
+                lead.Recalculate();
+                GD.Print($"[equip] {lead.Name} now holds {item.DisplayName} ({lead.WeaponProfile.Kind}{(item.TwoHanded ? ", two-handed" : "")})");
+            }
         }
         if (_dropIds != null && !_dropped && _elapsed >= 0.9 && Main.Instance?.Builder.FloorRoot is { } dropRoot)
         {
