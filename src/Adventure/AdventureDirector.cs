@@ -484,6 +484,9 @@ public partial class AdventureDirector : Node
         return true;
     }
 
+    /// <summary>Nothing queued, deferred or being said: the floor's opening has been heard (tests).</summary>
+    public bool NarrationIdle => _deferred.Count == 0 && _narrationQueue.Count == 0 && _speech.Free(Game.Instance.PlaySeconds);
+
     /// <summary>Whether a victory recap is waiting for the closing narration (tests).</summary>
     public bool RecapHeld => _heldRecap != null;
 

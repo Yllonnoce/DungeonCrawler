@@ -328,7 +328,7 @@ public partial class DebugTools : Node
             else if (arg == "--no-gathering") NoGathering = true;
             else if (arg == "--test-safe-room") { _testSafeRoom = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-elites-and-bosses") { _testElites = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; _startFloor = 8; _floorGiven = true; }
-            else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 90; }
+            else if (arg == "--test-writing") { _testWriting = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 130; }
             else if (arg == "--test-narration") { _testNarration = true; _builtin = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; ForcedLethality ??= 1f; _quitAfter = 170; }
             else if (arg == "--test-items-and-builds") { _testItems = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 45; }
             else if (arg == "--test-fortune") { _testFortune = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; _startFloor = 2; _floorGiven = true; }
@@ -3628,13 +3628,13 @@ public partial class DebugTools : Node
             _wrStep = 99;
             _quitAfter = _elapsed + 0.5;
         }
-        if (_elapsed > 80) { Fail($"timed out at step {_wrStep}"); Finish(); return; }
+        if (_elapsed > 120) { Fail($"timed out at step {_wrStep}"); Finish(); return; }
         IEnumerable<(string Who, string Text)> Since() => _wrHeard.Skip(_wrHeardBefore);
         string Subtitle() => main.Hud.GetNode<Label>("Subtitle").Text;
         var lead = party.Lead.State;
         switch (_wrStep)
         {
-            case 0 when _elapsed >= 1.0:
+            case 0 when _elapsed >= 1.0 && (AdventureDirector.Instance.NarrationIdle || _elapsed >= 40.0): // floor 1 opens with the tier line, then the intro: the subtitle checks below start after them
             {
                 if (!_wrListening) { EventBus.Instance.Bark += (who, line) => _wrHeard.Add((who, line.Text)); _wrListening = true; }
                 foreach (var e in root.GetChildren().OfType<Enemy>()) e.QueueFree(); // a quiet floor: only the test's creature moves
