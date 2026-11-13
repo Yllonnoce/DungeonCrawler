@@ -427,7 +427,7 @@
             "Id": "bet_a",
             "Line": {
               "Text": "You\u0027re here too! Those are my master\u0027s vestments in the water. He\u0027s alive, though; he\u0027s sent for me. The orc holds him prisoner, doesn\u0027t he? Tell me true.",
-              "VoiceId": null,
+              "VoiceId": "880e92a8969ba621",
               "Delivery": null
             },
             "Choices": [

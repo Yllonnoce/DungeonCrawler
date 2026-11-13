@@ -454,7 +454,7 @@
       "Room": 11,
       "Line": {
         "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. To save herself she kept her own crew caged for him, and the moment you reached this floor, he had his iron cut her down.",
-        "VoiceId": null,
+        "VoiceId": "571934dd1bff9e56",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -484,7 +484,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "Grisel Thorn was my head jailer, hirelings. She took my keys to save her own bloody neck and kept her crew caged for me. Now you\u0027re here I\u0027ve no more use for a jailer, so she\u0027s dead. The keys are on her belt.",
-        "VoiceId": null,
+        "VoiceId": "3f2f57f33de654a2",
         "Delivery": null
       },
       "CleanLine": {

@@ -6,7 +6,7 @@
   "Title": "Canon Ludd",
   "IntroLine": {
     "Text": "The mines have stood shut since spring by order of the Verger, who keeps the crypt door. Under the chantry you find the first great drain, its grate packed solid on purpose, and a dead canon saying the office over it.",
-    "VoiceId": null,
+    "VoiceId": "bc1ac83ba91c75de",
     "Delivery": null
   },
   "Rooms": [

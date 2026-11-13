@@ -250,7 +250,7 @@
       "Room": null,
       "Line": {
         "Text": "The Bellows, the engine that pushed the water down this drain for three hundred years, heaves over it choked. The orc set it to pouring his minions: fresh iron drops hissing from its ladles. Stop it and the drain runs.",
-        "VoiceId": null,
+        "VoiceId": "8171ffd9d4d22adf",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -261,7 +261,7 @@
       "Room": null,
       "Line": {
         "Text": "The engine\u0027s last stroke comes down on an empty ladle. You turn the sluice wheel under it, and the third great drain runs: the heat goes out of the works, the shaking above you eases, and the god drinks.",
-        "VoiceId": null,
+        "VoiceId": "7439018e390923a7",
         "Delivery": null
       },
       "RequiresFlag": null,

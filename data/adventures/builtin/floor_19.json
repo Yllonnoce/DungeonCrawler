@@ -790,7 +790,7 @@
       "Room": 1,
       "Line": {
         "Text": "Maud Sorrel sits at the altar with her hands flat on the stone, holding the god asleep, but the floor will not stop shaking: Gorm is nearer waking for the strength he lent you. Keep the Sleepless\u0027s kind off her.",
-        "VoiceId": null,
+        "VoiceId": "88cb6e414f490e58",
         "Delivery": null
       },
       "RequiresFlag": "wake_gorm",
@@ -812,7 +812,7 @@
       "Room": 1,
       "Line": {
         "Text": "Forty years the Verger prayed to Gorm unanswered; for the orc\u0027s promise of a god who would answer, he opened the crypt door. Deacon Tobit\u0027s voice is in that rite, slow and grey. Break it, and it lets the deacon go.",
-        "VoiceId": null,
+        "VoiceId": "f5dfc712083076a7",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -881,7 +881,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "My old priest is down here praying your god the rest of the way awake, hirelings. A drowned warden is all that holds your god asleep now. I\u0027d bloody bet on the priest.",
-        "VoiceId": null,
+        "VoiceId": "d749c2488136c51f",
         "Delivery": null
       },
       "CleanLine": {
@@ -966,7 +966,7 @@
       "Objective": null,
       "Line": {
         "Text": "The old priest dropped the ewer when his rite broke, hirelings, and your half-grey deacon walked out of it. The church can have its jug back.",
-        "VoiceId": null,
+        "VoiceId": "a448cf679f318f00",
         "Delivery": null
       },
       "CleanLine": {

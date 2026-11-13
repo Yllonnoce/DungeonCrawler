@@ -11949,7 +11949,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "More cages, hirelings, and every one of them full: townsfolk, going grey a little more each day. Open them if you can. The finished ones already run with my bloody packs.",
-        "VoiceId": null,
+        "VoiceId": "45102e8275c08885",
         "Delivery": null
       },
       "CleanLine": {
@@ -11966,7 +11966,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "This floor stinks. That\u0027s what my choked drains do to standing water. The stairs are at the bottom of the bloody stink. Hold your breath, hirelings.",
-        "VoiceId": null,
+        "VoiceId": "97f47f5c5b7b78b1",
         "Delivery": null
       },
       "CleanLine": {
@@ -11983,7 +11983,7 @@
       "Objective": "ritual",
       "Line": {
         "Text": "Someone is at work at the shrine, hirelings, trying to undo what I\u0027ve done. My minions are coming for her. Stand in the bloody way if you like.",
-        "VoiceId": null,
+        "VoiceId": "b8ac49eaae7ee0bb",
         "Delivery": null
       },
       "CleanLine": {
@@ -12000,7 +12000,7 @@
       "Objective": "shiftingvault",
       "Line": {
         "Text": "The stairs on this floor sit behind my gates, and only my levers open them. Pull and guess. I\u0027m in no hurry; my master has waited a long time for these mines.",
-        "VoiceId": null,
+        "VoiceId": "ac482d52d23e086f",
         "Delivery": null
       },
       "CleanLine": {
@@ -12034,7 +12034,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "That one goes back in my cage, and the turning picks up where it stopped. Some rescue. You\u0027ll have to do bloody better than that.",
-        "VoiceId": null,
+        "VoiceId": "8d81149e2b288cae",
         "Delivery": null
       },
       "CleanLine": {
@@ -12068,7 +12068,7 @@
       "Objective": "jailbreak",
       "Line": {
         "Text": "Out you come, then. Run home to your frightened town. It never came down for you itself; it hired these sods to do it.",
-        "VoiceId": null,
+        "VoiceId": "66c9c2379e389ecf",
         "Delivery": null
       },
       "CleanLine": {
@@ -12170,7 +12170,7 @@
       "Objective": "toxic",
       "Line": {
         "Text": "Deep enough to drown in, hirelings. Kneel in it. Your frightened town won\u0027t pay for the bloody funeral.",
-        "VoiceId": null,
+        "VoiceId": "7874b5eb3494a31e",
         "Delivery": null
       },
       "CleanLine": {
@@ -12510,7 +12510,7 @@
       "Objective": null,
       "Line": {
         "Text": "One of you down, hirelings. Is that what the town hired? I\u0027ve seen more fight in my raised dead.",
-        "VoiceId": null,
+        "VoiceId": "89eb0eb78ec4e528",
         "Delivery": null
       },
       "CleanLine": {
@@ -12680,7 +12680,7 @@
       "Objective": null,
       "Line": {
         "Text": "So that one\u0027s dead. I\u0027ll remember that, hirelings. I remember everything I\u0027m owed.",
-        "VoiceId": null,
+        "VoiceId": "09cf369f55b8ef5a",
         "Delivery": null
       },
       "CleanLine": {
@@ -12765,7 +12765,7 @@
       "Objective": null,
       "Line": {
         "Text": "Your friend is dead, then. One more of the town\u0027s own, left lying in my mines. They do pile up.",
-        "VoiceId": null,
+        "VoiceId": "027beb46842169c6",
         "Delivery": null
       },
       "CleanLine": {

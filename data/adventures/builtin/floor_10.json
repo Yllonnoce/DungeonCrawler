@@ -265,7 +265,7 @@
       "Room": null,
       "Line": {
         "Text": "Mother Nit, swollen on the standing water, squats on her nest over the second drain. The orc set her here, and every egg she lays packs the grate tighter. Cut her brood down, or they will bury you.",
-        "VoiceId": null,
+        "VoiceId": "85b00eff9a28fe5f",
         "Delivery": null
       },
       "RequiresFlag": null,
@@ -276,7 +276,7 @@
       "Room": null,
       "Line": {
         "Text": "Mother Nit falls across her grate and her brood scatters. Her nest goes down with the water: the second great drain runs. The standing water drops, the air clears, and above you the shaking eases.",
-        "VoiceId": null,
+        "VoiceId": "a2b0e9cd20ec5299",
         "Delivery": null
       },
       "RequiresFlag": null,
