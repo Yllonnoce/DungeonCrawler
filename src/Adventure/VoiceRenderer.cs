@@ -185,6 +185,22 @@ public partial class VoiceRenderer : Node
         catch (Exception e) { GD.PushWarning($"[Voice] cannot load {id}: {e.Message}"); return null; }
     }
 
+    private readonly Dictionary<string, double?> _lengths = new();
+
+    /// <summary>
+    /// How long a line's recording runs, in seconds, from the shipped bank or the cache; null when it has no recording.
+    /// What waits for a line waits this long (<see cref="NarrationRules.HeardSeconds"/>). Cached by id: an id is its content.
+    /// </summary>
+    public double? LengthOf(string? id)
+    {
+        if (string.IsNullOrEmpty(id)) return null;
+        if (_lengths.TryGetValue(id, out var known)) return known;
+        double? length = HasAudio(id) && Load(id) is { } stream ? stream.GetLength() : null;
+        if (length is <= 0) length = null;
+        if (length != null) _lengths[id] = length; // a line not rendered yet may be by the next time it is asked about
+        return length;
+    }
+
     /// <summary>Play a rendered line now; false when it has no audio or a more important line is speaking.</summary>
     public bool Play(string? id, bool interrupt)
     {

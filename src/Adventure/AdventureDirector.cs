@@ -465,7 +465,10 @@ public partial class AdventureDirector : Node
     private readonly List<(double At, string Text, string? Voice, string Key)> _narrationQueue = new();
     private readonly HashSet<string> _narrationQueued = new();
     private double _narrationFree, _roomNarrationCheck;
-    private readonly Voice.SpeechClock _speech = new(); // every line raised as narration holds the one voice channel for its SpeakSeconds
+    private readonly Voice.SpeechClock _speech = new(); // every line raised as narration holds the one voice channel for its recording's length (HeardSeconds)
+
+    /// <summary>How long a line holds the voice channel: its recording's real length and a breath, else the estimate.</summary>
+    private double Heard(string text, string? voiceId) => Voice.NarrationRules.HeardSeconds(text, _voice.LengthOf(voiceId));
     private (double? DrainedAt, Action Show)? _heldRecap; // the victory recap, waiting for the closing narration; DrainedAt once the last entry is raised
 
     /// <summary>Nothing queued survives a floor change, a load or a wipe: the line was not heard, so its key was never recorded.</summary>
@@ -504,7 +507,7 @@ public partial class AdventureDirector : Node
                 said.Add(key);
                 _narrationQueued.Add(key);
                 var at = Math.Max(Game.Instance.PlaySeconds + lead, _narrationFree);
-                _narrationFree = at + Voice.NarrationRules.SpeakSeconds(n.Line.Text);
+                _narrationFree = at + Heard(n.Line.Text, n.Line.VoiceId);
                 _narrationQueue.Add((at, n.Line.Text, n.Line.VoiceId, key));
             }
     }
@@ -514,7 +517,7 @@ public partial class AdventureDirector : Node
     {
         if (Main.Instance?.Builder.Contents?.Plan?.Boss is not { } b) return 0;
         var line = death ? b.DeathLineFor(Memory.Flags) : b.IntroLine;
-        return line == null || line.Text == "" ? 0 : Voice.NarrationRules.SpeakSeconds($"{b.Name}: {line.Text}");
+        return line == null || line.Text == "" ? 0 : Heard($"{b.Name}: {line.Text}", line.VoiceId);
     }
 
     private static readonly int?[] NoRoom = { null };
@@ -586,7 +589,13 @@ public partial class AdventureDirector : Node
         AddChild(_voice);
         AddChild(new CampaignBaker { Name = "Baker" });
         var bus = EventBus.Instance;
-        bus.BossSeen += boss => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {b.IntroLine.Text}", b.IntroLine.VoiceId); Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); PlayNarration(NarrationTrigger.BossSeen, NoRoom, BossSpeakSeconds(death: false)); };
+        bus.BossSeen += boss =>
+        {
+            var b = Main.Instance?.Builder.Contents?.Plan?.Boss;
+            if (b is { } spoken && spoken.IntroLine.Text != "") EventBus.Instance.RaiseNarration($"{spoken.Name}: {spoken.IntroLine.Text}", spoken.IntroLine.VoiceId);
+            if (b == null || b.IntroLine.Text != "" || !NarrationDue(NarrationTrigger.BossSeen)) Bark(Main.Instance?.Party?.Lead.State, BarkTrigger.BossSeen); // a silent boss's sighting is the narrator's at once: no bark for it to cut
+            PlayNarration(NarrationTrigger.BossSeen, NoRoom, BossSpeakSeconds(death: false));
+        };
         bus.BossDefeated += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.DeathLineFor(Memory.Flags) is { } last && last.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {last.Text}", last.VoiceId); PlayNarration(NarrationTrigger.BossDead, NoRoom, BossSpeakSeconds(death: true)); };
         bus.BossHalf += _ => { if (Main.Instance?.Builder.Contents?.Plan?.Boss is { } b && b.HalfLineFor(Memory.Flags) is { } half && half.Text != "") EventBus.Instance.RaiseNarration($"{b.Name}: {half.Text}", half.VoiceId); };
         bus.SecretFound += _ => { if (_record != null) _record.SecretsFound++; }; // fortune: the floor card's count
@@ -607,7 +616,7 @@ public partial class AdventureDirector : Node
         bus.PartyWiped += ClearNarrationQueue;
         bus.PartyWiped += () => Taunt(Objectives.TauntTrigger.PartyWiped, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, urgent: true);
         bus.ObjectiveEvent += OnObjectiveEvent;
-        bus.Narration += (text, _) => { var at = Game.Instance.PlaySeconds; _taunts.NoteNarration(at, Voice.NarrationRules.SpeakSeconds(text)); _speech.Spoke(at, text); }; // the villain waits until a line has been heard, and so does the next queued entry
+        bus.Narration += (text, voiceId) => { var at = Game.Instance.PlaySeconds; var heard = Heard(text, voiceId); _taunts.NoteNarration(at, heard); _speech.Spoke(at, heard); }; // the villain waits until a line has been heard, and so does the next queued entry
         bus.MemberRevived += i => Bark(Member(i), BarkTrigger.Revived);
         bus.EnemyDied += OnEnemyDied;
         bus.QuestItemPicked += id => Apply(new QuestItemPicked(QuestKeys.QuestOf(id))); // clue items carry an ordinal after the quest key
@@ -669,7 +678,7 @@ public partial class AdventureDirector : Node
     }
 
     private FloorObjectiveKind? _pendingDescend;
-    private string _lastTauntSpoken = "";
+    private double _lastTauntSeconds; // how long the last taunt raised holds the channel: what the next floor's opening waits for
     private readonly List<(double At, Action Do)> _deferred = new(); // what opens a floor, held until the parting taunt has been heard
     private List<TauntPlan> _leftDescend = new(); // the floor just left: its own Descend taunts the flags allow
 
@@ -719,13 +728,12 @@ public partial class AdventureDirector : Node
         // the order on arrival: the parting taunt of the floor left, then (on a tier's first floor, once a run) the tier's
         // entry line, then the floor's opening; each waits until the line before it has been heard
         var now = Game.Instance.PlaySeconds;
-        var openAt = ownSpoke ? now + Voice.NarrationRules.SpeakSeconds(_lastTauntSpoken) : now;
-        if (firstVisit && TierLineDue(floor) is { } tier)
+        var tier = firstVisit ? TierLineDue(floor) : null;
+        var (tierAt, openAt) = Voice.NarrationRules.Arrival(now, partingSpoke ? _lastTauntSeconds : null, tier == null ? null : Heard(tier.EnterLine.Text, tier.EnterLine.VoiceId));
+        if (tier != null && tierAt is { } at)
         {
-            var at = partingSpoke ? now + Voice.NarrationRules.SpeakSeconds(_lastTauntSpoken) : now;
             if (at <= now) SayTierLine(tier);
             else _deferred.Add((at, () => { if (_currentFloor == floor) SayTierLine(tier); }));
-            openAt = at + Voice.NarrationRules.SpeakSeconds(tier.EnterLine.Text);
         }
         var holdOpening = firstVisit && openAt > now;
         var villainSpoke = !holdOpening && firstVisit && OpeningTaunt(objectiveKind, contents.Plan);
@@ -804,10 +812,10 @@ public partial class AdventureDirector : Node
         if (campaign.Taunts.Count == 0 || !campaign.Taunts.Any(t => t.Trigger == Objectives.TauntTriggers.Id(trigger))) Objectives.TauntBank.Fill(campaign); // a campaign baked before a trigger existed gets the stock line for it
         var bank = bankOverride ?? campaign.Taunts.Concat(Main.Instance?.Builder.Contents?.Plan?.Taunts ?? new List<TauntPlan>()).ToList();
         var now = Game.Instance.PlaySeconds;
-        if (urgent && Objectives.TauntDirector.HoldsForSpeech(trigger) && !_speech.Free(now))
-        {   // the objective's last word waits for the line being said rather than cutting it off; it is never dropped
-            var floor = _currentFloor;
-            _deferred.Add((_speech.Until, () => { if (_currentFloor == floor) Taunt(trigger, kind, arg, urgent, bankOverride); }));
+        if (Objectives.TauntDirector.HoldSeconds(trigger, urgent) is { } hold && !_speech.Free(now))
+        {   // the objective's last word (as long as it takes) or a rite's opening (half a minute) waits for the line being said rather than cutting it off or being dropped
+            if (Objectives.TauntDirector.Held(now, _speech.Until, now + hold) == Objectives.TauntDirector.HoldVerdict.Drop) return false;
+            HoldTaunt(trigger, kind, arg, bankOverride, now + hold);
             return true;
         }
         var pick = _taunts.Pick(bank, trigger, kind, Game.Instance.Adventure.BarksSaid, Memory.Flags, _currentFloor, now, _barkRng, urgent);
@@ -820,10 +828,30 @@ public partial class AdventureDirector : Node
         var (text, voice) = Settings.VillainCurses || clean == null ? (coarse, pick.Line.VoiceId) : (clean, pick.CleanLine!.VoiceId);
         if (trigger == Objectives.TauntTrigger.FloorEnter) EventBus.Instance.PlaySfx("boss");
         EventBus.Instance.RaiseNarration(text, voice, clean, pick.CleanLine?.VoiceId);
-        _lastTauntSpoken = text;
+        _lastTauntSeconds = Heard(text, voice);
         _lastObjectiveActivity = now;
         return true;
     }
+
+    /// <summary>A held taunt, tried again once the channel frees: said (as urgent: it has waited its turn), held again, or dropped past its deadline.</summary>
+    private void HoldTaunt(Objectives.TauntTrigger trigger, FloorObjectiveKind kind, string? arg, List<TauntPlan>? bankOverride, double deadline)
+    {
+        var floor = _currentFloor;
+        _deferred.Add((_speech.Until, () =>
+        {
+            if (_currentFloor != floor) return;
+            switch (Objectives.TauntDirector.Held(Game.Instance.PlaySeconds, _speech.Until, deadline))
+            {
+                case Objectives.TauntDirector.HoldVerdict.Play: Taunt(trigger, kind, arg, urgent: true, bankOverride); break;
+                case Objectives.TauntDirector.HoldVerdict.Wait: HoldTaunt(trigger, kind, arg, bankOverride, deadline); break;
+            }
+        }));
+    }
+
+    /// <summary>Whether this floor has narration due for a trigger (not yet said, flags allowing).</summary>
+    private bool NarrationDue(NarrationTrigger trigger)
+        => Main.Instance?.Builder is { Contents.Plan: { } plan } builder
+           && Voice.NarrationRules.Due(plan, trigger, null, Memory.Flags, new HashSet<string>(Game.Instance.Adventure.BarksSaid.Keys), builder.CurrentFloor).Count > 0;
 
     private void OnObjectiveEvent(FloorObjectiveKind kind, Objectives.ObjectiveTrigger trigger, string? arg)
     {

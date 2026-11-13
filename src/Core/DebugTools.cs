@@ -402,7 +402,7 @@ public partial class DebugTools : Node
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
         if (automation && !_testFloors && !_builtin && _bakeDir == null && _rehashDir == null && _testObjective == null && ForcedObjective == null) ForcedObjective = "none";
         if (_server || _netClient) NoVoice = true; // a headless server has no speakers; the test client keeps its key in its pocket
-        if (_testNarration && EventBus.Instance != null) { EventBus.Instance.Narration += (text, _) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); }; _nrListening = true; } // from the first floor build: the tier line opens floor 1
+        if (_testNarration && EventBus.Instance != null) { EventBus.Instance.Narration += (text, voice) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); _nrVoiceOf[text] = voice; }; _nrListening = true; } // from the first floor build: the tier line opens floor 1
     }
 
     public override void _Process(double delta)
@@ -3449,6 +3449,10 @@ public partial class DebugTools : Node
     private TauntPlan? _nrDescend;
     private int _nrBossDeadQueued;
     private string _nrTierText = "";
+    private readonly Dictionary<string, string?> _nrVoiceOf = new(); // each heard line's voice id: its recording's real length is what the next line must wait
+    /// <summary>A heard line's recording length (null without one) and what the director waits for it.</summary>
+    private double? NrReal(string text) => VoiceRenderer.Instance?.LengthOf(_nrVoiceOf.GetValueOrDefault(text));
+    private double NrNeed(string text) => Adventure.Voice.NarrationRules.HeardSeconds(text, NrReal(text));
     private double _nrTierAt;
     private double _nrKilledAt;
 
@@ -3477,7 +3481,7 @@ public partial class DebugTools : Node
         {
             case 0 when _elapsed >= 1.0:
             {
-                if (!_nrListening) { EventBus.Instance.Narration += (text, _) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); }; _nrListening = true; }
+                if (!_nrListening) { EventBus.Instance.Narration += (text, voice) => { _nrHeard.Add(text); _nrHeardAt.Add(_elapsed); _nrVoiceOf[text] = voice; }; _nrListening = true; }
                 _nrEntry = main.Builder.Contents?.Plan?.Narration.FirstOrDefault(n => n.Trigger == NarrationTrigger.RoomEnter && n.Room is { } r && r >= 0 && r < layout.Rooms.Count);
                 if (_nrEntry == null) { Fail("floor 1 has no RoomEnter narration"); Finish(); return; }
                 // the opening: the tier line first, raised once and remembered
@@ -3509,8 +3513,8 @@ public partial class DebugTools : Node
                 var ti = _nrTierAt; var ii = _nrHeard.IndexOf(intro); var ei = _nrHeard.IndexOf(_nrEntry!.Line.Text);
                 GD.Print($"[narration] tier line at {ti:0.0}s, intro at {(ii >= 0 ? _nrHeardAt[ii] : -1):0.0}s, room line at {(ei >= 0 ? _nrHeardAt[ei] : -1):0.0}s");
                 if (ii < 0) Fail("the floor 1 intro never played after the tier line");
-                else if (_nrHeardAt[ii] - ti < Adventure.Voice.NarrationRules.SpeakSeconds(_nrTierText) - 0.5) Fail($"the intro came {_nrHeardAt[ii] - ti:0.0}s after the tier line, wanted {Adventure.Voice.NarrationRules.SpeakSeconds(_nrTierText):0.0}s");
-                if (ii >= 0 && ei >= 0 && _nrHeardAt[ei] - _nrHeardAt[ii] < Adventure.Voice.NarrationRules.SpeakSeconds(intro) - 0.5) Fail("the room line cut the intro off");
+                else if (_nrHeardAt[ii] - ti < (NrReal(_nrTierText) ?? NrNeed(_nrTierText)) - 0.05) Fail($"the intro came {_nrHeardAt[ii] - ti:0.0}s after the tier line, whose recording runs {NrReal(_nrTierText):0.0}s");
+                if (ii >= 0 && ei >= 0 && _nrHeardAt[ei] - _nrHeardAt[ii] < (NrReal(intro) ?? NrNeed(intro)) - 0.05) Fail("the room line cut the intro off");
                 if (Heard() != 1) Fail($"entering the room raised the entry {Heard()} times, wanted 1");
                 if (!Game.Instance.Adventure.BarksSaid.ContainsKey(Adventure.Voice.NarrationRules.Key(1, _nrEntry!))) Fail("the played entry was not remembered");
                 main.SaveGame("narration-test");
@@ -3547,9 +3551,10 @@ public partial class DebugTools : Node
                 if (at >= 0 && at + 1 < _nrHeard.Count)
                 {
                     var gap = _nrHeardAt[at + 1] - _nrHeardAt[at];
-                    var need = Adventure.Voice.NarrationRules.SpeakSeconds(_nrHeard[at]);
-                    GD.Print($"[narration] parting taunt, then \"{_nrHeard[at + 1]}\" {gap:0.0}s later (needs {need:0.0}s)");
-                    if (gap < need - 0.5) Fail($"the next floor's opening came {gap:0.0}s after the parting taunt, wanted {need:0.0}s");
+                    var real = NrReal(_nrHeard[at]);
+                    GD.Print($"[narration] parting taunt (recording {(real is { } r ? $"{r:0.00}s" : "none")}), then \"{_nrHeard[at + 1]}\" {gap:0.00}s later");
+                    if (real == null) Fail("floor 1's parting taunt has no recording to measure");
+                    else if (gap < real.Value - 0.05) Fail($"the next floor's opening came {gap:0.00}s after the parting taunt, whose recording runs {real:0.00}s");
                 }
                 else Fail("nothing opened floor 2 after the parting taunt");
                 // floor 2 is no tier's first floor: no tier line there
@@ -3589,7 +3594,10 @@ public partial class DebugTools : Node
                 GD.Print($"[narration] victory recap after {recapAt - _nrKilledAt:0.0}s: \"{main.LastRecap?.Headline}\"; closing lines heard {closing.Count(_nrHeard.Contains)}/{closing.Count}{(last >= 0 ? $", the last at {_nrHeardAt[last] - _nrKilledAt:0.0}s" : "")}");
                 if (main.LastRecap == null) Fail("the victory recap never came");
                 if (closing.Any(t => !_nrHeard.Contains(t))) Fail("the recap came before every closing line was raised");
-                if (last >= 0 && recapAt - _nrHeardAt[last] < Adventure.Voice.NarrationRules.SpeakSeconds(closing[^1]) - 0.5) Fail("the recap came over the last closing line");
+                if (last >= 0) GD.Print($"[narration] the last closing line's recording runs {NrReal(closing[^1]):0.00}s; the recap came {recapAt - _nrHeardAt[last]:0.00}s after it started");
+                if (last >= 0 && recapAt - _nrHeardAt[last] < (NrReal(closing[^1]) ?? NrNeed(closing[^1])) - 0.05) Fail("the recap came over the last closing line");
+                for (var i = 0; i + 1 < _nrHeard.Count; i++) // the death line and the closing lines one after another, none cut
+                    if (NrReal(_nrHeard[i]) is { } len && _nrHeardAt[i + 1] - _nrHeardAt[i] < len - 0.05) Fail($"\"{_nrHeard[i][..Math.Min(40, _nrHeard[i].Length)]}...\" ({len:0.0}s) was cut after {_nrHeardAt[i + 1] - _nrHeardAt[i]:0.0}s");
                 if (main.LastRecap is { } r && Game.Instance.Adventure.Campaign is { } c && r.Headline.Split(c.Antagonist.Name).Length > 2) Fail($"the headline says {c.Antagonist.Name} twice");
                 Finish();
                 break;

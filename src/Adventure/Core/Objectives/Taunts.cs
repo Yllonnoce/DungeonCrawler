@@ -92,11 +92,27 @@ public sealed class TauntDirector
             .Where(t => FlagRules.Allowed(t.RequiresFlag, t.ForbidsFlag, flags ?? Array.Empty<string>()))
             .ToList();
 
+    /// <summary>The longest a rite's opening taunt waits for the voice channel before it is no longer worth saying.</summary>
+    public const double RitualStartHoldSeconds = 30;
+
     /// <summary>
-    /// The objective's last words (urgent, never dropped) wait for a line being said instead of cutting it off; the
-    /// openings, a crushing and a wipe keep speaking at once.
+    /// How long a taunt may wait for a line being said instead of cutting it off or being dropped: the objective's last
+    /// words (urgent) as long as it takes, a rite's opening (the defence starts while the shrine room is being narrated)
+    /// <see cref="RitualStartHoldSeconds"/>; null for the rest (the openings, a crushing and a wipe speak at once, and a
+    /// moment-bound taunt is dropped when someone is speaking).
     /// </summary>
-    public static bool HoldsForSpeech(TauntTrigger trigger) => trigger is TauntTrigger.AllFreed or TauntTrigger.RitualDone or TauntTrigger.VaultOpened or TauntTrigger.ObjectiveDone;
+    public static double? HoldSeconds(TauntTrigger trigger, bool urgent) => trigger switch
+    {
+        TauntTrigger.AllFreed or TauntTrigger.RitualDone or TauntTrigger.VaultOpened or TauntTrigger.ObjectiveDone when urgent => double.PositiveInfinity,
+        TauntTrigger.RitualStart => RitualStartHoldSeconds,
+        _ => null,
+    };
+
+    public enum HoldVerdict { Play, Wait, Drop }
+
+    /// <summary>A held taunt: play once the channel is free, wait while it will be free by the deadline, else drop it.</summary>
+    public static HoldVerdict Held(double now, double speakingUntil, double deadline)
+        => now >= speakingUntil ? HoldVerdict.Play : speakingUntil > deadline ? HoldVerdict.Drop : HoldVerdict.Wait;
 
     /// <summary>Fill the tokens a line may carry.</summary>
     public static string Render(string text, string? party, int floor, string? arg) => text

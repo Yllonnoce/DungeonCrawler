@@ -27,10 +27,35 @@ public static class NarrationRules
     public static bool BossIsAntagonist(string bossName, string antagonistName)
         => bossName.Trim().Length > 0 && string.Equals(bossName.Trim(), antagonistName.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    public const double SpeakFloor = 3.0, SpeakPerChar = 0.06, SpeakCap = 12.0;
+    /// <summary>
+    /// The estimate's constants, fitted to the shipped bank (2026-11-12: 198 narration, taunt and boss recordings, 0.076 s a
+    /// character at the median, 0.096 at the 95th percentile, the longest 18.3 s): 1.5 s + 0.085 s a character, at most 20 s,
+    /// covers 97.5% of them with a median of 2.6 s to spare and about 0.6 s on a short line.
+    /// </summary>
+    public const double SpeakFloor = 1.5, SpeakPerChar = 0.085, SpeakCap = 20.0;
 
-    /// <summary>Roughly how long a line takes to be heard: a floor of three seconds, 0.06 s a character, capped at twelve. What waits for a line waits this long.</summary>
+    /// <summary>Roughly how long a line takes to be heard when its recording is not to hand: 1.5 s, 0.085 s a character, capped at twenty.</summary>
     public static double SpeakSeconds(string text) => Math.Min(SpeakCap, SpeakFloor + SpeakPerChar * (text?.Trim().Length ?? 0));
+
+    /// <summary>A pause after a recording before the next line; the least and the most a recording holds the channel.</summary>
+    public const double Breath = 0.3, HeardFloor = 1.0, HeardCap = 30.0;
+
+    /// <summary>
+    /// How long a line holds the voice channel: its recording's real length and a breath when the recording is there
+    /// (<paramref name="recordedSeconds"/>), else the estimate. What waits for a line waits this long.
+    /// </summary>
+    public static double HeardSeconds(string text, double? recordedSeconds)
+        => recordedSeconds is { } r && r > 0 ? Math.Clamp(r + Breath, HeardFloor, HeardCap) : SpeakSeconds(text);
+
+    /// <summary>
+    /// A floor's arrival: the parting taunt of the floor left (any that spoke, the floor's own or the campaign's), then the
+    /// tier's entry line when there is one, then the floor's opening, each once the line before it has been heard.
+    /// </summary>
+    public static (double? TierAt, double OpenAt) Arrival(double now, double? partingSeconds, double? tierSeconds)
+    {
+        var after = now + (partingSeconds ?? 0);
+        return tierSeconds is { } tier ? (after, after + tier) : (null, after);
+    }
 
     /// <summary>
     /// The tier whose entry line opens this floor: the first floor of each tier of the campaign proper (1, 6, 11, 16),
@@ -65,7 +90,7 @@ public static class NarrationRules
 
 /// <summary>
 /// The one voice channel the narrator, the villain and the bosses share: whatever was raised last holds it for its
-/// <see cref="NarrationRules.SpeakSeconds"/>, and a queued narration entry waits until it is free. Engine-free.
+/// <see cref="NarrationRules.HeardSeconds"/>, and a queued narration entry waits until it is free. Engine-free.
 /// </summary>
 public sealed class SpeechClock
 {
@@ -73,7 +98,10 @@ public sealed class SpeechClock
     public double Until { get; private set; } = double.NegativeInfinity;
 
     /// <summary>A line was raised now: the channel is held until it has been heard (a shorter line never cuts the wait).</summary>
-    public void Spoke(double now, string text) => Until = Math.Max(Until, now + NarrationRules.SpeakSeconds(text));
+    public void Spoke(double now, string text) => Spoke(now, seconds: NarrationRules.SpeakSeconds(text));
+
+    /// <summary>A line was raised now that is heard for <paramref name="seconds"/> (its recording's length, see <see cref="NarrationRules.HeardSeconds"/>).</summary>
+    public void Spoke(double now, double seconds) => Until = Math.Max(Until, now + seconds);
 
     public bool Free(double now) => now >= Until;
 
