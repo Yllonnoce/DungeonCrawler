@@ -123,8 +123,9 @@ public partial class MapView : Control
                     case Door { IsOpen: false } door when explored.IsSeen(door.Cell):
                         DrawMarker(CellCentre(door.Cell), cell, new Color(0.6f, 0.4f, 0.2f), square: true);
                         break;
-                    case Lever { Pulled: false } lever when explored.IsSeen(DungeonBuilder.WorldToCell(lever.GlobalPosition)):
-                        DrawMarker(CellCentre(DungeonBuilder.WorldToCell(lever.GlobalPosition)), cell, new Color(0.3f, 0.9f, 0.9f), square: false);
+                    case Lever lever when (!lever.Pulled || lever.Toggle) && explored.IsSeen(DungeonBuilder.WorldToCell(lever.GlobalPosition)):
+                        // a pulled puzzle lever can still be put back: it stays on the map, dimmer
+                        DrawMarker(CellCentre(DungeonBuilder.WorldToCell(lever.GlobalPosition)), cell, lever.Pulled ? new Color(0.2f, 0.5f, 0.5f) : new Color(0.3f, 0.9f, 0.9f), square: false);
                         break;
                     case Enemy { IsAlive: true } enemy when enemy.CanSeeParty():
                         var ep = enemy.GlobalPosition / DungeonBuilder.CellSize;

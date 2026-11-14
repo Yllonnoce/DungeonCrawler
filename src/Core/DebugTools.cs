@@ -297,6 +297,7 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--pose-skills=")) _poseSkills = arg["--pose-skills=".Length..].Split(',');
             else if (arg == "--test-drag") { _testDrag = true; _quitAfter = 6; }
             else if (arg == "--test-save") { _testSave = true; _faceEnemy = true; _quitAfter = 9; }
+            else if (arg == "--test-vault-puzzle") { _testVault = true; _builtin = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 900; _vaultAt = 1.0; }
             else if (arg == "--test-depth") { _testDepth = true; TraceAi = false; _quitAfter = 16; }
             else if (arg == "--test-plan") { _testPlan = true; TraceAi = false; _quitAfter = 6; }
             else if (arg == "--test-collectives") { _testCollectives = true; TraceAi = false; _quitAfter = 45; }
@@ -792,6 +793,7 @@ public partial class DebugTools : Node
         }
         if (_testSave) RunSaveTest();
         if (_testDepth) RunDepthTest();
+        if (_testVault) RunVaultPuzzleTest();
         if (_testPlan) RunPlanTest();
         if (_testCollectives) RunCollectivesTest();
         if (_testQuest) RunQuestTest();

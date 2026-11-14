@@ -630,12 +630,13 @@ public partial class PartyController : Node3D
         return pool.OrderByDescending(m => m.Stats[stat]).First();
     }
 
-    public bool TryUnlock(string what) => TryUnlock(what, out _);
+    public bool TryUnlock(string what, bool objectiveLock = false) => TryUnlock(what, out _, objectiveLock: objectiveLock);
     public bool TryUnlock(string what, Vector3 noiseAt) => TryUnlock(what, out _, noiseAt);
 
     /// <summary>A key opens it at once. Else the best hands pick: a failure is a noise that wakes the unaware within <see cref="Adventure.Fortune.LockRules.NoiseRadius"/> m; <paramref name="failed"/> is true only for a real failed attempt (not a cooldown refusal), so the prop can count toward a jam.</summary>
     /// <param name="noiseAt">Where the lock is; the noise is measured from there (a dedicated server has no local body at it). The lead's position when null.</param>
-    public bool TryUnlock(string what, out bool failed, Vector3? noiseAt = null)
+    /// <param name="objectiveLock">A lock the floor's objective needs (the jail door, a prisoner's shackles): Butterfingers cannot seal it for good, so it picks at the uncursed chance.</param>
+    public bool TryUnlock(string what, out bool failed, Vector3? noiseAt = null, bool objectiveLock = false)
     {
         failed = false;
         if (Bag.Count("item.iron_key") > 0)
@@ -646,7 +647,7 @@ public partial class PartyController : Node3D
         }
         if (_lockpickCooldown > 0) return false;
         var m = BestBy(Stat.Dexterity);
-        var chance = Adventure.Fortune.LockRules.ForcedChance ?? Adventure.Fortune.LockRules.Chance(m.Stats[Stat.Dexterity], Game.Instance.Adventure);
+        var chance = Adventure.Fortune.LockRules.ForcedChance ?? Adventure.Fortune.LockRules.Chance(m.Stats[Stat.Dexterity], Game.Instance.Adventure, objectiveLock);
         if (Rng.NextDouble() < chance) { EventBus.Instance.Log($"{m.Name} picks the lock on {what}."); return true; }
         failed = true;
         _lockpickCooldown = Adventure.Fortune.LockRules.RetrySeconds;

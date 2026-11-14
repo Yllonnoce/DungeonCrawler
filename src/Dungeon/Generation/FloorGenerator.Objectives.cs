@@ -93,11 +93,15 @@ public static partial class FloorGenerator
     {
         if (objective.JailRoom is not { } jail) return;
         var want = 1 + rng.Next(2);
-        bool Free(GridPos p) => layout[p] == Cell.Floor && !layout.IsUnder(p) && !layout.IsReserved(p) && !layout.IsWater(p) && p != layout.UpStairs && p != layout.DownStairs
+        // a spare must be worth something before the jailbreak is done: in reach with the jail and the reward vault still shut
+        // (a vault can open off the reward vault's room, and a key in there frees nobody)
+        var shut = layout.Vaults.Where(v => v.Index == objective.JailVault || v.Index == objective.RewardVault).Select(v => v.Door).ToHashSet();
+        var reach = layout.Reachable(layout.UpStairs, shut.Contains);
+        bool Free(GridPos p) => reach.Contains(p) && layout[p] == Cell.Floor && !layout.IsUnder(p) && !layout.IsReserved(p) && !layout.IsWater(p) && p != layout.UpStairs && p != layout.DownStairs
             && !layout.ChestSpawns.Contains(p) && !layout.EnemySpawns.Contains(p) && !layout.TrapSpawns.Contains(p) && !layout.BreakableSpawns.Contains(p) && !layout.KeySpawns.Contains(p)
             && layout.Vaults.All(v => v.Key != p && v.Lever != p && v.Door != p) && !layout.Ledges.Any(l => l.Cells.Contains(p) || l.RampBottom == p || l.RampTop == p);
         var spots = new List<GridPos>();
-        foreach (var v in layout.Vaults.Where(v => v.Room != jail && v.Kind != VaultKind.SafeDoor))
+        foreach (var v in layout.Vaults.Where(v => v.Room != jail && v.Kind != VaultKind.SafeDoor && v.Index != objective.RewardVault))
             foreach (var p in v.Room.Cells().Where(Free).OrderBy(_ => rng.Next()).Take(1)) spots.Add(p);
         foreach (var i in layout.LockedChests)
         {
@@ -284,7 +288,29 @@ public static partial class FloorGenerator
                 var q = new GridPos(cell.X + d.X * radius, cell.Y + d.Y * radius);
                 if (room.Contains(q) && PlaqueOk(layout, room, q, objective) && q.X != room.X && q.X != room.Right && q.Y != room.Y && q.Y != room.Bottom) return q;
             }
-        return null;
+        // a crowded room: the nearest free cell anywhere in it, so no lever goes without its clue
+        var inner = room.Cells().Where(q => q != cell && PlaqueOk(layout, room, q, objective) && q.X != room.X && q.X != room.Right && q.Y != room.Y && q.Y != room.Bottom)
+            .OrderBy(q => q.ManhattanDistance(cell)).ThenBy(q => q.Y).ThenBy(q => q.X).Cast<GridPos?>().FirstOrDefault();
+        if (inner != null) return inner;
+        // a room too small for that: an edge cell against the wall, never a doorway, and never one that cuts the room in two
+        return room.Cells().Where(q => q != cell && PlaqueOk(layout, room, q, objective) && !layout.IsDoorway(q) && KeepsRoomWhole(layout, room, q, cell))
+            .OrderBy(q => q.ManhattanDistance(cell)).ThenBy(q => q.Y).ThenBy(q => q.X).Cast<GridPos?>().FirstOrDefault();
+    }
+
+    /// <summary>Whether every walkable cell of the room (the lever's too) still joins up with <paramref name="solid"/> filled in.</summary>
+    private static bool KeepsRoomWhole(FloorLayout layout, Room room, GridPos solid, GridPos lever)
+    {
+        var cells = room.Cells().Where(c => c != solid && layout.IsWalkable(c)).ToHashSet();
+        if (cells.Count == 0 || !cells.Contains(lever)) return false;
+        var seen = new HashSet<GridPos> { lever };
+        var stack = new Stack<GridPos>();
+        stack.Push(lever);
+        while (stack.Count > 0)
+        {
+            var p = stack.Pop();
+            foreach (var d in Dirs4) { var n = p + d; if (cells.Contains(n) && layout.CanStep(p, n) && seen.Add(n)) stack.Push(n); }
+        }
+        return seen.Count == cells.Count;
     }
 
     /// <summary>A wall-side cell of the room that blocks nothing, for the vault's notice.</summary>

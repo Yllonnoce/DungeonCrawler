@@ -4,7 +4,7 @@ namespace DungeonCrawler.Dungeon.Generation;
 /// Builds and proves the lever-and-gate puzzle of a Shifting Vault floor. Engine-free and deterministic. A puzzle is
 /// only accepted when, from the start with the gates as they first stand, every reachable situation (which levers
 /// stand pulled, where the party can walk) can still reach one where the gates match the target and the party can
-/// walk up to the vault door: no dead ends, no sealed-in party, ever.
+/// walk up to the vault door: no dead ends, no sealed-in party, ever; and no part of the floor is shut off for good.
 /// </summary>
 public static class VaultPuzzles
 {
@@ -143,23 +143,11 @@ public static class VaultPuzzles
     /// anywhere the open gates allow and pull any lever it can reach. Every state reachable from the start must be able
     /// to reach a state where the gates match the target and the vault's doorstep is in reach.
     /// </summary>
-    public static bool Verify(FloorLayout layout, VaultPuzzle puzzle, GridPos vaultDoor, Room vaultRoom)
+    public static bool Verify(FloorLayout layout, VaultPuzzle puzzle, GridPos vaultDoor, Room vaultRoom, bool secretsOpen = true)
     {
-        var gateIndex = new Dictionary<GridPos, int>();
-        for (var g = 0; g < puzzle.GateCount; g++) gateIndex[puzzle.Gates[g]] = g;
         var doorstep = Doorstep(layout, vaultDoor, vaultRoom);
         if (doorstep == null) return false;
-        // components per gate setting (not per lever parity: many parities share a setting), reused for every cell inside them
-        var components = new Dictionary<int, List<HashSet<GridPos>>>();
-        HashSet<GridPos> Reach(int parity, GridPos from)
-        {
-            var state = puzzle.StateFor(parity);
-            if (!components.TryGetValue(state, out var list)) components[state] = list = new List<HashSet<GridPos>>();
-            foreach (var c in list) if (c.Contains(from)) return c;
-            var result = layout.Reachable(from, p => p == vaultDoor || (gateIndex.TryGetValue(p, out var g) && !puzzle.IsOpen(state, g)), secretsOpen: true);
-            list.Add(result);
-            return result;
-        }
+        var Reach = Reacher(layout, puzzle, vaultDoor, secretsOpen);
         var start = (Parity: 0, Cell: layout.UpStairs);
         var seen = new HashSet<(int, GridPos)> { start };
         var queue = new Queue<(int, GridPos)>();
@@ -198,7 +186,66 @@ public static class VaultPuzzles
             if (!reverse.TryGetValue(s, out var froms)) continue;
             foreach (var f in froms) if (canFinish.Add(f)) back.Enqueue(f);
         }
-        return seen.All(canFinish.Contains);
+        if (!seen.All(canFinish.Contains)) return false;
+        // and no corner of the floor is lost for good: every cell the party could walk to with every gate open is open to it
+        // in some situation it can bring about (a key, a chest or a lever cut off by gates that never all open would be a puzzle with no answer)
+        var walked = new HashSet<GridPos>();
+        foreach (var s in seen) walked.UnionWith(Reach(s.Item1, s.Item2));
+        return layout.Reachable(layout.UpStairs, p => p == vaultDoor, secretsOpen).All(walked.Contains);
+    }
+
+    /// <summary>Where the party can walk from a cell with the levers in a given parity; components cached per gate setting (many parities share one), reused for every cell inside them.</summary>
+    private static Func<int, GridPos, HashSet<GridPos>> Reacher(FloorLayout layout, VaultPuzzle puzzle, GridPos vaultDoor, bool secretsOpen)
+    {
+        var gateIndex = new Dictionary<GridPos, int>();
+        for (var g = 0; g < puzzle.GateCount; g++) gateIndex[puzzle.Gates[g]] = g;
+        var components = new Dictionary<int, List<HashSet<GridPos>>>();
+        return (parity, from) =>
+        {
+            var state = puzzle.StateFor(parity);
+            if (!components.TryGetValue(state, out var list)) components[state] = list = new List<HashSet<GridPos>>();
+            foreach (var c in list) if (c.Contains(from)) return c;
+            var result = layout.Reachable(from, p => p == vaultDoor || (gateIndex.TryGetValue(p, out var g) && !puzzle.IsOpen(state, g)), secretsOpen);
+            list.Add(result);
+            return result;
+        };
+    }
+
+    /// <summary>
+    /// The fewest lever pulls, in an order the party can walk, that open the vault from where it stands with the
+    /// levers as they stand (parity); empty when it already stands open, null when no order works.
+    /// </summary>
+    public static List<int>? Solve(FloorLayout layout, VaultPuzzle puzzle, GridPos vaultDoor, Room vaultRoom, int parity, GridPos from, bool secretsOpen = true)
+    {
+        var doorstep = Doorstep(layout, vaultDoor, vaultRoom);
+        if (doorstep == null) return null;
+        var Reach = Reacher(layout, puzzle, vaultDoor, secretsOpen);
+        var start = (parity, from);
+        var parent = new Dictionary<(int, GridPos), ((int, GridPos) From, int Lever)>();
+        var seen = new HashSet<(int, GridPos)> { start };
+        var queue = new Queue<(int Parity, GridPos Cell)>();
+        queue.Enqueue(start);
+        while (queue.Count > 0)
+        {
+            var s = queue.Dequeue();
+            var reach = Reach(s.Parity, s.Cell);
+            if (puzzle.StateFor(s.Parity) == puzzle.Target && reach.Contains(doorstep.Value))
+            {
+                var order = new List<int>();
+                for (var at = s; parent.TryGetValue(at, out var p); at = p.From) order.Add(p.Lever);
+                order.Reverse();
+                return order;
+            }
+            for (var i = 0; i < puzzle.LeverCount; i++)
+            {
+                if (!reach.Contains(puzzle.Levers[i])) continue;
+                var t = (s.Parity ^ (1 << i), puzzle.Levers[i]);
+                if (!seen.Add(t)) continue;
+                parent[t] = (s, i);
+                queue.Enqueue(t);
+            }
+        }
+        return null;
     }
 
     /// <summary>The walkable cell just outside the vault door.</summary>

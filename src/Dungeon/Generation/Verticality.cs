@@ -360,6 +360,8 @@ public static class Verticality
             var cells = new List<GridPos>();
             for (var oy = -1; oy <= 1; oy++) for (var ox = -1; ox <= 1; ox++) cells.Add(new GridPos(pit.X + ox, pit.Y + oy));
             if (cells.Any(c => layout.IsUnder(c) || c == layout.UpStairs || c == layout.DownStairs || layout.ChestSpawns.Contains(c))) continue;
+            // a vault's key or lever (or a cell the objective owns) already stands here: a shaft under it would drop it into the cellar
+            if (cells.Any(c => layout.Vaults.Any(v => v.Key == c || v.Lever == c) || layout.Objective?.Reserved.Contains(c) == true)) continue;
 
             var exit = FindTunnel(layout, cells, out var target);
             if (exit == null) continue;

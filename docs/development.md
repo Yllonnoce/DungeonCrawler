@@ -109,7 +109,22 @@ reinforcement count) tracks them. Each runs in a server-only `ObjectiveControlle
   when the gates match a target. A plaque beside each lever says which gates it turns, a notice near the start says
   the setting. The puzzle is proven before it is accepted: from the start with the gates as they first stand, every
   state the party can reach (levers pulled, where it can walk) can still reach the target with the vault's doorstep in
-  reach, so no pull ever traps the party. Patrols reroute to the rooms they can still reach whenever the gates shift.
+  reach, so no pull ever traps the party, and every cell the party could walk to with all gates open is open to it in
+  some state it can reach, so no key, chest or lever is shut off for good. Patrols reroute to the rooms they can still
+  reach whenever the gates shift. `VaultPuzzles.Solve` gives the shortest lever order from any state. A pulled puzzle
+  lever stays on the map, dimmer, since it can be put back.
+- **Every floor can be finished** (`Dungeon/Generation/FloorSolvability.cs`, tests in `tests/Dungeon/FloorSolvabilityTests.cs`):
+  `FloorSolvability.Problems(layout)` lists every way a finished floor cannot be played through, with hidden passages
+  counted as walls: a treasure vault whose key or lever is out of reach (a key may lie behind another lock the party can
+  open first), the vault puzzle failing its proof, a lever with no plaque, the jail, a prisoner out on the floor or every
+  spare jail key out of reach, the altar or a breach lever out of reach, the gas exit's lever behind its own gate, the
+  stairs out of reach once every lock is worked. The unit test runs every shape with every objective it can hold over
+  200 floors each; `--test-vault-puzzle` runs the story's floors and 150 seeded runs (3,000 floors) as the game deals
+  them, prints each puzzle with its answer, and pulls that answer on the real levers. Rules the sweep forced: a cellar
+  pit is never dug under a vault's key or lever or a cell the objective owns; spare jail keys lie only where the party
+  can walk with the jail and the reward vault shut; a crowded lever room puts its plaque on the nearest free cell, against
+  the wall if it must; and Butterfingers does not touch the jail's locks (door and shackles pick at the uncursed chance),
+  or a cursed party could find the stairs sealed for good.
 
 ## The dungeon's master
 
@@ -305,6 +320,7 @@ godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an e
 godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
 godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
+godot --headless --path . -- --test-vault-puzzle --no-ai  # every floor of the story and of 150 seeded runs through FloorSolvability, each puzzle floor printed with its answer and solved on the real levers; prints [vault] RESULT
 godot --headless --path . -- --test-objective=KIND  # floor 2 with that objective (toxic, shiftingvault, ritual, jailbreak): stairs sealed, the villain speaks, driven to its end, stairs open, saved; --objective=KIND forces a kind on every eligible floor, --lethality=N pins the damage multiplier
 godot --headless --path . -- --test-gas-wipe        # floor 2 toxic, lethality 3: the gas full and the floor remembered as the server autosaves it, the party gassed to a wipe; the floor comes back with the gas at its grace and nobody falls again
 godot --headless --path . -- --purge-voice          # sweep assets/voice/builtin of lines the shipped campaign no longer refers to, and user://voice of lines no campaign, run or save slot refers to; every bake does the same for the bank it wrote unless --keep-old-voice

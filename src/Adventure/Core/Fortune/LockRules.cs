@@ -13,10 +13,10 @@ public static class LockRules
     /// <summary>Test hook: every pick succeeds with this chance when set.</summary>
     public static float? ForcedChance { get; set; }
 
-    /// <summary>The pick chance: the trap rule by Dexterity, plus Light Fingers; nothing at all under Butterfingers.</summary>
-    public static float Chance(float dexterity, AdventureDto? adv)
+    /// <summary>The pick chance: the trap rule by Dexterity, plus Light Fingers; nothing at all under Butterfingers, except on a lock the floor's objective needs (<paramref name="objectiveLock"/>), which a curse must not seal for good.</summary>
+    public static float Chance(float dexterity, AdventureDto? adv, bool objectiveLock = false)
     {
-        if (FortuneRules.Has(adv, "butterfingers")) return 0f;
+        if (FortuneRules.Has(adv, "butterfingers") && !objectiveLock) return 0f;
         var bonus = Boons.Has(adv, "light_fingers") ? FortuneRules.LockBonus : 0f;
         return Math.Clamp(TrapRules.LockpickChance(dexterity) + bonus, 0.05f, 0.95f);
     }

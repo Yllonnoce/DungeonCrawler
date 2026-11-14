@@ -27,6 +27,8 @@ public partial class Door : StaticBody3D, IInteractable
     public string? GateLabel { get; set; }
     /// <summary>Whether this door belongs to the floor's objective (index from <see cref="Adventure.FloorContents.ExtraIndexBase"/> up): the objective, not the save's vault list, owns its state.</summary>
     public bool IsObjectiveGate => VaultIndex >= Adventure.FloorContents.ExtraIndexBase;
+    /// <summary>A lock the floor's objective needs worked (the jail's): a curse on the party's picks does not seal it for good.</summary>
+    public bool ObjectiveLock { get; set; }
 
     public string Prompt => Kind == VaultKind.SafeDoor ? "" : IsOpen || !Detected ? "" : Kind == VaultKind.KeyDoor ? "Locked door: use a key or pick the lock" : IsObjectiveGate ? $"{GateLabel ?? "Gate"}: shut; the levers move it" : "Sealed gate: find its lever";
 
@@ -120,7 +122,7 @@ public partial class Door : StaticBody3D, IInteractable
             EventBus.Instance.Log(IsObjectiveGate ? $"{GateLabel ?? "The gate"} will not budge. The levers on this floor move it." : "The gate will not budge. A lever somewhere on this floor must open it.");
             return;
         }
-        if (party.TryUnlock("the door")) Open();
+        if (party.TryUnlock("the door", objectiveLock: ObjectiveLock)) Open();
     }
 
     /// <param name="silent">No sound or log line: a client applying what the server already announced.</param>

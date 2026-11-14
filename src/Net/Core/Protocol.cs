@@ -1,9 +1,9 @@
 namespace DungeonCrawler.Net;
 
-/// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
+/// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes, or when the floor generator changes what a seed builds (both ends build each floor from its seed).</summary>
 public static class Protocol
 {
-    public const int Version = 14;
+    public const int Version = 15;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
     public const int MessageKindCount = 108;
     /// <summary>Seconds between the server's item checks (<see cref="LootManifest"/>).</summary>

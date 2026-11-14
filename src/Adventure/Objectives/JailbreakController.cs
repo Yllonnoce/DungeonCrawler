@@ -72,6 +72,7 @@ public partial class JailbreakController : ObjectiveController
     {
         var objective = Layout.Objective!;
         _jailDoor = root.GetChildren().OfType<Door>().FirstOrDefault(d => d.VaultIndex == objective.JailVault);
+        if (_jailDoor != null) _jailDoor.ObjectiveLock = true; // Butterfingers must not lock the stairs away for the floor
         _rewardDoor = objective.RewardVault >= 0 ? root.GetChildren().OfType<Door>().FirstOrDefault(d => d.VaultIndex == objective.RewardVault) : null;
         _jailAnchor = builder.Surface(objective.JailRoom!.Center);
         foreach (var p in Contents.Prisoners)
@@ -256,7 +257,7 @@ public partial class JailbreakController : ObjectiveController
         switch (StateOf(npc))
         {
             case PrisonerState.Wandering: Free(npc, party, "rescued"); break;
-            case PrisonerState.Jailed: if (party.TryUnlock($"{npc.NpcName}'s shackles")) Free(npc, party, "unshackled"); break;
+            case PrisonerState.Jailed: if (party.TryUnlock($"{npc.NpcName}'s shackles", objectiveLock: true)) Free(npc, party, "unshackled"); break;
         }
     }
 
