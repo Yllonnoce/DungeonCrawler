@@ -19,6 +19,8 @@ public sealed class PlayerSlot
     public int PeerId { get; set; }
     public bool Online => PeerId > 0;
     public bool Ready { get; set; }
+    /// <summary>The floor the peer said it built when it sent Ready (a join can race a floor change).</summary>
+    public int ReadyFloor { get; set; }
     public PoseDto? ParkedPose { get; set; }
     public int ParkedFloor { get; set; }
     public string LastSeenUtc { get; set; } = "";
@@ -71,6 +73,14 @@ public sealed class PlayerRegistry
     public PlayerSlot? ByName(string name) => _slots.FirstOrDefault(s => string.Equals(s.Name, Normalize(name), StringComparison.OrdinalIgnoreCase));
     public PlayerSlot? ByPeer(int peerId) => peerId <= 0 ? null : _slots.FirstOrDefault(s => s.PeerId == peerId);
     public PlayerSlot? ByMember(int memberIndex) => _slots.FirstOrDefault(s => s.MemberIndex == memberIndex);
+
+    /// <summary>
+    /// Whether <paramref name="player"/> may change <paramref name="memberIndex"/>'s gear, points and skills, or use an item on
+    /// them: their own hero, or a bot in play that follows them. Everyone else's hero is theirs to manage.
+    /// </summary>
+    public bool MayChange(PlayerSlot player, int memberIndex)
+        => memberIndex >= 0 && (memberIndex == player.MemberIndex
+            || ByMember(memberIndex) is { IsBot: true, BotActive: true } bot && string.Equals(bot.BotOwner, player.Name, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// A peer asks for a name and class. <paramref name="createMember"/> makes a new party member and returns its index;

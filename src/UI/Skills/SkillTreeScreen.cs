@@ -22,6 +22,18 @@ public partial class SkillTreeScreen : PanelContainer
 
     public void Bind(PartyController party) => _party = party;
 
+    // a member's sync (a learned skill coming back from the server, a level-up) redraws the open tree once per frame
+    private bool _dirty;
+    private void OnMemberChanged(int index) => _dirty = true;
+    public override void _EnterTree() => EventBus.Instance.MemberChanged += OnMemberChanged;
+    public override void _ExitTree() => EventBus.Instance.MemberChanged -= OnMemberChanged;
+    public override void _Process(double delta)
+    {
+        if (!_dirty || !Visible) return;
+        _dirty = false;
+        Refresh();
+    }
+
     public override void _Ready()
     {
         var margin = new MarginContainer();

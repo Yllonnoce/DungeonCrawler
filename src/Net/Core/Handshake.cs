@@ -31,6 +31,8 @@ public sealed class ServerHandshake
     public PeerPhase? PhaseOf(int peer) => _peers.TryGetValue(peer, out var p) ? p : null;
     public bool InGame(int peer) => PhaseOf(peer) == PeerPhase.InGame;
     public IEnumerable<int> InGamePeers => _peers.Where(p => p.Value == PeerPhase.InGame).Select(p => p.Key);
+    /// <summary>Peers that have their Welcome but have not sent Ready yet (still building the floor).</summary>
+    public IEnumerable<int> WelcomedPeers => _peers.Where(p => p.Value == PeerPhase.Welcomed).Select(p => p.Key);
 
     public void OnPeerConnected(int peer) => _peers[peer] = PeerPhase.Connected;
 
@@ -47,11 +49,12 @@ public sealed class ServerHandshake
                 if (result != ClaimResult.Ok || slot == null) { dropPeer = true; return new Reject(PlayerRegistry.ReasonText(result)); }
                 _peers[peer] = PeerPhase.Welcomed;
                 return BuildWelcome(slot, peer);
-            case PeerPhase.Welcomed when m is Ready:
+            case PeerPhase.Welcomed when m is Ready ready:
                 var s = Registry.ByPeer(peer);
                 if (s == null) { dropPeer = true; return null; }
                 _peers[peer] = PeerPhase.InGame;
                 s.Ready = true;
+                s.ReadyFloor = ready.Floor;
                 PlayerReady?.Invoke(s);
                 return null;
             case PeerPhase.Connected:

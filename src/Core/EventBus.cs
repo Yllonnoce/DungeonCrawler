@@ -53,6 +53,8 @@ public partial class EventBus : Node
     public event Action<int>? LeadChanged;
     /// <summary>Members were added, parked or unparked: the HUD rebuilds its portraits.</summary>
     public event Action? RosterChanged;
+    /// <summary>The shared bag's contents changed (on a client: the server's BagSync arrived). Open screens redraw.</summary>
+    public event Action? BagChanged;
     public event Action<Enemies.Enemy>? BossSeen;
     /// <summary>A tier guardian fell to half its health (once per boss): the moment for its middle line.</summary>
     public event Action<Enemies.Enemy>? BossHalf;
@@ -204,6 +206,7 @@ public partial class EventBus : Node
     public void RaiseGoldChanged(int total, int delta) => GoldChanged?.Invoke(total, delta);
     public void RaiseLeadChanged(int index) => LeadChanged?.Invoke(index);
     public void RaiseRosterChanged() => RosterChanged?.Invoke();
+    public void RaiseBagChanged() => BagChanged?.Invoke();
     public void RaiseBossSeen(Enemies.Enemy boss) => BossSeen?.Invoke(boss);
     public void RaiseBossHalf(Enemies.Enemy boss) => BossHalf?.Invoke(boss);
     public void RaiseAlarmRaised(string collectiveId) => AlarmRaised?.Invoke(collectiveId);

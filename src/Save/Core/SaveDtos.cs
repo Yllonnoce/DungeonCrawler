@@ -299,6 +299,8 @@ public sealed class CollectiveDto
 
 public sealed class PlacedTrapDto
 {
+    /// <summary>The trap's id on its floor (Net.PropCheck.PlacedTrapBase up), so co-op can name it; -1 in saves from before ids (a fresh one is given on load).</summary>
+    public int Id { get; set; } = -1;
     public string Kind { get; set; } = "Spikes";
     public float X { get; set; }
     public float Y { get; set; }
@@ -323,4 +325,6 @@ public sealed class WorldItemDto
     public float Z { get; set; }
     /// <summary>Above zero: a pile of gold, and Item is only a placeholder.</summary>
     public int Coins { get; set; }
+    /// <summary>Put down by the party on purpose: companions walk past it (older saves read false).</summary>
+    public bool DroppedByParty { get; set; }
 }

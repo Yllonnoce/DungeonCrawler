@@ -313,6 +313,7 @@ public partial class Main : Node
         LayoutHashMatched = hash == w.LayoutHash;
         GD.Print($"[net] layout hash {(LayoutHashMatched ? "match" : $"MISMATCH (ours {hash}, server {w.LayoutHash})")}");
         if (!LayoutHashMatched) EventBus.Instance.Log("Warning: this floor does not match the server's. Check that both run the same build.");
+        Overlay.Close(); // a rejoin from behind a floor change's loading screen (the client's floor watchdog) comes back to a floor
         NetSession.Instance.Client?.FloorBuilt();
     }
 
@@ -659,7 +660,10 @@ public partial class Main : Node
             GD.Print($"[Main] {t.Name} comes along to floor {floor}");
         }
         if (!NetSession.IsClient) EventBus.Instance.Log(floor == 0 ? "The tavern. The way down is in the corner." : delta > 0 ? $"You descend to floor {floor}." : delta < 0 ? $"You climb back to floor {floor}." : $"Floor {floor} reshapes itself.");
-        if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null);
+        // the floor stands: a story hook that throws must not keep FloorBuilt from going out (a server that never heard it
+        // stayed "changing floor" for good: joiners never ready, every co-op check stopped)
+        try { if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: saved == null); }
+        catch (Exception e) { GD.PushError($"[Main] floor {floor}: the adventure's floor hook failed: {e}"); }
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
         if (delta != 0 && floor >= 1 && !NetSession.IsClient) { RecordRunInProfile(); ProfileStore.Save(); }
         if (delta != 0 && floor >= 1) Autosave($"floor {floor}"); // solo only (Autosave refuses the rest)
@@ -703,6 +707,7 @@ public partial class Main : Node
         GD.Print($"[net] floor {fc.Floor} layout hash {(LayoutHashMatched ? "match" : "MISMATCH")}");
         Overlay.Close();
         Party.InputLocked = Hud?.Paused ?? false;
+        if (fc.Resync && fc.Delta == 0) return; // the floor sent again as it stands (the floor watchdog): nothing reshaped
         EventBus.Instance.Log(fc.Delta > 0 ? $"You descend to floor {fc.Floor}." : fc.Delta < 0 ? $"You climb back to floor {fc.Floor}." : $"Floor {fc.Floor} reshapes itself.");
     }
 

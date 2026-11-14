@@ -43,18 +43,18 @@ public partial class ServerWorld : Node
             ParkedPoseOf = slot => (PoseOf(slot.MemberIndex), Game.Instance.CurrentFloor),
         };
         t.PeerConnected += p => { Handshake.OnPeerConnected(p); GD.Print($"[net-server] peer {p} connected"); };
-        t.PeerDisconnected += p => { Handshake.OnPeerDisconnected(p); GD.Print($"[net-server] peer {p} disconnected"); if (NetSession.Instance.QuitWhenEmpty && Registry.OnlineCount == 0) CallDeferred(nameof(QuitEmpty)); };
+        t.PeerDisconnected += p => { _joinQueue.Remove(p); _joinQueueOverflowed.Remove(p); _welcomeEpoch.Remove(p); ForgetResyncLimits(p); Handshake.OnPeerDisconnected(p); GD.Print($"[net-server] peer {p} disconnected"); if (NetSession.Instance.QuitWhenEmpty && Registry.OnlineCount == 0) CallDeferred(nameof(QuitEmpty)); };
         t.Received += OnReceived;
         StartBots();
         var bus = EventBus.Instance;
         bus.Message += line => _logBatch.Add(line);
         bus.Sfx += cue => { if (!LocalCues.Contains(cue) && !Quiet) Broadcast(new SfxMsg(cue)); };
         bus.ObjectiveChanged += text => Broadcast(new ObjectiveMsg(text));
-        bus.MemberChanged += i => _dirtyMembers.Add(i);
+        // no MemberChanged hook: it fires on every swing and hit; FlushSync compares each sheet's content instead (MemberSync)
         bus.LootSpawned += drop => { if (!Quiet) Broadcast(new LootSpawned(SaveMapper.ToDto(drop.Item), Vec(drop.GlobalPosition), drop.KeyIndex, drop.QuestId, drop.Coins)); };
         bus.LootRemoved += (id, by) => { if (!Quiet) Broadcast(new LootRemoved(id, by)); };
         bus.PropChanged += (r, what) => { if (!Quiet) Broadcast(new PropEvt(r, what)); };
-        bus.TrapPlaced += trap => { if (!Quiet) Broadcast(new TrapPlacedEvt(new PlacedTrapDto { Kind = trap.Kind.ToString(), X = trap.GlobalPosition.X, Y = trap.GlobalPosition.Y, Z = trap.GlobalPosition.Z })); };
+        bus.TrapPlaced += trap => { if (!Quiet) Broadcast(new TrapPlacedEvt(new PlacedTrapDto { Id = trap.SpawnIndex, Kind = trap.Kind.ToString(), X = trap.GlobalPosition.X, Y = trap.GlobalPosition.Y, Z = trap.GlobalPosition.Z })); };
         bus.HitFx += (kind, pos, dir, enemy) => { if (!Quiet) Broadcast(HitFxMessage(kind, pos, dir, enemy)); };
         bus.EnemyHurt += (e, amount, flavor, by) => { if (!Quiet) Broadcast(new EnemyHurt(e.NetId, amount, (byte)flavor, e.Hp, by)); };
         bus.EnemyTelegraph += (e, state) => { if (!Quiet && !e.IsHorde) Broadcast(new EnemyStateMsg(e.NetId, state)); }; // hordes wind up from the snapshot instead
@@ -93,11 +93,17 @@ public partial class ServerWorld : Node
             s.Ready = false;
             if (s.MemberIndex < party.Adventurers.Length) party.Adventurers[s.MemberIndex].Remote = null;
         }
-        Broadcast(new FloorChangeBegin(floor, floor > Game.Instance.CurrentFloor ? "Descending..." : "The dungeon shifts..."));
+        _floorChangeBegin = new FloorChangeBegin(floor, floor > Game.Instance.CurrentFloor ? "Descending..." : "The dungeon shifts...");
+        Broadcast(_floorChangeBegin);
         _floorChangeStarted = Time.GetTicksMsec() / 1000.0;
+        _floorChanging = true;
     }
 
     private double _floorChangeStarted;
+    /// <summary>The change under way, said again to a client whose floor watchdog asks while we still build or wait for a plan.</summary>
+    private FloorChangeBegin? _floorChangeBegin;
+    /// <summary>Between FloorChangeBegin and the new floor's FloorChange: a joiner's Ready must not count its poses yet.</summary>
+    private bool _floorChanging;
 
     private void OnFloorBuilt(int floor, int delta, bool firstVisit)
     {
@@ -106,18 +112,43 @@ public partial class ServerWorld : Node
         var game = Game.Instance;
         var party = main.Party;
         var poses = party.Adventurers.Select(a => new PoseDto { X = a.GlobalPosition.X, Y = a.GlobalPosition.Y, Z = a.GlobalPosition.Z, Yaw = a.Rotation.Y }).ToList();
-        game.Adventure.FloorPlans.TryGetValue(floor, out var plan);
         game.Floors.TryGetValue(floor, out var state);
-        var snapshot = main.BuildSnapshotFor.TryGetValue(floor, out var s) ? s : party.Snapshot();
-        var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemy>();
-        if (NetSession.Instance.TestServer) GD.Print($"[net-server] elites on floor {floor}: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
-        foreach (var peer in Handshake.InGamePeers)
-            _t.Send(peer, NetCodec.Encode(new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main), elites.Select(e => e.SpawnIndex).ToList())));
+        _floorEpoch++; // a new build, even of the same floor number (a wipe's reload): checks about the old one no longer apply
+        _floorDelta = delta;
+        _floorBuiltAt = Time.GetTicksMsec() / 1000.0;
+        var change = NetCodec.Encode(FloorChangeOf(floor, delta, state, poses, firstVisit, resync: false));
+        foreach (var peer in Handshake.InGamePeers) _t.Send(peer, change);
+        foreach (var peer in Handshake.WelcomedPeers) HoldForJoiner(peer, change); // a joiner still building the old floor follows on Ready
+        _floorChanging = false;
         _lastSent.Clear();
         _firstPose.Clear();
         Trace.Add($"floor:{floor}");
         WriteStatus();
         CallDeferred(nameof(AutosaveFloor));
+    }
+
+    /// <summary>The server's count of floor builds (every <see cref="OnFloorBuilt"/>): carried by the Welcome, FloorChange and the checks so a client never applies a check about one build to another.</summary>
+    private int _floorEpoch = 1;
+    public int FloorEpoch => _floorEpoch;
+    private int _floorDelta;
+    private double _floorBuiltAt;
+    /// <summary>The floor build each joining peer's Welcome described (until its Ready): a rebuild in between makes it follow like a floor change.</summary>
+    private readonly Dictionary<int, int> _welcomeEpoch = new();
+
+    /// <summary>
+    /// The FloorChange for the floor on the server now: the one every peer gets when it is built, or (resync) the answer to
+    /// one client's <see cref="FloorResyncIntent"/>, carrying the floor as it stands (a live capture, the bodies where they are).
+    /// </summary>
+    private FloorChange FloorChangeOf(int floor, int delta, FloorStateDto? state, List<PoseDto> poses, bool firstVisit, bool resync)
+    {
+        var main = Main.Instance;
+        var game = Game.Instance;
+        game.Adventure.FloorPlans.TryGetValue(floor, out var plan);
+        var snapshot = main.BuildSnapshotFor.TryGetValue(floor, out var s) ? s : main.Party.Snapshot();
+        var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemy>();
+        if (NetSession.Instance.TestServer) GD.Print($"[net-server] elites on floor {floor}: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
+        return new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main),
+            elites.Select(e => e.SpawnIndex).ToList(), _floorEpoch, resync);
     }
 
     /// <summary>A peer finished building the floor everyone moved to: its poses count again and it gets a full picture.</summary>
@@ -136,6 +167,7 @@ public partial class ServerWorld : Node
         SendTo(slot.PeerId, new ObjectiveMsg(AdventureDirector.Instance.CurrentObjective));
         SendShopSync(slot.PeerId); // a floor change: the floor is built on both ends now (a join is sent in OnPlayerReady)
         if (Adventure.Objectives.ObjectiveController.Instance is { } objective) SendTo(slot.PeerId, new ObjectiveStateMsg(objective.Capture()));
+        SendWorldChecks(slot.PeerId); // what changed while it built (an item taken, a creature spawned) is put right now, not at the next check
     }
 
     private static string FloorObjectiveId(Main main) => Dungeon.Generation.FloorObjectives.Id(main.Builder.Layout?.Objective?.Kind ?? Dungeon.Generation.FloorObjectiveKind.None);
@@ -207,14 +239,15 @@ public partial class ServerWorld : Node
         var objective = AdventureDirector.Instance?.CurrentObjective ?? "";
         Trace.Add(slot.ParkedPose != null || slot.LastSeenUtc != "" ? $"rejoin:{slot.Name}" : $"join:{slot.Name}");
         GD.Print($"[net-server] {slot.Name} {(slot.LastSeenUtc != "" ? "rejoins" : "joins")} as member {slot.MemberIndex} ({slot.ClassId}) on floor {floor}");
+        _welcomeEpoch[peer] = _floorEpoch;
         return new Welcome(peer, slot.MemberIndex, game.GameSeed, floor, game.PlaySeconds, game.Victory, adventure, snapshot, state,
-            DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main));
+            DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main), _floorEpoch);
     }
 
-    /// <summary>A dynamic enemy on the wire: its elite name and affixes ride along so a client dresses and names it.</summary>
+    /// <summary>An enemy on the wire: its elite name and affixes ride along so a client dresses and names it, and its spawn index so a planned one sent again (the enemy check) keeps its identity.</summary>
     public static DynamicEnemyDto EnemyDto(Enemy e)
         => new(e.NetId, e.Profile.Id, e.GlobalPosition.X, e.GlobalPosition.Y, e.GlobalPosition.Z, e.Rotation.Y, e.Hp, e.HordeId,
-            e.IsElite ? e.Profile.EliteName : null, e.IsElite ? EliteRules.Encode(e.Profile.Affixes) : null);
+            e.IsElite ? e.Profile.EliteName : null, e.IsElite ? EliteRules.Encode(e.Profile.Affixes) : null, e.SpawnIndex);
 
     public static List<DynamicEnemyDto> DynamicEnemies(Node3D? root)
     {
@@ -255,6 +288,13 @@ public partial class ServerWorld : Node
         var main = Main.Instance;
         var party = main.Party;
         var index = slot.MemberIndex;
+        FlushJoinQueue(slot.PeerId);
+        // the floor changed while this player built the old one (the held FloorChange is on its way to it now): its poses
+        // must not count until it has built the new floor and said so (OnFloorReady sets Ready and sends the full picture)
+        // (or the same floor number was built again: a wipe's reload during the join, which the floor number alone missed)
+        var staleBuild = _welcomeEpoch.Remove(slot.PeerId, out var welcomed) && welcomed != _floorEpoch;
+        var behind = _floorChanging || slot.ReadyFloor != Game.Instance.CurrentFloor || staleBuild;
+        if (behind) { slot.Ready = false; GD.Print($"[net-server] {slot.Name} joined on floor {slot.ReadyFloor} while the party went to {Game.Instance.CurrentFloor}: it follows"); }
         Vector3? at = null;
         Vector3? look = null;
         if (slot.ParkedPose is { } p && slot.ParkedFloor == Game.Instance.CurrentFloor) at = new Vector3(p.X, p.Y, p.Z);
@@ -268,15 +308,33 @@ public partial class ServerWorld : Node
         party.Unpark(index, ControlKind.Remote, at, look);
         if (slot.ParkedPose is { } pp && at != null && look == null) party.Adventurers[index].Rotation = new Vector3(0, pp.Yaw, 0);
         var body = party.Adventurers[index];
-        SendTo(slot.PeerId, new ForcePose(index, new PoseDto { X = body.GlobalPosition.X, Y = body.GlobalPosition.Y, Z = body.GlobalPosition.Z, Yaw = body.Rotation.Y }));
+        if (!behind) SendTo(slot.PeerId, new ForcePose(index, new PoseDto { X = body.GlobalPosition.X, Y = body.GlobalPosition.Y, Z = body.GlobalPosition.Z, Yaw = body.Rotation.Y }));
         EventBus.Instance.Log($"{slot.Name} joins the party.");
         Broadcast(new PlayerJoined(slot.ToDto()), except: slot.PeerId);
-        SendSnapshotTo(slot.PeerId, full: true);
-        SendShopSync(slot.PeerId); // a join: the joiner is in game now, so it will not discard this (a floor change sends it in OnFloorReady)
+        // the others built a default member from PlayerJoined; the sheet sent at Hello came before they had the place for it
+        Broadcast(new PartySync(index, SaveMapper.ToDto(party.Members[index])), except: slot.PeerId);
+        if (!behind)
+        {
+            SendSnapshotTo(slot.PeerId, full: true);
+            SendShopSync(slot.PeerId); // a join: the joiner is in game now, so it will not discard this (a floor change sends it in OnFloorReady)
+        }
+        SendCatchUp(slot.PeerId);
+        if (!behind) SendWorldChecks(slot.PeerId); // closes the join window at once: items and creatures that changed since the Welcome
         Trace.Add($"ready:{slot.Name}");
         ResumeBotsOf(slot);
         PlayerReady?.Invoke(slot);
         WriteStatus();
+    }
+
+    /// <summary>The shared state a joiner must hold whatever it missed: the bag, every member, the purse, an altar card waiting for a pick.</summary>
+    private void SendCatchUp(int peer)
+    {
+        var party = Main.Instance.Party;
+        SendTo(peer, new BagSync(SaveMapper.ToDto(party.Bag)));
+        for (var i = 0; i < party.Members.Length; i++) SendTo(peer, new PartySync(i, SaveMapper.ToDto(party.Members[i])));
+        SendTo(peer, new GoldSync(party.Gold));
+        if (FortuneDirector.Instance?.PendingShrine is { } card) SendTo(peer, card);
+        SendPropState(peer); // the props as they stand now (a joiner still on an older floor ignores it; the prop check covers it later)
     }
 
     private void OnPlayerLeft(PlayerSlot slot)
@@ -330,13 +388,31 @@ public partial class ServerWorld : Node
         }
         if (!Handshake.InGame(from))
         {
-            var reply = Handshake.OnMessage(from, m, out var drop);
-            if (reply != null) _t.Send(from, NetCodec.Encode(reply));
-            if (drop) (_t as WebSocketTransport)?.Disconnect(from);
+            // a join that throws (building the Welcome, readying the player) must not leave the peer Welcomed for good, its name
+            // taken and broadcasts piling up for it: drop it, and its client can join again
+            try
+            {
+                var reply = Handshake.OnMessage(from, m, out var drop);
+                if (reply != null) _t.Send(from, NetCodec.Encode(reply));
+                if (drop) (_t as WebSocketTransport)?.Disconnect(from);
+            }
+            catch (Exception e)
+            {
+                GD.PushError($"[net-server] {m.Kind} from joining peer {from} failed: {e.GetType().Name}: {e.Message}; dropping it");
+                (_t as WebSocketTransport)?.Disconnect(from);
+            }
             return;
         }
         var slot = Registry.ByPeer(from);
         if (slot == null) return;
+        // one message that throws (a stale index, a node freed under it) must cost that message only: uncaught, it escaped the
+        // transport's poll and the rest of the frame's packets waited, and its log line never named what failed
+        try { Dispatch(from, slot, m); }
+        catch (Exception e) { GD.PushError($"[net-server] {m.Kind} from {slot.Name} failed: {e.GetType().Name}: {e.Message}"); }
+    }
+
+    private void Dispatch(int from, PlayerSlot slot, NetMessage m)
+    {
         switch (m)
         {
             case Pose pose: if (slot.Ready) ApplyPose(slot, pose); break;
@@ -373,6 +449,10 @@ public partial class ServerWorld : Node
             case AddBotIntent ab: OnAddBot(slot, ab.Hero); break;
             case DismissBotIntent db: OnDismissBot(slot, db.Member); break;
             case LootResyncIntent lr: OnLootResync(slot, lr); break;
+            case StateResyncIntent sr: OnStateResync(slot, sr); break;
+            case PropResyncIntent pr: OnPropResync(slot, pr); break;
+            case EnemyResyncIntent er: OnEnemyResync(slot, er); break;
+            case FloorResyncIntent fr: OnFloorResync(slot, fr); break;
             case AttackIntent a:
             {
                 // aim exactly where the player aimed; the body stays where its poses put it
@@ -380,8 +460,7 @@ public partial class ServerWorld : Node
                 body.Camera.Rotation = new Vector3(Mathf.Clamp(a.Pitch, Mathf.DegToRad(-Adventurer.MaxPitchDegrees), Mathf.DegToRad(Adventurer.MaxPitchDegrees)), 0, 0);
                 var wanted = new Vector3(a.Position.X, a.Position.Y, a.Position.Z);
                 if (wanted.DistanceTo(body.Camera.GlobalPosition) < 1.5f && body.Remote != null) { body.Remote.Position = body.GlobalPosition + (wanted - body.Camera.GlobalPosition); body.GlobalPosition = body.Remote.Position; }
-                body.Attack(a.Heavy, a.Perfect);
-                _dirtyMembers.Add(slot.MemberIndex);
+                body.Attack(a.Heavy, a.Perfect); // stamina and cooldown reach every screen in the Vitals; the sheet itself did not change
                 if (!Trace.Contains("attack")) Trace.Add("attack");
                 if (NetSession.Instance.TestServer && _attackLogs++ < 6)
                 {
@@ -410,6 +489,16 @@ public partial class ServerWorld : Node
                 var dist = Math.Min(node.GlobalPosition.DistanceTo(body.GlobalPosition), node.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
                 if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: {dist:0.0} m (reach {reach}) body={body.GlobalPosition:0.0} node={node.GlobalPosition:0.0}");
                 if (dist > reach) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
+                // recovery: the altar is paid and its card still waits for a pick, but this player's screen lost it: hand it back
+                if (node is Dungeon.Props.Shrine && FortuneDirector.Instance?.PendingShrine is { } pendingCard) { SendTo(slot.PeerId, pendingCard); Trace.Add("shrine-resent"); break; }
+                // the bag filled here (a bot's pickup) before this player's copy showed it: tell them, not the whole party, and
+                // send the bag so their prompt says "full" too
+                if (node is Items.LootDrop { Coins: 0 } full && !party.Bag.HasRoomFor(full.Item))
+                {
+                    Tell(slot, Items.LootDrop.BagFullLine);
+                    SendTo(slot.PeerId, new BagSync(SaveMapper.ToDto(party.Bag)));
+                    break;
+                }
                 target.Interact(party, body);
                 if (node is Items.LootDrop) { _bagDirty = true; Trace.Add("pickup"); }
                 if (node is Dungeon.Props.Chest) Trace.Add("chest");
@@ -449,7 +538,7 @@ public partial class ServerWorld : Node
                 Trace.Add("cheer");
                 break;
             case BagMoveIntent bm:
-                if (!OwnsSlots(slot, bm.From, bm.To)) break;
+                if (!MayTouch(slot, bm.From, bm.To) || !StillHolds(slot, bm.From, bm.Expect)) break; // the guard answers a refusal (ServerWorld.BagGuard.cs)
                 party.BagMove(bm.From, bm.To, body);
                 _bagDirty = true;
                 break;
@@ -473,7 +562,7 @@ public partial class ServerWorld : Node
             }
             case ShopSellIntent ss:
                 if (!slot.Ready || !CanTrade(slot)) break;
-                if (!OwnsSlots(slot, ss.Slot, ss.Slot)) break;
+                if (!MayTouch(slot, ss.Slot, ss.Slot) || !StillHolds(slot, ss.Slot, ss.Expect)) break; // only plain sales were unguarded: a legendary's screen asks by id
                 if (party.ShopSell(ss.Slot) == null) Trace.Add("shop");
                 SendShopSync();
                 _bagDirty = true;
@@ -498,19 +587,32 @@ public partial class ServerWorld : Node
                 GD.Print($"[net-server] {slot.Name} reached dialogue node {dn.NpcId}/{dn.NodeId} on floor {Game.Instance.CurrentFloor}");
                 break;
             case QuickActionIntent q:
-                if (!OwnsSlots(slot, q.Slot, q.Slot)) break;
-                party.BagQuick(q.Slot, slot.MemberIndex, body);
+            {
+                // the hero the screen acts for (equip on, drink for): the sender's own, or a bot they own; a click on an equip
+                // slot takes that piece off its wearer whoever the screen shows (MayTouch checks the wearer is ours)
+                var who = q.Slot.IsEquip ? q.Slot.Member : q.Member < 0 ? slot.MemberIndex : q.Member;
+                if (!MayActFor(slot, who) || !MayTouch(slot, q.Slot, q.Slot) || !StillHolds(slot, q.Slot, q.Expect)) break;
+                party.BagQuick(q.Slot, who, body);
                 _bagDirty = true;
                 break;
+            }
             case CycleAbilityIntent c:
                 party.CycleAbility(slot.MemberIndex, Math.Sign(c.Dir));
                 break;
             case AllocateStatIntent st:
-                if (Enum.TryParse<Characters.Stat>(st.Stat, out var stat)) party.AllocateStat(slot.MemberIndex, stat);
+            {
+                var who = st.Member < 0 ? slot.MemberIndex : st.Member; // the sheet's hero: our own or a bot we own (their points were never spendable before v14)
+                if (!MayActFor(slot, who)) break;
+                if (Enum.TryParse<Characters.Stat>(st.Stat, out var stat)) party.AllocateStat(who, stat);
                 break;
+            }
             case LearnSkillIntent ls:
-                if (Game.Instance.Skills.Skills.TryGetValue(ls.SkillId, out var skill)) party.LearnSkill(slot.MemberIndex, skill);
+            {
+                var who = ls.Member < 0 ? slot.MemberIndex : ls.Member;
+                if (!MayActFor(slot, who)) break;
+                if (Game.Instance.Skills.Skills.TryGetValue(ls.SkillId, out var skill)) party.LearnSkill(who, skill);
                 break;
+            }
             case DialogueChoiceIntent d:
                 if (d.Effect == DialogueEffect.Join)
                 {
@@ -526,10 +628,6 @@ public partial class ServerWorld : Node
                 break;
         }
     }
-
-    /// <summary>A player may rearrange the shared bag and their own gear, nobody else's.</summary>
-    private static bool OwnsSlots(PlayerSlot slot, BagSlot a, BagSlot b)
-        => (!a.IsEquip || a.Member == slot.MemberIndex) && (!b.IsEquip || b.Member == slot.MemberIndex);
 
     private void ApplyPose(PlayerSlot slot, Pose pose)
     {
@@ -613,6 +711,46 @@ public partial class ServerWorld : Node
     {
         var bytes = NetCodec.Encode(m);
         foreach (var peer in Handshake.InGamePeers) if (peer != except) _t.Send(peer, bytes);
+        foreach (var peer in Handshake.WelcomedPeers) if (peer != except) HoldForJoiner(peer, bytes);
+    }
+
+    /// <summary>
+    /// Everything that happens while a player is between its Welcome and its Ready (building the floor): a boss falling,
+    /// a door opening, a bot's pickup, a floor change. It used to be lost (only in-game peers hear broadcasts) and stayed
+    /// wrong until a reconnect; it is held here and delivered in order the moment the player is in (<see cref="OnPlayerReady"/>).
+    /// </summary>
+    private readonly Dictionary<int, List<byte[]>> _joinQueue = new();
+    private readonly HashSet<int> _joinQueueOverflowed = new();
+    /// <summary>Well under the socket's queued-packet limit, so the flush and the catch-up behind it always fit in one frame.</summary>
+    private const int JoinQueueCap = 600;
+
+    /// <summary>Moments a joiner has no use for once they are past: the next Vitals, snapshot or swing replaces them.</summary>
+    private static bool Transient(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.Vitals or MsgKind.Sfx or MsgKind.EnemyHurt
+        or MsgKind.HitFxEvt or MsgKind.SwingEvt or MsgKind.Emote or MsgKind.ProjectileSpawned or MsgKind.ProjectileEnded or MsgKind.Bark;
+
+    private static bool FloorKind(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.FloorChangeBegin or MsgKind.FloorChange;
+
+    private void HoldForJoiner(int peer, byte[] bytes)
+    {
+        if (bytes.Length == 0 || Transient(bytes[0])) return;
+        if (!_joinQueue.TryGetValue(peer, out var q)) _joinQueue[peer] = q = new List<byte[]>();
+        if (q.Count >= JoinQueueCap)
+        {
+            // a long join through a busy fight: keep only the floor changes (the one thing the catch-up cannot redo), and let
+            // the catch-up, the prop state and the world checks sent on Ready repair the rest
+            if (_joinQueueOverflowed.Add(peer)) GD.Print($"[net-server] peer {peer}'s join queue is full: keeping only floor changes");
+            q.RemoveAll(b => !FloorKind(b[0]));
+            if (q.Count >= JoinQueueCap) q.RemoveRange(0, q.Count - JoinQueueCap / 2);
+        }
+        if (!_joinQueueOverflowed.Contains(peer) || FloorKind(bytes[0])) q.Add(bytes);
+    }
+
+    private void FlushJoinQueue(int peer)
+    {
+        var overflowed = _joinQueueOverflowed.Remove(peer);
+        if (!_joinQueue.Remove(peer, out var q)) return;
+        foreach (var bytes in q) _t.Send(peer, bytes);
+        if (q.Count > 0) GD.Print($"[net-server] delivered {q.Count} message(s) held while peer {peer} was joining{(overflowed ? " (overflowed: the catch-up repairs the rest)" : "")}");
     }
 
     public void SendTo(int peer, NetMessage m) => _t.Send(peer, NetCodec.Encode(m));
@@ -626,7 +764,7 @@ public partial class ServerWorld : Node
         var full = _fullSnapshotTimer <= 0f;
         if (full) _fullSnapshotTimer = Protocol.FullSnapshotSeconds;
         if (tick % (60 / Protocol.SnapshotHz) == 0) foreach (var peer in Handshake.InGamePeers) SendSnapshotTo(peer, full);
-        if (tick % (60 / Protocol.VitalsHz) == 0 && Handshake.InGamePeers.Any()) Broadcast(BuildVitals());
+        if (tick % (60 / Protocol.VitalsHz) == 0 && Handshake.InGamePeers.Any()) SendVitals();
         if (tick % 6 == 0 && Handshake.InGamePeers.Any()) FlushSync();
         if (tick % 120 == 0 && Handshake.InGamePeers.Any() && Adventure.Objectives.ObjectiveController.Instance is { } objective) Broadcast(new ObjectiveStateMsg(objective.Capture()));
         if (_spawned.Count > 0)
@@ -692,13 +830,28 @@ public partial class ServerWorld : Node
         _t.Send(peer, NetCodec.Encode(new WorldSnapshot(NetSession.Instance.Tick, NetSession.Instance.Now, enemies.ToArray(), npcs, players)), NetChannel.State);
     }
 
-    /// <summary>Members whose sheet changed and a bag that changed go out whole, a few times a second at most.</summary>
+    /// <summary>What each member's last broadcast PartySync held (<see cref="MemberSync"/>): its signature, its effects and when.</summary>
+    private readonly Dictionary<int, (string Signature, List<Save.StatusDto> Effects, double At)> _memberSent = new();
+
+    /// <summary>
+    /// Members whose sheet changed and a bag that changed go out whole, a few times a second at most. A member goes out
+    /// when its content differs from the last send (gear, level, xp, points, skills, an effect starting, ending or
+    /// stacking), when an effect was refreshed, or when <see cref="_dirtyMembers"/> forces it (a bot just called in); never
+    /// for a swing or a hit alone, whose hp, stamina, mana and cooldown are the Vitals' job.
+    /// </summary>
     private void FlushSync()
     {
         var party = Main.Instance?.Party;
         if (party == null) return;
-        foreach (var i in _dirtyMembers)
-            if (i >= 0 && i < party.Members.Length) Broadcast(new PartySync(i, SaveMapper.ToDto(party.Members[i])));
+        var now = Time.GetTicksMsec() / 1000.0;
+        for (var i = 0; i < party.Members.Length; i++)
+        {
+            var dto = SaveMapper.ToDto(party.Members[i]);
+            var signature = MemberSync.Signature(dto);
+            if (!_dirtyMembers.Contains(i) && _memberSent.TryGetValue(i, out var sent) && sent.Signature == signature && !MemberSync.TimersDrifted(sent.Effects, sent.At, dto.Effects, now)) continue;
+            _memberSent[i] = (signature, dto.Effects, now);
+            Broadcast(new PartySync(i, dto));
+        }
         _dirtyMembers.Clear();
         var sig = string.Join("|", party.Bag.Items.Select(it => $"{party.Bag.IndexOf(it)}:{it.Id:N}:{it.StackCount}"));
         if (_bagDirty || sig != _bagSignature)
@@ -712,6 +865,25 @@ public partial class ServerWorld : Node
             _goldSent = party.Gold;
             Broadcast(new GoldSync(party.Gold));
         }
+    }
+
+    private byte[]? _vitalsSent;
+    private double _vitalsSentAt;
+
+    /// <summary>
+    /// The Vitals go out at <see cref="Protocol.VitalsHz"/> while anything in them changes (a fight, regeneration, a
+    /// cooldown running down), and once every <see cref="Protocol.VitalsHeartbeatSeconds"/> while the whole party stands
+    /// still, which is all a joiner or a screen that missed one needs. An idle party no longer streams identical copies.
+    /// </summary>
+    private void SendVitals()
+    {
+        var vitals = BuildVitals();
+        var bytes = NetCodec.Encode(vitals);
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (_vitalsSent != null && now - _vitalsSentAt < Protocol.VitalsHeartbeatSeconds && bytes.AsSpan().SequenceEqual(_vitalsSent)) return;
+        _vitalsSent = bytes;
+        _vitalsSentAt = now;
+        Broadcast(vitals);
     }
 
     private Vitals BuildVitals()
@@ -730,7 +902,7 @@ public partial class ServerWorld : Node
         var game = Game.Instance;
         var players = string.Join(",", Registry.Online.Select(s => $"\"{s.Name.Replace("\"", "")}\""));
         var bots = string.Join(",", Registry.ActiveBots.Select(s => $"\"{s.Name.Replace("\"", "")}\""));
-        var json = $"{{\"floor\":{game.CurrentFloor},\"online\":{Registry.OnlineCount},\"players\":[{players}],\"bots\":[{bots}],\"known\":{Registry.All.Count},\"uptime\":{(int)(Time.GetTicksMsec() / 1000)},\"layoutHash\":\"{Main.Instance?.Builder.Layout?.ContentHash() ?? 0}\",\"tick\":{NetSession.Instance.Tick}}}";
+        var json = $"{{\"floor\":{game.CurrentFloor},\"online\":{Registry.OnlineCount},\"players\":[{players}],\"bots\":[{bots}],\"known\":{Registry.All.Count},\"uptime\":{(int)(Time.GetTicksMsec() / 1000)},\"layoutHash\":\"{Main.Instance?.Builder.Layout?.ContentHash() ?? 0}\",\"tick\":{NetSession.Instance.Tick},\"net\":{NetSession.Instance.Traffic?.ToJson(NetSession.Instance.Now) ?? "null"}}}";
         try { File.WriteAllText(ProjectSettings.GlobalizePath(path), json); } catch (Exception e) { GD.PushWarning($"[net-server] status file: {e.Message}"); }
     }
 }

@@ -41,6 +41,14 @@ public static class BagActions
     public static ItemInstance? Get(Inventory bag, CharacterState[] members, BagSlot r)
         => r.IsBag ? bag[r.BagIndex] : r.IsEquip && r.Member < members.Length ? members[r.Member].Equipment[r.Slot] : null;
 
+    /// <summary>
+    /// Whether <paramref name="r"/> still holds the item a screen showed there (<paramref name="expect"/>; <see cref="Guid.Empty"/>
+    /// expects nothing in particular). A co-op bag is changed by many hands at once, so a cell index sent over the wire can point
+    /// at a different item by the time it lands; the server refuses then rather than destroy, sell or drop the wrong thing.
+    /// </summary>
+    public static bool Holds(Inventory bag, CharacterState[] members, BagSlot r, Guid expect)
+        => expect == Guid.Empty || Get(bag, members, r)?.Id == expect;
+
     /// <summary>Which slot a drop on <paramref name="to"/> should really use: the cell itself if the kind matches, else the member's preferred slot.</summary>
     private static EquipSlot? ResolveSlot(CharacterState m, BagSlot to, ItemInstance item)
     {

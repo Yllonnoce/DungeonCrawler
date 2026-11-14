@@ -44,12 +44,36 @@ public partial class NetTestFlow : Node
             if (leftPile != null) leftPile.DroppedByParty = true; // companions leave it alone: only the rejoined client takes it
             GD.Print($"[net-server] left a 37 gold pile at {lastLead:0.0}: {leftPile != null}");
         }
+        if (!_potionsGranted && !resumed && world.Trace.Contains("bot:Sable") && Main.Instance?.Party is { } stocked && Game.Instance.Catalog.TryBase("item.health_potion", out _))
+        {
+            // the client's bag guard step (34) needs something in the shared bag: a potion for its bot to drink
+            _potionsGranted = stocked.Bag.TryAdd(Game.Instance.Catalog.Create("item.health_potion", 3));
+            GD.Print($"[net-server] put 3 health potions in the bag for the bag guard: {_potionsGranted}");
+        }
+        if (!_propsRevealed && !resumed && world.Trace.Contains("bot-aside:Sable") && Main.Instance?.Builder.FloorRoot is { } propRoot)
+        {
+            // the client's prop check step (35) spoils a door and a trap it has seen: make sure one of each is seen, on both ends
+            _propsRevealed = true;
+            var door = propRoot.GetChildren().OfType<Dungeon.Props.Door>().FirstOrDefault(d => !d.IsOpen);
+            var trap = propRoot.GetChildren().OfType<Dungeon.Props.Trap>().FirstOrDefault(t => !t.PlacedByParty && t.SpawnIndex >= 0 && t.Armed);
+            door?.Reveal();
+            trap?.Reveal();
+            GD.Print($"[net-server] revealed door {door?.VaultIndex.ToString() ?? "-"} and trap {trap?.SpawnIndex.ToString() ?? "-"} for the prop check");
+        }
         if (!_goldGranted && !resumed && world.Trace.Contains("floor:2") && Main.Instance?.Party is { } rich)
         {
             // the client buys at the merchant on floor 2: enough gold for any of his wares
             _goldGranted = true;
             rich.AddGold(10_000);
             GD.Print($"[net-server] granted 10000 gold for the shop: purse {rich.Gold}");
+        }
+        if (!_hasteGiven && !resumed && world.Trace.Contains("cheer") && Main.Instance?.Party is { } hasted && world.Registry.Online.FirstOrDefault(s => s.BotOwner == null) is { } cheerer && cheerer.MemberIndex < hasted.Members.Length)
+        {
+            // the effect sync (v14): a short buff on the client's hero, with no MemberChanged anywhere; its start and its end must
+            // both reach the client's sheet (step 17), because the server now compares sheets instead of trusting the event
+            _hasteGiven = true;
+            var applied = hasted.Members[cheerer.MemberIndex].Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Haste, 2.5f, 0.2f));
+            GD.Print($"[net-server] gave {cheerer.Name} 2.5 s of Haste for the effect sync: {applied}");
         }
         if (((resumed || Game.Instance.CurrentFloor == 0) && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
         {
@@ -217,9 +241,63 @@ public partial class NetTestFlow : Node
                     if (hud.InventoryOpen) hud.ToggleInventory();
                     if (!dolls) { Finish("[net]", false, $"the inventory has no doll for us (member {client.MemberIndex}) or the bot (member {entry.MemberIndex})"); return; }
                     GD.Print("[net] inventory opens with a doll for us and the bot");
-                    _clock = 0; _step = 32; net.Send(new DismissBotIntent(entry.MemberIndex));
+                    _guardBot = entry.MemberIndex; _clock = 0; _step = 34; // the bag guard, with the bot still ours; step 34 sends it away after
                 }
                 else if (_clock > 15) Finish("[net]", false, $"the bot did not follow (parked {bot.Parked}, {gap:0.0} m away)");
+                return;
+            }
+            case 34:
+            {
+                // the bag guard (v14): an intent naming an item the cell no longer holds is refused and the bag re-sent, never applied
+                // to whatever is there now; we may act for a bot we own (it drinks our potion), and not for a hero who is not ours
+                var bag = main.Party.Bag;
+                if (_guardPhase == 0)
+                {
+                    if (!_guardListening) { _guardListening = true; EventBus.Instance.Message += GuardHeard; }
+                    _guardIndex = Enumerable.Range(0, bag.Capacity).FirstOrDefault(i => bag[i] is { Consumable: { Respec: false, PlaceTrap: "" } }, -1);
+                    if (_guardIndex < 0) _guardIndex = Enumerable.Range(0, bag.Capacity).FirstOrDefault(i => bag[i] != null, -1);
+                    if (_guardIndex < 0) { if (_clock > 5) Finish("[net]", false, "the bag guard needs an item in the bag and there is none (the server puts potions in)"); return; }
+                    _guardId = bag[_guardIndex]!.Id; _guardCount = bag[_guardIndex]!.StackCount;
+                    net.Send(new BagMoveIntent(Party.BagSlot.Bag(_guardIndex), Party.BagSlot.Destroy, Guid.NewGuid())); // a stale screen's destroy
+                    _guardPhase = 1; _clock = 0;
+                    return;
+                }
+                var held = bag[_guardIndex];
+                if (_guardPhase == 1)
+                {
+                    if (_heardMoved && held?.Id == _guardId && held.StackCount == _guardCount)
+                    {
+                        GD.Print($"[net] bag guard: a destroy aimed at an item that moved was refused ({held.DisplayName} x{held.StackCount} kept) after {_clock:0.0}s");
+                        if (held.Consumable is not { Respec: false, PlaceTrap: "" }) { GD.Print("[net] bag guard: no potion in the bag; skipping the bot's drink"); _guardPhase = 3; }
+                        else { net.Send(new QuickActionIntent(Party.BagSlot.Bag(_guardIndex), _guardBot, _guardId)); _guardPhase = 2; }
+                        _clock = 0;
+                    }
+                    else if (_clock > 6) Finish("[net]", false, $"the stale destroy was not refused (heard {_heardMoved}, cell holds {held?.DisplayName ?? "nothing"} x{held?.StackCount ?? 0}, was x{_guardCount})");
+                    return;
+                }
+                if (_guardPhase == 2)
+                {
+                    var left = bag.Items.Where(i => i.Id == _guardId).Sum(i => i.StackCount);
+                    if (_heardNotYours) { Finish("[net]", false, "the server would not let us use a potion on our own bot"); return; }
+                    if (left == _guardCount - 1) { GD.Print($"[net] bag guard: our bot drank a potion we gave it ({left} left)"); _guardPhase = 3; _clock = 0; }
+                    else if (_clock > 6) Finish("[net]", false, $"our bot never drank the potion ({left} left, was {_guardCount})");
+                    return;
+                }
+                if (_guardPhase == 3)
+                {
+                    // a hero who is neither ours nor our bot's: a member of the party that is someone else's, or past the end of it
+                    var other = Enumerable.Range(0, main.Party.Members.Length).FirstOrDefault(i => i != client.MemberIndex && i != _guardBot, main.Party.Members.Length + 3);
+                    net.Send(new AllocateStatIntent("Strength", other));
+                    _guardPhase = 4; _clock = 0;
+                    return;
+                }
+                if (_heardNotYours)
+                {
+                    GD.Print("[net] bag guard: a stat point for a hero who is not ours was refused out loud");
+                    EventBus.Instance.Message -= GuardHeard;
+                    _clock = 0; _step = 32; net.Send(new DismissBotIntent(_guardBot));
+                }
+                else if (_clock > 6) Finish("[net]", false, "a stat point for someone else's hero was not refused with a message");
                 return;
             }
             case 32:
@@ -242,21 +320,122 @@ public partial class NetTestFlow : Node
                     ghost.GlobalPosition = main.Party.Local!.GlobalPosition + Vector3.Forward;
                     if (root.GetChildren().OfType<Items.LootDrop>().FirstOrDefault(d => !d.Taken && d.Item.Id != _ghostId) is { } real) { _lostId = real.Item.Id; root.RemoveChild(real); real.QueueFree(); }
                     GD.Print($"[net] item check: made a ghost here{(_lostId == Guid.Empty ? "" : " and hid a real item")}");
+                    // the state check: our purse, our bag and our stairs seal go wrong here only; the server's fingerprints must put them right
+                    _goldTruth = main.Party.Gold;
+                    main.Party.SetGold(_goldTruth + 1234);
+                    if (main.Party.Bag.Items.FirstOrDefault() is { } bagItem) { _bagTruth = bagItem.Id; main.Party.Bag.Remove(bagItem); }
+                    if (root.GetNodeOrNull<Dungeon.Stairs>("DownStairs") is { } st) { _stairsTruth = st.Locked; st.SetLocked(!st.Locked); }
+                    GD.Print($"[net] state check: purse {_goldTruth} -> {main.Party.Gold} here, {(_bagTruth == Guid.Empty ? "bag empty" : "a bag item gone")}, stairs seal flipped to {!_stairsTruth}");
                     _clock = 0;
                     return;
                 }
                 var drops = root.GetChildren().OfType<Items.LootDrop>().Where(d => !d.Taken).ToList();
                 var ghostGone = drops.All(d => d.Item.Id != _ghostId);
                 var lostBack = _lostId == Guid.Empty || drops.Any(d => d.Item.Id == _lostId);
-                if (ghostGone && lostBack) { GD.Print($"[net] item check: the ghost went{(_lostId == Guid.Empty ? "" : " and the hidden item came back")} after {_clock:0.0}s"); _clock = 0; _step = 4; }
-                else if (_clock > Protocol.LootCheckSeconds * 2 + 2) Finish("[net]", false, $"the item check did not repair this screen (ghost gone {ghostGone}, hidden item back {lostBack})");
+                var goldBack = main.Party.Gold == _goldTruth;
+                var bagBack = _bagTruth == Guid.Empty || main.Party.Bag.Items.Any(i => i.Id == _bagTruth);
+                var stairsBack = root.GetNodeOrNull<Dungeon.Stairs>("DownStairs") is not { } st2 || st2.Locked == _stairsTruth;
+                if (ghostGone && lostBack && goldBack && bagBack && stairsBack) { GD.Print($"[net] item check: the ghost went{(_lostId == Guid.Empty ? "" : " and the hidden item came back")}; state check: purse, bag and stairs seal repaired, after {_clock:0.0}s"); _clock = 0; _step = 35; }
+                else if (_clock > Protocol.LootCheckSeconds * 3 + 2) Finish("[net]", false, $"the checks did not repair this screen (ghost gone {ghostGone}, hidden item back {lostBack}, purse {goldBack}, bag {bagBack}, stairs {stairsBack})");
+                return;
+            }
+            case 35:
+            {
+                // the prop check: props go wrong on this screen only (a trap of the party's the server never set, and a door, a
+                // floor trap and a lever moved the other way); the server's fingerprint must make us ask, and its answer put them back
+                var root = main.Builder.FloorRoot!;
+                var me = main.Party.Local!;
+                if (!_propsSpoiled)
+                {
+                    _propsSpoiled = true;
+                    _fakeTrap = PropSync.SpawnPlaced(root, new Save.PlacedTrapDto { Id = PropCheck.PlacedTrapBase + 999, Kind = "Spikes", X = me.GlobalPosition.X + 1f, Y = me.GlobalPosition.Y, Z = me.GlobalPosition.Z }, Dungeon.TrapKind.Spikes);
+                    var spoiled = new List<string> { "a party trap the server never set" };
+                    // a door already made out (opening one marks it seen, which only the server's own sighting undoes), well away
+                    // from us (closing one on our own cell would shut us in)
+                    if (root.GetChildren().OfType<Dungeon.Props.Door>().FirstOrDefault(d => d.Detected && d.GlobalPosition.DistanceTo(me.GlobalPosition) > 8f) is { } door)
+                    {
+                        _spoiledDoor = door; _doorTruth = door.IsOpen;
+                        door.SetOpen(!door.IsOpen, silent: true);
+                        spoiled.Add($"door {door.VaultIndex} {(door.IsOpen ? "opened" : "shut")}");
+                    }
+                    // a trap already seen: springing or disarming one here also marks it seen, which only the server's own sighting undoes
+                    if (root.GetChildren().OfType<Dungeon.Props.Trap>().FirstOrDefault(t => !t.PlacedByParty && t.SpawnIndex >= 0 && t.Detected) is { } trap)
+                    {
+                        _spoiledTrap = trap; _trapTruth = (trap.Triggered, trap.Disarmed);
+                        if (trap.Armed) trap.RestoreState(triggered: false, disarmed: true); else trap.RestoreState(false, false); // disarmed here, or re-armed
+                        spoiled.Add($"trap {trap.SpawnIndex} {(trap.Armed ? "re-armed" : "disarmed")}");
+                    }
+                    if (root.GetChildren().OfType<Dungeon.Props.Lever>().FirstOrDefault() is { } lever)
+                    {
+                        _spoiledLever = lever; _leverTruth = lever.Pulled;
+                        lever.SetPulled(!lever.Pulled);
+                        spoiled.Add($"lever {lever.VaultIndex} {(lever.Pulled ? "pulled" : "reset")}");
+                    }
+                    GD.Print($"[net] prop check: spoiled here: {string.Join(", ", spoiled)}");
+                    _clock = 0;
+                    return;
+                }
+                var fakeGone = _fakeTrap == null || !IsInstanceValid(_fakeTrap) || _fakeTrap.IsQueuedForDeletion();
+                var doorBack = _spoiledDoor == null || !IsInstanceValid(_spoiledDoor) || _spoiledDoor.IsOpen == _doorTruth;
+                var trapBack = _spoiledTrap == null || !IsInstanceValid(_spoiledTrap) || (_spoiledTrap.Triggered, _spoiledTrap.Disarmed) == _trapTruth;
+                var leverBack = _spoiledLever == null || !IsInstanceValid(_spoiledLever) || _spoiledLever.Pulled == _leverTruth;
+                if (fakeGone && doorBack && trapBack && leverBack)
+                {
+                    GD.Print($"[net] prop check: the spoiled props were repaired after {_clock:0.0}s (door {(_spoiledDoor != null ? "yes" : "none")}, trap {(_spoiledTrap != null ? "yes" : "none")}, lever {(_spoiledLever != null ? "yes" : "none")})");
+                    _clock = 0; _step = 36;
+                }
+                else if (_clock > Protocol.LootCheckSeconds * 3 + 2) Finish("[net]", false, $"the prop check did not repair this screen (fake trap gone {fakeGone}, door {doorBack}, trap {trapBack}, lever {leverBack})");
+                return;
+            }
+            case 36:
+            {
+                // the enemy check: a creature only this screen shows goes, and a living one this screen lost comes back; and the
+                // item check's counts: an item shown with the wrong count is sent again and put right in place
+                var root = main.Builder.FloorRoot!;
+                var me = main.Party.Local!;
+                if (!_enemiesSpoiled)
+                {
+                    _enemiesSpoiled = true;
+                    client.MessageReceived += NoteEnemyCheck;
+                    var living = root.GetChildren().OfType<Enemies.Enemy>().Where(e => e.IsAlive && !e.IsQueuedForDeletion() && !e.IsBoss).ToList();
+                    if (living.Count == 0) { GD.Print("[net] enemy check: no living creature on this floor; skipping"); _clock = 0; _step = 4; return; }
+                    _ghostEnemy = main.Builder.SpawnEnemy(living[0].Profile.Id, me.GlobalPosition + new Vector3(2f, 0.3f, 0), Game.Instance.CurrentFloor, netId: Enemies.Enemy.DynamicNetIdBase + 9999);
+                    // the farthest from us (the fight below takes the nearest), gone from this screen only
+                    var lost = living.OrderByDescending(e => e.GlobalPosition.DistanceSquaredTo(me.GlobalPosition)).First();
+                    _lostEnemy = lost.NetId;
+                    root.RemoveChild(lost);
+                    lost.QueueFree();
+                    var spoiled = $"made a ghost {_ghostEnemy?.Profile.Id} and hid {lost.Profile.Id} (net id {_lostEnemy})";
+                    if (root.GetChildren().OfType<Items.LootDrop>().FirstOrDefault(d => !d.Taken) is { } drop)
+                    {
+                        _countDrop = drop.Item.Id;
+                        _countTruth = WorldCheck.ItemCount(drop.Coins, drop.Item.StackCount);
+                        if (drop.Coins > 0) drop.Coins += 5; else drop.Item.StackCount += 5;
+                        spoiled += $"; {drop.Item} shows {WorldCheck.ItemCount(drop.Coins, drop.Item.StackCount)} here, {_countTruth} on the server";
+                    }
+                    GD.Print($"[net] enemy check: {spoiled}");
+                    _clock = 0;
+                    return;
+                }
+                var ghostGone = _ghostEnemy == null || !IsInstanceValid(_ghostEnemy) || _ghostEnemy.IsQueuedForDeletion();
+                // back alive, or (it died on the server meanwhile) no longer on the server's list
+                var lostBack = root.GetChildren().OfType<Enemies.Enemy>().Any(e => e.NetId == _lostEnemy && e.IsAlive && !e.IsQueuedForDeletion())
+                    || (_enemyChecksSeen > 0 && _lastEnemyCheck != null && !_lastEnemyCheck.Contains(_lostEnemy));
+                var countBack = _countDrop == Guid.Empty || root.GetChildren().OfType<Items.LootDrop>().Any(d => !d.Taken && d.Item.Id == _countDrop && WorldCheck.ItemCount(d.Coins, d.Item.StackCount) == _countTruth);
+                if (ghostGone && lostBack && countBack)
+                {
+                    client.MessageReceived -= NoteEnemyCheck;
+                    GD.Print($"[net] enemy check: the ghost creature went and the hidden one came back{(_countDrop == Guid.Empty ? "" : "; item check: the miscounted item was put right")} after {_clock:0.0}s");
+                    _clock = 0; _step = 4;
+                }
+                else if (_clock > Protocol.LootCheckSeconds * 3 + 2) Finish("[net]", false, $"the enemy check did not repair this screen (ghost gone {ghostGone}, hidden creature back {lostBack}, count {countBack}; {_enemyChecksSeen} enemy checks seen)");
                 return;
             }
             case 4:
             {
                 // fight: stand in front of the nearest living enemy and swing until the server reports the kill
                 var me = main.Party.Local!;
-                if (!_fightHeard) { _fightHeard = true; _killsBefore = client.Trace.Count(t => t == "kill"); _hitFxBefore = client.Trace.Count(t => t == "hitfx"); EventBus.Instance.Sfx += FightCue; }
+                if (!_fightHeard) { _fightHeard = true; _killsBefore = client.Trace.Count(t => t == "kill"); _hitFxBefore = client.Trace.Count(t => t == "hitfx"); EventBus.Instance.Sfx += FightCue; client.MessageReceived += CountPartySync; }
                 if (_target == null || !IsInstanceValid(_target) || !_target.IsAlive)
                 {
                     if (client.Trace.Contains("kill"))
@@ -276,6 +455,10 @@ public partial class NetTestFlow : Node
                         if (hitFx < 1) { Finish("[net]", false, "no hit fx (blood) reached this client while fighting"); return; }
                         // the server tells every screen about each swing (hero bots' and other players' bodies play the clip)
                         if (!client.Trace.Contains("swing")) { Finish("[net]", false, "no swing event reached this client while fighting"); return; }
+                        // a swing or a hit changes only what the Vitals carry: the whole sheet must not follow every blow (MemberSync)
+                        client.MessageReceived -= CountPartySync;
+                        GD.Print($"[net] fight traffic: {_partySyncs} PartySync for {_swings} swings");
+                        if (_swings >= 4 && _partySyncs >= _swings) { Finish("[net]", false, $"{_partySyncs} PartySync for {_swings} swings: the sheet still follows every blow"); return; }
                         _clock = 0; _step = 5; return;
                     }
                     // a loner, not a camp or a nest: one level-1 warrior against a band would be a different test
@@ -395,6 +578,10 @@ public partial class NetTestFlow : Node
                     var away = (main.Builder.Surface(cell) - down) with { Y = 0 };
                     var stand = down + (away.LengthSquared() > 0.01f ? away.Normalized() : Vector3.Forward) * 1.3f;
                     main.Party.Local!.Teleport(stand with { Y = down.Y + 0.3f }, down);
+                    // a revive that never reached this screen (the server's self-recovery once skipped it): the body shows fallen
+                    // while it is alive. The stairs landing cannot see a fallen body, so the question below fails unless it stands up again
+                    main.Party.Local.ShowDowned();
+                    GD.Print($"[net] showing our body fallen with no revive coming (layer {main.Party.Local.CollisionLayer}); the stairs must still ask");
                     _placed4 = true; _clock = 0; return;
                 }
                 if (!_askedStairs)
@@ -411,6 +598,8 @@ public partial class NetTestFlow : Node
                     main.Party.ForcedMoveInput = null;
                     GD.Print($"[net] the stairs asked after {_clock:0.0} s: \"{stairs.Question}\"; answering yes");
                     _askedStairs = true;
+                    // the floor watchdog: this floor change is lost on its way here; the client must ask for the floor and build it
+                    client.TestDropFloorChanges = 1;
                     stairs.Confirm(main.Party, main.Party.Local!); // the Yes button's path: a client sends the intent
                     _clock = 0; return;
                 }
@@ -420,6 +609,8 @@ public partial class NetTestFlow : Node
                     var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemies.Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemies.Enemy>();
                     GD.Print($"[net] elites on floor 2: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]"); // net_test.sh compares this with the server's line
                     if (!client.Trace.Contains("floorcard")) { Finish("[net]", false, "the floor card for floor 1 never reached the client (run-structure's FloorCardEvt)"); return; }
+                    if (!client.Trace.Contains("floor-dropped") || !client.Trace.Contains("floor-resync")) { Finish("[net]", false, $"the floor watchdog: dropped {client.Trace.Contains("floor-dropped")}, fetched again {client.Trace.Contains("floor-resync")}"); return; }
+                    GD.Print($"[net] floor watchdog: the lost floor change was asked for and built ({client.Trace.Count(t => t == "floor-ask")} ask(s))");
                     _placementsAtFloor2 = _placements; _clock = 0; _step = 11;
                 }
                 else if (_clock > 20) Finish("[net]", false, $"floor 2 never came (floor {Game.Instance.CurrentFloor}, trace=[{string.Join(", ", client.Trace)}])");
@@ -523,8 +714,23 @@ public partial class NetTestFlow : Node
             {
                 // cheer: V goes to the server as a CheerIntent; the server picks our hero's line and it comes back as a BarkMsg for our member
                 if (!_cheerSent) { _cheerSent = true; _barksBefore = client.Trace.Count(t => t == $"bark:{client.MemberIndex}"); net.Send(new CheerIntent()); _clock = 0; return; }
-                if (client.Trace.Count(t => t == $"bark:{client.MemberIndex}") > _barksBefore) { GD.Print($"[net] cheered: our hero's line came back from the server"); _clock = 0; _step = 8; }
+                if (client.Trace.Count(t => t == $"bark:{client.MemberIndex}") > _barksBefore) { GD.Print($"[net] cheered: our hero's line came back from the server"); _clock = 0; _step = 17; }
                 else if (_clock > 3) Finish("[net]", false, $"the cheer never came back as our bark (trace=[{string.Join(", ", client.Trace.Distinct())}])");
+                return;
+            }
+            case 17:
+            {
+                // the effect sync (v14): the server gives our hero a 2.5 s Haste on our cheer; our sheet must show it start and end.
+                // Both used to stay unsent (no MemberChanged), while every swing sent the whole sheet (MemberSync)
+                var hasted = main.Party.Members[client.MemberIndex].Effects.Has(Combat.StatusKind.Haste);
+                if (_hasteSeenAt < 0)
+                {
+                    if (hasted) { _hasteSeenAt = _clock; GD.Print($"[net] effect sync: the server's Haste reached our sheet after {_clock:0.0} s"); }
+                    else if (_clock > 6) Finish("[net]", false, "effect sync: the Haste the server gave us never reached our sheet");
+                    return;
+                }
+                if (!hasted) { GD.Print($"[net] effect sync: its end reached us {_clock - _hasteSeenAt:0.0} s later"); _clock = 0; _step = 8; }
+                else if (_clock - _hasteSeenAt > 8) Finish("[net]", false, "effect sync: the Haste ran out on the server but our sheet still shows it");
                 return;
             }
             case 8:
@@ -581,10 +787,35 @@ public partial class NetTestFlow : Node
     private int _swings, _bagBefore, _lootBefore;
     private bool _fightHeard;
     private bool _botAsked;
+    private int _guardPhase, _guardBot = -1, _guardIndex = -1, _guardCount;
+    private Guid _guardId;
+    private bool _heardMoved, _heardNotYours, _guardListening;
+    private void GuardHeard(string line)
+    {
+        if (line == ServerWorld.ItemMovedLine) _heardMoved = true;
+        else if (line == ServerWorld.NotYoursLine) _heardNotYours = true;
+    }
+    private bool _propsSpoiled, _doorTruth, _leverTruth;
+    private Dungeon.Props.Trap? _fakeTrap, _spoiledTrap;
+    private Dungeon.Props.Door? _spoiledDoor;
+    private Dungeon.Props.Lever? _spoiledLever;
+    private (bool Triggered, bool Disarmed) _trapTruth;
     private Guid _ghostId, _lostId;
+    private bool _enemiesSpoiled;
+    private Enemies.Enemy? _ghostEnemy;
+    private int _lostEnemy = -1, _countTruth, _enemyChecksSeen;
+    private Guid _countDrop;
+    private List<int>? _lastEnemyCheck;
+    private void NoteEnemyCheck(NetMessage m) { if (m is EnemyCheckMsg ec) { _lastEnemyCheck = ec.Alive; _enemyChecksSeen++; } }
+    private int _goldTruth;
+    private Guid _bagTruth;
+    private bool _stairsTruth;
     private Vector3? _botFollowFrom;
     private double _botPrint;
-    private bool _cheerSent;
+    private bool _cheerSent, _hasteGiven;
+    private double _hasteSeenAt = -1;
+    private int _partySyncs;
+    private void CountPartySync(NetMessage m) { if (m is PartySync) _partySyncs++; }
     private int _barksBefore;
     private int _killsBefore, _deathCues, _hurtCues, _hitFxBefore;
     private double _settle;
@@ -603,7 +834,7 @@ public partial class NetTestFlow : Node
     private Vector3? _startAfterPose, _hazardReturn, _safeReturn;
     private int _placements, _placementsAtFloor2;
     private bool _placedJoin;
-    private bool _goldGranted, _dealSentTwice, _tavernJoinSeen;
+    private bool _goldGranted, _dealSentTwice, _tavernJoinSeen, _potionsGranted, _propsRevealed;
     private int _shopPhase, _shopsBefore;
     private HashSet<int> _shopHeld = new();
     /// <summary>The server placed our body (a ForcePose): the start position on floor 1, and the arrival spot after a floor change.</summary>

@@ -93,7 +93,17 @@ public partial class FortuneDirector : Node
     {
         if (Main.Instance is not { } main || !main.InGame) return;
         // a load (or a join) rebuilds the members without a FloorBuilt: the new states need the held modifiers and the floor's wards too, and no card is pending any more
-        if (!ReferenceEquals(_refreshedMembers, main.Party.Members)) { _refreshedMembers = main.Party.Members; CloseShrine("gone", "the party's members were replaced (a load, a join, or a new member)"); Refresh(); OnFloorStart(); }
+        if (!ReferenceEquals(_refreshedMembers, main.Party.Members))
+        {
+            var before = _refreshedMembers;
+            var members = main.Party.Members;
+            _refreshedMembers = members;
+            // the party only grew (a player joined, a bot was called): the same states plus new ones. Nothing pending is stale
+            // (closing the card here lost a paid boon), and only the newcomers get this floor's wards
+            var grew = before != null && members.Length > before.Length && before.Select((m, i) => ReferenceEquals(m, members[i])).All(x => x);
+            if (grew) { Refresh(); WardNewcomers(before!.Length); }
+            else { CloseShrine("gone", "the party's members were replaced (a load or a new session)"); Refresh(); OnFloorStart(); }
+        }
         if (!Authority || main.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root) return;
         _secretTick -= delta;
         if (_secretTick > 0) return;
@@ -236,12 +246,15 @@ public partial class FortuneDirector : Node
     }
 
     /// <summary>Per-floor wards: Pennies for the Ferryman and Second Skin are refilled on every floor build.</summary>
-    public void OnFloorStart()
+    public void OnFloorStart() => WardNewcomers(0);
+
+    /// <summary>This floor's wards for the members from <paramref name="from"/> on (all of them on a floor build; only the newcomers when the party grows).</summary>
+    private void WardNewcomers(int from)
     {
         if (Party is not { } party) return;
         var ferryman = Boons.Has(Adv, "ferryman");
         var secondSkin = Boons.Has(Adv, "second_skin");
-        foreach (var m in party.Members)
+        foreach (var m in party.Members.Skip(from))
         {
             m.DeathWards = ferryman ? 1 : 0;
             m.NegateHits = secondSkin ? 1 : 0;

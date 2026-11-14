@@ -18,6 +18,8 @@ public sealed class NetCodecException : Exception
 public static class NetCodec
 {
     private const byte CompressedBit = 0x80;
+    /// <summary>The most a gzipped message may unpack to (the largest real one, an AI campaign's Welcome, is a few MB).</summary>
+    public const int MaxDecompressedBytes = 32 * 1024 * 1024;
 
     /// <summary>Compact copy of the save options: no indentation on the wire.</summary>
     public static readonly JsonSerializerOptions Json = new(SaveFormat.Options) { WriteIndented = false };
@@ -32,17 +34,17 @@ public static class NetCodec
             case Vitals v: return Binary(kind, w => BinaryLayout.Write(w, v));
         }
         var json = JsonSerializer.SerializeToUtf8Bytes(m, m.GetType(), Json);
-        if (json.Length <= Protocol.CompressThreshold)
+        if (json.Length > Protocol.CompressThreshold)
         {
-            var plain = new byte[json.Length + 1];
-            plain[0] = (byte)kind;
-            json.CopyTo(plain, 1);
-            return plain;
+            using var ms = new MemoryStream();
+            ms.WriteByte((byte)((byte)kind | CompressedBit));
+            using (var gz = new GZipStream(ms, CompressionLevel.Fastest, leaveOpen: true)) gz.Write(json);
+            if (ms.Length < json.Length) return ms.ToArray(); // text that does not shrink (a list of random ids) goes plain
         }
-        using var ms = new MemoryStream();
-        ms.WriteByte((byte)((byte)kind | CompressedBit));
-        using (var gz = new GZipStream(ms, CompressionLevel.Fastest, leaveOpen: true)) gz.Write(json);
-        return ms.ToArray();
+        var plain = new byte[json.Length + 1];
+        plain[0] = (byte)kind;
+        json.CopyTo(plain, 1);
+        return plain;
     }
 
     /// <summary>The kind of a packet without decoding it (dispatch, stats). Null for an empty or unknown packet.</summary>
@@ -74,7 +76,14 @@ public static class NetCodec
             {
                 using var gz = new GZipStream(new MemoryStream(bytes, 1, bytes.Length - 1), CompressionMode.Decompress);
                 using var outMs = new MemoryStream();
-                gz.CopyTo(outMs);
+                // a gzip bomb (a few KB unpacking to gigabytes) must not take the server's memory: nothing real is near this
+                var buffer = new byte[81920];
+                int n;
+                while ((n = gz.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    outMs.Write(buffer, 0, n);
+                    if (outMs.Length > MaxDecompressedBytes) throw new NetCodecException($"{type.Name} unpacks past {MaxDecompressedBytes / (1024 * 1024)} MB");
+                }
                 payload = outMs.ToArray();
             }
             else payload = new ReadOnlySpan<byte>(bytes, 1, bytes.Length - 1);

@@ -21,7 +21,12 @@ public partial class LootDrop : Area3D, IInteractable
 
     public void NotifyPicked() { if (QuestId != null) Core.EventBus.Instance.RaiseQuestItemPicked(QuestId); }
 
-    public string Prompt => Coins > 0 ? $"Pick up {Coins} gold" : Item.Rarity == Rarity.Common ? $"Pick up {Item}" : $"Pick up {Item} ({Item.Rarity})";
+    public string Prompt => Coins > 0 ? $"Pick up {Coins} gold"
+        : Core.Main.Instance?.Party?.Bag is { } bag && !bag.HasRoomFor(Item) ? $"Bag full: no room for {Item}"
+        : Item.Rarity == Rarity.Common ? $"Pick up {Item}" : $"Pick up {Item} ({Item.Rarity})";
+
+    /// <summary>What the screen says when E is pressed on an item the bag has no room for.</summary>
+    public const string BagFullLine = "The bag is full. Drop, sell or use something to make room.";
 
     private Node3D? _spin;
 

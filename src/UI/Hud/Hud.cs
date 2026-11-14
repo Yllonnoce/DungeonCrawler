@@ -474,10 +474,11 @@ public partial class Hud : Control
     {
         foreach (var p in _panels) p.Refresh();
         if (_shop.Visible) _shop.Refresh();
-        OnFloorChanged(Game.Instance.CurrentFloor, 0);
+        UpdateFloorLabel(Game.Instance.CurrentFloor);
     }
 
-    public void RefreshFloorLabel() => OnFloorChanged(Game.Instance.CurrentFloor, 0);
+    /// <summary>The floor name only. A refresh (every co-op bag, shop or dip sync calls one) must not run the floor-change cleanup: that closed an open shrine card as "gone" and lost the boon.</summary>
+    public void RefreshFloorLabel() => UpdateFloorLabel(Game.Instance.CurrentFloor);
 
     public void ToggleSkills()
     {
@@ -612,6 +613,11 @@ public partial class Hud : Control
         if (_shop.Visible && floor != _shop.Floor) _shop.Close(); // the merchant's wares are the floor's
         if (_shrine.Visible) _shrine.Close("gone"); // the altar stayed on the floor we left
         HideReadyCheck(); // the vote is over once the floor changes
+        UpdateFloorLabel(floor);
+    }
+
+    private void UpdateFloorLabel(int floor)
+    {
         var tier = Main.Instance?.Builder.CurrentTier?.DisplayName ?? "";
         var theme = Main.Instance?.Builder.CurrentTheme?.DisplayName;
         var place = theme != null && theme != tier ? $"{tier}, {theme}" : tier;

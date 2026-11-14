@@ -151,7 +151,7 @@ public partial class ShopScreen : PanelContainer
         var (buy, sell) = (_pendingBuy, _pendingSell);
         _pendingBuy = -1; _pendingSell = -1;
         if (buy >= 0) Buy(buy);
-        else if (sell >= 0 && _party.Bag[sell]?.Id == _pendingSellItem) Sell(sell); // the cell still holds what was asked about (by id: a co-op bag sync rebuilds the items)
+        else if (sell >= 0 && _party.Bag[sell]?.Id == _pendingSellItem) Sell(sell, _pendingSellItem); // the cell still holds what was asked about (by id: a co-op bag sync rebuilds the items)
     }
 
     public override void _ExitTree() => EventBus.Instance.GoldChanged -= OnGoldChanged;
@@ -266,18 +266,19 @@ public partial class ShopScreen : PanelContainer
     }
 
     /// <summary>A click on a cell: a wares cell buys it, a buyback cell buys it back, a bag cell sells it.</summary>
-    public void Clicked(ShopSection from, int index)
+    /// <param name="shown">The id of the item the cell showed; a bag sale carries it so a co-op server refuses if that cell changed hands meanwhile.</param>
+    public void Clicked(ShopSection from, int index, Guid? shown = null)
     {
         switch (from)
         {
             case ShopSection.Wares: TryBuy(_from + index); break; // cells are the segment's; the stock index is the party's
             case ShopSection.Buyback: _party.ShopBuyback(index); Refresh(); break;
-            default: TrySell(index); break;
+            default: TrySell(index, shown); break;
         }
     }
 
     /// <summary>A drag landed on another section: from the merchant's side it buys (or buys back), from the bag it sells.</summary>
-    public void Dropped(ShopSection from, int index) => Clicked(from, index);
+    public void Dropped(ShopSection from, int index, Guid? shown = null) => Clicked(from, index, shown);
 
     /// <summary>Buys stock slot <paramref name="index"/>, asking first when it is a legendary.</summary>
     public void TryBuy(int index)
@@ -297,7 +298,7 @@ public partial class ShopScreen : PanelContainer
     }
 
     /// <summary>Sells bag cell <paramref name="index"/>, asking first when it is a legendary (he never resells one).</summary>
-    public void TrySell(int index)
+    public void TrySell(int index, Guid? shown = null)
     {
         if (index >= 0 && index < _party.Bag.Capacity && _party.Bag[index] is { Rarity: Rarity.Legendary } item && Prices.Sellable(item))
         {
@@ -309,7 +310,7 @@ public partial class ShopScreen : PanelContainer
             _confirm.PopupCentered();
             return;
         }
-        Sell(index);
+        Sell(index, shown);
     }
 
     private void Buy(int index)
@@ -325,9 +326,9 @@ public partial class ShopScreen : PanelContainer
         Refresh();
     }
 
-    private void Sell(int index)
+    private void Sell(int index, Guid? shown = null)
     {
-        _party.ShopSell(BagSlot.Bag(index));
+        _party.ShopSell(BagSlot.Bag(index), shown);
         Refresh();
     }
 

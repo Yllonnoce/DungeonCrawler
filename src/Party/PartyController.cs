@@ -411,7 +411,14 @@ public partial class PartyController : Node3D
         if (Adventurers.Length == 0) return;
         var dt = (float)delta;
         _time += delta;
-        if (Net.NetSession.IsClient) return; // vitals, effects and falls all come from the server
+        if (Net.NetSession.IsClient)
+        {
+            // vitals, effects and falls all come from the server; the effect timers only count down here for the portraits.
+            // The server resends a sheet when an effect starts, ends or is refreshed (Net.MemberSync), not every second
+            foreach (var m in Members)
+                foreach (var e in m.Effects.Active) e.Remaining = Math.Max(0f, e.Remaining - dt);
+            return;
+        }
         for (var i = 0; i < Members.Length; i++)
         {
             var m = Members[i];
@@ -458,9 +465,8 @@ public partial class PartyController : Node3D
         foreach (var a in down)
         {
             var i = a.Index;
-            Members[i].Hp = 1;
+            a.Revive(); // first, while the hp still says down: Revive raises MemberRevived only then, and that is what tells every client to stand the body up (it set the hp to 1)
             Members[i].Effects.Clear();
-            a.Revive();
             EventBus.Instance.Log($"{Members[i].Name} gets back up.");
             EventBus.Instance.RaiseMemberChanged(i);
         }
@@ -568,8 +574,9 @@ public partial class PartyController : Node3D
         if (Trigger(m, TriggerKind.SoulSiphon) is > 0 and var mana) { m.Mana = Math.Min(m.Stats[Stat.MaxMana], m.Mana + mana); EventBus.Instance.Log($"{m.Name} siphons {mana:0} mana."); }
         if (Trigger(m, TriggerKind.Scavenger) is > 0 and var arrows && m.WeaponProfile.IsRanged && Game.Instance.Catalog.TryBase(ArrowDefId, out _))
         {
-            Bag.TryAdd(Game.Instance.Catalog.Create(ArrowDefId, (int)arrows));
-            EventBus.Instance.Log($"{m.Name} recovers {(int)arrows} arrow{((int)arrows == 1 ? "" : "s")}.");
+            // all or nothing (Inventory.TryAdd): the log never claims arrows the full bag could not take
+            if (Bag.TryAdd(Game.Instance.Catalog.Create(ArrowDefId, (int)arrows))) EventBus.Instance.Log($"{m.Name} recovers {(int)arrows} arrow{((int)arrows == 1 ? "" : "s")}.");
+            else EventBus.Instance.Log($"{m.Name} finds arrows to recover, but the bag is full.");
         }
         if (Trigger(m, TriggerKind.Momentum) is > 0 and var haste) { m.Effects.Apply(new StatusApplication(StatusKind.Haste, 3f * haste, 1)); m.Recalculate(); }
         if (index >= 0) EventBus.Instance.RaiseMemberChanged(index);
@@ -670,6 +677,8 @@ public partial class PartyController : Node3D
         trap.Kind = kind;
         trap.Floor = Game.Instance.CurrentFloor;
         trap.PlacedByParty = true;
+        // an id of its own (TrapPlacedEvt carries it), so a client can be told when a creature springs it on the server
+        trap.SpawnIndex = Net.PropCheck.NextPlacedTrapId(root.GetChildren().OfType<Trap>().Where(t => t.PlacedByParty).Select(t => t.SpawnIndex));
         root.AddChild(trap);
         trap.GlobalPosition = new Vector3(pos.X, actor.GlobalPosition.Y, pos.Z);
         EventBus.Instance.Log($"{BestBy(Stat.Dexterity).Name} sets a {kind.ToString().ToLower()} trap.");
@@ -678,6 +687,9 @@ public partial class PartyController : Node3D
 
     private void ScanForTrapsAndSecrets(float dt)
     {
+        // the server's call: it sends each reveal and its line. A client that looked for itself revealed what the server had
+        // not (its own idea of who stands where), the prop check could never take that back, and it asked again for good
+        if (Net.NetSession.IsClient) return;
         _trapScanTimer -= dt;
         if (_trapScanTimer > 0 || Main.Instance.Builder.FloorRoot is not { } root) return;
         _trapScanTimer = 0.25f;
@@ -746,15 +758,19 @@ public partial class PartyController : Node3D
     }
 
     /// <summary>Run a bag move for <paramref name="actor"/> (the anchor when null) and carry out what it asks for.</summary>
-    public BagResult BagMove(BagSlot from, BagSlot to, Adventurer? actor = null)
+    /// <param name="shown">On a client, the id of the item the screen showed in <paramref name="from"/> (this copy's item when null):
+    /// the server refuses the move if the cell holds something else by the time it lands. Single player ignores it.</param>
+    public BagResult BagMove(BagSlot from, BagSlot to, Adventurer? actor = null, Guid? shown = null)
     {
-        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.BagMoveIntent(from, to)); return new BagResult(); }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.BagMoveIntent(from, to, shown ?? BagActions.Get(Bag, Members, from)?.Id ?? Guid.Empty)); return new BagResult(); }
         return ApplyBag(BagActions.Move(Bag, Members, from, to), actor);
     }
 
-    public BagResult BagQuick(BagSlot slot, int focused, Adventurer? actor = null)
+    /// <summary>Double-click / right-click on <paramref name="slot"/>: equip on (or use on) <paramref name="focused"/>, or unequip to the bag.</summary>
+    /// <param name="shown">As <see cref="BagMove"/>'s. A client also names the focused hero: the server allows its own and its bots.</param>
+    public BagResult BagQuick(BagSlot slot, int focused, Adventurer? actor = null, Guid? shown = null)
     {
-        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.QuickActionIntent(slot)); return new BagResult(); }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.QuickActionIntent(slot, focused, shown ?? BagActions.Get(Bag, Members, slot)?.Id ?? Guid.Empty)); return new BagResult(); }
         return ApplyBag(BagActions.QuickAction(Bag, Members, slot, focused, Game.Instance.Skills), actor);
     }
 
@@ -762,7 +778,7 @@ public partial class PartyController : Node3D
     public bool AllocateStat(int index, Stat stat)
     {
         if (index < 0 || index >= Members.Length) return false;
-        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.AllocateStatIntent(stat.ToString())); return false; }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.AllocateStatIntent(stat.ToString(), index)); return false; } // the hero on the sheet: the server allows our own and our bots
         if (!Members[index].AllocateStat(stat)) return false;
         EventBus.Instance.RaiseMemberChanged(index);
         return true;
@@ -775,7 +791,7 @@ public partial class PartyController : Node3D
         var m = Members[index];
         var why = SkillRules.WhyCannotLearn(m, skill);
         if (why != null) { EventBus.Instance.Log(why + "."); return false; }
-        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.LearnSkillIntent(skill.Id)); return false; }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.LearnSkillIntent(skill.Id, index)); return false; } // as AllocateStat
         SkillRules.Learn(m, skill, Game.Instance.Skills);
         EventBus.Instance.PlaySfx("skill");
         EventBus.Instance.Log($"{m.Name} learns {skill.Name}.");
@@ -797,6 +813,7 @@ public partial class PartyController : Node3D
     {
         Save.SaveMapper.Restore(Bag, dto, Game.Instance.Catalog);
         Main.Instance?.Hud?.Refresh();
+        EventBus.Instance.RaiseBagChanged(); // the inventory redraws now, not on the player's next action
     }
 
     private BagResult ApplyBag(BagResult r, Adventurer? actor)
@@ -806,6 +823,7 @@ public partial class PartyController : Node3D
         if (r.Dropped != null) DropItem(r.Dropped, actor, quiet: true);
         if (r.PlaceTrap != "" && Enum.TryParse<TrapKind>(r.PlaceTrap, true, out var kind)) PlaceTrap(kind, actor);
         foreach (var i in r.ChangedMembers) EventBus.Instance.RaiseMemberChanged(i);
+        EventBus.Instance.RaiseBagChanged();
         return r;
     }
 
@@ -883,9 +901,10 @@ public partial class PartyController : Node3D
     }
 
     /// <summary>Sell a bag item to the merchant. Null on success (or on a client); else the refusal, also logged.</summary>
-    public string? ShopSell(BagSlot slot)
+    /// <param name="shown">As <see cref="BagMove"/>'s: a client names the item it means to sell.</param>
+    public string? ShopSell(BagSlot slot, Guid? shown = null)
     {
-        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopSellIntent(slot)); return null; }
+        if (Net.NetSession.IsClient) { Net.NetSession.Instance.Send(new Net.ShopSellIntent(slot, shown ?? (slot.IsBag ? Bag[slot.BagIndex]?.Id : null) ?? Guid.Empty)); return null; }
         if (!Net.NetSession.IsServer && !CanTradeAt(Local)) return "Not at the merchant."; // a server judged the asking peer's body already (ServerWorld.CanTrade)
         if (!slot.IsBag) { EventBus.Instance.Log("Nothing there."); return "Nothing there."; }
         var item = Bag[slot.BagIndex];

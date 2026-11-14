@@ -40,7 +40,39 @@ public partial class Stairs : Area3D, IInteractable
         Retint();
     }
 
+    /// <summary>The server's word on the seal (the state check): a client whose unlock went missing, or a sealed stairs it shows open, is put right.</summary>
+    public void SetLocked(bool locked)
+    {
+        if (Locked == locked) return;
+        Locked = locked;
+        Retint();
+    }
+
     private Area3D _landing = null!;
+    private Vector3 _landingCentre, _landingHalf;
+    private double _askTimer;
+    /// <summary>The local player answered (yes or no) since stepping onto the landing: the re-ask waits until they step off.</summary>
+    private bool _answered;
+    /// <summary>The local player dismissed the question (sealed stairs' "Turn back"): no re-ask until they step off.</summary>
+    public void MarkAnswered() => _answered = true;
+
+    /// <summary>
+    /// Recovery for the landing question: the entry signal is one-shot and can be missed (the body's collision layer was
+    /// off while it fell and got up, the ask was refused under a dialogue, a teleport). Twice a second, if the local
+    /// body stands on the landing, alive, with no question open and no answer given since it stepped on, ask again.
+    /// </summary>
+    public override void _PhysicsProcess(double delta)
+    {
+        _askTimer -= delta;
+        if (_askTimer > 0) return;
+        _askTimer = 0.5;
+        if (Main.Instance is not { InGame: true, Hud: { } hud } main || main.Party.Local is not { } me) return;
+        var p = _landing.ToLocal(me.GlobalPosition) - _landingCentre;
+        var on = Math.Abs(p.X) <= _landingHalf.X && Math.Abs(p.Y) <= _landingHalf.Y && Math.Abs(p.Z) <= _landingHalf.Z;
+        if (!on) { _answered = false; return; }
+        if (_answered || me.Downed || me.Parked || hud.StairsPromptOpen) return;
+        hud.AskStairs(this, me);
+    }
     private readonly HashSet<ulong> _onLanding = new();
 
     public override void _Ready()
@@ -96,6 +128,8 @@ public partial class Stairs : Area3D, IInteractable
         var askFront = landingFront + 0.3f;
         var shape = new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(Width, 2.8f, askFront - LandingBack) } };
         shape.Position = new Vector3(0, landingTop + 1.1f, (askFront + LandingBack) / 2f);
+        _landingCentre = shape.Position;
+        _landingHalf = ((BoxShape3D)shape.Shape).Size / 2f;
         _landing.AddChild(shape);
         _landing.BodyEntered += OnLandingEntered;
         _landing.BodyExited += OnLandingExited;
@@ -144,6 +178,7 @@ public partial class Stairs : Area3D, IInteractable
     /// <summary>The player said yes on the landing: a client asks the server (its vote in the ready-check), everyone else changes the floor here.</summary>
     public void Confirm(PartyController party, Adventurer actor)
     {
+        if (actor.IsLocal) _answered = true;
         if (Net.NetSession.IsClient)
         {
             if (Net.NetRefResolver.RefOf(this) is { } netRef) Net.NetSession.Instance.Send(new Net.StairsReadyIntent(netRef, true));
@@ -155,6 +190,7 @@ public partial class Stairs : Area3D, IInteractable
     /// <summary>The player said no: on a server that calls a running ready-check off; in solo it is nothing.</summary>
     public void Decline(Adventurer? actor)
     {
+        if (actor?.IsLocal != false) _answered = true;
         if (Net.NetSession.IsClient)
         {
             if (Net.NetRefResolver.RefOf(this) is { } netRef) Net.NetSession.Instance.Send(new Net.StairsReadyIntent(netRef, false));

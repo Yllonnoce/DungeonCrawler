@@ -25,15 +25,19 @@ public abstract record NetMessage
 public sealed record NetPlayerDto(string Name, int MemberIndex, string ClassId, int PeerId, bool Online, string? BotOwner = null);
 
 /// <summary>An enemy that was not part of the floor plan (summoned, horde) and so must be described to a joiner.</summary>
-/// <summary>A dynamic enemy for a joiner or a spawn message; EliteName/EliteAffixes (v8, comma-joined enum names) when it is an elite.</summary>
-public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, float Z, float Yaw, float Hp, string? HordeId = null, string? EliteName = null, string? EliteAffixes = null);
+/// <summary>
+/// A dynamic enemy for a joiner or a spawn message; EliteName/EliteAffixes (v8, comma-joined enum names) when it is an elite.
+/// SpawnIndex (v14): a planned enemy's index (-2 the boss, -1 dynamic), so one the enemy check sends again keeps its identity.
+/// </summary>
+public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, float Z, float Yaw, float Hp, string? HordeId = null, string? EliteName = null, string? EliteAffixes = null, int SpawnIndex = -1);
 
 [Msg(MsgKind.Hello)] public sealed record Hello(int Protocol, string PlayerName, string ClassId, string Build) : NetMessage;
 [Msg(MsgKind.Reject)] public sealed record Reject(string Reason) : NetMessage;
 [Msg(MsgKind.Welcome)] public sealed record Welcome(
     int YourPeerId, int YourMemberIndex, ulong GameSeed, int CurrentFloor, double PlaySeconds, bool Victory,
     AdventureDto? Adventure, PartySnapshot BuildSnapshot, FloorStateDto FloorState, List<DynamicEnemyDto> DynamicEnemies,
-    PartyDto Party, List<NetPlayerDto> Players, string Objective, int ServerTick, ulong LayoutHash = 0, string? FloorObjective = null) : NetMessage;
+    PartyDto Party, List<NetPlayerDto> Players, string Objective, int ServerTick, ulong LayoutHash = 0, string? FloorObjective = null,
+    int FloorEpoch = 0) : NetMessage; // FloorEpoch (v14): which build of the floor the state describes (the server counts every build; see WorldCheck.SameBuild)
 [Msg(MsgKind.Ready)] public sealed record Ready(int Floor) : NetMessage;
 [Msg(MsgKind.PlayerJoined)] public sealed record PlayerJoined(NetPlayerDto Player) : NetMessage;
 [Msg(MsgKind.PlayerLeft)] public sealed record PlayerLeft(int MemberIndex, string Name) : NetMessage;
@@ -48,11 +52,16 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 
 [Msg(MsgKind.AttackIntent)] public sealed record AttackIntent(bool Heavy, bool Perfect, NetVec Position, float Yaw, float Pitch) : NetMessage;
 [Msg(MsgKind.InteractIntent)] public sealed record InteractIntent(string Ref) : NetMessage;
-[Msg(MsgKind.BagMoveIntent)] public sealed record BagMoveIntent(BagSlot From, BagSlot To) : NetMessage;
-[Msg(MsgKind.QuickActionIntent)] public sealed record QuickActionIntent(BagSlot Slot) : NetMessage;
+// v14: a bag intent names the item the client saw in the cell it acts on (Expect; Guid.Empty asks no check). The bag is shared
+// and changed by many hands at once (bots drink and pick up, arrows run out, other players move things), so an index alone can
+// point at a different item by the time it lands: the server refuses a mismatch and re-sends the bag instead of destroying,
+// selling or dropping the wrong thing. Member (v14) is the hero the screen acts for (-1: the sender's own); the server allows
+// the sender's own hero and the bots they own.
+[Msg(MsgKind.BagMoveIntent)] public sealed record BagMoveIntent(BagSlot From, BagSlot To, Guid Expect = default) : NetMessage;
+[Msg(MsgKind.QuickActionIntent)] public sealed record QuickActionIntent(BagSlot Slot, int Member = -1, Guid Expect = default) : NetMessage;
 [Msg(MsgKind.CycleAbilityIntent)] public sealed record CycleAbilityIntent(int Dir) : NetMessage;
-[Msg(MsgKind.AllocateStatIntent)] public sealed record AllocateStatIntent(string Stat) : NetMessage;
-[Msg(MsgKind.LearnSkillIntent)] public sealed record LearnSkillIntent(string SkillId) : NetMessage;
+[Msg(MsgKind.AllocateStatIntent)] public sealed record AllocateStatIntent(string Stat, int Member = -1) : NetMessage;
+[Msg(MsgKind.LearnSkillIntent)] public sealed record LearnSkillIntent(string SkillId, int Member = -1) : NetMessage;
 [Msg(MsgKind.RespecIntent)] public sealed record RespecIntent : NetMessage;
 [Msg(MsgKind.DialogueChoiceIntent)] public sealed record DialogueChoiceIntent(string NpcId, DialogueEffect Effect, string? Flag = null) : NetMessage;
 [Msg(MsgKind.ChatIntent)] public sealed record ChatIntent(string Text) : NetMessage;
@@ -64,12 +73,14 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.FloorChange)] public sealed record FloorChange(
     int Floor, int Delta, FloorPlan? Plan, PartySnapshot BuildSnapshot, FloorStateDto? State,
     List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0, string? Objective = null,
-    List<int>? EliteSpawns = null) : NetMessage; // EliteSpawns (v10): the floor's elite spawn indices, so a first visit's roster is the server's and never the client's own roll
+    List<int>? EliteSpawns = null, int Epoch = 0, bool Resync = false) : NetMessage; // EliteSpawns (v10): the floor's elite spawn indices, so a first visit's roster is the server's and never the client's own roll.
+// Epoch (v14): the server's count of floor builds (a wipe's rebuild of the same number is a new one). Resync (v14): the answer to a
+// FloorResyncIntent, the floor as it stands now (State is a live capture), to one client whose change never arrived or failed to build
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
 [Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;
 [Msg(MsgKind.ShopBuyIntent)] public sealed record ShopBuyIntent(int StockIndex) : NetMessage;
-[Msg(MsgKind.ShopSellIntent)] public sealed record ShopSellIntent(BagSlot Slot) : NetMessage;
+[Msg(MsgKind.ShopSellIntent)] public sealed record ShopSellIntent(BagSlot Slot, Guid Expect = default) : NetMessage; // Expect (v14): as BagMoveIntent's
 /// <summary>The floor's sold slots, the purse and (v7) the merchant's buyback ledger; a null ledger leaves the client's as it is.</summary>
 [Msg(MsgKind.ShopSync)] public sealed record ShopSync(int Floor, List<int> Sold, int Gold, List<Save.SoldDto>? Buyback = null) : NetMessage;
 [Msg(MsgKind.ShopBuybackIntent)] public sealed record ShopBuybackIntent(int Index) : NetMessage;
@@ -188,10 +199,31 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.DismissBotIntent)] public sealed record DismissBotIntent(int Member) : NetMessage;
 /// <summary>A member swung, shot or cast (the server saw it): every other screen plays the clip on that body.</summary>
 [Msg(MsgKind.SwingEvt)] public sealed record SwingEvt(int Member, byte AbilityKind, bool Ranged) : NetMessage;
-/// <summary>Every item lying on the server's current floor, by id (the item check): a client drops any it shows that is not listed and asks for the listed ones it lacks.</summary>
-[Msg(MsgKind.LootManifest)] public sealed record LootManifest(int Floor, List<Guid> Ids) : NetMessage;
-/// <summary>A client lacks these listed items (the item check): the server sends each one's LootSpawned to that client.</summary>
-[Msg(MsgKind.LootResyncIntent)] public sealed record LootResyncIntent(int Floor, List<Guid> Missing) : NetMessage;
+/// <summary>
+/// Every item lying on the server's current floor, by id (the item check): a client drops any it shows that is not listed and
+/// asks for the listed ones it lacks. Epoch (v14) names the floor build, so a check about a rebuilt floor of the same number is
+/// not applied to the old one; Counts (v14, parallel to Ids: a pile's coins or a stack's count) let a client ask again for an
+/// item whose count it shows wrong.
+/// </summary>
+[Msg(MsgKind.LootManifest)] public sealed record LootManifest(int Floor, List<Guid> Ids, int Epoch = 0, List<int>? Counts = null) : NetMessage;
+/// <summary>A client lacks these listed items (the item check): the server sends each one's LootSpawned to that client. Epoch (v14): an ask about an older build is ignored.</summary>
+[Msg(MsgKind.LootResyncIntent)] public sealed record LootResyncIntent(int Floor, List<Guid> Missing, int Epoch = 0) : NetMessage;
+/// <summary>The state check: fingerprints of the shared bag, each member's lasting state, the purse, and whether the way down is sealed (see <see cref="StateCheck"/>).</summary>
+[Msg(MsgKind.StateCheckMsg)] public sealed record StateCheckMsg(int Floor, uint Bag, int Gold, List<uint> Members, bool StairsLocked) : NetMessage;
+/// <summary>A client's copy differs from the state check: send these again (the server answers at most once per check interval).</summary>
+[Msg(MsgKind.StateResyncIntent)] public sealed record StateResyncIntent(bool Bag, List<int> Members, bool Gold) : NetMessage;
+/// <summary>The prop check: the fingerprint of the server's props on <paramref name="Floor"/> (<see cref="PropCheck.Hash"/>), sent with each item check.</summary>
+[Msg(MsgKind.PropCheckMsg)] public sealed record PropCheckMsg(int Floor, uint Hash) : NetMessage;
+/// <summary>A client's props differ from the prop check: send it the whole prop state (answered at most once per check interval).</summary>
+[Msg(MsgKind.PropResyncIntent)] public sealed record PropResyncIntent(int Floor) : NetMessage;
+/// <summary>The server's props on <paramref name="Floor"/>, to one client: it moves its own to match, silently (<c>PropSync.ApplyLive</c>).</summary>
+[Msg(MsgKind.PropStateMsg)] public sealed record PropStateMsg(int Floor, PropStateDto State) : NetMessage;
+/// <summary>The enemy check: the net ids of every living enemy on the server's floor build <paramref name="Epoch"/>, with each item check (<see cref="WorldCheck.CompareEnemies"/>).</summary>
+[Msg(MsgKind.EnemyCheckMsg)] public sealed record EnemyCheckMsg(int Floor, int Epoch, List<int> Alive) : NetMessage;
+/// <summary>A client has no living copy of these listed enemies: the server sends each one's EnemySpawned to that client (once per check interval).</summary>
+[Msg(MsgKind.EnemyResyncIntent)] public sealed record EnemyResyncIntent(int Floor, int Epoch, List<int> Missing) : NetMessage;
+/// <summary>A client's floor change never arrived or failed to build (its watchdog): the server sends it the floor as it stands, as a FloorChange with Resync set.</summary>
+[Msg(MsgKind.FloorResyncIntent)] public sealed record FloorResyncIntent(int Floor, int Epoch, string Reason) : NetMessage;
 
 /// <summary>Kind &lt;-&gt; type, built once from the <see cref="MsgAttribute"/> tags.</summary>
 public static class MsgRegistry
@@ -206,6 +238,7 @@ public static class MsgRegistry
             if (!t.IsSubclassOf(typeof(NetMessage)) || t.IsAbstract) continue;
             var attr = (MsgAttribute?)Attribute.GetCustomAttribute(t, typeof(MsgAttribute));
             if (attr == null) throw new InvalidOperationException($"{t.Name} needs a [Msg] attribute");
+            if ((byte)attr.Kind >= 0x80) throw new InvalidOperationException($"{t.Name} has kind {(byte)attr.Kind}: the kind byte's top bit is the gzip flag, so kinds stop at 127 (use a free number below)");
             if (TypeByKind.ContainsKey(attr.Kind)) throw new InvalidOperationException($"{t.Name} reuses kind {attr.Kind} of {TypeByKind[attr.Kind].Name}");
             KindByType[t] = attr.Kind;
             TypeByKind[attr.Kind] = t;

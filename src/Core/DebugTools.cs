@@ -2316,7 +2316,7 @@ public partial class DebugTools : Node
                 if (contents?.Plan == null) { GD.Print("[plan] RESULT FAIL: floor 7 was not built from a plan"); break; }
                 var enemies = root.GetChildren().OfType<Enemy>().Count(e => e.SpawnIndex >= 0 && e.SpawnIndex < DungeonBuilder.ViewerOrcSpawnIndex); // the plan's creatures: not the viewer orc, not fortune's drift-cache ambushers (91000+)
                 var extraChests = root.GetChildren().OfType<Dungeon.Props.Chest>().Count(c => c.SpawnIndex >= FloorContents.ExtraIndexBase);
-                var extraTraps = root.GetChildren().OfType<Dungeon.Props.Trap>().Count(t => t.SpawnIndex >= FloorContents.ExtraIndexBase);
+                var extraTraps = root.GetChildren().OfType<Dungeon.Props.Trap>().Count(t => t.SpawnIndex >= FloorContents.ExtraIndexBase && !t.PlacedByParty);
                 var grouped = contents.Enemies.Count(e => e.CollectiveId != null);
                 var data = main.BuildSaveData("plan");
                 var back = SaveFormat.Deserialize(SaveFormat.Serialize(data));

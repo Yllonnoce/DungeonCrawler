@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes.</summary>
 public static class Protocol
 {
-    public const int Version = 12;
+    public const int Version = 14;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 100;
+    public const int MessageKindCount = 108;
     /// <summary>Seconds between the server's item checks (<see cref="LootManifest"/>).</summary>
     public const float LootCheckSeconds = 4f;
     public const int DefaultPort = 7777;
@@ -13,12 +13,18 @@ public static class Protocol
     public const int PoseHz = 30;
     public const int SnapshotHz = 20;
     public const int VitalsHz = 10;
+    /// <summary>Unchanged Vitals are skipped, but sent at least this often (a heartbeat for joiners and lost copies).</summary>
+    public const float VitalsHeartbeatSeconds = 1f;
     /// <summary>Clients render remote bodies this far behind the newest snapshot so there is always something to interpolate toward.</summary>
     public const int InterpolationMs = 100;
     /// <summary>Beyond this the body freezes rather than guessing further.</summary>
     public const int MaxExtrapolationMs = 150;
-    /// <summary>JSON payloads above this are gzipped (flag bit in the kind byte).</summary>
-    public const int CompressThreshold = 8 * 1024;
+    /// <summary>
+    /// JSON payloads above this are gzipped (flag bit in the kind byte), when that makes them smaller. It was 8 KB; at 512 B
+    /// a member's sheet (PartySync, about 1 KB of JSON, sent on every kill for every member) goes out at about half the
+    /// size, and so do full bags and long item lists. Every build already decodes the flag, so this is not a wire change.
+    /// </summary>
+    public const int CompressThreshold = 512;
     public const int MaxNameLength = 16;
     public const int MaxChatLength = 200;
     /// <summary>Snapshots list an enemy when it is awake or moved, and every enemy at least this often.</summary>
@@ -77,4 +83,14 @@ public enum MsgKind : byte
     AddBotIntent, DismissBotIntent, SwingEvt,
     // item check (v12): the server's list of the items on the floor every few seconds; a client drops what is not on it and asks for what it lacks
     LootManifest, LootResyncIntent,
+    // state check (v13): the server's fingerprints of the bag, each member, the purse and the stairs lock; a client asks again for what differs.
+    // The kind byte's top bit is NetCodec's gzip flag, so 127 is the last usable kind (LootResyncIntent is 126): new kinds fill the free
+    // numbers below, here 31.., and MsgRegistry refuses any kind of 128 or more.
+    StateCheckMsg = 31, StateResyncIntent = 32,
+    // prop check (v14): the server's fingerprint of the floor's props with each item check; a client whose own differs asks for the whole
+    // prop state, sent to it alone (doors, levers, chests, secrets, traps, barrels, the shrine, the party's traps)
+    PropCheckMsg = 37, PropResyncIntent = 38, PropStateMsg = 39,
+    // enemy check and floor resync (v14): the server's living enemies with each item check, a client's ask for the ones it lacks,
+    // and a client's ask for the whole floor when its floor change never arrived or would not build (its watchdog)
+    EnemyCheckMsg = 54, EnemyResyncIntent = 55, FloorResyncIntent = 56,
 }

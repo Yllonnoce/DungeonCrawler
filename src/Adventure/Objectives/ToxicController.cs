@@ -40,7 +40,7 @@ public partial class ToxicController : ObjectiveController
     {
         get
         {
-            var anchor = Main.Instance?.Party?.Anchor;
+            var anchor = Main.Instance?.Party is { HasBodies: true } party ? party.Anchor : null; // a server with nobody online has no body to ask
             if (anchor == null) return "The gas is rising. The stairs lie low and far.";
             var cell = DungeonBuilder.WorldToCell(anchor.GlobalPosition);
             var danger = DangerAt(cell);

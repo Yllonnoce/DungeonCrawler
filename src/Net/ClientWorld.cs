@@ -63,11 +63,25 @@ public partial class ClientWorld : Node
                 Trace.Add("welcome");
                 _roster.Clear();
                 foreach (var p in w.Players) _roster[p.MemberIndex] = p;
-                Main.Instance.StartClientSession(w);
+                _epoch = w.FloorEpoch;
+                try { Main.Instance.StartClientSession(w); }
+                catch (Exception e)
+                {
+                    // the server waits for a Ready that would never come: leave with the reason rather than sit in a half-built floor
+                    GD.PushError($"[net] the Welcome's floor would not build: {e}");
+                    Main.Instance.OnClientLeft("The server's floor would not build here; try joining again.");
+                }
             }
             return;
         }
         MessageReceived?.Invoke(m);
+        // one message that throws costs that message only, and says which it was (it used to escape the transport's poll unnamed)
+        try { Dispatch(m); }
+        catch (Exception e) { GD.PushError($"[net] {m.Kind} failed: {e.GetType().Name}: {e.Message}"); }
+    }
+
+    private void Dispatch(NetMessage m)
+    {
         switch (m)
         {
             case WorldSnapshot s: ApplySnapshot(s); break;
@@ -95,6 +109,10 @@ public partial class ClientWorld : Node
             case LootSpawned ls: OnLootSpawned(ls); break;
             case LootRemoved lr: OnLootRemoved(lr); break;
             case LootManifest lm: OnLootManifest(lm); break;
+            case EnemyCheckMsg ec: OnEnemyCheck(ec); break;
+            case StateCheckMsg sc: OnStateCheck(sc); break;
+            case PropCheckMsg pc: OnPropCheck(pc); break;
+            case PropStateMsg ps2: OnPropState(ps2); break;
             case PropEvt pe: OnProp(pe); break;
             case TrapPlacedEvt tp: OnTrapPlaced(tp.Trap); break;
             case EnemyHurt eh: if (_enemies.TryGetValue(eh.NetId, out var hurt) && GodotObject.IsInstanceValid(hurt)) hurt.ClientHurt(eh.Amount, eh.Hp, (Combat.HitFlavor)eh.Flavor, eh.ByMember); break;
@@ -110,7 +128,14 @@ public partial class ClientWorld : Node
                 Trace.Add(rm.Total == 0 ? "ready-done" : "ready-check");
                 break;
             case RunRecapEvt rr: Main.Instance.Hud?.ShowRunRecap(rr.Recap, rr.Button, rr.Recap.Victory ? null : () => { Main.Instance.OnClientLeft("The contract is void."); Main.Instance.Menu?.OpenRecords(); }); Trace.Add("recap"); break; // a dead world is nothing to stay in
-            case MemberDownedEvt md: if (md.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[md.Index].ShowDowned(); EventBus.Instance.RaiseMemberDowned(md.Index); break;
+            case MemberDownedEvt md:
+                if (md.Index < Main.Instance.Party.Adventurers.Length)
+                {
+                    Main.Instance.Party.Members[md.Index].Hp = 0; // the state agrees with the pose at once (the vitals follow), so nothing reads the body as standing in between
+                    Main.Instance.Party.Adventurers[md.Index].ShowDowned();
+                }
+                EventBus.Instance.RaiseMemberDowned(md.Index);
+                break;
             case MemberRevivedEvt mr: if (mr.Index < Main.Instance.Party.Adventurers.Length) Main.Instance.Party.Adventurers[mr.Index].Revive(); break;
             case LevelUpEvt lu: EventBus.Instance.RaiseLevelUp(lu.Index); break;
             case SwingEvt sw:
@@ -125,7 +150,12 @@ public partial class ClientWorld : Node
             case BossDefeatedEvt bd: OnBossDefeated(bd.Floor); break;
             case ObjectiveDoneEvt od: OnObjectiveDone(od); break;
             case ObjectiveStateMsg os: Adventure.Objectives.ObjectiveController.Instance?.ApplyNet(os.State); break;
-            case FloorChangeBegin fb: Main.Instance.Overlay.Open("The dungeon stirs...", fb.Status); Main.Instance.Party.InputLocked = true; break;
+            case FloorChangeBegin fb: Main.Instance.Overlay.Open("The dungeon stirs...", fb.Status); Main.Instance.Party.InputLocked = true; _floorWatch.Begin(NetSession.Instance.Now); break;
+            case FloorChange when TestDropFloorChanges > 0:
+                TestDropFloorChanges--; // the net test loses one on purpose: the watchdog must fetch the floor again
+                GD.Print("[net] test: dropped a FloorChange; the floor watchdog must ask for it again");
+                Trace.Add("floor-dropped");
+                break;
             case FloorChange fc: OnFloorChange(fc); break;
             case QuestSync qs: AdventureDirector.Instance.Quests[qs.Quest.Id] = qs.Quest; EventBus.Instance.RaiseQuestChanged(qs.Quest); break;
             case NarrationMsg n:
@@ -179,25 +209,108 @@ public partial class ClientWorld : Node
         }
     }
 
+    /// <summary>The floor build this client holds (the server's count, from the Welcome and each FloorChange; 0 unknown).</summary>
+    private int _epoch;
+    /// <summary>Watches a floor change from its FloorChangeBegin to its build (<see cref="FloorWatchdog"/>).</summary>
+    private readonly FloorWatchdog _floorWatch = new() { TimeoutSeconds = NetSession.Instance?.TestClient == true ? 4 : 20 };
+    /// <summary>The net test drops this many FloorChanges on purpose (the watchdog must recover them).</summary>
+    public int TestDropFloorChanges { get; set; }
+
     private void OnFloorChange(FloorChange fc)
     {
-        Main.Instance.ApplyFloorChange(fc);
+        // our ask crossed the change it was about: the build we hold is already this one
+        if (fc.Resync && !_floorWatch.Pending && fc.Epoch != 0 && fc.Epoch == _epoch && fc.Floor == Game.Instance.CurrentFloor) { GD.Print($"[net] floor {fc.Floor} (build {fc.Epoch}) sent again, already built"); return; }
+        try { Main.Instance.ApplyFloorChange(fc); }
+        catch (Exception e)
+        {
+            // the loading screen stays up and the controls locked: the watchdog asks for the floor again shortly, then rejoins
+            GD.PushError($"[net] floor {fc.Floor} would not build: {e}");
+            _floorWatch.Failed(NetSession.Instance.Now);
+            Trace.Add("floor-failed");
+            return;
+        }
+        _floorWatch.Done();
+        _epoch = fc.Epoch;
+        _enemySpawnedAt.Clear();
         Reindex();
         _players.Clear();
         _t.Send(NetPeers.Server, NetCodec.Encode(new Ready(fc.Floor)));
+        if (fc.Resync) { GD.Print($"[net] floor {fc.Floor} (build {fc.Epoch}) rebuilt from the server's resend"); Trace.Add("floor-resync"); }
         Trace.Add($"floor:{fc.Floor}");
     }
+
+    /// <summary>The watchdog's turn: ask the server for the floor again, or rejoin when asking has not helped.</summary>
+    private void TickFloorWatch()
+    {
+        switch (_floorWatch.Tick(NetSession.Instance.Now))
+        {
+            case FloorWatchdog.Step.Ask:
+                var why = _floorWatch.Failures > 0 ? "our build of it failed" : "no floor change arrived";
+                GD.Print($"[net] floor watchdog: {why}; asking the server for the floor again (ask {_floorWatch.Asks})");
+                NetSession.Instance.Send(new FloorResyncIntent(Game.Instance.CurrentFloor, _epoch, why));
+                Trace.Add("floor-ask");
+                break;
+            case FloorWatchdog.Step.Rejoin:
+                Rejoin("the floor change never completed");
+                break;
+        }
+    }
+
+    /// <summary>
+    /// The last resort: leave and join again under the same name, which the server treats as a rejoin with a whole new
+    /// Welcome (what "reconnecting fixed it" did by hand). With no address to dial, back to the title with the reason.
+    /// </summary>
+    private void Rejoin(string why)
+    {
+        Trace.Add("rejoin");
+        if (NetSession.Instance.ServerUrl is not { } url) { Main.Instance.OnClientLeft($"Lost the floor ({why}); join again."); return; }
+        GD.PushWarning($"[net] {why}: rejoining {url} as {PlayerName}");
+        var name = PlayerName;
+        var cls = _h.ClassId;
+        Callable.From(() => NetSession.Instance.Connect(url, name, cls)).CallDeferred();
+    }
+
+    /// <summary>When this client spawned an enemy from a server message (the enemy check spares one that new).</summary>
+    private readonly Dictionary<int, double> _enemySpawnedAt = new();
 
     private void OnEnemySpawned(DynamicEnemyDto d)
     {
         var main = Main.Instance;
-        if (main?.Builder.FloorRoot == null || _enemies.ContainsKey(d.NetId)) return;
-        var e = main.Builder.SpawnEnemy(d.DefId, new Vector3(d.X, d.Y, d.Z), Game.Instance.CurrentFloor, netId: d.NetId,
+        if (main?.Builder.FloorRoot is not { } root) return;
+        // a living copy already here (the index can lag the tree, so look at the tree): nothing to do. A corpse under a net id
+        // the server says is alive (the enemy check's resend) makes way for the living one
+        var have = root.GetChildren().OfType<Enemy>().Where(e => e.NetId == d.NetId && !e.IsQueuedForDeletion()).ToList();
+        if (have.FirstOrDefault(e => e.IsAlive) is { } alive) { _enemies[d.NetId] = alive; return; }
+        foreach (var corpse in have) corpse.QueueFree();
+        var e = main.Builder.SpawnEnemy(d.DefId, new Vector3(d.X, d.Y, d.Z), Game.Instance.CurrentFloor, spawnIndex: d.SpawnIndex >= 0 || d.SpawnIndex == -2 ? d.SpawnIndex : -1, netId: d.NetId,
             elite: d.EliteName != null ? new EliteRoll(EliteRules.Decode(d.EliteAffixes), d.EliteName) : null);
         if (e == null) return;
         e.Rotation = new Vector3(0, d.Yaw, 0);
         if (d.HordeId != null) { e.SetSwarmDetail(); e.HordeId = d.HordeId; }
         _enemies[d.NetId] = e;
+        _enemySpawnedAt[d.NetId] = NetSession.Instance.Now;
+    }
+
+    /// <summary>
+    /// The enemy check (<see cref="EnemyCheckMsg"/>): free a living enemy the server has no living copy of (a ghost: its death
+    /// or its corpse's end never reached us, or the floor state brought it back), and ask for the living ones we lack.
+    /// </summary>
+    private void OnEnemyCheck(EnemyCheckMsg ec)
+    {
+        if (Root is not { } root || Main.Instance is not { InGame: true } main || main.Rebuilding || ec.Floor != Game.Instance.CurrentFloor || main.Builder.CurrentFloor != ec.Floor || !WorldCheck.SameBuild(_epoch, ec.Epoch)) return;
+        var now = NetSession.Instance.Now;
+        var local = root.GetChildren().OfType<Enemy>().Where(e => !e.IsQueuedForDeletion()).ToList();
+        var (free, missing) = WorldCheck.CompareEnemies(local.Select(e => (e.NetId, e.IsAlive, _enemySpawnedAt.TryGetValue(e.NetId, out var at) ? now - at : double.MaxValue)).ToList(), ec.Alive);
+        foreach (var i in free)
+        {
+            if (NetSession.Instance.TestClient) GD.Print($"[net] enemy check: freeing {local[i].Name} ({local[i].Profile.Id}, net id {local[i].NetId}): the server has no living copy");
+            local[i].QueueFree();
+        }
+        if (free.Count > 0) Reindex();
+        if (missing.Count > 0) NetSession.Instance.Send(new EnemyResyncIntent(ec.Floor, ec.Epoch, missing.Take(64).ToList()));
+        if (free.Count == 0 && missing.Count == 0) return;
+        GD.Print($"[net] enemy check: freed {free.Count} creature(s) the server does not have, asked for {missing.Count} missing");
+        Trace.Add("enemy-check");
     }
 
     /// <summary>
@@ -231,6 +344,26 @@ public partial class ClientWorld : Node
     private void OnLootSpawned(LootSpawned ls)
     {
         if (Root is not { } root) return;
+        // idempotent: an item already shown (a resend that crossed the original, an ask repeated on a slow link, the item
+        // check's answer to a count that differs) is brought up to date in place instead of shown twice
+        var at = new Vector3(ls.Position.X, ls.Position.Y, ls.Position.Z);
+        var shown = root.GetChildren().OfType<Items.LootDrop>().Where(d => !d.Taken && d.Item.Id == ls.Item.Id).ToList();
+        if (shown.Count > 0)
+        {
+            var keep = shown[0];
+            foreach (var extra in shown.Skip(1)) extra.QueueFree();
+            if ((keep.Coins > 0) == (ls.Coins > 0)) // the same kind of thing on the floor: its look stays, its count and place follow the server
+            {
+                keep.Item = Save.SaveMapper.FromDto(ls.Item, Game.Instance.Catalog);
+                keep.Coins = ls.Coins;
+                keep.KeyIndex = ls.KeyIndex;
+                keep.QuestId = ls.QuestKey;
+                keep.GlobalPosition = at;
+                Trace.Add("loot-updated");
+                return;
+            }
+            keep.QueueFree(); // a pile became an item or the other way: its look is built once, so make it again
+        }
         var drop = GD.Load<PackedScene>("res://scenes/Props/LootDrop.tscn").Instantiate<Items.LootDrop>();
         drop.Item = Save.SaveMapper.FromDto(ls.Item, Game.Instance.Catalog);
         drop.Coins = ls.Coins;
@@ -248,25 +381,42 @@ public partial class ClientWorld : Node
             if (d.Item.Id == lr.Id && !d.Taken) d.QueueFree(); // every copy: a drop shown twice must not leave a ghost behind
     }
 
+    /// <summary>The state check (<see cref="StateCheckMsg"/>): compare our copies of the bag, the members and the purse with the server's fingerprints and ask again for what differs; take the server's word on the stairs seal.</summary>
+    private void OnStateCheck(StateCheckMsg sc)
+    {
+        if (Root is not { } root || Main.Instance is not { InGame: true } main || main.Rebuilding || sc.Floor != Game.Instance.CurrentFloor || main.Builder.CurrentFloor != sc.Floor) return;
+        var party = main.Party;
+        var bag = Save.SaveMapper.ToDto(party.Bag);
+        var bagDiffers = StateCheck.BagHash(bag) != sc.Bag;
+        var members = new List<int>();
+        for (var i = 0; i < Math.Min(sc.Members.Count, party.Members.Length); i++)
+            if (StateCheck.MemberHash(Save.SaveMapper.ToDto(party.Members[i])) != sc.Members[i]) members.Add(i);
+        var goldDiffers = party.Gold != sc.Gold;
+        if (root.GetNodeOrNull<Dungeon.Stairs>("DownStairs") is { } stairs && stairs.Locked != sc.StairsLocked)
+        {
+            GD.Print($"[net] state check: the stairs down are {(sc.StairsLocked ? "sealed" : "open")} on the server; fixing ours");
+            stairs.SetLocked(sc.StairsLocked);
+            Trace.Add("stairs-check");
+        }
+        if (!bagDiffers && members.Count == 0 && !goldDiffers) return;
+        GD.Print($"[net] state check: {(bagDiffers ? "bag " : "")}{(members.Count > 0 ? $"member(s) {string.Join(",", members)} " : "")}{(goldDiffers ? "purse " : "")}differ from the server; asking again");
+        NetSession.Instance.Send(new StateResyncIntent(bagDiffers, members, goldDiffers));
+        Trace.Add("state-check");
+    }
+
     /// <summary>The item check (<see cref="LootManifest"/>): drop what the server no longer has, ask for what we lack.</summary>
     private void OnLootManifest(LootManifest lm)
     {
-        if (Root is not { } root || lm.Floor != Game.Instance.CurrentFloor || Main.Instance?.Builder.CurrentFloor != lm.Floor) return;
-        var listed = lm.Ids.ToHashSet();
-        var shown = new HashSet<Guid>();
-        var dropped = 0;
-        foreach (var d in root.GetChildren().OfType<Items.LootDrop>())
+        // another floor, or another build of this floor number (a wipe's reload): the list is not about what we show
+        if (Root is not { } root || Main.Instance is not { InGame: true } main || main.Rebuilding || lm.Floor != Game.Instance.CurrentFloor || main.Builder.CurrentFloor != lm.Floor || !WorldCheck.SameBuild(_epoch, lm.Epoch)) return;
+        var drops = root.GetChildren().OfType<Items.LootDrop>().Where(d => !d.Taken).ToList();
+        var (free, missing) = WorldCheck.CompareItems(drops.Select(d => (d.Item.Id, WorldCheck.ItemCount(d.Coins, d.Item.StackCount))).ToList(), lm.Ids, lm.Counts);
+        foreach (var i in free) drops[i].QueueFree(); // not on the server's floor, or a second copy of one that is
+        // what we lack, and what we show with another count (a partial pickup's stack): the resend replaces ours in place
+        if (missing.Count > 0) NetSession.Instance.Send(new LootResyncIntent(lm.Floor, missing, lm.Epoch));
+        if (free.Count > 0 || missing.Count > 0)
         {
-            if (d.Taken) continue;
-            if (listed.Contains(d.Item.Id) && shown.Add(d.Item.Id)) continue;
-            d.QueueFree(); // not on the server's floor, or a second copy of one that is
-            dropped++;
-        }
-        var missing = listed.Where(id => !shown.Contains(id)).ToList();
-        if (missing.Count > 0) NetSession.Instance.Send(new LootResyncIntent(lm.Floor, missing));
-        if (dropped > 0 || missing.Count > 0)
-        {
-            GD.Print($"[net] item check: removed {dropped} item(s) the server does not have, asked for {missing.Count} missing");
+            GD.Print($"[net] item check: removed {free.Count} item(s) the server does not have, asked for {missing.Count} missing or miscounted");
             Trace.Add("loot-check");
         }
     }
@@ -298,12 +448,45 @@ public partial class ClientWorld : Node
     private void OnTrapPlaced(Save.PlacedTrapDto dto)
     {
         if (Root is not { } root || !Enum.TryParse<Dungeon.TrapKind>(dto.Kind, out var kind)) return;
-        var trap = GD.Load<PackedScene>("res://scenes/Props/Trap.tscn").Instantiate<Dungeon.Props.Trap>();
-        trap.Kind = kind;
-        trap.Floor = Game.Instance.CurrentFloor;
-        trap.PlacedByParty = true;
-        root.AddChild(trap);
-        trap.GlobalPosition = new Vector3(dto.X, dto.Y, dto.Z);
+        // the server's id rides along (v14), so "sprung" reaches this copy when a creature steps on it there
+        if (dto.Id >= 0 && root.GetChildren().OfType<Dungeon.Props.Trap>().Any(t => t.PlacedByParty && t.SpawnIndex == dto.Id && !t.IsQueuedForDeletion())) return;
+        PropSync.SpawnPlaced(root, dto, kind);
+    }
+
+    /// <summary>The server's prop state we last asked for (and when): an ask the apply could not settle is not repeated every check.</summary>
+    private uint? _propAskedFor;
+    private double _propAskedAt;
+
+    /// <summary>The prop check (<see cref="PropCheckMsg"/>): hash our props as the server hashes its own and ask for the whole state when they differ.</summary>
+    private void OnPropCheck(PropCheckMsg pc)
+    {
+        if (Root is not { } root || Main.Instance is not { InGame: true } main || main.Rebuilding || pc.Floor != Game.Instance.CurrentFloor || main.Builder.CurrentFloor != pc.Floor) return;
+        var mine = PropCheck.Hash(PropSync.Capture(root));
+        var now = NetSession.Instance.Now;
+        if (!PropCheck.ShouldAsk(mine, pc.Hash, _propAskedFor, _propAskedAt, now)) return;
+        _propAskedFor = pc.Hash;
+        _propAskedAt = now;
+        GD.Print($"[net] prop check: our props differ from the server's ({mine:X8} vs {pc.Hash:X8}); asking again");
+        NetSession.Instance.Send(new PropResyncIntent(pc.Floor));
+        Trace.Add("prop-check");
+    }
+
+    /// <summary>The server's whole prop state (the prop check's answer, or a join's catch-up): move ours to match, silently.</summary>
+    private void OnPropState(PropStateMsg ps)
+    {
+        if (Root is not { } root || Main.Instance is not { InGame: true } main || main.Rebuilding || ps.Floor != Game.Instance.CurrentFloor || main.Builder.CurrentFloor != ps.Floor) return;
+        var before = PropSync.Capture(root);
+        var changed = PropSync.ApplyLive(ps.State, root);
+        if (changed.Count > 0)
+        {
+            GD.Print($"[net] prop check: {string.Join(", ", changed)}");
+            Trace.Add("props-fixed");
+        }
+        // settled (Capture skips what is queued for freeing): the next difference may ask at once. A difference only the
+        // other way can mend (a barrel or chest we lost that the server still has) keeps the ask held back (PropCheck.ShouldAsk)
+        var after = PropSync.Capture(root);
+        if (PropCheck.Hash(after) == PropCheck.Hash(ps.State)) { if (changed.Count == 0 && _propAskedFor != null) GD.Print("[net] prop check: nothing left to repair (the difference had passed)"); _propAskedFor = null; }
+        else GD.Print($"[net] prop check: still differs from the server after the apply ({string.Join("; ", PropCheck.Differences(after, ps.State))}; before: {string.Join("; ", PropCheck.Differences(before, ps.State))})");
     }
 
     private void OnProjectile(ProjectileSpawned pr)
@@ -370,6 +553,7 @@ public partial class ClientWorld : Node
         if (Main.Instance?.Builder.FloorRoot is not { } root) return;
         foreach (var child in root.GetChildren())
         {
+            if (child.IsQueuedForDeletion()) continue; // a ghost the checks just freed must not shadow the living copy
             if (child is Enemy e) _enemies[e.NetId] = e;
             else if (child is Npc n) _npcs[n.Id] = n;
         }
@@ -420,6 +604,7 @@ public partial class ClientWorld : Node
     public override void _PhysicsProcess(double delta)
     {
         if (_h.State != ClientHandshake.Phase.InGame || Main.Instance?.Party is not { } party || !GodotObject.IsInstanceValid(party)) return;
+        TickFloorWatch();
         var dt = (float)delta;
         var now = NetSession.Instance.Now;
         var renderTime = now - Protocol.InterpolationMs / 1000.0;

@@ -171,7 +171,16 @@ public partial class Press : Node3D
         foreach (var b in parent.GetChildren().OfType<Breakable>())
         {
             if (!b.IsAlive || !Inside(b.GlobalPosition)) continue;
-            if (++_jamSqueezes >= 2) { b.Vanish(); _jamSqueezes = 0; EventBus.Instance.Log("The barrel splinters between the stones."); return false; }
+            if (++_jamSqueezes >= 2)
+            {
+                b.Vanish();
+                _jamSqueezes = 0;
+                EventBus.Instance.Log("The barrel splinters between the stones.");
+                // Vanish raises nothing (it is also how a client shows a barrel the server broke): say so here, or every
+                // client keeps a solid ghost barrel in the lane (JamCheck only runs on the authority)
+                if (b.SpawnIndex >= 0) EventBus.Instance.RaisePropChanged(Net.NetRefs.Barrel(b.SpawnIndex), "broken");
+                return false;
+            }
             EventBus.Instance.Log("The press jams on the barrel.");
             return true;
         }

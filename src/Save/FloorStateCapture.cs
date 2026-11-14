@@ -52,10 +52,10 @@ public static class FloorStateCapture
                     dto.NpcStates.Add(new NpcDto { Id = npc.Id, Dead = npc.Dead, Escorting = npc.Escorting, Rescued = npc.Rescued, Downed = npc.Downed, Captured = npc.Captured, Jailed = npc.Jailed, Freed = npc.Freed, Fled = npc.Fled, Hp = npc.Hp, X = npc.GlobalPosition.X, Y = npc.GlobalPosition.Y, Z = npc.GlobalPosition.Z });
                     break;
                 case LootDrop drop when !drop.IsQueuedForDeletion():
-                    dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), Coins = drop.Coins, X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });
+                    dto.Items.Add(new WorldItemDto { Item = SaveMapper.ToDto(drop.Item), Coins = drop.Coins, DroppedByParty = drop.DroppedByParty, X = drop.GlobalPosition.X, Y = drop.GlobalPosition.Y, Z = drop.GlobalPosition.Z });
                     break;
                 case Trap { PlacedByParty: true, Armed: true } placed:
-                    dto.PlacedTraps.Add(new PlacedTrapDto { Kind = placed.Kind.ToString(), X = placed.GlobalPosition.X, Y = placed.GlobalPosition.Y, Z = placed.GlobalPosition.Z });
+                    dto.PlacedTraps.Add(new PlacedTrapDto { Id = placed.SpawnIndex, Kind = placed.Kind.ToString(), X = placed.GlobalPosition.X, Y = placed.GlobalPosition.Y, Z = placed.GlobalPosition.Z });
                     break;
                 case Trap { PlacedByParty: false } trap:
                     if (trap.Triggered) dto.TriggeredTraps.Add(trap.SpawnIndex);
@@ -88,6 +88,11 @@ public static class FloorStateCapture
             var index = DungeonBuilder.CacheAmbusherBase + i;
             if (!seenEnemies.Contains(index) && !dto.DeadEnemies.Contains(index)) dto.DeadEnemies.Add(index);
         }
+        // and any other planned enemy this build placed whose corpse is gone: the viewer orc (ViewerOrcSpawnIndex) came back
+        // on every reload and revisit once its corpse was freed, and a co-op joiner saw it frozen where the server had none
+        if (Main.Instance?.Builder is { } builder && builder.FloorRoot == floorRoot)
+            foreach (var index in builder.SpawnedPlanned.OrderBy(i => i))
+                if (!seenEnemies.Contains(index) && !dto.DeadEnemies.Contains(index)) dto.DeadEnemies.Add(index);
         // barrels that no longer exist were broken
         var barrels = floorRoot.GetChildren().OfType<Breakable>().Select(b => b.SpawnIndex).ToHashSet();
         for (var i = 0; i < layout.BreakableSpawns.Count; i++) if (!barrels.Contains(i)) dto.BrokenBarrels.Add(i);
@@ -128,6 +133,17 @@ public static class FloorStateCapture
         var takenQuestItems = dto.TakenQuestItems.ToHashSet();
         var npcs = dto.NpcStates.ToDictionary(n => n.Id);
         var hazards = dto.Hazards.ToDictionary(h => (h.Kind, h.Index));
+        // saves from before each cellar chest had its own index stored every cellar chest of a floor as ChestSpawns.Count + 8
+        // (the chest's cell in its pit), so that one entry opened them all: read it the same way, or a loaded floor's emptied
+        // cellar chests close again with fresh loot. The first cellar's chest is ChestSpawns.Count now; a floor with nine
+        // cellars (whose own chest would hold the old number) is never misread.
+        var cellarChests = floorRoot.GetChildren().OfType<Chest>().Where(c => c.Name.ToString().StartsWith("CellarChest", StringComparison.Ordinal)).ToList();
+        if (cellarChests.Count > 0)
+        {
+            var legacy = cellarChests.Min(c => c.SpawnIndex) + 8;
+            if (opened.Contains(legacy) && cellarChests.All(c => c.SpawnIndex != legacy))
+                foreach (var c in cellarChests) opened.Add(c.SpawnIndex);
+        }
 
         foreach (var child in floorRoot.GetChildren().ToList())
         {
@@ -202,9 +218,10 @@ public static class FloorStateCapture
                 registry.Find(c.Id)?.Restore(c.Alert, c.AlarmRaised, c.Regrouped);
         foreach (var w in dto.Items)
         {
-            if (w.Coins > 0) party.SpawnCoins(w.Coins, new Vector3(w.X, w.Y, w.Z), w.Item.Id);
-            else party.SpawnLoot(SaveMapper.FromDto(w.Item, Game.Instance.Catalog), new Vector3(w.X, w.Y, w.Z));
+            if (w.Coins > 0) { if (party.SpawnCoins(w.Coins, new Vector3(w.X, w.Y, w.Z), w.Item.Id) is { } pile) pile.DroppedByParty = w.DroppedByParty; }
+            else party.SpawnLoot(SaveMapper.FromDto(w.Item, Game.Instance.Catalog), new Vector3(w.X, w.Y, w.Z), w.DroppedByParty);
         }
+        var placedIds = new HashSet<int>();
         foreach (var t in dto.PlacedTraps)
         {
             if (!Enum.TryParse<TrapKind>(t.Kind, out var kind)) continue;
@@ -212,6 +229,9 @@ public static class FloorStateCapture
             trap.Kind = kind;
             trap.Floor = Game.Instance.CurrentFloor;
             trap.PlacedByParty = true;
+            // its saved id (co-op names it by this), or a fresh one for a save from before ids or a clash
+            trap.SpawnIndex = t.Id >= Net.PropCheck.PlacedTrapBase && !placedIds.Contains(t.Id) ? t.Id : Net.PropCheck.NextPlacedTrapId(placedIds);
+            placedIds.Add(trap.SpawnIndex);
             floorRoot.AddChild(trap);
             trap.GlobalPosition = new Vector3(t.X, t.Y, t.Z);
         }

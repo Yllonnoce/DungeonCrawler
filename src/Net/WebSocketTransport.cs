@@ -17,6 +17,8 @@ public sealed class WebSocketTransport : INetTransport
     public bool IsServer { get; private set; }
     public bool IsConnected => IsServer ? _last != MultiplayerPeer.ConnectionStatus.Disconnected : _last == MultiplayerPeer.ConnectionStatus.Connected;
     public string LastError { get; private set; } = "";
+    /// <summary>What went through this socket, by message kind (<c>--net-stats</c>, the server's status file).</summary>
+    public TrafficStats Stats { get; } = new();
 
     public event Action<int>? PeerConnected;
     public event Action<int>? PeerDisconnected;
@@ -62,6 +64,7 @@ public sealed class WebSocketTransport : INetTransport
         _peer.SetTargetPeer(IsServer ? peer : NetPeers.Server);
         var err = _peer.PutPacket(bytes);
         if (err != Error.Ok) LastError = $"send failed: {err}";
+        else Stats.Sent(bytes);
     }
 
     public void Poll()
@@ -85,6 +88,7 @@ public sealed class WebSocketTransport : INetTransport
         {
             var from = _peer.GetPacketPeer();
             var bytes = _peer.GetPacket();
+            Stats.Received(bytes);
             Received?.Invoke(from, bytes);
         }
     }

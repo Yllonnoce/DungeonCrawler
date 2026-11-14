@@ -470,6 +470,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
         if (InWater && IsAlive) Wade(dt, !wasInWater);
         if (IsHorde) TickSwarmDetail(dt);
+        TickUnstick(dt);
         if (Party == null || !IsInstanceValid(Party)) return;
         UpdateAnimation();
 
@@ -783,7 +784,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (layout == null) { MoveToward(target, dt); return; }
 
         var dist = GlobalPosition.DistanceTo(target);
-        if (dist < 5f && Math.Abs(GlobalPosition.Y - target.Y) < 1.5f && HasLineOfSight() && !(DangerWeight > 0f && builder!.DangerAlong(GlobalPosition, target))) { _path = null; MoveToward(target, dt); return; }
+        // the straight shortcut only on the same layer: from a cellar tunnel to a ramp beside it the line runs through the
+        // ramp's side, and the creature pushed into it for good
+        if (dist < 5f && Math.Abs(GlobalPosition.Y - target.Y) < 1.5f && builder!.IsUnderAt(GlobalPosition) == builder.IsUnderAt(target) && HasLineOfSight() && !(DangerWeight > 0f && builder.DangerAlong(GlobalPosition, target))) { _path = null; MoveToward(target, dt); return; }
 
         var me = new PathNode(DungeonBuilder.WorldToCell(GlobalPosition), builder!.IsUnderAt(GlobalPosition));
         var goal = new PathNode(DungeonBuilder.WorldToCell(target), builder.IsUnderAt(target));
@@ -796,7 +799,10 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             _repathTimer = IsHorde ? 0.9f : 0.5f; // a swarm can afford a staler path
         }
         PathFailed = _path == null;
-        if (_path == null || _path.Count < 2) { MoveToward(target, dt); return; }
+        // no way there: on the same layer press on (a shut safe-room door is met face to face); from a cellar to the floor
+        // above (or back) close in only when it is right here, since walking straight at it pinned creatures in a ramp's side
+        if (_path == null) { MoveToward(dist < 2.5f || builder.IsUnderAt(GlobalPosition) == builder.IsUnderAt(target) ? target : GlobalPosition, dt); return; }
+        if (_path.Count < 2) { MoveToward(target, dt); return; }
 
         _pathIndex = Math.Clamp(_pathIndex, 1, _path.Count - 1);
         var wp = Waypoint(_path[_pathIndex]);

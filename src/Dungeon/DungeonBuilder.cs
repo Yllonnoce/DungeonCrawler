@@ -33,6 +33,13 @@ public partial class DungeonBuilder : Node3D
     /// <summary>Floor cells whose slab is tilted or heaved this floor; picked from the seed before the grid is built.</summary>
     private readonly Dictionary<GridPos, int> _buckled = new();
     private int _dynamicSerial;
+    private readonly HashSet<int> _spawnedPlanned = new();
+    /// <summary>
+    /// Every planned spawn index (0 and up: the layout's, the viewer orc's, the drift ambushers') this build has placed. A
+    /// planned enemy that is no longer under the floor root died and its corpse was freed, so <c>FloorStateCapture</c>
+    /// saves it dead whatever range its index is in (the viewer orc's 90000 used to come back on every reload and revisit).
+    /// </summary>
+    public IReadOnlySet<int> SpawnedPlanned => _spawnedPlanned;
     /// <summary>Game seed of the floor being built (for per-actor seeds placed by the builder).</summary>
     public ulong GameSeed { get; private set; }
     public IReadOnlyDictionary<GridPos, int> BuckledCells => _buckled;
@@ -264,9 +271,11 @@ public partial class DungeonBuilder : Node3D
 
         PickBuckled(layout);
         _dynamicSerial = 0;
+        _spawnedPlanned.Clear();
         GameSeed = gameSeed;
         _grid = BuildGridMap(layout, CurrentTheme);
         _floorRoot.AddChild(_grid);
+        WallRampSides(layout, _floorRoot);
         PlaceStairs(layout, _floorRoot, floorIndex);
         PlaceViewerCast(layout, _floorRoot, floorIndex);
         PlaceMerchant(layout, _floorRoot, floorIndex);
@@ -1128,11 +1137,58 @@ public partial class DungeonBuilder : Node3D
     }
 
     /// <summary>A breach mouth falls shut: rubble to the ceiling, the cell blocked for paths.</summary>
+    /// <summary>The breach closes over whatever stands in its mouth: a creature there is crushed (it was encased in the rubble, alive and stuck, and kept a ritual wave's place); a companion steps aside. Authority only; clients follow.</summary>
+    private void ClearMouth(Node3D root, FloorLayout layout, GridPos mouth)
+    {
+        var floorY = Surface(mouth).Y;
+        foreach (var e in root.GetChildren().OfType<Enemies.Enemy>().ToList())
+            if (e.IsAlive && WorldToCell(e.GlobalPosition) == mouth && Math.Abs(e.GlobalPosition.Y - floorY) < 2.5f)
+                e.KillByEnvironment("The falling stone", HazardDamage.Crush);
+        var aside = WalkableNeighbor(layout, mouth);
+        foreach (var a in Core.Main.Instance?.Party?.Active ?? Enumerable.Empty<Party.Adventurer>())
+            if (a.Control == Party.ControlKind.Companion && WorldToCell(a.GlobalPosition) == mouth) a.Teleport(Surface(aside) + Vector3.Up * 0.3f);
+    }
+
+    /// <summary>
+    /// A cellar tunnel can run beside a lower-level ramp. The ramp is a sloped plank over a slab, so its side lay open to
+    /// the tunnel: creatures walked in under the plank or wedged against its edge for good (and a body could fall in from
+    /// the slope). A thin wall closes each such side from the cellar floor to the level above. The layout is unchanged,
+    /// so the content hash and saves are too; every peer builds the same wall.
+    /// </summary>
+    private void WallRampSides(FloorLayout layout, Node3D root)
+    {
+        StandardMaterial3D? wallMat = null;
+        var height = LevelHeight - FloorTop;
+        var sides = 0;
+        for (var y = 0; y < layout.Height; y++)
+            for (var x = 0; x < layout.Width; x++)
+            {
+                var u = new GridPos(x, y);
+                if (!layout.IsUnder(u)) continue;
+                foreach (var d in new[] { new GridPos(1, 0), new GridPos(-1, 0), new GridPos(0, 1), new GridPos(0, -1) })
+                {
+                    var n = new GridPos(x + d.X, y + d.Y);
+                    if (!layout.Ramps.TryGetValue(n, out var ramp) || ramp.LowHeight >= LevelHeight || d.IsParallelTo(ramp.Dir)) continue; // a side, never the ends the slope is walked through
+                    wallMat ??= Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
+                    var size = d.X != 0 ? new Vector3(0.2f, height, CellSize) : new Vector3(CellSize, height, 0.2f);
+                    var body = new StaticBody3D { Name = $"RampSide_{x}_{y}_{d.X}_{d.Y}", CollisionLayer = 1, CollisionMask = 0 };
+                    body.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size }, MaterialOverride = wallMat });
+                    body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size } });
+                    root.AddChild(body);
+                    var centre = CellToWorld(u);
+                    body.GlobalPosition = new Vector3(centre.X + d.X * CellSize / 2f, FloorTop + height / 2f, centre.Z + d.Y * CellSize / 2f);
+                    sides++;
+                }
+            }
+        if (sides > 0) GD.Print($"[DungeonBuilder] floor {CurrentFloor}: walled {sides} ramp side(s) beside cellar tunnels");
+    }
+
     public void SealMouth(Node3D root, GridPos mouth, bool silent)
     {
         if (Layout is not { } layout) return;
         var wallMat = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
         var rng = new Random(mouth.X * 73856093 ^ mouth.Y * 19349663 ^ CurrentFloor);
+        if (!Net.NetSession.IsClient) ClearMouth(root, layout, mouth);
         var node = new StaticBody3D { Name = $"Sealed_{mouth.X}_{mouth.Y}", CollisionLayer = 1, CollisionMask = 0 };
         var height = LevelHeight - 0.2f;
         node.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(CellSize * 0.98f, height, CellSize * 0.98f) }, MaterialOverride = wallMat, Position = new Vector3(0, height / 2f, 0) });
@@ -1279,6 +1335,7 @@ public partial class DungeonBuilder : Node3D
         group?.Add(enemy);
         _floorRoot.AddChild(enemy);
         enemy.GlobalPosition = position;
+        if (spawnIndex >= 0) _spawnedPlanned.Add(spawnIndex);
         if (spawnIndex < 0 && spawnIndex != -2) EventBus.Instance.RaiseEnemySpawned(enemy); // dynamic: a server tells its clients
         return enemy;
     }
@@ -1446,7 +1503,7 @@ public partial class DungeonBuilder : Node3D
         foreach (var cellar in layout.Cellars)
         {
             var chest = _chestScene.Instantiate<Chest>();
-            chest.SpawnIndex = layout.ChestSpawns.Count + cellar.Cells.IndexOf(cellar.Chest);
+            chest.SpawnIndex = layout.ChestSpawns.Count + layout.Cellars.IndexOf(cellar); // one index per cellar: the old per-cellar cell index gave two cellars' chests the same one (net ref, save key and loot seed)
             chest.TableId = Adventure.Fortune.ChestRules.TableFor(Adventure.Fortune.ChestRules.CellarKind);
             chest.Name = $"CellarChest{chest.SpawnIndex}";
             root.AddChild(chest);

@@ -15,9 +15,23 @@ public sealed class Inventory
     public int FreeSlots => _slots.Count(s => s == null);
     public int IndexOf(ItemInstance item) => Array.IndexOf(_slots, item);
 
-    /// <summary>Merge into existing stacks first, then take the first empty cell. False if nothing fits.</summary>
+    /// <summary>Whether <see cref="TryAdd"/> would take the whole of <paramref name="item"/>: an empty cell, or room for every unit in the stacks of its kind. Changes nothing.</summary>
+    public bool HasRoomFor(ItemInstance item)
+    {
+        if (FreeSlots > 0) return true;
+        if (!item.Stackable) return false;
+        var room = _slots.Where(s => s != null && s.Stackable && s.DefId == item.DefId).Sum(s => Math.Max(0, s!.MaxStack - s.StackCount));
+        return room >= item.StackCount;
+    }
+
+    /// <summary>
+    /// Merge into existing stacks first, then take the first empty cell. All or nothing: false, with the bag and the item
+    /// unchanged, unless the whole of it fits (<see cref="HasRoomFor"/>). A half-merged pickup used to leave the drop's count
+    /// stale on every co-op screen while the log said the bag was full.
+    /// </summary>
     public bool TryAdd(ItemInstance item)
     {
+        if (!HasRoomFor(item)) return false;
         if (item.Stackable)
         {
             foreach (var s in _slots)

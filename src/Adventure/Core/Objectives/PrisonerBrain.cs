@@ -85,6 +85,13 @@ public static class JailbreakRules
 
     public static bool Completed(IEnumerable<PrisonerState> states) => states.Any() && states.All(s => s == PrisonerState.Freed);
 
+    /// <summary>
+    /// A prisoner's state read back from the NPC flags a co-op snapshot carries (a client's view: its own state table only
+    /// follows the objective's 2 s update). Following the party means freed; then the jail; then a jailer's grip.
+    /// </summary>
+    public static PrisonerState StateFromFlags(bool followingOrFreed, bool jailed, bool captured)
+        => followingOrFreed ? PrisonerState.Freed : jailed ? PrisonerState.Jailed : captured ? PrisonerState.Captured : PrisonerState.Wandering;
+
     public static string HudText(IReadOnlyList<PrisonerState> states)
     {
         var freed = states.Count(s => s == PrisonerState.Freed);

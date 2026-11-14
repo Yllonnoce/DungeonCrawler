@@ -36,7 +36,11 @@ public partial class JailbreakController : ObjectiveController
 
     public override string HudText => Completed ? "Every prisoner is free. Take the stairs." : JailbreakRules.HudText(_prisoners.Select(StateOf).ToList());
 
-    public string PromptFor(Npc npc) => StateOf(npc) switch
+    /// <summary>
+    /// What E on a prisoner says. A client reads the NPC's own flags, which every snapshot keeps right: its <see cref="_state"/>
+    /// only follows the 2 s objective state, and used to stay as Build left it (a freed follower still read "Unlock").
+    /// </summary>
+    public string PromptFor(Npc npc) => (Net.NetSession.IsClient ? JailbreakRules.StateFromFlags(npc.Escorting || npc.Freed, npc.Jailed, npc.Captured) : StateOf(npc)) switch
     {
         PrisonerState.Wandering => $"Rescue {npc.NpcName}",
         PrisonerState.Jailed => $"Unlock {npc.NpcName}'s shackles",
@@ -301,7 +305,18 @@ public partial class JailbreakController : ObjectiveController
         if (Completed && _rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(silent: true); }
     }
 
-    public override void ApplyNet(ObjectiveStateDto dto) => base.Restore(dto);
+    /// <summary>
+    /// A client's copy of where each prisoner stands (the HUD's count reads it): the flags only, never the follow, which is
+    /// the server's (the NPC's pose and Escorting come in the snapshot). A capture in progress keeps the snapshot's Captured.
+    /// </summary>
+    public override void ApplyNet(ObjectiveStateDto dto)
+    {
+        base.Restore(dto);
+        foreach (var npc in _prisoners)
+            _state[npc] = dto.FreedNpcs.Contains(npc.Id) ? PrisonerState.Freed
+                : dto.JailedNpcs.Contains(npc.Id) ? PrisonerState.Jailed
+                : npc.Captured ? PrisonerState.Captured : PrisonerState.Wandering;
+    }
 
     /// <summary>Free everyone and open everything (tests).</summary>
     public override void Hurry()

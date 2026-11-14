@@ -86,6 +86,9 @@ public partial class InventoryScreen : PanelContainer
         side.AddChild(_destroy);
         EventBus.Instance.GoldChanged += OnGoldChanged;
         EventBus.Instance.RosterChanged += OnRosterChanged;
+        EventBus.Instance.BagChanged += MarkDirty;
+        EventBus.Instance.MemberChanged += OnMemberChanged;
+        EventBus.Instance.ItemPickedUp += OnItemPickedUp;
     }
 
     /// <summary>
@@ -127,11 +130,26 @@ public partial class InventoryScreen : PanelContainer
     {
         EventBus.Instance.GoldChanged -= OnGoldChanged;
         EventBus.Instance.RosterChanged -= OnRosterChanged;
+        EventBus.Instance.BagChanged -= MarkDirty;
+        EventBus.Instance.MemberChanged -= OnMemberChanged;
+        EventBus.Instance.ItemPickedUp -= OnItemPickedUp;
     }
 
-    private void OnRosterChanged() { if (Visible) Refresh(); }
+    // every change only marks the screen; it redraws once per frame while open (a co-op fight sends many member syncs a second)
+    private bool _dirty;
+    private void MarkDirty() => _dirty = true;
+    private void OnRosterChanged() => _dirty = true;
+    private void OnMemberChanged(int index) => _dirty = true;
+    private void OnItemPickedUp(ItemInstance item) => _dirty = true;
 
-    private void OnGoldChanged(int total, int delta) { if (Visible) Refresh(); }
+    public override void _Process(double delta)
+    {
+        if (!_dirty || !Visible) return;
+        _dirty = false;
+        Refresh();
+    }
+
+    private void OnGoldChanged(int total, int delta) => _dirty = true;
 
     /// <summary>First line of the info panel, e.g. "57 gold" (for the headless tests).</summary>
     public string PurseLine => _info.Text.Split('\n')[0];
@@ -179,16 +197,17 @@ public partial class InventoryScreen : PanelContainer
     /// <summary>Drops are accepted generously so the player always gets a message; the rules live in <see cref="BagActions"/>.</summary>
     public bool CanMove(SlotRef from, SlotRef to) => BagActions.CanMove(_party.Bag, _party.Members, from.ToSlot(), to.ToSlot());
 
-    public void Move(SlotRef from, SlotRef to)
+    /// <param name="shown">The id of the item the dragged cell showed: a co-op server refuses the move if that cell holds something else by now.</param>
+    public void Move(SlotRef from, SlotRef to, Guid? shown = null)
     {
-        _party.BagMove(from.ToSlot(), to.ToSlot(), _party.Local);
+        _party.BagMove(from.ToSlot(), to.ToSlot(), _party.Local, shown);
         Refresh();
     }
 
     /// <summary>Double-click / right-click: equip on the focused member, use a consumable, or unequip to the bag.</summary>
-    public void QuickAction(SlotRef r)
+    public void QuickAction(SlotRef r, Guid? shown = null)
     {
-        _party.BagQuick(r.ToSlot(), _party.FocusedIndex, _party.Local);
+        _party.BagQuick(r.ToSlot(), _party.FocusedIndex, _party.Local, shown);
         Refresh();
     }
 }

@@ -38,6 +38,8 @@ public partial class NetSession : Node
     public string? StatusFile { get; private set; }
     public float AutosaveSeconds { get; private set; } = 60f;
     public string? JoinUrl { get; private set; }
+    /// <summary>The server this client last dialled: the floor watchdog rejoins it as a last resort.</summary>
+    public string? ServerUrl { get; private set; }
     public string JoinName { get; private set; } = "";
     public string JoinClass { get; private set; } = "class.warrior";
     public bool TestServer { get; private set; }
@@ -50,6 +52,13 @@ public partial class NetSession : Node
     public bool Resumed { get; set; }
     /// <summary>--clauses=a,b:2 (run-structure): the contract every new game in this process signs (a server's world too), normalized by ClauseRules.</summary>
     public List<string>? Clauses { get; private set; }
+    /// <summary>--net-stats: the server prints a traffic line every minute (and a table on quit); a client prints the table when it leaves.</summary>
+    public bool NetStats { get; private set; }
+    /// <summary>--net-soak: a joining client keeps its hero fighting (<see cref="Net.NetSoak"/>), for traffic measurements.</summary>
+    public bool NetSoak { get; private set; }
+    /// <summary>The live transport's per-kind counters (null in single player or on a test transport).</summary>
+    public TrafficStats? Traffic => (Transport as WebSocketTransport)?.Stats;
+    private double _nextStatsLine = 60;
 
     public override void _Ready()
     {
@@ -75,6 +84,8 @@ public partial class NetSession : Node
             else if (arg == "--test-net-client") TestClient = true;
             else if (arg == "--test-net-rejoin") { TestClient = true; TestRejoinOnly = true; }
             else if (arg == "--net-test-join-only") TestJoinOnly = true;
+            else if (arg == "--net-stats") NetStats = true;
+            else if (arg == "--net-soak") NetSoak = true;
         }
         if (ServerRequested || JoinUrl != null) CallDeferred(nameof(AutoStart));
     }
@@ -129,10 +140,12 @@ public partial class NetSession : Node
         if (!t.Dial(url)) { SetStatus(t.LastError); return false; }
         Transport = t;
         Role = NetRole.Client;
+        ServerUrl = url;
         Client = new ClientWorld { Name = "ClientWorld" };
         AddChild(Client);
         Client.Start(t, playerName, classId);
-        if (TestClient) AddChild(new NetTestFlow { Name = "TestFlow" });
+        if (TestClient && GetNodeOrNull("TestFlow") == null) AddChild(new NetTestFlow { Name = "TestFlow" }); // a watchdog rejoin reconnects: one flow only
+        if (NetSoak && GetNodeOrNull("Soak") == null) AddChild(new NetSoak { Name = "Soak" });
         SetStatus($"connecting to {url}...");
         return true;
     }
@@ -141,6 +154,7 @@ public partial class NetSession : Node
     public void Disconnect(string? reason = null)
     {
         if (Role == NetRole.Single) return;
+        PrintTraffic("disconnect");
         Transport?.Close();
         Transport = null;
         if (Server != null) { Server.QueueFree(); Server = null; }
@@ -151,7 +165,28 @@ public partial class NetSession : Node
 
     public void Send(NetMessage m, NetChannel channel = NetChannel.Reliable) => Transport?.Send(NetPeers.Server, NetCodec.Encode(m), channel);
 
-    public override void _Process(double delta) => Transport?.Poll();
+    public override void _Process(double delta)
+    {
+        Transport?.Poll();
+        if (Traffic is not { } stats) return;
+        stats.Sample(Now);
+        if (NetStats && Role == NetRole.Server && stats.Seconds(Now) >= _nextStatsLine)
+        {
+            _nextStatsLine += 60;
+            GD.Print($"[net-stats] {stats.Summary(Now)}");
+        }
+    }
+
+    /// <summary>The whole table once, when a --net-stats process leaves the session or quits.</summary>
+    private void PrintTraffic(string why)
+    {
+        if (!NetStats || Traffic is not { } stats || _trafficPrinted.Contains(stats)) return;
+        _trafficPrinted.Add(stats);
+        GD.Print($"[net-stats] {Role.ToString().ToLowerInvariant()} traffic at {why}:\n{stats.Report(Now)}");
+    }
+    private readonly HashSet<TrafficStats> _trafficPrinted = new();
+
+    public override void _ExitTree() => PrintTraffic("quit");
 
     public override void _PhysicsProcess(double delta)
     {

@@ -83,6 +83,7 @@ public partial class StairsPrompt : Control
         var actor = _actor;
         Close();
         if (stairs is { Locked: false }) stairs.Decline(actor); // "Turn back" on sealed stairs is no vote
+        else stairs?.MarkAnswered(); // but it is an answer: the landing does not ask again until the player steps off
     }
 
     private void Accept()
@@ -98,7 +99,8 @@ public partial class StairsPrompt : Control
         if (!Visible) return;
         if (@event.IsActionPressed("interact") || @event.IsActionPressed("ui_accept"))
         {
-            if (Current is { Locked: false }) Accept(); else Close();
+            if (Current is { Locked: false }) Accept();
+            else { var sealedStairs = Current; Close(); sealedStairs?.MarkAnswered(); } // E on sealed stairs answers too: no re-ask until the player steps off
             GetViewport().SetInputAsHandled();
         }
         else if (@event.IsActionPressed("ui_cancel") || @event.IsActionPressed("pause"))

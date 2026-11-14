@@ -222,6 +222,11 @@ public partial class RitualController : ObjectiveController
         base.Restore(dto);
         Started = dto.RitualStarted || Completed;
         Progress = dto.RitualProgress;
+        // a breach the server sealed: a client's lever only shows the pull (Lever.Pull returns before OnLever), so the rubble
+        // comes from here, or a connected client's own body walks through a mouth the server has blocked. Silent: the server
+        // already sent the log line and the sound. SealMouth clears the mouth's creatures only on the authority.
+        foreach (var i in dto.SealedMouths)
+            if (i >= 0 && i < _sealed.Count && !_sealed[i]) { Seal(i, silent: true); if (i < _levers.Count) _levers[i].SetPulled(true); }
     }
 
     /// <summary>Begin, and put the rite a breath from done (tests).</summary>

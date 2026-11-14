@@ -76,6 +76,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     private int _lastTelegraphDecided = -1;
     private Enemy? _telegraphing;
     public bool Downed => !State.IsAlive;
+    /// <summary>The fallen look is showing (<see cref="ShowDowned"/> ran and <see cref="Revive"/> has not).</summary>
+    private bool _shownDowned;
     public Stance Stance { get; set; } = Stance.Defensive;
     public Enemy? Target { get; private set; }
     public IInteractable? LookingAt { get; private set; }
@@ -333,6 +335,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         var dt = (float)delta;
         if (Parked) return;
+        // recovery: a body still lying in the fallen look (no collision layer, so the stairs landing and the enemies miss it)
+        // while its state is alive again missed its revive; stand it up
+        if (_shownDowned && !Downed) Revive();
+        else if (_shownDowned) CollisionLayer = State.Mangled ? 8u : 0u; // a Mangled flag that arrives after the fall still makes the body reachable for a rescue
         if (Main.Instance?.Builder.Layout == null) return; // no floor yet (the planner is still writing it): stand still rather than fall forever
         if (++_heldCheck % 30 == 0) RefreshHeldWeapon(); // the equipped weapon changes from the inventory, a loot pickup or a sync
         if (Control == ControlKind.Remote) { RemoteTick(dt); return; }
@@ -816,8 +822,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 pile.Interact(Party, this);
                 return;
             }
-            if (child is LootDrop { DroppedByParty: false, Taken: false } drop && drop.GlobalPosition.DistanceTo(GlobalPosition) < 1.6f && Party.Bag.FreeSlots > 0)
+            if (child is LootDrop { DroppedByParty: false, Taken: false } drop && drop.GlobalPosition.DistanceTo(GlobalPosition) < 1.6f)
             {
+                var coop = Net.NetSession.IsServer; // a server's companions are hero bots sharing the bag with people
+                var humans = coop ? Party.Active.Where(a => a.Control == ControlKind.Remote && !a.Downed).ToList() : null;
+                var nearestHuman = humans is { Count: > 0 } ? humans.Min(a => a.GlobalPosition.DistanceTo(drop.GlobalPosition)) : float.PositiveInfinity;
+                var essential = drop.KeyIndex >= 0 || drop.QuestId != null || drop.Item.DefId == "item.iron_key";
+                if (!LootPolicy.ShouldTake(coop, essential, LootPolicy.MergesFully(Party.Bag, drop.Item), Party.Bag.HasRoomFor(drop.Item), Party.Bag.FreeSlots, nearestHuman)) continue;
                 if (Party.Bag.TryAdd(drop.Item))
                 {
                     EventBus.Instance.Log($"{State.Name} picks up {drop.Item}.");
@@ -829,7 +840,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 }
                 return;
             }
-            if (child is Chest { Opened: false, Locked: false } chest && chest.GlobalPosition.DistanceTo(GlobalPosition) < 1.8f && Target == null)
+            if (child is Chest { Opened: false, Locked: false, Bound: false } chest && chest.GlobalPosition.DistanceTo(GlobalPosition) < 1.8f && Target == null) // a bound chest starts the Hunt for everyone: a person decides that
             {
                 EventBus.Instance.Log($"{State.Name} opens a chest.");
                 chest.Interact(Party, this);
@@ -849,6 +860,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             return;
         }
         if (LookingAt is not { } target) return;
+        if (target is LootDrop { Coins: 0 } full && !Party.Bag.HasRoomFor(full.Item))
+        {
+            Main.Instance?.Hud?.ShowSubtitle(LootDrop.BagFullLine);
+            EventBus.Instance.PlaySfx("ui_close");
+            return;
+        }
         // talking is local (the choice goes over the wire); everything else the server does for us
         if (Net.NetSession.IsClient && target is not Npc)
         {
@@ -1209,6 +1226,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     /// <summary>The fallen pose and label, no bookkeeping (clients get the event from the server).</summary>
     public void ShowDowned()
     {
+        _shownDowned = true;
         CollisionLayer = State.Mangled ? 8u : 0u; // a Mangled body is something to reach for: the interact ray finds it
         if (_model != null) _model.Play("Death", force: true);
         else
@@ -1242,7 +1260,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void Revive()
     {
-        var wasDown = State.Hp <= 0f;
+        var wasDown = State.Hp <= 0f || _shownDowned; // a caller that restored the hp first (rescue, wipe, self-recovery) still revived a fallen body: say so, or clients never stand it up
+        _shownDowned = false;
         State.Mangled = false;
         State.MangledBy = -1;
         State.Hp = Math.Max(1f, State.Hp);

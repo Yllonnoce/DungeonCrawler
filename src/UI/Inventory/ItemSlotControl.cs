@@ -94,8 +94,11 @@ public partial class ItemSlotControl : Control
         var preview = new Label { Text = Item.DisplayName };
         preview.AddThemeColorOverride("font_color", new Color(RarityInfo.ColorHex(Item.Rarity)));
         SetDragPreview(preview);
-        if (Shop != null) return new Godot.Collections.Dictionary { ["shop"] = (int)Section, ["i"] = Ref.BagIndex };
-        return Ref.ToDict();
+        if (Shop != null) return new Godot.Collections.Dictionary { ["shop"] = (int)Section, ["i"] = Ref.BagIndex, ["id"] = Item.Id.ToString("N") };
+        // the item this cell shows rides along: in co-op the server refuses the move if that cell holds something else by the time it lands
+        var d = Ref.ToDict();
+        d["id"] = Item.Id.ToString("N");
+        return d;
     }
 
     public override bool _CanDropData(Vector2 atPosition, Variant data)
@@ -109,9 +112,13 @@ public partial class ItemSlotControl : Control
     public override void _DropData(Vector2 atPosition, Variant data)
     {
         var d = data.AsGodotDictionary();
-        if (Shop != null) Shop.Dropped((UI.Shop.ShopSection)(int)d["shop"], (int)d["i"]);
-        else Screen.Move(SlotRef.FromDict(d), Ref);
+        if (Shop != null) Shop.Dropped((UI.Shop.ShopSection)(int)d["shop"], (int)d["i"], ShownId(d));
+        else Screen.Move(SlotRef.FromDict(d), Ref, ShownId(d));
     }
+
+    /// <summary>The id of the item the dragged cell showed, if the drag carried one.</summary>
+    private static Guid? ShownId(Godot.Collections.Dictionary d)
+        => d.ContainsKey("id") && Guid.TryParseExact((string)d["id"], "N", out var id) ? id : null;
 
     public override void _GuiInput(InputEvent @event)
     {
@@ -120,14 +127,14 @@ public partial class ItemSlotControl : Control
             // a click (press and release without a drag) buys or sells; the action waits for the release so a drag never also clicks
             if (@event is not InputEventMouseButton { ButtonIndex: MouseButton.Left } click) return;
             if (click.Pressed) _armed = Item != null;
-            else if (_armed) { _armed = false; Shop.Clicked(Section, Ref.BagIndex); }
+            else if (_armed) { _armed = false; Shop.Clicked(Section, Ref.BagIndex, Item?.Id); }
             AcceptEvent();
             return;
         }
         if (@event is not InputEventMouseButton { Pressed: true } mb) return;
         if ((mb.ButtonIndex == MouseButton.Left && mb.DoubleClick) || mb.ButtonIndex == MouseButton.Right)
         {
-            Screen.QuickAction(Ref);
+            Screen.QuickAction(Ref, Item?.Id);
             AcceptEvent();
         }
     }

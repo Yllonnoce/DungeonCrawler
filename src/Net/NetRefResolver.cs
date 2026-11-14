@@ -37,7 +37,7 @@ public static class NetRefResolver
             case NetRefs.DoorKind: return NetRefs.TryIndex(id, out var di) ? children.OfType<Door>().FirstOrDefault(d => d.VaultIndex == di) : null;
             case NetRefs.LeverKind: return NetRefs.TryIndex(id, out var li) ? children.OfType<Lever>().FirstOrDefault(l => l.VaultIndex == li) : null;
             case NetRefs.SecretKind: return NetRefs.TryIndex(id, out var si) ? children.OfType<SecretWall>().FirstOrDefault(s => s.Index == si) : null;
-            case NetRefs.TrapKind: return NetRefs.TryIndex(id, out var ti) ? children.OfType<Trap>().FirstOrDefault(t => t.SpawnIndex == ti && !t.PlacedByParty) : null;
+            case NetRefs.TrapKind: return NetRefs.TryIndex(id, out var ti) ? children.OfType<Trap>().FirstOrDefault(t => t.SpawnIndex == ti) : null; // the party's own traps too: their ids start at PropCheck.PlacedTrapBase
             case NetRefs.BarrelKind: return NetRefs.TryIndex(id, out var bi) ? children.OfType<Breakable>().FirstOrDefault(b => b.SpawnIndex == bi) : null;
             case NetRefs.StairsKind: return root.GetNodeOrNull<Stairs>(id == "down" ? "DownStairs" : "UpStairs");
             case NetRefs.NpcKind: return children.OfType<Npc>().FirstOrDefault(n => n.Id == id);
