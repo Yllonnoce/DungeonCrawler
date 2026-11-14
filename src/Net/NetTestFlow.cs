@@ -75,7 +75,7 @@ public partial class NetTestFlow : Node
             var applied = hasted.Members[cheerer.MemberIndex].Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Haste, 2.5f, 0.2f));
             GD.Print($"[net-server] gave {cheerer.Name} 2.5 s of Haste for the effect sync: {applied}");
         }
-        if (((resumed || Game.Instance.CurrentFloor == 0) && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 90))
+        if (((resumed || Game.Instance.CurrentFloor == 0) && world.Trace.Contains("empty")) || world.Trace.Count(t => t == "empty") >= 2 || (world.Trace.Contains("empty") && _elapsed > 150)) // the v14 steps (bag guard, prop, enemy and floor checks) run the pass past 90 s
         {
             var pressOnFloor = Main.Instance?.Builder.Hazards.OfType<Dungeon.Props.Press>().Any() == true;
             var want = resumed ? new[] { "rejoin:", "ready:", "left:" }
@@ -94,7 +94,7 @@ public partial class NetTestFlow : Node
             Finish("[net-server]", missing.Count == 0 && ordered, $"trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order"));
             return;
         }
-        if (_elapsed > 110) Finish("[net-server]", false, $"timed out, trace=[{string.Join(", ", world.Trace)}]");
+        if (_elapsed > 170) Finish("[net-server]", false, $"timed out, trace=[{string.Join(", ", world.Trace)}]");
     }
 
     private void ClientTick(double delta)
