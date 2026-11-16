@@ -252,6 +252,7 @@ public partial class DebugTools : Node
         Instance = this;
         foreach (var arg in OS.GetCmdlineUserArgs())
         {
+            if (arg.StartsWith("--test-") && arg != "--test-blade-contact") Party.Adventurer.BladeContact = false; // written when a blow landed at the click: they read the result in the same frame
             if (arg.StartsWith("--screenshot=")) _screenshotPath = arg["--screenshot=".Length..];
             else if (arg.StartsWith("--after=")) _after = double.Parse(arg["--after=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             else if (arg.StartsWith("--quit-after=")) _quitAfter = double.Parse(arg["--quit-after=".Length..], System.Globalization.CultureInfo.InvariantCulture);
@@ -354,6 +355,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-fortune") { _testFortune = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; _startFloor = 2; _floorGiven = true; }
             else if (arg == "--test-run-structure") { _testRunStructure = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
             else if (arg == "--test-combat-feel") { _testCombatFeel = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 75; }
+            else if (arg == "--test-blade-contact") { _testBlade = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 60; }
             else if (arg == "--test-co-op") { _testCoOp = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 40; }
             else if (arg.StartsWith("--rehash-plans=")) { _rehashDir = ProjectSettings.GlobalizePath(arg["--rehash-plans=".Length..]); _menuOnly = true; _quitAfter = Math.Max(_quitAfter, 30); }
             else if (arg == "--test-ambush") { _testAmbush = true; _quitAfter = 40; _startFloor = 2; }
@@ -407,6 +409,7 @@ public partial class DebugTools : Node
         if (_testElites) { _seed ??= 8; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testFortune) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testRunStructure) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
+        if (_testBlade) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testCoOp) { _seed ??= 7; ForcedLethality ??= 1f; Dungeon.TierRules.Lethality = ForcedLethality.Value; }
         if (_testSafeRoom)
         {
@@ -427,8 +430,8 @@ public partial class DebugTools : Node
 
     public override void _Process(double delta)
     {
-        // any automation flag means "skip the title screen"
-        if (!_started && !_menuOnly && !_server && !_netClient && Main.Instance != null && (_screenshotPath != null || _quitAfter > 0 || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk))
+        // any automation flag means "skip the title screen"; so does a headset, which cannot see the title screen yet
+        if (!_started && !_menuOnly && !_server && !_netClient && Main.Instance != null && (Vr.Active || _screenshotPath != null || _quitAfter > 0 || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk))
         {
             _started = true;
             if (_builtin) { if (!Main.Instance.StartBuiltinCampaign()) { GD.Print("[builtin] RESULT FAIL: no built-in campaign"); GetTree().Quit(); } }
@@ -825,6 +828,7 @@ public partial class DebugTools : Node
         if (_testAbilities) RunAbilitiesTest();
         if (_testHitFx) RunHitFxTest();
         if (_testCombatFeel) RunCombatFeelTest();
+        if (_testBlade) RunBladeContactTest();
         if (_testVertical) RunVerticalTest();
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();

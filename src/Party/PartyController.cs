@@ -357,6 +357,19 @@ public partial class PartyController : Node3D
         else if (@event.IsActionReleased("attack_primary")) local.EndAttack(_time);
     }
 
+    // The controllers of a headset (VrRig.Read), where the keys and the mouse come through _UnhandledInput.
+
+    /// <summary>The attack trigger pressed or let go.</summary>
+    public void VrAttack(bool pressed)
+    {
+        if (!PartyAlive || Local is not { } local) return;
+        if (pressed) local.BeginAttack(_time); else local.EndAttack(_time);
+    }
+
+    public void VrUse() { if (PartyAlive) Local?.TryInteract(); }
+
+    public void VrNextAbility() { if (PartyAlive && Local != null) CycleAbility(LocalIndex, +1); }
+
     private int NextAlive(int from)
     {
         for (var step = 1; step < Members.Length; step++)
@@ -396,7 +409,7 @@ public partial class PartyController : Node3D
     {
         var dt = (float)delta;
         if (Adventurers.Length == 0) return;
-        if (Local is { } local) local.Intent = local.DebugIntent ?? LocalInput.Read(MouseCaptured, InputLocked, local.ForcedMoveInput);
+        if (Local is { } local) local.Intent = local.DebugIntent ?? (local.VrRig is { } rig ? rig.Read(!InputLocked, local.ForcedMoveInput) : LocalInput.Read(MouseCaptured, InputLocked, local.ForcedMoveInput));
         if (HasBodies)
         {
             GlobalPosition = Anchor.GlobalPosition;
@@ -586,7 +599,7 @@ public partial class PartyController : Node3D
     {
         if (!r.Hit) { EventBus.Instance.Log($"{attacker} misses {target}."); EventBus.Instance.PlaySfx("miss"); return; }
         EventBus.Instance.PlaySfx(r.Type == DamageType.Physical ? (heavy || r.Crit ? "hit_heavy" : "hit_flesh") : "cast_hit");
-        var verb = r.Shatter ? "shatters" : r.Sneak ? "ambushes" : r.Crit ? "critically hits" : perfect ? "perfectly smashes" : heavy ? "smashes" : "hits";
+        var verb = r.Shatter ? "shatters" : r.Sneak ? "ambushes" : r.Crit ? "critically hits" : r.Glancing ? "glances off" : perfect ? "perfectly smashes" : heavy ? "smashes" : "hits";
         var text = $"{attacker} {verb} {target} for {r.Amount:0}";
         if (r.Type != DamageType.Physical) text += $" {r.Type.ToString().ToLower()}";
         if (r.Blocked) text += " (blocked)";

@@ -28,6 +28,10 @@ public sealed record HitContext
     public bool DefenderStunned { get; init; }
     /// <summary>A melee swing released in the perfect window: the hit reads as a perfect blow.</summary>
     public bool PerfectBlow { get; init; }
+    /// <summary>The blade was seen to touch the defender: a failed hit roll is a glancing blow, not a miss (see <see cref="BladeRules"/>).</summary>
+    public bool Contact { get; init; }
+    /// <summary>How much of the blow is left after the bodies the blade already cut this swing.</summary>
+    public float Carry { get; init; } = 1f;
 
     public static HitContext None { get; } = new();
 }
@@ -38,5 +42,7 @@ public sealed record DamageResult(bool Hit, bool Crit, bool Blocked, bool Sneak,
     public bool Shatter { get; init; }
     /// <summary>Burn landing on a Poisoned target: fire damage to everything within <see cref="CombatRules.IgniteRadius"/>; 0 when nothing ignited.</summary>
     public float IgniteBurst { get; init; }
+    /// <summary>The blade touched but the hit roll failed: the blow landed for <see cref="BladeRules.GlancingMultiplier"/> of its damage and could not crit.</summary>
+    public bool Glancing { get; init; }
     public static DamageResult Miss(DamageType type) => new(false, false, false, false, 0, type, Array.Empty<StatusApplication>());
 }

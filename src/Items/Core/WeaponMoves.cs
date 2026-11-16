@@ -29,9 +29,10 @@ public readonly record struct MovePose(float Up, float Left, float Twist, float 
 /// <summary>
 /// A first-person weapon move: poses played in order, the last one back at rest. <see cref="Jolt"/> (0..1) shakes the
 /// view at each impact; <see cref="Trail"/> draws a streak behind the blade (skills always, else only legendaries and
-/// perfect blows).
+/// perfect blows). <see cref="Blade"/> is false for a blow struck with something other than the blade (a shield): it
+/// lands where the wielder aims, not where the blade passes.
 /// </summary>
-public sealed record WeaponMove(string Name, MoveKey[] Keys, float Jolt = 0f, bool Trail = false)
+public sealed record WeaponMove(string Name, MoveKey[] Keys, float Jolt = 0f, bool Trail = false, bool Blade = true)
 {
     public float Seconds => Keys.Sum(k => k.Seconds);
 
@@ -195,7 +196,7 @@ public static class WeaponMoves
             "ability.cleave" => new("cleave", [K(-32, -120, 0, 0.2f, 0.14f, 0.05f, 0.14f), K(-36, 95, 0, -0.35f, 0.16f, -0.12f, 0.14f, MoveEase.InOut, true), Rest(0.32f)], 0.6f, true),
             "ability.backstab" => new("backstab", [K(-50, -8, 0, 0.05f, -0.12f, 0.08f, 0.12f), K(-30, -6, 0, -0.06f, 0.1f, -0.3f, 0.07f, MoveEase.Out, true), K(-30, -6, 90, -0.06f, 0.1f, -0.28f, 0.08f), Rest(0.25f)], 0.3f, true),
             "ability.venom_strike" => new("venom strike", [K(-40, -6, 0, -0.04f, 0.06f, -0.2f, 0.05f, MoveEase.Out, true), K(-38, -10, 0, 0.02f, 0.03f, 0.02f, 0.05f), K(-42, -14, 0, -0.08f, 0.08f, -0.22f, 0.05f, MoveEase.Out, true), Rest(0.2f)], 0f, true),
-            "ability.shield_bash" => new("shield bash", [K(-30, -80, 0, 0.2f, -0.14f, 0.12f, 0.1f), K(-30, -80, 0, 0.14f, -0.12f, -0.04f, 0.07f, MoveEase.Out, true), Rest(0.3f)], 1f, false),
+            "ability.shield_bash" => new("shield bash", [K(-30, -80, 0, 0.2f, -0.14f, 0.12f, 0.1f), K(-30, -80, 0, 0.14f, -0.12f, -0.04f, 0.07f, MoveEase.Out, true), Rest(0.3f)], 1f, false, Blade: false),
             "ability.fan_of_knives" => new("fan of knives", [K(-60, 45, 0, -0.1f, 0.05f, -0.06f, 0.06f, MoveEase.Out, true), K(-60, -85, 0, 0.08f, 0.05f, -0.06f, 0.07f, MoveEase.Out, true), K(-50, -24, 0, 0, 0.05f, -0.12f, 0.05f, MoveEase.Out, true), Rest(0.22f)], 0f, true),
             "ability.smoke_bomb" => new("smoke bomb", [K(-20, 0, 0, 0, -0.15f, 0.05f, 0.1f), K(-40, 0, 0, 0, 0.05f, -0.1f, 0.08f, MoveEase.Out, true), Rest(0.2f)]),
             "ability.meteor" => new("call down", [K(35, -20, 0, 0, 0.25f, 0, 0.2f), K(37, -20, 0, 0, 0.27f, 0, 0.1f, MoveEase.Linear), K(-60, -20, 0, 0, 0.05f, -0.15f, 0.1f, MoveEase.In, true), Rest(0.3f)], 0.8f, true),

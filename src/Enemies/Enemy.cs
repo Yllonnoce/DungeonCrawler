@@ -1060,9 +1060,20 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         }
     }
 
-    /// <summary>Blood from a melee blow, thrown toward the nearest adventurer (the enemy is not told who struck it).</summary>
+    /// <summary>A blade is about to land here, travelling this way: the next melee blow bleeds from that spot, along the cut.</summary>
+    public void AimBlood(Vector3 at, Vector3 along) => _bloodAt = (at, along);
+    private (Vector3 at, Vector3 dir)? _bloodAt;
+
+    /// <summary>Blood from a melee blow, thrown toward the nearest adventurer (the enemy is not told who struck it) unless a blade marked the spot.</summary>
     private void Bleed()
     {
+        if (_bloodAt is { } cut)
+        {
+            _bloodAt = null;
+            HitFx.Blood(GetParent(), cut.at, cut.dir);
+            EventBus.Instance.RaiseHitFx(Net.HitFxKind.Blood, cut.at, cut.dir, this);
+            return;
+        }
         var chest = GlobalPosition + Vector3.Up * 0.9f * Profile.Scale;
         var toward = Party?.NearestAlive(GlobalPosition) is { } adv ? adv.GlobalPosition - GlobalPosition : -GlobalTransform.Basis.Z;
         var flat = new Vector3(toward.X, 0f, toward.Z);

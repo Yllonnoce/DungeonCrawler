@@ -227,6 +227,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (Camera == null) return; // before _Ready
         Camera.Current = local;
+        if (local && Vr.Active)
+        {
+            _vr ??= VrRig.Attach(this); // the headset is the view; the flat camera rides it
+            _vr.TakeView();             // every time: making the flat camera current just above took the view from the head
+        }
+        else if (_vr != null) { _vr.Detach(); _vr = null; Camera.Position = _cameraHome; Camera.Rotation = new Vector3(_pitch, 0, 0); }
         Torch.ShadowEnabled = local;
         Torch.LightEnergy = local ? 2.5f : 1.0f;
         Torch.OmniRange = local ? 16f : 8f;
@@ -281,9 +287,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Camera.VOffset = ((float)_shakeRng.NextDouble() * 2f - 1f) * amp * 0.7f;
     }
 
+    private VrRig? _vr;
+    /// <summary>The headset rig while this body is played in VR (see <see cref="Vr"/>), else null.</summary>
+    public VrRig? VrRig => _vr;
+
     public void Look(Vector2 relative)
     {
-        if (SpectateTarget != null) return;
+        if (SpectateTarget != null || _vr != null) return; // in a headset the head looks, not the mouse
         var sens = 0.0022f * Settings.MouseSensitivity;
         RotateY(-relative.X * sens);
         _pitch = Mathf.Clamp(_pitch - relative.Y * sens * (Settings.InvertY ? -1f : 1f), Mathf.DegToRad(-MaxPitchDegrees), Mathf.DegToRad(MaxPitchDegrees));
@@ -317,6 +327,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         var flat = new Vector3(target.X, GlobalPosition.Y, target.Z);
         if (flat.DistanceSquaredTo(GlobalPosition) > 0.001f) LookAt(flat, Vector3.Up);
+        _vr?.TurnTo(Rotation.Y);
     }
 
     /// <summary>Companions aim their eyes at a point so melee casts and projectiles go where they look.</summary>
@@ -341,6 +352,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         else if (_shownDowned) CollisionLayer = State.Mangled ? 8u : 0u; // a Mangled flag that arrives after the fall still makes the body reachable for a rescue
         if (Main.Instance?.Builder.Layout == null) return; // no floor yet (the planner is still writing it): stand still rather than fall forever
         if (++_heldCheck % 30 == 0) RefreshHeldWeapon(); // the equipped weapon changes from the inventory, a loot pickup or a sync
+        TickBlade(dt);
         if (Control == ControlKind.Remote) { RemoteTick(dt); return; }
         var velocity = Velocity;
         var wasInWater = InWater;
@@ -370,6 +382,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (Downed) { target = Vector3.Zero; Guarding = false; Defense.Update(dt, false); }
         else if (IsLocal)
         {
+            _vr?.BeforeMove();
             var input = Intent;
             _forwardHeld = input.Live && input.Move.Y < -0.5f ? _forwardHeld + dt : 0f;
             AutoRunning = _forwardHeld >= AutoRunSeconds;
@@ -414,6 +427,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Velocity = velocity;
         var before = GlobalPosition;
         MoveAndSlide();
+        _vr?.AfterMove();
         var moved = GlobalPosition - before; moved.Y = 0;
         DistanceTravelled += moved.Length();
 
@@ -912,7 +926,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         EventBus.Instance.RaiseAbilityUsed(Index, a.Kind);
         _dance.Cancel();
         _model?.Play(a.Kind is AbilityKind.WeaponAttack or AbilityKind.MeleeStrike ? (w.IsRanged ? Clips.cast : Clips.melee) : Clips.cast, force: true);
-        if (IsLocal) _fpWeapon.PlayAttack(a, heavy, perfect, m.CooldownRemaining);
+        var move = IsLocal ? _fpWeapon.PlayAttack(a, heavy, perfect, m.CooldownRemaining) : null;
         EventBus.Instance.PlaySfx(a.Kind switch
         {
             AbilityKind.WeaponAttack when w.IsRanged => "bow",
@@ -926,7 +940,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 FireProjectile(w.ToAttack(), 40f, new Color(0.8f, 0.7f, 0.5f), isArrow: true);
                 break;
             case AbilityKind.WeaponAttack:
-                MeleeSwing(w.ToAttack(), heavy, perfect, w.HeavyMultiplier);
+                MeleeSwing(w.ToAttack(), heavy, perfect, w.HeavyMultiplier, move);
                 break;
             case AbilityKind.MeleeStrike:
                 var bonus = a.Attack ?? new AttackProfile();
@@ -936,7 +950,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                     Type = w.Type, Kind = AttackKind.Melee, CritBonus = bonus.CritBonus, OnHit = w.OnHit.Concat(bonus.OnHit).ToArray(),
                 };
                 EventBus.Instance.Log($"{m.Name} uses {a.Name}!");
-                MeleeSwing(strike, false, false, 1f);
+                MeleeSwing(strike, false, false, 1f, move);
                 break;
             case AbilityKind.Projectile:
                 EventBus.Instance.Log($"{m.Name} {(a.ArrowCost > 0 ? "looses" : "casts")} {a.Name}.");
@@ -961,9 +975,20 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         }
     }
 
-    private void MeleeSwing(AttackProfile attack, bool heavy, bool perfect, float heavyMultiplier)
+    /// <summary>
+    /// A melee blow. The body you play swings a blade that hits what it touches, when it touches it (<see cref="BladeRules"/>,
+    /// following <paramref name="move"/>, the move the first-person view is playing); every other body, and a blow struck
+    /// with no blade, lands at once on what stands where it aims.
+    /// </summary>
+    private void MeleeSwing(AttackProfile attack, bool heavy, bool perfect, float heavyMultiplier, WeaponMove? move = null)
     {
         var m = State;
+        if (BladeContact && IsLocal && move is { Blade: true } && BladeRules.Ends(move) > 0f)
+        {
+            _blade = new BladeSwing(move, attack, heavy, perfect, heavyMultiplier, Mathf.Max(1.0f, m.WeaponProfile.Range));
+            return;
+        }
+        _blade = null;
         _meleeCast.TargetPosition = new Vector3(0, 0, -Mathf.Max(1.0f, m.WeaponProfile.Range));
         _meleeCast.ForceShapecastUpdate();
         var hitSomething = false;
@@ -972,23 +997,132 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         {
             if (_meleeCast.GetCollider(i) is not ICombatTarget target || !target.IsAlive) continue;
             hitSomething = true;
-            var ctx = new HitContext { Heavy = heavy, HeavyMultiplier = heavyMultiplier * (perfect ? 1.25f : 1f), PerfectBlow = perfect, SneakAttack = target.IsUnaware, SneakMultiplier = m.Class.SneakAttackMultiplier * Party.SneakBonus(m, target) };
-            var result = target.ReceiveAttack(m.Stats, attack, ctx, Party.Rng, m.Name);
-            Party.LogResult(m.Name, target.DisplayName, result, heavy, perfect);
-            Party.OnHitLanded(m, target, result);
-            if (target is Enemy e)
-            {
-                e.NoteThreat(this, result.Amount + 5f);
-                if (IsLocal) Party.LeadTarget = e;
-                if (result.Hit && (heavy || perfect)) e.Stagger(e.HitReactSeconds, fromDefense: false);
-                if (result.Hit && heavy && Party.HeavyStunSeconds(m) is > 0f and var heavyStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, heavyStun, 0));
-                if (result.Shatter && Party.ShatterStunSeconds(m) is > 0f and var shatterStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, shatterStun, 0));
-                if (result.Shatter && Adventure.Fortune.FortuneRules.ShatterChain(Game.Instance.Adventure) is > 0 and var chain) ShatterChain(e, chain, attack, m);
-                if (result.Hit && perfect && Party.PerfectBlowCleave(m) is > 0f and var cleave) Cleave(e, result.Amount * cleave, attack);
-            }
+            var result = Strike(target, attack, heavy, perfect, heavyMultiplier);
             if (perfect && result.Hit && !perfectSaid) { perfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
         }
         if (!hitSomething && IsLocal) EventBus.Instance.Log($"{m.Name} swings at nothing.");
+    }
+
+    /// <summary>One blow on one target, and everything a blow that lands sets off. <paramref name="contact"/>: the blade was seen to touch it.</summary>
+    private DamageResult Strike(ICombatTarget target, AttackProfile attack, bool heavy, bool perfect, float heavyMultiplier, bool contact = false, float carry = 1f)
+    {
+        var m = State;
+        var ctx = new HitContext { Heavy = heavy, HeavyMultiplier = heavyMultiplier * (perfect ? 1.25f : 1f), PerfectBlow = perfect, SneakAttack = target.IsUnaware, SneakMultiplier = m.Class.SneakAttackMultiplier * Party.SneakBonus(m, target), Contact = contact, Carry = carry };
+        var result = target.ReceiveAttack(m.Stats, attack, ctx, Party.Rng, m.Name);
+        Party.LogResult(m.Name, target.DisplayName, result, heavy, perfect);
+        Party.OnHitLanded(m, target, result);
+        if (target is Enemy e)
+        {
+            e.NoteThreat(this, result.Amount + 5f);
+            if (IsLocal) Party.LeadTarget = e;
+            if (result.Hit && (heavy || perfect)) e.Stagger(e.HitReactSeconds, fromDefense: false);
+            if (result.Hit && heavy && Party.HeavyStunSeconds(m) is > 0f and var heavyStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, heavyStun, 0));
+            if (result.Shatter && Party.ShatterStunSeconds(m) is > 0f and var shatterStun) e.ApplyStatus(new StatusApplication(StatusKind.Stun, shatterStun, 0));
+            if (result.Shatter && Adventure.Fortune.FortuneRules.ShatterChain(Game.Instance.Adventure) is > 0 and var chain) ShatterChain(e, chain, attack, m);
+            if (result.Hit && perfect && Party.PerfectBlowCleave(m) is > 0f and var cleave) Cleave(e, result.Amount * cleave, attack);
+        }
+        return result;
+    }
+
+    // ---- the blade ---------------------------------------------------------------------------
+
+    /// <summary>Off, every melee blow lands at once where it aims, as it does for the bodies you do not play (the self-tests written before the blade turn it off).</summary>
+    public static bool BladeContact = true;
+
+    /// <summary>Where the blade's reach starts, in the camera's space: the chest, a little toward the sword arm.</summary>
+    private static readonly Vector3 BladeOrigin = new(0.15f, -0.3f, 0f);
+    /// <summary>A hit point stops this far short of the middle of the body it found, about where the skin is.</summary>
+    private const float BodyRadius = 0.35f;
+
+    /// <summary>A swing under way: the move the view is playing, the blow it carries, and what the blade has cut so far.</summary>
+    private sealed class BladeSwing(WeaponMove move, AttackProfile attack, bool heavy, bool perfect, float heavyMultiplier, float range)
+    {
+        public readonly WeaponMove Move = move;
+        public readonly AttackProfile Attack = attack;
+        public readonly bool Heavy = heavy, Perfect = perfect;
+        public readonly float HeavyMultiplier = heavyMultiplier, Range = range;
+        public readonly HashSet<ICombatTarget> Cut = new();
+        public float Time, Hold;
+        public Vector3? LastTip;
+        public bool PerfectSaid;
+    }
+
+    private BladeSwing? _blade;
+    private readonly CapsuleShape3D _bladeShape = new() { Radius = BladeRules.Thickness };
+    private readonly PhysicsShapeQueryParameters3D _bladeQuery = new() { CollisionMask = 4, CollideWithBodies = true, CollideWithAreas = false };
+
+    /// <summary>True while a swing's blade is still on its way (the blow has not finished landing).</summary>
+    public bool BladeSwinging => _blade != null;
+
+    /// <summary>Carry the blade along its move for this tick and strike what it touches on the way.</summary>
+    private void TickBlade(float dt)
+    {
+        if (_blade is not { } s) return;
+        if (Downed) { _blade = null; return; }
+        var hung = Mathf.Min(s.Hold, dt); // biting into the first body it met
+        s.Hold -= hung;
+        dt -= hung;
+        if (dt <= 0f) return;
+        var from = s.Time;
+        s.Time += dt;
+        foreach (var t in BladeRules.Steps(s.Move, from, s.Time, s.Range))
+        {
+            var reach = BladeRules.At(s.Move, t, s.Range);
+            if (reach.Live) CutAlong(s, reach);
+            else s.LastTip = null;
+        }
+        if (s.Time < BladeRules.Ends(s.Move)) return;
+        if (s.Cut.Count == 0) EventBus.Instance.Log($"{State.Name} swings at nothing.");
+        _blade = null;
+    }
+
+    /// <summary>The blade where <paramref name="reach"/> puts it: every living target it lies across that it has not cut yet this swing takes the blow.</summary>
+    private void CutAlong(BladeSwing s, BladeReach reach)
+    {
+        var cam = Camera.GlobalTransform;
+        var bearing = Mathf.DegToRad(reach.Bearing);
+        var dir = (cam.Basis * new Vector3(-Mathf.Sin(bearing), 0f, -Mathf.Cos(bearing))).Normalized();
+        var origin = cam * BladeOrigin;
+        var tip = origin + dir * reach.Length;
+        var along = s.LastTip is { } last && last.DistanceSquaredTo(tip) > 1e-6f ? (tip - last).Normalized() : dir;
+        s.LastTip = tip;
+
+        // a capsule laid along the blade (its long axis is Y)
+        var side = dir.Cross(cam.Basis.Y);
+        side = side.LengthSquared() > 1e-6f ? side.Normalized() : cam.Basis.X.Normalized();
+        _bladeShape.Height = Mathf.Max(reach.Length, BladeRules.Thickness * 2f + 0.01f);
+        _bladeQuery.Shape = _bladeShape;
+        _bladeQuery.Transform = new Transform3D(new Basis(side, dir, side.Cross(dir)), origin + dir * reach.Length * 0.5f);
+        var space = GetWorld3D().DirectSpaceState;
+        foreach (var found in space.IntersectShape(_bladeQuery, 16))
+        {
+            if (found["collider"].AsGodotObject() is not ICombatTarget target || !target.IsAlive || s.Cut.Contains(target)) continue;
+            var at = tip;
+            if (target is Node3D body)
+            {
+                // the point of the blade nearest the body's upright middle, moved in to about its skin
+                var middle = body.GlobalPosition;
+                var flat = new Vector3(dir.X, 0f, dir.Z);
+                var u = flat.LengthSquared() > 1e-6f ? Mathf.Clamp((middle - origin).Dot(flat) / flat.LengthSquared(), 0f, reach.Length) : reach.Length;
+                at = origin + dir * u;
+                var inward = new Vector3(middle.X - at.X, 0f, middle.Z - at.Z);
+                if (inward.Length() > BodyRadius) at += inward * (1f - BodyRadius / inward.Length());
+                // no cutting through a wall: the eye must see the spot
+                var sight = PhysicsRayQueryParameters3D.Create(cam.Origin, at, 1);
+                if (space.IntersectRay(sight).Count > 0) continue;
+            }
+            var carry = BladeRules.Carry(s.Cut.Count);
+            s.Cut.Add(target);
+            if (target is Enemy e) e.AimBlood(at, along);
+            var result = Strike(target, s.Attack, s.Heavy, s.Perfect, s.HeavyMultiplier, contact: true, carry);
+            if (s.Perfect && result.Hit && !s.PerfectSaid) { s.PerfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
+            if (result.Hit && s.Cut.Count == 1)
+            {
+                s.Hold = BladeRules.HitStop(s.Heavy);
+                _fpWeapon.Hitch(s.Hold);
+                _vr?.Pulse(rightHand: true, s.Heavy ? 0.9f : 0.5f, s.Hold * 2f);
+            }
+        }
     }
 
     private void FireProjectile(AttackProfile attack, float speed, Color color, bool isArrow, float yawDegrees = 0f)

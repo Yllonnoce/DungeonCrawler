@@ -23,6 +23,22 @@
       "console": "internalConsole"
     },
     {
+      // In a headset through Meta Quest Link (see "Playing in a headset" in docs/development.md). Start Link in the headset first.
+      "name": "Play in VR",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build",
+      "program": "${env:HOME}/.local/bin/godot",
+      "windows": {
+        "program": "${env:LOCALAPPDATA}\\DungeonCrawlerTools\\Godot_v4.7.2-stable_mono_win64\\Godot_v4.7.2-stable_mono_win64_console.exe",
+        "env": { "PATH": "${env:LOCALAPPDATA}\\DungeonCrawlerTools\\dotnet;${env:PATH}" }
+      },
+      "args": ["--xr-mode", "on", "--path", "${workspaceFolder}", "--", "--vr"],
+      "cwd": "${workspaceFolder}",
+      "stopAtEntry": false,
+      "console": "internalConsole"
+    },
+    {
       "name": "Play (builtin campaign)",
       "type": "coreclr",
       "request": "launch",

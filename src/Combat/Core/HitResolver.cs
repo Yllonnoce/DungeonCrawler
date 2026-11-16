@@ -66,11 +66,16 @@ public static class HitResolver
                                        AttackProfile attack, HitContext ctx, Random rng)
     {
         var autoHit = ctx.SneakAttack || ctx.DefenderStunned;
+        var glancing = false;
         if (!autoHit && rng.NextDouble() >= DamagePipeline.HitChance(attacker, defender))
-            return DamageResult.Miss(attack.Type);
+        {
+            if (!ctx.Contact) return DamageResult.Miss(attack.Type);
+            glancing = true; // the blade touched: the roll decides how well, not whether
+        }
 
-        var crit = ctx.SneakAttack || rng.NextDouble() < attacker[Stat.CritChance] + attack.CritBonus;
-        var dmg = DamagePipeline.RollBase(attacker, attack, rng);
+        var crit = !glancing && (ctx.SneakAttack || rng.NextDouble() < attacker[Stat.CritChance] + attack.CritBonus);
+        var dmg = DamagePipeline.RollBase(attacker, attack, rng) * ctx.Carry;
+        if (glancing) dmg *= BladeRules.GlancingMultiplier;
         if (ctx.Heavy) dmg *= ctx.HeavyMultiplier;
         if (crit) dmg *= Math.Max(1f, attacker[Stat.CritMultiplier]);
         if (ctx.SneakAttack) dmg *= Math.Max(1f, ctx.SneakMultiplier);
@@ -103,6 +108,6 @@ public static class HitResolver
                 defenderEffects.Apply(new StatusApplication(StatusKind.Vulnerable, CombatRules.VulnerableSeconds, 0));
         }
 
-        return new DamageResult(true, crit, blocked, ctx.SneakAttack, Math.Max(0f, dmg), attack.Type, applied) { Shatter = shatter, IgniteBurst = ignite };
+        return new DamageResult(true, crit, blocked, ctx.SneakAttack, Math.Max(0f, dmg), attack.Type, applied) { Shatter = shatter, IgniteBurst = ignite, Glancing = glancing };
     }
 }

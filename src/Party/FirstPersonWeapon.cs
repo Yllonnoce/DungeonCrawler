@@ -56,7 +56,7 @@ public partial class FirstPersonWeapon : Node3D
 
     // the move playing
     private WeaponMove? _move;
-    private float _moveTime;
+    private float _moveTime, _hitch;
     private readonly Queue<float> _impacts = new();
     private bool _holding, _guarding;
     private int _combo;
@@ -105,7 +105,9 @@ public partial class FirstPersonWeapon : Node3D
 
         if (_move != null)
         {
-            _moveTime += dt;
+            var hung = Mathf.Min(_hitch, dt);
+            _hitch -= hung;
+            _moveTime += dt - hung;
             while (_impacts.Count > 0 && _impacts.Peek() <= _moveTime)
             {
                 _impacts.Dequeue();
@@ -262,11 +264,12 @@ public partial class FirstPersonWeapon : Node3D
 
     /// <summary>
     /// Play the move for an attack or a skill. <paramref name="budget"/> is the time until the member can act again (see
-    /// <see cref="AbilityRules.SwingSeconds"/>); a move that would outlast it is played faster.
+    /// <see cref="AbilityRules.SwingSeconds"/>); a move that would outlast it is played faster. Returns the move as it
+    /// plays (null when the hand holds nothing to swing), so the fight can follow the same blade.
     /// </summary>
-    public void PlayAttack(AbilityProfile ability, bool heavy, bool perfect, float budget)
+    public WeaponMove? PlayAttack(AbilityProfile ability, bool heavy, bool perfect, float budget)
     {
-        if (_model == null || _shownStyle is not { } style) return;
+        if (_model == null || _shownStyle is not { } style) return null;
         WeaponMove? move;
         if (ability.Kind == AbilityKind.WeaponAttack)
         {
@@ -279,14 +282,19 @@ public partial class FirstPersonWeapon : Node3D
             move = WeaponMoves.Attack(style, heavy, _combo);
         }
         else move = WeaponMoves.Skill(ability.Id, ability.Kind, style);
-        if (move == null) return;
+        if (move == null) return null;
 
         Color? trail = null;
         if (ability.Kind != AbilityKind.WeaponAttack && move.Trail) trail = ToColor(TrailColor.ForSkill(ability.Id));
         else if (_glow != null) trail = _legendColor;
         else if (perfect) trail = ToColor(TrailColor.Gold);
-        Play(move.FitTo(budget), trail);
+        move = move.FitTo(budget);
+        Play(move, trail);
+        return move;
     }
+
+    /// <summary>Hang the move where it is for a moment: the blade biting into what it hit.</summary>
+    public void Hitch(float seconds) => _hitch = Mathf.Max(_hitch, seconds);
 
     /// <summary>A parry: the blade flicked out across the body, the same for every weapon.</summary>
     public void PlayParry()
@@ -311,6 +319,7 @@ public partial class FirstPersonWeapon : Node3D
         _holding = false;
         _move = move;
         _moveTime = 0f;
+        _hitch = 0f;
         _impacts.Clear();
         foreach (var t in move.ImpactTimes()) _impacts.Enqueue(t);
         _trailOn = trail != null;

@@ -39,8 +39,10 @@ public partial class Main : Node
     public override void _Ready()
     {
         Instance = this;
+        Vr.Start(GetViewport());
         _world = GetNode<Node3D>("World");
         _ui = GetNode<CanvasLayer>("UiRoot");
+        Vr.HostUi(this, _ui);
 
         Builder = new DungeonBuilder { Name = "Dungeon" };
         _world.AddChild(Builder);
