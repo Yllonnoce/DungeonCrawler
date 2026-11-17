@@ -17,6 +17,8 @@ public static class CartRules
 {
     public const float Cruise = 6f;
     public const float MaxSpeed = 11f;
+    public const float ClimbSpeed = 3f;
+    public const float ClimbSlope = 0.05f;
 
     public const float DriveAccel = 2.5f;
     public const float BrakeDecel = 6f;
@@ -44,13 +46,18 @@ public static class CartPhysics
     const float CreepSpeed = 0.25f;
 
     /// <summary>The speed the drive aims for: pumpers speed it up, crew wagons weigh it down.</summary>
-    public static float TargetSpeed(int pumpers, int crewWagons)
+    public static float TargetSpeed(int pumpers, int crewWagons) => Scaled(CartRules.Cruise, pumpers, crewWagons);
+
+    /// <summary>The speed the haul rope pulls the cart up a climb at, with the same pump and load scaling.</summary>
+    public static float ClimbTarget(int pumpers, int crewWagons) => Scaled(CartRules.ClimbSpeed, pumpers, crewWagons);
+
+    static float Scaled(float speed, int pumpers, int crewWagons)
     {
         float boost = pumpers >= 2 ? CartRules.PumpBoost2 : pumpers == 1 ? CartRules.PumpBoost1 : 0f;
-        return CartRules.Cruise * (1f + boost) / (1f + CartRules.LoadPerWagon * crewWagons);
+        return speed * (1f + boost) / (1f + CartRules.LoadPerWagon * crewWagons);
     }
 
-    /// <summary>One step. Only a Rolling cart moves; it never passes StopAt and holds there.</summary>
+    /// <summary>One step. Only a Rolling cart moves; it never passes StopAt and holds there. The controller must set StopAt ahead of S before switching Held to Rolling.</summary>
     public static CartState Step(CartState c, in CartInput i, float dt)
     {
         if (c.Mode != CartMode.Rolling) return c;
@@ -60,8 +67,15 @@ public static class CartPhysics
         else
         {
             float gap = TargetSpeed(i.Pumpers, i.CrewWagons) - c.V;
-            // The drive also cancels drag, so the cart settles on the target instead of just under it.
-            a += (gap < -1f ? -1f : gap > 1f ? 1f : gap) * CartRules.DriveAccel + CartRules.Drag * c.V * c.V;
+            a += (gap < -1f ? -1f : gap > 1f ? 1f : gap) * CartRules.DriveAccel;
+            // At or below target the drive also cancels drag, so the cart settles on the target; above it drag is real.
+            if (gap >= 0f) a += CartRules.Drag * c.V * c.V;
+            // A haul rope pulls the cart up a climb that the drive could not manage.
+            if (i.Slope > CartRules.ClimbSlope)
+            {
+                float rope = (ClimbTarget(i.Pumpers, i.CrewWagons) - c.V) * 2f;
+                if (a < rope) a = rope;
+            }
         }
 
         float remaining = i.StopAt - c.S;
