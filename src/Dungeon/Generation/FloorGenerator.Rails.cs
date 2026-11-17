@@ -104,11 +104,12 @@ public static partial class FloorGenerator
             var to = MakeRailRoom(layout, exit, way, RailEnds.Entry);
             if (from == null || to == null) continue;
             var count = Math.Min(railCount, eligible.Count);
+            if (count < 1) continue; // a line needs at least one stop between the start and the exit
             var chosen = new List<RailRoom>();
             for (var k = 0; k < count; k++) chosen.Add(MakeRailRoom(layout, eligible[(int)((k + 0.5) * eligible.Count / count)], way)!);
             var s = -way; // increasing index runs the way Perp turns, so the outward side is the opposite hand
             var segs = RouteLine(layout, from, chosen, to, s);
-            if (segs == null) continue;
+            if (segs == null || segs.Count < 2) continue; // every stop dropped: no line this way
             var line = LineCells(segs, s, out var levels, out var ramps);
             if (line == null) continue;
             if (!LaneHeightsOk(line.Value.party, line.Value.enemy, levels, ramps, s)) continue;
