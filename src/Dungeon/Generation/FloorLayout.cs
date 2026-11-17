@@ -17,6 +17,16 @@ public sealed class FloorLayout
     public RailLine? Rail { get; internal set; }
     /// <summary>A lane cell of either lane.</summary>
     public bool IsRail(GridPos p) => Rail != null && (Rail.Party.Contains(p) || Rail.Enemy.Contains(p));
+    /// <summary>How many rooms a ring floor laid on its circle: Rooms[1..RingRooms] in circle order (0 on other shapes).</summary>
+    internal int RingRooms { get; set; }
+    /// <summary>On a railed ring, how deep a band round the grid's edge carved side rooms keep out of, for the rail line (0 = none).</summary>
+    internal int RailBand { get; set; }
+    /// <summary>
+    /// On a railed ring, until the line is laid: the ring rooms' outer edge cells, kept clear for platforms (reserved), and
+    /// the rock outside them, kept solid. Empty on every other floor and once the line is laid.
+    /// </summary>
+    internal HashSet<GridPos> RailKeep { get; } = new();
+    internal HashSet<GridPos> RailRock { get; } = new();
     public Cell[] Cells { get; }               // row-major, index = y * Width + x
     /// <summary>Height level per cell: 0 low, 1 high (4 m up). Meaningful for walkable cells; ramps store their base level.</summary>
     public byte[] Levels { get; }
@@ -71,7 +81,7 @@ public sealed class FloorLayout
     /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
     public HashSet<GridPos> Fires { get; } = new();
     /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
-    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p)) || IsRail(p) || Rail?.Pockets.Contains(p) == true;
+    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p)) || IsRail(p) || Rail?.Pockets.Contains(p) == true || RailKeep.Contains(p);
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with

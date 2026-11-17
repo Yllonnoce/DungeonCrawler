@@ -120,6 +120,8 @@ public static class Verticality
             var room = layout.Rooms[i];
             if (roomLevel[i] != 0 || room.H < 5 || room.W < 4 || FloorGenerator.ChamferDepth(room) > 1) continue;
             if (layout.StructureAt(room) != null) continue;
+            // a railed ring keeps a ring room's outer edge for the line: not under the strip (top) or its ramp (left end)
+            if (layout.RailKeep.Count > 0 && (layout.RailKeep.Contains(new GridPos(room.X + room.W / 2, room.Y)) || layout.RailKeep.Contains(new GridPos(room.X, room.Y + 1)) || layout.RailKeep.Contains(new GridPos(room.X, room.Y + 2)))) continue;
             if (room == upRoom || room == downRoom || room == layout.BossArena || layout.Vaults.Any(v => v.Room == room)) continue;
             // corridors must not enter along the top row or beside the ramp column
             if (FloorGenerator.Entrances(layout, room).Any(e => e.Y == room.Y - 1 || (e.X == room.X - 1 && e.Y <= room.Y + 2) || (e.X == room.X && e.Y == room.Y - 1))) continue;
@@ -449,6 +451,7 @@ public static class Verticality
             var w = r + n;
             var a = w + n;
             if (layout[w] != Cell.Wall || layout[a] != Cell.Void || layout.IsUnder(w) || layout.IsUnder(a)) continue;
+            if (layout.RailKeep.Contains(r) || layout.RailRock.Contains(w) || layout.RailRock.Contains(a)) continue; // a railed ring keeps its rooms' outer walls for the line
             var ok = true;
             for (var oy = -1; oy <= 1 && ok; oy++)
                 for (var ox = -1; ox <= 1; ox++)

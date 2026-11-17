@@ -13,6 +13,7 @@ public static partial class FloorGenerator
         if (spec.RailCount > 0 && spec.Layout == LayoutKind.Ring) spec = spec with { Width = spec.Width + 2 * RailRules.Band, Height = spec.Height + 2 * RailRules.Band };
         var rng = new Random(seed);
         var layout = new FloorLayout(seed, spec.Width, spec.Height) { Kind = spec.Layout };
+        if (spec.RailCount > 0 && spec.Layout == LayoutKind.Ring) layout.RailBand = RailRules.Band + 2;
         if (spec.Objective != FloorObjectiveKind.None) layout.Objective = new ObjectiveLayout { Kind = spec.Objective };
 
         // the shape: how rooms are laid and joined; everything after works the same on any of them (see FloorGenerator.Kinds.cs)
@@ -26,6 +27,7 @@ public static partial class FloorGenerator
                 break;
             case LayoutKind.Ring:
                 PlaceRingRooms(spec, rng, layout);
+                if (layout.RailBand > 0) KeepRailEdges(layout);
                 CarveRooms(layout);
                 ConnectRing(spec, rng, layout);
                 break;
@@ -67,6 +69,7 @@ public static partial class FloorGenerator
         PlaceTraps(spec, rng, layout);
         HazardPlanner.PlaceHazards(spec, new Random(seed ^ 0x4A2D), layout); // the lethal hazards, last and from their own seed: a floor without them is untouched
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
+        LayRails(spec, new Random(seed ^ 0x2A11), layout); // the mine-cart line round a railed ring, from its own seed; a no-op without RailCount
         // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
         PlaceSecretRooms(spec, new Random(seed ^ 0x5EC2), layout);
         if (spec.Layout == LayoutKind.Mine) DigDrifts(spec, new Random(seed ^ 0x0D1F), layout); // the drifts after the safe room, vaults and spawns: dead-end tunnels into free rock, nothing else moves
@@ -303,9 +306,11 @@ public static partial class FloorGenerator
     /// for a stretch in its middle, so hallways jog and weave instead of running dead straight. Each jog adds only two
     /// cells and leaves straight runs at both ends, which is what ramps need.
     /// </summary>
-    internal static void CarveCorridor(Random rng, FloorLayout layout, GridPos from, GridPos to)
+    internal static void CarveCorridor(Random rng, FloorLayout layout, GridPos from, GridPos to, GridPos? inward = null)
     {
         var corner = rng.Next(2) == 0 ? new GridPos(to.X, from.Y) : new GridPos(from.X, to.Y);
+        // a railed ring bends its corridors on the side toward the centre, so they never run round the outside of a room
+        if (inward is { } c) corner = Dist2(new GridPos(to.X, from.Y), c) <= Dist2(new GridPos(from.X, to.Y), c) ? new GridPos(to.X, from.Y) : new GridPos(from.X, to.Y);
         CarveLeg(rng, layout, from, corner);
         CarveLeg(rng, layout, corner, to);
     }
@@ -636,6 +641,8 @@ public static partial class FloorGenerator
         }
         var room = new Room(x, y, w, h);
         if (x < 1 || y < 1 || room.Right >= layout.Width - 1 || room.Bottom >= layout.Height - 1) return null;
+        // a railed ring keeps its edge band for the rail line
+        if (layout.RailBand > 0 && (x < layout.RailBand || y < layout.RailBand || room.Right >= layout.Width - layout.RailBand || room.Bottom >= layout.Height - layout.RailBand)) return null;
         foreach (var r in rooms) if (r.Intersects(room, 1)) return null;
         // the corridor: a straight line from the host edge to the vault edge, along the shared span
         GridPos start, end;
@@ -662,6 +669,7 @@ public static partial class FloorGenerator
         var step = new GridPos(Math.Sign(end.X - start.X), Math.Sign(end.Y - start.Y));
         while (true) { cells.Add(p); if (p == end) break; p += step; }
         foreach (var c in cells) if (layout[c] is Cell.Floor or Cell.Door or Cell.Ramp) return null; // a ramp too: carving after the levels must not flatten one
+        if (cells.Any(c => layout.RailRock.Contains(c) || layout.RailKeep.Contains(c))) return null; // a railed ring keeps the rock outside its rooms for the line
         // the room must not touch any existing floor cell (would create extra entrances)
         foreach (var c in room.Cells())
             for (var oy = -1; oy <= 1; oy++) for (var ox = -1; ox <= 1; ox++)
@@ -731,7 +739,7 @@ public static partial class FloorGenerator
 
     /// <summary>A cell a structure must leave alone.</summary>
     internal static bool Busy(FloorLayout layout, GridPos p)
-        => layout[p] != Cell.Floor || layout.IsUnder(p) || p == layout.UpStairs || p == layout.DownStairs
+        => layout[p] != Cell.Floor || layout.IsUnder(p) || p == layout.UpStairs || p == layout.DownStairs || layout.RailKeep.Contains(p)
            || layout.Vaults.Any(v => v.Key == p || v.Lever == p || v.Door == p)
            || layout.Secrets.Any(s => s.Facing == p || s.Alcove == p) || layout.ChestSpawns.Contains(p);
 
@@ -1017,7 +1025,7 @@ public static partial class FloorGenerator
         for (var i = 0; i < 20; i++)
         {
             var p = new GridPos(room.X + rng.Next(room.W), room.Y + rng.Next(room.H));
-            if (layout[p] == Cell.Floor && p != layout.UpStairs && p != layout.DownStairs) return p;
+            if (layout[p] == Cell.Floor && p != layout.UpStairs && p != layout.DownStairs && !layout.RailKeep.Contains(p)) return p;
         }
         return room.Center;
     }

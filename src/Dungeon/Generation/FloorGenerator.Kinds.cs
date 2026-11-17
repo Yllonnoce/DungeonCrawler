@@ -251,6 +251,7 @@ public static partial class FloorGenerator
             }
             if (placed != null) layout.Rooms.Add(placed);
         }
+        layout.RingRooms = layout.Rooms.Count - 1;
     }
 
     /// <summary>The ring corridor joins neighbours around the circle; spokes run in to the rotunda from every other room.</summary>
@@ -271,7 +272,7 @@ public static partial class FloorGenerator
         foreach (var (a, b) in edges.Distinct())
         {
             layout.Connections.Add((a, b));
-            CarveCorridor(walk, layout, rooms[a].Center, rooms[b].Center);
+            CarveCorridor(walk, layout, rooms[a].Center, rooms[b].Center, layout.RailBand > 0 ? new GridPos(spec.Width / 2, spec.Height / 2) : null);
         }
     }
 
