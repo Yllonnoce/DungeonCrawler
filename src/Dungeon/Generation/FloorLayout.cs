@@ -13,6 +13,10 @@ public sealed class FloorLayout
     public ObjectiveLayout? Objective { get; set; }
     public int Width { get; }
     public int Height { get; }
+    /// <summary>The mine-cart line (a railed ring floor); null on an ordinary floor.</summary>
+    public RailLine? Rail { get; internal set; }
+    /// <summary>A lane cell of either lane.</summary>
+    public bool IsRail(GridPos p) => Rail != null && (Rail.Party.Contains(p) || Rail.Enemy.Contains(p));
     public Cell[] Cells { get; }               // row-major, index = y * Width + x
     /// <summary>Height level per cell: 0 low, 1 high (4 m up). Meaningful for walkable cells; ramps store their base level.</summary>
     public byte[] Levels { get; }
@@ -67,7 +71,7 @@ public sealed class FloorLayout
     /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
     public HashSet<GridPos> Fires { get; } = new();
     /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
-    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p));
+    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p)) || IsRail(p) || Rail?.Pockets.Contains(p) == true;
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with
@@ -215,6 +219,13 @@ public sealed class FloorLayout
             h ^= (ulong)hz.Index * 0x9E37UL + (ulong)hz.Kind * 0x1F3UL + (ulong)hz.Variant * 0x2BUL; h *= 1099511628211UL;
             foreach (var c in hz.Cells) { h ^= (ulong)c.GetHashCode() * 29; h *= 1099511628211UL; }
         }
+        if (Rail != null)
+        {
+            foreach (var c in Rail.Party) { h ^= (ulong)c.GetHashCode() * 37; h *= 1099511628211UL; }
+            foreach (var c in Rail.Enemy) { h ^= (ulong)c.GetHashCode() * 37; h *= 1099511628211UL; }
+            foreach (var c in Rail.Pockets) { h ^= (ulong)c.GetHashCode() * 37; h *= 1099511628211UL; }
+            foreach (var st in Rail.Stops) { h ^= (ulong)st.Room * 37; h *= 1099511628211UL; }
+        }
         return h;
     }
 
@@ -251,6 +262,7 @@ public sealed class FloorLayout
             {
                 var p = new GridPos(x, y);
                 sb.Append(p == UpStairs ? '<' : p == DownStairs ? '>' :
+                          Rail?.Party.Contains(p) == true ? '=' : Rail?.Enemy.Contains(p) == true ? '%' : Rail?.Pockets.Contains(p) == true ? ')' :
                           EnemySpawns.Contains(p) ? 'e' : ChestSpawns.Contains(p) ? '$' : BreakableSpawns.Contains(p) ? 'b' :
                           TrapSpawns.Contains(p) ? '^' : KeySpawns.Contains(p) || Vaults.Any(v => v.Key == p) ? 'k' : Vaults.Any(v => v.Lever == p) ? 'L' :
                           IsWater(p) ? '~' : Fires.Contains(p) ? '*' :
