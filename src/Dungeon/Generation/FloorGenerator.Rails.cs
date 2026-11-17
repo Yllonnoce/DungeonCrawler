@@ -57,6 +57,7 @@ public static partial class FloorGenerator
         // what was kept for the line is let go: the line takes what it needs below, everything after may use the rest
         layout.RailKeep.Clear();
         layout.RailRock.Clear();
+        layout.RailFailure = null;
         if (spec.RailCount <= 0 || layout.Kind != LayoutKind.Ring || layout.Rail != null) return;
         List<RailSegment>? plan;
         List<GridPos>? pockets = null;
@@ -65,11 +66,13 @@ public static partial class FloorGenerator
         {
             plan = PlanRails(spec.RailCount, rng, layout, out sign, out pockets);
         }
-        catch (Exception)
+        catch (Exception e)
         {
             plan = null; // planning only reads the floor: a fault in it costs the line, never the floor
+            layout.RailFailure = $"{e.GetType().Name}: {e.Message}";
+            return;
         }
-        if (plan == null || pockets == null) return;
+        if (plan == null || pockets == null) { layout.RailFailure = "no line fits (no eligible stop rooms, or no route to the exit)"; return; }
         CommitRails(layout, plan, sign, pockets);
     }
 

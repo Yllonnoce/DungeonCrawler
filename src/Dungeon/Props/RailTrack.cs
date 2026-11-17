@@ -17,8 +17,11 @@ public partial class RailTrack : Node3D
     public Curve3D Curve { get; } = new() { BakeInterval = 0.2f, UpVectorEnabled = true };
     public float Length { get; private set; }
 
+    /// <summary>Lay the track along the points; a second call replaces the first (the old path and meshes are freed).</summary>
     public void Build(IReadOnlyList<Vector3> points, Material steel, Material sleeper)
     {
+        foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
+        Curve.ClearPoints();
         foreach (var p in points) Curve.AddPoint(p);
         Length = Curve.GetBakedLength();
         AddChild(new Path3D { Curve = Curve, Name = "Path" });

@@ -1029,18 +1029,22 @@ Item level is the floor (`TierRules.ItemLevel`). Base damage and the Armor base 
 Ring floors can carry a mine-cart line round their outside (the floor 12 chase). `FloorSpec.RailCount` is the knob: 0 (the
 default) lays nothing, 1 to 3 is the number of stops past the start; it only applies to the ring layout, and a campaign
 floor sets it through `SpecOverrides` as `"RailCount"` (`CampaignPlan` clamps it 0..3). A railed ring grows the grid by
-`RailRules.Band` (6 cells) on every side and insets the ring by (6,6) so the line has an outer band to run in; room
-indices and order do not change, so plans keep pointing at the same rooms.
+`RailRules.Band` (6 cells) on every side while the ring's radius shrinks by the same band, so the same rooms come out,
+shifted by the band, with an outer band for the line to run in; room indices and order do not change, so plans keep
+pointing at the same rooms. Floors with `RailCount` 0 are unchanged, byte for byte.
 
 `FloorGenerator.LayRails` (`FloorGenerator.Rails.cs`) runs after the ring and its ramps, from its own salted rng
-(`new Random(seed ^ 0x2A11)`), so the rest of a seed builds exactly as it did without rails. The line rooms are the start
+(`new Random(seed ^ 0x2A11)`). On a railed floor the grid grows and the keep-clear rules change corridors, side rooms,
+ledges and alcoves, so the rest of the seed does not build as it would without rails. The line rooms are the start
 (up stairs), the stops and the exit (down stairs). It lays twin lanes round the band (`FloorLayout.Rail`: the party lane
 and the enemy lane), the stop platforms, side pockets where the party can step off, and ramps where a lane has to change
 height. On a railed ring the outer edges of the ring rooms are kept clear so the lanes never run into a wall or a prop.
 
-`FloorSolvability.Problems` also checks the floor with the rails blocked: anything the party could only finish by
-riding (a key, lever or stairs reachable only along the line) is reported as "with the rails blocked, ...", so a floor
-can always be completed on foot. `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets.
+`FloorSolvability.Problems` also runs its checks with the lanes and pockets blocked (the platform cells stay open) and
+reports every problem that appears only then, as "with the rails blocked, ...": the stairs, every cage and every key must
+still be reachable on foot. The up stairs can never be on a lane. A requested line that could not be laid leaves
+`FloorLayout.Rail` null and says why in `FloorLayout.RailFailure` (also warned from `DungeonBuilder.Build`; the floor log
+line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets.
 `DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
 

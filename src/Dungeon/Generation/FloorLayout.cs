@@ -14,9 +14,27 @@ public sealed class FloorLayout
     public int Width { get; }
     public int Height { get; }
     /// <summary>The mine-cart line (a railed ring floor); null on an ordinary floor.</summary>
-    public RailLine? Rail { get; internal set; }
+    public RailLine? Rail
+    {
+        get => _rail;
+        internal set
+        {
+            _rail = value;
+            _railParty = value == null ? new() : new HashSet<GridPos>(value.Party);
+            _railEnemy = value == null ? new() : new HashSet<GridPos>(value.Enemy);
+            _railPockets = value == null ? new() : new HashSet<GridPos>(value.Pockets);
+        }
+    }
+    private RailLine? _rail;
+    private HashSet<GridPos> _railParty = new(), _railEnemy = new(), _railPockets = new();
+    /// <summary>Why a requested line was not laid (a fault, or no room for one); null when none was requested or it was laid. Not part of the content hash.</summary>
+    public string? RailFailure { get; internal set; }
     /// <summary>A lane cell of either lane.</summary>
-    public bool IsRail(GridPos p) => Rail != null && (Rail.Party.Contains(p) || Rail.Enemy.Contains(p));
+    public bool IsRail(GridPos p) => _railParty.Contains(p) || _railEnemy.Contains(p);
+    /// <summary>A cell of the party lane.</summary>
+    internal bool IsPartyRail(GridPos p) => _railParty.Contains(p);
+    /// <summary>A pocket cell off the line (the carved nooks beside it).</summary>
+    internal bool IsRailPocket(GridPos p) => _railPockets.Contains(p);
     /// <summary>How many rooms a ring floor laid on its circle: Rooms[1..RingRooms] in circle order (0 on other shapes).</summary>
     internal int RingRooms { get; set; }
     /// <summary>On a railed ring, how deep a band round the grid's edge carved side rooms keep out of, for the rail line (0 = none).</summary>
@@ -81,7 +99,7 @@ public sealed class FloorLayout
     /// <summary>Floor cells on fire (Burning floors): walkable, but it hurts, and bodies path around them.</summary>
     public HashSet<GridPos> Fires { get; } = new();
     /// <summary>Cells nothing may be placed on: a campfire, a gateway, a ruin's columns, a rubble mound, a nest mouth, a fire.</summary>
-    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p)) || IsRail(p) || Rail?.Pockets.Contains(p) == true || RailKeep.Contains(p);
+    public bool IsReserved(GridPos p) => p == ShrineCell || Rubble.Contains(p) || Fires.Contains(p) || IsNestMouth(p) || Objective?.Reserved.Contains(p) == true || Structures.Any(s => s.Anchor == p || s.Openings.Contains(p) || (s.Kind == StructureKind.Ruin && s.Cells.Contains(p))) || Hazards.Any(h => h.Cells.Contains(p)) || IsRail(p) || IsRailPocket(p) || RailKeep.Contains(p);
 
     /// <summary>
     /// A wall cell the builder may draw as a 45° piece: it touches plain floor on two perpendicular sides at ground level with

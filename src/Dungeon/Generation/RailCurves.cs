@@ -14,6 +14,12 @@ public static class RailCurves
     public static IReadOnlyList<Vector3> Centreline(IReadOnlyList<GridPos> lane, Func<GridPos, float> heightOf,
         float cell = 4f, float cornerRadius = 3f, float step = 0.5f)
     {
+        if (step <= 0f) throw new ArgumentOutOfRangeException(nameof(step), "step must be positive");
+        if (cell <= 0f) throw new ArgumentOutOfRangeException(nameof(cell), "cell must be positive");
+        if (cornerRadius < 0f) throw new ArgumentOutOfRangeException(nameof(cornerRadius), "cornerRadius must not be negative");
+        for (int i = 1; i < lane.Count; i++)
+            if (Math.Abs(lane[i].X - lane[i - 1].X) + Math.Abs(lane[i].Y - lane[i - 1].Y) != 1)
+                throw new ArgumentException($"lane cells {lane[i - 1]} and {lane[i]} are not 4-adjacent", nameof(lane));
         if (lane.Count == 0) return Array.Empty<Vector3>();
         Vector2 Centre(GridPos g) => new(g.X * cell + cell / 2f, g.Y * cell + cell / 2f);
         if (lane.Count == 1) return new[] { new Vector3(Centre(lane[0]).X, heightOf(lane[0]), Centre(lane[0]).Y) };

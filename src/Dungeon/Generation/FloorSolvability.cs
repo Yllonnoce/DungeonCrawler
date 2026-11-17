@@ -24,11 +24,10 @@ public static class FloorSolvability
         if (layout.Rail is { } rail)
         {
             var platform = rail.Stops.SelectMany(s => s.Platform).ToHashSet();
-            var party = rail.Party.ToHashSet();
-            bool Rails(GridPos p) => (layout.IsRail(p) || rail.Pockets.Contains(p)) && !(party.Contains(p) && platform.Contains(p));
+            bool Rails(GridPos p) => (layout.IsRail(p) || layout.IsRailPocket(p)) && !(layout.IsPartyRail(p) && platform.Contains(p));
+            var already = problems.ToHashSet();
             foreach (var q in Problems(layout, Rails))
-                if (q.StartsWith("the stairs down") || q.StartsWith("a prisoner at") || q.StartsWith("every spare jail key"))
-                    problems.Add("with the rails blocked, " + q);
+                if (!already.Contains(q)) problems.Add("with the rails blocked, " + q);
         }
         return problems;
     }
