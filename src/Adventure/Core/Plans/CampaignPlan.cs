@@ -56,9 +56,11 @@ public sealed class SpecOverrides
     [AiNotNull] public int? NestCount { get; set; }
     [AiDescription("Ponds or streams laid in rooms, 0 to 3.")]
     [AiNotNull] public int? WaterCount { get; set; }
+    [AiDescription("Stops on a mine-cart line round the outside of a ring floor, 0 to 3; 0 means no rails.")]
+    [AiNotNull] public int? RailCount { get; set; }
 
     public bool IsEmpty => EnemyCount == null && ChestCount == null && LockedChestCount == null && TrapCount == null && VaultCount == null
-                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null;
+                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null;
 
     public FloorSpec Apply(FloorSpec spec) => spec with
     {
@@ -75,6 +77,7 @@ public sealed class SpecOverrides
         RubbleCount = Math.Clamp(RubbleCount ?? spec.RubbleCount, 0, 6),
         NestCount = Math.Clamp(NestCount ?? spec.NestCount, 0, 8),
         WaterCount = Math.Clamp(WaterCount ?? spec.WaterCount, 0, 3),
+        RailCount = Math.Clamp(RailCount ?? spec.RailCount, 0, 3),
     };
 }
 

@@ -41,6 +41,8 @@ public sealed record FloorSpec
     public int WaterCount { get; init; } = 1;
     /// <summary>Fires burning on room floors (a Burning floor sets this; nothing else has any).</summary>
     public int FireCount { get; init; }
+    /// <summary>Stops on a mine-cart line round a ring floor's outside (0 = no rails; ring only).</summary>
+    public int RailCount { get; init; }
     /// <summary>Tier-final floor: a large arena room is placed and the down stairs live inside it.</summary>
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;
