@@ -5,6 +5,7 @@ using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Dungeon.Rails;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Items;
 using Godot;
@@ -86,6 +87,21 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public Vector2? ForcedMoveInput { get; set; }
     public float DistanceTravelled { get; private set; }
     public string CurrentActionName => _action.Kind.ToString();
+
+    // ---- seated in a mine cart -------------------------------------------------------------------
+    /// <summary>The cart this body sits in (null on foot). The RailController seats and unseats; see <see cref="SitIn"/>.</summary>
+    public MineCart? Cart { get; private set; }
+    /// <summary>The seat in <see cref="Cart"/>, -1 on foot.</summary>
+    public int Seat { get; private set; } = -1;
+    /// <summary>Riding a cart: no walking, gravity or MoveAndSlide; the body takes its transform from the seat (<see cref="FollowSeat"/>).</summary>
+    public bool Seated => Cart != null;
+    /// <summary>A seated body can turn this far either way from facing forward: enough to look back over a shoulder.</summary>
+    public const float MaxSeatYawDegrees = 150f;
+    /// <summary>A seated body's eye above the tub floor (its origin) and the height of its shorter capsule.</summary>
+    public const float SeatedEyeHeight = 1.15f;
+    public const float SeatedHeight = 1.3f;
+    /// <summary>Where a seated body looks, relative to its seat's forward, in radians (mouselook, or a companion facing its target).</summary>
+    private float _seatYaw;
 
     private ShapeCast3D _meleeCast = null!;
     private RayCast3D _interactRay = null!;
@@ -295,9 +311,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (SpectateTarget != null || _vr != null) return; // in a headset the head looks, not the mouse
         var sens = 0.0022f * Settings.MouseSensitivity;
-        RotateY(-relative.X * sens);
+        if (Seated) _seatYaw = ClampSeatYaw(_seatYaw - relative.X * sens); // the seat stays a seat: turn the head, not the cart
+        else RotateY(-relative.X * sens);
         _pitch = Mathf.Clamp(_pitch - relative.Y * sens * (Settings.InvertY ? -1f : 1f), Mathf.DegToRad(-MaxPitchDegrees), Mathf.DegToRad(MaxPitchDegrees));
         Camera.Rotation = new Vector3(_pitch, 0, 0);
+        if (Seated) FollowSeat();
     }
 
     /// <summary>
@@ -306,6 +324,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     /// </summary>
     public void Shove(Vector3 to)
     {
+        if (Seated) return; // a seat holds its rider; throwing someone out of the cart is the RailController's call (GetOut)
         GlobalPosition = to;
         if (Remote != null) Remote.Position = to;
         if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.ForcePose(Index, new Save.PoseDto { X = to.X, Y = to.Y, Z = to.Z, Yaw = Rotation.Y }));
@@ -313,6 +332,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void Teleport(Vector3 position, Vector3? lookTarget = null)
     {
+        if (Seated) // a floor change, a load or a debug jump takes the rider out of the cart, and frees the seat so the cart's book agrees
+        {
+            if (IsInstanceValid(Cart)) Cart!.Seats.Leave(Index);
+            LeaveSeat();
+        }
         GlobalPosition = position;
         Velocity = Vector3.Zero;
         _fallStart = position.Y;
@@ -325,6 +349,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void FaceToward(Vector3 target)
     {
+        if (Seated) { SeatYawToward(target); return; }
         var flat = new Vector3(target.X, GlobalPosition.Y, target.Z);
         if (flat.DistanceSquaredTo(GlobalPosition) > 0.001f) LookAt(flat, Vector3.Up);
         _vr?.TurnTo(Rotation.Y);
@@ -353,7 +378,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (Main.Instance?.Builder.Layout == null) return; // no floor yet (the planner is still writing it): stand still rather than fall forever
         if (++_heldCheck % 30 == 0) RefreshHeldWeapon(); // the equipped weapon changes from the inventory, a loot pickup or a sync
         TickBlade(dt);
+        if (Cart != null && !IsInstanceValid(Cart)) LeaveSeat(); // the floor went and took the cart with it
         if (Control == ControlKind.Remote) { RemoteTick(dt); return; }
+        if (Seated) { SeatedTick(dt); return; }
         var velocity = Velocity;
         var wasInWater = InWater;
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
@@ -392,12 +419,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             var sprint = !Crouching && (input.Sprint || AutoRunning);
             var wish = (Transform.Basis * new Vector3(input.Move.X, 0, input.Move.Y)).Normalized();
             if (input.DodgePressed && Defense.TryDodge(State.Stamina)) StartDodge(wish == Vector3.Zero ? Transform.Basis.Z : wish);
-            if (input.ParryPressed && !Party.CanGuard(State) && Defense.TryParry(State.Stamina, Party.ParryWindowBonus(State)))
-            {
-                if (!Net.NetSession.IsClient) State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.ParryStamina);
-                _fpWeapon.PlayParry();
-                EventBus.Instance.RaiseMemberChanged(Index);
-            }
+            TryParry(input);
             if (Dodging) target = _dodgeDir * DefenseRules.DodgeSpeed; // the burst: sprint, crouch and guard ignored
             else
             {
@@ -444,6 +466,22 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             if (_stepTimer <= 0f) { _stepTimer = 0.5f; Audio.AudioManager.Instance?.Play("footstep", IsLocal ? -10f : -18f); }
         }
 
+        TickView();
+
+        if (Control == ControlKind.Companion && !Downed && !Party.Adventurers.Any(a => a.Dancing)) ScanLoot(dt); // the loot waits until every dance is over
+    }
+
+    private void TryParry(InputIntent input)
+    {
+        if (!input.ParryPressed || Party.CanGuard(State) || !Defense.TryParry(State.Stamina, Party.ParryWindowBonus(State))) return;
+        if (!Net.NetSession.IsClient) State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.ParryStamina);
+        _fpWeapon.PlayParry();
+        EventBus.Instance.RaiseMemberChanged(Index);
+    }
+
+    /// <summary>What the body you play is looking at (the interact prompt), and a crushed client body's spectating.</summary>
+    private void TickView()
+    {
         if (IsLocal && !Downed)
         {
             _fpWeapon.SetGuard(Guarding);
@@ -453,8 +491,107 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         }
         else LookingAt = null;
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
+    }
 
-        if (Control == ControlKind.Companion && !Downed && !Party.Adventurers.Any(a => a.Dancing)) ScanLoot(dt); // the loot waits until every dance is over
+    /// <summary>
+    /// A tick in a cart seat: no walking, gravity, jumping, crouching or dodging, and no MoveAndSlide; the RailController
+    /// carries the body (<see cref="FollowSeat"/>, every rendered frame). Guard, parry, attacks, abilities, potions and the
+    /// interact prompt work as on foot; a companion fights from its seat. A downed rider stays slumped in the seat.
+    /// </summary>
+    private void SeatedTick(float dt)
+    {
+        InWater = false;
+        _falling = false;
+        _forwardHeld = 0f;
+        AutoRunning = false;
+        if (Downed) { Guarding = false; Defense.Update(dt, false); }
+        else if (IsLocal)
+        {
+            var input = Intent; // Move (brake, pump) is the RailController's to read
+            Guarding = input.Guard && Party.CanGuard(State);
+            Defense.Update(dt, Guarding);
+            TryParry(input);
+        }
+        else
+        {
+            Guarding = false;
+            Defense.Update(dt, false);
+            CompanionVelocity(dt); // thinks, faces and attacks; the velocity it would walk at is always zero in a seat
+        }
+        Velocity = Cart!.Velocity; // whoever reads this body's velocity (a leading shot, the pose sync) sees the ride
+        if (_model != null && !Downed)
+        {
+            if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
+            ShowGait(0f);
+        }
+        TickView();
+    }
+
+    /// <summary>Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in <see cref="MineCart.Seats"/>.</summary>
+    public void SitIn(MineCart cart, int seat)
+    {
+        Cart = cart;
+        Seat = seat;
+        _seatYaw = 0f;
+        Crouching = false;
+        ApplyPosture();
+        Velocity = cart.Velocity;
+        _falling = false;
+        _forwardHeld = 0f;
+        AutoRunning = false;
+        _mover.Reset();
+        _dance.Cancel();
+        RescueTarget = null;
+        _action = CompanionAction.Idle;
+        FollowSeat();
+    }
+
+    /// <summary>Out of the seat and onto the ground at <paramref name="at"/>, moving at <paramref name="velocity"/> (a moving cart throws you). The caller frees the seat in <see cref="MineCart.Seats"/>.</summary>
+    public void GetOut(Vector3 at, Vector3 velocity)
+    {
+        LeaveSeat();
+        GlobalPosition = at;
+        Velocity = velocity;
+        _fallStart = at.Y;
+        _falling = false;
+        _mover.Reset();
+        _action = CompanionAction.Idle;
+    }
+
+    /// <summary>Put the body on its seat as the cart stands now, turned by the seat-relative yaw; the camera keeps its pitch.</summary>
+    public void FollowSeat()
+    {
+        if (Cart is not { } cart) return;
+        if (!IsInstanceValid(cart)) { LeaveSeat(); return; }
+        var seat = cart.SeatTransform(Seat);
+        GlobalTransform = new Transform3D(seat.Basis * new Basis(Vector3.Up, _seatYaw), seat.Origin);
+        if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch, 0, Camera.Rotation.Z); // the roll is the seated camera's (the lean)
+    }
+
+    /// <summary>Back to standing on foot, upright and facing where the rider looked; nothing is moved.</summary>
+    private void LeaveSeat()
+    {
+        var forward = -GlobalTransform.Basis.Z;
+        Cart = null;
+        Seat = -1;
+        _seatYaw = 0f;
+        if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
+        else GlobalBasis = Basis.Identity;
+        ApplyPosture();
+        if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch, 0, 0);
+    }
+
+    private static float ClampSeatYaw(float yaw) => Mathf.Clamp(yaw, Mathf.DegToRad(-MaxSeatYawDegrees), Mathf.DegToRad(MaxSeatYawDegrees));
+
+    /// <summary>A seated body turns its head toward a point (as far as the seat allows), at once, so a shot fired next goes there.</summary>
+    private void SeatYawToward(Vector3 point)
+    {
+        if (Cart is not { } cart || !IsInstanceValid(cart)) return;
+        var seat = cart.SeatTransform(Seat);
+        var local = seat.Basis.Inverse() * (point - seat.Origin);
+        if (local.X * local.X + local.Z * local.Z < 0.001f) return;
+        _seatYaw = ClampSeatYaw(Mathf.Atan2(-local.X, -local.Z));
+        FollowSeat();
     }
 
     /// <summary>A viewer body shows the weapon it has equipped, hung from its right-hand grip bone; swapped when the equipment changes.</summary>
@@ -483,7 +620,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     /// </summary>
     public void Celebrate()
     {
-        if (_model == null || !_viewerModel || Downed) return; // the stock models have no dance clips
+        if (_model == null || !_viewerModel || Downed || Seated) return; // the stock models have no dance clips; nobody dances in a cart seat
         if (IsLocal && !Net.NetSession.IsClient) return;        // your own body is hidden in first person: nothing to see, so the kill bark stays
         _dance.Start(Random.Shared.Next());
         if (!Net.NetSession.IsClient) EventBus.Instance.RaiseMemberDance(Index); // the crowing (the server's word reaches co-op clients as a bark)
@@ -530,11 +667,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (Remote is not { } pose) return;
         var before = GlobalPosition;
         var gap = pose.Position - before;
-        GlobalPosition = gap.Length() > 3f ? pose.Position : before.Lerp(pose.Position, Math.Min(1f, dt * 12f));
-        Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, pose.Yaw, Math.Min(1f, dt * 12f)), 0);
+        if (!Seated) // a seat carries a seated remote body; seat-relative poses are co-op's (plan 5)
+        {
+            GlobalPosition = gap.Length() > 3f ? pose.Position : before.Lerp(pose.Position, Math.Min(1f, dt * 12f));
+            Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, pose.Yaw, Math.Min(1f, dt * 12f)), 0);
+        }
         _pitch = pose.Pitch;
         Camera.Rotation = new Vector3(_pitch, 0, 0);
-        Velocity = pose.Velocity;
+        Velocity = Seated ? Cart!.Velocity : pose.Velocity;
         SetCrouch(pose.Crouch);
         Guarding = pose.Guard && Party.CanGuard(State);
         // the window opens only when the server can charge for it, in the same step: a start reported here is one already judged payable
@@ -580,10 +720,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (crouch == Crouching) return;
         Crouching = crouch;
-        _capsule.Height = crouch ? 1.1f : 1.8f;
-        _collision.Position = new Vector3(0, crouch ? 0.55f : 0.9f, 0);
-        Camera.Position = new Vector3(0, crouch ? 0.95f : 1.6f, 0);
-        if (_model != null) _model.Root.Scale = new Vector3(_model.Root.Scale.X, _model.Root.Scale.X * (crouch ? 0.7f : 1f), _model.Root.Scale.Z);
+        ApplyPosture();
+    }
+
+    /// <summary>The capsule, the eye and the model's height for standing, crouching or sitting in a cart (a seat lowers the eye and folds the body like a crouch).</summary>
+    private void ApplyPosture()
+    {
+        var height = Seated ? SeatedHeight : Crouching ? 1.1f : 1.8f;
+        _capsule.Height = height;
+        _collision.Position = new Vector3(0, height / 2f, 0);
+        Camera.Position = new Vector3(0, Seated ? SeatedEyeHeight : Crouching ? 0.95f : 1.6f, 0);
+        if (_model != null) _model.Root.Scale = new Vector3(_model.Root.Scale.X, _model.Root.Scale.X * (Seated || Crouching ? 0.7f : 1f), _model.Root.Scale.Z);
     }
 
     /// <summary>Fell out of the world (a hole in the geometry): put the body back on the last ground it stood on.</summary>
@@ -620,6 +767,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         // a signature about to land is decided at once, not at the next quarter-second
         if (_telegraphing != null && IsInstanceValid(_telegraphing) && _telegraphing.TelegraphRemaining >= 0f && _telegraphing.TelegraphRemaining <= CompanionBrain.DodgeLead + 0.05f && _telegraphing.TelegraphId != _lastTelegraphDecided) _thinkTimer = Math.Min(_thinkTimer, 0f);
         if (_thinkTimer <= 0f) { _thinkTimer = 0.25f; Think(); }
+        if (Seated) // a seat holds its rider: no following, regrouping, rescuing or closing in; it faces its target and fights from where it sits
+        {
+            if (Target != null && IsInstanceValid(Target) && Target.IsAlive) FaceToward(Target.GlobalPosition);
+            return Vector3.Zero;
+        }
 
         var lead = FollowLead;
         switch (_action.Kind)
@@ -784,6 +936,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         };
 
         _action = CompanionBrain.Decide(ctx);
+        if (Seated) _action = CompanionBrain.WhileSeated(_action);
         if (CompanionBrain.DodgeDecisionDue(ctx)) _lastTelegraphDecided = ctx.TelegraphId; // one roll per signature, win or lose
         RescueTarget = _action.Kind == ActionKind.Rescue ? mangled : null;
         Target = _action.Kind != ActionKind.Rescue && _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;

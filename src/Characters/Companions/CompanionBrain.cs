@@ -105,6 +105,18 @@ public static class CompanionBrain
         return CompanionAction.Idle; // in position, waiting for a cooldown
     }
 
+    /// <summary>
+    /// A companion seated in a mine cart cannot walk: following, holding, regrouping, closing in, backing off, a rescue and a
+    /// dodge all become Hold (keeping the enemy to face, never a member to rescue). An attack (chosen only when the target is
+    /// in reach), a potion and idling stand.
+    /// </summary>
+    public static CompanionAction WhileSeated(CompanionAction a) => a.Kind switch
+    {
+        ActionKind.Follow or ActionKind.Hold or ActionKind.Regroup or ActionKind.Approach or ActionKind.Retreat => new CompanionAction(ActionKind.Hold, a.TargetId),
+        ActionKind.Rescue or ActionKind.Dodge => CompanionAction.HoldPosition,
+        _ => a,
+    };
+
     /// <summary>Nearest enemy the stance allows; the lead's target counts as closer so the party focuses fire.</summary>
     public static EnemyView? PickTarget(CompanionContext ctx)
     {

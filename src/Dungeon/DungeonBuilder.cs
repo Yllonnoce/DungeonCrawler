@@ -1150,7 +1150,7 @@ public partial class DungeonBuilder : Node3D
                 e.KillByEnvironment("The falling stone", HazardDamage.Crush);
         var aside = WalkableNeighbor(layout, mouth);
         foreach (var a in Core.Main.Instance?.Party?.Active ?? Enumerable.Empty<Party.Adventurer>())
-            if (a.Control == Party.ControlKind.Companion && WorldToCell(a.GlobalPosition) == mouth) a.Teleport(Surface(aside) + Vector3.Up * 0.3f);
+            if (a.Control == Party.ControlKind.Companion && !a.Seated && WorldToCell(a.GlobalPosition) == mouth) a.Teleport(Surface(aside) + Vector3.Up * 0.3f); // a rider passing the mouth stays in the cart
     }
 
     /// <summary>
