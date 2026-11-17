@@ -27,7 +27,7 @@ held at the stops and ride with you once freed; the walking route always stays o
 
 ## Goals
 
-1. Floor 12 is a sequence of four rides between stops, each ride short (60–90 s) and each adding one new thing.
+1. Floor 12 is a sequence of four rides between stops, each ride short (about 20–30 s) and each adding one new thing.
 2. Fighting from a moving cart uses the full hero kit (melee, ranged, spells). Never a turret section.
 3. The rescue is the spine: each stop frees part of the crew, who ride behind you in a wagon you must protect.
 4. It works in single player (AI companions), in online co-op (up to 4 players plus hero bots), and in VR.
@@ -166,7 +166,7 @@ told to stop you.
   +10° FOV at top speed, and shakes with the existing offset shake; rail-joint clacks at a rate set by speed; a thump on
   landing; no head bob while seated. Turn on physics interpolation (or interpolate cart and camera) so carts do not
   judder on high-refresh monitors.
-- **Speed**: cruise about 8–10 m/s, gravity-driven on dips and climbs, clamped to about 14 m/s; pump adds about 30%.
+- **Speed**: cruise about 6 m/s, gravity-driven on dips and climbs, clamped to about 11 m/s; pump adds about 30%.
 - **VR** (from Meta's comfort guidance): never shake, roll or force pitch on the headset camera; the rig follows the
   cart's position and yaw only while the cart model banks beneath a level view; the cart rim and front board are a fixed
   frame in view; speed changes are eased and rare; a **comfort vignette** that tightens with acceleration and turning, with
@@ -277,6 +277,7 @@ told to stop you.
 - **Enemies are plan data**: stop mobs are collectives placed in the stop rooms; slag-cart riders and the golem are a new
   horde-like list of rail encounters in the plan (budgeted outside `EnemyCount`, as hordes are today), so a later floor
   or the AI designer can use them.
+- **Ride length (after plan 1's review).** The line on floor 12 is about 500 m, so four rides of 60–90 s would mean a crawl. Rides are about 20–30 s at a 6 m/s cruise, with one or two set pieces each; a longer line (switchbacks in a wider band) is a later option if the owner wants longer rides.
 
 ## Left to the builder
 
