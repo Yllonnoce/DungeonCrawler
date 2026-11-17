@@ -19,6 +19,22 @@ public static class FloorSolvability
     /// <summary>Every way the floor cannot be finished, in words; empty when it can.</summary>
     public static List<string> Problems(FloorLayout layout)
     {
+        var problems = Problems(layout, null);
+        // a railed floor must also be finishable on foot: the lines are the mine cart's, the halls have to do the job alone
+        if (layout.Rail is { } rail)
+        {
+            var platform = rail.Stops.SelectMany(s => s.Platform).ToHashSet();
+            var party = rail.Party.ToHashSet();
+            bool Rails(GridPos p) => (layout.IsRail(p) || rail.Pockets.Contains(p)) && !(party.Contains(p) && platform.Contains(p));
+            foreach (var q in Problems(layout, Rails))
+                if (q.StartsWith("the stairs down") || q.StartsWith("a prisoner at") || q.StartsWith("every spare jail key"))
+                    problems.Add("with the rails blocked, " + q);
+        }
+        return problems;
+    }
+
+    private static List<string> Problems(FloorLayout layout, Func<GridPos, bool>? extraBlocked)
+    {
         var problems = new List<string>();
         if (!layout.IsWalkable(layout.UpStairs)) { problems.Add($"the stairs up at {layout.UpStairs} stand on no floor"); return problems; }
         var objective = layout.Objective;
@@ -28,7 +44,7 @@ public static class FloorSolvability
         // the vault doors that open as their locks are worked, and the gate settings the party can stand in
         var opened = new HashSet<int>();
         foreach (var v in layout.Vaults) if (v.Kind == VaultKind.SafeDoor) opened.Add(v.Index);
-        bool ShutDoor(GridPos p) => layout.Vaults.Any(v => v.Door == p && !opened.Contains(v.Index));
+        bool ShutDoor(GridPos p) => (extraBlocked != null && extraBlocked(p)) || layout.Vaults.Any(v => v.Door == p && !opened.Contains(v.Index));
         HashSet<GridPos> ReachWith(int? gateState)
             => layout.Reachable(layout.UpStairs, p => ShutDoor(p) || (gateCells.Contains(p) && (gateState is not { } s || !puzzle!.IsOpen(s, IndexOf(puzzle!, p)))));
         // a lock counts as worked when its opener is in reach in some setting of the puzzle's gates the party can bring about
