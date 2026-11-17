@@ -1151,7 +1151,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     {
         if (!IsAlive) return;
         _environmentalKill = true;
-        EventBus.Instance.Log($"{sourceName} {(kind == HazardDamage.Crush ? "crushes" : "impales")} {DisplayName}.");
+        EventBus.Instance.Log($"{sourceName} {HazardRules.Verb(kind)} {DisplayName}.");
         EventBus.Instance.RaiseEnemyKilledByHazard(this, sourceName);
         Kill();
     }

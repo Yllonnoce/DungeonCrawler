@@ -1315,14 +1315,14 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (Downed) return;
         var m = State;
-        m.LastHarm = new Adventure.Run.HarmSource(kind == HazardDamage.Crush ? Adventure.Run.HarmCauses.Press : Adventure.Run.HarmCauses.Spikes, sourceName, Game.Instance.PlaySeconds);
+        m.LastHarm = new Adventure.Run.HarmSource(kind == HazardDamage.Crush ? Adventure.Run.HarmCauses.Press : kind == HazardDamage.RunOver ? Adventure.Run.HarmCauses.Generic : Adventure.Run.HarmCauses.Spikes, sourceName, Game.Instance.PlaySeconds);
         if (outcome.Lethal)
         {
             m.Hp = 0;
             m.Mangled = true;
             m.MangledBy = hazardIndex;
             m.Effects.Clear();
-            EventBus.Instance.Log($"{sourceName} {(kind == HazardDamage.Crush ? "crushes" : "impales")} {m.Name}!");
+            EventBus.Instance.Log($"{sourceName} {HazardRules.Verb(kind)} {m.Name}!");
             EventBus.Instance.PlaySfx("hit_flesh");
             EventBus.Instance.RaiseMemberChanged(Index);
             OnDowned();

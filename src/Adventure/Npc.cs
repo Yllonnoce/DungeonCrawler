@@ -562,7 +562,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (Dead || Downed) return;
         if (outcome.Lethal || outcome.HpFraction >= 1f)
         {
-            EventBus.Instance.Log($"{sourceName} {(kind == HazardDamage.Crush ? "crushes" : "impales")} {NpcName}!");
+            EventBus.Instance.Log($"{sourceName} {HazardRules.Verb(kind)} {NpcName}!");
             if (outcome.Lethal) { Mangled = true; MangledBy = hazardIndex; }
             GoDown();
             return;
