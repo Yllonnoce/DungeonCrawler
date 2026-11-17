@@ -285,6 +285,7 @@ public partial class DungeonBuilder : Node3D
         PlaceSecretRooms(layout, _floorRoot, floorIndex);
         PlaceFires(layout, _floorRoot, floorIndex);
         PlaceStructures(layout, _floorRoot, seed);
+        PlaceRails(layout, _floorRoot);
         PlaceNestMouths(layout, _floorRoot, seed);
         PlaceHordes(layout, contents, floorIndex, Game.Instance?.SpentHordes(floorIndex) ?? Array.Empty<string>());
         PlaceAmbushes(layout, floorIndex, seed, floorState);
@@ -1836,6 +1837,83 @@ public partial class DungeonBuilder : Node3D
             if (fallen.Contains(cell)) Rubble.Scatter(node, Surface(cell) + new Vector3(-lie.Z, 0, lie.X) * 1.4f, stone, rng);
         }
         node.Name = $"Ruin_{ruin.Anchor.X}_{ruin.Anchor.Y}";
+    }
+
+    /// <summary>The party's rail track on this floor, or null when the floor has no line.</summary>
+    public RailTrack? PartyTrack { get; private set; }
+    /// <summary>The enemy's rail track (the party lane's twin), or null.</summary>
+    public RailTrack? EnemyTrack { get; private set; }
+
+    /// <summary>
+    /// The mine-cart line's dressing: rails and sleepers along each lane, timber frames outside rooms, a lantern in
+    /// some pockets and a RailStop marker per stop. The tunnel itself is the ordinary cell grid.
+    /// </summary>
+    private void PlaceRails(FloorLayout layout, Node3D root)
+    {
+        PartyTrack = EnemyTrack = null;
+        if (layout.Rail is not { } rail) return;
+        var node = new Node3D { Name = "Rails" };
+        root.AddChild(node);
+
+        // The forge theme has no metal or wood entries, so: dark iron and dark wood.
+        var steel = new StandardMaterial3D { AlbedoColor = new Color(0.18f, 0.18f, 0.2f), Metallic = 0.8f, Roughness = 0.45f };
+        var wood = Material("weathered_planks", new Color(0.3f, 0.21f, 0.13f), 1.6f);
+
+        RailTrack Lay(IReadOnlyList<GridPos> lane, string name)
+        {
+            var pts = new List<Vector3>();
+            foreach (var p in RailCurves.Centreline(lane, c => FloorTop + layout.HeightOf(c)))
+            {
+                var v = new Vector3(p.X, p.Y, p.Z);
+                if (pts.Count > 0 && pts[^1].DistanceTo(v) < 0.05f) continue;
+                pts.Add(v);
+            }
+            var track = new RailTrack { Name = name };
+            node.AddChild(track);
+            track.Build(pts, steel, wood);
+            return track;
+        }
+        PartyTrack = Lay(rail.Party, "PartyTrack");
+        EnemyTrack = Lay(rail.Enemy, "EnemyTrack");
+
+        // Timber frames: two posts and a cap across the lane cell, every 2nd straight cell outside rooms.
+        var frames = new Node3D { Name = "Timbering" };
+        node.AddChild(frames);
+        foreach (var lane in new[] { rail.Party, rail.Enemy })
+            for (var i = 2; i < lane.Count - 1; i += 2)
+            {
+                var p = lane[i];
+                if (layout.RoomAt(p) != null || layout[p] == Cell.Ramp) continue;
+                var along = lane[i + 1] - lane[i - 1];
+                if (Math.Abs(along.X) + Math.Abs(along.Y) != 2 || (along.X != 0 && along.Y != 0)) continue; // corners get none
+                var centre = Surface(p);
+                var side = along.X != 0 ? new Vector3(0, 0, 1) : new Vector3(1, 0, 0);
+                var yaw = along.X != 0 ? Mathf.Pi / 2f : 0f; // boxes are wide in local X across the lane
+                var post = Mathf.Min(LevelHeight, 3.2f) - 0.3f;
+                foreach (var sgn in new[] { -1f, 1f })
+                    Box(frames, new Vector3(0.22f, post, 0.22f), centre + side * (sgn * (CellSize / 2f - 0.2f)) + Vector3.Up * (post / 2f), wood, collide: false);
+                Box(frames, new Vector3(CellSize - 0.1f, 0.25f, 0.28f), centre + Vector3.Up * (post + 0.12f), wood, collide: false, yaw: yaw);
+            }
+
+        // Pocket lanterns: every other pocket (about 45 small lights on a full line).
+        var torch = CurrentTheme?.TorchColor ?? new Color(1f, 0.85f, 0.65f);
+        var lamp = new StandardMaterial3D { AlbedoColor = torch, EmissionEnabled = true, Emission = torch, EmissionEnergyMultiplier = 2f };
+        for (var i = 0; i < rail.Pockets.Count; i += 2)
+        {
+            var at = Surface(rail.Pockets[i]) + Vector3.Up * 1.5f;
+            var light = new OmniLight3D { LightColor = torch, LightEnergy = 0.8f, OmniRange = 6f, OmniAttenuation = 1.3f, ShadowEnabled = false, Name = $"RailLamp{i}" };
+            node.AddChild(light);
+            light.GlobalPosition = at;
+            Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false);
+        }
+
+        for (var i = 0; i < rail.Stops.Count; i++)
+        {
+            var plat = rail.Stops[i].Platform;
+            var marker = new Node3D { Name = $"RailStop{i}" };
+            root.AddChild(marker);
+            marker.GlobalPosition = Surface(plat[plat.Count / 2]);
+        }
     }
 
     private static MeshInstance3D Box(Node3D parent, Vector3 size, Vector3 position, Material material, bool collide = true, float yaw = 0f, float roll = 0f)
