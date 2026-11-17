@@ -316,6 +316,7 @@ public partial class DungeonBuilder : Node3D
     public void Clear()
     {
         JailDoorCell = null;
+        PartyTrack = EnemyTrack = null;
         _closedDoors.Clear();
         _openSecrets.Clear();
         _propCells.Clear();
@@ -1910,6 +1911,7 @@ public partial class DungeonBuilder : Node3D
         for (var i = 0; i < rail.Stops.Count; i++)
         {
             var plat = rail.Stops[i].Platform;
+            if (plat.Count == 0) continue;
             var marker = new Node3D { Name = $"RailStop{i}" };
             root.AddChild(marker);
             marker.GlobalPosition = Surface(plat[plat.Count / 2]);

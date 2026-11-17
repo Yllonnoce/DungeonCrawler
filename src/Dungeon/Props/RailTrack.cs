@@ -67,7 +67,7 @@ public partial class RailTrack : Node3D
         AddChild(new MeshInstance3D { Name = "Sleepers", Mesh = sleeperSt.Commit(), MaterialOverride = sleeper });
     }
 
-    // Both windings are emitted so the tube is visible whichever way the basis happens to face.
+    // One clockwise-from-outside winding (Godot's front face): a,b,c and a,c,d. Checked: the rail top comes out with normal +Y.
     static void Quad(SurfaceTool st, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
     {
         st.AddVertex(a); st.AddVertex(b); st.AddVertex(c);
