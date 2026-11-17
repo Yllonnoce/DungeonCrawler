@@ -1024,6 +1024,29 @@ Item level is the floor (`TierRules.ItemLevel`). Base damage and the Armor base 
 - `scenes/` `.tscn` files. `data/` definition Resources (`.tres`): `classes/`, `abilities/`, `items/`, `affixes/`, `legendaries/`, `loot_tables/`. Registry loads them by `Id` at startup; `Items/Catalog.cs` turns them into the plain `ItemCatalog` the roller uses. `assets/` third-party art (log licenses in `assets/LICENSES.md`).
 - `tests/` xUnit project, ignored by Godot via `.gdignore`.
 
+## Rails
+
+Ring floors can carry a mine-cart line round their outside (the floor 12 chase). `FloorSpec.RailCount` is the knob: 0 (the
+default) lays nothing, 1 to 3 is the number of stops past the start; it only applies to the ring layout, and a campaign
+floor sets it through `SpecOverrides` as `"RailCount"` (`CampaignPlan` clamps it 0..3). A railed ring grows the grid by
+`RailRules.Band` (6 cells) on every side and insets the ring by (6,6) so the line has an outer band to run in; room
+indices and order do not change, so plans keep pointing at the same rooms.
+
+`FloorGenerator.LayRails` (`FloorGenerator.Rails.cs`) runs after the ring and its ramps, from its own salted rng
+(`new Random(seed ^ 0x2A11)`), so the rest of a seed builds exactly as it did without rails. The line rooms are the start
+(up stairs), the stops and the exit (down stairs). It lays twin lanes round the band (`FloorLayout.Rail`: the party lane
+and the enemy lane), the stop platforms, side pockets where the party can step off, and ramps where a lane has to change
+height. On a railed ring the outer edges of the ring rooms are kept clear so the lanes never run into a wall or a prop.
+
+`FloorSolvability.Problems` also checks the floor with the rails blocked: anything the party could only finish by
+riding (a key, lever or stairs reachable only along the line) is reported as "with the rails blocked, ...", so a floor
+can always be completed on foot. `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets.
+`DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
+`PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
+
+Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check) and `tests/Dungeon/RailCurvesTests.cs`
+(the smoothed rail centrelines). `tests/` is local and not in git.
+
 ## Runs, clauses, deaths and records
 
 The Depths' pillar 5 (`docs/superpowers/specs/2026-11-07-the-depths-update-design.md` section 5). Engine-free rules under

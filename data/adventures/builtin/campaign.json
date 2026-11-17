@@ -530,7 +530,8 @@
         "RubbleCount": 2,
         "NestCount": 1,
         "WaterCount": 0,
-        "IsEmpty": false
+        "IsEmpty": false,
+        "RailCount": 3
       }
     },
     {
