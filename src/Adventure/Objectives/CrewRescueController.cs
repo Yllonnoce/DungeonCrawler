@@ -443,6 +443,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         dto.HomeCrew = _crew.Where(c => _home.Contains(c.Id)).Select(c => c.Id).ToList();
         dto.LostCrew = _crew.Where(c => !IsInstanceValid(c) || c.Dead).Select(c => c.Id).ToList();
         dto.OrcKeys = OrcKeys;
+        dto.GatesUp = _rails != null && IsInstanceValid(_rails) ? _rails.GatesUpList.ToList() : null;
         return dto;
     }
 
@@ -457,6 +458,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         base.Restore(dto);
         OrcKeys = dto.OrcKeys ?? false;
+        if (dto.GatesUp != null && _rails != null && IsInstanceValid(_rails)) _rails.RestoreGates(dto.GatesUp);
         _grisel = _root?.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == GriselId);
         var open = dto.OpenCages ?? new List<int>();
         foreach (var wagon in _wagons) wagon.SetOpen(open.Contains(wagon.Stop));

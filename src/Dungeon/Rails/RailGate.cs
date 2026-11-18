@@ -1,0 +1,94 @@
+using DungeonCrawler.Core;
+using Godot;
+
+namespace DungeonCrawler.Dungeon.Rails;
+
+/// <summary>
+/// An iron gate across both tracks at a stop: two posts, a bar chained to a winch post. It holds the cart at the stop
+/// until the stop's mobs are dead; <see cref="Lift"/> winches the bar up. Procedural boxes; only the posts collide
+/// (the cart is code-driven and walkers can duck under the bar).
+/// </summary>
+public partial class RailGate : Node3D
+{
+    public const float BarHeight = 1.0f;
+    public const float LiftedHeight = 2.6f;
+    public const float LiftSeconds = 1.5f;
+    const float PostHeight = 2.8f;
+
+    public int Stop { get; }
+    public bool Up { get; private set; }
+
+    private readonly float _left, _right;
+    private Node3D _bar = null!;
+    private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.8f, Roughness = 0.5f };
+    private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
+    private readonly StandardMaterial3D _warn = new() { AlbedoColor = new Color(0.55f, 0.12f, 0.08f), Roughness = 0.7f };
+
+    /// <param name="left">Lateral extent of the gate to the left of its origin (negative or zero, in the node's X).</param>
+    /// <param name="right">Lateral extent to the right.</param>
+    /// <param name="winchRight">The winch post stands at the right end (else the left).</param>
+    public RailGate(int stop, float left, float right, bool winchRight)
+    {
+        Stop = stop;
+        _left = left;
+        _right = right;
+        _winchRight = winchRight;
+        Name = $"RailGate{stop}";
+    }
+
+    private readonly bool _winchRight;
+
+    public override void _Ready()
+    {
+        float span = _right - _left, mid = (_left + _right) / 2f;
+        Post("PostL", _left, _winchRight);
+        Post("PostR", _right, !_winchRight);
+        _bar = new Node3D { Name = "Bar", Position = new Vector3(0, BarHeight, 0) };
+        AddChild(_bar);
+        Box(_bar, "Iron", new Vector3(span, 0.12f, 0.12f), new Vector3(mid, 0, 0), _iron);
+        // red-banded warning blocks along the bar
+        for (var x = _left + 0.5f; x < _right - 0.3f; x += 1.2f)
+            Box(_bar, "Band", new Vector3(0.3f, 0.14f, 0.14f), new Vector3(x, 0, 0), _warn);
+        // the chain: small links from the winch post's head down to the bar's end (they ride the bar up)
+        var winchX = _winchRight ? _right : _left;
+        var rise = PostHeight - 0.2f - BarHeight;
+        for (var k = 0; k < 6; k++)
+            Box(_bar, $"Link{k}", new Vector3(0.06f, 0.14f, 0.06f), new Vector3(winchX - Mathf.Sign(winchX) * 0.1f, rise * (k + 0.5f) / 6f, 0.0f), _iron);
+        if (Up) SetLifted();
+    }
+
+    private void Post(string name, float x, bool winch)
+    {
+        var body = new StaticBody3D { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1, CollisionMask = 0 };
+        body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.3f, PostHeight, 0.3f) }, Position = new Vector3(0, PostHeight / 2f, 0) });
+        Box(body, "Post", new Vector3(0.28f, PostHeight, 0.28f), new Vector3(0, PostHeight / 2f, 0), _wood);
+        if (winch) Box(body, "Winch", new Vector3(0.5f, 0.2f, 0.2f), new Vector3(0, PostHeight - 0.2f, 0), _iron);
+        AddChild(body);
+    }
+
+    private static void Box(Node3D parent, string name, Vector3 size, Vector3 at, Material material)
+        => parent.AddChild(new MeshInstance3D { Name = name, Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Position = at });
+
+    /// <summary>The bar goes up over <see cref="LiftSeconds"/>; "The gate lifts." is logged.</summary>
+    public void Lift()
+    {
+        if (Up) return;
+        Up = true;
+        EventBus.Instance.Log("The gate lifts.");
+        EventBus.Instance.PlaySfx("gate_lift"); // no clip yet: plan 6 adds the sound
+        if (_bar == null || !IsInsideTree()) return;
+        CreateTween().TweenProperty(_bar, "position:y", LiftedHeight, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+    }
+
+    /// <summary>Up at once, with no animation or log (a restored save).</summary>
+    public void SetUp()
+    {
+        Up = true;
+        SetLifted();
+    }
+
+    private void SetLifted()
+    {
+        if (_bar != null) _bar.Position = new Vector3(0, LiftedHeight, 0);
+    }
+}

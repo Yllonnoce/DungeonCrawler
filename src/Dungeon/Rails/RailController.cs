@@ -42,6 +42,105 @@ public partial class RailController : Node
     public string? HudText { get; private set; }
     public Boarding Boarding { get; } = new();
 
+    // ---- the gates -------------------------------------------------------------------------------
+
+    /// <summary>The gate at each stop (null: the landing, the end of the line, or a stop with no mobs of its own). Indexed by stop.</summary>
+    private RailGate?[] _gates = Array.Empty<RailGate?>();
+    private float _gateTimer;
+    const float GateEvery = 0.25f;
+    /// <summary>Gap kept between a gate and the next stop's cart.</summary>
+    const float GateMargin = 2f;
+    const float GateBeyondCart = 1.5f;
+    const float GateSide = 0.6f;
+
+    /// <summary>The stop's gate stands open (or the stop has none). A stop's gate starts down while any of its mobs live.</summary>
+    public bool GateUp(int stopIndex) => stopIndex < 0 || stopIndex >= _gates.Length || _gates[stopIndex] is not { } g || !IsInstanceValid(g) || g.Up;
+
+    /// <summary>The intermediate stops (indices) whose gate is up, for the save. Stops with no gate are not listed.</summary>
+    public IReadOnlyList<int> GatesUpList
+    {
+        get
+        {
+            var list = new List<int>();
+            for (var i = 0; i < _gates.Length; i++)
+                if (_gates[i] is { } g && IsInstanceValid(g) && g.Up) list.Add(i);
+            return list;
+        }
+    }
+
+    /// <summary>Back from a save: the listed gates stand up at once (no animation, no log). Gates not listed stay as they are.</summary>
+    public void RestoreGates(IEnumerable<int> up)
+    {
+        foreach (var i in up)
+            if (i >= 0 && i < _gates.Length && _gates[i] is { } g && IsInstanceValid(g)) g.SetUp();
+        RefreshHud();
+    }
+
+    /// <summary>Test hook (--test-ride): every gate goes up at once.</summary>
+    internal void DebugLiftAllGates()
+    {
+        foreach (var g in _gates) if (g != null && IsInstanceValid(g)) g.SetUp();
+    }
+
+    /// <summary>The mobs that hold the stop: every collective in the stop's room that stays put (guards and defenders; a patrol or alarm group does not hold a gate).</summary>
+    private int AliveAtStop(int stopIndex)
+    {
+        var room = _layout.Rail!.Stops[stopIndex].Room;
+        var n = 0;
+        if (_builder.Collectives is { } reg)
+            foreach (var c in reg.Collectives)
+                if (c.Room == room && c.Goal is Adventure.GoalKind.Guard or Adventure.GoalKind.Defend) n += c.Alive.Count();
+        return n;
+    }
+
+    private bool HoldsMobs(int stopIndex)
+    {
+        var room = _layout.Rail!.Stops[stopIndex].Room;
+        return _builder.Collectives is { } reg && reg.Collectives.Any(c => c.Room == room && c.Goal is Adventure.GoalKind.Guard or Adventure.GoalKind.Defend);
+    }
+
+    private void BuildGates(Node3D root)
+    {
+        _gates = new RailGate?[StopS.Length];
+        if (_builder.EnemyTrack is not { } enemy) return;
+        for (var i = 1; i < StopS.Length - 1; i++)
+        {
+            if (!HoldsMobs(i)) continue; // no mobs of its own: the gate starts up (there is none to see)
+            var s = StopS[i] + CartRules.HalfLength + GateBeyondCart;
+            s = Mathf.Min(s, StopS[i + 1] - GateMargin);
+            s = Mathf.Max(s, StopS[i]);
+            var frame = Party.Track.Frame(s);
+            var at = frame.Origin;
+            var right = frame.Basis.X.Normalized();
+            var near = enemy.ToGlobal(enemy.Curve.GetClosestPoint(enemy.ToLocal(at)));
+            var lateral = (near - at).Dot(right);
+            float left = Mathf.Min(0f, lateral) - GateSide, rightEdge = Mathf.Max(0f, lateral) + GateSide;
+            // the winch stands on the outer side of the party lane (away from the enemy lane)
+            var gate = new RailGate(i, left, rightEdge, winchRight: lateral < 0f) { Transform = new Transform3D(frame.Basis.Orthonormalized(), at) };
+            root.AddChild(gate);
+            _gates[i] = gate;
+        }
+    }
+
+    /// <summary>Server: every 0.25 s a down gate whose stop has no living mob lifts; seated riders then start the boarding.</summary>
+    private void TickGates(float dt)
+    {
+        _gateTimer -= dt;
+        if (_gateTimer > 0f) return;
+        _gateTimer = GateEvery;
+        for (var i = 0; i < _gates.Length; i++)
+        {
+            if (_gates[i] is not { Up: false } g || !IsInstanceValid(g)) continue;
+            if (!Adventure.Objectives.CrewRules.StopCleared(AliveAtStop(i))) continue;
+            g.Lift();
+            if (i == StopIndex && State.Mode == CartMode.Held)
+            {
+                if (!Boarding.Running && PlayerAboard()) Boarding.Start();
+                RefreshHud();
+            }
+        }
+    }
+
     /// <summary>Cage wagons coupled behind the cart, nearest first: the RailController poses them on the line behind it.</summary>
     public IReadOnlyList<CageWagon> Train => _train;
     /// <summary>From one body's middle to the next along the train: a cart's length and a coupling's gap.</summary>
@@ -114,6 +213,7 @@ public partial class RailController : Node
         Party = new CartRun(new TrackSampler(track), Cart, new CartState(start, 0f, CartMode.Held, CartRules.MaxPlating)) { Limit = start };
         Cart.RiderChanged += OnRiderChanged;
         root.AddChild(Cart);
+        BuildGates(root);
     }
 
     public override void _EnterTree() => Instance = this;
@@ -322,7 +422,7 @@ public partial class RailController : Node
                 if (mate != actor && mate.Control == ControlKind.Companion && !mate.Downed && !mate.Seated
                     && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
-        if (!Boarding.Running && StopIndex < StopS.Length - 1) Boarding.Start();
+        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateUp(StopIndex)) Boarding.Start();
         RefreshHud();
     }
 
@@ -344,7 +444,7 @@ public partial class RailController : Node
         if (State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1) return false;
         if (hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) return false;
         if (!PlayerAboard() || !SeatHero(hero)) return false;
-        if (!Boarding.Running) Boarding.Start();
+        if (!Boarding.Running && GateUp(StopIndex)) Boarding.Start();
         RefreshHud();
         return true;
     }
@@ -458,6 +558,7 @@ public partial class RailController : Node
     {
         var party = Main.Instance.Party;
         if (State.Mode != CartMode.Rolling) Party.Settle(); // a cart that does not roll is posed where it stands
+        TickGates(dt);
 
         if (State.Mode == CartMode.Held)
         {
@@ -465,7 +566,7 @@ public partial class RailController : Node
             if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
             else HopInNearby(party);
             CountHeroes(party, out var seated, out var living);
-            if (!playerAboard || seated == 0) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, or without a player
+            if (!playerAboard || seated == 0 || !GateUp(StopIndex)) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, or without a player
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
@@ -626,7 +727,8 @@ public partial class RailController : Node
         Raise(new CartEvent(CartEventKind.Arrived, Stop: StopIndex));
         Cart.Speed = 0f;
         if (!PlayerAboard()) SetDownRiders(); // the player was thrown or got out on the way: the companions step out here and the cart stays
-        else if (!last && State.Mode == CartMode.Held) Boarding.Start(); // plan 3 adds the rail gate and the departure lever
+        else if (!last && State.Mode == CartMode.Held && GateUp(StopIndex)) Boarding.Start();
+        if (!GateUp(StopIndex)) EventBus.Instance.Log("The gate is down. Clear the stop.");
         RefreshHud();
     }
 
@@ -672,6 +774,7 @@ public partial class RailController : Node
     private string Line()
     {
         if (State.Mode == CartMode.Wrecked) return "Cart — wrecked";
+        if (State.Mode == CartMode.Held && !GateUp(StopIndex)) return "Cart — gate down";
         if (Boarding.Running) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(Boarding.Left)}";
         if (State.Mode == CartMode.Rolling) return "Cart — rolling";
         if (StopIndex == 0) return "Cart — at the landing";
