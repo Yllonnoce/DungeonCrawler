@@ -226,7 +226,7 @@ public partial class DebugTools
             for (var dx = -3; dx <= 3; dx++)
             {
                 var c = new GridPos(here.X + dx, here.Y + dy);
-                if (!layout.IsWalkable(c) || layout.IsRail(c)) continue;
+                if (!layout.IsWalkable(c) || layout.IsRail(c) || main.Builder.IsCellBlocked(c)) continue; // a cage wagon's siding is no place to stand
                 var d = main.Builder.Surface(c).DistanceTo(at);
                 if (d < bestD) { bestD = d; beside = c; }
             }

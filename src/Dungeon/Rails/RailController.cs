@@ -42,6 +42,15 @@ public partial class RailController : Node
     public string? HudText { get; private set; }
     public Boarding Boarding { get; } = new();
 
+    /// <summary>Cage wagons coupled behind the cart, nearest first: the RailController poses them on the line behind it.</summary>
+    public IReadOnlyList<CageWagon> Train => _train;
+    /// <summary>From one body's middle to the next along the train: a cart's length and a coupling's gap.</summary>
+    public const float WagonSpacing = 2f * CartRules.HalfLength + 0.4f;
+    private readonly List<CageWagon> _train = new();
+    private readonly List<ICartRider> _trainRiders = new();
+    /// <summary>Cells a cage wagon stands on beside a platform: nobody getting out is set down there.</summary>
+    private readonly HashSet<GridPos> _sidings = new();
+
     /// <summary>
     /// Every change of the cart's state: departed, arrived, hit, wrecked, a rider seated or unseated (whatever seated or
     /// unseated it: the cart tells), restored from a save. Queued as they happen and told at the end of the physics tick
@@ -147,6 +156,58 @@ public partial class RailController : Node
         for (var i = 1; i < _aboard.Count; i++) // insertion sort: six riders at most, and no comparer to allocate
             for (var j = i; j > 0 && _aboard[j - 1].RiderId > _aboard[j].RiderId; j--) (_aboard[j - 1], _aboard[j]) = (_aboard[j], _aboard[j - 1]);
         return _aboard;
+    }
+
+    // ---- the train -------------------------------------------------------------------------------
+
+    /// <summary>A cage wagon's siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
+    public void ReserveSiding(GridPos cell) => _sidings.Add(cell);
+
+    /// <summary>Couple <paramref name="wagon"/> on behind the last body of the train (server, at a departure or a load). It is posed behind the cart at once.</summary>
+    public void Couple(CageWagon wagon)
+    {
+        if (!IsInstanceValid(wagon) || _train.Contains(wagon)) return;
+        _train.Add(wagon);
+        wagon.SetCoupled(true);
+        PoseTrain(State.S);
+        SyncTrain();
+    }
+
+    /// <summary>Each coupled wagon on the line at <paramref name="s"/> − <see cref="WagonSpacing"/>·k (k its 1-based place, clamped at the track's start), facing the cart's way.</summary>
+    private void PoseTrain(float s)
+    {
+        if (_train.Count == 0 || !Party.Track.Valid) return;
+        for (var k = 0; k < _train.Count; k++)
+        {
+            var wagon = _train[k];
+            if (!IsInstanceValid(wagon)) continue;
+            var at = Mathf.Clamp(s - Party.Dir * WagonSpacing * (k + 1), 0f, Party.Track.Length);
+            var frame = Party.Track.Frame(at);
+            wagon.Pose(Party.Dir >= 0 ? frame : new Transform3D(frame.Basis * new Basis(Vector3.Up, Mathf.Pi), frame.Origin));
+        }
+    }
+
+    /// <summary>The train's wagons learn the cart's speed and the bend each stands in (their riders' velocity).</summary>
+    private void SyncTrain()
+    {
+        for (var k = 0; k < _train.Count; k++)
+        {
+            var wagon = _train[k];
+            if (!IsInstanceValid(wagon)) continue;
+            wagon.Speed = State.Mode == CartMode.Rolling ? State.V : 0f;
+            wagon.Curvature = Party.Dir * Party.Track.Curvature(Mathf.Max(0f, State.S - Party.Dir * WagonSpacing * (k + 1)));
+        }
+    }
+
+    /// <summary>Seat every train rider on its wagon as it stands now (copied first: a rider whose ride is gone leaves the book as it follows).</summary>
+    private void FollowTrain()
+    {
+        if (_train.Count == 0) return;
+        _trainRiders.Clear();
+        foreach (var wagon in _train)
+            if (IsInstanceValid(wagon)) _trainRiders.AddRange(wagon.Riders.Values);
+        foreach (var rider in _trainRiders)
+            if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
     }
 
     // ---- save ------------------------------------------------------------------------------------
@@ -368,6 +429,7 @@ public partial class RailController : Node
 
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
+        bool Free(GridPos c) => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_sidings.Contains(c);
         var lane = _layout.Rail!.Party;
         var here = DungeonBuilder.WorldToCell(at);
         int best = 0, bestD = int.MaxValue;
@@ -376,10 +438,10 @@ public partial class RailController : Node
             int dx = lane[i].X - here.X, dy = lane[i].Y - here.Y, d = dx * dx + dy * dy;
             if (d < bestD) { bestD = d; best = i; }
         }
-        if (!useTaken) return CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c), atStop);
-        var cell = CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_exitTaken.Contains(c), atStop);
+        if (!useTaken) return CartSeats.ExitCell(lane, best, Free, atStop);
+        var cell = CartSeats.ExitCell(lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop);
         // every free cell nearby taken: share the first one rather than land on the track
-        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c), true);
+        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = CartSeats.ExitCell(lane, best, Free, true);
         return cell;
     }
 
@@ -416,7 +478,7 @@ public partial class RailController : Node
 
         if (State.Mode == CartMode.Rolling)
         {
-            var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, 0, Party.Limit));
+            var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, _train.Count, Party.Limit));
             Party.Step(input, dt);
             RunOver(party); // the arrival tick too: the last stretch before the stop is swept
             if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
@@ -425,6 +487,7 @@ public partial class RailController : Node
         }
 
         Party.Sync();
+        SyncTrain();
     }
 
     // ---- run-over --------------------------------------------------------------------------------
@@ -584,9 +647,12 @@ public partial class RailController : Node
     public override void _Process(double delta)
     {
         if (!Current) return;
-        Party.Pose(NetSession.IsClient ? 1f : (float)Engine.GetPhysicsInterpolationFraction());
+        var s = Party.RenderS(NetSession.IsClient ? 1f : (float)Engine.GetPhysicsInterpolationFraction());
+        Party.PoseAt(s);
+        PoseTrain(s);
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
+        FollowTrain();
         if (NetSession.IsClient) return;
         _hudTimer -= (float)delta;
         if (_hudTimer <= 0f) RefreshHud();

@@ -81,7 +81,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public string Prompt => Dead ? "" : IsMerchant ? $"Talk to {NpcName}" : CanBeRevived ? $"Revive {NpcName}" : Mode switch
     {
         NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin with {NpcName}" : "",
-        NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.JailbreakController jail ? jail.PromptFor(this) : "",
+        NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.IPrisonerHost host ? host.PromptFor(this) : "",
         NpcMode.Fighter when Downed => $"Revive {NpcName}",
         _ => Rescued ? $"{NpcName} waits by the stairs" : $"Talk to {NpcName}",
     };
@@ -145,7 +145,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                 (Objectives.ObjectiveController.Instance as Objectives.RitualController)?.Begin(this);
                 return;
             case NpcMode.Prisoner:
-                (Objectives.ObjectiveController.Instance as Objectives.JailbreakController)?.OnInteract(this, party, actor);
+                (Objectives.ObjectiveController.Instance as Objectives.IPrisonerHost)?.OnInteract(this, party, actor);
                 return;
         }
         if (Main.Instance?.Hud is not { } hud) return; // a dedicated server has no screen; the client opened its own
@@ -231,7 +231,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (!Downed || Dead) return false;
         if (GetParent() is { } parent && parent.GetChildren().OfType<Enemy>().Any(e => e.IsAlive && e.IsHostile && e.GlobalPosition.DistanceTo(GlobalPosition) < Objectives.RitualRules.ReviveClearRadius))
         {
-            EventBus.Instance.Log($"Not with them at {NpcName}'s throat. Clear the shrine first.");
+            EventBus.Instance.Log(Crew || (Mode == NpcMode.Quest && Escorting) ? "Not with enemies this close." : $"Not with them at {NpcName}'s throat. Clear the shrine first.");
             return false;
         }
         Downed = false;
@@ -736,6 +736,11 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         CollisionLayer = 0;
         _label.Text = $"{NpcName} (dead)";
         _model?.Play("Death", force: true);
+        if (Seated) // the ride gives up its seat: the body drops to the floor of the cell it was carried over
+        {
+            var at = GlobalPosition;
+            GetOut(Main.Instance?.Builder is { Layout: not null } builder ? builder.Surface(DungeonBuilder.WorldToCell(at)) : at);
+        }
         EventBus.Instance.Log(Crew ? $"{NpcName} is gone." : $"{NpcName} is dead.");
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
     }

@@ -181,6 +181,8 @@ public partial class DungeonBuilder : Node3D
     public void SetDoorOpen(GridPos cell) => _closedDoors.Remove(cell);
     public void SetDoorClosed(GridPos cell) => _closedDoors.Add(cell);
     public void BlockCell(GridPos cell) => _propCells.Add(cell);
+    /// <summary>A prop that blocked <paramref name="cell"/> has gone (a cage wagon coupled off its siding).</summary>
+    public void UnblockCell(GridPos cell) => _propCells.Remove(cell);
     private readonly HashSet<GridPos> _enemyOnlyCells = new();
     /// <summary>Everything <see cref="IsCellBlocked"/> blocks, plus the safe room and its door cell: only enemies are kept out of it.</summary>
     public bool IsCellBlockedForEnemies(GridPos cell) => IsCellBlocked(cell) || _enemyOnlyCells.Contains(cell);
@@ -1036,6 +1038,8 @@ public partial class DungeonBuilder : Node3D
             FloorObjectiveKind.Toxic => new Adventure.Objectives.ToxicController(),
             FloorObjectiveKind.ShiftingVault => new Adventure.Objectives.ShiftingVaultController(),
             FloorObjectiveKind.Ritual => new Adventure.Objectives.RitualController(),
+            // a railed floor's jailbreak is Grisel's crew in cage wagons along the line; a walk-in jail everywhere else
+            FloorObjectiveKind.Jailbreak when Rails.RailController.Instance is { } rails && rails.GetParent() == root => new Adventure.Objectives.CrewRescueController(),
             FloorObjectiveKind.Jailbreak => new Adventure.Objectives.JailbreakController(),
             _ => null,
         };

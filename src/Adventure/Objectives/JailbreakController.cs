@@ -15,7 +15,7 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// lockpick and frees each prisoner the same way; freed villagers follow the party. Every prisoner free opens the
 /// treasure vault and the stairs.
 /// </summary>
-public partial class JailbreakController : ObjectiveController
+public partial class JailbreakController : ObjectiveController, IPrisonerHost
 {
     public const float DecideEvery = 0.5f;
 
@@ -252,13 +252,14 @@ public partial class JailbreakController : ObjectiveController
     }
 
     /// <summary>E on a prisoner: rescue a wanderer outright, unlock a jailed one's shackles with a key or a pick.</summary>
-    public void OnInteract(Npc npc, PartyController party, Adventurer actor)
+    public bool OnInteract(Npc npc, PartyController party, Adventurer actor)
     {
         switch (StateOf(npc))
         {
-            case PrisonerState.Wandering: Free(npc, party, "rescued"); break;
-            case PrisonerState.Jailed: if (party.TryUnlock($"{npc.NpcName}'s shackles", objectiveLock: true)) Free(npc, party, "unshackled"); break;
+            case PrisonerState.Wandering: Free(npc, party, "rescued"); return true;
+            case PrisonerState.Jailed: if (party.TryUnlock($"{npc.NpcName}'s shackles", objectiveLock: true)) { Free(npc, party, "unshackled"); return true; } return false;
         }
+        return false;
     }
 
     private void Free(Npc npc, PartyController party, string how)
