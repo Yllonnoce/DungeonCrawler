@@ -1148,14 +1148,17 @@ sets the home crew in the exit room. Lifted gates come back up with no animation
 lethality 3 with no AI and prints `[crew]` lines. It checks the floor first: 3 wagons, 6 caged crew, 3 gates down. Then it
 boards at the landing, and at each stop it checks that the gate is down, kills the stop's guards by hand and waits for
 the gate to lift. Each cage must open free (an iron key in the bag stays unspent, and every pick is forced to fail).
-Condemned, the party takes the orc's keys from Grisel's body; forgiven, Grisel opens the cages from the bench. Each wagon
-must couple on as the cart leaves. Between stops 2 and 3 the run saves and loads, and the train, crew, `OrcKeys` and gates
+Condemned, the party takes the orc's keys from Grisel's body. Forgiven, Grisel must be on the bench (or following within
+reach) at every cage, and each cage must offer "Open the cage (Grisel)". Her escort quest is accepted by raising its
+accept event (`QuestAccepted`), so her dialogue's accept button is not covered. After the load she must not stand on a
+rail cell. Each wagon must couple on as the cart leaves. Between stops 2 and 3 the run saves and loads, and the train, crew, `OrcKeys` and gates
 must come back. A crew member taken out of wagon 2 is downed and bleeds out (the clock is wound on through
 `Npc.DebugBleed`) and is lost. The end of the line must bring the other five home and unlock the stairs; forgiven, Grisel
 walks with the party to the stairs and `q_grisel_out` must complete. Then the floor is built again, and a cart on thin
 plating hits a cinder brute between stops 1 and 2. One spare must take over, holding the cart at a stop. The run ends
 with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
-as it appears.
+as it appears. A run with no RESULT line 10 s before its quit timeout fails with "timed out at step N" and exit code 1.
+`--test-ride` and `--test-ride-edges` share this watchdog.
 
 Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check) and `tests/Dungeon/RailCurvesTests.cs`
 (the smoothed rail centrelines). `tests/` is local and not in git.

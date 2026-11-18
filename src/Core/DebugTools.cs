@@ -848,9 +848,9 @@ public partial class DebugTools : Node
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();
         if (_testGasWipe) RunGasWipeTest();
-        if (_testRide) RunRideTest();
-        if (_testRideEdges) RunRideEdgesTest();
-        if (_testCrew) RunCrewTest();
+        if (_testRide && !ScriptStalled("ride", _rideStep)) RunRideTest();
+        if (_testRideEdges && !ScriptStalled("ride-edges", _edgeStep)) RunRideEdgesTest();
+        if (_testCrew && !ScriptStalled("crew", _crewSection2 ? 100 + _crewStep : _crewStep)) RunCrewTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

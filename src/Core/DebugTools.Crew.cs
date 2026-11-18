@@ -33,6 +33,21 @@ public partial class DebugTools
 
     private string CrewBranch => _crewForgiven ? "forgiven" : "condemned";
 
+    /// <summary>
+    /// A scripted ride (--test-ride, --test-ride-edges, --test-crew) that has not printed its RESULT by 10 s before its
+    /// --quit-after fails here with exit code 1, instead of being quit quietly with exit 0 by the generic timeout (a floor
+    /// that never came up, a step that waits for ever). Step numbers of the crew test's wreck section are 100 + its step.
+    /// </summary>
+    private bool ScriptStalled(string tag, int step)
+    {
+        if (_done || _quitAfter <= 0 || _elapsed < _quitAfter - 10.0) return false;
+        GD.Print($"[{tag}] RESULT FAIL: timed out at step {step} after {_elapsed:0} s (floor {Game.Instance?.CurrentFloor}, in game {Main.Instance?.InGame})");
+        LockRules.ForcedChance = null;
+        _done = true;
+        GetTree().Quit(1);
+        return true;
+    }
+
     private void RunCrewTest()
     {
         var main = Main.Instance;
@@ -169,6 +184,7 @@ public partial class DebugTools
                 if (ctrl.OrcKeys != _crewOrcKeys) fails.Add($"OrcKeys came back {ctrl.OrcKeys}, saved {_crewOrcKeys}");
                 if (!rc.GateUp(1) || !rc.GateUp(2) || rc.GateUp(3)) fails.Add($"gates up {gatesUp}: stops 1 and 2 should be up, stop 3 down");
                 if (wagons.First(w => w.Stop == 3).Open || ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Caged) != 2) fails.Add("cage 3 is not still locked on its two crew");
+                if (_crewForgiven && GriselNpc(root) is { } gl && layout.IsRail(DungeonBuilder.WorldToCell(gl.GlobalPosition))) fails.Add($"Grisel stands on a rail cell {DungeonBuilder.WorldToCell(gl.GlobalPosition)} after the load");
                 if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
                 // 6. a crew member is let out at stop 2 and goes down: nobody revives them
                 var lost = ctrl.Crew.FirstOrDefault(c => c.Ride is CageWagon { Stop: 2 } && !c.Dead);
@@ -219,8 +235,7 @@ public partial class DebugTools
             case 15:
             {
                 if (!rc.GateUp(3)) { if (_crewClock > 2f) Fail("stop 3's gate did not lift with its guards dead"); break; }
-                var how = _crewForgiven ? GriselNpc(root)?.Cart == rc.Cart ? "Open the cage (Grisel)" : null : "Open the cage (the orc's keys)";
-                if (!CrewOpen(main, ctrl, wagons.First(w => w.Stop == 3), how, Fail)) return;
+                if (!CrewOpen(main, ctrl, wagons.First(w => w.Stop == 3), _crewForgiven ? "Open the cage (Grisel)" : "Open the cage (the orc's keys)", Fail)) return;
                 _crewStep++;
                 _crewClock = 0f;
                 break;
@@ -289,11 +304,22 @@ public partial class DebugTools
     }
 
     /// <summary>The cage opens on one use, by the way <paramref name="expect"/> names (its prompt), with no iron key spent and no pick.</summary>
-    private bool CrewOpen(Main main, CrewRescueController ctrl, CageWagon wagon, string? expect, Action<string> fail)
+    private bool CrewOpen(Main main, CrewRescueController ctrl, CageWagon wagon, string expect, Action<string> fail)
     {
         var party = main.Party;
+        if (_crewForgiven)
+        {
+            // forgiven: Grisel opens every cage herself, from the bench of the cart held at the cage's stop or on foot within reach
+            var g = main.Builder.FloorRoot is { } root ? GriselNpc(root) : null;
+            var rc = RailController.Instance!;
+            var onBench = g != null && g.Cart == rc.Cart && rc.State.Mode == CartMode.Held && rc.StopIndex == wagon.Stop;
+            var near = g is { Escorting: true, Seated: false } && g.GlobalPosition.DistanceTo(wagon.GlobalPosition) <= CrewRescueController.GriselReach;
+            if (g == null || g.Dead || g.Downed || !(onBench || near))
+            { fail($"forgiven, but Grisel cannot open cage {wagon.Stop}: {(g == null ? "none" : $"dead={g.Dead} downed={g.Downed} bench={g.Cart == rc.Cart} escorting={g.Escorting} {g.GlobalPosition.DistanceTo(wagon.GlobalPosition):0.0} m from the cage")}"); return false; }
+            GD.Print($"[crew] 3 Grisel at cage {wagon.Stop}: {(onBench ? "on the bench" : $"on foot {g.GlobalPosition.DistanceTo(wagon.GlobalPosition):0.0} m away")}");
+        }
         var prompt = wagon.Prompt;
-        if (expect != null && prompt != expect) { fail($"cage {wagon.Stop} offers \"{prompt}\", not \"{expect}\""); return false; }
+        if (prompt != expect) { fail($"cage {wagon.Stop} offers \"{prompt}\", not \"{expect}\""); return false; }
         wagon.Interact(party, party.Local!);
         var keys = party.Bag.Count("item.iron_key");
         var crew = ctrl.Crew.Where(c => c.Ride == wagon).ToList();
