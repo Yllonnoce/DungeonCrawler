@@ -360,7 +360,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             else FaceToward(lead.GlobalPosition);
             if (_mover.Unreachable > 5f)
             {
-                GlobalPosition = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
+                if (!lead.Seated) GlobalPosition = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
+                // the lead rides: never into the tub or onto the line; far behind, beside the cart (as a rider gets out), else hold here
+                else if (gap + FollowDistance > SeatedLeadCatchUp && RailController.Instance is { } rails) GlobalPosition = rails.StandBesideCart();
                 _mover.Reset();
             }
             if (Mode == NpcMode.Quest) CheckStairs();
@@ -408,6 +410,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// <summary>What this NPC rides (a cart, a cage wagon), null on foot.</summary>
     public Node3D? Ride { get; private set; }
     public bool Seated => Ride != null;
+    /// <summary>A follower stuck this far (flat) from a lead who rides the cart is set down beside the cart; nearer, it holds where it is.</summary>
+    public const float SeatedLeadCatchUp = 30f;
     private Func<Transform3D>? _seatAt;
     private uint _layerOnFoot;
     private int _riderId = -1;
@@ -739,11 +743,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         CollisionLayer = 0;
         _label.Text = $"{NpcName} (dead)";
         _model?.Play("Death", force: true);
-        if (Seated) // the ride gives up its seat: the body drops to the floor of the cell it was carried over
-        {
-            var at = GlobalPosition;
-            GetOut(Main.Instance?.Builder is { Layout: not null } builder ? builder.Surface(DungeonBuilder.WorldToCell(at)) : at);
-        }
+        LeaveRide();
         EventBus.Instance.Log(Crew ? $"{NpcName} is gone." : $"{NpcName} is dead.");
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
     }
@@ -758,7 +758,16 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         Escorting = false;
         CollisionLayer = 0;
         Visible = false;
+        LeaveRide();
         EventBus.Instance.Log(BetrayalRules.TurnLog(fled, NpcName));
+    }
+
+    /// <summary>A seated NPC who dies or turns gives up its seat: the body drops to the floor of the cell it was carried over.</summary>
+    private void LeaveRide()
+    {
+        if (!Seated) return;
+        var at = GlobalPosition;
+        GetOut(Main.Instance?.Builder is { Layout: not null } builder ? builder.Surface(DungeonBuilder.WorldToCell(at)) : at);
     }
 
     public void Restore(bool dead, bool escorting, bool rescued, float hp, Vector3? position, bool downed = false, bool fled = false)

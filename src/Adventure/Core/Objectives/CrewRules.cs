@@ -11,6 +11,8 @@ public static class CrewRules
     public const float ReviveHpFraction = 0.35f;
     /// <summary>Crew carried by one cage wagon.</summary>
     public const int PerWagon = 2;
+    /// <summary>The dead Grisel's NPC id on the condemned branch: no crew member may take it.</summary>
+    public const string GriselBodyId = "grisel_body";
 
     /// <summary>Every cage open and every crew member Home or Lost. An empty crew means not set up yet.</summary>
     public static bool Completed(IReadOnlyList<CrewState> crew, int cagesClosed)

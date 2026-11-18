@@ -330,9 +330,12 @@ public static class PlanValidator
     {
         var ids = new HashSet<string>();
         var cast = campaign?.Cast.Select(c => c.Name.Trim().ToLowerInvariant()).ToHashSet() ?? new HashSet<string>();
+        // a crew member is spawned as an NPC of the floor: an id another NPC (or dead Grisel's body) holds is taken
+        var taken = plan.Npcs.Select(n => n.Id).Append(Objectives.CrewRules.GriselBodyId).ToHashSet();
         plan.Crew.RemoveAll(c =>
         {
             if (string.IsNullOrWhiteSpace(c.Id) || string.IsNullOrWhiteSpace(c.Name) || !ids.Add(c.Id)) { report.Repairs.Add($"crew {c.Id}: dropped (no name or a duplicate id)"); return true; }
+            if (taken.Contains(c.Id)) { report.Repairs.Add($"crew {c.Id}: dropped (id taken)"); return true; }
             c.Name = Clip(c.Name, 40);
             if (cast.Contains(c.Name.Trim().ToLowerInvariant())) { report.Repairs.Add($"crew {c.Id}: dropped (a cast name)"); return true; }
             c.Sex = string.Equals(c.Sex, "woman", StringComparison.OrdinalIgnoreCase) ? "woman" : "man";

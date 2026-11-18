@@ -13,9 +13,10 @@ namespace DungeonCrawler.Dungeon.Rails;
 public partial class RailGate : Node3D
 {
     public const float BarHeight = 1.0f;
-    public const float LiftedHeight = 2.6f;
+    /// <summary>The lifted bar's middle: its underside (2.88 m) clears a coupled cage wagon's roof (2.57 m).</summary>
+    public const float LiftedHeight = 2.95f;
     public const float LiftSeconds = 1.5f;
-    const float PostHeight = 2.8f;
+    public const float PostHeight = 3.1f;
 
     public int Stop { get; }
     public bool Up { get; private set; }
@@ -27,6 +28,9 @@ public partial class RailGate : Node3D
 
     private readonly float _left, _right;
     private Node3D _bar = null!;
+    /// <summary>The links from the bar's end up to the winch head: wound in (squashed onto the bar) as it rises.</summary>
+    private Node3D _chain = null!;
+    const float WoundChain = 0.02f;
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.8f, Roughness = 0.5f };
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
     private readonly StandardMaterial3D _warn = new() { AlbedoColor = new Color(0.55f, 0.12f, 0.08f), Roughness = 0.7f };
@@ -56,11 +60,13 @@ public partial class RailGate : Node3D
         // red-banded warning blocks along the bar
         for (var x = _left + 0.5f; x < _right - 0.3f; x += 1.2f)
             Box(_bar, "Band", new Vector3(0.3f, 0.14f, 0.14f), new Vector3(x, 0, 0), _warn);
-        // the chain: small links from the winch post's head down to the bar's end (they ride the bar up)
+        // the chain: small links from the winch post's head down to the bar's end (they ride the bar up, wound in as it rises)
         var winchX = _winchRight ? _right : _left;
         var rise = PostHeight - 0.2f - BarHeight;
+        _chain = new Node3D { Name = "Chain" };
+        _bar.AddChild(_chain);
         for (var k = 0; k < 6; k++)
-            Box(_bar, $"Link{k}", new Vector3(0.06f, 0.14f, 0.06f), new Vector3(winchX - Mathf.Sign(winchX) * 0.1f, rise * (k + 0.5f) / 6f, 0.0f), _iron);
+            Box(_chain, $"Link{k}", new Vector3(0.06f, 0.14f, 0.06f), new Vector3(winchX - Mathf.Sign(winchX) * 0.1f, rise * (k + 0.5f) / 6f, 0.0f), _iron);
         if (Up) SetLifted();
     }
 
@@ -106,7 +112,9 @@ public partial class RailGate : Node3D
         EventBus.Instance.PlaySfx("gate_lift"); // no clip yet: plan 6 adds the sound
         Lifted?.Invoke(this);
         if (_bar == null || !IsInsideTree()) return;
-        CreateTween().TweenProperty(_bar, "position:y", LiftedHeight, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        var tween = CreateTween().SetParallel();
+        tween.TweenProperty(_bar, "position:y", LiftedHeight, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        tween.TweenProperty(_chain, "scale:y", WoundChain, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
     }
 
     /// <summary>Up at once, with no animation or log (a restored save).</summary>
@@ -119,5 +127,6 @@ public partial class RailGate : Node3D
     private void SetLifted()
     {
         if (_bar != null) _bar.Position = new Vector3(0, LiftedHeight, 0);
+        if (_chain != null) _chain.Scale = new Vector3(1f, WoundChain, 1f);
     }
 }

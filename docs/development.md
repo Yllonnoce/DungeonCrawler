@@ -1085,7 +1085,8 @@ Floor 12's stops (built-in campaign; `Rail.Stops[i].Room`) and what waits at the
 | 4 | 5 | Cooling Stair (exit) | `col_stairbell`, an ember hound |
 
 The six named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon)
-are seated by the crew controller, not the resolver. The "caged crew" narration fires at S1.
+are seated by the crew controller, not the resolver. A crew id another NPC of the plan holds, or `grisel_body` (dead
+Grisel on the condemned branch), is dropped ("crew <id>: dropped (id taken)"). The "caged crew" narration fires at S1.
 
 ### Stops, cages and the crew
 
@@ -1094,8 +1095,10 @@ the walk-in `JailbreakController`; floors without rails (floors 2 and 13) keep t
 change is the server's (or solo's); a client only reads the objective state for the HUD line until plan 5 syncs the rest.
 The jail room stays a locked vault with nobody in its cells.
 
-The gates. Each intermediate stop whose room holds a guard or defend collective gets a `RailGate` across the party lane
-just past the platform, with a winch post on the outer side. A stop with no such mobs gets no gate. A gate starts down
+The gates. Each intermediate stop whose room holds a guard or defend collective gets a `RailGate` across both tracks (the
+party lane and the enemy lane beside it) just past the platform, with a winch post on the outer side of the party lane.
+The posts stand 1.05 m out from each lane's centre line (`RailController.GateSide`: the tub's half-width and a margin), so
+a cart passes between them, and the lifted bar sits at 2.95 m, clear of a coupled cage wagon's roof (2.57 m). A stop with no such mobs gets no gate. A gate starts down
 while any member of those collectives lives. A patrol or alarm group passing through does not hold a gate. The cart
 rolls into the stop as usual but does not count down to leave, and the HUD says "Cart — gate down". Every 0.25 s the
 server lifts any down gate whose holders are all dead. Riders already seated then start the boarding. The winch ("Crank
@@ -1110,14 +1113,21 @@ follows the party within 8 m, or sits on the cart's bench at that stop. "Unlock 
 pick (`PartyController.TryUnlock`, an objective lock). An open cage frees its two: XP and a `freed:<id>` flag each, as the
 walk-in jailbreak gives. When the cart next leaves that stop, an open wagon with crew aboard couples on behind it, and the
 train is posed along the line behind the cart. Each coupled wagon slows the cart a little (`CartInput.CrewWagons`, 5% per
-wagon). An open wagon still on its siding offers "Let them out": its crew climb out and follow the party on foot.
+wagon). An open wagon offers "Let them out" only when it cannot ride: on its siding while the cart is not held at its
+stop (the cart is elsewhere, or already gone past), or anywhere once the cart is wrecked with no spare left. Its crew
+climb out and follow the party on foot, and crew on foot never board again (neither a wagon nor the bench). While the
+cart is held at the wagon's stop the choice is not offered, since the wagon couples on at the departure. A boarding that
+starts at a stop whose cage is still locked logs "The cage here is still locked." once for that stop. A follower whose
+lead rides the cart never regroups into the tub or onto the line: stuck, it holds where it is, and only when it is more
+than 30 m behind (`Npc.SeatedLeadCatchUp`) is it set down beside the cart, as a rider steps out at a stop.
 
 The crew. Floor 12's six are Hob Tallow, Merrin Ash, Dace Wicker, Old Pell, Juno Brack and Selby Crane (wagon 1 holds Hob
 and Merrin, wagon 2 Dace and Old Pell, wagon 3 Juno and Selby). A plan with no `Crew` falls back to the floor's stock
 prisoners. Crew who cannot fit in a wagon wait freed at the landing. A crew member (`Npc.Crew`) who is hurt to nothing
 goes down and bleeds out after 60 s (`CrewRules.BleedOutSeconds`), and the label counts the seconds left. "Revive <name>",
 on the NPC or on the wagon they sit in, gets them up at 35% HP, but not with a hostile within 6 m. One who bleeds out is
-gone ("<name> is gone.") and counts as lost.
+gone ("<name> is gone.") and counts as lost. The same "Revive <name>" now works for any downed escorting Quest NPC on
+every floor (`Npc.CanBeRevived`), which closes the old gap where an escort put down by wounds could never be got up.
 
 Grisel's two branches hang on the floor 9 flag `grisel_forgiven`; condemned and unset are the same. Forgiven, Grisel
 (`npc_grisel`) waits at the landing with her escort quest `q_grisel_out`. Once she follows, she takes the cart's rear
@@ -1130,19 +1140,26 @@ Spare carts. A spare cart, for looks only, stands beside each intermediate stop'
 wrecked, the nearest stop (along the line, ahead or behind) with an unused spare provides a new one. The spare vanishes,
 and the party's cart stands Held there with full plating, its wagons still coupled behind it. The log says "A spare cart
 waits at stop N." With every spare used, a wreck leaves the rest on foot ("No carts left. The rest is on foot.", a
-`CartEventKind.OnFoot` event). The crew in coupled wagons then get out and follow.
+`CartEventKind.OnFoot` event). The crew in coupled wagons then get out and follow. A load after that brings the cart back
+whole at its last stop, but with every spare spent the crew who were let out stay on foot and are not seated again.
+
+The stairs. On a railed floor the sealed down stairs say "<villain> has sealed the stairs. Bring Grisel's crew home."
+(`ObjectiveText.CrewLockReason`) in place of the walk-in jail's line.
 
 The win. A crew member is home once they stand in the exit room (`Stops[^1].Room`) on foot, or sit in a coupled wagon while
 the cart is held at the end of the line. Home is kept unless they go down outside the exit room. The floor completes when
 every cage is open and every crew member is home or lost. The lost never block it. The floor's reward vault, if it has one, opens, the flag
 `jailbreak_freed_all` is set, and the log says "The crew are home. The stairs grind open." If no stop had room for a
-wagon, the trial is waived and the stairs open on the first tick.
+wagon, or wagons stand but there is nobody to bring home and every cage is open, the trial is waived and the stairs open
+on the next tick.
 
 The save. `FloorStateDto.SparesUsed` lists the stops whose spare is spent. `ObjectiveStateDto` adds `GatesUp`, `OpenCages`,
 `CoupledCages` (in train order), `HomeCrew`, `LostCrew` and `OrcKeys`; every one is nullable, so old saves load. Seats
 are not saved. A load puts the cart Held at the stop it last reached and couples the saved train behind it again. It
 seats the caged crew and the train's riders in their wagons, leaves crew who were let out on foot where they stood, and
-sets the home crew in the exit room. Lifted gates come back up with no animation or log line.
+sets the home crew in the exit room. Lifted gates come back up with no animation or log line. On a co-op client (a join
+or a revisit) the objective's restore only reads the state for the HUD, as the 2 s objective sync does, and the cart's
+restore does nothing: seats, the train and the doors are the server's.
 
 `--test-crew[=forgiven|condemned]` (condemned when no branch is given) plays the rescue on the built-in floor 12 at
 lethality 3 with no AI and prints `[crew]` lines. It checks the floor first: 3 wagons, 6 caged crew, 3 gates down. Then it

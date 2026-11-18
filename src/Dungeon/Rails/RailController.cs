@@ -51,7 +51,8 @@ public partial class RailController : Node
     /// <summary>Gap kept between a gate and the next stop's cart.</summary>
     const float GateMargin = 2f;
     const float GateBeyondCart = 1.5f;
-    const float GateSide = 0.6f;
+    /// <summary>A post stands this far out from each lane's centre line: the tub's half-width (0.7 m) and a hand's clearance, so a cart passes between them (still inside the 4 m cell).</summary>
+    public const float GateSide = MineCart.TubWidth / 2f + 0.35f;
 
     /// <summary>The stop's gate stands open (or the stop has none). A stop's gate starts down while any of its mobs live.</summary>
     public bool GateUp(int stopIndex) => stopIndex < 0 || stopIndex >= _gates.Length || _gates[stopIndex] is not { } g || !IsInstanceValid(g) || g.Up;
@@ -142,7 +143,7 @@ public partial class RailController : Node
     /// <summary>A gate went up (the check or the winch): riders waiting at its stop start the boarding.</summary>
     private void OnGateLifted(RailGate g)
     {
-        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Boarding.Running && PlayerAboard()) Boarding.Start();
+        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Boarding.Running && PlayerAboard()) StartBoarding();
         RefreshHud();
     }
 
@@ -349,7 +350,7 @@ public partial class RailController : Node
     /// <summary>Couple <paramref name="wagon"/> on behind the last body of the train (server, at a departure or a load). It is posed behind the cart at once.</summary>
     public void Couple(CageWagon wagon)
     {
-        if (!IsInstanceValid(wagon) || _train.Contains(wagon)) return;
+        if (NetSession.IsClient || !IsInstanceValid(wagon) || _train.Contains(wagon)) return; // the train is the server's
         _train.Add(wagon);
         wagon.SetCoupled(true);
         PoseTrain(State.S);
@@ -418,6 +419,7 @@ public partial class RailController : Node
     /// </summary>
     public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null, IEnumerable<int>? sparesUsed = null)
     {
+        if (NetSession.IsClient) return; // a join or revisit: a client's cart stays parked at the first stop and nobody's seat is its to change (co-op riding is plan 5)
         _sparesUsed.Clear();
         if (sparesUsed != null) foreach (var i in sparesUsed) if (_spares.ContainsKey(i)) { _sparesUsed.Add(i); HideSpare(i); }
         _restoredRiders.Clear();
@@ -491,6 +493,13 @@ public partial class RailController : Node
 
     // ---- boarding --------------------------------------------------------------------------------
 
+    /// <summary>The countdown starts at the stop the cart is held at (a Boarding event says where).</summary>
+    private void StartBoarding()
+    {
+        Boarding.Start();
+        Raise(new CartEvent(CartEventKind.Boarding, Stop: StopIndex));
+    }
+
     private string PromptFor(Adventurer hero)
     {
         if (NetSession.IsClient || hero.Control == ControlKind.Remote) return ""; // co-op riding is plan 5
@@ -519,7 +528,7 @@ public partial class RailController : Node
                     && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
         if (actor.Control == ControlKind.LocalHuman) SeatBench(actor.GlobalPosition);
-        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateUp(StopIndex)) Boarding.Start();
+        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateUp(StopIndex)) StartBoarding();
         RefreshHud();
     }
 
@@ -541,7 +550,7 @@ public partial class RailController : Node
         if (State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1) return false;
         if (hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) return false;
         if (!PlayerAboard() || !SeatHero(hero)) return false;
-        if (!Boarding.Running && GateUp(StopIndex)) Boarding.Start();
+        if (!Boarding.Running && GateUp(StopIndex)) StartBoarding();
         RefreshHud();
         return true;
     }
@@ -657,6 +666,9 @@ public partial class RailController : Node
 
     /// <summary>Where a rider gets out of a slow or stopped cart: a free walkable cell beside the lane that is no rail (never the enemy lane, never a cell another rider just took).</summary>
     private GridPos ExitCell() => ExitCellNear(Cart.GlobalPosition, true, true);
+
+    /// <summary>A walkable cell beside the lane near the cart, off the rails and the sidings (as a rider steps out at a stop): where a follower left far behind a riding lead is set down.</summary>
+    public Vector3 StandBesideCart() => _builder.Surface(ExitCellNear(Cart.GlobalPosition, true, false)) + Vector3.Up * 0.1f;
 
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
@@ -897,7 +909,7 @@ public partial class RailController : Node
         Raise(new CartEvent(CartEventKind.Arrived, Stop: StopIndex));
         Cart.Speed = 0f;
         if (!PlayerAboard()) SetDownRiders(); // the player was thrown or got out on the way: the companions step out here and the cart stays
-        else if (!last && State.Mode == CartMode.Held && GateUp(StopIndex)) Boarding.Start();
+        else if (!last && State.Mode == CartMode.Held && GateUp(StopIndex)) StartBoarding();
         if (!GateUp(StopIndex)) EventBus.Instance.Log("The gate is down. Clear the stop.");
         RefreshHud();
     }

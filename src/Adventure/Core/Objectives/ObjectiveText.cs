@@ -24,6 +24,9 @@ public static class ObjectiveText
         _ => "The stairs are sealed until the guardian falls.",
     };
 
+    /// <summary>The sealed-stairs line of a railed floor's jailbreak (Grisel's crew in their cage wagons).</summary>
+    public static string CrewLockReason(string? villain) => $"{Villain(villain)} has sealed the stairs. Bring Grisel's crew home.";
+
     public static string Completed(FloorObjectiveKind kind) => kind switch
     {
         FloorObjectiveKind.Jailbreak => "The last prisoner is free. The stairs grind open.",

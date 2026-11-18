@@ -19,7 +19,7 @@ public partial class OrcKeyring : StaticBody3D, IInteractable
 
     public override void _Ready()
     {
-        CollisionLayer = 9; // something to use
+        CollisionLayer = 8; // something to use, not solid (the interact ray sees layer 8)
         CollisionMask = 0;
         var scene = ResourceLoader.Exists(ModelPath) ? ResourceLoader.Load<PackedScene>(ModelPath) : null;
         if (scene?.Instantiate() is Node3D model)
