@@ -82,6 +82,13 @@ public partial class MoltenPour : Node3D
         Valve.Broken += () => Quenched = true;
     }
 
+    /// <summary>Broken without the burst (a load): the pour is out for good and the valve stands burst.</summary>
+    public void Quench()
+    {
+        Quenched = true;
+        Valve.BreakQuietly();
+    }
+
     /// <summary>Whole again, pouring on its clock (a wreck or a load undid the ride).</summary>
     public void Rebuild()
     {
@@ -177,6 +184,16 @@ public partial class QuenchValve : StaticBody3D, ICombatTarget
             GetTree().CreateTimer(2.5).Timeout += () => { if (IsInstanceValid(steam)) steam.QueueFree(); };
         }
         Broken?.Invoke();
+    }
+
+    /// <summary>Burst without steam, sound or a message (a load puts it back as it was).</summary>
+    public void BreakQuietly()
+    {
+        IsAlive = false;
+        if (_shape == null) return;
+        _shape.Disabled = true;
+        CollisionLayer = 0;
+        _wheelNode.Visible = false;
     }
 
     /// <summary>Whole again.</summary>

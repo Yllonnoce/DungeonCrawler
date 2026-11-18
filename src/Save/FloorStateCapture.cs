@@ -113,6 +113,7 @@ public static class FloorStateCapture
         if (Adventure.FortuneDirector.Instance is { } fortune) dto.SecretsFound = fortune.FoundSecrets.OrderBy(i => i).ToList();
         if (floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault() is { } objective) dto.Objective = objective.Capture();
         if (Dungeon.Rails.RailController.Instance is { } rails && rails.GetParent() == floorRoot) { dto.RailStop = rails.Capture(); dto.RailRiders = rails.CaptureRiders(); dto.SparesUsed = rails.CaptureSpares(); }
+        if (floorRoot.GetNodeOrNull<Dungeon.Rails.RailEncounterController>("RailEncounterController") is { } railEncounters) railEncounters.Capture(dto);
         dto.BossDefeated = Main.Instance?.BossDefeatedThisFloor == true || floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss && !e.IsAlive) || (layout.BossArena != null && !floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss));
         return dto;
     }
@@ -211,6 +212,7 @@ public static class FloorStateCapture
         Adventure.FortuneDirector.Instance?.RestoreSecrets(dto.SecretsFound);
         // the cart back at the stop it reached, nobody aboard, its riders beside it (it looks again once the party is set down); a floor without a line ignores it
         if (dto.RailStop is { } railStop && Dungeon.Rails.RailController.Instance is { } railController && railController.GetParent() == floorRoot) railController.Restore(railStop, dto.RailRiders, dto.SparesUsed);
+        if (floorRoot.GetNodeOrNull<Dungeon.Rails.RailEncounterController>("RailEncounterController") is { } railEncountersBack) railEncountersBack.Restore(dto);
         if (dto.Objective is { } os)
         {
             floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault()?.Restore(os);

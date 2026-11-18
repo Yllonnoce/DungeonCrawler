@@ -4,7 +4,9 @@ using DungeonCrawler.Combat.Fx;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Enemies;
+using DungeonCrawler.Net;
 using DungeonCrawler.Party;
+using DungeonCrawler.Save;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -164,7 +166,7 @@ public partial class RailEncounterController
 
     // ---- arming and clearing ---------------------------------------------------------------------
 
-    /// <summary>Ride <paramref name="ride"/> arms: the gap waits for the cart, the trestle and the buffer stand, the hammers start their beat; a wreck or a load mends the valve.</summary>
+    /// <summary>Ride <paramref name="ride"/> arms: the gap waits for the cart, the trestle and the buffer stand, the hammers start their beat; a broken valve stays broken.</summary>
     private void ArmKiln(int ride)
     {
         var tick = _builder.FloorTick;
@@ -178,8 +180,6 @@ public partial class RailEncounterController
             p.Buffer?.Restore();
             if (p.Pour is { } pour)
             {
-                if (p.Rebuild && pour.Quenched) pour.Rebuild();
-                p.Rebuild = false;
                 p.PourCount = p.PourHit = 0;
                 p.BurnClock = 0f;
                 p.Phase = (int)SetPieceRules.Pour(tick, out _);
@@ -200,14 +200,44 @@ public partial class RailEncounterController
         _rails.ClearGap();
     }
 
-    /// <summary>The cart's state changed: a wreck or a load mends the valve at the next arming; a cart restored at or past a buffer's ride stands past it.</summary>
+    /// <summary>The cart's state changed: a cart restored at or past a buffer's ride stands past it.</summary>
     private void ResetKiln(CartEventKind kind)
     {
         foreach (var p in _pieces)
         {
-            if (kind is CartEventKind.Wrecked or CartEventKind.Restored && p.Pour != null) p.Rebuild = true;
             if (kind == CartEventKind.Restored && p.Buffer is { } buffer) buffer.Restore(smashed: _rails.StopIndex >= p.Plan.Ride);
         }
+    }
+
+    // ---- save ------------------------------------------------------------------------------------
+
+    /// <summary>The save keeps what the floor remembers of the kiln: the golem's death and the broken valve. Server only.</summary>
+    public void Capture(FloorStateDto dto)
+    {
+        if (NetSession.IsClient) return;
+        dto.GolemDefeated = GolemDefeated;
+        dto.ValveBroken = _pieces.Any(p => p.Pour is { Quenched: true });
+    }
+
+    /// <summary>
+    /// Back from a save: no ride is live (the Restored event cleared them and the pieces rebuild at the next arming), the golem
+    /// stays dead if it was killed, a broken valve stays broken. Server only; older saves carry nulls, read as false.
+    /// </summary>
+    public void Restore(FloorStateDto dto)
+    {
+        if (NetSession.IsClient) return;
+        ClearRide(loaded: true); // idempotent: nothing live stands over a load
+        ClearThrowers();
+        _rails.ClearGap();
+        _rails.ClearLane();
+        GolemDefeated = dto.GolemDefeated ?? false;
+        var broken = dto.ValveBroken ?? false;
+        foreach (var p in _pieces)
+            if (p.Pour is { } pour)
+            {
+                if (broken) pour.Quench();
+                else if (pour.Quenched) pour.Rebuild();
+            }
     }
 
     // ---- the golem -------------------------------------------------------------------------------

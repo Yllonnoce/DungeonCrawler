@@ -247,6 +247,7 @@ public partial class RailController : Node
         if (StopS.Length == 0) return;
         StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
         Party.Reset(new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating));
+        Cart.Visible = true; // a cart hidden by a wreck with no spare is back
         SetCartLayer();
         Party.Limit = StopS[StopIndex];
         ResetLine();
@@ -670,6 +671,7 @@ public partial class RailController : Node
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
+        Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
         EventBus.Instance.Log("The cart is wrecked!");
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
@@ -685,6 +687,31 @@ public partial class RailController : Node
         RefreshHud();
     }
 
+    private const float TumbleSeconds = 6f;
+
+    /// <summary>The tub's look on a rigid body thrown along the cart's way and up, with a little spin, gone after <see cref="TumbleSeconds"/>. Cosmetic: layer 0, the floor only.</summary>
+    private void Tumble()
+    {
+        if (!IsInsideTree() || GetParent() is not Node3D root || Cart.GetNodeOrNull<Node3D>("Body") is not { } body) return;
+        var tub = new RigidBody3D { Name = "CartTumble", CollisionLayer = 0, CollisionMask = 1, Mass = 300f };
+        tub.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(MineCart.TubWidth, MineCart.TubHeight, MineCart.TubLength) }, Position = new Vector3(0, MineCart.TubBottom + MineCart.TubHeight / 2f, 0) });
+        tub.AddChild(body.Duplicate());
+        root.AddChild(tub);
+        tub.GlobalTransform = Cart.GlobalTransform;
+        var basis = Cart.GlobalTransform.Basis;
+        tub.LinearVelocity = Cart.Velocity + Vector3.Up * 4f;
+        tub.AngularVelocity = -basis.Z * 3f + basis.X * 1.5f + Vector3.Up * 1f;
+        GetTree().CreateTimer(TumbleSeconds).Timeout += () => { if (IsInstanceValid(tub)) tub.QueueFree(); };
+        EventBus.Instance.PlaySfx("cart_wreck"); // placeholder cue
+    }
+
+    /// <summary>No spare took over: the real cart's body is hidden and not solid, and kept for a Restore.</summary>
+    private void HideWreck()
+    {
+        Cart.Visible = false;
+        Cart.CollisionLayer = 0;
+    }
+
     /// <summary>
     /// The nearest intermediate stop (by distance along the line, behind or at most the next stop ahead) with an unused spare provides a new cart:
     /// the spare disappears and the party's cart (same node and run) stands Held there with full plating, wagons still coupled
@@ -697,6 +724,7 @@ public partial class RailController : Node
         {
             EventBus.Instance.Log("No carts left. The rest is on foot.");
             Raise(new CartEvent(CartEventKind.OnFoot, Stop: StopIndex));
+            HideWreck(); // the tumble was the wreck: nothing is left standing on the line (the node stays for a Restore)
             return;
         }
         _spares.Use(pick);

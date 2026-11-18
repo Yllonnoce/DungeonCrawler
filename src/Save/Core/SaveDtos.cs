@@ -246,6 +246,10 @@ public sealed class FloorStateDto
     public List<int>? RailRiders { get; set; }
     /// <summary>The intermediate stops whose spare cart has been used, or null.</summary>
     public List<int>? SparesUsed { get; set; }
+    /// <summary>The floor-12 golem has died (it does not come again); null in older saves.</summary>
+    public bool? GolemDefeated { get; set; }
+    /// <summary>The quench valve is broken (it stays broken on this floor); null in older saves.</summary>
+    public bool? ValveBroken { get; set; }
 }
 
 /// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>
