@@ -435,6 +435,191 @@
       "Ritualist": false
     }
   ],
+  "RailEncounters": [
+    {
+      "Id": "r1_lone",
+      "Ride": 1,
+      "Kind": "lone",
+      "Riders": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.45,
+      "Offset": 0,
+      "Line": "One of them\u0027s stood on the rails."
+    },
+    {
+      "Id": "r1_thrower",
+      "Ride": 1,
+      "Kind": "thrower",
+      "Riders": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.8,
+      "Offset": 0,
+      "Line": null
+    },
+    {
+      "Id": "r2_slag1",
+      "Ride": 2,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 2,
+          "Elite": null
+        }
+      ],
+      "At": 0.15,
+      "Offset": -6,
+      "Line": "Carts on the slag line!"
+    },
+    {
+      "Id": "r2_slag2",
+      "Ride": 2,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1,
+          "Elite": null
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.45,
+      "Offset": -4,
+      "Line": null
+    },
+    {
+      "Id": "r2_slag3",
+      "Ride": 2,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2,
+          "Elite": null
+        },
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.75,
+      "Offset": -3,
+      "Line": null
+    },
+    {
+      "Id": "r3_slag",
+      "Ride": 3,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.3,
+      "Offset": 8,
+      "Line": null
+    },
+    {
+      "Id": "r4_golem",
+      "Ride": 4,
+      "Kind": "golem",
+      "Riders": [
+        {
+          "EnemyId": "enemy.forge_golem",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.05,
+      "Offset": 0,
+      "Line": "The kiln wall bursts \u2014 something huge is on the slag line!"
+    }
+  ],
+  "RailSetPieces": [
+    {
+      "Id": "r1_beam",
+      "Ride": 1,
+      "Kind": "beam",
+      "At": 0.6
+    },
+    {
+      "Id": "r3_switch_out",
+      "Ride": 3,
+      "Kind": "switch_out",
+      "At": 0.2
+    },
+    {
+      "Id": "r3_heap",
+      "Ride": 3,
+      "Kind": "heap",
+      "At": 0.35
+    },
+    {
+      "Id": "r3_switch_back",
+      "Ride": 3,
+      "Kind": "switch_back",
+      "At": 0.55
+    },
+    {
+      "Id": "r3_buckets",
+      "Ride": 3,
+      "Kind": "buckets",
+      "At": 0.75
+    },
+    {
+      "Id": "r4_hammers",
+      "Ride": 4,
+      "Kind": "hammers",
+      "At": 0.25
+    },
+    {
+      "Id": "r4_pour",
+      "Ride": 4,
+      "Kind": "pour",
+      "At": 0.45
+    },
+    {
+      "Id": "r4_trestle",
+      "Ride": 4,
+      "Kind": "trestle",
+      "At": 0.6
+    },
+    {
+      "Id": "r4_jump",
+      "Ride": 4,
+      "Kind": "jump",
+      "At": 0.75
+    },
+    {
+      "Id": "r4_spur",
+      "Ride": 4,
+      "Kind": "spur_switch",
+      "At": 0.85
+    },
+    {
+      "Id": "r4_buffer",
+      "Ride": 4,
+      "Kind": "buffer",
+      "At": 0.95
+    }
+  ],
   "Crew": [
     {
       "Id": "crew_hob",

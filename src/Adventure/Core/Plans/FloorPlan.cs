@@ -238,6 +238,30 @@ public sealed class CrewPlan
     [AiNotNull] public string? Body { get; set; }
 }
 
+/// <summary>A hand-authored enemy on a railed floor's rides: riders of a slag cart, a lone stander, a thrower or a golem. Kind is "slag_cart", "lone", "thrower" or "golem".</summary>
+public sealed record RailEncounterPlan
+{
+    public string Id { get; set; } = "";
+    /// <summary>1-based: the stretch from stop Ride-1 to stop Ride.</summary>
+    public int Ride { get; set; } = 1;
+    public string Kind { get; set; } = "lone";
+    public List<MemberPlan> Riders { get; set; } = new();
+    /// <summary>The fraction of the ride where it starts or stands.</summary>
+    public float At { get; set; } = 0.5f;
+    /// <summary>Metres ahead (+) or behind (-) the party cart, for a slag cart.</summary>
+    public float Offset { get; set; }
+    [AiNotNull] public string? Line { get; set; }
+}
+
+/// <summary>A scripted set piece on a ride. Kind is "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch" or "buffer".</summary>
+public sealed record RailSetPiecePlan
+{
+    public string Id { get; set; } = "";
+    public int Ride { get; set; } = 1;
+    public string Kind { get; set; } = "beam";
+    public float At { get; set; } = 0.5f;
+}
+
 public sealed class QuestParams
 {
     [AiNotNull] public string? TargetCollective { get; set; }
@@ -338,6 +362,10 @@ public sealed class FloorPlan
     public List<NpcPlan> Npcs { get; set; } = new();
     /// <summary>Grisel's crew on a railed jailbreak floor, in wagon order. Hand-authored until the designer can make railed floors.</summary>
     [AiIgnore] public List<CrewPlan> Crew { get; set; } = new();
+    /// <summary>Hand-authored enemies on a railed floor's rides (slag carts, a lone stander, a thrower, a golem).</summary>
+    [AiIgnore] public List<RailEncounterPlan> RailEncounters { get; set; } = new();
+    /// <summary>Hand-authored set pieces on a railed floor's rides.</summary>
+    [AiIgnore] public List<RailSetPiecePlan> RailSetPieces { get; set; } = new();
     public List<QuestPlan> Quests { get; set; } = new();
     public List<NarrationPlan> Narration { get; set; } = new();
     [AiDescription("Taunts the antagonist keeps for this floor in particular (its story, its cast), on top of the campaign's; usually empty.")]

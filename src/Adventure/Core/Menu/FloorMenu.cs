@@ -57,6 +57,8 @@ public sealed class FloorMenu
     public string? BossName { get; init; }
     public IReadOnlyList<RoomInfo> Rooms { get; init; } = Array.Empty<RoomInfo>();
     public IReadOnlyList<EnemyOption> Roster { get; init; } = Array.Empty<EnemyOption>();
+    /// <summary>Every creature the run knows (id to IsBoss), for hand-authored lists such as rail encounters that may field creatures outside the tier's pool.</summary>
+    public IReadOnlyDictionary<string, bool> KnownEnemies { get; init; } = new Dictionary<string, bool>();
     /// <summary>How many enemies the generator would have placed; designers aim near this.</summary>
     public int TargetEnemies { get; init; }
     public int MinEnemies { get; init; }
@@ -157,7 +159,7 @@ public sealed class FloorMenu
             Floor = floor, TierIndex = TierRules.TierIndex(floor), TierName = tier?.DisplayName ?? "Dungeon", Layout = LayoutKinds.Id(layout.Kind),
             Objective = FloorObjectives.Id(layout.Objective?.Kind ?? FloorObjectiveKind.None), ObjectiveNote = layout.Objective is { } ol ? FloorObjectives.Describe(ol.Kind) : "",
             BossFloor = TierRules.IsBossFloor(floor), BossId = bossId, BossName = bossId != null && roster.TryGetValue(bossId, out var bp) ? bp.Name : null,
-            Rooms = rooms, Roster = options,
+            Rooms = rooms, Roster = options, KnownEnemies = roster.ToDictionary(kv => kv.Key, kv => kv.Value.IsBoss),
             TargetEnemies = spec.EnemyCount, MinEnemies = Math.Max(3, spec.EnemyCount / 2), MaxEnemies = 16,
             Budget = spec.EnemyCount * meanCost * PartyPower(party, floor),
             VaultCount = layout.Vaults.Count(v => v.Kind != VaultKind.SafeDoor), GeneratorChests = layout.ChestSpawns.Count,

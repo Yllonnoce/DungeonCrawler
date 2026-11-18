@@ -313,6 +313,7 @@ public static class PlanValidator
 
         ValidateNpcsAndQuests(plan, menu, start, report, campaign);
         ValidateCrew(plan, layout, report, campaign);
+        ValidateRailPlans(plan, layout, menu, report);
 
         // text
         plan.Title = Clip(plan.Title, 60);
@@ -343,6 +344,68 @@ public static class PlanValidator
         });
         var cap = layout.Rail is { } rail ? Objectives.CrewRules.PerWagon * Math.Max(0, rail.Stops.Count - 2) : 6;
         if (plan.Crew.Count > cap) { report.Repairs.Add($"crew: dropped {plan.Crew.Count - cap} over the cap of {cap}"); plan.Crew.RemoveRange(cap, plan.Crew.Count - cap); }
+    }
+
+    public const int MaxRailEncounters = 12, MaxRailSetPieces = 20, MaxSlagRiders = 3;
+    private static readonly string[] EncounterKinds = { "slag_cart", "lone", "thrower", "golem" };
+    private static readonly string[] SetPieceKinds = { "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch", "buffer" };
+
+    private static void ValidateRailPlans(FloorPlan plan, FloorLayout layout, FloorMenu menu, ValidationReport report)
+    {
+        if (plan.RailEncounters.Count == 0 && plan.RailSetPieces.Count == 0) return;
+        if (layout.Rail is not { } rail)
+        {
+            plan.RailEncounters.Clear();
+            plan.RailSetPieces.Clear();
+            report.Repairs.Add("rail encounters dropped (no rails)");
+            return;
+        }
+        var rides = rail.Stops.Count - 1;
+        var ids = new HashSet<string>();
+        float Clamp(string what, string id, float at)
+        {
+            var c = Math.Clamp(at, 0.05f, 0.95f);
+            if (c != at) report.Repairs.Add($"{what} {id}: at clamped to {c}");
+            return c;
+        }
+        plan.RailEncounters.RemoveAll(e =>
+        {
+            if (string.IsNullOrWhiteSpace(e.Id) || !ids.Add(e.Id)) { report.Repairs.Add($"rail encounter {e.Id}: dropped (no id or a duplicate)"); return true; }
+            if (!EncounterKinds.Contains(e.Kind)) { report.Repairs.Add($"rail encounter {e.Id}: dropped (unknown kind {e.Kind})"); return true; }
+            if (e.Ride < 1 || e.Ride > rides) { report.Repairs.Add($"rail encounter {e.Id}: dropped (ride {e.Ride} out of range)"); return true; }
+            e.Riders ??= new();
+            e.Riders.RemoveAll(m => m.Count < 1);
+            if (e.Riders.Count == 0) { report.Repairs.Add($"rail encounter {e.Id}: dropped (no riders)"); return true; }
+            foreach (var m in e.Riders)
+            {
+                if (!menu.KnownEnemies.TryGetValue(m.EnemyId, out var isBoss)) { report.Repairs.Add($"rail encounter {e.Id}: dropped (unknown enemy {m.EnemyId})"); return true; }
+                if (isBoss) { report.Repairs.Add($"rail encounter {e.Id}: no bosses"); return true; }
+            }
+            e.At = Clamp("rail encounter", e.Id, e.At);
+            if (e.Kind == "slag_cart")
+            {
+                var total = e.Riders.Sum(m => m.Count);
+                if (total > MaxSlagRiders)
+                {
+                    report.Repairs.Add($"rail encounter {e.Id}: riders trimmed to {MaxSlagRiders}");
+                    var left = MaxSlagRiders;
+                    foreach (var m in e.Riders) { m.Count = Math.Min(m.Count, left); left -= m.Count; }
+                    e.Riders.RemoveAll(m => m.Count < 1);
+                }
+            }
+            return false;
+        });
+        if (plan.RailEncounters.Count > MaxRailEncounters) { report.Repairs.Add($"rail encounters: dropped {plan.RailEncounters.Count - MaxRailEncounters} over the cap of {MaxRailEncounters}"); plan.RailEncounters.RemoveRange(MaxRailEncounters, plan.RailEncounters.Count - MaxRailEncounters); }
+        var pieceIds = new HashSet<string>();
+        plan.RailSetPieces.RemoveAll(p =>
+        {
+            if (string.IsNullOrWhiteSpace(p.Id) || !pieceIds.Add(p.Id)) { report.Repairs.Add($"rail set piece {p.Id}: dropped (no id or a duplicate)"); return true; }
+            if (!SetPieceKinds.Contains(p.Kind)) { report.Repairs.Add($"rail set piece {p.Id}: dropped (unknown kind {p.Kind})"); return true; }
+            if (p.Ride < 1 || p.Ride > rides) { report.Repairs.Add($"rail set piece {p.Id}: dropped (ride {p.Ride} out of range)"); return true; }
+            p.At = Clamp("rail set piece", p.Id, p.At);
+            return false;
+        });
+        if (plan.RailSetPieces.Count > MaxRailSetPieces) { report.Repairs.Add($"rail set pieces: dropped {plan.RailSetPieces.Count - MaxRailSetPieces} over the cap of {MaxRailSetPieces}"); plan.RailSetPieces.RemoveRange(MaxRailSetPieces, plan.RailSetPieces.Count - MaxRailSetPieces); }
     }
 
     private static void ValidateNpcsAndQuests(FloorPlan plan, FloorMenu menu, int start, ValidationReport report, CampaignPlan? campaign = null)

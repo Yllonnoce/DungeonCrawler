@@ -67,6 +67,9 @@ public sealed class FloorContents
     public List<NpcPlacement> Npcs { get; } = new();
     /// <summary>The floor's named crew (railed jailbreak); the crew controller seats them, the resolver only passes them on.</summary>
     public IReadOnlyList<CrewPlan> Crew { get; set; } = Array.Empty<CrewPlan>();
+    /// <summary>Authored rail encounters and set pieces; the resolver only passes them on.</summary>
+    public IReadOnlyList<RailEncounterPlan> RailEncounters { get; set; } = Array.Empty<RailEncounterPlan>();
+    public IReadOnlyList<RailSetPiecePlan> RailSetPieces { get; set; } = Array.Empty<RailSetPiecePlan>();
     public List<HordeContents> Hordes { get; } = new();
     public List<QuestItemPlacement> QuestItems { get; } = new();
     /// <summary>The floor objective's people and texts, when the floor has one (derived from the layout, not the plan).</summary>
