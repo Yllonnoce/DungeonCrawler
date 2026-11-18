@@ -1049,18 +1049,30 @@ line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
 
 Riding (`Dungeon/Rails/RailController.cs`, a node under the floor root; the engine-free rules are in `Dungeon/Rails/Core`):
-the party's cart waits at the first stop. Board it with E; companions within 25 m hop in with you. The cart leaves 5 s
-after the first hero boards, or 2 s after everyone living is aboard, and rolls to the next stop, where the countdown starts
-again. Seated, forward pumps and back brakes; seated companions pump on climbs and when the cart is slow. E again gets you
-out: below 1 m/s you step out beside the lane and your companions follow you, but getting out of a moving cart (1 m/s or
-more) gets you run over. Anyone on foot in the cart's path is run over too, as the press does it, by the lethality
+the party's cart waits at the first stop. Board it with E (not at the end of the line); companions within 25 m hop in with
+you. The cart leaves 5 s after the first hero boards; it leaves as soon as everyone living is aboard, but never sooner than
+2 s after the countdown began. It rolls to the next stop, where the countdown starts again. It only leaves with a player
+aboard: a companion on foot whose lead is seated never regroups onto the lead (that would put it in the tub, or ahead of a
+moving cart); while the cart is held at a stop it hops in (and any companion that comes within 3 m of the held cart does),
+and while the cart rolls it holds where it stands. A cart that is held, or arrives, with no player aboard sets its riders
+down beside the lane there and stays. Seated, forward pumps and back brakes; seated companions pump on climbs and when the
+cart is slow. E again gets you out: below 1 m/s you step out beside the lane and your companions follow you, but getting
+out of a moving cart (1 m/s or more) gets you run over once, and you land on the line just behind the cart (the others ride
+on). The "Cart coming!" warning looks 3 s ahead, at 3 m/s at least. Anyone on foot in the cart's path is run over too, as the press does it, by the lethality
 setting: mangled at the default 3, part of max HP below 2.5. Seated heroes are never hit, and a body already down is not
 hit again. Big enemies (scale 1.05 and up, and bosses) are hurt, stunned and knocked aside instead, and dent the plating by
 15. At 0 plating the cart is wrecked: it stops for good and the riders climb out beside the lane, each losing 25% of max
-HP. The side pockets are off the lanes, so a hero standing in one is safe. The save keeps the stop reached
-(`FloorStateDto.RailStop`); a load puts the cart back there, held, with full plating and nobody aboard. Co-op clients
-only see the cart parked at the first stop for now. `--test-ride` rides floor 12 of the built-in campaign at lethality 3:
+HP. The side pockets are off the lanes, so a hero standing in one is safe. Stop i is the `RailStop{i}` marker; the stops
+must lie in order along the party track, or the floor gets no cart (an error is logged). The save keeps the stop reached
+(`FloorStateDto.RailStop`; a ride under way keeps the stop it left) and who was seated (`FloorStateDto.RailRiders`, party
+indices). A load or a re-entry puts the cart Held at the stop it last reached, with full plating and nobody aboard: the
+saved riders, anyone set down inside the cart and anyone standing on a rail cell step out beside it, on cells of their own
+where there is room. Co-op clients only see the cart parked at the first stop for now. `--test-ride` rides floor 12
+of the built-in campaign at lethality 3:
 board, run over an enemy on the way to stop 1, save and load there, a companion jumping out at speed, and a wreck.
+`--test-ride-edges` covers the edges: a companion downed at boarding gets up far behind the rolling cart and never
+regroups into or ahead of it (it hops in at stop 1), a save between stops and a load, the human thrown at lethality 1 (hurt
+once, not downed), and the companions it leaves riding are set down at the next stop, where the cart stays.
 
 Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check) and `tests/Dungeon/RailCurvesTests.cs`
 (the smoothed rail centrelines). `tests/` is local and not in git.

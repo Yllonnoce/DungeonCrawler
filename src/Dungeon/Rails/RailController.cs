@@ -47,6 +47,8 @@ public partial class RailController : Node
     private readonly Dictionary<ulong, double> _hitAt = new();
     private readonly List<ulong> _stale = new();
     private readonly Dictionary<int, double> _warnedAt = new();
+    /// <summary>Hero indices the save had seated in the cart: the deferred pass after a load sets them down beside it.</summary>
+    private readonly HashSet<int> _restoredRiders = new();
     /// <summary>Only bodies this close (flat) to the cart's front are judged for a run-over.</summary>
     const float ScanRange = 6f;
     const float JudgeAgain = 1f;
@@ -66,12 +68,22 @@ public partial class RailController : Node
         _builder = builder;
         _layout = layout;
         _track = track;
-        var stops = new List<float>();
+        // stop i is marker RailStop{i}: the save keeps a stop index, so the order is the markers' and is never re-sorted
+        var stops = new List<(int Marker, float S)>();
+        var problem = (string?)null;
         for (var i = 0; i < (layout.Rail?.Stops.Count ?? 0); i++)
-            if (root.GetNodeOrNull<Node3D>($"RailStop{i}") is { } marker)
-                stops.Add(track.Curve.GetClosestOffset(track.ToLocal(marker.GlobalPosition)));
-        stops.Sort();
-        StopS = stops.ToArray();
+        {
+            if (root.GetNodeOrNull<Node3D>($"RailStop{i}") is not { } marker) { problem = $"marker RailStop{i} is missing"; break; }
+            var s = track.Curve.GetClosestOffset(track.ToLocal(marker.GlobalPosition));
+            if (stops.Count > 0 && s <= stops[^1].S) { problem = $"RailStop{i} lies at S={s:0.0}, not past RailStop{stops[^1].Marker} at S={stops[^1].S:0.0}"; break; }
+            stops.Add((i, s));
+        }
+        if (problem != null)
+        {
+            GD.PushError($"[RailController] the stops do not run along the party track ({problem}): no cart on this floor");
+            stops.Clear();
+        }
+        StopS = stops.Select(p => p.S).ToArray();
         State = new CartState(StopS.Length > 0 ? StopS[0] : 0f, 0f, CartMode.Held, CartRules.MaxPlating);
         _prevS = State.S;
         Cart = new MineCart { PromptFor = PromptFor, OnUse = Use };
@@ -97,12 +109,25 @@ public partial class RailController : Node
     /// <summary>What the save keeps: the stop the cart has reached (a ride under way keeps the stop it left).</summary>
     public int Capture() => StopIndex;
 
+    /// <summary>The heroes seated in the cart (their indices), or null when nobody is: a load sets them down beside the cart.</summary>
+    public List<int>? CaptureRiders()
+    {
+        List<int>? riders = null;
+        if (Main.Instance?.Party is { } party)
+            foreach (var hero in party.Adventurers)
+                if (IsInstanceValid(hero) && hero.Cart == Cart) (riders ??= new()).Add(hero.Index);
+        return riders;
+    }
+
     /// <summary>
     /// Back from a save: the cart Held at the stop it had reached (clamped to the line), plating full, nobody aboard.
-    /// A wrecked cart comes back whole at its last stop (spare carts are plan 3).
+    /// A wrecked cart comes back whole at its last stop (spare carts are plan 3). The heroes saved as riders (their saved
+    /// poses were seats, mid-line on a ride under way), and anyone set down on a rail cell, step out beside the cart.
     /// </summary>
-    public void Restore(int stopIndex)
+    public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null)
     {
+        _restoredRiders.Clear();
+        if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
         if (StopS.Length == 0) return;
         StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
         State = new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating);
@@ -115,12 +140,13 @@ public partial class RailController : Node
         Cart.Curvature = CurvatureAt(State.S);
         PoseAt(State.S);
         ClearRiders();
-        Callable.From(ClearRiders).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
+        Callable.From(() => { ClearRiders(); _restoredRiders.Clear(); }).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
     }
 
     /// <summary>
     /// Nobody rides a restored cart: a hero still holding a seat (this cart's or a freed one's) is unseated where it stands,
-    /// and a body set down inside the parked cart (its saved pose was its seat) steps out beside the lane.
+    /// and a body the save had seated (its pose was a seat, maybe mid-line), set down inside the parked cart, or standing on
+    /// a rail cell (party or enemy lane) steps out beside the cart at its stop, each on its own cell.
     /// </summary>
     private void ClearRiders()
     {
@@ -130,7 +156,9 @@ public partial class RailController : Node
         {
             if (!IsInstanceValid(hero)) continue;
             if (hero.Seated) hero.Teleport(hero.GlobalPosition); // Teleport frees the seat and stands the body up
-            if (hero.Parked || hero.Control == ControlKind.Remote || !InsideCart(hero.GlobalPosition)) continue;
+            if (hero.Parked || hero.Control == ControlKind.Remote) continue;
+            var pos = hero.GlobalPosition;
+            if (!_restoredRiders.Contains(hero.Index) && !InsideCart(pos) && !_layout.IsRail(DungeonBuilder.WorldToCell(pos))) continue;
             var cell = ExitCell();
             _exitTaken.Add(cell);
             hero.Teleport(_builder.Surface(cell) + Vector3.Up * 0.3f, Cart.GlobalPosition);
@@ -167,6 +195,8 @@ public partial class RailController : Node
         if (NetSession.IsClient || actor.Control == ControlKind.Remote || !Current) return;
         if (actor.Cart == Cart) { GetOutWithParty(actor); return; }
         if (actor.Seated || actor.Downed || State.Mode != CartMode.Held) return;
+        if (StopIndex >= StopS.Length - 1) return; // the end of the line: nowhere left to ride (the prompt offers nothing either)
+        if (actor.Control != ControlKind.LocalHuman && !PlayerAboard(Main.Instance.Party)) return; // a companion rides only with a player
         if (!SeatHero(actor)) return;
         if (actor.Control == ControlKind.LocalHuman)
             foreach (var mate in Main.Instance.Party.Active)
@@ -175,6 +205,56 @@ public partial class RailController : Node
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
         if (!Boarding.Running && StopIndex < StopS.Length - 1) Boarding.Start();
         RefreshHud();
+    }
+
+    /// <summary>
+    /// A companion on foot whose lead rides this cart asks for a seat instead of regrouping onto the lead (into the tub,
+    /// or ahead of a moving cart): it hops in, as boarding seats it, while the cart is held at a stop short of the end of
+    /// the line with a player aboard. False otherwise (the cart rolling, wrecked, at the end, full, or no player in it).
+    /// </summary>
+    public bool TryHopIn(Adventurer hero)
+    {
+        if (NetSession.IsClient || !Current || !IsInstanceValid(hero)) return false;
+        if (State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1) return false;
+        if (hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) return false;
+        var party = Main.Instance.Party;
+        if (!PlayerAboard(party) || !SeatHero(hero)) return false;
+        if (!Boarding.Running) Boarding.Start();
+        RefreshHud();
+        return true;
+    }
+
+    /// <summary>A player's hero sits in this cart, awake: the cart only leaves (and companions only board) with one aboard. Remote players count from plan 5.</summary>
+    private bool PlayerAboard(PartyController party)
+    {
+        foreach (var hero in party.Adventurers)
+            if (IsInstanceValid(hero) && hero.Cart == Cart && !hero.Downed && hero.Control == ControlKind.LocalHuman) return true;
+        return false;
+    }
+
+    /// <summary>Every rider steps out beside the lane at the stop (the cart is held there): nobody rides on without a player.</summary>
+    private void SetDownRiders(PartyController party)
+    {
+        _exitTaken.Clear();
+        var any = false;
+        foreach (var hero in party.Adventurers)
+            if (IsInstanceValid(hero) && hero.Cart == Cart) { hero.Pumping = false; GetOut(hero); any = true; }
+        if (any) RefreshHud();
+    }
+
+    /// <summary>Companions on foot who come this close to a held cart with a player aboard hop in.</summary>
+    const float HopInRange = 3f;
+
+    private void HopInNearby(PartyController party)
+    {
+        if (StopIndex >= StopS.Length - 1 || !PlayerAboard(party)) return;
+        var at = Cart.GlobalPosition;
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) continue;
+            if (hero.GlobalPosition.DistanceSquaredTo(at) > HopInRange * HopInRange) continue;
+            if (SeatHero(hero)) RefreshHud();
+        }
     }
 
     private bool SeatHero(Adventurer hero)
@@ -196,23 +276,29 @@ public partial class RailController : Node
         RefreshHud();
     }
 
+    /// <summary>A rider thrown from the moving cart lands this far behind its back end (past the body's own radius).</summary>
+    const float ThrownBehind = 0.2f;
+
     private void GetOut(Adventurer hero)
     {
-        var velocity = Cart.Velocity;
-        var thrown = State.V >= RunOverRules.ThrownAtSpeed;
+        var thrown = State.Mode == CartMode.Rolling && State.V >= RunOverRules.ThrownAtSpeed;
         Cart.Seats.Leave(hero.Index);
-        var cell = ExitCell();
-        _exitTaken.Add(cell);
-        if (thrown) EventBus.Instance.Log($"{hero.State.Name} jumps from the moving cart!");
-        hero.GetOut(_builder.Surface(cell), velocity);
-        if (thrown) hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, TierRules.Lethality), SourceName, HazardIndex);
+        if (!thrown)
+        {
+            var cell = ExitCell();
+            _exitTaken.Add(cell);
+            hero.GetOut(_builder.Surface(cell), Cart.Velocity);
+            return;
+        }
+        // thrown: down on the line just behind the cart, carried a little by the ride; the cart has had them (once) and rolls on away
+        EventBus.Instance.Log($"{hero.State.Name} jumps from the moving cart!");
+        hero.GetOut(TrackPoint(State.S - CartRules.HalfLength - BodyRadius - ThrownBehind) + Vector3.Up * 0.05f, Cart.Velocity * 0.3f);
+        _hitAt[hero.GetInstanceId()] = Time.GetTicksMsec() / 1000.0;
+        hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, TierRules.Lethality), SourceName, HazardIndex);
     }
 
-    /// <summary>
-    /// Where a rider gets out: at a stop or below throwing speed, a free walkable cell beside the lane that is no rail
-    /// (never the enemy lane, never a cell another rider just took); at speed, the lane cell under the cart.
-    /// </summary>
-    private GridPos ExitCell() => ExitCellNear(Cart.GlobalPosition, State.Mode != CartMode.Rolling || State.V < RunOverRules.ThrownAtSpeed, true);
+    /// <summary>Where a rider gets out of a slow or stopped cart: a free walkable cell beside the lane that is no rail (never the enemy lane, never a cell another rider just took).</summary>
+    private GridPos ExitCell() => ExitCellNear(Cart.GlobalPosition, true, true);
 
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
@@ -242,8 +328,11 @@ public partial class RailController : Node
 
         if (State.Mode == CartMode.Held)
         {
+            var playerAboard = PlayerAboard(party);
+            if (!playerAboard) SetDownRiders(party); // no player aboard: companions do not ride off on their own
+            else HopInNearby(party);
             CountHeroes(party, out var seated, out var living);
-            if (seated == 0) { if (Boarding.Running) Boarding.Cancel(); } // nobody standing aboard: the cart does not leave empty (or with only the fallen)
+            if (!playerAboard || seated == 0) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, or without a player
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
                 State = State with { Mode = CartMode.Rolling }; // StopAt (the next stop) is ahead of S before the cart rolls
@@ -390,6 +479,7 @@ public partial class RailController : Node
     private void Wreck(PartyController party)
     {
         State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
+        Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
         EventBus.Instance.Log("The cart is wrecked!");
         _exitTaken.Clear();
         foreach (var hero in party.Adventurers)
@@ -431,8 +521,9 @@ public partial class RailController : Node
         foreach (var hero in party.Adventurers) if (IsInstanceValid(hero) && hero.Cart == Cart) hero.Pumping = false;
         var last = StopIndex >= StopS.Length - 1;
         EventBus.Instance.Log(last ? "The cart reaches the end of the line." : $"The cart rolls into stop {StopIndex}.");
-        CountHeroes(party, out var seated, out _);
-        if (!last && seated > 0) Boarding.Start(); // plan 3 adds the rail gate and the departure lever
+        Cart.Speed = 0f;
+        if (!PlayerAboard(party)) SetDownRiders(party); // the player was thrown or got out on the way: the companions step out here and the cart stays
+        else if (!last) Boarding.Start(); // plan 3 adds the rail gate and the departure lever
         RefreshHud();
     }
 

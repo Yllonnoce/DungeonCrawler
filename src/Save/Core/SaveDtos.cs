@@ -242,6 +242,8 @@ public sealed class FloorStateDto
     public List<int> JammedChests { get; set; } = new();
     /// <summary>The stop the party's mine cart has reached on a railed floor; null on a floor without a cart line.</summary>
     public int? RailStop { get; set; }
+    /// <summary>The heroes (party indices) seated in the cart when the save was made, or null: a load sets them down beside the cart at <see cref="RailStop"/>.</summary>
+    public List<int>? RailRiders { get; set; }
 }
 
 /// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>

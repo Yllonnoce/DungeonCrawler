@@ -471,6 +471,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             Guarding = false;
             Defense.Update(dt, false);
             target = Dodging ? _dodgeDir * DefenseRules.DodgeSpeed : _dance.Active && !FightOn ? Vector3.Zero : CompanionVelocity(dt); // a companion stands for its dance unless the fight is still on
+            if (Seated) return; // it hopped into its lead's cart as it thought: the seat carries it from now on
         }
 
         if (Dodging && !Downed) { velocity.X = target.X; velocity.Z = target.Z; } // the burst is instant: 0.25 s at full speed, not a ramp
@@ -849,6 +850,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 Party.TryRescue(victim, this, () => Main.Instance?.Builder.HazardArmed(victim.State.MangledBy) ?? true);
                 return Vector3.Zero;
             }
+            case ActionKind.Regroup when lead.Seated: // never onto a seat: that is inside the tub, or ahead of a moving cart
+                _action = CompanionAction.HoldPosition;
+                return Vector3.Zero;
             case ActionKind.Regroup:
                 Teleport(lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f), lead.GlobalPosition + -lead.GlobalTransform.Basis.Z * 5f);
                 _unreachable = 0;
@@ -859,6 +863,20 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
                 if (Target != null && IsInstanceValid(Target) && Target.IsAlive) FaceToward(Target.GlobalPosition);
                 return Vector3.Zero;
         }
+    }
+
+    /// <summary>
+    /// The lead rides a mine cart and this companion is on foot. It never regroups onto the lead (a seat: into the tub, or
+    /// ahead of a moving cart, where the cart runs it over): while the cart is held at a stop it hops in, as boarding seats
+    /// it; while the cart rolls (or will not take it) it holds where it stands instead of regrouping or walking after it.
+    /// </summary>
+    private CompanionAction BesideTheCart(Adventurer lead, CompanionAction action)
+    {
+        if (action.Kind is not (ActionKind.Regroup or ActionKind.Follow)) return action;
+        var rails = Dungeon.Rails.RailController.Instance;
+        if (rails != null && lead.Cart == rails.Cart && rails.TryHopIn(this)) return CompanionAction.Idle;
+        if (action.Kind == ActionKind.Regroup || rails == null || lead.Cart != rails.Cart || rails.State.Mode != Dungeon.Rails.CartMode.Held) return CompanionAction.HoldPosition;
+        return action; // held at the end of the line: it may walk up to the cart
     }
 
     private Vector3 Planar(Vector3 to)
@@ -993,6 +1011,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _action = CompanionBrain.Decide(ctx);
         if (Seated) _action = CompanionBrain.WhileSeated(_action);
         if (Seated && Pumping && _action.Kind == ActionKind.Attack) _action = new CompanionAction(ActionKind.Hold, _action.TargetId); // pumping means not fighting
+        else if (!Seated && lead.Seated) _action = BesideTheCart(lead, _action);
         if (CompanionBrain.DodgeDecisionDue(ctx)) _lastTelegraphDecided = ctx.TelegraphId; // one roll per signature, win or lose
         RescueTarget = _action.Kind == ActionKind.Rescue ? mangled : null;
         Target = _action.Kind != ActionKind.Rescue && _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;

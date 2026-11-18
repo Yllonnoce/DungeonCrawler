@@ -21,9 +21,12 @@ public static class RunOverRules
         && sPrev + CartRules.HalfLength < b.S && b.S <= sNow + CartRules.HalfLength
         && OnTheRails(b);
 
-    /// <summary>A body on the rails ahead, within the distance the cart covers in the given seconds.</summary>
+    /// <summary>A crawling cart still warns this far ahead: the look-ahead reckons with at least this speed.</summary>
+    public const float WarnMinSpeed = 3f;
+
+    /// <summary>A body on the rails ahead, within the distance the cart covers in the given seconds (at <see cref="WarnMinSpeed"/> at least).</summary>
     public static bool InWarning(float sNow, float v, in TrackBody b, float seconds = 3f) =>
-        b.S >= sNow && b.S - sNow <= v * seconds + CartRules.HalfLength && OnTheRails(b);
+        b.S >= sNow && b.S - sNow <= Math.Max(v, WarnMinSpeed) * seconds + CartRules.HalfLength && OnTheRails(b);
 
     public static bool IsBig(float profileScale, bool isBoss) => isBoss || profileScale >= BigScale;
 
