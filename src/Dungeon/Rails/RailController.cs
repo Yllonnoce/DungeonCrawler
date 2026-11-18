@@ -259,7 +259,7 @@ public partial class RailController : Node
             var free = Adventure.RoomCells.Free(_layout, _layout.Rooms[stop.Room]);
             var mid = stop.Platform[stop.Platform.Count / 2];
             GridPos? best = null, beside = null;
-            var bestKey = (int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue);
+            var bestKey = (int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue); // a platform cell only when nothing beside it is free
             foreach (var c in free)
             {
                 if (_layout.IsRail(c) || _builder.IsCellBlocked(c) || _sidings.Contains(c)) continue;
@@ -272,7 +272,7 @@ public partial class RailController : Node
                 }
                 if (near is not { } np || _layout.LevelOf(c) != _layout.LevelOf(np)) continue;
                 var fromMid = (c.X - mid.X) * (c.X - mid.X) + (c.Y - mid.Y) * (c.Y - mid.Y);
-                var key = (nearD, -fromMid, c.X, c.Y); // beside the platform, toward its end: the wagon's siding takes the middle
+                var key = (nearD == 0 ? 1 : 0, nearD, -fromMid, c.X, c.Y); // beside the platform, toward its end: the wagon's siding takes the middle
                 if (key.CompareTo(bestKey) >= 0) continue;
                 bestKey = key;
                 best = c;
@@ -464,6 +464,14 @@ public partial class RailController : Node
             _exitTaken.Add(cell);
             hero.Teleport(_builder.Surface(cell) + Vector3.Up * 0.3f, Cart.GlobalPosition);
         }
+        // an escort (Grisel, an ally) left standing on a rail cell by the save steps out beside the cart as well
+        foreach (var child in GetParent().GetChildren())
+            if (child is Npc { Dead: false, Escorting: true, Seated: false } npc && _layout.IsRail(DungeonBuilder.WorldToCell(npc.GlobalPosition)))
+            {
+                var cell = ExitCell();
+                _exitTaken.Add(cell);
+                npc.GlobalPosition = _builder.Surface(cell);
+            }
         RefreshHud();
     }
 
@@ -821,7 +829,7 @@ public partial class RailController : Node
     }
 
     /// <summary>
-    /// The nearest intermediate stop (by distance along the line, ahead or behind) with an unused spare provides a new cart:
+    /// The nearest intermediate stop (by distance along the line, behind or at most the next stop ahead) with an unused spare provides a new cart:
     /// the spare disappears and the party's cart (same node and run) stands Held there with full plating, wagons still coupled
     /// behind it. None left: the rest is on foot (an OnFoot event: the crew in coupled wagons get out and follow).
     /// </summary>
@@ -829,7 +837,8 @@ public partial class RailController : Node
     {
         int pick = -1;
         var bestD = float.MaxValue;
-        for (var i = 1; i < StopS.Length - 1; i++)
+        var reach = Math.Min(StopS.Length - 2, StopIndex + 1); // the stop last left, earlier ones, or the very next: never past a gate not yet crossed
+        for (var i = 1; i <= reach; i++)
         {
             if (_sparesUsed.Contains(i)) continue;
             var d = Mathf.Abs(StopS[i] - State.S);
@@ -848,6 +857,7 @@ public partial class RailController : Node
         Party.Limit = StopS[pick];
         Cart.Speed = 0f;
         _hitAt.Clear();
+        _warnedAt.Clear();
         Party.Sync();
         Party.PoseAt(State.S);
         PoseTrain(State.S);
