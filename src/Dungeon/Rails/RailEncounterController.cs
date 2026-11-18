@@ -112,6 +112,7 @@ public partial class RailEncounterController : Node
     private void Arm(int ride)
     {
         ArmedRide = ride >= 1 && ride < _rails.StopS.Length ? ride : -1;
+        if (ArmedRide >= 1) FreeTraffic(); // the ride has the enemy line: a traffic cart in the way goes, so the two are never live together
         for (var i = 0; i < _encounters.Count; i++)
             if (_encounters[i].Ride == ride) _started[i] = false;
     }
@@ -281,6 +282,7 @@ public partial class RailEncounterController : Node
         if (_hits.Count == 0) return;
         if (TraceTraffic) foreach (var (hb, tb) in _hits) GD.Print($"[rails] t={_now:0.00} {source} runs over {hb.Name} (cart S={run.State.S:0.0}, body S={tb.S:0.0}, lateral {tb.Lateral:0.0})");
         RunOverEffects.Apply(_hits, source, TierRules.Lethality, setAside, hazardIndex: hazardIndex);
+        foreach (var (hb, _) in _hits) _bodies.Remove(hb); // hit once this tick: another cart's sweep does not hit it again
     }
 
     /// <summary>"Cart coming!" and the bell for a hero on foot on the enemy lane with a slag cart bearing down (as the party's cart warns).</summary>

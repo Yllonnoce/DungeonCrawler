@@ -165,6 +165,7 @@ public partial class RailController : Node
         Party = new CartRun(new TrackSampler(track), Cart, new CartState(start, 0f, CartMode.Held, CartRules.MaxPlating)) { Limit = start };
         Cart.RiderChanged += OnRiderChanged;
         root.AddChild(Cart);
+        SetCartLayer();
         _train = new CartTrain(Party);
         _gates = new StopGates(builder, layout, OnGateLifted, RefreshHud);
         _gates.Build(root, StopS, Party.Track);
@@ -246,6 +247,7 @@ public partial class RailController : Node
         if (StopS.Length == 0) return;
         StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
         Party.Reset(new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating));
+        SetCartLayer();
         Party.Limit = StopS[StopIndex];
         Boarding.Cancel();
         _hitAt.Clear();
@@ -566,6 +568,7 @@ public partial class RailController : Node
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
                 Party.State = State with { Mode = CartMode.Rolling };
+                SetCartLayer();
                 Party.Settle(); // it sets off from a standstill: nothing banked from the wait
                 Raise(new CartEvent(CartEventKind.Departed, Stop: StopIndex));
                 RefreshHud();
@@ -578,7 +581,7 @@ public partial class RailController : Node
             Party.Step(input, dt);
             RunOver(party); // the arrival tick too: the last stretch before the stop is swept
             if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
-            else if (State.Mode == CartMode.Held) Arrive();
+            else if (State.Mode == CartMode.Held) { SetCartLayer(); Arrive(); }
             else Warn(party);
         }
 
@@ -647,10 +650,17 @@ public partial class RailController : Node
         }
     }
 
+    /// <summary>
+    /// The cart is solid (layer 1) while it stands, so nobody walks through it, and only a thing to use (layer 8) while it rolls: a
+    /// rolling cart runs a body over (<see cref="RunOver"/>) instead of shoving it down the line.
+    /// </summary>
+    private void SetCartLayer() => Cart.CollisionLayer = State.Mode == CartMode.Rolling ? 8u : 1u | 8u;
+
     /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
     private void Wreck()
     {
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
+        SetCartLayer();
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
         EventBus.Instance.Log("The cart is wrecked!");
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
@@ -683,6 +693,7 @@ public partial class RailController : Node
         _spares.Use(pick);
         StopIndex = pick;
         Party.Reset(new CartState(StopS[pick], 0f, CartMode.Held, CartRules.MaxPlating));
+        SetCartLayer();
         Party.Limit = StopS[pick];
         Cart.Speed = 0f;
         _hitAt.Clear();

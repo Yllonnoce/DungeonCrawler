@@ -74,7 +74,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     public SlagCart()
     {
         SyncToPhysics = false;
-        CollisionLayer = 1; // solid like the party's cart; not a thing to use
+        CollisionLayer = 8; // never solid: it runs a body over rather than shoving it (the sweep judges the hit)
         CollisionMask = 0;
     }
 

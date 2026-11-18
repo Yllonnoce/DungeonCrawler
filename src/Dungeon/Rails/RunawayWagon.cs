@@ -19,6 +19,6 @@ public partial class RunawayWagon : MineCart
     public RunawayWagon()
     {
         Name = "RunawayWagon";
-        CollisionLayer = 1; // solid, but not on the interact layer: nothing to board
+        CollisionLayer = 8; // never solid (it runs bodies over); it offers no prompt, so nothing to board
     }
 }

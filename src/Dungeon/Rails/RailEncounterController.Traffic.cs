@@ -48,6 +48,8 @@ public partial class RailEncounterController
         public CartRun Run = null!;
         public Node3D Carrier = null!;
         public Vector3 Spot;
+        public Vector3? PriorTarget;
+        public bool PriorOverride;
     }
 
     private SlagCart? _traffic;
@@ -74,12 +76,21 @@ public partial class RailEncounterController
     private void TickTrafficClocks(float dt)
     {
         if (!_enemy.Valid || _rails.StopS.Length < 2) return;
-        if (_traffic != null || _carts.Count > 0) _trafficClock = 0f;
+        if (_traffic != null || _carts.Count > 0 || ArmedRide >= 1 || _rails.State.Mode == CartMode.Rolling) _trafficClock = 0f; // never while a ride is armed or the party's cart rolls
         else if ((_trafficClock += dt) >= SetPieceRules.SlagTrafficEvery) { _trafficClock = 0f; SpawnTraffic(); }
 
         var held = _rails.State.Mode == CartMode.Held && _rails.Cart.Riders.Count == 0 && _rails.StopIndex < _rails.StopS.Length - 1 && _rails.GateUp(_rails.StopIndex);
         if (!held) _runawayClock = 0f;
         else if (_runaway == null && (_runawayClock += dt) >= SetPieceRules.RunawayEvery) { _runawayClock = 0f; SpawnRunaway(); }
+    }
+
+    /// <summary>The traffic cart goes (a ride has armed).</summary>
+    private void FreeTraffic()
+    {
+        if (_traffic == null) return;
+        if (IsInstanceValid(_traffic)) Free(_traffic);
+        _traffic = null;
+        _warnedTraffic.Clear();
     }
 
     private void SpawnTraffic()
@@ -208,7 +219,7 @@ public partial class RailEncounterController
         var kind = "pocket";
         if (best == null && OffLine(pos) is { } off) { best = off; kind = "off the rails"; }
         if (best is not { } spot) return;
-        _seekers[id] = new Seeker { Body = body, Run = run, Carrier = carrier, Spot = spot };
+        _seekers[id] = new Seeker { Body = body, Run = run, Carrier = carrier, Spot = spot, PriorTarget = (body as Npc)?.MoveTarget, PriorOverride = (body as Npc)?.MoveOverride ?? false };
         switch (body)
         {
             case Adventurer hero: hero.SeekSpot = spot; break;
@@ -244,7 +255,7 @@ public partial class RailEncounterController
             switch (k.Body)
             {
                 case Adventurer hero: hero.SeekSpot = null; break;
-                case Npc npc: npc.MoveTarget = null; npc.MoveOverride = false; break;
+                case Npc npc: npc.MoveTarget = k.PriorTarget; npc.MoveOverride = k.PriorOverride; break;
             }
         }
         _seekers.Clear();
@@ -279,7 +290,7 @@ public partial class RailEncounterController
             switch (k.Body)
             {
                 case Adventurer hero: hero.SeekSpot = null; break;
-                case Npc npc: npc.MoveTarget = null; npc.MoveOverride = false; break;
+                case Npc npc: npc.MoveTarget = k.PriorTarget; npc.MoveOverride = k.PriorOverride; break;
             }
             if (TraceTraffic) GD.Print($"[rails] t={_now:0.00} {k.Body.Name} leaves its refuge (cart front S={k.Run.FrontS:0.0})");
         }
