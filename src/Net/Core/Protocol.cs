@@ -5,7 +5,7 @@ public static class Protocol
 {
     public const int Version = 17;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 111;
+    public const int MessageKindCount = 113;
     /// <summary>Seconds between the server's item checks (<see cref="LootManifest"/>).</summary>
     public const float LootCheckSeconds = 4f;
     public const int DefaultPort = 7777;
@@ -46,6 +46,8 @@ public enum MsgKind : byte
     CartState = 8, CartCorrection = 9,
     // movement (binary)
     Pose = 10, WorldSnapshot, Vitals,
+    // seats and leaps (v17, plan 5 task 4): who sits where in which cart (and where an unseated rider lands), and a hound's leap onto a cart
+    Seat = 13, Leap = 14,
     // intents client -> server
     AttackIntent = 20, InteractIntent, BagMoveIntent, QuickActionIntent, CycleAbilityIntent, AllocateStatIntent, LearnSkillIntent, RespecIntent, DialogueChoiceIntent, ChatIntent, StanceIntent,
     // server state

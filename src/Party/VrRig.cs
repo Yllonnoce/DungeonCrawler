@@ -129,7 +129,8 @@ public partial class VrRig : XROrigin3D
     /// <summary>The body's flat camera rides the head, with everything that hangs from it.</summary>
     private void CarryCamera() => _body.Camera.GlobalTransform = _head.GlobalTransform;
 
-    private float HeadYaw()
+    /// <summary>The way the head faces, laid flat (radians, the body's measure of yaw).</summary>
+    public float HeadYaw()
     {
         var f = -_head.GlobalTransform.Basis.Z;
         return new Vector2(f.X, f.Z).LengthSquared() > 1e-4f ? Mathf.Atan2(-f.X, -f.Z) : _body.Rotation.Y; // looking straight up or down: keep the facing

@@ -7,7 +7,7 @@ namespace DungeonCrawler.Net;
 /// </summary>
 public sealed class PoseBuffer
 {
-    public readonly record struct Sample(double Time, int Tick, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags);
+    public readonly record struct Sample(double Time, int Tick, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags, float SeatYaw = 0f, PoseFlags2 Flags2 = PoseFlags2.None);
 
     private readonly List<Sample> _samples = new();
     private readonly int _capacity;
@@ -18,16 +18,16 @@ public sealed class PoseBuffer
     public Sample? Newest => _samples.Count > 0 ? _samples[^1] : null;
 
     /// <summary>Add a sample stamped with the receive (or server) time. Returns false when it was older than what we have.</summary>
-    public bool Push(double time, int tick, NetVec position, float yaw, float pitch, NetVec velocity, PoseFlags flags)
+    public bool Push(double time, int tick, NetVec position, float yaw, float pitch, NetVec velocity, PoseFlags flags, float seatYaw = 0f, PoseFlags2 flags2 = PoseFlags2.None)
     {
         if (_samples.Count > 0 && tick <= _samples[^1].Tick) return false;
         if (_samples.Count > 0 && time < _samples[^1].Time) time = _samples[^1].Time;
-        _samples.Add(new Sample(time, tick, position, yaw, pitch, velocity, flags));
+        _samples.Add(new Sample(time, tick, position, yaw, pitch, velocity, flags, seatYaw, flags2));
         if (_samples.Count > _capacity) _samples.RemoveAt(0);
         return true;
     }
 
-    public bool Push(double time, PlayerPoseState p, int tick) => Push(time, tick, p.Position, p.Yaw, p.Pitch, p.Velocity, p.Flags);
+    public bool Push(double time, PlayerPoseState p, int tick) => Push(time, tick, p.Position, p.Yaw, p.Pitch, p.Velocity, p.Flags, p.SeatYaw, p.Flags2);
 
     /// <summary>The pose to show at <paramref name="renderTime"/>; null until a sample exists.</summary>
     public Sample? At(double renderTime, double maxExtrapolationSeconds = Protocol.MaxExtrapolationMs / 1000.0)
@@ -48,7 +48,7 @@ public sealed class PoseBuffer
             var span = b.Time - a.Time;
             var t = span <= 0 ? 1f : (float)((renderTime - a.Time) / span);
             return new Sample(renderTime, b.Tick, NetVec.Lerp(a.Position, b.Position, t), LerpAngle(a.Yaw, b.Yaw, t), a.Pitch + (b.Pitch - a.Pitch) * t,
-                NetVec.Lerp(a.Velocity, b.Velocity, t), t < 0.5f ? a.Flags : b.Flags);
+                NetVec.Lerp(a.Velocity, b.Velocity, t), t < 0.5f ? a.Flags : b.Flags, LerpAngle(a.SeatYaw, b.SeatYaw, t), t < 0.5f ? a.Flags2 : b.Flags2);
         }
         return newest;
     }

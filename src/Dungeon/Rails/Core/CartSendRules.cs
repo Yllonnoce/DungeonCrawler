@@ -18,11 +18,8 @@ public static class CartSendRules
         return true;
     }
 
-    /// <summary>The party's cart shows (Hidden: a wreck with no spare left).</summary>
+    /// <summary>The party's cart shows (Hidden: a wreck with no spare left). Its coupled wagons stay shown, as the server's HideWreck leaves them.</summary>
     public static bool Shown(byte flags) => (flags & (byte)CartFlags.Hidden) == 0;
-
-    /// <summary>The wagons coupled behind it show with it.</summary>
-    public static bool WagonsShown(byte flags) => Shown(flags);
 
     /// <summary>Wrecked was clear and is set now: the client plays the tumble (once).</summary>
     public static bool WreckedRose(byte before, byte now) => (before & (byte)CartFlags.Wrecked) == 0 && (now & (byte)CartFlags.Wrecked) != 0;

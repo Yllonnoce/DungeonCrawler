@@ -45,7 +45,11 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 
 // ---- movement (binary, see Snapshot.cs) --------------------------------------------------------
 
-[Msg(MsgKind.Pose)] public sealed record Pose(int Tick, int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags) : NetMessage;
+/// <summary>
+/// A client's own body (binary, 45 bytes with the kind). While seated (<see cref="PoseFlags2.Seated"/>) <paramref name="SeatYaw"/> is where it
+/// looks relative to its seat's forward; the server then takes only that, the pitch and the flags (its own seat places the body).
+/// </summary>
+[Msg(MsgKind.Pose)] public sealed record Pose(int Tick, int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags, float SeatYaw = 0f, PoseFlags2 Flags2 = PoseFlags2.None) : NetMessage;
 [Msg(MsgKind.WorldSnapshot)] public sealed record WorldSnapshot(int Tick, double ServerTime, EntityState[] Enemies, NpcState[] Npcs, PlayerPoseState[] Players) : NetMessage;
 [Msg(MsgKind.Vitals)] public sealed record Vitals(MemberVitals[] Members) : NetMessage;
 

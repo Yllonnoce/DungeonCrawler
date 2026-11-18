@@ -2,6 +2,7 @@ using DungeonCrawler.Adventure;
 using DungeonCrawler.Core;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Combat.Fx;
+using DungeonCrawler.Net;
 using DungeonCrawler.Party;
 using Godot;
 
@@ -38,6 +39,9 @@ public partial class RailEncounterController
         public int Spot;
         public bool Miss;
         public float Dent;
+        /// <summary>Where it leapt to on the wire (<see cref="Net.CartIds"/>: the cart it aims at, or the body it misses beside) and when (the server's clock).</summary>
+        public int ToCart;
+        public double SentAt;
     }
 
     private readonly List<Leap> _leaps = new();
@@ -208,8 +212,27 @@ public partial class RailEncounterController
             var anchor = nearest ?? _rails.Cart;
             var lead = anchor is MineCart cart ? cart.Velocity : anchor is CageWagon w ? w.Velocity : Vector3.Zero;
             l.To = Beside(anchor.GlobalPosition + lead * LeapSeconds); // the cart will have moved on by the time it lands
+            l.Spot = -1;
             GD.Print($"[rails] {h.Name} leaps and misses: no boarder spot free ({nearestD:0.0} m to the nearest body), lands at {l.To}");
         }
+        // every client flies the arc itself from here (a LeapMsg); the boarder lists in the cart's state say who rides where once it lands
+        l.ToCart = WireId(l.Dest ?? nearest ?? _rails.Cart);
+        l.SentAt = NetSession.Instance?.Now ?? 0;
+        if (NetSession.IsServer && NetSession.Instance?.Server is { } world) world.Broadcast(LeapOf(l));
+    }
+
+    /// <summary>A body a hound leaps to, as the wire names it: the party's cart, or a cage wagon by its stop.</summary>
+    private static int WireId(Node3D body) => body is CageWagon wagon ? CartIds.Wagon(wagon.Stop) : CartIds.Party;
+
+    private static LeapMsg LeapOf(Leap l)
+        => new(l.Hound.NetId, IsInstanceValid(l.Source) ? l.Source.CartId : -1, l.ToCart, l.Miss ? -1 : l.Spot, l.Miss, l.SentAt);
+
+    /// <summary>The leaps in the air now, for a joiner's catch-up (each as first sent: a client flies it on from its start time).</summary>
+    internal void CollectAirLeaps(List<LeapMsg> into)
+    {
+        into.Clear();
+        foreach (var l in _leaps)
+            if (l.Phase == LeapPhase.Air && IsInstanceValid(l.Hound) && !l.Hound.IsQueuedForDeletion()) into.Add(LeapOf(l));
     }
 
     private void FlyLeap(Leap l, float dt, int index)

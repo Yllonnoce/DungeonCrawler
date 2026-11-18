@@ -280,9 +280,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     {
         _net ??= new Net.PoseBuffer(16);
         _net.Push(now, tick, s.Position, s.Yaw, 0f, Net.NetVec.Zero, Net.PoseFlags.None);
-        if (s.Flags != _netFlags)
+        var changed = (s.Flags ^ _netFlags) & ~Net.NpcState.FlagSeated; // the seat bit alone restores nothing (ClientTick reads it)
+        _netFlags = s.Flags;
+        if (changed != 0)
         {
-            _netFlags = s.Flags;
             Restore((s.Flags & Net.NpcState.FlagDead) != 0, (s.Flags & Net.NpcState.FlagEscorting) != 0, (s.Flags & Net.NpcState.FlagRescued) != 0, Hp, null, (s.Flags & Net.NpcState.FlagDowned) != 0, (s.Flags & Net.NpcState.FlagFled) != 0);
             Captured = (s.Flags & Net.NpcState.FlagCaptured) != 0;
             Jailed = (s.Flags & Net.NpcState.FlagJailed) != 0;
@@ -293,7 +294,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     private void ClientTick(float dt)
     {
         var before = GlobalPosition;
-        if (_net?.At(Net.NetSession.Instance.Now - Net.Protocol.InterpolationMs / 1000.0) is { } s)
+        // a seat here (the server's SeatMsg) carries it: its ride's owner calls FollowSeat each rendered frame. One the server says is
+        // seated whose SeatMsg has not come yet stays put rather than slide 100 ms behind a moving cart
+        if (!Seated && (_netFlags & Net.NpcState.FlagSeated) == 0 && _net?.At(Net.NetSession.Instance.Now - Net.Protocol.InterpolationMs / 1000.0) is { } s)
         {
             var target = new Vector3(s.Position.X, s.Position.Y, s.Position.Z);
             GlobalPosition = before.DistanceSquaredTo(target) > 9f ? target : before.Lerp(target, Math.Min(1f, dt * 15f));

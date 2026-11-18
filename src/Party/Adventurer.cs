@@ -370,8 +370,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     public void Teleport(Vector3 position, Vector3? lookTarget = null)
     {
+        var wasSeated = Seated;
         if (Seated) LeaveSeat(); // a floor change, a load or a debug jump takes the rider out of the cart, and frees the seat so the cart's book agrees
         GlobalPosition = position;
+        if (wasSeated && Remote != null && Net.NetSession.IsServer) Remote.Position = position; // a remote body eases toward its last pose: that pose was the seat
         Velocity = Vector3.Zero;
         _fallStart = position.Y;
         _falling = false;
@@ -598,6 +600,24 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         _falling = false;
         _mover.Reset();
         _action = CompanionAction.Idle;
+        // the server set a remote player down (a stop, a wreck, a throw, getting out with the party): its own screen is told where at
+        // once, and its body eases toward the landing rather than back toward the seat its last poses named
+        if (Control == ControlKind.Remote && Net.NetSession.IsServer)
+        {
+            if (Remote != null) { Remote.Position = at; Remote.Velocity = Vector3.Zero; Remote.Seated = false; }
+            Net.NetSession.Instance.Server?.ForceUnseatedPose(Index, at, Rotation.Y);
+        }
+    }
+
+    /// <summary>
+    /// A seated body aims at a world yaw (a remote player's attack intent): the seat yaw turns to it, as far as a view may
+    /// (<see cref="MaxSeatYawDegrees"/>), and the body is put on its seat facing that way. The cart is not turned.
+    /// </summary>
+    public void AimSeated(float worldYaw)
+    {
+        if (Cart is not { } cart || !CartAlive(cart)) return;
+        _seatYaw = ClampSeatYaw(Mathf.Wrap(worldYaw - SeatHeading(cart.SeatTransform(Seat)), -Mathf.Pi, Mathf.Pi));
+        FollowSeat();
     }
 
     /// <summary>
@@ -612,10 +632,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (!CartAlive(cart)) { LeaveSeat(); return; }
         var seat = cart.SeatTransform(Seat);
         var heading = SeatHeading(seat);
-        GlobalTransform = new Transform3D(new Basis(Vector3.Up, heading + _seatYaw), seat.Origin);
         // a headset's room stands in the world on its own (TopLevel) and only AfterMove brings it, which a seat skips:
-        // carry it here, turned by the bend since the last frame, never pitched or rolled
-        if (_vr != null) _vr.RideAlong(float.IsNaN(_lastSeatHeading) ? 0f : Mathf.Wrap(heading - _lastSeatHeading, -Mathf.Pi, Mathf.Pi));
+        // carry it here, turned by the bend since the last frame, never pitched or rolled. The head is the seated view: the seat yaw
+        // (the pose, the aim and the attack's yaw) follows where it looks once the room has turned with the bend
+        var turn = _vr != null && !float.IsNaN(_lastSeatHeading) ? Mathf.Wrap(heading - _lastSeatHeading, -Mathf.Pi, Mathf.Pi) : 0f;
+        if (_vr != null) _seatYaw = ClampSeatYaw(Mathf.Wrap(_vr.HeadYaw() + turn - heading, -Mathf.Pi, Mathf.Pi));
+        GlobalTransform = new Transform3D(new Basis(Vector3.Up, heading + _seatYaw), seat.Origin);
+        if (_vr != null) _vr.RideAlong(turn);
         _lastSeatHeading = heading;
         if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch + _feelPitch, 0, _feelRoll); // the roll is the seated camera's lean (RideFeel), never the track's
     }
@@ -734,10 +757,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (Remote is not { } pose) return;
         var before = GlobalPosition;
         var gap = pose.Position - before;
-        if (!Seated) // a seat carries a seated remote body; seat-relative poses are co-op's (plan 5)
+        if (!Seated)
         {
             GlobalPosition = gap.Length() > 3f ? pose.Position : before.Lerp(pose.Position, Math.Min(1f, dt * 12f));
             Rotation = new Vector3(0, Mathf.LerpAngle(Rotation.Y, pose.Yaw, Math.Min(1f, dt * 12f)), 0);
+        }
+        else
+        {
+            // a seat carries a seated remote body (FollowSeat, each rendered frame): the pose only says where it looks from the seat.
+            // Raw, not clamped: a companion's seat yaw goes all the way round (the server clamped a player's when it took the pose)
+            if (pose.Seated) _seatYaw = pose.SeatYaw;
+            if (Net.NetSession.IsClient) Pumping = pose.Seated && pose.Pumping; // the server's word (its own Inputs set it there)
         }
         _pitch = pose.Pitch;
         Camera.Rotation = new Vector3(_pitch, 0, 0);

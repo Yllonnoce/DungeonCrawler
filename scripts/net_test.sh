@@ -7,7 +7,9 @@
 #        RIDE=1 scripts/net_test.sh  (the built-in campaign: the server takes the client to floor 12, where the rides' set
 #                                     pieces must stand on the client and its props must hash as the server's; then the cart
 #                                     rides empty to stop 3 and the client's carts must keep within 1.5 m (2 m for ride 3's
-#                                     slag cart) of the server's on a shared server-time grid)
+#                                     slag cart) of the server's on a shared server-time grid; the crew sit in their wagons on
+#                                     the client as on the server, the client's hero seated by the server sits in a hero seat
+#                                     there, and when the server sets it down its body stands at the server's landing)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -22,8 +24,9 @@ SERVER_EXE=${SERVER_BIN:-}   # e.g. build/server/DungeonCrawler.x86_64 to test t
 run_server() { if [ -n "$SERVER_EXE" ]; then "$SERVER_EXE" --headless -- "$@"; else "$GODOT" --headless --path . -- "$@"; fi; }
 
 if [ "${RIDE:-}" = 1 ]; then
-  # the RIDE pass: one server on the built-in campaign, one client; floor 12 after the client is ready
-  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --seed=4242 --lethality=1 --quit-when-empty > "$TMP/server.log" 2>&1 &
+  # the RIDE pass: one server on the built-in campaign, one client; floor 12 after the client is ready. A scripted server deals
+  # no objective unless one is named: --objective=jailbreak gives floor 12 the campaign's own (the crew in their cage wagons)
+  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --objective=jailbreak --seed=4242 --lethality=1 --quit-when-empty > "$TMP/server.log" 2>&1 &
   SERVER=$!
   for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.5; done
   # the built-in floor 1 takes a while to build (the socket is not served meanwhile): wait for the server to say it is built
@@ -43,6 +46,13 @@ if [ "${RIDE:-}" = 1 ]; then
   # the carts on the wire: both sides print the cart's S on one 0.5 s server-time grid; lines with the same grid t are paired.
   # The party's cart: at least 20 pairs while it rolls, and every pair within 1.5 m. Ride 3's slag cart: paired the same way, within 2 m.
   if ! grep -q "\[net\] ride: the cart followed the server's to stop" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's cart never followed the server's to stop 3)"; exit 1; fi
+  # seats on the wire: the crew sit in their wagons on the client as on the server (the catch-up's SeatMsgs); the client's hero, seated
+  # on the server as the cart rolls, sits in a hero seat of the client's cart; set down at the next stop, it stands at the server's landing
+  SRV_CREW=$(grep -o "\[net-server\] ride: crew seated in wagons: [0-9]*" "$TMP/server.log" | head -1 | grep -o "[0-9]*$")
+  CLI_CREW=$(grep -o "\[net\] ride: crew seated in their wagons here: [0-9]*" "$TMP/client.log" | head -1 | grep -o "[0-9]*$")
+  if [ -z "$SRV_CREW" ] || [ "$SRV_CREW" != "$CLI_CREW" ]; then echo "NET TEST: FAIL (crew seated in wagons: server ${SRV_CREW:-?}, client ${CLI_CREW:-?})"; exit 1; fi
+  if ! grep -q "\[net\] ride: seated here in seat [0-3] (the party's cart)" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's hero never sat in a hero seat of its cart)"; exit 1; fi
+  if ! grep -q "\[net\] ride: set down within" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's hero was not set down at the server's landing)"; exit 1; fi
   PAIRS=$(awk '
     FNR == 1 { file++ }
     function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }

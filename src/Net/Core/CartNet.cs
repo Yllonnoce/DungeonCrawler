@@ -91,6 +91,12 @@ public sealed class CartStateDto
     // slag, traffic and golem carts: the carried enemies' net ids by spot (−1 an empty spot)
     public List<int>? RiderNetIds { get; set; }
 
+    // the party's cart only (plan 5 task 4): the hounds aboard it by boarder spot, and each coupled wagon's roof boarder in train
+    // order (nearest the cart first). −1 is a free spot (net id 0 is a real id); null when none is held. A hound still crouching
+    // or in the air is not listed: its LeapMsg flies it.
+    public List<int>? Boarders { get; set; }
+    public List<int>? WagonBoarders { get; set; }
+
     /// <summary>The server's clock (<c>NetSession.Instance.Now</c>) when this state was true.</summary>
     public double ServerTime { get; set; }
 
@@ -102,3 +108,25 @@ public sealed class CartStateDto
 
 /// <summary>Every live cart, 5 times a second (transient: never held for a joiner). A client frees any live cart of its own that is missing from it.</summary>
 [Msg(MsgKind.CartCorrection)] public sealed record CartCorrectionMsg(int Floor, int Epoch, List<CartStateDto> Carts) : NetMessage;
+
+/// <summary>Who rides in a seat book: a hero (<see cref="SeatMsg.RiderId"/> its member index) or an NPC (its <c>Npc.Id</c>).</summary>
+public static class SeatRiderKind
+{
+    public const int Hero = 0;
+    public const int Npc = 1;
+}
+
+/// <summary>
+/// A rider took (<paramref name="Seated"/>) or left a seat in a cart (<see cref="CartIds"/>: the party's, a cage wagon, a chaser). Sent for every
+/// seat and unseat on the server, after the tick's <see cref="CartStateMsg"/>; not transient (a joiner replays them, then the catch-up).
+/// <paramref name="X"/>, <paramref name="Y"/>, <paramref name="Z"/>: where an unseated rider landed (unused when seated).
+/// </summary>
+[Msg(MsgKind.Seat)] public sealed record SeatMsg(int RiderKind, string RiderId, int Cart, int Seat, bool Seated, float X, float Y, float Z) : NetMessage;
+
+/// <summary>
+/// A hound left its slag cart (<paramref name="FromCart"/>) on a leap toward <paramref name="ToCart"/> (the party's cart, or
+/// <see cref="CartIds.WagonBase"/> + stop) and boarder spot <paramref name="Spot"/>, or toward the ground beside it (<paramref name="Miss"/>,
+/// spot −1), at the server's clock <paramref name="ServerTime"/>. A client flies the arc itself from there. Transient: the catch-up resends
+/// leaps still in the air.
+/// </summary>
+[Msg(MsgKind.Leap)] public sealed record LeapMsg(int NetId, int FromCart, int ToCart, int Spot, bool Miss, double ServerTime) : NetMessage;

@@ -14,6 +14,10 @@ public readonly record struct NetVec(float X, float Y, float Z)
 [Flags]
 public enum PoseFlags : byte { None = 0, Crouch = 1, Sprint = 2, Guard = 4, OnFloor = 8, Downed = 16, Bound = 32, Parry = 64, Dodge = 128 }
 
+/// <summary>The pose's second flags byte (plan 5 task 4): the body sits in a cart seat (its <c>SeatYaw</c> is seat-relative), and works the pump.</summary>
+[Flags]
+public enum PoseFlags2 : byte { None = 0, Seated = 1, Pumping = 2 }
+
 /// <summary>An enemy as the server last saw it.</summary>
 public readonly record struct EntityState(int NetId, NetVec Position, float Yaw, float Hp, byte State, byte Flags)
 {
@@ -23,9 +27,12 @@ public readonly record struct EntityState(int NetId, NetVec Position, float Yaw,
 public readonly record struct NpcState(string Id, NetVec Position, float Yaw, byte Flags)
 {
     public const byte FlagDead = 1, FlagEscorting = 2, FlagRescued = 4, FlagDowned = 8, FlagCaptured = 16, FlagJailed = 32, FlagFled = 64;
+    /// <summary>It sits in a cart or a cage wagon on the server: a client poses it from its own seat (<c>FollowSeat</c>), never from the snapshot's position.</summary>
+    public const byte FlagSeated = 128;
 }
 
-public readonly record struct PlayerPoseState(int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags);
+/// <summary>A member's body as the server last saw it. <paramref name="SeatYaw"/> is where a seated body looks relative to its seat's forward (radians, all the way round for a companion), 0 on foot.</summary>
+public readonly record struct PlayerPoseState(int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags, float SeatYaw = 0f, PoseFlags2 Flags2 = PoseFlags2.None);
 
 public readonly record struct MemberVitals(int Member, float Hp, float Stamina, float Mana, float Cooldown, bool Alive);
 
@@ -38,10 +45,11 @@ public static class BinaryLayout
     public static void Write(BinaryWriter w, Pose p)
     {
         w.Write(p.Tick); w.Write((short)p.Member); Write(w, p.Position); w.Write(p.Yaw); w.Write(p.Pitch); Write(w, p.Velocity); w.Write((byte)p.Flags);
+        w.Write(p.SeatYaw); w.Write((byte)p.Flags2);
     }
 
     public static Pose ReadPose(BinaryReader r)
-        => new(r.ReadInt32(), r.ReadInt16(), ReadVec(r), r.ReadSingle(), r.ReadSingle(), ReadVec(r), (PoseFlags)r.ReadByte());
+        => new(r.ReadInt32(), r.ReadInt16(), ReadVec(r), r.ReadSingle(), r.ReadSingle(), ReadVec(r), (PoseFlags)r.ReadByte(), r.ReadSingle(), (PoseFlags2)r.ReadByte());
 
     public static void Write(BinaryWriter w, WorldSnapshot s)
     {
@@ -51,7 +59,7 @@ public static class BinaryLayout
         w.Write((ushort)s.Npcs.Length);
         foreach (var n in s.Npcs) { w.Write(n.Id); Write(w, n.Position); w.Write(n.Yaw); w.Write(n.Flags); }
         w.Write((byte)s.Players.Length);
-        foreach (var p in s.Players) { w.Write((short)p.Member); Write(w, p.Position); w.Write(p.Yaw); w.Write(p.Pitch); Write(w, p.Velocity); w.Write((byte)p.Flags); }
+        foreach (var p in s.Players) { w.Write((short)p.Member); Write(w, p.Position); w.Write(p.Yaw); w.Write(p.Pitch); Write(w, p.Velocity); w.Write((byte)p.Flags); w.Write(p.SeatYaw); w.Write((byte)p.Flags2); }
     }
 
     public static WorldSnapshot ReadSnapshot(BinaryReader r)
@@ -62,7 +70,7 @@ public static class BinaryLayout
         var npcs = new NpcState[r.ReadUInt16()];
         for (var i = 0; i < npcs.Length; i++) npcs[i] = new NpcState(r.ReadString(), ReadVec(r), r.ReadSingle(), r.ReadByte());
         var players = new PlayerPoseState[r.ReadByte()];
-        for (var i = 0; i < players.Length; i++) players[i] = new PlayerPoseState(r.ReadInt16(), ReadVec(r), r.ReadSingle(), r.ReadSingle(), ReadVec(r), (PoseFlags)r.ReadByte());
+        for (var i = 0; i < players.Length; i++) players[i] = new PlayerPoseState(r.ReadInt16(), ReadVec(r), r.ReadSingle(), r.ReadSingle(), ReadVec(r), (PoseFlags)r.ReadByte(), r.ReadSingle(), (PoseFlags2)r.ReadByte());
         return new WorldSnapshot(tick, time, enemies, npcs, players);
     }
 

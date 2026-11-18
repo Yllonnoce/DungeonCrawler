@@ -1,7 +1,10 @@
 using System.Globalization;
+using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Objectives;
 using DungeonCrawler.Core;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Net;
+using DungeonCrawler.Party;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -18,6 +21,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// the others to copies built here as dressing with the server's own constructors (slag and traffic carts, runaway wagons, the
 /// golem's runner), each following its own <see cref="CartFollower"/> on its own track and posed every rendered frame, their
 /// riders bound by net id as they arrive (the cart's state may come before the riders' spawn).</para>
+/// <para>Seats and leaps (plan 5 task 4): the server sends a <see cref="SeatMsg"/> for every seat and unseat in the party's cart and the
+/// cage wagons, after the tick's cart state, and the leaps the hounds start (<see cref="LeapMsg"/>, from the encounter controller); a
+/// joiner or a client that rebuilt the floor gets who sits where and the leaps in the air (<see cref="SendRailCatchUp"/>). A client books
+/// the server's seat (<see cref="CartSeats.Put"/>) and seats its own copy of the rider, flies each leap's arc itself from the server's
+/// start time, and keeps the boarders the cart's state lists at their spots on its own carts (posed each rendered frame).</para>
 /// </summary>
 public partial class RailNet : Node
 {
@@ -47,12 +55,20 @@ public partial class RailNet : Node
     public override void _ExitTree()
     {
         if (Instance == this) Instance = null;
-        if (_rails != null && IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
+        if (_rails != null && IsInstanceValid(_rails))
+        {
+            _rails.CartEvents -= OnCartEvent;
+            if (IsInstanceValid(_rails.Cart)) _rails.Cart.RiderChanged -= OnPartyRider;
+        }
+        foreach (var (wagon, handler) in _wagonsHeard) if (IsInstanceValid(wagon)) wagon.RiderChanged -= handler;
+        _wagonsHeard.Clear();
     }
 
     public override void _Ready()
     {
-        if (NetSession.IsServer && _rails != null) _rails.CartEvents += OnCartEvent;
+        if (!NetSession.IsServer || _rails == null) return;
+        _rails.CartEvents += OnCartEvent;
+        _rails.Cart.RiderChanged += OnPartyRider;
     }
 
     private bool Current => _rails != null && IsInstanceValid(_rails) && RailController.Instance == _rails && Main.Instance is { InGame: true, Rebuilding: false };
@@ -130,6 +146,10 @@ public partial class RailNet : Node
         }
         if (changed != null) world.Broadcast(new CartStateMsg(floor, epoch, changed));
 
+        // who sat down and who got out since the last tick, after the cart they ride is on its way
+        HearWagons();
+        FlushSeats(world);
+
         // every live cart, five times a second, while anyone is in game
         if (_correction.Advance(delta) > 0 && world.Handshake.InGamePeers.Any())
         {
@@ -139,6 +159,84 @@ public partial class RailNet : Node
         }
 
         if (NetSession.Instance.TestRide) RideTraceServer(now, enc: RailEncounterController.Instance);
+    }
+
+    // ---- seats (the server) -------------------------------------------------------------------
+
+    private readonly record struct SeatChange(ICartRider Rider, int Cart, int Seat, bool Seated);
+
+    private readonly List<SeatChange> _seats = new();
+    private readonly List<(CageWagon Wagon, Action<ICartRider, bool> Handler)> _wagonsHeard = new();
+    private readonly List<LeapMsg> _airLeaps = new();
+
+    /// <summary>The party cart's book changed (any path): sent after this tick's cart state. The seat is read now, while the rider still holds it.</summary>
+    private void OnPartyRider(ICartRider rider, bool seated) => _seats.Add(new SeatChange(rider, CartIds.Party, rider.Seat, seated));
+
+    /// <summary>Listen to each cage wagon's book (the crew controller builds them after this node): once, the first tick they stand.</summary>
+    private void HearWagons()
+    {
+        if (ObjectiveController.Instance is not CrewRescueController crew || crew.Wagons.Count == _wagonsHeard.Count) return;
+        var wagons = crew.Wagons;
+        for (var k = 0; k < wagons.Count; k++)
+        {
+            var wagon = wagons[k];
+            if (!IsInstanceValid(wagon)) continue;
+            var heard = false;
+            foreach (var (w, _) in _wagonsHeard) if (w == wagon) { heard = true; break; }
+            if (heard) continue;
+            var id = CartIds.Wagon(wagon.Stop);
+            Action<ICartRider, bool> handler = (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
+            wagon.RiderChanged += handler;
+            _wagonsHeard.Add((wagon, handler));
+        }
+    }
+
+    private void FlushSeats(ServerWorld world)
+    {
+        if (_seats.Count == 0) return;
+        foreach (var c in _seats)
+            if (SeatMsgOf(c.Rider, c.Cart, c.Seat, c.Seated) is { } m) world.Broadcast(m);
+        _seats.Clear();
+    }
+
+    /// <summary>The wire's word for a seat change: a hero by member index, an NPC by id; an unseated rider's landing is where it stands now (set down by its GetOut).</summary>
+    private static SeatMsg? SeatMsgOf(ICartRider rider, int cart, int seat, bool seated)
+    {
+        if (rider is not Node3D body || !IsInstanceValid(body)) return null;
+        var (kind, id) = rider switch
+        {
+            Adventurer hero => (SeatRiderKind.Hero, hero.Index.ToString(CultureInfo.InvariantCulture)),
+            Npc npc => (SeatRiderKind.Npc, npc.Id),
+            _ => (-1, ""),
+        };
+        if (kind < 0) return null;
+        var at = seated ? Vector3.Zero : body.GlobalPosition;
+        return new SeatMsg(kind, id, cart, seat, seated, at.X, at.Y, at.Z);
+    }
+
+    /// <summary>
+    /// Server: the rails as a joiner (or a client that rebuilt the floor) must hold them whatever it missed: a <see cref="SeatMsg"/> for
+    /// every rider seated in the party's cart and the cage wagons, and every leap still in the air (each from its own start time).
+    /// </summary>
+    public void SendRailCatchUp(int peer)
+    {
+        if (!NetSession.IsServer || !Current || NetSession.Instance.Server is not { } world) return;
+        SendSeated(world, peer, _rails.Cart, CartIds.Party);
+        if (ObjectiveController.Instance is CrewRescueController crew)
+            foreach (var wagon in crew.Wagons)
+                if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Stop));
+        if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc))
+        {
+            enc.CollectAirLeaps(_airLeaps);
+            foreach (var leap in _airLeaps) world.SendTo(peer, leap);
+            _airLeaps.Clear();
+        }
+    }
+
+    private static void SendSeated(ServerWorld world, int peer, ICartBody cart, int id)
+    {
+        foreach (var rider in cart.Riders.Values)
+            if (rider.Cart == cart && SeatMsgOf(rider, id, rider.Seat, true) is { } m) world.SendTo(peer, m);
     }
 
     /// <summary>The riders' net ids folded into one number (no allocation): a change sends the cart.</summary>
@@ -203,7 +301,7 @@ public partial class RailNet : Node
         foreach (var d in carts)
         {
             _listed.Add(d.Cart);
-            if (d.Cart == CartIds.Party) _rails.ApplyNet(d, now);
+            if (d.Cart == CartIds.Party) { _rails.ApplyNet(d, now); ApplyBoarders(d); }
             else ApplyOther(d, now);
         }
         if (!correction) return;
@@ -291,7 +389,7 @@ public partial class RailNet : Node
                 var have = slag.RiderAt(i);
                 if (have != null && have.NetId == want) continue;
                 if (have != null) slag.Unbind(i);
-                if (want < 0 || client?.EnemyByNetId(want) is not { } e || e.Carried) continue;
+                if (want < 0 || client?.EnemyByNetId(want) is not { } e || e.Carried || e.Leaping) continue; // a hound in the air is its leap's
                 slag.BoardAt(e, i);
             }
             return;
@@ -351,7 +449,255 @@ public partial class RailNet : Node
             if (cc.Slag != null) cc.Slag.FollowRiders();
             else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.FollowCarrier();
         }
-        if (NetSession.Instance.TestRide && NetSession.Instance.Client is { } client) RideTraceClient(client.ServerNow);
+        if (NetSession.Instance.Client is not { } client) return;
+        FlyLeaps(client.ServerNow); // after every cart is posed: the arcs start on one and end on another
+        FollowBoarders();
+        if (NetSession.Instance.TestRide) RideTraceClient(client.ServerNow);
+    }
+
+    // ---- seats (a client) ----------------------------------------------------------------------
+
+    /// <summary>
+    /// Client: the server seated or unseated a rider. Seated: its seat index is booked in this client's copy of the cart (a different
+    /// occupant there gets out where it sits first) and the rider takes it. Unseated: a rider still in that cart here gets out at the
+    /// server's landing. Idempotent: a rider already in that seat is only posed.
+    /// </summary>
+    internal void OnSeat(SeatMsg m)
+    {
+        if (!NetSession.IsClient || !Current || RiderOf(m.RiderKind, m.RiderId) is not { } rider) return;
+        var cart = CartById(m.Cart);
+        if (!m.Seated)
+        {
+            if (m.RiderKind == SeatRiderKind.Hero && rider is Adventurer { IsLocal: true }) LastLocalLanding = (new Vector3(m.X, m.Y, m.Z), NetSession.Instance.Now);
+            if (cart != null && rider.Cart == cart) rider.GetOut(new Vector3(m.X, m.Y, m.Z), Vector3.Zero);
+            return;
+        }
+        if (cart == null) return;
+        if (rider.Cart == cart && rider.Seat == m.Seat) { rider.FollowSeat(); return; }
+        if (!cart.Seats.Put(rider.RiderId, m.Seat))
+        {
+            if (cart.Seats.OccupantOf(m.Seat) is int holder)
+            {
+                if (cart.Riders.TryGetValue(holder, out var other) && other is Node3D n && IsInstanceValid(n)) other.GetOut(n.GlobalPosition, Vector3.Zero);
+                cart.Seats.Leave(holder);
+            }
+            if (!cart.Seats.Put(rider.RiderId, m.Seat)) return;
+        }
+        rider.SitIn(cart, m.Seat);
+    }
+
+    /// <summary>Client: where the server last set this client's own hero down from a seat, and when (this process's clock); the RIDE pass reads it.</summary>
+    internal (Vector3 At, double When)? LastLocalLanding { get; private set; }
+
+    /// <summary>A cart on the wire as a seat book here: the party's, or a cage wagon by its stop (a chaser comes with Task 9).</summary>
+    private ICartBody? CartById(int id)
+    {
+        if (id == CartIds.Party) return IsInstanceValid(_rails.Cart) ? _rails.Cart : null;
+        if (id >= CartIds.WagonBase && id < CartIds.ChaserBase) return WagonAt(id - CartIds.WagonBase);
+        return null;
+    }
+
+    private static CageWagon? WagonAt(int stop)
+    {
+        if (ObjectiveController.Instance is not CrewRescueController crew) return null;
+        foreach (var wagon in crew.Wagons) if (IsInstanceValid(wagon) && wagon.Stop == stop) return wagon;
+        return null;
+    }
+
+    private ICartRider? RiderOf(int kind, string id)
+    {
+        if (kind == SeatRiderKind.Hero)
+        {
+            if (Main.Instance?.Party is not { } party || !int.TryParse(id, NumberStyles.Integer, CultureInfo.InvariantCulture, out var index)
+                || index < 0 || index >= party.Adventurers.Length || !IsInstanceValid(party.Adventurers[index])) return null;
+            return party.Adventurers[index];
+        }
+        if (kind == SeatRiderKind.Npc && GetParent()?.GetNodeOrNull<Npc>($"Npc_{id}") is { } npc && !npc.IsQueuedForDeletion()) return npc;
+        return null;
+    }
+
+    // ---- leaps and boarders (a client) ---------------------------------------------------------
+
+    /// <summary>A hound in the air here: flown from where it stood (riding on the cart it left) to its spot, or beside the body it misses.</summary>
+    private sealed class Flight
+    {
+        public Enemy Hound = null!;
+        public Node3D? Source;
+        public Vector3 FromLocal, FromWorld, To;
+        public bool HasLocal;
+        public Node3D? Dest;
+        public int Spot;
+        public bool Miss;
+        public double Start;
+    }
+
+    private readonly List<Flight> _flights = new();
+
+    /// <summary>Client: hounds in the air here now (the RIDE pass reads it).</summary>
+    internal int ClientFlights => _flights.Count;
+
+    /// <summary>
+    /// Client: a hound left its slag cart on a leap (or the catch-up says one is in the air): fly it from where it stands, already
+    /// <c>serverNow − ServerTime</c> into the arc. Ignored when that hound already flies, or already rides the spot named.
+    /// </summary>
+    internal void OnLeap(LeapMsg m)
+    {
+        if (!NetSession.IsClient || !Current || NetSession.Instance.Client is not { } client) return;
+        if (client.EnemyByNetId(m.NetId) is not { } hound || !hound.IsAlive) return;
+        foreach (var f in _flights) if (f.Hound == hound) return;
+        var dest = BodyById(m.ToCart);
+        if (!m.Miss && dest != null && hound.Carrier == dest && HeldAt(dest, m.Spot) == hound) return; // it landed here already (the boarder list)
+        Node3D? source = _carts.TryGetValue(m.FromCart, out var cc) && IsInstanceValid(cc.Body) ? cc.Body : null;
+        if (cc?.Slag is { } slag)
+            for (var i = 0; i < SlagCart.MaxRiders; i++)
+                if (slag.RiderAt(i) == hound) { slag.Unbind(i); break; }
+        ForgetBoarder(hound); // a boarder the client had elsewhere (a stale list) leaves that spot
+        if (hound.Carried) hound.Drop(hound.GlobalPosition);
+        var flight = new Flight
+        {
+            Hound = hound, Source = source, FromWorld = hound.GlobalPosition, Dest = dest, Spot = m.Spot, Miss = m.Miss || dest == null || m.Spot < 0, Start = m.ServerTime,
+        };
+        if (source != null) { flight.FromLocal = source.GlobalTransform.AffineInverse() * hound.GlobalPosition; flight.HasLocal = true; }
+        if (flight.Miss)
+        {
+            // where the server sets it down: beside the party lane, ahead by where the body it missed will be when it lands
+            var anchor = dest ?? _rails.Cart;
+            var lead = anchor is ICartBody body ? body.Velocity : Vector3.Zero;
+            var left = Mathf.Max(0f, RailEncounterController.LeapSeconds - (float)(client.ServerNow - m.ServerTime));
+            flight.To = _rails.StandBesideLane(anchor.GlobalPosition + lead * left);
+        }
+        hound.BeginNetLeap();
+        _flights.Add(flight);
+        if (NetSession.Instance.TestRide)
+            GD.Print(FormattableString.Invariant($"[net] ride: hound {m.NetId} leaps from cart {m.FromCart} to {(flight.Miss ? "beside" : "cart")} {m.ToCart} spot {m.Spot}, {client.ServerNow - m.ServerTime:0.000} s into the arc"));
+    }
+
+    private Node3D? BodyById(int id) => CartById(id) as Node3D;
+
+    /// <summary>The boarder spot <paramref name="spot"/> of the party's cart or a cage wagon, in world space.</summary>
+    private static Transform3D SpotOf(Node3D dest, int spot) => dest is MineCart cart ? cart.BoarderSpotTransform(spot) : ((CageWagon)dest).BoarderSpotTransform(spot);
+
+    private static Enemy?[]? HeldOf(Node3D body) => body is MineCart cart ? cart.Boarders : body is CageWagon wagon ? wagon.Boarders : null;
+
+    private static Enemy? HeldAt(Node3D body, int spot) => HeldOf(body) is { } held && spot >= 0 && spot < held.Length ? held[spot] : null;
+
+    /// <summary>Pose each hound in the air on its arc at the server's time; at the end it lands on its spot (carried from then on) or on the ground (the snapshots move it).</summary>
+    private void FlyLeaps(double serverNow)
+    {
+        for (var i = _flights.Count - 1; i >= 0; i--)
+        {
+            var f = _flights[i];
+            var h = f.Hound;
+            if (!IsInstanceValid(h) || h.IsQueuedForDeletion() || !h.Leaping) { _flights.RemoveAt(i); continue; }
+            var t = Mathf.Clamp((float)((serverNow - f.Start) / RailEncounterController.LeapSeconds), 0f, 1f);
+            if (f.HasLocal && f.Source != null && IsInstanceValid(f.Source)) f.FromWorld = f.Source.GlobalTransform * f.FromLocal;
+            var landing = !f.Miss && f.Dest != null && IsInstanceValid(f.Dest);
+            var to = landing ? SpotOf(f.Dest!, f.Spot).Origin : f.To;
+            var pos = f.FromWorld.Lerp(to, t) + Vector3.Up * (RailEncounterController.LeapApex * 4f * t * (1f - t));
+            var flat = new Vector3(to.X - f.FromWorld.X, 0f, to.Z - f.FromWorld.Z);
+            var yaw = flat.LengthSquared() > 0.01f ? Mathf.Atan2(-flat.X, -flat.Z) : h.GlobalRotation.Y;
+            h.GlobalTransform = new Transform3D(new Basis(Vector3.Up, yaw), pos);
+            if (t < 1f && h.IsAlive) continue;
+            _flights.RemoveAt(i);
+            if (landing && h.IsAlive) { Land(h, f.Dest!, f.Spot); NoteLanding(h, f.Start + RailEncounterController.LeapSeconds); }
+            else h.LandAt(landing ? pos : f.To);
+            if (NetSession.Instance.TestRide)
+                GD.Print(FormattableString.Invariant($"[net] ride: hound {h.NetId} {(landing && h.IsAlive ? $"boarded {f.Dest!.Name} spot {f.Spot}" : "landed beside the lane")} at ({h.GlobalPosition.X:0.00}, {h.GlobalPosition.Y:0.00}, {h.GlobalPosition.Z:0.00})"));
+        }
+    }
+
+    /// <summary>Hounds that landed here lately and when (the server's time of the landing): a cart state older than that does not let them go.</summary>
+    private readonly List<(Enemy Hound, double At)> _landed = new();
+
+    private void NoteLanding(Enemy hound, double at)
+    {
+        for (var i = _landed.Count - 1; i >= 0; i--)
+            if (_landed[i].Hound == hound || at - _landed[i].At > 2.0) _landed.RemoveAt(i);
+        _landed.Add((hound, at));
+    }
+
+    /// <summary>The state was taken before <paramref name="hound"/> landed here (its boarder list could not name it yet).</summary>
+    private bool LandedAfter(Enemy hound, double stateTime)
+    {
+        foreach (var (h, at) in _landed) if (h == hound && at > stateTime) return true;
+        return false;
+    }
+
+    /// <summary>A hound rides <paramref name="dest"/> at boarder spot <paramref name="spot"/> here (its leap landed, or the boarder list says so).</summary>
+    private static void Land(Enemy hound, Node3D dest, int spot)
+    {
+        if (HeldOf(dest) is not { } held || spot < 0 || spot >= held.Length) { if (hound.Leaping) hound.LandAt(hound.GlobalPosition); return; }
+        if (held[spot] is { } other && other != hound && IsInstanceValid(other) && other.Carrier == dest) other.Drop(other.GlobalPosition);
+        held[spot] = hound;
+        Func<Transform3D> at = () => IsInstanceValid(dest) ? SpotOf(dest, spot) : new Transform3D(Basis.Identity, hound.GlobalPosition);
+        if (hound.Leaping) hound.LandOn(dest, at);
+        else hound.Carry(dest, at);
+    }
+
+    /// <summary>A hound leaves whichever boarder spot this client had it at (the party cart's or a wagon's).</summary>
+    private void ForgetBoarder(Enemy hound)
+    {
+        Forget(_rails.Cart.Boarders, hound);
+        var train = _rails.Train;
+        for (var k = 0; k < train.Count; k++) if (IsInstanceValid(train[k])) Forget(train[k].Boarders, hound);
+        static void Forget(Enemy?[] held, Enemy hound) { for (var i = 0; i < held.Length; i++) if (held[i] == hound) held[i] = null; }
+    }
+
+    private bool InFlight(Enemy hound)
+    {
+        foreach (var f in _flights) if (f.Hound == hound) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Client: the party cart's state lists its boarders by spot and each coupled wagon's: a hound named is carried at its spot (unless it is
+    /// still flying there), and one carried here that is no longer named is let go where it stands (the snapshots move it). No allocation
+    /// unless a boarder changes.
+    /// </summary>
+    private void ApplyBoarders(CartStateDto d)
+    {
+        if (!IsInstanceValid(_rails.Cart)) return;
+        Reconcile(_rails.Cart, _rails.Cart.Boarders, d.Boarders, 0, d.ServerTime);
+        var train = _rails.Train;
+        for (var k = 0; k < train.Count; k++)
+            if (IsInstanceValid(train[k])) Reconcile(train[k], train[k].Boarders, d.WagonBoarders, k, d.ServerTime);
+    }
+
+    /// <summary>Make <paramref name="held"/> (a body's boarder spots here) what <paramref name="wanted"/> says, from index <paramref name="from"/> on (a wagon: its one entry).</summary>
+    private void Reconcile(Node3D body, Enemy?[] held, List<int>? wanted, int from, double stateTime)
+    {
+        var client = NetSession.Instance?.Client;
+        for (var i = 0; i < held.Length; i++)
+        {
+            var at = from + i;
+            var want = wanted != null && at < wanted.Count ? wanted[at] : -1;
+            var have = held[i];
+            if (have != null && (!IsInstanceValid(have) || have.IsQueuedForDeletion() || have.Carrier != body)) { held[i] = null; have = null; }
+            if (have != null && have.NetId == want) continue;
+            if (have != null && want < 0 && LandedAfter(have, stateTime)) continue; // our flight landed it before the server's did: the next state names it
+            if (have != null) { held[i] = null; have.Drop(have.GlobalPosition); }
+            if (want < 0 || client?.EnemyByNetId(want) is not { } hound || InFlight(hound)) continue;
+            foreach (var cc in _carts.Values) // still bound to a slag cart here (its leap never reached this client): off it first
+                if (cc.Slag is { } slag)
+                    for (var s = 0; s < SlagCart.MaxRiders; s++)
+                        if (slag.RiderAt(s) == hound) slag.Unbind(s);
+            ForgetBoarder(hound);
+            if (hound.Leaping) hound.LandAt(hound.GlobalPosition);
+            Land(hound, body, i);
+        }
+    }
+
+    /// <summary>Pose the boarders this client holds on the carts it runs (each rendered frame, after the carts).</summary>
+    private void FollowBoarders()
+    {
+        if (!IsInstanceValid(_rails.Cart)) return;
+        Follow(_rails.Cart, _rails.Cart.Boarders);
+        var train = _rails.Train; // by index: a foreach over the interface would box its enumerator every frame
+        for (var k = 0; k < train.Count; k++) if (IsInstanceValid(train[k])) Follow(train[k], train[k].Boarders);
+        static void Follow(Node3D body, Enemy?[] held)
+        {
+            foreach (var h in held) if (h != null && IsInstanceValid(h) && h.Carrier == body) h.FollowCarrier();
+        }
     }
 
     // ==== the RIDE pass's trace: both sides on one server-time grid ===============================

@@ -66,4 +66,10 @@ public sealed class RemotePose
     public bool Parry;
     public bool Dodge;
     public bool OnFloor = true;
+    /// <summary>Where a seated body looks relative to its seat's forward (radians; a companion's all the way round). Applied only while the body sits here too.</summary>
+    public float SeatYaw;
+    /// <summary>The body sits in a seat where this pose was taken (the server's say on a client; the client's own, never trusted, on the server).</summary>
+    public bool Seated;
+    /// <summary>It works the cart's pump (the server's word: a client shows it; the server's own Inputs set it there).</summary>
+    public bool Pumping;
 }

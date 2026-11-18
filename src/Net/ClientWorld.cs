@@ -22,6 +22,8 @@ public partial class ClientWorld : Node
     private Vector3 _lastSentPos;
     private float _lastSentYaw;
     private PoseFlags _lastSentFlags;
+    private float _lastSentSeatYaw;
+    private PoseFlags2 _lastSentFlags2;
     private bool _readySent;
     public Welcome? Welcome => _h.Welcome;
     public ClientHandshake.Phase Phase => _h.State;
@@ -111,6 +113,8 @@ public partial class ClientWorld : Node
             case FloorClockMsg fcm: OnFloorClock(fcm); break;
             case CartStateMsg cs: OnCarts(cs.Floor, cs.Epoch, cs.Carts, correction: false); break;
             case CartCorrectionMsg cc: OnCarts(cc.Floor, cc.Epoch, cc.Carts, correction: true); break;
+            case SeatMsg seat: if (RailsHere() is { } seatRails) seatRails.OnSeat(seat); break;
+            case LeapMsg leap: if (RailsHere() is { } leapRails) leapRails.OnLeap(leap); break;
             case ForcePose fp: ApplyForcePose(fp); break;
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
@@ -231,6 +235,16 @@ public partial class ClientWorld : Node
         if (floor != Game.Instance.CurrentFloor || !WorldCheck.SameBuild(_epoch, epoch)) return;
         if (Main.Instance is not { InGame: true, Rebuilding: false } main || main.Builder.CurrentFloor != floor) return;
         if (Dungeon.Rails.RailNet.Instance is { } rails && GodotObject.IsInstanceValid(rails)) rails.OnCarts(carts, correction);
+    }
+
+    /// <summary>
+    /// The rail sender's copy here while a built floor stands (a seat or a leap names no floor: one meant for a floor this client
+    /// has not built yet finds no cart or rider here and is dropped; the rail catch-up on its Ready says it again).
+    /// </summary>
+    private static Dungeon.Rails.RailNet? RailsHere()
+    {
+        if (Main.Instance is not { InGame: true, Rebuilding: false } main || main.Builder.CurrentFloor != Game.Instance.CurrentFloor) return null;
+        return Dungeon.Rails.RailNet.Instance is { } rails && GodotObject.IsInstanceValid(rails) ? rails : null;
     }
 
     /// <summary>The living (or dying) copy of the server's enemy <paramref name="netId"/> here, or null.</summary>
@@ -695,6 +709,9 @@ public partial class ClientWorld : Node
             body.Remote.Crouch = s.Flags.HasFlag(PoseFlags.Crouch);
             body.Remote.Guard = s.Flags.HasFlag(PoseFlags.Guard);
             body.Remote.OnFloor = s.Flags.HasFlag(PoseFlags.OnFloor);
+            body.Remote.SeatYaw = s.SeatYaw;
+            body.Remote.Seated = s.Flags2.HasFlag(PoseFlags2.Seated);
+            body.Remote.Pumping = s.Flags2.HasFlag(PoseFlags2.Pumping);
         }
         _reindexTimer -= dt;
         if (_reindexTimer <= 0f) { _reindexTimer = 2f; Reindex(); }
@@ -713,12 +730,19 @@ public partial class ClientWorld : Node
             if (local.Downed) flags |= PoseFlags.Downed;
             if (local.Defense.Parrying) flags |= PoseFlags.Parry;
             if (local.Defense.Dodging) flags |= PoseFlags.Dodge;
-            // coalesce: a body that has not moved sends a pose every half second only; a window that opens or closes while standing still goes at once
-            if (pos.DistanceSquaredTo(_lastSentPos) > 0.0001f || Math.Abs(local.Rotation.Y - _lastSentYaw) > 0.001f || flags != _lastSentFlags || _heartbeatDue)
+            // seated (the server's SeatMsg sat it here): where it looks from the seat goes too; the server ignores the pump bit (its Inputs decide)
+            var flags2 = PoseFlags2.None;
+            if (local.Seated) flags2 |= PoseFlags2.Seated;
+            if (local.Seated && local.Pumping) flags2 |= PoseFlags2.Pumping;
+            var seatYaw = local.Seated ? local.SeatYaw : 0f;
+            // coalesce: a body that has not moved sends a pose every half second only; a window that opens or closes while standing still goes at
+            // once, and so does a seated head turning (a held cart moves nothing else)
+            if (pos.DistanceSquaredTo(_lastSentPos) > 0.0001f || Math.Abs(local.Rotation.Y - _lastSentYaw) > 0.001f || flags != _lastSentFlags
+                || Math.Abs(seatYaw - _lastSentSeatYaw) > 0.001f || flags2 != _lastSentFlags2 || _heartbeatDue)
             {
-                _lastSentPos = pos; _lastSentYaw = local.Rotation.Y; _lastSentFlags = flags; _heartbeatDue = false;
+                _lastSentPos = pos; _lastSentYaw = local.Rotation.Y; _lastSentFlags = flags; _lastSentSeatYaw = seatYaw; _lastSentFlags2 = flags2; _heartbeatDue = false;
                 _t.Send(NetPeers.Server, NetCodec.Encode(new Pose(tick, local.Index, new NetVec(pos.X, pos.Y, pos.Z), local.Rotation.Y, local.Camera.Rotation.X,
-                    new NetVec(local.Velocity.X, local.Velocity.Y, local.Velocity.Z), flags)), NetChannel.State);
+                    new NetVec(local.Velocity.X, local.Velocity.Y, local.Velocity.Z), flags, seatYaw, flags2)), NetChannel.State);
             }
         }
         // every second (it was every two): more samples for the server clock (NetClock) to settle on

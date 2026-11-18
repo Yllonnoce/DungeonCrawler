@@ -147,7 +147,37 @@ public partial class NetTestFlow : Node
                 _rideDeparts++;
                 _rideHeldSince = -1;
                 GD.Print($"[net-server] ride: the cart departs stop {rc.StopIndex} empty (ride {rc.StopIndex + 1} armed: {Dungeon.Rails.RailEncounterController.Instance?.ArmedRide})");
+                // seats on the wire: the client's hero is seated here as the cart rolls out of the landing; with no player of the
+                // server's aboard, the stop it rolls into sets it down (a server GetOut: a SeatMsg and a ForcePose to its screen)
+                if (_rideDeparts == 1 && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null) is { } rider && Main.Instance?.Party is { } party)
+                {
+                    _rideMember = rider.MemberIndex;
+                    var hero = party.Adventurers[rider.MemberIndex];
+                    _rideSafeAt = hero.GlobalPosition; // where it waited at the landing, out of every fight
+                    _rideSeated = rc.DebugSeat(rider.MemberIndex);
+                    GD.Print($"[net-server] ride: seated {rider.Name} in seat {hero.Seat} as the cart rolls ({(_rideSeated ? "ok" : "REFUSED")})");
+                }
             }
+        }
+        if (_rideSeated && !_rideSetDown && _rideMember >= 0 && Main.Instance?.Party is { } p2 && _rideMember < p2.Adventurers.Length && !p2.Adventurers[_rideMember].Seated)
+        {
+            _rideSetDown = true;
+            _rideSetDownAt = _elapsed;
+            var at = p2.Adventurers[_rideMember].GlobalPosition;
+            GD.Print(FormattableString.Invariant($"[net-server] ride: set down at ({at.X:0.00}, {at.Y:0.00}, {at.Z:0.00}) at stop {Dungeon.Rails.RailController.Instance?.StopIndex}"));
+        }
+        // the stop's own fight would kill the idle hero (a wipe reloads the floor and the script's ride with it): once its screen has
+        // had a second to see where it was set down, it goes back to where it waited at the landing
+        if (_rideSetDown && _rideSafeAt is { } safe && _elapsed - _rideSetDownAt >= 1.0 && Main.Instance?.Party is { } p3 && _rideMember < p3.Adventurers.Length)
+        {
+            _rideSafeAt = null;
+            p3.Adventurers[_rideMember].Shove(safe);
+            GD.Print("[net-server] ride: the set-down hero is sent back to the landing, clear of the stop's fight");
+        }
+        if (!_rideCrewTold && _rideReadyAt >= 0 && Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.CrewRescueController crew)
+        {
+            _rideCrewTold = true;
+            GD.Print($"[net-server] ride: crew seated in wagons: {crew.Wagons.Sum(w => w.Riders.Count)} in {crew.Wagons.Count} wagon(s)");
         }
         if (world.Trace.Contains("empty"))
         {
@@ -163,8 +193,9 @@ public partial class NetTestFlow : Node
             }
             var reached = Dungeon.Rails.RailController.Instance is { } end && IsInstanceValid(end) ? end.StopIndex : -1;
             var rode = _rideDeparts >= RideLastStop && reached >= RideLastStop;
-            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
+            var seats = _rideSeated && _rideSetDown;
+            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats;
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero seated and set down: {(seats ? "yes" : "NO")}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
             return;
         }
         if (_elapsed > 400) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
@@ -172,6 +203,52 @@ public partial class NetTestFlow : Node
 
     private int _ridePropChecks, _rideAsks, _ridePropMatched, _rideMostCarts;
     private bool _rideSawRolling;
+    // seats (plan 5 task 4): the server's side seats the client's hero and sees it set down; the client's checks its own body
+    private int _rideMember = -1;
+    private bool _rideSeated, _rideSetDown, _rideCrewTold;
+    private double _rideSetDownAt;
+    private Vector3? _rideSafeAt;
+    private bool _rideCrewOk, _rideSeatOk, _rideLandOk;
+    private int _rideCrewSeated = -1;
+    private string? _rideSeatFail;
+
+    /// <summary>
+    /// The client's seat checks, every tick of step 52: the crew sit in their wagons here (the catch-up's SeatMsgs); this client's hero,
+    /// seated by the server, sits in a hero seat (0-3) of its copy of the cart; and once the server sets it down, the body stands within
+    /// 0.5 m of the server's landing within 0.5 s of that SeatMsg.
+    /// </summary>
+    private void RideSeatChecks(Main main, Dungeon.Rails.RailController rc)
+    {
+        if (!_rideCrewOk && Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.CrewRescueController crew && main.Builder.FloorRoot is { } root)
+        {
+            var seated = root.GetChildren().OfType<Npc>().Count(n => n.Crew && n.Cart is Dungeon.Rails.CageWagon);
+            var inWagons = crew.Wagons.Sum(w => w.Riders.Count);
+            if (seated > 0 && seated == inWagons)
+            {
+                _rideCrewOk = true;
+                _rideCrewSeated = seated;
+                GD.Print($"[net] ride: crew seated in their wagons here: {seated} in {crew.Wagons.Count} wagon(s)");
+            }
+        }
+        if (main.Party.Local is not { } me) return;
+        if (!_rideSeatOk && me.Seated)
+        {
+            _rideSeatOk = me.Cart == rc.Cart && me.Seat is >= 0 and <= 3;
+            GD.Print($"[net] ride: seated here in seat {me.Seat} ({(me.Cart == rc.Cart ? "the party's cart" : "another cart")}) as the cart is {rc.State.Mode}");
+            if (!_rideSeatOk) _rideSeatFail ??= $"the server seated our hero in seat {me.Seat} of {(me.Cart == rc.Cart ? "the cart" : "something else")}";
+        }
+        if (_rideSeatOk && !_rideLandOk && _rideSeatFail == null && Dungeon.Rails.RailNet.Instance?.LastLocalLanding is { } landing)
+        {
+            var off = me.GlobalPosition.DistanceTo(landing.At);
+            var after = NetSession.Instance.Now - landing.When;
+            if (off <= 0.5f && !me.Seated)
+            {
+                _rideLandOk = true;
+                GD.Print(FormattableString.Invariant($"[net] ride: set down within {off:0.00} m of the server's landing ({landing.At.X:0.00}, {landing.At.Y:0.00}, {landing.At.Z:0.00}) {after:0.00} s after its SeatMsg"));
+            }
+            else if (after > 0.5) _rideSeatFail ??= FormattableString.Invariant($"0.5 s after the server set our hero down it stood {off:0.00} m from the landing (seated here: {me.Seated})");
+        }
+    }
 
     /// <summary>
     /// The client's half of the RIDE pass. Step 50: the server's floor 12 is built here with its set pieces (beams, switches,
@@ -223,11 +300,14 @@ public partial class NetTestFlow : Node
                 if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc)) { if (_clock > 5) { Finish("[net]", false, "ride: no rail controller on the client"); net.Disconnect("test finished"); } return; }
                 if (rc.Following && rc.State.Mode == Dungeon.Rails.CartMode.Rolling) _rideSawRolling = true;
                 if (Dungeon.Rails.RailNet.Instance is { } rn && IsInstanceValid(rn)) _rideMostCarts = Math.Max(_rideMostCarts, rn.ClientCartCount);
+                RideSeatChecks(main, rc);
+                if (_rideSeatFail != null) { Finish("[net]", false, $"ride: {_rideSeatFail}"); net.Disconnect("test finished"); return; }
                 if (_rideSawRolling && rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex >= 3)
                 {
                     GD.Print($"[net] ride: the cart followed the server's to stop {rc.StopIndex} (S={rc.State.S:0.0}); up to {_rideMostCarts} other cart(s) here at once");
                     if (!rc.Following || _rideMostCarts == 0) { Finish("[net]", false, $"ride: the cart never followed a state (following={rc.Following}) or no slag cart ever showed here ({_rideMostCarts})"); net.Disconnect("test finished"); return; }
-                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most");
+                    if (!_rideCrewOk || !_rideSeatOk || !_rideLandOk) { Finish("[net]", false, $"ride: seats: crew in their wagons {(_rideCrewOk ? "yes" : "NO")}, our hero seated {(_rideSeatOk ? "yes" : "NO")}, set down at the server's landing {(_rideLandOk ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
+                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons, our hero seated and set down where the server put it");
                     net.Disconnect("test finished");
                     return;
                 }

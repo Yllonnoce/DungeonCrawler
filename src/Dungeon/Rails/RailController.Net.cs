@@ -48,13 +48,41 @@ public partial class RailController : ISlopeSource
         var train = _train.Count;
         for (var i = 0; i < _train.Count; i++) train = train * 31 + _train.Wagons[i].Stop;
         var line = HashCode.Combine(_crossOut, _crossBack, _gapFrom, _gapTo, _jumpV);
-        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, Wrecks);
+        var boarders = 17;
+        for (var i = 0; i < Cart.Boarders.Length; i++) boarders = boarders * 31 + AboardId(Cart.Boarders[i], Cart);
+        for (var i = 0; i < _train.Count; i++) boarders = boarders * 31 + AboardId(_train.Wagons[i].Boarders[0], _train.Wagons[i]);
+        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders));
+    }
+
+    /// <summary>The net id of a hound riding <paramref name="body"/> at a boarder spot (landed: carried by it), or −1 (free, reserved for a leap still in the air, gone).</summary>
+    private static int AboardId(Enemies.Enemy? hound, Node3D body)
+        => hound != null && IsInstanceValid(hound) && !hound.IsQueuedForDeletion() && hound.Carrier == body ? hound.NetId : -1;
+
+    /// <summary>The boarders aboard the cart by spot, and each coupled wagon's (train order), for the wire: null when none rides.</summary>
+    private void CaptureBoarders(out List<int>? cart, out List<int>? wagons)
+    {
+        cart = wagons = null;
+        for (var i = 0; i < Cart.Boarders.Length; i++)
+        {
+            var id = AboardId(Cart.Boarders[i], Cart);
+            if (id < 0) continue;
+            if (cart == null) { cart = new List<int>(Cart.Boarders.Length); for (var k = 0; k < Cart.Boarders.Length; k++) cart.Add(-1); }
+            cart[i] = id;
+        }
+        for (var i = 0; i < _train.Count; i++)
+        {
+            var id = AboardId(_train.Wagons[i].Boarders[0], _train.Wagons[i]);
+            if (id < 0) continue;
+            if (wagons == null) { wagons = new List<int>(_train.Count); for (var k = 0; k < _train.Count; k++) wagons.Add(-1); }
+            wagons[i] = id;
+        }
     }
 
     /// <summary>The cart's state now, for the wire (<paramref name="flags"/> in place of its own: the wreck frame).</summary>
     internal CartStateDto CaptureNet(double serverTime, byte? flags = null)
     {
         var input = Party.LastInput;
+        CaptureBoarders(out var boarders, out var wagonBoarders);
         List<int>? train = null;
         if (_train.Count > 0)
         {
@@ -68,8 +96,23 @@ public partial class RailController : ISlopeSource
             Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)_train.Count, TargetOverride = -1f,
             Plating = State.Plating, StopIndex = StopIndex, Flags = flags ?? NetFlags(),
             CrossOut = _crossOut, CrossBack = _crossBack, GapFrom = _gapFrom, GapTo = _gapTo, JumpV = _jumpV > 0f ? _jumpV : float.NaN,
-            BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, ServerTime = serverTime,
+            BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, Boarders = boarders, WagonBoarders = wagonBoarders, ServerTime = serverTime,
         };
+    }
+
+    /// <summary>
+    /// Test hook (--test-net-server's RIDE pass): seat party member <paramref name="member"/> (a remote player's hero) in the first free
+    /// hero seat, as boarding would; its SeatMsg goes out with the tick's cart state. Task 5 boards remote players for real.
+    /// </summary>
+    internal bool DebugSeat(int member)
+    {
+        if (NetSession.IsClient || !Current || Core.Main.Instance?.Party is not { } party || member < 0 || member >= party.Adventurers.Length) return false;
+        var hero = party.Adventurers[member];
+        if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) return false;
+        var seated = SeatHero(hero);
+        RefreshHud();
+        Flush();
+        return seated;
     }
 
     /// <summary>
@@ -122,9 +165,8 @@ public partial class RailController : ISlopeSource
         Party.Limit = d.Limit;
         _follow.Apply(d, serverNow);
         Party.State = new CartState(_follow.S, _follow.V, mode, d.Plating);
-        var shown = CartSendRules.Shown(d.Flags);
+        var shown = CartSendRules.Shown(d.Flags); // the cart only: the coupled wagons stay shown, as the server's HideWreck leaves them
         Cart.Visible = shown;
-        foreach (var wagon in _train.Wagons) if (IsInstanceValid(wagon)) wagon.Visible = CartSendRules.WagonsShown(d.Flags);
         if (shown) SetCartLayer();
         else Cart.CollisionLayer = 0;
         _netBoardingLeft = d.BoardingLeft;

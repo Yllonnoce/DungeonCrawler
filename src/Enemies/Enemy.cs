@@ -445,15 +445,16 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var before = GlobalPosition;
         if (_net?.At(now) is { } s)
         {
-            // carried on a cart the client runs itself (RailNet): the cart puts it at its spot; the snapshot only turns it
-            if (!Carried)
+            // carried on a cart the client runs itself (RailNet), or in the air on a leap it flies itself (a LeapMsg): the cart or the
+            // arc puts it there; the snapshot only turns a carried one
+            if (!Carried && !Leaping)
             {
                 var target = new Vector3(s.Position.X, s.Position.Y, s.Position.Z);
                 GlobalPosition = before.DistanceSquaredTo(target) > 9f ? target : before.Lerp(target, Math.Min(1f, dt * 15f));
             }
-            Rotation = new Vector3(0, Net.PoseBuffer.LerpAngle(Rotation.Y, s.Yaw, Math.Min(1f, dt * 12f)), 0);
+            if (!Leaping) Rotation = new Vector3(0, Net.PoseBuffer.LerpAngle(Rotation.Y, s.Yaw, Math.Min(1f, dt * 12f)), 0);
         }
-        Velocity = Carried ? Vector3.Zero : (GlobalPosition - before) / Math.Max(dt, 0.0001f);
+        Velocity = Carried || Leaping ? Vector3.Zero : (GlobalPosition - before) / Math.Max(dt, 0.0001f);
         if (IsHorde) TickSwarmDetail(dt);
         if (WindupLeft > 0f) WindupLeft -= dt;
         if (TelegraphRemaining > 0f) TelegraphRemaining -= dt;
@@ -764,6 +765,22 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         if (!Carried || Leaping) return;
         Carrier = null;
         _carrySpot = null; // the mask stays 0 and _maskOnFoot is kept for the landing
+        Leaping = true;
+        Velocity = Vector3.Zero;
+        _path = null;
+    }
+
+    /// <summary>
+    /// Client: a leap the server announced (a <c>LeapMsg</c>) starts here, from a slag cart or from wherever the snapshots had it: off any
+    /// carrier and into the air, posed by the client's flight until <see cref="LandOn"/> or <see cref="LandAt"/>.
+    /// </summary>
+    public void BeginNetLeap()
+    {
+        if (Leaping) return;
+        if (!Carried) _maskOnFoot = CollisionMask;
+        Carrier = null;
+        _carrySpot = null;
+        CollisionMask = 0;
         Leaping = true;
         Velocity = Vector3.Zero;
         _path = null;

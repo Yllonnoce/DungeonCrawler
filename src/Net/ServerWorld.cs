@@ -171,6 +171,7 @@ public partial class ServerWorld : Node
         SendShopSync(slot.PeerId); // a floor change: the floor is built on both ends now (a join is sent in OnPlayerReady)
         if (Adventure.Objectives.ObjectiveController.Instance is { } objective) SendTo(slot.PeerId, new ObjectiveStateMsg(objective.Capture()));
         SendTo(slot.PeerId, FloorClockNow()); // the floor ran on while it built: the pair in its FloorChange is old, this one is not
+        Dungeon.Rails.RailNet.Instance?.SendRailCatchUp(slot.PeerId); // the seats taken while it built (the crew in their wagons), the leaps in the air
         SendWorldChecks(slot.PeerId); // what changed while it built (an item taken, a creature spawned) is put right now, not at the next check
     }
 
@@ -324,6 +325,7 @@ public partial class ServerWorld : Node
             SendShopSync(slot.PeerId); // a join: the joiner is in game now, so it will not discard this (a floor change sends it in OnFloorReady)
         }
         SendCatchUp(slot.PeerId);
+        if (!behind) Dungeon.Rails.RailNet.Instance?.SendRailCatchUp(slot.PeerId); // who sits where, the leaps in the air (after the join queue's own SeatMsgs)
         if (!behind) SendWorldChecks(slot.PeerId); // closes the join window at once: items and creatures that changed since the Welcome
         Trace.Add($"ready:{slot.Name}");
         ResumeBotsOf(slot);
@@ -461,11 +463,13 @@ public partial class ServerWorld : Node
             case FloorResyncIntent fr: OnFloorResync(slot, fr); break;
             case AttackIntent a:
             {
-                // aim exactly where the player aimed; the body stays where its poses put it
-                body.Rotation = new Vector3(0, a.Yaw, 0);
-                body.Camera.Rotation = new Vector3(Mathf.Clamp(a.Pitch, Mathf.DegToRad(-Adventurer.MaxPitchDegrees), Mathf.DegToRad(Adventurer.MaxPitchDegrees)), 0, 0);
+                // aim exactly where the player aimed; the body stays where its poses put it. A seated body (the server's seat, never
+                // the client's word) turns its head in the seat instead: no body rotation, no nudge (the seat places it)
                 var wanted = new Vector3(a.Position.X, a.Position.Y, a.Position.Z);
-                if (wanted.DistanceTo(body.Camera.GlobalPosition) < 1.5f && body.Remote != null) { body.Remote.Position = body.GlobalPosition + (wanted - body.Camera.GlobalPosition); body.GlobalPosition = body.Remote.Position; }
+                if (body.Seated) body.AimSeated(a.Yaw);
+                else body.Rotation = new Vector3(0, a.Yaw, 0);
+                body.Camera.Rotation = new Vector3(Mathf.Clamp(a.Pitch, Mathf.DegToRad(-Adventurer.MaxPitchDegrees), Mathf.DegToRad(Adventurer.MaxPitchDegrees)), 0, 0);
+                if (!body.Seated && wanted.DistanceTo(body.Camera.GlobalPosition) < 1.5f && body.Remote != null) { body.Remote.Position = body.GlobalPosition + (wanted - body.Camera.GlobalPosition); body.GlobalPosition = body.Remote.Position; }
                 body.Attack(a.Heavy, a.Perfect); // stamina and cooldown reach every screen in the Vitals; the sheet itself did not change
                 if (!Trace.Contains("attack")) Trace.Add("attack");
                 if (NetSession.Instance.TestServer && _attackLogs++ < 6)
@@ -635,12 +639,47 @@ public partial class ServerWorld : Node
         }
     }
 
+    /// <summary>Members the server set down from a seat whose poses still in flight say seated: dropped until one says otherwise.</summary>
+    private readonly HashSet<int> _unseatedPending = new();
+
+    /// <summary>
+    /// The server set remote member <paramref name="member"/> down from a seat at <paramref name="at"/> (a stop, a set-down, a wreck,
+    /// getting out with the party, a throw): its own screen is put there at once (with the SeatMsg the rail sender sends), and its
+    /// poses still flagged seated are dropped until it has heard (they would put the body back on the seat's old place).
+    /// </summary>
+    public void ForceUnseatedPose(int member, Vector3 at, float yaw)
+    {
+        _unseatedPending.Add(member);
+        var pose = new ForcePose(member, new PoseDto { X = at.X, Y = at.Y, Z = at.Z, Yaw = yaw });
+        foreach (var slot in Registry.Online)
+            if (slot.MemberIndex == member && slot.BotOwner == null) SendTo(slot.PeerId, pose);
+    }
+
     private void ApplyPose(PlayerSlot slot, Pose pose)
     {
         var party = Main.Instance?.Party;
         if (party == null || slot.MemberIndex >= party.Adventurers.Length) return;
         var body = party.Adventurers[slot.MemberIndex];
         if (body.Control != ControlKind.Remote) return;
+        var seatedThere = pose.Flags2.HasFlag(PoseFlags2.Seated);
+        if (body.Seated)
+        {
+            // the server's seat places the body (never the client's flag): only where it looks from the seat, the pitch and the
+            // flags count; no walkable or press check, the position is ignored. Pumping is the server's own (Inputs), not the client's
+            _unseatedPending.Remove(slot.MemberIndex);
+            body.Remote ??= new RemotePose();
+            var seatYaw = float.IsFinite(pose.SeatYaw) ? Mathf.Wrap(pose.SeatYaw, -Mathf.Pi, Mathf.Pi) : 0f;
+            body.Remote.SeatYaw = Mathf.Clamp(seatYaw, Mathf.DegToRad(-Adventurer.MaxSeatYawDegrees), Mathf.DegToRad(Adventurer.MaxSeatYawDegrees));
+            body.Remote.Seated = true;
+            body.Remote.Pitch = pose.Pitch;
+            ApplyPoseFlags(body.Remote, pose.Flags);
+            return;
+        }
+        if (_unseatedPending.Contains(slot.MemberIndex))
+        {
+            if (seatedThere) return; // sent before its screen heard of the set-down
+            _unseatedPending.Remove(slot.MemberIndex);
+        }
         var at = new Vector3(pose.Position.X, pose.Position.Y, pose.Position.Z);
         // a body cannot be steered off the map: keep it on floor the layout knows
         if (Main.Instance!.Builder.Layout is { } layout && !layout.IsWalkable(DungeonBuilder.WorldToCell(at)) && !Main.Instance.Builder.IsUnderAt(at)) { RejectedPoses++; if (NetSession.Instance.TestServer && RejectedPoses <= 12) GD.Print($"[net-server] pose from {slot.Name} rejected at {at:0.0} cell {DungeonBuilder.WorldToCell(at)} ({layout[DungeonBuilder.WorldToCell(at)]})"); return; }
@@ -651,13 +690,19 @@ public partial class ServerWorld : Node
         body.Remote.Yaw = pose.Yaw;
         body.Remote.Pitch = pose.Pitch;
         body.Remote.Velocity = new Vector3(pose.Velocity.X, pose.Velocity.Y, pose.Velocity.Z);
-        body.Remote.Crouch = pose.Flags.HasFlag(PoseFlags.Crouch);
-        body.Remote.Guard = pose.Flags.HasFlag(PoseFlags.Guard);
-        body.Remote.Parry = pose.Flags.HasFlag(PoseFlags.Parry);
-        body.Remote.Dodge = pose.Flags.HasFlag(PoseFlags.Dodge);
-        body.Remote.OnFloor = pose.Flags.HasFlag(PoseFlags.OnFloor);
+        body.Remote.Seated = false;
+        ApplyPoseFlags(body.Remote, pose.Flags);
         if (!_moved.Contains(slot.MemberIndex) && _firstPose.TryGetValue(slot.MemberIndex, out var first) && first.DistanceTo(at) > 1f) { _moved.Add(slot.MemberIndex); Trace.Add($"moved:{slot.Name}"); }
         _firstPose.TryAdd(slot.MemberIndex, at);
+    }
+
+    private static void ApplyPoseFlags(RemotePose remote, PoseFlags flags)
+    {
+        remote.Crouch = flags.HasFlag(PoseFlags.Crouch);
+        remote.Guard = flags.HasFlag(PoseFlags.Guard);
+        remote.Parry = flags.HasFlag(PoseFlags.Parry);
+        remote.Dodge = flags.HasFlag(PoseFlags.Dodge);
+        remote.OnFloor = flags.HasFlag(PoseFlags.OnFloor);
     }
 
     /// <summary>A hazard entered a phase: tell every client which, when and how far along, so they animate in step.</summary>
@@ -733,7 +778,7 @@ public partial class ServerWorld : Node
     /// <summary>Moments a joiner has no use for once they are past: the next Vitals, snapshot or swing replaces them.</summary>
     private static bool Transient(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.Vitals or MsgKind.Sfx or MsgKind.EnemyHurt
         or MsgKind.HitFxEvt or MsgKind.SwingEvt or MsgKind.Emote or MsgKind.ProjectileSpawned or MsgKind.ProjectileEnded or MsgKind.Bark
-        or MsgKind.FloorClock or MsgKind.CartCorrection;
+        or MsgKind.FloorClock or MsgKind.CartCorrection or MsgKind.Leap; // a stale leap must not fly twice: the rail catch-up resends the ones in the air
 
     private static bool FloorKind(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.FloorChangeBegin or MsgKind.FloorChange;
 
@@ -841,6 +886,7 @@ public partial class ServerWorld : Node
             if (n.Captured) f |= NpcState.FlagCaptured;
             if (n.Jailed) f |= NpcState.FlagJailed;
             if (n.Fled) f |= NpcState.FlagFled;
+            if (n.Seated) f |= NpcState.FlagSeated;
             return new NpcState(n.Id, new NetVec(n.GlobalPosition.X, n.GlobalPosition.Y, n.GlobalPosition.Z), n.Rotation.Y, f);
         }).ToArray();
         var players = bodies.Select(b =>
@@ -851,8 +897,11 @@ public partial class ServerWorld : Node
             if (b.IsOnFloor() || b.Remote?.OnFloor == true) flags |= PoseFlags.OnFloor;
             if (b.Downed) flags |= PoseFlags.Downed;
             if (_bound.Contains(b.Index)) flags |= PoseFlags.Bound;
+            var flags2 = PoseFlags2.None;
+            if (b.Seated) flags2 |= PoseFlags2.Seated;
+            if (b.Seated && b.Pumping) flags2 |= PoseFlags2.Pumping;
             return new PlayerPoseState(b.Index, new NetVec(b.GlobalPosition.X, b.GlobalPosition.Y, b.GlobalPosition.Z), b.Rotation.Y, b.Camera.Rotation.X,
-                new NetVec(b.Velocity.X, b.Velocity.Y, b.Velocity.Z), flags);
+                new NetVec(b.Velocity.X, b.Velocity.Y, b.Velocity.Z), flags, b.Seated ? b.SeatYaw : 0f, flags2);
         }).ToArray();
         _t.Send(peer, NetCodec.Encode(new WorldSnapshot(NetSession.Instance.Tick, NetSession.Instance.Now, enemies.ToArray(), npcs, players)), NetChannel.State);
     }

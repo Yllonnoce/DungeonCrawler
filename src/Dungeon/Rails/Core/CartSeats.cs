@@ -29,6 +29,22 @@ public sealed class CartSeats
         return null;
     }
 
+    /// <summary>
+    /// Book exactly <paramref name="seat"/> for <paramref name="occupant"/> (a client following the server's <c>SeatMsg</c>): false when the
+    /// index is outside the book (0-3 heroes, 4-5 the bench) or another occupant holds it. An occupant already elsewhere in the book moves.
+    /// </summary>
+    public bool Put(int occupant, int seat)
+    {
+        if (seat < 0 || seat >= _seat.Length) return false;
+        if (_seat[seat] is int holder) return holder == occupant;
+        if (SeatOf(occupant) is int had) _seat[had] = null;
+        _seat[seat] = occupant;
+        return true;
+    }
+
+    /// <summary>Who holds <paramref name="seat"/>, or null (free, or no such seat).</summary>
+    public int? OccupantOf(int seat) => seat >= 0 && seat < _seat.Length ? _seat[seat] : null;
+
     public bool Leave(int occupant)
     {
         var s = SeatOf(occupant);
