@@ -272,9 +272,9 @@ public sealed class ObjectiveStateDto
     public List<int> SealedMouths { get; set; } = new();
     /// <summary>Shifting Vault: bit i set when lever i stands pulled.</summary>
     public int LeverParity { get; set; }
-    /// <summary>Railed jailbreak: the stops (1-based) whose cage wagon stands open.</summary>
     /// <summary>Railed jailbreak: the intermediate stops whose rail gate stands lifted.</summary>
     public List<int>? GatesUp { get; set; }
+    /// <summary>Railed jailbreak: the stops (1-based) whose cage wagon stands open.</summary>
     public List<int>? OpenCages { get; set; }
     /// <summary>Railed jailbreak: the stops whose cage wagon is coupled behind the cart, in train order.</summary>
     public List<int>? CoupledCages { get; set; }

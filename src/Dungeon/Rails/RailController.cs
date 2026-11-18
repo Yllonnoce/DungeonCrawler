@@ -71,15 +71,30 @@ public partial class RailController : Node
     /// <summary>Back from a save: the listed gates stand up at once (no animation, no log). Gates not listed stay as they are.</summary>
     public void RestoreGates(IEnumerable<int> up)
     {
+        _restoredGates = true; // a down gate whose mobs are already dead lifts quietly at the next check
         foreach (var i in up)
             if (i >= 0 && i < _gates.Length && _gates[i] is { } g && IsInstanceValid(g)) g.SetUp();
         RefreshHud();
     }
 
-    /// <summary>Test hook (--test-ride): every gate goes up at once.</summary>
-    internal void DebugLiftAllGates()
+    /// <summary>The winch works when no living holder of the stop is within this horizontal range of the gate.</summary>
+    public const float WinchClearRange = 12f;
+    /// <summary>The next gate check after a restore lifts quietly (no log, no tween).</summary>
+    private bool _restoredGates;
+
+    private bool NoHolderNear(RailGate gate)
     {
-        foreach (var g in _gates) if (g != null && IsInstanceValid(g)) g.SetUp();
+        var room = _layout.Rail!.Stops[gate.Stop].Room;
+        var at = gate.GlobalPosition;
+        if (_builder.Collectives is { } reg)
+            foreach (var c in reg.Collectives)
+                if (c.Room == room && c.Goal is Adventure.GoalKind.Guard or Adventure.GoalKind.Defend)
+                    foreach (var e in c.Alive)
+                    {
+                        var d = e.GlobalPosition - at;
+                        if (d.X * d.X + d.Z * d.Z <= WinchClearRange * WinchClearRange) return false;
+                    }
+        return true;
     }
 
     /// <summary>The mobs that hold the stop: every collective in the stop's room that stays put (guards and defenders; a patrol or alarm group does not hold a gate).</summary>
@@ -118,8 +133,17 @@ public partial class RailController : Node
             // the winch stands on the outer side of the party lane (away from the enemy lane)
             var gate = new RailGate(i, left, rightEdge, winchRight: lateral < 0f) { Transform = new Transform3D(frame.Basis.Orthonormalized(), at) };
             root.AddChild(gate);
+            gate.CanCrank = NoHolderNear;
+            gate.Lifted += OnGateLifted;
             _gates[i] = gate;
         }
+    }
+
+    /// <summary>A gate went up (the check or the winch): riders waiting at its stop start the boarding.</summary>
+    private void OnGateLifted(RailGate g)
+    {
+        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Boarding.Running && PlayerAboard()) Boarding.Start();
+        RefreshHud();
     }
 
     /// <summary>Server: every 0.25 s a down gate whose stop has no living mob lifts; seated riders then start the boarding.</summary>
@@ -128,17 +152,14 @@ public partial class RailController : Node
         _gateTimer -= dt;
         if (_gateTimer > 0f) return;
         _gateTimer = GateEvery;
+        var quiet = _restoredGates;
         for (var i = 0; i < _gates.Length; i++)
         {
             if (_gates[i] is not { Up: false } g || !IsInstanceValid(g)) continue;
             if (!Adventure.Objectives.CrewRules.StopCleared(AliveAtStop(i))) continue;
-            g.Lift();
-            if (i == StopIndex && State.Mode == CartMode.Held)
-            {
-                if (!Boarding.Running && PlayerAboard()) Boarding.Start();
-                RefreshHud();
-            }
+            if (quiet) { g.SetUp(); RefreshHud(); } else g.Lift(); // OnGateLifted does the rest
         }
+        _restoredGates = false;
     }
 
     /// <summary>Cage wagons coupled behind the cart, nearest first: the RailController poses them on the line behind it.</summary>

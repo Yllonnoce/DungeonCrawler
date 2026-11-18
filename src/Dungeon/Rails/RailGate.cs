@@ -1,4 +1,6 @@
 using DungeonCrawler.Core;
+using DungeonCrawler.Net;
+using DungeonCrawler.Party;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -17,6 +19,11 @@ public partial class RailGate : Node3D
 
     public int Stop { get; }
     public bool Up { get; private set; }
+    /// <summary>Set by the RailController: true when no living holder of the stop stands within range of the gate (the winch then works).</summary>
+    public Func<RailGate, bool>? CanCrank { get; set; }
+    /// <summary>The gate has been lifted (by the kill check or the winch; not by a restore).</summary>
+    public event Action<RailGate>? Lifted;
+    private double _refusedAt = -100;
 
     private readonly float _left, _right;
     private Node3D _bar = null!;
@@ -59,7 +66,8 @@ public partial class RailGate : Node3D
 
     private void Post(string name, float x, bool winch)
     {
-        var body = new StaticBody3D { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1, CollisionMask = 0 };
+        var body = winch ? new WinchPost(this) { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1 | 8, CollisionMask = 0 }
+            : new StaticBody3D { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1, CollisionMask = 0 };
         body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.3f, PostHeight, 0.3f) }, Position = new Vector3(0, PostHeight / 2f, 0) });
         Box(body, "Post", new Vector3(0.28f, PostHeight, 0.28f), new Vector3(0, PostHeight / 2f, 0), _wood);
         if (winch) Box(body, "Winch", new Vector3(0.5f, 0.2f, 0.2f), new Vector3(0, PostHeight - 0.2f, 0), _iron);
@@ -69,6 +77,26 @@ public partial class RailGate : Node3D
     private static void Box(Node3D parent, string name, Vector3 size, Vector3 at, Material material)
         => parent.AddChild(new MeshInstance3D { Name = name, Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Position = at });
 
+    /// <summary>The winch post: looked at, it offers "Crank the winch" while the gate is down.</summary>
+    private partial class WinchPost : StaticBody3D, IInteractable
+    {
+        private readonly RailGate _gate;
+        public WinchPost(RailGate gate) => _gate = gate;
+        public string Prompt => _gate.Up || NetSession.IsClient ? "" : "Crank the winch";
+        public void Interact(PartyController party, Adventurer actor) => _gate.Crank();
+    }
+
+    /// <summary>Server: the winch lifts the gate when none of its holders is near; otherwise the crew says no (once per 3 s).</summary>
+    public void Crank()
+    {
+        if (NetSession.IsClient || Up) return;
+        if (CanCrank?.Invoke(this) ?? true) { Lift(); return; }
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (now - _refusedAt < 3.0) return;
+        _refusedAt = now;
+        EventBus.Instance.Log("Not while they're still here.");
+    }
+
     /// <summary>The bar goes up over <see cref="LiftSeconds"/>; "The gate lifts." is logged.</summary>
     public void Lift()
     {
@@ -76,6 +104,7 @@ public partial class RailGate : Node3D
         Up = true;
         EventBus.Instance.Log("The gate lifts.");
         EventBus.Instance.PlaySfx("gate_lift"); // no clip yet: plan 6 adds the sound
+        Lifted?.Invoke(this);
         if (_bar == null || !IsInsideTree()) return;
         CreateTween().TweenProperty(_bar, "position:y", LiftedHeight, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
     }
