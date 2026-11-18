@@ -453,7 +453,14 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>The cart left a stop: an open wagon there with crew aboard couples on behind.</summary>
     private void OnCartEvent(CartEvent e)
     {
-        if (NetSession.IsClient || e.Kind != CartEventKind.Departed || _rails == null || !IsInstanceValid(_rails)) return;
+        if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails)) return;
+        if (e.Kind == CartEventKind.OnFoot) // no cart left: every coupled wagon's crew get out and follow the lead
+        {
+            foreach (var wagon in _wagons)
+                if (wagon.Coupled && wagon.Open && AnyAboard(wagon)) LetOut(wagon);
+            return;
+        }
+        if (e.Kind != CartEventKind.Departed) return;
         foreach (var wagon in _wagons)
         {
             if (wagon.Stop != e.Stop || !wagon.Open || wagon.Coupled || !AnyAboard(wagon)) continue;

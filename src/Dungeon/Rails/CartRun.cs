@@ -122,7 +122,7 @@ public sealed class CartRun
 }
 
 /// <summary>What happened to a cart, for whoever listens (plan 5 syncs it to clients).</summary>
-public enum CartEventKind { Departed, Arrived, Hit, Wrecked, Seated, Unseated, Restored }
+public enum CartEventKind { Departed, Arrived, Hit, Wrecked, Seated, Unseated, Restored, OnFoot }
 
 /// <param name="Stop">The stop concerned (Departed, Wrecked: the one last left; Arrived, Restored: the one reached), or −1.</param>
 /// <param name="Rider">The rider's <see cref="ICartRider.RiderId"/> (Seated, Unseated), or −1.</param>

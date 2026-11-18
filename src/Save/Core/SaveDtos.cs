@@ -244,6 +244,8 @@ public sealed class FloorStateDto
     public int? RailStop { get; set; }
     /// <summary>The heroes (party indices) seated in the cart when the save was made, or null: a load sets them down beside the cart at <see cref="RailStop"/>.</summary>
     public List<int>? RailRiders { get; set; }
+    /// <summary>The intermediate stops whose spare cart has been used, or null.</summary>
+    public List<int>? SparesUsed { get; set; }
 }
 
 /// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>

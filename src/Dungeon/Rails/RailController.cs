@@ -205,6 +205,7 @@ public partial class RailController : Node
     {
         Name = "RailController";
         ProcessPriority = -100; // pose the cart before the heroes' own _Process (their cameras) runs
+        _benchOrder = BenchOrder;
     }
 
     /// <summary>Read the stops off the track and park the cart at the first. Call before adding the controller to the tree.</summary>
@@ -235,6 +236,67 @@ public partial class RailController : Node
         Cart.RiderChanged += OnRiderChanged;
         root.AddChild(Cart);
         BuildGates(root);
+        BuildSpares(root);
+    }
+
+    // ---- spare carts -----------------------------------------------------------------------------
+
+    /// <summary>Intermediate stops (indices) whose spare has been used, for the save.</summary>
+    public IReadOnlyCollection<int> SparesUsed => _sparesUsed;
+    /// <summary>Spares still parked.</summary>
+    public int SparesLeft => _spares.Count - _sparesUsed.Count;
+    private readonly Dictionary<int, MineCart> _spares = new();
+    private readonly HashSet<int> _sparesUsed = new();
+
+    /// <summary>One stand-in cart per intermediate stop, on a free cell of the stop's room beside the platform (never a rail, a siding or a blocked cell), facing along the track. It is looks only: no prompt, never boarded.</summary>
+    private void BuildSpares(Node3D root)
+    {
+        if (_layout.Rail is not { } rail) return;
+        for (var i = 1; i < StopS.Length - 1 && i < rail.Stops.Count; i++)
+        {
+            var stop = rail.Stops[i];
+            if (stop.Platform.Count == 0 || stop.Room < 0 || stop.Room >= _layout.Rooms.Count) continue;
+            var free = Adventure.RoomCells.Free(_layout, _layout.Rooms[stop.Room]);
+            var mid = stop.Platform[stop.Platform.Count / 2];
+            GridPos? best = null, beside = null;
+            var bestKey = (int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue);
+            foreach (var c in free)
+            {
+                if (_layout.IsRail(c) || _builder.IsCellBlocked(c) || _sidings.Contains(c)) continue;
+                GridPos? near = null;
+                var nearD = int.MaxValue;
+                foreach (var p in stop.Platform)
+                {
+                    var d = (p.X - c.X) * (p.X - c.X) + (p.Y - c.Y) * (p.Y - c.Y);
+                    if (d < nearD) { nearD = d; near = p; }
+                }
+                if (near is not { } np || _layout.LevelOf(c) != _layout.LevelOf(np)) continue;
+                var fromMid = (c.X - mid.X) * (c.X - mid.X) + (c.Y - mid.Y) * (c.Y - mid.Y);
+                var key = (nearD, -fromMid, c.X, c.Y); // beside the platform, toward its end: the wagon's siding takes the middle
+                if (key.CompareTo(bestKey) >= 0) continue;
+                bestKey = key;
+                best = c;
+                beside = np;
+            }
+            if (best is not { } cell || beside is not { } platform) continue;
+            var at = _builder.Surface(cell);
+            var s = _track.Curve.GetClosestOffset(_track.ToLocal(_builder.Surface(platform)));
+            var along = -(_track.GlobalTransform * _track.Curve.SampleBakedWithRotation(s, true, true)).Basis.Z;
+            var basis = new Basis(Vector3.Up, Mathf.Atan2(-along.X, -along.Z));
+            var spare = new MineCart { Name = $"SpareCart{i}", PromptFor = _ => "", CollisionLayer = 1 };
+            root.AddChild(spare);
+            spare.GlobalTransform = new Transform3D(basis, at);
+            _builder.BlockCell(cell);
+            _sidings.Add(cell);
+            _spares[i] = spare;
+        }
+    }
+
+    private void HideSpare(int stop)
+    {
+        if (!_spares.TryGetValue(stop, out var spare) || !IsInstanceValid(spare)) return;
+        spare.Visible = false;
+        spare.CollisionLayer = 0;
     }
 
     public override void _EnterTree() => Instance = this;
@@ -336,6 +398,9 @@ public partial class RailController : Node
     /// <summary>What the save keeps: the stop the cart has reached (a ride under way keeps the stop it left).</summary>
     public int Capture() => StopIndex;
 
+    /// <summary>The stops whose spare cart is spent, or null when none is.</summary>
+    public List<int>? CaptureSpares() => _sparesUsed.Count == 0 ? null : _sparesUsed.OrderBy(i => i).ToList();
+
     /// <summary>The heroes seated in the cart (their indices), or null when nobody is: a load sets them down beside the cart.</summary>
     public List<int>? CaptureRiders()
     {
@@ -348,11 +413,13 @@ public partial class RailController : Node
 
     /// <summary>
     /// Back from a save: the cart Held at the stop it had reached (clamped to the line), plating full, nobody aboard.
-    /// A wrecked cart comes back whole at its last stop (spare carts are plan 3). The heroes saved as riders (their saved
+    /// A wrecked cart comes back whole at its last stop (no spare is spent for it). The heroes saved as riders (their saved
     /// poses were seats, mid-line on a ride under way), and anyone set down on a rail cell, step out beside the cart.
     /// </summary>
-    public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null)
+    public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null, IEnumerable<int>? sparesUsed = null)
     {
+        _sparesUsed.Clear();
+        if (sparesUsed != null) foreach (var i in sparesUsed) if (_spares.ContainsKey(i)) { _sparesUsed.Add(i); HideSpare(i); }
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
         if (StopS.Length == 0) return;
@@ -490,6 +557,8 @@ public partial class RailController : Node
 
     /// <summary>Companions on foot who come this close to a held cart with a player aboard hop in.</summary>
     const float HopInRange = 3f;
+    const float HopEvery = 0.25f;
+    private float _hopTimer;
 
     private void HopInNearby(PartyController party)
     {
@@ -512,15 +581,12 @@ public partial class RailController : Node
     {
         if (StopIndex >= StopS.Length - 1 || !PlayerAboard() || GetParent() is not { } floor) return;
         _bench.Clear();
-        foreach (var child in floor.GetChildren())
-            if (child is Npc { Dead: false, Downed: false, Escorting: true, Seated: false, Crew: false } npc
+        for (var i = 0; i < floor.GetChildCount(); i++)
+            if (floor.GetChild(i) is Npc { Dead: false, Downed: false, Escorting: true, Seated: false, Crew: false } npc
                 && npc.GlobalPosition.DistanceTo(from) <= CompanionBoardRange) _bench.Add(npc);
         if (_bench.Count == 0) return;
-        _bench.Sort((a, b) =>
-        {
-            var byGrisel = IsGrisel(b).CompareTo(IsGrisel(a)); // Grisel first
-            return byGrisel != 0 ? byGrisel : a.GlobalPosition.DistanceSquaredTo(from).CompareTo(b.GlobalPosition.DistanceSquaredTo(from));
-        });
+        _benchFrom = from;
+        _bench.Sort(_benchOrder);
         foreach (var npc in _bench)
         {
             if (Cart.Seats.Take(npc.RiderId, isHero: false) is not int seat) break; // the bench is full
@@ -530,6 +596,13 @@ public partial class RailController : Node
     }
     private static bool IsGrisel(Npc npc) => npc.Id == Adventure.Objectives.CrewRescueController.GriselId;
     private readonly List<Npc> _bench = new();
+    private Vector3 _benchFrom;
+    private readonly Comparison<Npc> _benchOrder;
+    private int BenchOrder(Npc a, Npc b)
+    {
+        var byGrisel = IsGrisel(b).CompareTo(IsGrisel(a)); // Grisel first
+        return byGrisel != 0 ? byGrisel : a.GlobalPosition.DistanceSquaredTo(_benchFrom).CompareTo(b.GlobalPosition.DistanceSquaredTo(_benchFrom));
+    }
 
     private bool SeatHero(Adventurer hero)
     {
@@ -614,7 +687,7 @@ public partial class RailController : Node
         {
             var playerAboard = PlayerAboard();
             if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
-            else HopInNearby(party);
+            else if ((_hopTimer -= dt) <= 0f) { _hopTimer = HopEvery; HopInNearby(party); }
             CountHeroes(party, out var seated, out var living);
             if (!playerAboard || seated == 0 || !GateUp(StopIndex)) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, or without a player
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
@@ -743,7 +816,44 @@ public partial class RailController : Node
                 victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
         }
         Boarding.Cancel();
+        SpareTakesOver();
         RefreshHud();
+    }
+
+    /// <summary>
+    /// The nearest intermediate stop (by distance along the line, ahead or behind) with an unused spare provides a new cart:
+    /// the spare disappears and the party's cart (same node and run) stands Held there with full plating, wagons still coupled
+    /// behind it. None left: the rest is on foot (an OnFoot event: the crew in coupled wagons get out and follow).
+    /// </summary>
+    private void SpareTakesOver()
+    {
+        int pick = -1;
+        var bestD = float.MaxValue;
+        for (var i = 1; i < StopS.Length - 1; i++)
+        {
+            if (_sparesUsed.Contains(i)) continue;
+            var d = Mathf.Abs(StopS[i] - State.S);
+            if (d < bestD) { bestD = d; pick = i; }
+        }
+        if (pick < 0)
+        {
+            EventBus.Instance.Log("No carts left. The rest is on foot.");
+            Raise(new CartEvent(CartEventKind.OnFoot, Stop: StopIndex));
+            return;
+        }
+        _sparesUsed.Add(pick);
+        HideSpare(pick);
+        StopIndex = pick;
+        Party.Reset(new CartState(StopS[pick], 0f, CartMode.Held, CartRules.MaxPlating));
+        Party.Limit = StopS[pick];
+        Cart.Speed = 0f;
+        _hitAt.Clear();
+        Party.Sync();
+        Party.PoseAt(State.S);
+        PoseTrain(State.S);
+        EventBus.Instance.Log($"A spare cart waits at stop {pick}.");
+        Raise(new CartEvent(CartEventKind.Arrived, Stop: pick));
+        if (!GateUp(pick)) EventBus.Instance.Log("The gate is down. Clear the stop.");
     }
 
     /// <summary>The seated human brakes (back) or pumps (forward); seated companions pump on a climb or when slow, two pumpers at most.</summary>

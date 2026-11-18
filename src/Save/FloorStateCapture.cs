@@ -112,7 +112,7 @@ public static class FloorStateCapture
         if (Core.Main.Instance?.Party is { } shopParty) { dto.ShopSold = shopParty.ShopSoldOnFloor.OrderBy(i => i).ToList(); dto.LuckyDipBought = shopParty.LuckyDipBoughtOnFloor.OrderBy(i => i).ToList(); }
         if (Adventure.FortuneDirector.Instance is { } fortune) dto.SecretsFound = fortune.FoundSecrets.OrderBy(i => i).ToList();
         if (floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault() is { } objective) dto.Objective = objective.Capture();
-        if (Dungeon.Rails.RailController.Instance is { } rails && rails.GetParent() == floorRoot) { dto.RailStop = rails.Capture(); dto.RailRiders = rails.CaptureRiders(); }
+        if (Dungeon.Rails.RailController.Instance is { } rails && rails.GetParent() == floorRoot) { dto.RailStop = rails.Capture(); dto.RailRiders = rails.CaptureRiders(); dto.SparesUsed = rails.CaptureSpares(); }
         dto.BossDefeated = Main.Instance?.BossDefeatedThisFloor == true || floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss && !e.IsAlive) || (layout.BossArena != null && !floorRoot.GetChildren().OfType<Enemy>().Any(e => e.IsBoss));
         return dto;
     }
@@ -210,7 +210,7 @@ public static class FloorStateCapture
         foreach (var i in dto.LuckyDipBought) party.LuckyDipBoughtOnFloor.Add(i);
         Adventure.FortuneDirector.Instance?.RestoreSecrets(dto.SecretsFound);
         // the cart back at the stop it reached, nobody aboard, its riders beside it (it looks again once the party is set down); a floor without a line ignores it
-        if (dto.RailStop is { } railStop && Dungeon.Rails.RailController.Instance is { } railController && railController.GetParent() == floorRoot) railController.Restore(railStop, dto.RailRiders);
+        if (dto.RailStop is { } railStop && Dungeon.Rails.RailController.Instance is { } railController && railController.GetParent() == floorRoot) railController.Restore(railStop, dto.RailRiders, dto.SparesUsed);
         if (dto.Objective is { } os)
         {
             floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault()?.Restore(os);

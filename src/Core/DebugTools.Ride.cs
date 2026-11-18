@@ -187,7 +187,9 @@ public partial class DebugTools
             case 9:
             {
                 if (rc!.State.Mode == CartMode.Rolling) { RideNoteHp(party, rc); if (_rideClock > 10f) Fail($"the cart was not wrecked within 10 s (plating {rc.State.Plating:0}, S={rc.State.S:0.0})"); break; }
-                if (rc.State.Mode != CartMode.Wrecked) { Fail($"the cart stopped ({rc.State.Mode}) instead of wrecking (plating {rc.State.Plating:0})"); return; }
+                // a spare cart takes over at once: the wreck leaves the cart Held at a stop, full plating, one spare spent
+                if (rc.State.Mode != CartMode.Held || rc.State.Plating < CartRules.MaxPlating - 0.01f || rc.SparesUsed.Count != 1)
+                { Fail($"after the wreck the cart is {rc.State.Mode} (plating {rc.State.Plating:0}, spares used {rc.SparesUsed.Count}); a spare should hold it at a stop"); return; }
                 var fails = new List<string>();
                 var lines = new List<string>();
                 foreach (var a in party.Active)
@@ -202,6 +204,7 @@ public partial class DebugTools
                 }
                 GD.Print($"[ride] 7 wrecked after {_rideClock:0.0} s at S={rc.State.S:0.0}: {string.Join("; ", lines)}; brute alive={_rideBrute != null && IsInstanceValid(_rideBrute) && _rideBrute.IsAlive}");
                 if (party.Adventurers.Any(a => IsInstanceValid(a) && a.Seated)) fails.Add("a hero is still seated");
+                if (rc.StopIndex < 1 || rc.StopIndex > rc.StopS.Length - 2) fails.Add($"the spare stands at stop {rc.StopIndex}, not an intermediate stop");
                 if (_rideHpBefore.Count == 0) fails.Add("nobody was seated when the cart wrecked");
                 if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
                 GD.Print("[ride] RESULT ok");
