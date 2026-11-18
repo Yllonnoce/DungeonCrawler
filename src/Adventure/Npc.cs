@@ -3,6 +3,7 @@ using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Generation;
+using DungeonCrawler.Dungeon.Rails;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Party;
 using Godot;
@@ -16,7 +17,7 @@ namespace DungeonCrawler.Adventure;
 /// <summary>What an NPC is on this floor: a quest giver from the plan, or one of the floor objective's people.</summary>
 public enum NpcMode { Quest, Ritualist, Prisoner, Fighter }
 
-public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazardVictim
+public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazardVictim, ICartRider
 {
     public const float WalkSpeed = 4.2f;
     public const float RunSpeed = 6.5f;
@@ -65,10 +66,19 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// <summary>The merchant in the tavern on floor 0: he briefs the party instead of trading (his wares come down later).</summary>
     public bool InTavern => IsMerchant && Floor == 0;
 
+    /// <summary>One of the railed jailbreak's crew: bleeds out when downed for <see cref="Objectives.CrewRules.BleedOutSeconds"/> unless revived.</summary>
+    public bool Crew { get; set; }
+    /// <summary>How long this NPC has been down (server clock, seconds); counted only for Crew, reset by a revive.</summary>
+    public float DownedSeconds { get; private set; }
+    private float _labelTimer;
+    private int _shownLeft = -1;
+
+    private bool CanBeRevived => Downed && !Dead && (Crew || (Mode == NpcMode.Quest && Escorting));
+
     public string DisplayName => NpcName;
     public bool IsAlive => !Dead && !Downed;
     public bool IsUnaware => false;
-    public string Prompt => Dead ? "" : IsMerchant ? $"Talk to {NpcName}" : Mode switch
+    public string Prompt => Dead ? "" : IsMerchant ? $"Talk to {NpcName}" : CanBeRevived ? $"Revive {NpcName}" : Mode switch
     {
         NpcMode.Ritualist => Downed ? $"Revive {NpcName}" : Objectives.ObjectiveController.Instance is Objectives.RitualController { Started: false } ? $"Begin with {NpcName}" : "",
         NpcMode.Prisoner => Objectives.ObjectiveController.Instance is Objectives.JailbreakController jail ? jail.PromptFor(this) : "",
@@ -126,8 +136,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     {
         if (Dead) return;
         // on a co-op client only talking is local; freeing a prisoner, starting the rite or getting a fighter up is the server's to do
-        if (Net.NetSession.IsClient && (Mode is NpcMode.Ritualist or NpcMode.Prisoner || (Mode == NpcMode.Fighter && Downed))) { Net.NetSession.Instance.Send(new Net.InteractIntent(Net.NetRefs.Npc(Id))); return; }
-        if (Mode == NpcMode.Fighter && Downed) { TryRevive(); return; }
+        if (Net.NetSession.IsClient && (Mode is NpcMode.Ritualist or NpcMode.Prisoner || (Mode == NpcMode.Fighter && Downed) || CanBeRevived)) { Net.NetSession.Instance.Send(new Net.InteractIntent(Net.NetRefs.Npc(Id))); return; }
+        if ((Mode == NpcMode.Fighter && Downed) || CanBeRevived) { TryRevive(); return; }
         switch (Mode)
         {
             case NpcMode.Ritualist:
@@ -225,7 +235,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             return false;
         }
         Downed = false;
-        Hp = MathF.Round(MaxHp * Objectives.RitualRules.ReviveHpFraction);
+        Hp = MathF.Round(MaxHp * (Mode is NpcMode.Ritualist or NpcMode.Fighter ? Objectives.RitualRules.ReviveHpFraction : Objectives.CrewRules.ReviveHpFraction));
+        DownedSeconds = 0f;
+        _shownLeft = -1;
         _label.Text = NpcName;
         _model?.Play("Idle", force: true);
         Mangled = false;
@@ -241,7 +253,10 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         if (Dead || Downed) return;
         Downed = true;
         Hp = 0;
-        _label.Text = $"{NpcName} (down)";
+        DownedSeconds = 0f;
+        _labelTimer = 0f;
+        _shownLeft = -1;
+        _label.Text = Crew ? $"{NpcName} (down {Objectives.CrewRules.BleedOutSeconds:0}s)" : $"{NpcName} (down)";
         _model?.Play("Death", force: true);
         EventBus.Instance.Log($"{NpcName} goes down!");
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Downed);
@@ -295,6 +310,18 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         var dt = (float)delta;
         if (!Net.NetSession.IsServer) { Greet(); GreetInTavern(); } // every player's own screen: a dedicated server has nobody to greet
         if (Net.NetSession.IsClient) { ClientTick(dt); return; }
+        BleedOut(dt);
+        if (Seated)
+        {
+            // the ride carries it (FollowSeat, called by the ride's owner): no walking, no gravity, no wounding hazard
+            if (Mode == NpcMode.Quest && Escorting && !Downed && !Dead) CheckStairs();
+            if (_model != null)
+            {
+                if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
+                ShowGait(0f, dt);
+            }
+            return;
+        }
         var v = Velocity;
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
         var planar = Vector3.Zero;
@@ -356,6 +383,118 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
             ShowGait(actual, dt);   // a blocked NPC stands instead of running on the spot
         }
+    }
+
+    /// <summary>A downed crew member's clock (server only): the label counts the seconds left; at the end they are gone.</summary>
+    private void BleedOut(float dt)
+    {
+        if (!Downed || !Crew || Dead) return;
+        DownedSeconds += dt;
+        if (DownedSeconds >= Objectives.CrewRules.BleedOutSeconds) { Die(); return; }
+        _labelTimer += dt;
+        if (_labelTimer < 0.5f) return;
+        _labelTimer = 0f;
+        var left = (int)MathF.Ceiling(Objectives.CrewRules.BleedOutSeconds - DownedSeconds);
+        if (left == _shownLeft) return;
+        _shownLeft = left;
+        _label.Text = $"{NpcName} (down {left}s)";
+    }
+
+    // ---- riding ----------------------------------------------------------------------------------
+
+    /// <summary>What this NPC rides (a cart, a cage wagon), null on foot.</summary>
+    public Node3D? Ride { get; private set; }
+    public bool Seated => Ride != null;
+    private Func<Transform3D>? _seatAt;
+    private uint _layerOnFoot;
+    private int _riderId = -1;
+    private float _seatYaw;
+
+    /// <summary>The seat book's id for this NPC: 100 + its place among the floor's NPCs, fixed for the ride.</summary>
+    public int RiderId
+    {
+        get
+        {
+            if (_riderId < 0)
+            {
+                var index = 0;
+                if (GetParent() is { } parent)
+                    foreach (var n in parent.GetChildren())
+                    {
+                        if (n == this) break;
+                        if (n is Npc) index++;
+                    }
+                _riderId = 100 + index;
+            }
+            return _riderId;
+        }
+    }
+
+    /// <summary>The cart this NPC sits in (null on foot or on another kind of ride).</summary>
+    public ICartBody? Cart { get; private set; }
+    public int Seat { get; private set; } = -1;
+    public float SeatYaw { get => _seatYaw; set => _seatYaw = Mathf.Clamp(value, -Mathf.Pi, Mathf.Pi); }
+
+    /// <summary>Sit on <paramref name="ride"/> at the pose <paramref name="seat"/> gives (world space, −Z forward); its owner calls <see cref="FollowSeat"/> every rendered frame.</summary>
+    public void SitIn(Node3D ride, Func<Transform3D> seat)
+    {
+        if (!Seated) _layerOnFoot = CollisionLayer;
+        Ride = ride;
+        _seatAt = seat;
+        _seatYaw = 0f;
+        CollisionLayer = 0;
+        Velocity = Vector3.Zero;
+        Fleeing = false;
+        MoveTarget = null;
+        _mover.Reset();
+        FollowSeat();
+    }
+
+    /// <summary>Take the booked <paramref name="seat"/> of a cart (<see cref="RiderId"/> in its book).</summary>
+    public void SitIn(ICartBody cart, int seat)
+    {
+        if (Cart != null && Cart != cart) LeaveSeat();
+        Cart = cart;
+        Seat = seat;
+        SitIn((Node3D)cart, () => cart.SeatTransform(seat));
+        cart.Admit(this); // last: whoever hears of it sees the body seated
+    }
+
+    /// <summary>Upright at the seat, facing its heading turned by <see cref="SeatYaw"/>.</summary>
+    public void FollowSeat()
+    {
+        if (_seatAt == null) return;
+        if (Ride == null || !IsInstanceValid(Ride)) { LeaveSeat(); return; }
+        var seat = _seatAt();
+        var f = -seat.Basis.Z;
+        var heading = Mathf.Atan2(-f.X, -f.Z);
+        GlobalTransform = new Transform3D(new Basis(Vector3.Up, heading + _seatYaw), seat.Origin);
+    }
+
+    /// <summary>Out of the seat and onto the ground at <paramref name="at"/>; an escort keeps following.</summary>
+    public void GetOut(Vector3 at) => GetOut(at, Vector3.Zero);
+
+    public void GetOut(Vector3 at, Vector3 velocity)
+    {
+        LeaveSeat();
+        GlobalPosition = at;
+        Velocity = velocity;
+        _mover.Reset();
+    }
+
+    private void LeaveSeat()
+    {
+        var forward = -GlobalTransform.Basis.Z;
+        if (Cart is { } cart && cart is GodotObject o && IsInstanceValid(o)) cart.Release(this);
+        var wasSeated = Seated;
+        Cart = null;
+        Seat = -1;
+        Ride = null;
+        _seatAt = null;
+        _riderId = -1;
+        _seatYaw = 0f;
+        if (wasSeated) CollisionLayer = Dead ? 0u : _layerOnFoot;
+        if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
     }
 
     /// <summary>Idle, Walk or Run for this ground speed; a viewer-rigged model's gait is played at the pace the ground passes so its feet stay planted.</summary>
@@ -597,7 +736,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         CollisionLayer = 0;
         _label.Text = $"{NpcName} (dead)";
         _model?.Play("Death", force: true);
-        EventBus.Instance.Log($"{NpcName} is dead.");
+        EventBus.Instance.Log(Crew ? $"{NpcName} is gone." : $"{NpcName} is dead.");
         EventBus.Instance.RaiseNpcEvent(Id, NpcEventKind.Died);
     }
 

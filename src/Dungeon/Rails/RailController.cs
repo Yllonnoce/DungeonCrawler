@@ -442,7 +442,7 @@ public partial class RailController : Node
             {
                 var child = parent.GetChild(i);
                 if (child is Enemy { IsAlive: true } enemy) _bodies.Add(enemy);
-                else if (child is Npc { Dead: false, Downed: false } npc) _bodies.Add(npc);
+                else if (child is Npc { Dead: false, Downed: false, Seated: false } npc) _bodies.Add(npc);
             }
         }
         RunOverSweep.Judge(Party, _bodies, _now, _hitAt, _hits);
@@ -525,7 +525,7 @@ public partial class RailController : Node
         foreach (var rider in Aboard())
         {
             GetOut(rider); // V is 0: no thrown run-over
-            if (rider is IHazardVictim victim && !(rider is Adventurer { Downed: true }))
+            if (rider is IHazardVictim victim && !(rider is Adventurer { Downed: true }) && !(rider is Npc { Downed: true }))
                 victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
         }
         Boarding.Cancel();
