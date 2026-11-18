@@ -33,7 +33,11 @@ public static class SetPieceRules
     const int DryT = 6 * TicksPerSecond, WarnT = (int)(1.5f * TicksPerSecond), PouringT = 3 * TicksPerSecond;
     const int PourCycleT = DryT + WarnT + PouringT;
 
-    public const float JumpSpeed = 6.5f;
+    /// <summary>
+    /// The lip speed that makes the jump: one pumper with every wagon coupled clears it (6 × 1.2 / 1.15 = 6.26 m/s), an unpumped
+    /// cart never does (6.0 m/s empty, less with wagons), so a lone player can always make it by pumping.
+    /// </summary>
+    public const float JumpSpeed = 6.1f;
     public const float TrestleGrace = 4f;
     public const float RunawayEvery = 40f;
     public const float SlagTrafficEvery = 25f;

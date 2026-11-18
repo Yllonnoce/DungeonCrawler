@@ -453,10 +453,11 @@ public partial class RailEncounterController
     // ---- the set pieces --------------------------------------------------------------------------
 
     /// <summary>
-    /// The hammers' beat: the glow (the warning) cues its sound once a cycle; at the drop, a cart under a hammer loses
-    /// <see cref="HammerDent"/> plating and its riders are shaken (never mangled), and a walker under it is crushed.
+    /// The hammers' beat: the glow (the warning) cues its sound once a cycle; at the drop, a walker under a hammer is crushed (any
+    /// time), and with <paramref name="judgeCart"/> (their ride is armed) a cart under it loses <see cref="HammerDent"/> plating and
+    /// its riders are shaken (never mangled).
     /// </summary>
-    private void TickHammers(Piece piece)
+    private void TickHammers(Piece piece, bool judgeCart)
     {
         if (piece.Hammers == null) return;
         var tick = _builder.FloorTick;
@@ -468,7 +469,7 @@ public partial class RailEncounterController
             if (phase == was) continue;
             if (phase == HammerPhase.Glow && Mathf.Abs(_rails.State.S - hammer.S) <= SfxReach) EventBus.Instance.PlaySfx("hammer_wind"); // placeholder: plan 6 adds the sound (not positional: only near the cart)
             if (phase != HammerPhase.Fall) continue;
-            if (_rails.State.Mode != CartMode.Wrecked && !_rails.OnEnemyLane(hammer.S) && Mathf.Abs(_rails.State.S - hammer.S) <= CartRules.HalfLength + DropHammer.HalfLength + 0.05f)
+            if (judgeCart && _rails.State.Mode != CartMode.Wrecked && !_rails.OnEnemyLane(hammer.S) && Mathf.Abs(_rails.State.S - hammer.S) <= CartRules.HalfLength + DropHammer.HalfLength + 0.05f)
             {
                 HammerHits++;
                 EventBus.Instance.Log("A drop hammer slams into the cart!");
@@ -515,10 +516,11 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// The pour's clock: the warning cues its hiss; while it pours, a cart through the stream loses <see cref="PourDent"/> plating
-    /// and each seated hero is burned twice, once per pour, and a walker in it burns every <see cref="PourBurnEvery"/> s.
+    /// The pour's clock: the warning cues its hiss; while it pours, a walker in it burns every <see cref="PourBurnEvery"/> s (any
+    /// time), and with <paramref name="judgeCart"/> (its ride is armed) a cart through the stream loses <see cref="PourDent"/> plating
+    /// and each seated hero is burned twice, once per pour.
     /// </summary>
-    private void TickPour(Piece piece, float dt)
+    private void TickPour(Piece piece, float dt, bool judgeCart)
     {
         if (piece.Pour is not { } pour) return;
         var phase = pour.Quenched ? PourPhase.Dry : SetPieceRules.Pour(_builder.FloorTick, out _);
@@ -530,7 +532,7 @@ public partial class RailEncounterController
             if (phase == PourPhase.Pouring) { piece.PourCount++; piece.BurnClock = 0f; }
         }
         if (phase != PourPhase.Pouring) return;
-        if (piece.PourHit != piece.PourCount && _rails.State.Mode != CartMode.Wrecked && !_rails.OnEnemyLane(piece.S)
+        if (judgeCart && piece.PourHit != piece.PourCount && _rails.State.Mode != CartMode.Wrecked && !_rails.OnEnemyLane(piece.S)
             && Mathf.Abs(_rails.State.S - piece.S) <= CartRules.HalfLength + MoltenPour.Zone)
         {
             piece.PourHit = piece.PourCount;

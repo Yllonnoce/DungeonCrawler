@@ -29,7 +29,7 @@ public partial class RailEncounterController
         public OreBuckets? Buckets;
         /// <summary>Its warning has been called this arming.</summary>
         public bool Barked;
-        /// <summary>A wreck or a load undid the ride: the heap stands again (the pour's valve is mended) at the next arming.</summary>
+        /// <summary>A wreck or a load undid the ride: the heap stands again at the next arming (a broken valve stays broken for the floor).</summary>
         public bool Rebuild;
         public DropHammer[]? Hammers;
         public MoltenPour? Pour;
@@ -51,10 +51,19 @@ public partial class RailEncounterController
     /// <summary>Stand-ins of the armed ride that go with it if the cart stops short ("lone"); a thrower is not on it.</summary>
     private readonly List<Enemy> _lones = new();
     private readonly List<(string id, Enemy enemy)> _throwers = new();
+    /// <summary>Thrower encounters that have stood once on this floor: the first is a full enemy (it stays after the cart passes, for loot and XP); one sent again after it died or a load is a reinforcement (no loot farm).</summary>
+    private readonly HashSet<string> _throwersSent = new();
     private int _headsBarked;
 
     /// <summary>The set pieces built on this floor (tests and the smoke read it).</summary>
     public int SetPieceCount => _pieces.Count;
+    /// <summary>Whether <paramref name="enemy"/> is one of the floor's trackside throwers (tests read it).</summary>
+    internal bool IsThrower(Enemy enemy)
+    {
+        foreach (var (_, e) in _throwers) if (e == enemy) return true;
+        return false;
+    }
+
     /// <summary>Times the beam has ducked the riders (tests read it).</summary>
     public int BeamPasses { get; private set; }
 
@@ -111,13 +120,13 @@ public partial class RailEncounterController
                 var baseProfile = _builder.EnemyProfile(id);
                 var profile = baseProfile == null ? null : baseProfile with { WindupSeconds = Mathf.Max(ThrowerWindup, baseProfile.WindupSeconds) };
                 if (_builder.SpawnEnemy(id, spot, _builder.CurrentFloor, profile: profile) is not { } thrower) return;
-                thrower.IsReinforcement = true;
-                thrower.HoldAt(spot);
+                thrower.HoldAt(spot); // (it marks a holder a reinforcement: the flag is set after)
+                thrower.IsReinforcement = !_throwersSent.Add(enc.Id); // the first pays like any enemy; a re-armed ride's next one only gives XP
                 var toward = track.Point(s) - spot;
                 toward.Y = 0f;
                 if (toward.LengthSquared() > 0.01f) thrower.LookAt(thrower.GlobalPosition + toward, Vector3.Up);
                 _throwers.Add((enc.Id, thrower));
-                GD.Print($"[rails] thrower {enc.Id} ({thrower.Profile.Name}, wind-up {thrower.Profile.WindupSeconds:0.0} s) stands in the pocket at {spot} for party S={s:0.0} (ride {enc.Ride})");
+                GD.Print($"[rails] thrower {enc.Id} ({thrower.Profile.Name}, wind-up {thrower.Profile.WindupSeconds:0.0} s, reinforcement={thrower.IsReinforcement}) stands in the pocket at {spot} for party S={s:0.0} (ride {enc.Ride})");
                 break;
             }
         }
@@ -221,14 +230,23 @@ public partial class RailEncounterController
         CutGaps(gaps);
     }
 
-    /// <summary>The armed ride's pieces: the beam and the points act as the rolling cart's front reaches them; the heap and the buckets tick while the ride is armed (a cart halted at the heap too).</summary>
+    /// <summary>
+    /// The armed ride's pieces: the beam and the points act as the rolling cart's front reaches them; the heap and the buckets tick
+    /// while the ride is armed (a cart halted at the heap too). The hammers and the pour fall on their clocks whether or not their
+    /// ride is armed: a body under them (a walker in the hall, an enemy) is hurt any time; the cart is judged only on its ride.
+    /// </summary>
     private void TickSetPieces(PartyController party, float dt)
     {
-        if (_pieces.Count == 0 || ArmedRide < 1) return;
+        if (_pieces.Count == 0) return;
         var rolling = _rails.State.Mode == CartMode.Rolling;
         foreach (var piece in _pieces)
         {
-            if (piece.Plan.Ride != ArmedRide) continue;
+            if (ArmedRide < 1 || piece.Plan.Ride != ArmedRide)
+            {
+                if (piece.Plan.Kind == "hammers") TickHammers(piece, judgeCart: false);
+                else if (piece.Plan.Kind == "pour") TickPour(piece, dt, judgeCart: false);
+                continue;
+            }
             switch (piece.Plan.Kind)
             {
                 case "beam":
@@ -244,10 +262,10 @@ public partial class RailEncounterController
                     TickBuckets(piece, dt);
                     break;
                 case "hammers":
-                    TickHammers(piece);
+                    TickHammers(piece, judgeCart: true);
                     break;
                 case "pour":
-                    TickPour(piece, dt);
+                    TickPour(piece, dt, judgeCart: true);
                     break;
                 case "trestle":
                     TickTrestle(piece, rolling, dt);

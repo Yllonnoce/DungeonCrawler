@@ -1196,8 +1196,9 @@ only: a co-op client gets the enemies through the usual snapshots and sees nothi
 cart's departure from stop k−1 arms ride k. Lone standers, throwers and the golem appear at the departure, so they are
 already there to be seen. Every other item starts as the cart passes its `At`. The cart arriving, being wrecked or restored,
 or the party going on foot clears the ride's live items: slag carts and their riders go silently. A ride armed again (after
-a wreck, or a load) runs again from its start. Every enemy a ride spawns is a reinforcement (no loot farm), and none may be a
-boss: a boss dying on floor 12 would open the stairs through `Main.OnBossDefeated` and skip the crew. Every hazard warns
+a wreck, or a load) runs again from its start. Every enemy a ride spawns is a reinforcement (no loot farm), except a
+thrower the first time it stands (it stays after the cart passes and pays loot and XP like any enemy; one sent again after
+it died, or after a load, is a reinforcement). None may be a boss: a boss dying on floor 12 would open the stairs through `Main.OnBossDefeated` and skip the crew. Every hazard warns
 first, by light and a sound cue: one on a timer at least 1.5 s before it can hurt anyone, a cart by its bell at 3 s of
 look-ahead. The cues (`cart_bell`, `switch_clunk`,
 `cart_crash`, `crate_break`, `bucket_creak`, `hammer_wind`, `pour_hiss`, `golem_windup`, `golem_slam`, `trestle_creak`, `timber_collapse`,
@@ -1209,7 +1210,7 @@ Floor 12's rides (`data/adventures/builtin/floor_12.json`):
 | Ride | Stops | Encounters | Set pieces |
 |---|---|---|---|
 | 1 (≈71 m) | landing → S1 | a lone cinder on the rails (0.45), a forge priest thrower in a pocket (0.8) | the low beam (0.6) |
-| 2 (≈185 m) | S1 → S2 | three slag carts: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), 2 hounds and a cinder (0.75, −3) | — |
+| 2 (≈185 m) | S1 → S2 | three slag carts: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | — |
 | 3 (≈142 m) | S2 → S3 | a slag cart with a cinder brute (0.3, +8) | switch out (0.2), the ore heap (0.35), switch back (0.55), ore buckets (0.75) |
 | 4 (≈75 m) | S3 → exit | the golem (0.05) | drop hammers (0.25), the pour (0.45), the trestle (0.6), the jump (0.75), the spur (0.85), the buffer (0.95) |
 
@@ -1230,7 +1231,12 @@ cart that is alongside, within 6 m of the party's cart (or of a coupled wagon wi
 glow and a "Hound!" call. It then leaps on a 0.6 s arc onto a free boarder spot: two on the cart's rim, one on each crewed
 wagon's roof. With no spot free it misses and lands beside the party lane as a normal creature. A boarder bites with its
 normal melee (a wagon boarder bites the crew inside), dents a rolling cart's plating by 3 every 2 s, and falls off when it
-dies.
+dies. When the cart is wrecked, live boarders drop beside the lane where it was wrecked (`RailController.WreckedAt`), not at
+the stop where a spare takes over: a wreck judged inside the encounter controller's tick is told at the rail controller's
+next flush, after the spare has moved the cart.
+
+The cart's plating is mended to full whenever it rolls into a stop (`RailController.Arrive`), as a load would give it: each
+ride has its own 100. A halt at the heap is not an arrival and mends nothing.
 
 Traffic (`RailEncounterController.Traffic.cs`). Every 25 s with no ride armed, no ride's slag cart live and the party's
 cart not rolling, a riderless slag cart runs the whole enemy line at cruise. There is at most one, and it goes when a ride
@@ -1241,7 +1247,8 @@ member or escort on foot on a warned lane walks to the nearest pocket of that la
 the rails within 3 cells) and holds there until the cart's front is 2 m past it.
 
 Switches and the lane blend (ride 3). A `switch_out` lever (`TrackSwitch`) stands between the lanes, 5 m short of its
-points. E or any hit toggles it (thrown, or set back); a blade's sight ray ignores the lever's own collider. Once the cart's front has
+points. E toggles it (thrown, or set back); any hit only throws it, so a stray friendly shot never sets a thrown lever back. A
+blade's sight ray ignores the lever's own collider. Once the cart's front has
 passed the points the lever's prompt is gone. Thrown as the front reaches the points, the cart crosses
 (`RailController.Cross`). The ride's next `switch_back` (always thrown, untouchable) brings it home. The pose eases across
 over 6 m after each switch (`LaneBlendAt`, read per S, so each coupled wagon crosses at its own S); crossover rails are
@@ -1249,7 +1256,8 @@ laid as dressing, and timber posts in the way are taken down. While the front is
 (`FrontOnEnemyLane`, the one test for spawning, pacing, ramming and the sweep), the run-over sweep and the warning judge
 bodies against the enemy lane. There, a slag cart ahead cannot outrun the party's cart (it runs at most 2 m/s slower).
 When the front reaches its back end it is rammed: it derails and the plating takes 10. Levers fall back to straight
-when the cart arrives, is wrecked or restored, or the party goes on foot.
+when the cart is wrecked or restored, or the party goes on foot. An arrival at stop k sets back only the levers of rides
+1..k, so a lever a walker threw ahead for a later ride (ride 3's switch, ride 4's spur) stays thrown.
 
 The heap. An `OreHeap` blocks the party lane (`RailController.BlockLine`). Its lantern blinks while a cart bears down on
 it. A seated companion calls "Line's blocked — switch!" once, at 3 s of look-ahead to the lever while the lever is still
@@ -1281,10 +1289,13 @@ away from the enemy lane, 3.5 m before the pour) bursts to one hit, and the pour
 after the cart's front first runs onto it, and a cart still on it is wrecked; the log says "The trestle groans under the
 cart." when the clock starts. The jump is a 5 m gap in the rails (`RailController.SetGap`). Seated companions pump
 while its lip is within 30 m ahead (two at most), and one calls "Pump it — we have to jump!" at 3 s of look-ahead to the
-lip. At 6.5 m/s or more the cart flies an arc over the gap (its pose rises per S, so each wagon flies at its own S) and lands
+lip. At 6.1 m/s or more the cart flies an arc over the gap (its pose rises per S, so each wagon flies at its own S) and lands
 with a shake. Slower, it drops in and is wrecked. The buffer (`BufferStop`) across the line just short of the last stop is
-smashed by the cart's front, which does no harm; the cart rolls on into the stop. Hammers and the pour only hurt while
-ride 4 is armed.
+smashed by the cart's front, which does no harm; the cart rolls on into the stop. 6.1 m/s is one pumper's speed with all
+three wagons coupled (6 × 1.2 / 1.15 = 6.26), while an unpumped cart reaches at most 6.0, so the jump always needs a pump
+and a lone player can always make it. The hammers and the pour fall on their clocks whether or not ride 4 is armed: a body
+under them (a hero walking the hall, an enemy, an NPC under a hammer) is hurt any time; the cart is judged only while ride 4
+is armed. Their warning cues still play only while the party's cart is within 25 m along the line.
 
 Saving mid-ride. A ride under way is not saved: a load puts the cart Held at the stop it left with nobody aboard, and the
 ride runs again from its start when the cart next departs (`RailEncounterController.Restore` clears every live item and
@@ -1301,22 +1312,30 @@ wagon now. `RailEncounterController.TraceTraffic` prints the warnings and refuge
 `BeamPasses`, `Rams`, `HammerHits`, `PourHits`, `GolemSlams`, `Leapers` and `Seeking`.
 
 `--test-chase` rides the four rides of the built-in floor 12 at lethality 3 with no AI and prints `[chase]` lines (a 300 s
-quit timeout and the scripted rides' watchdog). It plays the condemned branch: each stop's guards die by the test's hand on
+quit timeout and the scripted rides' watchdog). At stop 1, before ride 2, it levels the party to `--party-level=N`
+(not at the landing: a levelled seated rogue can kill ride 1's lone cinder before the cart runs it over; default 12: the XP curve
+aims at level 18–20 after floor 20, and floors 1–11 give about 28% of a run's XP, which is level 11.6–12.9). Each member's
+stat points go two to its class's best primary for one to Vitality, and it learns what its tree allows in tree order; no
+gear is added. The built-in start puts the party at level 6, so a lower N only spends its unspent points. It plays the condemned branch: each stop's guards die by the test's hand on
 arrival, and each cage opens with the orc's keys, so it is a ride test. The test mends the party at each stop and keeps
 the floor's own mobs culled. Section 1 rides the whole line. On ride 1 the lone cinder must die under the cart, and the beam
 must pass with no damage to the seated riders. At stop 1, with nobody aboard and no ride armed, the test sets the traffic
 clock to a quarter second. A companion held on the enemy lane must get "Cart coming!" and then be mangled, and one held in an
 enemy-lane pocket must be untouched. On ride 2 all three slag carts must appear and pull alongside. A debug hit breaks the first
-one's brake shoe, which must derail it with its riders, and at least one hound must leap. On ride 3 the switch is thrown
-through `DebugThrowSwitches(3)`: the cart must cross, ram the slag cart ahead and cross back. On ride 4 the golem must come
-out as a carried elite, never a boss. The spur lever is thrown through `DebugThrow()` at the departure, and the golem must be
-diverted. The jump must be made at 6.5 m/s or more with two pumping, and the cart must reach the end of the line through the
+one's brake shoe, which must derail it with its riders, and at least one hound must leap. The lead sits idle on ride 2.
+Each boarder and who killed it (a hero by name, a crew member or a hazard) is logged, and at the default level or higher at
+most one companion may go down by stop 2. At every stop the cart must stand with full plating. Ride 4's spur lever is
+thrown through `DebugThrow()` as ride 2 starts, and must still be thrown at stops 2 and 3. On ride 3 the switch is thrown by
+a hit (`ReceiveAttack`), and a second hit must leave it thrown: the cart must cross, ram the slag cart ahead and cross back,
+and the arrival at stop 3 must set that lever back. On ride 4 the golem must come out as a carried elite, never a boss, and
+must be diverted by the lever thrown on ride 2. The jump must be made at 6.1 m/s or more with two pumping, and the cart must reach the end of the line through the
 buffer. There the crew must be home and the stairs must open. Section 2 builds floor 12 again and restores the cart at stop
 2 (`RestoreGates`, `Restore(2)`). Ride 3's switch is left straight: the cart must crash into the heap (40 plating, a `Halted`
 event). The lead gets out and breaks the heap with real swings (mouse look and `PartyController.Attack`, the input path),
 and the cart must resume (a `Resumed` event) and reach stop 3. On ride 4 the test holds the cart under a hammer and then under
 the pour until each hits, and kills the golem after its first slam. It breaks the valve with a debug hit, then saves and loads
-mid-ride. The cart must come back Held at stop 3 with `GolemDefeated` and the valve broken. Departing again, no golem may come
+mid-ride. The cart must come back Held at stop 3 with `GolemDefeated` and the valve broken. With no ride armed, a stunned
+cinder stood under the middle hammer must be hurt by its next fall. Departing again, no golem may come
 and the pour must not run, and the jump and the buffer must work again. Throughout, every enemy on the floor root (plan
 collectives included) is swept for a boss at each ride's start and every frame, and the stairs must stay sealed until the crew
 are home. Each hazard's warning (the bell's "Cart coming!", the heap's call, a hammer's glow, the pour's warning, the golem's

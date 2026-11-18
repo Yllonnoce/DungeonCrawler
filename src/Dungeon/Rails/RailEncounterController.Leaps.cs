@@ -94,7 +94,7 @@ public partial class RailEncounterController
         if (_carts.Count > 0) StartCrouches();
         for (var i = _leaps.Count - 1; i >= 0; i--)
         {
-            if (i >= _leaps.Count) continue; // a wreck cleared the lot
+            if (i >= _leaps.Count) continue; // defensive: the list emptied under the loop
             var l = _leaps[i];
             var h = l.Hound;
             if (!IsInstanceValid(h) || h.IsQueuedForDeletion()) { ReleaseLeap(l); _leaps.RemoveAt(i); continue; }
@@ -279,12 +279,12 @@ public partial class RailEncounterController
             if (h.BoardTarget is not { IsAlive: true } || !IsInstanceValid(h.BoardTarget)) h.BoardTarget = NearestCrew(wagon, h.GlobalPosition); // the one it bit went down: the next
             return true;
         }
-        if (_rails.State.Mode != CartMode.Rolling) return true; // it only bites the plating of a cart that rolls (a held cart is mended at the stop)
+        if (_rails.State.Mode != CartMode.Rolling) return true; // it only bites the plating of a cart that rolls (a halted one stands still; arriving at a stop mends the cart to full)
         l.Dent += dt;
         if (l.Dent >= DentEvery)
         {
             l.Dent -= DentEvery;
-            _rails.DentPlating(DentAmount); // plating gone wrecks the cart, and the wreck clears this ride's leaps from inside (the loop checks)
+            _rails.DentPlating(DentAmount); // plating gone wrecks the cart; the Wrecked event comes at the RailController's next flush, and ClearLeaps then drops the boarders at the wreck's place
         }
         return true;
     }
@@ -310,9 +310,14 @@ public partial class RailEncounterController
             if (_leaps[i].Phase == LeapPhase.Aboard && IsInstanceValid(_leaps[i].Hound)) _leaps[i].Hound.FollowCarrier();
     }
 
-    /// <summary>The ride is over: boarders and leapers go silently like riders, or, when the cart wrecked, drop beside the lane and fight on foot.</summary>
+    /// <summary>
+    /// The ride is over: boarders and leapers go silently like riders, or, when the cart wrecked, drop beside the lane where it was
+    /// wrecked (<see cref="RailController.WreckedAt"/>: a spare may have moved the cart, and its boarders with it, before the
+    /// Wrecked event is told) and fight on foot.
+    /// </summary>
     private void ClearLeaps(bool wrecked)
     {
+        var wreck = _rails.WreckedAt;
         for (var i = _leaps.Count - 1; i >= 0; i--)
         {
             var l = _leaps[i];
@@ -324,9 +329,11 @@ public partial class RailEncounterController
             if (l.Phase == LeapPhase.Crouch) continue; // still a rider of its slag cart: that cart frees it
             if (wrecked && h.IsAlive)
             {
-                if (h.Carried) h.Drop(Beside(h.GlobalPosition));
-                else if (h.Leaping) h.LandAt(Beside(h.GlobalPosition));
+                var at = Beside(wreck ?? h.GlobalPosition);
+                if (h.Carried) h.Drop(at);
+                else if (h.Leaping) h.LandAt(at);
                 h.ForceAggro();
+                GD.Print($"[rails] {h.Name} drops off the wrecked cart at {at}");
             }
             else h.QueueFree();
         }

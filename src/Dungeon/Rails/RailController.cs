@@ -665,9 +665,17 @@ public partial class RailController : Node
     /// </summary>
     private void SetCartLayer() => Cart.CollisionLayer = State.Mode == CartMode.Rolling ? 8u : 1u | 8u;
 
+    /// <summary>
+    /// Where the cart was last wrecked (its body's place before a spare took over), or null before any wreck. A wreck judged
+    /// inside another node's tick is told at this controller's next flush, after the spare has moved the cart: whoever clears
+    /// the ride then (the boarders) reads the wreck's place here.
+    /// </summary>
+    public Vector3? WreckedAt { get; private set; }
+
     /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
     private void Wreck()
     {
+        WreckedAt = Cart.GlobalPosition;
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
@@ -765,9 +773,14 @@ public partial class RailController : Node
         return input with { Brake = brake, Pumpers = pumpers };
     }
 
+    /// <summary>
+    /// The cart rolls into the next stop: it is mended there to full plating (as a load would give it), so each ride has its
+    /// own budget and one ride's mistake does not wreck the next. A halt on the line is not an arrival and mends nothing.
+    /// </summary>
     private void Arrive()
     {
         StopIndex++;
+        Party.State = State with { Plating = CartRules.MaxPlating };
         ResetLine();
         foreach (var rider in Cart.Riders.Values) if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Pumping = false;
         var last = StopIndex >= StopS.Length - 1;

@@ -34,6 +34,7 @@ namespace DungeonCrawler.Core;
 ///   --test-ride-edges   floor 12: a companion revived behind the cart, a mid-ride load, the human thrown at lethality 1, companions left at a stop
 ///   --test-crew[=forgiven|condemned]  floor 12: the scripted rescue (stops, gates, cages, Grisel's branch, a save mid-ride, a lost crew member, the win), then a wreck and a spare
 ///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), then the heap and a save mid-ride 4; warning timings checked
+///   --party-level=N     --test-chase levels the party to N first (default 12, the shipped campaign's level by floor 12)
 /// </summary>
 public partial class DebugTools : Node
 {
@@ -287,6 +288,7 @@ public partial class DebugTools : Node
                 if (branch is not ("forgiven" or "condemned")) { GD.PrintErr($"[crew] --test-crew={branch}: the branch is forgiven or condemned"); branch = "condemned"; }
                 _testCrew = true; _crewForgiven = branch == "forgiven"; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240;
             }
+            else if (arg.StartsWith("--party-level=")) _chPartyLevel = Math.Clamp(int.Parse(arg["--party-level=".Length..]), 1, Characters.Leveling.MaxLevel);
             else if (arg == "--test-chase") { _testChase = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }

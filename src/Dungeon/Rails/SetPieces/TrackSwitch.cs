@@ -9,8 +9,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
 /// A switch lever on a post beside the party line, with a lamp on top: green while the points lie straight, red when the
-/// lever is thrown. E (layer 8) or any hit (layer 4: a blade from the seat, an arrow from afar) throws it over or back; the
-/// post is solid (layer 1). A <see cref="Fixed"/> switch is always thrown and takes nothing (the return switch). Built by
+/// lever is thrown. E (layer 8) throws it over or back; any hit (layer 4: a blade from the seat, an arrow from afar) only
+/// throws it, never back, so a stray friendly shot cannot undo a thrown lever. The post is solid (layer 1). A <see cref="Fixed"/> switch is always thrown and takes nothing (the return switch). Built by
 /// the <see cref="RailEncounterController"/>, which reads <see cref="Thrown"/> as the cart's front reaches the points. Server only.
 /// </summary>
 public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
@@ -65,10 +65,10 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
     public bool IsCreature => false;
     public void ApplyStatus(StatusApplication status) { }
 
-    /// <summary>Any hit throws it over (or back).</summary>
+    /// <summary>Any hit throws it over; a thrown lever takes nothing (only E sets it back).</summary>
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
-        if (!Toggle(attackerName)) return DamageResult.Miss(attack.Type);
+        if (Thrown || !Toggle(attackerName)) return DamageResult.Miss(attack.Type);
         return new DamageResult(true, false, false, false, 1, attack.Type, Array.Empty<StatusApplication>());
     }
 

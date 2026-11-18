@@ -13,17 +13,30 @@ namespace DungeonCrawler.Core;
 // open with the orc's keys). The stop guards die by the test's hand on arrival and each cage is opened as the cart is
 // held there, so it is a ride test. Section 1 rides the line: ride 1's lone cinder run over and the beam passed, the slag
 // traffic (a hero on the enemy lane at stop 1 warned, then mangled; one in a pocket untouched), ride 2's three slag carts
-// (a brake shoe broken by a debug hit derails one, a hound leaps), ride 3's switch thrown by a debug hook (the slag cart
-// ahead rammed, the cart back on its own lane), ride 4's golem diverted at the spur by a debug-thrown lever, the jump made
+// (a brake shoe broken by a debug hit derails one, a hound leaps), ride 3's switch thrown by a hit that a second hit leaves
+// thrown (the slag cart ahead rammed, the cart back on its own lane), ride 4's golem diverted at the spur by a lever
+// debug-thrown ahead on ride 2 (the arrivals at stops 2 and 3 leave it thrown), the jump made
 // with two pumping and the buffer smashed into the last stop; the crew home and the stairs open. Section 2 builds the floor
 // again: ride 3 with the switch left straight (the heap halts the cart, a hero breaks it with real swings, the ride
 // resumes), then ride 4 crawled under a hammer and the pour so each hits, the golem killed, the valve broken, a save and a
-// load mid-ride, and ride 4 again from stop 3 (no golem, the valve still broken). Throughout: no boss on the floor, the
-// stairs stay sealed until the crew are home, and every hazard's warning comes at least 1.5 s before its hit (physics
-// frames logged). Prints [chase] lines and [chase] RESULT.
+// load mid-ride, a stunned cinder under a hammer hurt with no ride armed, and ride 4 again from stop 3 (no golem, the valve
+// still broken). Throughout: no boss on the floor, the
+// stairs stay sealed until the crew are home, every hazard's warning comes at least 1.5 s before its hit (physics
+// frames logged), and the cart is mended to full plating at every stop. At stop 1, before ride 2, the party is levelled to
+// --party-level=N (default ChaseDefaultLevel = 12, the level a run of the shipped campaign has by floor 12), its points spent; on
+// ride 2 the lead sits idle, who kills each boarder is logged, and at that level or higher at most one companion may be
+// down by stop 2. Prints [chase] lines and [chase] RESULT.
 public partial class DebugTools
 {
     private bool _testChase;
+    /// <summary>
+    /// The party's level for --test-chase. 12 is what a run of the shipped campaign has on reaching floor 12: the XP curve is
+    /// tuned for level 18–20 at the end of floor 20, and with XP per floor ∝ the tier's creature XP (crypt ~27, caves ~30, forge
+    /// ~45, abyss ~58) × <c>TierRules.XpScale</c>, floors 1–11 give about 28% of the run's XP: 14.5k–19.8k, level 11.6–12.9.
+    /// </summary>
+    private const int ChaseDefaultLevel = 12;
+    private int _chPartyLevel = ChaseDefaultLevel;
+    private bool _chLevelled;
     private int _chStep;
     private float _chClock;
     private bool _chSection2;
@@ -47,6 +60,17 @@ public partial class DebugTools
     private readonly List<Enemies.Enemy> _chShoeRiders = new();
     private bool _chDerailed;
     private int _chLeaps;
+    private readonly Dictionary<Enemies.Enemy, string> _chBoarders = new(); // a hound that boarded -> what it boarded
+    private readonly Dictionary<Enemies.Enemy, (int Striker, ulong Frame)> _chLastHit = new();
+    private readonly Dictionary<Enemies.Enemy, string> _chKiller = new();
+    private Enemies.Enemy? _chDiedNow;
+    private ulong _chDiedFrame;
+    private readonly HashSet<int> _chDownedRide2 = new();
+    private bool _chSpurEarly;
+    // section 2: a creature stood under a hammer with no ride armed
+    private Enemies.Enemy? _chProbe;
+    private float _chProbeHp;
+    private string _chProbeBy = "";
     // ride 3
     private bool _chThrown, _chAcross, _chBack;
     private int _chRams0, _chRamsSeen;
@@ -110,8 +134,8 @@ public partial class DebugTools
         {
             if (!e.IsAlive) continue;
             var keep = _chSection2
-                ? e == enc.GolemBody && !_chGolemKilled
-                : HoldsAStop(main, layout, e) || enc.ArmedRide >= 1 && (e == enc.GolemBody || e.IsReinforcement && _chSpawnRide.TryGetValue(e, out var r) && r == enc.ArmedRide);
+                ? e == enc.GolemBody && !_chGolemKilled || e == _chProbe
+                : HoldsAStop(main, layout, e) || enc.ArmedRide >= 1 && (e == enc.GolemBody || (e.IsReinforcement || enc.IsThrower(e)) && _chSpawnRide.TryGetValue(e, out var r) && r == enc.ArmedRide);
             if (!keep) e.Kill();
         }
         ChaseTrackRides(rc, enc);
@@ -223,6 +247,7 @@ public partial class DebugTools
             }
             case 6 when _chClock >= 0.5f:
             {
+                ChaseLevelParty(main); // here, not at the landing: a levelled seated rogue can kill ride 1's lone cinder before the cart runs it over
                 enc.RunawayClock = 0f;
                 _chStep++;
                 _chClock = 0f;
@@ -242,7 +267,24 @@ public partial class DebugTools
                     GD.Print($"[chase] 2 debug hit on {slag1.Name}'s brake shoe at party S={rc.State.S:0.0}: hit={r.Hit} shoe alive={slag1.Shoe.IsAlive}; riders [{string.Join(", ", _chShoeRiders.Select(e => e.Profile.Id))}]");
                     _chClock = 0f;
                 }
+                if (!_chSpurEarly && enc.ArmedRide == 2 && enc.SetPieceNode("r4_spur") is SpurSwitch early)
+                {
+                    _chSpurEarly = true;
+                    early.Lever.DebugThrow(); // a walker threw ride 4's lever ahead: the arrivals at stops 2 and 3 must leave it thrown
+                    GD.Print($"[chase] 2 ride 4's spur lever thrown ahead during ride 2 (S={rc.State.S:0.0}): thrown={early.Lever.Thrown}");
+                }
+                foreach (var a in party.Adventurers)
+                    if (IsInstanceValid(a) && !a.Parked && a.Control == ControlKind.Companion && a.Downed && _chDownedRide2.Add(a.Index))
+                        GD.Print($"[chase] 2 {a.State.Name} is down at S={rc.State.S:0.0} (seated={a.Seated}); plating {rc.State.Plating:0}");
+                foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
+                    if (e.IsAlive && e.Profile.Id == RailEncounterController.HoundId && e.Carrier is MineCart or CageWagon && !_chBoarders.ContainsKey(e))
+                    {
+                        _chBoarders[e] = e.Carrier!.Name;
+                        GD.Print($"[chase] 2 {e.Name} boards {e.Carrier.Name} at S={rc.State.S:0.0} (hp {e.Hp:0}/{e.MaxHp:0})");
+                    }
                 if (!ChaseHeldAt(rc, 2, Fail)) break;
+                if (!ChaseBoarderReport(main, rc, Fail)) return;
+                if (enc.SetPieceNode("r4_spur") is not SpurSwitch { Lever.Thrown: true }) { Fail("arriving at stop 2 set back ride 4's spur lever, thrown ahead"); return; }
                 var ridersDead = _chShoeRiders.All(e => !IsInstanceValid(e) || !e.IsAlive);
                 GD.Print($"[chase] 2 ride 2 done, held at stop 2: slag carts seen [{string.Join(",", _chSlagSeen.OrderBy(x => x))}] alongside [{string.Join(",", _chSlagBeside.OrderBy(x => x))}]; {(_chShoeCart == null ? "no shoe hit" : $"{_chShoeCart.EncounterId} derailed={_chDerailed} riders dead={ridersDead}")}; hound leaps={_chLeaps}; plating={rc.State.Plating:0}");
                 var ride2 = new[] { "r2_slag1", "r2_slag2", "r2_slag3" };
@@ -271,17 +313,24 @@ public partial class DebugTools
                 break;
             case 11:
             {
-                // 3. ride 3: the switch thrown (the debug hook), the ram, the way back
-                if (!_chThrown && enc.ArmedRide == 3 && rc.State.Mode == CartMode.Rolling && enc.DebugThrowSwitches(3) > 0)
+                // 3. ride 3: the switch thrown by a hit (a second hit leaves it thrown), the ram, the way back
+                if (!_chThrown && enc.ArmedRide == 3 && rc.State.Mode == CartMode.Rolling && enc.SetPieceNode("r3_switch_out") is TrackSwitch sw)
                 {
                     _chThrown = true;
-                    GD.Print($"[chase] 3 ride 3 armed at S={rc.State.S:0.0}: the switch_out lever thrown by the debug hook");
+                    var hit = new Combat.AttackProfile { MinDamage = 1, MaxDamage = 2 };
+                    var first = sw.ReceiveAttack(lead!.State.Stats, hit, new Combat.HitContext(), party.Rng, lead.State.Name);
+                    var thrown1 = sw.Thrown;
+                    var second = sw.ReceiveAttack(lead.State.Stats, hit, new Combat.HitContext(), party.Rng, lead.State.Name);
+                    GD.Print($"[chase] 3 ride 3 armed at S={rc.State.S:0.0}: a hit on the switch_out lever (hit={first.Hit}) threw it={thrown1}; a second hit (hit={second.Hit}) leaves it thrown={sw.Thrown}");
+                    if (!thrown1 || !sw.Thrown || second.Hit) { Fail("a hit must throw the lever and a second hit must not set it back"); return; }
                 }
                 if (!ChaseHeldAt(rc, 3, Fail)) break;
                 GD.Print($"[chase] 3 ride 3 done, held at stop 3: thrown={_chThrown} across={_chAcross} rams={enc.Rams - _chRams0} back on the party lane={_chBack}; plating={rc.State.Plating:0}");
                 if (!_chThrown || !_chAcross) { Fail("the cart did not take the switch onto the enemy lane"); return; }
                 if (enc.Rams - _chRams0 < 1) { Fail("the cart did not ram the slag cart ahead"); return; }
                 if (!_chBack) { Fail("the cart did not cross back to its own lane"); return; }
+                if (enc.SetPieceNode("r4_spur") is not SpurSwitch { Lever.Thrown: true }) { Fail("arriving at stop 3 set back ride 4's spur lever, thrown ahead"); return; }
+                if (enc.SetPieceNode("r3_switch_out") is not TrackSwitch { Thrown: false }) { Fail("arriving at stop 3 did not set ride 3's lever back"); return; }
                 if (!ChaseKillGuards(main, layout, rc, 3, Fail)) return;
                 _chStep++;
                 _chClock = 0f;
@@ -299,12 +348,11 @@ public partial class DebugTools
             case 13:
             {
                 if (!ChaseDepart(rc, enc, ctrl, 3, Fail)) break;
-                // 4. ride 4: the golem out of the kiln wall; the spur lever thrown by the debug hook
+                // 4. ride 4: the golem out of the kiln wall; the spur lever thrown ahead on ride 2 (the debug hook)
                 if (!ChaseGolemOut(enc, Fail)) return;
                 if (enc.SetPieceNode("r4_spur") is not SpurSwitch spur) { Fail("no spur on ride 4"); return; }
-                spur.Lever.DebugThrow();
-                GD.Print($"[chase] 4 the spur lever thrown by the debug hook at S={rc.State.S:0.0}: thrown={spur.Lever.Thrown}");
-                if (!spur.Lever.Thrown) { Fail("the spur lever would not throw"); return; }
+                GD.Print($"[chase] 4 the spur lever, thrown ahead on ride 2, at the departure from stop 3 (S={rc.State.S:0.0}): thrown={spur.Lever.Thrown}");
+                if (!spur.Lever.Thrown) { Fail("the spur lever thrown on ride 2 is not thrown as ride 4 starts"); return; }
                 _chStep++;
                 _chClock = 0f;
                 break;
@@ -430,8 +478,7 @@ public partial class DebugTools
             case 8:
             {
                 if (!ChaseHeldAt(rc, 3, fail)) break;
-                GD.Print($"[chase] 7 the heap path reached stop 3: plating {rc.State.Plating:0}; the test mends it to {CartRules.MaxPlating:0} for ride 4");
-                rc.DebugSetPlating(CartRules.MaxPlating);
+                GD.Print($"[chase] 7 the heap path reached stop 3 (the heap took {RailEncounterController.HeapDent:0} on the way): plating {rc.State.Plating:0}, mended at the stop");
                 ChaseMend(main, root);
                 _chHammer0 = enc.HammerHits;
                 _chPour0 = enc.PourHits;
@@ -495,19 +542,42 @@ public partial class DebugTools
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != 3 || enc.ArmedRide >= 1) { fail($"the cart came back {rc.State.Mode} at stop {rc.StopIndex} (armed ride {enc.ArmedRide}), not held at stop 3"); return; }
                 if (!enc.GolemDefeated || pour is not { Quenched: true }) { fail("the load lost the golem's death or the broken valve"); return; }
                 ChaseMend(main, root);
+                // the hammers fall on walkers with no ride armed: a stunned cinder stood under the middle hammer must be hurt
+                var mid = (enc.SetPieceNode("r4_hammers") as Node3D)?.GetNodeOrNull<DropHammer>("Hammer1");
+                if (mid == null) { fail("ride 4 has no hammers"); return; }
+                var at = rc.Party.Track.Point(mid.S) + Vector3.Up * 0.05f;
+                _chProbe = main.Builder.SpawnEnemy("enemy.horde_cinder", at, main.Builder.CurrentFloor);
+                if (_chProbe == null) { fail("could not spawn the cinder for the hammer"); return; }
+                _chProbe.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Stun, 30f, 0f));
+                _chProbeHp = _chProbe.Hp;
+                _chProbeBy = "";
+                GD.Print($"[chase] 8 a stunned cinder {_chProbe.Name} stands under hammer {mid.Index} at S={mid.S:0.0} (hp {_chProbeHp:0}); the cart is held at stop 3, armed ride {enc.ArmedRide}");
+                _chStep++;
+                _chClock = 0f;
+                break;
+            }
+            case 13:
+            {
+                var p = _chProbe;
+                var hurt = p == null || !IsInstanceValid(p) || !p.IsAlive || p.Hp < _chProbeHp - 0.01f;
+                if (enc.ArmedRide >= 1) { fail($"ride {enc.ArmedRide} armed while the hammer probe waited"); return; }
+                if (!hurt) { if (_chClock > 6f) fail($"no hammer fell on the cinder under it in 6 s with no ride armed (hp {p!.Hp:0})"); break; }
+                GD.Print($"[chase] 8 the hammer fell on the cinder with no ride armed after {_chClock:0.0} s: alive={p != null && IsInstanceValid(p) && p.IsAlive} hp {_chProbeHp:0}->{(p != null && IsInstanceValid(p) ? p.Hp : 0f):0} ({(_chProbeBy == "" ? "no hazard kill" : $"killed by \"{_chProbeBy}\"")})");
+                if (p != null && IsInstanceValid(p) && p.IsAlive) p.Kill();
+                _chProbe = null;
                 _chStep++;
                 _chClock = 0f;
                 if (!RideBoard(main, layout, rc, out var why)) { fail(why); return; }
                 break;
             }
-            case 13:
+            case 14:
             {
                 if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 8f) fail($"re-boarded at stop 3 after the load, but the cart did not depart (mode {rc.State.Mode})"); break; }
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
-            case 14 when _chClock >= 0.3f:
+            case 15 when _chClock >= 0.3f:
             {
                 var golems = _chSpawnRide.Count(kv => kv.Value == 4 && IsInstanceValid(kv.Key) && kv.Key.Profile.Id == "enemy.forge_golem"); // spawned since the load (the map starts again with the loaded floor)
                 var pour = enc.SetPieceNode("r4_pour") as MoltenPour;
@@ -518,7 +588,7 @@ public partial class DebugTools
                 _chClock = 0f;
                 break;
             }
-            case 15:
+            case 16:
             {
                 if (!ChaseHeldAt(rc, 4, fail)) break;
                 var buffer = enc.SetPieceNode("r4_buffer") as BufferStop;
@@ -547,8 +617,31 @@ public partial class DebugTools
             bus.Message += OnChaseMessage;
             bus.Sfx += OnChaseSfx;
             bus.EnemySpawned += e => { if (_chEnc != null && IsInstanceValid(_chEnc)) _chSpawnRide[e] = _chEnc.ArmedRide; };
-            bus.EnemyKilledByHazard += (e, source) => { if (e == _chLone) { _chLoneByCart = true; _chLoneSource = source; } };
-            bus.EnemyDied += e => { if (e == _chLone && !_chLoneByCart) _chLoneOther = true; };
+            bus.EnemyKilledByHazard += (e, source) =>
+            {
+                if (e == _chLone) { _chLoneByCart = true; _chLoneSource = source; }
+                if (_chBoarders.ContainsKey(e)) _chKiller[e] = $"hazard {source}";
+                if (e == _chProbe) _chProbeBy = source;
+            };
+            // who killed a boarder: the party hit or the crew blow in the frame it died (the hurt event may come just after the death), else a tick
+            bus.EnemyDied += e =>
+            {
+                if (e == _chLone && !_chLoneByCart) _chLoneOther = true;
+                if (!_chBoarders.ContainsKey(e) || _chKiller.ContainsKey(e)) return;
+                var now = Engine.GetPhysicsFrames();
+                if (_chLastHit.TryGetValue(e, out var hit) && hit.Striker >= 0 && hit.Frame == now) { _chKiller[e] = ChaseStriker(hit.Striker); return; }
+                _chDiedNow = e;
+                _chDiedFrame = now;
+                _chKiller[e] = _chLastHit.TryGetValue(e, out var last) && last.Striker >= 0 ? $"a tick or a stray (last party hit by {ChaseStriker(last.Striker)})" : "a tick or a stray (no party hit)";
+            };
+            bus.EnemyHurt += (e, _, _, striker) =>
+            {
+                if (!_chBoarders.ContainsKey(e)) return;
+                var now = Engine.GetPhysicsFrames();
+                _chLastHit[e] = (striker, now);
+                if (striker >= 0 && e == _chDiedNow && _chDiedFrame == now) { _chKiller[e] = ChaseStriker(striker); _chDiedNow = null; }
+            };
+            bus.NpcKill += npc => { if (_chDiedNow != null && _chDiedFrame == Engine.GetPhysicsFrames()) { _chKiller[_chDiedNow] = $"crew {npc.Name}"; _chDiedNow = null; } };
             bus.MemberKilledByHazard += (index, _) =>
             {
                 if (!_chTrafficOn || _chLaneHero == null || index != _chLaneHero.Index || _chLaneHit) return;
@@ -739,6 +832,7 @@ public partial class DebugTools
     {
         if (rc.State.Mode == CartMode.Rolling) { if (_chClock > 70f) fail($"the cart was not held at stop {stop} within 70 s (S={rc.State.S:0.0})"); return false; }
         if (rc.State.Mode != CartMode.Held || rc.StopIndex != stop || rc.Halted) { fail($"the cart is {rc.State.Mode} at stop {rc.StopIndex} (halted {rc.Halted}), not held at stop {stop}"); return false; }
+        if (rc.State.Plating < CartRules.MaxPlating - 0.01f) { fail($"the cart arrived at stop {stop} with plating {rc.State.Plating:0}: a stop mends it to {CartRules.MaxPlating:0}"); return false; }
         return true;
     }
 
@@ -782,6 +876,67 @@ public partial class DebugTools
         GD.Print($"[chase] 4 ride 4 armed: golem {(g == null ? "none" : $"{g.Name} \"{g.DisplayName}\" ({g.Profile.Id}) alive={g.IsAlive} carried={g.Carried} on the runner={enc.GolemRun != null} elite={g.IsElite} affixes=[{string.Join(",", g.Profile.Affixes ?? Array.Empty<Enemies.EliteAffix>())}] boss={g.IsBoss} hp {g.Hp:0}/{g.MaxHp:0}")}");
         if (g is { IsAlive: true, IsBoss: false, IsElite: true, Carried: true } && enc.GolemRun != null) return true;
         fail("the golem did not come out on the enemy line as a carried elite (never a boss)");
+        return false;
+    }
+
+    /// <summary>
+    /// The party to <see cref="_chPartyLevel"/>, once: each member gets the XP to each next level, puts its stat points two into its
+    /// class's best primary to one into Vitality, learns what its tree allows in tree order (branch, then tier), and is restored.
+    /// No gear is added, so a levelled party here is still weaker than one that played floors 1–11.
+    /// </summary>
+    private void ChaseLevelParty(Main main)
+    {
+        if (_chLevelled) return;
+        _chLevelled = true;
+        var party = main.Party;
+        var skills = Game.Instance.Skills;
+        for (var i = 0; i < party.Members.Length; i++)
+        {
+            var m = party.Members[i];
+            int lv0 = m.Level;
+            var hp0 = m.Stats[Characters.Stat.MaxHp];
+            while (m.Level < _chPartyLevel && m.Level < Characters.Leveling.MaxLevel)
+                if (Characters.Leveling.AddXp(m, Characters.Leveling.XpToNext(m.Level) - m.Xp) == 0) break;
+            var best = Characters.StatInfo.Primaries.Where(p => p != Characters.Stat.Vitality).OrderByDescending(p => m.Class.BasePrimaries.GetValueOrDefault(p)).First();
+            for (var n = 0; m.StatPoints > 0; n++)
+                if (!m.AllocateStat(n % 3 == 2 ? Characters.Stat.Vitality : best)) break;
+            var learned = new List<string>();
+            for (var more = true; more;)
+            {
+                more = false;
+                foreach (var sk in skills.ForClass(m.Class.Id).ToList())
+                    if (Characters.SkillRules.WhyCannotLearn(m, sk) == null && Characters.SkillRules.Learn(m, sk, skills)) { learned.Add(sk.Name); more = true; break; }
+            }
+            m.FullRestore();
+            EventBus.Instance.RaiseMemberChanged(i);
+            GD.Print($"[chase] 0 {m.Name} ({m.Class.Name}) levelled {lv0} -> {m.Level}: max hp {hp0:0} -> {m.Stats[Characters.Stat.MaxHp]:0}, +{best} and Vitality, {learned.Count} skills [{string.Join(", ", learned)}], {m.SkillPoints} skill points left");
+        }
+    }
+
+    private static string ChaseStriker(int index)
+    {
+        var party = Main.Instance.Party;
+        if (index < 0 || index >= party.Members.Length) return $"party index {index}";
+        var who = party.Members[index];
+        var body = index < party.Adventurers.Length ? party.Adventurers[index] : null;
+        return $"{who.Name} ({who.Class.Name}{(body != null && IsInstanceValid(body) ? $", {body.Control}, seated={body.Seated}" : "")})";
+    }
+
+    /// <summary>Stop 2: the companions who went down on ride 2, and every boarder with who killed it. At the default level or higher, more than one down fails.</summary>
+    private bool ChaseBoarderReport(Main main, RailController rc, Action<string> fail)
+    {
+        var party = main.Party;
+        var downed = _chDownedRide2.Select(i => party.Members[i].Name).ToList();
+        var crewDown = main.Builder.FloorRoot?.GetChildren().OfType<Npc>().Where(n => n.Crew && (n.Downed || n.Dead)).Select(n => n.Name.ToString()).ToList() ?? new List<string>();
+        GD.Print($"[chase] 2 ride 2 at lethality {TierRules.Lethality:0.#}, party level {_chPartyLevel}, lead idle: {_chBoarders.Count} boarders, companions down by stop 2: {downed.Count} [{string.Join(", ", downed)}], crew down: {crewDown.Count} [{string.Join(", ", crewDown)}]; hp [{string.Join(" ", party.Active.Select(a => $"{a.State.Name}:{a.State.Hp:0}/{a.State.Stats[Characters.Stat.MaxHp]:0}{(a.Downed ? " DOWN" : "")}"))}]; plating {rc.State.Plating:0}");
+        foreach (var (hound, carrier) in _chBoarders)
+        {
+            var fate = _chKiller.TryGetValue(hound, out var killer) ? $"killed by {killer}" : "alive at the stop (freed with the ride)";
+            GD.Print($"[chase] 2   boarder {(IsInstanceValid(hound) ? hound.Name : "(freed)")} on {carrier}: {fate}");
+        }
+        if (downed.Count <= 1) return true;
+        if (_chPartyLevel < ChaseDefaultLevel) { GD.Print($"[chase] 2 (more than one down is only asserted at party level {ChaseDefaultLevel} or higher)"); return true; }
+        fail($"{downed.Count} companions were down by stop 2 ({string.Join(", ", downed)}) at party level {_chPartyLevel}: at most one may be");
         return false;
     }
 

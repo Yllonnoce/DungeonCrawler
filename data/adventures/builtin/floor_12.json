@@ -508,12 +508,12 @@
       "Riders": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2,
+          "Count": 1,
           "Elite": null
         },
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 1,
+          "Count": 2,
           "Elite": null
         }
       ],

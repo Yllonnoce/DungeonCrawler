@@ -114,6 +114,9 @@ public partial class RailEncounterController : Node
                 ResetKiln(e.Kind);
                 break;
             case CartEventKind.Arrived:
+                ClearRide();
+                ResetSwitchyard(undone: false, upToRide: e.Stop); // the finished rides' levers only: one thrown ahead for a later ride stays thrown
+                break;
             case CartEventKind.OnFoot:
                 ClearRide();
                 ResetSwitchyard(undone: false);
