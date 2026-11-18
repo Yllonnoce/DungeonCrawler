@@ -54,22 +54,28 @@ public sealed class CartSeats
     }
 }
 
-/// <summary>The countdown at the start: the cart leaves when time is up or every living hero is aboard.</summary>
+/// <summary>The countdown at a stop: the cart leaves when time is up, or once every living hero is aboard and the short minimum wait has passed.</summary>
 public sealed class Boarding
 {
     public const float Countdown = 5f;
+    /// <summary>Even with everyone aboard the cart waits this long after the countdown starts.</summary>
+    public const float MinWait = 2f;
 
     public bool Running { get; private set; }
     public float Left { get; private set; }
 
     public void Start() { Running = true; Left = Countdown; }
 
+    /// <summary>Stop the countdown without departing.</summary>
+    public void Cancel() => Running = false;
+
     /// <summary>Returns true once per Start, when the cart should depart.</summary>
     public bool Tick(float dt, int seatedHeroes, int livingHeroes)
     {
         if (!Running) return false;
         Left = Math.Max(0f, Left - dt);
-        if (Left <= 0f || (seatedHeroes >= 1 && seatedHeroes == livingHeroes)) { Running = false; return true; }
+        bool allAboard = seatedHeroes >= 1 && seatedHeroes == livingHeroes && Countdown - Left >= MinWait - 1e-4f;
+        if (Left <= 0f || allAboard) { Running = false; return true; }
         return false;
     }
 }

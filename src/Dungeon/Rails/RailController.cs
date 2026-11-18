@@ -34,13 +34,14 @@ public partial class RailController : Node
     public float[] StopS { get; private set; } = Array.Empty<float>();
     /// <summary>The cart's status line, or null when it is not shown.</summary>
     public string? HudText { get; private set; }
-    public Boarding Boarding { get; private set; } = new();
+    public Boarding Boarding { get; } = new();
 
     private RailTrack _track = null!;
     private FloorLayout _layout = null!;
     private DungeonBuilder _builder = null!;
     private float _prevS;
     private float _hudTimer;
+    private readonly HashSet<GridPos> _exitTaken = new();
 
     public RailController()
     {
@@ -86,13 +87,14 @@ public partial class RailController : Node
     {
         if (NetSession.IsClient || hero.Control == ControlKind.Remote) return ""; // co-op riding is plan 5
         if (hero.Cart == Cart) return "Get out";
+        if (StopIndex >= StopS.Length - 1) return ""; // the end of the line: nowhere left to ride
         return State.Mode == CartMode.Held && !hero.Seated ? "Board the cart" : "";
     }
 
     private void Use(Adventurer actor)
     {
         if (NetSession.IsClient || actor.Control == ControlKind.Remote || !Current) return;
-        if (actor.Cart == Cart) { GetOut(actor); return; }
+        if (actor.Cart == Cart) { GetOutWithParty(actor); return; }
         if (actor.Seated || actor.Downed || State.Mode != CartMode.Held) return;
         if (!SeatHero(actor)) return;
         if (actor.Control == ControlKind.LocalHuman)
@@ -111,19 +113,34 @@ public partial class RailController : Node
         return true;
     }
 
+    /// <summary>The actor gets out; when the human steps out of a slow cart, the seated companions follow (a hero thrown out at speed leaves them riding).</summary>
+    private void GetOutWithParty(Adventurer actor)
+    {
+        _exitTaken.Clear();
+        var slow = State.V < RunOverRules.ThrownAtSpeed;
+        GetOut(actor);
+        if (actor.Control == ControlKind.LocalHuman && slow)
+            foreach (var mate in Main.Instance.Party.Adventurers)
+                if (IsInstanceValid(mate) && mate.Cart == Cart && mate.Control == ControlKind.Companion) GetOut(mate);
+        RefreshHud();
+    }
+
     private void GetOut(Adventurer hero)
     {
         var velocity = Cart.Velocity;
         var thrown = State.V >= RunOverRules.ThrownAtSpeed;
         Cart.Seats.Leave(hero.Index);
-        var at = _builder.Surface(ExitCell());
+        var cell = ExitCell();
+        _exitTaken.Add(cell);
         if (thrown) EventBus.Instance.Log($"{hero.State.Name} jumps from the moving cart!");
-        hero.GetOut(at, velocity);
+        hero.GetOut(_builder.Surface(cell), velocity);
         if (thrown) hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, TierRules.Lethality), SourceName, HazardIndex);
-        RefreshHud();
     }
 
-    /// <summary>Where a rider gets out: beside the lane at a stop, else on the lane cell under the cart.</summary>
+    /// <summary>
+    /// Where a rider gets out: at a stop or below throwing speed, a free walkable cell beside the lane that is no rail
+    /// (never the enemy lane, never a cell another rider just took); at speed, the lane cell under the cart.
+    /// </summary>
     private GridPos ExitCell()
     {
         var lane = _layout.Rail!.Party;
@@ -134,7 +151,11 @@ public partial class RailController : Node
             int dx = lane[i].X - here.X, dy = lane[i].Y - here.Y, d = dx * dx + dy * dy;
             if (d < bestD) { bestD = d; best = i; }
         }
-        return CartSeats.ExitCell(lane, best, _layout.IsWalkable, atStop: State.Mode == CartMode.Held);
+        var atStop = State.Mode == CartMode.Held || State.V < RunOverRules.ThrownAtSpeed;
+        var cell = CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_exitTaken.Contains(c), atStop);
+        // every free cell nearby taken: share the first one rather than land on the track
+        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c), true);
+        return cell;
     }
 
     // ---- the ride --------------------------------------------------------------------------------
@@ -148,9 +169,9 @@ public partial class RailController : Node
 
         if (State.Mode == CartMode.Held)
         {
-            var seated = SeatedLiving(party);
-            if (seated == 0) Boarding = new Boarding(); // nobody standing aboard: the countdown stops, the cart does not leave empty (or with only the fallen)
-            else if (Boarding.Tick(dt, seated, party.Active.Count(a => !a.Downed)) && StopIndex < StopS.Length - 1)
+            CountHeroes(party, out var seated, out var living);
+            if (seated == 0) { if (Boarding.Running) Boarding.Cancel(); } // nobody standing aboard: the cart does not leave empty (or with only the fallen)
+            else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
                 State = State with { Mode = CartMode.Rolling }; // StopAt (the next stop) is ahead of S before the cart rolls
                 RefreshHud();
@@ -182,9 +203,9 @@ public partial class RailController : Node
             if (move.Y < -0.5f) pumpers = 1;
         }
         var companionsPump = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise;
-        foreach (var hero in party.Active)
+        foreach (var hero in party.Adventurers)
         {
-            if (hero.Cart != Cart) continue;
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart) continue;
             var pump = companionsPump && !brake && pumpers < 2 && hero.Control == ControlKind.Companion && !hero.Downed;
             if (pump) pumpers++;
             hero.Pumping = pump;
@@ -195,14 +216,25 @@ public partial class RailController : Node
     private void Arrive(PartyController party)
     {
         StopIndex++;
-        foreach (var hero in party.Active) if (hero.Cart == Cart) hero.Pumping = false;
+        foreach (var hero in party.Adventurers) if (IsInstanceValid(hero) && hero.Cart == Cart) hero.Pumping = false;
         var last = StopIndex >= StopS.Length - 1;
         EventBus.Instance.Log(last ? "The cart reaches the end of the line." : $"The cart rolls into stop {StopIndex}.");
-        if (!last && Cart.Seats.Count > 0) Boarding.Start(); // plan 3 adds the rail gate and the departure lever
+        CountHeroes(party, out var seated, out _);
+        if (!last && seated > 0) Boarding.Start(); // plan 3 adds the rail gate and the departure lever
         RefreshHud();
     }
 
-    private int SeatedLiving(PartyController party) => party.Active.Count(a => a.Cart == Cart && !a.Downed);
+    /// <summary>Living heroes in the world (as <see cref="PartyController.Active"/>), and how many of them sit in this cart. No allocation.</summary>
+    private void CountHeroes(PartyController party, out int seated, out int living)
+    {
+        seated = living = 0;
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Downed) continue;
+            living++;
+            if (hero.Cart == Cart) seated++;
+        }
+    }
 
     // ---- posing ----------------------------------------------------------------------------------
 
@@ -252,8 +284,8 @@ public partial class RailController : Node
     private void RefreshHud()
     {
         _hudTimer = HudEvery;
-        var party = Main.Instance?.Party;
-        var show = party != null && party.Active.Any(a => a.Cart == Cart || a.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange);
+        var me = Main.Instance?.Party?.Local;
+        var show = me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange);
         HudText = show ? Line() : null;
         Main.Instance?.Hud?.SetCart(show ? State.Plating / CartRules.MaxPlating : null, HudText);
     }
@@ -263,6 +295,7 @@ public partial class RailController : Node
         if (State.Mode == CartMode.Wrecked) return "Cart — wrecked";
         if (Boarding.Running) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(Boarding.Left)}";
         if (State.Mode == CartMode.Rolling) return "Cart — rolling";
-        return $"Cart — at stop {StopIndex}";
+        if (StopIndex == 0) return "Cart — at the landing";
+        return StopIndex >= StopS.Length - 1 ? "Cart — end of the line" : $"Cart — at stop {StopIndex}";
     }
 }
