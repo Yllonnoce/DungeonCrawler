@@ -89,7 +89,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     // ---- seated in a mine cart -------------------------------------------------------------------
     /// <summary>The cart this body sits in (null on foot). The RailController seats and unseats; see <see cref="SitIn"/>.</summary>
-    public MineCart? Cart { get; private set; }
+    public ICartBody? Cart { get; private set; }
     /// <summary>The seat in <see cref="Cart"/>, -1 on foot.</summary>
     public int Seat { get; private set; } = -1;
     /// <summary>Riding a cart: no walking, gravity or MoveAndSlide; the body takes its transform from the seat (<see cref="FollowSeat"/>).</summary>
@@ -308,7 +308,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// </summary>
     private void RideFeel(float dt)
     {
-        if (!IsLocal || _vr != null || SpectateTarget != null || Cart is not { } cart || !IsInstanceValid(cart)) return;
+        if (!IsLocal || _vr != null || SpectateTarget != null || Cart is not { } cart || !CartAlive(cart)) return;
         dt = Math.Min(dt, 0.05f);
         var target = Mathf.DegToRad(CartFeel.LeanDegrees(cart.Curvature, cart.Speed));
         _feelRollVel += (RollStiffness * (target - _feelRoll) - RollDamping * _feelRollVel) * dt;
@@ -411,7 +411,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (Main.Instance?.Builder.Layout == null) return; // no floor yet (the planner is still writing it): stand still rather than fall forever
         if (++_heldCheck % 30 == 0) RefreshHeldWeapon(); // the equipped weapon changes from the inventory, a loot pickup or a sync
         TickBlade(dt);
-        if (Cart != null && !IsInstanceValid(Cart)) LeaveSeat(); // the floor went and took the cart with it
+        if (Cart != null && !CartAlive(Cart)) LeaveSeat(); // the floor went and took the cart with it
         if (Control == ControlKind.Remote) { RemoteTick(dt); return; }
         if (Seated) { SeatedTick(dt); return; }
         var velocity = Velocity;
@@ -561,13 +561,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         TickView();
     }
 
-    /// <summary>Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in <see cref="MineCart.Seats"/>; the body enters itself in <see cref="MineCart.Riders"/>.</summary>
-    public void SitIn(MineCart cart, int seat)
+    /// <summary>Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in <see cref="ICartBody.Seats"/>; the body enters itself (<see cref="ICartBody.Admit"/>).</summary>
+    public void SitIn(ICartBody cart, int seat)
     {
         if (Cart != null && Cart != cart) LeaveSeat(); // never in two carts' books at once
         Cart = cart;
         Seat = seat;
-        cart.Riders[RiderId] = this;
         _seatYaw = 0f;
         _lastSeatHeading = float.NaN;
         Crouching = false;
@@ -581,9 +580,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         RescueTarget = null;
         _action = CompanionAction.Idle;
         FollowSeat();
+        cart.Admit(this); // last: whoever hears of it sees the body seated
     }
 
-    /// <summary>Out of the seat and onto the ground at <paramref name="at"/>, moving at <paramref name="velocity"/> (a moving cart throws you). The seat is given back (<see cref="MineCart.Release"/>).</summary>
+    /// <summary>The cart still exists (a cart is a node; it dies with its floor).</summary>
+    private static bool CartAlive(ICartBody cart) => cart is GodotObject o && IsInstanceValid(o);
+
+    /// <summary>Out of the seat and onto the ground at <paramref name="at"/>, moving at <paramref name="velocity"/> (a moving cart throws you). The seat is given back (<see cref="ICartBody.Release"/>).</summary>
     public void GetOut(Vector3 at, Vector3 velocity)
     {
         LeaveSeat();
@@ -605,7 +608,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     public void FollowSeat()
     {
         if (Cart is not { } cart) return;
-        if (!IsInstanceValid(cart)) { LeaveSeat(); return; }
+        if (!CartAlive(cart)) { LeaveSeat(); return; }
         var seat = cart.SeatTransform(Seat);
         var heading = SeatHeading(seat);
         GlobalTransform = new Transform3D(new Basis(Vector3.Up, heading + _seatYaw), seat.Origin);
@@ -627,7 +630,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private void LeaveSeat()
     {
         var forward = -GlobalTransform.Basis.Z;
-        if (Cart != null && IsInstanceValid(Cart)) Cart.Release(this);
+        if (Cart != null && CartAlive(Cart)) Cart.Release(this);
         Cart = null;
         Seat = -1;
         Pumping = false;
@@ -645,7 +648,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// <summary>A seated body turns its head toward a point (as far as the seat allows), at once, so a shot fired next goes there.</summary>
     private void SeatYawToward(Vector3 point)
     {
-        if (Cart is not { } cart || !IsInstanceValid(cart)) return;
+        if (Cart is not { } cart || !CartAlive(cart)) return;
         var seat = cart.SeatTransform(Seat);
         var d = point - seat.Origin;
         if (d.X * d.X + d.Z * d.Z < 0.001f) return;

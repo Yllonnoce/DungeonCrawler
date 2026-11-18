@@ -26,7 +26,7 @@ public static class RunOverSweep
     /// Fill <paramref name="hits"/> with the <paramref name="bodies"/> the cart ran over between PrevS and S: near its
     /// front, measured within <see cref="Window"/> of it, swept by <see cref="RunOverRules.Hits"/> in the cart's
     /// direction, and not hit within <see cref="JudgeAgain"/> (<paramref name="hitAt"/>, which this keeps). A body riding
-    /// a cart (this one's <see cref="MineCart.Riders"/>, or any other) is carried, never run over. The owner filters the
+    /// a cart (this one's <see cref="ICartBody.Riders"/>, or any other) is carried, never run over. The owner filters the
     /// fallen and the dead out of <paramref name="bodies"/>.
     /// </summary>
     public static void Judge(CartRun run, IReadOnlyList<Node3D> bodies, double now, Dictionary<ulong, double> hitAt, List<(Node3D body, TrackBody tb)> hits)
@@ -36,7 +36,7 @@ public static class RunOverSweep
         if (!run.Moving) return;
         float sPrev = run.PrevS, sNow = run.State.S, frontS = run.FrontS;
         var front = run.Track.Point(frontS);
-        var cart = run.Body as MineCart;
+        var cart = run.Body as ICartBody;
         for (var i = 0; i < bodies.Count; i++)
         {
             var body = bodies[i];

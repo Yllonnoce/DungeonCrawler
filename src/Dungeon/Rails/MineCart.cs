@@ -11,7 +11,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// interact key through <see cref="PromptFor"/> and <see cref="OnUse"/>; it keeps who rides it in <see cref="Riders"/>.
 /// Its origin sits on the track (the floor under the rails); forward is −Z.
 /// </summary>
-public partial class MineCart : AnimatableBody3D, IInteractable
+public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
 {
     /// <summary>The tub's outside bottom, above the track; the wheels hang below it.</summary>
     public const float TubBottom = 0.5f;
@@ -41,8 +41,10 @@ public partial class MineCart : AnimatableBody3D, IInteractable
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
 
     public CartSeats Seats { get; } = new();
-    /// <summary>Who rides this cart, by <see cref="ICartRider.RiderId"/>: entered by the rider's SitIn, removed by <see cref="Release"/>.</summary>
+    /// <summary>Who rides this cart, by <see cref="ICartRider.RiderId"/>: entered by <see cref="Admit"/> (the rider's SitIn), removed by <see cref="Release"/>.</summary>
     public Dictionary<int, ICartRider> Riders { get; } = new();
+    /// <summary>A rider got in (true) or out (false), whoever seated or unseated it: the RailController relays it as a CartEvent.</summary>
+    public event Action<ICartRider, bool>? RiderChanged;
     /// <summary>Speed along the line (m/s), set by the RailController each tick.</summary>
     public float Speed { get; set; }
     /// <summary>How hard the line bends here (1/m, signed), set by the RailController each tick.</summary>
@@ -80,14 +82,23 @@ public partial class MineCart : AnimatableBody3D, IInteractable
         return _seats[Math.Clamp(seat, 0, _seats.Length - 1)].GlobalTransform;
     }
 
+    /// <summary>The rider (its seat booked in <see cref="Seats"/>, its own SitIn under way) rides here now.</summary>
+    public void Admit(ICartRider rider)
+    {
+        Riders[rider.RiderId] = rider;
+        RiderChanged?.Invoke(rider, true);
+    }
+
     /// <summary>
     /// The rider's seat is free again and it no longer rides here: the book only (the rider's own GetOut, or a teleport,
-    /// calls this as it leaves the seat). A rider that is not aboard changes nothing.
+    /// calls this as it leaves the seat). A rider that is not the one aboard under its id changes nothing.
     /// </summary>
     public void Release(ICartRider rider)
     {
+        if (!Riders.TryGetValue(rider.RiderId, out var aboard) || aboard != rider) return;
+        Riders.Remove(rider.RiderId);
         Seats.Leave(rider.RiderId);
-        if (Riders.TryGetValue(rider.RiderId, out var aboard) && aboard == rider) Riders.Remove(rider.RiderId);
+        RiderChanged?.Invoke(rider, false);
     }
 
     /// <summary>Put the cart on a curve sample (world space; −Z along the line, Y up from the track).</summary>
