@@ -249,6 +249,7 @@ public partial class RailController : Node
         Party.Reset(new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating));
         SetCartLayer();
         Party.Limit = StopS[StopIndex];
+        ResetLine();
         Boarding.Cancel();
         _hitAt.Clear();
         _warnedAt.Clear();
@@ -317,8 +318,9 @@ public partial class RailController : Node
     /// <summary>The countdown starts at the stop the cart is held at (a Boarding event says where).</summary>
     private void StartBoarding()
     {
+        if (Halted && LineBlocked) return; // held at an obstacle on the line: nobody leaves until it is cleared
         Boarding.Start();
-        Raise(new CartEvent(CartEventKind.Boarding, Stop: StopIndex));
+        Raise(new CartEvent(CartEventKind.Boarding, Stop: Halted ? -1 : StopIndex));
     }
 
     private string PromptFor(Adventurer hero)
@@ -478,7 +480,7 @@ public partial class RailController : Node
         // thrown: down on the line just behind the cart, carried a little by the ride; the cart has had them (once) and rolls on away
         EventBus.Instance.Log($"{(rider is Adventurer hero ? hero.State.Name : ((Node)rider).Name)} jumps from the moving cart!");
         _throwing = true;
-        try { rider.GetOut(Party.Track.Point(Party.BackS - Party.Dir * BodyRadius - Party.Dir * ThrownBehind) + Vector3.Up * 0.05f, Cart.Velocity * 0.3f); }
+        try { rider.GetOut(LanePoint(Party.BackS - Party.Dir * BodyRadius - Party.Dir * ThrownBehind) + Vector3.Up * 0.05f, Cart.Velocity * 0.3f); }
         finally { _throwing = false; }
         if (rider is GodotObject o) _hitAt[o.GetInstanceId()] = _now;
         if (rider is IHazardVictim victim)
@@ -563,14 +565,15 @@ public partial class RailController : Node
             if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
             else if ((_hopTimer -= dt) <= 0f) { _hopTimer = HopEvery; HopInNearby(party); }
             CountHeroes(party, out var seated, out var living);
-            if (!playerAboard || seated == 0 || !GateUp(StopIndex)) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, or without a player
+            if (!playerAboard || seated == 0 || !GateUp(StopIndex) || Halted && LineBlocked) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, without a player, or into the obstacle it stopped at
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
                 Party.State = State with { Mode = CartMode.Rolling };
                 SetCartLayer();
                 Party.Settle(); // it sets off from a standstill: nothing banked from the wait
-                Raise(new CartEvent(CartEventKind.Departed, Stop: StopIndex));
+                Raise(new CartEvent(Halted ? CartEventKind.Resumed : CartEventKind.Departed, Stop: StopIndex)); // a halt left is not a departure: the ride stays armed
+                Halted = false;
                 RefreshHud();
             }
         }
@@ -579,8 +582,10 @@ public partial class RailController : Node
         {
             var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, _train.Count, Party.Limit));
             Party.Step(input, dt);
+            var crashed = HitBlock(); // an obstacle on the party lane: the cart is put back at its face
             RunOver(party); // the arrival tick too: the last stretch before the stop is swept
             if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
+            else if (crashed) Halt();
             else if (State.Mode == CartMode.Held) { SetCartLayer(); Arrive(); }
             else Warn(party);
         }
@@ -607,10 +612,11 @@ public partial class RailController : Node
                 else if (child is Npc { Dead: false, Downed: false, Seated: false } npc) _bodies.Add(npc);
             }
         }
-        RunOverSweep.Judge(Party, _bodies, _now, _hitAt, _hits);
+        var run = JudgedRun(); // the lane the front is on
+        RunOverSweep.Judge(run, _bodies, _now, _hitAt, _hits);
         if (_hits.Count == 0) return;
 
-        var damage = RunOverEffects.Apply(_hits, SourceName, TierRules.Lethality, _setAside, _onHit);
+        var damage = RunOverEffects.Apply(_hits, SourceName, TierRules.Lethality, SetAsideFor(run), _onHit);
         if (damage <= 0f) return;
         Party.State = State with { Plating = Mathf.Max(0f, State.Plating - damage) };
         foreach (var rider in Cart.Riders.Values)
@@ -621,18 +627,19 @@ public partial class RailController : Node
     /// <summary>"Cart coming!" for a hero on foot with the cart bearing down: a seated companion says it (else the log), once per hero per few seconds.</summary>
     private void Warn(PartyController party)
     {
+        var run = JudgedRun(); // the lane the front is on
         var look = Mathf.Max(State.V, RunOverRules.WarnMinSpeed) * WarnSeconds;
-        float hint = Party.FrontS + look / 2f, window = look / 2f + 2f;
+        float hint = run.FrontS + look / 2f, window = look / 2f + 2f;
         // a warned body stands within 2 m of the line at most look + HalfLength ahead, and no stretch of line is shorter than the straight way
         var reach = look + CartRules.HalfLength + 3f;
-        var at = Party.Track.Point(State.S);
+        var at = run.Track.Point(run.State.S);
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
             var pos = hero.GlobalPosition;
             if (pos.DistanceSquaredTo(at) > reach * reach) continue;
-            if (!Party.Track.Measure(pos, hint, window, out var b)) continue;
-            if (!RunOverRules.InWarning(State.S, State.V, b with { Radius = BodyRadius }, WarnSeconds)) continue;
+            if (!run.Track.Measure(pos, hint, window, out var b)) continue;
+            if (!RunOverRules.InWarning(run.State.S, State.V, b with { Radius = BodyRadius }, WarnSeconds)) continue;
             if (_warnedAt.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
             _warnedAt[hero.Index] = _now;
             Adventurer? speaker = null;
@@ -661,6 +668,7 @@ public partial class RailController : Node
     {
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
+        ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
         EventBus.Instance.Log("The cart is wrecked!");
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
@@ -731,6 +739,7 @@ public partial class RailController : Node
     private void Arrive()
     {
         StopIndex++;
+        ResetLine();
         foreach (var rider in Cart.Riders.Values) if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Pumping = false;
         var last = StopIndex >= StopS.Length - 1;
         EventBus.Instance.Log(last ? "The cart reaches the end of the line." : $"The cart rolls into stop {StopIndex}.");
@@ -784,9 +793,11 @@ public partial class RailController : Node
     private string Line()
     {
         if (State.Mode == CartMode.Wrecked) return "Cart — wrecked";
+        if (Halted && LineBlocked) return "Cart — line blocked";
         if (State.Mode == CartMode.Held && !GateUp(StopIndex)) return "Cart — gate down";
         if (Boarding.Running) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(Boarding.Left)}";
         if (State.Mode == CartMode.Rolling) return "Cart — rolling";
+        if (Halted) return "Cart — on the line";
         if (StopIndex == 0) return "Cart — at the landing";
         return StopIndex >= StopS.Length - 1 ? "Cart — end of the line" : $"Cart — at stop {StopIndex}";
     }

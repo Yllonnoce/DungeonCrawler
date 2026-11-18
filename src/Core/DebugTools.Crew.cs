@@ -65,6 +65,9 @@ public partial class DebugTools
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
             if (e.IsAlive && e != _crewBrute && (_crewSection2 || !HoldsAStop(main, layout, e))) e.Kill();
         if (rc.State.Mode == CartMode.Rolling) Pin(_crewBrute, _crewBruteAt);
+        // ride 3's heap blocks the party lane: the test throws the switch_out lever as the ride arms, so the cart goes round on the enemy lane
+        if (rc.State.Mode == CartMode.Rolling && root.GetNodeOrNull<RailEncounterController>("RailEncounterController") is { ArmedRide: 3 } enc && enc.DebugThrowSwitches(3) > 0)
+            GD.Print($"[crew] ride 3 armed at S={rc.State.S:0.0}: the switch_out lever is thrown (the ore heap blocks the party lane)");
 
         if (_crewSection2) { RunCrewWreck(main, layout, rc, Fail); return; }
         var wagons = ctrl.Wagons;

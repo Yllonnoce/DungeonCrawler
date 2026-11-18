@@ -69,6 +69,7 @@ public partial class RailEncounterController : Node
         _enemyTrack = enemyTrack;
         _enemy = new TrackSampler(enemyTrack);
         Lanes = new LaneMap(rails.Party.Track, _enemy);
+        rails.UseLanes(_enemy, Lanes); // a thrown switch takes the party's cart across
         _encounters = contents.RailEncounters;
         _setPieces = contents.RailSetPieces;
         _started = new bool[_encounters.Count];
@@ -103,14 +104,17 @@ public partial class RailEncounterController : Node
                 break;
             case CartEventKind.Wrecked:
                 ClearRide(wrecked: true);
+                ResetSwitchyard(undone: true);
                 break;
             case CartEventKind.Restored:
                 ClearRide();
                 ClearThrowers();
+                ResetSwitchyard(undone: true);
                 break;
             case CartEventKind.Arrived:
             case CartEventKind.OnFoot:
                 ClearRide();
+                ResetSwitchyard(undone: false);
                 break;
         }
     }
@@ -130,6 +134,7 @@ public partial class RailEncounterController : Node
     {
         ArmedRide = -1;
         ClearStanders();
+        ClearSwitchyard();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
         foreach (var cart in _carts) Free(cart);
         _carts.Clear();
@@ -196,6 +201,7 @@ public partial class RailEncounterController : Node
         var partyS = _rails.State.S;
         var paceS = PaceRules.TargetS(Lanes.EnemyS(partyS), enc.Offset);
         var s = Mathf.Clamp(paceS - SpawnBehind, 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
+        if (_rails.OnEnemyLane(partyS)) s = Mathf.Min(Mathf.Max(paceS, Lanes.EnemyS(_rails.Party.FrontS) + CartRules.HalfLength + SpawnClear), Mathf.Max(0f, _enemy.Length - LineEnd - 1f)); // the party's cart is on this lane: seen ahead of it, never in it
         var v = _rails.State.V * Lanes.Stretch(partyS);
         var cart = new SlagCart { Name = $"SlagCart_{enc.Id}", EncounterId = enc.Id, InnerSide = InnerSideAt(s) };
         cart.Setup(_enemy, new CartState(s, v, CartMode.Rolling, CartRules.MaxPlating), enc.Offset);
@@ -230,7 +236,7 @@ public partial class RailEncounterController : Node
         if (NetSession.IsClient || !Current) return;
         var dt = (float)delta;
         StartReached();
-        TickSetPieces(Main.Instance.Party);
+        TickSetPieces(Main.Instance.Party, dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null)
@@ -244,6 +250,7 @@ public partial class RailEncounterController : Node
         {
             var cart = _carts[i];
             if (!IsInstanceValid(cart) || cart.Derailed) { _carts.RemoveAt(i); continue; }
+            if (Ram(cart)) { _carts.RemoveAt(i); continue; } // before it moves or sweeps: a rammed cart does nothing more
             Pace(cart, dt);
             RunOver(cart);
             Warn(cart, party);
@@ -262,6 +269,8 @@ public partial class RailEncounterController : Node
         var partyV = _rails.State.Mode == CartMode.Rolling ? _rails.State.V * Lanes.Stretch(partyS) : 0f;
         var target = PaceRules.TargetS(Lanes.EnemyS(partyS), cart.Offset);
         var command = PaceRules.SpeedFor(run.State.S, run.State.V, target, partyV);
+        if (_rails.OnEnemyLane(partyS)) // the party's cart took this lane: one ahead cannot outrun it, one behind never runs into it
+            command = run.State.S > Lanes.EnemyS(partyS) ? Mathf.Min(command, Mathf.Max(0f, partyV - RamCloseIn)) : Mathf.Min(command, partyV);
         run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit, command), dt);
         run.Sync();
         run.PoseAt(run.State.S); // physics this tick (riders' aim, hits on the shoe) sees the cart where it is; _Process smooths it

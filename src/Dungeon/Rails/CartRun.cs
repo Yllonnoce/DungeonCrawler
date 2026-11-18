@@ -130,9 +130,10 @@ public sealed class CartRun
 }
 
 /// <summary>What happened to a cart, for whoever listens (plan 5 syncs it to clients).</summary>
-public enum CartEventKind { Departed, Arrived, Hit, Wrecked, Seated, Unseated, Restored, OnFoot, Boarding }
+/// <summary>Halted: the cart ran into an obstacle on the line and is held there, short of the next stop. Resumed: it left such a halt for the next stop (not a departure from a stop).</summary>
+public enum CartEventKind { Departed, Arrived, Hit, Wrecked, Seated, Unseated, Restored, OnFoot, Boarding, Halted, Resumed }
 
-/// <param name="Stop">The stop concerned (Departed, Wrecked: the one last left; Arrived, Restored: the one reached; Boarding: the one the countdown runs at), or −1.</param>
+/// <param name="Stop">The stop concerned (Departed, Wrecked, Halted, Resumed: the one last left; Arrived, Restored: the one reached; Boarding: the one the countdown runs at, −1 on the line after a halt), or −1.</param>
 /// <param name="Rider">The rider's <see cref="ICartRider.RiderId"/> (Seated, Unseated), or −1.</param>
 /// <param name="Target">The instance id of the body run over (Hit), or 0.</param>
 /// <param name="Thrown">Unseated from a moving cart at speed.</param>

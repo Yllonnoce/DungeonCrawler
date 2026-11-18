@@ -24,6 +24,13 @@ public partial class RailEncounterController
         public Node3D Node = null!;
         public float S;
         public bool Fired;
+        public TrackSwitch? Switch;
+        public OreHeap? Heap;
+        public OreBuckets? Buckets;
+        /// <summary>Its warning has been called this arming.</summary>
+        public bool Barked;
+        /// <summary>A wreck or a load undid the ride: the heap stands again at the next arming.</summary>
+        public bool Rebuild;
     }
 
     private readonly List<Piece> _pieces = new();
@@ -52,6 +59,7 @@ public partial class RailEncounterController
             SpawnStander(i, enc);
         }
         for (var i = 0; i < _pieces.Count; i++) if (_pieces[i].Plan.Ride == ride) _pieces[i].Fired = false;
+        ArmSwitchyard(ride);
     }
 
     private void SpawnStander(int index, RailEncounterPlan enc)
@@ -148,6 +156,7 @@ public partial class RailEncounterController
         {
             if (plan.Ride < 1 || plan.Ride >= _rails.StopS.Length) continue;
             var s = RideS(plan.Ride, plan.At);
+            var piece = new Piece { Plan = plan, S = s };
             Node3D? node = null;
             switch (plan.Kind)
             {
@@ -157,21 +166,44 @@ public partial class RailEncounterController
                     beam.Place(_rails.Party.Track.Frame(s));
                     node = beam;
                     break;
+                case "switch_out":
+                case "switch_back":
+                    node = BuildSwitch(root, piece);
+                    break;
+                case "heap":
+                    node = BuildHeap(root, piece);
+                    break;
+                case "buckets":
+                    node = BuildBuckets(root, piece);
+                    break;
             }
-            if (node != null) _pieces.Add(new Piece { Plan = plan, Node = node, S = s });
+            if (node == null) continue;
+            piece.Node = node;
+            _pieces.Add(piece);
         }
     }
 
-    private void TickSetPieces(PartyController party)
+    /// <summary>The armed ride's pieces: the beam and the points act as the rolling cart's front reaches them; the heap and the buckets tick while the ride is armed (a cart halted at the heap too).</summary>
+    private void TickSetPieces(PartyController party, float dt)
     {
-        if (_pieces.Count == 0 || ArmedRide < 1 || _rails.State.Mode != CartMode.Rolling) return;
+        if (_pieces.Count == 0 || ArmedRide < 1) return;
+        var rolling = _rails.State.Mode == CartMode.Rolling;
         foreach (var piece in _pieces)
         {
-            if (piece.Plan.Ride != ArmedRide || piece.Fired) continue;
+            if (piece.Plan.Ride != ArmedRide) continue;
             switch (piece.Plan.Kind)
             {
                 case "beam":
-                    if (_rails.Party.FrontS >= piece.S) { piece.Fired = true; DuckUnder(party, piece); }
+                    if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) { piece.Fired = true; DuckUnder(party, piece); }
+                    break;
+                case "switch_out":
+                    if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) TakeSwitch(piece);
+                    break;
+                case "heap":
+                    TickHeap(piece, party, rolling);
+                    break;
+                case "buckets":
+                    TickBuckets(piece, dt);
                     break;
             }
         }
