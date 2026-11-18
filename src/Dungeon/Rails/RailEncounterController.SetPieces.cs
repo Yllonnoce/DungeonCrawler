@@ -307,6 +307,14 @@ public partial class RailEncounterController
 
     // ---- the wire: the set pieces' names and the prop check's rail part --------------------------
 
+    /// <summary>The index (its wire name's number) of the first set piece of plan kind <paramref name="kind"/> on ride <paramref name="ride"/>, or −1 (tests).</summary>
+    internal int PieceIndexOf(string kind, int ride)
+    {
+        foreach (var p in _pieces)
+            if (p.Plan.Kind == kind && p.Plan.Ride == ride) return p.Index;
+        return -1;
+    }
+
     /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer), or null.</summary>
     internal Node3D? NetNode(string kind, int index)
     {

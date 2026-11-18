@@ -135,6 +135,18 @@ public sealed class StopGates
         return n;
     }
 
+    /// <summary>Test hook (--test-net-server's RIDE pass): every living holder of the stop dies at once, so its gate lifts for real at the next check. Returns how many.</summary>
+    internal int DebugKillHolders(int stopIndex)
+    {
+        if (stopIndex <= 0 || stopIndex >= _gates.Length || _builder.Collectives is not { } reg) return 0;
+        var room = _layout.Rail!.Stops[stopIndex].Room;
+        var n = 0;
+        foreach (var c in reg.Collectives)
+            if (c.Room == room && c.Goal is GoalKind.Guard or GoalKind.Defend)
+                foreach (var e in c.Alive.ToList()) { e.Kill(); n++; }
+        return n;
+    }
+
     private bool HoldsMobs(int stopIndex)
     {
         var room = _layout.Rail!.Stops[stopIndex].Room;

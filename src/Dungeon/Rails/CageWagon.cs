@@ -10,7 +10,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// A cage wagon on a railed jailbreak floor: a flat bed on four wheels, the size of the party's cart, with an iron-bar
 /// cage on it, a barred door and a padlock on the side that faces the platform, and room for two crew standing inside.
 /// A dumb prop like <see cref="MineCart"/>: the crew controller answers the interact key through <see cref="PromptFor"/>
-/// and <see cref="OnUse"/>; it stands on its siding at a stop until the RailController couples it behind the cart and
+/// and <see cref="OnUse"/> (a client's prompt reads its synced copies; a client's use goes to the server as an InteractIntent
+/// for "wagon:{stop}"); it stands on its siding at a stop until the RailController couples it behind the cart and
 /// poses it (<see cref="Pose"/>). Its origin sits on the track (or the siding's floor); forward is −Z. Only NPC riders:
 /// its seat book has no hero seats in use, and the two bench seats (4, 5) are the crew's.
 /// </summary>

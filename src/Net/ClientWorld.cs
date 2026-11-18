@@ -515,6 +515,7 @@ public partial class ClientWorld : Node
             case (Dungeon.Rails.TrackSwitch sw, "thrown"): sw.ShowThrown(true); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.TrackSwitch sw, "straight"): sw.ShowThrown(false); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.TrackSwitch sw, "taken"): sw.ShowTaken(); break;
+            case (Dungeon.Rails.TrackSwitch sw, "free"): sw.ShowTaken(false); break;
             case (Dungeon.Rails.TrackSwitch sw, "reset"): sw.ShowReset(); break;
             case (Dungeon.Rails.OreHeap h, "cleared"): h.ShowCleared(); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.OreHeap h, "rebuilt"): h.ShowRebuilt(); break;

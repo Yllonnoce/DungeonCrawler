@@ -5,8 +5,9 @@ using Godot;
 namespace DungeonCrawler.Adventure.Objectives;
 
 /// <summary>
-/// The orc's keyring at dead Grisel's belt on the condemned branch of floor 12. A dumb prop: the crew controller answers
-/// the interact key through <see cref="PromptFor"/> and <see cref="OnUse"/>, and hides it once the keys are taken.
+/// The orc's keyring at dead Grisel's belt on the condemned branch of floor 12 ("keyring:0"). A dumb prop: the crew controller
+/// answers the interact key through <see cref="PromptFor"/> and <see cref="OnUse"/> (on a client the prompt reads the keys the
+/// server told it; a use goes to the server as an InteractIntent), and hides it once the keys are taken.
 /// </summary>
 public partial class OrcKeyring : StaticBody3D, IInteractable
 {
@@ -44,6 +45,6 @@ public partial class OrcKeyring : StaticBody3D, IInteractable
 
     public void Interact(PartyController party, Adventurer actor)
     {
-        if (PromptFor?.Invoke(actor) is { Length: > 0 }) OnUse?.Invoke(actor);
+        if (!actor.Downed && PromptFor?.Invoke(actor) is { Length: > 0 }) OnUse?.Invoke(actor);
     }
 }

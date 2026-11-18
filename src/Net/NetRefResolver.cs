@@ -23,7 +23,11 @@ public static class NetRefResolver
         Npc n => NetRefs.Npc(n.Id),
         Plaque pl => NetRefs.Plaque(pl.Index),
         Shrine => NetRefs.Shrine(0),
-        MineCart c when c == RailController.Instance?.Cart => NetRefs.Cart, // the party's cart only: a spare or a runaway wagon is no cart:0
+        MineCart c => NetRefs.CartRef(c.Kind, c == RailController.Instance?.Cart), // the party's cart only: a spare or a runaway wagon is no cart:0
+        TrackSwitch sw => sw.NetRef.Length > 0 ? sw.NetRef : null, // "switch:{piece}", or "spur:{piece}" for a spur's lever
+        RailGate.WinchPost w => NetRefs.Winch(w.Gate.Stop),
+        CageWagon w => NetRefs.Wagon(w.Stop),
+        Adventure.Objectives.OrcKeyring => NetRefs.Keyring,
         _ => null,
     };
 

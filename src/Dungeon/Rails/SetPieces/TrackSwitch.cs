@@ -12,7 +12,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// lever is thrown. E (layer 8) throws it over or back; any hit (layer 4: a blade from the seat, an arrow from afar) only
 /// throws it, never back, so a stray friendly shot cannot undo a thrown lever. The post is solid (layer 1). A <see cref="Fixed"/> switch is always thrown and takes nothing (the return switch). Built by
 /// the <see cref="RailEncounterController"/>, which reads <see cref="Thrown"/> as the cart's front reaches the points. The server
-/// judges it and tells every change (<see cref="NetRef"/>: "thrown", "straight", "taken", "reset"); a client's copy only shows
+/// judges it and tells every change (<see cref="NetRef"/>: "thrown", "straight", "taken", "free", "reset"); a client's copy only shows
 /// what it is told (<see cref="ShowThrown"/>, <see cref="ShowTaken"/>, <see cref="ShowReset"/>).
 /// </summary>
 public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
@@ -25,7 +25,10 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
     /// <summary>Always thrown and not to be touched: the return switch brings the cart home before the ride ends.</summary>
     public bool Fixed { get; init; }
     public bool Thrown { get; private set; }
-    /// <summary>The cart's front has passed its points this ride: the lever offers nothing until the ride is over. Taking it is told ("taken").</summary>
+    /// <summary>
+    /// The cart's front has passed its points this ride: the lever offers nothing until the ride is over. Taking it is told ("taken"),
+    /// and so is clearing it outside a <see cref="Reset"/> ("free": a ride's arming), so a client's prompt never stays blank.
+    /// </summary>
     public bool Taken
     {
         get => _taken;
@@ -33,7 +36,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
         {
             if (_taken == value) return;
             _taken = value;
-            if (value) Tell("taken");
+            Tell(value ? "taken" : "free");
         }
     }
     private bool _taken;
@@ -69,9 +72,15 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
         SetThrown(Fixed);
     }
 
-    public string Prompt => NetSession.IsClient || Fixed || Taken ? "" : Thrown ? "Set the switch back" : "Throw the switch"; // co-op riding is plan 5
+    /// <summary>The same rule on every peer: a client's copy reads the Fixed, Taken and Thrown the server told it.</summary>
+    public string Prompt => PropPromptRules.SwitchPrompt(Fixed, Taken, Thrown);
 
-    public void Interact(PartyController party, Adventurer actor) => Toggle(actor.State.Name);
+    /// <summary>E on the lever: the server's (or solo) use by any hero up on their feet, a remote player's through its InteractIntent (the server checked the reach).</summary>
+    public void Interact(PartyController party, Adventurer actor)
+    {
+        if (actor.Downed) return;
+        Toggle(actor.State.Name);
+    }
 
     public string DisplayName => "switch";
     public bool IsAlive => true;
@@ -118,7 +127,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
 
     /// <summary>Client: the lever stands thrown (or straight) as on the server. A fixed switch stays thrown.</summary>
     public void ShowThrown(bool thrown) { if (!Fixed) SetThrown(thrown); }
-    /// <summary>Client: its points are behind the cart this ride.</summary>
+    /// <summary>Client: its points are behind the cart this ride ("taken"), or no longer ("free").</summary>
     public void ShowTaken(bool taken = true) => _taken = taken;
     /// <summary>Client: the end-of-ride reset, without a sound.</summary>
     public void ShowReset()

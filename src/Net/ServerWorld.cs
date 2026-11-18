@@ -442,6 +442,16 @@ public partial class ServerWorld : Node
         }
     }
 
+    /// <summary>A railed floor's prop after a player's use, for a test server's trace ("prop:{ref}:{state}"): a lever thrown or straight, a gate up or down, a cage open or locked, the keys taken or left; null for anything else.</summary>
+    private static string? RailPropState(Node3D node) => node switch
+    {
+        Dungeon.Rails.TrackSwitch sw => sw.Thrown ? "thrown" : "straight",
+        Dungeon.Rails.RailGate.WinchPost w => w.Gate.Up ? "up" : "down",
+        Dungeon.Rails.CageWagon w => w.Open ? "open" : "locked",
+        Adventure.Objectives.OrcKeyring => Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.CrewRescueController { OrcKeys: true } ? "taken" : "left",
+        _ => null,
+    };
+
     /// <summary>A dialogue node id or NPC id from a client longer than this is ignored: real ids are short words.</summary>
     private const int MaxDialogueNodeIdLength = 64;
 
@@ -514,6 +524,7 @@ public partial class ServerWorld : Node
                 var seatedBefore = body.Seated;
                 target.Interact(party, body);
                 if (node is Dungeon.Rails.MineCart && !seatedBefore && body.Seated) Trace.Add($"aboard:{slot.Name}");
+                if (NetSession.Instance.TestServer && RailPropState(node) is { } propState) { Trace.Add($"prop:{i.Ref}:{propState}"); GD.Print($"[net-server] {slot.Name} used {i.Ref}: now {propState}"); } // test servers only: a lever can be used without end
                 if (node is Items.LootDrop) { _bagDirty = true; Trace.Add("pickup"); }
                 if (node is Dungeon.Props.Chest) Trace.Add("chest");
                 break;

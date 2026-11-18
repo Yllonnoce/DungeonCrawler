@@ -87,13 +87,21 @@ public partial class RailGate : Node3D
     private static void Box(Node3D parent, string name, Vector3 size, Vector3 at, Material material)
         => parent.AddChild(new MeshInstance3D { Name = name, Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Position = at });
 
-    /// <summary>The winch post: looked at, it offers "Crank the winch" while the gate is down.</summary>
+    /// <summary>
+    /// The winch post ("winch:{stop}"): looked at, it offers "Crank the winch" while the gate is down, on every peer (a client's gate
+    /// is up when the server told it). A use reaches <see cref="Crank"/> on the server, a remote player's through its InteractIntent.
+    /// </summary>
     internal partial class WinchPost : StaticBody3D, IInteractable
     {
         private readonly RailGate _gate;
         public WinchPost(RailGate gate) => _gate = gate;
-        public string Prompt => _gate.Up || NetSession.IsClient ? "" : "Crank the winch";
-        public void Interact(PartyController party, Adventurer actor) => _gate.Crank();
+        /// <summary>The gate it winds.</summary>
+        public RailGate Gate => _gate;
+        public string Prompt => PropPromptRules.WinchPrompt(_gate.Up);
+        public void Interact(PartyController party, Adventurer actor)
+        {
+            if (!actor.Downed) _gate.Crank();
+        }
     }
 
     /// <summary>Server: the winch lifts the gate when none of its holders is near; otherwise the crew says no (once per 3 s).</summary>

@@ -101,25 +101,8 @@ public partial class RailController : ISlopeSource
         };
     }
 
-    /// <summary>
-    /// Test hook (--test-net-server's RIDE pass): the cart departs from the stop it is held at, as a boarding would send it (a Departed
-    /// event arms the next ride), whoever is aboard and whatever the gate. The pass boards the client for real at the landing; this
-    /// sends the empty cart on through rides 2 and 3 for their carts. False when it cannot leave.
-    /// </summary>
-    internal bool DebugDepart()
-    {
-        if (NetSession.IsClient || !Current || State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1 || Halted && LineBlocked) return false;
-        Boarding.Cancel();
-        Party.Limit = StopS[StopIndex + 1];
-        Party.State = State with { Mode = CartMode.Rolling };
-        SetCartLayer();
-        Party.Settle();
-        Raise(new CartEvent(Halted ? CartEventKind.Resumed : CartEventKind.Departed, Stop: StopIndex));
-        Halted = false;
-        RefreshHud();
-        Flush();
-        return true;
-    }
+    /// <summary>Test hook (--test-net-server's RIDE pass): the stop's holders die by the test's hand, so its gate lifts for real at the next gate check. Returns how many died.</summary>
+    internal int DebugKillHolders(int stop) => NetSession.IsClient ? 0 : _gates.DebugKillHolders(stop);
 
     // ---- a client's side ---------------------------------------------------------------------
 

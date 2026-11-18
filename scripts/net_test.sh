@@ -7,11 +7,14 @@
 #        RIDE=1 scripts/net_test.sh  (the built-in campaign: the server takes the client to floor 12, where the rides' set
 #                                     pieces must stand on the client and its props must hash as the server's; the client
 #                                     boards the cart at the landing through its intent, pumps out of it (the server shows
-#                                     the pump), brakes on the way and gets out at stop 1 at the server's landing; the cart
-#                                     rides on empty to stop 3 and the client's carts must keep within 1.5 m (2 m for ride 3's
-#                                     slag cart) of the server's on a shared server-time grid; the crew sit in their wagons on
-#                                     the client as on the server; at stop 3 the client boards again and leaves the game
-#                                     seated, and the server unseats it quietly beside the lane with its parked pose there)
+#                                     the pump), brakes on the way and gets out at stop 1 at the server's landing; stop 1's
+#                                     holders die by the test's hand and its gate rises on the client; the client takes the
+#                                     orc's keys, opens cage 1 and revives a crewman the server downed in it, each through its
+#                                     intent; it boards again, rides on (every departure a real one) and throws ride 3's switch
+#                                     from the seat, and the cart crosses on both; the client's carts must keep within 1.5 m (2 m
+#                                     for ride 3's slag cart) of the server's on a shared server-time grid; the crew sit in their
+#                                     wagons on the client as on the server; at stop 3 the client leaves the game seated, and the
+#                                     server unseats it quietly beside the lane with its parked pose there)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -37,8 +40,8 @@ if [ "${RIDE:-}" = 1 ]; then
   XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=360 > "$TMP/client.log" 2>&1
   for i in $(seq 1 60); do kill -0 $SERVER 2>/dev/null || break; sleep 0.5; done
   kill $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
-  echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT|.* left while seated)|Unhandled|ERROR" "$TMP/server.log" | head -30
-  echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -30
+  echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT|.* left while seated)|Unhandled|ERROR" "$TMP/server.log" | head -50
+  echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -50
   if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi
   # the set pieces stand on the client as on the server, and its props (the rail part too) hash as the server's
@@ -65,6 +68,17 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: at stop 1; asked to get out through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never got out at stop 1)"; exit 1; fi
   if ! grep -q "\[net-server\] Rider left while seated: unseated quietly" "$TMP/server.log"; then echo "NET TEST: FAIL (the client left seated but was not unseated quietly)"; exit 1; fi
   if grep -q "Rider jumps from the moving cart" "$TMP/server.log"; then echo "NET TEST: FAIL (the client was thrown from the cart)"; exit 1; fi
+  # the props: stop 1's gate rises on the client (its PropEvt); the keys (condemned branch), cage 1 and a revive through the client's
+  # intents; every departure from stops 1 and 2 a real one with the client aboard; ride 3's switch thrown from the seat, crossed on both
+  if ! grep -q "\[net\] ride: gate 1 is up here (its PropEvt)" "$TMP/client.log"; then echo "NET TEST: FAIL (stop 1's gate never rose on the client)"; exit 1; fi
+  if grep -q "\[net-server\] ride: stop 1's .* keyring: at Grisel's belt" "$TMP/server.log" && ! grep -q "\[net\] ride: took the orc's keys through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never took the orc's keys)"; exit 1; fi
+  if ! grep -q "\[net\] ride: opened cage 1 through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never opened cage 1)"; exit 1; fi
+  if ! grep -q "\[net\] ride: revived .* through the intent" "$TMP/client.log" || ! grep -q "\[net-server\] ride: .* is up again" "$TMP/server.log"; then echo "NET TEST: FAIL (the downed crewman was not revived through the client's intent)"; exit 1; fi
+  for STOP in 1 2; do
+    if ! grep -q "\[net-server\] ride: the cart departs stop $STOP with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart never left stop $STOP for real with the client aboard)"; exit 1; fi
+  done
+  if ! grep -q "\[net\] ride: ride 3's lever offers \"Throw the switch\" .* thrown through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never threw ride 3's switch from the seat)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: the cart takes ride 3's switch .* thrown through the intent" "$TMP/server.log" || ! grep -q "\[net\] ride: the cart crosses here (CrossOut set" "$TMP/client.log"; then echo "NET TEST: FAIL (ride 3's switch thrown by the client did not send the cart across on both)"; exit 1; fi
   PAIRS=$(awk '
     FNR == 1 { file++ }
     function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }

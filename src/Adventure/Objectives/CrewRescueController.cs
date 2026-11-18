@@ -17,7 +17,8 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// stop the open wagon couples on behind, its crew aboard, or the party lets them out to follow on foot. A crew member
 /// is home in the exit room (seated in the train once the cart is at the end of the line, or on foot there); a dead one
 /// is lost. Every cage open and every crew member home or lost opens the reward vault and the stairs. Server only for
-/// every change; a client reads the 2 s objective state for the HUD (the wagons' and crew's sync is plan 5).
+/// every change; a client reads the 2 s objective state for the HUD, shows the cages and the keys as the server tells them,
+/// and offers the wagons' and the keyring's prompts from its copies (<see cref="PropPromptRules"/>; a use is an InteractIntent).
 /// </summary>
 public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 {
@@ -184,7 +185,8 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         GD.Print($"[CrewRescue] Grisel lies dead on cell {cell} beside wagon {wagon.Stop}, her keys at her belt");
     }
 
-    private string KeyringPrompt() => NetSession.IsClient || OrcKeys ? "" : "Take the orc's keys";
+    /// <summary>The same rule on every peer: a client's keys are the ones the server told it of.</summary>
+    private string KeyringPrompt() => PropPromptRules.KeyringPrompt(OrcKeys);
 
     private void TakeKeys()
     {
@@ -350,17 +352,19 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     // ---- the wagons -------------------------------------------------------------------------------
 
+    /// <summary>
+    /// The same rule on every peer (<see cref="PropPromptRules.CagePrompt"/>). A client reads its copies: the cage's door and the keys
+    /// as the server told them, Grisel and the crew (up, down, following, seated) from the snapshots and the seats, the cart's stop
+    /// and mode from its state; the server judges the use again when the intent arrives.
+    /// </summary>
     private string WagonPrompt(CageWagon wagon, Adventurer hero)
-    {
-        if (NetSession.IsClient || hero.Control == ControlKind.Remote) return ""; // co-op wagons are plan 5
-        if (!wagon.Open) return OrcKeys ? "Open the cage (the orc's keys)" : GriselOpens(wagon) is not null ? "Open the cage (Grisel)" : "Unlock the cage";
-        if (CanLetOut(wagon)) return "Let them out";
-        return DownedAboard(wagon) is { } down ? $"Revive {down.NpcName}" : "";
-    }
+        => PropPromptRules.CagePrompt(wagon.Open, OrcKeys, !wagon.Open && !OrcKeys && GriselOpens(wagon) is not null, wagon.Open && CanLetOut(wagon),
+            wagon.Open ? DownedAboard(wagon)?.NpcName : null);
 
+    /// <summary>A hero used the wagon: the server's (or solo) work, a remote player's through its InteractIntent (the server checked the reach); a hero who is down does nothing.</summary>
     private void UseWagon(CageWagon wagon, Adventurer actor)
     {
-        if (NetSession.IsClient || actor.Control == ControlKind.Remote || Main.Instance is not { InGame: true } main || main.Builder.Layout != Layout) return;
+        if (NetSession.IsClient || actor.Downed || Main.Instance is not { InGame: true } main || main.Builder.Layout != Layout) return;
         var party = main.Party;
         if (!wagon.Open)
         {

@@ -153,7 +153,7 @@ public partial class RailEncounterController
         {
             if (p.Plan.Ride != ride) continue;
             p.Barked = false;
-            if (p.Switch != null) p.Switch.Taken = false;
+            if (p.Switch != null) p.Switch.Taken = false; // told ("free") when it was still taken, so a client's lever offers itself again
             if (p.Heap is { } heap)
             {
                 if (p.Rebuild && !heap.IsAlive) heap.Rebuild();
