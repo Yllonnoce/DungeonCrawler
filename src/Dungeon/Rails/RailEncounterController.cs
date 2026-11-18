@@ -216,7 +216,7 @@ public partial class RailEncounterController : Node
         var s = Mathf.Clamp(paceS - SpawnBehind, 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
         if (_rails.FrontOnEnemyLane) s = Mathf.Min(Mathf.Max(paceS, Lanes.EnemyS(_rails.Party.FrontS) + CartRules.HalfLength + SpawnClear), Mathf.Max(0f, _enemy.Length - LineEnd - 1f)); // the party's cart is on this lane: seen ahead of it, never in it
         var v = _rails.State.V * Lanes.Stretch(partyS);
-        var cart = new SlagCart { Name = $"SlagCart_{enc.Id}", EncounterId = enc.Id, InnerSide = InnerSideAt(s) };
+        var cart = new SlagCart { Name = $"SlagCart_{enc.Id}", EncounterId = enc.Id, InnerSide = InnerSideAt(s), CartId = NextCartId() };
         cart.Setup(_enemy, new CartState(s, v, CartMode.Rolling, CartRules.MaxPlating), enc.Offset);
         root.AddChild(cart);
         cart.Run.PoseAt(s);

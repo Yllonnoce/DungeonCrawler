@@ -5,7 +5,7 @@ public static class Protocol
 {
     public const int Version = 17;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 109;
+    public const int MessageKindCount = 111;
     /// <summary>Seconds between the server's item checks (<see cref="LootManifest"/>).</summary>
     public const float LootCheckSeconds = 4f;
     public const int DefaultPort = 7777;
@@ -42,6 +42,8 @@ public enum MsgKind : byte
     Hello = 1, Reject, Welcome, Ready, PlayerJoined, PlayerLeft,
     // the floor clock (v17): the server's (floor seconds, server time) pair every second or two, so clients run the floor's metronome
     FloorClock = 7,
+    // the carts (v17, plan 5 task 3): what changed this tick, and every live cart five times a second (transient), so clients run them
+    CartState = 8, CartCorrection = 9,
     // movement (binary)
     Pose = 10, WorldSnapshot, Vitals,
     // intents client -> server

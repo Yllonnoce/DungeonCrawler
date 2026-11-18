@@ -314,7 +314,11 @@ public partial class DungeonBuilder : Node3D
         {
             var rails = new Rails.RailController();
             rails.Setup(this, layout, PartyTrack, _floorRoot);
-            if (rails.StopS.Length >= 2) _floorRoot.AddChild(rails);
+            if (rails.StopS.Length >= 2)
+            {
+                _floorRoot.AddChild(rails);
+                if (Net.NetSession.IsNetworked) _floorRoot.AddChild(new Rails.RailNet(rails)); // the carts on the wire (sent on the server, followed on a client)
+            }
             else { rails.Cart.QueueFree(); rails.QueueFree(); }
         }
         PlaceNestMouths(layout, _floorRoot, seed);

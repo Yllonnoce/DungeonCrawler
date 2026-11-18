@@ -40,6 +40,14 @@ public sealed class CartTrain
         return true;
     }
 
+    /// <summary>Client: every wagon off the train, where it stands, shown (the server's train is coupled again from its cart state).</summary>
+    public void UncoupleAll()
+    {
+        foreach (var wagon in _wagons)
+            if (GodotObject.IsInstanceValid(wagon)) { wagon.SetCoupled(false); wagon.Visible = true; }
+        _wagons.Clear();
+    }
+
     /// <summary>Each coupled wagon on the line at <paramref name="s"/> − <see cref="WagonSpacing"/>·k (k its 1-based place, clamped at the track's start), facing the lead's way.</summary>
     public void Pose(float s)
     {

@@ -32,9 +32,10 @@ public partial class RailController
     private float _blockDent;
     /// <summary>The cart is held on the line short of the next stop (it ran into an obstacle), not at <see cref="StopIndex"/>.</summary>
     public bool Halted { get; private set; }
-    private bool LineBlocked => !float.IsPositiveInfinity(BlockedAt);
-    /// <summary>Nothing at the cart's place holds it: the gate of the stop it is held at is up, or it is halted on the line past that stop (its gate is behind it).</summary>
-    private bool GateClear => Halted || GateUp(StopIndex);
+    /// <summary>An obstacle stands on the party lane (a client reads the server's flag).</summary>
+    private bool LineBlocked => NetSession.IsClient ? (_netFlags & (byte)CartFlags.LineBlocked) != 0 : !float.IsPositiveInfinity(BlockedAt);
+    /// <summary>Nothing at the cart's place holds it: the gate of the stop it is held at is up, or it is halted on the line past that stop (its gate is behind it). A client reads the server's flag.</summary>
+    private bool GateClear => NetSession.IsClient ? (_netFlags & (byte)CartFlags.GateClear) != 0 : Halted || GateUp(StopIndex);
 
     /// <summary>The enemy lane beside the party's and the map between them (the encounter controller has both). Before any <see cref="Cross"/>.</summary>
     public void UseLanes(TrackSampler enemy, LaneMap lanes)
@@ -84,6 +85,22 @@ public partial class RailController
         _crossBack = backS;
         RefreshFrameAt(); // one FrameAt for the lane blend and a jump's arc
     }
+
+    /// <summary>
+    /// Client: the lane blend the server's cart state names (<paramref name="outS"/> and <paramref name="backS"/> as <see cref="Cross"/>
+    /// takes them, NaN for none). Sets no server state; the pose follows at once.
+    /// </summary>
+    internal void ApplyLaneNet(float outS, float backS)
+    {
+        if (!NetSession.IsClient || _laneFrame == null) return;
+        if (Same(_crossOut, outS) && Same(_crossBack, backS)) return;
+        _crossOut = outS;
+        _crossBack = backS;
+        RefreshFrameAt();
+    }
+
+    /// <summary>Two floats the same, NaN equal to NaN.</summary>
+    private static bool Same(float a, float b) => float.IsNaN(a) ? float.IsNaN(b) : a == b;
 
     /// <summary>Back on the party lane for good (the ride is over or undone).</summary>
     public void ClearLane()

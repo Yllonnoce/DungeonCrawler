@@ -5,7 +5,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// An empty ore wagon running loose down the party's line: the party cart's iron tub with nobody offered a seat in it (it is
 /// not an interactable). Posed and judged by the <see cref="RailEncounterController"/>, which runs it on the party track with
-/// its own <see cref="CartRun"/>. Server only.
+/// its own <see cref="CartRun"/>. A client builds the same wagon as dressing from the server's cart state and poses it by its follower.
 /// </summary>
 public partial class RunawayWagon : MineCart
 {
@@ -15,6 +15,8 @@ public partial class RunawayWagon : MineCart
 
     /// <summary>When each body was last run over (<see cref="RunOverSweep.Judge"/> keeps it).</summary>
     public Dictionary<ulong, double> HitAt { get; } = new();
+
+    public override Net.CartKind Kind => Net.CartKind.Runaway;
 
     public RunawayWagon()
     {

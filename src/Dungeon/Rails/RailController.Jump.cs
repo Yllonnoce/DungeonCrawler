@@ -45,6 +45,22 @@ public partial class RailController
         RefreshFrameAt();
     }
 
+    /// <summary>
+    /// Client: the gap and the jump the server's cart state names (NaN for none; <paramref name="jumpV"/> the speed it left the lip
+    /// at, NaN before it flew). Sets no server state: the arc poses the cart and its train at once.
+    /// </summary>
+    internal void ApplyGapNet(float from, float to, float jumpV)
+    {
+        if (!NetSession.IsClient) return;
+        var v = float.IsNaN(jumpV) || jumpV <= 0f ? 0f : jumpV;
+        if (Same(_gapFrom, from) && Same(_gapTo, to) && _jumpV == v) return;
+        _gapFrom = from;
+        _gapTo = to;
+        _jumpV = v;
+        _jumpJudged = v > 0f;
+        RefreshFrameAt();
+    }
+
     /// <summary>No gap waits (the ride is over or undone).</summary>
     public void ClearGap()
     {

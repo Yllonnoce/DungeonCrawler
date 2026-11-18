@@ -102,6 +102,13 @@ public partial class NetTestFlow : Node
 
     private bool _rideJumped, _rideBuiltSeen, _rideThrown;
     private double _rideReadyAt = -1;
+    /// <summary>When the cart was last seen held at a stop it may leave (−1: not held), and how many times it has been sent off.</summary>
+    private double _rideHeldSince = -1;
+    private int _rideDeparts;
+    /// <summary>The cart is sent off this long after the client is ready (its prop checks run first) and this long after each arrival.</summary>
+    private const double RideFirstDeparture = 14, RideDwell = 1.5;
+    /// <summary>The RIDE pass rides the cart from the landing to this stop (ride 3 has a slag cart).</summary>
+    private const int RideLastStop = 3;
 
     /// <summary>The server's half of the RIDE pass: once a client is ready the party goes to floor 12; the client checks it there and leaves.</summary>
     private void RideServerTick(ServerWorld world)
@@ -129,6 +136,19 @@ public partial class NetTestFlow : Node
                 GD.Print($"[net-server] ride: threw {thrower.DebugThrowSwitches(3)} switch(es) of ride 3 for the client to see");
             }
         }
+        // the carts on the wire: the cart departs each stop empty (DebugDepart) until it reaches stop 3, so rides 1 to 3 run their carts
+        if (_rideThrown && _elapsed - _rideReadyAt >= RideFirstDeparture && Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc))
+        {
+            var held = rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex < RideLastStop;
+            if (!held) _rideHeldSince = -1;
+            else if (_rideHeldSince < 0) _rideHeldSince = _elapsed;
+            else if (_elapsed - _rideHeldSince >= RideDwell && rc.DebugDepart())
+            {
+                _rideDeparts++;
+                _rideHeldSince = -1;
+                GD.Print($"[net-server] ride: the cart departs stop {rc.StopIndex} empty (ride {rc.StopIndex + 1} armed: {Dungeon.Rails.RailEncounterController.Instance?.ArmedRide})");
+            }
+        }
         if (world.Trace.Contains("empty"))
         {
             var want = new[] { "join:", "ready:", "floor:12", "left:" };
@@ -141,14 +161,17 @@ public partial class NetTestFlow : Node
                 if (i < last) ordered = false;
                 last = Math.Max(last, i);
             }
-            var ok = missing.Count == 0 && ordered && _rideBuiltSeen;
-            Finish("[net-server]", ok, $"ride: trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides"));
+            var reached = Dungeon.Rails.RailController.Instance is { } end && IsInstanceValid(end) ? end.StopIndex : -1;
+            var rode = _rideDeparts >= RideLastStop && reached >= RideLastStop;
+            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode;
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
             return;
         }
-        if (_elapsed > 170) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
+        if (_elapsed > 400) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
     }
 
-    private int _ridePropChecks, _rideAsks;
+    private int _ridePropChecks, _rideAsks, _ridePropMatched, _rideMostCarts;
+    private bool _rideSawRolling;
 
     /// <summary>
     /// The client's half of the RIDE pass. Step 50: the server's floor 12 is built here with its set pieces (beams, switches,
@@ -190,8 +213,25 @@ public partial class NetTestFlow : Node
                 if (matched < 2) { Finish("[net]", false, $"ride: only {matched} prop check(s) reached us in 10 s on floor 12"); net.Disconnect("test finished"); return; }
                 GD.Print($"[net] ride: the server's thrown switch shows here ({lever.Name}, by PropEvt)");
                 GD.Print($"[net] ride: prop hash matches the server's ({matched} checks matched, no prop-check in {_clock:0} s)");
-                Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({matched} checks)");
-                net.Disconnect("test finished");
+                _ridePropMatched = matched;
+                _clock = 0; _step = 52;
+                return;
+            }
+            case 52:
+            {
+                // the cart rides stops 0 to 3 on the server; here it follows (the trace lines on the server-time grid are paired by the script)
+                if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc)) { if (_clock > 5) { Finish("[net]", false, "ride: no rail controller on the client"); net.Disconnect("test finished"); } return; }
+                if (rc.Following && rc.State.Mode == Dungeon.Rails.CartMode.Rolling) _rideSawRolling = true;
+                if (Dungeon.Rails.RailNet.Instance is { } rn && IsInstanceValid(rn)) _rideMostCarts = Math.Max(_rideMostCarts, rn.ClientCartCount);
+                if (_rideSawRolling && rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex >= 3)
+                {
+                    GD.Print($"[net] ride: the cart followed the server's to stop {rc.StopIndex} (S={rc.State.S:0.0}); up to {_rideMostCarts} other cart(s) here at once");
+                    if (!rc.Following || _rideMostCarts == 0) { Finish("[net]", false, $"ride: the cart never followed a state (following={rc.Following}) or no slag cart ever showed here ({_rideMostCarts})"); net.Disconnect("test finished"); return; }
+                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most");
+                    net.Disconnect("test finished");
+                    return;
+                }
+                if (_clock > 300) { Finish("[net]", false, $"ride: the cart never reached stop 3 here (stop {rc.StopIndex}, mode {rc.State.Mode}, following={rc.Following})"); net.Disconnect("test finished"); }
                 return;
             }
         }

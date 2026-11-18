@@ -41,6 +41,10 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.8f, Roughness = 0.5f };
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
 
+    /// <summary>What it is on the wire: the party's cart (a spare is one too), or a runaway wagon.</summary>
+    public virtual Net.CartKind Kind => Net.CartKind.Party;
+    /// <summary>Its id on the wire (<see cref="Net.CartIds"/>): 0 the party's, the server's count for a runaway wagon.</summary>
+    public int CartId { get; set; }
     public CartSeats Seats { get; } = new();
     /// <summary>Who rides this cart, by <see cref="ICartRider.RiderId"/>: entered by <see cref="Admit"/> (the rider's SitIn), removed by <see cref="Release"/>.</summary>
     public Dictionary<int, ICartRider> Riders { get; } = new();

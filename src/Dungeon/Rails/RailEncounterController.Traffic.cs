@@ -96,7 +96,7 @@ public partial class RailEncounterController
     private void SpawnTraffic()
     {
         if (GetParent() is not Node3D root) return;
-        var cart = new SlagCart { Name = "SlagCart_traffic", EncounterId = "traffic", InnerSide = InnerSideAt(0f) };
+        var cart = new SlagCart { Name = "SlagCart_traffic", EncounterId = "traffic", InnerSide = InnerSideAt(0f), CartId = NextCartId() };
         cart.Setup(_enemy, new CartState(0f, 0f, CartMode.Rolling, CartRules.MaxPlating), 0f);
         root.AddChild(cart);
         cart.Run.PoseAt(0f);
@@ -112,7 +112,7 @@ public partial class RailEncounterController
         var from = _rails.StopS[_rails.StopIndex] + RunawayAhead;
         var to = _rails.StopS[_rails.StopIndex + 1] - RunawayShort;
         if (to - from < 10f) return;
-        var wagon = new RunawayWagon();
+        var wagon = new RunawayWagon { CartId = NextCartId() };
         var run = new CartRun(_rails.Party.Track, wagon, new CartState(from, 0f, CartMode.Rolling, CartRules.MaxPlating), 1) { Limit = to };
         root.AddChild(wagon);
         run.PoseAt(from);

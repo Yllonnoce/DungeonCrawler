@@ -109,6 +109,8 @@ public partial class ClientWorld : Node
             case PlayerLeft pl: OnPlayerLeft(pl); break;
             case Pong pong: Clock.OnPong(pong.SentAt, NetSession.Instance.Now, pong.ServerTime); break;
             case FloorClockMsg fcm: OnFloorClock(fcm); break;
+            case CartStateMsg cs: OnCarts(cs.Floor, cs.Epoch, cs.Carts, correction: false); break;
+            case CartCorrectionMsg cc: OnCarts(cc.Floor, cc.Epoch, cc.Carts, correction: true); break;
             case ForcePose fp: ApplyForcePose(fp); break;
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
@@ -223,6 +225,24 @@ public partial class ClientWorld : Node
     }
 
     /// <summary>The server's floor clock pair: dropped when it is about another floor or build than the one this client holds.</summary>
+    /// <summary>The carts' states (an event's, or the 5 Hz correction's): for this floor's build only, once it stands here.</summary>
+    private void OnCarts(int floor, int epoch, List<CartStateDto> carts, bool correction)
+    {
+        if (floor != Game.Instance.CurrentFloor || !WorldCheck.SameBuild(_epoch, epoch)) return;
+        if (Main.Instance is not { InGame: true, Rebuilding: false } main || main.Builder.CurrentFloor != floor) return;
+        if (Dungeon.Rails.RailNet.Instance is { } rails && GodotObject.IsInstanceValid(rails)) rails.OnCarts(carts, correction);
+    }
+
+    /// <summary>The living (or dying) copy of the server's enemy <paramref name="netId"/> here, or null.</summary>
+    public Enemy? EnemyByNetId(int netId)
+    {
+        if (_enemies.TryGetValue(netId, out var e) && GodotObject.IsInstanceValid(e) && !e.IsQueuedForDeletion()) return e;
+        if (Root is not { } root) return null;
+        foreach (var child in root.GetChildren())
+            if (child is Enemy found && found.NetId == netId && !found.IsQueuedForDeletion()) { _enemies[netId] = found; return found; }
+        return null;
+    }
+
     private void OnFloorClock(FloorClockMsg m)
     {
         if (m.Floor != Game.Instance.CurrentFloor || !WorldCheck.SameBuild(_epoch, m.Epoch)) return;
@@ -313,7 +333,7 @@ public partial class ClientWorld : Node
         // a living copy already here (the index can lag the tree, so look at the tree): nothing to do. A corpse under a net id
         // the server says is alive (the enemy check's resend) makes way for the living one
         var have = root.GetChildren().OfType<Enemy>().Where(e => e.NetId == d.NetId && !e.IsQueuedForDeletion()).ToList();
-        if (have.FirstOrDefault(e => e.IsAlive) is { } alive) { _enemies[d.NetId] = alive; return; }
+        if (have.FirstOrDefault(e => e.IsAlive) is { } alive) { _enemies[d.NetId] = alive; Dungeon.Rails.RailNet.Instance?.OnEnemySpawned(alive); return; }
         foreach (var corpse in have) corpse.QueueFree();
         var e = main.Builder.SpawnEnemy(d.DefId, new Vector3(d.X, d.Y, d.Z), Game.Instance.CurrentFloor, spawnIndex: d.SpawnIndex >= 0 || d.SpawnIndex == -2 ? d.SpawnIndex : -1, netId: d.NetId,
             elite: d.EliteName != null ? new EliteRoll(EliteRules.Decode(d.EliteAffixes), d.EliteName) : null);
@@ -322,6 +342,7 @@ public partial class ClientWorld : Node
         if (d.HordeId != null) { e.SetSwarmDetail(); e.HordeId = d.HordeId; }
         _enemies[d.NetId] = e;
         _enemySpawnedAt[d.NetId] = NetSession.Instance.Now;
+        Dungeon.Rails.RailNet.Instance?.OnEnemySpawned(e); // a cart's state may have named it as a rider before it came
     }
 
     /// <summary>

@@ -445,11 +445,15 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var before = GlobalPosition;
         if (_net?.At(now) is { } s)
         {
-            var target = new Vector3(s.Position.X, s.Position.Y, s.Position.Z);
-            GlobalPosition = before.DistanceSquaredTo(target) > 9f ? target : before.Lerp(target, Math.Min(1f, dt * 15f));
+            // carried on a cart the client runs itself (RailNet): the cart puts it at its spot; the snapshot only turns it
+            if (!Carried)
+            {
+                var target = new Vector3(s.Position.X, s.Position.Y, s.Position.Z);
+                GlobalPosition = before.DistanceSquaredTo(target) > 9f ? target : before.Lerp(target, Math.Min(1f, dt * 15f));
+            }
             Rotation = new Vector3(0, Net.PoseBuffer.LerpAngle(Rotation.Y, s.Yaw, Math.Min(1f, dt * 12f)), 0);
         }
-        Velocity = (GlobalPosition - before) / Math.Max(dt, 0.0001f);
+        Velocity = Carried ? Vector3.Zero : (GlobalPosition - before) / Math.Max(dt, 0.0001f);
         if (IsHorde) TickSwarmDetail(dt);
         if (WindupLeft > 0f) WindupLeft -= dt;
         if (TelegraphRemaining > 0f) TelegraphRemaining -= dt;
@@ -788,7 +792,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     /// <summary>
     /// Ride <paramref name="carrier"/> at the pose <paramref name="spot"/> gives (world space, −Z forward): the body stays on
-    /// layer 4 (heroes can hit it) but collides with nothing, and is posed there at once. Server only.
+    /// layer 4 (heroes can hit it) but collides with nothing, and is posed there at once. On a client, a rider of a cart the client
+    /// runs from the server's cart state (RailNet binds it by net id): the snapshots then only turn it.
     /// </summary>
     public void Carry(Node3D carrier, Func<Transform3D> spot)
     {
@@ -815,12 +820,16 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _lastFree = at;
     }
 
-    /// <summary>Stand at the carrier's spot, upright, facing the target while it has one (else the carrier's way). A carrier gone: dropped where it stands.</summary>
+    /// <summary>
+    /// Stand at the carrier's spot, upright, facing the target while it has one (else the carrier's way). A carrier gone: dropped
+    /// where it stands. On a client only the place is the spot's: it faces the way the snapshots say (the server's aim).
+    /// </summary>
     public void FollowCarrier()
     {
         if (!Carried) return;
         if (!IsInstanceValid(Carrier) || _carrySpot == null) { Drop(GlobalPosition); return; }
         var spot = _carrySpot();
+        if (Net.NetSession.IsClient) { GlobalPosition = spot.Origin; return; }
         var f = -spot.Basis.Z;
         GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-f.X, -f.Z)), spot.Origin);
         if (IsAlive && (HasBoardTarget || HasTarget)) FaceToward(TargetPosition);

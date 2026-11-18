@@ -13,7 +13,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// the heap (carried: <see cref="Enemy.Carry"/>). A dumb prop like <see cref="MineCart"/>: the
 /// <see cref="RailEncounterController"/> paces its <see cref="Run"/> on the enemy track, poses it and its riders, and judges
 /// what its front runs over. A glowing <see cref="BrakeShoe"/> on the side that faces the party's lane breaks to one hit and
-/// derails it (<see cref="Derail"/>). Its origin sits on the track; forward is −Z. Server only (plan 5 shows it on clients).
+/// derails it (<see cref="Derail"/>). Its origin sits on the track; forward is −Z. A client builds the same cart as dressing from
+/// the server's cart state (RailNet): posed by its follower, its riders bound by net id (<see cref="BoardAt"/>), its derail shown
+/// (<see cref="ShowDerailed"/>); it judges, paces and warns nothing, and its shoe never breaks to a client's hit.
 /// </summary>
 public partial class SlagCart : AnimatableBody3D, ICartBody
 {
@@ -45,8 +47,12 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     public CartRun Run { get; private set; } = null!;
     /// <summary>Metres ahead (+) or behind (−) the party's cart it keeps pace at.</summary>
     public float Offset { get; private set; }
-    /// <summary>The encounter it came from (its plan id).</summary>
+    /// <summary>The encounter it came from (its plan id), or "traffic".</summary>
     public string EncounterId { get; init; } = "";
+    /// <summary>Its id on the wire (<see cref="Net.CartIds"/>): the server's count of the floor's carts.</summary>
+    public int CartId { get; set; }
+    /// <summary>A ride's slag cart, or a traffic cart.</summary>
+    public Net.CartKind Kind => EncounterId == "traffic" ? Net.CartKind.Traffic : Net.CartKind.Slag;
     /// <summary>The side (+1 its local +X, −1 its −X) that faces the party's lane: the brake shoe is there.</summary>
     public int InnerSide { get; init; } = 1;
     /// <summary>The creatures riding it, in spot order (a dead one rides on until its corpse is gone).</summary>
@@ -95,13 +101,42 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     }
 
     /// <summary>Carry <paramref name="enemy"/> at the next free spot. False when all three are taken.</summary>
-    public bool Board(Enemy enemy)
+    public bool Board(Enemy enemy) => Aboard.Count < MaxRiders && BoardAt(enemy, Aboard.Count);
+
+    /// <summary>Who was boarded at each spot (spots are by boarding order; a rider leaving the list keeps no one else's spot).</summary>
+    private readonly Enemy?[] _bySpot = new Enemy?[MaxRiders];
+
+    /// <summary>Carry <paramref name="enemy"/> at spot <paramref name="spot"/> (a client binds the server's riders where the server has them).</summary>
+    public bool BoardAt(Enemy enemy, int spot)
     {
-        if (Aboard.Count >= MaxRiders) return false;
-        var i = Aboard.Count;
-        Aboard.Add(enemy);
-        enemy.Carry(this, () => RiderSpot(i));
+        if (spot < 0 || spot >= MaxRiders) return false;
+        if (!Aboard.Contains(enemy)) Aboard.Add(enemy);
+        _bySpot[spot] = enemy;
+        enemy.Carry(this, () => RiderSpot(spot));
         return true;
+    }
+
+    /// <summary>The net id of the creature riding spot <paramref name="spot"/> (alive or a corpse), or −1 when none rides it.</summary>
+    public int RiderNetIdAt(int spot)
+    {
+        var e = spot >= 0 && spot < MaxRiders ? _bySpot[spot] : null;
+        return e != null && IsInstanceValid(e) && !e.IsQueuedForDeletion() && e.Carrier == this && Aboard.Contains(e) ? e.NetId : -1;
+    }
+
+    /// <summary>The creature bound at spot <paramref name="spot"/> on this cart, or null.</summary>
+    public Enemy? RiderAt(int spot)
+    {
+        var e = spot >= 0 && spot < MaxRiders ? _bySpot[spot] : null;
+        return e != null && IsInstanceValid(e) && e.Carrier == this ? e : null;
+    }
+
+    /// <summary>Client: the creature at spot <paramref name="spot"/> no longer rides here (the server's state stopped naming it): it stands where it is and the snapshots move it.</summary>
+    public void Unbind(int spot)
+    {
+        if (spot < 0 || spot >= MaxRiders || _bySpot[spot] is not { } e) return;
+        _bySpot[spot] = null;
+        Aboard.Remove(e);
+        if (IsInstanceValid(e) && e.Carrier == this) e.Drop(e.GlobalPosition);
     }
 
     /// <summary>Pose the riders at their spots (after the cart is posed); a corpse that has been freed leaves the list.</summary>
@@ -127,7 +162,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         Sparks(root, at + Vector3.Up * 0.4f);
         Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
         Props.Tremor.ShakeOnly(0.03f, 0.4f);
-        EventBus.Instance.Log("The slag cart derails!");
+        EventBus.Instance.Log("The slag cart derails!"); // relayed to clients as a log line
         var groundY = Run.Track.Point(Run.State.S).Y;
         foreach (var rider in Aboard)
         {
@@ -139,6 +174,34 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
             rider.KillByEnvironment(SourceName, HazardDamage.RunOver, quiet: true); // the line above tells it
         }
         Aboard.Clear();
+        Tumble(root);
+        Visible = false;
+        CollisionLayer = 0;
+        Shoe.Break();
+        QueueFree();
+    }
+
+    /// <summary>
+    /// Client: the server derailed this cart. The same sparks, thud, tremor and tumble; its riders are set down on the line where they
+    /// stand (the server kills them: their deaths come as their own messages); then it is freed. No log line (the server's comes).
+    /// </summary>
+    public void ShowDerailed()
+    {
+        if (Derailed || IsQueuedForDeletion() || !IsInsideTree() || GetParent() is not Node3D root) return;
+        Derailed = true;
+        var at = GlobalPosition;
+        Sparks(root, at + Vector3.Up * 0.4f);
+        Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
+        Props.Tremor.ShakeOnly(0.03f, 0.4f);
+        var groundY = Run.Track.Valid ? Run.Track.Point(Run.State.S).Y : at.Y;
+        foreach (var rider in Aboard)
+        {
+            if (!IsInstanceValid(rider) || rider.Carrier != this) continue;
+            var p = rider.GlobalPosition;
+            rider.Drop(new Vector3(p.X, groundY + 0.05f, p.Z));
+        }
+        Aboard.Clear();
+        Array.Clear(_bySpot);
         Tumble(root);
         Visible = false;
         CollisionLayer = 0;

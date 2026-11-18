@@ -16,7 +16,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// to stop on the server (or solo), applies what <see cref="RunOverSweep"/> finds (<see cref="RunOverEffects"/>), keeps
 /// the HUD line and the save, and poses the cart and its riders every rendered frame. The gates (<see cref="StopGates"/>),
 /// the spare carts (<see cref="SpareYard"/>) and the coupled wagons (<see cref="CartTrain"/>) are its parts. A client
-/// only shows the cart parked at the first stop. Every change of the cart's state is told through <see cref="CartEvents"/>.
+/// follows the server's cart state (<see cref="ApplyNet"/>, a <see cref="CartFollower"/>) and poses the cart, the train and
+/// the riders by it, with the HUD line. Every change of the cart's state is told through <see cref="CartEvents"/> (server and solo).
 /// </summary>
 public partial class RailController : Node
 {
@@ -684,6 +685,7 @@ public partial class RailController : Node
     /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
     private void Wreck()
     {
+        Wrecks++;
         WreckedAt = Cart.GlobalPosition;
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
@@ -706,8 +708,11 @@ public partial class RailController : Node
 
     private const float TumbleSeconds = 6f;
 
-    /// <summary>The tub's look on a rigid body thrown along the cart's way and up, with a little spin, gone after <see cref="TumbleSeconds"/>. Cosmetic: layer 0, the floor only.</summary>
-    private void Tumble()
+    /// <summary>
+    /// The tub's look on a rigid body thrown along the cart's way and up, with a little spin, gone after <see cref="TumbleSeconds"/>.
+    /// Cosmetic: layer 0, the floor only. A client plays it without the cue (the server's comes relayed).
+    /// </summary>
+    private void Tumble(bool sound = true)
     {
         if (!IsInsideTree() || GetParent() is not Node3D root || Cart.GetNodeOrNull<Node3D>("Body") is not { } body) return;
         var tub = new RigidBody3D { Name = "CartTumble", CollisionLayer = 0, CollisionMask = 1, Mass = 300f };
@@ -719,7 +724,7 @@ public partial class RailController : Node
         tub.LinearVelocity = Cart.Velocity + Vector3.Up * 4f;
         tub.AngularVelocity = -basis.Z * 3f + basis.X * 1.5f + Vector3.Up * 1f;
         GetTree().CreateTimer(TumbleSeconds).Timeout += () => { if (IsInstanceValid(tub)) tub.QueueFree(); };
-        EventBus.Instance.PlaySfx("cart_wreck"); // placeholder cue
+        if (sound) EventBus.Instance.PlaySfx("cart_wreck"); // placeholder cue
     }
 
     /// <summary>No spare took over: the real cart's body is hidden and not solid, and kept for a Restore.</summary>
@@ -820,13 +825,13 @@ public partial class RailController : Node
     public override void _Process(double delta)
     {
         if (!Current) return;
-        var s = Party.RenderS(NetSession.IsClient ? 1f : (float)Engine.GetPhysicsInterpolationFraction());
+        if (NetSession.IsClient) { ClientPose((float)delta); return; }
+        var s = Party.RenderS((float)Engine.GetPhysicsInterpolationFraction());
         Party.PoseAt(s);
         _train.Pose(s);
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         _train.Follow();
-        if (NetSession.IsClient) return;
         _hudTimer -= (float)delta;
         if (_hudTimer <= 0f) RefreshHud();
     }
@@ -842,12 +847,14 @@ public partial class RailController : Node
         Main.Instance?.Hud?.SetCart(show ? State.Plating / CartRules.MaxPlating : null, HudText);
     }
 
+    /// <summary>The line's words: from the cart's own state on the server or solo, from the server's flags and countdown on a client.</summary>
     private string Line()
     {
         if (State.Mode == CartMode.Wrecked) return "Cart — wrecked";
         if (Halted && LineBlocked) return "Cart — line blocked";
         if (State.Mode == CartMode.Held && !GateClear) return "Cart — gate down";
-        if (Boarding.Running) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(Boarding.Left)}";
+        var left = NetSession.IsClient ? NetBoardingLeft() : Boarding.Running ? Mathf.Max(0f, Boarding.Left) : -1f;
+        if (left >= 0f) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(left)}";
         if (State.Mode == CartMode.Rolling) return "Cart — rolling";
         if (Halted) return "Cart — on the line";
         if (StopIndex == 0) return "Cart — at the landing";

@@ -5,7 +5,9 @@
 #        scripts/net_test.sh relay URL  (a client against an already-running relay, e.g. ws://127.0.0.1:10000/ws)
 #        START_FLOOR=0 scripts/net_test.sh  (the server opens in the tavern; the client joins, strikes the deal and leaves)
 #        RIDE=1 scripts/net_test.sh  (the built-in campaign: the server takes the client to floor 12, where the rides' set
-#                                     pieces must stand on the client and its props must hash as the server's)
+#                                     pieces must stand on the client and its props must hash as the server's; then the cart
+#                                     rides empty to stop 3 and the client's carts must keep within 1.5 m (2 m for ride 3's
+#                                     slag cart) of the server's on a shared server-time grid)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -27,17 +29,45 @@ if [ "${RIDE:-}" = 1 ]; then
   # the built-in floor 1 takes a while to build (the socket is not served meanwhile): wait for the server to say it is built
   for i in $(seq 1 180); do grep -q "\[net-server\] floor 1 built" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
   sleep 1
-  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior > "$TMP/client.log" 2>&1
+  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=360 > "$TMP/client.log" 2>&1
   for i in $(seq 1 60); do kill -0 $SERVER 2>/dev/null || break; sleep 0.5; done
   kill $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
-  echo "--- server"; grep -E "\[net-server\] (ride|RESULT)|Unhandled|ERROR" "$TMP/server.log" | head -20
-  echo "--- client"; grep -E "\[net\] (ride|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -20
+  echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT)|Unhandled|ERROR" "$TMP/server.log" | head -20
+  echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -20
   if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi
   # the set pieces stand on the client as on the server, and its props (the rail part too) hash as the server's
   if ! grep -q "\[net\] ride: set pieces on the client:" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's floor 12 set pieces were not checked)"; exit 1; fi
   if ! grep -q "\[net\] ride: the server's thrown switch shows here" "$TMP/client.log"; then echo "NET TEST: FAIL (a switch thrown on the server never showed on the client)"; exit 1; fi
   if ! grep -q "\[net\] ride: prop hash matches the server's" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's floor 12 props differ from the server's)"; exit 1; fi
+  # the carts on the wire: both sides print the cart's S on one 0.5 s server-time grid; lines with the same grid t are paired.
+  # The party's cart: at least 20 pairs while it rolls, and every pair within 1.5 m. Ride 3's slag cart: paired the same way, within 2 m.
+  if ! grep -q "\[net\] ride: the cart followed the server's to stop" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's cart never followed the server's to stop 3)"; exit 1; fi
+  PAIRS=$(awk '
+    FNR == 1 { file++ }
+    function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
+    file == 1 && /^\[net-server\] ride t=/ { srv[val("t")] = val("S"); mode[val("t")] = val("mode") }
+    file == 1 && /^\[net-server\] ride cart=/ { if (val("kind") == "Slag" && val("armed") == "3") slag[val("cart") "@" val("t")] = val("S") }
+    file == 2 && /^\[net\] ride t=/ { cli[val("t")] = val("S") }
+    file == 2 && /^\[net\] ride cart=/ { cslag[val("cart") "@" val("t")] = val("S") }
+    END {
+      n = 0; rolling = 0; worst = 0; sum = 0; over = 0
+      for (t in cli) if (t in srv) {
+        d = cli[t] - srv[t]; if (d < 0) d = -d
+        n++; sum += d; if (d > worst) worst = d; if (d > 1.5) { over++; print "  party pair over 1.5 m: t=" t " server " srv[t] " client " cli[t] > "/dev/stderr" }
+        if (mode[t] == "Rolling") rolling++
+      }
+      sn = 0; sworst = 0; sover = 0
+      for (k in cslag) if (k in slag) {
+        d = cslag[k] - slag[k]; if (d < 0) d = -d
+        sn++; if (d > sworst) sworst = d; if (d > 2) { sover++; print "  slag pair over 2 m: " k " server " slag[k] " client " cslag[k] > "/dev/stderr" }
+      }
+      printf "party pairs=%d rolling=%d mean=%.3f max=%.3f over=%d; ride-3 slag pairs=%d max=%.3f over=%d\n", n, rolling, (n ? sum / n : 0), worst, over, sn, sworst, sover
+      exit !(rolling >= 20 && over == 0 && sn >= 1 && sover == 0)
+    }' "$TMP/server.log" "$TMP/client.log")
+  PAIRS_RC=$?
+  echo "--- cart S, client vs server: $PAIRS"
+  if [ $PAIRS_RC -ne 0 ]; then echo "NET TEST: FAIL (the client's carts did not keep to the server's: $PAIRS)"; exit 1; fi
   echo "NET TEST: ok"; exit 0
 fi
 

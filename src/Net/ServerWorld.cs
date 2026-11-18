@@ -733,7 +733,7 @@ public partial class ServerWorld : Node
     /// <summary>Moments a joiner has no use for once they are past: the next Vitals, snapshot or swing replaces them.</summary>
     private static bool Transient(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.Vitals or MsgKind.Sfx or MsgKind.EnemyHurt
         or MsgKind.HitFxEvt or MsgKind.SwingEvt or MsgKind.Emote or MsgKind.ProjectileSpawned or MsgKind.ProjectileEnded or MsgKind.Bark
-        or MsgKind.FloorClock;
+        or MsgKind.FloorClock or MsgKind.CartCorrection;
 
     private static bool FloorKind(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.FloorChangeBegin or MsgKind.FloorChange;
 

@@ -1,0 +1,104 @@
+namespace DungeonCrawler.Net;
+
+/// <summary>What runs on the rails: the party's cart, a ride's slag cart, a traffic slag cart, a runaway wagon, the golem's runner, a chaser (Task 9).</summary>
+public enum CartKind : byte { Party, Slag, Traffic, Runaway, Golem, Chaser }
+
+/// <summary>
+/// Every cart's id on the wire. The party's cart is 0; slag, traffic, runaway and golem carts count up from 1 per floor build
+/// (the server assigns them, below <see cref="WagonBase"/>); a cage wagon is <see cref="WagonBase"/> + its stop, a chaser
+/// <see cref="ChaserBase"/> + its stop.
+/// </summary>
+public static class CartIds
+{
+    public const int Party = 0;
+    public const int FirstDynamic = 1;
+    public const int WagonBase = 1000;
+    public const int ChaserBase = 2000;
+    public static int Wagon(int stop) => WagonBase + stop;
+    public static int Chaser(int stop) => ChaserBase + stop;
+}
+
+/// <summary>A cart's flags on the wire (<see cref="CartStateDto.Flags"/>).</summary>
+[Flags]
+public enum CartFlags : byte
+{
+    None = 0,
+    /// <summary>The party's cart is held on the line short of a stop (it ran into an obstacle).</summary>
+    Halted = 1,
+    /// <summary>The cart was wrecked (its rising edge plays the tumble on clients).</summary>
+    Wrecked = 2,
+    /// <summary>The party's cart is hidden (a wreck with no spare left); any other cart is gone (freed).</summary>
+    Hidden = 4,
+    /// <summary>An obstacle stands on the party lane ahead.</summary>
+    LineBlocked = 8,
+    /// <summary>Nothing at the party cart's place holds it (its stop's gate is up, or it is halted past it).</summary>
+    GateClear = 16,
+    /// <summary>A slag cart jumped the rails (its tumble plays, then it is freed).</summary>
+    Derailed = 32,
+}
+
+/// <summary>
+/// One cart's state as the server sees it: who it is, where it runs, what its integrator steps on (so a client predicts it
+/// with the same <c>CartPhysics</c>), its condition and, for the party's cart, the lane, the gap, the boarding and the train.
+/// Engine-free. <see cref="Limit"/> is the integrator's StopAt; NaN floats mean none.
+/// </summary>
+public sealed class CartStateDto
+{
+    // identity
+    public int Cart { get; set; }
+    public byte Kind { get; set; }
+    /// <summary>0 the party line, 1 the enemy line, 2+k the k-th spur.</summary>
+    public byte Track { get; set; }
+    /// <summary>+1 runs toward higher S, −1 toward lower S.</summary>
+    public sbyte Dir { get; set; } = 1;
+
+    // motion
+    public float S { get; set; }
+    public float V { get; set; }
+    /// <summary>A <c>CartMode</c>: 0 Held, 1 Rolling, 2 Wrecked.</summary>
+    public byte Mode { get; set; }
+    public float Limit { get; set; }
+
+    // the integrator's input
+    public byte Pumpers { get; set; }
+    public bool Brake { get; set; }
+    public byte CrewWagons { get; set; }
+    /// <summary>The commanded speed (a slag cart's pace, a coasting runner), or negative for none.</summary>
+    public float TargetOverride { get; set; } = -1f;
+
+    // condition
+    public float Plating { get; set; }
+    public int StopIndex { get; set; }
+    /// <summary><see cref="CartFlags"/>.</summary>
+    public byte Flags { get; set; }
+
+    // the party's cart only
+    public float CrossOut { get; set; } = float.NaN;
+    public float CrossBack { get; set; } = float.NaN;
+    public float GapFrom { get; set; } = float.NaN;
+    public float GapTo { get; set; } = float.NaN;
+    /// <summary>The speed the cart left a gap's lip at, or NaN while it has not flown.</summary>
+    public float JumpV { get; set; } = float.NaN;
+    /// <summary>Seconds left on the boarding countdown, or −1 when none runs.</summary>
+    public float BoardingLeft { get; set; } = -1f;
+    /// <summary>The coupled wagons' stops, nearest the cart first.</summary>
+    public List<int>? Train { get; set; }
+
+    // slag and traffic carts
+    public float Offset { get; set; }
+    public string? EncounterId { get; set; }
+
+    // slag, traffic and golem carts: the carried enemies' net ids by spot (−1 an empty spot)
+    public List<int>? RiderNetIds { get; set; }
+
+    /// <summary>The server's clock (<c>NetSession.Instance.Now</c>) when this state was true.</summary>
+    public double ServerTime { get; set; }
+
+    public bool Has(CartFlags f) => (Flags & (byte)f) != 0;
+}
+
+/// <summary>The carts that changed this physics tick (event-driven: a cart event, a lane, gap, train, halt or boarding change, a spawn, derail or free). Not transient: a joiner replays them before its catch-up.</summary>
+[Msg(MsgKind.CartState)] public sealed record CartStateMsg(int Floor, int Epoch, List<CartStateDto> Carts) : NetMessage;
+
+/// <summary>Every live cart, 5 times a second (transient: never held for a joiner). A client frees any live cart of its own that is missing from it.</summary>
+[Msg(MsgKind.CartCorrection)] public sealed record CartCorrectionMsg(int Floor, int Epoch, List<CartStateDto> Carts) : NetMessage;

@@ -16,6 +16,9 @@ public struct CartClock
 
     public void Reset() => Accumulated = 0f;
 
+    /// <summary>Start again with <paramref name="banked"/> seconds toward the next step (clamped to [0, FixedStep)): a follower's catch-up leaves a part step.</summary>
+    public void Reset(float banked) => Accumulated = banked > 0f ? Math.Min(banked, FixedStep * 0.9999f) : 0f;
+
     /// <summary>Bank <paramref name="dt"/> and return how many fixed steps to take now.</summary>
     public int Advance(float dt)
     {

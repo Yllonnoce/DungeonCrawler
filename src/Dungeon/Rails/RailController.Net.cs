@@ -1,0 +1,180 @@
+using DungeonCrawler.Adventure.Objectives;
+using DungeonCrawler.Net;
+using Godot;
+
+namespace DungeonCrawler.Dungeon.Rails;
+
+/// <summary>
+/// The party's cart on the wire. The server captures its state for <see cref="RailNet"/> (<see cref="CaptureNet"/>, with a cheap
+/// <see cref="NetSignature"/> to tell when it changed). A client follows that state: <see cref="ApplyNet"/> feeds a
+/// <see cref="CartFollower"/> (this controller is its <see cref="ISlopeSource"/>), applies the lane, the gap, the train, the
+/// flags and the HUD fields, and plays the tumble on a wreck's rising edge; each rendered frame poses the cart, the train and
+/// the riders at the follower's S (<see cref="ClientPose"/>). A client never steps, judges or raises anything.
+/// </summary>
+public partial class RailController : ISlopeSource
+{
+    /// <summary>Wrecks so far (the server's): a change tells the cart sender a wreck happened, whenever its event is told.</summary>
+    internal int Wrecks { get; private set; }
+
+    /// <summary>The track a cart state names: 0 the party line, 1 the enemy line, 2+k the k-th spur.</summary>
+    internal TrackSampler? TrackOf(byte track) => track switch
+    {
+        0 => Party.Track,
+        1 => _enemyLane,
+        _ => RailEncounterController.Instance?.SpurTrack(track - 2),
+    };
+
+    float ISlopeSource.SlopeAt(byte track, float s) => TrackOf(track) is { Valid: true } t ? t.Slope(s) : 0f;
+
+    // ---- the server's side -------------------------------------------------------------------
+
+    private byte NetFlags()
+    {
+        var f = CartFlags.None;
+        if (Halted) f |= CartFlags.Halted;
+        if (State.Mode == CartMode.Wrecked) f |= CartFlags.Wrecked;
+        if (!Cart.Visible) f |= CartFlags.Hidden;
+        if (LineBlocked) f |= CartFlags.LineBlocked;
+        if (GateClear) f |= CartFlags.GateClear;
+        return (byte)f;
+    }
+
+    /// <summary>The cart's flags now (<see cref="CartFlags"/>).</summary>
+    internal byte NetFlagsNow => NetFlags();
+
+    /// <summary>Changes whenever anything a client shows of the cart (short of its motion) changes: the cart sender's dirty test. No allocation.</summary>
+    internal int NetSignature()
+    {
+        var train = _train.Count;
+        for (var i = 0; i < _train.Count; i++) train = train * 31 + _train.Wagons[i].Stop;
+        var line = HashCode.Combine(_crossOut, _crossBack, _gapFrom, _gapTo, _jumpV);
+        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, Wrecks);
+    }
+
+    /// <summary>The cart's state now, for the wire (<paramref name="flags"/> in place of its own: the wreck frame).</summary>
+    internal CartStateDto CaptureNet(double serverTime, byte? flags = null)
+    {
+        var input = Party.LastInput;
+        List<int>? train = null;
+        if (_train.Count > 0)
+        {
+            train = new List<int>(_train.Count);
+            foreach (var w in _train.Wagons) train.Add(w.Stop);
+        }
+        return new CartStateDto
+        {
+            Cart = CartIds.Party, Kind = (byte)Cart.Kind, Track = 0, Dir = (sbyte)Party.Dir,
+            S = State.S, V = State.V, Mode = (byte)State.Mode, Limit = Party.Limit,
+            Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)_train.Count, TargetOverride = -1f,
+            Plating = State.Plating, StopIndex = StopIndex, Flags = flags ?? NetFlags(),
+            CrossOut = _crossOut, CrossBack = _crossBack, GapFrom = _gapFrom, GapTo = _gapTo, JumpV = _jumpV > 0f ? _jumpV : float.NaN,
+            BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, ServerTime = serverTime,
+        };
+    }
+
+    /// <summary>
+    /// Test hook (--test-net-server's RIDE pass): the cart departs from the stop it is held at, empty, as a boarding would send it
+    /// (a Departed event arms the next ride). Task 5 replaces it with a real boarding. False when it cannot leave.
+    /// </summary>
+    internal bool DebugDepart()
+    {
+        if (NetSession.IsClient || !Current || State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1 || Halted && LineBlocked) return false;
+        Boarding.Cancel();
+        Party.Limit = StopS[StopIndex + 1];
+        Party.State = State with { Mode = CartMode.Rolling };
+        SetCartLayer();
+        Party.Settle();
+        Raise(new CartEvent(Halted ? CartEventKind.Resumed : CartEventKind.Departed, Stop: StopIndex));
+        Halted = false;
+        RefreshHud();
+        Flush();
+        return true;
+    }
+
+    // ---- a client's side ---------------------------------------------------------------------
+
+    private CartFollower? _follow;
+    private byte _netFlags;
+    private CartMode _netMode = CartMode.Held;
+    private float _netBoardingLeft = -1f;
+    private double _netBoardingAt;
+
+    /// <summary>Client: the cart follows the server's state (a state has arrived).</summary>
+    public bool Following => _follow is { HasState: true };
+    /// <summary>Client: the follower (the RIDE pass reads its S), or null before the first state.</summary>
+    internal CartFollower? Follower => _follow;
+
+    /// <summary>Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state.</summary>
+    internal void ApplyNet(CartStateDto d, double serverNow)
+    {
+        if (!NetSession.IsClient || !Current) return;
+        _follow ??= new CartFollower(this);
+        if (CartSendRules.WreckedRose(_netFlags, d.Flags) && Cart.Visible) Tumble(sound: false); // where it stands now, before the state moves it
+        _netFlags = d.Flags;
+        var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;
+        _netMode = mode;
+        StopIndex = Math.Clamp(d.StopIndex, 0, Math.Max(0, StopS.Length - 1));
+        Halted = d.Has(CartFlags.Halted);
+        ApplyLaneNet(d.CrossOut, d.CrossBack);
+        ApplyGapNet(d.GapFrom, d.GapTo, d.JumpV);
+        ApplyTrain(d.Train);
+        Party.Dir = d.Dir >= 0 ? 1 : -1;
+        Party.Limit = d.Limit;
+        _follow.Apply(d, serverNow);
+        Party.State = new CartState(_follow.S, _follow.V, mode, d.Plating);
+        var shown = CartSendRules.Shown(d.Flags);
+        Cart.Visible = shown;
+        foreach (var wagon in _train.Wagons) if (IsInstanceValid(wagon)) wagon.Visible = CartSendRules.WagonsShown(d.Flags);
+        if (shown) SetCartLayer();
+        else Cart.CollisionLayer = 0;
+        _netBoardingLeft = d.BoardingLeft;
+        _netBoardingAt = d.ServerTime;
+        if (mode != CartMode.Rolling) Cart.Speed = 0f;
+        RefreshHud();
+    }
+
+    /// <summary>Client: couple and uncouple the cage wagons so the train is the server's (stops nearest first).</summary>
+    internal void ApplyTrain(List<int>? stops)
+    {
+        var count = stops?.Count ?? 0;
+        var same = count == _train.Count;
+        for (var i = 0; same && i < count; i++) same = _train.Wagons[i].Stop == stops![i];
+        if (same) return;
+        _train.UncoupleAll();
+        if (count == 0 || ObjectiveController.Instance is not CrewRescueController crew) return;
+        foreach (var stop in stops!)
+            foreach (var wagon in crew.Wagons)
+                if (wagon.Stop == stop) { _train.Couple(wagon); break; }
+    }
+
+    /// <summary>Client, each rendered frame: the follower moves on and the cart, the train and the riders are posed at its S; speed and bend for the ride feel.</summary>
+    private void ClientPose(float dt)
+    {
+        float s;
+        if (_follow is { HasState: true } f)
+        {
+            s = f.Advance(dt);
+            var v = _netMode == CartMode.Rolling ? f.V : 0f;
+            Party.State = new CartState(s, v, _netMode, State.Plating);
+            Cart.Speed = v;
+            Cart.Curvature = Party.Dir * Party.Track.Curvature(s);
+            _train.Sync();
+        }
+        else s = State.S; // parked at the first stop until the server's state arrives
+        Party.PoseAt(s);
+        _train.Pose(s);
+        foreach (var rider in Cart.Riders.Values)
+            if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
+        _train.Follow();
+        _hudTimer -= dt;
+        if (_hudTimer <= 0f) RefreshHud();
+    }
+
+    /// <summary>Client: seconds left on the server's boarding countdown now, or −1 when none runs.</summary>
+    private float NetBoardingLeft()
+    {
+        if (_netBoardingLeft < 0f) return -1f;
+        var now = NetSession.Instance?.Client?.ServerNow ?? _netBoardingAt;
+        return Mathf.Max(0f, _netBoardingLeft - (float)(now - _netBoardingAt));
+    }
+}

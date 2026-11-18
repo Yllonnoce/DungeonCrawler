@@ -39,6 +39,8 @@ public partial class RailEncounterController
 
     private sealed class Golem
     {
+        /// <summary>Its runner's id on the wire.</summary>
+        public int CartId;
         public int Ride;
         public Enemy Body = null!;
         public Node3D Runner = null!;
@@ -264,7 +266,7 @@ public partial class RailEncounterController
         if (_builder.SpawnEnemy(enc.Riders[0].EnemyId, runner.GlobalPosition + Vector3.Up * 0.05f, _builder.CurrentFloor, elite: elite) is not { } golem) { runner.QueueFree(); return; }
         if (golem.IsBoss) GD.PushError($"[rails] the golem {enc.Id} ({golem.Profile.Name}) spawned as a boss: its death would unlock the stairs"); // an authored id must never be a boss (the validator drops them)
         golem.IsReinforcement = true; // it came with the ride (an elite still pays its loot: it never comes again once dead, GolemDefeated)
-        var g = new Golem { Body = golem, Runner = runner, Run = run, EncounterId = enc.Id, Ride = enc.Ride };
+        var g = new Golem { Body = golem, Runner = runner, Run = run, EncounterId = enc.Id, Ride = enc.Ride, CartId = NextCartId() };
         _golem = g;
         _golemSpot ??= () => _golem is { } x && IsInstanceValid(x.Runner) ? new Transform3D(x.Runner.GlobalBasis, x.Runner.GlobalPosition + Vector3.Up * 0.05f) : Transform3D.Identity;
         _golemDrop ??= () => _golem is { } x ? x.Run.Track.Point(x.Run.State.S) + Vector3.Up * 0.05f : Vector3.Zero; // it falls between the rails
