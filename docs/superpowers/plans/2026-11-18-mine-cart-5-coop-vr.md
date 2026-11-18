@@ -56,8 +56,8 @@ How each part syncs:
   `MessageKindCount` goes 108 → 109 (T1) → 111 (T3) → 113 (T4) → 114 (T5). The pins in `tests/Net/NetCodecTests.cs` (:248-252, :439) follow each change.
 - **The server stays authoritative.** Clients never change gameplay state: they pose, animate and ask through intents. The server validates every intent: reach (3.5 m, as `InteractIntent`), seat ownership, and Held or Rolling where it matters.
 - **The wire stays engine-free.** New records and DTOs live in `src/Net/Core`, and engine-free rules in `src/Dungeon/Rails/Core` or `src/Party/Core`. All of them use `NetVec` or plain numbers, so the test project compiles them (csproj lines 30, 34, 35).
-- **Join queue.** A message a joiner must not replay gets its kind added to the `ServerWorld.Transient` predicate (`ServerWorld.cs:728`). State a joiner needs comes from `SendRailCatchUp` (Task 8).
-- **Cadences run on elapsed time, never on `tick % n`**, on both server and client. This keeps a process at any physics rate on time.
+- **Join queue.** A message a joiner must not replay gets its kind added to the `ServerWorld.Transient` predicate (`ServerWorld.cs:728`). State a joiner needs comes from `SendRailCatchUp` (Task 8). Transient kinds: `FloorClock` (T1), `CartCorrection` (T3), `Leap` (T4: the catch-up resends in-flight leaps). `CartState` and `Seat` are not Transient (the queue replays them before the catch-up, so the fresh state arrives last).
+- **Cadences run on elapsed time, never on `tick % n`**, on both server and client, through the one engine-free `Cadence` type (Task 1). This keeps a process at any physics rate on time.
 - **No per-frame allocation** in the client cart, follower, seat and comfort paths. Decoding messages is exempt.
 - **VR never shakes, rolls or forces pitch on the headset camera.** Comfort defaults to Recommended.
 - **Repo rules.**
@@ -98,7 +98,7 @@ How each part syncs:
 
 ### Task 0: Single-player carry-overs from plan 4
 
-The plan 4 fix wave found two single-player gaps; the controller ruled them into this plan. They touch no wire.
+The plan 4 fix wave found two single-player gaps; the controller ruled them into this plan. Their only wire effect is the additive, nullable `FloorStateDto.ThrowersSent` (Welcome and FloorChange carry the DTO as JSON); Task 1's version 17 covers it, and nothing ships in between.
 
 **Files:**
 - Modify:
@@ -124,7 +124,8 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 **Files:**
 - Create:
   - `src/Net/Core/NetClock.cs`;
-  - `src/Net/Core/FloorClock.cs`.
+  - `src/Net/Core/FloorClock.cs`;
+  - `src/Net/Core/Cadence.cs`.
 - Modify:
   - `src/Net/Core/Protocol.cs`: version 17, kind `FloorClock = 7`, count 109;
   - `src/Net/Core/Messages.cs`: Welcome, FloorChange, HazardPhaseMsg, the new `FloorClockMsg`;
@@ -137,16 +138,17 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 - Test:
   - `tests/Net/NetClockTests.cs`;
   - `tests/Net/FloorClockTests.cs`;
+  - `tests/Net/CadenceTests.cs`;
   - `tests/Net/HazardSyncTests.cs` (rewrite for seconds);
   - `tests/Net/NetCodecTests.cs`.
 
 **Interfaces:**
 - **`public sealed class NetClock`** (engine-free):
-  - `void Seed(double serverTime, double clientNow)`: one sample with no RTT.
+  - `void Seed(double serverTime, double clientNow)`: sets the starting offset only. It is kept out of the RTT statistics and the 9-sample window, and the first real pong replaces it (`Ready` is true after Seed).
   - `void OnPong(double clientSentAt, double clientNow, double serverTime)`:
     - each sample's offset is `serverTime − (clientSentAt + clientNow) / 2` and its RTT is `clientNow − clientSentAt`;
     - the clock uses the median offset of the last 9 samples whose RTT is ≤ 2 × the median RTT.
-  - `double ServerNow(double clientNow)`, `double Rtt` (median), `bool Ready` (true after Seed or one sample).
+  - `double ServerNow(double clientNow)`, `double Rtt` (median of real samples; 0 before the first), `bool Ready` (true after Seed or one sample).
   - `ClientWorld.Rtt` reads `NetClock.Rtt`.
 - **Wire changes:**
   - `Welcome` gains trailing `double ServerTime = 0, double FloorSeconds = 0`. The client seeds `NetClock` from `ServerTime` and the floor clock from the pair. `Welcome.ServerTick` stays.
@@ -157,9 +159,9 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
     - clients drop one whose Floor or Epoch is not theirs (`WorldCheck.SameBuild`).
 - **The floor clock:**
   - **Server and single player.** `DungeonBuilder.FloorSeconds` (double) sums the `delta` passed to `DungeonBuilder._PhysicsProcess`: 1/60 s per tick at 60 Hz, 1/90 s at 90 Hz. It resets in `Clear()`.
-  - **Server pairs** are `(FloorSeconds, NetSession.Now)`.
+  - **Server pairs** are `(FloorSeconds, NetSession.Instance.Now)`.
   - **Clients:**
-    - `FloorSeconds` is `FloorClock.Read(NetClock.ServerNow(NetSession.Now))`;
+    - `FloorSeconds` is `FloorClock.Read(NetClock.ServerNow(NetSession.Instance.Now))`;
     - the clock is fed by every pair (Welcome, FloorChange, FloorClockMsg);
     - before the first pair it reads 0.
 - **`public sealed class FloorClock`** (engine-free):
@@ -171,17 +173,17 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
     - It never decreases except on a snap.
     - Calling it twice at the same `serverNow` returns the same value.
   - `static int TickOf(double seconds) => (int)Math.Floor(seconds * 60 + 1e-6)`.
-  - `DungeonBuilder.FloorTick` becomes `FloorClock.TickOf(FloorSeconds)` on every role. SpikeBed, DropHammer, MoltenPour and the Kiln stay on `FloorTick` and become rate-safe and client-visible.
+  - `DungeonBuilder.FloorTick` becomes `FloorClock.TickOf(FloorSeconds)` on every role. DropHammer, MoltenPour and the Kiln stay on `FloorTick` and become rate-safe and client-visible (their clients run on the floor clock). SpikeBed stays on `FloorTick` on the server and rate-safe; clients keep getting its phase from `HazardPhaseMsg` (no change to `SpikeBed.cs`).
 - **`HazardPhaseMsg(int Index, byte Hazard, byte Phase, double ServerTime, float DurationSeconds, bool Jammed, int Spent)`.**
   - `ServerTime` replaces `ServerTick`, and `DurationSeconds` replaces `DurationTicks`.
   - `HazardSync.DurationSeconds(float s)` returns 0 for a non-finite or ≤ 0 duration.
   - `HazardSync.SecondsIn(double serverNow, double sentServerTime, float durationSeconds)` is `max(0, serverNow − sent)`, clamped to the duration when the duration is > 0.
   - Drop `_serverTickOffset` (`ClientWorld.cs:190, 565`).
-- **Cadences by elapsed time.** Each is an accumulator that keeps its remainder, so at 60 Hz it fires on the same ticks as today.
+- **Cadences by elapsed time**, all through `public struct Cadence` (engine-free): `Cadence(double period)`, `int Advance(double dt)` returns how many periods elapsed and keeps the remainder (1e-6 tolerance), `void Reset()`. At 60 Hz each cadence below fires on the same ticks as today's `tick % n` (counting from tick 1), except the client ping, which deliberately changes from 2.0 s to 1.0 s for faster clock convergence.
   - Server snapshot every 1/20 s, vitals every 1/10 s, `FlushSync` every 0.1 s, `ObjectiveStateMsg` every 2.0 s (`ServerWorld.cs:766-769`).
   - The ready-check broadcast every 1.0 s (`ServerReadyCheck.cs:64`).
   - The client pose send every 1/30 s, with the idle heartbeat every 0.5 s (`ClientWorld.cs:627-645`).
-  - The client ping every 1.0 s (`ClientWorld.cs:647`).
+  - The client ping every 1.0 s of elapsed time (`ClientWorld.cs:647`; today `tick % 120`, a deliberate change).
 - **Debug flags** (committed):
   - `--physics-hz=N` sets `Engine.PhysicsTicksPerSecond`.
   - `--test-tick-rate`:
@@ -203,6 +205,8 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
     - elapsed time is clamped to the duration;
     - an open-ended phase (duration 0) grows;
     - an infinite duration maps to 0.
+  - `Cadence`: for periods 0.05, 0.1, 0.5, 1.0 and 2.0 s and 1/30 s, the ticks on which it fires over 1,200 steps of 1/60 equal the ticks `t` in 1..1200 with `t % n == 0` (n = 3, 6, 30, 60, 120, 2); at 1/90 steps it fires the same number of times over the same wall time (±1); a 0.4 s dt returns the full count and keeps the remainder.
+  - `NetClock`: a Seed followed by one real pong leaves the offset at the pong's, and `Rtt` stays that pong's.
   - Codec: round trips for `FloorClockMsg`, the new Welcome, FloorChange and HazardPhaseMsg fields; pins at version 17 and count 109.
 - [ ] **Step 2: Implement.**
 - [ ] **Step 3: Check.**
@@ -258,7 +262,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   | Ref | Values |
   |---|---|
   | `gate` | "up" |
-  | `switch`, `spur` | "thrown", "straight" (a player set it back), "reset" (an end-of-ride reset; silent on clients) |
+  | `switch`, `spur` | "thrown", "straight" (a player set it back), "taken" (the cart crossed it), "reset" (an end-of-ride reset; silent on clients) |
   | `heap` | "cleared", "rebuilt" |
   | `valve` | "broken", "rebuilt" |
   | `trestle` | "collapsed", "rebuilt" |
@@ -270,13 +274,14 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `ClientWorld.OnProp` gains a case per pair, calling a silent client method (`ShowUp`, `ShowThrown`, `ShowCleared`, …).
   - The collapse, smash and burst play their cosmetic debris on clients too.
 - **`PropStateDto.Rail : RailPropsDto?`** (null off railed floors), with these lists:
-  - `int` lists: `GatesUp`, `ThrownSwitches`, `ThrownSpurs`, `ClearedHeaps`, `BrokenValves`, `CollapsedTrestles`, `SmashedBuffers`, `SparesUsed`, `OpenCages`;
+  - `int` lists: `GatesUp`, `ThrownSwitches`, `TakenSwitches`, `ThrownSpurs`, `ClearedHeaps`, `BrokenValves`, `CollapsedTrestles`, `SmashedBuffers`, `SparesUsed`, `OpenCages`;
   - `bool KeysTaken`.
   - `PropSync.Capture` and `ApplyLive` handle it.
   - `PropCheck.Signature` appends the rail part only when `Rail != null`, so every existing hash is unchanged.
   - `PropCheck.Differences` lists it.
   - Joiners get it in the existing `SendPropState`. The 4 s prop check repairs drift.
-  - `FloorStateDto` and the save are unchanged.
+  - **One source for rail props on a client.** Gates, cages and keys come only from `PropEvt` and `Rail`. The objective state's `ApplyNet` (Task 7) never sets them.
+  - `FloorStateDto` and the save are unchanged by this task (Task 0 adds `ThrowersSent`).
 - **`RIDE=1 scripts/net_test.sh`:**
   - **Server:** `--test-net-server --campaign=builtin --seed=4242 --lethality=1 --quit-when-empty`. Its NetTestFlow calls `Game.Instance.JumpToFloor(12)` once a client is Ready.
   - **One client.**
@@ -302,6 +307,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 - Create:
   - `src/Net/Core/CartNet.cs`: `CartKind`, `CartIds`, `CartFlags`, `CartStateDto`, `CartStateMsg`, `CartCorrectionMsg`;
   - `src/Dungeon/Rails/Core/CartFollower.cs` (engine-free);
+  - `src/Dungeon/Rails/Core/CartSendRules.cs` (engine-free: the wreck-frame rule);
   - `src/Dungeon/Rails/RailNet.cs`: the server sender node and the client applier.
 - Modify:
   - `src/Net/Core/Protocol.cs`: kinds 8 and 9, count 111;
@@ -309,13 +315,15 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `src/Net/ClientWorld.cs`;
   - `src/Dungeon/Rails/RailController.cs`, `RailController.Lanes.cs`, `RailController.Jump.cs`: client apply methods, client posing and the HUD;
   - `src/Dungeon/Rails/CartTrain.cs`;
+  - `src/Dungeon/Rails/MineCart.cs`: `Kind` (`CartKind`) and `CartId`;
   - `src/Dungeon/Rails/RailEncounterController*.cs`: cart ids and dirty marks;
   - `src/Dungeon/Rails/SlagCart.cs`, `src/Dungeon/Rails/RunawayWagon.cs`: client construction;
   - `src/Enemies/Enemy.cs`: client carried mode;
   - `src/Net/NetTestFlow.cs`, `scripts/net_test.sh`.
 - Test:
   - `tests/Net/CartNetTests.cs`;
-  - `tests/Dungeon/Rails/CartFollowerTests.cs`.
+  - `tests/Dungeon/Rails/CartFollowerTests.cs`;
+  - `tests/Dungeon/Rails/CartSendRulesTests.cs`.
 
 **Interfaces:**
 - **Ids and kinds:**
@@ -345,7 +353,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - the golem's spawn, a spur taken, or the runner done.
 
   It never sends from inside a `CartEvents` handler, so the wagons coupled by `CrewRescueController`'s `Departed` handler are already in `Train`. It also sends a `CartCorrectionMsg` every 0.2 s of elapsed time while any cart is live.
-- **`CartFollower`** (engine-free, no allocation):
+- **`CartFollower`** (engine-free, no allocation). It takes an `ISlopeSource` (`float SlopeAt(byte track, float s)`, in `Rails/Core`, set once; the client's `RailController` implements it from its `TrackSampler`s), because `CartInput.Slope` is not on the wire. The DTO's `Limit` is the integrator's `StopAt`.
   - `void Apply(in CartStateDto s, double serverNow)` takes the authoritative state. It steps a copy with `CartPhysics.Step` from `s.ServerTime` to `serverNow` (fixed 1/60 s steps, at most 30), using `s`'s input and Limit.
   - `float Advance(float dt)` returns the rendered S:
     - The authoritative copy steps on by `dt` with `CartPhysics.Step` (through a `CartClock`) and is clamped to Limit in Dir.
@@ -362,8 +370,8 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
     - `ApplyTrain(List<int> stops)`, which couples and uncouples wagons through `CartTrain`.
   - `RefreshHud` runs on clients, using `Plating`, `Mode`, `StopIndex` and the flags, and showing "departs in N" from `BoardingLeft`.
   - The Wrecked flag's rising edge plays `Tumble()`, visual only.
-    - **A spare taking over in the same tick.** The server still sends one `CartStateMsg` carrying Wrecked (from the `Wrecked` CartEvent) before the takeover state, so clients always see the wreck.
-    - **Test:** a codec/sender unit test, or a RIDE net step, proves this. Hidden hides the cart and its coupled wagons; clearing it shows them again.
+    - **A spare taking over in the same tick.** The server still sends one `CartStateMsg` carrying Wrecked (from the `Wrecked` CartEvent) before the takeover state, so clients always see the wreck. `CartSendRules.NeedsWreckFrame(bool wreckedThisTick, bool tookOverThisTick, byte flagsNow, out byte firstFlags)` decides it: true when both happened, with `firstFlags = flagsNow | Wrecked`. `RailNet` calls it and sends the extra message first.
+    - **Test:** `CartSendRulesTests`: wreck plus takeover gives true and Wrecked set; a wreck alone, a takeover alone and neither give false. Hidden hides the cart and its coupled wagons; clearing it shows them again.
 - **Client slag, traffic, runaway and golem carts.**
   - They are built from the DTO with the server's constructors, as dressing. The client never runs a run-over sweep, a pace or a warning (the server-only Tick).
   - Each follows its own follower on its own track.
@@ -374,8 +382,8 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - A bound rider is `Carry`'d at its spot on the client's own cart. While carried, `Enemy.ClientTick` skips snapshot positions.
 - **RIDE pass, the steps this task adds:**
   - A server test hook, `RailController.DebugDepart()` (internal; `--test-net-server` only), departs the cart empty for this pass. Task 5 replaces it with a real boarding.
-  - The server prints `[net-server] ride t=<Now> S=<S>` every 0.5 s, and the client prints `[net] ride t=<ServerNow> S=<rendered S>`.
-  - The script pairs lines whose t values are within 50 ms. It needs ≥ 20 pairs, all with |ΔS| ≤ 1.5 m.
+  - Both sides print on a shared server-time grid: whenever `floor(t / 0.5)` changes, the server prints `[net-server] ride t=<Now> S=<S>` and the client prints `[net] ride t=<ServerNow> S=<rendered S>`, with t rounded down to the grid.
+  - The script pairs lines whose grid t is equal. It needs ≥ 20 pairs, all with |ΔS| ≤ 1.5 m.
   - On ride 3, a slag cart is on the client within 2 m of the server's (paired the same way).
 
 - [ ] **Step 1: Tests.**
@@ -386,7 +394,8 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
     - snaps on a 5 m error;
     - Held snaps to the DTO's S, including a Halt 4 m short of the stop;
     - with ±150 ms arrival jitter at 6 m/s over 30 s, S never decreases;
-    - a cart 1 m behind at V = 0 closes within 2 s;
+    - a cart 1 m behind at V = 0 is within 0.1 m after 2 s;
+    - on a 5% slope the predicted S matches `CartPhysics.Step` run directly to within 0.01 m;
     - extrapolation never passes Limit;
     - a braking cart (Brake = true) is predicted within 0.1 m of the server after 0.2 s;
     - a Track change snaps.
@@ -404,7 +413,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `src/Net/Core/PoseBuffer.cs`;
   - `src/Party/Control/Control.cs` (`RemotePose`);
   - `src/Dungeon/Rails/Core/CartSeats.cs` (`Put`);
-  - `src/Net/ServerWorld.cs`: `ApplyPose`, snapshots, `AttackIntent`;
+  - `src/Net/ServerWorld.cs`: `ApplyPose`, snapshots, `AttackIntent`, `Transient` gains `Leap`;
   - `src/Net/ClientWorld.cs`;
   - `src/Party/Adventurer.cs`;
   - `src/Adventure/Npc.cs`;
@@ -422,7 +431,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `X, Y, Z` is the landing spot when `Seated` is false.
   - `RailNet` sends one for every seat and unseat: the party cart (`OnRiderChanged`), each cage wagon's `RiderChanged` (crew) and the chaser (Task 9). It sends them after the tick's `CartStateMsg`.
 - **On the client:**
-  - `CartSeats.Put(int occupant, int seat)` books the server's seat index. It returns false if the seat is taken by another occupant; the client then frees that occupant first.
+  - `CartSeats.Put(int occupant, int seat)` books the server's seat index. It returns false if the seat is taken by another occupant or the index is outside 0..5 (hero seats 0..3, bench 4..5); on a taken seat the client frees that occupant, then calls `Put` again once.
   - Then the client calls `SitIn(cart, seat)` on its copy, or `GetOut(at, 0)` for an unseat.
   - A seated Npc skips its `ClientTick` position, and so does any Npc whose `NpcState.FlagSeated` (128) is set; the cart's owner calls `FollowSeat` each rendered frame.
 - **Boarders.**
@@ -431,12 +440,14 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `[Msg(MsgKind.Leap)] LeapMsg(int NetId, int FromCart, int ToCart, int Spot, bool Miss, double ServerTime)` is sent when a leap enters its Air phase. `ToCart` is `Party` or `WagonBase + stop`.
   - The client flies the hound itself, starting `serverNow − ServerTime` into the leap: an arc of `LeapSeconds` (0.6 s) and apex `LeapApex` (1.2 m) to the destination spot. It then `Carry`s it there, or, on Miss, releases it to the snapshots.
   - While carried or leaping, `Enemy.ClientTick` skips snapshot positions.
+  - The handler is idempotent per `NetId`: a `LeapMsg` for a hound already leaping or carried at that spot is ignored.
+  - `Leap` is added to `Transient`; the catch-up resends in-flight leaps.
 - **`Pose(int Tick, int Member, NetVec Position, float Yaw, float Pitch, NetVec Velocity, PoseFlags Flags, float SeatYaw = 0, PoseFlags2 Flags2 = 0)`**, where `PoseFlags2 : byte { None = 0, Seated = 1, Pumping = 2 }`.
   - The binary layout appends `SeatYaw` (float) and `Flags2` (byte): 45 bytes with the kind byte, up from 40.
   - `PlayerPoseState` appends the same two fields, in the snapshot's binary layout too.
   - `PoseBuffer.Sample` gains both fields, and `At` interpolates `SeatYaw` with `LerpAngle`.
   - `RemotePose` gains `SeatYaw`, `Seated` and `Pumping`.
-- **The client's Pose** sets `Flags2.Seated` and `SeatYaw` while seated. The server ignores the client's `Pumping` bit: `RideIntent` (Task 5) is authoritative.
+- **The client's Pose** sets `Flags2.Seated` and `SeatYaw` while seated. The send-coalescing test at `ClientWorld.cs:635` also counts a `SeatYaw` change over 0.001 rad and any `Flags2` change. The server ignores the client's `Pumping` bit: `RideIntent` (Task 5) is authoritative.
 - **Server `ApplyPose`:**
   - For a body the server has seated (`body.Seated`; never the client's flag), it takes only `SeatYaw` (clamped to ±150°), `Pitch` and the flags. It skips the walkable and press checks and ignores `Position`.
   - After the server unseats a member, it drops that member's poses carrying `Flags2.Seated` until one without the flag arrives.
@@ -452,7 +463,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 - [ ] **Step 1: Tests.**
   - Codec round trips: the new `Pose` (45 bytes), `PlayerPoseState` in a snapshot, `SeatMsg`, `LeapMsg`, and `NpcState` bit 128. Pins at count 113.
   - `PoseBuffer` interpolates `SeatYaw` across ±π.
-  - `CartSeats.Put`: books the given index; refuses a taken seat; keeps `Take` unchanged.
+  - `CartSeats.Put`: books the given index; refuses a taken seat and an index outside 0..5; keeps `Take` unchanged.
 - [ ] **Step 2: Implement.**
 - [ ] **Step 3: Check.** Build; the full suite; the three net_test passes; the SP ride tests.
 - [ ] **Step 4: Commit** `feat(net): seats, boarders and leaps sync; riders are posed in their carts on every client`.
@@ -460,7 +471,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 ### Task 5: Remote players ride — board, get out, pump, brake, leave
 
 **Files:**
-- Create `src/Dungeon/Rails/Core/RideInputRules.cs`.
+- Create `src/Dungeon/Rails/Core/RideInputRules.cs` (`Inputs` and `BoardPrompt`).
 - Modify:
   - `src/Net/Core/Protocol.cs`: kind 15, count 114;
   - `src/Net/Core/CartNet.cs` (`RideIntent`);
@@ -468,15 +479,15 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `src/Dungeon/Rails/RailController.cs`;
   - `src/Net/ServerWorld.cs`;
   - `src/Party/Adventurer.cs`.
-- Test `tests/Dungeon/Rails/RideInputRulesTests.cs`.
+- Test:
+  - `tests/Dungeon/Rails/RideInputRulesTests.cs`;
+  - `tests/Net/NetCodecTests.cs` (pins).
 
 **Interfaces:**
 - **`RefOf`:** `MineCart c when c == RailController.Instance?.Cart` resolves to `cart:0`. Spares and `RunawayWagon` never match.
-- **The client's `PromptFor`** mirrors the server's rules from the synced state:
-  - "Get out" when the local hero is seated in the cart;
-  - "Board the cart" when the cart is Held, its stop is not the last, and a hero seat is free.
+- **One prompt rule, called by both sides.** `RideInputRules.BoardPrompt(bool seatedHere, bool held, bool lastStop, bool heroSeatFree) → string` returns "Get out" when seated here, "Board the cart" when the cart is Held, its stop is not the last and a hero seat is free, else "". The server's and the client's `PromptFor` both call it, the client with the synced state.
 - **Server `UseCart`:**
-  - It accepts Remote actors, with the same checks as for a local player: Held, gate clear, not the last stop, a seat free.
+  - It accepts Remote actors, with the same checks as for a local player: Held, not the last stop, a seat free. The gate-clear check stays where it is today, on `StartBoarding` only, so single player is unchanged.
   - When a player boards (LocalHuman, or Remote), these hop in, as `UseCart` does today: the companions within `CompanionBoardRange` that are that player's own (single player: all companions; online: the bots whose `PlayerSlot.BotOwner` is the boarder's name). The bench is filled too.
   - Getting out at speed throws the Remote rider: the run-over, the set-aside behind the cart, then the `ForcePose` from Task 4.
 - **`PlayerAboard()`** counts LocalHuman and Remote heroes who are seated, not downed and not parked. `SetDownRiders` and the hop-in rules use it unchanged. A Remote player is never hopped in automatically.
@@ -488,7 +499,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - players pump first;
   - companions fill up to 2 pumpers in total.
 
-  `RailController.Inputs()` uses it, with the local `Intent.Move` for LocalHuman and the stored `RideIntent` for Remote.
+  `RailController.Inputs()` uses it, with the local `Intent.Move` for LocalHuman and the stored `RideIntent` for Remote. It then sets `hero.Pumping` true for each pumping rider, player or companion (today only companions), so Task 4's snapshot flag shows a remote player's pump.
 - **A player who disconnects while seated** is unseated quietly, by `RailController.UnseatQuietly(Adventurer)`, called in `OnPlayerLeft` before `Park`:
   - the body is set at `ExitCellNear(cart, atStop: true, useTaken: false)`;
   - no run-over, no "jumps from the moving cart" log, and the seat is freed;
@@ -498,13 +509,16 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - It replaces `DebugDepart`: the client boards through the intent; the server traces `aboard:<name>`;
   - pumping through RideIntent leaves the stop with server `Pumpers ≥ 1`;
   - the client brakes, and the server's V drops;
+  - the client's view of the remote body shows `Pumping` while the intent holds Pump;
   - the client gets out at a stop and ends within 0.5 m of the server's spot.
 
 - [ ] **Step 1: Tests.** `RideInputRules`:
   - two players pumping plus a willing companion → 2;
   - one player braking with two pumping → (0, true);
-  - no players and companions willing → 2;
-  - one player pumping and companions not wanting → 1.
+  - no players and companions willing (two available) → 2;
+  - one player pumping and companions not wanting → 1;
+  - `BoardPrompt`: seated gives "Get out"; Held, not last, seat free gives "Board the cart"; not Held, last stop or no seat gives "".
+  - Codec: `RideIntent` round trip; the pins in `NetCodecTests.cs` (:251-252) go to version 17 and count 114.
 - [ ] **Step 2: Implement.**
 - [ ] **Step 3: Check.** Build; the full suite; the three net_test passes; the SP ride tests.
 - [ ] **Step 4: Commit** `feat(net): remote players board, ride, pump and brake`.
@@ -519,22 +533,27 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `src/Dungeon/Rails/CageWagon.cs`;
   - `src/Adventure/Objectives/CrewRescueController.cs` (:162, the cage and key prompts);
   - `src/Adventure/Objectives/OrcKeyring.cs`.
+- Create `src/Dungeon/Rails/Core/PropPromptRules.cs`.
+- Test:
+  - `tests/Dungeon/Rails/PropPromptRulesTests.cs`;
+  - `tests/Net/NetRefsTests.cs`.
 
 **Interfaces:**
 - **`RefOf`** gains `TrackSwitch` (`switch:{piece}`, or `spur:{piece}` for the spur's lever), `WinchPost` (`winch:{stop}`), `CageWagon` (`wagon:{stop}`) and `OrcKeyring` (`keyring:0`). On a client, `TryInteract` then sends `InteractIntent` by itself (`Adventurer.cs:1137`); no `Interact` changes are needed.
-- **Client prompts** mirror the server's rules from the synced state, instead of returning "" on clients:
-  - switch: `Thrown`, `Taken` and `Fixed`;
-  - winch: gate up, and no holder in range (the gate's synced state);
-  - cage: `Open` and `OrcKeys`;
-  - keyring: `OrcKeys`.
+- **Client prompts** call one engine-free rule per prop (`src/Dungeon/Rails/Core/PropPromptRules.cs`), which the server's `Prompt` also calls, with the synced state instead of returning "" on clients:
+  - `SwitchPrompt(fixed, taken, thrown)`: from `Fixed` (plan-static), `TakenSwitches` and `ThrownSwitches`;
+  - `WinchPrompt(gateUp)`: from `GatesUp`. The holder-in-range refusal stays a server log ("Not while they're still here.");
+  - `CagePrompt(open, orcKeys, downedAboard, crewName)`: "Open the cage", or "Revive {crewName}" when a downed crew member is aboard (from `Npc.Downed`, which the snapshot carries);
+  - `KeyringPrompt(orcKeys)`.
 - **Server.** The prop methods accept Remote actors wherever a `Control == LocalHuman` or `!= Remote` check refuses them today. The server re-checks every rule on arrival (reach 3.5 m from `InteractIntent`).
 - **Hits** need nothing new: brake shoes, the heap, the valve, and levers thrown by a hit. `AttackIntent` runs the server melee, and Task 4 fixed the seated aim.
 - **RIDE pass, the steps this task adds.** The server kills stop 1's mobs (test hook), then:
   - `gate:1` "up" reaches the client;
   - the client opens cage 1 through the intent;
+  - a downed crew member in a cage wagon is revived through the intent (`TryRevive`; server test hook downs one);
   - on ride 3 the client throws a switch through the intent; the server traces `switch:<piece>` as thrown, and the client cart crosses (CrossOut set).
 
-- [ ] **Step 1: Implement.** Add a `NetRefsTests` case: `RefOf` maps a spare `MineCart` to null.
+- [ ] **Step 1: Tests and implement.** `NetRefsTests`: `RefOf` maps a `RunawayWagon` to null (a spare's `spare:{stop}` is Task 9). `PropPromptRulesTests`: each rule's table (fixed, taken or thrown switch; gate up or down; open, keyed, downed-aboard cage; keyring taken or not).
 - [ ] **Step 2: Check.** Build; the full suite; the three net_test passes; the SP tests.
 - [ ] **Step 3: Commit** `feat(net): remote players open cages, crank winches, throw switches and take the keys`.
 
@@ -549,16 +568,21 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - `src/Dungeon/Rails/RailEncounterController.Kiln.cs`: the golem's windup telegraph;
   - `src/Net/Core/CartNet.cs`: party `ArmedRide`, `ArmedAt`;
   - `src/Party/Adventurer.cs` (`Shake`);
-  - `src/Net/ClientWorld.cs` (`ShakeEvt`).
+  - `src/Net/ServerWorld.cs` (sends `ShakeEvt` to the Remote member's peer from an `EventBus` hook);
+  - `src/Net/ClientWorld.cs` (`ShakeEvt`);
+  - `src/Dungeon/Rails/Core/SetPieceRules.cs` (`BucketStateAt`).
+- Test:
+  - `tests/Dungeon/Rails/SetPieceRulesTests.cs`;
+  - `tests/Save/SaveRunFieldsTests.cs`.
 
 **Interfaces:**
 - **Crew.**
-  - `ApplyNet` applies `GatesUp` (`RailController.RestoreGates`).
+  - `ApplyNet` does not touch gates, cages or keys: they come from `PropEvt` and `Rail` (Task 2). It keeps the crew states and `CrewDownedLeft`.
   - Crew seats come from `SeatMsg` (Task 4), not from the objective.
   - `ObjectiveStateDto.CrewDownedLeft : Dictionary<string, float>?` carries the seconds left for each downed crew member. Clients count the label down locally, refreshed by each objective broadcast (2 s).
 - **Buckets.**
   - The party DTO gains `int ArmedRide` (−1 when none) and `double ArmedAt` (the server time the ride armed).
-  - Client buckets run the server's schedule from `serverNow − ArmedAt`: bucket n creaks at `n · Every` (3 s) and pours `Creak` seconds later. Each pour spawns a visual-only `CinderPatch` that lives `PatchSeconds`.
+  - Client buckets run the server's schedule from `serverNow − ArmedAt` through `SetPieceRules.BucketStateAt(double secondsSinceArmed, int n) → (phase, secondsIn)` (the server's `TickBuckets` calls it too): bucket n creaks at `n · Every` (3 s) and pours `Creak` seconds later. Each pour spawns a visual-only `CinderPatch` that lives `PatchSeconds`.
   - Hits on the cart stay server-judged.
 - **Hammers and the pour** already animate from `FloorTick` (Task 1). Their glow and stream are checked on the client in the RIDE pass.
 - **Client-local presentation**, from the follower, each with one rule:
@@ -571,14 +595,14 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - a downed crew member's label counts down on the client;
   - on ride 4 the client's hammer reaches Fall within 50 ms of the server's (both log `t=<server time>` at Fall entry).
 
-- [ ] **Step 1: Implement.** Add a SaveDtos round-trip test: `CrewDownedLeft` survives JSON, and null is the default.
+- [ ] **Step 1: Tests and implement.** `SaveRunFieldsTests`: `CrewDownedLeft` survives JSON, and null is the default. `SetPieceRulesTests`: `BucketStateAt` for bucket 0, 1 and 3 at the creak and pour boundaries, and before arming.
 - [ ] **Step 2: Check.** Build; the full suite; the three net_test passes; the SP tests.
 - [ ] **Step 3: Commit** `feat(net): the crew, the gates and the set pieces match on every client`.
 
 ### Task 8: Joiners mid-ride, resyncs, and the cart watchdog
 
 **Files:**
-- Create `src/Dungeon/Rails/Core/CartWatchdog.cs`.
+- Create `src/Dungeon/Rails/Core/CartWatchdog.cs` (`Stuck`, `PartyWatched`, `SlagWatched`).
 - Modify:
   - `src/Net/ServerWorld.cs` (`SendCatchUp` :330, `OnFloorReady` :155);
   - `src/Dungeon/Rails/RailNet.cs`;
@@ -594,7 +618,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - a `FloorClockMsg`.
 
   It is called from both `SendCatchUp` (a join) and `OnFloorReady` (a floor change, a `FloorResyncIntent` rebuild, a wipe reload). Rail props already ride in `SendPropState`.
-- **`CartWatchdog`** (engine-free): `bool Stuck(float progress10s, float targetProgress10s, bool watched)`, with a 10 s window and a 0.5 m threshold.
+- **`CartWatchdog`** (engine-free): `bool Stuck(float progress10s, float targetProgress10s, bool watched)`, with a 10 s window and a 0.5 m threshold, plus the two watch decisions `PartyWatched(bool rolling, bool halted, bool anyRiderBrakes)` and `SlagWatched(bool partyRolling, bool partyHalted)`. `RailController` calls these; it keeps the 10 s windows. For the party cart, `targetProgress10s` is passed as `float.PositiveInfinity` (stuck means under 0.5 m).
   - **The party cart** is watched only while Rolling and not Halted. It is also not watched while any seated rider (player or companion) holds the brake, because a player who stops the cart on purpose is not stuck.
   - **When the party cart is stuck,** it is moved to its next stop as an arrival (`Arrive()`), with the log line "The cart grinds free."
   - **The watchdog never moves a cart across the jump gap.** If the next stop lies past an unjudged `RailGap`, the cart is instead set to the gap's near lip and given `JumpSpeed`, so the jump is judged normally. The plan 4 final review ruled this.
@@ -602,16 +626,16 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
   - **Traffic carts and runaways** are judged on their own progress.
   - **The golem runner** is never watched; its script ends it.
 - **RIDE pass, the steps this task adds:**
-  - a second client joins during ride 2;
+  - a second client joins during ride 2 and rides in the cart (so its seats are the same as the first's);
   - within 1 s of its Ready it has: the cart within 1.5 m (paired as in Task 3), the same seats, the same `Train`, and the same prop hash;
   - it traces `joined-mid-ride ok`.
 
 - [ ] **Step 1: Tests.** `CartWatchdog`:
-  - a party cart halted for 30 s is never stuck;
-  - a Rolling cart with 0.3 m of progress in 10 s is stuck;
-  - a Rolling cart held at 0 m/s by a braking rider for 30 s is not stuck;
-  - a slag cart beside a halted party cart for 30 s is not stuck;
-  - a slag cart that cannot follow a moving target is stuck.
+  - `PartyWatched`: false when halted, false when a rider brakes, true when Rolling, not halted and no brake;
+  - `SlagWatched`: false when the party cart is halted or not Rolling, true otherwise;
+  - a Rolling cart with 0.3 m of progress in 10 s is stuck, and with 0.6 m is not;
+  - a halted party cart is never stuck (unwatched, 0 m of progress);
+  - a slag cart whose target moved 4 m while it moved 0.2 m is stuck, and one whose target did not move is not.
 - [ ] **Step 2: Implement.**
 - [ ] **Step 3: Check.** Build; the full suite; the three net_test passes; the SP tests.
 - [ ] **Step 4: Commit** `feat(rails): joiners and resyncs mid-ride see the ride as it is; a cart watchdog`.
@@ -621,20 +645,24 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 **Files:**
 - Create `src/Dungeon/Rails/RailController.Chase.cs`.
 - Modify:
+  - `src/Dungeon/Rails/RailController.cs`: `Restore`, `OnFoot` and the wreck end the chase; the chaser owns a second `Boarding`;
+  - `src/Dungeon/Rails/MineCart.cs`: `Kind = Chaser` (the property comes from Task 3);
   - `src/Dungeon/Rails/Core/SpareRules.cs`;
   - `src/Dungeon/Rails/SpareYard.cs`;
   - `src/Net/NetRefResolver.cs`;
   - `src/Dungeon/Rails/RailNet.cs`;
   - `src/Net/NetTestFlow.cs`.
-- Test `tests/Dungeon/Rails/SpareRulesTests.cs`.
+- Test:
+  - `tests/Dungeon/Rails/SpareRulesTests.cs`;
+  - `tests/Net/NetRefsTests.cs` (`spare:{stop}` round trip).
 
 **Interfaces:**
-- **`SpareRules.MayChase(int spareStop, bool spareUsed, int trainStop, bool trainHeldAtSpare, bool chaseLive) → bool`:** true when:
+- **`SpareRules.MayChase(int spareStop, bool spareUsed, int trainStop, bool trainHeldAtSpare, bool chaseLive) → bool`,** where `trainStop` is the party cart's `StopIndex` (the last stop it arrived at; it stays k while rolling out of k): true when:
   - the spare is unused;
   - the train has left that stop (`trainStop > spareStop`, or Rolling out of it);
   - no chase is live (one at a time: "no second train").
-- **`SpareRules.ChaseLimit(float trainBackS, float nextStopS) => min(nextStopS, trainBackS − 1.5f)`.** `trainBackS` is the back of the last coupled wagon: `Party.BackS − Train.Count · WagonSpacing − HalfLength`.
-- **The spare's prompt** is "Take the spare cart" for a player hero on foot (LocalHuman or Remote, not downed) within 3 m, when `MayChase` holds. The client mirrors it from the synced `SparesUsed` and the cart state. `RefOf(spare MineCart) → spare:{stop}`.
+- **`SpareRules.ChaseLimit(float trainBackS, float nextStopS) => min(nextStopS, trainBackS − 1.5f)`.** `trainBackS` is the S the chaser's centre may not pass before the 1.5 m gap: one `HalfLength` behind the last wagon's back, `Party.BackS − Train.Count · WagonSpacing − HalfLength` (wagon k's centre is `S − k · WagonSpacing`), so the bodies end 1.5 m apart.
+- **The spare's prompt** is "Take the spare cart" for a player hero on foot (LocalHuman or Remote, not downed) within 3 m, when `MayChase` holds. Server and client both call `SpareRules.Prompt(bool onFootPlayer, bool mayChase) → string`; the client passes `MayChase` computed from the synced `SparesUsed` and the cart state. `RefOf(spare MineCart) → spare:{stop}`.
 - **Taking it:**
   - The spare is spent: `SparesUsed` gains the stop, and the PropEvt `spare` "used" is raised.
   - A chaser cart, a `MineCart` with `Kind = Chaser` and id `ChaserBase + stop`, is placed on the party line at `StopS[stop]` and Held.
@@ -647,13 +675,13 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 
   A wreck, a load (`Restore`) or `OnFoot` ends the chase at once, with the riders set down beside the chaser. The chase is not saved; its spare stays spent.
 - **Sync.** `CartKind.Chaser` rides in `CartStateMsg`; its seats go as `SeatMsg` with `Cart = ChaserBase + stop`.
-- **RIDE pass, the steps this task adds.** The second client stays at stop 1 while the train leaves with the first. Then:
+- **RIDE pass, the steps this task adds.** On ride 3, the second client (joined in Task 8) gets out at stop 1 and stays on foot while the train leaves with the first. Then:
   - it takes spare 1 through the intent;
   - its chaser halts within 3 m behind the train's last body;
   - it traces `chase-done`.
 
 - [ ] **Step 1: Tests.**
-  - `MayChase`: refused when used, when the train is held at that stop, and while a chase is live; allowed otherwise.
+  - `MayChase`: refused when used, when the train is held at that stop, and while a chase is live; allowed otherwise. `Prompt`: "Take the spare cart" only for an on-foot player when `MayChase` holds.
   - `ChaseLimit`: never past `trainBackS − 1.5`; capped at the next stop.
 - [ ] **Step 2: Implement.**
 - [ ] **Step 3: Check.** Build; the full suite; the three net_test passes; the SP tests. Single player is unchanged: there is no chase without a second player, and spares are not boardable while the train is Held at their stop.
@@ -684,14 +712,14 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 - **Inputs, while seated in VR:**
   - `accel` is d(cart V)/dt, smoothed over 0.1 s;
   - `yawRateDeg` is the seat heading's change per second;
-  - `verticalAccel` is the second difference of the seat's Y.
+  - `verticalAccel` is the second difference of the seat's Y, smoothed over 0.1 s like `accel` so frame jitter at 90 to 120 Hz cannot cross the −4 m/s² threshold.
 
   They come from `FollowSeat`, with no allocation.
 - **Seated eye height.** While seated, `RideAlong` and `AfterMove` lift the room by `_lift − (EyeHeight − Adventurer.SeatedEyeHeight)`, which is 0.45 m lower. Standing restores it, and nothing is re-measured. The eye then sits about 1.15 m above the seat, with the rim and front board in the lower view.
 - **No camera shake, roll or pitch in VR**, which is already true. Snap turn while seated also already works; Step 3 checks it.
 
 - [ ] **Step 1: ComfortRules tests.**
-  - Off is always 1, at any input.
+  - Off is always 1, at any input, from any starting radius (Off sets it to 1 at once).
   - Recommended never goes below 0.55.
   - Strong reaches ≤ 0.36 after 2 s at maximum input.
   - The radius moves monotonically toward a constant target.
@@ -700,7 +728,7 @@ The plan 4 fix wave found two single-player gaps; the controller ruled them into
 - [ ] **Step 3: Check.**
   - Build; the full suite.
   - A headless screenshot of the vignette at Strong in a forced state. Use a local, uncommitted flag that draws the quad on the desktop camera for the screenshot only.
-  - `--test-ride` passes. `VrRig` snap turn while seated still turns the room: read the code and add a unit check of `TurnBy` if it is extracted.
+  - `--test-ride`, `--test-ride-edges`, `--test-crew` (both branches) and `--test-chase` print RESULT ok. `VrRig` snap turn while seated still turns the room: read the code and, if `TurnBy` is extracted, add a unit check; if not, record the code reading in the commit message.
 - [ ] **Step 4: Commit** `feat(vr): a comfort vignette for the ride; seated eye height keeps the cart in view`.
 
 ### Task 11: Regressions and docs
