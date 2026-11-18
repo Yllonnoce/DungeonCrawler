@@ -378,7 +378,7 @@ public static class PlanValidator
             if (e.Riders.Count == 0) { report.Repairs.Add($"rail encounter {e.Id}: dropped (no riders)"); return true; }
             foreach (var m in e.Riders)
             {
-                if (!menu.KnownEnemies.TryGetValue(m.EnemyId, out var isBoss)) { report.Repairs.Add($"rail encounter {e.Id}: dropped (unknown enemy {m.EnemyId})"); return true; }
+                if (m.EnemyId is null || !menu.KnownEnemies.TryGetValue(m.EnemyId, out var isBoss)) { report.Repairs.Add($"rail encounter {e.Id}: dropped (unknown enemy {m.EnemyId})"); return true; }
                 if (isBoss) { report.Repairs.Add($"rail encounter {e.Id}: no bosses"); return true; }
             }
             e.At = Clamp("rail encounter", e.Id, e.At);

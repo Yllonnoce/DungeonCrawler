@@ -501,6 +501,21 @@ public partial class RailController : Node
         return _builder.Surface(cell);
     }
 
+    /// <summary>A walkable cell beside the PARTY lane near <paramref name="at"/>, off the rails and the sidings: where a hound that missed the cart lands.</summary>
+    public Vector3 StandBesideLane(Vector3 at) => _builder.Surface(ExitCellNear(at, true, false)) + Vector3.Up * 0.1f;
+
+    /// <summary>
+    /// Something on the cart (a boarding hound) bites the plating for <paramref name="amount"/>: the HUD follows, and plating gone
+    /// while the cart rolls wrecks it as a run-over would. Server only.
+    /// </summary>
+    public void DentPlating(float amount)
+    {
+        if (NetSession.IsClient || amount <= 0f || State.Mode == CartMode.Wrecked) return;
+        Party.State = State with { Plating = Mathf.Max(0f, State.Plating - amount) };
+        RefreshHud();
+        if (State.Plating <= 0f && State.Mode == CartMode.Rolling) Wreck();
+    }
+
     /// <summary>The index of the lane cell nearest <paramref name="here"/> (squared grid distance, first wins).</summary>
     private static int NearestOf(IReadOnlyList<GridPos> lane, GridPos here)
     {
@@ -585,7 +600,7 @@ public partial class RailController : Node
             for (var i = 0; i < parent.GetChildCount(); i++)
             {
                 var child = parent.GetChild(i);
-                if (child is Enemy { IsAlive: true, Carried: false } enemy) _bodies.Add(enemy); // a slag cart's riders ride their own cart
+                if (child is Enemy { IsAlive: true, Carried: false, Leaping: false } enemy) _bodies.Add(enemy); // a slag cart's riders ride their own cart
                 else if (child is Npc { Dead: false, Downed: false, Seated: false } npc) _bodies.Add(npc);
             }
         }

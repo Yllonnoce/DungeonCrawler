@@ -1,5 +1,6 @@
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Enemies;
 using DungeonCrawler.Party;
 using Godot;
 
@@ -80,6 +81,37 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     {
         Build();
         return _seats[Math.Clamp(seat, 0, _seats.Length - 1)].GlobalTransform;
+    }
+
+    /// <summary>How far above the rim a boarding hound's feet are: it clings to the lip with its forepaws over the wall.</summary>
+    public const float BoarderLift = 0.25f;
+    /// <summary>The two boarder spots on the rim in the cart's space (x, z): 0 front-left, 1 back-right.</summary>
+    static readonly Vector2[] BoarderSpots = { new(-TubWidth / 2f + 0.08f, -0.55f), new(TubWidth / 2f - 0.08f, 0.55f) };
+    public const int BoarderCount = 2;
+    /// <summary>Who holds each boarder spot (reserved at a leap's start, so two leaps never take one spot), null when free.</summary>
+    public Enemy?[] Boarders { get; } = new Enemy?[BoarderCount];
+
+    /// <summary>The boarder spot <paramref name="i"/> in world space: on the rim, facing in across the tub.</summary>
+    public Transform3D BoarderSpotTransform(int i)
+    {
+        i = Math.Clamp(i, 0, BoarderCount - 1);
+        var at = BoarderSpots[i];
+        var yaw = i == 0 ? -Mathf.Pi / 2f : Mathf.Pi / 2f; // −Z (forward) turned to point at the other wall
+        return GlobalTransform * new Transform3D(new Basis(Vector3.Up, yaw), new Vector3(at.X, TubBottom + TubHeight + BoarderLift, at.Y));
+    }
+
+    /// <summary>Take a free boarder spot for <paramref name="who"/>: its index, or −1 when both are held (a held spot whose holder is gone is free).</summary>
+    public int ReserveBoarderSpot(Enemy who)
+    {
+        for (var i = 0; i < Boarders.Length; i++)
+            if (Boarders[i] == null || !GodotObject.IsInstanceValid(Boarders[i]) || Boarders[i]!.IsQueuedForDeletion() || !Boarders[i]!.IsAlive) { Boarders[i] = who; return i; }
+        return -1;
+    }
+
+    /// <summary>Give the spot back (only if <paramref name="who"/> still holds it).</summary>
+    public void FreeBoarderSpot(Enemy who)
+    {
+        for (var i = 0; i < Boarders.Length; i++) if (Boarders[i] == who) Boarders[i] = null;
     }
 
     /// <summary>The rider (its seat booked in <see cref="Seats"/>, its own SitIn under way) rides here now.</summary>

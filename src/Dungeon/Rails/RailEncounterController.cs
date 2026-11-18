@@ -94,8 +94,10 @@ public partial class RailEncounterController : Node
                 ClearRide();
                 Arm(e.Stop + 1);
                 break;
-            case CartEventKind.Arrived:
             case CartEventKind.Wrecked:
+                ClearRide(wrecked: true);
+                break;
+            case CartEventKind.Arrived:
             case CartEventKind.Restored:
             case CartEventKind.OnFoot:
                 ClearRide();
@@ -112,9 +114,10 @@ public partial class RailEncounterController : Node
     }
 
     /// <summary>The ride is over (or undone): its live items go, the riders without a death or a word.</summary>
-    private void ClearRide()
+    private void ClearRide(bool wrecked = false)
     {
         ArmedRide = -1;
+        ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
         foreach (var cart in _carts) Free(cart);
         _carts.Clear();
         _warnedAt.Clear();
@@ -214,6 +217,7 @@ public partial class RailEncounterController : Node
         if (NetSession.IsClient || !Current) return;
         var dt = (float)delta;
         StartReached();
+        TickLeaps(dt); // boarders outlive the slag cart that threw them
         if (_carts.Count == 0) return;
         var party = Main.Instance.Party;
         GatherBodies(party);
@@ -252,7 +256,7 @@ public partial class RailEncounterController : Node
         for (var i = 0; i < parent.GetChildCount(); i++)
         {
             var child = parent.GetChild(i);
-            if (child is Enemy { IsAlive: true, Carried: false } enemy) _bodies.Add(enemy); // riders (its own or another cart's) ride
+            if (child is Enemy { IsAlive: true, Carried: false, Leaping: false } enemy) _bodies.Add(enemy); // riders (its own or another cart's) ride
             else if (child is Npc { Dead: false, Downed: false, Seated: false } npc) _bodies.Add(npc);
         }
     }
@@ -300,7 +304,9 @@ public partial class RailEncounterController : Node
 
     public override void _Process(double delta)
     {
-        if (NetSession.IsClient || _carts.Count == 0 || !Current) return;
+        if (NetSession.IsClient || !Current) return;
+        FollowBoarders();
+        if (_carts.Count == 0) return;
         var frac = (float)Engine.GetPhysicsInterpolationFraction();
         foreach (var cart in _carts)
         {

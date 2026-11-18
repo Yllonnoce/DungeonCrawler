@@ -89,7 +89,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public Adventurer? Target { get; private set; }
     public bool HasTarget => Target != null && IsInstanceValid(Target) && !Target.Downed && !Target.Parked; // a parked body is out of the world
     /// <summary>Position to chase: the target, else the nearest living member, else our own spot.</summary>
-    public Vector3 TargetPosition => HasTarget ? Target!.GlobalPosition : (Party?.NearestAlive(GlobalPosition)?.GlobalPosition ?? GlobalPosition);
+    public Vector3 TargetPosition => HasBoardTarget ? BoardTarget!.GlobalPosition + Vector3.Up * 1f : HasTarget ? Target!.GlobalPosition : (Party?.NearestAlive(GlobalPosition)?.GlobalPosition ?? GlobalPosition);
     /// <summary>Actively fighting (companions in Defensive stance react to these).</summary>
     public bool IsHostile => IsAlive && !State.Unaware;
     private readonly Dictionary<int, float> _threat = new(); // keyed by member index: stable across parking and peers
@@ -470,7 +470,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
         if (InWater && IsAlive) Wade(dt, !wasInWater);
         if (IsHorde) TickSwarmDetail(dt);
-        if (!Carried) TickUnstick(dt); // a carried body is posed by its carrier: nothing to unstick
+        if (!Carried && !Leaping) TickUnstick(dt); // a carried body is posed by its carrier: nothing to unstick
         if (Party == null || !IsInstanceValid(Party)) return;
         UpdateAnimation();
 
@@ -500,8 +500,15 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             }
         }
 
+        if (_dying && DeathDrop != null)
+        {
+            // a boarder dies where it hangs: its body (and what it leaves) goes down beside the lane rather than ride off on the cart
+            if (Carried) Drop(DeathDrop());
+            else if (Leaping) LandAt(DeathDrop());
+        }
         if (_dying && State is not DeadState) ChangeState(new DeadState());
 
+        if (Leaping) { UpdateTint(dt); return; } // in the air between two carts: its leap owner poses it, no AI until it lands
         if (IsAlive && !State.Unaware) Retarget(dt);
         if (IsAlive && (Effects.IsStunned || _staggerLeft > 0f))
         {
@@ -735,13 +742,57 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     private Func<Transform3D>? _carrySpot;
     private uint _maskOnFoot;
 
+    /// <summary>In the air on a leap between two carriers (<see cref="BeginLeap"/>): carried by neither, no AI, no walking; the leap's owner poses it.</summary>
+    public bool Leaping { get; private set; }
+
+    /// <summary>
+    /// A crew member this creature has boarded a wagon to bite: its melee goes for them (their chest, not their feet) instead of
+    /// the party, and it turns to face them. Set by the rail encounter controller on a wagon boarder; null otherwise.
+    /// </summary>
+    public Adventure.Npc? BoardTarget { get; set; }
+    /// <summary>Where this creature's body goes if it dies carried or in the air (a boarder: beside the lane). Set by its leap owner.</summary>
+    public Func<Vector3>? DeathDrop { get; set; }
+    private bool HasBoardTarget => BoardTarget is { IsAlive: true } npc && IsInstanceValid(npc);
+
+    /// <summary>Leave the carrier for the air: still on layer 4 (hittable), colliding with nothing, not walking. Server only.</summary>
+    public void BeginLeap()
+    {
+        if (!Carried || Leaping) return;
+        Carrier = null;
+        _carrySpot = null; // the mask stays 0 and _maskOnFoot is kept for the landing
+        Leaping = true;
+        Velocity = Vector3.Zero;
+        _path = null;
+    }
+
+    /// <summary>The leap ends on a carrier: it rides at <paramref name="spot"/> from now on.</summary>
+    public void LandOn(Node3D carrier, Func<Transform3D> spot)
+    {
+        if (!Leaping) return;
+        Carry(carrier, spot);
+        Leaping = false;
+    }
+
+    /// <summary>The leap ends on the ground at <paramref name="at"/>: a normal creature on its own feet again.</summary>
+    public void LandAt(Vector3 at)
+    {
+        if (!Leaping) return;
+        Leaping = false;
+        if (IsAlive) CollisionMask = _maskOnFoot; // a corpse keeps the mask its death gave it
+        Velocity = Vector3.Zero;
+        GlobalPosition = at;
+        _path = null;
+        _repathTimer = 0f;
+        _lastFree = at;
+    }
+
     /// <summary>
     /// Ride <paramref name="carrier"/> at the pose <paramref name="spot"/> gives (world space, −Z forward): the body stays on
     /// layer 4 (heroes can hit it) but collides with nothing, and is posed there at once. Server only.
     /// </summary>
     public void Carry(Node3D carrier, Func<Transform3D> spot)
     {
-        if (!Carried) _maskOnFoot = CollisionMask;
+        if (!Carried && !Leaping) _maskOnFoot = CollisionMask;
         Carrier = carrier;
         _carrySpot = spot;
         CollisionMask = 0;
@@ -772,7 +823,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var spot = _carrySpot();
         var f = -spot.Basis.Z;
         GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-f.X, -f.Z)), spot.Origin);
-        if (IsAlive && HasTarget) FaceToward(Target!.GlobalPosition);
+        if (IsAlive && (HasBoardTarget || HasTarget)) FaceToward(TargetPosition);
     }
 
     // ---- locomotion --------------------------------------------------------------------------
@@ -883,6 +934,13 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public void StrikeParty()
     {
         WindupLeft = -1f; // the clip has been running since the wind-up began
+        if (HasBoardTarget)
+        {
+            // a boarder on a wagon bites the crew inside it: their chest is the mark (the roof is above their heads)
+            if (GlobalPosition.DistanceTo(TargetPosition) <= AttackRange * 1.15f)
+                BoardTarget!.ReceiveAttack(Stats, Attack, new HitContext(), Party?.Rng ?? new Random(), DisplayName);
+            return;
+        }
         if (!HasTarget || DistanceToParty() > AttackRange * 1.15f) return;
         OnDealtDamage(Target!.ReceiveAttack(Stats, Attack, DisplayName, this));
     }

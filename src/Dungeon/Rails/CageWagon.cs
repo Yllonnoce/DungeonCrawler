@@ -1,5 +1,6 @@
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Enemies;
 using DungeonCrawler.Party;
 using Godot;
 
@@ -117,6 +118,27 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
         Riders.Remove(rider.RiderId);
         Seats.Leave(rider.RiderId);
         RiderChanged?.Invoke(rider, false);
+    }
+
+    public const float BoarderLift = 0.05f;
+    public const int BoarderCount = 1;
+    /// <summary>Who holds the boarder spot on the roof (reserved at a leap's start), null when free.</summary>
+    public Enemy?[] Boarders { get; } = new Enemy?[BoarderCount];
+
+    /// <summary>The roof's boarder spot in world space: on top of the cage, at its middle, facing forward.</summary>
+    public Transform3D BoarderSpotTransform(int i = 0)
+        => GlobalTransform * new Transform3D(Basis.Identity, new Vector3(0, BedTop + CageHeight + BoarderLift, 0));
+
+    /// <summary>Take the roof spot for <paramref name="who"/>: 0, or −1 when it is held (a holder that is gone or dead frees it).</summary>
+    public int ReserveBoarderSpot(Enemy who)
+    {
+        if (Boarders[0] == null || !GodotObject.IsInstanceValid(Boarders[0]) || Boarders[0]!.IsQueuedForDeletion() || !Boarders[0]!.IsAlive) { Boarders[0] = who; return 0; }
+        return -1;
+    }
+
+    public void FreeBoarderSpot(Enemy who)
+    {
+        for (var i = 0; i < Boarders.Length; i++) if (Boarders[i] == who) Boarders[i] = null;
     }
 
     /// <summary>Put the wagon on a curve sample (world space; −Z along the line, Y up from the track).</summary>
