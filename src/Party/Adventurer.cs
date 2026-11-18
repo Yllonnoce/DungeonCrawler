@@ -822,6 +822,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     // ---- companion AI ----------------------------------------------------------------------------
 
+    /// <summary>
+    /// Where this companion walks to, whatever it was doing, and holds: a rail pocket (or a cell off the line) while a cart bears
+    /// down on its lane. Null (the default) leaves its brain in charge. Server only; the rail encounter controller sets and clears it.
+    /// </summary>
+    public Vector3? SeekSpot { get; set; }
+
     private Vector3 CompanionVelocity(float dt)
     {
         _thinkTimer -= dt;
@@ -833,6 +839,16 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         {
             if (Target != null && IsInstanceValid(Target) && Target.IsAlive) FaceToward(Target.GlobalPosition);
             return Vector3.Zero;
+        }
+
+        if (SeekSpot is { } seek) // a cart is coming down this lane: walk to the refuge and wait there (set by the rail encounter controller, which clears it)
+        {
+            if (new Vector2(seek.X - GlobalPosition.X, seek.Z - GlobalPosition.Z).Length() < 0.6f)
+            {
+                _mover.Reset();
+                return Vector3.Zero;
+            }
+            return Steer(seek, dt, stopWithin: 0.5f);
         }
 
         var lead = FollowLead;

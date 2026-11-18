@@ -28,6 +28,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     public bool Downed { get; private set; }
     /// <summary>Where the objective wants this NPC to walk (a prisoner fleeing or following a jailer); null = stand.</summary>
     public Vector3? MoveTarget { get; set; }
+    /// <summary>An escorting NPC follows <see cref="MoveTarget"/> too while this is set (a rail pocket while a cart bears down). The rail encounter controller sets and clears it.</summary>
+    public bool MoveOverride { get; set; }
     /// <summary>A prisoner in a jailer's hands, on the way to the jail.</summary>
     public bool Captured { get; set; }
     /// <summary>A prisoner behind bars.</summary>
@@ -335,7 +337,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         {
             if (at is { } d) { FaceToward(d); planar = PathMover.Planar(GlobalPosition, d) * speed; }
         }
-        else if (!Dead && !Downed && !Escorting && MoveTarget is { } goal)
+        else if (!Dead && !Downed && (!Escorting || MoveOverride) && MoveTarget is { } goal)
         {
             var dest = _mover.Next(this, goal, dt, 0.6f, ClearLine, out var straight);
             if (dest is { } d)

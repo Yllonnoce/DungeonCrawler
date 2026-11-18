@@ -100,9 +100,13 @@ public partial class RailEncounterController
             if (!IsInstanceValid(h) || h.IsQueuedForDeletion()) { ReleaseLeap(l); _leaps.RemoveAt(i); continue; }
             if (!h.IsAlive)
             {
-                // it died hanging on (its DeathDrop usually has set the body down already) or in the air: the body goes beside the lane
-                if (h.Carried) h.Drop(Beside(h.GlobalPosition));
-                else if (h.Leaping) h.LandAt(Beside(h.GlobalPosition));
+                // it died hanging on (its DeathDrop usually has set the body down already) or in the air: the body goes beside the lane;
+                // one that died crouching still rides its slag cart on the enemy line, and the cart frees it with the rest
+                if (l.Phase != LeapPhase.Crouch)
+                {
+                    if (h.Carried) h.Drop(Beside(h.GlobalPosition));
+                    else if (h.Leaping) h.LandAt(Beside(h.GlobalPosition));
+                }
                 ReleaseLeap(l);
                 _leaps.RemoveAt(i);
                 continue;
@@ -275,6 +279,7 @@ public partial class RailEncounterController
             if (h.BoardTarget is not { IsAlive: true } || !IsInstanceValid(h.BoardTarget)) h.BoardTarget = NearestCrew(wagon, h.GlobalPosition); // the one it bit went down: the next
             return true;
         }
+        if (_rails.State.Mode != CartMode.Rolling) return true; // it only bites the plating of a cart that rolls (a held cart is mended at the stop)
         l.Dent += dt;
         if (l.Dent >= DentEvery)
         {

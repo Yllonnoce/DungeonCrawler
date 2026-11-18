@@ -47,6 +47,7 @@ public partial class RailEncounterController : Node
     private readonly List<(Node3D body, TrackBody tb)> _hits = new();
     private readonly Dictionary<int, double> _warnedAt = new();
     private readonly Func<Vector3, Vector3> _setAside;
+    private readonly Func<Vector3, Vector3> _setAsideParty;
     private double _now;
 
     /// <summary>The slag carts on the line now (live, not derailed), for tests and later tasks.</summary>
@@ -56,6 +57,7 @@ public partial class RailEncounterController : Node
     {
         Name = "RailEncounterController";
         _setAside = pos => _rails.SetAsideBesideEnemyLane(pos);
+        _setAsideParty = pos => _rails.StandBesideLane(pos);
     }
 
     /// <summary>Read the floor's ride lists and map the lanes. Call before adding the controller to the tree.</summary>
@@ -78,6 +80,7 @@ public partial class RailEncounterController : Node
     public override void _ExitTree()
     {
         if (IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
+        ReleaseSeekers(); // a hero must not keep walking to a refuge on a floor that is gone
     }
 
     /// <summary>The floor this controller belongs to is still the one built (a cleared floor waits a frame to be freed).</summary>
@@ -218,7 +221,12 @@ public partial class RailEncounterController : Node
         var dt = (float)delta;
         StartReached();
         TickLeaps(dt); // boarders outlive the slag cart that threw them
-        if (_carts.Count == 0) return;
+        TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
+        if (_carts.Count == 0 && _traffic == null && _runaway == null)
+        {
+            TickSeekers();
+            return;
+        }
         var party = Main.Instance.Party;
         GatherBodies(party);
         for (var i = _carts.Count - 1; i >= 0; i--)
@@ -230,6 +238,9 @@ public partial class RailEncounterController : Node
             Warn(cart, party);
             if (cart.Run.State.S >= _enemy.Length - LineEnd || cart.Run.State.Mode != CartMode.Rolling) { Free(cart); _carts.RemoveAt(i); }
         }
+        TickTraffic(dt, party);
+        TickRunaway(dt, party);
+        TickSeekers();
     }
 
     /// <summary>Hold pace with the party's cart: aim at the pace point, at the party's speed carried over to this lane plus a capped correction.</summary>
@@ -261,20 +272,30 @@ public partial class RailEncounterController : Node
         }
     }
 
-    private void RunOver(SlagCart cart)
+    private void RunOver(SlagCart cart) => RunOver(cart.Run, cart.HitAt, SlagCart.SourceName, SlagCart.HazardIndex, _setAside); // its own plating is not kept: a big body is only knocked aside
+
+    /// <summary>Judge what <paramref name="run"/>'s front swept and apply the run-over outcomes by <see cref="TierRules.Lethality"/>.</summary>
+    private void RunOver(CartRun run, Dictionary<ulong, double> hitAt, string source, int hazardIndex, Func<Vector3, Vector3> setAside)
     {
-        RunOverSweep.Judge(cart.Run, _bodies, _now, cart.HitAt, _hits);
+        RunOverSweep.Judge(run, _bodies, _now, hitAt, _hits);
         if (_hits.Count == 0) return;
-        RunOverEffects.Apply(_hits, SlagCart.SourceName, TierRules.Lethality, _setAside, hazardIndex: SlagCart.HazardIndex); // its own plating is not kept: a big body is only knocked aside
+        if (TraceTraffic) foreach (var (hb, tb) in _hits) GD.Print($"[rails] t={_now:0.00} {source} runs over {hb.Name} (cart S={run.State.S:0.0}, body S={tb.S:0.0}, lateral {tb.Lateral:0.0})");
+        RunOverEffects.Apply(_hits, source, TierRules.Lethality, setAside, hazardIndex: hazardIndex);
     }
 
     /// <summary>"Cart coming!" and the bell for a hero on foot on the enemy lane with a slag cart bearing down (as the party's cart warns).</summary>
-    private void Warn(SlagCart cart, PartyController party)
+    private void Warn(SlagCart cart, PartyController party) => Warn(cart.Run, cart, _warnedAt, false, party);
+
+    /// <summary>
+    /// A cart bears down (the body stands on its lane within <see cref="WarnSeconds"/> of look-ahead): a hero on foot gets the bark
+    /// and the bell, and an AI-controlled body (a companion, a crew or escorting NPC) within 30 m also walks to a refuge
+    /// (<see cref="SeekRefuge"/>). <paramref name="warned"/> throttles the bark per hero.
+    /// </summary>
+    private void Warn(CartRun run, Node3D carrier, Dictionary<int, double> warned, bool partyLane, PartyController party)
     {
-        var run = cart.Run;
         var look = Mathf.Max(run.State.V, RunOverRules.WarnMinSpeed) * WarnSeconds;
         float hint = run.FrontS + look / 2f, window = look / 2f + 2f;
-        var reach = look + CartRules.HalfLength + 3f;
+        var reach = Mathf.Min(look + CartRules.HalfLength + 3f, SeekScan);
         var at = run.Track.Point(run.State.S);
         foreach (var hero in party.Adventurers)
         {
@@ -283,8 +304,9 @@ public partial class RailEncounterController : Node
             if (pos.DistanceSquaredTo(at) > reach * reach) continue;
             if (!run.Track.Measure(pos, hint, window, out var b)) continue;
             if (!RunOverRules.InWarning(run.State.S, run.State.V, b with { Radius = RunOverSweep.BodyRadius }, WarnSeconds)) continue;
-            if (_warnedAt.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
-            _warnedAt[hero.Index] = _now;
+            if (hero.Control == ControlKind.Companion) SeekRefuge(hero, run, carrier, partyLane, b.S);
+            if (warned.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
+            warned[hero.Index] = _now;
             Adventurer? speaker = null;
             foreach (var mate in party.Adventurers)
                 if (IsInstanceValid(mate) && mate.Cart == _rails.Cart && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
@@ -297,6 +319,16 @@ public partial class RailEncounterController : Node
             }
             else EventBus.Instance.Log("Cart coming!");
             EventBus.Instance.PlaySfx("cart_bell"); // no clip yet: plan 6 adds the sound
+            if (TraceTraffic) GD.Print($"[rails] t={_now:0.00} warn {hero.State.Name} by {carrier.Name}: cart S={run.State.S:0.0} v={run.State.V:0.0}, body S={b.S:0.0} ({b.S - run.State.S:0.0} m ahead)");
+        }
+        for (var i = 0; i < _bodies.Count; i++)
+        {
+            if (_bodies[i] is not Npc { Dead: false, Downed: false, Seated: false } npc || !(npc.Crew || npc.Escorting) || !IsInstanceValid(npc)) continue;
+            var pos = npc.GlobalPosition;
+            if (pos.DistanceSquaredTo(at) > reach * reach) continue;
+            if (!run.Track.Measure(pos, hint, window, out var b)) continue;
+            if (!RunOverRules.InWarning(run.State.S, run.State.V, b with { Radius = RunOverSweep.BodyRadius }, WarnSeconds)) continue;
+            SeekRefuge(npc, run, carrier, partyLane, b.S);
         }
     }
 
@@ -306,7 +338,6 @@ public partial class RailEncounterController : Node
     {
         if (NetSession.IsClient || !Current) return;
         FollowBoarders();
-        if (_carts.Count == 0) return;
         var frac = (float)Engine.GetPhysicsInterpolationFraction();
         foreach (var cart in _carts)
         {
@@ -314,5 +345,7 @@ public partial class RailEncounterController : Node
             cart.Run.Pose(frac);
             cart.FollowRiders();
         }
+        if (_traffic != null && IsInstanceValid(_traffic) && !_traffic.Derailed) _traffic.Run.Pose(frac);
+        if (_runaway != null && IsInstanceValid(_runaway.Body)) _runaway.Run.Pose(frac);
     }
 }
