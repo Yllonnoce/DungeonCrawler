@@ -18,9 +18,10 @@ public static class RunOverEffects
     /// <see cref="RunOverRules.Outcome"/> from <paramref name="sourceName"/>; a big enemy (<see cref="RunOverRules.IsBig"/>)
     /// still standing is moved to <paramref name="setAsideAt"/>(where it was hit). <paramref name="onHit"/> hears each body
     /// once its outcome is applied. Returns the plating damage to the cart: <see cref="RunOverRules.BigBodyPlatingDamage"/>
-    /// when any big enemy was hit (once, however many), else 0.
+    /// when any big enemy was hit (once, however many), else 0. <paramref name="hazardIndex"/> is what a mangled body carries
+    /// as MangledBy (the party's cart <see cref="RailController.HazardIndex"/>, a slag cart <see cref="SlagCart.HazardIndex"/>).
     /// </summary>
-    public static float Apply(List<(Node3D body, TrackBody tb)> hits, string sourceName, float lethality, Func<Vector3, Vector3> setAsideAt, Action<Node3D>? onHit = null)
+    public static float Apply(List<(Node3D body, TrackBody tb)> hits, string sourceName, float lethality, Func<Vector3, Vector3> setAsideAt, Action<Node3D>? onHit = null, int hazardIndex = RailController.HazardIndex)
     {
         var hitBig = false;
         foreach (var (body, _) in hits)
@@ -28,13 +29,13 @@ public static class RunOverEffects
             switch (body)
             {
                 case Adventurer hero:
-                    hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, lethality), sourceName, RailController.HazardIndex);
+                    hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, lethality), sourceName, hazardIndex);
                     break;
                 case Enemy enemy:
                 {
                     var pos = enemy.GlobalPosition;
                     var big = RunOverRules.IsBig(enemy.Profile.Scale, enemy.IsBoss);
-                    enemy.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(enemy.HazardVictimKind, big, lethality), sourceName, RailController.HazardIndex);
+                    enemy.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(enemy.HazardVictimKind, big, lethality), sourceName, hazardIndex);
                     if (big)
                     {
                         if (enemy.IsAlive) enemy.GlobalPosition = setAsideAt(pos);
@@ -43,7 +44,7 @@ public static class RunOverEffects
                     break;
                 }
                 case Npc npc:
-                    npc.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(npc.HazardVictimKind, false, lethality), sourceName, RailController.HazardIndex);
+                    npc.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(npc.HazardVictimKind, false, lethality), sourceName, hazardIndex);
                     break;
             }
             onHit?.Invoke(body);

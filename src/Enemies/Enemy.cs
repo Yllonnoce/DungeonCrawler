@@ -470,7 +470,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
         if (InWater && IsAlive) Wade(dt, !wasInWater);
         if (IsHorde) TickSwarmDetail(dt);
-        TickUnstick(dt);
+        if (!Carried) TickUnstick(dt); // a carried body is posed by its carrier: nothing to unstick
         if (Party == null || !IsInstanceValid(Party)) return;
         UpdateAnimation();
 
@@ -726,6 +726,55 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         else if (!HasTarget) Target = Party.NearestAlive(GlobalPosition);
     }
 
+    // ---- carried (a slag cart's rider) ---------------------------------------------------------
+
+    /// <summary>What carries this creature (a slag cart), or null on its own feet. Its owner calls <see cref="FollowCarrier"/>.</summary>
+    public Node3D? Carrier { get; private set; }
+    /// <summary>Riding a carrier: it neither walks, falls nor is pushed; it still picks targets, winds up, strikes in reach and fires.</summary>
+    public bool Carried => Carrier != null;
+    private Func<Transform3D>? _carrySpot;
+    private uint _maskOnFoot;
+
+    /// <summary>
+    /// Ride <paramref name="carrier"/> at the pose <paramref name="spot"/> gives (world space, −Z forward): the body stays on
+    /// layer 4 (heroes can hit it) but collides with nothing, and is posed there at once. Server only.
+    /// </summary>
+    public void Carry(Node3D carrier, Func<Transform3D> spot)
+    {
+        if (!Carried) _maskOnFoot = CollisionMask;
+        Carrier = carrier;
+        _carrySpot = spot;
+        CollisionMask = 0;
+        Velocity = Vector3.Zero;
+        _path = null;
+        FollowCarrier();
+    }
+
+    /// <summary>Off the carrier and onto its own feet at <paramref name="at"/>: the body collides as before and walks again.</summary>
+    public void Drop(Vector3 at)
+    {
+        if (!Carried) return;
+        Carrier = null;
+        _carrySpot = null;
+        if (IsAlive) CollisionMask = _maskOnFoot; // a corpse keeps the mask its death gave it
+        Velocity = Vector3.Zero;
+        GlobalPosition = at;
+        _path = null;
+        _repathTimer = 0f;
+        _lastFree = at;
+    }
+
+    /// <summary>Stand at the carrier's spot, upright, facing the target while it has one (else the carrier's way). A carrier gone: dropped where it stands.</summary>
+    public void FollowCarrier()
+    {
+        if (!Carried) return;
+        if (!IsInstanceValid(Carrier) || _carrySpot == null) { Drop(GlobalPosition); return; }
+        var spot = _carrySpot();
+        var f = -spot.Basis.Z;
+        GlobalTransform = new Transform3D(new Basis(Vector3.Up, Mathf.Atan2(-f.X, -f.Z)), spot.Origin);
+        if (IsAlive && HasTarget) FaceToward(Target!.GlobalPosition);
+    }
+
     // ---- locomotion --------------------------------------------------------------------------
 
     /// <summary>Enemies do not collide with each other (they would block corridors); a soft push keeps them from stacking.</summary>
@@ -734,7 +783,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var push = Vector3.Zero;
         foreach (var other in GetParent().GetChildren())
         {
-            if (other is not Enemy e || e == this || !e.IsAlive) continue;
+            if (other is not Enemy e || e == this || !e.IsAlive || e.Carried) continue; // one riding a cart pushes nobody
             var d = GlobalPosition - e.GlobalPosition;
             d.Y = 0;
             var len = d.Length();
@@ -747,6 +796,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public void MoveToward(Vector3 target, float dt)
     {
+        if (Carried) return; // its carrier moves it (FollowCarrier): no steering, gravity, separation or sliding of its own
         var v = Velocity;
         v.Y = IsOnFloor() ? 0f : v.Y - _gravity * dt;
         var to = target - GlobalPosition;
@@ -779,6 +829,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     public void MoveAlongPathToward(Vector3 target, float dt)
     {
+        if (Carried) return; // no path to walk while carried (and no search to pay for)
         var builder = Main.Instance?.Builder;
         var layout = builder?.Layout;
         if (layout == null) { MoveToward(target, dt); return; }
@@ -956,7 +1007,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         var p = _projectileScene.Instantiate<Projectile>();
         root.AddChild(p);
         p.GlobalPosition = from + dir * 0.8f;
-        p.SetupEnemy(this, attack, dir * Profile.ProjectileSpeed, new Color(Profile.Color).Lightened(0.3f));
+        var velocity = dir * Profile.ProjectileSpeed;
+        if (Carrier is Dungeon.Rails.ICartBody ride && IsInstanceValid(Carrier)) velocity += ride.Velocity; // thrown from a moving cart, it carries the cart's speed (and so keeps up with a cart riding alongside)
+        p.SetupEnemy(this, attack, velocity, new Color(Profile.Color).Lightened(0.3f));
     }
 
     public bool TrySignature()

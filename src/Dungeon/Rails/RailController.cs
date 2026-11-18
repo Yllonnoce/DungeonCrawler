@@ -489,17 +489,35 @@ public partial class RailController : Node
     /// <summary>A walkable cell beside the lane near the cart, off the rails and the sidings (as a rider steps out at a stop): where a follower left far behind a riding lead is set down.</summary>
     public Vector3 StandBesideCart() => _builder.Surface(ExitCellNear(Cart.GlobalPosition, true, false)) + Vector3.Up * 0.1f;
 
-    private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
+    /// <summary>
+    /// Where a big body a slag cart knocked aside lands: a walkable cell beside the enemy lane near <paramref name="at"/>, off
+    /// the rails and the sidings (a pocket, the platform). No such cell near that stretch: beside the party lane instead.
+    /// </summary>
+    public Vector3 SetAsideBesideEnemyLane(Vector3 at)
     {
-        bool Free(GridPos c) => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c);
-        var lane = _layout.Rail!.Party;
-        var here = DungeonBuilder.WorldToCell(at);
+        var lane = _layout.Rail!.Enemy;
+        var cell = CartSeats.ExitCell(lane, NearestOf(lane, DungeonBuilder.WorldToCell(at)), c => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c), true);
+        if (_layout.IsRail(cell)) cell = ExitCellNear(at, true, false);
+        return _builder.Surface(cell);
+    }
+
+    /// <summary>The index of the lane cell nearest <paramref name="here"/> (squared grid distance, first wins).</summary>
+    private static int NearestOf(IReadOnlyList<GridPos> lane, GridPos here)
+    {
         int best = 0, bestD = int.MaxValue;
         for (var i = 0; i < lane.Count; i++)
         {
             int dx = lane[i].X - here.X, dy = lane[i].Y - here.Y, d = dx * dx + dy * dy;
             if (d < bestD) { bestD = d; best = i; }
         }
+        return best;
+    }
+
+    private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
+    {
+        bool Free(GridPos c) => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c);
+        var lane = _layout.Rail!.Party;
+        var best = NearestOf(lane, DungeonBuilder.WorldToCell(at));
         if (!useTaken) return CartSeats.ExitCell(lane, best, Free, atStop);
         var cell = CartSeats.ExitCell(lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop);
         // every free cell nearby taken: share the first one rather than land on the track
@@ -567,7 +585,7 @@ public partial class RailController : Node
             for (var i = 0; i < parent.GetChildCount(); i++)
             {
                 var child = parent.GetChild(i);
-                if (child is Enemy { IsAlive: true } enemy) _bodies.Add(enemy);
+                if (child is Enemy { IsAlive: true, Carried: false } enemy) _bodies.Add(enemy); // a slag cart's riders ride their own cart
                 else if (child is Npc { Dead: false, Downed: false, Seated: false } npc) _bodies.Add(npc);
             }
         }

@@ -304,6 +304,7 @@ public partial class DungeonBuilder : Node3D
         PlaceSafeRoom(layout, floorIndex, floorState);
         PlaceShrine(layout, floorIndex);
         PlaceObjective(layout, contents, _floorRoot, floorIndex, seed);
+        PlaceRailEncounters(layout, contents);
         if (layout.Water.Count > 0)
         {
             var tile = CurrentTheme?.MetersPerTile ?? 2f;
@@ -1047,6 +1048,16 @@ public partial class DungeonBuilder : Node3D
         controller.Setup(layout, oc, floor, seed);
         root.AddChild(controller);
         controller.Build(this, root);
+    }
+
+    /// <summary>A railed floor's authored rides (slag carts and the rest): only when this floor has the party's cart and either list.</summary>
+    private void PlaceRailEncounters(FloorLayout layout, FloorContents contents)
+    {
+        if (_floorRoot == null || EnemyTrack == null || contents.RailEncounters.Count == 0 && contents.RailSetPieces.Count == 0) return;
+        if (Rails.RailController.Instance is not { } rails || rails.GetParent() != _floorRoot) return;
+        var encounters = new Rails.RailEncounterController();
+        encounters.Setup(this, layout, rails, EnemyTrack, contents);
+        _floorRoot.AddChild(encounters);
     }
 
     /// <summary>A puzzle gate: a lever-gate door that shows from the start, named, owned by the objective (index from <see cref="FloorContents.ExtraIndexBase"/>).</summary>
