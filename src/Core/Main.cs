@@ -806,7 +806,7 @@ public partial class Main : Node
     }
 
     /// <summary>The floor's objective is met: unlock the way down and tell everyone (clients hear it over the wire).</summary>
-    public void OnObjectiveCompleted(int floor, Dungeon.Generation.FloorObjectiveKind kind)
+    public void OnObjectiveCompleted(int floor, Dungeon.Generation.FloorObjectiveKind kind, string line)
     {
         if (NetSession.IsClient) return;
         if (Builder.FloorRoot?.GetNodeOrNull<Stairs>("DownStairs") is { } stairs) stairs.Unlock();
@@ -815,7 +815,7 @@ public partial class Main : Node
             state.Objective ??= new Save.ObjectiveStateDto { Kind = Dungeon.Generation.FloorObjectives.Id(kind) };
             state.Objective.Completed = true;
         }
-        EventBus.Instance.Log(Adventure.Objectives.ObjectiveText.Completed(kind));
+        EventBus.Instance.Log(line);
         EventBus.Instance.RaiseObjectiveCompleted(floor, kind);
     }
 

@@ -1039,7 +1039,7 @@ public partial class DungeonBuilder : Node3D
             FloorObjectiveKind.ShiftingVault => new Adventure.Objectives.ShiftingVaultController(),
             FloorObjectiveKind.Ritual => new Adventure.Objectives.RitualController(),
             // a railed floor's jailbreak is Grisel's crew in cage wagons along the line; a walk-in jail everywhere else
-            FloorObjectiveKind.Jailbreak when Rails.RailController.Instance is { } rails && rails.GetParent() == root => new Adventure.Objectives.CrewRescueController(),
+            FloorObjectiveKind.Jailbreak when Rails.RailController.Instance is { } rails && rails.GetParent() == root && layout.Rail is { Stops.Count: >= 3 } => new Adventure.Objectives.CrewRescueController(),
             FloorObjectiveKind.Jailbreak => new Adventure.Objectives.JailbreakController(),
             _ => null,
         };

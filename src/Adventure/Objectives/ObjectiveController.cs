@@ -84,9 +84,12 @@ public abstract partial class ObjectiveController : Node
         if (Completed) return;
         Completed = true;
         Raise(ObjectiveTrigger.ObjectiveDone);
-        Main.Instance?.OnObjectiveCompleted(Floor, Kind);
+        Main.Instance?.OnObjectiveCompleted(Floor, Kind, CompletedLine);
         RefreshHud();
     }
+
+    /// <summary>The log line when this objective completes and the stairs open.</summary>
+    protected virtual string CompletedLine => ObjectiveText.Completed(Kind);
 
     /// <summary>Something happened the villain (and the tests) may care about.</summary>
     protected void Raise(ObjectiveTrigger trigger, string? arg = null) => EventBus.Instance.RaiseObjectiveEvent(Kind, trigger, arg);

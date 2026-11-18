@@ -32,7 +32,6 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private readonly Dictionary<Npc, CrewState> _state = new();
     private readonly HashSet<string> _home = new();
     private readonly List<CrewState> _states = new();
-    private readonly List<Npc> _scratch = new();
     private RailController? _rails;
     private DungeonBuilder? _builder;
     private Node3D? _root;
@@ -87,28 +86,65 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         var plans = builder.Contents?.Crew is { Count: > 0 } named
             ? named.Select(c => (c.Id, c.Name, c.Body)).ToList()
             : Contents.Prisoners.Select(p => (p.Id, p.Name, (string?)null)).ToList();
+        _grisel = root.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == GriselId); // placed with the floor's NPCs, before the objective
         var taken = OccupiedCells(root);
-        var next = 0;
         for (var stop = 1; stop < rail.Stops.Count - 1; stop++)
         {
             if (PickSiding(builder, rail.Stops[stop], taken) is not { } pick) { GD.PushWarning($"[CrewRescue] stop {stop}: no free cell beside the platform for a cage wagon"); continue; }
             taken.Add(pick.Cell);
-            var wagon = PlaceWagon(builder, root, track, stop, pick.Cell, pick.Platform);
+            PlaceWagon(builder, root, track, stop, pick.Cell, pick.Platform);
+        }
+        if (_wagons.Count == 0)
+        {
+            // nowhere to put a cage: the floor must not stay sealed, so the trial is waived (the first server tick completes it)
+            GD.PushWarning("[CrewRescue] no stop had room for a cage wagon: the crew trial is waived and the stairs open");
+            return;
+        }
+        // the crew fill the wagons in stop order, two to a wagon; a stop that had no room passes its crew on to the wagons
+        // that stand, and whoever is left over when those are full waits freed at the landing and follows the party
+        var next = 0;
+        foreach (var wagon in _wagons)
             for (var k = 0; k < CrewRules.PerWagon && next < plans.Count; k++, next++)
             {
-                var (id, name, body) = plans[next];
-                var path = body != null && ResourceLoader.Exists(NpcBodies.Path(body)) ? NpcBodies.Path(body) : null;
-                var npc = builder.SpawnObjectiveNpc(root, id, name, pick.Cell, NpcMode.Prisoner, path);
-                npc.Crew = true;
-                _crew.Add(npc);
+                var npc = SpawnCrew(builder, root, plans[next], wagon.Cell);
                 _wagonOf[npc] = wagon;
                 _state[npc] = CrewState.Caged;
                 if (!NetSession.IsClient) Seat(npc, wagon); // a client's crew stand where the snapshots put them
             }
-            GD.Print($"[CrewRescue] stop {stop} (room {rail.Stops[stop].Room}): cage wagon on cell {pick.Cell} beside platform cell {pick.Platform}, crew {string.Join(", ", _crew.Where(c => _wagonOf[c] == wagon).Select(c => c.NpcName))}");
+        var landing = next < plans.Count ? LandingCells(rail.Stops[0], taken) : new List<GridPos>();
+        for (var i = 0; next < plans.Count; next++, i++)
+        {
+            var cell = landing.Count > 0 ? landing[i % landing.Count] : Layout.UpStairs;
+            var npc = SpawnCrew(builder, root, plans[next], cell);
+            npc.Freed = true;
+            _state[npc] = CrewState.Freed;
+            if (!NetSession.IsClient) npc.Restore(false, true, false, npc.MaxHp, null); // following from the start, without a log line each
+            GD.PushWarning($"[CrewRescue] {npc.NpcName} has no cage wagon: freed at the landing on cell {cell}");
         }
-        if (next < plans.Count) GD.PushWarning($"[CrewRescue] {plans.Count - next} crew had no wagon to ride in");
+        foreach (var wagon in _wagons)
+            GD.Print($"[CrewRescue] stop {wagon.Stop} (room {rail.Stops[wagon.Stop].Room}): cage wagon on cell {wagon.Cell}, crew {string.Join(", ", _crew.Where(c => WagonOf(c) == wagon).Select(c => c.NpcName))}");
     }
+
+    private Npc SpawnCrew(DungeonBuilder builder, Node3D root, (string Id, string Name, string? Body) plan, GridPos cell)
+    {
+        var path = plan.Body != null && ResourceLoader.Exists(NpcBodies.Path(plan.Body)) ? NpcBodies.Path(plan.Body) : null;
+        var npc = builder.SpawnObjectiveNpc(root, plan.Id, plan.Name, cell, NpcMode.Prisoner, path);
+        npc.Crew = true;
+        _crew.Add(npc);
+        return npc;
+    }
+
+    /// <summary>Free floor of the start room, off the line and away from anything standing there, nearest its platform's middle.</summary>
+    private List<GridPos> LandingCells(RailStop start, HashSet<GridPos> taken)
+    {
+        if (start.Room < 0 || start.Room >= Layout.Rooms.Count || _builder == null) return new List<GridPos>();
+        var mid = start.Platform.Count > 0 ? start.Platform[start.Platform.Count / 2] : Layout.UpStairs;
+        return RoomCells.Free(Layout, Layout.Rooms[start.Room]).Where(c => !Layout.IsRail(c) && !_builder.IsCellBlocked(c) && !taken.Contains(c))
+            .OrderBy(c => Sq(c, mid)).ThenBy(c => c.X).ThenBy(c => c.Y).ToList();
+    }
+
+    /// <summary>The wagon a crew member was caged in, or null for one freed at the landing.</summary>
+    private CageWagon? WagonOf(Npc npc) => _wagonOf.GetValueOrDefault(npc);
 
     /// <summary>Cells something already stands on: an NPC, an enemy, a chest (props and vault cells the builder blocks).</summary>
     private static HashSet<GridPos> OccupiedCells(Node3D root)
@@ -146,7 +182,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private static int Sq(GridPos a, GridPos b) => (a.X - b.X) * (a.X - b.X) + (a.Y - b.Y) * (a.Y - b.Y);
 
     /// <summary>The wagon on its siding cell, facing along the track beside it, with a stub of rail under it; the cell is blocked and kept clear of riders getting out.</summary>
-    private CageWagon PlaceWagon(DungeonBuilder builder, Node3D root, RailTrack track, int stop, GridPos cell, GridPos platform)
+    private void PlaceWagon(DungeonBuilder builder, Node3D root, RailTrack track, int stop, GridPos cell, GridPos platform)
     {
         var at = builder.Surface(cell);
         var beside = builder.Surface(platform);
@@ -163,7 +199,6 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         builder.BlockCell(cell);
         _rails?.ReserveSiding(cell);
         _wagons.Add(wagon);
-        return wagon;
     }
 
     /// <summary>A short stub of track on sleepers for a wagon to stand on: looks only.</summary>
@@ -193,22 +228,10 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     protected override void Tick(float dt, Main main)
     {
-        if (Completed || _crew.Count == 0) return;
+        if (Completed) return;
+        if (_wagons.Count == 0) { Complete(); return; } // no cage could stand anywhere: waived (Build warned)
         Evaluate();
         if (CrewRules.Completed(States(), ClosedCages)) Win();
-    }
-
-    public override void _Process(double delta)
-    {
-        // a wagon on its siding holds its crew where they stand (the train's riders are the RailController's to pose)
-        if (NetSession.IsClient) return;
-        foreach (var wagon in _wagons)
-        {
-            if (wagon.Coupled || wagon.Riders.Count == 0) continue;
-            _scratch.Clear();
-            foreach (var rider in wagon.Riders.Values) if (rider is Npc npc && IsInstanceValid(npc)) _scratch.Add(npc);
-            foreach (var npc in _scratch) npc.FollowSeat();
-        }
     }
 
     /// <summary>Where each crew member stands now: caged, freed, down, home (and staying home) or lost.</summary>
@@ -229,7 +252,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private CrewState Judge(Npc npc, bool atEnd)
     {
         if (!IsInstanceValid(npc) || npc.Dead) { _home.Remove(npc.Id); return CrewState.Lost; }
-        if (_wagonOf.TryGetValue(npc, out var wagon) && !wagon.Open) return CrewState.Caged;
+        if (WagonOf(npc) is { Open: false }) return CrewState.Caged;
         var inTrain = npc.Ride is CageWagon { Coupled: true };
         var inExit = (inTrain && atEnd) || (!npc.Seated && InExitRoom(npc));
         if (_home.Contains(npc.Id))
@@ -250,9 +273,10 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         AdventureDirector.Instance?.SetFlag("jailbreak_freed_all", "the prisoners");
         if (_rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(); EventBus.Instance.Log("Somewhere on this floor, a vault door swings wide for you."); }
-        EventBus.Instance.Log("The crew are home. The stairs grind open.");
-        Complete();
+        Complete(); // its line is CompletedLine
     }
+
+    protected override string CompletedLine => _wagons.Count == 0 ? ObjectiveText.Completed(FloorObjectiveKind.None) : "The crew are home. The stairs grind open.";
 
     // ---- the wagons -------------------------------------------------------------------------------
 
@@ -273,7 +297,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (OrcKeys) EventBus.Instance.Log("The orc's keys turn in the cage's padlock.");
             else if (GriselOpens(wagon) is { } grisel)
             {
-                EventBus.Instance.Log($"{grisel.NpcName} works the lock. '{GriselLine}'");
+                EventBus.Instance.Log($"Grisel works the lock. '{GriselLine}'");
                 Main.Instance?.Hud?.ShowBark(grisel.NpcName, GriselLine, 4f);
             }
             else if (!party.TryUnlock("the cage", out _, wagon.GlobalPosition, objectiveLock: true)) return;
@@ -287,8 +311,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>Grisel, alive and up, following the party within <see cref="GriselReach"/> of the wagon (or seated in the cart held at its stop); else null.</summary>
     private Npc? GriselOpens(CageWagon wagon)
     {
-        if (_grisel == null || !IsInstanceValid(_grisel)) _grisel = _root?.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == GriselId);
-        if (_grisel is not { Dead: false, Downed: false } g) return null;
+        if (_grisel == null || !IsInstanceValid(_grisel) || _grisel is not { Dead: false, Downed: false } g) return null;
         if (g.Escorting && !g.Seated && g.GlobalPosition.DistanceTo(wagon.GlobalPosition) <= GriselReach) return g;
         if (_rails != null && IsInstanceValid(_rails) && g.Cart == _rails.Cart && _rails.State.Mode == CartMode.Held && _rails.StopIndex == wagon.Stop) return g;
         return null;
@@ -296,15 +319,22 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     /// <summary>An open wagon with crew aboard lets them out on its siding, or anywhere once the cart that drew it is wrecked (the train goes nowhere).</summary>
     private bool CanLetOut(CageWagon wagon) =>
-        wagon.Open && (!wagon.Coupled || _rails is { State.Mode: CartMode.Wrecked }) && Aboard(wagon).Count > 0;
+        wagon.Open && (!wagon.Coupled || _rails is { State.Mode: CartMode.Wrecked }) && AnyAboard(wagon);
+
+    private bool AnyAboard(CageWagon wagon)
+    {
+        foreach (var npc in _crew)
+            if (IsInstanceValid(npc) && !npc.Dead && npc.Ride == wagon) return true;
+        return false;
+    }
 
     /// <summary>The living crew seated in <paramref name="wagon"/>.</summary>
     private List<Npc> Aboard(CageWagon wagon)
     {
-        _scratch.Clear();
+        var aboard = new List<Npc>(CrewRules.PerWagon);
         foreach (var npc in _crew)
-            if (IsInstanceValid(npc) && !npc.Dead && npc.Ride == wagon) _scratch.Add(npc);
-        return _scratch;
+            if (IsInstanceValid(npc) && !npc.Dead && npc.Ride == wagon) aboard.Add(npc);
+        return aboard;
     }
 
     private Npc? DownedAboard(CageWagon wagon)
@@ -319,7 +349,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         wagon.SetOpen(true);
         EventBus.Instance.PlaySfx("door");
-        var crew = _crew.Where(c => _wagonOf.GetValueOrDefault(c) == wagon).ToList();
+        var crew = _crew.Where(c => WagonOf(c) == wagon).ToList();
         foreach (var npc in crew)
         {
             if (!IsInstanceValid(npc) || npc.Dead) continue;
@@ -347,7 +377,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>The crew of an open wagon climb out beside it and follow the party on foot.</summary>
     private void LetOut(CageWagon wagon)
     {
-        var aboard = Aboard(wagon).ToList();
+        var aboard = Aboard(wagon);
         var cells = FreeCellsNear(wagon.Coupled ? DungeonBuilder.WorldToCell(wagon.GlobalPosition) : wagon.Cell, aboard.Count);
         for (var i = 0; i < aboard.Count; i++)
         {
@@ -382,7 +412,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (NetSession.IsClient || e.Kind != CartEventKind.Departed || _rails == null || !IsInstanceValid(_rails)) return;
         foreach (var wagon in _wagons)
         {
-            if (wagon.Stop != e.Stop || !wagon.Open || wagon.Coupled || Aboard(wagon).Count == 0) continue;
+            if (wagon.Stop != e.Stop || !wagon.Open || wagon.Coupled || !AnyAboard(wagon)) continue;
             Couple(wagon);
             EventBus.Instance.Log("The cage wagon couples on behind.");
         }
@@ -427,6 +457,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         base.Restore(dto);
         OrcKeys = dto.OrcKeys ?? false;
+        _grisel = _root?.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == GriselId);
         var open = dto.OpenCages ?? new List<int>();
         foreach (var wagon in _wagons) wagon.SetOpen(open.Contains(wagon.Stop));
         _home.Clear();
@@ -441,8 +472,8 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         foreach (var npc in _crew)
         {
             if (!IsInstanceValid(npc)) continue;
-            var wagon = _wagonOf[npc];
-            npc.Freed = wagon.Open;
+            var wagon = WagonOf(npc); // null: freed at the landing (no wagon had room for them)
+            npc.Freed = wagon?.Open ?? true;
             if (lost.Contains(npc.Id) && !npc.Dead) npc.Restore(true, false, false, 0f, null);
             if (npc.Dead)
             {
@@ -450,20 +481,21 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 if (npc.Seated) npc.GetOut(_builder!.Surface(DungeonBuilder.WorldToCell(npc.GlobalPosition)));
                 continue;
             }
-            if (!wagon.Open) { Seat(npc, wagon); continue; }
+            if (wagon is { Open: false }) { Seat(npc, wagon); continue; }
             if (_home.Contains(npc.Id))
             {
-                if (wagon.Coupled && atEnd) { Seat(npc, wagon); continue; }
+                if (wagon is { Coupled: true } && atEnd) { Seat(npc, wagon); continue; }
                 var cell = exitCells.Count > 0 ? exitCells[nextExit++ % exitCells.Count] : DungeonBuilder.WorldToCell(npc.GlobalPosition);
                 npc.GetOut(_builder!.Surface(cell) + Vector3.Up * 0.1f);
                 if (!npc.Escorting) npc.Restore(false, true, false, npc.Hp, null, npc.Downed);
                 continue;
             }
+            if (wagon == null) continue; // on foot where the save had them
             if (wagon.Coupled || !npc.Escorting) Seat(npc, wagon);
             else if (npc.Seated) npc.GetOut(npc.GlobalPosition); // let out before the save: on foot where it stood
         }
         _state.Clear();
-        foreach (var npc in _crew) _state[npc] = npc.Dead ? CrewState.Lost : !_wagonOf[npc].Open ? CrewState.Caged : _home.Contains(npc.Id) ? CrewState.Home : CrewState.Freed;
+        foreach (var npc in _crew) _state[npc] = npc.Dead ? CrewState.Lost : WagonOf(npc) is { Open: false } ? CrewState.Caged : _home.Contains(npc.Id) ? CrewState.Home : CrewState.Freed;
         Evaluate();
         if (Completed && _rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(silent: true); }
         RefreshHud();
@@ -488,7 +520,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         var lost = (dto.LostCrew ?? new List<string>()).ToHashSet();
         foreach (var npc in _crew)
             _state[npc] = lost.Contains(npc.Id) ? CrewState.Lost
-                : !_wagonOf[npc].Open ? CrewState.Caged
+                : WagonOf(npc) is { Open: false } ? CrewState.Caged
                 : home.Contains(npc.Id) ? CrewState.Home
                 : IsInstanceValid(npc) && npc.Downed ? CrewState.Downed : CrewState.Freed;
     }
