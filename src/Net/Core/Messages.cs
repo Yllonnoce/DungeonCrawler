@@ -37,7 +37,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
     int YourPeerId, int YourMemberIndex, ulong GameSeed, int CurrentFloor, double PlaySeconds, bool Victory,
     AdventureDto? Adventure, PartySnapshot BuildSnapshot, FloorStateDto FloorState, List<DynamicEnemyDto> DynamicEnemies,
     PartyDto Party, List<NetPlayerDto> Players, string Objective, int ServerTick, ulong LayoutHash = 0, string? FloorObjective = null,
-    int FloorEpoch = 0) : NetMessage; // FloorEpoch (v14): which build of the floor the state describes (the server counts every build; see WorldCheck.SameBuild)
+    int FloorEpoch = 0, double ServerTime = 0, double FloorSeconds = 0) : NetMessage; // FloorEpoch (v14): which build of the floor the state describes (the server counts every build; see WorldCheck.SameBuild)
+// ServerTime, FloorSeconds (v17): the server's clock as it sent this (seeds the client's NetClock) and its floor's seconds then (the FloorClock's first pair)
 [Msg(MsgKind.Ready)] public sealed record Ready(int Floor) : NetMessage;
 [Msg(MsgKind.PlayerJoined)] public sealed record PlayerJoined(NetPlayerDto Player) : NetMessage;
 [Msg(MsgKind.PlayerLeft)] public sealed record PlayerLeft(int MemberIndex, string Name) : NetMessage;
@@ -73,9 +74,16 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.FloorChange)] public sealed record FloorChange(
     int Floor, int Delta, FloorPlan? Plan, PartySnapshot BuildSnapshot, FloorStateDto? State,
     List<PoseDto> SpawnPoses, List<DynamicEnemyDto> DynamicEnemies, bool FirstVisit, ulong LayoutHash = 0, string? Objective = null,
-    List<int>? EliteSpawns = null, int Epoch = 0, bool Resync = false) : NetMessage; // EliteSpawns (v10): the floor's elite spawn indices, so a first visit's roster is the server's and never the client's own roll.
+    List<int>? EliteSpawns = null, int Epoch = 0, bool Resync = false, double ServerTime = 0, double FloorSeconds = 0) : NetMessage; // EliteSpawns (v10): the floor's elite spawn indices, so a first visit's roster is the server's and never the client's own roll.
 // Epoch (v14): the server's count of floor builds (a wipe's rebuild of the same number is a new one). Resync (v14): the answer to a
-// FloorResyncIntent, the floor as it stands now (State is a live capture), to one client whose change never arrived or failed to build
+// FloorResyncIntent, the floor as it stands now (State is a live capture), to one client whose change never arrived or failed to build.
+// ServerTime, FloorSeconds (v17): the floor clock's pair for the new floor (see FloorClockMsg)
+/// <summary>
+/// The floor clock (v17): the server's floor <paramref name="Floor"/>, build <paramref name="Epoch"/>, had run
+/// <paramref name="FloorSeconds"/> at its time <paramref name="ServerTime"/>. Every second on a railed floor, every two elsewhere,
+/// and to a peer when it is ready; a client drops one about another floor or build. Transient (the next one replaces it).
+/// </summary>
+[Msg(MsgKind.FloorClock)] public sealed record FloorClockMsg(int Floor, int Epoch, double FloorSeconds, double ServerTime) : NetMessage;
 [Msg(MsgKind.PartySync)] public sealed record PartySync(int Index, CharacterDto Member) : NetMessage;
 [Msg(MsgKind.BagSync)] public sealed record BagSync(List<BagCellDto> Bag) : NetMessage;
 [Msg(MsgKind.GoldSync)] public sealed record GoldSync(int Gold) : NetMessage;
@@ -131,9 +139,12 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 /// <summary>The floor objective is met: the stairs open.</summary>
 [Msg(MsgKind.ObjectiveDone)] public sealed record ObjectiveDoneEvt(int Floor, string ObjectiveKind) : NetMessage;
 
-// lethal hazards: the server owns every phase; a client animates from the tick the phase began
-/// <summary>A hazard entered a phase. Hazard is a (byte)HazardKind; Phase a PressPhase or SpikePhase byte; DurationTicks how long it lasts.</summary>
-[Msg(MsgKind.HazardPhase)] public sealed record HazardPhaseMsg(int Index, byte Hazard, byte Phase, int ServerTick, int DurationTicks, bool Jammed, int Spent) : NetMessage;
+// lethal hazards: the server owns every phase; a client animates from the server time the phase began
+/// <summary>
+/// A hazard entered a phase. Hazard is a (byte)HazardKind; Phase a PressPhase or SpikePhase byte; ServerTime the server's clock
+/// when it began; DurationSeconds how long it lasts (0 open-ended, see <see cref="HazardSync"/>). Seconds since v17 (were ticks).
+/// </summary>
+[Msg(MsgKind.HazardPhase)] public sealed record HazardPhaseMsg(int Index, byte Hazard, byte Phase, double ServerTime, float DurationSeconds, bool Jammed, int Spent) : NetMessage;
 /// <summary>The sender wants to pull a Mangled member clear; the server runs the hold.</summary>
 [Msg(MsgKind.RescueIntent)] public sealed record RescueIntent(int Member) : NetMessage;
 /// <summary>A downed player calling for help; everyone reads it in the log.</summary>

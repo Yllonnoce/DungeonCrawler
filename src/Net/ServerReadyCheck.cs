@@ -51,9 +51,13 @@ public partial class ServerWorld
         return true;
     }
 
+    /// <summary>The HUD count's beat: once a second of elapsed time (it runs always, so its beat does not hang on when a vote began).</summary>
+    private Cadence _readyCadence = new(1.0);
+
     /// <summary>Once a second while a vote runs: the HUD count, and the verdict at 15 s.</summary>
-    private void TickReadyCheck(float dt)
+    private void TickReadyCheck(double delta)
     {
+        var beat = _readyCadence.Advance(delta) > 0;
         if (!StairsCheck.Active) return;
         if (_readyStairs == null || !GodotObject.IsInstanceValid(_readyStairs)) { StairsCheck.Clear(); OnReadyVerdict(ReadyVerdict.Cancelled); return; }
         var living = LivingPlayers();
@@ -61,7 +65,7 @@ public partial class ServerWorld
         var verdict = StairsCheck.Tick(living, now);
         if (verdict == ReadyVerdict.Pending)
         {
-            if (NetSession.Instance.Tick % 60 == 0) BroadcastReady(StairsCheck.ReadyCount(living), living.Count, Mathf.CeilToInt(StairsCheck.SecondsLeft(now)), _readyDirection);
+            if (beat) BroadcastReady(StairsCheck.ReadyCount(living), living.Count, Mathf.CeilToInt(StairsCheck.SecondsLeft(now)), _readyDirection);
             return;
         }
         if (verdict == ReadyVerdict.Cancelled) EventBus.Instance.Log($"Nobody agreed. The {(_readyDirection < 0 ? "climb" : "descent")} is called off.");

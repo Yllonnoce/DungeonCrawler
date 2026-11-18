@@ -32,7 +32,16 @@ public partial class ClientWorld : Node
     /// <summary>Every hero the server knows, by member: players and hero bots, in play or not (the pause menu's party list).</summary>
     public IReadOnlyDictionary<int, NetPlayerDto> Roster => _roster;
     public int SnapshotsSeen { get; private set; }
-    public double Rtt { get; private set; }
+    /// <summary>The server's clock as this client reckons it (the Welcome seeds it, each pong refines it).</summary>
+    public NetClock Clock { get; } = new();
+    /// <summary>The floor's clock as the server runs it (fed by the Welcome, each FloorChange and each <see cref="FloorClockMsg"/>).</summary>
+    private readonly FloorClock _floorClock = new();
+    /// <summary>The median ping round trip, seconds (0 before the first pong).</summary>
+    public double Rtt => Clock.Rtt;
+    /// <summary>The server's <c>NetSession.Instance.Now</c> as of now.</summary>
+    public double ServerNow => Clock.ServerNow(NetSession.Instance.Now);
+    /// <summary>The seconds the server's current floor has run, now (<see cref="Dungeon.DungeonBuilder.FloorSeconds"/> reads it once a physics tick).</summary>
+    public double ReadFloorSeconds() => _floorClock.Read(ServerNow);
     /// <summary>What the scripted client test saw, in order.</summary>
     public List<string> Trace { get; } = new();
     public event Action<NetMessage>? MessageReceived;
@@ -64,6 +73,12 @@ public partial class ClientWorld : Node
                 _roster.Clear();
                 foreach (var p in w.Players) _roster[p.MemberIndex] = p;
                 _epoch = w.FloorEpoch;
+                if (w.ServerTime > 0)
+                {
+                    Clock.Seed(w.ServerTime, NetSession.Instance.Now);
+                    _floorClock.Reset();
+                    _floorClock.Apply(w.FloorSeconds, w.ServerTime);
+                }
                 try { Main.Instance.StartClientSession(w); }
                 catch (Exception e)
                 {
@@ -92,7 +107,8 @@ public partial class ClientWorld : Node
             case ObjectiveMsg o: EventBus.Instance.RaiseObjectiveChanged(o.Text); break;
             case PlayerJoined pj: OnPlayerJoined(pj.Player); break;
             case PlayerLeft pl: OnPlayerLeft(pl); break;
-            case Pong pong: Rtt = NetSession.Instance.Now - pong.SentAt; break;
+            case Pong pong: Clock.OnPong(pong.SentAt, NetSession.Instance.Now, pong.ServerTime); break;
+            case FloorClockMsg fcm: OnFloorClock(fcm); break;
             case ForcePose fp: ApplyForcePose(fp); break;
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
@@ -187,12 +203,9 @@ public partial class ClientWorld : Node
 
     private static Node3D? Root => Main.Instance?.Builder.FloorRoot;
 
-    /// <summary>Server tick minus ours, from the latest snapshot: turns a phase's start tick into seconds already elapsed here.</summary>
-    private int _serverTickOffset;
-
     private void OnHazardPhase(HazardPhaseMsg hp)
     {
-        var secondsIn = HazardSync.SecondsIn(NetSession.Instance.Tick, _serverTickOffset, hp.ServerTick, hp.DurationTicks);
+        var secondsIn = HazardSync.SecondsIn(ServerNow, hp.ServerTime, hp.DurationSeconds);
         foreach (var node in Main.Instance?.Builder.Hazards ?? Array.Empty<Node3D>())
         {
             switch (node)
@@ -209,6 +222,23 @@ public partial class ClientWorld : Node
         }
     }
 
+    /// <summary>The server's floor clock pair: dropped when it is about another floor or build than the one this client holds.</summary>
+    private void OnFloorClock(FloorClockMsg m)
+    {
+        if (m.Floor != Game.Instance.CurrentFloor || !WorldCheck.SameBuild(_epoch, m.Epoch)) return;
+        var report = NetSession.Instance.TestClient && ++_floorPairsSeen == 5; // a few pairs in: the pings have refined the seed
+        var before = report && _floorClock.HasPair ? ReadFloorSeconds() : double.NaN;
+        _floorClock.Apply(m.FloorSeconds, m.ServerTime);
+        if (report)
+        {
+            // the scripted client's proof that the clocks agree: the pair's floor time carried to now against what this client read just before it
+            GD.Print($"[net] floor clock: server floor {m.FloorSeconds + (ServerNow - m.ServerTime):0.000} s, ours {before:0.000} s, rtt {Rtt * 1000:0} ms");
+            Trace.Add("floorclock");
+        }
+    }
+
+    private int _floorPairsSeen;
+
     /// <summary>The floor build this client holds (the server's count, from the Welcome and each FloorChange; 0 unknown).</summary>
     private int _epoch;
     /// <summary>Watches a floor change from its FloorChangeBegin to its build (<see cref="FloorWatchdog"/>).</summary>
@@ -220,6 +250,9 @@ public partial class ClientWorld : Node
     {
         // our ask crossed the change it was about: the build we hold is already this one
         if (fc.Resync && !_floorWatch.Pending && fc.Epoch != 0 && fc.Epoch == _epoch && fc.Floor == Game.Instance.CurrentFloor) { GD.Print($"[net] floor {fc.Floor} (build {fc.Epoch}) sent again, already built"); return; }
+        // a new floor, a new clock: its first pair rides in the change
+        _floorClock.Reset();
+        if (fc.ServerTime > 0) _floorClock.Apply(fc.FloorSeconds, fc.ServerTime);
         try { Main.Instance.ApplyFloorChange(fc); }
         catch (Exception e)
         {
@@ -562,7 +595,6 @@ public partial class ClientWorld : Node
     private void ApplySnapshot(WorldSnapshot s)
     {
         SnapshotsSeen++;
-        _serverTickOffset = s.Tick - NetSession.Instance.Tick;
         var now = NetSession.Instance.Now;
         var party = Main.Instance?.Party;
         if (party == null) return;
@@ -624,8 +656,10 @@ public partial class ClientWorld : Node
         _reindexTimer -= dt;
         if (_reindexTimer <= 0f) { _reindexTimer = 2f; Reindex(); }
 
+        // by elapsed time, not ticks: a 90 Hz headset sends as often as a 60 Hz screen
         var tick = NetSession.Instance.Tick;
-        if (tick % (60 / Protocol.PoseHz) == 0 && party.Local is { } local)
+        if (_heartbeatCadence.Advance(delta) > 0) _heartbeatDue = true;
+        if (_poseCadence.Advance(delta) > 0 && party.Local is { } local)
         {
             var pos = local.GlobalPosition;
             var flags = PoseFlags.None;
@@ -637,13 +671,20 @@ public partial class ClientWorld : Node
             if (local.Defense.Parrying) flags |= PoseFlags.Parry;
             if (local.Defense.Dodging) flags |= PoseFlags.Dodge;
             // coalesce: a body that has not moved sends a pose every half second only; a window that opens or closes while standing still goes at once
-            if (pos.DistanceSquaredTo(_lastSentPos) > 0.0001f || Math.Abs(local.Rotation.Y - _lastSentYaw) > 0.001f || flags != _lastSentFlags || tick % 30 == 0)
+            if (pos.DistanceSquaredTo(_lastSentPos) > 0.0001f || Math.Abs(local.Rotation.Y - _lastSentYaw) > 0.001f || flags != _lastSentFlags || _heartbeatDue)
             {
-                _lastSentPos = pos; _lastSentYaw = local.Rotation.Y; _lastSentFlags = flags;
+                _lastSentPos = pos; _lastSentYaw = local.Rotation.Y; _lastSentFlags = flags; _heartbeatDue = false;
                 _t.Send(NetPeers.Server, NetCodec.Encode(new Pose(tick, local.Index, new NetVec(pos.X, pos.Y, pos.Z), local.Rotation.Y, local.Camera.Rotation.X,
                     new NetVec(local.Velocity.X, local.Velocity.Y, local.Velocity.Z), flags)), NetChannel.State);
             }
         }
-        if (tick % 120 == 0) _t.Send(NetPeers.Server, NetCodec.Encode(new Ping(tick, now)));
+        // every second (it was every two): more samples for the server clock (NetClock) to settle on
+        if (_pingCadence.Advance(delta) > 0) _t.Send(NetPeers.Server, NetCodec.Encode(new Ping(tick, now)));
     }
+
+    private Cadence _poseCadence = new(1.0 / Protocol.PoseHz);
+    /// <summary>A body that has not moved still sends a pose this often.</summary>
+    private Cadence _heartbeatCadence = new(0.5);
+    private bool _heartbeatDue;
+    private Cadence _pingCadence = new(1.0);
 }

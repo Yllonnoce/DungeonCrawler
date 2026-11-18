@@ -148,8 +148,11 @@ public partial class ServerWorld : Node
         var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemy>();
         if (NetSession.Instance.TestServer) GD.Print($"[net-server] elites on floor {floor}: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
         return new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main),
-            elites.Select(e => e.SpawnIndex).ToList(), _floorEpoch, resync);
+            elites.Select(e => e.SpawnIndex).ToList(), _floorEpoch, resync, NetSession.Instance.Now, main.Builder.FloorSeconds);
     }
+
+    /// <summary>The floor clock's pair now: the floor's seconds (the sum of its physics steps) at the server's time.</summary>
+    private FloorClockMsg FloorClockNow() => new(Game.Instance.CurrentFloor, _floorEpoch, Main.Instance.Builder.FloorSeconds, NetSession.Instance.Now);
 
     /// <summary>A peer finished building the floor everyone moved to: its poses count again and it gets a full picture.</summary>
     private void OnFloorReady(PlayerSlot slot, int floor)
@@ -167,6 +170,7 @@ public partial class ServerWorld : Node
         SendTo(slot.PeerId, new ObjectiveMsg(AdventureDirector.Instance.CurrentObjective));
         SendShopSync(slot.PeerId); // a floor change: the floor is built on both ends now (a join is sent in OnPlayerReady)
         if (Adventure.Objectives.ObjectiveController.Instance is { } objective) SendTo(slot.PeerId, new ObjectiveStateMsg(objective.Capture()));
+        SendTo(slot.PeerId, FloorClockNow()); // the floor ran on while it built: the pair in its FloorChange is old, this one is not
         SendWorldChecks(slot.PeerId); // what changed while it built (an item taken, a creature spawned) is put right now, not at the next check
     }
 
@@ -241,7 +245,8 @@ public partial class ServerWorld : Node
         GD.Print($"[net-server] {slot.Name} {(slot.LastSeenUtc != "" ? "rejoins" : "joins")} as member {slot.MemberIndex} ({slot.ClassId}) on floor {floor}");
         _welcomeEpoch[peer] = _floorEpoch;
         return new Welcome(peer, slot.MemberIndex, game.GameSeed, floor, game.PlaySeconds, game.Victory, adventure, snapshot, state,
-            DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main), _floorEpoch);
+            DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main), _floorEpoch,
+            NetSession.Instance.Now, main.Builder.FloorSeconds);
     }
 
     /// <summary>An enemy on the wire: its elite name and affixes ride along so a client dresses and names it, and its spawn index so a planned one sent again (the enemy check) keeps its identity.</summary>
@@ -334,6 +339,7 @@ public partial class ServerWorld : Node
         for (var i = 0; i < party.Members.Length; i++) SendTo(peer, new PartySync(i, SaveMapper.ToDto(party.Members[i])));
         SendTo(peer, new GoldSync(party.Gold));
         if (FortuneDirector.Instance?.PendingShrine is { } card) SendTo(peer, card);
+        SendTo(peer, FloorClockNow()); // the floor clock as it stands (a joiner still on an older floor drops it by its epoch)
         SendPropState(peer); // the props as they stand now (a joiner still on an older floor ignores it; the prop check covers it later)
     }
 
@@ -657,17 +663,17 @@ public partial class ServerWorld : Node
     /// <summary>A hazard entered a phase: tell every client which, when and how far along, so they animate in step.</summary>
     private void OnHazardPhase(int index, byte phase)
     {
-        var tick = NetSession.Instance.Tick;
+        var now = NetSession.Instance.Now;
         foreach (var node in Main.Instance?.Builder.Hazards ?? Array.Empty<Node3D>())
         {
             switch (node)
             {
                 case Dungeon.Props.Press p when p.Index == index:
-                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.Press, phase, tick, HazardSync.DurationTicks(HazardRules.PressDuration(p.Phase)), p.Jammed, p.Spent));
+                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.Press, phase, now, HazardSync.DurationSeconds(HazardRules.PressDuration(p.Phase)), p.Jammed, p.Spent));
                     Trace.Add($"hazard:{p.Phase}");
                     return;
                 case Dungeon.Props.SpikeBed b when b.Index == index:
-                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.SpikeBed, phase, tick, HazardSync.DurationTicks(HazardRules.SpikeDuration(b.Phase, b.Variant)), false, b.Spent));
+                    Broadcast(new HazardPhaseMsg(index, (byte)HazardKind.SpikeBed, phase, now, HazardSync.DurationSeconds(HazardRules.SpikeDuration(b.Phase, b.Variant)), false, b.Spent));
                     Trace.Add($"hazard:{b.Phase}");
                     return;
             }
@@ -726,7 +732,8 @@ public partial class ServerWorld : Node
 
     /// <summary>Moments a joiner has no use for once they are past: the next Vitals, snapshot or swing replaces them.</summary>
     private static bool Transient(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.Vitals or MsgKind.Sfx or MsgKind.EnemyHurt
-        or MsgKind.HitFxEvt or MsgKind.SwingEvt or MsgKind.Emote or MsgKind.ProjectileSpawned or MsgKind.ProjectileEnded or MsgKind.Bark;
+        or MsgKind.HitFxEvt or MsgKind.SwingEvt or MsgKind.Emote or MsgKind.ProjectileSpawned or MsgKind.ProjectileEnded or MsgKind.Bark
+        or MsgKind.FloorClock;
 
     private static bool FloorKind(byte kindByte) => (MsgKind)(kindByte & 0x7F) is MsgKind.FloorChangeBegin or MsgKind.FloorChange;
 
@@ -758,15 +765,16 @@ public partial class ServerWorld : Node
     public override void _PhysicsProcess(double delta)
     {
         var dt = (float)delta;
-        var tick = NetSession.Instance.Tick;
         if (_logBatch.Count > 0) { Broadcast(new LogMsg(_logBatch.ToList())); _logBatch.Clear(); }
         _fullSnapshotTimer -= dt;
         var full = _fullSnapshotTimer <= 0f;
         if (full) _fullSnapshotTimer = Protocol.FullSnapshotSeconds;
-        if (tick % (60 / Protocol.SnapshotHz) == 0) foreach (var peer in Handshake.InGamePeers) SendSnapshotTo(peer, full);
-        if (tick % (60 / Protocol.VitalsHz) == 0 && Handshake.InGamePeers.Any()) SendVitals();
-        if (tick % 6 == 0 && Handshake.InGamePeers.Any()) FlushSync();
-        if (tick % 120 == 0 && Handshake.InGamePeers.Any() && Adventure.Objectives.ObjectiveController.Instance is { } objective) Broadcast(new ObjectiveStateMsg(objective.Capture()));
+        // by elapsed time, not ticks (each Advance runs every step, before the test that may skip the send)
+        if (_snapshotCadence.Advance(delta) > 0) foreach (var peer in Handshake.InGamePeers) SendSnapshotTo(peer, full);
+        if (_vitalsCadence.Advance(delta) > 0 && Handshake.InGamePeers.Any()) SendVitals();
+        if (_syncCadence.Advance(delta) > 0 && Handshake.InGamePeers.Any()) FlushSync();
+        if (_objectiveCadence.Advance(delta) > 0 && Handshake.InGamePeers.Any() && Adventure.Objectives.ObjectiveController.Instance is { } objective) Broadcast(new ObjectiveStateMsg(objective.Capture()));
+        TickFloorClock(delta);
         if (_spawned.Count > 0)
         {
             foreach (var e in _spawned)
@@ -775,11 +783,30 @@ public partial class ServerWorld : Node
         }
         TickBound(dt);
         TickLootCheck(dt);
-        TickReadyCheck(dt);
+        TickReadyCheck(delta);
         _statusTimer -= dt;
         if (_statusTimer <= 0f) { _statusTimer = 10f; WriteStatus(); }
         _autosaveTimer += dt;
         if (_autosaveTimer >= NetSession.Instance.AutosaveSeconds && Registry.OnlineCount > 0) { _autosaveTimer = 0f; Autosave("timer"); }
+    }
+
+    private Cadence _snapshotCadence = new(1.0 / Protocol.SnapshotHz);
+    private Cadence _vitalsCadence = new(1.0 / Protocol.VitalsHz);
+    private Cadence _syncCadence = new(0.1);
+    private Cadence _objectiveCadence = new(2.0);
+    private Cadence _floorClockCadence = new(FloorClockSeconds(railed: false));
+
+    /// <summary>How often the floor clock's pair goes out: every second on a railed floor (the hammers and the pour must agree), every two elsewhere.</summary>
+    private static double FloorClockSeconds(bool railed) => railed ? 1.0 : 2.0;
+
+    /// <summary>The floor clock's pair to everyone in game, on its cadence (<see cref="FloorClockMsg"/>; transient, so not held for joiners).</summary>
+    private void TickFloorClock(double delta)
+    {
+        var main = Main.Instance;
+        var period = FloorClockSeconds(main?.Builder.Layout?.Rail != null);
+        if (_floorClockCadence.Period != period) _floorClockCadence = new Cadence(period);
+        if (_floorClockCadence.Advance(delta) == 0 || main == null || !main.InGame || main.Rebuilding || _floorChanging || !Handshake.InGamePeers.Any()) return;
+        Broadcast(FloorClockNow());
     }
 
     private void SendSnapshotTo(int peer, bool full)

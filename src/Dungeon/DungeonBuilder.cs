@@ -204,9 +204,29 @@ public partial class DungeonBuilder : Node3D
         return false;
     }
 
-    /// <summary>Physics ticks since this floor was built; the metronome for periodic hazards (the server's clock in co-op, replicated by phase messages).</summary>
+    /// <summary>
+    /// Seconds this floor has run: on the server and in single player the sum of the physics steps since it was built (1/60 s a
+    /// tick at 60 Hz, 1/90 s at 90 Hz), so the floor keeps real time at any rate; on a client the server's floor clock
+    /// (<see cref="Net.FloorClock"/>, fed by the server's pairs; 0 before the first).
+    /// </summary>
+    public double FloorSeconds { get; private set; }
+    /// <summary>
+    /// The floor's 60 Hz metronome (<see cref="Net.FloorClock.TickOf"/> of <see cref="FloorSeconds"/>): periodic hazards and the
+    /// set pieces run on it. At 60 Hz it counts the physics ticks as it always did; at 90 Hz it still counts 60 a second; on a
+    /// client it follows the server's.
+    /// </summary>
     public int FloorTick { get; private set; }
-    public override void _PhysicsProcess(double delta) { if (!Net.NetSession.IsClient) FloorTick++; }
+    private Net.ElapsedSeconds _floorElapsed;
+    public override void _PhysicsProcess(double delta)
+    {
+        if (Net.NetSession.IsClient) FloorSeconds = Net.NetSession.Instance.Client?.ReadFloorSeconds() ?? 0;
+        else
+        {
+            _floorElapsed.Add(delta);
+            FloorSeconds = _floorElapsed.Value;
+        }
+        FloorTick = Net.FloorClock.TickOf(FloorSeconds);
+    }
 
     private readonly List<Node3D> _hazards = new();
     /// <summary>The lethal hazard nodes on this floor (Press, SpikeBed), by placement index.</summary>
@@ -335,6 +355,8 @@ public partial class DungeonBuilder : Node3D
         _enemyOnlyCells.Clear();
         _danger.Clear();
         _hazards.Clear();
+        _floorElapsed.Reset();
+        FloorSeconds = 0;
         FloorTick = 0;
         _grid = null;
         if (_floorRoot == null) return;

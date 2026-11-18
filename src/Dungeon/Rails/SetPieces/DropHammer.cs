@@ -8,8 +8,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// It runs on the floor's metronome (<see cref="SetPieceRules.Phase"/> on <see cref="DungeonBuilder.FloorTick"/>, offset by
 /// <see cref="Index"/>): up, a red glow for the 1.5 s warning, then it drops <see cref="Drop"/> metres onto the line, rests and
 /// rises. Its rest is clear of the tallest seated head; at the bottom it meets the tub's rim. Dressing with no collision overhead
-/// (the posts are solid): the <see cref="RailEncounterController"/> judges what is under it at the drop. Server only (a client's
-/// FloorTick does not run: the hammer hangs still there until plan 5).
+/// (the posts are solid): the <see cref="RailEncounterController"/> judges what is under it at the drop. Built on the server (a
+/// client's FloorTick follows the server's floor clock, so a client copy falls in step with the server's).
 /// </summary>
 public partial class DropHammer : Node3D
 {

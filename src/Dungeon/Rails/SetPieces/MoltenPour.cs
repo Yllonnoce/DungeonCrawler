@@ -11,8 +11,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <see cref="QuenchValve"/> beside the line. It runs on the floor's clock (<see cref="SetPieceRules.Pour"/> on
 /// <see cref="DungeonBuilder.FloorTick"/>): dry, a 1.5 s warning (the trough's lip glows and the light swells), then a falling
 /// stream of molten slag onto a <see cref="Zone"/> of the line. A broken valve quenches it for good (<see cref="Quenched"/>).
-/// Dressing: the <see cref="RailEncounterController"/> judges the cart and walkers under the stream. Server only (a client's
-/// FloorTick does not run: plan 5 shows it).
+/// Dressing: the <see cref="RailEncounterController"/> judges the cart and walkers under the stream. Built on the server (a
+/// client's FloorTick follows the server's floor clock, so a client copy pours in step with the server's).
 /// </summary>
 public partial class MoltenPour : Node3D
 {

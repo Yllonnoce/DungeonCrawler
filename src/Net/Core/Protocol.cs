@@ -3,9 +3,9 @@ namespace DungeonCrawler.Net;
 /// <summary>Wire constants shared by server and client. Bump <see cref="Version"/> whenever a message shape changes, or when the floor generator changes what a seed builds (both ends build each floor from its seed).</summary>
 public static class Protocol
 {
-    public const int Version = 16;
+    public const int Version = 17;
     /// <summary>How many <see cref="MsgKind"/> values this <see cref="Version"/> knows; a test fails when a kind is appended without bumping both.</summary>
-    public const int MessageKindCount = 108;
+    public const int MessageKindCount = 109;
     /// <summary>Seconds between the server's item checks (<see cref="LootManifest"/>).</summary>
     public const float LootCheckSeconds = 4f;
     public const int DefaultPort = 7777;
@@ -40,6 +40,8 @@ public enum MsgKind : byte
 {
     // handshake and roster
     Hello = 1, Reject, Welcome, Ready, PlayerJoined, PlayerLeft,
+    // the floor clock (v17): the server's (floor seconds, server time) pair every second or two, so clients run the floor's metronome
+    FloorClock = 7,
     // movement (binary)
     Pose = 10, WorldSnapshot, Vitals,
     // intents client -> server
