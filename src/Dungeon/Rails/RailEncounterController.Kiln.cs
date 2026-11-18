@@ -31,10 +31,13 @@ public partial class RailEncounterController
     /// <summary>A body mangled by a ride-4 hazard (a hammer) carries this as MangledBy: no floor hazard has it, so it always counts as armed.</summary>
     public const int KilnHazardIndex = 1003;
     const float PourBurnEvery = 0.8f;
+    /// <summary>A hazard's warning cue plays only while the party's cart is this close along the line (EventBus.PlaySfx is not positional).</summary>
+    const float SfxReach = 25f;
     const string GolemName = "Kilnheart the Hulking";
 
     private sealed class Golem
     {
+        public int Ride;
         public Enemy Body = null!;
         public Node3D Runner = null!;
         public CartRun Run = null!;
@@ -57,6 +60,12 @@ public partial class RailEncounterController
     private Func<Transform3D>? _golemSpot;
     private Func<Vector3>? _golemDrop;
     private readonly List<Node3D> _under = new();
+
+    /// <summary>
+    /// The golem has died on this floor: it never bursts out again (an elite pays loot even as a reinforcement, so a re-armed ride
+    /// must not send a fresh one). Server state; the save keeps it (Task 9).
+    /// </summary>
+    public bool GolemDefeated { get; set; }
 
     /// <summary>The ride's golem now (alive or a corpse), or null (tests and the smoke read it).</summary>
     public Enemy? GolemBody => _golem?.Body is { } b && IsInstanceValid(b) ? b : null;
@@ -180,9 +189,13 @@ public partial class RailEncounterController
         }
     }
 
-    /// <summary>The ride is over or undone: the golem goes (its corpse stays), the gap is closed to judging.</summary>
-    private void ClearKiln()
+    /// <summary>
+    /// The ride is over or undone: the golem goes (its corpse stays), the gap is closed to judging. With <paramref name="payOff"/>
+    /// (not a load) a living golem whose spur lever is thrown and that has not hit the stop yet goes off the spur first.
+    /// </summary>
+    private void ClearKiln(bool payOff = true)
     {
+        if (payOff) PayOffSpur();
         ClearGolem();
         _rails.ClearGap();
     }
@@ -207,6 +220,7 @@ public partial class RailEncounterController
     {
         if (GetParent() is not Node3D root || !_enemy.Valid || enc.Riders.Count == 0) return;
         ClearGolem();
+        if (GolemDefeated) { GD.Print($"[rails] golem {enc.Id}: already defeated on this floor, it does not come again"); return; }
         var partyS = _rails.State.S;
         var s = Mathf.Clamp(PaceRules.TargetS(Lanes.EnemyS(partyS), enc.Offset), 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
         var runner = new Node3D { Name = $"GolemRunner_{enc.Id}" };
@@ -216,8 +230,8 @@ public partial class RailEncounterController
         var elite = new EliteRoll(new[] { EliteAffix.Hulking }, GolemName);
         if (_builder.SpawnEnemy(enc.Riders[0].EnemyId, runner.GlobalPosition + Vector3.Up * 0.05f, _builder.CurrentFloor, elite: elite) is not { } golem) { runner.QueueFree(); return; }
         if (golem.IsBoss) GD.PushError($"[rails] the golem {enc.Id} ({golem.Profile.Name}) spawned as a boss: its death would unlock the stairs"); // an authored id must never be a boss (the validator drops them)
-        golem.IsReinforcement = true; // a ride re-armed after a wreck or a load sends it again: no loot farm
-        var g = new Golem { Body = golem, Runner = runner, Run = run, EncounterId = enc.Id };
+        golem.IsReinforcement = true; // it came with the ride (an elite still pays its loot: it never comes again once dead, GolemDefeated)
+        var g = new Golem { Body = golem, Runner = runner, Run = run, EncounterId = enc.Id, Ride = enc.Ride };
         _golem = g;
         _golemSpot ??= () => _golem is { } x && IsInstanceValid(x.Runner) ? new Transform3D(x.Runner.GlobalBasis, x.Runner.GlobalPosition + Vector3.Up * 0.05f) : Transform3D.Identity;
         _golemDrop ??= () => _golem is { } x ? x.Run.Track.Point(x.Run.State.S) + Vector3.Up * 0.05f : Vector3.Zero; // it falls between the rails
@@ -260,6 +274,7 @@ public partial class RailEncounterController
         if (IsInstanceValid(keep.Runner) && !keep.Runner.IsQueuedForDeletion()) keep.Runner.QueueFree();
         if (!IsInstanceValid(keep.Body)) return;
         keep.Body.DeathDrop = null;
+        if (!keep.Body.IsAlive) GolemDefeated = true; // it died the tick the ride ended, before its tick saw it
         if (keep.Body.IsAlive && !keep.Body.IsQueuedForDeletion()) keep.Body.QueueFree();
     }
 
@@ -273,9 +288,10 @@ public partial class RailEncounterController
             if (!g.DeathTold)
             {
                 g.DeathTold = true;
+                GolemDefeated = true;
+                if (!g.Done) EventBus.Instance.Log("The golem falls between the rails."); // on its runner (not after it was set down)
                 g.Done = true;
-                EventBus.Instance.Log("The golem falls between the rails.");
-                GD.Print($"[rails] golem {g.EncounterId} died at runner S={g.Run.State.S:0.0} after {g.Slams} slams");
+                GD.Print($"[rails] golem {g.EncounterId} died at runner S={g.Run.State.S:0.0} after {g.Slams} slams; it will not come again");
                 if (IsInstanceValid(g.Runner)) g.Runner.QueueFree();
             }
             return;
@@ -344,6 +360,29 @@ public partial class RailEncounterController
         run.PoseAt(run.State.S);
         g.Body.FollowCarrier();
         if (g.Spur == null || run.State.S < g.Spur.CrashS) return;
+        SpurCrash(g, $"at spur S={run.State.S:0.0}");
+    }
+
+    /// <summary>
+    /// The ride ends (the cart arrived or was wrecked) with the golem alive and its spur lever thrown, but before it hit the stop
+    /// (on the spur, or a runner lagging short of the points): it goes off the spur now, so a thrown lever always pays off.
+    /// </summary>
+    private void PayOffSpur()
+    {
+        if (_golem is not { Done: false } g || !IsInstanceValid(g.Body) || !g.Body.IsAlive) return;
+        if (!g.OnSpur && g.PastSpur) return; // it passed the points straight: the lever was not thrown in time
+        var spur = g.Spur;
+        if (spur == null)
+            foreach (var p in _pieces)
+                if (p.Plan.Ride == g.Ride && p.Spur is { Lever.Thrown: true } s) { spur = s; break; }
+        if (spur == null) return;
+        g.Spur = spur;
+        SpurCrash(g, g.OnSpur ? $"as the ride ends, at spur S={g.Run.State.S:0.0}" : $"as the ride ends, the runner {spur.EnemyPointsS - g.Run.State.S:0.0} m short of the points");
+    }
+
+    /// <summary>The golem hits the spur's stop: thrown off its runner, badly hurt (three big run-overs' worth), then a creature on its own feet.</summary>
+    private void SpurCrash(Golem g, string where)
+    {
         var at = g.Body.GlobalPosition;
         EventBus.Instance.Log("The golem goes off the spur!");
         if (GetParent() is Node3D root)
@@ -354,9 +393,10 @@ public partial class RailEncounterController
         Tremor.ShakeOnly(0.05f, 0.6f);
         var big = RunOverRules.Outcome(VictimKind.Enemy, true, TierRules.Lethality);
         var hp = g.Body.Hp;
+        if (g.Spur != null) g.Spur.Lever.Taken = true;
         LetGo(g, "goes off the spur");
         g.Body.ReceiveHazard(HazardDamage.Crush, big with { HpFraction = big.HpFraction * 3f }, "The spur's stop", KilnHazardIndex); // three big run-overs' worth
-        GD.Print($"[rails] golem off the spur at spur S={run.State.S:0.0}: hp {hp:0} -> {g.Body.Hp:0} of {g.Body.MaxHp:0}, alive={g.Body.IsAlive}, now at {g.Body.GlobalPosition}");
+        GD.Print($"[rails] golem off the spur {where}: hp {hp:0} -> {g.Body.Hp:0} of {g.Body.MaxHp:0}, alive={g.Body.IsAlive}, now at {g.Body.GlobalPosition}");
     }
 
     /// <summary>The golem leaves its runner for good: set down beside the enemy line, hunting the party on its own feet.</summary>
@@ -396,7 +436,7 @@ public partial class RailEncounterController
             var was = hammer.Judged;
             hammer.Judged = phase;
             if (phase == was) continue;
-            if (phase == HammerPhase.Glow) EventBus.Instance.PlaySfx("hammer_wind"); // placeholder: plan 6 adds the sound
+            if (phase == HammerPhase.Glow && Mathf.Abs(_rails.State.S - hammer.S) <= SfxReach) EventBus.Instance.PlaySfx("hammer_wind"); // placeholder: plan 6 adds the sound (not positional: only near the cart)
             if (phase != HammerPhase.Fall) continue;
             if (_rails.State.Mode != CartMode.Wrecked && !_rails.OnEnemyLane(hammer.S) && Mathf.Abs(_rails.State.S - hammer.S) <= CartRules.HalfLength + DropHammer.HalfLength + 0.05f)
             {
@@ -456,7 +496,7 @@ public partial class RailEncounterController
         piece.Phase = (int)phase;
         if (phase != was)
         {
-            if (phase == PourPhase.Warn) EventBus.Instance.PlaySfx("pour_hiss"); // placeholder: plan 6 adds the sound
+            if (phase == PourPhase.Warn && Mathf.Abs(_rails.State.S - piece.S) <= SfxReach) EventBus.Instance.PlaySfx("pour_hiss"); // placeholder: plan 6 adds the sound (not positional: only near the cart)
             if (phase == PourPhase.Pouring) { piece.PourCount++; piece.BurnClock = 0f; }
         }
         if (phase != PourPhase.Pouring) return;

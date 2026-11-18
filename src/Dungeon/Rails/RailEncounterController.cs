@@ -108,7 +108,7 @@ public partial class RailEncounterController : Node
                 ResetKiln(e.Kind);
                 break;
             case CartEventKind.Restored:
-                ClearRide();
+                ClearRide(loaded: true);
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
@@ -132,13 +132,13 @@ public partial class RailEncounterController : Node
     }
 
     /// <summary>The ride is over (or undone): its live items go, the riders without a death or a word.</summary>
-    private void ClearRide(bool wrecked = false)
+    private void ClearRide(bool wrecked = false, bool loaded = false)
     {
         ArmedRide = -1;
         ClearStanders();
         ClearSwitchyard();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
-        ClearKiln(); // the golem goes like a rider (its corpse stays)
+        ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
         foreach (var cart in _carts) Free(cart);
         _carts.Clear();
         _warnedAt.Clear();
@@ -174,7 +174,7 @@ public partial class RailEncounterController : Node
         }
     }
 
-    /// <summary>One encounter starts, by its kind. "lone" and "thrower" stand from the ride's departure (<see cref="ArmStanders"/>); "golem" comes with a later task.</summary>
+    /// <summary>One encounter starts, by its kind, as the cart reaches it. "lone", "thrower" and "golem" are there from the ride's departure instead (<see cref="ArmStanders"/>).</summary>
     private void Spawn(int index, RailEncounterPlan enc)
     {
         switch (enc.Kind)

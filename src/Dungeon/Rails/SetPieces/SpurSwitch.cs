@@ -5,7 +5,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
 /// A dead-end spur off the enemy line into the wall, with its points' lever (a <see cref="TrackSwitch"/>) between the lanes
-/// <see cref="RailEncounterController.LeverLead"/> metres short of them, where a rider can throw it in passing. The spur is a
+/// <see cref="LeverLead"/> metres short of them, where a rider can throw it in passing. The spur is a
 /// short <see cref="RailTrack"/> bending away from the party's lane (<see cref="SpurLength"/> metres) to a timber stop at its
 /// end. Thrown when the golem's runner reaches the points, the golem is sent down it (<see cref="Sampler"/>) into the stop.
 /// Dressing plus the lever; the <see cref="RailEncounterController"/> runs it. The node stays at the origin. Server only.
@@ -17,6 +17,8 @@ public partial class SpurSwitch : Node3D
     public const float SpurOut = 1.8f;
     /// <summary>A runner on the spur hits the stop with its middle this far short of the spur's end.</summary>
     public const float EndClear = 0.9f;
+    /// <summary>The lever stands this far short of the points: on floor 12 that puts it past the jump's landing, in reach of a rolling cart's seats.</summary>
+    public const float LeverLead = 2f;
 
     /// <summary>The party line's S beside the points.</summary>
     public float PointsS { get; init; }
@@ -35,7 +37,7 @@ public partial class SpurSwitch : Node3D
     public List<Vector3> Build(TrackSampler party, TrackSampler enemy, LaneMap lanes, Material steel, Material sleeper)
     {
         EnemyPointsS = lanes.EnemyS(PointsS);
-        var leverS = Mathf.Max(0f, PointsS - RailEncounterController.LeverLead);
+        var leverS = Mathf.Max(0f, PointsS - LeverLead);
         var frame = party.Frame(leverS);
         var x = frame.Basis.X.Normalized();
         var side = (enemy.Point(lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
