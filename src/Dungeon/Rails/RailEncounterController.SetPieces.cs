@@ -21,6 +21,8 @@ public partial class RailEncounterController
     private sealed class Piece
     {
         public RailSetPiecePlan Plan = null!;
+        /// <summary>Its plan's index in <see cref="FloorContents.RailSetPieces"/>: its wire name's number, the same on every peer.</summary>
+        public int Index;
         public Node3D Node = null!;
         public float S;
         public bool Fired;
@@ -175,16 +177,17 @@ public partial class RailEncounterController
 
     // ---- extension point 3: set pieces -----------------------------------------------------------
 
-    /// <summary>Build every set piece of the floor (they are dressing until their ride is armed). Later kinds add a case.</summary>
+    /// <summary>Build every set piece of the floor (they are dressing until their ride is armed), on every role. Later kinds add a case.</summary>
     private void BuildSetPieces()
     {
         if (GetParent() is not Node3D root || _rails.StopS.Length < 2) return;
         var gaps = new List<(float from, float to)>();
-        foreach (var plan in _setPieces)
+        for (var index = 0; index < _setPieces.Count; index++)
         {
+            var plan = _setPieces[index];
             if (plan.Ride < 1 || plan.Ride >= _rails.StopS.Length) continue;
             var s = RideS(plan.Ride, plan.At);
-            var piece = new Piece { Plan = plan, S = s };
+            var piece = new Piece { Plan = plan, Index = index, S = s };
             Node3D? node = null;
             switch (plan.Kind)
             {
@@ -300,5 +303,80 @@ public partial class RailEncounterController
             _headsBarked++;
         }
         GD.Print($"[rails] beam {piece.Plan.Id} passed at S={piece.S:0.0} (cart front {_rails.Party.FrontS:0.0}); bark={(speaker != null ? speaker.State.Name : "none")}");
+    }
+
+    // ---- the wire: the set pieces' names and the prop check's rail part --------------------------
+
+    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer), or null.</summary>
+    internal Node3D? NetNode(string kind, int index)
+    {
+        foreach (var p in _pieces)
+        {
+            if (p.Index != index) continue;
+            return kind switch
+            {
+                Net.NetRefs.SwitchKind => p.Spur == null ? p.Switch : null,
+                Net.NetRefs.SpurKind => p.Spur?.Lever,
+                Net.NetRefs.HeapKind => p.Heap,
+                Net.NetRefs.ValveKind => p.Pour?.Valve,
+                Net.NetRefs.TrestleKind => p.Trestle,
+                Net.NetRefs.BufferKind => p.Buffer,
+                _ => null,
+            };
+        }
+        return null;
+    }
+
+    /// <summary>The set pieces' lasting state into the prop check's rail part (server and client read alike).</summary>
+    internal void CaptureProps(Net.RailPropsDto r)
+    {
+        foreach (var p in _pieces)
+        {
+            if (p.Switch is { } sw)
+            {
+                if (sw.Thrown) (p.Spur != null ? r.ThrownSpurs : r.ThrownSwitches).Add(p.Index);
+                if (sw.Taken) r.TakenSwitches.Add(p.Index);
+            }
+            if (p.Heap is { IsAlive: false }) r.ClearedHeaps.Add(p.Index);
+            if (p.Pour is { Quenched: true }) r.BrokenValves.Add(p.Index);
+            if (p.Trestle is { Collapsed: true }) r.CollapsedTrestles.Add(p.Index);
+            if (p.Buffer is { Smashed: true }) r.SmashedBuffers.Add(p.Index);
+        }
+    }
+
+    /// <summary>Client: the set pieces moved to the server's rail part, silently and both ways (no debris, no steam). Adds what changed to <paramref name="changed"/>.</summary>
+    internal void ApplyProps(Net.RailPropsDto r, List<string> changed)
+    {
+        foreach (var p in _pieces)
+        {
+            var i = p.Index;
+            if (p.Switch is { } sw)
+            {
+                var thrown = (p.Spur != null ? r.ThrownSpurs : r.ThrownSwitches).Contains(i);
+                if (thrown != sw.Thrown && !sw.Fixed) { sw.ShowThrown(thrown); changed.Add($"{(p.Spur != null ? "spur" : "switch")} {i} {(thrown ? "thrown" : "straight")}"); }
+                var taken = r.TakenSwitches.Contains(i);
+                if (taken != sw.Taken) { sw.ShowTaken(taken); changed.Add($"lever {i} {(taken ? "taken" : "free")}"); }
+            }
+            if (p.Heap is { } heap && r.ClearedHeaps.Contains(i) == heap.IsAlive)
+            {
+                if (heap.IsAlive) heap.ShowCleared(); else heap.ShowRebuilt();
+                changed.Add($"heap {i} {(heap.IsAlive ? "rebuilt" : "cleared")}");
+            }
+            if (p.Pour is { } pour && r.BrokenValves.Contains(i) != pour.Quenched)
+            {
+                if (pour.Quenched) pour.Valve.ShowRebuilt(); else pour.Valve.ShowBroken(steam: false);
+                changed.Add($"valve {i} {(pour.Quenched ? "broken" : "rebuilt")}");
+            }
+            if (p.Trestle is { } trestle && r.CollapsedTrestles.Contains(i) != trestle.Collapsed)
+            {
+                if (trestle.Collapsed) trestle.ShowRebuilt(); else trestle.ShowCollapsed(null, debris: false);
+                changed.Add($"trestle {i} {(trestle.Collapsed ? "collapsed" : "rebuilt")}");
+            }
+            if (p.Buffer is { } buffer && r.SmashedBuffers.Contains(i) != buffer.Smashed && GetParent() is Node3D root)
+            {
+                if (buffer.Smashed) buffer.ShowRestored(); else buffer.ShowSmashed(root, Vector3.Zero, debris: false);
+                changed.Add($"buffer {i} {(buffer.Smashed ? "smashed" : "restored")}");
+            }
+        }
     }
 }

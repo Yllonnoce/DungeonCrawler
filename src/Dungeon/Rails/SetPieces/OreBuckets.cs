@@ -12,7 +12,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// ride is armed (<see cref="Tick"/>), one bucket tips every <see cref="Every"/> seconds: it creaks and glows for
 /// <see cref="Creak"/> seconds, then pours a <see cref="CinderPatch"/> onto the line beneath it, which burns for
 /// <see cref="PatchSeconds"/>. The <see cref="RailEncounterController"/> judges the party's cart against <see cref="Patches"/>.
-/// Server only (built on the server; plan 5 shows it on clients).
+/// Ticked on the server; a client builds a still copy (its tipping and patches come with plan 5 task 7).
 /// </summary>
 public partial class OreBuckets : Node3D
 {

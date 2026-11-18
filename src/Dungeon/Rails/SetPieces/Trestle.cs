@@ -1,3 +1,5 @@
+using DungeonCrawler.Core;
+using DungeonCrawler.Net;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -7,7 +9,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// a bent of legs and a cross brace every few metres either side, a rail along each side. Dressing, built from boxes, with no
 /// collision. <see cref="Collapse"/> drops it: the deck and bents go, a few timbers tumble (cosmetic rigid bodies, freed after
 /// <see cref="TimberSeconds"/>). The <see cref="RailEncounterController"/> starts the collapse <see cref="SetPieceRules.TrestleGrace"/>
-/// seconds after the cart's front enters it and catches a cart still on it. Server only.
+/// seconds after the cart's front enters it and catches a cart still on it. The server tells "collapsed" and "rebuilt"
+/// (<see cref="NetRef"/>); a client's copy shows them (<see cref="ShowCollapsed"/>, its timbers tumbling too).
 /// </summary>
 public partial class Trestle : Node3D
 {
@@ -20,6 +23,8 @@ public partial class Trestle : Node3D
     public float From => S - Span / 2f;
     public float To => S + Span / 2f;
     public bool Collapsed { get; private set; }
+    /// <summary>Its wire name ("trestle:{piece}"), set by the builder; empty: not told.</summary>
+    public string NetRef { get; init; } = "";
 
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.3f, 0.2f, 0.11f), Roughness = 0.95f };
     private readonly StandardMaterial3D _dark = new() { AlbedoColor = new Color(0.17f, 0.11f, 0.06f), Roughness = 1f };
@@ -66,12 +71,37 @@ public partial class Trestle : Node3D
     public void Collapse(Node3D root)
     {
         if (Collapsed) return;
+        Fall(root);
+        Tell("collapsed");
+    }
+
+    /// <summary>Client: falls as on the server; with <paramref name="debris"/> its timbers tumble too (a repair shows it gone, quietly).</summary>
+    public void ShowCollapsed(Node3D? root, bool debris = true)
+    {
+        if (!Collapsed) Fall(debris ? root : null);
+    }
+
+    /// <summary>Client: standing again.</summary>
+    public void ShowRebuilt()
+    {
+        Collapsed = false;
+        foreach (var t in _timbers) t.Visible = true;
+    }
+
+    private void Tell(string what)
+    {
+        if (NetRef.Length > 0 && !NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRef, what);
+    }
+
+    /// <summary>Every timber goes; with a <paramref name="root"/>, a few tumble down under it.</summary>
+    private void Fall(Node3D? root)
+    {
         Collapsed = true;
         for (var i = 0; i < _timbers.Count; i++)
         {
             var t = _timbers[i];
             t.Visible = false;
-            if (i % 4 != 0 || t.Mesh is not BoxMesh box) continue; // a few of them fall where they stood
+            if (root == null || i % 4 != 0 || t.Mesh is not BoxMesh box) continue; // a few of them fall where they stood
             var body = new RigidBody3D { Name = "TrestleTimber", CollisionLayer = 0, CollisionMask = 1, Mass = 40f };
             body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = box.Size } });
             body.AddChild(new MeshInstance3D { Mesh = box, MaterialOverride = t.MaterialOverride });
@@ -86,7 +116,9 @@ public partial class Trestle : Node3D
     /// <summary>Standing again (the ride runs again).</summary>
     public void Rebuild()
     {
+        var was = Collapsed;
         Collapsed = false;
         foreach (var t in _timbers) t.Visible = true;
+        if (was) Tell("rebuilt");
     }
 }

@@ -45,10 +45,35 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     public bool OrcKeys
     {
         get => _orcKeys;
-        set { _orcKeys = value; if (value && _keyring != null && IsInstanceValid(_keyring)) _keyring.Take(); }
+        set
+        {
+            var taken = value && !_orcKeys;
+            _orcKeys = value;
+            if (value && _keyring != null && IsInstanceValid(_keyring)) _keyring.Take();
+            if (taken && !NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRefs.Keyring, "taken"); // a client's keys come only from that (and the prop check)
+        }
     }
     private bool _orcKeys;
     private OrcKeyring? _keyring;
+    /// <summary>The orc's keyring at Grisel's belt ("keyring:0"), or null (the forgiven branch).</summary>
+    public OrcKeyring? Keyring => _keyring != null && IsInstanceValid(_keyring) ? _keyring : null;
+
+    /// <summary>Client: the keys are taken, as the server said; silently. True when it changed.</summary>
+    public bool ShowKeysTaken()
+    {
+        if (_orcKeys) return false;
+        _orcKeys = true;
+        Keyring?.Take();
+        return true;
+    }
+
+    /// <summary>Client: the stop's cage stands open, as the server said; silently. True when it changed.</summary>
+    public bool ShowCageOpen(int stop)
+    {
+        foreach (var wagon in _wagons)
+            if (wagon.Stop == stop && !wagon.Open) { wagon.SetOpen(true); return true; }
+        return false;
+    }
     /// <summary>The dead Grisel on the condemned branch (null on the forgiven one).</summary>
     public Npc? Body { get; private set; }
     public CrewState StateOf(Npc npc) => _state.GetValueOrDefault(npc, CrewState.Caged);
@@ -402,6 +427,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private void OpenCage(CageWagon wagon, PartyController party)
     {
         wagon.SetOpen(true);
+        if (!NetSession.IsClient) EventBus.Instance.RaisePropChanged(NetRefs.Wagon(wagon.Stop), "opened");
         EventBus.Instance.PlaySfx("door");
         var crew = _crew.Where(c => WagonOf(c) == wagon).ToList();
         foreach (var npc in crew)
@@ -586,13 +612,14 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         return RoomCells.Free(Layout, _exitRoom).Where(c => !Layout.IsRail(c) && !_builder.IsCellBlocked(c)).OrderBy(c => Sq(c, stairs)).ThenBy(c => c.X).ThenBy(c => c.Y).ToList();
     }
 
-    /// <summary>A client's copy for the HUD: open cages, home and lost crew from the server's state (the wagons' poses and the crew's seats are plan 5).</summary>
+    /// <summary>
+    /// A client's copy for the HUD: home and lost crew from the server's state (the wagons' poses and the crew's seats are plan 5).
+    /// The open cages and the orc's keys are rail props: they come only from the server's PropEvts and the prop check's rail
+    /// part, never from here (one writer per fact: a stale objective state cannot undo a newer PropEvt).
+    /// </summary>
     public override void ApplyNet(ObjectiveStateDto dto)
     {
         base.Restore(dto);
-        OrcKeys = dto.OrcKeys ?? false;
-        var open = dto.OpenCages ?? new List<int>();
-        foreach (var wagon in _wagons) if (wagon.Open != open.Contains(wagon.Stop)) wagon.SetOpen(open.Contains(wagon.Stop));
         var home = (dto.HomeCrew ?? new List<string>()).ToHashSet();
         var lost = (dto.LostCrew ?? new List<string>()).ToHashSet();
         foreach (var npc in _crew)

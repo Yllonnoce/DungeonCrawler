@@ -6,6 +6,10 @@ public static class NetRefs
     public const string ChestKind = "chest", DoorKind = "door", LeverKind = "lever", SecretKind = "secret", TrapKind = "trap",
         StairsKind = "stairs", NpcKind = "npc", LootKind = "loot", BarrelKind = "barrel", PlaqueKind = "plaque", HazardKind = "hazard", ShrineKind = "shrine";
 
+    /// <summary>A railed floor's props (plan 5). A stop's are named by its stop index; a set piece's by its plan's index in <c>FloorContents.RailSetPieces</c> (the same on every peer).</summary>
+    public const string GateKind = "gate", WinchKind = "winch", WagonKind = "wagon", SpareKind = "spare", SwitchKind = "switch", SpurKind = "spur",
+        HeapKind = "heap", ValveKind = "valve", TrestleKind = "trestle", BufferKind = "buffer", KeyringKind = "keyring", CartKind = "cart";
+
     public static string Chest(int index) => $"{ChestKind}:{index}";
     public static string Door(int vault) => $"{DoorKind}:{vault}";
     public static string Lever(int vault) => $"{LeverKind}:{vault}";
@@ -17,6 +21,20 @@ public static class NetRefs
     public static string Shrine(int index) => $"{ShrineKind}:{index}";
     public static string StairsDown => $"{StairsKind}:down";
     public static string StairsUp => $"{StairsKind}:up";
+    public static string Gate(int stop) => $"{GateKind}:{stop}";
+    public static string Winch(int stop) => $"{WinchKind}:{stop}";
+    public static string Wagon(int stop) => $"{WagonKind}:{stop}";
+    public static string Spare(int stop) => $"{SpareKind}:{stop}";
+    public static string Switch(int piece) => $"{SwitchKind}:{piece}";
+    public static string Spur(int piece) => $"{SpurKind}:{piece}";
+    public static string Heap(int piece) => $"{HeapKind}:{piece}";
+    public static string Valve(int piece) => $"{ValveKind}:{piece}";
+    public static string Trestle(int piece) => $"{TrestleKind}:{piece}";
+    public static string Buffer(int piece) => $"{BufferKind}:{piece}";
+    /// <summary>The orc's keyring at dead Grisel's belt (there is one at most).</summary>
+    public static string Keyring => $"{KeyringKind}:0";
+    /// <summary>The party's cart (there is one).</summary>
+    public static string Cart => $"{CartKind}:0";
     public static string Npc(string id) => $"{NpcKind}:{id}";
     public static string Loot(Guid id) => $"{LootKind}:{id:N}";
 

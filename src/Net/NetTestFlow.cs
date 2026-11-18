@@ -34,6 +34,7 @@ public partial class NetTestFlow : Node
     {
         var world = NetSession.Instance.Server;
         if (world == null) return;
+        if (NetSession.Instance.TestRide) { RideServerTick(world); return; }
         var resumed = NetSession.Instance.Resumed;
         if (Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a != null && IsInstanceValid(a)) is { } leadNow) _lastLead = leadNow.GlobalPosition;
         if (!_pileLeft && !resumed && Game.Instance.CurrentFloor != 0 && _lastLead is { } lastLead && world.Trace.Any(t => t.StartsWith("left:")) && Main.Instance?.Party is { } sp)
@@ -97,6 +98,105 @@ public partial class NetTestFlow : Node
         if (_elapsed > 170) Finish("[net-server]", false, $"timed out, trace=[{string.Join(", ", world.Trace)}]");
     }
 
+    // ---- the RIDE pass (--net-test-ride): floor 12's rides on a client ----------------------------
+
+    private bool _rideJumped, _rideBuiltSeen, _rideThrown;
+    private double _rideReadyAt = -1;
+
+    /// <summary>The server's half of the RIDE pass: once a client is ready the party goes to floor 12; the client checks it there and leaves.</summary>
+    private void RideServerTick(ServerWorld world)
+    {
+        if (!_rideJumped && world.Trace.Any(t => t.StartsWith("ready:")) && Game.Instance.CurrentFloor != 12)
+        {
+            _rideJumped = true;
+            GD.Print("[net-server] ride: a client is ready; the party goes to floor 12");
+            Game.Instance.JumpToFloor(12);
+        }
+        if (!_rideBuiltSeen && Main.Instance is { InGame: true } main && main.Builder.CurrentFloor == 12 && main.Builder.FloorRoot is { } root
+            && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.GetParent() == root)
+        {
+            _rideBuiltSeen = true;
+            var props = PropSync.Capture(root);
+            GD.Print($"[net-server] ride: floor 12 built with {enc.SetPieceCount} set pieces; rail props {(props.Rail != null ? "captured" : "MISSING")}, prop hash {PropCheck.Hash(props):X8}");
+        }
+        // a PropEvt on the wire: once the client has built floor 12 too, ride 3's switch is thrown here; the client must show it
+        if (_rideBuiltSeen && !_rideThrown && world.Registry.Online.Any(sl => sl.BotOwner == null && sl.Ready))
+        {
+            if (_rideReadyAt < 0) _rideReadyAt = _elapsed;
+            if (_elapsed - _rideReadyAt >= 2 && Dungeon.Rails.RailEncounterController.Instance is { } thrower && IsInstanceValid(thrower))
+            {
+                _rideThrown = true;
+                GD.Print($"[net-server] ride: threw {thrower.DebugThrowSwitches(3)} switch(es) of ride 3 for the client to see");
+            }
+        }
+        if (world.Trace.Contains("empty"))
+        {
+            var want = new[] { "join:", "ready:", "floor:12", "left:" };
+            var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
+            var ordered = true;
+            var last = -1;
+            foreach (var w in want)
+            {
+                var i = world.Trace.FindIndex(t => t.StartsWith(w));
+                if (i < last) ordered = false;
+                last = Math.Max(last, i);
+            }
+            var ok = missing.Count == 0 && ordered && _rideBuiltSeen;
+            Finish("[net-server]", ok, $"ride: trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides"));
+            return;
+        }
+        if (_elapsed > 170) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
+    }
+
+    private int _ridePropChecks, _rideAsks;
+
+    /// <summary>
+    /// The client's half of the RIDE pass. Step 50: the server's floor 12 is built here with its set pieces (beams, switches,
+    /// hammers, pours); step 51: for at least 10 s every prop check matches (the rail part included) and none asks for the props
+    /// again, and the switch the server throws meanwhile shows here (its PropEvt).
+    /// </summary>
+    private void RideClientTick(NetSession net, ClientWorld client, Main main)
+    {
+        switch (_step)
+        {
+            case 50:
+            {
+                if (Game.Instance.CurrentFloor != 12 || main.Builder.CurrentFloor != 12 || main.Rebuilding || main.Builder.FloorRoot is not { } root
+                    || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc) || enc.GetParent() != root)
+                {
+                    if (_clock > 60) Finish("[net]", false, $"ride: floor 12 never built here (floor {Game.Instance.CurrentFloor}, built {main.Builder.CurrentFloor})");
+                    return;
+                }
+                int Named(string prefix) => root.GetChildren().Count(n => n.Name.ToString().StartsWith(prefix));
+                var beams = Named("Beam_");
+                var switches = Named("Switch_");
+                var pours = Named("Pour_");
+                var hammers = root.GetChildren().Where(n => n.Name.ToString().StartsWith("Hammers_")).Sum(h => h.GetChildren().OfType<Dungeon.Rails.DropHammer>().Count(d => d.Name.ToString().StartsWith("Hammer")));
+                var rail = PropSync.Capture(root).Rail;
+                GD.Print($"[net] ride: set pieces on the client: {enc.SetPieceCount} built, beams={beams} switches={switches} hammers={hammers} pours={pours}; rail props {(rail != null ? "captured" : "MISSING")}");
+                if (beams == 0 || switches == 0 || hammers == 0 || pours == 0 || rail == null) { Finish("[net]", false, $"ride: the client's floor 12 lacks set pieces (beams={beams} switches={switches} hammers={hammers} pours={pours}, rail {(rail != null ? "yes" : "no")})"); return; }
+                _ridePropChecks = client.PropChecksMatched;
+                _rideAsks = client.Trace.Count(t => t == "prop-check");
+                _clock = 0; _step = 51;
+                return;
+            }
+            case 51:
+            {
+                if (client.Trace.Count(t => t == "prop-check") > _rideAsks) { Finish("[net]", false, "ride: the client's props differed from the server's on floor 12 (a prop-check asked again)"); net.Disconnect("test finished"); return; }
+                if (_clock < 10) return;
+                var lever = main.Builder.FloorRoot?.GetChildren().OfType<Dungeon.Rails.TrackSwitch>().FirstOrDefault(t => !t.Fixed);
+                if (lever is not { Thrown: true }) { if (_clock > 20) { Finish("[net]", false, "ride: the server's thrown switch never showed here (no PropEvt)"); net.Disconnect("test finished"); } return; }
+                var matched = client.PropChecksMatched - _ridePropChecks;
+                if (matched < 2) { Finish("[net]", false, $"ride: only {matched} prop check(s) reached us in 10 s on floor 12"); net.Disconnect("test finished"); return; }
+                GD.Print($"[net] ride: the server's thrown switch shows here ({lever.Name}, by PropEvt)");
+                GD.Print($"[net] ride: prop hash matches the server's ({matched} checks matched, no prop-check in {_clock:0} s)");
+                Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({matched} checks)");
+                net.Disconnect("test finished");
+                return;
+            }
+        }
+    }
+
     private void ClientTick(double delta)
     {
         var net = NetSession.Instance;
@@ -111,6 +211,7 @@ public partial class NetTestFlow : Node
         if (client.Trace.Contains("failed") || client.Trace.Contains("rejected") || client.Trace.Contains("dropped")) { Finish("[net]", false, $"connection: {net.Status}"); return; }
         var main = Main.Instance;
         _clock += delta;
+        if (_step >= 50) { RideClientTick(net, client, main); return; }
         switch (_step)
         {
             case 0:
@@ -136,6 +237,12 @@ public partial class NetTestFlow : Node
                     _goldBefore = main.Party.Gold;
                     net.Send(new DialogueNodeIntent("merchant", "deal"));
                     _clock = 0; _step = 20;
+                    return;
+                }
+                if (net.TestRide)
+                {
+                    GD.Print($"[net] ride: ready on floor {Game.Instance.CurrentFloor}; waiting for the server's floor 12");
+                    _clock = 0; _step = 50;
                     return;
                 }
                 if (net.TestRejoinOnly)

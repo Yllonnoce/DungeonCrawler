@@ -14,8 +14,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// a node under the floor root, made after the objective when the floor has a <see cref="RailController"/> and either list.
 /// Ride k is the stretch from stop k−1 to stop k: the party cart's departure from stop k−1 arms ride k's items, and each
 /// starts once the cart passes its fraction At of the ride. The cart reaching a stop, being wrecked or restored, or the
-/// party going on foot clears the ride's live items (slag carts and their riders, silently). Server only: a client does
-/// nothing here (plan 5 shows it).
+/// party going on foot clears the ride's live items (slag carts and their riders, silently). The rides are the server's: a
+/// client builds the set pieces as visual copies (the same nodes, the same collision) and shows the state the server tells
+/// (PropEvt, the prop check's rail part), and judges, arms and ticks nothing.
 /// <para>Slag carts (kind "slag_cart") roll up the enemy line from behind their pace point and hold pace beside the party's
 /// cart (<see cref="PaceRules"/>), their riders carried; each runs over whoever stands on the enemy lane and rings its bell
 /// first. Other kinds come with later tasks (<see cref="Spawn"/>).</para>
@@ -53,6 +54,9 @@ public partial class RailEncounterController : Node
     /// <summary>The slag carts on the line now (live, not derailed), for tests and later tasks.</summary>
     public IReadOnlyList<SlagCart> SlagCarts => _carts;
 
+    /// <summary>The controller of the floor built now (the resolver finds the set pieces through it), or null.</summary>
+    public static RailEncounterController? Instance { get; private set; }
+
     public RailEncounterController()
     {
         Name = "RailEncounterController";
@@ -76,14 +80,17 @@ public partial class RailEncounterController : Node
         _lineShown = new bool[_encounters.Count];
     }
 
+    public override void _EnterTree() => Instance = this;
+
     public override void _Ready()
     {
         _rails.CartEvents += OnCartEvent;
-        if (!NetSession.IsClient) BuildSetPieces();
+        BuildSetPieces(); // every role: a client's copies are dressing that shows what the server tells
     }
 
     public override void _ExitTree()
     {
+        if (Instance == this) Instance = null;
         if (IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
         ReleaseSeekers(); // a hero must not keep walking to a refuge on a floor that is gone
     }

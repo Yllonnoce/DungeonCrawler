@@ -10,7 +10,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// A heap of spilled ore boxes across the party line, a lantern on a stake in front of it. Solid (layer 1) and something to
 /// hit (layer 4): <see cref="Hits"/> hits of anything clear it (<see cref="Cleared"/>). A cart that reaches it on the party lane
 /// crashes into it (the <see cref="RailController"/> stops the cart at <see cref="FaceS"/>). <see cref="Alarm"/> blinks the
-/// lantern while a cart bears down. <see cref="Rebuild"/> stacks it again. Server only.
+/// lantern while a cart bears down. <see cref="Rebuild"/> stacks it again. The server judges it and tells "cleared" and
+/// "rebuilt" (<see cref="NetRef"/>); a client's copy only shows them (<see cref="ShowCleared"/>, <see cref="ShowRebuilt"/>).
 /// </summary>
 public partial class OreHeap : StaticBody3D, ICombatTarget
 {
@@ -29,6 +30,8 @@ public partial class OreHeap : StaticBody3D, ICombatTarget
     public bool Alarm { get; set; }
     /// <summary>The heap was cleared (by a hit): told once per build.</summary>
     public event Action<OreHeap>? Cleared;
+    /// <summary>Its wire name ("heap:{piece}"), set by the builder; empty: not told.</summary>
+    public string NetRef { get; init; } = "";
 
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.32f, 0.22f, 0.13f), Roughness = 0.9f };
     private readonly StandardMaterial3D _ore = new() { AlbedoColor = new Color(0.22f, 0.2f, 0.19f), Metallic = 0.3f, Roughness = 0.85f };
@@ -70,7 +73,7 @@ public partial class OreHeap : StaticBody3D, ICombatTarget
         AddChild(new MeshInstance3D { Name = "Lantern", Mesh = new BoxMesh { Size = new Vector3(0.18f, 0.24f, 0.18f) }, MaterialOverride = _glass, Position = new Vector3(0.95f, 1.4f, 0.9f) });
         _lantern = new OmniLight3D { Name = "LanternLight", OmniRange = 7f, LightEnergy = 1.8f, LightColor = new Color(1f, 0.45f, 0.1f), ShadowEnabled = false, Position = new Vector3(0.95f, 1.45f, 0.9f) };
         AddChild(_lantern);
-        Rebuild();
+        Stack();
     }
 
     public override void _Process(double delta)
@@ -107,17 +110,41 @@ public partial class OreHeap : StaticBody3D, ICombatTarget
 
     private void Clear()
     {
+        Knock();
+        Cleared?.Invoke(this);
+        Tell("cleared");
+    }
+
+    /// <summary>Gone from the line: no pile, nothing solid, the lantern low.</summary>
+    private void Knock()
+    {
         Left = 0;
         Alarm = false;
         _pile.Visible = false;
         _shape.Disabled = true;
         CollisionLayer = 0;
         _lantern.LightEnergy = 0.6f;
-        Cleared?.Invoke(this);
     }
 
     /// <summary>Stacked again, whole: the ride runs again after a wreck or a load.</summary>
     public void Rebuild()
+    {
+        var was = IsAlive;
+        Stack();
+        if (!was) Tell("rebuilt");
+    }
+
+    /// <summary>Client: cleared off the line as on the server, silently (no event: the line's block is the server's).</summary>
+    public void ShowCleared() { if (IsAlive) Knock(); }
+    /// <summary>Client: stacked again.</summary>
+    public void ShowRebuilt() { if (!IsAlive) Stack(); }
+
+    private void Tell(string what)
+    {
+        if (NetRef.Length > 0 && !NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRef, what);
+    }
+
+    private void Stack()
     {
         Left = Hits;
         Alarm = false;

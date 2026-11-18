@@ -5,7 +5,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// A gap in the party line about <see cref="Length"/> metres long: the track is laid bare there (<see cref="Props.RailTrack.Cut"/>:
 /// no rail, no sleeper) and a channel of glowing slag runs under it, with the broken rail ends propped at each lip. Dressing:
-/// the <see cref="RailController"/> judges the jump at the lip (<see cref="RailController.SetGap"/>). Server only.
+/// the <see cref="RailController"/> judges the jump at the lip (<see cref="RailController.SetGap"/>) on the server; every peer builds and cuts it alike.
 /// </summary>
 public partial class RailGap : Node3D
 {

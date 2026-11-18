@@ -17,7 +17,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <see cref="GolemWindup"/> s glow, until it dies or a thrown "spur_switch" sends it off the line into the wall. "hammers" drop on
 /// the party line on the floor's metronome; a "pour" of slag runs on its clock until its quench valve is broken; a "trestle" falls
 /// <see cref="SetPieceRules.TrestleGrace"/> s after the cart's front enters it; a "jump" is a gap in the rails the cart must leap
-/// (<see cref="RailController.SetGap"/>); a "buffer" is smashed by the cart arriving. Every hazard warns first. Server only.
+/// (<see cref="RailController.SetGap"/>); a "buffer" is smashed by the cart arriving. Every hazard warns first. Judged on the server.
 /// </summary>
 public partial class RailEncounterController
 {
@@ -107,7 +107,7 @@ public partial class RailEncounterController
         // the valve stands on the side away from the enemy lane: clear of the golem's line and its lever
         var x = valveFrame.Basis.X.Normalized();
         var side = (_enemy.Point(Lanes.EnemyS(valveS)) - valveFrame.Origin).Dot(x) >= 0f ? -1f : 1f;
-        var pour = new MoltenPour { Name = $"Pour_{piece.Plan.Id}", S = piece.S };
+        var pour = new MoltenPour { Name = $"Pour_{piece.Plan.Id}", S = piece.S, NetRef = NetRefs.Valve(piece.Index) };
         root.AddChild(pour);
         pour.Place(frame, valveFrame, side);
         piece.Pour = pour;
@@ -117,7 +117,7 @@ public partial class RailEncounterController
 
     private Node3D? BuildTrestle(Node3D root, Piece piece)
     {
-        var trestle = new Trestle { Name = $"Trestle_{piece.Plan.Id}", S = piece.S };
+        var trestle = new Trestle { Name = $"Trestle_{piece.Plan.Id}", S = piece.S, NetRef = NetRefs.Trestle(piece.Index) };
         root.AddChild(trestle);
         trestle.Build(_rails.Party.Track);
         piece.Trestle = trestle;
@@ -138,7 +138,7 @@ public partial class RailEncounterController
 
     private Node3D? BuildSpur(Node3D root, Piece piece)
     {
-        var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S };
+        var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S, LeverRef = NetRefs.Spur(piece.Index) };
         root.AddChild(spur);
         var path = spur.Build(_rails.Party.Track, _enemy, Lanes, _steel ??= new StandardMaterial3D { AlbedoColor = new Color(0.18f, 0.18f, 0.2f), Metallic = 0.8f, Roughness = 0.45f },
             _sleeper ??= new StandardMaterial3D { AlbedoColor = new Color(0.3f, 0.21f, 0.13f), Roughness = 0.95f });
@@ -150,7 +150,7 @@ public partial class RailEncounterController
 
     private Node3D? BuildBuffer(Node3D root, Piece piece)
     {
-        var buffer = new BufferStop { Name = $"Buffer_{piece.Plan.Id}", S = piece.S };
+        var buffer = new BufferStop { Name = $"Buffer_{piece.Plan.Id}", S = piece.S, NetRef = NetRefs.Buffer(piece.Index) };
         root.AddChild(buffer);
         buffer.GlobalTransform = _rails.Party.Track.Frame(piece.S).Orthonormalized();
         piece.Buffer = buffer;

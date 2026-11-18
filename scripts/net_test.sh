@@ -4,6 +4,8 @@
 # Usage: scripts/net_test.sh            (direct ws://127.0.0.1:7790)
 #        scripts/net_test.sh relay URL  (a client against an already-running relay, e.g. ws://127.0.0.1:10000/ws)
 #        START_FLOOR=0 scripts/net_test.sh  (the server opens in the tavern; the client joins, strikes the deal and leaves)
+#        RIDE=1 scripts/net_test.sh  (the built-in campaign: the server takes the client to floor 12, where the rides' set
+#                                     pieces must stand on the client and its props must hash as the server's)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -16,6 +18,28 @@ trap '[ -n "${KEEP_TMP:-}" ] && echo "kept $TMP" || rm -rf "$TMP"' EXIT
 GODOT=${GODOT:-godot}
 SERVER_EXE=${SERVER_BIN:-}   # e.g. build/server/DungeonCrawler.x86_64 to test the exported server
 run_server() { if [ -n "$SERVER_EXE" ]; then "$SERVER_EXE" --headless -- "$@"; else "$GODOT" --headless --path . -- "$@"; fi; }
+
+if [ "${RIDE:-}" = 1 ]; then
+  # the RIDE pass: one server on the built-in campaign, one client; floor 12 after the client is ready
+  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --seed=4242 --lethality=1 --quit-when-empty > "$TMP/server.log" 2>&1 &
+  SERVER=$!
+  for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.5; done
+  # the built-in floor 1 takes a while to build (the socket is not served meanwhile): wait for the server to say it is built
+  for i in $(seq 1 180); do grep -q "\[net-server\] floor 1 built" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
+  sleep 1
+  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior > "$TMP/client.log" 2>&1
+  for i in $(seq 1 60); do kill -0 $SERVER 2>/dev/null || break; sleep 0.5; done
+  kill $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
+  echo "--- server"; grep -E "\[net-server\] (ride|RESULT)|Unhandled|ERROR" "$TMP/server.log" | head -20
+  echo "--- client"; grep -E "\[net\] (ride|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -20
+  if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi
+  # the set pieces stand on the client as on the server, and its props (the rail part too) hash as the server's
+  if ! grep -q "\[net\] ride: set pieces on the client:" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's floor 12 set pieces were not checked)"; exit 1; fi
+  if ! grep -q "\[net\] ride: the server's thrown switch shows here" "$TMP/client.log"; then echo "NET TEST: FAIL (a switch thrown on the server never showed on the client)"; exit 1; fi
+  if ! grep -q "\[net\] ride: prop hash matches the server's" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's floor 12 props differ from the server's)"; exit 1; fi
+  echo "NET TEST: ok"; exit 0
+fi
 
 if [ "$MODE" = direct ]; then
   XDG_DATA_HOME="$TMP/server" run_server --test-net-server --floor=$START_FLOOR --port=$PORT --bind=127.0.0.1 --campaign=offline --seed=4242 --lethality=1 --hazard=press@2 --quit-when-empty --status-file="$TMP/status.json" > "$TMP/server.log" 2>&1 &

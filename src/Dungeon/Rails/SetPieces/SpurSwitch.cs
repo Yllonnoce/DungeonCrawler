@@ -8,7 +8,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <see cref="LeverLead"/> metres short of them, where a rider can throw it in passing. The spur is a
 /// short <see cref="RailTrack"/> bending away from the party's lane (<see cref="SpurLength"/> metres) to a timber stop at its
 /// end. Thrown when the golem's runner reaches the points, the golem is sent down it (<see cref="Sampler"/>) into the stop.
-/// Dressing plus the lever; the <see cref="RailEncounterController"/> runs it. The node stays at the origin. Server only.
+/// Dressing plus the lever; the <see cref="RailEncounterController"/> runs it on the server. The node stays at the origin.
 /// </summary>
 public partial class SpurSwitch : Node3D
 {
@@ -25,6 +25,8 @@ public partial class SpurSwitch : Node3D
     /// <summary>The enemy line's S at the points (where the spur leaves it).</summary>
     public float EnemyPointsS { get; private set; }
     public TrackSwitch Lever { get; private set; } = null!;
+    /// <summary>The lever's wire name ("spur:{piece}"), set by the builder.</summary>
+    public string LeverRef { get; init; } = "";
     /// <summary>The spur's own track, from the points (S = 0) to its end.</summary>
     public TrackSampler Sampler { get; private set; } = null!;
     /// <summary>The spur's S where a runner's middle meets the stop.</summary>
@@ -41,7 +43,7 @@ public partial class SpurSwitch : Node3D
         var frame = party.Frame(leverS);
         var x = frame.Basis.X.Normalized();
         var side = (enemy.Point(lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
-        Lever = new TrackSwitch { Name = "Lever", PointsS = PointsS };
+        Lever = new TrackSwitch { Name = "Lever", PointsS = PointsS, NetRef = LeverRef };
         AddChild(Lever);
         Lever.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * RailEncounterController.LeverOut));
 

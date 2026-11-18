@@ -13,7 +13,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// (<see cref="RamCloseIn"/>) and is rammed when the front reaches its back end: it derails, the plating takes
 /// <see cref="RamDent"/>. A "heap" blocks the party lane (<see cref="RailController.BlockLine"/>) until it is cleared; its
 /// lantern and a companion's call warn first. "buckets" tip cinders onto the line: a cart through a live patch loses
-/// <see cref="PatchDent"/> plating and each seated hero takes one lick of <see cref="TrapRules.FloorFire"/>. Server only.
+/// <see cref="PatchDent"/> plating and each seated hero takes one lick of <see cref="TrapRules.FloorFire"/>. Judged on the server.
 /// </summary>
 public partial class RailEncounterController
 {
@@ -63,7 +63,7 @@ public partial class RailEncounterController
         var frame = party.Frame(leverS);
         var x = frame.Basis.X.Normalized();
         var side = (_enemy.Point(Lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
-        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, Fixed = back };
+        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, Fixed = back, NetRef = Net.NetRefs.Switch(piece.Index) };
         root.AddChild(sw);
         sw.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * LeverOut));
         piece.Switch = sw;
@@ -127,7 +127,7 @@ public partial class RailEncounterController
 
     private Node3D? BuildHeap(Node3D root, Piece piece)
     {
-        var heap = new OreHeap { Name = $"Heap_{piece.Plan.Id}", S = piece.S };
+        var heap = new OreHeap { Name = $"Heap_{piece.Plan.Id}", S = piece.S, NetRef = Net.NetRefs.Heap(piece.Index) };
         root.AddChild(heap);
         heap.GlobalTransform = _rails.Party.Track.Frame(piece.S).Orthonormalized();
         heap.Cleared += h => OnHeapCleared(piece, h);

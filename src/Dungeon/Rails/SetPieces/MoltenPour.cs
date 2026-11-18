@@ -29,6 +29,8 @@ public partial class MoltenPour : Node3D
     public float S { get; init; }
     /// <summary>The valve is broken: no more pours.</summary>
     public bool Quenched { get; private set; }
+    /// <summary>Its valve's wire name ("valve:{piece}"), set by the builder; empty: not told.</summary>
+    public string NetRef { get; init; } = "";
     /// <summary>The phase now (Dry while quenched).</summary>
     public PourPhase Phase { get; private set; } = PourPhase.Dry;
     public QuenchValve Valve { get; private set; } = null!;
@@ -76,7 +78,7 @@ public partial class MoltenPour : Node3D
             var x = Vector3.Up.Cross(dir).Normalized();
             pipe.Transform = new Transform3D(new Basis(x, dir, x.Cross(dir)), new Vector3(pipeTop.X, QuenchValve.WheelHeight, 0) + run / 2f);
         }
-        Valve = new QuenchValve { Name = "QuenchValve" };
+        Valve = new QuenchValve { Name = "QuenchValve", NetRef = NetRef, Pour = this };
         AddChild(Valve);
         Valve.GlobalTransform = new Transform3D(valveFrame.Basis.Orthonormalized(), valveFrame.Origin + valveFrame.Basis.X.Normalized() * (valveSide * ValveOut));
         Valve.Broken += () => Quenched = true;
@@ -96,6 +98,13 @@ public partial class MoltenPour : Node3D
         Valve.Rebuild();
     }
 
+    /// <summary>Client: whole again as on the server (the valve's "rebuilt").</summary>
+    internal void ShowRebuilt()
+    {
+        Quenched = false;
+        Valve.ShowRebuilt();
+    }
+
     public override void _Process(double delta)
     {
         if (_stream == null || Main.Instance?.Builder is not { } builder) return;
@@ -112,7 +121,8 @@ public partial class MoltenPour : Node3D
 
 /// <summary>
 /// The pour's quench valve: an iron wheel on the feed pipe beside the line, on layer 4 only (a small prop: a blade, a shove or an
-/// arrow finds it and nothing blocks the sight ray to it). Any hit bursts it: steam, the pour gutters out for good. Server only.
+/// arrow finds it and nothing blocks the sight ray to it). Any hit bursts it: steam, the pour gutters out for good. The server
+/// judges it and tells "broken" and "rebuilt" (<see cref="NetRef"/>); a client's copy only shows them (<see cref="ShowBroken"/>).
 /// </summary>
 public partial class QuenchValve : StaticBody3D, ICombatTarget
 {
@@ -126,6 +136,10 @@ public partial class QuenchValve : StaticBody3D, ICombatTarget
 
     /// <summary>It burst (told once per build).</summary>
     public event Action? Broken;
+    /// <summary>Its wire name ("valve:{piece}"); empty: not told.</summary>
+    public string NetRef { get; init; } = "";
+    /// <summary>The pour it feeds.</summary>
+    internal MoltenPour? Pour { get; init; }
 
     public QuenchValve()
     {
@@ -165,44 +179,77 @@ public partial class QuenchValve : StaticBody3D, ICombatTarget
 
     private void Burst()
     {
-        _shape.Disabled = true;
-        CollisionLayer = 0;
-        _wheelNode.Visible = false;
+        BurstLook(steam: true);
         EventBus.Instance.Log("The quench valve bursts — the pour gutters out.");
         EventBus.Instance.PlaySfx("steam_burst"); // placeholder: plan 6 adds the sound
-        if (GetParent() is Node3D parent && IsInsideTree())
-        {
-            var steam = new GpuParticles3D
-            {
-                Name = "Steam", Amount = 60, Lifetime = 1.6, OneShot = true, Explosiveness = 0.85f, Emitting = true,
-                ProcessMaterial = new ParticleProcessMaterial { Direction = Vector3.Up, Spread = 35f, InitialVelocityMin = 1.5f, InitialVelocityMax = 3.5f, Gravity = new Vector3(0, 0.6f, 0), ScaleMin = 0.4f, ScaleMax = 1.2f },
-                DrawPass1 = new QuadMesh { Size = new Vector2(0.8f, 0.8f) },
-                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.85f, 0.85f, 0.85f, 0.25f), AlbedoTexture = Props.Fire.Puff(), Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
-            };
-            parent.AddChild(steam);
-            steam.GlobalPosition = GlobalPosition + Vector3.Up * (WheelHeight + 0.2f);
-            GetTree().CreateTimer(2.5).Timeout += () => { if (IsInstanceValid(steam)) steam.QueueFree(); };
-        }
         Broken?.Invoke();
+        Tell("broken");
     }
 
-    /// <summary>Burst without steam, sound or a message (a load puts it back as it was).</summary>
-    public void BreakQuietly()
+    /// <summary>Burst to look at: nothing to hit, the wheel gone, and (<paramref name="steam"/>) a cloud of steam.</summary>
+    private void BurstLook(bool steam)
     {
         IsAlive = false;
         if (_shape == null) return;
         _shape.Disabled = true;
         CollisionLayer = 0;
         _wheelNode.Visible = false;
+        if (steam && GetParent() is Node3D parent && IsInsideTree())
+        {
+            var cloud = new GpuParticles3D
+            {
+                Name = "Steam", Amount = 60, Lifetime = 1.6, OneShot = true, Explosiveness = 0.85f, Emitting = true,
+                ProcessMaterial = new ParticleProcessMaterial { Direction = Vector3.Up, Spread = 35f, InitialVelocityMin = 1.5f, InitialVelocityMax = 3.5f, Gravity = new Vector3(0, 0.6f, 0), ScaleMin = 0.4f, ScaleMax = 1.2f },
+                DrawPass1 = new QuadMesh { Size = new Vector2(0.8f, 0.8f) },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.85f, 0.85f, 0.85f, 0.25f), AlbedoTexture = Props.Fire.Puff(), Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
+            };
+            parent.AddChild(cloud);
+            cloud.GlobalPosition = GlobalPosition + Vector3.Up * (WheelHeight + 0.2f);
+            GetTree().CreateTimer(2.5).Timeout += () => { if (IsInstanceValid(cloud)) cloud.QueueFree(); };
+        }
+    }
+
+    /// <summary>Burst without steam, sound or a message (a load puts it back as it was).</summary>
+    public void BreakQuietly()
+    {
+        var was = IsAlive;
+        BurstLook(steam: false);
+        if (was) Tell("broken");
     }
 
     /// <summary>Whole again.</summary>
     public void Rebuild()
+    {
+        var was = IsAlive;
+        Mend();
+        if (!was) Tell("rebuilt");
+    }
+
+    /// <summary>Client: burst as on the server, with its steam (<paramref name="steam"/>) but no sound or message; the pour is quenched.</summary>
+    public void ShowBroken(bool steam = true)
+    {
+        if (IsAlive) BurstLook(steam);
+        Broken?.Invoke(); // the pour is quenched
+    }
+
+    /// <summary>Client: whole again, the pour back on its clock.</summary>
+    public void ShowRebuilt()
+    {
+        if (!IsAlive) Mend();
+        if (Pour is { Quenched: true } pour) pour.ShowRebuilt(); // which comes back here with the valve whole
+    }
+
+    private void Mend()
     {
         IsAlive = true;
         if (_shape == null) return;
         _shape.Disabled = false;
         CollisionLayer = 4;
         _wheelNode.Visible = true;
+    }
+
+    private void Tell(string what)
+    {
+        if (NetRef.Length > 0 && !NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRef, what);
     }
 }

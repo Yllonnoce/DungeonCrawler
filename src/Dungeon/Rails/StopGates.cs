@@ -44,6 +44,9 @@ public sealed class StopGates
     /// <summary>The stop's gate stands open (or the stop has none). A stop's gate starts down while any of its mobs live.</summary>
     public bool Up(int stopIndex) => stopIndex < 0 || stopIndex >= _gates.Length || _gates[stopIndex] is not { } g || !GodotObject.IsInstanceValid(g) || g.Up;
 
+    /// <summary>The stop's gate, or null (no gate there).</summary>
+    public RailGate? At(int stopIndex) => stopIndex >= 0 && stopIndex < _gates.Length && _gates[stopIndex] is { } g && GodotObject.IsInstanceValid(g) ? g : null;
+
     /// <summary>The intermediate stops (indices) whose gate is up, for the save. Stops with no gate are not listed.</summary>
     public IReadOnlyList<int> UpList
     {

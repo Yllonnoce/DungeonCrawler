@@ -1,13 +1,15 @@
+using DungeonCrawler.Adventure.Objectives;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Dungeon.Rails;
 using DungeonCrawler.Save;
 using Godot;
 
 namespace DungeonCrawler.Net;
 
 /// <summary>
-/// The prop check's two halves that touch the scene: reading a floor root's props into a <see cref="PropStateDto"/>
+/// The prop check's two halves that touch the scene: reading a floor root's props (a railed floor's too, in its rail part) into a <see cref="PropStateDto"/>
 /// (server and client read the same way, so their <see cref="PropCheck.Hash"/> agree when the floors agree) and putting
 /// a client's props where the server's stand. <see cref="FloorStateCapture.Apply"/> cannot do the second: it frees
 /// enemies and spawns loot and placed traps again, which is right for a freshly built floor and wrong for a live one.
@@ -59,7 +61,50 @@ public static class PropSync
         foreach (var list in new[] { p.OpenedChests, p.SprungChests, p.JammedChests, p.OpenDoors, p.RevealedDoors, p.PulledLevers, p.RevealedSecrets, p.OpenSecrets, p.RevealedTraps, p.DisarmedTraps, p.TriggeredTraps, p.Barrels })
             list.Sort();
         p.PlacedTraps.Sort((a, b) => a.Id.CompareTo(b.Id));
+        p.Rail = CaptureRail(root);
         return p;
+    }
+
+    /// <summary>The floor's cart, when it is this root's (a railed floor), or null.</summary>
+    private static RailController? RailsOf(Node3D root) => RailController.Instance is { } rc && GodotObject.IsInstanceValid(rc) && rc.GetParent() == root ? rc : null;
+    private static RailEncounterController? EncountersOf(Node3D root) => RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.GetParent() == root ? enc : null;
+    private static CrewRescueController? CrewOf(Node3D root) => ObjectiveController.Instance is CrewRescueController crew && GodotObject.IsInstanceValid(crew) && crew.GetParent() == root ? crew : null;
+
+    /// <summary>A railed floor's props (null off railed floors): the gates and spares, the set pieces, the open cages and the orc's keys.</summary>
+    private static RailPropsDto? CaptureRail(Node3D root)
+    {
+        if (RailsOf(root) is not { } rails) return null;
+        var r = new RailPropsDto();
+        r.GatesUp.AddRange(rails.GatesUpList);
+        r.SparesUsed.AddRange(rails.SparesUsed);
+        EncountersOf(root)?.CaptureProps(r);
+        if (CrewOf(root) is { } crew)
+        {
+            foreach (var wagon in crew.Wagons) if (GodotObject.IsInstanceValid(wagon) && wagon.Open) r.OpenCages.Add(wagon.Stop);
+            r.KeysTaken = crew.OrcKeys;
+        }
+        foreach (var list in new[] { r.GatesUp, r.ThrownSwitches, r.TakenSwitches, r.ThrownSpurs, r.ClearedHeaps, r.BrokenValves, r.CollapsedTrestles, r.SmashedBuffers, r.SparesUsed, r.OpenCages })
+            list.Sort();
+        return r;
+    }
+
+    /// <summary>
+    /// A client's railed floor moved to the server's rail part, silently: the set pieces and the spares both ways; gates up,
+    /// cages open and the keys taken only forward (none of them goes back short of a new build of the floor).
+    /// </summary>
+    private static void ApplyRail(RailPropsDto r, Node3D root, List<string> changed)
+    {
+        if (RailsOf(root) is not { } rails) return;
+        foreach (var stop in r.GatesUp)
+            if (rails.GateAt(stop) is { Up: false } gate) { gate.ShowUp(animate: false); changed.Add($"gate {stop} up"); }
+        for (var stop = 0; stop < rails.StopS.Length; stop++)
+            if (rails.SpareAt(stop) != null && rails.ShowSpare(stop, r.SparesUsed.Contains(stop))) changed.Add($"spare {stop} {(r.SparesUsed.Contains(stop) ? "used" : "parked")}");
+        EncountersOf(root)?.ApplyProps(r, changed);
+        if (CrewOf(root) is { } crew)
+        {
+            foreach (var stop in r.OpenCages) if (crew.ShowCageOpen(stop)) changed.Add($"cage {stop} opened");
+            if (r.KeysTaken && crew.ShowKeysTaken()) changed.Add("orc's keys taken");
+        }
     }
 
     /// <summary>
@@ -146,6 +191,7 @@ public static class PropSync
             SpawnPlaced(root, t, kind);
             changed.Add($"placed trap {id} set");
         }
+        if (p.Rail != null) ApplyRail(p.Rail, root, changed);
         return changed;
     }
 

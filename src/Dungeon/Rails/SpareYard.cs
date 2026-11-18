@@ -1,5 +1,7 @@
+using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Net;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -7,7 +9,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// The spare carts, owned by the RailController: one stand-in cart beside each intermediate stop's platform, for looks
 /// only. When the party's cart is wrecked, <see cref="Pick"/> (by <see cref="SpareRules"/>) names the stop whose spare
-/// takes over and <see cref="Use"/> spends it (it vanishes). Which are spent is kept for the save.
+/// takes over and <see cref="Use"/> spends it (it vanishes). Which are spent is kept for the save. The server tells "used" and
+/// "restored" ("spare:{stop}"); a client's yard shows them (<see cref="Show"/>).
 /// </summary>
 public sealed class SpareYard
 {
@@ -82,8 +85,32 @@ public sealed class SpareYard
     /// <summary>The stop's spare is spent: it vanishes.</summary>
     public void Use(int stop)
     {
-        _used.Add(stop);
+        if (_used.Add(stop)) Tell(stop, "used");
         Hide(stop);
+    }
+
+    /// <summary>The stop's spare cart, or null (none stands there).</summary>
+    public MineCart? At(int stop) => _spares.TryGetValue(stop, out var spare) && GodotObject.IsInstanceValid(spare) ? spare : null;
+
+    /// <summary>The stop whose spare <paramref name="spare"/> is, or −1.</summary>
+    public int StopOf(MineCart spare)
+    {
+        foreach (var (stop, cart) in _spares) if (cart == spare) return stop;
+        return -1;
+    }
+
+    /// <summary>Client: the stop's spare spent (gone) or parked again, as on the server, silently. True when it changed.</summary>
+    public bool Show(int stop, bool used)
+    {
+        if (!_spares.ContainsKey(stop) || _used.Contains(stop) == used) return false;
+        if (used) { _used.Add(stop); Hide(stop); }
+        else { _used.Remove(stop); Park(stop); }
+        return true;
+    }
+
+    private static void Tell(int stop, string what)
+    {
+        if (!NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRefs.Spare(stop), what);
     }
 
     /// <summary>The stops whose spare cart is spent, or null when none is.</summary>
@@ -92,8 +119,11 @@ public sealed class SpareYard
     /// <summary>Back from a save: exactly the listed spares (those that exist) are spent and hidden.</summary>
     public void Restore(IEnumerable<int>? used)
     {
+        var before = _used.ToList();
         _used.Clear();
         if (used != null) foreach (var i in used) if (_spares.ContainsKey(i)) { _used.Add(i); Hide(i); }
+        foreach (var i in before) if (!_used.Contains(i)) Tell(i, "restored"); // (a load builds the floor afresh: its spares stand already)
+        foreach (var i in _used) if (!before.Contains(i)) Tell(i, "used");
     }
 
     private void Hide(int stop)
@@ -101,5 +131,12 @@ public sealed class SpareYard
         if (!_spares.TryGetValue(stop, out var spare) || !GodotObject.IsInstanceValid(spare)) return;
         spare.Visible = false;
         spare.CollisionLayer = 0;
+    }
+
+    private void Park(int stop)
+    {
+        if (!_spares.TryGetValue(stop, out var spare) || !GodotObject.IsInstanceValid(spare)) return;
+        spare.Visible = true;
+        spare.CollisionLayer = 1;
     }
 }

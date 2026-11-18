@@ -475,6 +475,24 @@ public partial class ClientWorld : Node
             case (Dungeon.Props.Trap t, "disarmed"): t.Disarm(); break;
             case (Dungeon.Props.Trap t, "sprung"): t.ShowSprung(); break;
             case (Dungeon.Props.Breakable b, "broken"): b.Vanish(); break;
+            // a railed floor's props (plan 5): the server judged them; our copies only show it, silently (its log and cues come apart)
+            case (Dungeon.Rails.RailGate g, "up"): g.ShowUp(); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.TrackSwitch sw, "thrown"): sw.ShowThrown(true); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.TrackSwitch sw, "straight"): sw.ShowThrown(false); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.TrackSwitch sw, "taken"): sw.ShowTaken(); break;
+            case (Dungeon.Rails.TrackSwitch sw, "reset"): sw.ShowReset(); break;
+            case (Dungeon.Rails.OreHeap h, "cleared"): h.ShowCleared(); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.OreHeap h, "rebuilt"): h.ShowRebuilt(); break;
+            case (Dungeon.Rails.QuenchValve v, "broken"): v.ShowBroken(); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.QuenchValve v, "rebuilt"): v.ShowRebuilt(); break;
+            case (Dungeon.Rails.Trestle t, "collapsed"): t.ShowCollapsed(root); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.Trestle t, "rebuilt"): t.ShowRebuilt(); break;
+            case (Dungeon.Rails.BufferStop b, "smashed"): b.ShowSmashed(root, Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc.Cart) ? rc.Cart.Velocity : Vector3.Zero); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.BufferStop b, "restored"): b.ShowRestored(); break;
+            case (Dungeon.Rails.MineCart spare, "used"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: true); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.MineCart spare, "restored"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: false); break;
+            case (Dungeon.Rails.CageWagon w, "opened"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowCageOpen(w.Stop); Trace.Add("rail-prop"); break;
+            case (Adventure.Objectives.OrcKeyring, "taken"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowKeysTaken(); Trace.Add("rail-prop"); break;
         }
     }
 
@@ -486,6 +504,9 @@ public partial class ClientWorld : Node
         PropSync.SpawnPlaced(root, dto, kind);
     }
 
+    /// <summary>Prop checks whose hash matched ours (the scripted RIDE check reads it).</summary>
+    public int PropChecksMatched { get; private set; }
+
     /// <summary>The server's prop state we last asked for (and when): an ask the apply could not settle is not repeated every check.</summary>
     private uint? _propAskedFor;
     private double _propAskedAt;
@@ -495,6 +516,7 @@ public partial class ClientWorld : Node
     {
         if (Root is not { } root || Main.Instance is not { InGame: true } main || main.Rebuilding || pc.Floor != Game.Instance.CurrentFloor || main.Builder.CurrentFloor != pc.Floor) return;
         var mine = PropCheck.Hash(PropSync.Capture(root));
+        if (mine == pc.Hash) PropChecksMatched++;
         var now = NetSession.Instance.Now;
         if (!PropCheck.ShouldAsk(mine, pc.Hash, _propAskedFor, _propAskedAt, now)) return;
         _propAskedFor = pc.Hash;

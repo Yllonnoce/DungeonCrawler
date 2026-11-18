@@ -57,6 +57,9 @@ public partial class RailController : Node
     /// <summary>The intermediate stops (indices) whose gate is up, for the save. Stops with no gate are not listed.</summary>
     public IReadOnlyList<int> GatesUpList => _gates.UpList;
 
+    /// <summary>The stop's gate ("gate:{stop}"), or null.</summary>
+    public RailGate? GateAt(int stopIndex) => _gates.At(stopIndex);
+
     /// <summary>Back from a save: the listed gates stand up at once (no animation, no log). Gates not listed stay as they are.</summary>
     public void RestoreGates(IEnumerable<int> up)
     {
@@ -96,6 +99,12 @@ public partial class RailController : Node
     public IReadOnlyCollection<int> SparesUsed => _spares.Used;
     /// <summary>Spares still parked.</summary>
     public int SparesLeft => _spares.Left;
+    /// <summary>The stop's spare cart ("spare:{stop}"), or null.</summary>
+    public MineCart? SpareAt(int stop) => _spares.At(stop);
+    /// <summary>Client: <paramref name="spare"/> spent or parked again, as the server said. True when it changed.</summary>
+    public bool ShowSpare(MineCart spare, bool used) => _spares.StopOf(spare) is var stop and >= 0 && _spares.Show(stop, used);
+    /// <summary>Client: the stop's spare spent or parked again (the prop check's repair). True when it changed.</summary>
+    public bool ShowSpare(int stop, bool used) => _spares.Show(stop, used);
 
     /// <summary>
     /// Every change of the cart's state: departed, arrived, hit, wrecked, a rider seated or unseated (whatever seated or

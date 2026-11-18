@@ -1,4 +1,5 @@
 using DungeonCrawler.Core;
+using DungeonCrawler.Net;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -7,7 +8,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// A timber-and-iron buffer stop across the party line just short of the last stop: a heavy beam on two iron uprights, braced
 /// back. Solid to walkers (layer 1) while it stands. The cart's front smashes it (<see cref="Smash"/>): it vanishes in a burst of
 /// splinters and a few tumbling timbers (cosmetic, freed after <see cref="TimberSeconds"/>), with a thud. It does no harm.
-/// <see cref="Restore"/> stands it up again. Server only.
+/// <see cref="Restore"/> stands it up again. The server tells "smashed" and "restored" (<see cref="NetRef"/>); a client's
+/// copy shows them (<see cref="ShowSmashed"/>, with its splinters and timbers).
 /// </summary>
 public partial class BufferStop : StaticBody3D
 {
@@ -20,6 +22,8 @@ public partial class BufferStop : StaticBody3D
     public float S { get; init; }
     public float FaceS => S - HalfDepth;
     public bool Smashed { get; private set; }
+    /// <summary>Its wire name ("buffer:{piece}"), set by the builder; empty: not told.</summary>
+    public string NetRef { get; init; } = "";
 
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.34f, 0.22f, 0.12f), Roughness = 0.9f };
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.75f, Roughness = 0.5f };
@@ -60,13 +64,36 @@ public partial class BufferStop : StaticBody3D
     public void Smash(Node3D root, Vector3 cartVelocity)
     {
         if (Smashed) return;
+        Break(root, cartVelocity);
+        EventBus.Instance.PlaySfx("timber_smash"); // placeholder: plan 6 adds the sound
+        Tell("smashed");
+    }
+
+    /// <summary>Client: smashed as on the server, with the thud, the splinters and the timbers (<paramref name="debris"/>; a repair is quiet), no cue.</summary>
+    public void ShowSmashed(Node3D root, Vector3 cartVelocity, bool debris = true)
+    {
+        if (Smashed) return;
+        if (debris) Break(root, cartVelocity);
+        else Restore(smashed: true);
+    }
+
+    /// <summary>Client: standing again.</summary>
+    public void ShowRestored() { if (Smashed) Restore(smashed: false); }
+
+    private void Tell(string what)
+    {
+        if (NetRef.Length > 0 && !NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRef, what);
+    }
+
+    /// <summary>Gone in splinters with a thud, a few timbers flying on ahead.</summary>
+    private void Break(Node3D root, Vector3 cartVelocity)
+    {
         Smashed = true;
         _look.Visible = false;
         _shape.Disabled = true;
         CollisionLayer = 0;
         var at = GlobalPosition + Vector3.Up * BeamHeight;
         Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
-        EventBus.Instance.PlaySfx("timber_smash"); // placeholder: plan 6 adds the sound
         var splinters = new GpuParticles3D
         {
             Name = "Splinters", Amount = 70, Lifetime = 1.2, OneShot = true, Explosiveness = 0.95f, Emitting = true,
@@ -98,7 +125,9 @@ public partial class BufferStop : StaticBody3D
     /// <summary>Standing again, or (<paramref name="smashed"/>) gone without a sound: the cart is past it already.</summary>
     public void Restore(bool smashed = false)
     {
+        var was = Smashed;
         Smashed = smashed;
+        if (was != smashed) Tell(smashed ? "smashed" : "restored");
         if (_look == null) return;
         _look.Visible = !smashed;
         _shape.Disabled = smashed;

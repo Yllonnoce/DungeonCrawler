@@ -8,7 +8,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// An iron gate across both tracks at a stop: two posts, a bar chained to a winch post. It holds the cart at the stop
 /// until the stop's mobs are dead; <see cref="Lift"/> winches the bar up. Procedural boxes; only the posts collide
-/// (the cart is code-driven and walkers can duck under the bar).
+/// (the cart is code-driven and walkers can duck under the bar). The server tells "up" ("gate:{stop}"); a client's copy
+/// shows it (<see cref="ShowUp"/>).
 /// </summary>
 public partial class RailGate : Node3D
 {
@@ -70,9 +71,12 @@ public partial class RailGate : Node3D
         if (Up) SetLifted();
     }
 
+    /// <summary>The winch post ("winch:{stop}"), once the gate is in the tree.</summary>
+    internal WinchPost? Winch { get; private set; }
+
     private void Post(string name, float x, bool winch)
     {
-        var body = winch ? new WinchPost(this) { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1 | 8, CollisionMask = 0 }
+        var body = winch ? (Winch = new WinchPost(this) { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1 | 8, CollisionMask = 0 })
             : new StaticBody3D { Name = name, Position = new Vector3(x, 0, 0), CollisionLayer = 1, CollisionMask = 0 };
         body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.3f, PostHeight, 0.3f) }, Position = new Vector3(0, PostHeight / 2f, 0) });
         Box(body, "Post", new Vector3(0.28f, PostHeight, 0.28f), new Vector3(0, PostHeight / 2f, 0), _wood);
@@ -84,7 +88,7 @@ public partial class RailGate : Node3D
         => parent.AddChild(new MeshInstance3D { Name = name, Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Position = at });
 
     /// <summary>The winch post: looked at, it offers "Crank the winch" while the gate is down.</summary>
-    private partial class WinchPost : StaticBody3D, IInteractable
+    internal partial class WinchPost : StaticBody3D, IInteractable
     {
         private readonly RailGate _gate;
         public WinchPost(RailGate gate) => _gate = gate;
@@ -111,17 +115,38 @@ public partial class RailGate : Node3D
         EventBus.Instance.Log("The gate lifts.");
         EventBus.Instance.PlaySfx("gate_lift"); // no clip yet: plan 6 adds the sound
         Lifted?.Invoke(this);
-        if (_bar == null || !IsInsideTree()) return;
-        var tween = CreateTween().SetParallel();
-        tween.TweenProperty(_bar, "position:y", LiftedHeight, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-        tween.TweenProperty(_chain, "scale:y", WoundChain, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        Tell();
+        Wind();
     }
 
     /// <summary>Up at once, with no animation or log (a restored save).</summary>
     public void SetUp()
     {
+        var was = Up;
         Up = true;
         SetLifted();
+        if (!was) Tell();
+    }
+
+    /// <summary>Client: the gate goes up as on the server (the bar winds up, <paramref name="animate"/>), with no log, cue or event.</summary>
+    public void ShowUp(bool animate = true)
+    {
+        if (Up) return;
+        Up = true;
+        if (animate) Wind(); else SetLifted();
+    }
+
+    private void Tell()
+    {
+        if (!NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRefs.Gate(Stop), "up");
+    }
+
+    private void Wind()
+    {
+        if (_bar == null || !IsInsideTree()) return;
+        var tween = CreateTween().SetParallel();
+        tween.TweenProperty(_bar, "position:y", LiftedHeight, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+        tween.TweenProperty(_chain, "scale:y", WoundChain, LiftSeconds).SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
     }
 
     private void SetLifted()

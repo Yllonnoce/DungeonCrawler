@@ -32,6 +32,31 @@ public sealed class PropStateDto
     /// <summary>The party's traps still armed, with their ids (<see cref="PropCheck.PlacedTrapBase"/> up).</summary>
     public List<PlacedTrapDto> PlacedTraps { get; set; } = new();
     public bool ShrineUsed { get; set; }
+    /// <summary>A railed floor's props (null off railed floors, so their hashes are as before).</summary>
+    public RailPropsDto? Rail { get; set; }
+}
+
+/// <summary>
+/// The lasting state of a railed floor's props: stop indices for the gates, spares and cage wagons, set-piece indices (a
+/// plan's index in <c>FloorContents.RailSetPieces</c>) for the rest. A switch's or spur's "taken" (the cart, or the golem,
+/// passed its points this ride) is in <see cref="TakenSwitches"/> for both kinds.
+/// </summary>
+public sealed class RailPropsDto
+{
+    public List<int> GatesUp { get; set; } = new();
+    /// <summary>Track switches (switch_out and the always-thrown switch_back) whose lever is thrown.</summary>
+    public List<int> ThrownSwitches { get; set; } = new();
+    /// <summary>Levers (switches and spurs) whose points are behind the cart this ride.</summary>
+    public List<int> TakenSwitches { get; set; } = new();
+    public List<int> ThrownSpurs { get; set; } = new();
+    public List<int> ClearedHeaps { get; set; } = new();
+    /// <summary>Pours whose quench valve is broken.</summary>
+    public List<int> BrokenValves { get; set; } = new();
+    public List<int> CollapsedTrestles { get; set; } = new();
+    public List<int> SmashedBuffers { get; set; } = new();
+    public List<int> SparesUsed { get; set; } = new();
+    public List<int> OpenCages { get; set; } = new();
+    public bool KeysTaken { get; set; }
 }
 
 /// <summary>
@@ -70,6 +95,14 @@ public static class PropCheck
         sb.Append('p');
         foreach (var t in p.PlacedTraps.OrderBy(t => t.Id)) sb.Append(t.Id.ToString(CultureInfo.InvariantCulture)).Append(':').Append(t.Kind).Append(',');
         sb.Append('|').Append(p.ShrineUsed ? 'U' : '-');
+        if (p.Rail is { } r) // appended only on a railed floor: every other floor's hash is as it was
+        {
+            sb.Append("|R");
+            List('G', r.GatesUp); List('S', r.ThrownSwitches); List('T', r.TakenSwitches); List('P', r.ThrownSpurs);
+            List('H', r.ClearedHeaps); List('V', r.BrokenValves); List('E', r.CollapsedTrestles); List('B', r.SmashedBuffers);
+            List('C', r.SparesUsed); List('W', r.OpenCages);
+            sb.Append(r.KeysTaken ? 'K' : '-');
+        }
         return sb.ToString();
     }
 
@@ -94,6 +127,16 @@ public static class PropCheck
         Compare("traps sprung", mine.TriggeredTraps, server.TriggeredTraps); Compare("barrels", mine.Barrels, server.Barrels);
         Compare("party traps", mine.PlacedTraps.Select(t => t.Id), server.PlacedTraps.Select(t => t.Id));
         if (mine.ShrineUsed != server.ShrineUsed) diffs.Add($"shrine {(server.ShrineUsed ? "used" : "fresh")} on the server");
+        if (mine.Rail != null || server.Rail != null)
+        {
+            RailPropsDto a = mine.Rail ?? new(), b = server.Rail ?? new();
+            Compare("gates up", a.GatesUp, b.GatesUp); Compare("switches thrown", a.ThrownSwitches, b.ThrownSwitches);
+            Compare("switches taken", a.TakenSwitches, b.TakenSwitches); Compare("spurs thrown", a.ThrownSpurs, b.ThrownSpurs);
+            Compare("heaps cleared", a.ClearedHeaps, b.ClearedHeaps); Compare("valves broken", a.BrokenValves, b.BrokenValves);
+            Compare("trestles collapsed", a.CollapsedTrestles, b.CollapsedTrestles); Compare("buffers smashed", a.SmashedBuffers, b.SmashedBuffers);
+            Compare("spares used", a.SparesUsed, b.SparesUsed); Compare("cages open", a.OpenCages, b.OpenCages);
+            if (a.KeysTaken != b.KeysTaken) diffs.Add($"orc's keys {(b.KeysTaken ? "taken" : "at the belt")} on the server");
+        }
         return diffs;
     }
 
