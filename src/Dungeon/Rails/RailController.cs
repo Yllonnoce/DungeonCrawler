@@ -1,4 +1,5 @@
 using DungeonCrawler.Adventure;
+using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
@@ -11,8 +12,10 @@ namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
 /// Runs the party's mine cart on a railed floor: a node under the floor root (it dies with the floor). It seats and
-/// unseats heroes, counts down the boarding, steps <see cref="CartPhysics"/> from stop to stop on the server (or solo),
-/// and poses the cart and its riders every rendered frame. A client only shows the cart parked at the first stop.
+/// unseats heroes, counts down the boarding, reads the riders' inputs, steps the cart's <see cref="CartRun"/> from stop
+/// to stop on the server (or solo), applies what <see cref="RunOverSweep"/> finds, keeps the HUD line and the save, and
+/// poses the cart and its riders every rendered frame. A client only shows the cart parked at the first stop. Every
+/// change of the cart's state is told through <see cref="CartEvents"/>.
 /// </summary>
 public partial class RailController : Node
 {
@@ -25,11 +28,12 @@ public partial class RailController : Node
     /// <summary>The cart's HUD line shows while a hero is seated or this close.</summary>
     public const float HudRange = 12f;
     const float HudEvery = 0.25f;
-    const float CurvatureSpan = 2f;
     const string SourceName = "the warden cart";
 
     public MineCart Cart { get; private set; } = null!;
-    public CartState State { get; private set; }
+    /// <summary>The party's cart on the party track: its state, stepping and pose.</summary>
+    public CartRun Party { get; private set; } = null!;
+    public CartState State => Party.State;
     /// <summary>The stop the cart is at, or last left.</summary>
     public int StopIndex { get; private set; }
     /// <summary>Each stop's distance along the party track, ascending.</summary>
@@ -38,23 +42,28 @@ public partial class RailController : Node
     public string? HudText { get; private set; }
     public Boarding Boarding { get; } = new();
 
+    /// <summary>Every change of the cart's state: departed, arrived, hit, wrecked, a rider seated or unseated, restored from a save.</summary>
+    public event Action<CartEvent>? CartEvents;
+
     private RailTrack _track = null!;
     private FloorLayout _layout = null!;
     private DungeonBuilder _builder = null!;
-    private float _prevS;
     private float _hudTimer;
+    /// <summary>Physics time (seconds since the controller's first tick): the run-over and warning throttles count in it.</summary>
+    private double _now;
     private readonly HashSet<GridPos> _exitTaken = new();
     private readonly Dictionary<ulong, double> _hitAt = new();
-    private readonly List<ulong> _stale = new();
     private readonly Dictionary<int, double> _warnedAt = new();
+    private readonly List<Node3D> _bodies = new();
+    private readonly List<(Node3D body, TrackBody tb)> _hits = new();
+    private readonly List<ICartRider> _aboard = new();
+    private readonly List<int> _gone = new();
     /// <summary>Hero indices the save had seated in the cart: the deferred pass after a load sets them down beside it.</summary>
     private readonly HashSet<int> _restoredRiders = new();
-    /// <summary>Only bodies this close (flat) to the cart's front are judged for a run-over.</summary>
-    const float ScanRange = 6f;
-    const float JudgeAgain = 1f;
     const float WarnEvery = 4f;
+    const float WarnSeconds = 3f;
     const float WreckHpFraction = 0.25f;
-    const float BodyRadius = 0.4f;
+    const float BodyRadius = RunOverSweep.BodyRadius;
 
     public RailController()
     {
@@ -84,15 +93,15 @@ public partial class RailController : Node
             stops.Clear();
         }
         StopS = stops.Select(p => p.S).ToArray();
-        State = new CartState(StopS.Length > 0 ? StopS[0] : 0f, 0f, CartMode.Held, CartRules.MaxPlating);
-        _prevS = State.S;
         Cart = new MineCart { PromptFor = PromptFor, OnUse = Use };
+        var start = StopS.Length > 0 ? StopS[0] : 0f;
+        Party = new CartRun(new TrackSampler(track), Cart, new CartState(start, 0f, CartMode.Held, CartRules.MaxPlating)) { Limit = start };
         root.AddChild(Cart);
     }
 
     public override void _EnterTree() => Instance = this;
 
-    public override void _Ready() => PoseAt(State.S);
+    public override void _Ready() => Party.PoseAt(State.S);
 
     public override void _ExitTree()
     {
@@ -103,6 +112,22 @@ public partial class RailController : Node
 
     /// <summary>The floor this controller belongs to is still the one built (a cleared floor waits a frame to be freed).</summary>
     private bool Current => Main.Instance is { InGame: true } main && main.Builder.PartyTrack == _track && IsInstanceValid(Cart);
+
+    private void Raise(CartEvent e) => CartEvents?.Invoke(e);
+
+    /// <summary>The cart's riders, in rider-id order (heroes by party index), for a pass that may unseat them. Freed riders are dropped from the book.</summary>
+    private List<ICartRider> Aboard()
+    {
+        _aboard.Clear();
+        _gone.Clear();
+        foreach (var (id, rider) in Cart.Riders)
+            if (rider is GodotObject o && !IsInstanceValid(o)) _gone.Add(id);
+            else _aboard.Add(rider);
+        foreach (var id in _gone) { Cart.Riders.Remove(id); Cart.Seats.Leave(id); }
+        for (var i = 1; i < _aboard.Count; i++) // insertion sort: six riders at most, and no comparer to allocate
+            for (var j = i; j > 0 && _aboard[j - 1].RiderId > _aboard[j].RiderId; j--) (_aboard[j - 1], _aboard[j]) = (_aboard[j], _aboard[j - 1]);
+        return _aboard;
+    }
 
     // ---- save ------------------------------------------------------------------------------------
 
@@ -130,15 +155,22 @@ public partial class RailController : Node
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
         if (StopS.Length == 0) return;
         StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
-        State = new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating);
-        _prevS = State.S;
+        Party.Reset(new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating));
+        Party.Limit = StopS[StopIndex];
         Boarding.Cancel();
         _hitAt.Clear();
         _warnedAt.Clear();
-        foreach (var occupant in Cart.Seats.Occupants) Cart.Seats.Leave(occupant);
-        Cart.Speed = 0f;
-        Cart.Curvature = CurvatureAt(State.S);
-        PoseAt(State.S);
+        foreach (var rider in Aboard()) // everyone still in a seat gets up where they sit (as a teleport does); ClearRiders sets them down
+        {
+            if (rider is Adventurer hero) hero.Teleport(hero.GlobalPosition);
+            else rider.GetOut(((Node3D)rider).GlobalPosition, Vector3.Zero);
+            Raise(new CartEvent(CartEventKind.Unseated, Rider: rider.RiderId));
+        }
+        foreach (var occupant in Cart.Seats.Occupants) Cart.Seats.Leave(occupant); // and nothing is left in the book
+        Cart.Riders.Clear();
+        Party.Sync();
+        Party.PoseAt(State.S);
+        Raise(new CartEvent(CartEventKind.Restored, Stop: StopIndex));
         ClearRiders();
         Callable.From(() => { ClearRiders(); _restoredRiders.Clear(); }).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
     }
@@ -176,7 +208,7 @@ public partial class RailController : Node
     /// <summary>Test hook (--test-ride): set the cart's plating directly.</summary>
     internal void DebugSetPlating(float plating)
     {
-        State = State with { Plating = Mathf.Clamp(plating, 0f, CartRules.MaxPlating) };
+        Party.State = State with { Plating = Mathf.Clamp(plating, 0f, CartRules.MaxPlating) };
         RefreshHud();
     }
 
@@ -196,7 +228,7 @@ public partial class RailController : Node
         if (actor.Cart == Cart) { GetOutWithParty(actor); return; }
         if (actor.Seated || actor.Downed || State.Mode != CartMode.Held) return;
         if (StopIndex >= StopS.Length - 1) return; // the end of the line: nowhere left to ride (the prompt offers nothing either)
-        if (actor.Control != ControlKind.LocalHuman && !PlayerAboard(Main.Instance.Party)) return; // a companion rides only with a player
+        if (actor.Control != ControlKind.LocalHuman && !PlayerAboard()) return; // a companion rides only with a player
         if (!SeatHero(actor)) return;
         if (actor.Control == ControlKind.LocalHuman)
             foreach (var mate in Main.Instance.Party.Active)
@@ -217,29 +249,27 @@ public partial class RailController : Node
         if (NetSession.IsClient || !Current || !IsInstanceValid(hero)) return false;
         if (State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1) return false;
         if (hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) return false;
-        var party = Main.Instance.Party;
-        if (!PlayerAboard(party) || !SeatHero(hero)) return false;
+        if (!PlayerAboard() || !SeatHero(hero)) return false;
         if (!Boarding.Running) Boarding.Start();
         RefreshHud();
         return true;
     }
 
     /// <summary>A player's hero sits in this cart, awake: the cart only leaves (and companions only board) with one aboard. Remote players count from plan 5.</summary>
-    private bool PlayerAboard(PartyController party)
+    private bool PlayerAboard()
     {
-        foreach (var hero in party.Adventurers)
-            if (IsInstanceValid(hero) && hero.Cart == Cart && !hero.Downed && hero.Control == ControlKind.LocalHuman) return true;
+        foreach (var rider in Cart.Riders.Values)
+            if (rider is Adventurer hero && IsInstanceValid(hero) && !hero.Downed && hero.Control == ControlKind.LocalHuman) return true;
         return false;
     }
 
     /// <summary>Every rider steps out beside the lane at the stop (the cart is held there): nobody rides on without a player.</summary>
-    private void SetDownRiders(PartyController party)
+    private void SetDownRiders()
     {
+        if (Cart.Riders.Count == 0) return;
         _exitTaken.Clear();
-        var any = false;
-        foreach (var hero in party.Adventurers)
-            if (IsInstanceValid(hero) && hero.Cart == Cart) { hero.Pumping = false; GetOut(hero); any = true; }
-        if (any) RefreshHud();
+        foreach (var rider in Aboard()) GetOut(rider);
+        RefreshHud();
     }
 
     /// <summary>Companions on foot who come this close to a held cart with a player aboard hop in.</summary>
@@ -247,7 +277,7 @@ public partial class RailController : Node
 
     private void HopInNearby(PartyController party)
     {
-        if (StopIndex >= StopS.Length - 1 || !PlayerAboard(party)) return;
+        if (StopIndex >= StopS.Length - 1 || !PlayerAboard()) return;
         var at = Cart.GlobalPosition;
         foreach (var hero in party.Adventurers)
         {
@@ -259,8 +289,9 @@ public partial class RailController : Node
 
     private bool SeatHero(Adventurer hero)
     {
-        if (Cart.Seats.Take(hero.Index, isHero: true) is not int seat) return false;
+        if (Cart.Seats.Take(hero.RiderId, isHero: true) is not int seat) return false;
         hero.SitIn(Cart, seat);
+        Raise(new CartEvent(CartEventKind.Seated, Rider: hero.RiderId));
         return true;
     }
 
@@ -271,30 +302,33 @@ public partial class RailController : Node
         var slow = State.V < RunOverRules.ThrownAtSpeed;
         GetOut(actor);
         if (actor.Control == ControlKind.LocalHuman && slow)
-            foreach (var mate in Main.Instance.Party.Adventurers)
-                if (IsInstanceValid(mate) && mate.Cart == Cart && mate.Control == ControlKind.Companion) GetOut(mate);
+            foreach (var rider in Aboard())
+                if (rider is Adventurer { Control: ControlKind.Companion }) GetOut(rider);
         RefreshHud();
     }
 
     /// <summary>A rider thrown from the moving cart lands this far behind its back end (past the body's own radius).</summary>
     const float ThrownBehind = 0.2f;
 
-    private void GetOut(Adventurer hero)
+    /// <summary>The rider leaves its seat (which frees it in the cart's book): beside the lane from a slow cart, onto the line behind a fast one.</summary>
+    private void GetOut(ICartRider rider)
     {
         var thrown = State.Mode == CartMode.Rolling && State.V >= RunOverRules.ThrownAtSpeed;
-        Cart.Seats.Leave(hero.Index);
         if (!thrown)
         {
             var cell = ExitCell();
             _exitTaken.Add(cell);
-            hero.GetOut(_builder.Surface(cell), Cart.Velocity);
+            rider.GetOut(_builder.Surface(cell), Cart.Velocity);
+            Raise(new CartEvent(CartEventKind.Unseated, Rider: rider.RiderId));
             return;
         }
         // thrown: down on the line just behind the cart, carried a little by the ride; the cart has had them (once) and rolls on away
-        EventBus.Instance.Log($"{hero.State.Name} jumps from the moving cart!");
-        hero.GetOut(TrackPoint(State.S - CartRules.HalfLength - BodyRadius - ThrownBehind) + Vector3.Up * 0.05f, Cart.Velocity * 0.3f);
-        _hitAt[hero.GetInstanceId()] = Time.GetTicksMsec() / 1000.0;
-        hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, TierRules.Lethality), SourceName, HazardIndex);
+        EventBus.Instance.Log($"{(rider is Adventurer hero ? hero.State.Name : ((Node)rider).Name)} jumps from the moving cart!");
+        rider.GetOut(Party.Track.Point(Party.BackS - Party.Dir * BodyRadius - Party.Dir * ThrownBehind) + Vector3.Up * 0.05f, Cart.Velocity * 0.3f);
+        if (rider is GodotObject o) _hitAt[o.GetInstanceId()] = _now;
+        if (rider is IHazardVictim victim)
+            victim.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(victim.HazardVictimKind, false, TierRules.Lethality), SourceName, HazardIndex);
+        Raise(new CartEvent(CartEventKind.Unseated, Rider: rider.RiderId, Thrown: true));
     }
 
     /// <summary>Where a rider gets out of a slow or stopped cart: a free walkable cell beside the lane that is no rail (never the enemy lane, never a cell another rider just took).</summary>
@@ -321,145 +355,113 @@ public partial class RailController : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        _now += delta;
         if (NetSession.IsClient || !Current) return;
         var dt = (float)delta;
         var party = Main.Instance.Party;
-        _prevS = State.S;
+        Party.PrevS = State.S; // a cart that does not step this tick is posed where it stands
 
         if (State.Mode == CartMode.Held)
         {
-            var playerAboard = PlayerAboard(party);
-            if (!playerAboard) SetDownRiders(party); // no player aboard: companions do not ride off on their own
+            var playerAboard = PlayerAboard();
+            if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
             else HopInNearby(party);
             CountHeroes(party, out var seated, out var living);
             if (!playerAboard || seated == 0) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, or without a player
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
-                State = State with { Mode = CartMode.Rolling }; // StopAt (the next stop) is ahead of S before the cart rolls
+                Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
+                Party.State = State with { Mode = CartMode.Rolling };
+                Raise(new CartEvent(CartEventKind.Departed, Stop: StopIndex));
                 RefreshHud();
             }
         }
 
         if (State.Mode == CartMode.Rolling)
         {
-            var slope = SlopeAt(State.S);
-            var input = new CartInput(slope, false, 0, 0, StopS[StopIndex + 1]);
-            input = Inputs(party, input);
-            State = CartPhysics.Step(State, input, dt);
-            if (State.Mode == CartMode.Held) Arrive(party);
-            else
-            {
-                RunOver(party);
-                Warn(party);
-                if (State.Plating <= 0f) Wreck(party);
-            }
+            var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, 0, Party.Limit));
+            Party.Step(input, dt);
+            RunOver(party); // the arrival tick too: the last stretch before the stop is swept
+            if (State.Mode == CartMode.Held) Arrive();
+            else Warn(party);
+            if (State.Mode != CartMode.Wrecked && State.Plating <= 0f) Wreck();
         }
 
-        Cart.Speed = State.V;
-        Cart.Curvature = CurvatureAt(State.S);
+        Party.Sync();
     }
 
     // ---- run-over --------------------------------------------------------------------------------
 
-    private bool Measure(Vector3 pos, float radius, out TrackBody body)
-    {
-        var s = _track.Curve.GetClosestOffset(_track.ToLocal(pos));
-        var p = TrackPoint(s);
-        var dx = pos.X - p.X; var dz = pos.Z - p.Z;
-        body = new TrackBody(s, Mathf.Sqrt(dx * dx + dz * dz), pos.Y - p.Y, radius);
-        return true;
-    }
-
-    private bool InScan(Vector3 pos, Vector3 front)
-    {
-        var dx = pos.X - front.X; var dz = pos.Z - front.Z;
-        return dx * dx + dz * dz <= ScanRange * ScanRange;
-    }
-
-    private bool JudgedRecently(ulong id, double now) => _hitAt.TryGetValue(id, out var t) && now - t < JudgeAgain;
-
-    /// <summary>Judge the bodies near the cart's front: hit ones take the run-over outcome, big enemies are also knocked aside and dent the plating.</summary>
+    /// <summary>Judge the bodies near the cart's front (<see cref="RunOverSweep"/>): hit ones take the run-over outcome, big enemies are also knocked aside and dent the plating.</summary>
     private void RunOver(PartyController party)
     {
-        var now = Time.GetTicksMsec() / 1000.0;
-        if (_hitAt.Count > 0)
-        {
-            _stale.Clear();
-            foreach (var kv in _hitAt) if (now - kv.Value >= JudgeAgain) _stale.Add(kv.Key);
-            foreach (var id in _stale) _hitAt.Remove(id);
-        }
-        var sNow = State.S;
-        var front = TrackPoint(Mathf.Min(_track.Length, sNow + CartRules.HalfLength));
-        var lethality = TierRules.Lethality;
-        var moving = sNow > _prevS;
-
+        _bodies.Clear();
         foreach (var hero in party.Adventurers)
+            if (IsInstanceValid(hero) && !hero.Parked && !hero.Downed) _bodies.Add(hero); // riders are skipped by the sweep
+        if (Party.Moving)
         {
-            if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
-            var pos = hero.GlobalPosition;
-            Measure(pos, BodyRadius, out var b);
-            if (!moving || !InScan(pos, front) || !RunOverRules.Hits(_prevS, sNow, b)) continue;
-            var id = hero.GetInstanceId();
-            if (JudgedRecently(id, now)) continue;
-            _hitAt[id] = now;
-            hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, lethality), SourceName, HazardIndex);
+            var parent = GetParent();
+            for (var i = 0; i < parent.GetChildCount(); i++)
+            {
+                var child = parent.GetChild(i);
+                if (child is Enemy { IsAlive: true } enemy) _bodies.Add(enemy);
+                else if (child is Npc { Dead: false, Downed: false } npc) _bodies.Add(npc);
+            }
         }
+        RunOverSweep.Judge(Party, _bodies, _now, _hitAt, _hits);
+        if (_hits.Count == 0) return;
 
-        if (!moving) return;
-        var parent = GetParent();
+        var lethality = TierRules.Lethality;
         var hitBig = false;
-        for (var i = 0; i < parent.GetChildCount(); i++)
+        foreach (var (body, _) in _hits)
         {
-            var child = parent.GetChild(i);
-            if (child is Enemy enemy)
+            switch (body)
             {
-                if (!enemy.IsAlive) continue;
-                var pos = enemy.GlobalPosition;
-                if (!InScan(pos, front)) continue;
-                Measure(pos, BodyRadius * enemy.Profile.Scale, out var b);
-                if (!RunOverRules.Hits(_prevS, sNow, b)) continue;
-                var id = enemy.GetInstanceId();
-                if (JudgedRecently(id, now)) continue;
-                _hitAt[id] = now;
-                var big = RunOverRules.IsBig(enemy.Profile.Scale, enemy.IsBoss);
-                enemy.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(enemy.HazardVictimKind, big, lethality), SourceName, HazardIndex);
-                if (big)
+                case Adventurer hero:
+                    hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, lethality), SourceName, HazardIndex);
+                    break;
+                case Enemy enemy:
                 {
-                    if (enemy.IsAlive) enemy.GlobalPosition = _builder.Surface(ExitCellNear(pos, true, false));
-                    hitBig = true;
+                    var pos = enemy.GlobalPosition;
+                    var big = RunOverRules.IsBig(enemy.Profile.Scale, enemy.IsBoss);
+                    enemy.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(enemy.HazardVictimKind, big, lethality), SourceName, HazardIndex);
+                    if (big)
+                    {
+                        if (enemy.IsAlive) enemy.GlobalPosition = _builder.Surface(ExitCellNear(pos, true, false));
+                        hitBig = true;
+                    }
+                    break;
                 }
+                case Npc npc:
+                    npc.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(npc.HazardVictimKind, false, lethality), SourceName, HazardIndex);
+                    break;
             }
-            else if (child is Npc npc)
-            {
-                if (npc.Dead || npc.Downed) continue;
-                var pos = npc.GlobalPosition;
-                if (!InScan(pos, front)) continue;
-                Measure(pos, BodyRadius, out var b);
-                if (!RunOverRules.Hits(_prevS, sNow, b)) continue;
-                var id = npc.GetInstanceId();
-                if (JudgedRecently(id, now)) continue;
-                _hitAt[id] = now;
-                npc.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(npc.HazardVictimKind, false, lethality), SourceName, HazardIndex);
-            }
+            Raise(new CartEvent(CartEventKind.Hit, Target: body.GetInstanceId()));
         }
         if (!hitBig) return;
-        State = State with { Plating = Mathf.Max(0f, State.Plating - RunOverRules.BigBodyPlatingDamage) };
-        foreach (var hero in party.Adventurers)
-            if (IsInstanceValid(hero) && hero.Cart == Cart) hero.Shake(0.06f, 0.4f);
+        Party.State = State with { Plating = Mathf.Max(0f, State.Plating - RunOverRules.BigBodyPlatingDamage) };
+        foreach (var rider in Cart.Riders.Values)
+            if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.06f, 0.4f);
         RefreshHud();
     }
 
     /// <summary>"Cart coming!" for a hero on foot with the cart bearing down: a seated companion says it (else the log), once per hero per few seconds.</summary>
     private void Warn(PartyController party)
     {
-        var now = Time.GetTicksMsec() / 1000.0;
+        var look = Mathf.Max(State.V, RunOverRules.WarnMinSpeed) * WarnSeconds;
+        float hint = Party.FrontS + look / 2f, window = look / 2f + 2f;
+        // a warned body stands within 2 m of the line at most look + HalfLength ahead, and no stretch of line is shorter than the straight way
+        var reach = look + CartRules.HalfLength + 3f;
+        var at = Party.Track.Point(State.S);
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
-            Measure(hero.GlobalPosition, BodyRadius, out var b);
-            if (!RunOverRules.InWarning(State.S, State.V, b)) continue;
-            if (_warnedAt.TryGetValue(hero.Index, out var t) && now - t < WarnEvery) continue;
-            _warnedAt[hero.Index] = now;
+            var pos = hero.GlobalPosition;
+            if (pos.DistanceSquaredTo(at) > reach * reach) continue;
+            if (!Party.Track.Measure(pos, hint, window, out var b)) continue;
+            if (!RunOverRules.InWarning(State.S, State.V, b with { Radius = BodyRadius }, WarnSeconds)) continue;
+            if (_warnedAt.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
+            _warnedAt[hero.Index] = _now;
             Adventurer? speaker = null;
             foreach (var mate in party.Adventurers)
                 if (IsInstanceValid(mate) && mate.Cart == Cart && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
@@ -476,18 +478,18 @@ public partial class RailController : Node
     }
 
     /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
-    private void Wreck(PartyController party)
+    private void Wreck()
     {
-        State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
+        Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
         EventBus.Instance.Log("The cart is wrecked!");
+        Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
         _exitTaken.Clear();
-        foreach (var hero in party.Adventurers)
+        foreach (var rider in Aboard())
         {
-            if (!IsInstanceValid(hero) || hero.Cart != Cart) continue;
-            hero.Pumping = false;
-            GetOut(hero); // V is 0: no thrown run-over
-            if (!hero.Downed) hero.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
+            GetOut(rider); // V is 0: no thrown run-over
+            if (rider is IHazardVictim victim && !(rider is Adventurer { Downed: true }))
+                victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
         }
         Boarding.Cancel();
         RefreshHud();
@@ -515,14 +517,15 @@ public partial class RailController : Node
         return input with { Brake = brake, Pumpers = pumpers };
     }
 
-    private void Arrive(PartyController party)
+    private void Arrive()
     {
         StopIndex++;
-        foreach (var hero in party.Adventurers) if (IsInstanceValid(hero) && hero.Cart == Cart) hero.Pumping = false;
+        foreach (var rider in Cart.Riders.Values) if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Pumping = false;
         var last = StopIndex >= StopS.Length - 1;
         EventBus.Instance.Log(last ? "The cart reaches the end of the line." : $"The cart rolls into stop {StopIndex}.");
+        Raise(new CartEvent(CartEventKind.Arrived, Stop: StopIndex));
         Cart.Speed = 0f;
-        if (!PlayerAboard(party)) SetDownRiders(party); // the player was thrown or got out on the way: the companions step out here and the cart stays
+        if (!PlayerAboard()) SetDownRiders(); // the player was thrown or got out on the way: the companions step out here and the cart stays
         else if (!last) Boarding.Start(); // plan 3 adds the rail gate and the departure lever
         RefreshHud();
     }
@@ -544,42 +547,12 @@ public partial class RailController : Node
     public override void _Process(double delta)
     {
         if (!Current) return;
-        var s = NetSession.IsClient ? State.S : Mathf.Lerp(_prevS, State.S, (float)Engine.GetPhysicsInterpolationFraction());
-        PoseAt(s);
-        foreach (var hero in Main.Instance.Party.Adventurers)
-            if (IsInstanceValid(hero) && hero.Cart == Cart) hero.FollowSeat();
+        Party.Pose(NetSession.IsClient ? 1f : (float)Engine.GetPhysicsInterpolationFraction());
+        foreach (var rider in Cart.Riders.Values)
+            if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         if (NetSession.IsClient) return;
         _hudTimer -= (float)delta;
         if (_hudTimer <= 0f) RefreshHud();
-    }
-
-    private void PoseAt(float s)
-    {
-        if (!IsInstanceValid(Cart) || !IsInstanceValid(_track)) return;
-        Cart.Pose(_track.GlobalTransform * _track.Curve.SampleBakedWithRotation(Mathf.Clamp(s, 0f, _track.Length), true, true));
-    }
-
-    private Vector3 TrackPoint(float s) => _track.ToGlobal(_track.Curve.SampleBaked(Mathf.Clamp(s, 0f, _track.Length), true));
-
-    /// <summary>Rise over run at S: the track's height half a metre either side.</summary>
-    private float SlopeAt(float s)
-    {
-        float a = Mathf.Max(0f, s - 0.5f), b = Mathf.Min(_track.Length, s + 0.5f);
-        return b - a < 0.01f ? 0f : (TrackPoint(b).Y - TrackPoint(a).Y) / (b - a);
-    }
-
-    /// <summary>The signed change in flat heading over the next two metres, per metre (positive bends left).</summary>
-    private float CurvatureAt(float s)
-    {
-        float a = Mathf.Clamp(s, 0f, _track.Length), b = Mathf.Min(_track.Length, a + CurvatureSpan);
-        if (b - a < 0.01f) return 0f;
-        return Mathf.Wrap(Heading(b) - Heading(a), -Mathf.Pi, Mathf.Pi) / (b - a);
-    }
-
-    private float Heading(float s)
-    {
-        var f = -(_track.GlobalBasis * _track.Curve.SampleBakedWithRotation(s, true, true).Basis).Z;
-        return Mathf.Atan2(-f.X, -f.Z);
     }
 
     // ---- HUD -------------------------------------------------------------------------------------

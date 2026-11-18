@@ -15,11 +15,18 @@ public static class RunOverRules
     private static bool OnTheRails(in TrackBody b) =>
         b.Lateral <= CartRules.HalfWidth + b.Radius && b.Height >= FeetBelow && b.Height <= CartRules.Clearance;
 
-    /// <summary>The cart's front swept the body this step.</summary>
-    public static bool Hits(float sPrev, float sNow, in TrackBody b) =>
-        sNow > sPrev
-        && sPrev + CartRules.HalfLength < b.S && b.S <= sNow + CartRules.HalfLength
-        && OnTheRails(b);
+    /// <summary>
+    /// The cart's front swept the body this step. A cart running toward higher S (<paramref name="dir"/> +1) has its front
+    /// at S + HalfLength, one running toward lower S (−1) at S − HalfLength; it must be moving that way. The front's place
+    /// before the step is excluded and its place after it included, so a body is swept once.
+    /// </summary>
+    public static bool Hits(float sPrev, float sNow, in TrackBody b, int dir = 1)
+    {
+        if (dir >= 0 ? sNow <= sPrev : sNow >= sPrev) return false;
+        float frontPrev = sPrev + dir * CartRules.HalfLength, frontNow = sNow + dir * CartRules.HalfLength;
+        bool swept = dir >= 0 ? frontPrev < b.S && b.S <= frontNow : frontNow <= b.S && b.S < frontPrev;
+        return swept && OnTheRails(b);
+    }
 
     /// <summary>A crawling cart still warns this far ahead: the look-ahead reckons with at least this speed.</summary>
     public const float WarnMinSpeed = 3f;

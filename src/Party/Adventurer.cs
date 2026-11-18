@@ -17,7 +17,7 @@ namespace DungeonCrawler.Party;
 /// the PartyController), companion AI (<see cref="CompanionBrain"/>: follow in formation, fight by stance, drink
 /// potions when hurt, pick up loot they pass), another player over the network, or nobody while parked.
 /// </summary>
-public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
+public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable, ICartRider
 {
     public const float WalkSpeed = 4.0f;
     public const float SprintMultiplier = 1.6f;
@@ -103,6 +103,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public const float SeatedHeight = 1.3f;
     /// <summary>Where a seated body looks, relative to its seat's forward, in radians (mouselook, or a companion facing its target).</summary>
     private float _seatYaw;
+    /// <summary>A cart rider's id: the party index.</summary>
+    public int RiderId => Index;
+    /// <summary>Where a seated body looks relative to its seat's forward (radians), clamped to <see cref="MaxSeatYawDegrees"/>.</summary>
+    public float SeatYaw { get => _seatYaw; set => _seatYaw = ClampSeatYaw(value); }
     /// <summary>The cart's flat heading at the last <see cref="FollowSeat"/> (NaN: none yet), so a headset's room turns with the bends.</summary>
     private float _lastSeatHeading = float.NaN;
     // the seated desktop camera's ride feel (CartFeel): roll spring, a share of the track pitch, a speed FOV boost; all zero on foot
@@ -365,11 +369,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void Teleport(Vector3 position, Vector3? lookTarget = null)
     {
-        if (Seated) // a floor change, a load or a debug jump takes the rider out of the cart, and frees the seat so the cart's book agrees
-        {
-            if (IsInstanceValid(Cart)) Cart!.Seats.Leave(Index);
-            LeaveSeat();
-        }
+        if (Seated) LeaveSeat(); // a floor change, a load or a debug jump takes the rider out of the cart, and frees the seat so the cart's book agrees
         GlobalPosition = position;
         Velocity = Vector3.Zero;
         _fallStart = position.Y;
@@ -561,11 +561,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         TickView();
     }
 
-    /// <summary>Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in <see cref="MineCart.Seats"/>.</summary>
+    /// <summary>Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in <see cref="MineCart.Seats"/>; the body enters itself in <see cref="MineCart.Riders"/>.</summary>
     public void SitIn(MineCart cart, int seat)
     {
+        if (Cart != null && Cart != cart) LeaveSeat(); // never in two carts' books at once
         Cart = cart;
         Seat = seat;
+        cart.Riders[RiderId] = this;
         _seatYaw = 0f;
         _lastSeatHeading = float.NaN;
         Crouching = false;
@@ -581,7 +583,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         FollowSeat();
     }
 
-    /// <summary>Out of the seat and onto the ground at <paramref name="at"/>, moving at <paramref name="velocity"/> (a moving cart throws you). The caller frees the seat in <see cref="MineCart.Seats"/>.</summary>
+    /// <summary>Out of the seat and onto the ground at <paramref name="at"/>, moving at <paramref name="velocity"/> (a moving cart throws you). The seat is given back (<see cref="MineCart.Release"/>).</summary>
     public void GetOut(Vector3 at, Vector3 velocity)
     {
         LeaveSeat();
@@ -621,10 +623,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         return Mathf.Atan2(-f.X, -f.Z);
     }
 
-    /// <summary>Back to standing on foot, upright and facing where the rider looked; nothing is moved.</summary>
+    /// <summary>Back to standing on foot, upright and facing where the rider looked; nothing is moved. The cart's book frees the seat.</summary>
     private void LeaveSeat()
     {
         var forward = -GlobalTransform.Basis.Z;
+        if (Cart != null && IsInstanceValid(Cart)) Cart.Release(this);
         Cart = null;
         Seat = -1;
         Pumping = false;
