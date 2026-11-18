@@ -102,6 +102,7 @@ public partial class ServerWorld
         if (party != null && GodotObject.IsInstanceValid(party) && BodyOf(bot) is { } body)
         {
             body.Leader = null;
+            UnseatLeaving(bot); // a bot set aside in its seat steps out first, as a player who leaves does
             party.Park(bot.MemberIndex);
         }
         Broadcast(new PlayerLeft(bot.MemberIndex, bot.Name));

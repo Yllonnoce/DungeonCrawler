@@ -132,3 +132,10 @@ public static class SeatRiderKind
 /// leaps still in the air.
 /// </summary>
 [Msg(MsgKind.Leap)] public sealed record LeapMsg(int NetId, int FromCart, int ToCart, int Spot, bool Miss, double ServerTime) : NetMessage;
+
+/// <summary>
+/// A seated player's say over the party's cart (client to server): forward pumps, back brakes. Sent on every change while
+/// seated and every <see cref="Dungeon.Rails.RideInputRules.ResendSeconds"/> while either is held. The server keeps the last one per
+/// member and lets it go on an unseat, a disconnect, or <see cref="Dungeon.Rails.RideInputRules.HeldTimeoutSeconds"/> of silence.
+/// </summary>
+[Msg(MsgKind.RideIntent)] public sealed record RideIntent(bool Pump, bool Brake) : NetMessage;

@@ -664,7 +664,14 @@ public partial class ClientWorld : Node
             if (_npcs.TryGetValue(n.Id, out var npc) && GodotObject.IsInstanceValid(npc)) npc.ApplyNetState(n, s.Tick, now);
         foreach (var p in s.Players)
         {
-            if (p.Member == MemberIndex) { if (!_echoed) { _echoed = true; Trace.Add("echo"); } continue; }
+            if (p.Member == MemberIndex)
+            {
+                if (!_echoed) { _echoed = true; Trace.Add("echo"); }
+                // the server's word on our own pump (its Inputs set it from our RideIntent): our seated hero shows it as other screens do
+                ServerSaysPumping = p.Flags2.HasFlag(PoseFlags2.Pumping);
+                if (p.Member < party.Adventurers.Length && party.Adventurers[p.Member] is { } own) own.Pumping = own.Seated && ServerSaysPumping;
+                continue;
+            }
             if (p.Member >= party.Adventurers.Length) continue;
             if (!_players.TryGetValue(p.Member, out var buf)) _players[p.Member] = buf = new PoseBuffer();
             buf.Push(now, p, s.Tick);
@@ -674,6 +681,9 @@ public partial class ClientWorld : Node
     }
 
     private bool _echoed;
+
+    /// <summary>The last snapshot's Pumping flag for this client's own hero (the server's Inputs; the RIDE pass reads it).</summary>
+    internal bool ServerSaysPumping { get; private set; }
 
     private void ApplyVitals(Vitals v)
     {

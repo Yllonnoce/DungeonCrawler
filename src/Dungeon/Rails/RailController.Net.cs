@@ -102,23 +102,9 @@ public partial class RailController : ISlopeSource
     }
 
     /// <summary>
-    /// Test hook (--test-net-server's RIDE pass): seat party member <paramref name="member"/> (a remote player's hero) in the first free
-    /// hero seat, as boarding would; its SeatMsg goes out with the tick's cart state. Task 5 boards remote players for real.
-    /// </summary>
-    internal bool DebugSeat(int member)
-    {
-        if (NetSession.IsClient || !Current || Core.Main.Instance?.Party is not { } party || member < 0 || member >= party.Adventurers.Length) return false;
-        var hero = party.Adventurers[member];
-        if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) return false;
-        var seated = SeatHero(hero);
-        RefreshHud();
-        Flush();
-        return seated;
-    }
-
-    /// <summary>
-    /// Test hook (--test-net-server's RIDE pass): the cart departs from the stop it is held at, empty, as a boarding would send it
-    /// (a Departed event arms the next ride). Task 5 replaces it with a real boarding. False when it cannot leave.
+    /// Test hook (--test-net-server's RIDE pass): the cart departs from the stop it is held at, as a boarding would send it (a Departed
+    /// event arms the next ride), whoever is aboard and whatever the gate. The pass boards the client for real at the landing; this
+    /// sends the empty cart on through rides 2 and 3 for their carts. False when it cannot leave.
     /// </summary>
     internal bool DebugDepart()
     {
@@ -136,6 +122,33 @@ public partial class RailController : ISlopeSource
     }
 
     // ---- a client's side ---------------------------------------------------------------------
+
+    private bool _sentPump, _sentBrake;
+    private Net.Cadence _rideResend = new(RideInputRules.ResendSeconds);
+
+    /// <summary>
+    /// Client, each physics tick: this client's hero seated in the cart tells the server its stick (<see cref="RideIntent"/>): on every
+    /// change, and every <see cref="RideInputRules.ResendSeconds"/> of elapsed time while it pumps or brakes. On foot nothing is sent
+    /// (the server let go of it at the unseat). No allocation unless it sends.
+    /// </summary>
+    private void SendRideIntent(double delta)
+    {
+        var me = Core.Main.Instance?.Party?.Local;
+        if (me == null || me.Cart != Cart || me.Downed)
+        {
+            _sentPump = _sentBrake = false;
+            _rideResend.Reset();
+            return;
+        }
+        var (pump, brake) = RideInputRules.FromMove(me.Intent.Move.Y);
+        var changed = pump != _sentPump || brake != _sentBrake;
+        var resend = (pump || brake) && _rideResend.Advance(delta) > 0;
+        if (!changed && !resend) return;
+        if (changed) _rideResend.Reset();
+        _sentPump = pump;
+        _sentBrake = brake;
+        NetSession.Instance.Send(new RideIntent(pump, brake));
+    }
 
     private CartFollower? _follow;
     private byte _netFlags;

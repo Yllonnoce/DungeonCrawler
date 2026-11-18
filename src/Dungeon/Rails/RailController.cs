@@ -25,7 +25,7 @@ public partial class RailController : Node
 
     /// <summary>A hero mangled by the cart carries this as MangledBy: no hazard has it, so it always counts as armed.</summary>
     public const int HazardIndex = 1000;
-    /// <summary>Companions this close to the human who boards hop in with them.</summary>
+    /// <summary>A player's own companions this close to them hop in when they board (single player: every companion; online: their bots).</summary>
     public const float CompanionBoardRange = 25f;
     /// <summary>The cart's HUD line shows while a hero is seated or this close.</summary>
     public const float HudRange = 12f;
@@ -334,12 +334,34 @@ public partial class RailController : Node
         Raise(new CartEvent(CartEventKind.Boarding, Stop: Halted ? -1 : StopIndex));
     }
 
+    /// <summary>The cart's prompt for <paramref name="hero"/>, on every peer (a client's state is the server's: its mode, stop and seat book).</summary>
     private string PromptFor(Adventurer hero)
     {
-        if (NetSession.IsClient || hero.Control == ControlKind.Remote) return ""; // co-op riding is plan 5
-        if (hero.Cart == Cart) return "Get out";
-        if (StopIndex >= StopS.Length - 1) return ""; // the end of the line: nowhere left to ride
-        return State.Mode == CartMode.Held && !hero.Seated ? "Board the cart" : "";
+        if (hero.Seated && hero.Cart != Cart) return ""; // in another seat book
+        return RideInputRules.BoardPrompt(hero.Cart == Cart, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree());
+    }
+
+    /// <summary>A hero seat (0-3) of the cart's book is free. No allocation.</summary>
+    private bool HeroSeatFree()
+    {
+        for (var i = 0; i < CartSeats.HeroSeats; i++) if (Cart.Seats.OccupantOf(i) == null) return true;
+        return false;
+    }
+
+    /// <summary>A player's hero: the one played here (solo) or another player's on the server.</summary>
+    private static bool IsPlayer(Adventurer hero) => hero.Control is ControlKind.LocalHuman or ControlKind.Remote;
+
+    /// <summary>
+    /// <paramref name="mate"/> is <paramref name="player"/>'s own companion: solo every companion is; online, a hero bot whose owner is
+    /// that player (one player's bots never ride off in another's cart).
+    /// </summary>
+    private static bool OwnCompanion(Adventurer mate, Adventurer player)
+    {
+        if (mate.Control != ControlKind.Companion) return false;
+        if (!NetSession.IsServer || NetSession.Instance.Server is not { } world) return true;
+        var bot = world.Registry.ByMember(mate.Index);
+        var owner = world.Registry.ByMember(player.Index);
+        return bot is { IsBot: true } && owner != null && string.Equals(bot.BotOwner, owner.Name, StringComparison.OrdinalIgnoreCase);
     }
 
     private void Use(Adventurer actor)
@@ -348,20 +370,28 @@ public partial class RailController : Node
         Flush();
     }
 
+    /// <summary>
+    /// A hero uses the cart (server or solo; a remote player's through its InteractIntent, reach checked there): seated, it gets out;
+    /// on foot, it boards a Held cart short of the end of the line with a hero seat free. A player who boards brings their own
+    /// companions within <see cref="CompanionBoardRange"/> and the escorts onto the bench; the gate is judged only to start the countdown.
+    /// </summary>
     private void UseCart(Adventurer actor)
     {
-        if (NetSession.IsClient || actor.Control == ControlKind.Remote || !Current) return;
+        if (NetSession.IsClient || !Current) return;
         if (actor.Cart == Cart) { GetOutWithParty(actor); return; }
-        if (actor.Seated || actor.Downed || State.Mode != CartMode.Held) return;
+        if (actor.Seated || actor.Downed || actor.Parked || State.Mode != CartMode.Held) return;
         if (StopIndex >= StopS.Length - 1) return; // the end of the line: nowhere left to ride (the prompt offers nothing either)
-        if (actor.Control != ControlKind.LocalHuman && !PlayerAboard()) return; // a companion rides only with a player
+        var player = IsPlayer(actor);
+        if (!player && !PlayerAboard()) return; // a companion rides only with a player
         if (!SeatHero(actor)) return;
-        if (actor.Control == ControlKind.LocalHuman)
+        if (player)
+        {
             foreach (var mate in Main.Instance.Party.Active)
-                if (mate != actor && mate.Control == ControlKind.Companion && !mate.Downed && !mate.Seated
+                if (mate != actor && !mate.Downed && !mate.Seated && OwnCompanion(mate, actor)
                     && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
-        if (actor.Control == ControlKind.LocalHuman) SeatBench(actor.GlobalPosition);
+            SeatBench(actor.GlobalPosition);
+        }
         if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateClear) StartBoarding();
         RefreshHud();
     }
@@ -389,12 +419,25 @@ public partial class RailController : Node
         return true;
     }
 
-    /// <summary>A player's hero sits in this cart, awake: the cart only leaves (and companions only board) with one aboard. Remote players count from plan 5.</summary>
+    /// <summary>A player's hero (played here, or another player's on the server) sits in this cart, awake: the cart only leaves (and companions only board) with one aboard.</summary>
     private bool PlayerAboard()
     {
         foreach (var rider in Cart.Riders.Values)
-            if (rider is Adventurer hero && IsInstanceValid(hero) && !hero.Downed && hero.Control == ControlKind.LocalHuman) return true;
+            if (rider is Adventurer hero && IsInstanceValid(hero) && !hero.Downed && !hero.Parked && IsPlayer(hero)) return true;
         return false;
+    }
+
+    /// <summary>
+    /// Server: a player left the game while seated (before their body is parked): it steps out beside the lane where the cart is, with
+    /// no throw, no run-over and no log, and the seat is freed (the SeatMsg goes out with the tick). The parked pose is that spot.
+    /// </summary>
+    public void UnseatQuietly(Adventurer hero)
+    {
+        if (NetSession.IsClient || !Current || !IsInstanceValid(hero) || hero.Cart != Cart) return;
+        var at = _builder.Surface(ExitCellNear(Cart.GlobalPosition, atStop: true, useTaken: false));
+        hero.GetOut(at, Vector3.Zero); // the cart tells it (Unseated), never as a throw
+        RefreshHud();
+        Flush();
     }
 
     /// <summary>Every rider steps out beside the lane at the stop (the cart is held there): nobody rides on without a player.</summary>
@@ -462,15 +505,21 @@ public partial class RailController : Node
         return true;
     }
 
-    /// <summary>The actor gets out; when the human steps out of a slow cart, the seated companions follow (a hero thrown out at speed leaves them riding).</summary>
+    /// <summary>
+    /// The actor gets out; when a player steps out of a slow cart, their own seated companions follow, and the bench too once no player
+    /// is left aboard (a player thrown out at speed leaves them riding).
+    /// </summary>
     private void GetOutWithParty(Adventurer actor)
     {
         _exitTaken.Clear();
         var slow = State.V < RunOverRules.ThrownAtSpeed;
         GetOut(actor);
-        if (actor.Control == ControlKind.LocalHuman && slow)
+        if (IsPlayer(actor) && slow)
+        {
+            var noPlayer = !PlayerAboard();
             foreach (var rider in Aboard())
-                if (rider is Adventurer { Control: ControlKind.Companion } or Npc) GetOut(rider);
+                if (rider is Adventurer mate && OwnCompanion(mate, actor) || rider is Npc && noPlayer) GetOut(rider);
+        }
         RefreshHud();
     }
 
@@ -561,6 +610,7 @@ public partial class RailController : Node
     {
         _now += delta;
         if (!NetSession.IsClient && Current) Tick((float)delta);
+        else if (NetSession.IsClient && Current) SendRideIntent(delta);
         Flush();
     }
 
@@ -765,27 +815,50 @@ public partial class RailController : Node
         if (!GateUp(pick)) EventBus.Instance.Log("The gate is down. Clear the stop.");
     }
 
-    /// <summary>The seated human brakes (back) or pumps (forward); seated companions pump on a climb or when slow, two pumpers at most.</summary>
+    /// <summary>
+    /// Each seated player brakes (back) or pumps (forward): the one played here from its stick, another player's (on the server) from
+    /// its last <see cref="RideIntent"/>. Seated companions pump on a climb, when slow or before a jump. <see cref="RideInputRules.Inputs"/>
+    /// decides: any player's brake cancels every pump, players pump first, companions fill up to two. Every pumping rider, player or
+    /// companion, is marked <see cref="Adventurer.Pumping"/> (the snapshot shows it). No allocation.
+    /// </summary>
     private CartInput Inputs(PartyController party, CartInput input)
     {
-        bool brake = false;
-        var pumpers = 0;
-        if (party.Local is { } me && me.Cart == Cart && !me.Downed && me.Control == ControlKind.LocalHuman)
+        var playersPumping = 0;
+        var anyBrake = false;
+        var companions = 0;
+        var server = NetSession.IsServer ? NetSession.Instance.Server : null;
+        foreach (var hero in party.Adventurers)
         {
-            var move = me.Intent.Move; // forward is −Y (move_forward is the vector's negative Y)
-            brake = move.Y > 0.5f;
-            if (move.Y < -0.5f) pumpers = 1;
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart || hero.Downed) continue;
+            if (hero.Control == ControlKind.Companion) { companions++; continue; }
+            var (pump, brake) = PlayerRide(hero, party, server);
+            if (pump) playersPumping++;
+            anyBrake |= brake;
         }
-        var companionsPump = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
-        var most = DebugTools.Instance?.PumperCap ?? 2; // a test's cap (--test-chase's one-pumper jump); the game's is two
+        var companionsWant = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
+        var most = DebugTools.Instance?.PumperCap ?? RideInputRules.MaxPumpers; // a test's cap (--test-chase's one-pumper jump); the game's is two
+        var (pumpers, brakeOn) = RideInputRules.Inputs(playersPumping, anyBrake, companionsWant, companions, most);
+        var companionPumps = pumpers - (brakeOn ? 0 : playersPumping);
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart) continue;
-            var pump = companionsPump && !brake && pumpers < most && hero.Control == ControlKind.Companion && !hero.Downed;
-            if (pump) pumpers++;
-            hero.Pumping = pump;
+            var pumping = false;
+            if (!hero.Downed && !brakeOn)
+            {
+                if (hero.Control == ControlKind.Companion) { if (companionPumps > 0) { companionPumps--; pumping = true; } }
+                else pumping = PlayerRide(hero, party, server).Pump;
+            }
+            hero.Pumping = pumping;
         }
-        return input with { Brake = brake, Pumpers = pumpers };
+        return input with { Brake = brakeOn, Pumpers = pumpers };
+    }
+
+    /// <summary>A seated player's pump and brake: the stick of the one played here, the last ride intent of another player's (server), else none.</summary>
+    private static (bool Pump, bool Brake) PlayerRide(Adventurer hero, PartyController party, ServerWorld? server)
+    {
+        if (hero.Control == ControlKind.LocalHuman) return hero == party.Local ? RideInputRules.FromMove(hero.Intent.Move.Y) : (false, false); // forward is −Y (move_forward is the vector's negative Y)
+        if (hero.Control == ControlKind.Remote && server != null) return server.RideInputOf(hero.Index);
+        return (false, false);
     }
 
     /// <summary>

@@ -373,7 +373,6 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         var wasSeated = Seated;
         if (Seated) LeaveSeat(); // a floor change, a load or a debug jump takes the rider out of the cart, and frees the seat so the cart's book agrees
         GlobalPosition = position;
-        if (wasSeated && Remote != null && Net.NetSession.IsServer) Remote.Position = position; // a remote body eases toward its last pose: that pose was the seat
         Velocity = Vector3.Zero;
         _fallStart = position.Y;
         _falling = false;
@@ -381,6 +380,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (lookTarget is { } t) FaceToward(t);
         _pitch = 0;
         Camera.Rotation = Vector3.Zero;
+        if (wasSeated) UnseatedOnServer(position); // as every server unseat of a remote player: its screen is told, its seated poses dropped
     }
 
     public void FaceToward(Vector3 target)
@@ -600,13 +600,19 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         _falling = false;
         _mover.Reset();
         _action = CompanionAction.Idle;
-        // the server set a remote player down (a stop, a wreck, a throw, getting out with the party): its own screen is told where at
-        // once, and its body eases toward the landing rather than back toward the seat its last poses named
-        if (Control == ControlKind.Remote && Net.NetSession.IsServer)
-        {
-            if (Remote != null) { Remote.Position = at; Remote.Velocity = Vector3.Zero; Remote.Seated = false; }
-            Net.NetSession.Instance.Server?.ForceUnseatedPose(Index, at, Rotation.Y);
-        }
+        UnseatedOnServer(at);
+    }
+
+    /// <summary>
+    /// The server took this body out of its seat (a stop, a wreck, a throw, getting out with the party, a quiet unseat, a teleport) and
+    /// set it at <paramref name="at"/>: a remote body eases toward there, facing as it stands now, rather than back toward the seat its
+    /// last poses named; a remote player's own screen is told where at once and its seated poses still in flight are dropped.
+    /// </summary>
+    private void UnseatedOnServer(Vector3 at)
+    {
+        if (!Net.NetSession.IsServer) return;
+        if (Remote != null) { Remote.Position = at; Remote.Yaw = Rotation.Y; Remote.Velocity = Vector3.Zero; Remote.Seated = false; }
+        if (Control == ControlKind.Remote) Net.NetSession.Instance.Server?.ForceUnseatedPose(Index, at, Rotation.Y);
     }
 
     /// <summary>

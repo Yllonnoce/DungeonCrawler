@@ -136,27 +136,77 @@ public partial class NetTestFlow : Node
                 GD.Print($"[net-server] ride: threw {thrower.DebugThrowSwitches(3)} switch(es) of ride 3 for the client to see");
             }
         }
-        // the carts on the wire: the cart departs each stop empty (DebugDepart) until it reaches stop 3, so rides 1 to 3 run their carts
-        if (_rideThrown && _elapsed - _rideReadyAt >= RideFirstDeparture && Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc))
+        // riding (task 5): at the landing the client's hero is put beside the cart and boards it through its own InteractIntent; it pumps
+        // out of the landing and brakes on the way (RideIntent), and gets out at stop 1 through the intent. Then the cart goes on empty
+        // (DebugDepart) through rides 2 and 3, so their carts run; at stop 3 the hero is put beside it again, boards, and leaves seated
+        if (_rideThrown && _elapsed - _rideReadyAt >= RideFirstDeparture && Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc)
+            && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null) is { } rider && Main.Instance?.Party is { } party && rider.MemberIndex < party.Adventurers.Length)
         {
-            var held = rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex < RideLastStop;
-            if (!held) _rideHeldSince = -1;
+            var hero = party.Adventurers[rider.MemberIndex];
+            var held = rc.State.Mode == Dungeon.Rails.CartMode.Held;
+            if (!_rideShoved && held && rc.StopIndex == 0 && !hero.Seated)
+            {
+                _rideShoved = true;
+                _rideMember = rider.MemberIndex;
+                _rideSafeAt = hero.GlobalPosition; // where it waited at the landing, out of every fight
+                var beside = WithinReach(rc);
+                hero.Shove(beside);
+                GD.Print(FormattableString.Invariant($"[net-server] ride: {rider.Name} is put beside the cart at the landing ({beside.X:0.00}, {beside.Y:0.00}, {beside.Z:0.00}), {beside.DistanceTo(rc.Cart.GlobalPosition):0.00} m from it"));
+            }
+            if (_rideShoved && !_rideSeated && hero.Seated && hero.Cart == rc.Cart)
+            {
+                _rideSeated = true;
+                GD.Print($"[net-server] ride: {rider.Name} boarded through the intent in seat {hero.Seat} (traced {(world.Trace.Contains($"aboard:{rider.Name}") ? "aboard" : "NOTHING")}); the countdown runs: {rc.Boarding.Running}");
+            }
+            if (_rideSeated && !_rideLeftLanding && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 0)
+            {
+                _rideLeftLanding = true;
+                _rideDeparts++;
+                _rideRollingSince = _elapsed;
+                GD.Print($"[net-server] ride: the cart departs the landing with {rider.Name} aboard (ride 1 armed: {Dungeon.Rails.RailEncounterController.Instance?.ArmedRide})");
+            }
+            if (_rideLeftLanding && rc.StopIndex == 0 && rc.State.Mode == Dungeon.Rails.CartMode.Rolling)
+            {
+                var input = rc.Party.LastInput;
+                if (_elapsed - _rideRollingSince <= 0.5) _rideMostPumpers = Math.Max(_rideMostPumpers, input.Pumpers);
+                else if (!_ridePumpTold)
+                {
+                    _ridePumpTold = true;
+                    _ridePumpOk = _rideMostPumpers >= 1;
+                    GD.Print($"[net-server] ride: the cart left the landing with {_rideMostPumpers} pumper(s) from the client's RideIntent ({(_ridePumpOk ? "ok" : "NONE")})");
+                }
+                if (!_rideHeroPumped && hero.Pumping) { _rideHeroPumped = true; GD.Print($"[net-server] ride: {rider.Name}'s hero pumps here (Pumping, in the snapshots)"); }
+                if (input.Brake)
+                {
+                    if (_rideBrakeFromV < 0f) _rideBrakeFromV = rc.State.V;
+                    _rideBrakeMinV = Mathf.Min(_rideBrakeMinV, rc.State.V);
+                }
+                else if (_rideBrakeFromV >= 0f && !_rideBrakeTold)
+                {
+                    _rideBrakeTold = true;
+                    _rideBrakeOk = _rideBrakeFromV - _rideBrakeMinV >= 1f;
+                    GD.Print(FormattableString.Invariant($"[net-server] ride: the client's brake took V from {_rideBrakeFromV:0.00} to {_rideBrakeMinV:0.00} m/s ({(_rideBrakeOk ? "ok" : "TOO LITTLE")})"));
+                }
+            }
+            // rides 2 and 3: on from stops 1 and 2 with nobody aboard
+            var aboard = false;
+            foreach (var r in rc.Cart.Riders.Values) if (r is Party.Adventurer) { aboard = true; break; }
+            var mayGo = held && rc.StopIndex >= 1 && rc.StopIndex < RideLastStop && _rideSetDown && !aboard;
+            if (!mayGo) _rideHeldSince = -1;
             else if (_rideHeldSince < 0) _rideHeldSince = _elapsed;
             else if (_elapsed - _rideHeldSince >= RideDwell && rc.DebugDepart())
             {
                 _rideDeparts++;
                 _rideHeldSince = -1;
                 GD.Print($"[net-server] ride: the cart departs stop {rc.StopIndex} empty (ride {rc.StopIndex + 1} armed: {Dungeon.Rails.RailEncounterController.Instance?.ArmedRide})");
-                // seats on the wire: the client's hero is seated here as the cart rolls out of the landing; with no player of the
-                // server's aboard, the stop it rolls into sets it down (a server GetOut: a SeatMsg and a ForcePose to its screen)
-                if (_rideDeparts == 1 && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null) is { } rider && Main.Instance?.Party is { } party)
-                {
-                    _rideMember = rider.MemberIndex;
-                    var hero = party.Adventurers[rider.MemberIndex];
-                    _rideSafeAt = hero.GlobalPosition; // where it waited at the landing, out of every fight
-                    _rideSeated = rc.DebugSeat(rider.MemberIndex);
-                    GD.Print($"[net-server] ride: seated {rider.Name} in seat {hero.Seat} as the cart rolls ({(_rideSeated ? "ok" : "REFUSED")})");
-                }
+            }
+            // stop 3: the hero (back at the landing) is put beside the cart once more; it boards and leaves the game seated
+            if (!_rideShovedAtEnd && held && _rideDeparts >= RideLastStop && rc.StopIndex >= RideLastStop && _rideSetDown && _rideSafeAt == null && !hero.Seated && !hero.Parked)
+            {
+                _rideShovedAtEnd = true;
+                var beside = WithinReach(rc);
+                hero.Shove(beside);
+                GD.Print(FormattableString.Invariant($"[net-server] ride: {rider.Name} is put beside the cart at stop {rc.StopIndex} to board it and leave seated ({beside.DistanceTo(rc.Cart.GlobalPosition):0.00} m from it)"));
             }
         }
         if (_rideSeated && !_rideSetDown && _rideMember >= 0 && Main.Instance?.Party is { } p2 && _rideMember < p2.Adventurers.Length && !p2.Adventurers[_rideMember].Seated)
@@ -181,7 +231,7 @@ public partial class NetTestFlow : Node
         }
         if (world.Trace.Contains("empty"))
         {
-            var want = new[] { "join:", "ready:", "floor:12", "left:" };
+            var want = new[] { "join:", "ready:", "floor:12", "aboard:", "unseat-quiet:", "left:" };
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -194,11 +244,45 @@ public partial class NetTestFlow : Node
             var reached = Dungeon.Rails.RailController.Instance is { } end && IsInstanceValid(end) ? end.StopIndex : -1;
             var rode = _rideDeparts >= RideLastStop && reached >= RideLastStop;
             var seats = _rideSeated && _rideSetDown;
-            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero seated and set down: {(seats ? "yes" : "NO")}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
+            var riding = _ridePumpOk && _rideHeroPumped && _rideBrakeOk;
+            var quiet = QuietUnseatChecked(world, out var quietWhy);
+            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet;
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
             return;
         }
         if (_elapsed > 400) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
+    }
+
+    // riding (plan 5 task 5): the server's side of the boarding, the pump, the brake and the quiet unseat
+    private bool _rideShoved, _rideLeftLanding, _ridePumpTold, _ridePumpOk, _rideHeroPumped, _rideBrakeTold, _rideBrakeOk, _rideShovedAtEnd;
+    private double _rideRollingSince = -1;
+    private int _rideMostPumpers;
+    private float _rideBrakeFromV = -1f, _rideBrakeMinV = float.MaxValue;
+
+    /// <summary>A spot 2.2 m from the cart's middle toward where a rider steps out (that cell's middle is a cell away, past the 3.5 m reach of an intent).</summary>
+    private static Vector3 WithinReach(Dungeon.Rails.RailController rc)
+    {
+        var cart = rc.Cart.GlobalPosition;
+        var beside = rc.StandBesideCart();
+        var flat = new Vector3(beside.X - cart.X, 0f, beside.Z - cart.Z);
+        if (flat.LengthSquared() < 0.01f) return beside;
+        var at = cart + flat.Normalized() * 2.2f;
+        return new Vector3(at.X, beside.Y, at.Z);
+    }
+
+    /// <summary>The client left seated at stop 3: its body stands where the quiet unseat put it (beside the lane, off the rails), its seat is free, and its parked pose is that spot.</summary>
+    private bool QuietUnseatChecked(ServerWorld world, out string why)
+    {
+        if (world.LastQuietUnseat is not { } at) { why = "NO quiet unseat"; return false; }
+        var slot = world.Registry.ByMember(_rideMember);
+        var parked = slot?.ParkedPose is { } pp ? new Vector3(pp.X, pp.Y, pp.Z) : (Vector3?)null;
+        var rc = Dungeon.Rails.RailController.Instance;
+        var hero = Main.Instance?.Party is { } party && _rideMember >= 0 && _rideMember < party.Adventurers.Length ? party.Adventurers[_rideMember] : null;
+        var free = rc != null && IsInstanceValid(rc) && hero != null && rc.Cart.Seats.SeatOf(hero.RiderId) == null && !rc.Cart.Riders.ContainsKey(hero.RiderId) && !hero.Seated;
+        var offRails = Main.Instance?.Builder.Layout is { } layout && !layout.IsRail(Dungeon.DungeonBuilder.WorldToCell(at)) && layout.IsWalkable(Dungeon.DungeonBuilder.WorldToCell(at));
+        var gap = parked is { } p ? p.DistanceTo(at) : float.PositiveInfinity;
+        why = FormattableString.Invariant($"unseated at ({at.X:0.00}, {at.Y:0.00}, {at.Z:0.00}) {(offRails ? "beside the lane" : "ON THE RAILS")}, seat freed {(free ? "yes" : "NO")}, parked pose {(parked == null ? "NONE" : $"{gap:0.00} m from it")}");
+        return free && offRails && gap <= 0.05f;
     }
 
     private int _ridePropChecks, _rideAsks, _ridePropMatched, _rideMostCarts;
@@ -247,6 +331,82 @@ public partial class NetTestFlow : Node
                 GD.Print(FormattableString.Invariant($"[net] ride: set down within {off:0.00} m of the server's landing ({landing.At.X:0.00}, {landing.At.Y:0.00}, {landing.At.Z:0.00}) {after:0.00} s after its SeatMsg"));
             }
             else if (after > 0.5) _rideSeatFail ??= FormattableString.Invariant($"0.5 s after the server set our hero down it stood {off:0.00} m from the landing (seated here: {me.Seated})");
+        }
+    }
+
+    // riding (plan 5 task 5): the client's side of the boarding, the pump, the brake and the get-out
+    private int _ridePhase;
+    private double _rideAskedAt = -1, _rideRolledAt = -1, _rideBrakeAt = -1;
+    private bool _rideSawPumping, _rideBraked, _rideBrakeReleased;
+
+    /// <summary>Ask to board through the intent once our hero stands within reach and the cart offers it (again every 2 s until seated).</summary>
+    private void TryBoard(NetSession net, Dungeon.Rails.RailController rc, Party.Adventurer me, string where)
+    {
+        if (me.Seated || me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition) > 3f) return;
+        var prompt = rc.Cart.Prompt;
+        if (prompt != "Board the cart" || (_rideAskedAt >= 0 && _clock - _rideAskedAt < 2)) return;
+        if (NetRefResolver.RefOf(rc.Cart) is not { } cartRef) { Finish("[net]", false, "ride: the party's cart has no net ref here"); net.Disconnect("test finished"); return; }
+        _rideAskedAt = _clock;
+        net.Send(new InteractIntent(cartRef));
+        GD.Print($"[net] ride: the cart offers \"{prompt}\" here at {where}; asked to board through the intent ({cartRef})");
+    }
+
+    /// <summary>
+    /// Step 52's riding, every tick: board at the landing (the server puts us beside the cart), pump out of it with the stick forward
+    /// (our RideIntent) until the server's snapshot shows our hero pumping, brake for 0.6 s on the way, and get out at stop 1 through the
+    /// intent. True when the step should wait (a failure was reported).
+    /// </summary>
+    private bool RideRiding(NetSession net, ClientWorld client, Main main, Dungeon.Rails.RailController rc)
+    {
+        if (main.Party.Local is not { } me) return false;
+        switch (_ridePhase)
+        {
+            case 0: // the landing
+                if (me.Seated && me.Cart == rc.Cart)
+                {
+                    _ridePhase = 1;
+                    main.Party.ForcedMoveInput = new Vector2(0, -1); // the stick forward: pump
+                    GD.Print($"[net] ride: boarded through the intent; the prompt here now says \"{rc.Cart.Prompt}\"; pumping (stick forward)");
+                    if (rc.Cart.Prompt != "Get out") { Finish("[net]", false, $"ride: seated, the cart's prompt here says \"{rc.Cart.Prompt}\" (want Get out)"); net.Disconnect("test finished"); return true; }
+                    return false;
+                }
+                if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 0) TryBoard(net, rc, me, "the landing");
+                return false;
+            case 1: // ride 1 with us aboard
+                if (rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 0)
+                {
+                    if (_rideRolledAt < 0) _rideRolledAt = _clock;
+                    if (!_rideSawPumping && !_rideBraked && client.ServerSaysPumping && me.Pumping)
+                    {
+                        _rideSawPumping = true;
+                        GD.Print($"[net] ride: the server shows our hero pumping (snapshot Pumping) {_clock - _rideRolledAt:0.00} s after the cart left");
+                    }
+                    if (!_rideBraked && _rideSawPumping && _clock - _rideRolledAt >= 2.0)
+                    {
+                        _rideBraked = true;
+                        _rideBrakeAt = _clock;
+                        main.Party.ForcedMoveInput = new Vector2(0, 1); // the stick back: brake
+                        GD.Print(FormattableString.Invariant($"[net] ride: braking (stick back) at V={rc.State.V:0.00} m/s"));
+                    }
+                    if (_rideBraked && !_rideBrakeReleased && _clock - _rideBrakeAt >= 0.6)
+                    {
+                        _rideBrakeReleased = true;
+                        main.Party.ForcedMoveInput = new Vector2(0, -1);
+                        GD.Print(FormattableString.Invariant($"[net] ride: brake let go at V={rc.State.V:0.00} m/s; pumping again"));
+                    }
+                }
+                if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 1 && me.Seated)
+                {
+                    main.Party.ForcedMoveInput = null;
+                    var prompt = rc.Cart.Prompt;
+                    if (prompt != "Get out" || NetRefResolver.RefOf(rc.Cart) is not { } cartRef) { Finish("[net]", false, $"ride: at stop 1 the cart's prompt here says \"{prompt}\" (want Get out)"); net.Disconnect("test finished"); return true; }
+                    net.Send(new InteractIntent(cartRef));
+                    _ridePhase = 2;
+                    GD.Print("[net] ride: at stop 1; asked to get out through the intent");
+                }
+                return false;
+            default:
+                return false;
         }
     }
 
@@ -302,16 +462,32 @@ public partial class NetTestFlow : Node
                 if (Dungeon.Rails.RailNet.Instance is { } rn && IsInstanceValid(rn)) _rideMostCarts = Math.Max(_rideMostCarts, rn.ClientCartCount);
                 RideSeatChecks(main, rc);
                 if (_rideSeatFail != null) { Finish("[net]", false, $"ride: {_rideSeatFail}"); net.Disconnect("test finished"); return; }
+                if (RideRiding(net, client, main, rc)) return;
                 if (_rideSawRolling && rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex >= 3)
                 {
                     GD.Print($"[net] ride: the cart followed the server's to stop {rc.StopIndex} (S={rc.State.S:0.0}); up to {_rideMostCarts} other cart(s) here at once");
                     if (!rc.Following || _rideMostCarts == 0) { Finish("[net]", false, $"ride: the cart never followed a state (following={rc.Following}) or no slag cart ever showed here ({_rideMostCarts})"); net.Disconnect("test finished"); return; }
                     if (!_rideCrewOk || !_rideSeatOk || !_rideLandOk) { Finish("[net]", false, $"ride: seats: crew in their wagons {(_rideCrewOk ? "yes" : "NO")}, our hero seated {(_rideSeatOk ? "yes" : "NO")}, set down at the server's landing {(_rideLandOk ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
-                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons, our hero seated and set down where the server put it");
-                    net.Disconnect("test finished");
+                    if (!_rideSawPumping || !_rideBraked) { Finish("[net]", false, $"ride: riding: the server showed our pump {(_rideSawPumping ? "yes" : "NO")}, we braked {(_rideBraked ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
+                    _clock = 0; _step = 53; // board at stop 3 and leave seated
                     return;
                 }
                 if (_clock > 300) { Finish("[net]", false, $"ride: the cart never reached stop 3 here (stop {rc.StopIndex}, mode {rc.State.Mode}, following={rc.Following})"); net.Disconnect("test finished"); }
+                return;
+            }
+            case 53:
+            {
+                // the server puts our hero beside the cart at stop 3: board it through the intent, then leave the game seated
+                if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || main.Party.Local is not { } me) return;
+                if (me.Seated && me.Cart == rc.Cart)
+                {
+                    GD.Print($"[net] ride: boarded at stop {rc.StopIndex} in seat {me.Seat}; leaving the game seated");
+                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons; our hero boarded through the intent, pumped (shown by the server), braked, got out where the server put it, and boarded again to leave seated");
+                    net.Disconnect("test finished");
+                    return;
+                }
+                TryBoard(net, rc, me, "stop 3");
+                if (_clock > 30) { Finish("[net]", false, $"ride: never boarded at stop 3 (prompt \"{rc.Cart.Prompt}\", {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart)"); net.Disconnect("test finished"); }
                 return;
             }
         }

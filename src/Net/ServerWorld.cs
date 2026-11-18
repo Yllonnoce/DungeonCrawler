@@ -348,6 +348,7 @@ public partial class ServerWorld : Node
     private void OnPlayerLeft(PlayerSlot slot)
     {
         var party = Main.Instance?.Party;
+        UnseatLeaving(slot); // a seat is never left booked to a body that is gone: it steps out beside the lane first
         if (party != null && GodotObject.IsInstanceValid(party)) party.Park(slot.MemberIndex);
         EventBus.Instance.Log($"{slot.Name} leaves the party.");
         Broadcast(new PlayerLeft(slot.MemberIndex, slot.Name));
@@ -461,6 +462,7 @@ public partial class ServerWorld : Node
             case PropResyncIntent pr: OnPropResync(slot, pr); break;
             case EnemyResyncIntent er: OnEnemyResync(slot, er); break;
             case FloorResyncIntent fr: OnFloorResync(slot, fr); break;
+            case RideIntent ri: OnRideIntent(slot, body, ri); break;
             case AttackIntent a:
             {
                 // aim exactly where the player aimed; the body stays where its poses put it. A seated body (the server's seat, never
@@ -509,7 +511,9 @@ public partial class ServerWorld : Node
                     SendTo(slot.PeerId, new BagSync(SaveMapper.ToDto(party.Bag)));
                     break;
                 }
+                var seatedBefore = body.Seated;
                 target.Interact(party, body);
+                if (node is Dungeon.Rails.MineCart && !seatedBefore && body.Seated) Trace.Add($"aboard:{slot.Name}");
                 if (node is Items.LootDrop) { _bagDirty = true; Trace.Add("pickup"); }
                 if (node is Dungeon.Props.Chest) Trace.Add("chest");
                 break;
@@ -644,11 +648,12 @@ public partial class ServerWorld : Node
 
     /// <summary>
     /// The server set remote member <paramref name="member"/> down from a seat at <paramref name="at"/> (a stop, a set-down, a wreck,
-    /// getting out with the party, a throw): its own screen is put there at once (with the SeatMsg the rail sender sends), and its
+    /// getting out, a throw, a quiet unseat, a teleport; all through <c>Adventurer.UnseatedOnServer</c>): its ride intent is let go, its own screen is put there at once (with the SeatMsg the rail sender sends), and its
     /// poses still flagged seated are dropped until it has heard (they would put the body back on the seat's old place).
     /// </summary>
     public void ForceUnseatedPose(int member, Vector3 at, float yaw)
     {
+        _rides.Remove(member); // its pump and brake go with the seat
         _unseatedPending.Add(member);
         var pose = new ForcePose(member, new PoseDto { X = at.X, Y = at.Y, Z = at.Z, Yaw = yaw });
         foreach (var slot in Registry.Online)
