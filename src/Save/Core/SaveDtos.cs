@@ -240,6 +240,8 @@ public sealed class FloorStateDto
     public List<int> LuckyDipBought { get; set; } = new();
     /// <summary>Chest spawn indices whose lock was jammed by a third failed pick (a key still opens them).</summary>
     public List<int> JammedChests { get; set; } = new();
+    /// <summary>The stop the party's mine cart has reached on a railed floor; null on a floor without a cart line.</summary>
+    public int? RailStop { get; set; }
 }
 
 /// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>

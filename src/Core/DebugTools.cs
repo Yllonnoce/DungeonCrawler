@@ -30,6 +30,7 @@ namespace DungeonCrawler.Core;
 ///   --trace-ai          print enemy state transitions
 ///   --quit-after=SECONDS quit without a screenshot
 ///   --smoke             scripted end-to-end run: get hit, kill an enemy, loot it, descend twice, ascend once, report
+///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart
 /// </summary>
 public partial class DebugTools : Node
 {
@@ -276,6 +277,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-hit-fx") { _testHitFx = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 40; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
+            else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
             else if (arg == "--ask-stairs") _askStairs = true;
@@ -419,7 +421,7 @@ public partial class DebugTools : Node
             if (Dungeon.Generation.FloorObjectives.TryParse(ForcedObjective, out var srObjective) && srObjective != Dungeon.Generation.FloorObjectiveKind.None && _startFloor < 2) { _startFloor = 2; ForcedLayout ??= "standard"; } // floor 1 never carries an objective, and not every shape takes every objective
         }
         // Automation never spends the player's keys unless --ai is given explicitly: scripted runs use the offline designer and no live voice.
-        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly;
+        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly || _testRide;
         if (automation && !ForceAi) { NoAi = true; NoVoice = !FakeVoice; }
         // scripted scenarios were written against the plain floors of their seeds: no objective floor unless one is asked for by name
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
@@ -833,6 +835,7 @@ public partial class DebugTools : Node
         if (_testStairs) RunStairsTest();
         if (_testObjective != null) RunObjectiveTest();
         if (_testGasWipe) RunGasWipeTest();
+        if (_testRide) RunRideTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

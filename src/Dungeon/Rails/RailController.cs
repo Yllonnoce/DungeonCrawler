@@ -92,6 +92,66 @@ public partial class RailController : Node
     /// <summary>The floor this controller belongs to is still the one built (a cleared floor waits a frame to be freed).</summary>
     private bool Current => Main.Instance is { InGame: true } main && main.Builder.PartyTrack == _track && IsInstanceValid(Cart);
 
+    // ---- save ------------------------------------------------------------------------------------
+
+    /// <summary>What the save keeps: the stop the cart has reached (a ride under way keeps the stop it left).</summary>
+    public int Capture() => StopIndex;
+
+    /// <summary>
+    /// Back from a save: the cart Held at the stop it had reached (clamped to the line), plating full, nobody aboard.
+    /// A wrecked cart comes back whole at its last stop (spare carts are plan 3).
+    /// </summary>
+    public void Restore(int stopIndex)
+    {
+        if (StopS.Length == 0) return;
+        StopIndex = Math.Clamp(stopIndex, 0, StopS.Length - 1);
+        State = new CartState(StopS[StopIndex], 0f, CartMode.Held, CartRules.MaxPlating);
+        _prevS = State.S;
+        Boarding.Cancel();
+        _hitAt.Clear();
+        _warnedAt.Clear();
+        foreach (var occupant in Cart.Seats.Occupants) Cart.Seats.Leave(occupant);
+        Cart.Speed = 0f;
+        Cart.Curvature = CurvatureAt(State.S);
+        PoseAt(State.S);
+        ClearRiders();
+        Callable.From(ClearRiders).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
+    }
+
+    /// <summary>
+    /// Nobody rides a restored cart: a hero still holding a seat (this cart's or a freed one's) is unseated where it stands,
+    /// and a body set down inside the parked cart (its saved pose was its seat) steps out beside the lane.
+    /// </summary>
+    private void ClearRiders()
+    {
+        if (!Current) return;
+        _exitTaken.Clear();
+        foreach (var hero in Main.Instance.Party.Adventurers)
+        {
+            if (!IsInstanceValid(hero)) continue;
+            if (hero.Seated) hero.Teleport(hero.GlobalPosition); // Teleport frees the seat and stands the body up
+            if (hero.Parked || hero.Control == ControlKind.Remote || !InsideCart(hero.GlobalPosition)) continue;
+            var cell = ExitCell();
+            _exitTaken.Add(cell);
+            hero.Teleport(_builder.Surface(cell) + Vector3.Up * 0.3f, Cart.GlobalPosition);
+        }
+        RefreshHud();
+    }
+
+    private bool InsideCart(Vector3 pos)
+    {
+        var local = Cart.GlobalTransform.AffineInverse() * pos;
+        return Mathf.Abs(local.X) <= MineCart.TubWidth / 2f + BodyRadius && Mathf.Abs(local.Z) <= CartRules.HalfLength + BodyRadius
+            && local.Y > -1f && local.Y < MineCart.TubBottom + MineCart.TubHeight + 1f;
+    }
+
+    /// <summary>Test hook (--test-ride): set the cart's plating directly.</summary>
+    internal void DebugSetPlating(float plating)
+    {
+        State = State with { Plating = Mathf.Clamp(plating, 0f, CartRules.MaxPlating) };
+        RefreshHud();
+    }
+
     // ---- boarding --------------------------------------------------------------------------------
 
     private string PromptFor(Adventurer hero)

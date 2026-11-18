@@ -246,6 +246,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     private void SetLocalView(bool local)
     {
         if (Camera == null) return; // before _Ready
+        ResetRideFeel(); // taking or handing over the view while seated: no lean or speed widening carried across (RideFeel builds it again for the local view)
         Camera.Current = local;
         if (local && Vr.Active)
         {
