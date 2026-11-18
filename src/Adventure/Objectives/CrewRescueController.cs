@@ -42,7 +42,15 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     public IReadOnlyList<CageWagon> Wagons => _wagons;
     public IReadOnlyList<Npc> Crew => _crew;
     /// <summary>The party has the orc's keys: every cage opens without a pick (set when they are taken, plan 3 task 6).</summary>
-    public bool OrcKeys { get; set; }
+    public bool OrcKeys
+    {
+        get => _orcKeys;
+        set { _orcKeys = value; if (value && _keyring != null && IsInstanceValid(_keyring)) _keyring.Take(); }
+    }
+    private bool _orcKeys;
+    private OrcKeyring? _keyring;
+    /// <summary>The dead Grisel on the condemned branch (null on the forgiven one).</summary>
+    public Npc? Body { get; private set; }
     public CrewState StateOf(Npc npc) => _state.GetValueOrDefault(npc, CrewState.Caged);
     /// <summary>Wagons still locked.</summary>
     public int ClosedCages { get { var n = 0; foreach (var w in _wagons) if (!w.Open) n++; return n; } }
@@ -121,8 +129,44 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (!NetSession.IsClient) npc.Restore(false, true, false, npc.MaxHp, null); // following from the start, without a log line each
             GD.PushWarning($"[CrewRescue] {npc.NpcName} has no cage wagon: freed at the landing on cell {cell}");
         }
+        if (!IsForgiven()) PlaceBody(builder, root, taken);
         foreach (var wagon in _wagons)
             GD.Print($"[CrewRescue] stop {wagon.Stop} (room {rail.Stops[wagon.Stop].Room}): cage wagon on cell {wagon.Cell}, crew {string.Join(", ", _crew.Where(c => WagonOf(c) == wagon).Select(c => c.NpcName))}");
+    }
+
+    private static bool IsForgiven() => Game.Instance.Adventure.Memory.Flags.Contains("grisel_forgiven");
+
+    /// <summary>
+    /// Condemned: Grisel lies dead on a free cell beside wagon 1, no dialogue, her keyring at her belt. Not saved on its own:
+    /// built again on every build of the floor, with the keyring hidden when the save says the keys are taken.
+    /// </summary>
+    private void PlaceBody(DungeonBuilder builder, Node3D root, HashSet<GridPos> taken)
+    {
+        var wagon = _wagons[0];
+        var cell = FreeCellsNear(wagon.Cell, 1)[0];
+        taken.Add(cell);
+        builder.BlockCell(cell);
+        var body = builder.SpawnObjectiveNpc(root, "grisel_body", "Grisel Thorn", cell, NpcMode.Quest, NpcBodies.Path("npc_prisoner"));
+        body.Restore(true, false, false, 0f, null);
+        Body = body;
+        var keyring = new OrcKeyring { Name = "OrcKeyring", PromptFor = _ => KeyringPrompt(), OnUse = _ => TakeKeys() };
+        root.AddChild(keyring);
+        var right = body.GlobalBasis.X;
+        keyring.GlobalPosition = body.GlobalPosition + right * 0.55f - Vector3.Up * 0.08f;
+        _keyring = keyring;
+        if (OrcKeys) keyring.Take();
+        GD.Print($"[CrewRescue] Grisel lies dead on cell {cell} beside wagon {wagon.Stop}, her keys at her belt");
+    }
+
+    private string KeyringPrompt() => NetSession.IsClient || OrcKeys ? "" : "Take the orc's keys";
+
+    private void TakeKeys()
+    {
+        if (NetSession.IsClient || OrcKeys) return;
+        OrcKeys = true;
+        EventBus.Instance.Log("You take the orc's keys from Grisel's belt.");
+        EventBus.Instance.PlaySfx("pickup");
+        RefreshHud();
     }
 
     private Npc SpawnCrew(DungeonBuilder builder, Node3D root, (string Id, string Name, string? Body) plan, GridPos cell)

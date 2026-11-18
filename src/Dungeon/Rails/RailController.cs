@@ -443,6 +443,7 @@ public partial class RailController : Node
                 if (mate != actor && mate.Control == ControlKind.Companion && !mate.Downed && !mate.Seated
                     && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
+        if (actor.Control == ControlKind.LocalHuman) SeatBench(actor.GlobalPosition);
         if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateUp(StopIndex)) Boarding.Start();
         RefreshHud();
     }
@@ -500,7 +501,35 @@ public partial class RailController : Node
             if (hero.GlobalPosition.DistanceSquaredTo(at) > HopInRange * HopInRange) continue;
             if (SeatHero(hero)) RefreshHud();
         }
+        SeatBench(at);
     }
+
+    /// <summary>
+    /// Escorts and allies ride the rear bench (seats 4-5): a living, up NPC on foot, following the party, within
+    /// <see cref="CompanionBoardRange"/> of <paramref name="from"/>, Grisel first and then by distance. Crew ride their wagons instead.
+    /// </summary>
+    private void SeatBench(Vector3 from)
+    {
+        if (StopIndex >= StopS.Length - 1 || !PlayerAboard() || GetParent() is not { } floor) return;
+        _bench.Clear();
+        foreach (var child in floor.GetChildren())
+            if (child is Npc { Dead: false, Downed: false, Escorting: true, Seated: false, Crew: false } npc
+                && npc.GlobalPosition.DistanceTo(from) <= CompanionBoardRange) _bench.Add(npc);
+        if (_bench.Count == 0) return;
+        _bench.Sort((a, b) =>
+        {
+            var byGrisel = IsGrisel(b).CompareTo(IsGrisel(a)); // Grisel first
+            return byGrisel != 0 ? byGrisel : a.GlobalPosition.DistanceSquaredTo(from).CompareTo(b.GlobalPosition.DistanceSquaredTo(from));
+        });
+        foreach (var npc in _bench)
+        {
+            if (Cart.Seats.Take(npc.RiderId, isHero: false) is not int seat) break; // the bench is full
+            npc.SitIn(Cart, seat);
+            RefreshHud();
+        }
+    }
+    private static bool IsGrisel(Npc npc) => npc.Id == Adventure.Objectives.CrewRescueController.GriselId;
+    private readonly List<Npc> _bench = new();
 
     private bool SeatHero(Adventurer hero)
     {
@@ -517,7 +546,7 @@ public partial class RailController : Node
         GetOut(actor);
         if (actor.Control == ControlKind.LocalHuman && slow)
             foreach (var rider in Aboard())
-                if (rider is Adventurer { Control: ControlKind.Companion }) GetOut(rider);
+                if (rider is Adventurer { Control: ControlKind.Companion } or Npc) GetOut(rider);
         RefreshHud();
     }
 
