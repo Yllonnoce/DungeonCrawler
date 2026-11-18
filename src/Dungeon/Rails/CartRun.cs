@@ -29,6 +29,11 @@ public sealed class CartRun
     public int Dir = 1;
     /// <summary>The S the cart halts at (the input's StopAt): set it ahead of S, in <see cref="Dir"/>, before the cart rolls.</summary>
     public float Limit;
+    /// <summary>
+    /// The cart's frame at an S when it does not run on the track's own centre line (a lane blend, a jump's arc, a runner's
+    /// path): posing uses it in place of <see cref="TrackSampler.Frame"/> when set. Null (the default) poses on the track.
+    /// </summary>
+    public Func<float, Transform3D>? FrameAt;
 
     private CartClock _clock;
     private float _tickDt = CartClock.FixedStep;
@@ -103,11 +108,14 @@ public sealed class CartRun
     /// <summary>Pose the body at <see cref="RenderS"/>.</summary>
     public void Pose(float frac) => PoseAt(RenderS(frac));
 
-    /// <summary>Put the body on the line at <paramref name="s"/>, facing its way of travel.</summary>
+    /// <summary>The frame the cart is posed in at <paramref name="s"/>: <see cref="FrameAt"/> when set, else the track's.</summary>
+    public Transform3D FrameOf(float s) => FrameAt != null ? FrameAt(s) : Track.Frame(s);
+
+    /// <summary>Put the body on the line at <paramref name="s"/> (<see cref="FrameOf"/>), facing its way of travel.</summary>
     public void PoseAt(float s)
     {
         if (!GodotObject.IsInstanceValid(Body) || !Track.Valid) return;
-        var frame = Track.Frame(s);
+        var frame = FrameOf(s);
         var basis = Dir >= 0 ? frame.Basis : frame.Basis * new Basis(Vector3.Up, Mathf.Pi);
         Body.GlobalTransform = new Transform3D(basis.Orthonormalized(), frame.Origin);
     }

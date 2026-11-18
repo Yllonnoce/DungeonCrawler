@@ -13,9 +13,10 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// Runs the party's mine cart on a railed floor: a node under the floor root (it dies with the floor). It seats and
 /// unseats heroes, counts down the boarding, reads the riders' inputs, steps the cart's <see cref="CartRun"/> from stop
-/// to stop on the server (or solo), applies what <see cref="RunOverSweep"/> finds, keeps the HUD line and the save, and
-/// poses the cart and its riders every rendered frame. A client only shows the cart parked at the first stop. Every
-/// change of the cart's state is told through <see cref="CartEvents"/>.
+/// to stop on the server (or solo), applies what <see cref="RunOverSweep"/> finds (<see cref="RunOverEffects"/>), keeps
+/// the HUD line and the save, and poses the cart and its riders every rendered frame. The gates (<see cref="StopGates"/>),
+/// the spare carts (<see cref="SpareYard"/>) and the coupled wagons (<see cref="CartTrain"/>) are its parts. A client
+/// only shows the cart parked at the first stop. Every change of the cart's state is told through <see cref="CartEvents"/>.
 /// </summary>
 public partial class RailController : Node
 {
@@ -42,102 +43,25 @@ public partial class RailController : Node
     public string? HudText { get; private set; }
     public Boarding Boarding { get; } = new();
 
-    // ---- the gates -------------------------------------------------------------------------------
+    // ---- the gates (StopGates) -------------------------------------------------------------------
 
-    /// <summary>The gate at each stop (null: the landing, the end of the line, or a stop with no mobs of its own). Indexed by stop.</summary>
-    private RailGate?[] _gates = Array.Empty<RailGate?>();
-    private float _gateTimer;
-    const float GateEvery = 0.25f;
-    /// <summary>Gap kept between a gate and the next stop's cart.</summary>
-    const float GateMargin = 2f;
-    const float GateBeyondCart = 1.5f;
-    /// <summary>A post stands this far out from each lane's centre line: the tub's half-width (0.7 m) and a hand's clearance, so a cart passes between them (still inside the 4 m cell).</summary>
-    public const float GateSide = MineCart.TubWidth / 2f + 0.35f;
+    private StopGates _gates = null!;
+    /// <summary>A post stands this far out from each lane's centre line (<see cref="StopGates.GateSide"/>).</summary>
+    public const float GateSide = StopGates.GateSide;
+    /// <summary>The winch works when no living holder of the stop is within this horizontal range of the gate (<see cref="StopGates.WinchClearRange"/>).</summary>
+    public const float WinchClearRange = StopGates.WinchClearRange;
 
     /// <summary>The stop's gate stands open (or the stop has none). A stop's gate starts down while any of its mobs live.</summary>
-    public bool GateUp(int stopIndex) => stopIndex < 0 || stopIndex >= _gates.Length || _gates[stopIndex] is not { } g || !IsInstanceValid(g) || g.Up;
+    public bool GateUp(int stopIndex) => _gates.Up(stopIndex);
 
     /// <summary>The intermediate stops (indices) whose gate is up, for the save. Stops with no gate are not listed.</summary>
-    public IReadOnlyList<int> GatesUpList
-    {
-        get
-        {
-            var list = new List<int>();
-            for (var i = 0; i < _gates.Length; i++)
-                if (_gates[i] is { } g && IsInstanceValid(g) && g.Up) list.Add(i);
-            return list;
-        }
-    }
+    public IReadOnlyList<int> GatesUpList => _gates.UpList;
 
     /// <summary>Back from a save: the listed gates stand up at once (no animation, no log). Gates not listed stay as they are.</summary>
     public void RestoreGates(IEnumerable<int> up)
     {
-        _restoredGates = true; // a down gate whose mobs are already dead lifts quietly at the next check
-        foreach (var i in up)
-            if (i >= 0 && i < _gates.Length && _gates[i] is { } g && IsInstanceValid(g)) g.SetUp();
+        _gates.Restore(up);
         RefreshHud();
-    }
-
-    /// <summary>The winch works when no living holder of the stop is within this horizontal range of the gate.</summary>
-    public const float WinchClearRange = 12f;
-    /// <summary>The next gate check after a restore lifts quietly (no log, no tween).</summary>
-    private bool _restoredGates;
-
-    private bool NoHolderNear(RailGate gate)
-    {
-        var room = _layout.Rail!.Stops[gate.Stop].Room;
-        var at = gate.GlobalPosition;
-        if (_builder.Collectives is { } reg)
-            foreach (var c in reg.Collectives)
-                if (c.Room == room && c.Goal is Adventure.GoalKind.Guard or Adventure.GoalKind.Defend)
-                    foreach (var e in c.Alive)
-                    {
-                        var d = e.GlobalPosition - at;
-                        if (d.X * d.X + d.Z * d.Z <= WinchClearRange * WinchClearRange) return false;
-                    }
-        return true;
-    }
-
-    /// <summary>The mobs that hold the stop: every collective in the stop's room that stays put (guards and defenders; a patrol or alarm group does not hold a gate).</summary>
-    private int AliveAtStop(int stopIndex)
-    {
-        var room = _layout.Rail!.Stops[stopIndex].Room;
-        var n = 0;
-        if (_builder.Collectives is { } reg)
-            foreach (var c in reg.Collectives)
-                if (c.Room == room && c.Goal is Adventure.GoalKind.Guard or Adventure.GoalKind.Defend) n += c.Alive.Count();
-        return n;
-    }
-
-    private bool HoldsMobs(int stopIndex)
-    {
-        var room = _layout.Rail!.Stops[stopIndex].Room;
-        return _builder.Collectives is { } reg && reg.Collectives.Any(c => c.Room == room && c.Goal is Adventure.GoalKind.Guard or Adventure.GoalKind.Defend);
-    }
-
-    private void BuildGates(Node3D root)
-    {
-        _gates = new RailGate?[StopS.Length];
-        if (_builder.EnemyTrack is not { } enemy) return;
-        for (var i = 1; i < StopS.Length - 1; i++)
-        {
-            if (!HoldsMobs(i)) continue; // no mobs of its own: the gate starts up (there is none to see)
-            var s = StopS[i] + CartRules.HalfLength + GateBeyondCart;
-            s = Mathf.Min(s, StopS[i + 1] - GateMargin);
-            s = Mathf.Max(s, StopS[i]);
-            var frame = Party.Track.Frame(s);
-            var at = frame.Origin;
-            var right = frame.Basis.X.Normalized();
-            var near = enemy.ToGlobal(enemy.Curve.GetClosestPoint(enemy.ToLocal(at)));
-            var lateral = (near - at).Dot(right);
-            float left = Mathf.Min(0f, lateral) - GateSide, rightEdge = Mathf.Max(0f, lateral) + GateSide;
-            // the winch stands on the outer side of the party lane (away from the enemy lane)
-            var gate = new RailGate(i, left, rightEdge, winchRight: lateral < 0f) { Transform = new Transform3D(frame.Basis.Orthonormalized(), at) };
-            root.AddChild(gate);
-            gate.CanCrank = NoHolderNear;
-            gate.Lifted += OnGateLifted;
-            _gates[i] = gate;
-        }
     }
 
     /// <summary>A gate went up (the check or the winch): riders waiting at its stop start the boarding.</summary>
@@ -147,30 +71,31 @@ public partial class RailController : Node
         RefreshHud();
     }
 
-    /// <summary>Server: every 0.25 s a down gate whose stop has no living mob lifts; seated riders then start the boarding.</summary>
-    private void TickGates(float dt)
+    // ---- the train (CartTrain) -------------------------------------------------------------------
+
+    private CartTrain _train = null!;
+    /// <summary>Cage wagons coupled behind the cart, nearest first: the RailController poses them on the line behind it.</summary>
+    public IReadOnlyList<CageWagon> Train => _train.Wagons;
+    /// <summary>From one body's middle to the next along the train (<see cref="CartTrain.WagonSpacing"/>).</summary>
+    public const float WagonSpacing = CartTrain.WagonSpacing;
+
+    /// <summary>A cage wagon's siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
+    public void ReserveSiding(GridPos cell) => _train.ReserveSiding(cell);
+
+    /// <summary>Couple <paramref name="wagon"/> on behind the last body of the train (server, at a departure or a load). It is posed behind the cart at once.</summary>
+    public void Couple(CageWagon wagon)
     {
-        _gateTimer -= dt;
-        if (_gateTimer > 0f) return;
-        _gateTimer = GateEvery;
-        var quiet = _restoredGates;
-        for (var i = 0; i < _gates.Length; i++)
-        {
-            if (_gates[i] is not { Up: false } g || !IsInstanceValid(g)) continue;
-            if (!Adventure.Objectives.CrewRules.StopCleared(AliveAtStop(i))) continue;
-            if (quiet) { g.SetUp(); RefreshHud(); } else g.Lift(); // OnGateLifted does the rest
-        }
-        _restoredGates = false;
+        if (NetSession.IsClient) return; // the train is the server's
+        _train.Couple(wagon);
     }
 
-    /// <summary>Cage wagons coupled behind the cart, nearest first: the RailController poses them on the line behind it.</summary>
-    public IReadOnlyList<CageWagon> Train => _train;
-    /// <summary>From one body's middle to the next along the train: a cart's length and a coupling's gap.</summary>
-    public const float WagonSpacing = 2f * CartRules.HalfLength + 0.4f;
-    private readonly List<CageWagon> _train = new();
-    private readonly List<ICartRider> _trainRiders = new();
-    /// <summary>Cells a cage wagon stands on beside a platform: nobody getting out is set down there.</summary>
-    private readonly HashSet<GridPos> _sidings = new();
+    // ---- spare carts (SpareYard) -----------------------------------------------------------------
+
+    private SpareYard _spares = null!;
+    /// <summary>Intermediate stops (indices) whose spare has been used, for the save.</summary>
+    public IReadOnlyCollection<int> SparesUsed => _spares.Used;
+    /// <summary>Spares still parked.</summary>
+    public int SparesLeft => _spares.Left;
 
     /// <summary>
     /// Every change of the cart's state: departed, arrived, hit, wrecked, a rider seated or unseated (whatever seated or
@@ -190,6 +115,8 @@ public partial class RailController : Node
     private readonly Dictionary<int, double> _warnedAt = new();
     private readonly List<Node3D> _bodies = new();
     private readonly List<(Node3D body, TrackBody tb)> _hits = new();
+    private readonly Func<Vector3, Vector3> _setAside;
+    private readonly Action<Node3D> _onHit;
     private readonly List<ICartRider> _aboard = new();
     private readonly List<int> _gone = new();
     private readonly List<CartEvent> _pending = new();
@@ -207,6 +134,8 @@ public partial class RailController : Node
         Name = "RailController";
         ProcessPriority = -100; // pose the cart before the heroes' own _Process (their cameras) runs
         _benchOrder = BenchOrder;
+        _setAside = pos => _builder.Surface(ExitCellNear(pos, true, false));
+        _onHit = body => Raise(new CartEvent(CartEventKind.Hit, Target: body.GetInstanceId()));
     }
 
     /// <summary>Read the stops off the track and park the cart at the first. Call before adding the controller to the tree.</summary>
@@ -236,68 +165,11 @@ public partial class RailController : Node
         Party = new CartRun(new TrackSampler(track), Cart, new CartState(start, 0f, CartMode.Held, CartRules.MaxPlating)) { Limit = start };
         Cart.RiderChanged += OnRiderChanged;
         root.AddChild(Cart);
-        BuildGates(root);
-        BuildSpares(root);
-    }
-
-    // ---- spare carts -----------------------------------------------------------------------------
-
-    /// <summary>Intermediate stops (indices) whose spare has been used, for the save.</summary>
-    public IReadOnlyCollection<int> SparesUsed => _sparesUsed;
-    /// <summary>Spares still parked.</summary>
-    public int SparesLeft => _spares.Count - _sparesUsed.Count;
-    private readonly Dictionary<int, MineCart> _spares = new();
-    private readonly HashSet<int> _sparesUsed = new();
-
-    /// <summary>One stand-in cart per intermediate stop, on a free cell of the stop's room beside the platform (never a rail, a siding or a blocked cell), facing along the track. It is looks only: no prompt, never boarded.</summary>
-    private void BuildSpares(Node3D root)
-    {
-        if (_layout.Rail is not { } rail) return;
-        for (var i = 1; i < StopS.Length - 1 && i < rail.Stops.Count; i++)
-        {
-            var stop = rail.Stops[i];
-            if (stop.Platform.Count == 0 || stop.Room < 0 || stop.Room >= _layout.Rooms.Count) continue;
-            var free = Adventure.RoomCells.Free(_layout, _layout.Rooms[stop.Room]);
-            var mid = stop.Platform[stop.Platform.Count / 2];
-            GridPos? best = null, beside = null;
-            var bestKey = (int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue, int.MaxValue); // a platform cell only when nothing beside it is free
-            foreach (var c in free)
-            {
-                if (_layout.IsRail(c) || _builder.IsCellBlocked(c) || _sidings.Contains(c)) continue;
-                GridPos? near = null;
-                var nearD = int.MaxValue;
-                foreach (var p in stop.Platform)
-                {
-                    var d = (p.X - c.X) * (p.X - c.X) + (p.Y - c.Y) * (p.Y - c.Y);
-                    if (d < nearD) { nearD = d; near = p; }
-                }
-                if (near is not { } np || _layout.LevelOf(c) != _layout.LevelOf(np)) continue;
-                var fromMid = (c.X - mid.X) * (c.X - mid.X) + (c.Y - mid.Y) * (c.Y - mid.Y);
-                var key = (nearD == 0 ? 1 : 0, nearD, -fromMid, c.X, c.Y); // beside the platform, toward its end: the wagon's siding takes the middle
-                if (key.CompareTo(bestKey) >= 0) continue;
-                bestKey = key;
-                best = c;
-                beside = np;
-            }
-            if (best is not { } cell || beside is not { } platform) continue;
-            var at = _builder.Surface(cell);
-            var s = _track.Curve.GetClosestOffset(_track.ToLocal(_builder.Surface(platform)));
-            var along = -(_track.GlobalTransform * _track.Curve.SampleBakedWithRotation(s, true, true)).Basis.Z;
-            var basis = new Basis(Vector3.Up, Mathf.Atan2(-along.X, -along.Z));
-            var spare = new MineCart { Name = $"SpareCart{i}", PromptFor = _ => "", CollisionLayer = 1 };
-            root.AddChild(spare);
-            spare.GlobalTransform = new Transform3D(basis, at);
-            _builder.BlockCell(cell);
-            _sidings.Add(cell);
-            _spares[i] = spare;
-        }
-    }
-
-    private void HideSpare(int stop)
-    {
-        if (!_spares.TryGetValue(stop, out var spare) || !IsInstanceValid(spare)) return;
-        spare.Visible = false;
-        spare.CollisionLayer = 0;
+        _train = new CartTrain(Party);
+        _gates = new StopGates(builder, layout, OnGateLifted, RefreshHud);
+        _gates.Build(root, StopS, Party.Track);
+        _spares = new SpareYard(builder, layout, track, _train.Sidings);
+        _spares.Build(root, StopS.Length);
     }
 
     public override void _EnterTree() => Instance = this;
@@ -342,65 +214,13 @@ public partial class RailController : Node
         return _aboard;
     }
 
-    // ---- the train -------------------------------------------------------------------------------
-
-    /// <summary>A cage wagon's siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
-    public void ReserveSiding(GridPos cell) => _sidings.Add(cell);
-
-    /// <summary>Couple <paramref name="wagon"/> on behind the last body of the train (server, at a departure or a load). It is posed behind the cart at once.</summary>
-    public void Couple(CageWagon wagon)
-    {
-        if (NetSession.IsClient || !IsInstanceValid(wagon) || _train.Contains(wagon)) return; // the train is the server's
-        _train.Add(wagon);
-        wagon.SetCoupled(true);
-        PoseTrain(State.S);
-        SyncTrain();
-    }
-
-    /// <summary>Each coupled wagon on the line at <paramref name="s"/> − <see cref="WagonSpacing"/>·k (k its 1-based place, clamped at the track's start), facing the cart's way.</summary>
-    private void PoseTrain(float s)
-    {
-        if (_train.Count == 0 || !Party.Track.Valid) return;
-        for (var k = 0; k < _train.Count; k++)
-        {
-            var wagon = _train[k];
-            if (!IsInstanceValid(wagon)) continue;
-            var at = Mathf.Clamp(s - Party.Dir * WagonSpacing * (k + 1), 0f, Party.Track.Length);
-            var frame = Party.Track.Frame(at);
-            wagon.Pose(Party.Dir >= 0 ? frame : new Transform3D(frame.Basis * new Basis(Vector3.Up, Mathf.Pi), frame.Origin));
-        }
-    }
-
-    /// <summary>The train's wagons learn the cart's speed and the bend each stands in (their riders' velocity).</summary>
-    private void SyncTrain()
-    {
-        for (var k = 0; k < _train.Count; k++)
-        {
-            var wagon = _train[k];
-            if (!IsInstanceValid(wagon)) continue;
-            wagon.Speed = State.Mode == CartMode.Rolling ? State.V : 0f;
-            wagon.Curvature = Party.Dir * Party.Track.Curvature(Mathf.Max(0f, State.S - Party.Dir * WagonSpacing * (k + 1)));
-        }
-    }
-
-    /// <summary>Seat every train rider on its wagon as it stands now (copied first: a rider whose ride is gone leaves the book as it follows).</summary>
-    private void FollowTrain()
-    {
-        if (_train.Count == 0) return;
-        _trainRiders.Clear();
-        foreach (var wagon in _train)
-            if (IsInstanceValid(wagon)) _trainRiders.AddRange(wagon.Riders.Values);
-        foreach (var rider in _trainRiders)
-            if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
-    }
-
     // ---- save ------------------------------------------------------------------------------------
 
     /// <summary>What the save keeps: the stop the cart has reached (a ride under way keeps the stop it left).</summary>
     public int Capture() => StopIndex;
 
     /// <summary>The stops whose spare cart is spent, or null when none is.</summary>
-    public List<int>? CaptureSpares() => _sparesUsed.Count == 0 ? null : _sparesUsed.OrderBy(i => i).ToList();
+    public List<int>? CaptureSpares() => _spares.Capture();
 
     /// <summary>The heroes seated in the cart (their indices), or null when nobody is: a load sets them down beside the cart.</summary>
     public List<int>? CaptureRiders()
@@ -420,8 +240,7 @@ public partial class RailController : Node
     public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null, IEnumerable<int>? sparesUsed = null)
     {
         if (NetSession.IsClient) return; // a join or revisit: a client's cart stays parked at the first stop and nobody's seat is its to change (co-op riding is plan 5)
-        _sparesUsed.Clear();
-        if (sparesUsed != null) foreach (var i in sparesUsed) if (_spares.ContainsKey(i)) { _sparesUsed.Add(i); HideSpare(i); }
+        _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
         if (StopS.Length == 0) return;
@@ -672,7 +491,7 @@ public partial class RailController : Node
 
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
-        bool Free(GridPos c) => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_sidings.Contains(c);
+        bool Free(GridPos c) => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c);
         var lane = _layout.Rail!.Party;
         var here = DungeonBuilder.WorldToCell(at);
         int best = 0, bestD = int.MaxValue;
@@ -701,7 +520,7 @@ public partial class RailController : Node
     {
         var party = Main.Instance.Party;
         if (State.Mode != CartMode.Rolling) Party.Settle(); // a cart that does not roll is posed where it stands
-        TickGates(dt);
+        _gates.Tick(dt);
 
         if (State.Mode == CartMode.Held)
         {
@@ -731,12 +550,12 @@ public partial class RailController : Node
         }
 
         Party.Sync();
-        SyncTrain();
+        _train.Sync();
     }
 
     // ---- run-over --------------------------------------------------------------------------------
 
-    /// <summary>Judge the bodies near the cart's front (<see cref="RunOverSweep"/>): hit ones take the run-over outcome, big enemies are also knocked aside and dent the plating.</summary>
+    /// <summary>Judge the bodies near the cart's front (<see cref="RunOverSweep"/>): hit ones take the run-over outcome (<see cref="RunOverEffects"/>), big enemies are also knocked aside and dent the plating, and the riders feel it.</summary>
     private void RunOver(PartyController party)
     {
         _bodies.Clear();
@@ -755,35 +574,9 @@ public partial class RailController : Node
         RunOverSweep.Judge(Party, _bodies, _now, _hitAt, _hits);
         if (_hits.Count == 0) return;
 
-        var lethality = TierRules.Lethality;
-        var hitBig = false;
-        foreach (var (body, _) in _hits)
-        {
-            switch (body)
-            {
-                case Adventurer hero:
-                    hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, lethality), SourceName, HazardIndex);
-                    break;
-                case Enemy enemy:
-                {
-                    var pos = enemy.GlobalPosition;
-                    var big = RunOverRules.IsBig(enemy.Profile.Scale, enemy.IsBoss);
-                    enemy.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(enemy.HazardVictimKind, big, lethality), SourceName, HazardIndex);
-                    if (big)
-                    {
-                        if (enemy.IsAlive) enemy.GlobalPosition = _builder.Surface(ExitCellNear(pos, true, false));
-                        hitBig = true;
-                    }
-                    break;
-                }
-                case Npc npc:
-                    npc.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(npc.HazardVictimKind, false, lethality), SourceName, HazardIndex);
-                    break;
-            }
-            Raise(new CartEvent(CartEventKind.Hit, Target: body.GetInstanceId()));
-        }
-        if (!hitBig) return;
-        Party.State = State with { Plating = Mathf.Max(0f, State.Plating - RunOverRules.BigBodyPlatingDamage) };
+        var damage = RunOverEffects.Apply(_hits, SourceName, TierRules.Lethality, _setAside, _onHit);
+        if (damage <= 0f) return;
+        Party.State = State with { Plating = Mathf.Max(0f, State.Plating - damage) };
         foreach (var rider in Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.06f, 0.4f);
         RefreshHud();
@@ -847,23 +640,14 @@ public partial class RailController : Node
     /// </summary>
     private void SpareTakesOver()
     {
-        int pick = -1;
-        var bestD = float.MaxValue;
-        var reach = Math.Min(StopS.Length - 2, StopIndex + 1); // the stop last left, earlier ones, or the very next: never past a gate not yet crossed
-        for (var i = 1; i <= reach; i++)
-        {
-            if (_sparesUsed.Contains(i)) continue;
-            var d = Mathf.Abs(StopS[i] - State.S);
-            if (d < bestD) { bestD = d; pick = i; }
-        }
+        var pick = _spares.Pick(StopS, StopIndex, State.S); // the stop last left, earlier ones, or the very next: never past a gate not yet crossed
         if (pick < 0)
         {
             EventBus.Instance.Log("No carts left. The rest is on foot.");
             Raise(new CartEvent(CartEventKind.OnFoot, Stop: StopIndex));
             return;
         }
-        _sparesUsed.Add(pick);
-        HideSpare(pick);
+        _spares.Use(pick);
         StopIndex = pick;
         Party.Reset(new CartState(StopS[pick], 0f, CartMode.Held, CartRules.MaxPlating));
         Party.Limit = StopS[pick];
@@ -872,7 +656,7 @@ public partial class RailController : Node
         _warnedAt.Clear();
         Party.Sync();
         Party.PoseAt(State.S);
-        PoseTrain(State.S);
+        _train.Pose(State.S);
         EventBus.Instance.Log($"A spare cart waits at stop {pick}.");
         Raise(new CartEvent(CartEventKind.Arrived, Stop: pick));
         if (!GateUp(pick)) EventBus.Instance.Log("The gate is down. Clear the stop.");
@@ -933,10 +717,10 @@ public partial class RailController : Node
         if (!Current) return;
         var s = Party.RenderS(NetSession.IsClient ? 1f : (float)Engine.GetPhysicsInterpolationFraction());
         Party.PoseAt(s);
-        PoseTrain(s);
+        _train.Pose(s);
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
-        FollowTrain();
+        _train.Follow();
         if (NetSession.IsClient) return;
         _hudTimer -= (float)delta;
         if (_hudTimer <= 0f) RefreshHud();
