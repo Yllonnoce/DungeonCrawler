@@ -33,6 +33,7 @@ namespace DungeonCrawler.Core;
 ///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart
 ///   --test-ride-edges   floor 12: a companion revived behind the cart, a mid-ride load, the human thrown at lethality 1, companions left at a stop
 ///   --test-crew[=forgiven|condemned]  floor 12: the scripted rescue (stops, gates, cages, Grisel's branch, a save mid-ride, a lost crew member, the win), then a wreck and a spare
+///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), then the heap and a save mid-ride 4; warning timings checked
 /// </summary>
 public partial class DebugTools : Node
 {
@@ -286,6 +287,7 @@ public partial class DebugTools : Node
                 if (branch is not ("forgiven" or "condemned")) { GD.PrintErr($"[crew] --test-crew={branch}: the branch is forgiven or condemned"); branch = "condemned"; }
                 _testCrew = true; _crewForgiven = branch == "forgiven"; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240;
             }
+            else if (arg == "--test-chase") { _testChase = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300; }
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
@@ -430,7 +432,7 @@ public partial class DebugTools : Node
             if (Dungeon.Generation.FloorObjectives.TryParse(ForcedObjective, out var srObjective) && srObjective != Dungeon.Generation.FloorObjectiveKind.None && _startFloor < 2) { _startFloor = 2; ForcedLayout ??= "standard"; } // floor 1 never carries an objective, and not every shape takes every objective
         }
         // Automation never spends the player's keys unless --ai is given explicitly: scripted runs use the offline designer and no live voice.
-        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly || _testRide || _testRideEdges || _testCrew;
+        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly || _testRide || _testRideEdges || _testCrew || _testChase;
         if (automation && !ForceAi) { NoAi = true; NoVoice = !FakeVoice; }
         // scripted scenarios were written against the plain floors of their seeds: no objective floor unless one is asked for by name
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
@@ -449,6 +451,7 @@ public partial class DebugTools : Node
             {
                 if (!Main.Instance.StartBuiltinCampaign()) { GD.Print("[builtin] RESULT FAIL: no built-in campaign"); GetTree().Quit(); }
                 else if (_testCrew) Game.Instance.Adventure.Memory.Flags.Add(_crewForgiven ? "grisel_forgiven" : "grisel_condemned"); // floor 9's choice, before floor 12 is built
+                else if (_testChase) Game.Instance.Adventure.Memory.Flags.Add("grisel_condemned"); // the cages open with the orc's keys
             }
             else if (_bakeDir != null && _bakeResume && BuiltinCampaign.LoadFrom(_bakeDir + ".partial") is { } partial)
             {
@@ -851,6 +854,7 @@ public partial class DebugTools : Node
         if (_testRide && !ScriptStalled("ride", _rideStep)) RunRideTest();
         if (_testRideEdges && !ScriptStalled("ride-edges", _edgeStep)) RunRideEdgesTest();
         if (_testCrew && !ScriptStalled("crew", _crewSection2 ? 100 + _crewStep : _crewStep)) RunCrewTest();
+        if (_testChase && !ScriptStalled("chase", _chSection2 ? 100 + _chStep : _chStep)) RunChaseTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;
@@ -4960,6 +4964,7 @@ public partial class DebugTools : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        if (_testChase) ChasePoll();
         if (_pathTarget == null || !IsInstanceValid(_pathTarget) || _depthStep != 3) return;
         _pathLog += delta;
         if (_pathLog < 1.0) return;

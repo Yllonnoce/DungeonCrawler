@@ -34,7 +34,7 @@ public partial class DebugTools
     private string CrewBranch => _crewForgiven ? "forgiven" : "condemned";
 
     /// <summary>
-    /// A scripted ride (--test-ride, --test-ride-edges, --test-crew) that has not printed its RESULT by 10 s before its
+    /// A scripted ride (--test-ride, --test-ride-edges, --test-crew, --test-chase) that has not printed its RESULT by 10 s before its
     /// --quit-after fails here with exit code 1, instead of being quit quietly with exit 0 by the generic timeout (a floor
     /// that never came up, a step that waits for ever). Step numbers of the crew test's wreck section are 100 + its step.
     /// </summary>
