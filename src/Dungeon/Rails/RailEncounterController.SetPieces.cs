@@ -29,8 +29,22 @@ public partial class RailEncounterController
         public OreBuckets? Buckets;
         /// <summary>Its warning has been called this arming.</summary>
         public bool Barked;
-        /// <summary>A wreck or a load undid the ride: the heap stands again at the next arming.</summary>
+        /// <summary>A wreck or a load undid the ride: the heap stands again (the pour's valve is mended) at the next arming.</summary>
         public bool Rebuild;
+        public DropHammer[]? Hammers;
+        public MoltenPour? Pour;
+        public Trestle? Trestle;
+        public RailGap? Gap;
+        public SpurSwitch? Spur;
+        public BufferStop? Buffer;
+        /// <summary>The trestle's seconds left before it falls, or −1 before the cart's front is on it.</summary>
+        public float Timer = -1f;
+        /// <summary>The pour's phase last tick (a <see cref="PourPhase"/>).</summary>
+        public int Phase;
+        /// <summary>Pours begun this arming, and the one that last caught the cart.</summary>
+        public int PourCount, PourHit;
+        /// <summary>Seconds to the pour's next burn of a walker.</summary>
+        public float BurnClock;
     }
 
     private readonly List<Piece> _pieces = new();
@@ -47,7 +61,7 @@ public partial class RailEncounterController
     // ---- extension point 1: arming (spawn what stands on the line) ------------------------------
 
     /// <summary>The kinds that stand on the line from the ride's departure rather than starting as the cart reaches them.</summary>
-    private static bool StandsFromDeparture(string kind) => kind is "lone" or "thrower";
+    private static bool StandsFromDeparture(string kind) => kind is "lone" or "thrower" or "golem";
 
     private void ArmStanders(int ride)
     {
@@ -60,6 +74,7 @@ public partial class RailEncounterController
         }
         for (var i = 0; i < _pieces.Count; i++) if (_pieces[i].Plan.Ride == ride) _pieces[i].Fired = false;
         ArmSwitchyard(ride);
+        ArmKiln(ride);
     }
 
     private void SpawnStander(int index, RailEncounterPlan enc)
@@ -73,6 +88,9 @@ public partial class RailEncounterController
         var at = track.Point(s) + Vector3.Up * 0.05f;
         switch (enc.Kind)
         {
+            case "golem":
+                SpawnGolem(index, enc); // it bursts out of the kiln wall beside the cart as it sets off
+                break;
             case "lone":
             {
                 if (_builder.SpawnEnemy(id, at, _builder.CurrentFloor) is not { } lone) return;
@@ -152,6 +170,7 @@ public partial class RailEncounterController
     private void BuildSetPieces()
     {
         if (GetParent() is not Node3D root || _rails.StopS.Length < 2) return;
+        var gaps = new List<(float from, float to)>();
         foreach (var plan in _setPieces)
         {
             if (plan.Ride < 1 || plan.Ride >= _rails.StopS.Length) continue;
@@ -176,11 +195,30 @@ public partial class RailEncounterController
                 case "buckets":
                     node = BuildBuckets(root, piece);
                     break;
+                case "hammers":
+                    node = BuildHammers(root, piece);
+                    break;
+                case "pour":
+                    node = BuildPour(root, piece);
+                    break;
+                case "trestle":
+                    node = BuildTrestle(root, piece);
+                    break;
+                case "jump":
+                    node = BuildGap(root, piece, gaps);
+                    break;
+                case "spur_switch":
+                    node = BuildSpur(root, piece);
+                    break;
+                case "buffer":
+                    node = BuildBuffer(root, piece);
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;
             _pieces.Add(piece);
         }
+        CutGaps(gaps);
     }
 
     /// <summary>The armed ride's pieces: the beam and the points act as the rolling cart's front reaches them; the heap and the buckets tick while the ride is armed (a cart halted at the heap too).</summary>
@@ -204,6 +242,21 @@ public partial class RailEncounterController
                     break;
                 case "buckets":
                     TickBuckets(piece, dt);
+                    break;
+                case "hammers":
+                    TickHammers(piece);
+                    break;
+                case "pour":
+                    TickPour(piece, dt);
+                    break;
+                case "trestle":
+                    TickTrestle(piece, rolling, dt);
+                    break;
+                case "jump":
+                    TickJump(piece, party, rolling);
+                    break;
+                case "buffer":
+                    TickBuffer(piece, rolling);
                     break;
             }
         }

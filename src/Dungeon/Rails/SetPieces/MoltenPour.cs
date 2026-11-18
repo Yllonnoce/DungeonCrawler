@@ -1,0 +1,191 @@
+using DungeonCrawler.Characters;
+using DungeonCrawler.Combat;
+using DungeonCrawler.Core;
+using DungeonCrawler.Net;
+using Godot;
+
+namespace DungeonCrawler.Dungeon.Rails;
+
+/// <summary>
+/// A slag pour over the party line: an iron trough on two posts above the track, a feed pipe down one post to a
+/// <see cref="QuenchValve"/> beside the line. It runs on the floor's clock (<see cref="SetPieceRules.Pour"/> on
+/// <see cref="DungeonBuilder.FloorTick"/>): dry, a 1.5 s warning (the trough's lip glows and the light swells), then a falling
+/// stream of molten slag onto a <see cref="Zone"/> of the line. A broken valve quenches it for good (<see cref="Quenched"/>).
+/// Dressing: the <see cref="RailEncounterController"/> judges the cart and walkers under the stream. Server only (a client's
+/// FloorTick does not run: plan 5 shows it).
+/// </summary>
+public partial class MoltenPour : Node3D
+{
+    /// <summary>The stream lands on the line within this of <see cref="S"/> (a 2 m stretch).</summary>
+    public const float Zone = 1f;
+    /// <summary>The trough's underside above the track.</summary>
+    public const float TroughHeight = 3.1f;
+    /// <summary>The valve stands this far short of the pour, beside the line.</summary>
+    public const float ValveLead = 3.5f;
+    public const float ValveOut = 1.5f;
+    const float PostOut = 1.35f, PostSize = 0.24f;
+
+    /// <summary>The party line's S under the stream.</summary>
+    public float S { get; init; }
+    /// <summary>The valve is broken: no more pours.</summary>
+    public bool Quenched { get; private set; }
+    /// <summary>The phase now (Dry while quenched).</summary>
+    public PourPhase Phase { get; private set; } = PourPhase.Dry;
+    public QuenchValve Valve { get; private set; } = null!;
+
+    private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.27f, 0.18f, 0.1f), Roughness = 0.9f };
+    private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.15f, 0.13f, 0.12f), Metallic = 0.75f, Roughness = 0.55f };
+    private readonly StandardMaterial3D _lip = new() { AlbedoColor = new Color(0.3f, 0.1f, 0.04f), EmissionEnabled = true, Emission = new Color(1f, 0.4f, 0.08f), EmissionEnergyMultiplier = 0.4f, Roughness = 0.8f };
+    private readonly StandardMaterial3D _molten = new() { AlbedoColor = new Color(1f, 0.45f, 0.08f), EmissionEnabled = true, Emission = new Color(1f, 0.42f, 0.06f), EmissionEnergyMultiplier = 4f, Roughness = 0.4f };
+    private MeshInstance3D _stream = null!, _puddle = null!;
+    private OmniLight3D _light = null!;
+
+    /// <summary>Stand over the line at <paramref name="frame"/> (the track's frame at <see cref="S"/>); the valve goes on the side <paramref name="valveSide"/> (+1 the frame's +X) at <paramref name="valveFrame"/>.</summary>
+    public void Place(Transform3D frame, Transform3D valveFrame, float valveSide)
+    {
+        GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin);
+        var height = TroughHeight + 0.5f;
+        foreach (var side in new[] { -1f, 1f })
+        {
+            var post = new StaticBody3D { Name = side < 0 ? "PostL" : "PostR", CollisionLayer = 1, CollisionMask = 0, Position = new Vector3(side * PostOut, height / 2f, 0) };
+            post.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(PostSize, height, PostSize) } });
+            post.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(PostSize, height, PostSize) }, MaterialOverride = _wood });
+            AddChild(post);
+        }
+        // the trough: an iron box across the line, its lip glowing, a spout over the middle
+        AddChild(new MeshInstance3D { Name = "Trough", Mesh = new BoxMesh { Size = new Vector3(PostOut * 2f + 0.5f, 0.4f, 0.8f) }, MaterialOverride = _iron, Position = new Vector3(0, TroughHeight + 0.2f, 0) });
+        AddChild(new MeshInstance3D { Name = "Lip", Mesh = new BoxMesh { Size = new Vector3(PostOut * 2f + 0.3f, 0.06f, 0.6f) }, MaterialOverride = _lip, Position = new Vector3(0, TroughHeight + 0.42f, 0) });
+        AddChild(new MeshInstance3D { Name = "Spout", Mesh = new CylinderMesh { TopRadius = 0.28f, BottomRadius = 0.2f, Height = 0.3f, RadialSegments = 10 }, MaterialOverride = _iron, Position = new Vector3(0, TroughHeight - 0.1f, 0) });
+        _stream = new MeshInstance3D { Name = "Stream", Mesh = new CylinderMesh { TopRadius = 0.18f, BottomRadius = 0.3f, Height = TroughHeight - 0.25f, RadialSegments = 10 }, MaterialOverride = _molten, Position = new Vector3(0, (TroughHeight - 0.25f) / 2f, 0), Visible = false, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(_stream);
+        _puddle = new MeshInstance3D { Name = "Puddle", Mesh = new CylinderMesh { TopRadius = Zone + 0.2f, BottomRadius = Zone + 0.2f, Height = 0.04f, RadialSegments = 16 }, MaterialOverride = _molten, Position = new Vector3(0, 0.27f, 0), Visible = false, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off };
+        AddChild(_puddle);
+        _light = new OmniLight3D { Name = "Glow", OmniRange = 7f, LightEnergy = 0.3f, LightColor = new Color(1f, 0.45f, 0.1f), ShadowEnabled = false, Position = new Vector3(0, TroughHeight - 0.4f, 0) };
+        AddChild(_light);
+
+        // the feed pipe: down the valve-side post and along the line to the valve
+        var pipeTop = new Vector3(valveSide * (PostOut + 0.2f), TroughHeight + 0.2f, 0);
+        AddChild(new MeshInstance3D { Name = "Pipe", Mesh = new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.06f, Height = TroughHeight + 0.2f - QuenchValve.WheelHeight, RadialSegments = 8 }, MaterialOverride = _iron, Position = new Vector3(pipeTop.X, (TroughHeight + 0.2f + QuenchValve.WheelHeight) / 2f, 0) });
+        var valveLocal = GlobalTransform.AffineInverse() * (valveFrame.Origin + valveFrame.Basis.X.Normalized() * (valveSide * ValveOut));
+        var run = new Vector3(valveLocal.X, QuenchValve.WheelHeight, valveLocal.Z) - new Vector3(pipeTop.X, QuenchValve.WheelHeight, 0);
+        if (run.Length() > 0.1f)
+        {
+            var pipe = new MeshInstance3D { Name = "FeedPipe", Mesh = new CylinderMesh { TopRadius = 0.06f, BottomRadius = 0.06f, Height = run.Length(), RadialSegments = 8 }, MaterialOverride = _iron };
+            AddChild(pipe);
+            var dir = run.Normalized();
+            var x = Vector3.Up.Cross(dir).Normalized();
+            pipe.Transform = new Transform3D(new Basis(x, dir, x.Cross(dir)), new Vector3(pipeTop.X, QuenchValve.WheelHeight, 0) + run / 2f);
+        }
+        Valve = new QuenchValve { Name = "QuenchValve" };
+        AddChild(Valve);
+        Valve.GlobalTransform = new Transform3D(valveFrame.Basis.Orthonormalized(), valveFrame.Origin + valveFrame.Basis.X.Normalized() * (valveSide * ValveOut));
+        Valve.Broken += () => Quenched = true;
+    }
+
+    /// <summary>Whole again, pouring on its clock (a wreck or a load undid the ride).</summary>
+    public void Rebuild()
+    {
+        Quenched = false;
+        Valve.Rebuild();
+    }
+
+    public override void _Process(double delta)
+    {
+        if (_stream == null || Main.Instance?.Builder is not { } builder) return;
+        float into = 0f;
+        Phase = Quenched ? PourPhase.Dry : SetPieceRules.Pour(builder.FloorTick, out into);
+        var pouring = Phase == PourPhase.Pouring;
+        _stream.Visible = pouring;
+        _puddle.Visible = pouring;
+        var warn = Phase == PourPhase.Warn ? Mathf.Clamp(into / 1.5f, 0f, 1f) : 0f;
+        _lip.EmissionEnergyMultiplier = Quenched ? 0.05f : pouring ? 4f : 0.4f + 3.6f * warn * (0.8f + 0.2f * Mathf.Sin(into * 20f));
+        _light.LightEnergy = Quenched ? 0.05f : pouring ? 3.5f : 0.3f + 2.5f * warn;
+    }
+}
+
+/// <summary>
+/// The pour's quench valve: an iron wheel on the feed pipe beside the line, on layer 4 only (a small prop: a blade, a shove or an
+/// arrow finds it and nothing blocks the sight ray to it). Any hit bursts it: steam, the pour gutters out for good. Server only.
+/// </summary>
+public partial class QuenchValve : StaticBody3D, ICombatTarget
+{
+    /// <summary>The wheel's height above the track: about a seated hero's hand.</summary>
+    public const float WheelHeight = 1.1f;
+
+    private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.15f, 0.13f, 0.12f), Metallic = 0.75f, Roughness = 0.55f };
+    private readonly StandardMaterial3D _wheel = new() { AlbedoColor = new Color(0.6f, 0.1f, 0.06f), Metallic = 0.4f, Roughness = 0.5f, EmissionEnabled = true, Emission = new Color(0.9f, 0.15f, 0.05f), EmissionEnergyMultiplier = 0.6f };
+    private Node3D _wheelNode = null!;
+    private CollisionShape3D _shape = null!;
+
+    /// <summary>It burst (told once per build).</summary>
+    public event Action? Broken;
+
+    public QuenchValve()
+    {
+        CollisionLayer = 4; // what a hero's melee cast, blade sweep and arrows look for; not solid, so it never blocks a sight ray
+        CollisionMask = 0;
+    }
+
+    public override void _Ready()
+    {
+        _shape = new CollisionShape3D { Shape = new BoxShape3D { Size = new Vector3(0.55f, 0.6f, 0.55f) }, Position = new Vector3(0, WheelHeight, 0) }; // bigger than it looks: easier to hit from a moving cart
+        AddChild(_shape);
+        AddChild(new MeshInstance3D { Name = "Stand", Mesh = new CylinderMesh { TopRadius = 0.07f, BottomRadius = 0.09f, Height = WheelHeight, RadialSegments = 8 }, MaterialOverride = _iron, Position = new Vector3(0, WheelHeight / 2f, 0) });
+        AddChild(new MeshInstance3D { Name = "Body", Mesh = new BoxMesh { Size = new Vector3(0.22f, 0.22f, 0.22f) }, MaterialOverride = _iron, Position = new Vector3(0, WheelHeight, 0) });
+        _wheelNode = new Node3D { Name = "Wheel", Position = new Vector3(0, WheelHeight + 0.18f, 0) };
+        AddChild(_wheelNode);
+        _wheelNode.AddChild(new MeshInstance3D { Mesh = new TorusMesh { InnerRadius = 0.15f, OuterRadius = 0.2f, Rings = 16, RingSegments = 6 }, MaterialOverride = _wheel });
+        _wheelNode.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.36f, 0.03f, 0.03f) }, MaterialOverride = _wheel });
+        _wheelNode.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.03f, 0.03f, 0.36f) }, MaterialOverride = _wheel });
+        AddChild(new OmniLight3D { Name = "Tell", OmniRange = 1.6f, LightEnergy = 0.5f, LightColor = new Color(1f, 0.25f, 0.1f), ShadowEnabled = false, Position = new Vector3(0, WheelHeight + 0.3f, 0) });
+    }
+
+    public string DisplayName => "quench valve";
+    public bool IsAlive { get; private set; } = true;
+    public bool IsUnaware => false;
+    public bool IsCreature => false;
+    public void ApplyStatus(StatusApplication status) { }
+
+    /// <summary>Any hit bursts it (deferred: a hit can land inside a physics query).</summary>
+    public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
+    {
+        if (!IsAlive || NetSession.IsClient) return DamageResult.Miss(attack.Type);
+        IsAlive = false;
+        GD.Print($"[rails] {attackerName} hits the quench valve");
+        Callable.From(Burst).CallDeferred();
+        return new DamageResult(true, false, false, false, 1, attack.Type, Array.Empty<StatusApplication>());
+    }
+
+    private void Burst()
+    {
+        _shape.Disabled = true;
+        CollisionLayer = 0;
+        _wheelNode.Visible = false;
+        EventBus.Instance.Log("The quench valve bursts — the pour gutters out.");
+        EventBus.Instance.PlaySfx("steam_burst"); // placeholder: plan 6 adds the sound
+        if (GetParent() is Node3D parent && IsInsideTree())
+        {
+            var steam = new GpuParticles3D
+            {
+                Name = "Steam", Amount = 60, Lifetime = 1.6, OneShot = true, Explosiveness = 0.85f, Emitting = true,
+                ProcessMaterial = new ParticleProcessMaterial { Direction = Vector3.Up, Spread = 35f, InitialVelocityMin = 1.5f, InitialVelocityMax = 3.5f, Gravity = new Vector3(0, 0.6f, 0), ScaleMin = 0.4f, ScaleMax = 1.2f },
+                DrawPass1 = new QuadMesh { Size = new Vector2(0.8f, 0.8f) },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.85f, 0.85f, 0.85f, 0.25f), AlbedoTexture = Props.Fire.Puff(), Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BillboardMode = BaseMaterial3D.BillboardModeEnum.Particles, ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded },
+            };
+            parent.AddChild(steam);
+            steam.GlobalPosition = GlobalPosition + Vector3.Up * (WheelHeight + 0.2f);
+            GetTree().CreateTimer(2.5).Timeout += () => { if (IsInstanceValid(steam)) steam.QueueFree(); };
+        }
+        Broken?.Invoke();
+    }
+
+    /// <summary>Whole again.</summary>
+    public void Rebuild()
+    {
+        IsAlive = true;
+        if (_shape == null) return;
+        _shape.Disabled = false;
+        CollisionLayer = 4;
+        _wheelNode.Visible = true;
+    }
+}

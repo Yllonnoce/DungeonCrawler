@@ -82,14 +82,14 @@ public partial class RailController
         if (NetSession.IsClient || _laneFrame == null) return;
         _crossOut = outS;
         _crossBack = backS;
-        Party.FrameAt = _laneFrame;
+        RefreshFrameAt(); // one FrameAt for the lane blend and a jump's arc
     }
 
     /// <summary>Back on the party lane for good (the ride is over or undone).</summary>
     public void ClearLane()
     {
         _crossOut = _crossBack = float.NaN;
-        Party.FrameAt = null;
+        RefreshFrameAt();
     }
 
     /// <summary>
@@ -189,11 +189,12 @@ public partial class RailController
         RefreshHud();
     }
 
-    /// <summary>The cart is at a stop again, or undone: no halt, no lane, no obstacle (the encounter controller blocks again when it re-arms).</summary>
+    /// <summary>The cart is at a stop again, or undone: no halt, no lane, no obstacle, no gap (the encounter controller sets them again when it re-arms).</summary>
     private void ResetLine()
     {
         Halted = false;
         BlockedAt = float.PositiveInfinity;
+        ClearGap(); // the encounter controller sets it again when the ride arms
         ClearLane();
     }
 }

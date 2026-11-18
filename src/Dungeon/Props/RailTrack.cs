@@ -17,16 +17,45 @@ public partial class RailTrack : Node3D
     public Curve3D Curve { get; } = new() { BakeInterval = 0.2f, UpVectorEnabled = true };
     public float Length { get; private set; }
 
-    /// <summary>Lay the track along the points; a second call replaces the first (the old path and meshes are freed).</summary>
-    public void Build(IReadOnlyList<Vector3> points, Material steel, Material sleeper)
+    private Material? _steel, _sleeper;
+
+    /// <summary>
+    /// Lay the track along the points; a second call replaces the first (the old path and meshes are freed). Each of
+    /// <paramref name="gaps"/> (S from, S to) is left bare: no rail and no sleeper over it (a jump's gap). The curve runs on through them.
+    /// </summary>
+    public void Build(IReadOnlyList<Vector3> points, Material steel, Material sleeper, IReadOnlyList<(float from, float to)>? gaps = null)
     {
         foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
         Curve.ClearPoints();
         foreach (var p in points) Curve.AddPoint(p);
         Length = Curve.GetBakedLength();
         AddChild(new Path3D { Curve = Curve, Name = "Path" });
+        _steel = steel;
+        _sleeper = sleeper;
         if (points.Count < 2 || Length < 0.1f) return;
+        BuildMeshes(gaps);
+    }
 
+    /// <summary>Lay the rails and sleepers again on the same curve, bare over <paramref name="gaps"/>: the path (and every S along it) is unchanged.</summary>
+    public void Cut(IReadOnlyList<(float from, float to)> gaps)
+    {
+        if (_steel == null || _sleeper == null || Length < 0.1f) return;
+        foreach (var name in new[] { "Rails", "Sleepers" })
+            if (GetNodeOrNull(name) is { } old) { RemoveChild(old); old.QueueFree(); }
+        BuildMeshes(gaps);
+    }
+
+    private static bool InGap(float s, IReadOnlyList<(float from, float to)>? gaps)
+    {
+        if (gaps == null) return false;
+        foreach (var (from, to) in gaps) if (s > from && s < to) return true;
+        return false;
+    }
+
+    private void BuildMeshes(IReadOnlyList<(float from, float to)>? gaps)
+    {
+        var steel = _steel!;
+        var sleeper = _sleeper!;
         var railSt = new SurfaceTool();
         railSt.Begin(Mesh.PrimitiveType.Triangles);
         var sleeperSt = new SurfaceTool();
@@ -40,8 +69,10 @@ public partial class RailTrack : Node3D
         foreach (var side in new[] { -1f, 1f })
         {
             Vector3[]? prev = null;
-            foreach (var t in samples)
+            for (var k = 0; k < samples.Count; k++)
             {
+                var t = samples[k];
+                if (InGap(k * Sample, gaps)) { prev = null; continue; } // a bare stretch: the rail ends at its lip and starts again past it
                 var c = t.Origin + t.Basis.X.Normalized() * (side * Gauge / 2f) + t.Basis.Y.Normalized() * (SleeperSize.Y + RailSize.Y / 2f);
                 var x = t.Basis.X.Normalized() * (RailSize.X / 2f);
                 var y = t.Basis.Y.Normalized() * (RailSize.Y / 2f);
@@ -59,6 +90,7 @@ public partial class RailTrack : Node3D
         // Sleepers.
         for (var s = SleeperEvery / 2f; s < Length; s += SleeperEvery)
         {
+            if (InGap(s, gaps)) continue;
             var t = Curve.SampleBakedWithRotation(s, true, true);
             var b = t.Basis.Orthonormalized();
             AddBox(sleeperSt, b, t.Origin + b.Y * (SleeperSize.Y / 2f), SleeperSize);

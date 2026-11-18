@@ -583,6 +583,7 @@ public partial class RailController : Node
             var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, _train.Count, Party.Limit));
             Party.Step(input, dt);
             var crashed = HitBlock(); // an obstacle on the party lane: the cart is put back at its face
+            JudgeJump(); // a gap's lip: the cart flies, or drops in with its plating gone (wrecked below)
             RunOver(party); // the arrival tick too: the last stretch before the stop is swept
             if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
             else if (crashed) Halt();
@@ -725,7 +726,7 @@ public partial class RailController : Node
             brake = move.Y > 0.5f;
             if (move.Y < -0.5f) pumpers = 1;
         }
-        var companionsPump = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise;
+        var companionsPump = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart) continue;

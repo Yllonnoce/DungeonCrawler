@@ -105,11 +105,13 @@ public partial class RailEncounterController : Node
             case CartEventKind.Wrecked:
                 ClearRide(wrecked: true);
                 ResetSwitchyard(undone: true);
+                ResetKiln(e.Kind);
                 break;
             case CartEventKind.Restored:
                 ClearRide();
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
+                ResetKiln(e.Kind);
                 break;
             case CartEventKind.Arrived:
             case CartEventKind.OnFoot:
@@ -136,6 +138,7 @@ public partial class RailEncounterController : Node
         ClearStanders();
         ClearSwitchyard();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
+        ClearKiln(); // the golem goes like a rider (its corpse stays)
         foreach (var cart in _carts) Free(cart);
         _carts.Clear();
         _warnedAt.Clear();
@@ -237,6 +240,7 @@ public partial class RailEncounterController : Node
         var dt = (float)delta;
         StartReached();
         TickSetPieces(Main.Instance.Party, dt);
+        TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null)
@@ -264,17 +268,22 @@ public partial class RailEncounterController : Node
     /// <summary>Hold pace with the party's cart: aim at the pace point, at the party's speed carried over to this lane plus a capped correction.</summary>
     private void Pace(SlagCart cart, float dt)
     {
-        var run = cart.Run;
+        PaceRun(cart.Run, cart.Offset, dt);
+        cart.FollowRiders();
+    }
+
+    /// <summary>Step <paramref name="run"/> on the enemy line toward its pace point <paramref name="offset"/> metres from the party's cart, and pose it for this tick's physics.</summary>
+    private void PaceRun(CartRun run, float offset, float dt)
+    {
         var partyS = _rails.State.S;
         var partyV = _rails.State.Mode == CartMode.Rolling ? _rails.State.V * Lanes.Stretch(partyS) : 0f;
-        var target = PaceRules.TargetS(Lanes.EnemyS(partyS), cart.Offset);
+        var target = PaceRules.TargetS(Lanes.EnemyS(partyS), offset);
         var command = PaceRules.SpeedFor(run.State.S, run.State.V, target, partyV);
         if (_rails.FrontOnEnemyLane) // the party's cart took this lane: one ahead cannot outrun it, one behind never runs into it
             command = run.State.S > Lanes.EnemyS(partyS) ? Mathf.Min(command, Mathf.Max(0f, partyV - RamCloseIn)) : Mathf.Min(command, partyV);
         run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit, command), dt);
         run.Sync();
         run.PoseAt(run.State.S); // physics this tick (riders' aim, hits on the shoe) sees the cart where it is; _Process smooths it
-        cart.FollowRiders();
     }
 
     /// <summary>Who a slag cart can run over: heroes and NPCs on foot (the sweep skips anyone seated) and creatures on their own feet.</summary>
@@ -360,6 +369,7 @@ public partial class RailEncounterController : Node
         if (NetSession.IsClient || !Current) return;
         FollowBoarders();
         var frac = (float)Engine.GetPhysicsInterpolationFraction();
+        PoseGolem(frac);
         foreach (var cart in _carts)
         {
             if (!IsInstanceValid(cart) || cart.Derailed) continue;
