@@ -1366,7 +1366,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         root.AddChild(p);
         var forward = (-Camera.GlobalTransform.Basis.Z).Rotated(Vector3.Up, Mathf.DegToRad(yawDegrees));
         p.GlobalPosition = Camera.GlobalPosition + forward * 0.7f + Vector3.Down * 0.15f;
-        p.Setup(Party, State, attack, forward * speed, isArrow, color, this);
+        var velocity = forward * speed;
+        if (Cart is GodotObject ride && IsInstanceValid(ride)) velocity += Cart.Velocity; // loosed from a moving cart, it carries the cart's speed (as a carried creature's bolt does)
+        p.Setup(Party, State, attack, velocity, isArrow, color, this);
     }
 
     private void Nova(AbilityProfile a)

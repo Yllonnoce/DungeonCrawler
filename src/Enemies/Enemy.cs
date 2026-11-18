@@ -1183,6 +1183,8 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
     public VictimKind HazardVictimKind => IsBoss ? VictimKind.Boss : VictimKind.Enemy;
 
     private bool _environmentalKill;
+    /// <summary>The death was already told (<see cref="KillByEnvironment"/> quiet): no "dies" line.</summary>
+    private bool _quietDeath;
 
     /// <summary>The dungeon itself caught this creature. Regulars die (no loot; XP if a member saw it); bosses stagger.</summary>
     public void ReceiveHazard(HazardDamage kind, HazardOutcome outcome, string sourceName, int hazardIndex)
@@ -1199,12 +1201,17 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         EventBus.Instance.Log($"{sourceName} staggers {DisplayName} for {amount:0}.");
     }
 
-    /// <summary>An environmental kill: the death sequence without the loot, and only the XP if the party was close enough to count it.</summary>
-    public void KillByEnvironment(string sourceName, HazardDamage kind)
+    /// <summary>
+    /// An environmental kill: the death sequence without the loot, and only the XP if the party was close enough to count it.
+    /// <paramref name="quiet"/>: the caller has already told it (a slag cart's rider thrown under it), so neither the hazard's
+    /// line nor the "dies" line is logged; listeners still hear of the kill.
+    /// </summary>
+    public void KillByEnvironment(string sourceName, HazardDamage kind, bool quiet = false)
     {
         if (!IsAlive) return;
         _environmentalKill = true;
-        EventBus.Instance.Log($"{sourceName} {HazardRules.Verb(kind)} {DisplayName}.");
+        _quietDeath = quiet;
+        if (!quiet) EventBus.Instance.Log($"{sourceName} {HazardRules.Verb(kind)} {DisplayName}.");
         EventBus.Instance.RaiseEnemyKilledByHazard(this, sourceName);
         Kill();
     }
@@ -1214,7 +1221,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         PlayAnim("Death", force: true);
         EventBus.Instance.PlaySfx(DeathCue);
         if (IsBoss) EventBus.Instance.PlaySfx("boss");
-        EventBus.Instance.Log(IsBoss ? $"{DisplayName} falls! The way down is open." : $"{DisplayName} dies.");
+        if (!_quietDeath) EventBus.Instance.Log(IsBoss ? $"{DisplayName} falls! The way down is open." : $"{DisplayName} dies.");
         CollisionLayer = 0;
         CollisionMask = 1 | Dungeon.Props.Door.SafeDoorBarrierLayer; // the world, and the open safe door's barrier
         _material.AlbedoColor = _baseColor.Darkened(0.6f);

@@ -191,6 +191,7 @@ public partial class RailEncounterController : Node
             {
                 var spot = cart.RiderSpot(cart.Aboard.Count).Origin;
                 if (_builder.SpawnEnemy(member.EnemyId, spot, _builder.CurrentFloor) is not { } rider) continue;
+                rider.IsReinforcement = true; // a ride re-armed after a wreck or a load sends them again: they must not be a loot farm
                 cart.Board(rider);
                 rider.ForceAggro(); // it has seen the cart it hunts
             }

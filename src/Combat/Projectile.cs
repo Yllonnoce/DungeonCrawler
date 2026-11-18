@@ -115,6 +115,7 @@ public partial class Projectile : Area3D
         if (from.DistanceSquaredTo(to) < 1e-8f) return false;
         var space = GetWorld3D().DirectSpaceState;
         var exclude = new Godot.Collections.Array<Rid>();
+        if (Source is { Cart: CollisionObject3D ride } && IsInstanceValid(ride)) exclude.Add(ride.GetRid()); // loosed from a cart: it clears the shooter's own tub
         for (var guard = 0; guard < 6; guard++)
         {
             var query = PhysicsRayQueryParameters3D.Create(from, to, CollisionMask, exclude);
@@ -133,6 +134,7 @@ public partial class Projectile : Area3D
     private void OnBodyEntered(Node3D body)
     {
         if (_spent) return;
+        if (Source != null && IsInstanceValid(Source) && Source.Cart is Node3D ride && body == ride) return; // the cart the shooter sits in
         if (Cosmetic) { _spent = true; if (!IsArrow) Fx.HitFx.SpellBurst(GetParent(), GlobalPosition, Color); QueueFree(); return; }
         if (FromEnemy)
         {

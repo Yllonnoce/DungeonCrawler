@@ -121,7 +121,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     /// </summary>
     public void Derail()
     {
-        if (Derailed || NetSession.IsClient || !IsInsideTree() || GetParent() is not Node3D root) return;
+        if (Derailed || NetSession.IsClient || IsQueuedForDeletion() || !IsInsideTree() || GetParent() is not Node3D root) return; // a derail queued on a cart already freed does nothing
         Derailed = true;
         var at = GlobalPosition;
         Sparks(root, at + Vector3.Up * 0.4f);
@@ -136,7 +136,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
             rider.Drop(new Vector3(p.X, groundY + 0.05f, p.Z)); // down on the line where it stood
             if (!rider.IsAlive) continue;
             EventBus.Instance.Log($"{rider.DisplayName} is thrown under the cart.");
-            rider.KillByEnvironment(SourceName, HazardDamage.RunOver);
+            rider.KillByEnvironment(SourceName, HazardDamage.RunOver, quiet: true); // the line above tells it
         }
         Aboard.Clear();
         Tumble(root);
