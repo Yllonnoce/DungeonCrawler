@@ -358,7 +358,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         if (_grisel == null || !IsInstanceValid(_grisel) || _grisel is not { Dead: false, Downed: false } g) return null;
         if (g.Escorting && !g.Seated && g.GlobalPosition.DistanceTo(wagon.GlobalPosition) <= GriselReach) return g;
-        if (_rails != null && IsInstanceValid(_rails) && g.Cart == _rails.Cart && _rails.State.Mode == CartMode.Held && _rails.StopIndex == wagon.Stop) return g;
+        if (_rails != null && IsInstanceValid(_rails) && g.Cart == _rails.Cart && _rails.State.Mode == CartMode.Held && !_rails.Halted && _rails.StopIndex == wagon.Stop) return g; // halted on the line is not at the stop
         return null;
     }
 
@@ -372,7 +372,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (!wagon.Open || !AnyAboard(wagon)) return false;
         if (_rails == null || !IsInstanceValid(_rails) || _rails.State.Mode == CartMode.Wrecked) return true; // wrecked with no spare to take over: on foot
         if (wagon.Coupled) return false;
-        return !(_rails.State.Mode == CartMode.Held && _rails.StopIndex == wagon.Stop);
+        return !(_rails.State.Mode == CartMode.Held && !_rails.Halted && _rails.StopIndex == wagon.Stop); // halted on the line past its stop: the wagon is left behind
     }
 
     private bool AnyAboard(CageWagon wagon)

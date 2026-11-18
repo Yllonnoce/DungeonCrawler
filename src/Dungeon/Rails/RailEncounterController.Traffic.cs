@@ -79,7 +79,7 @@ public partial class RailEncounterController
         if (_traffic != null || _carts.Count > 0 || ArmedRide >= 1 || _rails.State.Mode == CartMode.Rolling) _trafficClock = 0f; // never while a ride is armed or the party's cart rolls
         else if ((_trafficClock += dt) >= SetPieceRules.SlagTrafficEvery) { _trafficClock = 0f; SpawnTraffic(); }
 
-        var held = _rails.State.Mode == CartMode.Held && _rails.Cart.Riders.Count == 0 && _rails.StopIndex < _rails.StopS.Length - 1 && _rails.GateUp(_rails.StopIndex);
+        var held = _rails.State.Mode == CartMode.Held && !_rails.Halted && ArmedRide < 1 && _rails.Cart.Riders.Count == 0 && _rails.StopIndex < _rails.StopS.Length - 1 && _rails.GateUp(_rails.StopIndex);
         if (!held) _runawayClock = 0f;
         else if (_runaway == null && (_runawayClock += dt) >= SetPieceRules.RunawayEvery) { _runawayClock = 0f; SpawnRunaway(); }
     }

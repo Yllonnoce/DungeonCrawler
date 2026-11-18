@@ -23,6 +23,8 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
     /// <summary>Always thrown and not to be touched: the return switch brings the cart home before the ride ends.</summary>
     public bool Fixed { get; init; }
     public bool Thrown { get; private set; }
+    /// <summary>The cart's front has passed its points this ride: the lever offers nothing until the ride is over.</summary>
+    public bool Taken { get; set; }
 
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.7f, Roughness = 0.5f };
     private readonly StandardMaterial3D _handle = new() { AlbedoColor = new Color(0.55f, 0.12f, 0.08f), Roughness = 0.6f };
@@ -53,7 +55,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
         SetThrown(Fixed);
     }
 
-    public string Prompt => NetSession.IsClient || Fixed ? "" : Thrown ? "Set the switch back" : "Throw the switch"; // co-op riding is plan 5
+    public string Prompt => NetSession.IsClient || Fixed || Taken ? "" : Thrown ? "Set the switch back" : "Throw the switch"; // co-op riding is plan 5
 
     public void Interact(PartyController party, Adventurer actor) => Toggle(actor.State.Name);
 
@@ -72,7 +74,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
 
     private bool Toggle(string who)
     {
-        if (NetSession.IsClient || Fixed) return false;
+        if (NetSession.IsClient || Fixed || Taken) return false;
         SetThrown(!Thrown);
         EventBus.Instance.PlaySfx("switch_clunk"); // placeholder: plan 6 adds the sound
         EventBus.Instance.Log(Thrown ? $"{who} throws the switch." : $"{who} sets the switch back.");
@@ -82,6 +84,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
     /// <summary>Back to straight without a word (the ride is over or undone). A fixed switch stays thrown.</summary>
     public void Reset()
     {
+        Taken = false;
         if (!Fixed) SetThrown(false);
     }
 

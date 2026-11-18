@@ -153,6 +153,7 @@ public partial class RailEncounterController
         {
             if (p.Plan.Ride != ride) continue;
             p.Barked = false;
+            if (p.Switch != null) p.Switch.Taken = false;
             if (p.Heap is { } heap)
             {
                 if (p.Rebuild && !heap.IsAlive) heap.Rebuild();
@@ -195,6 +196,7 @@ public partial class RailEncounterController
     private void TakeSwitch(Piece piece)
     {
         piece.Fired = true;
+        if (piece.Switch != null) piece.Switch.Taken = true; // its points are behind the cart: nothing left to pull this ride
         if (piece.Switch is not { Thrown: true }) { GD.Print($"[rails] switch {piece.Plan.Id} passed straight at S={_rails.State.S:0.0}"); return; }
         var backS = float.NaN;
         foreach (var p in _pieces)
@@ -268,7 +270,7 @@ public partial class RailEncounterController
     /// </summary>
     private bool Ram(SlagCart cart)
     {
-        if (_rails.State.Mode != CartMode.Rolling || !_rails.OnEnemyLane(_rails.Party.FrontS)) return false;
+        if (_rails.State.Mode != CartMode.Rolling || !_rails.FrontOnEnemyLane) return false;
         if (cart.Run.State.S < Lanes.EnemyS(_rails.State.S)) return false; // behind the party's cart
         var front = Lanes.EnemyS(_rails.Party.FrontS);
         if (cart.Run.BackS - front > RamReach) return false;

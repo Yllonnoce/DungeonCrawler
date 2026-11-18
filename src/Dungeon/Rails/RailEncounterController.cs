@@ -201,7 +201,7 @@ public partial class RailEncounterController : Node
         var partyS = _rails.State.S;
         var paceS = PaceRules.TargetS(Lanes.EnemyS(partyS), enc.Offset);
         var s = Mathf.Clamp(paceS - SpawnBehind, 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
-        if (_rails.OnEnemyLane(partyS)) s = Mathf.Min(Mathf.Max(paceS, Lanes.EnemyS(_rails.Party.FrontS) + CartRules.HalfLength + SpawnClear), Mathf.Max(0f, _enemy.Length - LineEnd - 1f)); // the party's cart is on this lane: seen ahead of it, never in it
+        if (_rails.FrontOnEnemyLane) s = Mathf.Min(Mathf.Max(paceS, Lanes.EnemyS(_rails.Party.FrontS) + CartRules.HalfLength + SpawnClear), Mathf.Max(0f, _enemy.Length - LineEnd - 1f)); // the party's cart is on this lane: seen ahead of it, never in it
         var v = _rails.State.V * Lanes.Stretch(partyS);
         var cart = new SlagCart { Name = $"SlagCart_{enc.Id}", EncounterId = enc.Id, InnerSide = InnerSideAt(s) };
         cart.Setup(_enemy, new CartState(s, v, CartMode.Rolling, CartRules.MaxPlating), enc.Offset);
@@ -269,7 +269,7 @@ public partial class RailEncounterController : Node
         var partyV = _rails.State.Mode == CartMode.Rolling ? _rails.State.V * Lanes.Stretch(partyS) : 0f;
         var target = PaceRules.TargetS(Lanes.EnemyS(partyS), cart.Offset);
         var command = PaceRules.SpeedFor(run.State.S, run.State.V, target, partyV);
-        if (_rails.OnEnemyLane(partyS)) // the party's cart took this lane: one ahead cannot outrun it, one behind never runs into it
+        if (_rails.FrontOnEnemyLane) // the party's cart took this lane: one ahead cannot outrun it, one behind never runs into it
             command = run.State.S > Lanes.EnemyS(partyS) ? Mathf.Min(command, Mathf.Max(0f, partyV - RamCloseIn)) : Mathf.Min(command, partyV);
         run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit, command), dt);
         run.Sync();

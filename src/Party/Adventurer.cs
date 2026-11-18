@@ -1357,8 +1357,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 at = origin + dir * u;
                 var inward = new Vector3(middle.X - at.X, 0f, middle.Z - at.Z);
                 if (inward.Length() > BodyRadius) at += inward * (1f - BodyRadius / inward.Length());
-                // no cutting through a wall: the eye must see the spot
-                var sight = PhysicsRayQueryParameters3D.Create(cam.Origin, at, 1);
+                // no cutting through a wall: the eye must see the spot (a solid prop's own box, the ore heap's, the switch post's, is not in the way)
+                var sight = PhysicsRayQueryParameters3D.Create(cam.Origin, at, 1, OwnColliders(body));
                 if (space.IntersectRay(sight).Count > 0) continue;
             }
             var carry = BladeRules.Carry(s.Cut.Count);
@@ -1373,6 +1373,19 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 _vr?.Pulse(rightHand: true, s.Heavy ? 0.9f : 0.5f, s.Hold * 2f);
             }
         }
+    }
+
+    /// <summary>The struck body's own collision objects (itself and any beneath it): the blade's sight ray does not count them as a wall. Null when it has none.</summary>
+    private static Godot.Collections.Array<Rid>? OwnColliders(Node3D body)
+    {
+        Godot.Collections.Array<Rid>? rids = null;
+        void Add(Node n)
+        {
+            if (n is CollisionObject3D o) (rids ??= new()).Add(o.GetRid());
+            for (var i = 0; i < n.GetChildCount(); i++) Add(n.GetChild(i));
+        }
+        Add(body); // once per blow landed, not per frame
+        return rids;
     }
 
     private void FireProjectile(AttackProfile attack, float speed, Color color, bool isArrow, float yawDegrees = 0f)

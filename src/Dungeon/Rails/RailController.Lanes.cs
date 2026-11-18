@@ -33,6 +33,8 @@ public partial class RailController
     /// <summary>The cart is held on the line short of the next stop (it ran into an obstacle), not at <see cref="StopIndex"/>.</summary>
     public bool Halted { get; private set; }
     private bool LineBlocked => !float.IsPositiveInfinity(BlockedAt);
+    /// <summary>Nothing at the cart's place holds it: the gate of the stop it is held at is up, or it is halted on the line past that stop (its gate is behind it).</summary>
+    private bool GateClear => Halted || GateUp(StopIndex);
 
     /// <summary>The enemy lane beside the party's and the map between them (the encounter controller has both). Before any <see cref="Cross"/>.</summary>
     public void UseLanes(TrackSampler enemy, LaneMap lanes)
@@ -58,6 +60,9 @@ public partial class RailController
 
     /// <summary>At party S <paramref name="s"/> the cart counts as on the enemy lane (half way across or more).</summary>
     public bool OnEnemyLane(float s) => LaneBlendAt(s) >= 0.5f;
+
+    /// <summary>The party's cart counts as on the enemy lane: its front is half way across or more. The one test for spawning, pacing, ramming and the sweep.</summary>
+    public bool FrontOnEnemyLane => OnEnemyLane(Party.FrontS);
 
     /// <summary>The cart has taken a switch this ride: it is posed across the lanes by S.</summary>
     public bool Crossing => !float.IsNaN(_crossOut);
@@ -124,7 +129,7 @@ public partial class RailController
     /// <summary>The run the sweep and the warning judge: the party's own, or its view on the enemy lane while the front is across.</summary>
     private CartRun JudgedRun()
     {
-        if (_laneView == null || _lanes == null || !OnEnemyLane(Party.FrontS)) return Party;
+        if (_laneView == null || _lanes == null || !FrontOnEnemyLane) return Party;
         _laneView.State = State with { S = _lanes.EnemyS(State.S) };
         _laneView.PrevS = _lanes.EnemyS(Party.PrevS);
         return _laneView;

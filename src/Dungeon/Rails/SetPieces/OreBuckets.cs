@@ -134,7 +134,12 @@ public partial class OreBuckets : Node3D
         Poured = 0;
         foreach (var p in Patches) if (IsInstanceValid(p)) p.QueueFree();
         Patches.Clear();
-        for (var i = 0; i < 4; i++) { _tipped[i] = -1f; Look(i, false); }
+        for (var i = 0; i < 4; i++)
+        {
+            _tipped[i] = -1f;
+            Look(i, false);
+            if (_pivots[i] != null) _pivots[i].Transform = _hang[i]; // hanging still
+        }
     }
 
     /// <summary>One physics tick while the ride is armed (server): a bucket creaks, pours, rights itself; the old patches burn out.</summary>
@@ -189,7 +194,7 @@ public partial class OreBuckets : Node3D
 
     public override void _Process(double delta)
     {
-        if (_pivots[0] == null) return;
+        if (!_armed || _pivots[0] == null) return; // still while the ride is not armed (Clear hangs them straight)
         var t = (float)Time.GetTicksMsec() / 1000f;
         for (var i = 0; i < 4; i++)
         {

@@ -67,7 +67,7 @@ public partial class RailController : Node
     /// <summary>A gate went up (the check or the winch): riders waiting at its stop start the boarding.</summary>
     private void OnGateLifted(RailGate g)
     {
-        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Boarding.Running && PlayerAboard()) StartBoarding();
+        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Halted && !Boarding.Running && PlayerAboard()) StartBoarding(); // held at that stop, not halted on the line past it
         RefreshHud();
     }
 
@@ -351,7 +351,7 @@ public partial class RailController : Node
                     && mate.GlobalPosition.DistanceTo(actor.GlobalPosition) <= CompanionBoardRange)
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
         if (actor.Control == ControlKind.LocalHuman) SeatBench(actor.GlobalPosition);
-        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateUp(StopIndex)) StartBoarding();
+        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateClear) StartBoarding();
         RefreshHud();
     }
 
@@ -373,7 +373,7 @@ public partial class RailController : Node
         if (State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1) return false;
         if (hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) return false;
         if (!PlayerAboard() || !SeatHero(hero)) return false;
-        if (!Boarding.Running && GateUp(StopIndex)) StartBoarding();
+        if (!Boarding.Running && GateClear) StartBoarding();
         RefreshHud();
         return true;
     }
@@ -565,7 +565,7 @@ public partial class RailController : Node
             if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
             else if ((_hopTimer -= dt) <= 0f) { _hopTimer = HopEvery; HopInNearby(party); }
             CountHeroes(party, out var seated, out var living);
-            if (!playerAboard || seated == 0 || !GateUp(StopIndex) || Halted && LineBlocked) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, without a player, or into the obstacle it stopped at
+            if (!playerAboard || seated == 0 || !GateClear || Halted && LineBlocked) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, without a player, or into the obstacle it stopped at
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
@@ -794,7 +794,7 @@ public partial class RailController : Node
     {
         if (State.Mode == CartMode.Wrecked) return "Cart — wrecked";
         if (Halted && LineBlocked) return "Cart — line blocked";
-        if (State.Mode == CartMode.Held && !GateUp(StopIndex)) return "Cart — gate down";
+        if (State.Mode == CartMode.Held && !GateClear) return "Cart — gate down";
         if (Boarding.Running) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(Boarding.Left)}";
         if (State.Mode == CartMode.Rolling) return "Cart — rolling";
         if (Halted) return "Cart — on the line";
