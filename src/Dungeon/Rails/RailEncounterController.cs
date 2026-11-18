@@ -75,7 +75,11 @@ public partial class RailEncounterController : Node
         _lineShown = new bool[_encounters.Count];
     }
 
-    public override void _Ready() => _rails.CartEvents += OnCartEvent;
+    public override void _Ready()
+    {
+        _rails.CartEvents += OnCartEvent;
+        if (!NetSession.IsClient) BuildSetPieces();
+    }
 
     public override void _ExitTree()
     {
@@ -100,8 +104,11 @@ public partial class RailEncounterController : Node
             case CartEventKind.Wrecked:
                 ClearRide(wrecked: true);
                 break;
-            case CartEventKind.Arrived:
             case CartEventKind.Restored:
+                ClearRide();
+                ClearThrowers();
+                break;
+            case CartEventKind.Arrived:
             case CartEventKind.OnFoot:
                 ClearRide();
                 break;
@@ -115,12 +122,14 @@ public partial class RailEncounterController : Node
         if (ArmedRide >= 1) FreeTraffic(); // the ride has the enemy line: a traffic cart in the way goes, so the two are never live together
         for (var i = 0; i < _encounters.Count; i++)
             if (_encounters[i].Ride == ride) _started[i] = false;
+        if (ArmedRide >= 1) ArmStanders(ArmedRide);
     }
 
     /// <summary>The ride is over (or undone): its live items go, the riders without a death or a word.</summary>
     private void ClearRide(bool wrecked = false)
     {
         ArmedRide = -1;
+        ClearStanders();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
         foreach (var cart in _carts) Free(cart);
         _carts.Clear();
@@ -157,7 +166,7 @@ public partial class RailEncounterController : Node
         }
     }
 
-    /// <summary>One encounter starts, by its kind. "lone", "thrower" and "golem" come with later tasks.</summary>
+    /// <summary>One encounter starts, by its kind. "lone" and "thrower" stand from the ride's departure (<see cref="ArmStanders"/>); "golem" comes with a later task.</summary>
     private void Spawn(int index, RailEncounterPlan enc)
     {
         switch (enc.Kind)
@@ -221,6 +230,7 @@ public partial class RailEncounterController : Node
         if (NetSession.IsClient || !Current) return;
         var dt = (float)delta;
         StartReached();
+        TickSetPieces(Main.Instance.Party);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
         if (_carts.Count == 0 && _traffic == null && _runaway == null)
