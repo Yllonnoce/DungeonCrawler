@@ -149,6 +149,29 @@ public partial class MineCart : AnimatableBody3D, IInteractable
         Box(body, "BenchDeck", new Vector3(TubWidth - Wall * 2f, BenchDeck, deckDepth), new Vector3(0, InsideFloor + BenchDeck / 2f, halfL - Wall - deckDepth / 2f), _wood);
         Box(body, "Bench", plank, new Vector3(0, InsideFloor + BenchDeck + SeatHeight - 0.025f, SeatSpots[4].Y + 0.12f), _wood);
 
+        // the lamp: a warm spot on the front board aimed down the track, tilted a little to the floor, and a small glow round it
+        var lampAt = new Vector3(0, TubBottom + 0.45f, -halfL - 0.12f);
+        AddChild(new SpotLight3D
+        {
+            Name = "Lamp",
+            Position = lampAt,
+            RotationDegrees = new Vector3(-8f, 0, 0),
+            SpotRange = 18f,
+            SpotAngle = 35f,
+            LightEnergy = 2f,
+            LightColor = new Color(1f, 0.85f, 0.6f),
+            ShadowEnabled = false,
+        });
+        AddChild(new OmniLight3D
+        {
+            Name = "LampGlow",
+            Position = lampAt,
+            OmniRange = 3f,
+            LightEnergy = 0.6f,
+            LightColor = new Color(1f, 0.85f, 0.6f),
+            ShadowEnabled = false,
+        });
+
         for (var i = 0; i < _seats.Length; i++)
         {
             var y = InsideFloor + (i >= CartSeats.HeroSeats ? BenchDeck : 0f);

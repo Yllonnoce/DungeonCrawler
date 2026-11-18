@@ -105,6 +105,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     private float _seatYaw;
     /// <summary>The cart's flat heading at the last <see cref="FollowSeat"/> (NaN: none yet), so a headset's room turns with the bends.</summary>
     private float _lastSeatHeading = float.NaN;
+    // the seated desktop camera's ride feel (CartFeel): roll spring, a share of the track pitch, a speed FOV boost; all zero on foot
+    private float _feelRoll, _feelRollVel, _feelPitch, _feelFov;
 
     private ShapeCast3D _meleeCast = null!;
     private RayCast3D _interactRay = null!;
@@ -281,7 +283,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
     public void CancelHold() => _holdStart = -1;
 
-    public void ApplySettings() => Camera.Fov = Settings.Fov;
+    public void ApplySettings() => Camera.Fov = Settings.Fov + _feelFov;
 
     private float _shakeAmp, _shakeLeft, _shakeTotal;
     private readonly Random _shakeRng = new();
@@ -294,8 +296,36 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _shakeLeft = _shakeTotal = Math.Max(seconds, 0.05f);
     }
 
+    /// <summary>
+    /// The seated desktop camera, each rendered frame: roll leans into the bend (a spring, positive Z roll is the left side down,
+    /// so positive curvature, a left turn, leans left), a share of the cart's own pitch rides on the mouselook pitch, and the
+    /// field of view widens with speed. Only the view this machine looks through; never in a headset.
+    /// </summary>
+    private void RideFeel(float dt)
+    {
+        if (!IsLocal || _vr != null || SpectateTarget != null || Cart is not { } cart || !IsInstanceValid(cart)) return;
+        dt = Math.Min(dt, 0.05f);
+        var target = Mathf.DegToRad(CartFeel.LeanDegrees(cart.Curvature, cart.Speed));
+        _feelRollVel += (RollStiffness * (target - _feelRoll) - RollDamping * _feelRollVel) * dt;
+        _feelRoll += _feelRollVel * dt;
+        _feelPitch = CartFeel.PitchShare * Mathf.Asin(Mathf.Clamp(-cart.GlobalTransform.Basis.Z.Y, -1f, 1f));
+        _feelFov += (CartFeel.FovBoost(cart.Speed) - _feelFov) * (1f - Mathf.Exp(-dt / FovTimeConstant));
+        Camera.Rotation = new Vector3(_pitch + _feelPitch, 0, _feelRoll);
+        Camera.Fov = Settings.Fov + _feelFov;
+    }
+    private const float RollStiffness = 30f, RollDamping = 10f, FovTimeConstant = 0.4f;
+
+    /// <summary>Back to a normal view: no roll, no pitch share, the settings' field of view.</summary>
+    private void ResetRideFeel()
+    {
+        var had = _feelRoll != 0f || _feelPitch != 0f || _feelFov != 0f;
+        _feelRoll = _feelRollVel = _feelPitch = _feelFov = 0f;
+        if (had && Camera != null) Camera.Fov = Settings.Fov;
+    }
+
     public override void _Process(double delta)
     {
+        RideFeel((float)delta);
         if (_shakeLeft <= 0f) return;
         _shakeLeft -= (float)delta;
         if (_shakeLeft <= 0f) { Camera.HOffset = 0f; Camera.VOffset = 0f; return; }
@@ -579,7 +609,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         // carry it here, turned by the bend since the last frame, never pitched or rolled
         if (_vr != null) _vr.RideAlong(float.IsNaN(_lastSeatHeading) ? 0f : Mathf.Wrap(heading - _lastSeatHeading, -Mathf.Pi, Mathf.Pi));
         _lastSeatHeading = heading;
-        if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch, 0, Camera.Rotation.Z); // the roll is the seated camera's lean (Task 6), never the track's
+        if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch + _feelPitch, 0, _feelRoll); // the roll is the seated camera's lean (RideFeel), never the track's
     }
 
     /// <summary>The yaw of a seat's forward (−Z) laid flat: the way the cart points, without its pitch or roll.</summary>
@@ -598,6 +628,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Pumping = false;
         _seatYaw = 0f;
         _lastSeatHeading = float.NaN;
+        ResetRideFeel();
         if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
         else GlobalBasis = Basis.Identity;
         ApplyPosture();
