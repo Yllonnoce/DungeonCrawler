@@ -59,7 +59,6 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public Adventurer? SpectateTarget { get; private set; }
     /// <summary>The crushed member this companion is walking to or kneeling by.</summary>
     public Adventurer? RescueTarget { get; private set; }
-    private Vector3 _cameraHome;
     /// <summary>Holding block. Only a driven body (local or remote) can guard.</summary>
     public bool Guarding { get; private set; }
     private double _holdStart = -1;
@@ -102,6 +101,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public const float SeatedHeight = 1.3f;
     /// <summary>Where a seated body looks, relative to its seat's forward, in radians (mouselook, or a companion facing its target).</summary>
     private float _seatYaw;
+    /// <summary>The cart's flat heading at the last <see cref="FollowSeat"/> (NaN: none yet), so a headset's room turns with the bends.</summary>
+    private float _lastSeatHeading = float.NaN;
 
     private ShapeCast3D _meleeCast = null!;
     private RayCast3D _interactRay = null!;
@@ -184,7 +185,6 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public override void _Ready()
     {
         Camera = GetNode<Camera3D>("Camera");
-        _cameraHome = Camera.Position;
         Torch = GetNode<OmniLight3D>("Camera/Torch");
         _meleeCast = GetNode<ShapeCast3D>("Camera/MeleeCast");
         _interactRay = GetNode<RayCast3D>("Camera/InteractRay");
@@ -248,7 +248,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
             _vr ??= VrRig.Attach(this); // the headset is the view; the flat camera rides it
             _vr.TakeView();             // every time: making the flat camera current just above took the view from the head
         }
-        else if (_vr != null) { _vr.Detach(); _vr = null; Camera.Position = _cameraHome; Camera.Rotation = new Vector3(_pitch, 0, 0); }
+        else if (_vr != null) { _vr.Detach(); _vr = null; ApplyPosture(); Camera.Rotation = new Vector3(_pitch, 0, 0); } // the eye for standing, crouching or a seat
         Torch.ShadowEnabled = local;
         Torch.LightEnergy = local ? 2.5f : 1.0f;
         Torch.OmniRange = local ? 16f : 8f;
@@ -533,6 +533,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Cart = cart;
         Seat = seat;
         _seatYaw = 0f;
+        _lastSeatHeading = float.NaN;
         Crouching = false;
         ApplyPosture();
         Velocity = cart.Velocity;
@@ -551,6 +552,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         LeaveSeat();
         GlobalPosition = at;
+        _lastGround = at; // a thrown rider who falls out of the world comes back here, not to the boarding platform
         Velocity = velocity;
         _fallStart = at.Y;
         _falling = false;
@@ -569,7 +571,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         if (Cart is not { } cart) return;
         if (!IsInstanceValid(cart)) { LeaveSeat(); return; }
         var seat = cart.SeatTransform(Seat);
-        GlobalTransform = new Transform3D(new Basis(Vector3.Up, SeatHeading(seat) + _seatYaw), seat.Origin);
+        var heading = SeatHeading(seat);
+        GlobalTransform = new Transform3D(new Basis(Vector3.Up, heading + _seatYaw), seat.Origin);
+        // a headset's room stands in the world on its own (TopLevel) and only AfterMove brings it, which a seat skips:
+        // carry it here, turned by the bend since the last frame, never pitched or rolled
+        if (_vr != null) _vr.RideAlong(float.IsNaN(_lastSeatHeading) ? 0f : Mathf.Wrap(heading - _lastSeatHeading, -Mathf.Pi, Mathf.Pi));
+        _lastSeatHeading = heading;
         if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch, 0, Camera.Rotation.Z); // the roll is the seated camera's lean (Task 6), never the track's
     }
 
@@ -587,6 +594,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         Cart = null;
         Seat = -1;
         _seatYaw = 0f;
+        _lastSeatHeading = float.NaN;
         if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
         else GlobalBasis = Basis.Identity;
         ApplyPosture();
@@ -1553,7 +1561,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     private void EndSpectate()
     {
         SpectateTarget = null;
-        Camera.Position = _cameraHome;
+        ApplyPosture(); // the eye for standing, crouching or a seat
         Camera.Rotation = new Vector3(_pitch, 0, 0);
     }
 

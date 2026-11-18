@@ -154,6 +154,13 @@ public partial class VrRig : XROrigin3D
         CarryCamera();
     }
 
+    /// <summary>Seated in a cart (the body's FollowSeat): turn the room about the head by <paramref name="turn"/> (the cart's bend, yaw only) and bring it over the body, level.</summary>
+    public void RideAlong(float turn)
+    {
+        if (Mathf.Abs(turn) > 1e-6f) TurnBy(turn);
+        AfterMove();
+    }
+
     /// <summary>
     /// The player's own eye height, measured once the headset reports in and again whenever the right stick is clicked:
     /// the room is raised or lowered so that height is the hero's. Sit, stand or be any height; ducking still ducks.
