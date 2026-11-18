@@ -1,6 +1,8 @@
+using DungeonCrawler.Adventure;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Enemies;
 using DungeonCrawler.Net;
 using DungeonCrawler.Party;
 using Godot;
@@ -42,6 +44,15 @@ public partial class RailController : Node
     private float _prevS;
     private float _hudTimer;
     private readonly HashSet<GridPos> _exitTaken = new();
+    private readonly Dictionary<ulong, double> _hitAt = new();
+    private readonly List<ulong> _stale = new();
+    private readonly Dictionary<int, double> _warnedAt = new();
+    /// <summary>Only bodies this close (flat) to the cart's front are judged for a run-over.</summary>
+    const float ScanRange = 6f;
+    const float JudgeAgain = 1f;
+    const float WarnEvery = 4f;
+    const float WreckHpFraction = 0.25f;
+    const float BodyRadius = 0.4f;
 
     public RailController()
     {
@@ -141,17 +152,19 @@ public partial class RailController : Node
     /// Where a rider gets out: at a stop or below throwing speed, a free walkable cell beside the lane that is no rail
     /// (never the enemy lane, never a cell another rider just took); at speed, the lane cell under the cart.
     /// </summary>
-    private GridPos ExitCell()
+    private GridPos ExitCell() => ExitCellNear(Cart.GlobalPosition, State.Mode != CartMode.Rolling || State.V < RunOverRules.ThrownAtSpeed, true);
+
+    private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
         var lane = _layout.Rail!.Party;
-        var here = DungeonBuilder.WorldToCell(Cart.GlobalPosition);
+        var here = DungeonBuilder.WorldToCell(at);
         int best = 0, bestD = int.MaxValue;
         for (var i = 0; i < lane.Count; i++)
         {
             int dx = lane[i].X - here.X, dy = lane[i].Y - here.Y, d = dx * dx + dy * dy;
             if (d < bestD) { bestD = d; best = i; }
         }
-        var atStop = State.Mode == CartMode.Held || State.V < RunOverRules.ThrownAtSpeed;
+        if (!useTaken) return CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c), atStop);
         var cell = CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_exitTaken.Contains(c), atStop);
         // every free cell nearby taken: share the first one rather than land on the track
         if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = CartSeats.ExitCell(lane, best, c => _layout.IsWalkable(c) && !_layout.IsRail(c), true);
@@ -185,10 +198,149 @@ public partial class RailController : Node
             input = Inputs(party, input);
             State = CartPhysics.Step(State, input, dt);
             if (State.Mode == CartMode.Held) Arrive(party);
+            else
+            {
+                RunOver(party);
+                Warn(party);
+                if (State.Plating <= 0f) Wreck(party);
+            }
         }
 
         Cart.Speed = State.V;
         Cart.Curvature = CurvatureAt(State.S);
+    }
+
+    // ---- run-over --------------------------------------------------------------------------------
+
+    private bool Measure(Vector3 pos, float radius, out TrackBody body)
+    {
+        var s = _track.Curve.GetClosestOffset(_track.ToLocal(pos));
+        var p = TrackPoint(s);
+        var dx = pos.X - p.X; var dz = pos.Z - p.Z;
+        body = new TrackBody(s, Mathf.Sqrt(dx * dx + dz * dz), pos.Y - p.Y, radius);
+        return true;
+    }
+
+    private bool InScan(Vector3 pos, Vector3 front)
+    {
+        var dx = pos.X - front.X; var dz = pos.Z - front.Z;
+        return dx * dx + dz * dz <= ScanRange * ScanRange;
+    }
+
+    private bool JudgedRecently(ulong id, double now) => _hitAt.TryGetValue(id, out var t) && now - t < JudgeAgain;
+
+    /// <summary>Judge the bodies near the cart's front: hit ones take the run-over outcome, big enemies are also knocked aside and dent the plating.</summary>
+    private void RunOver(PartyController party)
+    {
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (_hitAt.Count > 0)
+        {
+            _stale.Clear();
+            foreach (var kv in _hitAt) if (now - kv.Value >= JudgeAgain) _stale.Add(kv.Key);
+            foreach (var id in _stale) _hitAt.Remove(id);
+        }
+        var sNow = State.S;
+        var front = TrackPoint(Mathf.Min(_track.Length, sNow + CartRules.HalfLength));
+        var lethality = TierRules.Lethality;
+        var moving = sNow > _prevS;
+
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
+            var pos = hero.GlobalPosition;
+            Measure(pos, BodyRadius, out var b);
+            if (!moving || !InScan(pos, front) || !RunOverRules.Hits(_prevS, sNow, b)) continue;
+            var id = hero.GetInstanceId();
+            if (JudgedRecently(id, now)) continue;
+            _hitAt[id] = now;
+            hero.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(VictimKind.Member, false, lethality), SourceName, HazardIndex);
+        }
+
+        if (!moving) return;
+        var parent = GetParent();
+        var hitBig = false;
+        for (var i = 0; i < parent.GetChildCount(); i++)
+        {
+            var child = parent.GetChild(i);
+            if (child is Enemy enemy)
+            {
+                if (!enemy.IsAlive) continue;
+                var pos = enemy.GlobalPosition;
+                if (!InScan(pos, front)) continue;
+                Measure(pos, BodyRadius * enemy.Profile.Scale, out var b);
+                if (!RunOverRules.Hits(_prevS, sNow, b)) continue;
+                var id = enemy.GetInstanceId();
+                if (JudgedRecently(id, now)) continue;
+                _hitAt[id] = now;
+                var big = RunOverRules.IsBig(enemy.Profile.Scale, enemy.IsBoss);
+                enemy.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(enemy.HazardVictimKind, big, lethality), SourceName, HazardIndex);
+                if (big)
+                {
+                    if (enemy.IsAlive) enemy.GlobalPosition = _builder.Surface(ExitCellNear(pos, true, false));
+                    hitBig = true;
+                }
+            }
+            else if (child is Npc npc)
+            {
+                if (npc.Dead || npc.Downed) continue;
+                var pos = npc.GlobalPosition;
+                if (!InScan(pos, front)) continue;
+                Measure(pos, BodyRadius, out var b);
+                if (!RunOverRules.Hits(_prevS, sNow, b)) continue;
+                var id = npc.GetInstanceId();
+                if (JudgedRecently(id, now)) continue;
+                _hitAt[id] = now;
+                npc.ReceiveHazard(HazardDamage.RunOver, RunOverRules.Outcome(npc.HazardVictimKind, false, lethality), SourceName, HazardIndex);
+            }
+        }
+        if (!hitBig) return;
+        State = State with { Plating = Mathf.Max(0f, State.Plating - RunOverRules.BigBodyPlatingDamage) };
+        foreach (var hero in party.Adventurers)
+            if (IsInstanceValid(hero) && hero.Cart == Cart) hero.Shake(0.06f, 0.4f);
+        RefreshHud();
+    }
+
+    /// <summary>"Cart coming!" for a hero on foot with the cart bearing down: a seated companion says it (else the log), once per hero per few seconds.</summary>
+    private void Warn(PartyController party)
+    {
+        var now = Time.GetTicksMsec() / 1000.0;
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
+            Measure(hero.GlobalPosition, BodyRadius, out var b);
+            if (!RunOverRules.InWarning(State.S, State.V, b)) continue;
+            if (_warnedAt.TryGetValue(hero.Index, out var t) && now - t < WarnEvery) continue;
+            _warnedAt[hero.Index] = now;
+            Adventurer? speaker = null;
+            foreach (var mate in party.Adventurers)
+                if (IsInstanceValid(mate) && mate.Cart == Cart && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
+            if (speaker != null)
+            {
+                var name = speaker.State.Name;
+                EventBus.Instance.Log($"{name}: \"Cart coming!\"");
+                EventBus.Instance.RaiseBark(name, new Adventure.Line("Cart coming!"));
+                Main.Instance?.Hud?.ShowBark(name, "Cart coming!", 2f);
+            }
+            else EventBus.Instance.Log("Cart coming!");
+            EventBus.Instance.PlaySfx("cart_bell"); // no clip yet: AudioManager.Play ignores unknown cues; plan 6 adds the sound
+        }
+    }
+
+    /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
+    private void Wreck(PartyController party)
+    {
+        State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
+        EventBus.Instance.Log("The cart is wrecked!");
+        _exitTaken.Clear();
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Cart != Cart) continue;
+            hero.Pumping = false;
+            GetOut(hero); // V is 0: no thrown run-over
+            if (!hero.Downed) hero.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
+        }
+        Boarding.Cancel();
+        RefreshHud();
     }
 
     /// <summary>The seated human brakes (back) or pumps (forward); seated companions pump on a climb or when slow, two pumpers at most.</summary>
