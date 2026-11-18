@@ -558,14 +558,26 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         _action = CompanionAction.Idle;
     }
 
-    /// <summary>Put the body on its seat as the cart stands now, turned by the seat-relative yaw; the camera keeps its pitch.</summary>
+    /// <summary>
+    /// Put the body on its seat as the cart stands now: at the seat's position, upright (Y up), facing the seat's
+    /// horizontal heading turned by the seat-relative yaw. The cart itself pitches and rolls with the track; its riders
+    /// do not (a 26° ramp would tilt the view whole, and a headset's view must stay level). The camera keeps its pitch;
+    /// on desktop Task 6 layers a share of the track's pitch and the lean onto the camera (its roll is left alone here).
+    /// </summary>
     public void FollowSeat()
     {
         if (Cart is not { } cart) return;
         if (!IsInstanceValid(cart)) { LeaveSeat(); return; }
         var seat = cart.SeatTransform(Seat);
-        GlobalTransform = new Transform3D(seat.Basis * new Basis(Vector3.Up, _seatYaw), seat.Origin);
-        if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch, 0, Camera.Rotation.Z); // the roll is the seated camera's (the lean)
+        GlobalTransform = new Transform3D(new Basis(Vector3.Up, SeatHeading(seat) + _seatYaw), seat.Origin);
+        if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch, 0, Camera.Rotation.Z); // the roll is the seated camera's lean (Task 6), never the track's
+    }
+
+    /// <summary>The yaw of a seat's forward (−Z) laid flat: the way the cart points, without its pitch or roll.</summary>
+    private static float SeatHeading(Transform3D seat)
+    {
+        var f = -seat.Basis.Z;
+        return Mathf.Atan2(-f.X, -f.Z);
     }
 
     /// <summary>Back to standing on foot, upright and facing where the rider looked; nothing is moved.</summary>
@@ -588,9 +600,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     {
         if (Cart is not { } cart || !IsInstanceValid(cart)) return;
         var seat = cart.SeatTransform(Seat);
-        var local = seat.Basis.Inverse() * (point - seat.Origin);
-        if (local.X * local.X + local.Z * local.Z < 0.001f) return;
-        _seatYaw = ClampSeatYaw(Mathf.Atan2(-local.X, -local.Z));
+        var d = point - seat.Origin;
+        if (d.X * d.X + d.Z * d.Z < 0.001f) return;
+        _seatYaw = ClampSeatYaw(Mathf.Wrap(Mathf.Atan2(-d.X, -d.Z) - SeatHeading(seat), -Mathf.Pi, Mathf.Pi)); // flat, as the rider sits
         FollowSeat();
     }
 
