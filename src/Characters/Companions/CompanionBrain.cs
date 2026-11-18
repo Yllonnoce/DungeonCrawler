@@ -21,6 +21,8 @@ public sealed record CompanionContext
     public bool HasHealingPotion { get; init; }
     public Stance Stance { get; init; } = Stance.Defensive;
     public bool PrefersRange { get; init; }
+    /// <summary>Sitting in a mine cart: it cannot step back, so it never retreats (it fights from the seat instead).</summary>
+    public bool Seated { get; init; }
     public float MeleeRange { get; init; } = 1.8f;
     public float EngageRadius { get; init; } = 12f;
     public float RangedDistance { get; init; } = 7f;
@@ -77,11 +79,12 @@ public static class CompanionBrain
     /// <summary>
     /// A melee blow reaches a hound on a coupled cage wagon's roof this far (body to body). Measured on ride 2 of --test-chase,
     /// which prints it: from the cart's rear seats the first wagon's roof hound is 3.38 m away on the level (2.73 m back, 1.98 m
-    /// up) and 3.21–3.37 m in the bends; a climb or a dip of 10% under the 2.6 m to the wagon adds about 0.15 m. The front seats
-    /// are 3.79–3.83 m (3.64 m at the closest, in a bend) and the second wagon's roof one wagon spacing (2.6 m) further: out of
-    /// reach. Only roof boarders get it: a sword still reaches nothing else beside the line that it did not before.
+    /// up) and 3.21–3.37 m in the bends; from the front seats 3.79–3.83 m (3.64 m in a bend); a climb or a dip of 10% under the
+    /// 2.6 m to the wagon adds about 0.15 m. So every seat reaches the first wagon's roof, while the second wagon's roof, one
+    /// wagon spacing (2.6 m) further (about 5.8 m from the rear seats, 6.4 m from the front), stays out of reach. Only roof
+    /// boarders get it: a sword still reaches nothing else beside the line that it did not before.
     /// </summary>
-    public const float BoarderReach = 3.6f;
+    public const float BoarderReach = 3.9f;
     /// <summary>A boarder biting crew, that this companion can strike from where it is, counts as this much nearer: it comes first.</summary>
     public const float CrewBiterPull = 10f;
 
@@ -104,8 +107,11 @@ public static class CompanionBrain
             return ctx.DistanceToFormation > 1.5f ? CompanionAction.Follow : CompanionAction.Idle;
         }
 
-        if (ctx.HpFraction < PanicThreshold && target.Distance < 3f) return new CompanionAction(ActionKind.Retreat, target.Id);
-        if (ctx.PrefersRange && target.Distance < RangedTooClose) return new CompanionAction(ActionKind.Retreat, target.Id);
+        if (!ctx.Seated) // a seat cannot be backed out of: a seated companion fights at any distance (WhileSeated would only turn the retreat into Hold)
+        {
+            if (ctx.HpFraction < PanicThreshold && target.Distance < 3f) return new CompanionAction(ActionKind.Retreat, target.Id);
+            if (ctx.PrefersRange && target.Distance < RangedTooClose) return new CompanionAction(ActionKind.Retreat, target.Id);
+        }
 
         var ability = ChooseAbility(ctx, target);
         if (ability != null && target.Distance <= RangeFor(ability, target) && (target.Visible || ability.Ability.Kind is AbilityKind.PartyBuff or AbilityKind.SelfBuff))

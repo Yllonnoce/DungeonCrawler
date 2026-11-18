@@ -93,6 +93,7 @@ public partial class DebugTools
                     // a small enemy on the lane 30 m ahead: the cart must run it down on the way to stop 1
                     _rideCinder = RideSpawnAhead(main, layout, rc, "enemy.horde_cinder", 30f, out _rideCinderAt, out var cell);
                     if (_rideCinder == null) { Fail("could not spawn enemy.horde_cinder on the lane ahead"); return; }
+                    _rideCinder.SetUntargetable(true); // the run-over is what this checks: seated companions shoot at any distance now; a hazard's blow ignores Untargetable, so only the cart can kill it
                     GD.Print($"[ride] 3 {_rideCinder.Name} placed on lane cell {cell} at S={rc.State.S + 30f:0.0} (stop 1 at {rc.StopS[1]:0.0})");
                 }
                 else if (_rideClock > 6f) Fail($"the cart did not depart within 6 s (mode {rc.State.Mode}, boarding {rc.Boarding.Running} left {rc.Boarding.Left:0.0})");
