@@ -1087,6 +1087,76 @@ Floor 12's stops (built-in campaign; `Rail.Stops[i].Room`) and what waits at the
 The six named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon)
 are seated by the crew controller, not the resolver. The "caged crew" narration fires at S1.
 
+### Stops, cages and the crew
+
+A jailbreak floor with a rail line runs `CrewRescueController` (`Adventure/Objectives/CrewRescueController.cs`) in place of
+the walk-in `JailbreakController`; floors without rails (floors 2 and 13) keep the walk-in jail as it was. Every state
+change is the server's (or solo's); a client only reads the objective state for the HUD line until plan 5 syncs the rest.
+The jail room stays a locked vault with nobody in its cells.
+
+The gates. Each intermediate stop whose room holds a guard or defend collective gets a `RailGate` across the party lane
+just past the platform, with a winch post on the outer side. A stop with no such mobs gets no gate. A gate starts down
+while any member of those collectives lives. A patrol or alarm group passing through does not hold a gate. The cart
+rolls into the stop as usual but does not count down to leave, and the HUD says "Cart — gate down". Every 0.25 s the
+server lifts any down gate whose holders are all dead. Riders already seated then start the boarding. The winch ("Crank
+the winch") lifts the gate by hand, but only when no living holder stands within 12 m of it; otherwise the log says
+"Not while they're still here."
+
+Cage wagons and coupling. At each intermediate stop a `CageWagon` (`Dungeon/Rails/CageWagon.cs`, procedural, with a stub
+of siding track under it) stands on a free cell beside the platform. The cell is blocked, and nobody getting out of the
+cart is set down on it. The crew ride inside, two to a wagon, in stop order. Looking at a locked wagon offers one of three
+ways in. "Open the cage (the orc's keys)" works once the party carries them. "Open the cage (Grisel)" works when she
+follows the party within 8 m, or sits on the cart's bench at that stop. "Unlock the cage" spends an iron key or tries a
+pick (`PartyController.TryUnlock`, an objective lock). An open cage frees its two: XP and a `freed:<id>` flag each, as the
+walk-in jailbreak gives. When the cart next leaves that stop, an open wagon with crew aboard couples on behind it, and the
+train is posed along the line behind the cart. Each coupled wagon slows the cart a little (`CartInput.CrewWagons`, 5% per
+wagon). An open wagon still on its siding offers "Let them out": its crew climb out and follow the party on foot.
+
+The crew. Floor 12's six are Hob Tallow, Merrin Ash, Dace Wicker, Old Pell, Juno Brack and Selby Crane (wagon 1 holds Hob
+and Merrin, wagon 2 Dace and Old Pell, wagon 3 Juno and Selby). A plan with no `Crew` falls back to the floor's stock
+prisoners. Crew who cannot fit in a wagon wait freed at the landing. A crew member (`Npc.Crew`) who is hurt to nothing
+goes down and bleeds out after 60 s (`CrewRules.BleedOutSeconds`), and the label counts the seconds left. "Revive <name>",
+on the NPC or on the wagon they sit in, gets them up at 35% HP, but not with a hostile within 6 m. One who bleeds out is
+gone ("<name> is gone.") and counts as lost.
+
+Grisel's two branches hang on the floor 9 flag `grisel_forgiven`; condemned and unset are the same. Forgiven, Grisel
+(`npc_grisel`) waits at the landing with her escort quest `q_grisel_out`. Once she follows, she takes the cart's rear
+bench (seats 4 and 5, Grisel first) whenever a player boards within 25 m of her. She opens every cage for free at its stop.
+The quest completes when she reaches the down stairs. Condemned, she lies dead on a cell beside wagon 1 with no dialogue,
+and an `OrcKeyring` hangs at her belt. "Take the orc's keys" sets `OrcKeys`, and every cage then opens free. Her body is
+built again with the floor every time, and the keyring is hidden once the save says the keys are taken.
+
+Spare carts. A spare cart, for looks only, stands beside each intermediate stop's platform. When the party's cart is
+wrecked, the nearest stop (along the line, ahead or behind) with an unused spare provides a new one. The spare vanishes,
+and the party's cart stands Held there with full plating, its wagons still coupled behind it. The log says "A spare cart
+waits at stop N." With every spare used, a wreck leaves the rest on foot ("No carts left. The rest is on foot.", a
+`CartEventKind.OnFoot` event). The crew in coupled wagons then get out and follow.
+
+The win. A crew member is home once they stand in the exit room (`Stops[^1].Room`) on foot, or sit in a coupled wagon while
+the cart is held at the end of the line. Home is kept unless they go down outside the exit room. The floor completes when
+every cage is open and every crew member is home or lost. The lost never block it. The floor's reward vault, if it has one, opens, the flag
+`jailbreak_freed_all` is set, and the log says "The crew are home. The stairs grind open." If no stop had room for a
+wagon, the trial is waived and the stairs open on the first tick.
+
+The save. `FloorStateDto.SparesUsed` lists the stops whose spare is spent. `ObjectiveStateDto` adds `GatesUp`, `OpenCages`,
+`CoupledCages` (in train order), `HomeCrew`, `LostCrew` and `OrcKeys`; every one is nullable, so old saves load. Seats
+are not saved. A load puts the cart Held at the stop it last reached and couples the saved train behind it again. It
+seats the caged crew and the train's riders in their wagons, leaves crew who were let out on foot where they stood, and
+sets the home crew in the exit room. Lifted gates come back up with no animation or log line.
+
+`--test-crew[=forgiven|condemned]` (condemned when no branch is given) plays the rescue on the built-in floor 12 at
+lethality 3 with no AI and prints `[crew]` lines. It checks the floor first: 3 wagons, 6 caged crew, 3 gates down. Then it
+boards at the landing, and at each stop it checks that the gate is down, kills the stop's guards by hand and waits for
+the gate to lift. Each cage must open free (an iron key in the bag stays unspent, and every pick is forced to fail).
+Condemned, the party takes the orc's keys from Grisel's body; forgiven, Grisel opens the cages from the bench. Each wagon
+must couple on as the cart leaves. Between stops 2 and 3 the run saves and loads, and the train, crew, `OrcKeys` and gates
+must come back. A crew member taken out of wagon 2 is downed and bleeds out (the clock is wound on through
+`Npc.DebugBleed`) and is lost. The end of the line must bring the other five home and unlock the stairs; forgiven, Grisel
+walks with the party to the stairs and `q_grisel_out` must complete. Then the floor is built again, and a cart on thin
+plating hits a cinder brute between stops 1 and 2. One spare must take over, holding the cart at a stop. The run ends
+with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
+as it appears.
+
 Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check) and `tests/Dungeon/RailCurvesTests.cs`
 (the smoothed rail centrelines). `tests/` is local and not in git.
 

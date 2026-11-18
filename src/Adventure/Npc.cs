@@ -385,6 +385,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         }
     }
 
+    /// <summary>Test hook (--test-crew): set a downed crew member's clock, to run the bleed-out on without waiting it out.</summary>
+    internal void DebugBleed(float seconds) { if (Downed && Crew && !Dead) DownedSeconds = seconds; }
+
     /// <summary>A downed crew member's clock (server only): the label counts the seconds left; at the end they are gone.</summary>
     private void BleedOut(float dt)
     {
