@@ -94,6 +94,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
     public int Seat { get; private set; } = -1;
     /// <summary>Riding a cart: no walking, gravity or MoveAndSlide; the body takes its transform from the seat (<see cref="FollowSeat"/>).</summary>
     public bool Seated => Cart != null;
+    /// <summary>A seated companion working the cart's pump (set by the RailController): it does not attack meanwhile.</summary>
+    public bool Pumping { get; set; }
     /// <summary>A seated body can turn this far either way from facing forward: enough to look back over a shoulder.</summary>
     public const float MaxSeatYawDegrees = 150f;
     /// <summary>A seated body's eye above the tub floor (its origin) and the height of its shorter capsule.</summary>
@@ -593,6 +595,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
         var forward = -GlobalTransform.Basis.Z;
         Cart = null;
         Seat = -1;
+        Pumping = false;
         _seatYaw = 0f;
         _lastSeatHeading = float.NaN;
         if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
@@ -957,6 +960,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable
 
         _action = CompanionBrain.Decide(ctx);
         if (Seated) _action = CompanionBrain.WhileSeated(_action);
+        if (Seated && Pumping && _action.Kind == ActionKind.Attack) _action = new CompanionAction(ActionKind.Hold, _action.TargetId); // pumping means not fighting
         if (CompanionBrain.DodgeDecisionDue(ctx)) _lastTelegraphDecided = ctx.TelegraphId; // one roll per signature, win or lose
         RescueTarget = _action.Kind == ActionKind.Rescue ? mangled : null;
         Target = _action.Kind != ActionKind.Rescue && _action.TargetId >= 0 && _action.TargetId < byId.Count ? byId[_action.TargetId] : null;

@@ -288,6 +288,13 @@ public partial class DungeonBuilder : Node3D
         PlaceFires(layout, _floorRoot, floorIndex);
         PlaceStructures(layout, _floorRoot, seed);
         PlaceRails(layout, _floorRoot);
+        if (PartyTrack != null && layout.Rail is { Stops.Count: >= 2 }) // the party's cart and its ride; it dies with the floor root
+        {
+            var rails = new Rails.RailController();
+            rails.Setup(this, layout, PartyTrack, _floorRoot);
+            if (rails.StopS.Length >= 2) _floorRoot.AddChild(rails);
+            else { rails.Cart.QueueFree(); rails.QueueFree(); }
+        }
         PlaceNestMouths(layout, _floorRoot, seed);
         PlaceHordes(layout, contents, floorIndex, Game.Instance?.SpentHordes(floorIndex) ?? Array.Empty<string>());
         PlaceAmbushes(layout, floorIndex, seed, floorState);

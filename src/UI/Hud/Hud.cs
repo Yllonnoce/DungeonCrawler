@@ -63,6 +63,9 @@ public partial class Hud : Control
     private QuestLogScreen _questLog = null!;
     private StairsPrompt _stairsPrompt = null!;
     private Label _objective = null!;
+    private VBoxContainer _cart = null!;
+    private Label _cartLine = null!;
+    private ProgressBar _cartBar = null!;
     private Label _subtitle = null!;
     private Label _mangled = null!;
     private Label _readyCheck = null!;
@@ -160,6 +163,19 @@ public partial class Hud : Control
         _objective.AnchorLeft = 0; _objective.AnchorRight = 0; _objective.AnchorTop = 0; _objective.AnchorBottom = 0;
         _objective.OffsetLeft = 16; _objective.OffsetTop = 44; _objective.OffsetRight = 620; _objective.OffsetBottom = 68;
         AddChild(_objective);
+        // the mine cart's line and plating bar, under the objective line (shown near or in the cart)
+        _cart = new VBoxContainer { Name = "Cart", Visible = false, MouseFilter = MouseFilterEnum.Ignore };
+        _cart.AnchorLeft = 0; _cart.AnchorRight = 0; _cart.AnchorTop = 0; _cart.AnchorBottom = 0;
+        _cart.OffsetLeft = 16; _cart.OffsetTop = 70; _cart.OffsetRight = 236; _cart.OffsetBottom = 108;
+        _cart.AddThemeConstantOverride("separation", 2);
+        AddChild(_cart);
+        _cartLine = new Label { Modulate = new Color(0.85f, 0.8f, 0.7f) };
+        _cartLine.AddThemeFontSizeOverride("font_size", 14);
+        _cart.AddChild(_cartLine);
+        _cartBar = new ProgressBar { CustomMinimumSize = new Vector2(220, 8), ShowPercentage = false, MinValue = 0, MaxValue = 1, Value = 1 };
+        _cartBar.AddThemeStyleboxOverride("fill", new StyleBoxFlat { BgColor = new Color(0.62f, 0.6f, 0.55f) });
+        _cartBar.AddThemeStyleboxOverride("background", new StyleBoxFlat { BgColor = new Color(0.08f, 0.08f, 0.08f, 0.85f) });
+        _cart.AddChild(_cartBar);
         _subtitle = new Label { Name = "Subtitle", HorizontalAlignment = HorizontalAlignment.Center, AutowrapMode = TextServer.AutowrapMode.Word, Modulate = new Color(0.95f, 0.93f, 0.85f) };
         _subtitle.AddThemeFontSizeOverride("font_size", 18);
         _subtitle.AnchorLeft = 0.5f; _subtitle.AnchorRight = 0.5f; _subtitle.AnchorTop = 1; _subtitle.AnchorBottom = 1;
@@ -306,6 +322,16 @@ public partial class Hud : Control
     }
 
     public string ObjectiveText => _objective.Text;
+
+    /// <summary>The mine cart's plating (0-1) and status line under the objective; a null plating hides both.</summary>
+    public void SetCart(float? plating01, string? line)
+    {
+        if (!IsInstanceValid(_cart)) return;
+        _cart.Visible = plating01 != null;
+        if (plating01 is not { } p) return;
+        _cartBar.Value = Mathf.Clamp(p, 0f, 1f);
+        _cartLine.Text = line ?? "";
+    }
     private void OnObjectiveChanged(string text) => _objective.Text = text;
     private void OnQuestChanged(QuestState q) { if (_questLog.Visible) _questLog.Refresh(); }
     private void OnNarration(string text, string? voiceId) => ShowSubtitle(text);
