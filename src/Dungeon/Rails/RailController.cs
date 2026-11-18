@@ -763,10 +763,11 @@ public partial class RailController : Node
             if (move.Y < -0.5f) pumpers = 1;
         }
         var companionsPump = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
+        var most = DebugTools.Instance?.PumperCap ?? 2; // a test's cap (--test-chase's one-pumper jump); the game's is two
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart) continue;
-            var pump = companionsPump && !brake && pumpers < 2 && hero.Control == ControlKind.Companion && !hero.Downed;
+            var pump = companionsPump && !brake && pumpers < most && hero.Control == ControlKind.Companion && !hero.Downed;
             if (pump) pumpers++;
             hero.Pumping = pump;
         }

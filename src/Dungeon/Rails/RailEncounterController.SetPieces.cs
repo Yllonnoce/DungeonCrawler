@@ -51,8 +51,8 @@ public partial class RailEncounterController
     /// <summary>Stand-ins of the armed ride that go with it if the cart stops short ("lone"); a thrower is not on it.</summary>
     private readonly List<Enemy> _lones = new();
     private readonly List<(string id, Enemy enemy)> _throwers = new();
-    /// <summary>Thrower encounters that have stood once on this floor: the first is a full enemy (it stays after the cart passes, for loot and XP); one sent again after it died or a load is a reinforcement (no loot farm).</summary>
-    private readonly HashSet<string> _throwersSent = new();
+    /// <summary>Thrower encounters that have stood once on this floor: the first is a full enemy (it stays after the cart passes, for loot and XP); one sent again after it died, a wreck or a load is a reinforcement (no loot farm). Saved (<see cref="Capture"/>).</summary>
+    private readonly ThrowerMemory _throwersSent = new();
     private int _headsBarked;
 
     /// <summary>The set pieces built on this floor (tests and the smoke read it).</summary>
@@ -121,7 +121,7 @@ public partial class RailEncounterController
                 var profile = baseProfile == null ? null : baseProfile with { WindupSeconds = Mathf.Max(ThrowerWindup, baseProfile.WindupSeconds) };
                 if (_builder.SpawnEnemy(id, spot, _builder.CurrentFloor, profile: profile) is not { } thrower) return;
                 thrower.HoldAt(spot); // (it marks a holder a reinforcement: the flag is set after)
-                thrower.IsReinforcement = !_throwersSent.Add(enc.Id); // the first pays like any enemy; a re-armed ride's next one only gives XP
+                thrower.IsReinforcement = _throwersSent.Send(enc.Id); // the first pays like any enemy; a re-armed ride's next one (a load's too) only gives XP
                 var toward = track.Point(s) - spot;
                 toward.Y = 0f;
                 if (toward.LengthSquared() > 0.01f) thrower.LookAt(thrower.GlobalPosition + toward, Vector3.Up);

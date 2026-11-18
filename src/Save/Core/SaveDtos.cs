@@ -250,6 +250,8 @@ public sealed class FloorStateDto
     public bool? GolemDefeated { get; set; }
     /// <summary>The quench valve is broken (it stays broken on this floor); null in older saves.</summary>
     public bool? ValveBroken { get; set; }
+    /// <summary>The trackside thrower encounters (ids) that have sent their thrower on this floor: one sent again is a reinforcement; null in older saves, read as none.</summary>
+    public List<string>? ThrowersSent { get; set; }
 }
 
 /// <summary>One Press or Spike Bed mid-life. Phase is a PressPhase or SpikePhase byte by Kind.</summary>

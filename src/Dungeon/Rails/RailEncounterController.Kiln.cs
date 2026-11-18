@@ -211,17 +211,19 @@ public partial class RailEncounterController
 
     // ---- save ------------------------------------------------------------------------------------
 
-    /// <summary>The save keeps what the floor remembers of the kiln: the golem's death and the broken valve. Server only.</summary>
+    /// <summary>The save keeps what the floor remembers of the rides: the golem's death, the broken valve and the throwers sent once. Server only.</summary>
     public void Capture(FloorStateDto dto)
     {
         if (NetSession.IsClient) return;
         dto.GolemDefeated = GolemDefeated;
         dto.ValveBroken = _pieces.Any(p => p.Pour is { Quenched: true });
+        dto.ThrowersSent = _throwersSent.Capture();
     }
 
     /// <summary>
     /// Back from a save: no ride is live (the Restored event cleared them and the pieces rebuild at the next arming), the golem
-    /// stays dead if it was killed, a broken valve stays broken. Server only; older saves carry nulls, read as false.
+    /// stays dead if it was killed, a broken valve stays broken, and a thrower sent before comes again as a reinforcement. Server
+    /// only; older saves carry nulls, read as false (and no thrower sent).
     /// </summary>
     public void Restore(FloorStateDto dto)
     {
@@ -231,6 +233,7 @@ public partial class RailEncounterController
         _rails.ClearGap();
         _rails.ClearLane();
         GolemDefeated = dto.GolemDefeated ?? false;
+        _throwersSent.Restore(dto.ThrowersSent);
         var broken = dto.ValveBroken ?? false;
         foreach (var p in _pieces)
             if (p.Pour is { } pour)

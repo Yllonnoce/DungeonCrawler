@@ -240,6 +240,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         CollisionLayer = parked || Downed ? 0u : 2u;
         CollisionMask = control == ControlKind.Remote ? 0u : 5u;
         if (parked) { Target = null; _action = CompanionAction.Idle; LookingAt = null; }
+        _seatYaw = ClampSeatYaw(_seatYaw); // a companion may have turned right round in its seat; a view may not
         SetLocalView(control == ControlKind.LocalHuman);
     }
 
@@ -645,14 +646,18 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     private static float ClampSeatYaw(float yaw) => Mathf.Clamp(yaw, Mathf.DegToRad(-MaxSeatYawDegrees), Mathf.DegToRad(MaxSeatYawDegrees));
 
-    /// <summary>A seated body turns its head toward a point (as far as the seat allows), at once, so a shot fired next goes there.</summary>
+    /// <summary>
+    /// A seated body turns its head toward a point, at once, so a shot fired next goes there: a view's as far as the seat allows
+    /// (<see cref="MaxSeatYawDegrees"/>), a companion's all the way round (a hound on the wagon roof behind sits straight back).
+    /// </summary>
     private void SeatYawToward(Vector3 point)
     {
         if (Cart is not { } cart || !CartAlive(cart)) return;
         var seat = cart.SeatTransform(Seat);
         var d = point - seat.Origin;
         if (d.X * d.X + d.Z * d.Z < 0.001f) return;
-        _seatYaw = ClampSeatYaw(Mathf.Wrap(Mathf.Atan2(-d.X, -d.Z) - SeatHeading(seat), -Mathf.Pi, Mathf.Pi)); // flat, as the rider sits
+        var yaw = Mathf.Wrap(Mathf.Atan2(-d.X, -d.Z) - SeatHeading(seat), -Mathf.Pi, Mathf.Pi); // flat, as the rider sits
+        _seatYaw = Control == ControlKind.Companion ? yaw : ClampSeatYaw(yaw);
         FollowSeat();
     }
 
@@ -977,7 +982,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 var id = byId.Count;
                 byId.Add(e);
                 if (Party.LeadTarget == e) leadTargetId = id;
-                enemies.Add(new EnemyView(id, dist, e.IsHostile, ClearLine(e.GlobalPosition), e.Hp / Math.Max(1f, e.MaxHp)));
+                var roof = OnWagonRoof(e);
+                enemies.Add(new EnemyView(id, dist, e.IsHostile, ClearLine(e.GlobalPosition), e.Hp / Math.Max(1f, e.MaxHp), roof, roof && e.BoardTarget is { } bitten && IsInstanceValid(bitten) && bitten.IsAlive));
             }
 
         var w = State.WeaponProfile;
@@ -994,7 +1000,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 AbilityKind.Nova => a.Radius,
                 _ => 999f,
             };
-            abilities.Add(new AbilityView(i, a, ready, range));
+            abilities.Add(new AbilityView(i, a, ready, range, a.Kind == AbilityKind.MeleeStrike || (a.Kind == AbilityKind.WeaponAttack && !w.IsRanged)));
         }
 
         var prefersRange = w.IsRanged || State.KnownAbilities.Any(id => Party.GetAbility(id).Kind == AbilityKind.Projectile && Party.GetAbility(id).ArrowCost == 0);
@@ -1243,15 +1249,28 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         _meleeCast.ForceShapecastUpdate();
         var hitSomething = false;
         var perfectSaid = false;
+        var struck = new List<ICombatTarget>(2);
         for (var i = 0; i < _meleeCast.GetCollisionCount(); i++)
         {
             if (_meleeCast.GetCollider(i) is not ICombatTarget target || !target.IsAlive) continue;
+            struck.Add(target);
             hitSomething = true;
             var result = Strike(target, attack, heavy, perfect, heavyMultiplier);
             if (perfect && result.Hit && !perfectSaid) { perfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
         }
+        // a hound on a coupled cage wagon's roof is struck from below (from a cart seat, or the ground beside the wagon) out to
+        // CompanionBrain.BoarderReach, where the brain chose it: the blow lands on that boarder only, never on anything else that far
+        if (Control == ControlKind.Companion && Target is { } boarder && IsInstanceValid(boarder) && boarder.IsAlive && OnWagonRoof(boarder) && !struck.Contains(boarder)
+            && boarder.GlobalPosition.DistanceTo(GlobalPosition) <= CompanionBrain.BoarderReach)
+        {
+            hitSomething = true;
+            Strike(boarder, attack, heavy, perfect, heavyMultiplier);
+        }
         if (!hitSomething && IsLocal) EventBus.Instance.Log($"{m.Name} swings at nothing.");
     }
+
+    /// <summary>A creature riding the roof of a cage wagon coupled behind the cart (a boarding hound).</summary>
+    private static bool OnWagonRoof(Enemy e) => e.Carrier is CageWagon wagon && IsInstanceValid(wagon) && wagon.Coupled;
 
     /// <summary>One blow on one target, and everything a blow that lands sets off. <paramref name="contact"/>: the blade was seen to touch it.</summary>
     private DamageResult Strike(ICombatTarget target, AttackProfile attack, bool heavy, bool perfect, float heavyMultiplier, bool contact = false, float carry = 1f)

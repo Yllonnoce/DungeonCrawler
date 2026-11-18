@@ -33,7 +33,7 @@ namespace DungeonCrawler.Core;
 ///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart
 ///   --test-ride-edges   floor 12: a companion revived behind the cart, a mid-ride load, the human thrown at lethality 1, companions left at a stop
 ///   --test-crew[=forgiven|condemned]  floor 12: the scripted rescue (stops, gates, cages, Grisel's branch, a save mid-ride, a lost crew member, the win), then a wreck and a spare
-///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), then the heap and a save mid-ride 4; warning timings checked
+///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), companions answer the wagon boarders, then a save mid-ride 1 (the thrower stays sent), the heap, a save mid-ride 4 and a one-pumper jump with three wagons; warning timings checked
 ///   --party-level=N     --test-chase levels the party to N first (default 12, the shipped campaign's level by floor 12)
 /// </summary>
 public partial class DebugTools : Node
