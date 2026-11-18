@@ -100,10 +100,12 @@ public static class PlanValidator
             if (IsVault(c.Goal.Room) && c.Goal.Kind is not (GoalKind.Guard or GoalKind.Defend)) { c.Goal.Kind = GoalKind.Guard; report.Repairs.Add($"{c.Id}: vault group changed to Guard"); }
             return false;
         });
-        if (plan.Collectives.Count > MaxCollectives)
+        // a railed floor may post one more group at each intermediate stop
+        var maxCollectives = MaxCollectives + (layout.Rail is { } rl ? Math.Max(0, rl.Stops.Count - 2) : 0);
+        if (plan.Collectives.Count > maxCollectives)
         {
-            plan.Collectives.RemoveRange(MaxCollectives, plan.Collectives.Count - MaxCollectives);
-            report.Repairs.Add($"kept only {MaxCollectives} collectives");
+            plan.Collectives.RemoveRange(maxCollectives, plan.Collectives.Count - maxCollectives);
+            report.Repairs.Add($"kept only {maxCollectives} collectives");
         }
         ids = plan.Collectives.Select(c => c.Id).ToHashSet();
         foreach (var c in plan.Collectives)
@@ -310,6 +312,7 @@ public static class PlanValidator
         if (plan.Traps.Count > FloorMenu.MaxExtraTraps) { plan.Traps.RemoveRange(FloorMenu.MaxExtraTraps, plan.Traps.Count - FloorMenu.MaxExtraTraps); report.Repairs.Add("too many extra traps"); }
 
         ValidateNpcsAndQuests(plan, menu, start, report, campaign);
+        ValidateCrew(plan, layout, report, campaign);
 
         // text
         plan.Title = Clip(plan.Title, 60);
@@ -321,6 +324,22 @@ public static class PlanValidator
             return false;
         });
         return report;
+    }
+
+    private static void ValidateCrew(FloorPlan plan, FloorLayout layout, ValidationReport report, CampaignPlan? campaign)
+    {
+        var ids = new HashSet<string>();
+        var cast = campaign?.Cast.Select(c => c.Name.Trim().ToLowerInvariant()).ToHashSet() ?? new HashSet<string>();
+        plan.Crew.RemoveAll(c =>
+        {
+            if (string.IsNullOrWhiteSpace(c.Id) || string.IsNullOrWhiteSpace(c.Name) || !ids.Add(c.Id)) { report.Repairs.Add($"crew {c.Id}: dropped (no name or a duplicate id)"); return true; }
+            c.Name = Clip(c.Name, 40);
+            if (cast.Contains(c.Name.Trim().ToLowerInvariant())) { report.Repairs.Add($"crew {c.Id}: dropped (a cast name)"); return true; }
+            c.Sex = string.Equals(c.Sex, "woman", StringComparison.OrdinalIgnoreCase) ? "woman" : "man";
+            return false;
+        });
+        var cap = layout.Rail is { } rail ? Objectives.CrewRules.PerWagon * Math.Max(0, rail.Stops.Count - 2) : 6;
+        if (plan.Crew.Count > cap) { report.Repairs.Add($"crew: dropped {plan.Crew.Count - cap} over the cap of {cap}"); plan.Crew.RemoveRange(cap, plan.Crew.Count - cap); }
     }
 
     private static void ValidateNpcsAndQuests(FloorPlan plan, FloorMenu menu, int start, ValidationReport report, CampaignPlan? campaign = null)

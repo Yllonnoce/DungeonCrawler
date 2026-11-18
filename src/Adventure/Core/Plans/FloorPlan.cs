@@ -227,6 +227,17 @@ public sealed class NpcPlan
     [AiIgnore] public bool Ritualist { get; set; }
 }
 
+/// <summary>One of Grisel's crew on a railed jailbreak floor: caged in a wagon at the start, freed along the line. A person by name, not a stock prisoner.</summary>
+public sealed class CrewPlan
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+    [AiDescription("\"man\" or \"woman\"; the voice pass reads it.")]
+    public string Sex { get; set; } = "man";
+    [AiDescription("An NpcBodies key for what they wear (e.g. npc_old_man); null takes the prisoner's rags.")]
+    [AiNotNull] public string? Body { get; set; }
+}
+
 public sealed class QuestParams
 {
     [AiNotNull] public string? TargetCollective { get; set; }
@@ -325,6 +336,8 @@ public sealed class FloorPlan
     public List<ChestPlan> Chests { get; set; } = new();
     public List<TrapPlan> Traps { get; set; } = new();
     public List<NpcPlan> Npcs { get; set; } = new();
+    /// <summary>Grisel's crew on a railed jailbreak floor, in wagon order. Hand-authored until the designer can make railed floors.</summary>
+    [AiIgnore] public List<CrewPlan> Crew { get; set; } = new();
     public List<QuestPlan> Quests { get; set; } = new();
     public List<NarrationPlan> Narration { get; set; } = new();
     [AiDescription("Taunts the antagonist keeps for this floor in particular (its story, its cast), on top of the campaign's; usually empty.")]

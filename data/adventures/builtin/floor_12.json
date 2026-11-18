@@ -112,7 +112,7 @@
         },
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2,
+          "Count": 1,
           "Elite": null
         }
       ],
@@ -137,7 +137,7 @@
       "Members": [
         {
           "EnemyId": "enemy.ember_hound",
-          "Count": 2,
+          "Count": 1,
           "Elite": null
         }
       ],
@@ -181,23 +181,73 @@
       }
     },
     {
-      "Id": "col_floorpriest",
-      "Name": "Tender of the Floor",
+      "Id": "col_stop1",
+      "Name": "The Cage Watch",
       "FactionId": "fac_bellows",
       "Members": [
         {
-          "EnemyId": "enemy.forge_priest",
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 2,
+          "Elite": null
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 9,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 9
+      }
+    },
+    {
+      "Id": "col_stop2",
+      "Name": "The Slag Crew",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 2,
+          "Elite": null
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
           "Count": 1,
           "Elite": null
         }
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 0,
+        "Room": 7,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 0
+        "RallyRoom": 7
+      }
+    },
+    {
+      "Id": "col_stop3",
+      "Name": "The Pour Guard",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1,
+          "Elite": null
+        },
+        {
+          "EnemyId": "enemy.horde_cinder_brute",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 6,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 6
       }
     }
   ],
@@ -266,7 +316,7 @@
     {
       "Id": "npc_grisel",
       "Name": "Grisel Thorn",
-      "Room": 7,
+      "Room": 1,
       "VoiceId": "Aoede",
       "Script": {
         "Start": "g1",
@@ -385,6 +435,44 @@
       "Ritualist": false
     }
   ],
+  "Crew": [
+    {
+      "Id": "crew_hob",
+      "Name": "Hob Tallow",
+      "Sex": "man",
+      "Body": "npc_young_man"
+    },
+    {
+      "Id": "crew_merrin",
+      "Name": "Merrin Ash",
+      "Sex": "woman",
+      "Body": "npc_young_woman"
+    },
+    {
+      "Id": "crew_dace",
+      "Name": "Dace Wicker",
+      "Sex": "man",
+      "Body": "npc_prisoner"
+    },
+    {
+      "Id": "crew_pell",
+      "Name": "Old Pell",
+      "Sex": "man",
+      "Body": "npc_old_man"
+    },
+    {
+      "Id": "crew_juno",
+      "Name": "Juno Brack",
+      "Sex": "woman",
+      "Body": "npc_prisoner"
+    },
+    {
+      "Id": "crew_selby",
+      "Name": "Selby Crane",
+      "Sex": "woman",
+      "Body": "npc_old_woman"
+    }
+  ],
   "Quests": [
     {
       "Id": "q_grisel_out",
@@ -440,7 +528,7 @@
   "Narration": [
     {
       "Trigger": "RoomEnter",
-      "Room": 11,
+      "Room": 9,
       "Line": {
         "Text": "The cages hold Grisel Thorn\u0027s crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.",
         "VoiceId": "34001ffef70beef3",
@@ -451,7 +539,7 @@
     },
     {
       "Trigger": "RoomEnter",
-      "Room": 11,
+      "Room": 9,
       "Line": {
         "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. To save herself she kept her own crew caged for him, and the moment you reached this floor, he had his iron cut her down.",
         "VoiceId": "571934dd1bff9e56",
@@ -514,5 +602,5 @@
       "FromStock": false
     }
   ],
-  "EnemyTotal": 12
+  "EnemyTotal": 16
 }

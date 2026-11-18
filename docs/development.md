@@ -1074,6 +1074,19 @@ board, run over an enemy on the way to stop 1, save and load there, a companion 
 regroups into or ahead of it (it hops in at stop 1), a save between stops and a load, the human thrown at lethality 1 (hurt
 once, not downed), and the companions it leaves riding are set down at the next stop, where the cart stays.
 
+Floor 12's stops (built-in campaign; `Rail.Stops[i].Room`) and what waits at them:
+
+| Stop | Room | Name | Mobs |
+|---|---|---|---|
+| 0 | 1 | Kiln-Mouth Landing (start) | Grisel, when forgiven |
+| S1 | 9 | Ladle Ledge | `col_stop1` The Cage Watch, 2 cinders (on `col_ring`'s patrol route) |
+| S2 | 7 | Tenders' Quarters | `col_stop2` The Slag Crew, 2 cinders and an ember hound |
+| S3 | 6 | Cinder Breaches (horde nest) | `col_stop3` The Pour Guard, a forge priest and a cinder brute |
+| 4 | 5 | Cooling Stair (exit) | `col_stairbell`, an ember hound |
+
+The six named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon)
+are seated by the crew controller, not the resolver. The "caged crew" narration fires at S1.
+
 Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check) and `tests/Dungeon/RailCurvesTests.cs`
 (the smoothed rail centrelines). `tests/` is local and not in git.
 

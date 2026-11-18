@@ -15,7 +15,7 @@ public static class PlanResolver
     /// <param name="extraElites">Elites on top of the floor's schedule (a curse, a clause).</param>
     public static FloorContents Resolve(FloorLayout layout, FloorPlan plan, TierProfile? tier, IReadOnlyDictionary<string, EnemyProfile> roster, int floor, int seed, IReadOnlyCollection<string>? flags = null, int extraElites = 0)
     {
-        var contents = new FloorContents { Plan = plan };
+        var contents = new FloorContents { Plan = plan, Crew = plan.Crew.ToList() };
         var rng = new Random(seed ^ 0xC011);
         var pools = layout.Rooms.Select(r => RoomCells.Free(layout, r)).ToList();
         foreach (var pool in pools) Shuffle(rng, pool);
