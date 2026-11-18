@@ -96,6 +96,7 @@ public partial class RailController : ISlopeSource
             Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)_train.Count, TargetOverride = -1f,
             Plating = State.Plating, StopIndex = StopIndex, Flags = flags ?? NetFlags(),
             CrossOut = _crossOut, CrossBack = _crossBack, GapFrom = _gapFrom, GapTo = _gapTo, JumpV = _jumpV > 0f ? _jumpV : float.NaN,
+            BlockedAt = LineBlocked && !OnEnemyLane(BlockedAt) ? BlockedAt : float.NaN, // as HitBlock judges it: a cart across on the enemy lane passes it
             BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, Boarders = boarders, WagonBoarders = wagonBoarders, ServerTime = serverTime,
         };
     }

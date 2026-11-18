@@ -79,6 +79,8 @@ public sealed class CartStateDto
     public float GapTo { get; set; } = float.NaN;
     /// <summary>The speed the cart left a gap's lip at, or NaN while it has not flown.</summary>
     public float JumpV { get; set; } = float.NaN;
+    /// <summary>The S on the party lane where an obstacle's face stands in the cart's way (a cart reaching it is halted there), or NaN when none blocks it.</summary>
+    public float BlockedAt { get; set; } = float.NaN;
     /// <summary>Seconds left on the boarding countdown, or −1 when none runs.</summary>
     public float BoardingLeft { get; set; } = -1f;
     /// <summary>The coupled wagons' stops, nearest the cart first.</summary>

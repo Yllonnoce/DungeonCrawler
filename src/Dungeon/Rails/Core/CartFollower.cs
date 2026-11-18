@@ -40,6 +40,8 @@ public sealed class CartFollower
     private float _authNow;
     private double _lastTime = double.NegativeInfinity;
     private float _v;
+    /// <summary>The cart's middle stops here while an obstacle stands ahead on its lane (its face minus a half length in Dir), or NaN.</summary>
+    private float _block = float.NaN;
 
     public CartFollower(ISlopeSource? slopes) => _slopes = slopes;
 
@@ -79,6 +81,10 @@ public sealed class CartFollower
         Track = s.Track;
         _auth = new CartState(s.S, s.V, mode, s.Plating);
         _input = new CartInput(0f, s.Brake, s.Pumpers, s.CrewWagons, s.Limit, s.TargetOverride);
+        // an obstacle ahead (the heap's face): the server's cart crashes there, short of the Limit it brakes for, so both S stop
+        // at it (the physics input keeps the Limit: braking toward the face would mispredict the run-in); one already past it is free
+        var block = float.IsNaN(s.BlockedAt) ? float.NaN : s.BlockedAt - _dir * CartRules.HalfLength;
+        _block = !float.IsNaN(block) && _dir * (s.S - block) <= 0f ? block : float.NaN;
 
         // catch up from the state's time to now, in whole fixed steps; the part step left is banked
         var elapsed = serverNow - s.ServerTime;
@@ -120,6 +126,7 @@ public sealed class CartFollower
         _rendered += _dir * v * dt;
         if (Math.Abs(_authNow - _rendered) > SnapError) _rendered = _authNow;
         if (_dir * (_rendered - _input.StopAt) > 0f) _rendered = _input.StopAt; // never past the stop
+        if (!float.IsNaN(_block) && _dir * (_rendered - _block) > 0f) { _rendered = _block; v = 0f; } // nor into the obstacle
         _v = v;
         return _rendered;
     }
@@ -137,6 +144,7 @@ public sealed class CartFollower
             _auth = mirrored with { S = Mirror - mirrored.S };
         }
         if (_dir * (_auth.S - _input.StopAt) > 0f) _auth = _auth with { S = _input.StopAt };
+        if (!float.IsNaN(_block) && _dir * (_auth.S - _block) > 0f) _auth = _auth with { S = _block, V = 0f }; // it ran into the face: it stands there until the server says
     }
 
     /// <summary>The authoritative S now: its last step's S carried on by its speed through the banked part step, short of the Limit.</summary>
@@ -144,6 +152,7 @@ public sealed class CartFollower
     {
         if (_auth.Mode != CartMode.Rolling) return _auth.S;
         var s = _auth.S + _dir * _auth.V * _clock.Accumulated;
-        return _dir * (s - _input.StopAt) > 0f ? _input.StopAt : s;
+        if (_dir * (s - _input.StopAt) > 0f) s = _input.StopAt;
+        return !float.IsNaN(_block) && _dir * (s - _block) > 0f ? _block : s;
     }
 }

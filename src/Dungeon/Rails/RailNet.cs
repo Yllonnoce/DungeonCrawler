@@ -11,7 +11,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
 /// The rails on the wire: a node under a railed floor's root in a networked game (it dies with the floor).
-/// <para>On the server (<see cref="Node.ProcessPriority"/> 100: after the rail controllers' ticks) it sends one
+/// <para>On the server (<see cref="Node.ProcessPhysicsPriority"/> 100: after the rail controllers' ticks) it sends one
 /// <see cref="CartStateMsg"/> per physics tick that changed any cart: the party's (any <see cref="CartEvent"/>, or a change of
 /// its <see cref="RailController.NetSignature"/>: lane, gap, train, halt, boarding, plating, a wreck) and the ride's others (a
 /// spawn, a track change, its riders, a derail or a free, the last two as a state flagged Hidden). A wreck and a spare's
@@ -44,7 +44,8 @@ public partial class RailNet : Node
     {
         _rails = rails;
         Name = "RailNet";
-        ProcessPriority = 100; // after the rail controllers' ticks (-100 and 0) and poses
+        ProcessPriority = 100; // _Process: after the RailController's poses (-100)
+        ProcessPhysicsPriority = 100; // _PhysicsProcess: after the RailController's and the RailEncounterController's ticks (both 0), whatever the tree order
     }
 
     /// <summary>For Godot's construction of the script class; the builder always passes the controller.</summary>
@@ -288,6 +289,7 @@ public partial class RailNet : Node
     private readonly Dictionary<int, ClientCart> _carts = new();
     private readonly HashSet<int> _listed = new();
     private readonly List<int> _drop = new();
+    private readonly HashSet<byte> _unresolved = new();
 
     /// <summary>Client: the carts besides the party's that run here now (the RIDE pass reads them).</summary>
     internal int ClientCartCount => _carts.Count;
@@ -319,8 +321,14 @@ public partial class RailNet : Node
             return;
         }
         if (cc == null && (cc = Build(d)) == null) return;
-        if (d.Track != cc.Track && _rails.TrackOf(d.Track) is { Valid: true } track)
+        if (d.Track != cc.Track)
         {
+            if (_rails.TrackOf(d.Track) is not { Valid: true } track)
+            {
+                // a spur this client cannot find: stay on the old track rather than pose the cart there at the spur's S (the next state retries)
+                if (_unresolved.Add(d.Track)) GD.PushWarning($"[net] cart {d.Cart}: track {d.Track} is not on this floor here; its state is skipped");
+                return;
+            }
             cc.Track = d.Track; // the golem's runner onto the spur: a new run on the new track (the follower snaps)
             cc.Run = new CartRun(track, cc.Body, new CartState(d.S, d.V, CartMode.Rolling, d.Plating), d.Dir);
         }
