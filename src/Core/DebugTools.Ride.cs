@@ -11,7 +11,8 @@ namespace DungeonCrawler.Core;
 // over a small enemy, the stop survives a save and a load with nobody aboard, a companion who jumps out at speed is
 // mangled while the cart rolls on (and the orc gloats with a RolledOver line, never the Press's Crushed one), and a big
 // enemy on thin plating wrecks the cart (and he gloats with a CartWrecked line). The first departure's RideStart taunt is said
-// or held, and a seated hero calls "all aboard" once at the landing and once more at the re-boarding after the load.
+// or held, and a seated companion (never the player's hero beside one) calls "all aboard" once at the landing and once more
+// at the re-boarding after the load.
 // Prints [ride] lines and [ride] RESULT.
 public partial class DebugTools
 {
@@ -30,6 +31,8 @@ public partial class DebugTools
     private double _rideThrownAt, _rideWreckedAt;
     /// <summary>The AllAboard calls heard (RailCalls.Called), said or only logged.</summary>
     private int _rideAllAboard;
+    /// <summary>A ride call said by the player's own hero while a companion sat up in the same cart (a companion should have said it), or null.</summary>
+    private string? _ridePlayerCalled;
 
     private static double RideNow => Time.GetTicksMsec() / 1000.0;
 
@@ -97,7 +100,11 @@ public partial class DebugTools
                     EventBus.Instance.NarrationEx += (text, _, clean, _) => { if (RideVillainWords(text) is { } words) _rideVillain.Add((RideNow, words, RideVillainWords(clean))); };
                     RailCalls.Called += (trigger, by) =>
                     {
-                        if (_done || !_testRide || trigger != Adventure.BarkTrigger.AllAboard) return;
+                        if (_done || !_testRide) return;
+                        if (Main.Instance?.Party is { Local: { } me } p && by == me.State.Name && me.Cart is { } cart
+                            && p.Adventurers.Any(a => IsInstanceValid(a) && a != me && a.Cart == cart && !a.Downed && a.Control == ControlKind.Companion))
+                            _ridePlayerCalled ??= $"{trigger} by {by}";
+                        if (trigger != Adventure.BarkTrigger.AllAboard) return;
                         _rideAllAboard++;
                         GD.Print($"[ride] call {trigger} #{_rideAllAboard} by {by ?? "the log"} at step {_rideStep}");
                     };
@@ -195,6 +202,7 @@ public partial class DebugTools
                 _rideClock = 0f;
                 GD.Print($"[ride] 6 re-boarded and departed with {party.Active.Count(a => a.Seated)} seated; AllAboard calls {_rideAllAboard}");
                 if (_rideAllAboard != 2) { Fail($"{_rideAllAboard} AllAboard calls by the re-boarding's departure, not 2 (one at the landing, one more at the re-boarding)"); return; }
+                if (_ridePlayerCalled != null) { Fail($"the player's hero called the ride with a companion seated beside them ({_ridePlayerCalled})"); return; }
                 break;
             }
             case 7 when _rideClock >= 2f:

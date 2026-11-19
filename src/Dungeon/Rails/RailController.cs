@@ -203,7 +203,8 @@ public partial class RailController : Node
 
     /// <summary>
     /// Tell the queued events, in order (one a listener raises meanwhile is told too). The orc taunts a ride's start and a wreck
-    /// (server and solo: the director's RailTaunt; both urgent, the start held for a line being said).
+    /// (server and solo: the director's RailTaunt; both urgent, the start held for a line being said), unless a rider's own call
+    /// carries the departure (<see cref="ClaimDeparture"/>).
     /// </summary>
     private void Flush()
     {
@@ -213,9 +214,15 @@ public partial class RailController : Node
             for (var i = 0; i < _pending.Count; i++)
             {
                 var e = _pending[i];
+                _departureClaimed = false;
                 CartEvents?.Invoke(e);
                 if (RideLines.TauntFor(e.Kind, e.Stop, StopS.Length) is { } taunt)
                 {
+                    if (taunt == Adventure.Objectives.TauntTrigger.RideStart && _departureClaimed)
+                    {
+                        GD.Print($"[rails] departed stop {e.Stop}: a rider's call carries the departure, no ride-start taunt");
+                        continue;
+                    }
                     var told = AdventureDirector.Instance?.RailTaunt(taunt, urgent: true) == true;
                     if (taunt == Adventure.Objectives.TauntTrigger.RideStart)
                     {
@@ -227,6 +234,11 @@ public partial class RailController : Node
         }
         finally { _pending.Clear(); }
     }
+
+    private bool _departureClaimed;
+
+    /// <summary>A listener of the departure being told (Grisel naming the cage ahead) says its own line for it: the orc's RideStart taunt is not raised for this one.</summary>
+    public void ClaimDeparture() => _departureClaimed = true;
 
     /// <summary>Whether the last departure's RideStart taunt was said or held (false: dropped; null: no ride has started). For the scripted checks.</summary>
     public bool? RideStartTaunted { get; private set; }

@@ -25,6 +25,8 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>Grisel opens a cage when she stands this close to it, following the party.</summary>
     public const float GriselReach = 8f;
     public const string GriselId = "npc_grisel";
+    /// <summary>Grisel's word at a cage she opens is said within this long of the lock, or not at all (it belongs to the lock).</summary>
+    public const double CageCallSeconds = 10;
 
     private readonly List<CageWagon> _wagons = new();
     private readonly List<Npc> _crew = new();
@@ -372,7 +374,8 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             {
                 // her word at the cage goes out as her own line once the channel is free (npc.Say here, NpcSay to every screen on a server)
                 EventBus.Instance.Log("Grisel works the lock.");
-                if (GriselCall(RideLines.CageCall) is { } call) AdventureDirector.Instance?.SayAs(grisel, call, $"grisel:cage{wagon.Stop}");
+                var at = Game.Instance.PlaySeconds;
+                if (GriselCall(RideLines.CageCall) is { } call) AdventureDirector.Instance?.SayAs(grisel, call, $"grisel:cage{wagon.Stop}", () => Game.Instance.PlaySeconds - at <= CageCallSeconds);
             }
             else if (!party.TryUnlock("the cage", out _, wagon.GlobalPosition, objectiveLock: true)) return;
             OpenCage(wagon, party);
@@ -513,8 +516,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     /// <summary>
     /// Forgiven: Grisel, up and seated in the party's cart, calls the ride ahead (her crew in the next cage, then the stair),
-    /// once a run, after the orc's word on the same departure. A call still waiting when the cart has left the stop it rides
-    /// to is dropped, so it never names the wrong cage.
+    /// once a run. Her call carries that departure: the orc's RideStart taunt is not raised for it (the ride's opening would
+    /// otherwise fill the channel). A call still waiting when the cart has left the stop it rides to is dropped, so it never
+    /// names the wrong cage.
     /// </summary>
     private void GriselNamesTheRide(CartEvent e)
     {
@@ -522,8 +526,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (RideLines.GriselCallFor(e.Kind, e.Stop) is not { } key || GriselCall(key) is not { } call) return;
         var rails = _rails;
         var left = e.Stop;
-        AdventureDirector.Instance?.SayAs(g, call, $"grisel:{key}", () => IsInstanceValid(rails)
-            && (rails.StopIndex == left || rails.StopIndex == left + 1 && rails.State.Mode == CartMode.Held && !rails.Halted));
+        if (AdventureDirector.Instance?.SayAs(g, call, $"grisel:{key}", () => IsInstanceValid(rails)
+            && (rails.StopIndex == left || rails.StopIndex == left + 1 && rails.State.Mode == CartMode.Held && !rails.Halted)) == true)
+            rails.ClaimDeparture();
     }
 
     /// <summary>Keys of Grisel's calls the floor's plan lacks, warned about once.</summary>

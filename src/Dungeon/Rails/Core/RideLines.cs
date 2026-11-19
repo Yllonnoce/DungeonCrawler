@@ -15,6 +15,23 @@ public static class RideLines
     /// <summary>Her call as the cart leaves stop <paramref name="stopLeft"/> (0-based): "ride1" for the first ride, and so on. Null for any other moment.</summary>
     public static string? GriselCallFor(CartEventKind kind, int stopLeft) => kind == CartEventKind.Departed ? $"ride{stopLeft + 1}" : null;
 
+    /// <summary>
+    /// Who calls a moment of the ride from a cart, by party order: the first hero seated in it and up whom no player controls
+    /// (a companion), else the first player's hero seated in it and up; -1 when nobody in it can. Each entry is one party member.
+    /// </summary>
+    public static int CallerIndex(IReadOnlyList<(bool InCart, bool Downed, bool Companion)> heroes)
+    {
+        var player = -1;
+        for (var i = 0; i < heroes.Count; i++)
+        {
+            var (inCart, downed, companion) = heroes[i];
+            if (!inCart || downed) continue;
+            if (companion) return i;
+            if (player < 0) player = i;
+        }
+        return player;
+    }
+
     /// <summary>The hero's call for a cart moment, or null: the boarding's countdown starting is "all aboard". The warnings are called where they are judged.</summary>
     public static BarkTrigger? BarkFor(CartEventKind kind) => kind == CartEventKind.Boarding ? BarkTrigger.AllAboard : null;
 

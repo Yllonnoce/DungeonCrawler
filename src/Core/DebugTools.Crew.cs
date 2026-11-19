@@ -33,9 +33,6 @@ public partial class DebugTools
     private Vector3 _crewBruteAt;
     private const string CrewSlot = "crewtest";
     private bool _crewListening;
-    /// <summary>When the cart was first seen held at the stop while the test waits for Grisel's call there; the longest it waits.</summary>
-    private float? _crewHeldClock;
-    private const float CrewCallWait = 30f;
     /// <summary>Grisel's calls heard through Npc.Said, by key ("?" for a line that is none of her calls).</summary>
     private readonly Dictionary<string, int> _crewGriselSaid = new();
     /// <summary>
@@ -108,13 +105,9 @@ public partial class DebugTools
         CrewListen();
 
         // the test owns the floor's fights: everything is culled as it appears except the guards that hold the stops
-        // (section 1: they die by the test's hand at their stop, never by a companion's shot from the cart) and the brute of section 2
+        // (section 1: they die by the test's hand at their stop) and the brute of section 2
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
-        {
-            if (!e.IsAlive || e == _crewBrute) continue;
-            if (_crewSection2 || !HoldsAStop(main, layout, e)) e.Kill();
-            else if (_crewForgiven) e.SetUntargetable(true); // forgiven, the test waits at a stop for Grisel's call (below)
-        }
+            if (e.IsAlive && e != _crewBrute && (_crewSection2 || !HoldsAStop(main, layout, e))) e.Kill();
         if (rc.State.Mode == CartMode.Rolling) Pin(_crewBrute, _crewBruteAt);
         // ride 3's heap blocks the party lane: the test throws the switch_out lever as the ride arms, so the cart goes round on the enemy lane
         if (rc.State.Mode == CartMode.Rolling && root.GetNodeOrNull<RailEncounterController>("RailEncounterController") is { ArmedRide: 3 } enc && enc.DebugThrowSwitches(3) > 0)
@@ -334,15 +327,6 @@ public partial class DebugTools
     {
         if (rc.State.Mode == CartMode.Rolling) { if (_crewClock > 60f) fail($"the cart was not held at stop {stop} within 60 s (S={rc.State.S:0.0})"); return false; }
         if (rc.State.Mode != CartMode.Held || rc.StopIndex != stop) { fail($"the cart is {rc.State.Mode} at stop {rc.StopIndex}, not held at stop {stop}"); return false; }
-        // forgiven: the stop's fight takes as long as Grisel's call for this ride still waits for the channel (the test's kill is
-        // otherwise at once, and the cart would leave before she spoke). A call that never comes fails at the end.
-        if (_crewForgiven && _crewGriselSaid.GetValueOrDefault($"ride{stop}") == 0)
-        {
-            _crewHeldClock ??= _crewClock;
-            if (_crewClock - _crewHeldClock < CrewCallWait) return false;
-        }
-        if (_crewHeldClock is { } heldAt) GD.Print($"[crew] waited {_crewClock - heldAt:0.0} s at stop {stop} for Grisel's ride{stop} call (heard {_crewGriselSaid.GetValueOrDefault($"ride{stop}")})");
-        _crewHeldClock = null;
         var room = layout.Rail!.Stops[stop].Room;
         var guards = StopGuards(main, room).ToList();
         var ids = string.Join(",", guards.Select(e => e.Group?.Id).Distinct());
