@@ -16,6 +16,12 @@
   - Taunts go in the campaign's `Taunts` and `TauntBank.Stock`.
   - Hero call-outs go in a new stock bank, `RideBarks`, topped up like the other bark banks.
   - Grisel's calls go in a new `NpcPlan.Calls` list. They are said as narration with her name in the text, as the villain's taunts are, so a co-op client shows who speaks.
+  - **This is overridden by a controller ruling made during plan 5, Task 7.** Grisel's calls use the existing NPC line path instead of narration, everywhere this plan says "narration" for her:
+    - In single player and on the server, use the director's NPC line (the merchant's path at `AdventureDirector.cs:~699`).
+    - On a server, broadcast `Net.NpcSay(grisel.Id, line)`; it already carries an NPC id to clients.
+    - Plan 5, Task 7's cage line already goes this way; follow it.
+    - The once-per-run key, the wait for a taunt in progress, and the `VoiceId` all stay as specified.
+    - Narration remains the narrator's channel only.
   - Rail narration becomes a real `Line`.
   - All of them are subtitles (`VoiceId` null) until the owner OKs a voice pass.
 - **Sound is local on every peer.**
