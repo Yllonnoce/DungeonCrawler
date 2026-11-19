@@ -4,11 +4,12 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// What the cart's HUD line is told: the party cart as this peer shows it (the server's or single player's own state, a client's
 /// flags and countdown), and the chaser when the local hero sits in it. <see cref="Boarding"/>: a countdown runs, with
 /// <see cref="BoardingLeft"/> seconds left; <see cref="Plating01"/> is the plating's share of full. <see cref="ChaserBoardingLeft"/> is −1
-/// when the chaser's countdown does not run. <see cref="CageHeld"/>: the cart stands at a stop whose locked cage holds it (plan 7).
+/// when the chaser's countdown does not run. <see cref="CageHeld"/>: the cart stands at a stop whose locked cage holds it (plan 7). <see cref="ChaserRelief"/>: the chaser the
+/// local hero rides is a relief cart (single player, plan 7).
 /// </summary>
 public readonly record struct RailHudState(CartMode Mode, bool Hidden, bool Halted, bool LineBlocked, bool GateClear, bool Boarding,
     float BoardingLeft, float Plating01, int StopIndex, int StopCount, bool InChaser = false, CartMode ChaserMode = CartMode.Held,
-    float ChaserBoardingLeft = -1f, bool CageHeld = false);
+    float ChaserBoardingLeft = -1f, bool CageHeld = false, bool ChaserRelief = false);
 
 /// <summary>The cart's HUD line from <see cref="RailHudState"/>. Engine-free.</summary>
 public static class RailHud
@@ -21,8 +22,9 @@ public static class RailHud
     {
         if (s.InChaser)
         {
-            if (s.ChaserBoardingLeft >= 0f) return $"Spare cart — departs in {Ceil(s.ChaserBoardingLeft)}";
-            return s.ChaserMode == CartMode.Rolling ? "Spare cart — after the train" : "Spare cart — behind the train";
+            var name = s.ChaserRelief ? "Relief cart" : "Spare cart";
+            if (s.ChaserBoardingLeft >= 0f) return $"{name} — departs in {Ceil(s.ChaserBoardingLeft)}";
+            return s.ChaserMode == CartMode.Rolling ? $"{name} — after the train" : $"{name} — behind the train";
         }
         if (s.Hidden) return null;
         if (s.Mode == CartMode.Wrecked) return "Cart — wrecked";
