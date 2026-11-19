@@ -1,6 +1,7 @@
 using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Net;
 using DungeonCrawler.Party;
 using Godot;
@@ -22,6 +23,8 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
 
     public const float PostHeight = 1.5f;
     const float Swing = 0.6f; // the handle's lean either way, radians
+    /// <summary>The mine pack's Lever stands this tall on the pivot, its foot this far below it (its top where the box rod's knob was).</summary>
+    const float LeverTall = 1.1f, LeverFoot = 0.3f;
 
     /// <summary>The party line's S at the points (where the cart takes the switch), not the lever's own S.</summary>
     public float PointsS { get; init; }
@@ -66,8 +69,16 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
         // the lever: a rod on a pivot at the post's waist, leaning toward the points when straight, back when thrown
         _pivot = new Node3D { Name = "Pivot", Position = new Vector3(0, 0.9f, 0) };
         AddChild(_pivot);
-        _pivot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.03f, Height = 0.7f, RadialSegments = 8 }, MaterialOverride = _iron, Position = new Vector3(0, 0.35f, 0) });
-        _pivot.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.07f, Height = 0.14f, RadialSegments = 10, Rings = 5 }, MaterialOverride = _handle, Position = new Vector3(0, 0.72f, 0) });
+        if (MinePack.Piece("Lever", new Vector3(0, LeverTall, 0)) is { } lever)
+        {
+            _pivot.AddChild(lever); // swung by the pivot as the rod was
+            lever.Position = new Vector3(0, -LeverFoot, 0);
+        }
+        else
+        {
+            _pivot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.03f, BottomRadius = 0.03f, Height = 0.7f, RadialSegments = 8 }, MaterialOverride = _iron, Position = new Vector3(0, 0.35f, 0) });
+            _pivot.AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.07f, Height = 0.14f, RadialSegments = 10, Rings = 5 }, MaterialOverride = _handle, Position = new Vector3(0, 0.72f, 0) });
+        }
         // the lamp on top
         AddChild(new MeshInstance3D { Mesh = new SphereMesh { Radius = 0.1f, Height = 0.2f, RadialSegments = 12, Rings = 6 }, MaterialOverride = _lamp, Position = new Vector3(0, PostHeight + 0.08f, 0) });
         _light = new OmniLight3D { Name = "Lamp", OmniRange = 4f, LightEnergy = 1.4f, ShadowEnabled = false, Position = new Vector3(0, PostHeight + 0.2f, 0) };

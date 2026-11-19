@@ -58,7 +58,11 @@ public partial class Main : Node
         GD.Print("[Main] scene ready (menu)");
     }
 
-    public override void _ExitTree() => EventBus.Instance.FloorChanged -= OnFloorChanged;
+    public override void _ExitTree()
+    {
+        EventBus.Instance.FloorChanged -= OnFloorChanged;
+        Dungeon.Props.MinePack.Release(); // its off-tree copy source: nothing kept in a static past the tree
+    }
 
     // ---- run-structure: the stakes and the solo autosave ---------------------------------------------------
 

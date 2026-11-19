@@ -1,4 +1,5 @@
 using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Net;
 using Godot;
 
@@ -34,6 +35,7 @@ public partial class BufferStop : StaticBody3D, ISoundPoint
     private Node3D _look = null!;
     private CollisionShape3D _shape = null!;
     private readonly List<(Vector3 size, Transform3D local, Material material)> _parts = new();
+    private Node3D? _model;
 
     public BufferStop()
     {
@@ -47,6 +49,9 @@ public partial class BufferStop : StaticBody3D, ISoundPoint
         AddChild(_shape);
         _look = new Node3D { Name = "Look" };
         AddChild(_look);
+        // the mine pack's Blockade over the solid box's size; without it the beam, uprights and braces below stand drawn
+        _model = MinePack.Piece("Blockade", new Vector3(Width, BeamHeight + 0.3f, HalfDepth * 2f), keepAspect: false);
+        if (_model != null) _look.AddChild(_model);
         Part(new Vector3(Width, 0.32f, 0.3f), new Transform3D(Basis.Identity, new Vector3(0, BeamHeight, 0)), _wood); // the beam
         Part(new Vector3(Width * 0.9f, 0.08f, 0.31f), new Transform3D(Basis.Identity, new Vector3(0, BeamHeight + 0.05f, 0)), _paint); // a warning stripe on its face
         foreach (var side in new[] { -1f, 1f })
@@ -57,9 +62,10 @@ public partial class BufferStop : StaticBody3D, ISoundPoint
         }
     }
 
+    /// <summary>One timber or iron of the stop: drawn when the model did not load, and always one of the pieces its smash throws.</summary>
     private void Part(Vector3 size, Transform3D local, Material material)
     {
-        _look.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Transform = local });
+        if (_model == null) _look.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Transform = local });
         _parts.Add((size, local, material));
     }
 

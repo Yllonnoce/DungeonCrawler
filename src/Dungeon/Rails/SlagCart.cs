@@ -41,7 +41,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     private readonly StandardMaterial3D _rust = new() { AlbedoColor = new Color(0.4f, 0.13f, 0.07f), Metallic = 0.45f, Roughness = 0.8f };
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.14f, 0.12f, 0.11f), Metallic = 0.8f, Roughness = 0.55f };
     private readonly StandardMaterial3D _slag = new() { AlbedoColor = new Color(0.1f, 0.09f, 0.08f), Roughness = 1f };
-    private readonly StandardMaterial3D _coal = new() { AlbedoColor = new Color(0.25f, 0.07f, 0.02f), EmissionEnabled = true, Emission = new Color(1f, 0.35f, 0.05f), EmissionEnergyMultiplier = 2.5f, Roughness = 1f };
+    private StandardMaterial3D _coal = null!; // Lava004, glowing (made in Build)
 
     /// <summary>The cart on the enemy track (<see cref="Setup"/>): its state, stepping and pose.</summary>
     public CartRun Run { get; private set; } = null!;
@@ -271,6 +271,10 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         var body = new Node3D { Name = "Body" };
         AddChild(body);
         _body = body;
+        _coal = DungeonBuilder.Lava(new Color(0.25f, 0.07f, 0.02f), new Color(1f, 0.35f, 0.05f), 2.5f, 0.5f);
+        // the mine pack's low tub (Cart_2) over the box tub's size; the boxes stand in without it
+        var tubModel = MinePack.Piece("Cart_2", new Vector3(TubWidth, TubHeight, TubLength), keepAspect: false);
+        var firstTubBox = body.GetChildCount();
         // the tub: a rust-red floor and four walls, iron bands and a lip
         Box(body, new Vector3(TubWidth, floor - TubBottom, TubLength), new Vector3(0, (TubBottom + floor) / 2f, 0), _rust);
         var wallH = top - floor;
@@ -289,12 +293,24 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
             Box(body, new Vector3(0.03f, TubHeight, 0.08f), new Vector3(-halfW - 0.015f, TubBottom + TubHeight / 2f, z), _iron);
             Box(body, new Vector3(0.03f, TubHeight, 0.08f), new Vector3(halfW + 0.015f, TubBottom + TubHeight / 2f, z), _iron);
         }
+        if (tubModel != null)
+        {
+            for (var i = firstTubBox; i < body.GetChildCount(); i++) body.GetChild<Node3D>(i).Visible = false;
+            body.AddChild(tubModel);
+            tubModel.Position = new Vector3(0, TubBottom, 0);
+        }
         // the chassis and wheels, as the party's cart
         foreach (var x in new[] { -RailTrack.Gauge / 2f + 0.12f, RailTrack.Gauge / 2f - 0.12f })
             Box(body, new Vector3(0.12f, 0.1f, TubLength - 0.1f), new Vector3(x, TubBottom - 0.05f, 0), _iron);
         var axleY = RailTop + WheelRadius;
         foreach (var z in new[] { -halfL + 0.35f, halfL - 0.35f })
         {
+            if (MineCart.Axle(z < 0f) is { } axle)
+            {
+                body.AddChild(axle); // the mine pack's axle and its two wheels, in place of the rod and the wheel cylinders
+                axle.Position = new Vector3(0, RailTop, z);
+                continue;
+            }
             body.AddChild(new MeshInstance3D
             {
                 Mesh = new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.035f, Height = RailTrack.Gauge + 0.1f, RadialSegments = 8, Rings = 1 },

@@ -37,14 +37,16 @@ public partial class MoltenPour : Node3D
 
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.27f, 0.18f, 0.1f), Roughness = 0.9f };
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.15f, 0.13f, 0.12f), Metallic = 0.75f, Roughness = 0.55f };
-    private readonly StandardMaterial3D _lip = new() { AlbedoColor = new Color(0.3f, 0.1f, 0.04f), EmissionEnabled = true, Emission = new Color(1f, 0.4f, 0.08f), EmissionEnergyMultiplier = 0.4f, Roughness = 0.8f };
-    private readonly StandardMaterial3D _molten = new() { AlbedoColor = new Color(1f, 0.45f, 0.08f), EmissionEnabled = true, Emission = new Color(1f, 0.42f, 0.06f), EmissionEnergyMultiplier = 4f, Roughness = 0.4f };
+    // Lava004, glowing by its emission map (made in Place): the lip's glow swells with the warning, the stream and puddle burn at 4
+    private StandardMaterial3D _lip = null!, _molten = null!;
     private MeshInstance3D _stream = null!, _puddle = null!;
     private OmniLight3D _light = null!;
 
     /// <summary>Stand over the line at <paramref name="frame"/> (the track's frame at <see cref="S"/>); the valve goes on the side <paramref name="valveSide"/> (+1 the frame's +X) at <paramref name="valveFrame"/>.</summary>
     public void Place(Transform3D frame, Transform3D valveFrame, float valveSide)
     {
+        _lip = DungeonBuilder.Lava(new Color(0.3f, 0.1f, 0.04f), new Color(1f, 0.4f, 0.08f), 0.4f);
+        _molten = DungeonBuilder.Lava(new Color(1f, 0.45f, 0.08f), new Color(1f, 0.42f, 0.06f), 4f);
         GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin);
         var height = TroughHeight + 0.5f;
         foreach (var side in new[] { -1f, 1f })

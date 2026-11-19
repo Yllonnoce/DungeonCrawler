@@ -37,9 +37,14 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
         new(-0.28f, 0.62f), new(0.28f, 0.62f),
     };
 
-    // once per cart, not static: a static resource outlives the scene tree and is reported as leaked at exit
-    private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.8f, Roughness = 0.5f };
-    private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
+    // once per cart (made in Build), not static: a static resource outlives the scene tree and is reported as leaked at exit
+    private StandardMaterial3D _iron = null!, _wood = null!;
+
+    /// <summary>
+    /// The mine pack's tub (<see cref="MinePack"/>) this cart wears in place of its box tub, or null to keep the boxes: the party's cart,
+    /// its spares and chasers keep them, since the seats and the bench are laid out in them.
+    /// </summary>
+    protected virtual string? TubModel => null;
 
     private Net.CartKind _kind = Net.CartKind.Party;
     /// <summary>What it is on the wire: the party's cart (a spare is one too), a chaser (a spare running after the train, <see cref="AsChaser"/>), or a runaway wagon.</summary>
@@ -189,6 +194,9 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
         if (_built) return;
         _built = true;
         float halfW = TubWidth / 2f, halfL = TubLength / 2f, top = TubBottom + TubHeight;
+        _iron = DungeonBuilder.Material("metal_plate_02", new Color(0.3f, 0.28f, 0.26f), 1f);
+        _iron.Metallic = 0.8f;
+        _wood = DungeonBuilder.Material("old_planks_02", new Color(0.45f, 0.33f, 0.22f), 1f);
 
         AddChild(new CollisionShape3D
         {
@@ -199,6 +207,8 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
 
         var body = new Node3D { Name = "Body" };
         AddChild(body);
+        var tubModel = TubModel is { } tubName ? MinePack.Piece(tubName, new Vector3(TubWidth, TubHeight, TubLength), keepAspect: false) : null;
+        var firstTubBox = body.GetChildCount();
         // the tub: a floor and four iron walls
         Box(body, "Floor", new Vector3(TubWidth, InsideFloor - TubBottom, TubLength), new Vector3(0, (TubBottom + InsideFloor) / 2f, 0), _iron);
         var wallH = top - InsideFloor;
@@ -222,12 +232,20 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
         }
         // the front board: a wooden buffer across the nose
         Box(body, "FrontBoard", new Vector3(TubWidth + 0.1f, 0.3f, 0.08f), new Vector3(0, TubBottom + 0.25f, -halfL - 0.05f), _wood);
+        var tubBoxes = body.GetChildCount() - firstTubBox;
         // the chassis: two wooden beams under the tub, and the axles
         foreach (var x in new[] { -RailTrack.Gauge / 2f + 0.12f, RailTrack.Gauge / 2f - 0.12f })
             Box(body, "Beam", new Vector3(0.12f, 0.1f, TubLength - 0.1f), new Vector3(x, TubBottom - 0.05f, 0), _wood);
         var axleY = RailTop + WheelRadius;
         foreach (var z in new[] { -halfL + 0.35f, halfL - 0.35f })
         {
+            if (Axle(z < 0f) is { } model)
+            {
+                // the mine pack's axle, its two wheels on the rails, in place of the rod and the two wheel cylinders
+                body.AddChild(model);
+                model.Position = new Vector3(0, RailTop, z);
+                continue;
+            }
             var axle = new MeshInstance3D
             {
                 Name = "Axle",
@@ -246,12 +264,21 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
                 });
         }
         // the seats: a plank per row, the rear bench on its raised deck
+        var firstSeat = body.GetChildCount();
         var plank = new Vector3(TubWidth - Wall * 2f, 0.05f, 0.3f);
         foreach (var row in new[] { 0, 2 })
             Box(body, "Seat", plank, new Vector3(0, InsideFloor + SeatHeight - 0.025f, SeatSpots[row].Y + 0.12f), _wood);
         var deckDepth = halfL - (SeatSpots[4].Y - 0.25f) - Wall;
         Box(body, "BenchDeck", new Vector3(TubWidth - Wall * 2f, BenchDeck, deckDepth), new Vector3(0, InsideFloor + BenchDeck / 2f, halfL - Wall - deckDepth / 2f), _wood);
         Box(body, "Bench", plank, new Vector3(0, InsideFloor + BenchDeck + SeatHeight - 0.025f, SeatSpots[4].Y + 0.12f), _wood);
+        if (tubModel != null)
+        {
+            // the model's tub stands in the box tub's place, over the same size: the boxes (walls, rim, bands, front board, seats) are hidden
+            for (var i = 0; i < tubBoxes; i++) body.GetChild<Node3D>(firstTubBox + i).Visible = false;
+            for (var i = firstSeat; i < body.GetChildCount(); i++) body.GetChild<Node3D>(i).Visible = false;
+            body.AddChild(tubModel);
+            tubModel.Position = new Vector3(0, TubBottom, 0);
+        }
 
         // the lamp: a warm spot on the front board aimed down the track, tilted a little to the floor, and a small glow round it
         var lampAt = new Vector3(0, TubBottom + 0.45f, -halfL - 0.12f);
@@ -288,4 +315,8 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
 
     private static void Box(Node3D parent, string name, Vector3 size, Vector3 at, Material material)
         => parent.AddChild(new MeshInstance3D { Name = name, Mesh = new BoxMesh { Size = size }, MaterialOverride = material, Position = at });
+
+    /// <summary>The mine pack's front (CartWheels_1) or rear (CartWheel_2) axle, its wheels on the gauge at this cart's wheel size; null without the pack.</summary>
+    internal static Node3D? Axle(bool front)
+        => MinePack.Piece(front ? "CartWheels_1" : "CartWheel_2", new Vector3(RailTrack.Gauge + 0.07f, WheelRadius * 2f, WheelRadius * 2f), keepAspect: false);
 }

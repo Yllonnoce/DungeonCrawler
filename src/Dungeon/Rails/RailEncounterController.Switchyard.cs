@@ -82,8 +82,8 @@ public partial class RailEncounterController
         var rails = root.GetNodeOrNull<Node3D>("Rails") ?? root;
         var crossover = new RailTrack { Name = $"Crossover_{piece.Plan.Id}" };
         rails.AddChild(crossover);
-        crossover.Build(points, _steel ??= new StandardMaterial3D { AlbedoColor = new Color(0.18f, 0.18f, 0.2f), Metallic = 0.8f, Roughness = 0.45f },
-            _sleeper ??= new StandardMaterial3D { AlbedoColor = new Color(0.3f, 0.21f, 0.13f), Roughness = 0.95f });
+        crossover.Build(points, _steel ??= DungeonBuilder.RailSteel(),
+            _sleeper ??= DungeonBuilder.RailSleeper());
         points.Add(sw.GlobalPosition); // and nothing stands in the lever's way
         ClearTimber(root, points);
         GD.Print($"[rails] switch {piece.Plan.Id} points at party S={piece.S:0.0}, lever at S={leverS:0.0} side {side:+0;-0} ({(back ? "fixed, thrown" : "straight")})");

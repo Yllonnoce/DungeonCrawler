@@ -1,6 +1,7 @@
 using DungeonCrawler.Characters;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Net;
 using Godot;
 
@@ -65,12 +66,24 @@ public partial class OreHeap : StaticBody3D, ICombatTarget, ISoundPoint
         foreach (var (at, size, yaw) in boxes)
             _pile.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size }, MaterialOverride = _wood, Position = at, Rotation = new Vector3(0, yaw, 0.08f) });
         for (var i = 0; i < 7; i++)
+        {
+            var at = new Vector3(-0.8f + i * 0.27f, 0.1f + 0.05f * (i % 2), 0.35f - 0.12f * (i % 3));
+            var radius = 0.14f + 0.03f * (i % 3);
+            // a lump of the mine pack's rock (Rocks_1..Rocks_7) in the heap's ore, as wide as the sphere it stands in for, on the ground under it
+            if (MinePack.Paint(MinePack.Piece($"Rocks_{i + 1}", new Vector3(radius * 2f, 0, 0)), _ore) is { } rock)
+            {
+                _pile.AddChild(rock);
+                rock.Position = new Vector3(at.X, 0f, at.Z);
+                rock.Rotation = new Vector3(0, i * 0.9f, 0);
+                continue;
+            }
             _pile.AddChild(new MeshInstance3D
             {
-                Mesh = new SphereMesh { Radius = 0.14f + 0.03f * (i % 3), Height = 0.2f + 0.04f * (i % 2), RadialSegments = 7, Rings = 4 },
+                Mesh = new SphereMesh { Radius = radius, Height = 0.2f + 0.04f * (i % 2), RadialSegments = 7, Rings = 4 },
                 MaterialOverride = _ore,
-                Position = new Vector3(-0.8f + i * 0.27f, 0.1f + 0.05f * (i % 2), 0.35f - 0.12f * (i % 3)),
+                Position = at,
             });
+        }
         // the lantern on a stake in front, on the cart's side (+Z: toward lower S, where the cart comes from)
         AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = new Vector3(0.06f, 1.3f, 0.06f) }, MaterialOverride = _wood, Position = new Vector3(0.95f, 0.65f, 0.9f) });
         AddChild(new MeshInstance3D { Name = "Lantern", Mesh = new BoxMesh { Size = new Vector3(0.18f, 0.24f, 0.18f) }, MaterialOverride = _glass, Position = new Vector3(0.95f, 1.4f, 0.9f) });

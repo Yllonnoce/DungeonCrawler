@@ -25,6 +25,8 @@ public partial class OreBuckets : Node3D
     /// <summary>The cable hangs this high above the track; a bucket's bottom is about half a metre below it, clear of seated heads.</summary>
     public const float CableHeight = 2.95f;
     const float BucketSize = 0.42f;
+    /// <summary>The mine pack's Bucket stands this tall with its bail (its pail about as wide as the box bucket was).</summary>
+    const float BucketModelTall = 0.47f;
     const float TipBack = 1f; // a tipped bucket rights itself this long after it pours
     const float GantryOut = 1.35f;
     /// <summary>The buckets' places along the line, from the middle; they tip in <see cref="Order"/>.</summary>
@@ -42,6 +44,7 @@ public partial class OreBuckets : Node3D
     private readonly Node3D[] _pivots = new Node3D[4];
     private readonly Transform3D[] _hang = new Transform3D[4]; // each pivot's resting local transform
     private readonly MeshInstance3D[] _bodies = new MeshInstance3D[4];
+    private readonly Material?[] _rest = new Material?[4]; // each body's look while it hangs still: the box's iron, or the model's own (null)
     private readonly OmniLight3D[] _glows = new OmniLight3D[4];
     private readonly float[] _tipped = new float[4]; // seconds since each poured, or −1
     private readonly float[] _bucketS = new float[4];
@@ -73,8 +76,20 @@ public partial class OreBuckets : Node3D
             AddChild(pivot);
             pivot.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), at);
             pivot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.015f, BottomRadius = 0.015f, Height = 0.2f, RadialSegments = 6 }, MaterialOverride = _iron, Position = new Vector3(0, -0.1f, 0) });
-            var body = new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = BucketSize / 2f, BottomRadius = BucketSize * 0.38f, Height = BucketSize, RadialSegments = 10 }, MaterialOverride = _iron, Position = new Vector3(0, -0.2f - BucketSize / 2f, 0) };
-            pivot.AddChild(body);
+            MeshInstance3D body;
+            if (MinePack.Piece("Bucket", new Vector3(0, BucketModelTall, 0)) is { } bucket && MinePack.MeshOf(bucket) is { } mesh)
+            {
+                // the mine pack's bucket, its bail on the hook: its own look at rest, the hot glow while it creaks
+                pivot.AddChild(bucket);
+                bucket.Position = new Vector3(0, -0.2f - BucketModelTall, 0);
+                body = mesh;
+            }
+            else
+            {
+                body = new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = BucketSize / 2f, BottomRadius = BucketSize * 0.38f, Height = BucketSize, RadialSegments = 10 }, MaterialOverride = _iron, Position = new Vector3(0, -0.2f - BucketSize / 2f, 0) };
+                pivot.AddChild(body);
+                _rest[i] = _iron;
+            }
             var glow = new OmniLight3D { OmniRange = 3f, LightEnergy = 0f, LightColor = new Color(1f, 0.45f, 0.1f), ShadowEnabled = false, Position = new Vector3(0, -0.5f, 0) };
             pivot.AddChild(glow);
             _pivots[i] = pivot;
@@ -109,16 +124,24 @@ public partial class OreBuckets : Node3D
         return at;
     }
 
+    /// <summary>A length of cable from <paramref name="a"/> to <paramref name="b"/>: the mine pack's Chain (without its guillotine blades), or an iron rod.</summary>
     private void Cable(Vector3 a, Vector3 b)
     {
         var length = a.DistanceTo(b);
         if (length < 0.05f) return;
-        var mesh = new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.02f, BottomRadius = 0.02f, Height = length, RadialSegments = 6 }, MaterialOverride = _iron };
-        AddChild(mesh);
         var dir = (b - a) / length;
         var side = Mathf.Abs(dir.Dot(Vector3.Up)) > 0.95f ? Vector3.Right : Vector3.Up;
         var x = side.Cross(dir).Normalized();
-        mesh.GlobalTransform = new Transform3D(new Basis(x, dir, x.Cross(dir)), (a + b) / 2f); // the cylinder's axis (Y) along the cable
+        var basis = new Basis(x, dir, x.Cross(dir)); // local Y along the cable
+        if (MinePack.Piece("Chain", new Vector3(0, length, 0), withChildren: false) is { } chain)
+        {
+            AddChild(chain);
+            chain.GlobalTransform = new Transform3D(basis, a); // it stands on its foot: from a up its Y to b
+            return;
+        }
+        var mesh = new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.02f, BottomRadius = 0.02f, Height = length, RadialSegments = 6 }, MaterialOverride = _iron };
+        AddChild(mesh);
+        mesh.GlobalTransform = new Transform3D(basis, (a + b) / 2f); // the cylinder's axis (Y) along the cable
     }
 
     /// <summary>The ride armed: the buckets start their round from the first, nothing tipped.</summary>
@@ -217,7 +240,7 @@ public partial class OreBuckets : Node3D
     private void Look(int i, bool creaking)
     {
         if (_bodies[i] == null) return;
-        _bodies[i].MaterialOverride = creaking ? _hot : _iron;
+        _bodies[i].MaterialOverride = creaking ? _hot : _rest[i];
         _glows[i].LightEnergy = creaking ? 1.6f : 0f;
     }
 
@@ -261,7 +284,7 @@ public partial class CinderPatch : Area3D
         {
             Name = "Scorch",
             Mesh = new CylinderMesh { TopRadius = Radius, BottomRadius = Radius, Height = 0.03f, RadialSegments = 14 },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.2f, 0.06f, 0.02f), EmissionEnabled = true, Emission = new Color(0.9f, 0.3f, 0.05f), EmissionEnergyMultiplier = 1.2f, Roughness = 1f },
+            MaterialOverride = DungeonBuilder.Lava(new Color(0.2f, 0.06f, 0.02f), new Color(0.9f, 0.3f, 0.05f), 1.2f),
             Position = new Vector3(0, 0.3f, 0),
         });
         var flames = Fire.Create(0.55f, 1.1f, 2f, 6f);

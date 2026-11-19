@@ -144,8 +144,8 @@ public partial class RailEncounterController
     {
         var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S, LeverRef = NetRefs.Spur(piece.Index) };
         root.AddChild(spur);
-        var path = spur.Build(_rails.Party.Track, _enemy, Lanes, _steel ??= new StandardMaterial3D { AlbedoColor = new Color(0.18f, 0.18f, 0.2f), Metallic = 0.8f, Roughness = 0.45f },
-            _sleeper ??= new StandardMaterial3D { AlbedoColor = new Color(0.3f, 0.21f, 0.13f), Roughness = 0.95f });
+        var path = spur.Build(_rails.Party.Track, _enemy, Lanes, _steel ??= DungeonBuilder.RailSteel(),
+            _sleeper ??= DungeonBuilder.RailSleeper());
         ClearTimber(root, path);
         piece.Spur = spur;
         piece.Switch = spur.Lever; // armed and reset with the other levers

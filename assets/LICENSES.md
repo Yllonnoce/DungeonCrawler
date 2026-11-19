@@ -18,6 +18,8 @@ All Poly Haven assets are CC0 (https://polyhaven.com/license). Kenney packs are 
 - rusty_metal: https://polyhaven.com/a/rusty_metal
 - wood_floor_deck: https://polyhaven.com/a/wood_floor_deck
 - wooden_rough_planks: https://polyhaven.com/a/wooden_rough_planks
+- gravel_floor_02: https://polyhaven.com/a/gravel_floor_02 (gravel_floor_02_diff_1k.jpg, gravel_floor_02_nor_1k.jpg, gravel_floor_02_rough_1k.jpg; the mine cart track's ballast, fetched by `scripts/fetch_polyhaven.py`)
+- old_planks_02: https://polyhaven.com/a/old_planks_02 (old_planks_02_diff_1k.jpg, old_planks_02_nor_1k.jpg, old_planks_02_rough_1k.jpg; the mine carts' and the track's wood, fetched by `scripts/fetch_polyhaven.py`)
 
 ## Poly Haven models (glTF 1k)
 - wine_barrel_01: https://polyhaven.com/a/wine_barrel_01
@@ -65,6 +67,42 @@ All Poly Haven assets are CC0 (https://polyhaven.com/license). Kenney packs are 
 - stone_tiles_02: https://polyhaven.com/a/stone_tiles_02
 - slate_floor: https://polyhaven.com/a/slate_floor
 - cracked_concrete_wall: https://polyhaven.com/a/cracked_concrete_wall
+
+## Mine cart chase models
+
+- "Mine Object collection" by loafbrr, https://opengameart.org/content/mine-object-collection, CC0 (the page's "License(s): CC0"; the bundled README.txt: "LICENSE: Creative Commons 0/ CC0 ... Giving attribution is not required, but is greatly appreciated!", so it is credited here as a courtesy). Checked 2026-11-19. From the zip `mines_asset_fbx_gltf_blend.zip` only `GLTF/MinesPack.gltf` (its images embedded) and `README.txt` were taken, into `assets/models/loafbrr_mine/`: MinesPack.gltf, README.txt, and its textures, the 26 images Godot's import extracts from the glTF beside it:
+  - MinesPack_Cart_1k_Base Color.png
+  - MinesPack_Cart_1k_EdgeMask.png
+  - MinesPack_Cart_1k_METALLIC-Cart_1k_ROUGHNESS.png
+  - MinesPack_Cart_1k_NORMAL.png
+  - MinesPack_Contraptions_1k_Base Color.png
+  - MinesPack_Contraptions_1k_METALLIC-Contraptions_1k_ROUGHNESS.png
+  - MinesPack_Contraptions_1k_NORMAL.png
+  - MinesPack_Jars_1k_Base Color.png
+  - MinesPack_Jars_1k_METALLIC-Jars_1k_ROUGHNESS.png
+  - MinesPack_Jars_1k_NORMAL.png
+  - MinesPack_Pillars_1k_Base Color.png
+  - MinesPack_Pillars_1k_METALLIC-Pillars_1k_ROUGHNESS.png
+  - MinesPack_Pillars_1k_NORMAL.png
+  - MinesPack_Pipes_1k_Base Color.png
+  - MinesPack_Pipes_1k_METALLIC-Pipes_1k_ROUGHNESS.png
+  - MinesPack_Pipes_1k_NORMAL.png
+  - MinesPack_Rails_albedo.png
+  - MinesPack_Rails_metalness-Rails_roughness.png
+  - MinesPack_Rails_normal.png
+  - MinesPack_Rocks_1k_Base Color.png
+  - MinesPack_Rocks_1k_EdgeMask.png
+  - MinesPack_Rocks_1k_NORMAL.png
+  - MinesPack_Rocks_1k_ROUGHNESS.png
+  - MinesPack_Tools_1k_Base Color.png
+  - MinesPack_Tools_1k_METALLIC-Tools_1k_ROUGHNESS.png
+  - MinesPack_Tools_1k_NORMAL.png
+
+## ambientCG textures (CC0)
+
+CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/); ambientCG's page: "All assets are released under the Creative Commons CC0 license" (checked 2026-11-19).
+
+- Lava004 by ambientCG (Lennart Demes), https://ambientcg.com/view?id=Lava004: the 1K-JPG set (`https://ambientcg.com/get?file=Lava004_1K-JPG.zip`), four maps renamed into `assets/textures/lava004/` as `DungeonBuilder.Material` loads them: Lava004_1K-JPG_Color.jpg as lava004_diff_1k.jpg, Lava004_1K-JPG_NormalGL.jpg as lava004_nor_1k.jpg, Lava004_1K-JPG_Roughness.jpg as lava004_rough_1k.jpg, and Lava004_1K-JPG_Emission.jpg as lava004_emit_1k.jpg (the slag pour, the slag carts' coals and the cinder patches).
 
 ## Kenney audio (CC0)
 - Impact Sounds: https://kenney.nl/assets/impact-sounds

@@ -785,6 +785,22 @@ public partial class DungeonBuilder : Node3D
         return mat;
     }
 
+    public const string LavaEmission = "res://assets/textures/lava004/lava004_emit_1k.jpg";
+
+    /// <summary>
+    /// Molten slag, glowing coals and cinders: ambientCG's Lava004 (<see cref="Material"/>), glowing in <paramref name="emission"/> at
+    /// <paramref name="energy"/> through its own emission map (the glowing cracks); without the map it glows flat, as before the textures came.
+    /// </summary>
+    public static StandardMaterial3D Lava(Color tint, Color emission, float energy, float metersPerTile = 1f)
+    {
+        var mat = Material("lava004", tint, metersPerTile);
+        mat.EmissionEnabled = true;
+        mat.Emission = emission; // times the map: a white emission burns the map out to white at the coals' strength
+        mat.EmissionEnergyMultiplier = energy;
+        if (ResourceLoader.Exists(LavaEmission)) mat.EmissionTexture = GD.Load<Texture2D>(LavaEmission);
+        return mat;
+    }
+
     private static MeshLibrary BuildLibrary(ThemeDef? tier)
     {
         var lib = new MeshLibrary();
@@ -1913,9 +1929,10 @@ public partial class DungeonBuilder : Node3D
         var node = new Node3D { Name = "Rails" };
         root.AddChild(node);
 
-        // The forge theme has no metal or wood entries, so: dark iron and dark wood.
-        var steel = new StandardMaterial3D { AlbedoColor = new Color(0.18f, 0.18f, 0.2f), Metallic = 0.8f, Roughness = 0.45f };
-        var wood = Material("weathered_planks", new Color(0.3f, 0.21f, 0.13f), 1.6f);
+        // The forge theme has no metal or wood entries, so: rusty iron rails on old planks, over a gravel bed.
+        var steel = RailSteel();
+        var wood = RailSleeper();
+        var ballast = Material("gravel_floor_02", new Color(0.36f, 0.33f, 0.3f), 1.5f);
 
         RailTrack Lay(IReadOnlyList<GridPos> lane, string name)
         {
@@ -1928,13 +1945,15 @@ public partial class DungeonBuilder : Node3D
             }
             var track = new RailTrack { Name = name };
             node.AddChild(track);
-            track.Build(pts, steel, wood);
+            track.Build(pts, steel, wood, ballast: ballast);
             return track;
         }
         PartyTrack = Lay(rail.Party, "PartyTrack");
         EnemyTrack = Lay(rail.Enemy, "EnemyTrack");
 
-        // Timber frames: two posts and a cap across the lane cell, every 2nd straight cell outside rooms.
+        // Timber frames: two posts and a cap across the lane cell, every 2nd straight cell outside rooms. Each part is a box that
+        // the rail code reads (ClearTimber takes a frame down by its boxes, the soundscape creaks at them); with the mine pack loaded
+        // the box is not drawn and carries the model: a WoodPost per post, a WoodPostBeams_2 lintel across the lane, in the line's wood.
         var frames = new Node3D { Name = "Timbering" };
         node.AddChild(frames);
         foreach (var lane in new[] { rail.Party, rail.Enemy })
@@ -1949,8 +1968,11 @@ public partial class DungeonBuilder : Node3D
                 var yaw = along.X != 0 ? Mathf.Pi / 2f : 0f; // boxes are wide in local X across the lane
                 var post = Mathf.Min(LevelHeight, 3.2f) - 0.3f;
                 foreach (var sgn in new[] { -1f, 1f })
-                    Box(frames, new Vector3(0.22f, post, 0.22f), centre + side * (sgn * (CellSize / 2f - 0.2f)) + Vector3.Up * (post / 2f), wood, collide: false);
-                Box(frames, new Vector3(CellSize - 0.1f, 0.25f, 0.28f), centre + Vector3.Up * (post + 0.12f), wood, collide: false, yaw: yaw);
+                    Dress(Box(frames, new Vector3(0.22f, post, 0.22f), centre + side * (sgn * (CellSize / 2f - 0.2f)) + Vector3.Up * (post / 2f), wood, collide: false),
+                        MinePack.Paint(MinePack.Piece("WoodPost", new Vector3(0, post, 0), withChildren: false), wood));
+                var cap = new Vector3(CellSize - 0.1f, 0.25f, 0.28f);
+                Dress(Box(frames, cap, centre + Vector3.Up * (post + 0.12f), wood, collide: false, yaw: yaw),
+                    MinePack.Paint(MinePack.Piece("WoodPostBeams_2", cap, keepAspect: false), wood));
             }
 
         // Pocket lanterns: every other pocket (about 45 small lights on a full line).
@@ -1962,7 +1984,13 @@ public partial class DungeonBuilder : Node3D
             var light = new OmniLight3D { LightColor = torch, LightEnergy = 0.8f, OmniRange = 6f, OmniAttenuation = 1.3f, ShadowEnabled = false, Name = $"RailLamp{i}" };
             node.AddChild(light);
             light.GlobalPosition = at;
-            Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false);
+            if (MinePack.Piece("PostLight_1", new Vector3(0, 0.36f, 0), keepRotation: true) is { } lantern)
+            {
+                lantern.Name = $"RailLantern{i}";
+                node.AddChild(lantern);
+                lantern.GlobalPosition = at - Vector3.Up * 0.18f; // its middle where the box's was
+            }
+            else Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false);
         }
 
         for (var i = 0; i < rail.Stops.Count; i++)
@@ -1973,6 +2001,33 @@ public partial class DungeonBuilder : Node3D
             root.AddChild(marker);
             marker.GlobalPosition = Surface(plat[plat.Count / 2]);
         }
+    }
+
+    /// <summary>The rails' iron: Poly Haven's rusty_metal_02, metallic (the main line, the spur and the crossovers).</summary>
+    public static StandardMaterial3D RailSteel()
+    {
+        var steel = Material("rusty_metal_02", new Color(0.42f, 0.36f, 0.32f), 1f);
+        steel.Metallic = 0.8f;
+        return steel;
+    }
+
+    /// <summary>The sleepers' wood: Poly Haven's old_planks_02.</summary>
+    public static StandardMaterial3D RailSleeper() => Material("old_planks_02", new Color(0.42f, 0.32f, 0.22f), 1f);
+
+    /// <summary>A visibility range that starts this far out: the box is never drawn.</summary>
+    const float NeverDrawn = 1e7f;
+
+    /// <summary>
+    /// A box the rail code still reads, dressed with <paramref name="model"/> (null: the box stays as it is): the box is kept with its
+    /// size and transform but not drawn, and the model hangs under it standing on the box's bottom, so hiding the box hides both.
+    /// </summary>
+    private static void Dress(MeshInstance3D box, Node3D? model)
+    {
+        if (model == null || box.Mesh is not BoxMesh mesh) return;
+        box.VisibilityRangeBegin = NeverDrawn; // culled at every distance (a layer mask of 0 upsets the renderer's light pairing)
+        box.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
+        box.AddChild(model);
+        model.Position = new Vector3(0, -mesh.Size.Y / 2f, 0);
     }
 
     private static MeshInstance3D Box(Node3D parent, Vector3 size, Vector3 position, Material material, bool collide = true, float yaw = 0f, float roll = 0f)

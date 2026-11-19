@@ -3,8 +3,8 @@ using Godot;
 namespace DungeonCrawler.Dungeon.Props;
 
 /// <summary>
-/// One mine-cart track: a Path3D through the lane centreline, with two steel rails and sleepers extruded along it.
-/// Dressing only: no collision (bodies walk the cell floor).
+/// One mine-cart track: a Path3D through the lane centreline, with two steel rails and sleepers extruded along it, over a
+/// gravel ribbon when given a ballast material. Dressing only: no collision (bodies walk the cell floor).
 /// </summary>
 public partial class RailTrack : Node3D
 {
@@ -13,17 +13,20 @@ public partial class RailTrack : Node3D
     public const float SleeperEvery = 0.6f;
     static readonly Vector3 RailSize = new(0.07f, 0.12f, 0f);
     static readonly Vector3 SleeperSize = new(1.4f, 0.12f, 0.22f);
+    /// <summary>The gravel bed under the sleepers: this wide, this far above the floor.</summary>
+    public const float BallastWidth = 1.5f, BallastLift = 0.02f;
 
     public Curve3D Curve { get; } = new() { BakeInterval = 0.2f, UpVectorEnabled = true };
     public float Length { get; private set; }
 
-    private Material? _steel, _sleeper;
+    private Material? _steel, _sleeper, _ballast;
 
     /// <summary>
     /// Lay the track along the points; a second call replaces the first (the old path and meshes are freed). Each of
-    /// <paramref name="gaps"/> (S from, S to) is left bare: no rail and no sleeper over it (a jump's gap). The curve runs on through them.
+    /// <paramref name="gaps"/> (S from, S to) is left bare: no rail, no sleeper and no gravel over it (a jump's gap). The curve runs on through them.
+    /// With <paramref name="ballast"/> a <see cref="BallastWidth"/> gravel ribbon lies along the same frames, <see cref="BallastLift"/> above the floor.
     /// </summary>
-    public void Build(IReadOnlyList<Vector3> points, Material steel, Material sleeper, IReadOnlyList<(float from, float to)>? gaps = null)
+    public void Build(IReadOnlyList<Vector3> points, Material steel, Material sleeper, IReadOnlyList<(float from, float to)>? gaps = null, Material? ballast = null)
     {
         foreach (var child in GetChildren()) { RemoveChild(child); child.QueueFree(); }
         Curve.ClearPoints();
@@ -32,6 +35,7 @@ public partial class RailTrack : Node3D
         AddChild(new Path3D { Curve = Curve, Name = "Path" });
         _steel = steel;
         _sleeper = sleeper;
+        _ballast = ballast;
         if (points.Count < 2 || Length < 0.1f) return;
         BuildMeshes(gaps);
     }
@@ -40,7 +44,7 @@ public partial class RailTrack : Node3D
     public void Cut(IReadOnlyList<(float from, float to)> gaps)
     {
         if (_steel == null || _sleeper == null || Length < 0.1f) return;
-        foreach (var name in new[] { "Rails", "Sleepers" })
+        foreach (var name in new[] { "Rails", "Sleepers", "Ballast" })
             if (GetNodeOrNull(name) is { } old) { RemoveChild(old); old.QueueFree(); }
         BuildMeshes(gaps);
     }
@@ -100,6 +104,33 @@ public partial class RailTrack : Node3D
         sleeperSt.GenerateNormals();
         AddChild(new MeshInstance3D { Name = "Rails", Mesh = railSt.Commit(), MaterialOverride = steel });
         AddChild(new MeshInstance3D { Name = "Sleepers", Mesh = sleeperSt.Commit(), MaterialOverride = sleeper });
+        if (_ballast != null) BuildBallast(samples, gaps, _ballast);
+    }
+
+    /// <summary>The gravel ribbon: a flat strip across the samples' frames, broken where the rails are.</summary>
+    private void BuildBallast(List<Transform3D> samples, IReadOnlyList<(float from, float to)>? gaps, Material ballast)
+    {
+        var st = new SurfaceTool();
+        st.Begin(Mesh.PrimitiveType.Triangles);
+        Vector3[]? prev = null;
+        var quads = 0;
+        for (var k = 0; k < samples.Count; k++)
+        {
+            if (InGap(k * Sample, gaps)) { prev = null; continue; }
+            var t = samples[k];
+            var c = t.Origin + t.Basis.Y.Normalized() * BallastLift;
+            var x = t.Basis.X.Normalized() * (BallastWidth / 2f);
+            var edge = new[] { c - x, c + x };
+            if (prev != null)
+            {
+                Quad(st, prev[0], edge[0], edge[1], prev[1]); // its face up (+Y)
+                quads++;
+            }
+            prev = edge;
+        }
+        if (quads == 0) return;
+        st.GenerateNormals();
+        AddChild(new MeshInstance3D { Name = "Ballast", Mesh = st.Commit(), MaterialOverride = ballast, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
     }
 
     // One clockwise-from-outside winding (Godot's front face): a,b,c and a,c,d. Checked: the rail top comes out with normal +Y.

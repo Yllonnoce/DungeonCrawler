@@ -259,6 +259,13 @@ hammers' fall, locked again each time it ends. The "Music and ambience" slider c
 Enemy grunts are CC0 creature SFX from rubberduck's packs, fetched by `scripts/fetch_grunts.py` into `assets/audio/grunts/<set>/`;
 `VoiceSets` picks the set by enemy size and plays a hurt or death clip (pitch varied), and falls back to the old `enemy_hurt` and
 `enemy_die` cues when a set has no clips. They are listed in `assets/LICENSES.md`.
+Floor 12's mine cart chase is dressed from loafbrr's CC0 "Mine Object collection" (`assets/models/loafbrr_mine/MinesPack.gltf`,
+its textures extracted beside it by the import): `Dungeon/Props/MinePack.cs` loads it once and hands out collision-free copies of
+named pieces (the slag carts' and runaway wagons' tubs, every cart's axles, the switch levers, the ore buckets and their chain,
+the buffer's blockade, the heap's rocks, the timber frames and the pocket lanterns), fitted over the boxes they replace; the boxes
+stand in when a piece is missing, and a dedicated server loads nothing. The pack is stylised, so its timber and rocks are drawn in
+the game's own materials. The track runs on Poly Haven's `rusty_metal_02` rails and `old_planks_02` sleepers over a
+`gravel_floor_02` ribbon, and the slag, coals and cinders are ambientCG's `Lava004` with its emission map. `RideAssets` lists every file.
 After adding files under `assets/`, run `godot --headless --import --path .` once so Godot imports them.
 
 ## Build, test, run
