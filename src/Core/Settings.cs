@@ -23,6 +23,8 @@ public static class Settings
     /// <summary>Volumetric haze in the air, 0 (off) to 1 (thick); torchlight shows in it.</summary>
     public static float Haze { get; set; } = 0.5f;
     public static Vector2I Resolution { get; set; } = new(1920, 1080);
+    /// <summary>The headset's comfort vignette while a cart carries you (Off, Recommended, Strong: Strong also dims the view on a big drop). Flat play never shows it.</summary>
+    public static Party.ComfortLevel VrComfort { get; set; } = Party.ComfortRules.Default;
 
     // danger: ambushers along the corridors and the boss's reinforcement portals
     public static bool Ambushes { get; set; } = true;
@@ -120,6 +122,7 @@ public static class Settings
             DamageNumbers = cfg.GetValue("display", "damage_numbers", DamageNumbers).AsBool();
             Haze = (float)cfg.GetValue("display", "haze", Haze).AsDouble();
             Resolution = cfg.GetValue("display", "resolution", Resolution).AsVector2I();
+            VrComfort = Party.ComfortRules.Parse(cfg.GetValue("vr", "comfort", Party.ComfortRules.Name(VrComfort)).AsString());
             Ambushes = cfg.GetValue("danger", "ambushes", Ambushes).AsBool();
             Reinforcements = (float)cfg.GetValue("danger", "reinforcements", Reinforcements).AsDouble();
             Lethality = Math.Clamp((float)cfg.GetValue("danger", "lethality", Lethality).AsDouble(), Dungeon.TierRules.MinLethality, Dungeon.TierRules.MaxLethality);
@@ -175,6 +178,7 @@ public static class Settings
         cfg.SetValue("display", "damage_numbers", DamageNumbers);
         cfg.SetValue("display", "haze", Haze);
         cfg.SetValue("display", "resolution", Resolution);
+        cfg.SetValue("vr", "comfort", Party.ComfortRules.Name(VrComfort));
         cfg.SetValue("danger", "ambushes", Ambushes);
         cfg.SetValue("danger", "reinforcements", Reinforcements);
         cfg.SetValue("danger", "lethality", Lethality);

@@ -76,6 +76,15 @@ public partial class SettingsScreen : PanelContainer
         Check(v, "Damage numbers over enemies", Settings.DamageNumbers, x => Settings.DamageNumbers = x);
         Slider(v, "Haze in the air", 0f, 1f, Settings.Haze, x => { Settings.Haze = x; Settings.Apply(); }, "P0");
 
+        Header(v, "VR");
+        var comfort = new OptionButton { FocusMode = FocusModeEnum.None };
+        comfort.AddItem("Off", (int)Party.ComfortLevel.Off);
+        comfort.AddItem("Recommended", (int)Party.ComfortLevel.Recommended);
+        comfort.AddItem("Strong (also dims the view on big drops)", (int)Party.ComfortLevel.Strong);
+        comfort.Selected = comfort.GetItemIndex((int)Settings.VrComfort);
+        comfort.ItemSelected += i => Settings.VrComfort = (Party.ComfortLevel)comfort.GetItemId((int)i);
+        Row(v, "Comfort vignette in a mine cart", comfort);
+
         Header(v, "Danger");
         var dangerNote = new Label { Text = "Ambushers hide in rubble and wall niches along the corridors and burst out as you pass (three on floor 1, ten by floor 20). After a minute and a half on a floor the boss starts sending reinforcements through portals behind you, faster the longer you stay; the stairs end it, and a dead tier boss silences its tier. Both apply from the next floor you enter.", AutowrapMode = TextServer.AutowrapMode.Word, CustomMinimumSize = new Vector2(700, 0), Modulate = new Color(0.7f, 0.7f, 0.7f) };
         dangerNote.AddThemeFontSizeOverride("font_size", 12);

@@ -109,6 +109,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     public float SeatYaw { get => _seatYaw; set => _seatYaw = ClampSeatYaw(value); }
     /// <summary>The cart's flat heading at the last <see cref="FollowSeat"/> (NaN: none yet), so a headset's room turns with the bends.</summary>
     private float _lastSeatHeading = float.NaN;
+    /// <summary>The comfort vignette's inputs from the seat's motion, while a headset rides (<see cref="FeedComfort"/>).</summary>
+    private readonly ComfortSampler _comfortIn = new();
     // the seated desktop camera's ride feel (CartFeel): roll spring, a share of the track pitch, a speed FOV boost; all zero on foot
     private float _feelRoll, _feelRollVel, _feelPitch, _feelFov;
 
@@ -581,6 +583,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         Seat = seat;
         _seatYaw = 0f;
         _lastSeatHeading = float.NaN;
+        _comfortIn.Reset();
         Crouching = false;
         ApplyPosture();
         Velocity = cart.Velocity;
@@ -653,9 +656,19 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         var turn = _vr != null && !float.IsNaN(_lastSeatHeading) ? Mathf.Wrap(heading - _lastSeatHeading, -Mathf.Pi, Mathf.Pi) : 0f;
         if (_vr != null) _seatYaw = ClampSeatYaw(Mathf.Wrap(_vr.HeadYaw() + turn - heading, -Mathf.Pi, Mathf.Pi));
         GlobalTransform = new Transform3D(new Basis(Vector3.Up, heading + _seatYaw), seat.Origin);
-        if (_vr != null) _vr.RideAlong(turn);
+        if (_vr != null) { _vr.RideAlong(turn); FeedComfort(cart, heading, seat.Origin.Y); }
         _lastSeatHeading = heading;
         if (_vr == null && SpectateTarget == null) Camera.Rotation = new Vector3(_pitch + _feelPitch, 0, _feelRoll); // the roll is the seated camera's lean (RideFeel), never the track's
+    }
+
+    /// <summary>
+    /// The seat's motion, for the headset's comfort vignette: sampled at the time the cart's pose stands for (the physics
+    /// tick plus the interpolation fraction the rail posed it at), once a frame however many times the seat is followed.
+    /// </summary>
+    private void FeedComfort(ICartBody cart, float heading, float y)
+    {
+        var now = (Engine.GetPhysicsFrames() + Engine.GetPhysicsInterpolationFraction()) / Engine.PhysicsTicksPerSecond;
+        if (_comfortIn.Sample(now, cart.Speed, heading, y)) _vr!.FeedComfort(_comfortIn.Accel, _comfortIn.YawRateDeg, _comfortIn.VerticalAccel);
     }
 
     /// <summary>The yaw of a seat's forward (−Z) laid flat: the way the cart points, without its pitch or roll.</summary>
@@ -675,6 +688,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         Pumping = false;
         _seatYaw = 0f;
         _lastSeatHeading = float.NaN;
+        _comfortIn.Reset();
         ResetRideFeel();
         if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
         else GlobalBasis = Basis.Identity;

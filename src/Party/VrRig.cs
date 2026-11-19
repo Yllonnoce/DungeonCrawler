@@ -31,6 +31,14 @@ public partial class VrRig : XROrigin3D
     private bool _turnArmed = true;
     private bool _attackHeld, _useHeld, _nextHeld, _guardHeld, _jumpHeld, _dodgeHeld;
 
+    // the comfort vignette while a cart carries the body (ComfortRules; the setting Settings.VrComfort)
+    private ComfortVignette _vignette = null!;
+    private ComfortState _comfort = ComfortState.Open;
+    private float _comfortAccel, _comfortYawRate, _comfortVertical;
+    private ulong _comfortFedFrame;
+    /// <summary>Inputs older than this many frames are stale (the cart is no longer followed): the vignette eases open.</summary>
+    private const ulong ComfortStaleFrames = 10;
+
     public static VrRig Attach(Adventurer body)
     {
         var rig = new VrRig { Name = "VrRig", TopLevel = true, _body = body };
@@ -42,6 +50,7 @@ public partial class VrRig : XROrigin3D
         rig.AddChild(rig._right);
         body.AddChild(rig);
         rig.TakeAim();
+        rig._vignette = ComfortVignette.Attach(rig._head);
         VrPanel.Attach(rig, body, rig._head, rig._left, rig._right);
         rig._head.Position = new Vector3(0, 1.6f, 0); // until the headset reports in
         rig.GlobalTransform = new Transform3D(new Basis(Vector3.Up, body.Rotation.Y), body.GlobalPosition);
@@ -124,6 +133,24 @@ public partial class VrRig : XROrigin3D
         if (!_head.Current) TakeView(); // something made another camera current (a possession, a spectate ending)
         CarryCamera();
         ShowAim();
+        Comfort((float)delta);
+    }
+
+    /// <summary>The seat's motion this frame (the body's FollowSeat, while seated): the cart's smoothed acceleration, the seat's turn rate and its smoothed vertical acceleration.</summary>
+    public void FeedComfort(float accel, float yawRateDeg, float verticalAccel)
+    {
+        (_comfortAccel, _comfortYawRate, _comfortVertical) = (accel, yawRateDeg, verticalAccel);
+        _comfortFedFrame = Engine.GetProcessFrames();
+    }
+
+    /// <summary>Once a rendered frame: the vignette narrows with the ride and opens again on foot (or at once when the setting is Off).</summary>
+    private void Comfort(float dt)
+    {
+        var live = _body.Seated && Engine.GetProcessFrames() - _comfortFedFrame <= ComfortStaleFrames;
+        _comfort = live
+            ? ComfortRules.Step(_comfort, dt, _comfortAccel, _comfortYawRate, _comfortVertical, Settings.VrComfort)
+            : ComfortRules.Step(_comfort, dt, 0f, 0f, 0f, Settings.VrComfort);
+        _vignette.Apply(_comfort);
     }
 
     /// <summary>The body's flat camera rides the head, with everything that hangs from it.</summary>
@@ -151,9 +178,16 @@ public partial class VrRig : XROrigin3D
     public void AfterMove()
     {
         var off = _body.GlobalPosition - _head.GlobalPosition;
-        GlobalPosition += new Vector3(off.X, _body.GlobalPosition.Y + _lift - GlobalPosition.Y, off.Z);
+        GlobalPosition += new Vector3(off.X, _body.GlobalPosition.Y + Lift - GlobalPosition.Y, off.Z);
         CarryCamera();
     }
+
+    /// <summary>
+    /// How far the room is raised: the measured lift on foot; seated, the eye comes down to the seated hero's
+    /// (<see cref="Adventurer.SeatedEyeHeight"/> above the tub floor, 0.45 m lower), so the cart's rim and front board stay in the
+    /// lower view. Standing up gives the standing height back; nothing is measured again.
+    /// </summary>
+    private float Lift => _body.Seated ? _lift - (EyeHeight - Adventurer.SeatedEyeHeight) : _lift;
 
     /// <summary>Seated in a cart (the body's FollowSeat): turn the room about the head by <paramref name="turn"/> (the cart's bend, yaw only) and bring it over the body, level.</summary>
     public void RideAlong(float turn)
@@ -218,13 +252,9 @@ public partial class VrRig : XROrigin3D
             if (use && !_useHeld) party.VrUse();
             if (next && !_nextHeld) party.VrNextAbility();
 
-            var turn = _right.GetVector2("primary").X;
-            if (Mathf.Abs(turn) < Vr.TurnRelease) _turnArmed = true;
-            else if (_turnArmed && Mathf.Abs(turn) > Vr.TurnPush)
-            {
-                _turnArmed = false;
-                TurnBy(-Mathf.Sign(turn) * Mathf.DegToRad(Vr.SnapTurnDegrees));
-            }
+            // seated too: the room turns about the head, and FollowSeat then takes the seat yaw from the head (RideAlong adds only the bend)
+            var turn = SnapTurn.Read(ref _turnArmed, _right.GetVector2("primary").X);
+            if (turn != 0f) TurnBy(turn);
 
             var stick = _left.GetVector2("primary");
             if (stick.Length() < Vr.StickDeadzone) stick = Vector2.Zero;

@@ -1242,7 +1242,7 @@ public partial class DebugTools : Node
         return 1;
     }
 
-    /// <summary>--test-keys: a rebind must survive a reload of the settings without anyone pressing Back, and land in the InputMap.</summary>
+    /// <summary>--test-keys: a rebind (and the VR comfort level) must survive a reload of the settings without anyone pressing Back, and land in the InputMap.</summary>
     private void RunTremor()
     {
         // --tremor: set off a heavy tremor once the floor is up; --test-tremor also watches the stones fall and land, and the camera shake
@@ -1269,12 +1269,17 @@ public partial class DebugTools : Node
     {
         var before = Settings.KeyFor("jump");
         var wanted = before == Key.Y ? Key.U : Key.Y; // neither is a default binding, so no other action gets cleared
-        Settings.Rebind("jump", wanted);
+        var comfortBefore = Settings.VrComfort; // the headset's comfort level rides the same file
+        var comfortWanted = comfortBefore == Party.ComfortLevel.Strong ? Party.ComfortLevel.Off : Party.ComfortLevel.Strong;
+        Settings.VrComfort = comfortWanted;
+        Settings.Rebind("jump", wanted); // saves
+        Settings.VrComfort = Party.ComfortRules.Default;
         Settings.Load(); // what the next launch does
         var inMap = InputMap.ActionGetEvents("jump").OfType<InputEventKey>().Any(e => e.PhysicalKeycode == wanted);
-        GD.Print($"[keys] rebound jump {before}->{wanted}: afterReload={Settings.KeyFor("jump")} inInputMap={inMap}");
-        var ok = Settings.KeyFor("jump") == wanted && inMap;
-        Settings.Rebind("jump", before); // leave the player's own binding as it was
+        GD.Print($"[keys] rebound jump {before}->{wanted}: afterReload={Settings.KeyFor("jump")} inInputMap={inMap}; vr comfort {comfortBefore}->{comfortWanted}: afterReload={Settings.VrComfort}");
+        var ok = Settings.KeyFor("jump") == wanted && inMap && Settings.VrComfort == comfortWanted;
+        Settings.VrComfort = comfortBefore;
+        Settings.Rebind("jump", before); // leave the player's own binding and comfort level as they were
         GD.Print($"[keys] RESULT {(ok ? "ok" : "FAIL")}");
         _done = true; GetTree().Quit();
     }

@@ -14,10 +14,10 @@ public static class Vr
     /// <summary>True once the headset is the game's display.</summary>
     public static bool Active { get; private set; }
 
-    /// <summary>A flick of the right stick turns the view this far at once (a smooth turn is what makes people ill).</summary>
-    public const float SnapTurnDegrees = 30f;
+    /// <summary>A flick of the right stick turns the view this far at once (a smooth turn is what makes people ill); see <see cref="Party.SnapTurn"/>.</summary>
+    public const float SnapTurnDegrees = Party.SnapTurn.Degrees;
     /// <summary>How far a stick must be pushed to turn, and how far it must come back before it turns again.</summary>
-    public const float TurnPush = 0.6f, TurnRelease = 0.3f;
+    public const float TurnPush = Party.SnapTurn.Push, TurnRelease = Party.SnapTurn.Release;
     /// <summary>A trigger or a grip counts as pressed above the first and as let go below the second.</summary>
     public const float SqueezeOn = 0.6f, SqueezeOff = 0.4f;
     /// <summary>A stick inside this is at rest.</summary>
