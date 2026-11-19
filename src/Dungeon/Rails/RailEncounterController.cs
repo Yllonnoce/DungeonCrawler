@@ -332,10 +332,12 @@ public partial class RailEncounterController : Node
     /// <summary>
     /// A cart bears down (the body stands on its lane within <see cref="WarnSeconds"/> of look-ahead): a hero on foot gets the bark
     /// and the bell, and an AI-controlled body (a companion, a crew or escorting NPC) within 30 m also walks to a refuge
-    /// (<see cref="SeekRefuge"/>). <paramref name="warned"/> throttles the bark per hero.
+    /// (<see cref="SeekRefuge"/>). <paramref name="warned"/> throttles the bark per hero. A seated companion of <paramref name="speakFrom"/>
+    /// (the party's cart unless named: a chaser's riders call their own) says it, else the log.
     /// </summary>
-    private void Warn(CartRun run, Node3D carrier, Dictionary<int, double> warned, bool partyLane, PartyController party)
+    private void Warn(CartRun run, Node3D carrier, Dictionary<int, double> warned, bool partyLane, PartyController party, ICartBody? speakFrom = null)
     {
+        var speakers = speakFrom ?? _rails.Cart;
         var look = Mathf.Max(run.State.V, RunOverRules.WarnMinSpeed) * WarnSeconds;
         float hint = run.FrontS + look / 2f, window = look / 2f + 2f;
         var reach = Mathf.Min(look + CartRules.HalfLength + 3f, SeekScan);
@@ -352,7 +354,7 @@ public partial class RailEncounterController : Node
             warned[hero.Index] = _now;
             Adventurer? speaker = null;
             foreach (var mate in party.Adventurers)
-                if (IsInstanceValid(mate) && mate.Cart == _rails.Cart && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
+                if (IsInstanceValid(mate) && mate.Cart == speakers && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
             if (speaker != null)
             {
                 var name = speaker.State.Name;
@@ -373,6 +375,38 @@ public partial class RailEncounterController : Node
             if (!RunOverRules.InWarning(run.State.S, run.State.V, b with { Radius = RunOverSweep.BodyRadius }, WarnSeconds)) continue;
             SeekRefuge(npc, run, carrier, partyLane, b.S);
         }
+    }
+
+    // ---- a left-behind player's chaser (RailController.Chase) ----------------------------------------
+
+    /// <summary>
+    /// A chaser rolling on the party lane warns as every party-lane cart does (its lamp is its tub's): a hero on foot ahead gets the bark
+    /// and the bell, and AI bodies (companions, crew, escorts) walk to a party-lane pocket. Its own riders call it. Server; no allocation.
+    /// </summary>
+    internal void WarnPartyLane(CartRun run, MineCart carrier, Dictionary<int, double> warned, PartyController party)
+    {
+        GatherBodies(party);
+        Warn(run, carrier, warned, true, party, carrier);
+    }
+
+    /// <summary>The party line's holes a chaser hops (it judges no set piece, but never floats over a pit): every jump's gap and every fallen trestle, From..To. <paramref name="into"/> is cleared first; no allocation.</summary>
+    internal void CollectPartyLaneHoles(List<(float From, float To)> into)
+    {
+        into.Clear();
+        foreach (var p in _pieces)
+        {
+            if (p.Gap is { } gap && IsInstanceValid(gap)) into.Add((gap.From, gap.To));
+            if (p.Trestle is { Collapsed: true } trestle && IsInstanceValid(trestle)) into.Add((trestle.From, trestle.To));
+        }
+    }
+
+    /// <summary>The nearest live ore heap's face on the party line at or ahead of <paramref name="frontS"/> (a chaser halts at it as the party cart does), or +∞.</summary>
+    internal float LiveHeapFaceAhead(float frontS)
+    {
+        var best = float.PositiveInfinity;
+        foreach (var p in _pieces)
+            if (p.Heap is { IsAlive: true } heap && IsInstanceValid(heap) && heap.FaceS >= frontS - 0.05f && heap.FaceS < best) best = heap.FaceS;
+        return best;
     }
 
     // ---- posing ----------------------------------------------------------------------------------

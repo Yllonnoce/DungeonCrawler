@@ -498,7 +498,17 @@ public partial class RailController : Node
     /// </summary>
     private void SeatBench(Vector3 from)
     {
-        if (StopIndex >= StopS.Length - 1 || !PlayerAboard() || GetParent() is not { } floor) return;
+        if (StopIndex >= StopS.Length - 1 || !PlayerAboard()) return;
+        SeatBench(Cart, from);
+    }
+
+    /// <summary>
+    /// The bench of <paramref name="cart"/> (the party's, or a left-behind player's chaser) takes the escorts and allies on foot near
+    /// <paramref name="from"/>, as <see cref="SeatBench(Vector3)"/> describes: one rule for both carts.
+    /// </summary>
+    private void SeatBench(MineCart cart, Vector3 from)
+    {
+        if (GetParent() is not { } floor) return;
         _bench.Clear();
         for (var i = 0; i < floor.GetChildCount(); i++)
             if (floor.GetChild(i) is Npc { Dead: false, Downed: false, Escorting: true, Seated: false, Crew: false } npc
@@ -508,8 +518,8 @@ public partial class RailController : Node
         _bench.Sort(_benchOrder);
         foreach (var npc in _bench)
         {
-            if (Cart.Seats.Take(npc.RiderId, isHero: false) is not int seat) break; // the bench is full
-            npc.SitIn(Cart, seat);
+            if (cart.Seats.Take(npc.RiderId, isHero: false) is not int seat) break; // the bench is full
+            npc.SitIn(cart, seat);
             RefreshHud();
         }
     }

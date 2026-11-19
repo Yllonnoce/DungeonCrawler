@@ -70,4 +70,45 @@ public static class SpareRules
     /// <summary>The chase is over: the chaser, boarded and held, stands up against its limit behind a held train (at a stop or halted).</summary>
     public static bool ChaseDone(bool boarded, bool chaserHeld, bool trainHeld, float s, float limit)
         => boarded && chaserHeld && trainHeld && limit - s <= AtLimit;
+    // ---- the line ahead of the chaser ---------------------------------------------------------------
+
+    /// <summary>A hop lands the chaser's back end this far past the hole.</summary>
+    public const float HopClear = 0.05f;
+
+    /// <summary>
+    /// The chaser judges no set piece, but it never floats over a pit: when its front reaches a hole in the party line this step
+    /// (<paramref name="holes"/>: a jump's gap, a fallen trestle, From..To in party S, any order), the new front S that lands its whole
+    /// body just past the first such hole (and past any hole that landing falls in), else null. No allocation.
+    /// </summary>
+    public static float? HopPast(float prevFrontS, float frontS, IReadOnlyList<(float From, float To)> holes)
+    {
+        const float tub = 2f * CartRules.HalfLength;
+        float? landing = null;
+        var first = float.PositiveInfinity;
+        for (var i = 0; i < holes.Count; i++)
+        {
+            var (from, to) = holes[i];
+            if (prevFrontS < to && frontS >= from && from < first) { first = from; landing = to + tub + HopClear; }
+        }
+        if (landing is not { } land) return null;
+        for (var pass = 0; pass <= holes.Count; pass++) // a landing in the next hole hops that one too
+        {
+            var moved = false;
+            for (var i = 0; i < holes.Count; i++)
+            {
+                var (from, to) = holes[i];
+                if (land - tub < to && land > from && to + tub + HopClear > land) { land = to + tub + HopClear; moved = true; }
+            }
+            if (!moved) break;
+        }
+        return land;
+    }
+
+    /// <summary>The chaser's limit with a live ore heap's face (<paramref name="faceS"/>, +∞ for none) ahead of its front: it halts one half length short of the face, as the party cart does, and never drives through.</summary>
+    public static float HeapLimit(float limit, float frontS, float faceS)
+        => faceS >= frontS - RollAgain ? Math.Min(limit, faceS - CartRules.HalfLength) : limit;
+
+    /// <summary>The chaser's prompt: "Get out" (the board prompt's word) for a hero seated in it while it stands, else nothing (nobody boards a chaser).</summary>
+    public static string ChaserPrompt(bool seatedHere, bool held)
+        => seatedHere && held ? RideInputRules.BoardPrompt(seatedHere: true, held: true, lastStop: false, heroSeatFree: false, inReach: true) : "";
 }

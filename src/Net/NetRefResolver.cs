@@ -23,7 +23,8 @@ public static class NetRefResolver
         Npc n => NetRefs.Npc(n.Id),
         Plaque pl => NetRefs.Plaque(pl.Index),
         Shrine => NetRefs.Shrine(0),
-        MineCart c => NetRefs.CartRef(c.Kind, c == RailController.Instance?.Cart, RailController.Instance?.SpareStopOf(c) ?? -1), // the party's cart is cart:0, a stop's spare spare:{stop}; a runaway wagon or a chaser has none
+        // the party's cart is cart:0; a stop's spare is spare:{stop}, parked or running after the train (a chaser: its rider gets out by it); a runaway wagon has none
+        MineCart c => NetRefs.CartRef(c.Kind, c == RailController.Instance?.Cart, c.Kind == CartKind.Chaser ? c.CartId - CartIds.ChaserBase : RailController.Instance?.SpareStopOf(c) ?? -1),
         TrackSwitch sw => sw.NetRef.Length > 0 ? sw.NetRef : null, // "switch:{piece}", or "spur:{piece}" for a spur's lever
         RailGate.WinchPost w => NetRefs.Winch(w.Gate.Stop),
         CageWagon w => NetRefs.Wagon(w.Stop),
@@ -68,7 +69,7 @@ public static class NetRefResolver
         {
             case NetRefs.GateKind: return rails?.GateAt(index);
             case NetRefs.WinchKind: return rails?.GateAt(index)?.Winch;
-            case NetRefs.SpareKind: return rails?.SpareAt(index);
+            case NetRefs.SpareKind: return rails?.ChaserStop == index && rails.Chaser is { } chaser ? chaser : rails?.SpareAt(index); // a spare running after the train is its chaser
             case NetRefs.CartKind: return index == 0 && rails != null && GodotObject.IsInstanceValid(rails.Cart) ? rails.Cart : null;
             case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind:
                 return RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.GetParent() == root ? enc.NetNode(kind, index) : null;

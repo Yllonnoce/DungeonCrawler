@@ -87,7 +87,7 @@ public partial class RailNet
         }
         cc.Run.Limit = d.Limit;
         cc.Follow.Apply(d, now);
-        if (cc.Chaser is { } chaser) chaser.CollisionLayer = d.Mode == (byte)CartMode.Held ? 1u : 0u; // solid while it stands, as the server's
+        if (cc.Chaser is { } chaser) chaser.CollisionLayer = d.Mode == (byte)CartMode.Held ? 1u | 8u : 0u; // solid and a thing to use (its rider's "Get out") while it stands, as the server's
         for (var i = 0; i < cc.Wanted.Length; i++) cc.Wanted[i] = d.RiderNetIds != null && i < d.RiderNetIds.Count ? d.RiderNetIds[i] : -1;
         Bind(cc);
     }
@@ -132,8 +132,10 @@ public partial class RailNet
             }
             case CartKind.Chaser:
             {
-                // a left-behind player's spare running after the train: the party's tub, nothing to use, its riders seated by SeatMsgs
-                var chaser = new MineCart { Name = $"ChaserCart{d.Cart - CartIds.ChaserBase}", CartId = d.Cart, PromptFor = _ => "", CollisionLayer = 1 }.AsChaser();
+                // a left-behind player's spare running after the train: the party's tub, its riders seated by SeatMsgs; standing, its rider's "Get out" goes as spare:{stop}
+                var chaser = new MineCart { Name = $"ChaserCart{d.Cart - CartIds.ChaserBase}", CartId = d.Cart, CollisionLayer = 1u | 8u }.AsChaser();
+                var follow = cc.Follow;
+                chaser.PromptFor = hero => SpareRules.ChaserPrompt(hero.Cart == chaser, follow.HasState && follow.Mode == CartMode.Held); // the server's rule, from its state
                 root.AddChild(chaser);
                 cc.Body = chaser;
                 cc.Chaser = chaser;

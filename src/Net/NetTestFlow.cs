@@ -247,9 +247,9 @@ public partial class NetTestFlow : Node
             var quiet = QuietUnseatChecked(world, out var quietWhy);
             var props = _rideGateUp && _rideCageOpen && _rideRevived && _rideReboarded && _rideCrossed;
             var joiner = _joinReadyMidRide && _joinSeated;
-            var chase = _joinSpareHeldRefused && _chaseTaken && _chaseDone && _chaseGapOk && _chaseSetDown;
+            var chase = _joinSpareHeldRefused && _chaseTaken && _chaseDone && _chaseGapOk && _chaseSetDown && _chaseHops >= 1; // ride 4's gap is always cut
             var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner && chase;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; the left-behind spare: refused while the train was held at stop 3 {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}; the heroes topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; the left-behind spare: refused while the train was held at stop 3 {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the heroes topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
             return;
         }
         if (_elapsed > 560) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
@@ -308,6 +308,7 @@ public partial class NetTestFlow : Node
     private bool _joinOut, _joinHoldersKilled, _joinSpareHeldRefused, _chaseTaken, _chaseDone, _chaseGapOk, _chaseSetDown, _chaseDepartTold;
     private double _joinOutAt;
     private float _chaseGap = float.NaN;
+    private int _chaseHops;
     private int _ridePlatingTopUps;
 
     /// <summary>
@@ -352,8 +353,9 @@ public partial class NetTestFlow : Node
             _chaseGap = rc.LastChaseGap;
             _chaseGapOk = _chaseGap >= 0f && _chaseGap <= 3f;
             _chaseSetDown = !hero.Seated && Main.Instance?.Builder.Layout is { } layout && !layout.IsRail(Dungeon.DungeonBuilder.WorldToCell(hero.GlobalPosition));
+            _chaseHops = rc.ChaserHops;
             world.Trace.Add("chase-done");
-            GD.Print(FormattableString.Invariant($"[net-server] ride: chase-done: the chaser halted {_chaseGap:0.00} m behind the train's last body (the train held at stop {rc.StopIndex}, S={rc.State.S:0.0}, {rc.Train.Count} wagon(s)); {RideJoinerName} set down beside the lane: {(_chaseSetDown ? "yes" : "NO")}"));
+            GD.Print(FormattableString.Invariant($"[net-server] ride: chase-done: the chaser halted {_chaseGap:0.00} m behind the train's last body (the train held at stop {rc.StopIndex}, S={rc.State.S:0.0}, {rc.Train.Count} wagon(s)); {RideJoinerName} set down beside the lane: {(_chaseSetDown ? "yes" : "NO")}; it hopped {_chaseHops} hole(s) in the line (ride 4's gap, the fallen trestle)"));
         }
         if (_joinOut && !_joinSpareHeldRefused && !_chaseDepartTold && rc.SpareAt(3) is { } held && rc.StopIndex == 3 && rc.State.Mode == Dungeon.Rails.CartMode.Held)
             _joinSpareHeldRefused = (held.PromptFor?.Invoke(hero) ?? "") == "" && held.TubDistance(hero) <= Dungeon.Rails.SpareRules.SpareReach;
