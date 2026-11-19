@@ -502,7 +502,7 @@ public partial class DebugTools
                 if (wagon.Coupled || wagon.Open) { fail($"wagon 1 left with the train (coupled {wagon.Coupled}, open {wagon.Open})"); return; }
                 if (!rc.CrewLeftAt.Contains(1)) { fail("CrewLeftAt does not list stop 1"); return; }
                 if (crew.Count != CrewRules.PerWagon || crew.Any(c => ctrl.StateOf(c) != CrewState.Lost)) { fail($"wagon 1's crew are not two lost: [{string.Join(", ", crew.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}]"); return; }
-                if (!ctrl.HudText.Contains(", 2 lost")) { fail($"the crew line reads \"{ctrl.HudText}\", with no \", 2 lost\""); return; }
+                if (ctrl.HudText != "Crew freed 0/6, home 0, 2 lost.") { fail($"the crew line reads \"{ctrl.HudText}\", not \"Crew freed 0/6, home 0, 2 lost.\" (a left cage's crew are lost, never freed)"); return; }
                 if (ctrl.Completed) { fail("the floor is complete with cages 2 and 3 still locked"); return; }
                 GD.Print($"[crew] 8 departed stop 1 without its prisoners: wagon 1 coupled={wagon.Coupled}, its crew Lost (hud \"{ctrl.HudText}\")");
                 _crewStep++;

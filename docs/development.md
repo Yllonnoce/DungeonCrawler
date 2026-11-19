@@ -1191,7 +1191,8 @@ not saved (`RailController.CrewLeftAt` is cleared by `Restore`): after a load th
 A cage left behind. Its crew count as lost (`CrewRules.JudgeCaged`), and the cage no longer blocks the stairs
 (`CrewRules.CagesBlocking` counts only the cages neither open nor left behind). Opening it later on foot frees its crew
 as any cage does, and they follow on foot ("Let them out" on its siding). The save still lists only the dead as lost, so
-after a load the cage holds again and its crew are caged.
+after a load the cage holds again and its crew are caged. The crew line's "freed" (`CrewRules.HudText`) counts only crew whose
+cage stands open (or who had none), so a left cage's crew, and crew who died still caged, are lost but never freed.
 
 The crew. Floor 12's six are Hob Tallow, Merrin Ash, Dace Wicker, Old Pell, Juno Brack and Selby Crane (wagon 1 holds Hob
 and Merrin, wagon 2 Dace and Old Pell, wagon 3 Juno and Selby). A plan with no `Crew` falls back to the floor's stock
@@ -1247,7 +1248,7 @@ walks with the party to the stairs and `q_grisel_out` must complete. Then the fl
 (`CageHeld`) a countdown and two seconds later with no countdown run, the bar "Cart — cage locked", the seat's prompt
 `CageHoldRules.SeatedPrompt` with the hold offered, and "The cage here is still locked." heard once. The lead then
 leaves the prisoners behind (`[crew] 8 held at stop 1 by its locked cage`). The cart must leave within 6 s with wagon 1
-uncoupled and still locked, `CrewLeftAt` listing stop 1, its two crew lost, the crew line saying ", 2 lost" and the floor
+uncoupled and still locked, `CrewLeftAt` listing stop 1, its two crew lost, the crew line reading "Crew freed 0/6, home 0, 2 lost." and the floor
 not complete (`[crew] 8 departed stop 1 without its prisoners`). (The other solo ride flows, `--test-ride`,
 `--test-ride-edges`, `--test-chase` and `--test-cart-watchdog`, leave each held stop's prisoners the frame the hold shows,
 through `DebugTools.RideWaiveCages`, so their timings are as before.) Then a cart on thin

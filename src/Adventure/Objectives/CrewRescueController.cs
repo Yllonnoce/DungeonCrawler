@@ -36,6 +36,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private readonly List<CrewState> _states = new();
     /// <summary>Each wagon's (open, left behind) for the win rule, reused every tick.</summary>
     private readonly List<(bool Open, bool LeftBehind)> _cages = new();
+    private readonly List<bool> _uncaged = new();
     private RailController? _rails;
     private DungeonBuilder? _builder;
     private Node3D? _root;
@@ -84,7 +85,15 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>Wagons still locked.</summary>
     public int ClosedCages { get { var n = 0; foreach (var w in _wagons) if (!w.Open) n++; return n; } }
 
-    public override string HudText => CrewRules.HudText(States());
+    public override string HudText => CrewRules.HudText(States(), Uncaged());
+
+    /// <summary>Each crew member's cage stands open, or they had none (the HUD's "freed"), into the reused list.</summary>
+    private List<bool> Uncaged()
+    {
+        _uncaged.Clear();
+        foreach (var npc in _crew) _uncaged.Add(WagonOf(npc) is not { Open: false });
+        return _uncaged;
+    }
 
     private List<CrewState> States()
     {

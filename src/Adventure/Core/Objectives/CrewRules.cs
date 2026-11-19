@@ -35,12 +35,17 @@ public static class CrewRules
         return n;
     }
 
-    public static string HudText(IReadOnlyList<CrewState> crew)
+    /// <summary>
+    /// The crew line. "Freed" counts only crew whose cage stands open (or who had none): <paramref name="uncaged"/>, by crew index
+    /// (null: everyone), so crew who died still caged, or whose cage was left behind (plan 7), are lost but never freed.
+    /// </summary>
+    public static string HudText(IReadOnlyList<CrewState> crew, IReadOnlyList<bool>? uncaged = null)
     {
         int freed = 0, home = 0, lost = 0;
-        foreach (var s in crew)
+        for (var i = 0; i < crew.Count; i++)
         {
-            if (s != CrewState.Caged) freed++;
+            var s = crew[i];
+            if (s != CrewState.Caged && (uncaged == null || i >= uncaged.Count || uncaged[i])) freed++;
             if (s == CrewState.Home) home++;
             if (s == CrewState.Lost) lost++;
         }
