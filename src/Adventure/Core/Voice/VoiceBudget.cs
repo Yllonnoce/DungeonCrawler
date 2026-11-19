@@ -105,7 +105,7 @@ public static class VoiceBudget
         foreach (var (floor, plan) in quiet)
             foreach (var n in plan.Narration.Where(n => n.Trigger != NarrationTrigger.Enter)) list.Add(new Pick(n.Line, "narration", floor));
         foreach (var (floor, plan) in byFloor) foreach (var h in plan.Hordes) list.Add(new Pick(h.Line, "horde", floor));
-        foreach (var (floor, plan) in byFloor) foreach (var r in plan.RailEncounters) if (r.Line is { } l) list.Add(new Pick(l, "rail", floor)); // the narrator as a ride's encounter comes into view
+        foreach (var (floor, plan) in byFloor) foreach (var r in plan.RailEncounters) if (r.Line is { } l && !string.IsNullOrWhiteSpace(l.Text)) list.Add(new Pick(l, "rail", floor)); // the narrator as a ride's encounter comes into view
         foreach (var set in campaign.Barks) foreach (var b in set.Lines) list.Add(new Pick(b.Line, $"bark {set.Member}", 0));
         if (campaign.Merchant is { } m)
         {

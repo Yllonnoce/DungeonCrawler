@@ -25,7 +25,6 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>Grisel opens a cage when she stands this close to it, following the party.</summary>
     public const float GriselReach = 8f;
     public const string GriselId = "npc_grisel";
-    const string GriselLine = "They'll know my voice before they know my face.";
 
     private readonly List<CageWagon> _wagons = new();
     private readonly List<Npc> _crew = new();
@@ -371,17 +370,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (OrcKeys) EventBus.Instance.Log("The orc's keys turn in the cage's padlock.");
             else if (GriselOpens(wagon) is { } grisel)
             {
-                if (NetSession.IsServer)
-                {
-                    // a dedicated server has no HUD to bark on: every screen hears her through the NPC's own line (as the merchant's), her name on it
-                    EventBus.Instance.Log("Grisel works the lock.");
-                    NetSession.Instance.Server?.Broadcast(new NpcSay(grisel.Id, new Line(GriselLine)));
-                }
-                else
-                {
-                    EventBus.Instance.Log($"Grisel works the lock. '{GriselLine}'");
-                    Main.Instance?.Hud?.ShowBark(grisel.NpcName, GriselLine, 4f);
-                }
+                // her word at the cage goes out as her own line once the channel is free (npc.Say here, NpcSay to every screen on a server)
+                EventBus.Instance.Log("Grisel works the lock.");
+                if (GriselCall(RideLines.CageCall) is { } call) AdventureDirector.Instance?.SayAs(grisel, call, $"grisel:cage{wagon.Stop}");
             }
             else if (!party.TryUnlock("the cage", out _, wagon.GlobalPosition, objectiveLock: true)) return;
             OpenCage(wagon, party);
@@ -499,7 +490,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         return cells;
     }
 
-    /// <summary>The cart left a stop: an open wagon there with crew aboard couples on behind.</summary>
+    /// <summary>The cart left a stop: an open wagon there with crew aboard couples on behind, and Grisel on the bench names the cage ahead.</summary>
     private void OnCartEvent(CartEvent e)
     {
         if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails)) return;
@@ -517,6 +508,33 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             Couple(wagon);
             EventBus.Instance.Log("The cage wagon couples on behind.");
         }
+        GriselNamesTheRide(e);
+    }
+
+    /// <summary>
+    /// Forgiven: Grisel, up and seated in the party's cart, calls the ride ahead (her crew in the next cage, then the stair),
+    /// once a run, after the orc's word on the same departure. A call still waiting when the cart has left the stop it rides
+    /// to is dropped, so it never names the wrong cage.
+    /// </summary>
+    private void GriselNamesTheRide(CartEvent e)
+    {
+        if (_grisel is not { Dead: false, Downed: false } g || !IsInstanceValid(g) || _rails == null || g.Cart != _rails.Cart) return;
+        if (RideLines.GriselCallFor(e.Kind, e.Stop) is not { } key || GriselCall(key) is not { } call) return;
+        var rails = _rails;
+        var left = e.Stop;
+        AdventureDirector.Instance?.SayAs(g, call, $"grisel:{key}", () => IsInstanceValid(rails)
+            && (rails.StopIndex == left || rails.StopIndex == left + 1 && rails.State.Mode == CartMode.Held && !rails.Halted));
+    }
+
+    /// <summary>Keys of Grisel's calls the floor's plan lacks, warned about once.</summary>
+    private readonly HashSet<string> _callsMissing = new();
+
+    /// <summary>Grisel's call for <paramref name="key"/> in the floor's plan; one it lacks is warned about once and nothing is said.</summary>
+    private Line? GriselCall(string key)
+    {
+        var line = Main.Instance?.Builder.Contents?.Plan?.Npcs.FirstOrDefault(n => n.Id == GriselId)?.CallFor(key);
+        if (line == null && _callsMissing.Add(key)) GD.PushWarning($"[CrewRescue] the floor's plan gives Grisel no \"{key}\" call: nothing said");
+        return line;
     }
 
     /// <summary>Stops whose locked cage has been pointed out: once per stop.</summary>

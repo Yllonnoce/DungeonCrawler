@@ -71,7 +71,7 @@ public partial class RailController : Node
     /// <summary>A gate went up (the check or the winch): riders waiting at its stop start the boarding.</summary>
     private void OnGateLifted(RailGate g)
     {
-        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Halted && !Boarding.Running && PlayerAboard()) StartBoarding(); // held at that stop, not halted on the line past it
+        if (g.Stop == StopIndex && State.Mode == CartMode.Held && !Halted && !Boarding.Running && PlayerAboard()) StartBoarding(call: true); // held at that stop, not halted on the line past it
         RefreshHud();
     }
 
@@ -201,7 +201,10 @@ public partial class RailController : Node
 
     private void Raise(CartEvent e) => _pending.Add(e);
 
-    /// <summary>Tell the queued events, in order (one a listener raises meanwhile is told too). The orc taunts a ride's start and a wreck (server and solo: the director's RailTaunt).</summary>
+    /// <summary>
+    /// Tell the queued events, in order (one a listener raises meanwhile is told too). The orc taunts a ride's start and a wreck
+    /// (server and solo: the director's RailTaunt; both urgent, the start held for a line being said).
+    /// </summary>
     private void Flush()
     {
         if (_pending.Count == 0) return;
@@ -212,11 +215,21 @@ public partial class RailController : Node
                 var e = _pending[i];
                 CartEvents?.Invoke(e);
                 if (RideLines.TauntFor(e.Kind, e.Stop, StopS.Length) is { } taunt)
-                    AdventureDirector.Instance?.RailTaunt(taunt, urgent: taunt == Adventure.Objectives.TauntTrigger.CartWrecked);
+                {
+                    var told = AdventureDirector.Instance?.RailTaunt(taunt, urgent: true) == true;
+                    if (taunt == Adventure.Objectives.TauntTrigger.RideStart)
+                    {
+                        RideStartTaunted = told;
+                        GD.Print($"[rails] departed stop {e.Stop}: ride-start taunt said or held={told}");
+                    }
+                }
             }
         }
         finally { _pending.Clear(); }
     }
+
+    /// <summary>Whether the last departure's RideStart taunt was said or held (false: dropped; null: no ride has started). For the scripted checks.</summary>
+    public bool? RideStartTaunted { get; private set; }
 
     /// <summary>The cart's book changed, by any path (boarding, getting out, a teleport, a takeover, a load).</summary>
     private void OnRiderChanged(ICartRider rider, bool seated) =>
@@ -339,12 +352,17 @@ public partial class RailController : Node
 
     // ---- boarding --------------------------------------------------------------------------------
 
-    /// <summary>The countdown starts at the stop the cart is held at (a Boarding event says where).</summary>
-    private void StartBoarding()
+    /// <summary>
+    /// The countdown starts at the stop the cart is held at (a Boarding event says where). With <paramref name="call"/> (someone got
+    /// in, or the stop's gate lifted: the party may be out fighting) a seated hero calls all aboard (<see cref="RailCalls"/>); a
+    /// countdown restarted under riders who never got out (an arrival, a cleared halt) goes uncalled.
+    /// </summary>
+    private void StartBoarding(bool call = false)
     {
         if (Halted && LineBlocked) return; // held at an obstacle on the line: nobody leaves until it is cleared
         Boarding.Start();
         Raise(new CartEvent(CartEventKind.Boarding, Stop: Halted ? -1 : StopIndex));
+        if (call && RideLines.BarkFor(CartEventKind.Boarding) is { } bark && Main.Instance?.Party is { } party) RailCalls.Say(party, Cart, bark, "All aboard!");
     }
 
     /// <summary>The cart's prompt for <paramref name="hero"/>, on every peer (a client's state is the server's: its mode, stop and seat book).</summary>
@@ -424,7 +442,7 @@ public partial class RailController : Node
                     SeatHero(mate); // they hop in; walking to the cart is polish for later
             SeatBench(actor.GlobalPosition);
         }
-        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateClear) StartBoarding();
+        if (!Boarding.Running && StopIndex < StopS.Length - 1 && GateClear) StartBoarding(call: true);
         RefreshHud();
     }
 
@@ -446,7 +464,7 @@ public partial class RailController : Node
         if (State.Mode != CartMode.Held || StopIndex >= StopS.Length - 1) return false;
         if (hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) return false;
         if (!PlayerAboard() || !SeatHero(hero)) return false;
-        if (!Boarding.Running && GateClear) StartBoarding();
+        if (!Boarding.Running && GateClear) StartBoarding(call: true);
         RefreshHud();
         return true;
     }
@@ -737,7 +755,7 @@ public partial class RailController : Node
         RefreshHud();
     }
 
-    /// <summary>"Cart coming!" for a hero on foot with the cart bearing down: a seated companion says it (else the log), once per hero per few seconds.</summary>
+    /// <summary>"Cart coming!" for a hero on foot with the cart bearing down: a seated hero calls it in their own words (<see cref="RailCalls"/>, else the log), once per hero per few seconds.</summary>
     private void Warn(PartyController party)
     {
         var run = JudgedRun(); // the lane the front is on
@@ -755,17 +773,7 @@ public partial class RailController : Node
             if (!RunOverRules.InWarning(run.State.S, State.V, b with { Radius = BodyRadius }, WarnSeconds)) continue;
             if (_warnedAt.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
             _warnedAt[hero.Index] = _now;
-            Adventurer? speaker = null;
-            foreach (var mate in party.Adventurers)
-                if (IsInstanceValid(mate) && mate.Cart == Cart && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
-            if (speaker != null)
-            {
-                var name = speaker.State.Name;
-                EventBus.Instance.Log($"{name}: \"Cart coming!\"");
-                EventBus.Instance.RaiseBark(name, new Adventure.Line("Cart coming!"));
-                Main.Instance?.Hud?.ShowBark(name, "Cart coming!", 2f);
-            }
-            else EventBus.Instance.Log("Cart coming!");
+            RailCalls.Say(party, Cart, BarkTrigger.CartComing, "Cart coming!");
             EventBus.Instance.PlaySfx("cart_bell"); // no clip yet: AudioManager.Play ignores unknown cues; plan 6 adds the sound
         }
     }

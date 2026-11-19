@@ -103,16 +103,17 @@ public sealed class TauntDirector
     public const double GolemHoldSeconds = 10;
 
     /// <summary>
-    /// The longest the buffer's smash (the line's last word, urgent: it comes a few seconds after the golem's line, inside the
-    /// twelve-second cooldown) waits for a line being said, so that it never talks over one.
+    /// The longest an urgent ride taunt waits for a line being said, so that it never talks over one: a ride's start (raised on
+    /// the same departure as the rail encounter's narration, and on the first ride beside the floor's opening) and the buffer's
+    /// smash (the line's last word: it comes a few seconds after the golem's line, inside the twelve-second cooldown).
     /// </summary>
-    public const double BufferHoldSeconds = 10;
+    public const double RideHoldSeconds = 10;
 
     /// <summary>
     /// How long a taunt may wait for a line being said instead of cutting it off or being dropped: the objective's last
     /// words (urgent) as long as it takes, a rite's opening (the defence starts while the shrine room is being narrated)
     /// <see cref="RitualStartHoldSeconds"/>, the golem's entrance (the narrator tells the wall bursting first)
-    /// <see cref="GolemHoldSeconds"/>, the buffer smashed (urgent) <see cref="BufferHoldSeconds"/>; null for the rest (the openings, a crushing, a wreck and a wipe speak at once, and a
+    /// <see cref="GolemHoldSeconds"/>, a ride's start and the buffer smashed (both urgent) <see cref="RideHoldSeconds"/>; null for the rest (the openings, a crushing, a wreck and a wipe speak at once, and a
     /// moment-bound taunt is dropped when someone is speaking).
     /// </summary>
     public static double? HoldSeconds(TauntTrigger trigger, bool urgent) => trigger switch
@@ -120,7 +121,7 @@ public sealed class TauntDirector
         TauntTrigger.AllFreed or TauntTrigger.RitualDone or TauntTrigger.VaultOpened or TauntTrigger.ObjectiveDone when urgent => double.PositiveInfinity,
         TauntTrigger.RitualStart => RitualStartHoldSeconds,
         TauntTrigger.GolemEntrance => GolemHoldSeconds,
-        TauntTrigger.BufferSmashed when urgent => BufferHoldSeconds,
+        TauntTrigger.RideStart or TauntTrigger.BufferSmashed when urgent => RideHoldSeconds,
         _ => null,
     };
 

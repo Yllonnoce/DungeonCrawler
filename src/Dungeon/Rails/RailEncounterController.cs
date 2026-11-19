@@ -332,8 +332,8 @@ public partial class RailEncounterController : Node
     /// <summary>
     /// A cart bears down (the body stands on its lane within <see cref="WarnSeconds"/> of look-ahead): a hero on foot gets the bark
     /// and the bell, and an AI-controlled body (a companion, a crew or escorting NPC) within 30 m also walks to a refuge
-    /// (<see cref="SeekRefuge"/>). <paramref name="warned"/> throttles the bark per hero. A seated companion of <paramref name="speakFrom"/>
-    /// (the party's cart unless named: a chaser's riders call their own) says it, else the log.
+    /// (<see cref="SeekRefuge"/>). <paramref name="warned"/> throttles the bark per hero. A seated hero of <paramref name="speakFrom"/>
+    /// (the party's cart unless named: a chaser's riders call their own) calls it in their own words (<see cref="RailCalls"/>), else the log.
     /// </summary>
     private void Warn(CartRun run, Node3D carrier, Dictionary<int, double> warned, bool partyLane, PartyController party, ICartBody? speakFrom = null)
     {
@@ -352,17 +352,7 @@ public partial class RailEncounterController : Node
             if (hero.Control == ControlKind.Companion) SeekRefuge(hero, run, carrier, partyLane, b.S);
             if (warned.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
             warned[hero.Index] = _now;
-            Adventurer? speaker = null;
-            foreach (var mate in party.Adventurers)
-                if (IsInstanceValid(mate) && mate.Cart == speakers && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
-            if (speaker != null)
-            {
-                var name = speaker.State.Name;
-                EventBus.Instance.Log($"{name}: \"Cart coming!\"");
-                EventBus.Instance.RaiseBark(name, new Line("Cart coming!"));
-                Main.Instance?.Hud?.ShowBark(name, "Cart coming!", 2f);
-            }
-            else EventBus.Instance.Log("Cart coming!");
+            RailCalls.Say(party, speakers, BarkTrigger.CartComing, "Cart coming!");
             EventBus.Instance.PlaySfx("cart_bell"); // no clip yet: plan 6 adds the sound
             if (TraceTraffic) GD.Print($"[rails] t={_now:0.00} warn {hero.State.Name} by {carrier.Name}: cart S={run.State.S:0.0} v={run.State.V:0.0}, body S={b.S:0.0} ({b.S - run.State.S:0.0} m ahead)");
         }

@@ -273,7 +273,7 @@ public partial class DebugTools
                 var warned = _chHits.Any(h => h.Hazard == "bell");
                 GD.Print($"[chase] 6 the traffic cart passed (front S={traffic.Run.FrontS:0.0}): {lane.State.Name} on the enemy lane at S={_chLaneS:0.0} hit={_chLaneHit} warned before it={warned} downed={lane.Downed} mangled={lane.State.Mangled}; {pocket.State.Name} in the pocket at S={_chPocketS:0.0} hp {_chPocketHp:0}->{pocket.State.Hp:0} downed={pocket.Downed} mangled={pocket.State.Mangled}");
                 if (!_chLaneHit || !lane.Downed || !lane.State.Mangled) { Fail($"{lane.State.Name} on the enemy lane was not mangled by the traffic cart"); return; }
-                if (!warned) { Fail($"{lane.State.Name} was hit with no \"Cart coming!\" before it"); return; }
+                if (!warned) { Fail($"{lane.State.Name} was hit with no cart warning before it"); return; }
                 if (pocket.Downed || pocket.State.Mangled || pocket.State.Hp < _chPocketHp - 0.01f) { Fail($"{pocket.State.Name} in the pocket was hurt by the traffic cart"); return; }
                 ChaseMend(main, root);
                 _chStep++;
@@ -774,6 +774,7 @@ public partial class DebugTools
             _chListening = true;
             var bus = EventBus.Instance;
             bus.Message += OnChaseMessage;
+            RailCalls.Called += OnChaseCall;
             bus.Sfx += OnChaseSfx;
             bus.EnemySpawned += e => { if (_chEnc != null && IsInstanceValid(_chEnc)) _chSpawnRide[e] = _chEnc.ArmedRide; };
             bus.EnemyKilledByHazard += (e, source) =>
@@ -859,9 +860,7 @@ public partial class DebugTools
     {
         if (_done || !_testChase) return;
         var t = Engine.GetPhysicsFrames();
-        if (text.Contains("Cart coming!")) { if (_chTrafficOn) _chWarn.TryAdd("bell", t); }
-        else if (text.Contains("Line's blocked")) _chWarn["heap"] = t;
-        else if (text == "The cart crashes into the ore heap!") ChaseHit("heap", t, "the cart into the heap");
+        if (text == "The cart crashes into the ore heap!") ChaseHit("heap", t, "the cart into the heap");
         else if (text == "A drop hammer slams into the cart!")
         {
             var rc = RailController.Instance;
@@ -875,7 +874,6 @@ public partial class DebugTools
         }
         else if (text == "Molten slag pours over the cart!") ChaseHit("pour", t, "the pour on the cart");
         else if (text == "The golem slams the cart!") { _chSlams++; ChaseHit("golem", t, "the golem's slam"); }
-        else if (text.Contains("Pump it")) _chWarn["jump"] = t;
         else if (text is "The cart leaps the gap!" or "The cart drops into the gap!")
         {
             var rc = RailController.Instance;
@@ -890,6 +888,19 @@ public partial class DebugTools
         else if (text == "The golem goes off the spur!") _chDiverted = true;
         else if (text == "The cart smashes through the buffer!") _chBuffer = true;
         else if (text == "The slag cart derails!") _chDerailed = true;
+    }
+
+    /// <summary>The warnings are stamped as the heroes call them (said or only logged): the bell while the traffic runs, the heap, the jump.</summary>
+    private void OnChaseCall(Adventure.BarkTrigger trigger, string? by)
+    {
+        if (_done || !_testChase) return;
+        var t = Engine.GetPhysicsFrames();
+        switch (trigger)
+        {
+            case Adventure.BarkTrigger.CartComing: if (_chTrafficOn) _chWarn.TryAdd("bell", t); break;
+            case Adventure.BarkTrigger.LineBlocked: _chWarn["heap"] = t; break;
+            case Adventure.BarkTrigger.JumpCall: _chWarn["jump"] = t; break;
+        }
     }
 
     private void OnChaseSfx(string cue)

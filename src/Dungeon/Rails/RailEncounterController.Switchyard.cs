@@ -212,7 +212,7 @@ public partial class RailEncounterController
         GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, back from {backS:0.0}");
     }
 
-    /// <summary>The heap ahead: its lantern blinks while a cart bears down on it, and a seated companion calls it once, while it can still be switched round.</summary>
+    /// <summary>The heap ahead: its lantern blinks while a cart bears down on it, and a seated hero calls it once (<see cref="RailCalls"/>), while it can still be switched round.</summary>
     private void TickHeap(Piece piece, PartyController party, bool rolling)
     {
         if (piece.Heap is not { IsAlive: true } heap) return;
@@ -224,7 +224,7 @@ public partial class RailEncounterController
         var aim = LeverAheadOf(piece, front) ?? heap.FaceS; // the call is useful while the lever is still ahead
         if (aim - front > look) return;
         piece.Barked = true;
-        var by = Bark(party, "Line's blocked — switch!");
+        var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.LineBlocked, "Line's blocked — switch!");
         EventBus.Instance.PlaySfx("cart_bell"); // placeholder: plan 6 adds the sound
         GD.Print($"[rails] heap {piece.Plan.Id} called at front S={front:0.0} ({heap.FaceS - front:0.0} m to the heap, aim {aim:0.0}); bark={by ?? "none"}");
     }
@@ -302,21 +302,5 @@ public partial class RailEncounterController
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.09f, 0.5f);
         _rails.DentPlating(RamDent);
         return true;
-    }
-
-    /// <summary>A seated companion says <paramref name="text"/> (bark, log, HUD); else the log. Returns who said it, or null.</summary>
-    private string? Bark(PartyController party, string text)
-    {
-        foreach (var hero in party.Adventurers)
-        {
-            if (!IsInstanceValid(hero) || hero.Cart != _rails.Cart || hero.Control != ControlKind.Companion || hero.Downed) continue;
-            var name = hero.State.Name;
-            EventBus.Instance.Log($"{name}: \"{text}\"");
-            EventBus.Instance.RaiseBark(name, new Line(text));
-            Main.Instance?.Hud?.ShowBark(name, text, 2.5f);
-            return name;
-        }
-        EventBus.Instance.Log(text);
-        return null;
     }
 }

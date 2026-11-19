@@ -15,7 +15,9 @@ namespace DungeonCrawler.Core;
 // when she was condemned, Grisel's own voice from the bench when she was forgiven), the wagon couples on at the departure,
 // a save and a load between stops 2 and 3 keep the train, one crew member let out at stop 2 bleeds out and is lost, and
 // the end of the line brings the rest home and opens the stairs. Then the floor is built again and the cart is wrecked
-// between stops 1 and 2: a spare takes over. Prints [crew] lines and [crew] RESULT.
+// between stops 1 and 2: a spare takes over. Forgiven, Grisel says each of her ride1-ride3 calls exactly once and her cage
+// call at least once, all through her own line (Npc.Said), never as narration; condemned, she says nothing. Prints [crew]
+// lines and [crew] RESULT.
 public partial class DebugTools
 {
     private bool _testCrew;
@@ -30,6 +32,50 @@ public partial class DebugTools
     private Enemies.Enemy? _crewBrute;
     private Vector3 _crewBruteAt;
     private const string CrewSlot = "crewtest";
+    private bool _crewListening;
+    /// <summary>When the cart was first seen held at the stop while the test waits for Grisel's call there; the longest it waits.</summary>
+    private float? _crewHeldClock;
+    private const float CrewCallWait = 30f;
+    /// <summary>Grisel's calls heard through Npc.Said, by key ("?" for a line that is none of her calls).</summary>
+    private readonly Dictionary<string, int> _crewGriselSaid = new();
+    /// <summary>
+    /// The first narration line that was Grisel's (one of her calls' words, bare or under her name; condemned, anything under her
+    /// name): the old channel. Forgiven, her escort's completion is told as narration under her name, as it always was.
+    /// </summary>
+    private string? _crewGriselNarrated;
+
+    /// <summary>Hear Grisel on the real path (Npc.Said) and on the narration channel, once.</summary>
+    private void CrewListen()
+    {
+        if (_crewListening) return;
+        _crewListening = true;
+        Npc.Said += (npc, line) =>
+        {
+            if (_done || !_testCrew || npc.Id != CrewRescueController.GriselId) return;
+            var calls = Main.Instance?.Builder.Contents?.Plan?.Npcs.FirstOrDefault(n => n.Id == CrewRescueController.GriselId)?.Calls ?? new List<NpcCallPlan>();
+            var key = calls.FirstOrDefault(c => c.Line.Text == line.Text)?.Key ?? "?";
+            _crewGriselSaid[key] = _crewGriselSaid.GetValueOrDefault(key) + 1;
+            GD.Print($"[crew] grisel said {key}{(key == "?" ? $" \"{line.Text}\"" : "")}");
+        };
+        EventBus.Instance.NarrationEx += (text, _, _, _) =>
+        {
+            if (_done || !_testCrew || _crewGriselNarrated != null || text == null) return;
+            var calls = Main.Instance?.Builder.Contents?.Plan?.Npcs.FirstOrDefault(n => n.Id == CrewRescueController.GriselId)?.Calls ?? new List<NpcCallPlan>();
+            if ((!_crewForgiven && text.StartsWith("Grisel Thorn:")) || calls.Any(c => text == c.Line.Text || text.EndsWith(": " + c.Line.Text))) _crewGriselNarrated = text;
+        };
+    }
+
+    /// <summary>What Grisel said over the run, judged at its end: null when it is right for the branch, else why not.</summary>
+    private string? CrewGriselVerdict()
+    {
+        var heard = string.Join(", ", _crewGriselSaid.OrderBy(k => k.Key).Select(k => $"{k.Key}x{k.Value}"));
+        if (_crewGriselNarrated != null) return $"Grisel was heard as narration: \"{_crewGriselNarrated}\"";
+        if (!_crewForgiven) return _crewGriselSaid.Count == 0 ? null : $"condemned, but Grisel said [{heard}]";
+        foreach (var key in new[] { "ride1", "ride2", "ride3" })
+            if (_crewGriselSaid.GetValueOrDefault(key) != 1) return $"Grisel said {key} {_crewGriselSaid.GetValueOrDefault(key)} times, not once (heard [{heard}])";
+        if (_crewGriselSaid.GetValueOrDefault("cage") < 1) return $"Grisel never said her cage call (heard [{heard}])";
+        return null;
+    }
 
     private string CrewBranch => _crewForgiven ? "forgiven" : "condemned";
 
@@ -59,11 +105,16 @@ public partial class DebugTools
         var ctrl = ObjectiveController.Instance as CrewRescueController;
         if (rc == null || ctrl == null) { if (_crewClock > 3f) Fail($"floor 12 has {(rc == null ? "no RailController" : "")}{(rc == null && ctrl == null ? " and " : "")}{(ctrl == null ? $"no CrewRescueController ({ObjectiveController.Instance?.GetType().Name ?? "no objective"})" : "")}"); return; }
         if (_crewSection2 && rc == _crewRails) return; // the floor is being built again: wait for the new one
+        CrewListen();
 
         // the test owns the floor's fights: everything is culled as it appears except the guards that hold the stops
-        // (section 1: they die by the test's hand at their stop) and the brute of section 2
+        // (section 1: they die by the test's hand at their stop, never by a companion's shot from the cart) and the brute of section 2
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
-            if (e.IsAlive && e != _crewBrute && (_crewSection2 || !HoldsAStop(main, layout, e))) e.Kill();
+        {
+            if (!e.IsAlive || e == _crewBrute) continue;
+            if (_crewSection2 || !HoldsAStop(main, layout, e)) e.Kill();
+            else if (_crewForgiven) e.SetUntargetable(true); // forgiven, the test waits at a stop for Grisel's call (below)
+        }
         if (rc.State.Mode == CartMode.Rolling) Pin(_crewBrute, _crewBruteAt);
         // ride 3's heap blocks the party lane: the test throws the switch_out lever as the ride arms, so the cart goes round on the enemy lane
         if (rc.State.Mode == CartMode.Rolling && root.GetNodeOrNull<RailEncounterController>("RailEncounterController") is { ArmedRide: 3 } enc && enc.DebugThrowSwitches(3) > 0)
@@ -283,6 +334,15 @@ public partial class DebugTools
     {
         if (rc.State.Mode == CartMode.Rolling) { if (_crewClock > 60f) fail($"the cart was not held at stop {stop} within 60 s (S={rc.State.S:0.0})"); return false; }
         if (rc.State.Mode != CartMode.Held || rc.StopIndex != stop) { fail($"the cart is {rc.State.Mode} at stop {rc.StopIndex}, not held at stop {stop}"); return false; }
+        // forgiven: the stop's fight takes as long as Grisel's call for this ride still waits for the channel (the test's kill is
+        // otherwise at once, and the cart would leave before she spoke). A call that never comes fails at the end.
+        if (_crewForgiven && _crewGriselSaid.GetValueOrDefault($"ride{stop}") == 0)
+        {
+            _crewHeldClock ??= _crewClock;
+            if (_crewClock - _crewHeldClock < CrewCallWait) return false;
+        }
+        if (_crewHeldClock is { } heldAt) GD.Print($"[crew] waited {_crewClock - heldAt:0.0} s at stop {stop} for Grisel's ride{stop} call (heard {_crewGriselSaid.GetValueOrDefault($"ride{stop}")})");
+        _crewHeldClock = null;
         var room = layout.Rail!.Stops[stop].Room;
         var guards = StopGuards(main, room).ToList();
         var ids = string.Join(",", guards.Select(e => e.Group?.Id).Distinct());
@@ -433,6 +493,8 @@ public partial class DebugTools
                 if (rc.SparesUsed.Count != 1 || !rc.SparesUsed.Contains(rc.StopIndex)) { fail($"spares used [{string.Join(",", rc.SparesUsed)}], the cart at stop {rc.StopIndex}"); return; }
                 if (rc.StopIndex is not (1 or 2)) { fail($"the spare stands at stop {rc.StopIndex}, not stop 1 or 2"); return; }
                 if (Mathf.Abs(rc.State.S - rc.StopS[rc.StopIndex]) > 0.05f || rc.State.Plating < CartRules.MaxPlating - 0.01f) { fail("the spare is not a whole cart at its stop"); return; }
+                if (CrewGriselVerdict() is { } wrong) { fail(wrong); return; }
+                GD.Print($"[crew] Grisel's calls heard: [{string.Join(", ", _crewGriselSaid.OrderBy(k => k.Key).Select(k => $"{k.Key}x{k.Value}"))}]");
                 LockRules.ForcedChance = null;
                 GD.Print($"[crew] RESULT ok ({CrewBranch})");
                 _done = true;

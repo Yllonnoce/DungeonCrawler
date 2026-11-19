@@ -156,13 +156,13 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         else hud.OpenDialogue(this);
     }
 
+    /// <summary>An NPC said a line through <see cref="Say"/>, on whichever role it was said (a test hook on the real path).</summary>
+    public static event Action<Npc, Line>? Said;
+
     /// <summary>
     /// Say a line out of a conversation (the merchant's greeting and his remarks on the gathering): its voice if it has
     /// one, the subtitle and the log line either way, and the talking pose for as long as it takes to say. Local only.
     /// </summary>
-    /// <summary>An NPC said a line through <see cref="Say"/>, on whichever role it was said (a test hook on the real path).</summary>
-    public static event Action<Npc, Line>? Said;
-
     public void Say(Line line)
     {
         if (Dead || string.IsNullOrWhiteSpace(line.Text)) return;

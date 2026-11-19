@@ -1,0 +1,133 @@
+namespace DungeonCrawler.Adventure.Voice;
+
+/// <summary>
+/// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
+/// leap, a blocked line, a gap to jump) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
+/// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
+/// deliverable and stay in this order. Engine-free.
+/// </summary>
+public static class RideBarks
+{
+    private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
+
+    /// <summary>The six ride calls.</summary>
+    public static readonly BarkTrigger[] Triggers =
+    {
+        BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
+    };
+
+    /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
+    public const int MinLines = 2;
+
+    /// <summary>A hero's lines for a trigger: their own by roster name, else their class's, else the plain set; empty for a trigger this bank does not cover.</summary>
+    public static IReadOnlyList<string> For(BarkTrigger t, string name, string classId)
+    {
+        if (!Banks.TryGetValue(t, out var b)) return Array.Empty<string>();
+        switch (name.Trim().ToLowerInvariant())
+        {
+            case "brand": return b.Brand;
+            case "sable": return b.Sable;
+            case "wren": return b.Wren;
+            case "ilex": return b.Ilex;
+        }
+        switch (classId.Trim().ToLowerInvariant())
+        {
+            case "class.warrior": return b.Warrior;
+            case "class.rogue": return b.Rogue;
+            case "class.ranger": return b.Ranger;
+            case "class.mage": return b.Mage;
+        }
+        return b.Generic;
+    }
+
+    /// <summary>
+    /// For every ride trigger with fewer than <see cref="MinLines"/> distinct lines, append the stock lines the set lacks
+    /// (keyed by <see cref="BarkRepeat.Key"/>); returns how many were added.
+    /// </summary>
+    public static int TopUp(BarkSet set, string classId)
+    {
+        var added = 0;
+        foreach (var t in Triggers)
+        {
+            var have = new HashSet<string>(set.Lines.Where(l => l.Trigger == t).Select(l => BarkRepeat.Key(l.Line.Text)));
+            if (have.Count >= MinLines) continue;
+            foreach (var text in For(t, set.Member, classId))
+            {
+                if (!have.Add(BarkRepeat.Key(text))) continue;
+                set.Lines.Add(new BarkLine { Trigger = t, Line = new Line(text) });
+                added++;
+            }
+        }
+        return added;
+    }
+
+    private static readonly Dictionary<BarkTrigger, Bank> Banks = new()
+    {
+        [BarkTrigger.CartComing] = new Bank(
+            Brand: new[] { "Cart! Off the rails!", "Into the wall, now!", "Cart coming. Move your feet." },
+            Sable: new[] { "Cart! Get in a hole, darling!", "Off the line, off the line!", "Something heavy's coming. Move!" },
+            Wren: new[] { "Cart. Pocket. Now.", "Off the rails.", "Wheels coming. Move." },
+            Ilex: new[] { "A cart! Kindly vacate the rails!", "Into the niche! Momentum is not negotiable!", "Mass approaching at speed! Move!" },
+            Warrior: new[] { "Cart! Move!", "Off the line!" },
+            Rogue: new[] { "Cart! Hide!", "Off the rails, quick!" },
+            Ranger: new[] { "Cart. Move.", "Pocket. Now." },
+            Mage: new[] { "A cart! Clear the line!", "Into the wall!" },
+            Generic: new[] { "Cart coming!", "Off the rails!", "Get in a pocket!" }),
+
+        [BarkTrigger.AllAboard] = new Bank(
+            Brand: new[] { "All aboard! Five seconds, then we roll.", "Get in or get walking.", "Seats, everyone. We're leaving." },
+            Sable: new[] { "All aboard! Mind the splinters.", "In you get. I'm not waiting.", "Last call for the cart, loves." },
+            Wren: new[] { "All aboard.", "In. We go.", "Seats. Now." },
+            Ilex: new[] { "All aboard! I have claimed the dignified seat.", "Do hurry. The cart keeps a timetable.", "Boarding, everyone. Punctuality, please." },
+            Warrior: new[] { "All aboard!", "Get in!" },
+            Rogue: new[] { "All aboard, quick!", "In you get!" },
+            Ranger: new[] { "In. Now.", "Aboard." },
+            Mage: new[] { "All aboard, please.", "Board the cart!" },
+            Generic: new[] { "All aboard!", "Get in the cart!", "We're leaving!" }),
+
+        [BarkTrigger.Heads] = new Bank(
+            Brand: new[] { "Heads!", "Duck!", "Beam! Heads down!" },
+            Sable: new[] { "Heads, darlings!", "Duck! Mind the hair!", "Low beam! Down!" },
+            Wren: new[] { "Heads.", "Down.", "Beam." },
+            Ilex: new[] { "Heads! Beam ahead!", "Duck! Mind the timber!", "Lower your heads, all of you!" },
+            Warrior: new[] { "Heads!", "Duck!" },
+            Rogue: new[] { "Heads!", "Down!" },
+            Ranger: new[] { "Heads.", "Down." },
+            Mage: new[] { "Heads!", "Mind the beam!" },
+            Generic: new[] { "Heads!", "Duck!", "Low beam!" }),
+
+        [BarkTrigger.HoundLeap] = new Bank(
+            Brand: new[] { "Hound! It's jumping!", "Dog on the cart!", "Hound coming over!" },
+            Sable: new[] { "Hound! Not on my lap!", "Dog! Jumping!", "It's leaping! Swat it!" },
+            Wren: new[] { "Hound.", "It'll jump.", "Hound. Watch it." },
+            Ilex: new[] { "A hound, airborne! Repel it!", "It's leaping! Somebody hit it!", "Hound! I object to this!" },
+            Warrior: new[] { "Hound!", "It's jumping!" },
+            Rogue: new[] { "Hound! Jumping!", "Dog!" },
+            Ranger: new[] { "Hound.", "Leaper." },
+            Mage: new[] { "A hound!", "It's leaping!" },
+            Generic: new[] { "Hound!", "It's jumping!", "Dog on the cart!" }),
+
+        [BarkTrigger.LineBlocked] = new Bank(
+            Brand: new[] { "Line's blocked! Take the switch!", "Pull the lever! Pull it!", "Heap ahead! Switch!" },
+            Sable: new[] { "Line's blocked! Lever, quick!", "Switch it or we eat that heap!", "Pull something, anything!" },
+            Wren: new[] { "Blocked. Switch.", "Lever. Now.", "Heap ahead. Switch." },
+            Ilex: new[] { "The line is blocked! The switch!", "Throw the lever, unless we enjoy collisions!", "Obstruction ahead! Change tracks!" },
+            Warrior: new[] { "Line's blocked! Switch!", "Pull the lever!" },
+            Rogue: new[] { "Switch! Now!", "Blocked! Lever!" },
+            Ranger: new[] { "Blocked. Switch.", "Lever." },
+            Mage: new[] { "Blocked ahead! The switch!", "Change tracks!" },
+            Generic: new[] { "Line's blocked, switch!", "Pull the lever!", "Switch tracks!" }),
+
+        [BarkTrigger.JumpCall] = new Bank(
+            Brand: new[] { "Pump it! We have to jump!", "Gap ahead! Push!", "Everyone pump! Now!" },
+            Sable: new[] { "Pump! We're jumping, apparently!", "Faster, or we swim in that!", "Push, push, push!" },
+            Wren: new[] { "Gap. Pump.", "Faster.", "Push. Now." },
+            Ilex: new[] { "Pump! We need the velocity!", "A gap! Speed is our only argument!", "Push harder! I have done the sums!" },
+            Warrior: new[] { "Pump it!", "Push!" },
+            Rogue: new[] { "Pump! Faster!", "Push it!" },
+            Ranger: new[] { "Pump.", "Faster." },
+            Mage: new[] { "Pump! More speed!", "Faster, all of you!" },
+            Generic: new[] { "Pump it, we have to jump!", "Faster!", "Push!" }),
+    };
+}

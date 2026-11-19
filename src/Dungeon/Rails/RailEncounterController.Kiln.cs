@@ -594,14 +594,14 @@ public partial class RailEncounterController
         else EventBus.Instance.Log("The trestle collapses behind the cart.");
     }
 
-    /// <summary>A seated companion calls the jump once, at the cart's 3 s look-ahead to the lip (the companions are already pumping).</summary>
+    /// <summary>A seated hero calls the jump once (<see cref="RailCalls"/>), at the cart's 3 s look-ahead to the lip (the companions are already pumping).</summary>
     private void TickJump(Piece piece, PartyController party, bool rolling)
     {
         if (piece.Barked || !rolling || piece.Gap is not { } gap || _rails.Jumped) return;
         var d = gap.From - _rails.Party.FrontS;
         if (d < 0f || d > Mathf.Max(_rails.State.V, RunOverRules.WarnMinSpeed) * WarnSeconds) return;
         piece.Barked = true;
-        var by = Bark(party, "Pump it — we have to jump!");
+        var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.JumpCall, "Pump it — we have to jump!");
         GD.Print($"[rails] jump {piece.Plan.Id} called at front S={_rails.Party.FrontS:0.0} ({d:0.0} m to the lip, v {_rails.State.V:0.0}); bark={by ?? "none"}");
     }
 
@@ -611,7 +611,7 @@ public partial class RailEncounterController
         if (!rolling || piece.Buffer is not { Smashed: false } buffer || _rails.Party.FrontS < buffer.FaceS || GetParent() is not Node3D root) return;
         buffer.Smash(root, _rails.Cart.Velocity);
         EventBus.Instance.Log("The cart smashes through the buffer!");
-        var taunt = AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.BufferSmashed, urgent: true) == true; // the line's last word: held for a line being said (BufferHoldSeconds), never lost to the cooldown after the golem's
+        var taunt = AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.BufferSmashed, urgent: true) == true; // the line's last word: held for a line being said (RideHoldSeconds), never lost to the cooldown after the golem's
         foreach (var rider in _rails.Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.06f, 0.3f);
         GD.Print($"[rails] buffer {piece.Plan.Id} smashed at S={_rails.State.S:0.0} (v {_rails.State.V:0.0}); taunt said or held={taunt}");

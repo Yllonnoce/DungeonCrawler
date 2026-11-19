@@ -287,28 +287,20 @@ public partial class RailEncounterController
     private const float DuckAmplitude = 0.05f, DuckSeconds = 0.15f;
 
     /// <summary>
-    /// The cart's front is at the beam: seated desktop heroes duck (no shake in VR), a seated companion calls it once. A remote player's
+    /// The cart's front is at the beam: seated desktop heroes duck (no shake in VR), a seated hero calls it once (<see cref="RailCalls"/>). A remote player's
     /// screen ducks itself as its own cart's front passes (<see cref="ClientPresent"/>), so it is not shaken from here.
     /// </summary>
     private void DuckUnder(PartyController party, Piece piece)
     {
         BeamPasses++;
-        Adventurer? speaker = null;
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || !hero.Seated || hero.Cart != _rails.Cart) continue;
             if (!Vr.Active && hero.Control != ControlKind.Remote) hero.Shake(DuckAmplitude, DuckSeconds);
-            if (speaker == null && hero.Control == ControlKind.Companion && !hero.Downed) speaker = hero;
         }
-        if (speaker != null)
-        {
-            var name = speaker.State.Name;
-            EventBus.Instance.Log($"{name}: \"Heads!\"");
-            EventBus.Instance.RaiseBark(name, new Line("Heads!"));
-            Main.Instance?.Hud?.ShowBark(name, "Heads!", 2f);
-            _headsBarked++;
-        }
-        GD.Print($"[rails] beam {piece.Plan.Id} passed at S={piece.S:0.0} (cart front {_rails.Party.FrontS:0.0}); bark={(speaker != null ? speaker.State.Name : "none")}");
+        var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.Heads, "Heads!");
+        if (by != null) _headsBarked++;
+        GD.Print($"[rails] beam {piece.Plan.Id} passed at S={piece.S:0.0} (cart front {_rails.Party.FrontS:0.0}); bark={by ?? "none"}");
     }
 
     // ---- the wire: the set pieces' names and the prop check's rail part --------------------------

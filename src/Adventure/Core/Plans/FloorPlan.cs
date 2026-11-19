@@ -230,10 +230,11 @@ public sealed class NpcPlan
     /// at each departure, her word at the cage: see <c>RideLines</c>), said once a run through the NPC line path. The voice
     /// pipeline reads them beside the script's nodes.
     /// </summary>
-    [AiIgnore] public List<NpcCallPlan> Calls { get; set; } = new();
+    [AiIgnore] public List<NpcCallPlan> Calls { get => _calls; set => _calls = value ?? new(); } // "Calls": null in a save the validator has not seen reads as none
+    private List<NpcCallPlan> _calls = new();
 
-    /// <summary>The first call with this key (case-blind), or null.</summary>
-    public Line? CallFor(string key) => Calls.FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.OrdinalIgnoreCase))?.Line;
+    /// <summary>The first call with this key (case-blind), or null; a null entry is skipped.</summary>
+    public Line? CallFor(string key) => Calls.FirstOrDefault(c => c != null && string.Equals(c.Key, key, StringComparison.OrdinalIgnoreCase))?.Line;
 }
 
 /// <summary>One of an NPC's <see cref="NpcPlan.Calls"/>: the moment's key and what they say.</summary>

@@ -1,3 +1,4 @@
+using DungeonCrawler.Adventure;
 using DungeonCrawler.Adventure.Objectives;
 
 namespace DungeonCrawler.Dungeon.Rails;
@@ -13,6 +14,9 @@ public static class RideLines
 
     /// <summary>Her call as the cart leaves stop <paramref name="stopLeft"/> (0-based): "ride1" for the first ride, and so on. Null for any other moment.</summary>
     public static string? GriselCallFor(CartEventKind kind, int stopLeft) => kind == CartEventKind.Departed ? $"ride{stopLeft + 1}" : null;
+
+    /// <summary>The hero's call for a cart moment, or null: the boarding's countdown starting is "all aboard". The warnings are called where they are judged.</summary>
+    public static BarkTrigger? BarkFor(CartEventKind kind) => kind == CartEventKind.Boarding ? BarkTrigger.AllAboard : null;
 
     /// <summary>
     /// The orc's taunt for a cart moment, or null: a departure from one of the first stops (<paramref name="stopLeft"/> at most

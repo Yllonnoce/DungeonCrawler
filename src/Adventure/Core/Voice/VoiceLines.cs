@@ -143,6 +143,12 @@ public static class Voices
         BarkTrigger.LowHp => Delivery.Frantic,
         BarkTrigger.Cheer => Delivery.Shout,
         BarkTrigger.CheerAnswer => Delivery.Cheerful,
+        BarkTrigger.CartComing => Delivery.Shout,
+        BarkTrigger.AllAboard => Delivery.Cheerful,
+        BarkTrigger.Heads => Delivery.Shout,
+        BarkTrigger.HoundLeap => Delivery.Frantic,
+        BarkTrigger.LineBlocked => Delivery.Shout,
+        BarkTrigger.JumpCall => Delivery.Frantic,
         _ => Delivery.Calm,
     };
     public static readonly Dictionary<string, string> Classes = new()

@@ -8,6 +8,8 @@ public enum BarkTrigger
     Kill, Hurt, Loot, LevelUp, BossSeen, Possess, Downed, Revived, Idle, Dance, Travel,
     // the Depths update (appended in contract order; the shipped campaign stores triggers by name)
     TrapSprung, Fell, PerfectBlow, Parried, Mimic, SecretFound, EliteSeen, Broke, ShrineBoon, ShrineCurse, GambleWin, GambleDud, LowHp, Cheer, CheerAnswer,
+    // the mine cart's calls (stock only, never asked of the planner: RideBarks)
+    CartComing, AllAboard, Heads, HoundLeap, LineBlocked, JumpCall,
 }
 
 public sealed class VoicedCharacter

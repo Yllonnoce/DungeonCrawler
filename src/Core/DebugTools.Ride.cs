@@ -10,7 +10,9 @@ namespace DungeonCrawler.Core;
 // The built-in campaign's floor 12 at lethality 3: the line is there (five stops), the party boards and rides to stop 1
 // over a small enemy, the stop survives a save and a load with nobody aboard, a companion who jumps out at speed is
 // mangled while the cart rolls on (and the orc gloats with a RolledOver line, never the Press's Crushed one), and a big
-// enemy on thin plating wrecks the cart (and he gloats with a CartWrecked line). Prints [ride] lines and [ride] RESULT.
+// enemy on thin plating wrecks the cart (and he gloats with a CartWrecked line). The first departure's RideStart taunt is said
+// or held, and a seated hero calls "all aboard" once at the landing and once more at the re-boarding after the load.
+// Prints [ride] lines and [ride] RESULT.
 public partial class DebugTools
 {
     private bool _testRide;
@@ -26,6 +28,8 @@ public partial class DebugTools
     /// <summary>Every villain line heard since the floor loaded: when (seconds since start-up) and its words inside the quotes, coarse and clean.</summary>
     private readonly List<(double At, string Text, string? Clean)> _rideVillain = new();
     private double _rideThrownAt, _rideWreckedAt;
+    /// <summary>The AllAboard calls heard (RailCalls.Called), said or only logged.</summary>
+    private int _rideAllAboard;
 
     private static double RideNow => Time.GetTicksMsec() / 1000.0;
 
@@ -91,6 +95,12 @@ public partial class DebugTools
                     EventBus.Instance.EnemyKilledByHazard += (e, _) => { if (e == _rideCinder) _rideCinderByHazard = true; };
                     EventBus.Instance.EnemyDied += e => { if (e == _rideCinder && !_rideCinderByHazard) _rideCinderOther = true; };
                     EventBus.Instance.NarrationEx += (text, _, clean, _) => { if (RideVillainWords(text) is { } words) _rideVillain.Add((RideNow, words, RideVillainWords(clean))); };
+                    RailCalls.Called += (trigger, by) =>
+                    {
+                        if (_done || !_testRide || trigger != Adventure.BarkTrigger.AllAboard) return;
+                        _rideAllAboard++;
+                        GD.Print($"[ride] call {trigger} #{_rideAllAboard} by {by ?? "the log"} at step {_rideStep}");
+                    };
                 }
                 GD.Print($"[ride] 0 floor 12: stops={layout.Rail.Stops.Count} StopS=[{string.Join(", ", rc.StopS.Select(s => s.ToString("0.0")))}] length={b.PartyTrack.Length:0.0} lethality={TierRules.Lethality} heroes={party.Active.Count()}");
                 _rideStep++;
@@ -120,7 +130,8 @@ public partial class DebugTools
             {
                 if (rc!.State.Mode == CartMode.Rolling)
                 {
-                    GD.Print($"[ride] 2 departed after {_rideClock:0.00} s at S={rc.State.S:0.00}");
+                    GD.Print($"[ride] 2 departed after {_rideClock:0.00} s at S={rc.State.S:0.00}; ride-start taunt said or held={rc.RideStartTaunted}");
+                    if (rc.RideStartTaunted != true) { Fail($"the first departure's RideStart taunt was {(rc.RideStartTaunted == null ? "never asked" : "dropped")}"); return; }
                     _rideStep++;
                     _rideClock = 0f;
                     _rideSeatDrift = 0f;
@@ -147,6 +158,7 @@ public partial class DebugTools
                     if (!_rideCinderByHazard) { Fail("the small enemy was not killed by the cart before stop 1"); return; }
                     if (off > 0.05f) { Fail($"the cart stopped {off:0.000} m from stop 1"); return; }
                     if (_rideSeatDrift > 0.1f) { Fail($"a seated companion left its seat by {_rideSeatDrift:0.000} m"); return; }
+                    if (_rideAllAboard != 1) { Fail($"{_rideAllAboard} AllAboard calls before the load, not 1"); return; }
                     // brief step 5: save at the stop with everyone aboard, load
                     main.SaveGame("ridetest");
                     if (!main.LoadGame("ridetest")) { Fail("the save would not load"); return; }
@@ -181,7 +193,8 @@ public partial class DebugTools
                 }
                 _rideStep++;
                 _rideClock = 0f;
-                GD.Print($"[ride] 6 re-boarded and departed with {party.Active.Count(a => a.Seated)} seated");
+                GD.Print($"[ride] 6 re-boarded and departed with {party.Active.Count(a => a.Seated)} seated; AllAboard calls {_rideAllAboard}");
+                if (_rideAllAboard != 2) { Fail($"{_rideAllAboard} AllAboard calls by the re-boarding's departure, not 2 (one at the landing, one more at the re-boarding)"); return; }
                 break;
             }
             case 7 when _rideClock >= 2f:

@@ -432,7 +432,49 @@
       "RequiresFlag": "grisel_forgiven",
       "ForbidsFlag": null,
       "Betrayal": null,
-      "Ritualist": false
+      "Ritualist": false,
+      "Calls": [
+        {
+          "Key": "ride1",
+          "Line": {
+            "Text": "Hob Tallow and Merrin Ash, first cage. I ran and left them there. I\u0027ll be the one who lets them out.",
+            "VoiceId": null,
+            "Delivery": null
+          }
+        },
+        {
+          "Key": "ride2",
+          "Line": {
+            "Text": "Next cage: Dace Wicker and Old Pell. Pell taught me these drains. I left him to the orc all the same.",
+            "VoiceId": null,
+            "Delivery": null
+          }
+        },
+        {
+          "Key": "ride3",
+          "Line": {
+            "Text": "Last cage. Juno Brack and Selby Crane. Selby said we shouldn\u0027t go down unpaid. She was right.",
+            "VoiceId": null,
+            "Delivery": null
+          }
+        },
+        {
+          "Key": "ride4",
+          "Line": {
+            "Text": "That\u0027s the last cage behind us. Get us to the stair before he thinks of something worse.",
+            "VoiceId": null,
+            "Delivery": null
+          }
+        },
+        {
+          "Key": "cage",
+          "Line": {
+            "Text": "They\u0027ll know my voice before they know my face.",
+            "VoiceId": null,
+            "Delivery": null
+          }
+        }
+      ]
     }
   ],
   "RailEncounters": [

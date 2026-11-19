@@ -164,7 +164,7 @@ public partial class RailEncounterController
     {
         _leaps.Add(new Leap { Hound = hound, Source = cart, Phase = LeapPhase.Crouch });
         TelegraphFx.HandGlow(hound, SetPieceRules.LeapWindup);
-        Bark("Hound!");
+        RailCalls.Say(Main.Instance.Party, _rails.Cart, BarkTrigger.HoundLeap, "Hound!");
         GD.Print($"[rails] {hound.Name} crouches on {cart.EncounterId} for the leap");
     }
 
@@ -311,20 +311,6 @@ public partial class RailEncounterController
             _rails.DentPlating(DentAmount); // plating gone wrecks the cart; the Wrecked event comes at the RailController's next flush, and ClearLeaps then drops the boarders at the wreck's place
         }
         return true;
-    }
-
-    /// <summary>A seated companion in the party cart calls it out (else the log), as the cart warning does.</summary>
-    private void Bark(string text)
-    {
-        var party = Main.Instance.Party;
-        Adventurer? speaker = null;
-        foreach (var mate in party.Adventurers)
-            if (IsInstanceValid(mate) && mate.Cart == _rails.Cart && mate.Control == ControlKind.Companion && !mate.Downed) { speaker = mate; break; }
-        if (speaker == null) { EventBus.Instance.Log(text); return; }
-        var name = speaker.State.Name;
-        EventBus.Instance.Log($"{name}: \"{text}\"");
-        EventBus.Instance.RaiseBark(name, new Line(text));
-        Main.Instance?.Hud?.ShowBark(name, text, 2f);
     }
 
     /// <summary>Pose the boarders on what they ride (every rendered frame, after the carts are posed).</summary>
