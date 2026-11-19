@@ -1394,7 +1394,7 @@ Protocol 17 carries it (see the note under Multiplayer). The code:
 - the client's pose 1/30 s, with its 0.5 s idle heartbeat;
 - the cart corrections 0.2 s, and the ride intent's 0.25 s resend.
 
-At 60 Hz each fires on the same ticks as the old `tick % n`. The ping is the exception: it went from 2 s to 1 s on purpose.
+At 60 Hz each fires every n ticks as the old `tick % n` did, counted from the cadence owner's first step (the absolute phase moved). The ping is the exception: it went from 2 s to 1 s on purpose.
 
 **Hammers and the pour in a headset.** They read the integer `FloorTick`, so on a faster headset their motion steps at 60 Hz (accepted). `--test-tick-rate`, bare and with `--physics-hz=90`, checks that the hammer's and the spike bed's 4.5 s cycles take 4.5 s of wall time.
 
@@ -1477,7 +1477,7 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
   - the pitch;
   - the flags.
 
-  It ignores the position and the client's Pumping bit.
+  It ignores the position, the client's Pumping bit and the Dodge flag (a seat allows guard and parry only, as for a local rider).
 - **Every server unseat of a remote player** goes through one place. That covers `Adventurer.GetOut` (stops, set-downs, wrecks, throws) and a `Teleport` of a seated body. It:
   - resets the body's remote position, yaw and velocity;
   - sends that peer a `ForcePose` at the landing;
@@ -1487,6 +1487,7 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
 - **An `AttackIntent` from a seated body** turns the seat yaw (`Adventurer.AimSeated`), never the body.
 
 **Others.**
+- **A seated remote body** (another player, a hero bot) is shown as a local rider is (`SeatedTick`): it sits still on every screen. Its pose's velocity is the cart's, so `RemoteTick` uses no gait speed, no dance, no footsteps and no wading for it while seated.
 - A seated NPC never takes a snapshot position on a client. NPC seat yaw is not on the wire, so a seated NPC faces its seat's forward.
 - In a headset the seat yaw follows the head, in single player too.
 
@@ -1503,6 +1504,10 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
 - A hound this client landed a moment before the server's state named it is kept.
 - A boarder the server frees silently at a ride's end can stand as a ghost for up to about 4 s, until the enemy check.
 
+**Rim spots.** The party cart opens one rim spot per awake hero seated in it, at most its two (`SetPieceRules.RimSpotsOpen`, checked in `MineCart.ReserveBoarderSpot`). A lone rider faces one hound at a time: the next tries a crewed wagon, or leaps and misses beside the lane. A party of two or more awake riders is unchanged, in single player too. A hound already on the rim stays when a rider goes down.
+
+**A player's blow reaches the wagon roof.** A player's melee blow that meets nothing (an instant one, a remote player's through `AttackIntent`, or a blade's swing that cut nothing) lands on the nearest hound riding a coupled wagon's roof within `CompanionBrain.BoarderReach` (3.9 m) and 45° of where it aims (`CompanionBrain.InBoarderSwing`), as a companion's does. The server swings it, so it works for remote players too.
+
 #### Remote riding and the shared prompt rules
 
 **Boarding.** The party's cart is `cart:0` on the wire, so a client's interact key sends `InteractIntent("cart:0")`.
@@ -1513,6 +1518,7 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
 - `PlayerAboard` counts every seated, awake, unparked player's hero (LocalHuman or Remote).
 
 **Getting out.**
+- A downed rider cannot get out (`RideInputRules.MayGetOut`): a "Get out" intent from one is refused.
 - Out of a slow cart, a player's own companions follow. The bench follows once no player is aboard.
 - At 1 m/s or more the player is thrown, like anyone: set down on the line just behind the cart, sent the `ForcePose`, and run over once.
 
@@ -1536,7 +1542,7 @@ So its parked pose is that spot. A chaser's rider is handled the same way.
 **One rule per prompt.** The server, solo play and a client (with its synced copies) all call the same engine-free rule:
 - `RideInputRules.BoardPrompt(seatedHere, held, lastStop, heroSeatFree, inReach)`: "Get out" when seated, "Board the cart" otherwise;
 - `PropPromptRules.SwitchPrompt(fixed, taken, thrown)`, `WinchPrompt(gateUp)`, `CagePrompt(open, orcKeys, griselOpens, canLetOut, downedAboard)` and `KeyringPrompt(orcKeys)`;
-- `SpareRules.Prompt(onFootPlayer, mayChase)` and `SpareRules.ChaserPrompt(seatedHere, held)`.
+- `SpareRules.Prompt(onFootPlayer, mayChase)` and `SpareRules.ChaserPrompt(seatedHere, held, downed, boardingLeft)`.
 
 What a prompt cannot know stays on the server, which refuses with its log line: a key or a pick in the bag, a holder still near the winch.
 
@@ -1575,7 +1581,7 @@ A client's `Show*` methods apply them silently. A live event plays the cosmetic 
 #### Crew, gates and set-piece visuals
 
 **Crew.**
-- The objective state names each downed crew member's seconds left (`ObjectiveStateDto.CrewDownedLeft`; server only, so a solo save is unchanged).
+- The objective state names each downed crew member's seconds left (`ObjectiveStateDto.CrewDownedLeft`). Only a server fills it, so a solo save is unchanged; a server's own autosaves carry it, and its `Restore` ignores it.
 - A client's bleed label counts down locally from it. On the Downed edge it starts full until the next broadcast, at most 2 s later.
 - On a dedicated server, Grisel's cage line goes to every screen as her own NPC line (`NpcSay`, as the merchant's).
 
@@ -1653,13 +1659,17 @@ A wrecked train offers no chase.
 - It rolls on the party track at the party cart's physics, with no pumping and no set piece judged. Its run-over sweep is on, and its plating is never judged.
 - It warns like every party-lane cart: the bark, the bell, and AI bodies sent to the party-lane pockets (`RailEncounterController.WarnPartyLane`).
 - **Its Limit** is recomputed every tick: `SpareRules.ChaseLimit(TrainBackS, the next stop)`. The bodies end 1.5 m apart, so it never passes the train.
-- **Holes.** When its front reaches a jump's gap or a fallen trestle, it is set just past (`SpareRules.HopPast`) and its riders are shaken. A client's follower snaps after it.
+- **Holes.** When its front reaches a jump's gap or a fallen trestle, it is set just past (`SpareRules.Hop`, from `HopPast`) and its riders are shaken. A client's follower snaps after it.
+  - Anything on the rails is rolled over: the step up to the near lip is swept as ever, then the landing from the far lip to the landing front (`HopLanding.SweepFromS` to `S`). The pit itself sweeps nothing.
+  - It never comes down over a pit. A landing past its Limit is pulled back to the Limit if the whole body still clears the hole there; otherwise it stops with its front at the near lip, Held. A Limit it could reach only standing over a hole is pulled back to that hole's near lip every tick (`SpareRules.HoleLimit`), so it waits there instead of hopping and stopping short each tick. Floor 12's layout never needs either.
 - **A live heap** halts it at the face until the heap is cleared (`SpareRules.HeapLimit`).
 
 **Ending.**
 - While the chaser stands, its riders may get out ("Get out", `SpareRules.ChaserPrompt`, through the intent `spare:{stop}`). With no player left in it, the chase ends.
+  - Not while downed, and not in the countdown's first 2 s (`SpareRules.GetOutOpen`, `Boarding.MinWait`): the key that took the spare, pressed again a beat later, does nothing. A client's prompt runs the countdown on from the chaser's `BoardingLeft`.
+  - **The spare given back.** A chase that ends before its chaser ever rolled (its riders got out in the countdown, or nobody is left in it) frees the chaser at once and gives the spare back (`SpareRules.GivesSpareBack`, `SpareYard.GiveBack`): parked beside the platform again, told "restored", and offered again. The log says "{name} steps back out of the spare cart." Once it has rolled, the spare stays spent.
 - Once it stands behind a held train, its riders step out beside the lane and it is gone 2 s later.
-- A wreck, a load, or nobody in it before it leaves ends the chase at once.
+- A wreck, a load, or nobody in it before it leaves ends the chase at once (with the spare given back if it never rolled; a load then sets the spares as the save has them).
 - The chase is not saved: a load sets its riders down.
 
 **On the wire.** The chaser is one more live cart. Its state is sent again when its mode changes, and as Hidden once it is gone. Its seats go out as `SeatMsg` with its id, and a client books them in its copy, NPCs too. Both are in the catch-up.
@@ -1683,7 +1693,7 @@ A wrecked train offers no chase.
 - **On a co-op client**, from the server's ride: the follower's `AuthV`, and `CartRun.MotionAt` at its `AuthS` for the turn rate and the vertical speed. Only first differences are taken. A follower snap (`Snaps` changed) resets the sampler, so a snap never fires Strong's fade.
 
 **The per-eye angular vignette.** `assets/shaders/comfort_vignette.gdshader` draws on a full-view quad (`ComfortVignette`), hung 0.5 m ahead of the XR camera and hidden while open.
-- For each eye, the fragment turns back into that eye's view-space ray (`INV_PROJECTION_MATRIX`). The darkening is measured as the angle from straight ahead, so both eyes agree under OpenXR's uneven frusta.
+- For each eye, the fragment turns back into that eye's view-space ray: `INV_PROJECTION_MATRIX` unprojects the fragment at two depths (z = 1.0 and 0.5) and the direction is the difference of the two points, never one point measured from the head (that matrix bakes each eye's offset in, which put each eye's cone about 18° toward the nose). The darkening is measured as the angle of that ray from straight ahead (−Z), so both eyes agree under OpenXR's uneven frusta. On desktop the result is unchanged.
 - The clear cone's half-angle is radius × 75°, and the dark comes in over the next 15°:
   - open is 75°;
   - Recommended is 41°;
@@ -1727,6 +1737,8 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 
 Ride 4's first hammer is paired all through the pass.
 
+**The riders fight back.** Seated in the party's cart, both clients swing every 0.5 s at the nearest hound on its rim, or on a coupled wagon's roof within 3.9 m (`FightBoarders`: `Adventurer.AimAt`, then `Attack`, so the server's melee judges a seated `AttackIntent`). The server's log shows the Rider's blows landing on a hound on wagon 1's roof 3.8 m away (nothing asserts it). The top-up stays: on the fix wave's first run the lone warrior killed every boarder, but ride 2's Forge Priest, shooting from its slag cart 5–6 m off, took it from 129 hp to 23 by stop 2, out of a melee rider's reach.
+
 **The markers the script pairs.** Both sides print on a shared 0.5 s server-time grid:
 - `ride t=… S=… mode=… stop=… armed=…`;
 - `ride cart=… kind=… t=… S=…`;
@@ -1744,7 +1756,7 @@ They also print `ride hammer=… fall t=…` and `ride bucket pour n=… t=…`.
 The server stops its grid lines before the wreck, because the jump to a spare's stop is not a pair.
 
 **Test hooks used.** Every departure is a real one. The pass leans on these hooks:
-- the server keeps every player's hero above 75% hp, and keeps the cart's plating up on ride 4 (it checks the wire, not the fight);
+- the server keeps every player's hero above 75% hp, and keeps the cart's plating up on ride 4 (it checks the wire, not the fight). Each top-up is logged and counted in the RESULT;
 - the shoves that put a hero within reach;
 - `DebugKillHolders`, `DebugWreck` and `TestAskFloorAgain`;
 - `RailNet.RideTraceOff`.
@@ -1753,11 +1765,14 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 
 **Not exercised live** (rule or unit tests only):
 - real latency and jitter: the pass runs on localhost, and ±150 ms of jitter is tested only in `CartFollowerTests`;
-- on a client: a seat taken by another occupant, a missed leap, the catch-up re-flying a leap in the air, and a seated `AttackIntent`;
+- on a client: a seat taken by another occupant, a missed leap, and the catch-up re-flying a leap in the air;
 - a bot hopping in with its owner online, and two players pumping or braking together;
 - a winch cranked through the intent, "Let them out", "Open the cage (Grisel)", the forgiven branch, and the "free" lever event;
 - on a client: the heap's lantern alarm and the golem's fist glow;
-- for the chaser: its warning, a rider's "Get out", a halt at a live heap, a chase ended by a wreck or a load, a joiner arriving mid-chase, and an escort on its bench;
+- for the chaser: its warning, a rider's "Get out" (and the 2 s it is hidden at the countdown's start), the spare given back when its riders get out before it rolls, a halt at a live heap, a chase ended by a wreck or a load, a joiner arriving mid-chase, an escort on its bench, a body run over on a hop's landing, and a hop with no room past the hole (floor 12 never needs one);
+- a floor change with a hero seated in the chaser: it relies on the `Teleport` unseat, the same path the party cart's riders take live;
+- a downed rider's "Get out" intent and a seated pose's Dodge flag, both now refused on the server (code and rule tests only);
+- the rim-spot cap with one awake rider (the RIDE pass's hounds went to the crewed wagon), and a remote seated body's presentation (no run gait or footsteps; nothing checks animation or audio);
 - a wipe's reload mid-ride. The resync runs the same `OnFloorReady` catch-up;
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing.
@@ -1767,14 +1782,12 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - A thrown remote body lands still, where a solo one slides at 0.3·V.
 - A slag cart first seen through a correction on a bend may put its brake shoe on the other side.
 - A boarder freed silently at a ride's end stands as a ghost for up to about 4 s.
-- The Welcome's and the `FloorChange`'s clock pair can be a step stale.
 - Hammers step at 60 Hz in a headset.
 - **The chaser:**
   - it has no HUD line or departure cue (plan 6);
-  - a hop skips the run-over judgement just past the far lip;
-  - "Get out" during its countdown ends the chase at once;
-  - it does not take crew on foot.
-- A lone remote rider with no companions can die to ride 2's hounds at lethality 1. The pass tops heroes up, and the balance is still open.
+  - it does not take crew on foot;
+  - held short of a hole whose far side its limit cannot clear, it waits at the near lip; behind a train held at the end of the line it would wait there for good (its riders may get out).
+- **A lone remote rider** now faces one rim hound at a time and can reach a wagon's roof hound with its own blade, but a ranged enemy riding a slag cart alongside (ride 2's Forge Priest) is out of a melee rider's reach and wears it down at lethality 1. The pass still tops heroes up.
 
 **VR, not tried in a headset:**
 - whether the eyes fuse the vignette;
