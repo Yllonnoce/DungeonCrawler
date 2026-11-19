@@ -1974,6 +1974,7 @@ public partial class DungeonBuilder : Node3D
                 Dress(Box(frames, cap, centre + Vector3.Up * (post + 0.12f), wood, collide: false, yaw: yaw),
                     MinePack.Paint(MinePack.Piece("WoodPostBeams_2", cap, keepAspect: false), wood));
             }
+        FadeBeyond(frames, RailDressingRange);
 
         // Pocket lanterns: every other pocket (about 45 small lights on a full line).
         var torch = CurrentTheme?.TorchColor ?? new Color(1f, 0.85f, 0.65f);
@@ -1981,7 +1982,11 @@ public partial class DungeonBuilder : Node3D
         for (var i = 0; i < rail.Pockets.Count; i += 2)
         {
             var at = Surface(rail.Pockets[i]) + Vector3.Up * 1.5f;
-            var light = new OmniLight3D { LightColor = torch, LightEnergy = 0.8f, OmniRange = 6f, OmniAttenuation = 1.3f, ShadowEnabled = false, Name = $"RailLamp{i}" };
+            var light = new OmniLight3D
+            {
+                LightColor = torch, LightEnergy = 0.8f, OmniRange = 6f, OmniAttenuation = 1.3f, ShadowEnabled = false, Name = $"RailLamp{i}",
+                DistanceFadeEnabled = true, DistanceFadeBegin = RailDressingRange - RailDressingFade, DistanceFadeLength = 2f * RailDressingFade,
+            };
             node.AddChild(light);
             light.GlobalPosition = at;
             if (MinePack.Piece("PostLight_1", new Vector3(0, 0.36f, 0), keepRotation: true) is { } lantern)
@@ -1989,8 +1994,9 @@ public partial class DungeonBuilder : Node3D
                 lantern.Name = $"RailLantern{i}";
                 node.AddChild(lantern);
                 lantern.GlobalPosition = at - Vector3.Up * 0.18f; // its middle where the box's was
+                FadeBeyond(lantern, RailDressingRange);
             }
-            else Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false);
+            else FadeBeyond(Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false), RailDressingRange);
         }
 
         for (var i = 0; i < rail.Stops.Count; i++)
@@ -2016,6 +2022,27 @@ public partial class DungeonBuilder : Node3D
 
     /// <summary>A visibility range that starts this far out: the box is never drawn.</summary>
     const float NeverDrawn = 1e7f;
+
+    /// <summary>
+    /// How far the rail dressing (timber frames, pocket lanterns and their lamps) is drawn: it fades out from
+    /// <see cref="RailDressingFade"/> short of it to as far past (the meshes' Self fade is that margin either side of the end;
+    /// the lamps' distance fade runs over the same 35 to 45 m). The floor's fog (exponential, 0.03 to 0.04 a metre on the
+    /// forge themes) has taken 65 to 85% of anything that far off, well past the torch's 16 m and any lamp's 6 m, so a seated
+    /// rider looking down the longest straight (about 80 m on floor 12) sees the far frames dim into the murk rather than pop.
+    /// </summary>
+    const float RailDressingRange = 40f, RailDressingFade = 5f;
+
+    /// <summary>Every mesh under <paramref name="node"/> (itself included) fades out <paramref name="end"/> metres off; a box drawn by its model stays hidden.</summary>
+    private static void FadeBeyond(Node node, float end)
+    {
+        if (node is GeometryInstance3D g && g.VisibilityRangeBegin < NeverDrawn)
+        {
+            g.VisibilityRangeEnd = end;
+            g.VisibilityRangeEndMargin = RailDressingFade;
+            g.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
+        }
+        foreach (var child in node.GetChildren()) FadeBeyond(child, end);
+    }
 
     /// <summary>
     /// A box the rail code still reads, dressed with <paramref name="model"/> (null: the box stays as it is): the box is kept with its

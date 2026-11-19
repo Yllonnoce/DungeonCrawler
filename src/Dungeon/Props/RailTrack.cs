@@ -4,13 +4,18 @@ namespace DungeonCrawler.Dungeon.Props;
 
 /// <summary>
 /// One mine-cart track: a Path3D through the lane centreline, with two steel rails and sleepers extruded along it, over a
-/// gravel ribbon when given a ballast material. Dressing only: no collision (bodies walk the cell floor).
+/// gravel ribbon when given a ballast material. Dressing only: no collision (bodies walk the cell floor). Each of the rails,
+/// sleepers and ballast is a node of that name holding one mesh per <see cref="ChunkLength"/> of S (Rails0, Rails1, ...), so
+/// the stretches out of view are culled; none casts a shadow.
 /// </summary>
 public partial class RailTrack : Node3D
 {
     public const float Gauge = 0.9f;
     public const float Sample = 0.25f;
     public const float SleeperEvery = 0.6f;
+    /// <summary>The S each mesh chunk covers: a whole-floor mesh is never out of view, nor out of the torch's shadow.</summary>
+    public const float ChunkLength = 20f;
+    const int SamplesPerChunk = (int)(ChunkLength / Sample);
     static readonly Vector3 RailSize = new(0.07f, 0.12f, 0f);
     static readonly Vector3 SleeperSize = new(1.4f, 0.12f, 0.22f);
     /// <summary>The gravel bed under the sleepers: this wide, this far above the floor.</summary>
@@ -62,14 +67,17 @@ public partial class RailTrack : Node3D
         var sleeper = _sleeper!;
         var railSt = new SurfaceTool();
         railSt.Begin(Mesh.PrimitiveType.Triangles);
+        var railChunks = new List<int>();
         var sleeperSt = new SurfaceTool();
         sleeperSt.Begin(Mesh.PrimitiveType.Triangles);
+        var sleeperChunks = new List<int>();
 
         var samples = new List<Transform3D>();
         for (var s = 0f; s < Length; s += Sample) samples.Add(Curve.SampleBakedWithRotation(s, true, true));
         samples.Add(Curve.SampleBakedWithRotation(Length, true, true));
 
-        // Rails: a rectangular tube per side, quad strips between consecutive samples.
+        // Rails: a rectangular tube per side, quad strips between consecutive samples; the strip from sample k-1 to k is in
+        // chunk (k-1) / SamplesPerChunk.
         foreach (var side in new[] { -1f, 1f })
         {
             Vector3[]? prev = null;
@@ -86,24 +94,24 @@ public partial class RailTrack : Node3D
                     {
                         var j = (i + 1) % 4;
                         Quad(railSt, prev[i], prev[j], ring[j], ring[i]);
+                        railChunks.Add((k - 1) / SamplesPerChunk);
                     }
                 prev = ring;
             }
         }
 
-        // Sleepers.
+        // Sleepers: each whole in the chunk of its S.
         for (var s = SleeperEvery / 2f; s < Length; s += SleeperEvery)
         {
             if (InGap(s, gaps)) continue;
             var t = Curve.SampleBakedWithRotation(s, true, true);
             var b = t.Basis.Orthonormalized();
             AddBox(sleeperSt, b, t.Origin + b.Y * (SleeperSize.Y / 2f), SleeperSize);
+            for (var f = 0; f < 6; f++) sleeperChunks.Add((int)(s / ChunkLength));
         }
 
-        railSt.GenerateNormals();
-        sleeperSt.GenerateNormals();
-        AddChild(new MeshInstance3D { Name = "Rails", Mesh = railSt.Commit(), MaterialOverride = steel });
-        AddChild(new MeshInstance3D { Name = "Sleepers", Mesh = sleeperSt.Commit(), MaterialOverride = sleeper });
+        CommitChunks(railSt, railChunks, "Rails", steel);
+        CommitChunks(sleeperSt, sleeperChunks, "Sleepers", sleeper);
         if (_ballast != null) BuildBallast(samples, gaps, _ballast);
     }
 
@@ -112,8 +120,8 @@ public partial class RailTrack : Node3D
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
+        var chunks = new List<int>();
         Vector3[]? prev = null;
-        var quads = 0;
         for (var k = 0; k < samples.Count; k++)
         {
             if (InGap(k * Sample, gaps)) { prev = null; continue; }
@@ -124,13 +132,62 @@ public partial class RailTrack : Node3D
             if (prev != null)
             {
                 Quad(st, prev[0], edge[0], edge[1], prev[1]); // its face up (+Y)
-                quads++;
+                chunks.Add((k - 1) / SamplesPerChunk);
             }
             prev = edge;
         }
-        if (quads == 0) return;
+        if (chunks.Count == 0) return;
+        CommitChunks(st, chunks, "Ballast", ballast);
+    }
+
+    /// <summary>
+    /// The surface tool's quads (two triangles each; <paramref name="chunkOfQuad"/> gives each quad's chunk, in the order they
+    /// were added) as a node named <paramref name="name"/> holding one shadowless mesh per chunk. The normals are generated
+    /// over the whole track first and then split, so a chunk's edge shades exactly as it did in one mesh: no seam.
+    /// </summary>
+    private void CommitChunks(SurfaceTool st, List<int> chunkOfQuad, string name, Material material)
+    {
         st.GenerateNormals();
-        AddChild(new MeshInstance3D { Name = "Ballast", Mesh = st.Commit(), MaterialOverride = ballast, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        var arrays = st.CommitToArrays();
+        var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+        var holder = new Node3D { Name = name };
+        AddChild(holder);
+        if (verts.Length != chunkOfQuad.Count * 6 || normals.Length != verts.Length)
+        {
+            GD.PushWarning($"[rails] {Name}/{name}: {verts.Length} vertices for {chunkOfQuad.Count} quads; laid as one mesh");
+            chunkOfQuad = Enumerable.Repeat(0, verts.Length / 6).ToList();
+        }
+        var count = 0;
+        foreach (var c in chunkOfQuad) count = Math.Max(count, c + 1);
+        var sizes = new int[count];
+        foreach (var c in chunkOfQuad) sizes[c] += 6;
+        var chunkVerts = new Vector3[count][];
+        var chunkNormals = new Vector3[count][];
+        var fill = new int[count];
+        for (var c = 0; c < count; c++) { chunkVerts[c] = new Vector3[sizes[c]]; chunkNormals[c] = new Vector3[sizes[c]]; }
+        for (var q = 0; q < chunkOfQuad.Count; q++)
+        {
+            var c = chunkOfQuad[q];
+            Array.Copy(verts, q * 6, chunkVerts[c], fill[c], 6);
+            Array.Copy(normals, q * 6, chunkNormals[c], fill[c], 6);
+            fill[c] += 6;
+        }
+        for (var c = 0; c < count; c++)
+        {
+            if (sizes[c] == 0) continue;
+            var surface = new Godot.Collections.Array();
+            surface.Resize((int)Mesh.ArrayType.Max);
+            surface[(int)Mesh.ArrayType.Vertex] = chunkVerts[c];
+            surface[(int)Mesh.ArrayType.Normal] = chunkNormals[c];
+            var mesh = new ArrayMesh();
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surface);
+            holder.AddChild(new MeshInstance3D
+            {
+                Name = $"{name}{c}", Mesh = mesh, MaterialOverride = material,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+        }
     }
 
     // One clockwise-from-outside winding (Godot's front face): a,b,c and a,c,d. Checked: the rail top comes out with normal +Y.
