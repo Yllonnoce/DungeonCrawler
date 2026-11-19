@@ -30,7 +30,10 @@
 #                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
 #                                     hook, and the joiner sees the Wrecked state and then a spare's takeover; it boards that cart
 #                                     and rides ride 3 again with its switch straight, into the ore heap: its rendered S never passes
-#                                     the heap's face; both clients' slag carts
+#                                     the heap's face; out of it, the server wrecks the cart until no spare is
+#                                     left (the joiner hears that wreck live), and the joiner asks for the floor
+#                                     again: its first cart state carries Wrecked and must play nothing there
+#                                     (no wreck shown, no cart_wreck, no tumble); both clients' slag carts
 #                                     (and their riders) and boarding hounds must match the server's on the grid as well)
 set -u
 cd "$(dirname "$0")/.."
@@ -75,7 +78,7 @@ if [ "${RIDE:-}" = 1 ]; then
   kill $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
   echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT|.* left while seated)|Unhandled|ERROR" "$TMP/server.log" | head -50
   echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -50
-  echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -40
+  echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -60
   if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
   # the ride heard where it happens (plan 6 task 5): each client heard the party cart's roll from the synced state, no rail cue came
   # relayed as a plain sfx, and the joiner (who watches the wreck with a spare) heard cart_wreck once
@@ -98,6 +101,11 @@ if [ "${RIDE:-}" = 1 ]; then
   # then the joiner rides the spare's cart into ride 3 again with its switch straight: the cart halts at the ore heap, and the joiner's
   # rendered S never passes the face (the follower's clamp at BlockedAt) nor steps back while it rolls
   if ! grep -q "\[net-server\] ride: heap: the cart halted at the ore heap on ride 3" "$TMP/server.log" || ! grep -q "\[net\] ride: heap: halted here at S=" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the spare's cart never halted at the ore heap with the joiner watching)"; exit 1; fi
+  # the last wreck (plan 6 final review): the server wrecks the cart until no spare is left; the joiner hears it live, then has the floor
+  # resent: a catch-up of a standing wreck shows no wreck, plays no cart_wreck and throws no tumble
+  if ! grep -q "\[net-server\] ride: last wreck: the test wrecked the cart [0-9]* time(s) until no spare was left" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never wrecked the cart until no spare was left)"; exit 1; fi
+  if ! grep -q "\[net\] ride: last wreck: the cart stands wrecked and hidden here .* cart_wreck played [1-9]" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner did not hear the last wreck live)"; exit 1; fi
+  if ! grep -q "\[net\] ride: last-wreck-resync ok: .* wreck=0 shown, cart_wreck played 0 time(s), 0 tumble(s)" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's catch-up of the standing wreck played a wreck: $(grep -o 'last-wreck-resync.*' "$TMP/joiner.log" | head -1))"; exit 1; fi
   # the left-behind spare (task 9): the joiner, out at stop 3, sees stop 3's spare offer nothing while the train is held there; the train
   # leaves on ride 4 with the first client; the joiner takes the spare through its intent, and its chaser halts within 3 m of the train
   if ! grep -q "\[net-server\] ride: the cart departs stop 3 with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the train never left stop 3 with the first client aboard and the joiner on foot)"; exit 1; fi

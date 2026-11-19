@@ -169,13 +169,18 @@ public partial class RailController : ISlopeSource
     internal int NetWrecksSeen { get; private set; }
     internal double NetWreckedAt { get; private set; } = -1;
 
-    /// <summary>Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state.</summary>
+    /// <summary>
+    /// Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state. The first state
+    /// this controller takes (a join, a floor's resend, a revisit) is a catch-up and primes the edges: its flags and mode are adopted,
+    /// but a cart already wrecked plays no wreck (no cue, no tumble, not counted) and a cart already rolling records no departure.
+    /// </summary>
     internal void ApplyNet(CartStateDto d, double serverNow)
     {
         if (!NetSession.IsClient || !Current) return;
+        var firstState = _follow is not { HasState: true }; // before this state is applied: nothing seen yet, so nothing rises
         _follow ??= new CartFollower(this);
         (Cart.NetRun, Cart.NetFollow) = (Party, _follow); // a seated headset's comfort inputs read the server's ride
-        if (CartSendRules.WreckedRose(_netFlags, d.Flags))
+        if (!firstState && CartSendRules.WreckedRose(_netFlags, d.Flags))
         {
             NetWrecksSeen++;
             NetWreckedAt = d.ServerTime;
@@ -184,7 +189,7 @@ public partial class RailController : ISlopeSource
         }
         _netFlags = d.Flags;
         var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;
-        if (mode == CartMode.Rolling && _netMode == CartMode.Held && !Halted) NetDepartedAt = d.ServerTime; // left a stop (a halt's resume is not a departure)
+        if (!firstState && mode == CartMode.Rolling && _netMode == CartMode.Held && !Halted) NetDepartedAt = d.ServerTime; // left a stop (a halt's resume is not a departure; a catch-up's Rolling is not one)
         _netMode = mode;
         StopIndex = Math.Clamp(d.StopIndex, 0, Math.Max(0, StopS.Length - 1));
         Halted = d.Has(CartFlags.Halted);
