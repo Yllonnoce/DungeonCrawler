@@ -50,6 +50,8 @@ public partial class NetSession : Node
     public bool TestJoinOnly { get; private set; }
     /// <summary>--net-test-ride (RIDE=1 scripts/net_test.sh): the server takes the party to floor 12 once a client is ready; the client checks the rides' set pieces and props there, and leaves.</summary>
     public bool TestRide { get; private set; }
+    /// <summary>--net-test-ride-join (with --net-test-ride): the RIDE pass's second client, which joins during ride 2, checks that it sees the ride as it is within 1 s of its Ready, boards at stop 2 and rides ride 3.</summary>
+    public bool TestRideJoin { get; private set; }
     /// <summary>The server resumed a save at start (the scripted check expects a rejoin, not a fresh join).</summary>
     public bool Resumed { get; set; }
     /// <summary>--clauses=a,b:2 (run-structure): the contract every new game in this process signs (a server's world too), normalized by ClauseRules.</summary>
@@ -87,6 +89,7 @@ public partial class NetSession : Node
             else if (arg == "--test-net-rejoin") { TestClient = true; TestRejoinOnly = true; }
             else if (arg == "--net-test-join-only") TestJoinOnly = true;
             else if (arg == "--net-test-ride") TestRide = true;
+            else if (arg == "--net-test-ride-join") TestRideJoin = true;
             else if (arg == "--net-stats") NetStats = true;
             else if (arg == "--net-soak") NetSoak = true;
         }

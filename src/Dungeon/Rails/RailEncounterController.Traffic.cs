@@ -40,6 +40,7 @@ public partial class RailEncounterController
         public CartRun Run = null!;
         public RunawayWagon Body = null!;
         public float Halted = -1f;
+        public CartWatchdog.Window Watch;
     }
 
     private sealed class Seeker
@@ -136,7 +137,7 @@ public partial class RailEncounterController
         run.PoseAt(run.State.S);
         RunOver(run, cart.HitAt, TrafficSource, SlagCart.HazardIndex, _setAside);
         Warn(run, cart, _warnedTraffic, false, party);
-        if (run.State.S >= _enemy.Length - LineEnd || run.State.Mode != CartMode.Rolling)
+        if (run.State.S >= _enemy.Length - LineEnd || run.State.Mode != CartMode.Rolling || OwnProgressStuck(ref cart.Watch, run, dt, cart))
         {
             GD.Print($"[rails] t={_now:0.00} traffic slag cart leaves the enemy line");
             Free(cart);
@@ -172,7 +173,32 @@ public partial class RailEncounterController
                 w.Halted = 0f;
                 GD.Print($"[rails] t={_now:0.00} runaway wagon halts at party S={run.State.S:0.0}");
             }
+            else if (OwnProgressStuck(ref w.Watch, run, dt, w.Body)) w.Halted = RunawayLinger; // freed on the next tick, as after its halt
         }
+    }
+
+    // ---- the watchdog (CartWatchdog) ---------------------------------------------------------------
+
+    /// <summary>
+    /// A ride's pacing slag cart, watched while the party's cart rolls (not halted at an obstacle: then the slag cart stands beside it
+    /// on purpose), judged against its pace point: stuck when the point ran on half a metre in 10 s and the cart did not. The caller
+    /// frees it (its riders with it).
+    /// </summary>
+    private bool PacingStuck(SlagCart cart, float dt)
+    {
+        var watched = CartWatchdog.SlagWatched(_rails.State.Mode == CartMode.Rolling, _rails.Halted);
+        var target = PaceRules.TargetS(Lanes.EnemyS(_rails.State.S), cart.Offset);
+        if (!cart.Watch.Observe(dt, cart.Run.State.S, target, watched)) return false;
+        GD.Print($"[rails] t={_now:0.00} watchdog: slag cart {cart.EncounterId} is stuck at S={cart.Run.State.S:0.0} (its pace point at {target:0.0}): freed");
+        return true;
+    }
+
+    /// <summary>A traffic cart or a runaway wagon, judged on its own progress while it rolls: stuck when it moved under half a metre in 10 s.</summary>
+    private bool OwnProgressStuck(ref CartWatchdog.Window watch, CartRun run, float dt, Node3D body)
+    {
+        if (!watch.Observe(dt, run.State.S, float.PositiveInfinity, run.State.Mode == CartMode.Rolling)) return false;
+        GD.Print($"[rails] t={_now:0.00} watchdog: {body.Name} is stuck at S={run.State.S:0.0}: freed");
+        return true;
     }
 
     // ---- refuge ----------------------------------------------------------------------------------

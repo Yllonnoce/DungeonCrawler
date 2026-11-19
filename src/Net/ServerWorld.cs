@@ -183,7 +183,8 @@ public partial class ServerWorld : Node
         SendShopSync(slot.PeerId); // a floor change: the floor is built on both ends now (a join is sent in OnPlayerReady)
         if (Adventure.Objectives.ObjectiveController.Instance is { } objective) SendTo(slot.PeerId, new ObjectiveStateMsg(objective.Capture()));
         SendTo(slot.PeerId, FloorClockNow()); // the floor ran on while it built: the pair in its FloorChange is old, this one is not
-        Dungeon.Rails.RailNet.Instance?.SendRailCatchUp(slot.PeerId); // the seats taken while it built (the crew in their wagons), the leaps in the air
+        SendPropState(slot.PeerId); // the props as they stand now (a revisit's cages, keys and gates at once, not at the next prop check)
+        Dungeon.Rails.RailNet.Instance?.SendRailCatchUp(slot.PeerId); // the carts as they roll, the seats taken while it built (the crew in their wagons), the leaps in the air
         SendWorldChecks(slot.PeerId); // what changed while it built (an item taken, a creature spawned) is put right now, not at the next check
     }
 
@@ -337,7 +338,7 @@ public partial class ServerWorld : Node
             SendShopSync(slot.PeerId); // a join: the joiner is in game now, so it will not discard this (a floor change sends it in OnFloorReady)
         }
         SendCatchUp(slot.PeerId);
-        if (!behind) Dungeon.Rails.RailNet.Instance?.SendRailCatchUp(slot.PeerId); // who sits where, the leaps in the air (after the join queue's own SeatMsgs)
+        if (!behind) Dungeon.Rails.RailNet.Instance?.SendRailCatchUp(slot.PeerId); // the carts as they roll, who sits where, the leaps in the air (after the join queue's own SeatMsgs)
         if (!behind) SendWorldChecks(slot.PeerId); // closes the join window at once: items and creatures that changed since the Welcome
         Trace.Add($"ready:{slot.Name}");
         ResumeBotsOf(slot);

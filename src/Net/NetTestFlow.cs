@@ -146,18 +146,13 @@ public partial class NetTestFlow : Node
         // put beside the cart, the hero boards again and rides on (stop 2's holders die too), and throws ride 3's switch from the seat.
         // Every departure is a real one; at stop 3 the client leaves the game seated
         if (_rideThrown && _elapsed - _rideReadyAt >= RideFirstDeparture && Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc)
-            && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null) is { } rider && Main.Instance?.Party is { } party && rider.MemberIndex < party.Adventurers.Length)
+            && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name != RideJoinerName) is { } rider && Main.Instance?.Party is { } party && rider.MemberIndex < party.Adventurers.Length)
         {
             var hero = party.Adventurers[rider.MemberIndex];
             var held = rc.State.Mode == Dungeon.Rails.CartMode.Held;
             // the pass checks the wire, not the fight: the client's hero rides rides 2 and 3 through the hounds, and its fall would wipe the
             // party (the only player) and reload the floor under the script, so the server keeps it topped up (a test hook)
-            if (!hero.Downed && hero.State.Hp < hero.State.Stats[Characters.Stat.MaxHp] * 0.75f)
-            {
-                hero.State.FullRestore();
-                EventBus.Instance.RaiseMemberChanged(hero.Index);
-                _rideTopUps++;
-            }
+            TopUp(hero);
             if (!_rideShoved && held && rc.StopIndex == 0 && !hero.Seated)
             {
                 _rideShoved = true;
@@ -211,6 +206,7 @@ public partial class NetTestFlow : Node
             }
             _rideHeldAtStop = heldAtStop;
             RideProps(world, rc, hero);
+            RideJoinerServer(world, rc, party);
         }
         if (_rideSeated && !_rideSetDown && _rideMember >= 0 && Main.Instance?.Party is { } p2 && _rideMember < p2.Adventurers.Length && !p2.Adventurers[_rideMember].Seated)
         {
@@ -244,8 +240,9 @@ public partial class NetTestFlow : Node
             var riding = _ridePumpOk && _rideHeroPumped && _rideBrakeOk;
             var quiet = QuietUnseatChecked(world, out var quietWhy);
             var props = _rideGateUp && _rideCageOpen && _rideRevived && _rideReboarded && _rideCrossed;
-            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the hero topped up {_rideTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
+            var joiner = _joinReadyMidRide && _joinSeated;
+            var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner;
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; the heroes topped up {_rideTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
             return;
         }
         if (_elapsed > 400) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
@@ -258,6 +255,46 @@ public partial class NetTestFlow : Node
     private float _rideBrakeFromV = -1f, _rideBrakeMinV = float.MaxValue;
 
     private static string Yes(bool b) => b ? "yes" : "NO";
+
+    /// <summary>A player's hero is kept above 75% hp through the RIDE pass (it checks the wire, not the fight).</summary>
+    private void TopUp(Party.Adventurer hero)
+    {
+        if (hero.Downed || hero.State.Hp >= hero.State.Stats[Characters.Stat.MaxHp] * 0.75f) return;
+        hero.State.FullRestore();
+        EventBus.Instance.RaiseMemberChanged(hero.Index);
+        _rideTopUps++;
+    }
+
+    // a joiner mid-ride (plan 5 task 8): the second client joins during ride 2, is put beside the cart at stop 2 and boards for ride 3
+    private const string RideJoinerName = "Joiner";
+    private bool _joinReadySeen, _joinReadyMidRide, _joinShoved, _joinSeated;
+
+    private void RideJoinerServer(ServerWorld world, Dungeon.Rails.RailController rc, Party.PartyController party)
+    {
+        if (world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name == RideJoinerName) is not { } slot || slot.MemberIndex >= party.Adventurers.Length) return;
+        var hero = party.Adventurers[slot.MemberIndex];
+        if (!_joinReadySeen)
+        {
+            if (!world.Trace.Contains($"ready:{RideJoinerName}")) return;
+            _joinReadySeen = true;
+            var armed = Dungeon.Rails.RailEncounterController.Instance?.ArmedRide ?? -1;
+            _joinReadyMidRide = rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 1 && armed == 2;
+            GD.Print(FormattableString.Invariant($"[net-server] ride: {RideJoinerName} is ready at t={NetSession.Instance.Now:0.000} with the cart {rc.State.Mode} at stop {rc.StopIndex} (S={rc.State.S:0.0}, ride {armed} armed): {(_joinReadyMidRide ? "mid-ride 2" : "NOT mid-ride 2")}"));
+        }
+        TopUp(hero);
+        if (!_joinShoved && rc.State.Mode == Dungeon.Rails.CartMode.Held && !rc.Halted && rc.StopIndex == 2 && !hero.Seated)
+        {
+            _joinShoved = true;
+            var beside = WithinReach(rc);
+            hero.Shove(beside);
+            GD.Print(FormattableString.Invariant($"[net-server] ride: {RideJoinerName} is put beside the cart at stop 2, {beside.DistanceTo(rc.Cart.GlobalPosition):0.00} m from it (the countdown runs: {rc.Boarding.Running})"));
+        }
+        if (_joinShoved && !_joinSeated && hero.Seated && hero.Cart == rc.Cart)
+        {
+            _joinSeated = true;
+            GD.Print($"[net-server] ride: {RideJoinerName} boarded at stop 2 through the intent in seat {hero.Seat}");
+        }
+    }
     /// <summary>How often the server topped the client's hero up.</summary>
     private int _rideTopUps;
 
@@ -772,6 +809,91 @@ public partial class NetTestFlow : Node
                 Finish("[net]", false, $"ride: our hero is not in the cart at stop 3 (seated {me.Seated})"); net.Disconnect("test finished");
                 return;
             }
+            default:
+                RideJoinerClient(net, client, main);
+                return;
+        }
+    }
+
+    // the joiner (plan 5 task 8): the RIDE pass's second client joins during ride 2
+    private double _joinReadyAt = -1, _joinStateAt = -1, _joinSeatsAt = -1;
+
+    /// <summary>
+    /// The joiner's half of the RIDE pass. Step 60: in game on floor 12 (its Welcome's floor) with the rails: its Ready's server time is
+    /// noted; step 61: 1 s after it, the ride as it is: the cart's state followed and Rolling on ride 2, the first client's hero seated in
+    /// the party's cart, the crew in their wagons and the train behind the cart (the script compares the seats, the train and the props'
+    /// hash with the server's on the grid, and the cart's S within 1.5 m); step 62: put beside the cart at stop 2 by the server, board
+    /// through the intent; step 63: ride 3 seated; at stop 3 get out through the intent; step 64: leave 3 s later (after the first client).
+    /// </summary>
+    private void RideJoinerClient(NetSession net, ClientWorld client, Main main)
+    {
+        var rc = Dungeon.Rails.RailController.Instance is { } r && IsInstanceValid(r) ? r : null;
+        var me = main.Party?.Local;
+        switch (_step)
+        {
+            case 60:
+                if (Game.Instance.CurrentFloor != 12 || main.Builder.CurrentFloor != 12 || main.Rebuilding || rc == null || Dungeon.Rails.RailNet.Instance == null || me == null)
+                {
+                    if (_clock > 60) { Finish("[net]", false, $"ride: the joiner never stood on floor 12 with its rails (floor {Game.Instance.CurrentFloor})"); net.Disconnect("test finished"); }
+                    return;
+                }
+                _joinReadyAt = client.ServerNow;
+                GD.Print(FormattableString.Invariant($"[net] ride: joined mid-ride; ready at t={_joinReadyAt:0.000} (server time); the cart here {(rc.Following ? $"follows the server's ({rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})" : "has no state yet")}"));
+                _clock = 0; _step = 61;
+                return;
+            case 61:
+            {
+                if (rc == null || me == null) return;
+                if (_joinStateAt < 0 && rc.Following) _joinStateAt = client.ServerNow; // the catch-up's cart state is here
+                if (_joinSeatsAt < 0 && main.Party.Adventurers.Any(a => IsInstanceValid(a) && a != me && a.Cart == rc.Cart)) _joinSeatsAt = client.ServerNow;
+                if (client.ServerNow - _joinReadyAt < 1.0) return;
+                var crew = Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController;
+                var inWagons = crew?.Wagons.Sum(w => w.Riders.Count) ?? 0;
+                var others = main.Party.Adventurers.Count(a => IsInstanceValid(a) && a != me && a.Cart == rc.Cart);
+                var midRide = rc.Following && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 1;
+                var why = new List<string>();
+                if (!midRide) why.Add($"the cart here is {(rc.Following ? $"{rc.State.Mode} at stop {rc.StopIndex}" : "not following the server")} (want Rolling on ride 2)");
+                if (others == 0) why.Add("nobody sits in the party's cart here");
+                if (inWagons == 0) why.Add("no crew sit in their wagons here");
+                if (rc.Train.Count == 0) why.Add("no wagon is coupled behind the cart here");
+                var line = FormattableString.Invariant($"the cart's state came {_joinStateAt - _joinReadyAt:0.000} s and the first client's seat {_joinSeatsAt - _joinReadyAt:0.000} s after Ready; {client.ServerNow - _joinReadyAt:0.00} s after Ready the cart is {rc.State.Mode} at stop {rc.StopIndex} (S={rc.State.S:0.0}), {others} hero(es) in it, {inWagons} crew in the wagons, train [{string.Join(", ", rc.Train.Select(w => w.Stop))}]");
+                if (why.Count > 0) { Finish("[net]", false, $"ride: the joiner: {line}: {string.Join("; ", why)}"); net.Disconnect("test finished"); return; }
+                client.Trace.Add("joined-mid-ride ok");
+                GD.Print($"[net] ride: joined-mid-ride ok: {line}");
+                _clock = 0; _step = 62;
+                return;
+            }
+            case 62: // put beside the cart at stop 2: board through the intent
+                if (rc == null || me == null) return;
+                if (me.Seated && me.Cart == rc.Cart)
+                {
+                    GD.Print($"[net] ride: the joiner boarded at stop 2 through the intent in seat {me.Seat}");
+                    _clock = 0; _step = 63;
+                    return;
+                }
+                if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 2) TryBoard(net, rc, me, "stop 2");
+                if (rc.StopIndex >= 3 || _clock > 150) { Finish("[net]", false, $"ride: the joiner never boarded at stop 2 (stop {rc.StopIndex}, mode {rc.State.Mode})"); net.Disconnect("test finished"); }
+                return;
+            case 63: // ride 3 seated; at stop 3 get out
+                if (rc == null || me == null) return;
+                if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex >= 3)
+                {
+                    if (!me.Seated || me.Cart != rc.Cart) { Finish("[net]", false, $"ride: the joiner is not in the cart at stop {rc.StopIndex}"); net.Disconnect("test finished"); return; }
+                    if (rc.Cart.Prompt != "Get out" || NetRefResolver.RefOf(rc.Cart) is not { } cartRef) { Finish("[net]", false, $"ride: at stop 3 the joiner's cart offers \"{rc.Cart.Prompt}\" (want Get out)"); net.Disconnect("test finished"); return; }
+                    net.Send(new InteractIntent(cartRef));
+                    GD.Print($"[net] ride: the joiner rode ride 3 to stop {rc.StopIndex} in seat {me.Seat}; asked to get out through the intent");
+                    _clock = 0; _step = 64;
+                    return;
+                }
+                if (_clock > 120) { Finish("[net]", false, $"ride: the joiner's ride 3 never reached stop 3 (stop {rc.StopIndex}, mode {rc.State.Mode})"); net.Disconnect("test finished"); }
+                return;
+            case 64: // out, then leave after the first client has
+                if (me == null) return;
+                if (me.Seated) { if (_clock > 5) { Finish("[net]", false, "ride: the joiner was not let out at stop 3"); net.Disconnect("test finished"); } return; }
+                if (_clock < 3) return;
+                Finish("[net]", true, $"ride: the joiner joined mid-ride 2 and saw the ride as it is (joined-mid-ride ok), boarded at stop 2, rode ride 3 and got out at stop 3");
+                net.Disconnect("test finished");
+                return;
         }
     }
 
@@ -819,8 +941,8 @@ public partial class NetTestFlow : Node
                 }
                 if (net.TestRide)
                 {
-                    GD.Print($"[net] ride: ready on floor {Game.Instance.CurrentFloor}; waiting for the server's floor 12");
-                    _clock = 0; _step = 50;
+                    GD.Print($"[net] ride: ready on floor {Game.Instance.CurrentFloor}; {(net.TestRideJoin ? "the joiner, mid-ride" : "waiting for the server's floor 12")}");
+                    _clock = 0; _step = net.TestRideJoin ? 60 : 50;
                     return;
                 }
                 if (net.TestRejoinOnly)

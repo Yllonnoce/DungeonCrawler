@@ -580,7 +580,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// </summary>
     public override void Restore(ObjectiveStateDto dto)
     {
-        if (NetSession.IsClient) { ApplyNet(dto); return; } // a join or revisit: a client only reads the state (the seats, the train and the doors are the server's)
+        if (NetSession.IsClient) { ShowForward(dto); ApplyNet(dto); return; } // a join or revisit: a client only reads the state (the seats, the train and the doors are the server's)
         base.Restore(dto);
         OrcKeys = dto.OrcKeys ?? false;
         if (dto.GatesUp != null && _rails != null && IsInstanceValid(_rails)) _rails.RestoreGates(dto.GatesUp);
@@ -628,6 +628,20 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         Evaluate();
         if (Completed && _rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(silent: true); }
         RefreshHud();
+    }
+
+    /// <summary>
+    /// Client, at the floor's build (a join, a revisit, a resync): the cages the floor state names open and the orc's keys taken, at
+    /// once and forward only (a cage is never shut and the keys never given back here). The floor state is the server's at that
+    /// build, so a revisited floor does not show its cages shut until the prop check; after the build the cages and the keys come
+    /// only from the PropEvts and the prop state (one writer per fact, as <see cref="ApplyNet"/> says).
+    /// </summary>
+    private void ShowForward(ObjectiveStateDto dto)
+    {
+        if (dto.OpenCages is { } open)
+            foreach (var wagon in _wagons)
+                if (IsInstanceValid(wagon) && !wagon.Open && open.Contains(wagon.Stop)) wagon.SetOpen(true);
+        if (dto.OrcKeys == true && !OrcKeys) OrcKeys = true; // a client's setter takes the keyring off Grisel's belt and tells nothing
     }
 
     /// <summary>The exit room's free floor (no rail, nothing blocking), nearest the down stairs first.</summary>

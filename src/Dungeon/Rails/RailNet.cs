@@ -215,6 +215,32 @@ public partial class RailNet : Node
         GD.Print(FormattableString.Invariant($"[net-server] ride t={t} S={_rails.State.S:0.000} mode={_rails.State.Mode} stop={_rails.StopIndex} armed={ride}"));
         foreach (var c in _live)
             GD.Print(FormattableString.Invariant($"[net-server] ride cart={c.Id} kind={c.Kind} t={t} S={c.Run.State.S:0.000} armed={ride}"));
+        GD.Print(FormattableString.Invariant($"[net-server] ride book t={t} now={now:0.000} {RideBook()}"));
+    }
+
+    /// <summary>
+    /// The RIDE pass: who sits where (the party's cart and each cage wagon, seat by seat: a hero by index, an NPC by id), the train behind
+    /// the cart, and the props' hash, as one word on each side; the script compares a joiner's with the server's on the grid. Test only.
+    /// </summary>
+    private string RideBook()
+    {
+        var b = new System.Text.StringBuilder();
+        b.Append("seats=");
+        BookSeats(b, "P", _rails.Cart);
+        if (ObjectiveController.Instance is CrewRescueController crew)
+            foreach (var wagon in crew.Wagons.Where(w => IsInstanceValid(w)).OrderBy(w => w.Stop))
+                BookSeats(b, "W" + wagon.Stop.ToString(CultureInfo.InvariantCulture), wagon);
+        b.Append(" train=").Append(_rails.Train.Count == 0 ? "-" : string.Join(",", _rails.Train.Select(w => w.Stop)));
+        b.Append(" props=").Append(GetParent() is Node3D root ? PropCheck.Hash(PropSync.Capture(root)).ToString("X8", CultureInfo.InvariantCulture) : "-");
+        return b.ToString();
+    }
+
+    private static void BookSeats(System.Text.StringBuilder b, string name, ICartBody cart)
+    {
+        if (cart is not GodotObject o || !IsInstanceValid(o)) return;
+        var taken = cart.Riders.Values.Where(r => r.Cart == cart && r is GodotObject g && IsInstanceValid(g)).OrderBy(r => r.Seat)
+            .Select(r => r.Seat.ToString(CultureInfo.InvariantCulture) + ":" + (r is Adventurer h ? "h" + h.Index.ToString(CultureInfo.InvariantCulture) : r is Npc n ? n.Id : "?")).ToList();
+        b.Append(name).Append('[').Append(string.Join(",", taken)).Append(']');
     }
 
     private int _rideHammer = int.MinValue;
@@ -241,10 +267,13 @@ public partial class RailNet : Node
         if (_rails.Follower is not { HasState: true } f) return;
         var grid = (long)Math.Floor(serverNow / RideGrid);
         if (grid == _rideGrid) return;
+        var first = _rideGrid == long.MinValue;
         _rideGrid = grid;
+        if (first) return; // the first state may come late in a grid step (a joiner's catch-up): print from the next boundary, as the server does
         var t = (grid * RideGrid).ToString("0.0", CultureInfo.InvariantCulture);
         GD.Print(FormattableString.Invariant($"[net] ride t={t} S={f.S:0.000}"));
         foreach (var cc in _carts.Values)
             if (IsInstanceValid(cc.Body)) GD.Print(FormattableString.Invariant($"[net] ride cart={cc.Id} kind={cc.Kind} t={t} S={cc.Follow.S:0.000}"));
+        GD.Print(FormattableString.Invariant($"[net] ride book t={t} now={serverNow:0.000} {RideBook()}"));
     }
 }

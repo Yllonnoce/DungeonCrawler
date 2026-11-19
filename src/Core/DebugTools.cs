@@ -36,6 +36,7 @@ namespace DungeonCrawler.Core;
 ///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), companions answer the wagon boarders, then a save mid-ride 1 (the thrower stays sent), the heap, a save mid-ride 4 and a one-pumper jump with three wagons; warning timings checked
 ///   --party-level=N     --test-chase levels the party to N first (default 12, the shipped campaign's level by floor 12)
 ///   --physics-hz=N      run the physics at N ticks a second (a headset's rate, as Vr.MatchPhysicsTo sets it); debug and tests only
+///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of ride 4's gap it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
 public partial class DebugTools : Node
@@ -294,6 +295,7 @@ public partial class DebugTools : Node
             else if (arg == "--test-chase") { _testChase = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 420; }
             else if (arg.StartsWith("--physics-hz=")) { _physicsHz = Math.Clamp(int.Parse(arg["--physics-hz=".Length..]), 10, 240); Engine.PhysicsTicksPerSecond = _physicsHz.Value; }
             else if (arg == "--test-tick-rate") { _testTickRate = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 40; }
+            else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
             else if (arg.StartsWith("--test-objective=")) { _testObjective = arg["--test-objective=".Length..].Trim().ToLowerInvariant(); ForcedObjective = _testObjective; ForcedLayout ??= "standard"; ForcedLethality ??= 1f; _quitAfter = 30; }
@@ -861,6 +863,7 @@ public partial class DebugTools : Node
         if (_testRideEdges && !ScriptStalled("ride-edges", _edgeStep)) RunRideEdgesTest();
         if (_testCrew && !ScriptStalled("crew", _crewSection2 ? 100 + _crewStep : _crewStep)) RunCrewTest();
         if (_testChase && !ScriptStalled("chase", _chSection2 ? 100 + _chStep : _chStep)) RunChaseTest();
+        if (_testCartWatchdog && !ScriptStalled("watchdog", _wdStep)) RunCartWatchdogTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

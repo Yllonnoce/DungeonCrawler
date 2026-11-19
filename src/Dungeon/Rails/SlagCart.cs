@@ -51,6 +51,8 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     public string EncounterId { get; init; } = "";
     /// <summary>Its id on the wire (<see cref="Net.CartIds"/>): the server's count of the floor's carts.</summary>
     public int CartId { get; set; }
+    /// <summary>The server's watchdog window for this cart (<see cref="CartWatchdog"/>): a ride's pacing cart or the traffic cart.</summary>
+    internal CartWatchdog.Window Watch;
     /// <summary>A ride's slag cart, or a traffic cart.</summary>
     public Net.CartKind Kind => EncounterId == "traffic" ? Net.CartKind.Traffic : Net.CartKind.Slag;
     /// <summary>The side (+1 its local +X, −1 its −X) that faces the party's lane: the brake shoe is there.</summary>

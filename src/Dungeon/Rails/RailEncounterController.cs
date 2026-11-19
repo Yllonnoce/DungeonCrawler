@@ -271,7 +271,7 @@ public partial class RailEncounterController : Node
             Pace(cart, dt);
             RunOver(cart);
             Warn(cart, party);
-            if (cart.Run.State.S >= _enemy.Length - LineEnd || cart.Run.State.Mode != CartMode.Rolling) { Free(cart); _carts.RemoveAt(i); }
+            if (cart.Run.State.S >= _enemy.Length - LineEnd || cart.Run.State.Mode != CartMode.Rolling || PacingStuck(cart, dt)) { Free(cart); _carts.RemoveAt(i); }
         }
         TickTraffic(dt, party);
         TickRunaway(dt, party);

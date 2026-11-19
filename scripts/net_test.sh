@@ -17,7 +17,10 @@
 #                                     server unseats it quietly beside the lane with its parked pose there; the crew, the gates and the
 #                                     set pieces match: the opened wagon couples on the client within 0.5 s of the departure, the downed
 #                                     crewman's label counts down there, the beam ducks the client's seated camera, ride 3's buckets pour
-#                                     on the server's schedule (0.1 s) and ride 4's hammer falls within 50 ms of the server's)
+#                                     on the server's schedule (0.1 s) and ride 4's hammer falls within 50 ms of the server's;
+#                                     a second client, the Joiner, joins as the cart leaves stop 1: within 1 s of its Ready it holds
+#                                     the cart (within 1.5 m), the seats, the train and the props' hash as the server has them, then
+#                                     boards at stop 2 and rides ride 3 with the first)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -40,12 +43,32 @@ if [ "${RIDE:-}" = 1 ]; then
   # the built-in floor 1 takes a while to build (the socket is not served meanwhile): wait for the server to say it is built
   for i in $(seq 1 180); do grep -q "\[net-server\] floor 1 built" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
   sleep 1
-  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=360 > "$TMP/client.log" 2>&1
+  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=360 > "$TMP/client.log" 2>&1 &
+  CLIENT=$!
+  # the joiner: a second client starts as the cart leaves stop 1, so its Ready falls during ride 2 (it boards at stop 2 and rides ride 3)
+  JOINER=""
+  for i in $(seq 1 720); do
+    grep -q "\[net-server\] ride: the cart departs stop 1 with" "$TMP/server.log" 2>/dev/null && break
+    kill -0 $CLIENT 2>/dev/null || break
+    sleep 0.5
+  done
+  if grep -q "\[net-server\] ride: the cart departs stop 1 with" "$TMP/server.log" 2>/dev/null; then
+    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=240 > "$TMP/joiner.log" 2>&1 &
+    JOINER=$!
+  fi
+  wait $CLIENT 2>/dev/null
+  [ -n "$JOINER" ] && wait $JOINER 2>/dev/null
   for i in $(seq 1 60); do kill -0 $SERVER 2>/dev/null || break; sleep 0.5; done
   kill $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
   echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT|.* left while seated)|Unhandled|ERROR" "$TMP/server.log" | head -50
   echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -50
+  echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -30
   if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
+  # a joiner mid-ride (task 8): ready during ride 2 on the server; 1 s after its Ready it traced joined-mid-ride ok; it boarded at stop 2
+  if ! grep -q "\[net\] RESULT ok" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner's pass)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: Joiner is ready at .*: mid-ride 2" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not ready during ride 2)"; exit 1; fi
+  if ! grep -q "\[net\] ride: joined-mid-ride ok" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never traced joined-mid-ride ok)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: Joiner boarded at stop 2 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded at stop 2)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi
   # the set pieces stand on the client as on the server, and its props (the rail part too) hash as the server's
   if ! grep -q "\[net\] ride: set pieces on the client:" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's floor 12 set pieces were not checked)"; exit 1; fi
@@ -77,9 +100,8 @@ if [ "${RIDE:-}" = 1 ]; then
   if grep -q "\[net-server\] ride: stop 1's .* keyring: at Grisel's belt" "$TMP/server.log" && ! grep -q "\[net\] ride: took the orc's keys through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never took the orc's keys)"; exit 1; fi
   if ! grep -q "\[net\] ride: opened cage 1 through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never opened cage 1)"; exit 1; fi
   if ! grep -q "\[net\] ride: revived .* through the intent" "$TMP/client.log" || ! grep -q "\[net-server\] ride: .* is up again" "$TMP/server.log"; then echo "NET TEST: FAIL (the downed crewman was not revived through the client's intent)"; exit 1; fi
-  for STOP in 1 2; do
-    if ! grep -q "\[net-server\] ride: the cart departs stop $STOP with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart never left stop $STOP for real with the client aboard)"; exit 1; fi
-  done
+  if ! grep -q "\[net-server\] ride: the cart departs stop 1 with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart never left stop 1 for real with the client aboard)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: the cart departs stop 2 with 2 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart never left stop 2 for real with both clients aboard)"; exit 1; fi
   if ! grep -q "\[net\] ride: ride 3's lever offers \"Throw the switch\" .* thrown through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never threw ride 3's switch from the seat)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: the cart takes ride 3's switch .* thrown through the intent" "$TMP/server.log" || ! grep -q "\[net\] ride: the cart crosses here (CrossOut set" "$TMP/client.log"; then echo "NET TEST: FAIL (ride 3's switch thrown by the client did not send the cart across on both)"; exit 1; fi
   # crew, gates and set pieces (task 7): the opened wagon couples here within 0.5 s of stop 1's departure (the cart's Train), the downed
@@ -142,6 +164,40 @@ if [ "${RIDE:-}" = 1 ]; then
   PAIRS_RC=$?
   echo "--- cart S, client vs server: $PAIRS"
   if [ $PAIRS_RC -ne 0 ]; then echo "NET TEST: FAIL (the client's carts did not keep to the server's: $PAIRS)"; exit 1; fi
+  # the joiner and the first client against the server on the grid: their seats (both carts' books, seat by seat), the train and the
+  # props' hash must match the server's within 1 s of the joiner's Ready (with its cart within 1.5 m), the joiner's cart pairs all within
+  # 1.5 m, and after that no book differs except next to a change on the server (a grid point whose neighbours both agree with it)
+  BOOKS=$(awk '
+    FNR == 1 { file++ }
+    function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
+    function key(t) { return sprintf("%.1f", t) }
+    file == 1 && /^\[net-server\] ride t=/ { srv[val("t")] = val("S") }
+    file == 1 && /^\[net-server\] ride book / { sb[val("t")] = val("seats") " " val("train") " " val("props") }
+    file == 2 && /^\[net\] ride book / { cb[val("t")] = val("seats") " " val("train") " " val("props") }
+    file == 3 && /^\[net\] ride: joined mid-ride; ready at t=/ { split($0, a, "ready at t="); split(a[2], b, " "); ready = b[1] + 0 }
+    file == 3 && /^\[net\] ride t=/ { js[val("t")] = val("S") }
+    file == 3 && /^\[net\] ride book / { n3++; jt[n3] = val("t"); jnow[n3] = val("now") + 0; jb[val("t")] = val("seats") " " val("train") " " val("props") }
+    function stable(t) { return (key(t - 0.5) in sb) && (key(t + 0.5) in sb) && sb[key(t - 0.5)] == sb[key(t)] && sb[key(t + 0.5)] == sb[key(t)] }
+    END {
+      match_at = -1
+      for (i = 1; i <= n3; i++) {
+        t = jt[i]; if (jnow[i] < ready) continue
+        if (!(t in sb) || !(t in srv) || !(t in js)) continue
+        d = js[t] - srv[t]; if (d < 0) d = -d
+        if (jb[t] == sb[t] && d <= 1.5) { match_at = jnow[i] - ready; match_t = t; break }
+      }
+      jp = 0; jover = 0; jworst = 0
+      for (t in js) if (t in srv) { d = js[t] - srv[t]; if (d < 0) d = -d; jp++; if (d > jworst) jworst = d; if (d > 1.5) { jover++; print "  joiner pair over 1.5 m: t=" t " server " srv[t] " joiner " js[t] > "/dev/stderr" } }
+      jm = 0; jbad = 0
+      for (t in jb) if ((t in sb) && match_at >= 0 && t + 0 >= match_t + 0) { jm++; if (jb[t] != sb[t] && stable(t + 0)) { jbad++; print "  joiner book differs: t=" t " server " sb[t] " joiner " jb[t] > "/dev/stderr" } }
+      cm = 0; cbad = 0
+      for (t in cb) if (t in sb) { cm++; if (cb[t] != sb[t] && stable(t + 0)) { cbad++; print "  client book differs: t=" t " server " sb[t] " client " cb[t] > "/dev/stderr" } }
+      printf "joiner ready t=%.3f, matched the server (seats, train, props, cart within 1.5 m) %.3f s after its Ready (grid t=%s); joiner cart pairs=%d max=%.3f over=%d; books compared: joiner %d (%d differ), client %d (%d differ)\n", ready, match_at, match_t, jp, jworst, jover, jm, jbad, cm, cbad
+      exit !(ready > 0 && match_at >= 0 && match_at <= 1.0 && jp >= 10 && jover == 0 && jm >= 10 && jbad == 0 && cm >= 20 && cbad == 0)
+    }' "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log")
+  BOOKS_RC=$?
+  echo "--- the joiner and the books, client vs server: $BOOKS"
+  if [ $BOOKS_RC -ne 0 ]; then echo "NET TEST: FAIL (the joiner or the client did not see the ride as the server has it: $BOOKS)"; exit 1; fi
   echo "NET TEST: ok"; exit 0
 fi
 

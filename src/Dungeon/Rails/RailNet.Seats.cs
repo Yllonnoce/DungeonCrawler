@@ -64,13 +64,25 @@ public partial class RailNet
         return new SeatMsg(kind, id, cart, seat, seated, at.X, at.Y, at.Z);
     }
 
+    private readonly List<LiveCart> _catchUpLive = new();
+
     /// <summary>
-    /// Server: the rails as a joiner (or a client that rebuilt the floor) must hold them whatever it missed: a <see cref="SeatMsg"/> for
-    /// every rider seated in the party's cart and the cage wagons, and every leap still in the air (each from its own start time).
+    /// Server: the rails as a joiner (or a client that rebuilt the floor: a floor change, a resync's rebuild, a wipe's reload) must hold
+    /// them whatever it missed: one <see cref="CartStateMsg"/> with every live cart (the party's with its train, boarders and flags, and
+    /// the ride's others with their riders), a <see cref="SeatMsg"/> for every rider seated in the party's cart and the cage wagons, and
+    /// every leap still in the air (each from its own start time). The callers send the floor clock's pair just before, and the props
+    /// (the rail part too) ride in the prop state.
     /// </summary>
     public void SendRailCatchUp(int peer)
     {
         if (!NetSession.IsServer || !Current || NetSession.Instance.Server is not { } world) return;
+        var now = NetSession.Instance.Now;
+        if (RailEncounterController.Instance is { } live && IsInstanceValid(live)) live.CollectNetCarts(_catchUpLive);
+        else _catchUpLive.Clear();
+        var carts = new List<CartStateDto>(_catchUpLive.Count + 1) { _rails.CaptureNet(now) };
+        foreach (var c in _catchUpLive) carts.Add(Capture(c, now));
+        _catchUpLive.Clear();
+        world.SendTo(peer, new CartStateMsg(Game.Instance.CurrentFloor, world.FloorEpoch, carts)); // before the seats and leaps that name them
         SendSeated(world, peer, _rails.Cart, CartIds.Party);
         if (ObjectiveController.Instance is CrewRescueController crew)
             foreach (var wagon in crew.Wagons)

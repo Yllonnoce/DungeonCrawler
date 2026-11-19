@@ -659,14 +659,16 @@ public partial class RailController : Node
         {
             var input = Inputs(party, new CartInput(Party.SlopeAhead, false, 0, _train.Count, Party.Limit));
             Party.Step(input, dt);
+            if (DebugStall) Party.State = State with { S = Party.PrevS, V = 0f }; // a test's stuck cart: it rolls and goes nowhere
             var crashed = HitBlock(); // an obstacle on the party lane: the cart is put back at its face
             JudgeJump(); // a gap's lip: the cart flies, or drops in with its plating gone (wrecked below)
             RunOver(party); // the arrival tick too: the last stretch before the stop is swept
             if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
             else if (crashed) Halt();
             else if (State.Mode == CartMode.Held) { SetCartLayer(); Arrive(); }
-            else Warn(party);
+            else { Warn(party); Watch(dt); }
         }
+        else _partyWatch.Reset();
 
         Party.Sync();
         _train.Sync();
@@ -854,6 +856,7 @@ public partial class RailController : Node
         var companionsWant = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
         var most = DebugTools.Instance?.PumperCap ?? RideInputRules.MaxPumpers; // a test's cap (--test-chase's one-pumper jump); the game's is two
         var (pumpers, brakeOn) = RideInputRules.Inputs(playersPumping, anyBrake, companionsWant, companions, most);
+        _anyBrake = anyBrake; // the watchdog: a rider holding the brake stops the cart on purpose
         _playersPumping = brakeOn ? 0 : playersPumping; // the cart sender's dirty test: a player's pump or brake goes out at once
         var companionPumps = pumpers - (brakeOn ? 0 : playersPumping);
         foreach (var hero in party.Adventurers)
