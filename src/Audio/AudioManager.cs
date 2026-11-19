@@ -230,10 +230,12 @@ public partial class AudioManager : Node
     /// Main's exit: every player under <paramref name="root"/> stopped (the pools, the ambience, the music, every cart's and prop's 3D
     /// player) and the ambience's generator playback this manager holds let go. A player still playing as the engine shuts down leaves its
     /// playback, and the stream under it, in the audio server: reported as "resources still in use" at exit. Stopping them here, before
-    /// the nodes are freed, gives the audio thread its mix cycles to free them first.
+    /// the nodes are freed, gives the audio thread its mix cycles to free them first. A dedicated server does no sound work: it returns
+    /// at once (no tree walk, no wait).
     /// </summary>
     public void StopAllAtExit(Node root)
     {
+        if (NetSession.IsServer) return; // a dedicated server plays nothing, so nothing is left to stop
         _ambientPlayback = null;
         _ambientGen = null;
         StopUnder(root);

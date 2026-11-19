@@ -518,7 +518,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// Forgiven: Grisel, up and seated in the party's cart, calls the ride ahead (her crew in the next cage, then the stair),
     /// once a run. Her call carries that departure: the orc's RideStart taunt is not raised for it (the ride's opening would
     /// otherwise fill the channel). A call still waiting when the cart has left the stop it rides to is dropped, so it never
-    /// names the wrong cage.
+    /// names the wrong cage. The departure is claimed when the call is queued, not when it is said: a call later dropped as
+    /// stale (<see cref="RideLines.CallStillDue"/> false, the channel busy until the cart moved on) does not give the taunt back,
+    /// so that departure has neither her line nor the orc's (rare; accepted, ruled 2026-11-18).
     /// </summary>
     private void GriselNamesTheRide(CartEvent e)
     {
@@ -528,7 +530,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         var left = e.Stop;
         if (AdventureDirector.Instance?.SayAs(g, call, $"grisel:{key}", () => IsInstanceValid(rails)
             && RideLines.CallStillDue(rails.StopIndex, left, rails.State.Mode == CartMode.Held, rails.Halted)) == true)
-            rails.ClaimDeparture();
+            rails.ClaimDeparture(); // claimed at the queue: a call dropped as stale later leaves this departure silent (no taunt back)
     }
 
     /// <summary>Keys of Grisel's calls the floor's plan lacks, warned about once.</summary>

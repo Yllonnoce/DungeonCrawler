@@ -403,6 +403,17 @@ scripts/package.sh               # installable archives under dist/, each with a
 godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered screenshot (--open-map for the full map)
 ```
 
+### Known gaps
+
+- **Godot's exit count.** Godot's "resources still in use at exit" (and its leaked ObjectDB instances) were audio streams and their
+  playbacks: whatever was playing when the engine shut down was still in the audio server, so the count moved from run to run. Main's
+  exit now stops every player and gives the audio thread 100 ms to free them (`AudioManager.StopAllAtExit`; a dedicated server
+  returns at once, as it plays nothing), and the static resource caches (`HitFx`, `Tremor`, `Fire`, `WaterSurface`, `WaterAudio`,
+  `Ripple`, `EnemyBars`, `Synth`, `MinePack`) are released there; nine measured runs (`--quit-after=3`, `--test-ride`,
+  `--test-crew=condemned`, three each) print none. A sound started after that point (nothing does today), or an audio thread that
+  needs more than 100 ms, would bring one back. The wait is a blind sleep, not a poll. The `static readonly` materials in
+  `EliteVisuals` and `SlowPatch` are not released (they are made at type load and never showed in the count).
+
 ## Controls
 
 You possess one of the four characters at a time (the local body); the other three follow and fight on their own.
@@ -594,8 +605,10 @@ key set it starts with `--planner=runware`.
 ## Voice (optional)
 
 **The mine cart chase's lines are not voiced yet.** Every line plan 6 added for floor 12's rides is an unvoiced subtitle (`VoiceId`
-null), waiting for the owner's OK for a paid voice pass. Until then nothing renders them: no bake has been run for them, and a
-headless check runs from a terminal with no keys. They are, by kind and speaker:
+null), waiting for the owner's OK for a paid voice pass. No bake has been run for them, and a headless check runs from a terminal with
+no keys, so such a run renders none of them. A run with keys present is different: with `RUNWARE_API_KEY` or a Gemini key in reach
+(an F5 run from the keyed VS Code profile, for one), floor 12 queues each new line as it plays and `VoiceRenderer` renders it into
+user://voice live, piecemeal, and spends money. They are, by kind and speaker:
 - the six ride taunts (16 lines in `campaign.json`, two stock lines each in `TauntBank.Stock`): Morg Ashtusk, a man (`Voices.Villain`,
   Fenrir, rendered as Dominus);
 - Grisel Thorn's calls `ride1` to `ride4` and `cage` (`npc_grisel.Calls` in `floor_12.json`): a woman (her persona's Despina, rendered
@@ -1491,8 +1504,9 @@ and 5; the second one's name is raised 0.32 m (`CrewRules.LabelLift`, `Npc.SetLa
 
 Tests: `RideLinesTests`, `RideBarksTests`, `TauntTests`, `TauntTimingTests`, `WritingCampaignTests`, `RideSoundTests`,
 `RideMusicTests`, `RailHudTests` and `CrewRulesTests`; headless, `--test-ride` (the taunts, AllAboard, the cart's sound and music),
-`--test-crew` (Grisel's calls through `Npc.Said`, the props' sound after a load) and `--test-chase` (every warning before its hit, the
-music's pitch, the bar after the last wreck); online, the RIDE pass's `[net] ride sound` and `[net] ride: chaser hud` lines.
+`--test-crew` (Grisel's calls through `Npc.Said`, the props' sound after a load, the bar after the last wreck: `[crew] hud after the
+last wreck`) and `--test-chase` (every warning before its hit, the music's pitch); online, the RIDE pass's `[net] ride sound`,
+`[net] ride: chaser hud` and `[net] ride: last-wreck-resync ok` lines.
 
 ### Riding together (online co-op)
 
@@ -1879,6 +1893,7 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 8. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
 9. **The wreck.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 and 2 unused. The joiner sees the Wrecked state and then spare 2's takeover, Held at stop 2 (`wreck-spare`).
 10. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
+11. **The last wreck.** The joiner gets out. 3 s later the server wrecks the cart (`DebugWreck`) until no spare is left, so it stands wrecked and hidden (`wreck-last`). The joiner hears that wreck live (`cart_wreck` at least once). 7 s later it asks for the floor again. Its rebuilt cart's first state carries Wrecked, and that catch-up must play nothing: no wreck shown (`NetWrecksSeen` 0), no `cart_wreck`, no tumble (`last-wreck-resync ok`).
 
 Ride 4's first hammer is paired all through the pass.
 
@@ -1932,13 +1947,6 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
   - it does not take crew on foot;
   - held short of a hole whose far side its limit cannot clear, it waits at the near lip; behind a train held at the end of the line it would wait there for good (its riders may get out).
   - its hop (`SpareRules.Hop`) handles one hole at a time: holes closer together than a cart length are not handled (floor 12 has none).
-- **Godot's exit count.** Godot's "resources still in use at exit" (and its leaked ObjectDB instances) were audio streams and their
-  playbacks: whatever was playing when the engine shut down was still in the audio server, so the count moved from run to run. Main's
-  exit now stops every player and gives the audio thread 100 ms to free them (`AudioManager.StopAllAtExit`), and the static resource
-  caches (`HitFx`, `Tremor`, `Fire`, `WaterSurface`, `WaterAudio`, `Ripple`, `EnemyBars`, `Synth`, `MinePack`) are released there;
-  nine measured runs (`--quit-after=3`, `--test-ride`, `--test-crew=condemned`, three each) print none. A sound started after that
-  point (nothing does today), or an audio thread that needs more than 100 ms, would bring one back. The `static readonly` materials in
-  `EliteVisuals` and `SlowPatch` are not released (they are made at type load and never showed in the count).
 - **A lone remote rider** now faces one rim hound at a time and can reach a wagon's roof hound with its own blade, but a ranged enemy riding a slag cart alongside (ride 2's Forge Priest) is out of a melee rider's reach and wears it down at lethality 1. The pass still tops heroes up.
 
 **VR, not tried in a headset:**
