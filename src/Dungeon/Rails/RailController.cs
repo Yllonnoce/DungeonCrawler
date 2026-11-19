@@ -397,7 +397,11 @@ public partial class RailController : Node
     private void UseCart(Adventurer actor)
     {
         if (NetSession.IsClient || !Current) return;
-        if (actor.Cart == Cart) { GetOutWithParty(actor); return; }
+        if (actor.Cart == Cart)
+        {
+            if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed)) GetOutWithParty(actor); // a downed rider stays slumped in the seat
+            return;
+        }
         if (actor.Seated || actor.Downed || actor.Parked || State.Mode != CartMode.Held) return;
         if (StopIndex >= StopS.Length - 1) return; // the end of the line: nowhere left to ride (the prompt offers nothing either)
         var player = IsPlayer(actor);

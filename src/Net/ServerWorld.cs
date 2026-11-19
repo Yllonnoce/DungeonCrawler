@@ -160,7 +160,7 @@ public partial class ServerWorld : Node
         var elites = main.Builder.FloorRoot?.GetChildren().OfType<Enemy>().Where(e => e.SpawnIndex >= 0 && e.IsElite).OrderBy(e => e.SpawnIndex).ToList() ?? new List<Enemy>();
         if (NetSession.Instance.TestServer) GD.Print($"[net-server] elites on floor {floor}: [{string.Join(", ", elites.Select(e => $"{e.SpawnIndex}:{e.DisplayName}"))}]");
         return new FloorChange(floor, delta, plan, snapshot, state, poses, DynamicEnemies(main.Builder.FloorRoot), firstVisit, main.Builder.Layout?.ContentHash() ?? 0, FloorObjectiveId(main),
-            elites.Select(e => e.SpawnIndex).ToList(), _floorEpoch, resync, NetSession.Instance.Now, main.Builder.FloorSeconds);
+            elites.Select(e => e.SpawnIndex).ToList(), _floorEpoch, resync, main.Builder.FloorStampNow, main.Builder.FloorSeconds); // the pair as the builder stamped it (FloorClockNow)
     }
 
     /// <summary>
@@ -264,8 +264,15 @@ public partial class ServerWorld : Node
         _welcomeEpoch[peer] = _floorEpoch;
         return new Welcome(peer, slot.MemberIndex, game.GameSeed, floor, game.PlaySeconds, game.Victory, adventure, snapshot, state,
             DynamicEnemies(root), main.Party.CaptureState(), Registry.ToDtos(), objective, NetSession.Instance.Tick, layout?.ContentHash() ?? 0, FloorObjectiveId(main), _floorEpoch,
-            NetSession.Instance.Now, main.Builder.FloorSeconds);
+            NetSession.Instance.Now, WelcomeFloorSeconds(main.Builder));
     }
+
+    /// <summary>
+    /// The Welcome's floor seconds for its ServerTime (<c>Now</c>, which also seeds the joiner's NetClock, so it stays exact): the builder's
+    /// stamped pair (<see cref="DungeonBuilder.FloorStampNow"/>) carried on to now, so the pair is the one FloorClockNow would send, never a step stale.
+    /// </summary>
+    private static double WelcomeFloorSeconds(DungeonBuilder builder)
+        => builder.FloorSeconds + Math.Max(0.0, NetSession.Instance.Now - builder.FloorStampNow);
 
     /// <summary>An enemy on the wire: its elite name and affixes ride along so a client dresses and names it, and its spawn index so a planned one sent again (the enemy check) keeps its identity.</summary>
     public static DynamicEnemyDto EnemyDto(Enemy e)

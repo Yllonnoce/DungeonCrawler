@@ -104,11 +104,93 @@ public static class SpareRules
         return land;
     }
 
+    /// <summary>
+    /// Where a hop sets the chaser down (all centre S): <see cref="S"/>, and whether it stands there (<see cref="Held"/>: up against its
+    /// limit); <see cref="NearS"/>, the centre with the front at the first hole's near lip (what this step swept up to the hole is judged
+    /// to there); <see cref="SweepFromS"/>, the centre with the front at the last hopped hole's far lip (the landing is judged from there
+    /// to <see cref="S"/>, so the pit itself sweeps nothing). <see cref="Landed"/>: it got past; false, it stopped short of the near lip.
+    /// </summary>
+    public readonly record struct HopLanding(float S, bool Held, float NearS, float SweepFromS)
+    {
+        public bool Landed => S > NearS;
+    }
+
+    /// <summary>
+    /// The chaser's front reached a hole this step (<see cref="HopPast"/>): where it comes down, never past <paramref name="limit"/> and
+    /// never over a pit. A landing past the limit is pulled back to the limit if the whole body still clears the hole there (its back at
+    /// the far lip or beyond); otherwise it stops short, its front at the first hole's near lip (Held). Null when no hole was reached.
+    /// No allocation.
+    /// </summary>
+    public static HopLanding? Hop(float prevFrontS, float frontS, IReadOnlyList<(float From, float To)> holes, float limit)
+    {
+        if (HopPast(prevFrontS, frontS, holes) is not { } land) return null;
+        var first = float.PositiveInfinity;
+        for (var i = 0; i < holes.Count; i++)
+        {
+            var (from, to) = holes[i];
+            if (prevFrontS < to && frontS >= from && from < first) first = from;
+        }
+        var near = first - CartRules.HalfLength;
+        var s = land - CartRules.HalfLength;
+        var sweepFrom = s - 2f * CartRules.HalfLength - HopClear; // the front at the far lip of the last hole hopped
+        if (s > limit) s = limit;
+        if (s <= near || OverHole(s, holes)) return new HopLanding(near, true, near, near);
+        return new HopLanding(s, limit - s < 0.02f, near, Math.Min(sweepFrom, s));
+    }
+
+    /// <summary>A chaser whose centre is at <paramref name="s"/> stands over one of <paramref name="holes"/> (any part of its body). No allocation.</summary>
+    public static bool OverHole(float s, IReadOnlyList<(float From, float To)> holes)
+    {
+        for (var i = 0; i < holes.Count; i++)
+        {
+            var (from, to) = holes[i];
+            if (s - CartRules.HalfLength < to && s + CartRules.HalfLength > from) return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The chaser's limit pulled back short of any hole it would stand over there: its front at that hole's near lip. A limit past a
+    /// hole by less than a body cannot be reached by a hop, so the chaser waits at the lip instead of hopping and stopping short each
+    /// tick. No allocation.
+    /// </summary>
+    public static float HoleLimit(float limit, IReadOnlyList<(float From, float To)> holes)
+    {
+        for (var pass = 0; pass <= holes.Count; pass++)
+        {
+            var moved = false;
+            for (var i = 0; i < holes.Count; i++)
+            {
+                var (from, to) = holes[i];
+                if (limit - CartRules.HalfLength < to && limit + CartRules.HalfLength > from) { limit = from - CartRules.HalfLength; moved = true; }
+            }
+            if (!moved) break;
+        }
+        return limit;
+    }
+
     /// <summary>The chaser's limit with a live ore heap's face (<paramref name="faceS"/>, +∞ for none) ahead of its front: it halts one half length short of the face, as the party cart does, and never drives through.</summary>
     public static float HeapLimit(float limit, float frontS, float faceS)
         => faceS >= frontS - RollAgain ? Math.Min(limit, faceS - CartRules.HalfLength) : limit;
 
-    /// <summary>The chaser's prompt: "Get out" (the board prompt's word) for a hero seated in it while it stands, else nothing (nobody boards a chaser).</summary>
-    public static string ChaserPrompt(bool seatedHere, bool held)
-        => seatedHere && held ? RideInputRules.BoardPrompt(seatedHere: true, held: true, lastStop: false, heroSeatFree: false, inReach: true) : "";
+    /// <summary>
+    /// The chaser's prompt: "Get out" (the board prompt's word) for a hero seated in it, up, while it stands and its countdown is not in
+    /// its first <see cref="Boarding.MinWait"/> (<see cref="GetOutOpen"/>), else nothing (nobody boards a chaser; a downed rider stays put).
+    /// The server's check and a client's prompt both ask this.
+    /// </summary>
+    public static string ChaserPrompt(bool seatedHere, bool held, bool downed, float boardingLeft)
+        => seatedHere && held && !downed && GetOutOpen(boardingLeft)
+            ? RideInputRules.BoardPrompt(seatedHere: true, held: true, lastStop: false, heroSeatFree: false, inReach: true) : "";
+
+    /// <summary>
+    /// "Get out" is open: no countdown runs (<paramref name="boardingLeft"/> &lt; 0), or it has run <see cref="Boarding.MinWait"/>. The key
+    /// that took the spare, pressed again a beat later, does not set the player straight back down.
+    /// </summary>
+    public static bool GetOutOpen(float boardingLeft) => boardingLeft < 0f || Boarding.Countdown - boardingLeft >= Boarding.MinWait - 1e-4f;
+
+    /// <summary>
+    /// A chase that ends before its chaser ever rolled (its riders got out, or nobody is left in it, during the countdown) gives the spare
+    /// back: parked again and offered again. One that rolled keeps it spent.
+    /// </summary>
+    public static bool GivesSpareBack(bool departed) => !departed;
 }

@@ -41,6 +41,9 @@ public static class RideInputRules
     public static string BoardPrompt(bool seatedHere, bool held, bool lastStop, bool heroSeatFree, bool inReach)
         => seatedHere ? "Get out" : held && !lastStop && heroSeatFree && inReach ? "Board the cart" : "";
 
+    /// <summary>A rider may get out of the cart it sits in only while up: a downed rider stays slumped in the seat (the server's check of a "Get out" intent).</summary>
+    public static bool MayGetOut(bool seatedHere, bool downed) => seatedHere && !downed;
+
     /// <summary>
     /// How far a point in the cart's own frame (<paramref name="x"/> across, <paramref name="y"/> up, <paramref name="z"/> along) lies
     /// from the tub's box: |x| ≤ <paramref name="halfWidth"/>, <paramref name="bottom"/> ≤ y ≤ <paramref name="top"/>,

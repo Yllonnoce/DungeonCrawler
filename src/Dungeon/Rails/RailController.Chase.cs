@@ -18,10 +18,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// halts <see cref="SpareRules.ChaseGap"/> behind the train's last body and never passes it. It never floats over a pit: its front
 /// reaching a jump's gap or a fallen trestle lands it just past (<see cref="SpareRules.HopPast"/>); a live ore heap halts it at the face
 /// (<see cref="SpareRules.HeapLimit"/>) until the heap is cleared. While it stands its riders may get out ("Get out",
-/// <see cref="SpareRules.ChaserPrompt"/>); with no player left in it the chase ends. Once it stands behind a held train (at a stop or
-/// halted) its riders step out beside the lane, the chase ends and the chaser is gone after <see cref="SpareRules.HideSeconds"/>. A wreck,
-/// a load or nobody in it before it leaves ends it at once. The chase is not saved; its spare stays spent. One chase at a time. Never
-/// solo: solo the spares stay looks only.
+/// <see cref="SpareRules.ChaserPrompt"/>, never in the countdown's first <see cref="Boarding.MinWait"/>, never while downed); with no player
+/// left in it the chase ends. Once it stands behind a held train (at a stop or halted) its riders step out beside the lane, the chase ends
+/// and the chaser is gone after <see cref="SpareRules.HideSeconds"/>. A wreck, a load or nobody in it before it leaves ends it at once. A
+/// chase that ends before its chaser ever rolled gives the spare back (<see cref="SpareRules.GivesSpareBack"/>: parked and offered again);
+/// once it has rolled the spare stays spent. The chase is not saved. One chase at a time. Never solo: solo the spares stay looks only.
 /// </summary>
 public partial class RailController
 {
@@ -142,16 +143,17 @@ public partial class RailController
 
     /// <summary>The chaser's prompt for <paramref name="hero"/> (server): "Get out" for its rider while it stands.</summary>
     private string ChaserPromptFor(Adventurer hero)
-        => _chase is { Ended: false } c && IsInstanceValid(c.Cart) ? SpareRules.ChaserPrompt(hero.Cart == c.Cart, c.Run.State.Mode == CartMode.Held) : "";
+        => _chase is { Ended: false } c && IsInstanceValid(c.Cart) ? SpareRules.ChaserPrompt(hero.Cart == c.Cart, c.Run.State.Mode == CartMode.Held, hero.Downed, ChaserBoardingLeft) : "";
 
     /// <summary>
     /// A rider uses the standing chaser (the server's work; a remote player's through its InteractIntent, "spare:{stop}"): it gets out beside
-    /// the lane with its own companions; with no player left in it the chase ends (the rest set down, the chaser gone 2 s later).
+    /// the lane with its own companions; with no player left in it the chase ends (the rest set down, the chaser gone 2 s later). One that
+    /// never rolled is gone at once and gives its spare back. A downed rider, or one in the countdown's first <see cref="Boarding.MinWait"/>, stays.
     /// </summary>
     private void GetOutOfChaser(Adventurer actor)
     {
         if (NetSession.IsClient || !Current || _chase is not { Ended: false } c || !IsInstanceValid(c.Cart) || !IsInstanceValid(actor)) return;
-        if (SpareRules.ChaserPrompt(actor.Cart == c.Cart, c.Run.State.Mode == CartMode.Held).Length == 0) return;
+        if (SpareRules.ChaserPrompt(actor.Cart == c.Cart, c.Run.State.Mode == CartMode.Held, actor.Downed, ChaserBoardingLeft).Length == 0) return;
         _exitTaken.Clear();
         SetDownFromChaser(c.Cart, actor);
         if (IsPlayer(actor))
@@ -162,7 +164,11 @@ public partial class RailController
                 if (rider is Adventurer mate && IsInstanceValid(mate) && OwnCompanion(mate, actor)) SetDownFromChaser(c.Cart, mate);
             _chaseRiders.Clear();
         }
-        if (!PlayerIn(c.Cart)) EndChase(atOnce: false);
+        if (!PlayerIn(c.Cart))
+        {
+            if (SpareRules.GivesSpareBack(c.Departed)) EventBus.Instance.Log($"{actor.State.Name} steps back out of the spare cart.");
+            EndChase(atOnce: !c.Departed); // one that never rolled goes now, and its spare is parked again (EndChase)
+        }
         RefreshHud();
         Flush();
     }
@@ -198,8 +204,12 @@ public partial class RailController
         var trainLimit = ChaseLimitNow();
         var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) && e.GetParent() == GetParent() ? e : null;
         var run = c.Run;
-        // a live ore heap ahead halts it at the face, as the party cart is halted there (the chase itself ends only behind the train)
+        // a live ore heap ahead halts it at the face, as the party cart is halted there (the chase itself ends only behind the train);
+        // a limit it could only reach standing over a hole is pulled back to that hole's near lip (it waits there, never over the pit)
+        if (enc != null) enc.CollectPartyLaneHoles(_chaseHoles);
+        else _chaseHoles.Clear();
         var limit = enc != null ? SpareRules.HeapLimit(trainLimit, run.FrontS, enc.LiveHeapFaceAhead(run.FrontS)) : trainLimit;
+        if (_chaseHoles.Count > 0) limit = SpareRules.HoleLimit(limit, _chaseHoles);
         if (!c.Boarded)
         {
             CountChasers(party, c.Cart, out var seated, out var living);
@@ -219,8 +229,8 @@ public partial class RailController
             run.Limit = Mathf.Max(limit, run.State.S); // the train never backs: a limit behind S would only pull the chaser back
             var prevFront = run.FrontS;
             run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit), dt);
-            if (enc != null) HopHoles(c, enc, prevFront);
-            ChaseRunOver(party, c);
+            HopHoles(party, c, prevFront);
+            ChaseRunOver(party, c); // nothing left to sweep after a hop (it settled)
             if (run.State.Mode == CartMode.Rolling) enc?.WarnPartyLane(run, c.Cart, _chaseWarned, party);
             if (run.State.Mode == CartMode.Held) { run.Settle(); c.Cart.CollisionLayer = ChaserHeldLayer; }
         }
@@ -237,20 +247,29 @@ public partial class RailController
 
     /// <summary>
     /// The chaser's front reached a hole in the party line this step (a jump's gap, a fallen trestle): it is set down just past it, its
-    /// riders shaken (never past its limit). The client's follower catches up (a snap past 3 m). No allocation.
+    /// riders shaken, never past its limit and never over a pit (<see cref="SpareRules.Hop"/>: with no room past the hole it stops at the
+    /// near lip). Anything on the rails is rolled over: the step up to the near lip is swept as ever, then the landing from the far lip to
+    /// the landing front (the pit itself sweeps nothing). The client's follower catches up (a snap past 3 m). No allocation.
     /// </summary>
-    private void HopHoles(Chase c, RailEncounterController enc, float prevFront)
+    private void HopHoles(PartyController party, Chase c, float prevFront)
     {
-        enc.CollectPartyLaneHoles(_chaseHoles);
-        if (_chaseHoles.Count == 0 || SpareRules.HopPast(prevFront, c.Run.FrontS, _chaseHoles) is not { } front) return;
         var run = c.Run;
-        var s = Mathf.Min(front - CartRules.HalfLength, run.Limit);
-        ChaserHops++;
-        GD.Print($"[rails] the spare cart hops the line's hole at front S={run.FrontS:0.0}: set down at S={s:0.0}");
-        run.State = run.State with { S = s, Mode = run.Limit - s < 0.02f ? CartMode.Held : CartMode.Rolling };
+        if (_chaseHoles.Count == 0 || SpareRules.Hop(prevFront, run.FrontS, _chaseHoles, run.Limit) is not { } hop) return;
+        var from = run.FrontS;
+        run.State = run.State with { S = Mathf.Min(run.State.S, hop.NearS) };
+        ChaseRunOver(party, c); // this step's run up to the near lip (PrevS .. the lip)
+        run.State = run.State with { S = hop.S, Mode = hop.Held ? CartMode.Held : CartMode.Rolling, V = hop.Held ? 0f : run.State.V };
+        if (hop.Landed)
+        {
+            run.PrevS = hop.SweepFromS;
+            ChaseRunOver(party, c); // the landing: from the far lip to where its front comes down
+            ChaserHops++;
+            GD.Print($"[rails] the spare cart hops the line's hole at front S={from:0.0}: set down at S={hop.S:0.0}");
+            foreach (var rider in c.Cart.Riders.Values)
+                if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.1f, 0.4f);
+        }
+        else GD.Print($"[rails] the spare cart has no room past the line's hole at front S={from:0.0}: it stops at the near lip, S={hop.S:0.0}");
         run.Settle(); // nothing swept or rendered across the pit
-        foreach (var rider in c.Cart.Riders.Values)
-            if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.1f, 0.4f);
     }
 
     /// <summary>Heroes up in the world not riding the train, and how many of them sit in the chaser: its countdown's "all aboard". No allocation.</summary>
@@ -294,6 +313,7 @@ public partial class RailController
     {
         if (_chase is not { Ended: false } c) return;
         c.Ended = true;
+        if (SpareRules.GivesSpareBack(c.Departed)) _spares.GiveBack(c.Stop); // it never rolled: the spare stands parked again ("restored")
         c.HideAt = _now + SpareRules.HideSeconds;
         if (IsInstanceValid(c.Cart))
         {

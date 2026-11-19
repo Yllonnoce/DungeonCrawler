@@ -77,7 +77,8 @@ public partial class RailEncounterController
 
     private bool Reserve(Node3D dest, Enemy hound, out int spot)
     {
-        spot = dest is MineCart cart ? cart.ReserveBoarderSpot(hound) : ((CageWagon)dest).ReserveBoarderSpot(hound);
+        // the party cart opens one rim spot per awake hero seated in it (at most its two): a lone rider faces one hound at a time
+        spot = dest is MineCart cart ? cart.ReserveBoarderSpot(hound, SetPieceRules.RimSpotsOpen(cart.AwakeHeroesSeated())) : ((CageWagon)dest).ReserveBoarderSpot(hound);
         return spot >= 0;
     }
 

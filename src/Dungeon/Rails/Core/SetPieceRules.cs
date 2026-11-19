@@ -46,6 +46,14 @@ public static class SetPieceRules
     public const float SlagTrafficEvery = 25f;
     public const float LeapWindup = 0.8f;
     public const float LeapRange = 6f;
+    /// <summary>The party cart's rim has this many boarder spots (front-left, back-right).</summary>
+    public const int RimSpots = 2;
+
+    /// <summary>
+    /// The party cart's rim spots open to a leaping hound: one per awake hero seated in it, at most <see cref="RimSpots"/>, so a
+    /// lone rider faces one hound at a time (the next tries a wagon, or leaps and misses beside the lane). A party of two or more is unchanged.
+    /// </summary>
+    public static int RimSpotsOpen(int awakeHeroesSeated) => Math.Clamp(awakeHeroesSeated, 0, RimSpots);
 
     static long Mod(long a, int m) { var r = a % m; return r < 0 ? r + m : r; }
 

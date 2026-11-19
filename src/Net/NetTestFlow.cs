@@ -150,8 +150,9 @@ public partial class NetTestFlow : Node
         {
             var hero = party.Adventurers[rider.MemberIndex];
             var held = rc.State.Mode == Dungeon.Rails.CartMode.Held;
-            // the pass checks the wire, not the fight: the client's hero rides rides 2 and 3 through the hounds, and its fall would wipe the
-            // party (the only player) and reload the floor under the script, so the server keeps it topped up (a test hook); on ride 4 the kiln's
+            // the pass checks the wire, not the fight: the client's hero rides rides 2 and 3 through the hounds (it swings at its boarders from
+            // the seat, FightBoarders) and ride 2's Forge Priest, and its fall would wipe the party (the only player) and reload the floor under
+            // the script, so the server keeps it topped up (a test hook, TopUp); on ride 4 the kiln's
             // golem, hammers and pour dent the cart, and a wreck would end the joiner's chase under the script, so its plating is kept up too
             TopUp(hero);
             if (rc.StopIndex == 3 && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.State.Plating < 50f)
@@ -251,7 +252,7 @@ public partial class NetTestFlow : Node
             var chase = _joinSpareHeldRefused && _chaseTaken && _chaseDone && _chaseGapOk && _chaseSetDown && _chaseHops >= 1; // ride 4's gap is always cut
             var thrown = _joinThrown;
             var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner && chase && thrown && _wreckOk && _heapHalt;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; the left-behind spare: refused while the train was held at stop 3 {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; the wreck at the end of the line with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {_wreckSpare}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}; the heroes topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; the left-behind spare: refused while the train was held at stop 3 {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; the wreck at the end of the line with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {_wreckSpare}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {RideLastStop}"));
             return;
         }
         if (_elapsed > 560) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
@@ -336,10 +337,17 @@ public partial class NetTestFlow : Node
 
     private static string Yes(bool b) => b ? "yes" : "NO";
 
-    /// <summary>A player's hero is kept above 75% hp through the RIDE pass (it checks the wire, not the fight).</summary>
+    /// <summary>
+    /// The riders fight their boarders from the seat (FightBoarders, on each client), but a lone warrior cannot answer ride 2's Forge Priest
+    /// shooting from its slag cart 5-6 m off (the fix wave's first run: 129 hp down to 23 by stop 2), so a player's hero is still kept
+    /// above this share of its hp (its fall would wipe the party under the script; the pass checks the wire, not the fight). Each top-up is logged.
+    /// </summary>
+    private const float TopUpBelow = 0.75f;
+
     private void TopUp(Party.Adventurer hero)
     {
-        if (hero.Downed || hero.State.Hp >= hero.State.Stats[Characters.Stat.MaxHp] * 0.75f) return;
+        if (hero.Downed || hero.State.Hp >= hero.State.Stats[Characters.Stat.MaxHp] * TopUpBelow) return;
+        GD.Print(FormattableString.Invariant($"[net-server] ride: top-up: {hero.State.Name} at {hero.State.Hp:0}/{hero.State.Stats[Characters.Stat.MaxHp]:0} hp (stop {Dungeon.Rails.RailController.Instance?.StopIndex}, ride {Dungeon.Rails.RailEncounterController.Instance?.ArmedRide} armed, seated {hero.Seated})"));
         hero.State.FullRestore();
         EventBus.Instance.RaiseMemberChanged(hero.Index);
         _rideTopUps++;
@@ -886,6 +894,7 @@ public partial class NetTestFlow : Node
     /// </summary>
     private void RideClientTick(NetSession net, ClientWorld client, Main main)
     {
+        FightBoarders(main);
         switch (_step)
         {
             case 50:
@@ -989,6 +998,33 @@ public partial class NetTestFlow : Node
         }
     }
 
+    // fighting back (the fix wave): seated in the party's cart, the RIDE pass's riders swing at the hounds on its rim and, from the seat,
+    // at a hound on a coupled wagon's roof within reach (a player's blow reaches it as a companion's does). The server swings them
+    private double _fightAt;
+    private int _fightSwings;
+
+    private void FightBoarders(Main main)
+    {
+        if (main.Party?.Local is not { Seated: true, Downed: false } me || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || me.Cart != rc.Cart) return;
+        var now = Time.GetTicksMsec() / 1000.0;
+        if (now - _fightAt < 0.5) return;
+        Enemies.Enemy? target = null;
+        var best = float.MaxValue;
+        foreach (var h in rc.Cart.Boarders)
+            if (h != null && IsInstanceValid(h) && h.IsAlive && h.Carrier == rc.Cart && h.GlobalPosition.DistanceTo(me.GlobalPosition) is var d && d < best) { best = d; target = h; }
+        foreach (var wagon in rc.Train)
+        {
+            if (!IsInstanceValid(wagon) || !wagon.Coupled) continue;
+            foreach (var h in wagon.Boarders)
+                if (h != null && IsInstanceValid(h) && h.IsAlive && h.Carrier == wagon && h.GlobalPosition.DistanceTo(me.GlobalPosition) is var d && d <= Characters.CompanionBrain.BoarderReach && d < best) { best = d; target = h; }
+        }
+        if (target == null) return;
+        _fightAt = now;
+        me.AimAt(target.GlobalPosition + Vector3.Up * 0.4f);
+        me.Attack();
+        if (_fightSwings++ % 10 == 0) GD.Print(FormattableString.Invariant($"[net] ride: fighting from the seat: swing {_fightSwings} at {target.DisplayName} on {target.Carrier?.Name} {best:0.00} m away; our hp {me.State.Hp:0}"));
+    }
+
     // the joiner (plan 5 task 8): the RIDE pass's second client joins during ride 2
     private double _joinReadyAt = -1, _joinStateAt = -1, _joinSeatsAt = -1;
     // the first client on ride 4 (plan 5 task 9)
@@ -1021,6 +1057,7 @@ public partial class NetTestFlow : Node
     /// </summary>
     private void RideJoinerClient(NetSession net, ClientWorld client, Main main)
     {
+        FightBoarders(main);
         var rc = Dungeon.Rails.RailController.Instance is { } r && IsInstanceValid(r) ? r : null;
         var me = main.Party?.Local;
         switch (_step)

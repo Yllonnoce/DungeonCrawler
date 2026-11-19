@@ -404,8 +404,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         _vr?.TurnTo(Rotation.Y);
     }
 
-    /// <summary>Companions aim their eyes at a point so melee casts and projectiles go where they look.</summary>
-    private void AimAt(Vector3 point)
+    /// <summary>Companions aim their eyes at a point so melee casts and projectiles go where they look (the RIDE pass's scripted riders too).</summary>
+    internal void AimAt(Vector3 point)
     {
         FaceToward(point);
         var eye = Camera.GlobalPosition;
@@ -817,11 +817,24 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         Velocity = Seated ? Cart!.Velocity : pose.Velocity;
         SetCrouch(pose.Crouch);
         Guarding = pose.Guard && Party.CanGuard(State);
-        // the window opens only when the server can charge for it, in the same step: a start reported here is one already judged payable
-        var (dodgeStarted, parryStarted) = Defense.ApplyRemote(pose.Dodge, pose.Parry, dt, State.Stamina, canParry: !Party.CanGuard(State));
+        // the window opens only when the server can charge for it, in the same step: a start reported here is one already judged payable.
+        // A seat allows guard and parry only, as SeatedTick does for a local rider: a seated body ignores the pose's dodge
+        var (dodgeStarted, parryStarted) = Defense.ApplyRemote(pose.Dodge && !Seated, pose.Parry, dt, State.Stamina, canParry: !Party.CanGuard(State));
         Defense.UpdateGuard(dt, Guarding);
         if (dodgeStarted) { State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.DodgeStamina); DodgesMade++; EventBus.Instance.RaiseMemberChanged(Index); }
         if (parryStarted) { State.Stamina = Math.Max(0f, State.Stamina - DefenseRules.ParryStamina); EventBus.Instance.RaiseMemberChanged(Index); }
+        if (Seated)
+        {
+            // a seated rider is carried, not walking: its pose's velocity is the cart's. Shown as SeatedTick shows a local rider (sitting
+            // still, no dance, no footsteps, no wading), so every screen sees the same ride
+            InWater = false;
+            if (_model != null && !Downed)
+            {
+                if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
+                ShowGait(0f);
+            }
+            return;
+        }
         var wasInWater = InWater;
         InWater = Main.Instance?.Builder.IsInWater(GlobalPosition) == true;
         if (InWater) Wade(dt, !wasInWater);
@@ -1323,28 +1336,62 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         _meleeCast.ForceShapecastUpdate();
         var hitSomething = false;
         var perfectSaid = false;
-        var struck = new List<ICombatTarget>(2);
+        var targetStruck = false;
         for (var i = 0; i < _meleeCast.GetCollisionCount(); i++)
         {
             if (_meleeCast.GetCollider(i) is not ICombatTarget target || !target.IsAlive) continue;
-            struck.Add(target);
+            if (Target != null && ReferenceEquals(target, Target)) targetStruck = true;
             hitSomething = true;
             var result = Strike(target, attack, heavy, perfect, heavyMultiplier);
             if (perfect && result.Hit && !perfectSaid) { perfectSaid = true; EventBus.Instance.RaisePerfectBlow(Index); }
         }
         // a hound on a coupled cage wagon's roof is struck from below (from a cart seat, or the ground beside the wagon) out to
-        // CompanionBrain.BoarderReach, where the brain chose it: the blow lands on that boarder only, never on anything else that far
-        if (Control == ControlKind.Companion && Target is { } boarder && IsInstanceValid(boarder) && boarder.IsAlive && OnWagonRoof(boarder) && !struck.Contains(boarder)
+        // CompanionBrain.BoarderReach: a companion's where the brain chose it; a player's (here or remote: the server swings it) when the
+        // blow met nothing else, the nearest one within the swing's cone. The blow lands on that boarder only, never on anything else that far
+        if (Control == ControlKind.Companion && Target is { } boarder && IsInstanceValid(boarder) && boarder.IsAlive && OnWagonRoof(boarder) && !targetStruck
             && boarder.GlobalPosition.DistanceTo(GlobalPosition) <= CompanionBrain.BoarderReach)
         {
             hitSomething = true;
             Strike(boarder, attack, heavy, perfect, heavyMultiplier);
+        }
+        else if (!hitSomething && RoofBoarderInSwing() is { } roof)
+        {
+            hitSomething = true;
+            Strike(roof, attack, heavy, perfect, heavyMultiplier);
         }
         if (!hitSomething && IsLocal) EventBus.Instance.Log($"{m.Name} swings at nothing.");
     }
 
     /// <summary>A creature riding the roof of a cage wagon coupled behind the cart (a boarding hound).</summary>
     private static bool OnWagonRoof(Enemy e) => e.Carrier is CageWagon wagon && IsInstanceValid(wagon) && wagon.Coupled;
+
+    /// <summary>
+    /// A player's melee blow that met nothing (server or solo): the nearest hound riding a coupled wagon's roof within
+    /// <see cref="CompanionBrain.BoarderReach"/> and the swing's cone (<see cref="CompanionBrain.InBoarderSwing"/>), as a companion
+    /// reaches one; null for a companion (its brain picks its own) or with none there. No allocation.
+    /// </summary>
+    private Enemy? RoofBoarderInSwing()
+    {
+        if (Control == ControlKind.Companion || RailController.Instance is not { } rails || !IsInstanceValid(rails)) return null;
+        var aim = -Camera.GlobalTransform.Basis.Z;
+        var from = GlobalPosition;
+        Enemy? best = null;
+        var bestD = float.MaxValue;
+        var train = rails.Train;
+        for (var i = 0; i < train.Count; i++)
+        {
+            var wagon = train[i];
+            if (!IsInstanceValid(wagon) || !wagon.Coupled) continue;
+            foreach (var hound in wagon.Boarders)
+            {
+                if (hound == null || !IsInstanceValid(hound) || !hound.IsAlive || !OnWagonRoof(hound)) continue;
+                var to = hound.GlobalPosition - from;
+                var d = to.Length();
+                if (d < bestD && CompanionBrain.InBoarderSwing(aim.X, aim.Z, to.X, to.Z, d)) { best = hound; bestD = d; }
+            }
+        }
+        return best;
+    }
 
     /// <summary>One blow on one target, and everything a blow that lands sets off. <paramref name="contact"/>: the blade was seen to touch it.</summary>
     private DamageResult Strike(ICombatTarget target, AttackProfile attack, bool heavy, bool perfect, float heavyMultiplier, bool contact = false, float carry = 1f)
@@ -1415,7 +1462,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             else s.LastTip = null;
         }
         if (s.Time < BladeRules.Ends(s.Move)) return;
-        if (s.Cut.Count == 0) EventBus.Instance.Log($"{State.Name} swings at nothing.");
+        if (s.Cut.Count == 0)
+        {
+            // a blade that met nothing still reaches a hound on a wagon's roof above it, as an instant blow does (MeleeSwing)
+            if (RoofBoarderInSwing() is { } roof) Strike(roof, s.Attack, s.Heavy, s.Perfect, s.HeavyMultiplier);
+            else EventBus.Instance.Log($"{State.Name} swings at nothing.");
+        }
         _blade = null;
     }
 

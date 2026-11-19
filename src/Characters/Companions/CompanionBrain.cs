@@ -85,6 +85,24 @@ public static class CompanionBrain
     /// boarders get it: a sword still reaches nothing else beside the line that it did not before.
     /// </summary>
     public const float BoarderReach = 3.9f;
+    /// <summary>A player's blow that met nothing still finds a roof boarder this far either side of where it aims (flat, degrees).</summary>
+    public const float BoarderSwingCone = 45f;
+
+    /// <summary>
+    /// A player's melee blow that met nothing lands on a roof boarder at (<paramref name="toX"/>, <paramref name="toZ"/>) from the body (flat)
+    /// and <paramref name="distance"/> away (body to body): within <see cref="BoarderReach"/>, and within <see cref="BoarderSwingCone"/> of the
+    /// aim (<paramref name="aimX"/>, <paramref name="aimZ"/>, flat). One straight overhead is in the swing whichever way it aims.
+    /// </summary>
+    public static bool InBoarderSwing(float aimX, float aimZ, float toX, float toZ, float distance)
+    {
+        if (distance > BoarderReach) return false;
+        var aimLen = MathF.Sqrt(aimX * aimX + aimZ * aimZ);
+        var toLen = MathF.Sqrt(toX * toX + toZ * toZ);
+        if (toLen < 1e-3f) return true;
+        if (aimLen < 1e-6f) return false;
+        var cos = (aimX * toX + aimZ * toZ) / (aimLen * toLen);
+        return cos >= MathF.Cos(BoarderSwingCone * MathF.PI / 180f) - 1e-6f;
+    }
     /// <summary>A boarder biting crew, that this companion can strike from where it is, counts as this much nearer: it comes first.</summary>
     public const float CrewBiterPull = 10f;
 

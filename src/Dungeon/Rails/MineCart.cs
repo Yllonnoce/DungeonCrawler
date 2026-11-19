@@ -115,7 +115,7 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     public const float BoarderLift = 0.25f;
     /// <summary>The two boarder spots on the rim in the cart's space (x, z): 0 front-left, 1 back-right.</summary>
     static readonly Vector2[] BoarderSpots = { new(-TubWidth / 2f + 0.08f, -0.55f), new(TubWidth / 2f - 0.08f, 0.55f) };
-    public const int BoarderCount = 2;
+    public const int BoarderCount = SetPieceRules.RimSpots;
     /// <summary>Who holds each boarder spot (reserved at a leap's start, so two leaps never take one spot), null when free.</summary>
     public Enemy?[] Boarders { get; } = new Enemy?[BoarderCount];
 
@@ -128,12 +128,29 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
         return GlobalTransform * new Transform3D(new Basis(Vector3.Up, yaw), new Vector3(at.X, TubBottom + TubHeight + BoarderLift, at.Y));
     }
 
-    /// <summary>Take a free boarder spot for <paramref name="who"/>: its index, or −1 when both are held (a held spot whose holder is gone is free).</summary>
-    public int ReserveBoarderSpot(Enemy who)
+    /// <summary>
+    /// Take a free boarder spot for <paramref name="who"/>: its index, or −1 when none is free (a held spot whose holder is gone is free).
+    /// <paramref name="open"/>: how many spots may be held at once (<see cref="SetPieceRules.RimSpotsOpen"/>; the party cart's awake riders).
+    /// </summary>
+    public int ReserveBoarderSpot(Enemy who, int open = BoarderCount)
     {
+        var held = 0;
+        for (var i = 0; i < Boarders.Length; i++) if (!SpotFree(i)) held++;
+        if (held >= open) return -1;
         for (var i = 0; i < Boarders.Length; i++)
-            if (Boarders[i] == null || !GodotObject.IsInstanceValid(Boarders[i]) || Boarders[i]!.IsQueuedForDeletion() || !Boarders[i]!.IsAlive) { Boarders[i] = who; return i; }
+            if (SpotFree(i)) { Boarders[i] = who; return i; }
         return -1;
+    }
+
+    private bool SpotFree(int i) => Boarders[i] == null || !GodotObject.IsInstanceValid(Boarders[i]) || Boarders[i]!.IsQueuedForDeletion() || !Boarders[i]!.IsAlive;
+
+    /// <summary>Heroes seated in this cart who are awake (not downed, not parked). No allocation.</summary>
+    public int AwakeHeroesSeated()
+    {
+        var n = 0;
+        foreach (var rider in Riders.Values)
+            if (rider is Adventurer hero && GodotObject.IsInstanceValid(hero) && !hero.Downed && !hero.Parked) n++;
+        return n;
     }
 
     /// <summary>Give the spot back (only if <paramref name="who"/> still holds it).</summary>

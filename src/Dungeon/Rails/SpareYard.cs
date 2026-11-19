@@ -106,6 +106,18 @@ public sealed class SpareYard
         Hide(stop);
     }
 
+    /// <summary>
+    /// The stop's spare is not spent after all (a chase whose chaser never rolled, <see cref="SpareRules.GivesSpareBack"/>): parked again
+    /// beside the platform, shown and solid, and told "restored" (server). False when it was not spent.
+    /// </summary>
+    public bool GiveBack(int stop)
+    {
+        if (!_used.Remove(stop)) return false;
+        Park(stop);
+        Tell(stop, "restored");
+        return true;
+    }
+
     /// <summary>The stop's spare has been spent (a takeover or a chase), as this peer knows it.</summary>
     public bool IsUsed(int stop) => _used.Contains(stop);
 

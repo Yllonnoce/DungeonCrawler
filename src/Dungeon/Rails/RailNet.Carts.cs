@@ -25,6 +25,17 @@ public partial class RailNet
         public Enemy? Rider;
         /// <summary>The riders' net ids by spot as the server last named them (−1 none).</summary>
         public readonly int[] Wanted = { -1, -1, -1 };
+        /// <summary>A chaser's countdown seconds left as the server last told (−1 none), and this client's server time then.</summary>
+        public float BoardingLeft = -1f;
+        public double BoardingAt;
+
+        /// <summary>The chaser's countdown seconds left now, run on from the server's last word (−1 none). No allocation.</summary>
+        public float BoardingLeftNow()
+        {
+            if (BoardingLeft < 0f) return -1f;
+            if (NetSession.Instance?.Client is not { } client) return BoardingLeft;
+            return Math.Max(0f, BoardingLeft - (float)(client.ServerNow - BoardingAt));
+        }
     }
 
     private readonly Dictionary<int, ClientCart> _carts = new();
@@ -87,6 +98,7 @@ public partial class RailNet
         }
         cc.Run.Limit = d.Limit;
         cc.Follow.Apply(d, now);
+        (cc.BoardingLeft, cc.BoardingAt) = (d.BoardingLeft, now);
         if (cc.Chaser is { } chaser) chaser.CollisionLayer = d.Mode == (byte)CartMode.Held ? 1u | 8u : 0u; // solid and a thing to use (its rider's "Get out") while it stands, as the server's
         for (var i = 0; i < cc.Wanted.Length; i++) cc.Wanted[i] = d.RiderNetIds != null && i < d.RiderNetIds.Count ? d.RiderNetIds[i] : -1;
         Bind(cc);
@@ -135,7 +147,7 @@ public partial class RailNet
                 // a left-behind player's spare running after the train: the party's tub, its riders seated by SeatMsgs; standing, its rider's "Get out" goes as spare:{stop}
                 var chaser = new MineCart { Name = $"ChaserCart{d.Cart - CartIds.ChaserBase}", CartId = d.Cart, CollisionLayer = 1u | 8u }.AsChaser();
                 var follow = cc.Follow;
-                chaser.PromptFor = hero => SpareRules.ChaserPrompt(hero.Cart == chaser, follow.HasState && follow.Mode == CartMode.Held); // the server's rule, from its state
+                chaser.PromptFor = hero => SpareRules.ChaserPrompt(hero.Cart == chaser, follow.HasState && follow.Mode == CartMode.Held, hero.Downed, cc.BoardingLeftNow()); // the server's rule, from its state
                 root.AddChild(chaser);
                 cc.Body = chaser;
                 cc.Chaser = chaser;

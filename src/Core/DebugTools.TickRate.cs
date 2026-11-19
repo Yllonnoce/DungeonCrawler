@@ -12,7 +12,6 @@ namespace DungeonCrawler.Core;
 public partial class DebugTools
 {
     private bool _testTickRate;
-    private int? _physicsHz;
     private HammerPhase? _trHammerWas;
     private SpikePhase? _trSpikesWas;
     private readonly List<ulong> _trHammerAt = new();
