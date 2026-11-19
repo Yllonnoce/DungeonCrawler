@@ -8,7 +8,7 @@ namespace DungeonCrawler.Core;
 // The party cart's watchdog (plan 5 task 8) on the built-in campaign's floor 12 (no enemies): the human boards at the landing; on
 // ride 1 the cart is caught (a test hook: it rolls and goes nowhere) while the human holds the brake for 15 s, and nothing frees it;
 // the brake let go, it grinds free to stop 1 as an arrival 10 s later (the brake closed the window: a fresh one opens at the let-go).
-// The window is fixed, not sliding: a cart caught partway through one is freed at the end of the next, 10 to 20 s after it stopped. Then from stop 3 on ride 4 it is caught short of the jump gap:
+// The window re-anchors at each half-metre of progress: a caught cart is freed 10 s after it last moved. Then from stop 3 on ride 4 it is caught short of the jump gap:
 // the watchdog sets it at the gap's near lip at the jump's speed, and the jump is judged (the cart leaps it), never carried across.
 // Prints [watchdog] lines and a RESULT.
 public partial class DebugTools
@@ -95,7 +95,7 @@ public partial class DebugTools
             case 7:
                 if (rc.GroundFree == _wdFreedBefore)
                 {
-                    if (_wdClock > 2f * CartWatchdog.WindowSeconds + 2f) Fail($"the caught cart was not freed on ride 4 after {_wdClock:0.0} s (mode {rc.State.Mode}, S={rc.State.S:0.0}, V={rc.State.V:0.00}, halted {rc.Halted}, stop {rc.StopIndex}, seated [{string.Join(", ", party.Adventurers.Where(a => IsInstanceValid(a) && a.Seated).Select(a => $"{a.State.Name}:{a.Control}"))}])");
+                    if (_wdClock > CartWatchdog.WindowSeconds + 2f) Fail($"the caught cart was not freed on ride 4 after {_wdClock:0.0} s (mode {rc.State.Mode}, S={rc.State.S:0.0}, V={rc.State.V:0.00}, halted {rc.Halted}, stop {rc.StopIndex}, seated [{string.Join(", ", party.Adventurers.Where(a => IsInstanceValid(a) && a.Seated).Select(a => $"{a.State.Name}:{a.Control}"))}])");
                     break;
                 }
                 _wdLeapt = rc.Jumped;
