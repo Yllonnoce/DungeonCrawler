@@ -266,6 +266,13 @@ the buffer's blockade, the heap's rocks, the timber frames and the pocket lanter
 stand in when a piece is missing, and a dedicated server loads nothing. The pack is stylised, so its timber and rocks are drawn in
 the game's own materials. The track runs on Poly Haven's `rusty_metal_02` rails and `old_planks_02` sleepers over a
 `gravel_floor_02` ribbon, and the slag, coals and cinders are ambientCG's `Lava004` with its emission map. `RideAssets` lists every file.
+The slag carts' and runaway wagons' tubs (`Cart_2`, `Cart_1`) are the pack's bright cartoon red; `MinePack` tones them to a dark
+rusted oxblood (`MinePack.EnemyTubTint`, one albedo multiply on a copy of the shared material, so the axles keep the original).
+The ride's sound is 23 clips in `assets/audio/rails/`, cut by hand from Freesound CC0 previews; see LICENSES.md for each source,
+author and cut. `Dungeon/Rails/Core/RideSound.cs` names them as cues (`RideSound.Clips`, with a few Kenney Impact reuses;
+`RideSound.Loops` are the looping ones), and `AudioManager` loads them beside its own cues. The chase track,
+`chase_determined_pursuit.ogg`, is CC0 from OpenGameArt, downloaded by hand (not by `scripts/fetch_music.py`), and listed in
+LICENSES.md with the music.
 After adding files under `assets/`, run `godot --headless --import --path .` once so Godot imports them.
 
 ## Build, test, run
@@ -585,6 +592,23 @@ The dedicated server takes `RUNWARE_API_KEY` beside `CLAUDE_API_KEY` (`deploy/st
 key set it starts with `--planner=runware`.
 
 ## Voice (optional)
+
+**The mine cart chase's lines are not voiced yet.** Every line plan 6 added for floor 12's rides is an unvoiced subtitle (`VoiceId`
+null), waiting for the owner's OK for a paid voice pass. Until then nothing renders them: no bake has been run for them, and a
+headless check runs from a terminal with no keys. They are, by kind and speaker:
+- the six ride taunts (16 lines in `campaign.json`, two stock lines each in `TauntBank.Stock`): Morg Ashtusk, a man (`Voices.Villain`,
+  Fenrir, rendered as Dominus);
+- Grisel Thorn's calls `ride1` to `ride4` and `cage` (`npc_grisel.Calls` in `floor_12.json`): a woman (her persona's Despina, rendered
+  as Abby);
+- the six ride barks (`RideBarks`, topped up into every bark set): each hero in their own class voice; Brand, Wren and Ilex are men,
+  Sable is a woman;
+- the three rail encounter lines (`RailEncounters[].Line` in `floor_12.json`): the narrator (Charon, rendered as Mortimer).
+
+The crew stay silent, and Oskar Vell keeps only his kill barks. Once the owner OKs it, the pass needs no code change: run
+`--bake-kill-barks=assets/voice/builtin` (it tops up every bark set from the stock banks, the ride barks among them, and gives the
+lines their ids) and `--bake-all-voice=assets/voice/builtin` (every line the shipped campaign can say, the taunts, Grisel's calls and
+the rail lines included), each with `--builtin --ai` and the voice flags as in "Build, test, run". Then copy
+`assets/voice/builtin/all-plans` over `data/adventures/builtin` and run `--import`.
 
 **Old audio is swept.** A bank file's name is its line's content id, so a rebake or a changed delivery style leaves the
 previous audio behind as dead weight. Every bake ends by sweeping the bank it wrote for (`VoiceBankSweep`,
@@ -1295,7 +1319,7 @@ even as a reinforcement.
 
 The other pieces of ride 4. Three drop hammers stand 3 m apart on the floor's metronome (`DungeonBuilder.FloorTick`). Each
 cycle is 4.5 s: up 1.6 s, a red glow for 1.5 s (the warning, `hammer_wind`), a 0.15 s fall, 0.5 s down and 0.75 s to rise.
-Each hammer runs 45 ticks (0.75 s, two beats at 160 BPM) behind the last, so all three fall on the beat of ride 4's music. A hammer that falls on the cart takes 15 plating and shakes the riders (never
+Hammer i runs i·45 ticks (0.75 s, two beats at 160 BPM) ahead of hammer 0 (`SetPieceRules.HammerIndexOffsetTicks`), so all three fall on the beat of ride 4's music. A hammer that falls on the cart takes 15 plating and shakes the riders (never
 mangling a seated rider). A walker under it is crushed by the lethality. The pour runs on a 10.5 s clock: 6 s dry, 1.5 s of
 warning (the lip glows, `pour_hiss`), then 3 s of pouring. A cart through the stream loses 20 plating and each seated hero
 is burned twice, once per pour. A walker in it burns every 0.8 s. Its quench valve (`QuenchValve`, a layer-4 prop on the side
@@ -1359,6 +1383,116 @@ after its warning, and the run ends with a table of each kind's first hit. A mis
 Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check), `tests/Dungeon/RailCurvesTests.cs`
 (the smoothed rail centrelines), `tests/Dungeon/Rails/*` (the engine-free cart rules, `SetPieceRulesTests` among them) and
 `tests/Adventure/RailEncounterPlanTests.cs` (the ride plans and their validation). `tests/` is local and not in git.
+
+### Lines, sound and music
+
+Every line the ride says is chosen on the server or in single player; clients hear it on the paths they already had:
+`NarrationMsg` for the orc and the narrator, `BarkMsg` for the heroes (it names its speaker by party index, so it only carries a
+hero) and `NpcSay` for Grisel. The ride adds no wire message (the protocol stays at 17). Every new line is a subtitle until the
+owner OKs a paid voice pass (see "Voice").
+
+**The orc's taunts.** Morg Ashtusk taunts six ride moments (`TauntTrigger.RideStart`, `RolledOver`, `CartWrecked`,
+`SlagDerailed`, `GolemEntrance`, `BufferSmashed`), each through `AdventureDirector.RailTaunt`, which does nothing on a client:
+- RideStart: `RailController.Flush`, on a Departed event from stops 0 to 2 (`RideLines.TauntFor`: rides 1 to 3; ride 4's opening
+  belongs to the golem). It is urgent and held up to `TauntDirector.RideHoldSeconds` (10 s) while a line is being said. It is not raised
+  when a `CartEvents` listener claims the departure (`RailController.ClaimDeparture`, called synchronously inside the handler: Grisel's
+  ride call carries it). `[rails] departed stop N: ride-start taunt said or held=…` is printed.
+- CartWrecked: `Flush`, on a Wrecked event, urgent.
+- RolledOver: the director's `MemberKilledByHazard` handler, in place of Crushed when the source is a cart (`RunOverRules.IsCartSource`:
+  the warden cart, a slag cart, a runaway wagon, the spare cart).
+- SlagDerailed: `SlagCart.Derail`, after its log line.
+- GolemEntrance: `SpawnGolem`, after the wall line, urgent and held up to `GolemHoldSeconds` (10 s) for it.
+- BufferSmashed: `TickBuffer`, after the smash log, urgent and held up to `RideHoldSeconds`.
+
+The campaign carries 16 of his own (`campaign.json`: RideStart 4, RolledOver 3, CartWrecked 2, SlagDerailed 3, GolemEntrance 2,
+BufferSmashed 2; the RideStart line that names Grisel forbids `grisel_forgiven`), and `TauntBank.Stock` two plain lines with clean
+twins for each. They are house triggers: the planner's prompt does not offer them. `CartEvents` listeners are isolated: one that throws
+is logged (`GD.PushError`) and costs neither that event's taunt nor the rest of the batch.
+
+**The heroes' calls.** `BarkTrigger.CartComing`, `AllAboard`, `Heads`, `HoundLeap`, `LineBlocked` and `JumpCall`
+(`Adventure/Core/Voice/RideBarks.cs`, topped up into every bark set by `CampaignRepair.TopUpSet`) are said through
+`RailCalls.Say` and `AdventureDirector.CallOut`, which skips the bark cooldowns. The caller is the first hero seated in the cart
+who is up and is a companion, else the first player's hero there (`RideLines.CallerIndex`: companions speak first). With nobody to
+say it the old text goes to the log. Where each is called:
+- CartComing: both `Warn`s (the party cart's and the encounter carts'), 3 s ahead (`RailWarn`);
+- Heads: a low beam;
+- HoundLeap: a hound leaping for the cart;
+- LineBlocked: a live ore heap on the line;
+- JumpCall: the jump;
+- AllAboard: `StartBoarding(call: true)`, for a boarding someone got into or one a gate's lift started, never for an arrival or a
+  cleared halt restarting the countdown under seated riders.
+
+Each raises `RailCalls.Called` (a test hook). `Voices.BarkDelivery` shouts CartComing, Heads and LineBlocked, says HoundLeap and
+JumpCall frantically and AllAboard cheerfully.
+
+**Grisel's calls.** `NpcPlan.Calls` (keyed lines; `CallFor(key)`) on `npc_grisel` in `floor_12.json` holds `ride1` to `ride4`
+(`RideLines.GriselCallFor`: the ride from stop 0 to 3) and `cage` (`RideLines.CageCall`). `CrewRescueController` says them with
+`AdventureDirector.SayAs(npc, line, onceKey, stillDue)`: `npc.Say` here and `NpcSay` to clients, once per floor and key
+(`call:{floor}:{key}`, marked in `BarksSaid`), 0.05 s after the speech channel frees, never as narration. Forgiven and seated in the
+party's cart, she names the ride ahead at each departure and claims it, so no RideStart taunt is raised for it. A ride call still
+waiting is dropped once it is stale (`RideLines.CallStillDue`: the cart has gone on from the stop it rode to, or a spare set it back).
+Her `cage` word at a lock she works is said within `CrewRescueController.CageCallSeconds` (10 s) of the lock or not at all.
+Condemned, she says nothing.
+
+**Sound.** Every cart body carries a `CartSound`: the party's cart, its spares and chasers, the runaway wagons, the slag and traffic
+carts, and the golem's runner with its wheels off. It keeps five pooled 3D players on the SFX bus (the roll and screech loops, the
+clack, the edge cues, and the bell on its own so a hit never cuts a warning off) and a wheel-spark emitter. Each rendered frame it is
+fed what that peer shows: the server's and single player's own `CartRun`, a client's `CartFollower` (plan 5's synced S, V, mode, flags,
+plating and track). `RideSound` (engine-free) turns that into:
+- the roll's volume and pitch by speed;
+- a screech on a bend or under hard braking;
+- a clack at every joint (2.4 m);
+- the bell for a body ahead (`RailWarn`, at most every 4 s);
+- one edge cue a feed: a crash, a jump, a landing, a hit (the golem's slam when the golem stands beside it), the brake squeal of an
+  arrival, or the points' clunk of a track change or a lane crossing.
+
+The first feed, and the first after `Prime()` (a restore, a client's follower snap of more than 1 m or onto another track), only
+primes. A wrecked or hidden cart, or one beyond 45 m (`RideSound.Audible`) of the camera, is silent; a dedicated server builds nothing.
+
+`RideAudio.At` plays a prop's or a set piece's one-shot at a point (`AudioManager.PlayAt`), culled when it starts beyond its range of
+the camera. On the server and in single player each prop plays its cue in the method that makes the noisy change (`Lift`, `Toggle`, the
+heap's knock, the valve's `Burst`, `Collapse`, `Smash`); a client plays it from the live `PropEvt` through `RideAudio.OnProp`
+(`RideSound.PropCueOf`), at the prop's one `ISoundPoint`. The hammers, the pour and the buckets hear their own floor clock on every
+peer, priming on the first frame and on a clock that jumped. The hammers' and the pour's cue range ends 2 m short of stop 3
+(`SetPieceRules.CueRange`), so a cart held there never hears them; a range of 0 plays nothing (`SetPieceRules.CueAudible`: a 3D
+player reads a `MaxDistance` of 0 as unlimited). `RideSoundscape`, a child of the RailController, keeps the foundry rumble loop, the
+rail song as a rolling cart nears the local hero on foot (`RideSound.SingDb`), and a trestle creak every 9 to 16 s at a timber frame
+near the camera.
+
+**Why nothing rail-side is broadcast.** No rail cue goes through `EventBus.PlaySfx` (a source scan in `RideSoundTests` pins it, and
+the RIDE client counts zero rail `SfxMsg`s). A relayed cue would play twice on the peer that made it, and flat, wherever the listener
+stands. Every peer already has the synced state, so each plays every cue once, where its own copy of the cart or prop stands. The
+quiet paths (a restore or a load, a quiet gate lift, a PropState catch-up, a follower snap) tell distinct values or nothing, and
+play nothing.
+
+**Music.** The Chase mood (`MusicDirector`, `Dungeon/Rails/Core/RideMusic.cs`) is wanted while the party cart rolls with the local
+hero seated in it or within 30 m, or while a live chase's chaser rolls with them in it, and for 4 s after (`RideMusic.Wanted`). Rides 1
+to 3 loop `RideMusic.ChaseTrack`. Ride 4 plays `RideMusic.PourTrack` once through, started at `RideMusic.PhaseSeek` of the floor
+clock so its downbeat (`PourBeatOrigin`) meets hammer 0's fall, and locked again each time it ends (`RideMusic.TrackFor`; a chaser's
+ride is the one from `RideMusic.StopBehind` its S). That is the phase lock:
+- the hammers' cycle is 4.5 s, twelve beats at 160 BPM;
+- hammer i runs i·45 ticks (two beats) ahead of hammer 0, so every hammer falls on a beat;
+- the beat meets the start of each fall, where `hammer_fall` plays, 0.15 s before the visual slam;
+- the track measures 159.66 BPM, so it plays at `RideMusic.PourPitch` (160/159.66, +3.7 cents) and every other track at pitch 1 (the two
+  players are reused). `--test-chase` checks the front player's pitch every frame.
+
+**The cart bar.** `RailHud.Text(RailHudState)` (engine-free) gives the HUD line, branch for branch as before ("Cart — wrecked",
+"Cart — line blocked", "Cart — gate down", "Cart — 80% — departs in 3", "Cart — rolling", "Cart — on the line", "Cart — at the
+landing", "Cart — end of the line", "Cart — at stop N"). A hidden party cart (a wreck no spare replaced; on a client, the Hidden flag)
+shows nothing. While the local hero sits in the chaser (`ChaseLive`; on a client `RailNet.ClientChaserHud`), the bar shows the
+chaser's own line at any distance from the train, with no plating bar: "Spare cart — departs in N", "Spare cart — after the train"
+while it rolls, "Spare cart — behind the train" once held.
+
+**Lamps and labels.** Every cart carries a head lamp (`Dungeon/Rails/CartLamp.cs`): a spot down the track, a small glow and an
+emissive lens facing forward, warm white on the party's cart, its spares and chasers, hot orange on the slag carts and runaway wagons.
+The lamp hangs on the cart node, never on its "Body", which a tumble duplicates. The two crew in a cage wagon stand at bench seats 4
+and 5; the second one's name is raised 0.32 m (`CrewRules.LabelLift`, `Npc.SetLabelLift`, set in `CageWagon.Admit` and reset in
+`Release`) so the names do not overlap.
+
+Tests: `RideLinesTests`, `RideBarksTests`, `TauntTests`, `TauntTimingTests`, `WritingCampaignTests`, `RideSoundTests`,
+`RideMusicTests`, `RailHudTests` and `CrewRulesTests`; headless, `--test-ride` (the taunts, AllAboard, the cart's sound and music),
+`--test-crew` (Grisel's calls through `Npc.Said`, the props' sound after a load) and `--test-chase` (every warning before its hit, the
+music's pitch, the bar after the last wreck); online, the RIDE pass's `[net] ride sound` and `[net] ride: chaser hud` lines.
 
 ### Riding together (online co-op)
 
@@ -1795,9 +1929,16 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - A boarder freed silently at a ride's end stands as a ghost for up to about 4 s.
 - Hammers step at 60 Hz in a headset.
 - **The chaser:**
-  - it has no HUD line or departure cue (plan 6);
   - it does not take crew on foot;
   - held short of a hole whose far side its limit cannot clear, it waits at the near lip; behind a train held at the end of the line it would wait there for good (its riders may get out).
+  - its hop (`SpareRules.Hop`) handles one hole at a time: holes closer together than a cart length are not handled (floor 12 has none).
+- **Godot's exit count.** Godot's "resources still in use at exit" (and its leaked ObjectDB instances) were audio streams and their
+  playbacks: whatever was playing when the engine shut down was still in the audio server, so the count moved from run to run. Main's
+  exit now stops every player and gives the audio thread 100 ms to free them (`AudioManager.StopAllAtExit`), and the static resource
+  caches (`HitFx`, `Tremor`, `Fire`, `WaterSurface`, `WaterAudio`, `Ripple`, `EnemyBars`, `Synth`, `MinePack`) are released there;
+  nine measured runs (`--quit-after=3`, `--test-ride`, `--test-crew=condemned`, three each) print none. A sound started after that
+  point (nothing does today), or an audio thread that needs more than 100 ms, would bring one back. The `static readonly` materials in
+  `EliteVisuals` and `SlowPatch` are not released (they are made at type load and never showed in the count).
 - **A lone remote rider** now faces one rim hound at a time and can reach a wagon's roof hound with its own blade, but a ranged enemy riding a slag cart alongside (ride 2's Forge Priest) is out of a melee rider's reach and wears it down at lethality 1. The pass still tops heroes up.
 
 **VR, not tried in a headset:**
