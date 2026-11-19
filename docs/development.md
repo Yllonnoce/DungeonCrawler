@@ -319,6 +319,8 @@ godot --headless --path . -- --builtin --ai --voice-provider=runware --voice-mod
 godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an enemy and the lead in the run, crushed and mangled, no auto-revive, a companion pulls the lead free, the villain gloats, a barrel jams the second run, saved, loaded, phase and kills survive
 godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
 godot --headless --path . -- --test-tick-rate --physics-hz=90   # floor 1: the drop hammer's beat and the periodic spike cycle on the floor clock (DungeonBuilder.FloorTick) take 4.5 s of wall time; prints [tick-rate] RESULT ok hammer=<s> spikes=<s> (run it bare for 60 Hz; --physics-hz=N runs the physics at a headset's rate, debug only)
+godot --headless --path . -- --test-cart-watchdog   # floor 12, no enemies: a caught cart braked 15 s is not freed; let go it grinds free to stop 1 10 s later; caught short of ride 4's gap it is set at the lip and leaps it; prints [watchdog] RESULT
+RIDE=1 scripts/net_test.sh                           # floor 12 in co-op: a server, a client and a joiner ride the whole line (see Rails, "Riding together"); run it alone, about 3 minutes
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
 godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
 godot --headless --path . -- --test-vault-puzzle --no-ai  # every floor of the story and of 150 seeded runs through FloorSolvability, each puzzle floor printed with its answer and solved on the real levers; prints [vault] RESULT
@@ -334,7 +336,7 @@ godot --headless --path . -- --test-floors --seed=N # walk-off detector: steps f
 godot --headless --path . -- --builtin --floor=N --inspect=X,Y   # print a cell's 7x7 neighbourhood: cell type, level, grid items, ray hits
 godot --headless --path . -- --test-structures                    # picks a seed whose floors 1-4 hold a gate, a camp, a pond and a stream; checks braziers, hut walls, bandits at the fire, water beds, 45° corners, wading
 godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   # stand N cells back from a node (Gate_, Camp_, Water_, Barrel0, Enemy...) and look at it; --face-cell=X,Y:N for a grid cell; --face-node=chamfer:N for the first cut corner, --face-node=buckled for a heaved tile, --face-node=bridge for a stream's bridge, --face-node=vault / groin for the ceiling (add --vault=pointed etc. to force a profile)
-godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back
+godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back; the VR comfort level round-trips through Save/Load
 godot --path . -- --test-horde --screenshot=out.png                 # floor 3 nest room: stream, kill, spent; the screenshot is taken mid-stream
 godot --path . -- --drop=item.iron_key,item.health_potion,item.longsword --screenshot=out.png   # lay sample items in front of the party (every 2nd magic, every 3rd rare)
 godot --path . -- --builtin --equip=item.hand_axe --screenshot=out.png --after=3   # put a weapon in the lead's hands half a second in, to check the first-person view (any weapon item id: hand_axe, greatsword, mace, spear, ...; or a legendary's id, leg.sluicebreaker, to see its glow)
@@ -1068,7 +1070,7 @@ must lie in order along the party track, or the floor gets no cart (an error is 
 (`FloorStateDto.RailStop`; a ride under way keeps the stop it left) and who was seated (`FloorStateDto.RailRiders`, party
 indices). A load or a re-entry puts the cart Held at the stop it last reached, with full plating and nobody aboard: the
 saved riders, anyone set down inside the cart and anyone standing on a rail cell step out beside it, on cells of their own
-where there is room. Co-op clients only see the cart parked at the first stop for now. `--test-ride` rides floor 12
+where there is room. Online every client rides the same cart (see "Riding together" below). `--test-ride` rides floor 12
 of the built-in campaign at lethality 3:
 board, run over an enemy on the way to stop 1, save and load there, a companion jumping out at speed, and a wreck.
 `--test-ride-edges` covers the edges: a companion downed at boarding gets up far behind the rolling cart and never
@@ -1093,7 +1095,7 @@ Grisel on the condemned branch), is dropped ("crew <id>: dropped (id taken)"). T
 
 A jailbreak floor with a rail line runs `CrewRescueController` (`Adventure/Objectives/CrewRescueController.cs`) in place of
 the walk-in `JailbreakController`; floors without rails (floors 2 and 13) keep the walk-in jail as it was. Every state
-change is the server's (or solo's); a client only reads the objective state for the HUD line until plan 5 syncs the rest.
+change is the server's (or solo's); a client shows the crew, the cages, the keys and the gates as the server tells them (see "Riding together").
 The jail room stays a locked vault with nobody in its cells.
 
 The gates. Each intermediate stop whose room holds a guard or defend collective gets a `RailGate` across both tracks (the
@@ -1193,7 +1195,7 @@ It clamps `At` to 0.05..0.95, trims a slag cart to 3 riders, and caps the lists 
 
 `RailEncounterController` (`Dungeon/Rails/RailEncounterController*.cs`) is a node under the floor root. It is made after
 the objective only when the floor has a `RailController` and either list, so every other floor is untouched. It is server
-only: a co-op client gets the enemies through the usual snapshots and sees nothing else of it yet (plan 5). The party
+only: a co-op client gets the enemies through the usual snapshots and builds the set pieces as dressing (see "Riding together"). The party
 cart's departure from stop k−1 arms ride k. Lone standers, throwers and the golem appear at the departure, so they are
 already there to be seen. Every other item starts as the cart passes its `At`. The cart arriving, being wrecked or restored,
 or the party going on foot clears the ride's live items: slag carts and their riders go silently. A ride armed again (after
@@ -1347,6 +1349,440 @@ Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check
 (the smoothed rail centrelines), `tests/Dungeon/Rails/*` (the engine-free cart rules, `SetPieceRulesTests` among them) and
 `tests/Adventure/RailEncounterPlanTests.cs` (the ride plans and their validation). `tests/` is local and not in git.
 
+### Riding together (online co-op)
+
+On a dedicated server the rails belong to the server.
+- **The server** steps every cart and judges every run-over, hit, jump, halt, wreck and gate. It owns the seat books.
+- **A client** builds the same floor and the same set pieces, but only as dressing. It poses and animates them, and it asks through intents. It never changes ride state.
+- **Single player** has none of this: there is no `RailNet` and no clock to follow. Its rides are the ones above, at any physics rate.
+
+Protocol 17 carries it (see the note under Multiplayer). The code:
+- the wire: `src/Net/Core/CartNet.cs`;
+- the sender and a client's copies: `Dungeon/Rails/RailNet.cs` (with `RailNet.Seats.cs`, `RailNet.Carts.cs`, `RailNet.Leaps.cs`), `RailController.Net.cs` and `RailEncounterController.Net.cs`;
+- the engine-free rules, each with its tests in `tests/`: `Dungeon/Rails/Core/` (`CartFollower`, `CartSendRules`, `CartSeats`, `RideInputRules`, `PropPromptRules`, `SetPieceRules`, `CartWatchdog`, `SpareRules`) and `Party/Core/ComfortRules.cs`.
+
+#### The server clock and the floor clock
+
+**The server clock.** A client keeps an estimate of the server's `NetSession.Instance.Now` (`ClientWorld.Clock`, a `NetClock`; `Net/Core/NetClock.cs`).
+- The Welcome's `ServerTime` seeds it.
+- Every pong is a sample: offset `serverTime − (sentAt + now) / 2`, round trip `now − sentAt`.
+- It takes the median offset of the last 9 samples whose round trip is at most twice the median round trip. `ClientWorld.Rtt` is that median round trip.
+- The client pings every second (it was every two). Its `Ping` also carries that round trip, and the server keeps it per member (capped at 2 s) for the lever's lag allowance (below).
+
+**The floor clock.** `DungeonBuilder.FloorSeconds` is the floor's running time.
+- On the server and in single player it is the sum of the physics steps' `delta` since the floor was built. `ElapsedSeconds` is a compensated sum, exact for hours, so a 90 Hz headset in single player keeps real time.
+- `FloorTick` is `FloorClock.TickOf(FloorSeconds)`. It is the 60 Hz metronome that the periodic spike beds, the drop hammers, the pour and the Kiln run on. At 60 Hz it counts the physics ticks as before.
+
+**The pair.** The server publishes pairs of (`FloorSeconds`, its `Now`).
+- **Where the pair is stamped:** in `DungeonBuilder._PhysicsProcess`, where the floor time is made. `DungeonBuilder.FloorStampNow` is the `Now` at which `FloorSeconds` was set. `ServerWorld.FloorClockNow()` sends that stamp, so the pair is not a physics step stale. Before this fix it was, which made a client's hammers fall 15-35 ms late.
+- **When it is sent:**
+  - in a transient `FloorClockMsg` (kind 7), every second on a railed floor and every two elsewhere;
+  - to a peer on its Ready (`OnFloorReady`) and in the join catch-up;
+  - never while the server changes floor or rebuilds one.
+- **The Welcome and every `FloorChange`** build their own pair from `Now`, which also seeds the `NetClock`. That pair can be up to a step stale. The `FloorClockMsg` sent on Ready replaces it within a round trip.
+
+**On a client.** `FloorSeconds` is `FloorClock.Read(ServerNow)`, read once per physics tick.
+- It slews to the latest pair at 0.9-1.1x real time.
+- It snaps only when more than 0.25 s off (a server stall, a new floor), and otherwise never goes back.
+- It drops a pair about another floor or build, and starts again at every `FloorChange`.
+
+**Timed things go in server seconds**, never in ticks: hazard phases (`HazardPhaseMsg` carries the server's time and the phase's length; `HazardSync.SecondsIn`), cart states, `ArmedAt`, leaps and the boarding countdown.
+
+**Cadences run by elapsed time.** Every send cadence goes through the engine-free `Cadence`, on both sides:
+- snapshots 1/20 s, vitals 1/10 s, `FlushSync` 0.1 s, the objective state 2 s;
+- the ready-check count 1 s;
+- the client's pose 1/30 s, with its 0.5 s idle heartbeat;
+- the cart corrections 0.2 s, and the ride intent's 0.25 s resend.
+
+At 60 Hz each fires on the same ticks as the old `tick % n`. The ping is the exception: it went from 2 s to 1 s on purpose.
+
+**Hammers and the pour in a headset.** They read the integer `FloorTick`, so on a faster headset their motion steps at 60 Hz (accepted). `--test-tick-rate`, bare and with `--physics-hz=90`, checks that the hammer's and the spike bed's 4.5 s cycles take 4.5 s of wall time.
+
+#### Cart state, corrections and dead reckoning
+
+**Ids.** Every cart has an id (`CartIds`):
+- the party's cart is 0;
+- a ride's slag, traffic, runaway and golem carts are numbered from 1 for each floor build;
+- a cage wagon is 1000 plus its stop;
+- a chaser is 2000 plus its stop.
+
+**The state.** Each cart has a `CartStateDto`:
+- track (0 the party line, 1 the enemy line, 2+k the k-th spur) and direction;
+- S, V, mode and Limit (the integrator's StopAt);
+- the integrator's input: pumpers, brake, crew wagons, commanded speed;
+- plating and stop;
+- flags: Halted 1, Wrecked 2, Hidden 4, LineBlocked 8, GateClear 16, Derailed 32, ChaseLive 64;
+- the server's time of the state.
+
+The party's cart adds:
+- the lane blend's two S, the gap and the jump's take-off speed (NaN for none);
+- `BlockedAt`, the heap's face (NaN for none);
+- the boarding countdown (−1 for none);
+- the coupled wagons' stops;
+- the boarders;
+- the armed ride and the server's time when it armed.
+
+Slag and golem carts name their riders' net ids by spot (−1 for an empty spot; net id 0 is a real id).
+
+**The sender.** A `RailNet` node exists only on a networked floor. On the server it runs after the rail controllers' ticks (`ProcessPhysicsPriority` 100).
+- **One `CartStateMsg` (kind 8)** goes out per physics tick that changed any cart.
+  - The party's cart changes on any `CartEvent`, or on a change of `RailController.NetSignature()`: mode, stop, flags, lane and gap, train, boarding, plating, the wreck count, the boarders, a player's brake or pump, and the armed ride.
+  - The other carts change on a spawn, a spur taken or a change of riders. A free or a derail is sent as a state flagged Hidden (plus Derailed).
+- **The wreck frame.** A wreck is counted (`RailController.Wrecks`), not read from its event, because a wreck judged inside the encounter controller's tick is flushed one tick late. When a spare took over in the same tick, `CartSendRules.NeedsWreckFrame` sends a state with Wrecked set first, then the takeover's Held state. A client plays the tumble on Wrecked's rising edge (`CartSendRules.WreckedRose`), before the state moves the cart.
+- **Hidden.** On the party's cart, Hidden means a wreck with no spare left. A client hides the cart only and leaves the coupled wagons shown, as the server's `HideWreck` does.
+- **Corrections.** A transient `CartCorrectionMsg` (kind 9) with every live cart goes out every 0.2 s. A client frees any other cart that a correction leaves out.
+
+**The follower.** A client's cart follows a `CartFollower`, which allocates nothing per frame.
+- **`Apply(state, serverNow)`:**
+  - A state older than the last one on the same track is ignored.
+  - It steps a copy of the state with `CartPhysics` from the state's server time to now, in whole 1/60 s steps (at most 30), and banks the part step. Slopes come from the client's own tracks (`ISlopeSource`).
+  - It snaps on the first state, on a track change, on Held or Wrecked (Held snaps to the server's S), and when the error is over 3 m.
+- **`Advance(dt)`, each rendered frame:**
+  - It measures the error at the start of the frame.
+  - It renders S at V + clamp(2·error, ±max(0.15·V, 0.5 m/s)), clamped to the Limit.
+  - The rendered S never moves backwards while V ≥ 0.5 m/s. Below that it may ease back at up to 0.5 m/s.
+- **The heap (`BlockedAt`).**
+  - The server sends `BlockedAt` while the line is blocked and the cart is not across on the enemy lane, which is the test `HitBlock` applies.
+  - While the state's S has not passed the face, the follower clamps both its own S and the rendered S at `BlockedAt − Dir·HalfLength`, with V 0 there.
+  - The Limit and the physics input are left alone, so the prediction runs into the face rather than braking for it. The Held state that follows lands exactly there, so there is no backward step.
+- **A spur track the client cannot find** is skipped. It logs one warning per track, and the next state retries.
+- **`Snaps`** counts the jumps of the rendered S. **`AuthS` and `AuthV`** give the server's ride without the rendered corrections; VR comfort reads them.
+
+**The client's party cart.** `RailController.ApplyNet` applies the stop, the halt, the lane, the gap, the train (`CartTrain.UncoupleAll`, then `Couple`), the flags and the HUD line. `LineBlocked` and `GateClear` come from the flags. The countdown is `BoardingLeft` less the server time since the state.
+
+`ClientPose`, each rendered frame, poses the cart, its train, its riders and its boarders at the follower's S.
+
+**The client's other carts.** `RailNet` builds them with the server's own constructors, as dressing.
+- They have no sweep, pace or warning. A brake shoe still misses to a client's hit.
+- Each follows its own follower on its own track.
+- Their riders are bound lazily by net id, because a cart's state can arrive before its riders spawn. A carried enemy ignores snapshot positions.
+- A client's slag cart places its brake shoe from its own build S. A cart first seen through a correction on a bend may put the shoe on the other side; this is visual only.
+
+#### Seats and poses
+
+**`SeatMsg` (kind 13).** It carries the rider kind (0 a hero by member index, 1 an NPC by id), the cart's id, the seat, and seated or not, with the landing spot when not.
+- The server hears `RiderChanged` on the party's cart, on every cage wagon (subscribed on the first tick each stands) and on the chaser. Each change goes out after the tick's cart state.
+- A client books exactly that seat (`CartSeats.Put`). It refuses an index outside 0..5. A different occupant already there gets out where it sits, then `Put` runs again.
+- The message is idempotent. An unseat sets the rider down at the landing.
+
+**Pose v2.** The binary `Pose` is 45 bytes with the kind. It appends:
+- `SeatYaw`: where a seated body looks from its seat, all the way round for a companion;
+- `PoseFlags2`: Seated 1, Pumping 2.
+
+The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128 while seated. `PoseBuffer` blends the seat yaw the short way round and takes `Flags2` from the nearer sample. A client's pose also goes out when its `SeatYaw` changes by more than 0.001 rad or its `Flags2` changes.
+
+**The server's side.**
+- **A body the server has seated** is judged by `body.Seated`, never by the client's flag. From its pose the server takes only:
+  - the seat yaw (wrapped, clamped to ±150°, 0 if not finite);
+  - the pitch;
+  - the flags.
+
+  It ignores the position and the client's Pumping bit.
+- **Every server unseat of a remote player** goes through one place. That covers `Adventurer.GetOut` (stops, set-downs, wrecks, throws) and a `Teleport` of a seated body. It:
+  - resets the body's remote position, yaw and velocity;
+  - sends that peer a `ForcePose` at the landing;
+  - drops its poses still flagged Seated until one is not;
+  - clears its ride intent.
+- **A server `Shove`** of a remote body drops its poses still in flight from the old spot, for up to 1 s (`PoseGuardRules.DropAfterShove`).
+- **An `AttackIntent` from a seated body** turns the seat yaw (`Adventurer.AimSeated`), never the body.
+
+**Others.**
+- A seated NPC never takes a snapshot position on a client. NPC seat yaw is not on the wire, so a seated NPC faces its seat's forward.
+- In a headset the seat yaw follows the head, in single player too.
+
+#### Leaps and boarders
+
+**`LeapMsg` (kind 14, transient).** It carries the hound's net id, the cart it leaves, the body it lands on, the spot (−1 a miss) and the server's start time.
+- Every client flies the same 0.6 s arc with a 1.2 m apex from that time. The take-off rides on its copy of the source cart, and the target is the spot's live transform.
+- The hound is then carried at its spot. On a miss it is set down at the client's own `StandBesideLane` estimate, and the snapshots correct it.
+- A leap is ignored for a hound already flying, or already carried at that spot.
+- It is transient because the catch-up resends the leaps still in the air, so a stale one never flies twice.
+
+**Boarders.** The party cart's state lists the hounds that have landed on it, by spot, and each coupled wagon's roof boarder (−1 for free). Reserved spots and hounds in the air are not listed.
+- A client carries the named hounds at their spots, unless they are still flying there, and drops the others where they stand.
+- A hound this client landed a moment before the server's state named it is kept.
+- A boarder the server frees silently at a ride's end can stand as a ghost for up to about 4 s, until the enemy check.
+
+#### Remote riding and the shared prompt rules
+
+**Boarding.** The party's cart is `cart:0` on the wire, so a client's interact key sends `InteractIntent("cart:0")`.
+- The server's `UseCart` boards or unseats a remote player with the checks a solo player meets: Held, short of the end of the line, a hero seat free. The gate only starts the countdown. A parked actor is refused.
+- Reach is the intent's 3.5 m, measured to the tub's nearest point (`RideInputRules.TubDistance`), as the prompt measures it.
+- A player who boards brings their own companions within 25 m (online, the bots whose `BotOwner` is that player) and the bench.
+- A companion near a held cart hops in only when its own player is seated in it.
+- `PlayerAboard` counts every seated, awake, unparked player's hero (LocalHuman or Remote).
+
+**Getting out.**
+- Out of a slow cart, a player's own companions follow. The bench follows once no player is aboard.
+- At 1 m/s or more the player is thrown, like anyone: set down on the line just behind the cart, sent the `ForcePose`, and run over once.
+
+**Pumping and braking.** A seated client sends `RideIntent(Pump, Brake)` (kind 15) from its stick: forward pumps and back brakes (`RideInputRules.FromMove`).
+- It sends on every change, and every 0.25 s while either is held.
+- The server keeps the last intent per member. It lets go of it on an unseat, a leave, or 1 s without one while holding.
+- `RailController.Inputs` decides with `RideInputRules.Inputs`:
+  - any seated player's brake cancels every pump;
+  - players pump first;
+  - companions fill up to two.
+- Every pumping rider is marked `Pumping`, shown through the snapshot's `PoseFlags2.Pumping`. A client takes its own hero's from its own snapshot entry.
+- A player's brake or pump change is in `NetSignature`, so it reaches clients at once.
+
+**Leaving seated.** A player who leaves while seated, or a bot set aside in its seat, is unseated quietly before it is parked (`RailController.UnseatQuietly`):
+- it is set beside the lane where the cart is;
+- there is no throw, no run-over and no log;
+- the seat is freed and the `SeatMsg` is sent.
+
+So its parked pose is that spot. A chaser's rider is handled the same way.
+
+**One rule per prompt.** The server, solo play and a client (with its synced copies) all call the same engine-free rule:
+- `RideInputRules.BoardPrompt(seatedHere, held, lastStop, heroSeatFree, inReach)`: "Get out" when seated, "Board the cart" otherwise;
+- `PropPromptRules.SwitchPrompt(fixed, taken, thrown)`, `WinchPrompt(gateUp)`, `CagePrompt(open, orcKeys, griselOpens, canLetOut, downedAboard)` and `KeyringPrompt(orcKeys)`;
+- `SpareRules.Prompt(onFootPlayer, mayChase)` and `SpareRules.ChaserPrompt(seatedHere, held)`.
+
+What a prompt cannot know stays on the server, which refuses with its log line: a key or a pick in the bag, a holder still near the winch.
+
+#### Props: PropEvt and the Rail part
+
+**Wire names.** Every rail prop has one (`NetRefs`; `NetRefResolver.RefOf` and `Resolve`):
+- by stop: `gate:{stop}`, `winch:{stop}`, `wagon:{stop}` and `spare:{stop}`;
+- by set piece: `switch:{piece}`, `spur:{piece}` (the spur's lever), `heap:{piece}`, `valve:{piece}`, `trestle:{piece}` and `buffer:{piece}`;
+- `keyring:0` and `cart:0`.
+
+**PropEvt.** Each prop tells its own change on the server as a `PropEvt`:
+- a gate "up";
+- a lever "thrown", "straight", "taken", "free" (a ride's arming cleared it) and "reset";
+- the heap "cleared" and "rebuilt";
+- the valve "broken" and "rebuilt";
+- a trestle "collapsed" and "rebuilt";
+- a buffer "smashed" and "restored";
+- a spare "used" and "restored";
+- a wagon "opened";
+- the keyring "taken".
+
+A client's `Show*` methods apply them silently. A live event plays the cosmetic debris; a quiet repair does not.
+
+**The Rail part.** `PropStateDto.Rail` (`RailPropsDto`) holds the same facts as lists, plus `KeysTaken`.
+- It rides in the prop state that a join gets and that `OnFloorReady` now sends, and in the prop check's hash (`|R…`). The check repairs drift every 4 s.
+- Set pieces and spares are applied both ways. Gates, cages and keys only go forward.
+- **One writer.** On a client, gates, cages and keys come only from `PropEvt` and the Rail part. The objective state keeps the crew states and `CrewDownedLeft`. At a client's floor build, `CrewRescueController.Restore` opens the cages and takes the keys that the floor state names, forward only.
+
+**Using the props.** A remote player uses the switch, the winch, a cage wagon and the keyring through `InteractIntent`.
+- A downed actor does nothing.
+- **A lever thrown from the seat of a rolling cart** is judged with `PropPromptRules.LeverReach`: 3.5 m plus the cart's speed times half the member's round trip, at most 1.5 m more.
+- **Hits need nothing new.** Brake shoes, the heap, the valve and a lever thrown by a blow all go through `AttackIntent`, which runs the server's melee.
+- A test server traces each use as `prop:{ref}:{state}`.
+- Partial knocks on the heap are not synced, so a partly knocked heap shows whole on clients until it is cleared.
+
+#### Crew, gates and set-piece visuals
+
+**Crew.**
+- The objective state names each downed crew member's seconds left (`ObjectiveStateDto.CrewDownedLeft`; server only, so a solo save is unchanged).
+- A client's bleed label counts down locally from it. On the Downed edge it starts full until the next broadcast, at most 2 s later.
+- On a dedicated server, Grisel's cage line goes to every screen as her own NPC line (`NpcSay`, as the merchant's).
+
+**The armed ride.** The party cart's state names the armed ride and its arm time. A client's copies of that ride's pieces run from the follower under the server's own rules:
+- **The ore buckets** follow `SetPieceRules.BucketStateAt(serverNow − ArmedAt, n)`: bucket n creaks at n·3 s and pours 1.5 s later. A client's pour is a visual-only cinder patch. A joiner silently skips the buckets whose patch has already burnt out. The server's `OreBuckets.Tick` asks the same rule, tick for tick as before.
+- **The beam** ducks the seated desktop camera as the client's own cart front passes it (`SetPieceRules.BeamPasses`). The server no longer shakes a remote rider for it. A beam already behind a joiner's cart when the ride arms counts as fired.
+- **The heap's lantern** blinks under `SetPieceRules.HeapHeaded` and `HeapAlarm`, without the bark.
+- **The kiln golem's wind-up** raises `EnemyTelegraph` with `RailSlam` (`TelegraphRules.RailSlam`), and a client's golem glows its fist for 1.5 s.
+- **The hammers and the pour** run on the floor clock.
+
+**Shakes.**
+- A server `Adventurer.Shake` on a remote player's body (the rails' per-rider shakes) raises `EventBus.RemoteShake`. Only that player's peer gets a `ShakeEvt`, and a headset ignores it.
+- The party-wide tremor, horde and ambush shakes (`Tremor`, `relay: false`) are never relayed, because every screen makes its own.
+
+#### Joiners mid-ride and `SendRailCatchUp`
+
+**What a joiner's queue holds.** A joiner's held broadcasts are replayed on its Ready, before the catch-up.
+- `CartState` and `Seat` are not transient, so the fresh state arrives last.
+- `FloorClock`, `CartCorrection` and `Leap` are transient (`ServerWorld.Transient`).
+
+**`RailNet.SendRailCatchUp(peer)`** runs on a join's Ready (`OnPlayerReady`, when not behind) and on every `OnFloorReady`: a floor change, a `FloorResyncIntent`'s rebuild, or a wipe's reload. It sends:
+1. one `CartStateMsg` with every live cart: the party's (train, boarders, flags, armed ride), the ride's slag, traffic, runaway and golem carts with their riders, and a chaser;
+2. a `SeatMsg` for each seated rider in the party's cart, the wagons and the chaser;
+3. every leap still in the air.
+
+The callers send the floor clock's pair just before it, and `OnFloorReady` also sends the prop state.
+
+**Measured on localhost.** In the RIDE pass a joiner holds the server's seats, train, props and cart (within 1.5 m) within 1 s of its Ready, at 0.1-0.6 s. A resync mid-ride does the same, at about 0.15 s. A joiner's first cart pair is its worst, at up to about 0.8 m: its `NetClock` has few pongs yet. Later pairs are under 0.15 m, and the follower never steps back.
+
+#### The watchdog
+
+`CartWatchdog` (engine-free) frees a cart that should move but has made no 0.5 m of progress in the last 10 s. It has:
+- `Stuck`;
+- `PartyWatched` and `SlagWatched`;
+- a `Window` that the owner keeps per cart, counting elapsed time.
+
+**The sliding window.** The window re-anchors each time the cart makes the half-metre, so a cart that sticks is freed 10 s after it last moved.
+
+**The party's cart** (`RailController.Watchdog.cs`).
+- It is watched only while Rolling and not Halted, with no seated player on the brake. Companions never brake.
+- Stuck, it "grinds free" to where `CartWatchdog.PartyFreeTo` says:
+  - **The heap face.** An obstacle on the party lane short of the next stop: the cart is set at its face and halted there, with no dent.
+  - **The gap lip.** An unjudged jump gap short of the next stop: the cart is set with its front at the near lip plus `LipNudge` (0.01 m), at `SetPieceRules.JumpSpeed`, and the jump is judged on that same tick.
+  - With both short of the stop, the nearer one along the line wins (a tie goes to the face).
+  - Otherwise the cart arrives at the next stop, Held there.
+
+**The other carts.**
+- A ride's pacing slag cart is watched only while the party's cart rolls and is not halted. It is judged against its pace point and freed with its riders.
+- Traffic carts and runaway wagons are judged on their own progress.
+- The golem's runner is never watched.
+
+**In single player.** The watchdog runs in single player too. `--test-cart-watchdog` (floor 12, no enemies) proves three things:
+1. A caught cart (`RailController.DebugStall`) held on the brake for 15 s is not freed.
+2. Let go, it grinds free to stop 1 about 10 s later.
+3. Caught short of ride 4's gap, it is set at the lip and leaps it.
+
+#### The left-behind chaser
+
+`RailController.Chase.cs` and `SpareRules`. Online, a stop's spare is a thing to use (layer 8) whose wire name is `spare:{stop}`. In single player it stays looks only.
+
+**The prompt.** Both sides call `SpareRules.Prompt(onFootPlayer, mayChase)`. It offers "Take the spare cart" to a player's hero, up and on foot within 3 m of the tub, when `SpareRules.MayChase` holds:
+- the spare is unused;
+- the train has gone from that stop: it last arrived at a later stop, is rolling out of this one, or is halted past it;
+- no chase is live (`ChaseLive` rides in the party cart's flags).
+
+A wrecked train offers no chase.
+
+**Taking the spare.** The server checks the intent's reach and the same rule.
+- It spends the spare (its "used" PropEvt), so a later wreck finds one spare fewer.
+- It puts a chaser on the party line: a `MineCart` of kind `Chaser` (`AsChaser`), with id 2000 + the stop. It stands Held at the stop, or back at its limit while the train's tail still stands there.
+- It seats the player, their own companions within 25 m and the escorts on foot near them. The party cart and the chaser share one bench rule (`SeatBench(cart, from)`).
+- The chaser then runs its own 5 s `Boarding`.
+
+**On the line.**
+- It rolls on the party track at the party cart's physics, with no pumping and no set piece judged. Its run-over sweep is on, and its plating is never judged.
+- It warns like every party-lane cart: the bark, the bell, and AI bodies sent to the party-lane pockets (`RailEncounterController.WarnPartyLane`).
+- **Its Limit** is recomputed every tick: `SpareRules.ChaseLimit(TrainBackS, the next stop)`. The bodies end 1.5 m apart, so it never passes the train.
+- **Holes.** When its front reaches a jump's gap or a fallen trestle, it is set just past (`SpareRules.HopPast`) and its riders are shaken. A client's follower snaps after it.
+- **A live heap** halts it at the face until the heap is cleared (`SpareRules.HeapLimit`).
+
+**Ending.**
+- While the chaser stands, its riders may get out ("Get out", `SpareRules.ChaserPrompt`, through the intent `spare:{stop}`). With no player left in it, the chase ends.
+- Once it stands behind a held train, its riders step out beside the lane and it is gone 2 s later.
+- A wreck, a load, or nobody in it before it leaves ends the chase at once.
+- The chase is not saved: a load sets its riders down.
+
+**On the wire.** The chaser is one more live cart. Its state is sent again when its mode changes, and as Hidden once it is gone. Its seats go out as `SeatMsg` with its id, and a client books them in its copy, NPCs too. Both are in the catch-up.
+
+#### VR comfort
+
+**The vignette.** `ComfortRules.Step` runs once a rendered frame (`VrRig._Process`) at the level in `Settings.VrComfort`.
+- **The target radius** is 1 − t·(1 − floor), where t is the larger of two ramps:
+  - |acceleration| over 1.5..4 m/s²;
+  - |turn rate| over 30..90 °/s.
+- **The floor** is 0.55 for Recommended and 0.35 for Strong. It only tightens with acceleration and turning.
+- The radius eases toward the target with a 0.25 s time constant. A level changed mid-ride eases the same way, from below as well. Off opens it at once.
+- **Strong only:** a vertical acceleration below −4 m/s² (a big drop) fades the view to 0.6 for 0.4 s, which then eases out with a 0.1 s time constant.
+- It never goes fully black: the edge's darkness is capped at 0.9.
+
+**Its inputs** (`ComfortSampler`). They count only while the body is seated and was fed within 10 frames; otherwise the vignette eases open.
+- **On the host and in single player**, from the seat's pose, sampled at the time the pose stands for ((physics frames + interpolation fraction) / tick rate):
+  - acceleration is d(cart speed)/dt, smoothed over 0.1 s;
+  - the turn rate is the heading's change per second;
+  - the vertical acceleration is the second difference of the seat's height, smoothed over 0.1 s.
+- **On a co-op client**, from the server's ride: the follower's `AuthV`, and `CartRun.MotionAt` at its `AuthS` for the turn rate and the vertical speed. Only first differences are taken. A follower snap (`Snaps` changed) resets the sampler, so a snap never fires Strong's fade.
+
+**The per-eye angular vignette.** `assets/shaders/comfort_vignette.gdshader` draws on a full-view quad (`ComfortVignette`), hung 0.5 m ahead of the XR camera and hidden while open.
+- For each eye, the fragment turns back into that eye's view-space ray (`INV_PROJECTION_MATRIX`). The darkening is measured as the angle from straight ahead, so both eyes agree under OpenXR's uneven frusta.
+- The clear cone's half-angle is radius × 75°, and the dark comes in over the next 15°:
+  - open is 75°;
+  - Recommended is 41°;
+  - Strong is 26°, fully dark from 41°.
+- A camera more than 1 m from the quad (a SubViewport, a probe) never draws it.
+
+**Seated eye height.** While seated, the rig sits 0.45 m lower (`VrRig.EyeHeight` 1.6 less `Adventurer.SeatedEyeHeight` 1.15), so the cart's rim stays in view. Standing restores it.
+
+**The headset camera.** Nothing shakes, rolls or forces pitch on it: `ShakeEvt` is ignored in VR, and the beam's duck is desktop only.
+
+**Snap turn while seated.** Snap turn works while seated (`SnapTurn.Read`: 30°, push 0.6, release 0.3). The seat yaw follows the head.
+
+**The settings.** The Settings screen's "VR" header has "Comfort vignette in a mine cart": Off, Recommended (the default) or Strong. It is saved as `[vr] comfort="off|recommended|strong"`, and an unknown word reads as Recommended. `--test-keys` round-trips it.
+
+Tests: `ComfortRulesTests` and `SnapTurnTests`.
+
+#### The RIDE net test
+
+**How to run it.** Build first, then run `RIDE=1 scripts/net_test.sh`.
+- It starts one server on the built-in campaign: `--test-net-server --net-test-ride --objective=jailbreak --seed=4242 --lethality=1`.
+- It starts the first client ("Rider") once floor 1 is built, and a second ("Joiner", `--net-test-ride-join`) as the cart leaves stop 1.
+- It takes about 3 minutes.
+
+**Run it alone.** Its set-piece clock checks fail on a loaded machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it.
+
+**Timeouts.**
+- The server runs with `--quit-after=600` (a test server quits after 120 s unless told) and ends anyway once empty. Its own RESULT fails at 560 s.
+- The first client runs with `--quit-after=480`, and the joiner with 360.
+
+**The script, in order:**
+1. **Floor 12.** The party goes to floor 12. The server throws ride 4's spur lever, and the client must show it. The client's set pieces stand and its props, rail part included, hash as the server's.
+2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping), brakes for 0.6 s (the server's V drops at least 1 m/s), and gets out at stop 1, within 0.5 m of the server's landing within 0.5 s.
+3. **Stop 1's props.** The holders die by a hook (`DebugKillHolders`), and the gate rises on the client. The client takes the keys, opens cage 1, and revives a crewman the server downed there, each through its intent. The bleed label counts down on the client.
+4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
+5. **Ride 3.** The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat, and the cart crosses on both sides. Ride 3's buckets pour on the server's schedule.
+6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
+7. **Ride 4 and the chase.** At stop 3 the joiner, on foot beside the spare, is offered nothing while the train is held there. The train leaves on ride 4 with the client pumping. The joiner takes `spare:3`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`).
+8. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
+9. **The wreck.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 and 2 unused. The joiner sees the Wrecked state and then spare 2's takeover, Held at stop 2 (`wreck-spare`).
+10. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
+
+Ride 4's first hammer is paired all through the pass.
+
+**The markers the script pairs.** Both sides print on a shared 0.5 s server-time grid:
+- `ride t=… S=… mode=… stop=… armed=…`;
+- `ride cart=… kind=… t=… S=…`;
+- `ride book t=… now=… seats=… train=… props=… carts=… boarders=…`.
+
+They also print `ride hammer=… fall t=…` and `ride bucket pour n=… t=…`. From these the script requires:
+- at least 20 party pairs while the cart rolls, each within 1.5 m;
+- ride 3's slag cart within 2 m;
+- at least 10 hammer falls, each within 50 ms;
+- at least 3 bucket pours, each within 0.1 s;
+- the joiner's match within 1 s of its Ready and of its resync's Ready, and every joiner pair within 1.5 m;
+- no book of either client differing from the server's at a grid point whose neighbours agree with it;
+- the same for the other carts with their living riders and for the boarders. The joiner is compared from its match on, except in the second after each Ready, and the script wants at least one compared point with a slag cart.
+
+The server stops its grid lines before the wreck, because the jump to a spare's stop is not a pair.
+
+**Test hooks used.** Every departure is a real one. The pass leans on these hooks:
+- the server keeps every player's hero above 75% hp, and keeps the cart's plating up on ride 4 (it checks the wire, not the fight);
+- the shoves that put a hero within reach;
+- `DebugKillHolders`, `DebugWreck` and `TestAskFloorAgain`;
+- `RailNet.RideTraceOff`.
+
+#### Known gaps
+
+**Not exercised live** (rule or unit tests only):
+- real latency and jitter: the pass runs on localhost, and ±150 ms of jitter is tested only in `CartFollowerTests`;
+- on a client: a seat taken by another occupant, a missed leap, the catch-up re-flying a leap in the air, and a seated `AttackIntent`;
+- a bot hopping in with its owner online, and two players pumping or braking together;
+- a winch cranked through the intent, "Let them out", "Open the cage (Grisel)", the forgiven branch, and the "free" lever event;
+- on a client: the heap's lantern alarm and the golem's fist glow;
+- for the chaser: its warning, a rider's "Get out", a halt at a live heap, a chase ended by a wreck or a load, a joiner arriving mid-chase, and an escort on its bench;
+- a wipe's reload mid-ride. The resync runs the same `OnFloorReady` catch-up;
+- a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
+- a thrown remote player's run-over damage. The pass checks only its landing.
+
+**Known differences, accepted for now:**
+- A partly knocked heap shows whole on clients.
+- A thrown remote body lands still, where a solo one slides at 0.3·V.
+- A slag cart first seen through a correction on a bend may put its brake shoe on the other side.
+- A boarder freed silently at a ride's end stands as a ghost for up to about 4 s.
+- The Welcome's and the `FloorChange`'s clock pair can be a step stale.
+- Hammers step at 60 Hz in a headset.
+- **The chaser:**
+  - it has no HUD line or departure cue (plan 6);
+  - a hop skips the run-over judgement just past the far lip;
+  - "Get out" during its countdown ends the chase at once;
+  - it does not take crew on foot.
+- A lone remote rider with no companions can die to ride 2's hounds at lethality 1. The pass tops heroes up, and the balance is still open.
+
+**VR, not tried in a headset:**
+- whether the eyes fuse the vignette;
+- the feel of the ramps;
+- the fill rate on a standalone headset.
+
+The vignette also darkens the HUD sheet's edges while it is narrowed.
+
 ## Runs, clauses, deaths and records
 
 The Depths' pillar 5 (`docs/superpowers/specs/2026-11-07-the-depths-update-design.md` section 5). Engine-free rules under
@@ -1470,14 +1906,12 @@ In a game: T opens the chat line, the floor label shows the round trip and how m
   - *Viewer orc:* `DungeonBuilder.SpawnedPlanned` records every planned spawn index a build placed, and `FloorStateCapture` saves any of them whose corpse is gone as dead, so the viewer orc (index 90000) no longer comes back on a reload or revisit, nor stands frozen for a late joiner.
   - *Floor watchdog* (`FloorWatchdog`, `ClientWorld.TickFloorWatch`): `FloorChangeBegin` starts it. With no `FloorChange` after 20 s, or 2 s after the client's own build of one threw (now caught, the loading screen stays up), the client sends `FloorResyncIntent`. The server answers that client alone with the floor as it stands (a `FloorChange` with `Resync` set, a live capture, the bodies where they are), unless it is still building one itself; then, for as long as an AI plan may be waited for (`Settings.PlanWaitSeconds` + 30 s since the change began), it sends that client the change's `FloorChangeBegin` again, which restarts its watch, so a long planner wait does not make every client rejoin. After three unanswered asks or two failed builds the client rejoins the server under its name (`NetSession.ServerUrl`), which the server treats as a rejoin with a whole new Welcome. Both worlds also catch an exception per message and log its kind, so one bad message costs that message only. A Welcome whose floor will not build leaves to the title screen with the reason instead of hanging.
   - Net test: step 36 makes a ghost creature and hides a real one on the client (and miscounts an item when one lies on the floor) and waits for the checks to repair them (`[net] enemy check: the ghost creature went ...`). Step 7 drops the FloorChange to floor 2 on the client (`ClientWorld.TestDropFloorChanges`; the watchdog waits 4 s in the test) and requires the floor to be asked for and built (`[net] floor watchdog: the lost floor change was asked for and built`).
-- **The server clock and the floor clock** (protocol 17, kind 7 `FloorClock`; `Net/Core/NetClock.cs`, `FloorClock.cs`, `Cadence.cs`, tests in `tests/Net/`): a client keeps an estimate of the server's `NetSession.Instance.Now` (`ClientWorld.Clock`, a `NetClock`): the Welcome's `ServerTime` seeds it, then every pong is a sample (offset `serverTime − (sentAt + now) / 2`, round trip `now − sentAt`) and it takes the median offset of the last 9 samples whose round trip is at most twice the median; `ClientWorld.Rtt` is that median round trip. The client pings every second (it was two). `DungeonBuilder.FloorSeconds` is the floor's running time: on the server and in single player the sum of the physics steps' `delta` since the floor was built (`ElapsedSeconds`, a compensated sum that stays exact for hours), so a 90 Hz headset in single player keeps real time; `FloorTick` is `FloorClock.TickOf(FloorSeconds)`, the 60 Hz metronome the periodic spike beds, the drop hammers, the pour and the Kiln run on (at 60 Hz it counts the physics ticks as before). The server publishes pairs (`FloorSeconds`, its `Now`) in the Welcome, every `FloorChange`, in a transient `FloorClockMsg` every second on a railed floor and every two elsewhere, and to a peer on its Ready and in the join catch-up; a client's `FloorSeconds` is `FloorClock.Read(ServerNow)`, which slews to the latest pair at 0.9-1.1x real time and snaps only when more than 0.25 s off (a server stall, a new floor); it drops a pair about another floor or build. `HazardPhaseMsg` carries the server's time and the phase's length in seconds (`HazardSync.SecondsIn`), not ticks. Every send cadence is by elapsed time (`Cadence`): snapshots 1/20 s, vitals 1/10 s, `FlushSync` 0.1 s, the objective state 2 s, the ready-check count 1 s, the client's pose 1/30 s with its 0.5 s idle heartbeat; at 60 Hz each fires on the same ticks as the old `tick % n`. `--test-tick-rate` (with `--physics-hz=90`) checks the hammer's and the spike bed's 4.5 s cycles in wall time.
-- **The carts on the wire** (protocol 17, kinds 8 `CartState` and 9 `CartCorrection`; `Net/Core/CartNet.cs`, `Dungeon/Rails/RailNet.cs`, `Dungeon/Rails/Core/CartFollower.cs`, `CartSendRules.cs`, `RailController.Net.cs`, `RailEncounterController.Net.cs`): every cart has an id (`CartIds`: the party's 0, a ride's slag, traffic, runaway and golem carts 1.. per floor build, a cage wagon 1000 + its stop, a chaser 2000 + its stop) and a `CartStateDto`: track (0 party line, 1 enemy line, 2+k the k-th spur) and direction, S, V, mode and Limit (the integrator's StopAt), the integrator's input (pumpers, brake, crew wagons, commanded speed), plating, stop and flags (Halted, Wrecked, Hidden, LineBlocked, GateClear, Derailed, ChaseLive), and for the party's cart the lane blend's two S, the gap and the jump's take-off speed (NaN for none), the boarding countdown and the coupled wagons' stops; slag and golem carts also name their riders' net ids by spot. On a networked floor a `RailNet` node (server, after the rail controllers' ticks) sends one `CartStateMsg` per physics tick that changed any cart (a cart event or a change of the party cart's signature; a spawn, a spur taken, the riders, a free or a derail of the others, the last two as a state flagged Hidden), a wreck frame first when a spare took over in the same tick (`CartSendRules.NeedsWreckFrame`), and a transient `CartCorrectionMsg` with every live cart every 0.2 s; a client frees any other cart a correction leaves out. A client's cart follows a `CartFollower`: it steps a copy of the server's state with `CartPhysics` from the state's server time to now (at most 30 steps; slopes from the client's own tracks) and renders S at V + 2·error, the correction held within ±max(0.15·V, 0.5 m/s), never backwards above 0.5 m/s, snapping past 3 m, on Held or Wrecked (Held to the server's S) and on a track change. The client's `RailController` poses the cart, its train (coupled and uncoupled to match) and its riders at that S each frame, applies the lane, the gap and the flags (a wreck's rising edge plays the tumble; Hidden hides the cart only, as the server's `HideWreck` does) and keeps the HUD line; `RailNet` builds the other carts with the server's constructors as dressing (no sweep, pace or warning; a brake shoe still misses to a client's hit), follows each on its own track and binds its riders lazily by net id (a cart's state can arrive before the riders' spawn); a carried enemy ignores snapshot positions. `RIDE=1 scripts/net_test.sh` rides the cart from the landing to the end of the line (the client aboard for rides 1 to 4, every departure a real one) and pairs both sides' `ride t=… S=…` lines on a 0.5 s server-time grid: at least 20 pairs while the cart rolls, each within 1.5 m, and ride 3's slag cart within 2 m.
-- **Seats, seat-relative poses, boarders and leaps on the wire** (kinds 13 `Seat` and 14 `Leap`; `Net/Core/CartNet.cs`, `Dungeon/Rails/RailNet.cs`): the server's `RailNet` hears the party cart's and every cage wagon's `RiderChanged` and sends a `SeatMsg` (rider kind 0 a hero by member index, 1 an NPC by id; the cart's id; the seat; seated or not, with the landing spot when not) after the tick's cart state; a client books exactly that seat (`CartSeats.Put`, refusing a taken seat or one outside 0..5; a different occupant there gets out where it sits first) and seats its copy of the rider, and the cart's owner poses it each rendered frame. A joiner, and a client that rebuilt the floor (`OnFloorReady`), get `RailNet.SendRailCatchUp`: a `SeatMsg` per rider seated in the party's cart and the wagons, and every leap still in the air. A seated NPC (snapshot flag 128) never takes a snapshot position on a client. `Pose` (45 bytes) and the snapshot's `PlayerPoseState` carry `SeatYaw` (where a seated body looks from its seat, all the way round for a companion) and `PoseFlags2` (Seated, Pumping); `PoseBuffer` blends the seat yaw the short way round. The server takes from a body it has seated (`body.Seated`, never the client's flag) only the seat yaw (clamped to ±150°), the pitch and the flags; every server-side unseat of a remote player (`Adventurer.GetOut`) sends that peer a `ForcePose` at the landing and drops its poses still flagged seated until one is not. An `AttackIntent` from a seated body turns the seat yaw (`Adventurer.AimSeated`), never the body. In a headset the seat yaw follows the head. The party cart's state lists its boarding hounds by spot and each coupled wagon's roof boarder (−1 none); a hound's leap (`LeapMsg`, transient: the catch-up resends the ones in the air) is flown on every client from the server's start time on the same 0.6 s, 1.2 m arc, then carried at its spot (or, missing, set down beside the lane for the snapshots); a carried or leaping enemy ignores snapshot positions. `RIDE=1` (its server runs `--objective=jailbreak`, the campaign's own floor 12) checks the crew sit in their wagons on the client, that the client's hero, once it boards, sits in a hero seat there, and that it stands within 0.5 m of the server's landing within 0.5 s of getting out at stop 1.
-- **Remote players ride** (kind 15 `RideIntent`; `Dungeon/Rails/Core/RideInputRules.cs`, `RailController.cs`, `Net/ServerWorld.Rails.cs`): the party's cart is `cart:0` on the wire (`NetRefResolver.RefOf`; a spare is `spare:{stop}`, a runaway wagon or a chaser has none), so a client's interact key sends `InteractIntent("cart:0")` and the server's `UseCart` boards or unseats a remote player with the checks a solo player meets (Held, short of the end of the line, a hero seat free; the gate only starts the countdown), reach checked by the intent (3.5 m to the tub's nearest point, `RideInputRules.TubDistance`, as the prompt measures it). A player who boards brings their own companions within 25 m (solo: every companion; online: the bots whose `BotOwner` is that player) and the bench; getting out of a slow cart takes their own companions along, and the bench once no player is aboard; getting out at speed throws them as anyone (the run-over, the set-down behind the cart, the `ForcePose`). Both sides' prompt is `RideInputRules.BoardPrompt` ("Get out" seated; "Board the cart" Held, not the last stop, a hero seat free), a client's from the synced mode, stop and seat book. `PlayerAboard` counts every seated, awake, unparked player's hero (LocalHuman or Remote); a companion near a held cart hops in only when its own player is seated in it. A player's brake or pump change marks the cart state dirty (`NetSignature`), so it goes out at once. A seated client sends `RideIntent(Pump, Brake)` from its stick (`RideInputRules.FromMove`: forward pumps, back brakes) on every change and every 0.25 s while either is held; the server keeps the last per member, lets it go on an unseat, a leave, or 1 s without one while holding, and `RailController.Inputs` decides with `RideInputRules.Inputs` (any seated player's brake cancels every pump; players pump first; companions fill up to two), marking every pumping rider `Pumping` (the snapshot's `PoseFlags2.Pumping`; a client takes its own hero's from its snapshot entry). A player who leaves while seated (or a bot set aside in its seat) is unseated quietly before it is parked (`RailController.UnseatQuietly`: beside the lane where the cart is, no throw, no run-over, no log, the seat freed, the `SeatMsg` sent), so its parked pose is that spot; a server teleport of a seated remote hero goes through the same unseat guard (`ForcePose`, seated poses dropped). `RIDE=1` puts the client beside the cart at the landing; it boards through the intent (`aboard:<name>`), pumps out of the landing (the server's pumpers ≥ 1, and the client sees its hero's Pumping in the snapshot), brakes 0.6 s on the way (the server's V drops ≥ 1 m/s), and gets out at stop 1 through the intent; after the props (below) it boards again and rides rides 2, 3 and 4; at the end of the line (after the joiner's chase, below) it leaves the game seated, and the server checks the quiet unseat (beside the lane, seat freed, parked pose at that spot).
-- **Remote players use the props** (`Dungeon/Rails/Core/PropPromptRules.cs`, `NetRefResolver.RefOf`): a ride's switch lever is `switch:{piece}` (a spur's lever `spur:{piece}`), a stop's winch `winch:{stop}`, a cage wagon `wagon:{stop}` and the orc's keyring `keyring:0`, so a client's interact key sends `InteractIntent` for them and the server's own code does the rest with the reach the intent checks (3.5 m); the props take any hero up on their feet, a remote player's too (a downed actor does nothing). Every prompt is one engine-free rule both sides call: `SwitchPrompt(fixed, taken, thrown)`, `WinchPrompt(gateUp)` (a holder still near refuses the crank on the server with its log line: the prompt cannot know), `CagePrompt(open, orcKeys, griselOpens, canLetOut, downedAboard)` ("Open the cage (the orc's keys)", "Open the cage (Grisel)", "Unlock the cage"; open: "Let them out", else "Revive {name}") and `KeyringPrompt(orcKeys)`; a client calls them with its copies (the lever's Fixed, Taken and Thrown, the gate, the cage and the keys as the server told them, Grisel and the crew from the snapshots and the seats, the cart's stop and mode from its state). A lever's `Taken` is told both ways ("taken", and "free" when a ride's arming clears it). Hits (brake shoes, the heap, the valve, a lever thrown by a blow) need nothing new: `AttackIntent` runs the server's melee. A test server traces each use as `prop:{ref}:{state}`. `RIDE=1`: the server throws ride 4's spur lever for the client to see (found here by `spur:{piece}` through the resolver); when the client's hero is set down at stop 1 the stop's holders die by the test's hand (`RailController.DebugKillHolders`), its gate rises on the client by its PropEvt; the hero, put by the keyring and then at cage 1's door, takes the keys and opens the cage through its intents with the prompts the rules give; a crewman the server downs in that cage is revived through the intent ("Revive {name}"); the hero boards again at stop 1 (stop 2's holders die then), the cart leaves stops 1 and 2 for real, and on ride 3 the client throws the switch from its seat as the lever passes (`prop:switch:{piece}:thrown`) and the cart crosses on both sides (the client's `CrossOut`). The server keeps the client's hero topped up through the pass (a fall would wipe the only player's party and reload the floor under the script).
-- **Crew, gates and set pieces on every client; shakes for remote riders** (`Dungeon/Rails/Core/SetPieceRules.cs`, `RailEncounterController.Net.cs`, `SetPieces/OreBuckets.cs`, `CrewRescueController.cs`, `Npc.cs`, `Net/ServerWorld.cs`, `ClientWorld.cs`): gates, cages and keys come only from `PropEvt` and the prop check's rail part; the objective state keeps the crew states and, on a server, `ObjectiveStateDto.CrewDownedLeft` (each downed crew member's seconds left), from which a client's bleed label counts down locally until the next broadcast (2 s). The party cart's state names the armed ride and the server's clock when it armed (`CartStateDto.ArmedRide`, −1 none, and `ArmedAt`); a client's copies of that ride's pieces run from the follower under the server's own rules: the ore buckets follow `SetPieceRules.BucketStateAt(serverNow − ArmedAt, n)` (bucket n creaks at n·3 s and pours 1.5 s later; the server's `OreBuckets.Tick` asks the same rule on its own clock, tick for tick as before) and pour visual-only cinder patches; the beam ducks the seated desktop camera as the client's own cart front passes it (`SetPieceRules.BeamPasses`; the server no longer shakes a remote rider for it); the heap's lantern blinks under `SetPieceRules.HeapHeaded`/`HeapAlarm` (rolling, the heap ahead on the party lane with no thrown switch before it, within max(V, the warn speed)·3 s), without the bark. Hits stay the server's. The kiln golem's wind-up raises `EnemyTelegraph` with the state `RailSlam` (`TelegraphRules.RailSlam`; a client's golem glows its fist for 1.5 s). A server's `Adventurer.Shake` on a remote player's body (the rails' per-rider shakes) raises `EventBus.RemoteShake`, and only that player's peer gets a `ShakeEvt` (ignored in a headset); the party-wide tremor, horde and ambush shakes (`Tremor`, `relay: false`) are never relayed, since every screen makes its own. A lever (a switch, a spur's) used from the seat of a rolling cart is judged with `PropPromptRules.LeverReach` (3.5 m plus the cart's speed times half the member's round trip, which its `Ping` now carries: the intent's one-way trip, at most 1.5 m more). A server `Shove` of a remote body drops its poses still in flight from the old spot (`PoseGuardRules.DropAfterShove`, for up to 1 s), as the unseat guard does for seated poses. On a dedicated server Grisel's cage line goes to every screen as her own NPC line (`NpcSay`, as the merchant's); narration stays the narrator's. The floor clock's `FloorClockMsg` pair is stamped where the floor time is made (`DungeonBuilder.FloorStampNow`), not a physics step later in `ServerWorld`. `RIDE=1` checks that the opened wagon couples on the client within 0.5 s of stop 1's departure (the cart's `Train`), that the downed crewman's label counts down there and agrees with the server's `CrewDownedLeft`, that the beam ducks the client's seated camera, that ride 3's buckets pour on both sides within 0.1 s by bucket, and that ride 4's first hammer (on the floor clock all the pass) enters its fall within 50 ms of the server's on at least 10 paired falls.
-- **Joiners and resyncs mid-ride; the cart watchdog** (`Dungeon/Rails/RailNet.Seats.cs`, `Dungeon/Rails/Core/CartWatchdog.cs`, `RailController.Watchdog.cs`, `RailEncounterController.Traffic.cs`, `CrewRescueController.cs`, `Net/ServerWorld.cs`): `RailNet.SendRailCatchUp` (on a join's Ready and on every `OnFloorReady`: a floor change, a `FloorResyncIntent`'s rebuild, a wipe's reload) sends first one `CartStateMsg` with every live cart (the party's with its train, boarders and flags; the ride's slag, traffic, runaway and golem carts with their riders), then a `SeatMsg` per seated rider and the leaps in the air; the callers send the floor clock's pair just before, and `OnFloorReady` now also sends the prop state (a join already had it), so a revisited floor shows its gates, cages and keys at once. At a client's floor build `CrewRescueController.Restore` opens the cages and takes the keys the floor state names, forward only (never shut again there); after the build only the PropEvts and the prop state write them. The watchdog (`CartWatchdog`, engine-free: `Stuck(progress10s, targetProgress10s, watched)`, `PartyWatched`, `SlagWatched`, and a `Window` value the owner keeps per cart, counting elapsed time) frees a cart that should move and has made no 0.5 m of progress in the last 10 s (the window re-anchors each time the cart makes the half-metre, so a cart that sticks is freed 10 s after it last moved). The party's cart is watched only while Rolling and not Halted with no seated player on the brake (companions never brake); stuck, it grinds on to its next stop as an arrival ("The cart grinds free."), but never across the jump gap (a next stop past an unjudged gap: the cart is set with its front at the near lip at `SetPieceRules.JumpSpeed` and the jump is judged on that tick) nor through an obstacle on the party lane (set at its face, halted there, no dent); with both a heap face and an unjudged gap lip short of the stop, the nearer one along the line wins (`CartWatchdog.PartyFreeTo`, engine-free and tested). A ride's pacing slag cart is watched only while the party's cart rolls, not halted, against its pace point (stuck when the point ran on 0.5 m and the cart did not), and freed with its riders; traffic carts and runaway wagons are judged on their own progress; the golem's runner is never watched. Single player has the watchdog too; `--test-cart-watchdog` (floor 12, no enemies) proves it: a caught cart (the test hook `RailController.DebugStall`) braked 15 s is not freed, let go it grinds free to stop 1 10 s later, and caught short of ride 4's gap it is set at the lip and leaps it. `RIDE=1` starts a second client (`--net-test-ride-join`, "Joiner") as the cart leaves stop 1: it is ready during ride 2 (the server says so), 1 s after its Ready it traces `joined-mid-ride ok` (its cart follows the server's, rolling on ride 2, the first client's hero seated, the crew in their wagons, the train coupled), it is put beside the cart at stop 2, boards through the intent and rides ride 3 (the cart leaves stop 2 with 2 players aboard), and gets out at stop 3. Both sides print `ride book t=… seats=… train=… props=…` on the grid (the party's cart and each wagon seat by seat, the train, the props' hash); the script wants the joiner's book and cart (within 1.5 m) to match the server's within 1 s of its Ready, every joiner pair within 1.5 m, and no book of either client to differ from the server's at a grid point whose neighbours agree with it.
-- **The spare cart for a co-op player left behind** (`Dungeon/Rails/RailController.Chase.cs`, `Dungeon/Rails/Core/SpareRules.cs`, `SpareYard.cs`, `RailNet*.cs`, `NetRefResolver.RefOf`): online a stop's spare is a thing to use (layer 8) whose wire name is `spare:{stop}`; solo it stays looks only. Both sides' prompt is `SpareRules.Prompt(onFootPlayer, mayChase)`: "Take the spare cart" for a player's hero up on foot within 3 m of the tub when `SpareRules.MayChase` holds (the spare unused, the train gone from that stop: last arrived at a later one, or rolling out of it or halted past it; no chase live), a client's from its used spares and the party cart's state, whose flags carry `ChaseLive` (64). Taking it (the server checks the intent's reach and the same rule) spends the spare (its "used" PropEvt: a later wreck finds one spare fewer) and puts a chaser on the party line: a `MineCart` of kind `Chaser` (`AsChaser`), id `CartIds.Chaser(stop)` (2000 + the stop), Held at the stop (or back at its limit while the train's tail still stands there), with the player, their own companions within 25 m and the escorts on foot near them seated, and its own 5 s `Boarding`. It then runs on the party track with a `CartRun` at the party cart's physics (no pumping, no set piece judged, its run-over sweep on, its plating never judged), warning as every party-lane cart does (`RailEncounterController.WarnPartyLane`: the bark, the bell, AI bodies to the party-lane pockets; its lamp is its tub's), its Limit recomputed every tick as `SpareRules.ChaseLimit(TrainBackS, the next stop)`: the centre stops one half length behind the last body's back less 1.5 m, so the bodies end 1.5 m apart and it never passes the train. It never floats over a pit: its front reaching a jump's gap or a fallen trestle (`CollectPartyLaneHoles`) sets it just past (`SpareRules.HopPast`, its riders shaken; a client's follower snaps after it), and a live ore heap halts it at the face until cleared (`SpareRules.HeapLimit`). While it stands its riders may get out (`SpareRules.ChaserPrompt`, "Get out", the intent `spare:{stop}`, which names the running chaser); with no player left in it the chase ends. Once it stands behind a held train (at a stop or halted) its riders step out beside the lane and it is gone 2 s later; a wreck, a load or nobody left in it before it leaves ends the chase at once. The party cart's bench and the chaser's are one rule (`SeatBench(cart, from)`). The chase is not saved (a load sets its riders down). On the wire the chaser is one more live cart (`CartStateMsg`, sent again on its mode's change; Hidden once gone), its seats `SeatMsg` with its id (a client books them in its copy, NPCs too), both in the catch-up. A restored spare (a test shortcut's in-place `Restore`) stands parked again on the server, as a client told "restored" shows it. `RIDE=1`: at stop 3 the joiner gets out and stays on foot beside stop 3's spare (which offers nothing while the train is held there), stop 3's holders die by the test's hand, and the train leaves on ride 4 with the first client pumping (the server keeps its plating up through the kiln); the joiner takes the spare through its intent (`spare:3`), and its chaser hops ride 4's gap and the fallen trestle and halts within 3 m of the train's last body at the end of the line on both sides (`chase-done`); the pass must run alone (a loaded machine slows the server's floor clock and fails the set-piece clock checks); the first client leaves seated once the chaser has gone.
+- **Protocol 17** (plan 5: the mine cart in co-op, VR comfort and the tick-rate fix; `Protocol.Version` 17, `MessageKindCount` 114; a client of another version is refused at the handshake as before):
+  - New kinds: 7 `FloorClock`, 8 `CartState`, 9 `CartCorrection`, 13 `Seat`, 14 `Leap` and 15 `RideIntent`. `FloorClock`, `CartCorrection` and `Leap` are transient (never held for a joiner); `CartState` and `Seat` are held and replayed before the rail catch-up.
+  - Changed shapes: the Welcome and `FloorChange` carry `ServerTime` and `FloorSeconds`; `HazardPhaseMsg` carries the server's time and the phase's length in seconds, not ticks; the binary `Pose` is 45 bytes (`SeatYaw`, `PoseFlags2`) and the snapshot's `PlayerPoseState` carries both; `NpcState` bit 128 is seated; `Ping` carries the client's round trip.
+  - Additive JSON fields: `PropStateDto.Rail`, `ObjectiveStateDto.CrewDownedLeft` (server only) and `FloorStateDto.ThrowersSent` (saved; null reads as empty).
+  - Every send cadence runs by elapsed time (`Cadence`), so a server or a client at any physics rate keeps time; the client pings every second.
+  - How the rails use all this (the two clocks, the carts, seats, leaps, remote riding, props, crew, joiners, the watchdog, the chaser, VR comfort and the `RIDE=1` pass) is under Rails, "Riding together".
 - **Other co-op recovery:** the stairs landing re-asks twice a second while the local body stands on it alive with no question open and no answer given since it stepped on (`Stairs._PhysicsProcess`); a body that shows fallen while its state is alive stands up (`Adventurer._shownDowned`), and `Revive` counts any fallen body as a real revive so `MemberRevived` reaches clients whichever caller restored the hp; pressing E on a paid altar whose card a screen lost sends the card again. `Hud.Refresh` only redraws the floor label (it used to run the floor-change cleanup on every bag sync and closed the shrine card as "gone").
 - **The bag guard** (protocol 14, `Net/ServerWorld.BagGuard.cs`): the shared bag is changed by many hands at once (bots drink and pick up, arrows run out, other players move things), so a cell index alone can land on a different item. `BagMoveIntent`, `QuickActionIntent` and `ShopSellIntent` carry `Expect`, the id of the item the screen showed (`ItemSlotControl` puts it in the drag data and the click; `PartyController` falls back to its own copy of the cell); the server acts only while the cell still holds it (`BagActions.Holds`; `Guid.Empty` checks nothing), else it answers that player at once with "That item moved; try again.", a `BagSync` and the member involved. `QuickActionIntent`, `AllocateStatIntent` and `LearnSkillIntent` also carry `Member`, the hero the screen acts for (the focused member; -1 means the sender's own): a player may act for their own hero and the bots that follow them (`PlayerRegistry.MayChange`, also the rule for drags onto a doll), so bots can be geared, given potions and have their stat and skill points spent by their owner. Anything else is refused out loud ("You can only change your own hero and your own bots.") with a fresh `BagSync`, never in silence. `Inventory.TryAdd` is all or nothing: a pickup that only part-fits stays whole on the floor (no stale stack count on other screens), and a Scavenger recovery the full bag cannot take says so instead of losing the arrows. Net test step 34 (with the bot in): a destroy aimed at an item that moved is refused, the bot drinks a potion its owner gives it, and a stat point for a hero who is not ours is refused with the line (the server puts 3 health potions in the bag for it).
 - **Bots and the shared bag** (`Items/Core/LootPolicy.cs`): in co-op a bot always takes gold, keys, quest items and stacks that merge fully, takes a new-cell item only while more than 8 cells are free, never takes an item within 3 m of a standing human player, and never opens a bound chest. Items the party drops keep `DroppedByParty` through saves and rebuilds (`WorldItemDto.DroppedByParty`).
