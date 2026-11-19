@@ -27,6 +27,14 @@ public static class SetPieceRules
 {
     public const int TicksPerSecond = 60;
 
+    /// <summary>A hammer's or the pour's cues carry at most this far (a walker near it hears its warning).</summary>
+    public const float MaxCueRange = 30f;
+    /// <summary>The cue range ends at least this far short of stop 3 (a seated head sits up to 0.7 m along the cart from its middle).</summary>
+    public const float StopThreeMargin = 2f;
+
+    /// <summary>A hazard's cue range when it stands <paramref name="metresToStopThree"/> from stop 3: 30 m, or less so a cart held there never hears it (never below 0).</summary>
+    public static float CueRange(float metresToStopThree) => Math.Clamp(metresToStopThree - StopThreeMargin, 0f, MaxCueRange);
+
     const float UpS = 1.6f, GlowS = 1.5f, FallS = 0.15f, DownS = 0.5f, RiseS = 0.75f;
     const int UpT = (int)(UpS * TicksPerSecond), GlowT = (int)(GlowS * TicksPerSecond), FallT = (int)(FallS * TicksPerSecond),
         DownT = (int)(DownS * TicksPerSecond), RiseT = (int)(RiseS * TicksPerSecond);

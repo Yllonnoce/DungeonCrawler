@@ -7,8 +7,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// The party's cart heard where it is, on every peer (plan 6): each rendered frame the controller feeds the cart's <see cref="CartSound"/>
 /// from what this peer shows (the server's and single player's own run, a client's follower, flags and plating) and a running chaser's
-/// on the server and in single player, and keeps the list of heroes on foot their bells look ahead for. A client's follower snap primes
-/// the cart's sound (a snap moves S in one step: no edge). The ride's soundscape (<see cref="RideSoundscape"/>) is a child on every role
+/// on the server and in single player, and keeps the list of heroes on foot their bells look ahead for. A client's follower snap of more
+/// than a metre primes the cart's sound (it moves S in one step: no edge; <see cref="CartSound.Snapped"/>). The ride's soundscape (<see cref="RideSoundscape"/>) is a child on every role
 /// but a dedicated server.
 /// </summary>
 public partial class RailController
@@ -51,7 +51,7 @@ public partial class RailController
         if (NetSession.IsClient && _follow is { } f && f.Snaps != _partySnaps)
         {
             _partySnaps = f.Snaps;
-            sound.Prime();
+            sound.Snapped(s, 0);
         }
         var input = new CartSoundInput(s, State.Mode == CartMode.Rolling ? State.V : 0f, State.Mode, State.Plating, 0, AirborneAt(s), Halted, Crossing);
         sound.Feed(input, _train.Count, _partyAhead ??= PartyAhead);

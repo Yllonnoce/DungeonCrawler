@@ -11,8 +11,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// (the cart is code-driven and walkers can duck under the bar). The server tells "up" ("gate:{stop}"); a client's copy
 /// shows it (<see cref="ShowUp"/>).
 /// </summary>
-public partial class RailGate : Node3D
+public partial class RailGate : Node3D, ISoundPoint
 {
+    /// <summary>Where the gate's lift is heard, on every role: above the bar's middle.</summary>
+    public Vector3 SoundPoint => GlobalPosition + Vector3.Up * 2f;
+
     public const float BarHeight = 1.0f;
     /// <summary>The lifted bar's middle: its underside (2.88 m) clears a coupled cage wagon's roof (2.57 m).</summary>
     public const float LiftedHeight = 2.95f;
@@ -121,7 +124,7 @@ public partial class RailGate : Node3D
         if (Up) return;
         Up = true;
         EventBus.Instance.Log("The gate lifts.");
-        RideAudio.At("gate_lift", GlobalPosition + Vector3.Up * 2f); // a client's comes from its "up" (RideAudio.OnProp)
+        RideAudio.At("gate_lift", SoundPoint); // a client's comes from its "up" (RideAudio.OnProp), at the same point
         Lifted?.Invoke(this);
         Tell("up");
         Wind();

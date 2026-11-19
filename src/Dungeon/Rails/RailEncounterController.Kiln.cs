@@ -94,6 +94,7 @@ public partial class RailEncounterController
             var hammer = new DropHammer { Name = $"Hammer{i}", S = s, Index = i };
             holder.AddChild(hammer);
             hammer.Place(_rails.Party.Track.Frame(s));
+            hammer.CueRange = CueRangeAt(hammer.GlobalPosition);
             piece.Hammers[i] = hammer;
         }
         GD.Print($"[rails] hammers {piece.Plan.Id} at party S={piece.S - 3f:0.0}/{piece.S:0.0}/{piece.S + 3f:0.0}");
@@ -112,6 +113,7 @@ public partial class RailEncounterController
         var pour = new MoltenPour { Name = $"Pour_{piece.Plan.Id}", S = piece.S, NetRef = NetRefs.Valve(piece.Index) };
         root.AddChild(pour);
         pour.Place(frame, valveFrame, side);
+        pour.CueRange = CueRangeAt(pour.GlobalPosition);
         piece.Pour = pour;
         GD.Print($"[rails] pour {piece.Plan.Id} at party S={piece.S:0.0}, quench valve at S={valveS:0.0} side {side:+0;-0}");
         return pour;
@@ -158,6 +160,10 @@ public partial class RailEncounterController
         piece.Buffer = buffer;
         return buffer;
     }
+
+    /// <summary>A hazard's cue range at <paramref name="at"/>, by its distance to stop 3 (<see cref="SetPieceRules.CueRange"/>; 30 m on a line without one). Every role builds the same.</summary>
+    private float CueRangeAt(Vector3 at)
+        => _rails.StopS.Length > 3 ? SetPieceRules.CueRange(at.DistanceTo(_rails.Party.Track.Point(_rails.StopS[3]))) : SetPieceRules.MaxCueRange;
 
     /// <summary>The party line is laid bare over the floor's gaps (the curve and every S stay as they were).</summary>
     private void CutGaps(List<(float from, float to)> gaps)

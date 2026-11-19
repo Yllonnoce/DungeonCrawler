@@ -75,6 +75,16 @@ public partial class CartSound : Node3D
     /// <summary>The next feed only primes (no edge cue): the cart's state jumped by a path that makes no sound.</summary>
     public void Prime() => _primed = false;
 
+    /// <summary>
+    /// A client's follower snapped and the cart is now at <paramref name="s"/> on <paramref name="track"/>: a snap that moves it more than
+    /// a metre from the last feed, or onto another track, primes (it would fake an edge); a small one (the server's Held state settling an
+    /// arrival) does not.
+    /// </summary>
+    public void Snapped(float s, byte track)
+    {
+        if (_primed && (Mathf.Abs(s - _prev.S) > 1f || track != _prev.Track)) Prime();
+    }
+
     /// <summary>The bell, once, at the cart now (a chaser placed beside a body: the one Held ring).</summary>
     public void RingNow()
     {

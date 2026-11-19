@@ -60,10 +60,10 @@ public partial class DropHammer : Node3D
     }
 
     /// <summary>
-    /// The hammer's cues carry this far: a walker near it hears it, a cart held at stop 3 does not. The plan's 30 m would reach stop 3, which
-    /// lies 13.1 m from ride 4's nearest hammer: the range is that less 2 m (--test-ride and --test-crew print the distance and check it).
+    /// The hammer's cues carry this far: a walker near it hears it, a cart held at stop 3 does not (<see cref="SetPieceRules.CueRange"/>
+    /// of its distance to stop 3, set at the floor's build on every role; 30 m until then).
     /// </summary>
-    public const float CueRange = 11.1f;
+    public float CueRange { get; set; } = SetPieceRules.MaxCueRange;
     /// <summary>A phase seen this late (a floor clock that jumped: a load, a client's catch-up) is shown silently.</summary>
     const int LateTicks = 30;
     private HammerPhase _heard;

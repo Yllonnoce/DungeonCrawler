@@ -13,8 +13,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// lantern while a cart bears down. <see cref="Rebuild"/> stacks it again. The server judges it and tells "cleared" and
 /// "rebuilt" (<see cref="NetRef"/>); a client's copy only shows them (<see cref="ShowCleared"/>, <see cref="ShowRebuilt"/>).
 /// </summary>
-public partial class OreHeap : StaticBody3D, ICombatTarget
+public partial class OreHeap : StaticBody3D, ICombatTarget, ISoundPoint
 {
+    /// <summary>Where the heap's sounds (its bell, its fall) are heard, on every role: on the pile.</summary>
+    public Vector3 SoundPoint => GlobalPosition + Vector3.Up * 0.6f;
+
     public const int Hits = 3;
     /// <summary>From the heap's middle to its face along the line.</summary>
     public const float HalfDepth = 0.6f;
@@ -94,7 +97,6 @@ public partial class OreHeap : StaticBody3D, ICombatTarget
     {
         if (!IsAlive || NetSession.IsClient) return DamageResult.Miss(attack.Type);
         Left--;
-        RideAudio.At("crate_break", GlobalPosition + Vector3.Up * 0.6f); // each box knocked off, where it plays today; a client hears the heap cleared (RideAudio.OnProp)
         if (Left > 0)
         {
             EventBus.Instance.Log($"{attackerName} knocks boxes off the ore heap.");
@@ -111,6 +113,7 @@ public partial class OreHeap : StaticBody3D, ICombatTarget
     private void Clear()
     {
         Knock();
+        RideAudio.At("crate_break", SoundPoint); // once, as it clears: a client's comes from its "cleared" (RideAudio.OnProp), at the same point
         Cleared?.Invoke(this);
         Tell("cleared");
     }

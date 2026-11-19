@@ -11,8 +11,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <see cref="Restore"/> stands it up again. The server tells "smashed" and "restored" (<see cref="NetRef"/>); a client's
 /// copy shows them (<see cref="ShowSmashed"/>, with its splinters and timbers).
 /// </summary>
-public partial class BufferStop : StaticBody3D
+public partial class BufferStop : StaticBody3D, ISoundPoint
 {
+    /// <summary>Where the smash is heard, on every role: at the beam.</summary>
+    public Vector3 SoundPoint => GlobalPosition + Vector3.Up * BeamHeight;
+
     /// <summary>From the buffer's middle to the face the cart meets.</summary>
     public const float HalfDepth = 0.3f;
     const float BeamHeight = 0.65f, Width = 1.7f;
@@ -65,7 +68,7 @@ public partial class BufferStop : StaticBody3D
     {
         if (Smashed) return;
         Break(root, cartVelocity);
-        RideAudio.At("timber_smash", GlobalPosition + Vector3.Up * BeamHeight); // a client's comes from its "smashed" (RideAudio.OnProp)
+        RideAudio.At("timber_smash", SoundPoint); // a client's comes from its "smashed" (RideAudio.OnProp), at the same point
         Tell("smashed");
     }
 

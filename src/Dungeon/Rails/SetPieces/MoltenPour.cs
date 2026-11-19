@@ -106,10 +106,10 @@ public partial class MoltenPour : Node3D
     }
 
     /// <summary>
-    /// The pour's cues carry this far: a walker near it hears it, a cart held at stop 3 does not. The plan's 30 m would reach stop 3, which
-    /// lies 25.9 m from the pour: the range is that less 2 m (--test-ride and --test-crew print the distance and check it).
+    /// The pour's cues (its hiss, its stream's loop) carry this far: a walker near it hears it, a cart held at stop 3 does not
+    /// (<see cref="SetPieceRules.CueRange"/> of its distance to stop 3, set at the floor's build on every role; 30 m until then).
     /// </summary>
-    public const float CueRange = 23.9f;
+    public float CueRange { get; set; } = SetPieceRules.MaxCueRange;
     /// <summary>A phase seen this late (a floor clock that jumped: a load, a client's catch-up) is shown silently.</summary>
     const int LateTicks = 30;
     private PourPhase _heard;
@@ -161,8 +161,11 @@ public partial class MoltenPour : Node3D
 /// arrow finds it and nothing blocks the sight ray to it). Any hit bursts it: steam, the pour gutters out for good. The server
 /// judges it and tells "broken" and "rebuilt" (<see cref="NetRef"/>); a client's copy only shows them (<see cref="ShowBroken"/>).
 /// </summary>
-public partial class QuenchValve : StaticBody3D, ICombatTarget
+public partial class QuenchValve : StaticBody3D, ICombatTarget, ISoundPoint
 {
+    /// <summary>Where the burst is heard, on every role: at the wheel.</summary>
+    public Vector3 SoundPoint => GlobalPosition + Vector3.Up * WheelHeight;
+
     /// <summary>The wheel's height above the track: about a seated hero's hand.</summary>
     public const float WheelHeight = 1.1f;
 
@@ -218,7 +221,7 @@ public partial class QuenchValve : StaticBody3D, ICombatTarget
     {
         BurstLook(steam: true);
         EventBus.Instance.Log("The quench valve bursts — the pour gutters out.");
-        RideAudio.At("steam_burst", GlobalPosition + Vector3.Up * WheelHeight); // a client's comes from its "broken" (RideAudio.OnProp)
+        RideAudio.At("steam_burst", SoundPoint); // a client's comes from its "broken" (RideAudio.OnProp), at the same point
         Broken?.Invoke();
         Tell("broken");
     }

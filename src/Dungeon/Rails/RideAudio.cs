@@ -36,6 +36,12 @@ public static class RideAudio
         At(cue, SoundAt(node));
     }
 
-    /// <summary>Where a prop's sound comes from: its node, or a trestle's middle (its node stays at the origin).</summary>
-    public static Vector3 SoundAt(Node3D node) => node is Trestle t ? t.Middle : node.GlobalPosition;
+    /// <summary>Where a prop's sound comes from: its one sound point (<see cref="ISoundPoint"/>, the same on every role), else its node.</summary>
+    public static Vector3 SoundAt(Node3D node) => node is ISoundPoint p ? p.SoundPoint : node.GlobalPosition;
+}
+
+/// <summary>A rail prop's one sound point: its noisy method on the server and in single player and a client's <see cref="RideAudio.OnProp"/> both play there.</summary>
+public interface ISoundPoint
+{
+    Vector3 SoundPoint { get; }
 }

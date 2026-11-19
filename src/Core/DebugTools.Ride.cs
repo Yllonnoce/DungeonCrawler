@@ -64,29 +64,27 @@ public partial class DebugTools
     private List<string> SoundsAfter(double since, double seconds, params string[] cues)
         => _soundPlays.Where(p => p.At >= since && p.At <= since + seconds && cues.Contains(p.Cue)).Select(p => $"{p.Cue}@+{p.At - since:0.00}s").ToList();
 
-    /// <summary>Stop 3's place on the party line against the nearest drop hammer and the pour: the hazards' 30 m cues must not reach a cart held there.</summary>
-    private static (float Hammer, float Pour) Stop3Distances(Node root, RailController rc)
-    {
-        if (rc.StopS.Length < 4 || Main.Instance?.Builder.PartyTrack is not { } track) return (float.NaN, float.NaN);
-        var at = track.ToGlobal(track.Curve.SampleBaked(rc.StopS[3], true));
-        float hammer = float.PositiveInfinity, pour = float.PositiveInfinity;
-        foreach (var child in root.GetChildren())
-        {
-            if (child is MoltenPour p) pour = Mathf.Min(pour, p.GlobalPosition.DistanceTo(at));
-            else if (child is Node3D holder)
-                foreach (var h in holder.GetChildren().OfType<DropHammer>()) hammer = Mathf.Min(hammer, h.GlobalPosition.DistanceTo(at));
-        }
-        return (hammer, pour);
-    }
-
-    /// <summary>Print stop 3's distances; null when both lie beyond the cues' range, else why not.</summary>
+    /// <summary>
+    /// Stop 3's place on the party line against every drop hammer and the pour: each piece's cue range (its own, set at the build) must end
+    /// at least 2 m short of a cart held there. Prints the nearest of each; null when every piece passes, else why not.
+    /// </summary>
     private static string? Stop3Check(string tag, Node root, RailController rc)
     {
-        var (hammer, pour) = Stop3Distances(root, rc);
-        GD.Print($"[{tag}] sound: stop 3 lies {hammer:0.0} m from the nearest drop hammer and {pour:0.0} m from the pour (within 30 m: the cues' range is {DropHammer.CueRange:0.0} m and {MoltenPour.CueRange:0.0} m, 2 m short of it)");
-        // a seated head sits up to 0.7 m along the cart from its middle: the range ends at least 2 m short of stop 3, less a hair for the print's rounding
-        if (!(hammer - DropHammer.CueRange >= 1.95f) || !(pour - MoltenPour.CueRange >= 1.95f)) return $"stop 3 lies within 2 m of the hazards' cue range (hammer {hammer:0.0} m against {DropHammer.CueRange:0.0}, pour {pour:0.0} m against {MoltenPour.CueRange:0.0})";
-        return null;
+        if (rc.StopS.Length < 4 || Main.Instance?.Builder.PartyTrack is not { } track) return null;
+        var at = track.ToGlobal(track.Curve.SampleBaked(rc.StopS[3], true));
+        var pieces = new List<(string What, float Distance, float Range)>();
+        foreach (var child in root.GetChildren())
+        {
+            if (child is MoltenPour p) pieces.Add(("pour", p.GlobalPosition.DistanceTo(at), p.CueRange));
+            else if (child is Node3D holder)
+                foreach (var h in holder.GetChildren().OfType<DropHammer>()) pieces.Add(($"hammer {h.Index}", h.GlobalPosition.DistanceTo(at), h.CueRange));
+        }
+        if (pieces.Count == 0) return "no drop hammer or pour on the floor to check";
+        string Nearest(string kind) => pieces.Where(x => x.What.StartsWith(kind)).OrderBy(x => x.Distance).Select(x => $"{x.What} {x.Distance:0.0} m (range {x.Range:0.0} m)").FirstOrDefault() ?? "none";
+        GD.Print($"[{tag}] sound: stop 3 against the hazards' cues: nearest {Nearest("hammer")}, {Nearest("pour")}; each range is min(30, distance - 2)");
+        // a hair under 2 m for float rounding
+        var near = pieces.Where(x => x.Distance - x.Range < SetPieceRules.StopThreeMargin - 0.01f).Select(x => $"{x.What} {x.Distance:0.00} m against range {x.Range:0.00} m").ToList();
+        return near.Count == 0 ? null : $"a hazard's cue reaches within 2 m of stop 3: {string.Join(", ", near)}";
     }
 
     /// <summary>Each frame of the ride: the party cart's roll follows the rules (on above a crawl, its pitch RideSound.RollPitch of V). Null, or why not.</summary>
@@ -238,8 +236,11 @@ public partial class DebugTools
                     if (_rideSeatDrift > 0.1f) { Fail($"a seated companion left its seat by {_rideSeatDrift:0.000} m"); return; }
                     if (_rideAllAboard != 1) { Fail($"{_rideAllAboard} AllAboard calls before the load, not 1"); return; }
                     var clacks = SoundCount("rail_clack", _rideDepartAt, _rideDepartAt + 10.0, cart: true);
+                    var squeals = SoundCount("brake_squeal", _rideDepartAt, RideNow, cart: true);
                     GD.Print($"[ride] sound: {clacks} rail_clack from the cart within 10 s of the departure; the roll checked on {_ridePitchSamples} frame(s), V up to {_rideMaxV:0.00}, roll on above 0.3 m/s {(_rideRollChecked ? "yes" : "NO")}, pitch over 1.0 above 5.5 m/s {(_ridePitchChecked ? "yes" : "not reached")}");
+                    GD.Print($"[ride] sound: the arrival at stop 1 played brake_squeal x{squeals}");
                     if (clacks < 5) { Fail($"only {clacks} rail_clack from the cart within 10 s of the departure, not 5"); return; }
+                    if (squeals < 1) { Fail("the cart rolled into stop 1 without a brake_squeal"); return; }
                     if (!_rideRollChecked) { Fail("the cart never rolled above 0.3 m/s to check its roll"); return; }
                     // brief step 5: save at the stop with everyone aboard, load
                     main.SaveGame("ridetest");

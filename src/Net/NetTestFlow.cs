@@ -1044,19 +1044,6 @@ public partial class NetTestFlow : Node
     private float _heapFace = float.NaN, _heapMost = float.MinValue, _heapPrevS = -1f, _heapBack;
     private bool _heapSawRolling;
 
-    /// <summary>
-    /// The joiner's half of the RIDE pass. Step 60: in game on floor 12 (its Welcome's floor) with the rails: its Ready's server time is
-    /// noted; step 61: 1 s after it, the ride as it is: the cart's state followed and Rolling on ride 2, the first client's hero seated in
-    /// the party's cart, the crew in their wagons and the train behind the cart (the script compares the seats, the train and the props'
-    /// hash with the server's on the grid, and the cart's S within 1.5 m); step 62: put beside the cart at stop 2 by the server, board
-    /// through the intent; step 63: ride 3 seated; 2 s after it rolls, at speed, get out through the intent; step 67 (task 11): thrown, we stand
-    /// at the server's landing on the line behind the cart, and ask for the floor again (a resync mid-ride 3); step 68: the floor is rebuilt
-    /// here; step 69: 1 s after that Ready, the ride as it is again (resynced-mid-ride ok); step 64 (task 9): on foot (the server puts us beside
-    /// stop 3's spare once the train is held there), the spare offers nothing while the train is held there, take it through the intent once
-    /// the train has left on ride 4; step 65: seated in the chaser, it halts within 3 m behind the train's last body here and we are set down
-    /// (chase-done); step 66 (task 11): once the first client has left, the server wrecks the cart at the end of the line by a test hook and a
-    /// spare takes over: we see the Wrecked state, then the cart held at the spare's stop (wreck-spare); then leave.
-    /// </summary>
     // ---- the ride's sound on a client (plan 6 task 5): the party cart's roll from the synced state, no rail cue relayed, the wreck heard once ----
 
     private bool _soundListening, _soundOk;
@@ -1097,6 +1084,19 @@ public partial class NetTestFlow : Node
         return null;
     }
 
+    /// <summary>
+    /// The joiner's half of the RIDE pass. Step 60: in game on floor 12 (its Welcome's floor) with the rails: its Ready's server time is
+    /// noted; step 61: 1 s after it, the ride as it is: the cart's state followed and Rolling on ride 2, the first client's hero seated in
+    /// the party's cart, the crew in their wagons and the train behind the cart (the script compares the seats, the train and the props'
+    /// hash with the server's on the grid, and the cart's S within 1.5 m); step 62: put beside the cart at stop 2 by the server, board
+    /// through the intent; step 63: ride 3 seated; 2 s after it rolls, at speed, get out through the intent; step 67 (task 11): thrown, we stand
+    /// at the server's landing on the line behind the cart, and ask for the floor again (a resync mid-ride 3); step 68: the floor is rebuilt
+    /// here; step 69: 1 s after that Ready, the ride as it is again (resynced-mid-ride ok); step 64 (task 9): on foot (the server puts us beside
+    /// stop 3's spare once the train is held there), the spare offers nothing while the train is held there, take it through the intent once
+    /// the train has left on ride 4; step 65: seated in the chaser, it halts within 3 m behind the train's last body here and we are set down
+    /// (chase-done); step 66 (task 11): once the first client has left, the server wrecks the cart at the end of the line by a test hook and a
+    /// spare takes over: we see the Wrecked state, then the cart held at the spare's stop (wreck-spare); then leave.
+    /// </summary>
     private void RideJoinerClient(NetSession net, ClientWorld client, Main main)
     {
         FightBoarders(main);

@@ -15,8 +15,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// judges it and tells every change (<see cref="NetRef"/>: "thrown", "straight", "taken", "free", "reset"); a client's copy only shows
 /// what it is told (<see cref="ShowThrown"/>, <see cref="ShowTaken"/>, <see cref="ShowReset"/>).
 /// </summary>
-public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
+public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, ISoundPoint
 {
+    /// <summary>Where the lever's clunk is heard, on every role: at its pivot.</summary>
+    public Vector3 SoundPoint => GlobalPosition + Vector3.Up * 0.9f;
+
     public const float PostHeight = 1.5f;
     const float Swing = 0.6f; // the handle's lean either way, radians
 
@@ -99,7 +102,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
     {
         if (NetSession.IsClient || Fixed || Taken) return false;
         SetThrown(!Thrown);
-        RideAudio.At("switch_clunk", GlobalPosition + Vector3.Up * 0.9f); // a client's comes from its "thrown" or "straight" (RideAudio.OnProp)
+        RideAudio.At("switch_clunk", SoundPoint); // a client's comes from its "thrown" or "straight" (RideAudio.OnProp), at the same point
         EventBus.Instance.Log(Thrown ? $"{who} throws the switch." : $"{who} sets the switch back.");
         Tell(Thrown ? "thrown" : "straight");
         return true;

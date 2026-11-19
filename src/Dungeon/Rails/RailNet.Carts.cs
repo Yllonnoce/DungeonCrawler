@@ -278,7 +278,8 @@ public partial class RailNet
     }
 
     /// <summary>
-    /// Client, each rendered frame: a copy's sound from its follower (its S, speed, mode and plating; its track), a follower snap priming it.
+    /// Client, each rendered frame: a copy's sound from its follower (its S, speed, mode and plating; its track), a follower snap of more than
+    /// a metre or onto another track priming it.
     /// The golem's runner hears its track only (the DTO's: its one sound is the points' clunk, and a track change snaps the follower, so its
     /// snaps never prime it).
     /// </summary>
@@ -288,7 +289,7 @@ public partial class RailNet
         if (!sound.Wheels) { sound.FeedTrack(cc.Track); return; }
         if (cc.Follow.Snaps != cc.Snaps)
         {
-            if (cc.Snaps != int.MinValue) sound.Prime();
+            if (cc.Snaps != int.MinValue) sound.Snapped(s, cc.Track);
             cc.Snaps = cc.Follow.Snaps;
         }
         sound.FeedRun(cc.Run, s, cc.Follow.V, cc.Follow.Mode, cc.Follow.Plating, cc.Track);

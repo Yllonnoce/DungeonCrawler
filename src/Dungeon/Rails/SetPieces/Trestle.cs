@@ -12,8 +12,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// seconds after the cart's front enters it and catches a cart still on it. The server tells "collapsed" and "rebuilt"
 /// (<see cref="NetRef"/>); a client's copy shows them (<see cref="ShowCollapsed"/>, its timbers tumbling too).
 /// </summary>
-public partial class Trestle : Node3D
+public partial class Trestle : Node3D, ISoundPoint
 {
+    /// <summary>Where its fall is heard, on every role: the line at its middle (the node stays at the origin).</summary>
+    public Vector3 SoundPoint => Middle;
+
     public const float Span = 12f;
     const float BentEvery = 3f, DeckWidth = 2.1f, LegOut = 1.15f, RailHeight = 1f;
     const float TimberSeconds = 4f;
@@ -78,7 +81,7 @@ public partial class Trestle : Node3D
     {
         if (Collapsed) return;
         Fall(root);
-        RideAudio.At("timber_collapse", Middle); // a client's comes from its "collapsed" (RideAudio.OnProp)
+        RideAudio.At("timber_collapse", SoundPoint); // a client's comes from its "collapsed" (RideAudio.OnProp), at the same point
         Tell("collapsed");
     }
 

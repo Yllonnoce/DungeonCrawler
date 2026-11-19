@@ -246,7 +246,7 @@ public partial class RailEncounterController
     {
         if (heap.Alarm == alarm) return;
         heap.Alarm = alarm;
-        if (alarm) RideAudio.At("cart_bell", heap.GlobalPosition);
+        if (alarm) RideAudio.At("cart_bell", heap.SoundPoint);
         if (NetSession.Instance?.TestRide == true)
             GD.Print(FormattableString.Invariant($"[{(NetSession.IsClient ? "net" : "net-server")}] ride heap alarm={(alarm ? "on" : "off")} t={(NetSession.IsClient ? NetSession.Instance.Client?.ServerNow ?? 0 : NetSession.Instance.Now):0.000}"));
     }

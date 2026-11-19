@@ -123,8 +123,8 @@ public static class RideSound
 
     /// <summary>
     /// The one-shot edges from one feed to the next: a halt (Crash), leaving or meeting the rails (Jump, Land), plating lost (Hit), a real
-    /// arrival (Arrive: Rolling to Held with no halt, no plating mended and no jump along the line, which a spare's takeover makes), a track
-    /// change and a thrown switch taken (Cross).
+    /// arrival (Arrive: Rolling to Held with no halt and no jump of a metre or more along the line, which a spare's takeover makes; an
+    /// arrival mends the plating in the same tick, so a rise says nothing), a track change and a thrown switch taken (Cross).
     /// </summary>
     public static CartCue Edges(in CartSoundInput prev, in CartSoundInput now)
     {
@@ -134,7 +134,7 @@ public static class RideSound
         if (now.Airborne && !prev.Airborne) e |= CartCue.Jump;
         if (!now.Airborne && prev.Airborne) e |= CartCue.Land;
         if (prev.Plating - now.Plating >= 1f) e |= CartCue.Hit;
-        if (prev.Mode == CartMode.Rolling && now.Mode == CartMode.Held && !haltRose && now.Plating <= prev.Plating && Math.Abs(now.S - prev.S) < 1f)
+        if (prev.Mode == CartMode.Rolling && now.Mode == CartMode.Held && !haltRose && Math.Abs(now.S - prev.S) < 1f)
             e |= CartCue.Arrive;
         if (now.Track != prev.Track) e |= CartCue.TrackChange;
         if (now.Crossing && !prev.Crossing) e |= CartCue.Cross;
