@@ -382,6 +382,7 @@ public static class PlanValidator
                 if (isBoss) { report.Repairs.Add($"rail encounter {e.Id}: no bosses"); return true; }
             }
             e.At = Clamp("rail encounter", e.Id, e.At);
+            if (e.Line != null) { CampaignRepair.RepairLine(e.Line, report.Repairs, $"rail encounter {e.Id} line"); ClipLine(e.Line); }
             if (e.Kind == "slag_cart")
             {
                 var total = e.Riders.Sum(m => m.Count);
@@ -430,6 +431,9 @@ public static class PlanValidator
             CampaignRepair.RepairPersona(n.Persona, report.Repairs, $"NPC {n.Id}");
             if (n.Persona is { IsEmpty: true }) n.Persona = null;
             foreach (var node in n.Script.Nodes) CampaignRepair.RepairLine(node.Line, report.Repairs, $"NPC {n.Id} line");
+            n.Calls ??= new();
+            n.Calls.RemoveAll(c => c?.Line == null);
+            foreach (var c in n.Calls) { CampaignRepair.RepairLine(c.Line, report.Repairs, $"NPC {n.Id} call {c.Key}"); ClipLine(c.Line); }
             if (n.Betrayal != null)
             {
                 if (!rosterIds.Contains(n.Betrayal.EnemyId)) { n.Betrayal = null; report.Repairs.Add($"NPC {n.Id}: betrayal creature not in the roster, dropped"); }

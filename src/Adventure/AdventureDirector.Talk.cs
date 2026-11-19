@@ -18,6 +18,9 @@ public partial class AdventureDirector
     private static bool Authority => !Net.NetSession.IsClient;
     private static FloorObjectiveKind Kind => Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None;
 
+    /// <summary>The villain on a ride's moment, for the floor's own objective. Server and solo only; false on a client.</summary>
+    public bool RailTaunt(Objectives.TauntTrigger trigger, string? arg = null, bool urgent = false) => Authority && Taunt(trigger, Kind, arg, urgent);
+
     private void WireTalk(EventBus bus)
     {
         bus.TrapSprung += i => { if (Authority) Bark(Member(i), BarkTrigger.TrapSprung); };

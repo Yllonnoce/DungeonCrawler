@@ -160,9 +160,13 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// Say a line out of a conversation (the merchant's greeting and his remarks on the gathering): its voice if it has
     /// one, the subtitle and the log line either way, and the talking pose for as long as it takes to say. Local only.
     /// </summary>
+    /// <summary>An NPC said a line through <see cref="Say"/>, on whichever role it was said (a test hook on the real path).</summary>
+    public static event Action<Npc, Line>? Said;
+
     public void Say(Line line)
     {
         if (Dead || string.IsNullOrWhiteSpace(line.Text)) return;
+        Said?.Invoke(this, line);
         var voiced = VoiceRenderer.Instance?.PlayLine(line, interrupt: false) == true; // the generic merchant's lines have no voice: subtitle only
         GD.Print($"[Npc] {NpcName}: \"{line.Text}\"{(voiced ? "" : " (no voice)")}");
         Main.Instance?.Hud?.ShowSubtitle($"{NpcName}: {line.Text}");

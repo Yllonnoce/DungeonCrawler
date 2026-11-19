@@ -200,9 +200,9 @@ public partial class RailEncounterController : Node
 
     private void ShowLine(int index, RailEncounterPlan enc)
     {
-        if (_lineShown[index] || string.IsNullOrWhiteSpace(enc.Line)) return;
+        if (_lineShown[index] || enc.Line is not { } line || string.IsNullOrWhiteSpace(line.Text)) return;
         _lineShown[index] = true;
-        EventBus.Instance.RaiseNarration(enc.Line, null);
+        EventBus.Instance.RaiseNarration(line.Text, line.VoiceId); // the narrator's, in its recording once the voice pass gives it one
     }
 
     // ---- slag carts ------------------------------------------------------------------------------

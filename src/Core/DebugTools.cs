@@ -952,6 +952,7 @@ public partial class DebugTools : Node
                     foreach (var npc in plan.Npcs.Where(n => n.CastId != null))
                     {
                         foreach (var node in npc.Script.Nodes) wanted.Add(node.Line);
+                        foreach (var call in npc.Calls) wanted.Add(call.Line); // what they call out on the floor (Grisel on the rails)
                         foreach (var q in plan.Quests.Where(q => q.GiverNpc == npc.Id)) foreach (var l in new[] { q.Lines.Offer, q.Lines.Accept, q.Lines.Decline, q.Lines.Complete, q.Lines.Fail }) wanted.Add(l);
                     }
                     if (plan.Boss != null) foreach (var l in plan.Boss.AllLines()) wanted.Add(l);

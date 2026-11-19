@@ -225,6 +225,22 @@ public sealed class NpcPlan
     /// through the rite rather than a script. Hand-authored (a cast member as the ritualist); the designer never sets it.
     /// </summary>
     [AiIgnore] public bool Ritualist { get; set; }
+    /// <summary>
+    /// Hand-authored lines the NPC calls out at a moment of the floor rather than in conversation (Grisel naming her crew
+    /// at each departure, her word at the cage: see <c>RideLines</c>), said once a run through the NPC line path. The voice
+    /// pipeline reads them beside the script's nodes.
+    /// </summary>
+    [AiIgnore] public List<NpcCallPlan> Calls { get; set; } = new();
+
+    /// <summary>The first call with this key (case-blind), or null.</summary>
+    public Line? CallFor(string key) => Calls.FirstOrDefault(c => string.Equals(c.Key, key, StringComparison.OrdinalIgnoreCase))?.Line;
+}
+
+/// <summary>One of an NPC's <see cref="NpcPlan.Calls"/>: the moment's key and what they say.</summary>
+public sealed class NpcCallPlan
+{
+    public string Key { get; set; } = "";
+    public Line Line { get; set; } = new();
 }
 
 /// <summary>One of Grisel's crew on a railed jailbreak floor: caged in a wagon at the start, freed along the line. A person by name, not a stock prisoner.</summary>
@@ -250,7 +266,8 @@ public sealed record RailEncounterPlan
     public float At { get; set; } = 0.5f;
     /// <summary>Metres ahead (+) or behind (-) the party cart, for a slag cart.</summary>
     public float Offset { get; set; }
-    [AiNotNull] public string? Line { get; set; }
+    /// <summary>The narrator's line as it comes into view, or null. Plans 2–4 wrote it as a bare string; <see cref="LineOrTextConverter"/> reads both.</summary>
+    [AiNotNull, System.Text.Json.Serialization.JsonConverter(typeof(LineOrTextConverter))] public Line? Line { get; set; }
 }
 
 /// <summary>A scripted set piece on a ride. Kind is "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch" or "buffer".</summary>

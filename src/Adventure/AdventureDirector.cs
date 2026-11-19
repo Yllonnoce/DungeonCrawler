@@ -123,6 +123,7 @@ public partial class AdventureDirector : Node
             var major = npc.CastId != null; // the cast gets the main model; passers-by the minor one
             var persona = npc.Persona ?? campaign?.CastFor(npc.CastId)?.Persona; // how they sound: their own words, else the cast member's
             foreach (var node in npc.Script.Nodes) _voice.Enqueue(node.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona);
+            foreach (var call in npc.Calls) _voice.Enqueue(call.Line, npc.VoiceId, Speaker.Npc, VoicePriority.Npc, major, persona); // what they call out on the floor (SayAs), in the same voice
             foreach (var aside in npc.Script.Nodes.Select(n => n.Aside).OfType<AsidePlan>()) // a companion's remark after the NPC's line, in the companion's voice
             {
                 var cls = ClassIdOf(aside.Member);
@@ -133,6 +134,7 @@ public partial class AdventureDirector : Node
         }
         foreach (var t in plan.Taunts) EnqueueTaunt(t, campaign);
         foreach (var h in plan.Hordes) if (h.Line.Text.Length > 0) _voice.Enqueue(h.Line, narrator, Speaker.Narrator, VoicePriority.Narrator); // the nest's line is narrated when the horde pours
+        foreach (var r in plan.RailEncounters) if (r.Line is { Text.Length: > 0 } rl) _voice.Enqueue(rl, narrator, Speaker.Narrator, VoicePriority.Narrator); // a ride's encounter, narrated as it comes into view
     }
 
     /// <summary>The antagonist's line: their voice, their persona, the clean twin rendered under the same id if the words are refused.</summary>
@@ -251,6 +253,52 @@ public partial class AdventureDirector : Node
         _barkCooldown[(m.Name, trigger)] = now;
         Say(m.Name, line);
         return true;
+    }
+
+    /// <summary>
+    /// A hero calls out a warning or a moment of the ride (the rails' call-outs): their own line for the trigger, chosen
+    /// as a bark is (<c>ChooseOrOldest</c>, marked said, the clock set) but past the bark gaps, since a warning cannot wait.
+    /// Server and solo only: a client hears it as a BarkMsg.
+    /// </summary>
+    public bool CallOut(Characters.CharacterState? member, BarkTrigger trigger) => Authority && Bark(member, trigger, scripted: true);
+
+    private readonly HashSet<string> _callsPending = new(); // SayAs keys queued and not yet said: asked again, they are not queued twice
+
+    /// <summary>
+    /// An NPC's line said once a run, through the NPC line path (as the merchant's gathering remarks): never narration.
+    /// It is queued, never said inside the caller's handler, so a taunt raised by the same moment goes first; once the
+    /// voice channel is free it is said (<see cref="Npc.Say"/>, and <c>NpcSay</c> to every client on a server), the key
+    /// <c>call:{floor}:{onceKey}</c> is remembered forever, and the channel is held for it. Dropped on a floor change or
+    /// when the NPC is gone or dead. False when it was said or queued already, or on a client.
+    /// </summary>
+    public bool SayAs(Npc npc, Line line, string onceKey)
+    {
+        if (!Authority || !Game.Instance.InGame || string.IsNullOrWhiteSpace(line.Text)) return false;
+        var key = $"call:{_currentFloor}:{onceKey}";
+        if (Game.Instance.Adventure.BarksSaid.ContainsKey(key) || !_callsPending.Add(key)) return false;
+        QueueCall(npc, line, key, _currentFloor);
+        return true;
+    }
+
+    /// <summary>A beat after whatever is being said now: a held taunt queued at the channel's free moment runs first.</summary>
+    private const double CallAfterSeconds = 0.05;
+
+    private void QueueCall(Npc npc, Line line, string key, int floor)
+    {
+        var at = Math.Max(_speech.Until, Game.Instance.PlaySeconds) + CallAfterSeconds;
+        _deferred.Add((at, () =>
+        {
+            if (_currentFloor != floor || !GodotObject.IsInstanceValid(npc) || npc.Dead) { _callsPending.Remove(key); return; }
+            var now = Game.Instance.PlaySeconds;
+            if (!_speech.Free(now)) { QueueCall(npc, line, key, floor); return; } // a line came in meanwhile: wait for it
+            _callsPending.Remove(key);
+            npc.Say(line);
+            if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.NpcSay(npc.Id, line)); // a client's Npc shows her name on the subtitle
+            Game.Instance.Adventure.BarksSaid[key] = Voice.BarkRepeat.Forever;
+            var heard = Heard(line.Text, line.VoiceId);
+            _speech.Spoke(now, heard); // the next taunt or call waits for her
+            _taunts.NoteNarration(now, heard);
+        }));
     }
 
     /// <summary>A companion's line goes out: the log, the bus (co-op clients hear it as a BarkMsg), the subtitle strip with the speaker's name, and the voice if it has one.</summary>
@@ -472,7 +520,7 @@ public partial class AdventureDirector : Node
     private (double? DrainedAt, Action Show)? _heldRecap; // the victory recap, waiting for the closing narration; DrainedAt once the last entry is raised
 
     /// <summary>Nothing queued survives a floor change, a load or a wipe: the line was not heard, so its key was never recorded.</summary>
-    private void ClearNarrationQueue() { _deferred.Clear(); _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; _speech.Reset(); }
+    private void ClearNarrationQueue() { _deferred.Clear(); _callsPending.Clear(); _narrationQueue.Clear(); _narrationQueued.Clear(); _narrationFree = 0; _speech.Reset(); }
 
     /// <summary>
     /// The last boss is dead: when its death queued narration (the closing lines), the victory recap waits until that has

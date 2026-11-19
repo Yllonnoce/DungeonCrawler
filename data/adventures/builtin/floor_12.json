@@ -449,7 +449,11 @@
       ],
       "At": 0.45,
       "Offset": 0,
-      "Line": "One of them\u0027s stood on the rails."
+      "Line": {
+        "Text": "A cinder stands square on the rails ahead, waiting for the cart.",
+        "VoiceId": null,
+        "Delivery": null
+      }
     },
     {
       "Id": "r1_thrower",
@@ -479,7 +483,11 @@
       ],
       "At": 0.15,
       "Offset": -6,
-      "Line": "Carts on the slag line!"
+      "Line": {
+        "Text": "Lamps on the slag line: the orc\u0027s carts are coming up alongside.",
+        "VoiceId": null,
+        "Delivery": null
+      }
     },
     {
       "Id": "r2_slag2",
@@ -549,7 +557,11 @@
       ],
       "At": 0.05,
       "Offset": 0,
-      "Line": "The kiln wall bursts \u2014 something huge is on the slag line!"
+      "Line": {
+        "Text": "The kiln wall bursts outward, and something huge drops onto the slag line.",
+        "VoiceId": null,
+        "Delivery": null
+      }
     }
   ],
   "RailSetPieces": [
