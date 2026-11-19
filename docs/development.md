@@ -1302,8 +1302,9 @@ which reads "Relief cart — departs in N", "Relief cart — after the train" or
 (`RailHudState.ChaserRelief`). It is solid and usable while it stands. "Board the cart" seats the player, their companions on
 foot within 25 m and the escorts on its bench, and starts its countdown; it then runs up behind the train and sets everyone
 down there. Getting out while it stands sets the player and their companions down; with no player left in it, it waits again
-and sets every other rider down. The phases are `ReliefPhase` Coming, Waiting, Riding and Leaving (`ReliefRules.Next`, `Rolls`,
-`Prompt`).
+and sets every other rider down. Its countdown ticks, and it rolls, only with a player in it (`ReliefRules.CountsDown`,
+`Rolls`), so a get-out in the countdown's last tick leaves it standing too. The phases are `ReliefPhase` Coming, Waiting, Riding and Leaving (`ReliefRules.Next`, `Rolls`,
+`Prompt`, `CountsDown`).
 
 **Log lines.** "A relief cart comes down the line.", "The relief cart waits for you.", "{name} climbs into the relief cart.",
 "The relief cart pulls up behind the train." and "The relief cart rolls on without you."; on stdout `[rails] relief {n}: sent

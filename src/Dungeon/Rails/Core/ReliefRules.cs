@@ -106,13 +106,22 @@ public static class ReliefRules
         _ => ReliefPhase.Leaving,
     };
 
-    /// <summary>The relief rolls: Coming and Leaving while their limit lies ahead; Riding once its countdown ran out; Waiting never.</summary>
-    public static bool Rolls(ReliefPhase phase, bool boarded, float s, float limit) => phase switch
+    /// <summary>
+    /// The relief rolls: Coming and Leaving while their limit lies ahead; Riding once its countdown ran out and only with a player
+    /// in it (a rider who got out as it boarded leaves it standing: it waits again, <see cref="Next"/>); Waiting never.
+    /// </summary>
+    public static bool Rolls(ReliefPhase phase, bool boarded, bool playerAboard, float s, float limit) => phase switch
     {
         ReliefPhase.Coming or ReliefPhase.Leaving => SpareRules.ChaseRolls(true, s, limit),
-        ReliefPhase.Riding => SpareRules.ChaseRolls(boarded, s, limit),
+        ReliefPhase.Riding => playerAboard && SpareRules.ChaseRolls(boarded, s, limit),
         _ => false,
     };
+
+    /// <summary>
+    /// The riding relief's countdown ticks: it has not run out yet and a player is in it. With nobody in it the tick is skipped, so a
+    /// get-out in its last tick never boards it (it waits again, <see cref="Next"/>, and never carries the escorts off alone).
+    /// </summary>
+    public static bool CountsDown(bool boarded, bool playerAboard) => !boarded && playerAboard;
 
     /// <summary>
     /// The relief's prompt: the chaser's ("Get out" while it stands, never in the countdown's first two seconds, never downed) for a hero

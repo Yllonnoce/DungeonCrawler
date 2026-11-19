@@ -111,6 +111,7 @@ public partial class RailController
     private void TickReliefChase(PartyController party, Chase c, RailEncounterController? enc, float limit, float trainLimit, float dt)
     {
         var run = c.Run;
+        var playerIn = PlayerIn(c.Cart);
         switch (c.Phase)
         {
             case ReliefPhase.Coming:
@@ -122,14 +123,14 @@ public partial class RailController
                 c.Waited += dt;
                 break;
             case ReliefPhase.Riding:
-                if (!c.Boarded) // the chaser's countdown; with no player left in it, it waits again (below), it never ends here
+                if (ReliefRules.CountsDown(c.Boarded, playerIn)) // the chaser's countdown, only with a player in it: with nobody left in it (even in its last tick) it waits again (below), it never ends here
                 {
                     CountChasers(party, c.Cart, out var seated, out var living);
                     if (c.Boarding.Tick(dt, seated, living)) c.Boarded = true;
                 }
                 break;
         }
-        if (run.State.Mode == CartMode.Held && ReliefRules.Rolls(c.Phase, c.Boarded, run.State.S, limit))
+        if (run.State.Mode == CartMode.Held && ReliefRules.Rolls(c.Phase, c.Boarded, playerIn, run.State.S, limit))
         {
             run.State = run.State with { Mode = CartMode.Rolling };
             run.Settle(); // from a standstill: nothing banked from the wait
@@ -177,7 +178,7 @@ public partial class RailController
         else if (c.Phase == ReliefPhase.Leaving && held)
         {
             if (c.Departed) EndChase(atOnce: false); // it rolled on and stopped: hidden after HideSeconds
-            else if (!ReliefRules.Rolls(c.Phase, c.Boarded, run.State.S, limit)) EndChase(atOnce: true); // nowhere to roll on to: gone now
+            else if (!ReliefRules.Rolls(c.Phase, c.Boarded, playerIn, run.State.S, limit)) EndChase(atOnce: true); // nowhere to roll on to: gone now
         }
     }
 
