@@ -39,8 +39,10 @@ public partial class RailEncounterController : Node
     public LaneMap Lanes { get; private set; } = null!;
     private IReadOnlyList<RailEncounterPlan> _encounters = Array.Empty<RailEncounterPlan>();
     private IReadOnlyList<RailSetPiecePlan> _setPieces = Array.Empty<RailSetPiecePlan>();
-    /// <summary>The ride whose items wait for the cart (1-based), or −1 when none is armed.</summary>
+    /// <summary>The ride whose items wait for the cart (1-based), or −1 when none is armed. A client's is the server's (the party cart's state).</summary>
     public int ArmedRide { get; private set; } = -1;
+    /// <summary>The server's clock (<c>NetSession.Instance.Now</c>) when <see cref="ArmedRide"/> armed; a client's buckets run from it.</summary>
+    public double ArmedAt { get; private set; }
     private bool[] _started = Array.Empty<bool>();
     private bool[] _lineShown = Array.Empty<bool>();
     private readonly List<SlagCart> _carts = new();
@@ -135,6 +137,7 @@ public partial class RailEncounterController : Node
     private void Arm(int ride)
     {
         ArmedRide = ride >= 1 && ride < _rails.StopS.Length ? ride : -1;
+        ArmedAt = NetSession.Instance?.Now ?? 0;
         if (ArmedRide >= 1) FreeTraffic(); // the ride has the enemy line: a traffic cart in the way goes, so the two are never live together
         for (var i = 0; i < _encounters.Count; i++)
             if (_encounters[i].Ride == ride) _started[i] = false;
@@ -376,7 +379,8 @@ public partial class RailEncounterController : Node
 
     public override void _Process(double delta)
     {
-        if (NetSession.IsClient || !Current) return;
+        if (!Current) return;
+        if (NetSession.IsClient) { ClientPresent((float)delta); return; }
         FollowBoarders();
         var frac = (float)Engine.GetPhysicsInterpolationFraction();
         PoseGolem(frac);

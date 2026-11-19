@@ -1,6 +1,7 @@
 using DungeonCrawler.Adventure;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Props;
+using DungeonCrawler.Net;
 using DungeonCrawler.Party;
 using Godot;
 
@@ -216,9 +217,9 @@ public partial class RailEncounterController
     {
         if (piece.Heap is not { IsAlive: true } heap) return;
         var front = _rails.Party.FrontS;
-        var headed = rolling && heap.FaceS >= front - 0.5f && !_rails.OnEnemyLane(heap.FaceS) && !SwitchSetBefore(piece);
-        var look = Mathf.Max(_rails.State.V, RunOverRules.WarnMinSpeed) * WarnSeconds;
-        heap.Alarm = headed && heap.FaceS - front <= look;
+        var headed = SetPieceRules.HeapHeaded(rolling, heap.FaceS, front, _rails.OnEnemyLane(heap.FaceS), SwitchSetBefore(piece));
+        var look = SetPieceRules.HeapLook(_rails.State.V);
+        SetAlarm(heap, SetPieceRules.HeapAlarm(headed, heap.FaceS, front, _rails.State.V));
         if (piece.Barked || !headed) return;
         var aim = LeverAheadOf(piece, front) ?? heap.FaceS; // the call is useful while the lever is still ahead
         if (aim - front > look) return;
@@ -228,12 +229,27 @@ public partial class RailEncounterController
         GD.Print($"[rails] heap {piece.Plan.Id} called at front S={front:0.0} ({heap.FaceS - front:0.0} m to the heap, aim {aim:0.0}); bark={by ?? "none"}");
     }
 
-    /// <summary>A switch_out of the heap's ride before it, not yet taken, is thrown: the cart will go round.</summary>
+    /// <summary>
+    /// A switch_out of the heap's ride before it, not yet taken, is thrown: the cart will go round. The server knows a taken switch by its
+    /// piece having fired; a client by the lever's Taken, which the server tells as it takes it.
+    /// </summary>
     private bool SwitchSetBefore(Piece heap)
     {
         foreach (var p in _pieces)
-            if (p.Plan.Ride == heap.Plan.Ride && p.Plan.Kind == "switch_out" && !p.Fired && p.S < heap.S && p.Switch is { Thrown: true }) return true;
+        {
+            if (p.Plan.Ride != heap.Plan.Ride || p.Plan.Kind != "switch_out" || p.S >= heap.S || p.Switch is not { Thrown: true } sw) continue;
+            if (!(NetSession.IsClient ? sw.Taken : p.Fired)) return true;
+        }
         return false;
+    }
+
+    /// <summary>The heap's lantern blinks or not; the RIDE pass prints each change on both sides (server time).</summary>
+    private static void SetAlarm(OreHeap heap, bool alarm)
+    {
+        if (heap.Alarm == alarm) return;
+        heap.Alarm = alarm;
+        if (NetSession.Instance?.TestRide == true)
+            GD.Print(FormattableString.Invariant($"[{(NetSession.IsClient ? "net" : "net-server")}] ride heap alarm={(alarm ? "on" : "off")} t={(NetSession.IsClient ? NetSession.Instance.Client?.ServerNow ?? 0 : NetSession.Instance.Now):0.000}"));
     }
 
     /// <summary>The lever of an untaken switch_out before the heap that the front has not reached yet, or null.</summary>

@@ -93,6 +93,9 @@ public partial class EventBus : Node
     public event Action<Enemies.Enemy>? EnemySpawned;
     /// <summary>An enemy began a wind-up or a signature telegraph (the state's name: "Attack", "Shoot", "Signature:Slam"); the server relays it to clients.</summary>
     public event Action<Enemies.Enemy, string>? EnemyTelegraph;
+    /// <summary>A server shook a remote player's body (member, amplitude, seconds): its own screen is told (<c>ShakeEvt</c>).</summary>
+    public event Action<int, float, float>? RemoteShake;
+    public void RaiseRemoteShake(int member, float amplitude, float seconds) => RemoteShake?.Invoke(member, amplitude, seconds);
     public void RaiseEnemyTelegraph(Enemies.Enemy enemy, string state) => EnemyTelegraph?.Invoke(enemy, state);
     public event Action<string>? HordeTriggered;
     public event Action<string>? HordeSpent;

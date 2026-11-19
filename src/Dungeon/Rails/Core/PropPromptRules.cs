@@ -42,4 +42,20 @@ public static class PropPromptRules
 
     /// <summary>The orc's keyring at Grisel's belt: offered until the keys are taken.</summary>
     public static string KeyringPrompt(bool orcKeys) => orcKeys ? "" : "Take the orc's keys";
+
+    /// <summary>A use through the InteractIntent reaches this far (to the prop's box from the body or the eye, as the look ray does).</summary>
+    public const float InteractReach = 3.5f;
+    /// <summary>The most a seated thrower's lag may add to a lever's reach.</summary>
+    public const float SeatedLagCap = 1.5f;
+
+    /// <summary>
+    /// How far a lever (a track switch or a spur's) may be from the body when the server judges its use. A player seated in a rolling cart
+    /// saw it in reach a round trip ago: the cart has carried them on by <paramref name="cartSpeed"/> × <paramref name="rtt"/> since, so that
+    /// much is allowed on top of <see cref="InteractReach"/>, at most <see cref="SeatedLagCap"/>. On foot, or with nothing sane to go on, none.
+    /// </summary>
+    public static float LeverReach(bool seated, float cartSpeed, double rtt)
+    {
+        if (!seated || !(cartSpeed > 0f) || !(rtt > 0)) return InteractReach; // NaN fails both tests
+        return InteractReach + (float)Math.Min(SeatedLagCap, cartSpeed * rtt);
+    }
 }

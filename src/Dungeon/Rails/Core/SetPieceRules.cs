@@ -19,6 +19,9 @@ public enum HammerPhase { Up, Glow, Fall, Down, Rise }
 
 public enum PourPhase { Dry, Warn, Pouring }
 
+/// <summary>Where one ore bucket stands in its ride's round (<see cref="SetPieceRules.BucketStateAt"/>).</summary>
+public enum BucketPhase { Hanging, Creaking, Poured }
+
 /// <summary>Timing and numbers for floor 12's set pieces. Engine-free; ticks are 60 Hz server physics ticks.</summary>
 public static class SetPieceRules
 {
@@ -70,6 +73,48 @@ public static class SetPieceRules
         secondsInto = (t - DryT - WarnT) / (float)TicksPerSecond;
         return PourPhase.Pouring;
     }
+
+    // ---- the ore buckets: the server's schedule, which a client runs from the ride's arm time too --------------
+
+    /// <summary>One bucket tips every this many seconds of an armed ride, in turn.</summary>
+    public const float BucketEvery = 3f;
+    /// <summary>A bucket creaks and glows this long before it pours.</summary>
+    public const float BucketCreak = 1.5f;
+    /// <summary>A poured cinder patch burns this long.</summary>
+    public const float BucketPatchSeconds = 4f;
+
+    /// <summary>
+    /// Bucket <paramref name="n"/> of a ride (0 the first to tip) <paramref name="secondsSinceArmed"/> after the ride armed: it hangs until
+    /// n·<see cref="BucketEvery"/>, creaks for <see cref="BucketCreak"/>, then has poured. <c>SecondsIn</c> counts from the phase's start
+    /// (hanging: from the arming); before the arming every bucket hangs, 0 s in. The server's buckets and a client's copies both ask this.
+    /// </summary>
+    public static (BucketPhase Phase, double SecondsIn) BucketStateAt(double secondsSinceArmed, int n)
+    {
+        if (secondsSinceArmed < 0) return (BucketPhase.Hanging, 0.0);
+        var creakAt = n * (double)BucketEvery;
+        if (secondsSinceArmed < creakAt) return (BucketPhase.Hanging, secondsSinceArmed);
+        var pourAt = creakAt + BucketCreak;
+        if (secondsSinceArmed < pourAt) return (BucketPhase.Creaking, secondsSinceArmed - creakAt);
+        return (BucketPhase.Poured, secondsSinceArmed - pourAt);
+    }
+
+    // ---- the heap's lantern and the beam: one rule on the server and on a client's copy ---------------------
+
+    /// <summary>The heap's lantern blinks while a cart bears down within this many seconds of its speed.</summary>
+    public const float HeapWarnSeconds = 3f;
+
+    /// <summary>How far ahead the heap is called: <see cref="HeapWarnSeconds"/> at the cart's speed, never less than at the warn speed.</summary>
+    public static float HeapLook(float v) => Math.Max(v, RunOverRules.WarnMinSpeed) * HeapWarnSeconds;
+
+    /// <summary>A rolling cart heads for the heap: its face is not behind the front, on the party lane, and no thrown switch before it sends the cart round.</summary>
+    public static bool HeapHeaded(bool rolling, float faceS, float front, bool faceOnEnemyLane, bool switchSetBefore)
+        => rolling && faceS >= front - 0.5f && !faceOnEnemyLane && !switchSetBefore;
+
+    /// <summary>The lantern blinks: headed for it, and the face within <see cref="HeapLook"/> of the front.</summary>
+    public static bool HeapAlarm(bool headed, float faceS, float front, float v) => headed && faceS - front <= HeapLook(v);
+
+    /// <summary>The beam is passed (the seated desktop cameras duck once): the rolling cart's front reached it, not yet this arming.</summary>
+    public static bool BeamPasses(bool rolling, bool fired, float front, float beamS) => rolling && !fired && front >= beamS;
 
     public static bool JumpMade(float v) => v >= JumpSpeed;
 

@@ -22,7 +22,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 public partial class RailEncounterController
 {
     public const float GolemEvery = 4f;
-    public const float GolemWindup = 1.5f;
+    public const float GolemWindup = TelegraphRules.RailSlamWindup;
     public const float GolemDent = 12f;
     /// <summary>The golem's fist reaches the cart from this far (flat): the lanes stand 4 m apart.</summary>
     public const float GolemReach = 6.5f;
@@ -350,6 +350,7 @@ public partial class RailEncounterController
             g.WindingUp = true;
             g.Clock = GolemEvery - GolemWindup;
             TelegraphFx.HandGlow(g.Body, GolemWindup);
+            EventBus.Instance.RaiseEnemyTelegraph(g.Body, TelegraphRules.RailSlam); // clients glow its fist too (EnemyStateMsg); nothing hears it in single player
             EventBus.Instance.PlaySfx("golem_windup"); // placeholder: plan 6 adds the sound
             return;
         }

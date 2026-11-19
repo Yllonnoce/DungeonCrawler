@@ -253,7 +253,7 @@ public partial class RailEncounterController
             switch (piece.Plan.Kind)
             {
                 case "beam":
-                    if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) { piece.Fired = true; DuckUnder(party, piece); }
+                    if (SetPieceRules.BeamPasses(rolling, piece.Fired, _rails.Party.FrontS, piece.S)) { piece.Fired = true; DuckUnder(party, piece); }
                     break;
                 case "switch_out":
                     if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) TakeSwitch(piece);
@@ -283,7 +283,13 @@ public partial class RailEncounterController
         }
     }
 
-    /// <summary>The cart's front is at the beam: seated desktop heroes duck (no shake in VR), a seated companion calls it once.</summary>
+    /// <summary>The duck under the beam: a short dip of the seated desktop camera.</summary>
+    private const float DuckAmplitude = 0.05f, DuckSeconds = 0.15f;
+
+    /// <summary>
+    /// The cart's front is at the beam: seated desktop heroes duck (no shake in VR), a seated companion calls it once. A remote player's
+    /// screen ducks itself as its own cart's front passes (<see cref="ClientPresent"/>), so it is not shaken from here.
+    /// </summary>
     private void DuckUnder(PartyController party, Piece piece)
     {
         BeamPasses++;
@@ -291,7 +297,7 @@ public partial class RailEncounterController
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || !hero.Seated || hero.Cart != _rails.Cart) continue;
-            if (!Vr.Active) hero.Shake(0.05f, 0.15f);
+            if (!Vr.Active && hero.Control != ControlKind.Remote) hero.Shake(DuckAmplitude, DuckSeconds);
             if (speaker == null && hero.Control == ControlKind.Companion && !hero.Downed) speaker = hero;
         }
         if (speaker != null)
@@ -306,6 +312,14 @@ public partial class RailEncounterController
     }
 
     // ---- the wire: the set pieces' names and the prop check's rail part --------------------------
+
+    /// <summary>The metronome index of the first drop hammer of ride <paramref name="ride"/>'s hammers, or −1 (the RIDE pass).</summary>
+    internal int HammerIndexOf(int ride)
+    {
+        foreach (var p in _pieces)
+            if (p.Plan.Kind == "hammers" && p.Plan.Ride == ride && p.Hammers is { Length: > 0 } hammers) return hammers[0].Index;
+        return -1;
+    }
 
     /// <summary>The index (its wire name's number) of the first set piece of plan kind <paramref name="kind"/> on ride <paramref name="ride"/>, or −1 (tests).</summary>
     internal int PieceIndexOf(string kind, int ride)

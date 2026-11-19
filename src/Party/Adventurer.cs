@@ -295,9 +295,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private readonly Random _shakeRng = new();
     public bool Shaking => _shakeLeft > 0f;
 
-    /// <summary>Rattle the camera: a tremor, a horde tearing loose. Amplitude in metres, fading over the seconds given.</summary>
+    /// <summary>
+    /// Rattle the camera: a tremor, a horde tearing loose. Amplitude in metres, fading over the seconds given. On a server a remote
+    /// player's body has no camera anyone looks through: its own screen is told instead (<see cref="EventBus.RemoteShake"/>, a ShakeEvt).
+    /// </summary>
     public void Shake(float amplitude, float seconds)
     {
+        if (Net.NetSession.IsServer && Control == ControlKind.Remote) EventBus.Instance?.RaiseRemoteShake(Index, amplitude, seconds);
         _shakeAmp = Math.Max(_shakeAmp * (_shakeLeft / Math.Max(_shakeTotal, 0.01f)), amplitude);
         _shakeLeft = _shakeTotal = Math.Max(seconds, 0.05f);
     }
@@ -363,9 +367,13 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     public void Shove(Vector3 to)
     {
         if (Seated) return; // a seat holds its rider; throwing someone out of the cart is the RailController's call (GetOut)
+        var from = GlobalPosition;
         GlobalPosition = to;
         if (Remote != null) Remote.Position = to;
-        if (Net.NetSession.IsServer) Net.NetSession.Instance.Server?.Broadcast(new Net.ForcePose(Index, new Save.PoseDto { X = to.X, Y = to.Y, Z = to.Z, Yaw = Rotation.Y }));
+        if (!Net.NetSession.IsServer) return;
+        // its poses still in flight (from where it stood) are dropped, as after a set-down from a seat, or they would pull it back
+        if (Control == ControlKind.Remote) Net.NetSession.Instance.Server?.NoteShoved(Index, from, to);
+        Net.NetSession.Instance.Server?.Broadcast(new Net.ForcePose(Index, new Save.PoseDto { X = to.X, Y = to.Y, Z = to.Z, Yaw = Rotation.Y }));
     }
 
     public void Teleport(Vector3 position, Vector3? lookTarget = null)

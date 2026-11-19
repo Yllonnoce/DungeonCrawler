@@ -2,6 +2,7 @@ using DungeonCrawler.Combat;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Enemies;
+using DungeonCrawler.Net;
 using DungeonCrawler.Party;
 using Godot;
 
@@ -12,14 +13,15 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// ride is armed (<see cref="Tick"/>), one bucket tips every <see cref="Every"/> seconds: it creaks and glows for
 /// <see cref="Creak"/> seconds, then pours a <see cref="CinderPatch"/> onto the line beneath it, which burns for
 /// <see cref="PatchSeconds"/>. The <see cref="RailEncounterController"/> judges the party's cart against <see cref="Patches"/>.
-/// Ticked on the server; a client builds a still copy (its tipping and patches come with plan 5 task 7).
+/// The schedule is <see cref="SetPieceRules.BucketStateAt"/>: the server ticks it on its own clock from <see cref="Arm"/>, and a client's
+/// copy runs the same schedule from the server's arm time (<see cref="ClientTick"/>), pouring visual-only patches (a client judges nothing).
 /// </summary>
 public partial class OreBuckets : Node3D
 {
     public const float Span = 10f;
-    public const float Every = 3f;
-    public const float Creak = 1.5f;
-    public const float PatchSeconds = 4f;
+    public const float Every = SetPieceRules.BucketEvery;
+    public const float Creak = SetPieceRules.BucketCreak;
+    public const float PatchSeconds = SetPieceRules.BucketPatchSeconds;
     /// <summary>The cable hangs this high above the track; a bucket's bottom is about half a metre below it, clear of seated heads.</summary>
     public const float CableHeight = 2.95f;
     const float BucketSize = 0.42f;
@@ -147,6 +149,24 @@ public partial class OreBuckets : Node3D
     {
         if (!_armed || _track == null || !_track.Valid) return;
         _clock += dt;
+        Step(dt, _clock);
+    }
+
+    /// <summary>
+    /// A client's copy, each rendered frame while its ride is armed here: the server's schedule at <paramref name="secondsSinceArmed"/>
+    /// (the server's clock now less its arm time). Buckets whose patch would already have burnt out (a late joiner, a long frame) are
+    /// passed over silently; the rest creak and pour as on the server. Its patches only show: a client's cinders burn nobody.
+    /// </summary>
+    public void ClientTick(double secondsSinceArmed, float dt)
+    {
+        if (!_armed || _track == null || !_track.Valid) return;
+        while (_creaking < 0 && SetPieceRules.BucketStateAt(secondsSinceArmed, _next) is { Phase: BucketPhase.Poured } gone && gone.SecondsIn >= PatchSeconds) _next++;
+        Step(dt, secondsSinceArmed);
+    }
+
+    /// <summary>The buckets' work for one step at <paramref name="clock"/> seconds since the arming (the server's <see cref="Tick"/> and a client's <see cref="ClientTick"/>).</summary>
+    private void Step(float dt, double clock)
+    {
         for (var i = Patches.Count - 1; i >= 0; i--)
         {
             var p = Patches[i];
@@ -156,33 +176,34 @@ public partial class OreBuckets : Node3D
         }
         for (var i = 0; i < 4; i++)
             if (_tipped[i] >= 0f && (_tipped[i] += dt) >= TipBack) _tipped[i] = -1f;
-        // bucket n creaks from n·Every and pours Creak seconds later
-        var start = _next * Every;
-        if (_creaking < 0 && _clock >= start)
+        // bucket n creaks from n·Every and pours Creak seconds later (SetPieceRules.BucketStateAt: the same schedule on every peer)
+        if (_creaking < 0 && SetPieceRules.BucketStateAt(clock, _next).Phase != BucketPhase.Hanging)
         {
             _creaking = Order[_next % Order.Length];
             Look(_creaking, true);
-            EventBus.Instance.PlaySfx("bucket_creak"); // placeholder: plan 6 adds the sound
+            if (!NetSession.IsClient) EventBus.Instance.PlaySfx("bucket_creak"); // placeholder: plan 6 adds the sound (a server's sfx reach every client)
         }
-        if (_creaking >= 0 && _clock >= start + Creak)
+        if (_creaking >= 0 && SetPieceRules.BucketStateAt(clock, _next) is { Phase: BucketPhase.Poured } poured)
         {
-            Pour(_creaking);
+            Pour(_creaking, (float)poured.SecondsIn);
             Look(_creaking, false);
             _creaking = -1;
             _next++;
+            if (NetSession.Instance?.TestRide == true) GD.Print(FormattableString.Invariant($"[{(NetSession.IsClient ? "net" : "net-server")}] ride bucket pour n={_next} t={(NetSession.IsClient ? NetSession.Instance.Client?.ServerNow ?? 0 : NetSession.Instance.Now):0.000}"));
         }
     }
 
-    private void Pour(int i)
+    /// <summary>Bucket <paramref name="i"/> pours <paramref name="late"/> seconds after its schedule said (0 on the server's tick; a client's frame or catch-up may be later).</summary>
+    private void Pour(int i, float late = 0f)
     {
-        _tipped[i] = 0f;
+        _tipped[i] = NetSession.IsClient ? Mathf.Min(late, TipBack) : 0f;
         Poured++;
         var frame = _track.Frame(_bucketS[i]);
-        var patch = new CinderPatch { Name = $"CinderPatch{Poured}", S = _bucketS[i], Life = PatchSeconds, Floor = Floor };
+        var patch = new CinderPatch { Name = $"CinderPatch{Poured}", S = _bucketS[i], Life = NetSession.IsClient ? PatchSeconds - late : PatchSeconds, Floor = Floor };
         AddChild(patch);
         patch.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin);
         Patches.Add(patch);
-        EventBus.Instance.PlaySfx("cinder_pour"); // placeholder: plan 6 adds the sound
+        if (!NetSession.IsClient) EventBus.Instance.PlaySfx("cinder_pour"); // placeholder: plan 6 adds the sound
     }
 
     private void Look(int i, bool creaking)

@@ -284,15 +284,49 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         _netFlags = s.Flags;
         if (changed != 0)
         {
+            var wasDowned = Downed;
             Restore((s.Flags & Net.NpcState.FlagDead) != 0, (s.Flags & Net.NpcState.FlagEscorting) != 0, (s.Flags & Net.NpcState.FlagRescued) != 0, Hp, null, (s.Flags & Net.NpcState.FlagDowned) != 0, (s.Flags & Net.NpcState.FlagFled) != 0);
             Captured = (s.Flags & Net.NpcState.FlagCaptured) != 0;
             Jailed = (s.Flags & Net.NpcState.FlagJailed) != 0;
             Freed = Escorting && Mode == NpcMode.Prisoner;
+            if (Downed && !wasDowned) { DownedSeconds = 0f; _shownLeft = -1; } // just gone down: its clock starts full until the next objective state says how far it ran
         }
     }
 
+    /// <summary>
+    /// Client: the server's objective state says this downed crew member has <paramref name="secondsLeft"/> to bleed. The label counts down
+    /// from there each frame (<see cref="ClientBleed"/>) until the next state refreshes it; the server alone lets them die.
+    /// </summary>
+    public void ApplyBleedLeft(float secondsLeft)
+    {
+        if (!Net.NetSession.IsClient || !Crew || !Downed || Dead || !float.IsFinite(secondsLeft)) return;
+        DownedSeconds = Math.Clamp(Objectives.CrewRules.BleedOutSeconds - secondsLeft, 0f, Objectives.CrewRules.BleedOutSeconds);
+        ShowBleedLabel();
+    }
+
+    /// <summary>Client, each physics tick: a downed crew member's clock runs on here, as on the server, and the label shows the whole seconds left. No allocation unless the number changes.</summary>
+    private void ClientBleed(float dt)
+    {
+        if (!Downed || !Crew || Dead) return;
+        DownedSeconds = Math.Min(DownedSeconds + dt, Objectives.CrewRules.BleedOutSeconds);
+        ShowBleedLabel();
+    }
+
+    /// <summary>The bleed label ("{name} (down 42s)"), rebuilt only when the whole seconds left change.</summary>
+    private void ShowBleedLabel()
+    {
+        var left = (int)MathF.Ceiling(Objectives.CrewRules.BleedOutSeconds - DownedSeconds);
+        if (left == _shownLeft) return;
+        _shownLeft = left;
+        _label.Text = $"{NpcName} (down {left}s)";
+    }
+
+    /// <summary>The name label's text now (tests: the RIDE pass reads a downed crewman's countdown).</summary>
+    internal string LabelText => _label?.Text ?? "";
+
     private void ClientTick(float dt)
     {
+        ClientBleed(dt);
         var before = GlobalPosition;
         // a seat here (the server's SeatMsg) carries it: its ride's owner calls FollowSeat each rendered frame. One the server says is
         // seated whose SeatMsg has not come yet stays put rather than slide 100 ms behind a moving cart

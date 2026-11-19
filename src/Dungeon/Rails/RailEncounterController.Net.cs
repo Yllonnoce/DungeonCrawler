@@ -38,6 +38,70 @@ public partial class RailEncounterController
         return 1;
     }
 
+    // ---- a client's copies of the set pieces: the server's ride, shown from this screen's own cart ---------------
+
+    /// <summary>
+    /// Client: the party cart's state named the armed ride and the server's clock when it armed. A new arming (another ride, or the same
+    /// ride armed again after a wreck or a load) starts its pieces as the server's arming does: the beam may duck again and the buckets
+    /// start their round; the other rides' buckets hang still and their lanterns stop.
+    /// </summary>
+    internal void ApplyArmNet(int ride, double armedAt)
+    {
+        if (!NetSession.IsClient) return;
+        ride = ride >= 1 && ride < _rails.StopS.Length ? ride : -1;
+        if (ride == ArmedRide && (ride < 1 || armedAt == ArmedAt)) return;
+        ArmedRide = ride;
+        ArmedAt = armedAt;
+        var front = _rails.Party.FrontS;
+        foreach (var p in _pieces)
+        {
+            var armed = ride >= 1 && p.Plan.Ride == ride;
+            if (armed) p.Fired = p.Plan.Kind == "beam" && front > p.S + 0.5f; // a joiner mid-ride past the beam does not duck for it
+            if (p.Buckets is { } buckets) { if (armed) buckets.Arm(); else buckets.Clear(); }
+            if (!armed && p.Heap is { } heap) heap.Alarm = false;
+        }
+    }
+
+    /// <summary>
+    /// Client, each rendered frame (after the cart is posed): the armed ride's presentation under the server's own rules, from this screen's
+    /// cart (the follower's S, speed, lane and mode): the beam ducks our seated desktop camera as the front passes it, the heap's lantern
+    /// blinks while the cart bears down on it (no bark: a companion's call comes from the server), and the buckets run the server's schedule
+    /// from its arm time. Nothing is judged here. No allocation.
+    /// </summary>
+    private void ClientPresent(float dt)
+    {
+        if (ArmedRide < 1 || _pieces.Count == 0 || NetSession.Instance?.Client is not { } client) return;
+        var rolling = _rails.State.Mode == CartMode.Rolling;
+        var front = _rails.Party.FrontS;
+        foreach (var piece in _pieces)
+        {
+            if (piece.Plan.Ride != ArmedRide) continue;
+            switch (piece.Plan.Kind)
+            {
+                case "beam":
+                    if (SetPieceRules.BeamPasses(rolling, piece.Fired, front, piece.S)) { piece.Fired = true; DuckHere(piece, front); }
+                    break;
+                case "heap":
+                    if (piece.Heap is { IsAlive: true } heap)
+                        SetAlarm(heap, SetPieceRules.HeapAlarm(SetPieceRules.HeapHeaded(rolling, heap.FaceS, front, _rails.OnEnemyLane(heap.FaceS), SwitchSetBefore(piece)), heap.FaceS, front, _rails.State.V));
+                    break;
+                case "buckets":
+                    piece.Buckets?.ClientTick(client.ServerNow - ArmedAt, dt);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Client: our cart's front passed the beam: our hero, seated in it at a desktop, ducks (never in a headset).</summary>
+    private void DuckHere(Piece piece, float front)
+    {
+        BeamPasses++;
+        var me = Core.Main.Instance?.Party?.Local;
+        var ducks = me != null && IsInstanceValid(me) && me.Seated && me.Cart == _rails.Cart && !Core.Vr.Active;
+        if (ducks) me!.Shake(DuckAmplitude, DuckSeconds);
+        if (NetSession.Instance.TestRide) GD.Print(FormattableString.Invariant($"[net] ride: the beam {piece.Plan.Id} passed here at front S={front:0.0} (beam S={piece.S:0.0}); our seated camera {(ducks ? "ducks" : "does not duck")}"));
+    }
+
     /// <summary>Which side of the enemy track at <paramref name="enemyS"/> the party's lane lies on (a client's slag cart puts its shoe there too).</summary>
     internal int InnerSideFor(float enemyS) => InnerSideAt(enemyS);
 

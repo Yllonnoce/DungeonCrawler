@@ -79,7 +79,19 @@ public partial class ServerWorld : Node
         bus.AmbushSprung += i => Broadcast(new AmbushSprungEvt(i));
         bus.HazardPhase += OnHazardPhase;
         bus.PortalOpened += at => Broadcast(new PortalOpenedEvt(at.X, at.Y, at.Z));
+        bus.RemoteShake += OnRemoteShake;
     }
+
+    /// <summary>A remote player's body was shaken here (a hammer, a slam, a landing): only that player's screen is told; it never shakes a headset.</summary>
+    private void OnRemoteShake(int member, float amplitude, float seconds)
+    {
+        if (Quiet) return;
+        foreach (var slot in Registry.Online)
+            if (slot.MemberIndex == member && slot.BotOwner == null) SendTo(slot.PeerId, new ShakeEvt(amplitude, seconds));
+    }
+
+    /// <summary>Each member's round trip as its own client last reckoned it (its pings carry it): a seated thrower's lag allowance.</summary>
+    private readonly Dictionary<int, double> _rttOf = new();
 
     private readonly List<Enemy> _spawned = new();
     private readonly HashSet<int> _plansSent = new();
@@ -349,6 +361,8 @@ public partial class ServerWorld : Node
     {
         var party = Main.Instance?.Party;
         UnseatLeaving(slot); // a seat is never left booked to a body that is gone: it steps out beside the lane first
+        _rttOf.Remove(slot.MemberIndex);
+        _shovedPending.Remove(slot.MemberIndex);
         if (party != null && GodotObject.IsInstanceValid(party)) party.Park(slot.MemberIndex);
         EventBus.Instance.Log($"{slot.Name} leaves the party.");
         Broadcast(new PlayerLeft(slot.MemberIndex, slot.Name));
@@ -434,7 +448,10 @@ public partial class ServerWorld : Node
                 GD.Print($"[chat] {slot.Name}: {text}");
                 Trace.Add("chat");
                 break;
-            case Ping ping: _t.Send(from, NetCodec.Encode(new Pong(ping.Tick, ping.SentAt, NetSession.Instance.Now))); break;
+            case Ping ping:
+                _t.Send(from, NetCodec.Encode(new Pong(ping.Tick, ping.SentAt, NetSession.Instance.Now)));
+                if (double.IsFinite(ping.Rtt) && ping.Rtt > 0) _rttOf[slot.MemberIndex] = Math.Min(ping.Rtt, 2.0);
+                break;
             default:
                 HandleIntent(slot, m);
                 IntentReceived?.Invoke(from, m);
@@ -507,7 +524,9 @@ public partial class ServerWorld : Node
                     }
                     break;
                 }
-                const float reach = 3.5f; // the look ray reaches 3 m to the item's (or prop's) box; its centre can sit half a metre further
+                // the look ray reaches 3 m to the item's (or prop's) box; its centre can sit half a metre further. A lever (a switch, a spur's)
+                // thrown from the seat of a rolling cart was in reach a round trip ago: the cart's speed times that member's round trip is allowed too
+                var reach = node is Dungeon.Rails.TrackSwitch ? Dungeon.Rails.PropPromptRules.LeverReach(body.Seated, SeatSpeed(body), _rttOf.GetValueOrDefault(slot.MemberIndex)) : Dungeon.Rails.PropPromptRules.InteractReach;
                 // a cart is measured to its tub (2.2 m long), as its prompt measures it (RideInputRules.BoardReach): its end is in reach, not only its middle
                 var dist = node is Dungeon.Rails.MineCart tub ? tub.TubDistance(body)
                     : Math.Min(node.GlobalPosition.DistanceTo(body.GlobalPosition), node.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
@@ -656,8 +675,21 @@ public partial class ServerWorld : Node
         }
     }
 
+    /// <summary>The speed of the cart <paramref name="body"/> sits in (the party's), 0 on foot or in anything else.</summary>
+    private static float SeatSpeed(Adventurer body)
+        => body.Seated && Dungeon.Rails.RailController.Instance is { } rc && GodotObject.IsInstanceValid(rc) && body.Cart == rc.Cart && rc.State.Mode == Dungeon.Rails.CartMode.Rolling ? rc.State.V : 0f;
+
     /// <summary>Members the server set down from a seat whose poses still in flight say seated: dropped until one says otherwise.</summary>
     private readonly HashSet<int> _unseatedPending = new();
+
+    /// <summary>Members the server shoved (<c>Adventurer.Shove</c>): where from, where to and when, until a pose from the new spot arrives (<see cref="PoseGuardRules.DropAfterShove"/>).</summary>
+    private readonly Dictionary<int, (Vector3 From, Vector3 To, double At)> _shovedPending = new();
+
+    /// <summary>The server moved remote member <paramref name="member"/>'s body from <paramref name="from"/> to <paramref name="to"/> (its ForcePose is on its way): its poses still in flight are dropped.</summary>
+    public void NoteShoved(int member, Vector3 from, Vector3 to) => _shovedPending[member] = (from, to, NetSession.Instance.Now);
+
+    /// <summary>Poses the shove guard dropped (tests read it).</summary>
+    public int ShovedPosesDropped { get; private set; }
 
     /// <summary>
     /// The server set remote member <paramref name="member"/> down from a seat at <paramref name="at"/> (a stop, a set-down, a wreck,
@@ -699,6 +731,11 @@ public partial class ServerWorld : Node
             _unseatedPending.Remove(slot.MemberIndex);
         }
         var at = new Vector3(pose.Position.X, pose.Position.Y, pose.Position.Z);
+        if (_shovedPending.TryGetValue(slot.MemberIndex, out var shove))
+        {
+            if (PoseGuardRules.DropAfterShove(at.DistanceTo(shove.From), at.DistanceTo(shove.To), NetSession.Instance.Now - shove.At)) { ShovedPosesDropped++; return; } // sent before its screen heard of the shove
+            _shovedPending.Remove(slot.MemberIndex);
+        }
         // a body cannot be steered off the map: keep it on floor the layout knows
         if (Main.Instance!.Builder.Layout is { } layout && !layout.IsWalkable(DungeonBuilder.WorldToCell(at)) && !Main.Instance.Builder.IsUnderAt(at)) { RejectedPoses++; if (NetSession.Instance.TestServer && RejectedPoses <= 12) GD.Print($"[net-server] pose from {slot.Name} rejected at {at:0.0} cell {DungeonBuilder.WorldToCell(at)} ({layout[DungeonBuilder.WorldToCell(at)]})"); return; }
         // nor into a Press that is holding shut: there is no room for a body between the slabs

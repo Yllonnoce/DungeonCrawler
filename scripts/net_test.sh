@@ -14,7 +14,10 @@
 #                                     from the seat, and the cart crosses on both; the client's carts must keep within 1.5 m (2 m
 #                                     for ride 3's slag cart) of the server's on a shared server-time grid; the crew sit in their
 #                                     wagons on the client as on the server; at stop 3 the client leaves the game seated, and the
-#                                     server unseats it quietly beside the lane with its parked pose there)
+#                                     server unseats it quietly beside the lane with its parked pose there; the crew, the gates and the
+#                                     set pieces match: the opened wagon couples on the client within 0.5 s of the departure, the downed
+#                                     crewman's label counts down there, the beam ducks the client's seated camera, ride 3's buckets pour
+#                                     on the server's schedule (0.1 s) and ride 4's hammer falls within 50 ms of the server's)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -79,6 +82,41 @@ if [ "${RIDE:-}" = 1 ]; then
   done
   if ! grep -q "\[net\] ride: ride 3's lever offers \"Throw the switch\" .* thrown through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never threw ride 3's switch from the seat)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: the cart takes ride 3's switch .* thrown through the intent" "$TMP/server.log" || ! grep -q "\[net\] ride: the cart crosses here (CrossOut set" "$TMP/client.log"; then echo "NET TEST: FAIL (ride 3's switch thrown by the client did not send the cart across on both)"; exit 1; fi
+  # crew, gates and set pieces (task 7): the opened wagon couples here within 0.5 s of stop 1's departure (the cart's Train), the downed
+  # crewman's label counts down here from the server's objective state, and the beam ducks our seated camera as our own cart's front passes
+  if ! grep -q "\[net\] ride: the cage wagon coupled here .* after the cart left stop 1" "$TMP/client.log"; then echo "NET TEST: FAIL (the coupled wagon never showed on the client at stop 1's departure)"; exit 1; fi
+  if ! grep -q "\[net\] ride: .*'s label counts down here" "$TMP/client.log"; then echo "NET TEST: FAIL (the downed crewman's label did not count down on the client)"; exit 1; fi
+  if ! grep -q "\[net\] ride: the beam .* our seated camera ducks" "$TMP/client.log"; then echo "NET TEST: FAIL (the beam never ducked the client's seated camera)"; exit 1; fi
+  # the set pieces' clocks: ride 4's first hammer enters its fall on both sides (server time; every client fall paired with the nearest
+  # server fall within 1 s, all within 50 ms, at least 10); ride 3's buckets pour on both sides from the ride's arm time (by bucket, within 0.1 s)
+  CLOCKS=$(awk '
+    FNR == 1 { file++ }
+    function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
+    file == 1 && /^\[net-server\] ride hammer=/ { sh[++nsh] = val("t") }
+    file == 2 && /^\[net\] ride hammer=/ { ch[++nch] = val("t") }
+    file == 1 && /^\[net-server\] ride bucket pour / { if (!(val("n") in sb)) sb[val("n")] = val("t") }
+    file == 2 && /^\[net\] ride bucket pour / { if (!(val("n") in cb)) cb[val("n")] = val("t") }
+    END {
+      hp = 0; hworst = 0; hover = 0
+      for (i = 1; i <= nch; i++) {
+        best = 99
+        for (j = 1; j <= nsh; j++) { d = ch[i] - sh[j]; if (d < 0) d = -d; if (d < best) best = d }
+        if (best > 1) continue
+        hp++; if (best > hworst) hworst = best
+        if (best > 0.05) { hover++; print "  hammer fall over 50 ms: client t=" ch[i] " (" best " s from the server s nearest)" > "/dev/stderr" }
+      }
+      bp = 0; bworst = 0; bover = 0
+      for (n in cb) if (n in sb) {
+        d = cb[n] - sb[n]; if (d < 0) d = -d
+        bp++; if (d > bworst) bworst = d
+        if (d > 0.1) { bover++; print "  bucket pour over 0.1 s: n=" n " server " sb[n] " client " cb[n] > "/dev/stderr" }
+      }
+      printf "hammer falls paired=%d (server %d, client %d) max=%.3f over=%d; bucket pours paired=%d max=%.3f over=%d\n", hp, nsh, nch, hworst, hover, bp, bworst, bover
+      exit !(hp >= 10 && hover == 0 && bp >= 3 && bover == 0)
+    }' "$TMP/server.log" "$TMP/client.log")
+  CLOCKS_RC=$?
+  echo "--- set-piece clocks, client vs server: $CLOCKS"
+  if [ $CLOCKS_RC -ne 0 ]; then echo "NET TEST: FAIL (the client's set pieces did not keep the server's clocks: $CLOCKS)"; exit 1; fi
   PAIRS=$(awk '
     FNR == 1 { file++ }
     function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }

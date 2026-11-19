@@ -54,7 +54,9 @@ public partial class RailController : ISlopeSource
         // a player's brake or pump (their RideIntent) reaches clients at once, not with the next correction; companions' pumping is left
         // out (it can flip at the 0.7·Cruise threshold, and it follows the state smoothly)
         var input = HashCode.Combine(Party.LastInput.Brake, _playersPumping);
-        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input));
+        // the armed ride and its arm time (a client's buckets run from it): an arming in a cart event is sent with it anyway, this is the backstop
+        var armed = RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? HashCode.Combine(enc.ArmedRide, enc.ArmedAt) : 0;
+        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input, armed));
     }
 
     /// <summary>Players pumping the cart this tick (<see cref="Inputs"/>; 0 under a brake).</summary>
@@ -95,6 +97,7 @@ public partial class RailController : ISlopeSource
             train = new List<int>(_train.Count);
             foreach (var w in _train.Wagons) train.Add(w.Stop);
         }
+        var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) ? e : null;
         return new CartStateDto
         {
             Cart = CartIds.Party, Kind = (byte)Cart.Kind, Track = 0, Dir = (sbyte)Party.Dir,
@@ -104,6 +107,7 @@ public partial class RailController : ISlopeSource
             CrossOut = _crossOut, CrossBack = _crossBack, GapFrom = _gapFrom, GapTo = _gapTo, JumpV = _jumpV > 0f ? _jumpV : float.NaN,
             BlockedAt = LineBlocked && !OnEnemyLane(BlockedAt) ? BlockedAt : float.NaN, // as HitBlock judges it: a cart across on the enemy lane passes it
             BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, Boarders = boarders, WagonBoarders = wagonBoarders, ServerTime = serverTime,
+            ArmedRide = enc?.ArmedRide ?? -1, ArmedAt = enc != null && enc.ArmedRide >= 1 ? enc.ArmedAt : 0,
         };
     }
 
@@ -149,6 +153,10 @@ public partial class RailController : ISlopeSource
     public bool Following => _follow is { HasState: true };
     /// <summary>Client: the follower (the RIDE pass reads its S), or null before the first state.</summary>
     internal CartFollower? Follower => _follow;
+    /// <summary>Client: the server's clock in the first state that showed the cart rolling from a stop (its departure), or −1 (the RIDE pass reads it).</summary>
+    internal double NetDepartedAt { get; private set; } = -1;
+    /// <summary>Client: the server's clock as this screen reckons it when the train last changed here, or −1 (the RIDE pass reads it).</summary>
+    internal double NetTrainChangedAt { get; private set; } = -1;
 
     /// <summary>Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state.</summary>
     internal void ApplyNet(CartStateDto d, double serverNow)
@@ -158,6 +166,7 @@ public partial class RailController : ISlopeSource
         if (CartSendRules.WreckedRose(_netFlags, d.Flags) && Cart.Visible) Tumble(sound: false); // where it stands now, before the state moves it
         _netFlags = d.Flags;
         var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;
+        if (mode == CartMode.Rolling && _netMode == CartMode.Held && !Halted) NetDepartedAt = d.ServerTime; // left a stop (a halt's resume is not a departure)
         _netMode = mode;
         StopIndex = Math.Clamp(d.StopIndex, 0, Math.Max(0, StopS.Length - 1));
         Halted = d.Has(CartFlags.Halted);
@@ -168,6 +177,7 @@ public partial class RailController : ISlopeSource
         Party.Limit = d.Limit;
         _follow.Apply(d, serverNow);
         Party.State = new CartState(_follow.S, _follow.V, mode, d.Plating);
+        RailEncounterController.Instance?.ApplyArmNet(d.ArmedRide, d.ArmedAt); // after the cart is placed: a joiner's beam already behind it stays still
         var shown = CartSendRules.Shown(d.Flags); // the cart only: the coupled wagons stay shown, as the server's HideWreck leaves them
         Cart.Visible = shown;
         if (shown) SetCartLayer();
@@ -185,6 +195,7 @@ public partial class RailController : ISlopeSource
         var same = count == _train.Count;
         for (var i = 0; same && i < count; i++) same = _train.Wagons[i].Stop == stops![i];
         if (same) return;
+        NetTrainChangedAt = NetSession.Instance?.Client?.ServerNow ?? -1;
         _train.UncoupleAll();
         if (count == 0 || ObjectiveController.Instance is not CrewRescueController crew) return;
         foreach (var stop in stops!)

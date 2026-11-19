@@ -19,6 +19,11 @@ public static class TelegraphRules
     public const float StrikeFraction = 0.55f;
     public const float SlamRadius = 4.5f, ChargeLaneLength = 9f, ChargeLaneWidth = 1.6f, PulseRadius = 1.5f;
 
+    /// <summary>The kiln golem's wind-up before it slams the party's cart (the telegraph's state name on the wire; plan 6 keys its sound on it).</summary>
+    public const string RailSlam = "RailSlam";
+    /// <summary>How long the golem's fist glows before the slam.</summary>
+    public const float RailSlamWindup = 1.5f;
+
     public static float Delay(Signature s) => s == Signature.Charge ? ChargeDelay : s == Signature.Volley ? VolleyDelay : s == Signature.Summon ? SummonDelay : SlamDelay;
     /// <summary>The clip speed that puts its strike frame at the end of the wind-up.</summary>
     public static float ClipSpeed(float clipSeconds, float windupSeconds) => clipSeconds * StrikeFraction / Math.Max(0.05f, windupSeconds);

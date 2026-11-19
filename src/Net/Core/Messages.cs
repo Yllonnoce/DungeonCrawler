@@ -107,7 +107,8 @@ public sealed record DynamicEnemyDto(int NetId, string DefId, float X, float Y, 
 [Msg(MsgKind.Narration)] public sealed record NarrationMsg(string Text, string? VoiceId, string? CleanText = null, string? CleanVoiceId = null) : NetMessage;
 [Msg(MsgKind.Bark)] public sealed record BarkMsg(int Member, string Text, string? VoiceId) : NetMessage;
 [Msg(MsgKind.Chat)] public sealed record ChatMsg(string From, string Text) : NetMessage;
-[Msg(MsgKind.Ping)] public sealed record Ping(int Tick, double SentAt) : NetMessage;
+/// <summary>A client's clock probe; <paramref name="Rtt"/> is its own median round trip so far (0 before the first pong): the server allows a seated thrower's lag from it.</summary>
+[Msg(MsgKind.Ping)] public sealed record Ping(int Tick, double SentAt, double Rtt = 0) : NetMessage;
 [Msg(MsgKind.Pong)] public sealed record Pong(int Tick, double SentAt, double ServerTime) : NetMessage;
 
 // ---- world events ------------------------------------------------------------------------------

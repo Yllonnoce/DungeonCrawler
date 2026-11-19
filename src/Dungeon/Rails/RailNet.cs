@@ -99,6 +99,11 @@ public partial class RailNet : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        if (NetSession.IsClient)
+        {
+            if (NetSession.Instance.TestRide && Current && NetSession.Instance.Client is { } client) RideHammerTrace(client.ServerNow, "[net]");
+            return;
+        }
         if (!NetSession.IsServer || !Current || NetSession.Instance.Server is not { } world) return;
         var now = NetSession.Instance.Now;
         var floor = Game.Instance.CurrentFloor;
@@ -159,7 +164,11 @@ public partial class RailNet : Node
             world.Broadcast(new CartCorrectionMsg(floor, epoch, all));
         }
 
-        if (NetSession.Instance.TestRide) RideTraceServer(now, enc: RailEncounterController.Instance);
+        if (NetSession.Instance.TestRide)
+        {
+            RideTraceServer(now, enc: RailEncounterController.Instance);
+            RideHammerTrace(now, "[net-server]");
+        }
     }
 
     /// <summary>The riders' net ids folded into one number (no allocation): a change sends the cart.</summary>
@@ -206,6 +215,25 @@ public partial class RailNet : Node
         GD.Print(FormattableString.Invariant($"[net-server] ride t={t} S={_rails.State.S:0.000} mode={_rails.State.Mode} stop={_rails.StopIndex} armed={ride}"));
         foreach (var c in _live)
             GD.Print(FormattableString.Invariant($"[net-server] ride cart={c.Id} kind={c.Kind} t={t} S={c.Run.State.S:0.000} armed={ride}"));
+    }
+
+    private int _rideHammer = int.MinValue;
+    private HammerPhase _rideHammerWas = HammerPhase.Up;
+
+    /// <summary>
+    /// The RIDE pass, each physics tick on both sides (after the floor clock's tick): ride 4's first drop hammer entering its Fall from its
+    /// glow, printed at the server's clock. The hammers fall on the floor clock whether or not their ride is armed, so the pass (which
+    /// ends at stop 3) pairs them all along: a client's must fall within 50 ms of the server's.
+    /// </summary>
+    private void RideHammerTrace(double serverNow, string tag)
+    {
+        if (Main.Instance?.Builder is not { } builder || RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return;
+        if (_rideHammer == int.MinValue) _rideHammer = enc.HammerIndexOf(4);
+        if (_rideHammer < 0) return;
+        var phase = SetPieceRules.Phase(builder.FloorTick, _rideHammer, out _);
+        if (phase == HammerPhase.Fall && _rideHammerWas == HammerPhase.Glow)
+            GD.Print(FormattableString.Invariant($"{tag} ride hammer={_rideHammer} fall t={serverNow:0.000} floor={builder.FloorSeconds:0.000}"));
+        _rideHammerWas = phase;
     }
 
     private void RideTraceClient(double serverNow)

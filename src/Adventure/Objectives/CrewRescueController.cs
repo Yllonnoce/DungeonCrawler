@@ -371,8 +371,17 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (OrcKeys) EventBus.Instance.Log("The orc's keys turn in the cage's padlock.");
             else if (GriselOpens(wagon) is { } grisel)
             {
-                EventBus.Instance.Log($"Grisel works the lock. '{GriselLine}'");
-                Main.Instance?.Hud?.ShowBark(grisel.NpcName, GriselLine, 4f);
+                if (NetSession.IsServer)
+                {
+                    // a dedicated server has no HUD to bark on: her line goes to every screen as narration, her name in it (plan 6 voices her this way)
+                    EventBus.Instance.Log("Grisel works the lock.");
+                    NetSession.Instance.Server?.Broadcast(new NarrationMsg($"{grisel.NpcName}: \"{GriselLine}\"", null));
+                }
+                else
+                {
+                    EventBus.Instance.Log($"Grisel works the lock. '{GriselLine}'");
+                    Main.Instance?.Hud?.ShowBark(grisel.NpcName, GriselLine, 4f);
+                }
             }
             else if (!party.TryUnlock("the cage", out _, wagon.GlobalPosition, objectiveLock: true)) return;
             OpenCage(wagon, party);
@@ -546,8 +555,21 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         dto.LostCrew = _crew.Where(c => !IsInstanceValid(c) || c.Dead).Select(c => c.Id).ToList();
         dto.OrcKeys = OrcKeys;
         dto.GatesUp = _rails != null && IsInstanceValid(_rails) ? _rails.GatesUpList.ToList() : null;
+        dto.CrewDownedLeft = NetSession.IsServer ? DownedLeft() : null; // the broadcast's (a client counts its labels down); a solo save stays as it was
         return dto;
     }
+
+    /// <summary>The seconds each downed crew member has left to bleed, by id; null when nobody is down.</summary>
+    private Dictionary<string, float>? DownedLeft()
+    {
+        Dictionary<string, float>? left = null;
+        foreach (var npc in _crew)
+            if (IsInstanceValid(npc) && npc.Downed && !npc.Dead) (left ??= new())[npc.Id] = Math.Max(0f, CrewRules.BleedOutSeconds - npc.DownedSeconds);
+        return left;
+    }
+
+    /// <summary>Client: the downed crew's seconds left as the last broadcast gave them (the RIDE pass reads it), or null.</summary>
+    internal IReadOnlyDictionary<string, float>? NetDownedLeft { get; private set; }
 
     /// <summary>
     /// Back from a save, after the floor's NPC states (alive, down, following, where they stood) and the cart (held at
@@ -631,6 +653,11 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 : WagonOf(npc) is { Open: false } ? CrewState.Caged
                 : home.Contains(npc.Id) ? CrewState.Home
                 : IsInstanceValid(npc) && npc.Downed ? CrewState.Downed : CrewState.Freed;
+        // the bleed-out clocks: each downed crew member's label counts down here from the server's seconds left (refreshed each broadcast)
+        NetDownedLeft = dto.CrewDownedLeft;
+        if (dto.CrewDownedLeft is { } left)
+            foreach (var npc in _crew)
+                if (IsInstanceValid(npc) && left.TryGetValue(npc.Id, out var secondsLeft)) npc.ApplyBleedLeft(secondsLeft);
     }
 
     /// <summary>Open every cage and bring every living crew member to the exit room (tests).</summary>

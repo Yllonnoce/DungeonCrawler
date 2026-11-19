@@ -292,6 +292,8 @@ public sealed class ObjectiveStateDto
     public List<string>? LostCrew { get; set; }
     /// <summary>Railed jailbreak: the party carries the orc's keys, which open every cage.</summary>
     public bool? OrcKeys { get; set; }
+    /// <summary>Railed jailbreak, a server's broadcast: the seconds each downed crew member (by id) has left to bleed; null when none is down. Clients count their labels down from it.</summary>
+    public Dictionary<string, float>? CrewDownedLeft { get; set; }
 }
 
 public sealed class NpcDto

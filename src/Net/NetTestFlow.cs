@@ -588,6 +588,7 @@ public partial class NetTestFlow : Node
                     GD.Print($"[net] ride: {_rideDownedHere.NpcName} is down in cage 1 here; the cage offers \"{wagon.Prompt}\"");
                 }
                 if (!_rideDownedHere.Downed) { GD.Print($"[net] ride: revived {_rideDownedHere.NpcName} through the intent"); Next(7); return false; }
+                if (!_rideBleedOk) return RideBleedCheck(net, crew);
                 UseProp(net, wagon, wagon, me, p => p == $"Revive {_rideDownedHere.NpcName}", "cage 1");
                 return false;
             case 7: // board again at stop 1
@@ -621,6 +622,63 @@ public partial class NetTestFlow : Node
     }
 
     private int _rideSwitchHere = -1;
+
+    // crew, gates and set pieces (plan 5 task 7): the bleed label, the wagon coupled at the departure
+    private bool _rideBleedOk, _rideTrainTold;
+    private string? _rideBleedFirst;
+    private int _rideBleedFirstN = -1;
+    private double _rideBleedAt;
+
+    /// <summary>The whole seconds a bleed label shows ("Hob Tallow (down 57s)" → 57), or −1.</summary>
+    private static int BleedNumber(string label)
+    {
+        var at = label.LastIndexOf("(down ", StringComparison.Ordinal);
+        if (at < 0) return -1;
+        var end = label.IndexOf('s', at + 6);
+        return end > at + 6 && int.TryParse(label.AsSpan(at + 6, end - at - 6), out var n) ? n : -1;
+    }
+
+    /// <summary>
+    /// Phase 6, before the revive: the downed crewman's label counts down here (two numbers at least a second apart, the later smaller),
+    /// and the server's objective state has named his seconds left (its CrewDownedLeft), which the label agrees with. False while it waits.
+    /// </summary>
+    private bool RideBleedCheck(NetSession net, Adventure.Objectives.CrewRescueController crew)
+    {
+        var downed = _rideDownedHere!;
+        var text = downed.LabelText;
+        var n = BleedNumber(text);
+        if (_rideBleedFirst == null)
+        {
+            if (n < 0) return false;
+            _rideBleedFirst = text;
+            _rideBleedFirstN = n;
+            _rideBleedAt = _clock;
+            return false;
+        }
+        if (n < 0) return RideFail(net, $"{downed.NpcName}'s label went from \"{_rideBleedFirst}\" to \"{text}\" while still down");
+        var synced = crew.NetDownedLeft is { } left && left.TryGetValue(downed.Id, out var secondsLeft) ? secondsLeft : float.NaN;
+        if (_clock - _rideBleedAt < 1.2 || n >= _rideBleedFirstN || float.IsNaN(synced)) return false;
+        var serverWhole = (int)MathF.Ceiling(synced);
+        if (n > serverWhole || n < serverWhole - 3) return RideFail(net, $"{downed.NpcName}'s label shows {n} s here, the server's last state {synced:0.0} s");
+        _rideBleedOk = true;
+        GD.Print(FormattableString.Invariant($"[net] ride: {downed.NpcName}'s label counts down here: \"{_rideBleedFirst}\" -> \"{text}\" over {_clock - _rideBleedAt:0.0} s (the server's objective state: {synced:0.0} s left)"));
+        return false;
+    }
+
+    /// <summary>
+    /// Every tick of step 52 after we boarded again at stop 1: as the cart leaves stop 1 the opened cage wagon couples on behind it here
+    /// (the cart's Train), within 0.5 s of the server's departure. Returns a failure, or null.
+    /// </summary>
+    private string? RideTrainCheck(ClientWorld client, Dungeon.Rails.RailController rc)
+    {
+        if (_rideTrainTold || _ridePhase < 8 || rc.StopIndex != 1 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || rc.NetDepartedAt < 0) return null;
+        if (rc.Train.Count == 0)
+            return client.ServerNow - rc.NetDepartedAt > 2 ? "no wagon was coupled behind the cart here 2 s after it left stop 1" : null;
+        _rideTrainTold = true;
+        var after = rc.NetTrainChangedAt - rc.NetDepartedAt;
+        GD.Print(FormattableString.Invariant($"[net] ride: the cage wagon coupled here {after:0.000} s after the cart left stop 1 (Train [{string.Join(", ", rc.Train.Select(w => w.Stop))}])"));
+        return after <= 0.5 ? null : FormattableString.Invariant($"the wagon coupled here {after:0.000} s after the cart left stop 1 (over 0.5 s)");
+    }
 
     private void Next(int phase)
     {
@@ -683,6 +741,7 @@ public partial class NetTestFlow : Node
                 if (rc.Following && rc.State.Mode == Dungeon.Rails.CartMode.Rolling) _rideSawRolling = true;
                 if (Dungeon.Rails.RailNet.Instance is { } rn && IsInstanceValid(rn)) _rideMostCarts = Math.Max(_rideMostCarts, rn.ClientCartCount);
                 RideSeatChecks(main, rc);
+                _rideSeatFail ??= RideTrainCheck(client, rc);
                 if (_rideSeatFail != null) { Finish("[net]", false, $"ride: {_rideSeatFail}"); net.Disconnect("test finished"); return; }
                 if (RideRiding(net, client, main, rc)) return;
                 if (_rideSawRolling && rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex >= 3)
@@ -692,6 +751,7 @@ public partial class NetTestFlow : Node
                     if (!_rideCrewOk || !_rideSeatOk || !_rideLandOk) { Finish("[net]", false, $"ride: seats: crew in their wagons {(_rideCrewOk ? "yes" : "NO")}, our hero seated {(_rideSeatOk ? "yes" : "NO")}, set down at the server's landing {(_rideLandOk ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
                     if (!_rideSawPumping || !_rideBraked) { Finish("[net]", false, $"ride: riding: the server showed our pump {(_rideSawPumping ? "yes" : "NO")}, we braked {(_rideBraked ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
                     if (_ridePhase < 9) { Finish("[net]", false, $"ride: props: reached stop {rc.StopIndex} in the props' phase {_ridePhase} (9: the switch thrown and crossed)"); net.Disconnect("test finished"); return; }
+                    if (!_rideBleedOk || !_rideTrainTold) { Finish("[net]", false, $"ride: crew: the bleed label counted down here {Yes(_rideBleedOk)}, the wagon coupled at stop 1's departure {Yes(_rideTrainTold)}"); net.Disconnect("test finished"); return; }
                     _clock = 0; _step = 53; // board at stop 3 and leave seated
                     return;
                 }
@@ -704,7 +764,7 @@ public partial class NetTestFlow : Node
                 if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || main.Party.Local is not { } me) return;
                 if (me.Seated && me.Cart == rc.Cart)
                 {
-                    GD.Print($"[net] ride: seated at stop {rc.StopIndex} in seat {me.Seat}; leaving the game seated");
+                    GD.Print($"[net] ride: seated at stop {rc.StopIndex} in seat {me.Seat}; leaving the game seated; {client.ShakesHeard} shake(s) from the server reached this screen");
                     Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons; our hero boarded through the intent, pumped (shown by the server), braked, got out where the server put it; saw gate 1 rise, took the keys, opened cage 1 and revived {_rideDownedHere?.NpcName} through the intents; boarded again, threw ride 3's switch from the seat, crossed, and leaves seated");
                     net.Disconnect("test finished");
                     return;

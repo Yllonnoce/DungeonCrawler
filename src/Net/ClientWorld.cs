@@ -116,6 +116,7 @@ public partial class ClientWorld : Node
             case SeatMsg seat: if (RailsHere() is { } seatRails) seatRails.OnSeat(seat); break;
             case LeapMsg leap: if (RailsHere() is { } leapRails) leapRails.OnLeap(leap); break;
             case ForcePose fp: ApplyForcePose(fp); break;
+            case ShakeEvt sh: OnShake(sh); break;
             case PartySync ps: Main.Instance.Party.ApplyMemberDto(ps.Index, ps.Member); break;
             case BagSync bs: Main.Instance.Party.ApplyBagDto(bs.Bag); Trace.Add("bag"); break;
             case ShopSync ss: Main.Instance.Party.ApplyShopSync(ss.Floor, ss.Sold, ss.Gold, ss.Buyback); Trace.Add("shop"); break;
@@ -194,6 +195,16 @@ public partial class ClientWorld : Node
             case HazardPhaseMsg hp: OnHazardPhase(hp); break;
             case PortalOpenedEvt po: Root?.GetChildren().OfType<PortalSpawner>().FirstOrDefault()?.ShowPortal(new Vector3(po.X, po.Y, po.Z)); break;
         }
+    }
+
+    /// <summary>Shakes the server sent this screen's own body (a hammer, a slam, a landing): the camera rattles, never in a headset.</summary>
+    public int ShakesHeard { get; private set; }
+
+    private void OnShake(ShakeEvt sh)
+    {
+        ShakesHeard++;
+        if (Vr.Active || Main.Instance?.Party?.Local is not { } me || !float.IsFinite(sh.Amplitude) || !float.IsFinite(sh.Seconds)) return;
+        me.Shake(Math.Clamp(sh.Amplitude, 0f, 0.3f), Math.Clamp(sh.Seconds, 0f, 3f));
     }
 
     private void ApplyForcePose(ForcePose fp)
@@ -757,7 +768,7 @@ public partial class ClientWorld : Node
             }
         }
         // every second (it was every two): more samples for the server clock (NetClock) to settle on
-        if (_pingCadence.Advance(delta) > 0) _t.Send(NetPeers.Server, NetCodec.Encode(new Ping(tick, now)));
+        if (_pingCadence.Advance(delta) > 0) _t.Send(NetPeers.Server, NetCodec.Encode(new Ping(tick, now, Rtt)));
     }
 
     private Cadence _poseCadence = new(1.0 / Protocol.PoseHz);

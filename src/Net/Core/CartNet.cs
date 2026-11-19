@@ -85,6 +85,10 @@ public sealed class CartStateDto
     public float BoardingLeft { get; set; } = -1f;
     /// <summary>The coupled wagons' stops, nearest the cart first.</summary>
     public List<int>? Train { get; set; }
+    /// <summary>The ride whose items wait for the cart (1-based), or −1 when none is armed (plan 5 task 7).</summary>
+    public int ArmedRide { get; set; } = -1;
+    /// <summary>The server's clock when <see cref="ArmedRide"/> armed: a client's ore buckets run the server's schedule from it.</summary>
+    public double ArmedAt { get; set; }
 
     // slag and traffic carts
     public float Offset { get; set; }
