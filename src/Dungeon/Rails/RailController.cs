@@ -48,7 +48,10 @@ public partial class RailController : Node
 
     /// <summary>The stop's cage wagon is locked with living crew (<see cref="CageHoldRules.Holds"/>). Set by the crew controller; null holds nothing.</summary>
     public Func<int, bool>? CageHolds { get; set; }
-    /// <summary>The stops whose prisoners a player left behind (held interact in the seat). Not saved: a load holds the cart again.</summary>
+    /// <summary>
+    /// The stops whose prisoners a player left behind (held interact in the seat). Not saved: a load holds the cart again at the stop
+    /// it is restored at, and counts every stop before it as left (<see cref="CageHoldRules.LeftOnLoad"/>).
+    /// </summary>
     private readonly HashSet<int> _crewLeftAt = new();
     /// <summary>The stops whose prisoners a player left behind (their crew count as lost).</summary>
     internal IReadOnlyCollection<int> CrewLeftAt => _crewLeftAt;
@@ -352,7 +355,8 @@ public partial class RailController : Node
         Party.Limit = StopS[StopIndex];
         ResetLine();
         Boarding.Cancel();
-        _crewLeftAt.Clear(); // the waiver is not saved: after a load the cage holds again
+        _crewLeftAt.Clear(); // the waiver is not saved: the cage at the stop the cart is restored at holds again,
+        foreach (var s in CageHoldRules.LeftOnLoad(StopIndex)) _crewLeftAt.Add(s); // but a cage still locked at a stop the cart is past was left behind
         _heldStartCall = null;
         _hitAt.Clear();
         _warnedAt.Clear();

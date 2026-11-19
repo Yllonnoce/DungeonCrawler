@@ -1189,12 +1189,15 @@ held back then starts with its own call: the arrival's starts uncalled, a boardi
 Left while the gate is still down, the gate's lift starts it as usual. A cage opened while the riders sit waiting (Grisel
 from the bench, a pick, the keys), or whose last crew die, ends the hold, and the countdown starts by itself. The hold
 applies in every mode: solo, and online through the server's state (see "Riding together"). Leaving the prisoners is
-not saved (`RailController.CrewLeftAt` is cleared by `Restore`): after a load the cage holds the cart again.
+not saved: `Restore` clears `RailController.CrewLeftAt` and refills it with every stop before the one the cart is restored at
+(`CageHoldRules.LeftOnLoad`), since a cart restored past a stop left it. Only the cage at the stop the cart is restored at
+holds the cart again after a load; a cage still locked at a stop the cart is past stays left behind (an open one ignores it).
 
 A cage left behind. Its crew count as lost (`CrewRules.JudgeCaged`), and the cage no longer blocks the stairs
 (`CrewRules.CagesBlocking` counts only the cages neither open nor left behind). Opening it later on foot frees its crew
-as any cage does, and they follow on foot ("Let them out" on its siding). The save still lists only the dead as lost, so
-after a load the cage holds again and its crew are caged. The crew line's "freed" (`CrewRules.HudText`) counts only crew whose
+as any cage does, and they follow on foot ("Let them out" on its siding). The save still lists only the dead as lost, but a load
+counts every passed stop as left (above), so a left cage behind the cart stays left and its crew stay lost; only a cage at
+the stop the cart is restored at holds again, with its crew caged. The crew line's "freed" (`CrewRules.HudText`) counts only crew whose
 cage stands open (or who had none), so a left cage's crew, and crew who died still caged, are lost but never freed.
 
 The crew. Floor 12's six are Hob Tallow, Merrin Ash, Dace Wicker, Old Pell, Juno Brack and Selby Crane (wagon 1 holds Hob
@@ -1255,7 +1258,11 @@ uncoupled and still locked, `CrewLeftAt` listing stop 1, its two crew lost, the 
 not complete (`[crew] 8 departed stop 1 without its prisoners`). (The other solo ride flows, `--test-ride`,
 `--test-ride-edges`, `--test-chase` and `--test-cart-watchdog`, leave each held stop's prisoners the frame the hold shows,
 through `DebugTools.RideWaiveCages`, so their timings are as before.) Then a cart on thin
-plating hits a cinder brute between stops 1 and 2. One spare must take over, holding the cart at a stop. The run ends
+plating hits a cinder brute between stops 1 and 2. One spare must take over, holding the cart at a stop (stop 1, whose
+prisoners were left, must not hold it). The brute dies and the cart rides on to stop 2, where cage 2 holds it, and the run
+saves and loads there. After the load `CrewLeftAt` must list stop 1 alone, wagon 1's crew must still be lost, two cages
+(2 and 3) must block the stairs (`CrewRescueController.CagesBlockingNow`), the crew line must still read "Crew freed 0/6,
+home 0, 2 lost." and cage 2 must hold the cart again (`[crew] 9 the load kept stop 1's prisoners left behind`). The run ends
 with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
 as it appears. A run with no RESULT line 10 s before its quit timeout fails with "timed out at step N" and exit code 1.
 `--test-ride` and `--test-ride-edges` share this watchdog.

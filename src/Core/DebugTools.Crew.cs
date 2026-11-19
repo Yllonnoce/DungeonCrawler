@@ -16,7 +16,8 @@ namespace DungeonCrawler.Core;
 // a save and a load between stops 2 and 3 keep the train, one crew member let out at stop 2 bleeds out and is lost, and
 // the end of the line brings the rest home and opens the stairs. Then the floor is built again and the cart is wrecked
 // between stops 1 and 2: a spare takes over. On the way the cart is held at stop 1 by its locked cage (the cage hold, plan 7:
-// no countdown, "Cart — cage locked", the hold prompt) until the lead leaves the prisoners behind, who then count as lost. Forgiven, Grisel says each of her ride1-ride3 calls exactly once and her cage
+// no countdown, "Cart — cage locked", the hold prompt) until the lead leaves the prisoners behind, who then count as lost; after the wreck the spare rides on to stop 2, and a save and a
+// load there keep stop 1's prisoners left behind (lost, blocking nothing) while stop 2's cage holds the cart again. Forgiven, Grisel says each of her ride1-ride3 calls exactly once and her cage
 // call at least once, all through her own line (Npc.Said), never as narration; condemned, she says nothing. Prints [crew]
 // lines and [crew] RESULT.
 public partial class DebugTools
@@ -542,6 +543,48 @@ public partial class DebugTools
                 if (props.Count > 0 || hazards.Count > 0) { fail($"the load was not quiet: {string.Join(", ", props.Concat(hazards))}"); return; }
                 if (_soundRelayed.Count > 0) { fail($"rail cues went through EventBus.Sfx: {string.Join(", ", _soundRelayed)}"); return; }
                 GD.Print($"[crew] Grisel's calls heard: [{string.Join(", ", _crewGriselSaid.OrderBy(k => k.Key).Select(k => $"{k.Key}x{k.Value}"))}]");
+                // on to stop 2 (the brute dies first: it stands on the lane), where a save and a load must keep stop 1's prisoners left behind
+                _crewBrute?.Kill();
+                _crewBrute = null;
+                if (rc.StopIndex == 1)
+                {
+                    if (rc.CageHeld) { fail("the spare at stop 1 is held by cage 1, whose prisoners were left behind"); return; }
+                    if (!RideBoard(main, layout, rc, out var why)) { fail(why); return; }
+                }
+                _crewStep++;
+                _crewClock = 0f;
+                break;
+            }
+            case 6:
+            {
+                // 9. held at stop 2 (its cage locked, so the cage holds the cart): save and load there, past stop 1
+                if (rc.State.Mode == CartMode.Held && rc.StopIndex == 2 && Mathf.Abs(rc.State.S - rc.StopS[2]) < 0.05f)
+                {
+                    GD.Print($"[crew] 9 held at stop 2 (CageHeld {rc.CageHeld}, left behind at [{string.Join(",", rc.CrewLeftAt.OrderBy(x => x))}], hud \"{((CrewRescueController)ObjectiveController.Instance!).HudText}\"): save and load");
+                    main.SaveGame(CrewSlot);
+                    if (!main.LoadGame(CrewSlot)) { fail("the save at stop 2 would not load"); return; }
+                    _crewStep++;
+                    _crewClock = 0f;
+                }
+                else if (_crewClock > 90f) fail($"the cart never stood at stop 2 within 90 s (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0}, stop 2 at {rc.StopS[2]:0.0})");
+                break;
+            }
+            case 7 when _crewClock >= 1f:
+            {
+                // after the load: stop 1's cage still counts as left (its crew lost, it blocks nothing), stop 2's (where the cart stands) holds again
+                var ctrl = (CrewRescueController)ObjectiveController.Instance!;
+                var wagon1 = ctrl.Wagons.First(w => w.Stop == 1);
+                var crew1 = ctrl.Crew.Where(c => c.Ride == wagon1).ToList();
+                var left = string.Join(",", rc.CrewLeftAt.OrderBy(x => x));
+                GD.Print($"[crew] 9 after the load at stop 2: mode={rc.State.Mode} stop={rc.StopIndex} left behind at [{left}] cages blocking {ctrl.CagesBlockingNow} CageHeld {rc.CageHeld} wagon 1 open={wagon1.Open} [{string.Join(", ", crew1.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}] (hud \"{ctrl.HudText}\")");
+                if (rc.State.Mode != CartMode.Held || rc.StopIndex != 2) { fail($"the cart came back {rc.State.Mode} at stop {rc.StopIndex}, not held at stop 2"); return; }
+                if (wagon1.Open) { fail("cage 1 came back open"); return; }
+                if (left != "1") { fail($"after the load the prisoners are left behind at [{left}], not stop 1 alone"); return; }
+                if (crew1.Count != CrewRules.PerWagon || crew1.Any(c => ctrl.StateOf(c) != CrewState.Lost)) { fail($"after the load wagon 1's crew are not two lost: [{string.Join(", ", crew1.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}]"); return; }
+                if (ctrl.CagesBlockingNow != 2) { fail($"{ctrl.CagesBlockingNow} cages block the stairs after the load, not 2 (cage 1 was left behind)"); return; }
+                if (ctrl.HudText != "Crew freed 0/6, home 0, 2 lost.") { fail($"after the load the crew line reads \"{ctrl.HudText}\", not \"Crew freed 0/6, home 0, 2 lost.\""); return; }
+                if (!rc.CageHeld) { fail("cage 2 does not hold the cart restored at stop 2"); return; }
+                GD.Print("[crew] 9 the load kept stop 1's prisoners left behind; the cage at stop 2, where the cart stands, holds again");
                 // the last wrecks: the cart is wrecked where it stands, with the local hero beside it, until no spare is left to take
                 // over; the wreck is then hidden, and the cart bar must show nothing over it (not "Cart — wrecked")
                 if (party.Local is not { } me) { fail("no local hero for the last wreck"); return; }
@@ -558,7 +601,7 @@ public partial class DebugTools
                 _crewClock = 0f;
                 break;
             }
-            case 6 when _crewClock >= 0.5f:
+            case 8 when _crewClock >= 0.5f:
             {
                 // half a second on: the bar has been refreshed (every 0.25 s) with the hero still within its range of the hidden wreck
                 var distance = party.Local is { } me ? me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition) : float.PositiveInfinity;

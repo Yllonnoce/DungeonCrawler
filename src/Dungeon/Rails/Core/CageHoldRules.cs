@@ -21,6 +21,16 @@ public static class CageHoldRules
     public static bool Held(CartMode mode, bool halted, int stopIndex, int stopCount, bool waived, bool cageHolds)
         => mode == CartMode.Held && !halted && stopIndex < stopCount - 1 && !waived && cageHolds;
 
+    /// <summary>
+    /// The stops whose prisoners count as left behind after a load (nothing about them is saved): every cage stop before the one the
+    /// cart is restored at (stop 0 has no wagon), since a cart restored past a stop left it. The cage at the restored stop holds again.
+    /// An open cage ignores the waiver (its crew are freed), so in effect only the passed stops whose cage is still locked count as left.
+    /// </summary>
+    public static IEnumerable<int> LeftOnLoad(int stopIndex)
+    {
+        for (var s = 1; s < stopIndex; s++) yield return s;
+    }
+
     /// <summary>A hero may leave the prisoners behind: seated in the held cart and on their feet.</summary>
     public static bool MayLeaveBehind(bool seatedHere, bool downed, bool cageHeld) => seatedHere && !downed && cageHeld;
 }

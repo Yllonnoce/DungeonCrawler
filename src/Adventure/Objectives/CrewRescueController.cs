@@ -331,6 +331,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         return _cages;
     }
 
+    /// <summary>The locked cages that still block the stairs (<see cref="CrewRules.CagesBlocking"/>; test hook).</summary>
+    internal int CagesBlockingNow => CrewRules.CagesBlocking(Cages());
+
     /// <summary>A player left this wagon's prisoners behind (plan 7): its crew count as lost and it no longer blocks the stairs. Not saved.</summary>
     private bool LeftBehind(CageWagon w) => _rails != null && IsInstanceValid(_rails) && _rails.CrewLeftAt.Contains(w.Stop);
 
