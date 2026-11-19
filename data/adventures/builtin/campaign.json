@@ -12947,6 +12947,278 @@
       "RequiresFlag": "let_him_dream",
       "ForbidsFlag": null,
       "FromStock": false
+    },
+    {
+      "Trigger": "RideStart",
+      "Objective": null,
+      "Line": {
+        "Text": "My ore line, hirelings. That cart hauled slag at a penny a ton. You\u0027re worth less, and you\u0027ll go out the same way.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "My ore line, hirelings. That cart hauled slag at a penny a ton. You\u0027re worth less, and you\u0027ll go out the same way.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RideStart",
+      "Objective": null,
+      "Line": {
+        "Text": "Ride, then. My cinder crews push carts down that line all day, and not one of them looks where it\u0027s going.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Ride, then. My cinder crews push carts down that line all day, and not one of them looks where it\u0027s going.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RideStart",
+      "Objective": null,
+      "Line": {
+        "Text": "Hold on tight, hirelings. I lose a cart a week down there, and I\u0027ve never once sent anyone to look for it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Hold on tight, hirelings. I lose a cart a week down there, and I\u0027ve never once sent anyone to look for it.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RideStart",
+      "Objective": null,
+      "Line": {
+        "Text": "Grisel\u0027s lying by my first cage, hirelings, with my keys still on her belt. Mind you don\u0027t run her over twice.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Grisel\u0027s lying by my first cage, hirelings, with my keys still on her belt. Mind you don\u0027t run her over twice.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": "grisel_forgiven",
+      "FromStock": false
+    },
+    {
+      "Trigger": "RolledOver",
+      "Objective": null,
+      "Line": {
+        "Text": "Under the wheels. Should have stayed in the cart, hireling. The cart was the one thing down here I gave you for free.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Under the wheels. Should have stayed in the cart, hireling. The cart was the one thing down here I gave you for free.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RolledOver",
+      "Objective": null,
+      "Line": {
+        "Text": "Flat on my rails. My crews will scrape you off at the end of the shift, and dock themselves the time.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Flat on my rails. My crews will scrape you off at the end of the shift, and dock themselves the time.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "RolledOver",
+      "Objective": null,
+      "Line": {
+        "Text": "That\u0027s what the bell was for, you stupid bugger. My carts don\u0027t stop. They never bloody stop.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "That\u0027s what the bell was for, you fool. My carts don\u0027t stop. They never stop.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "CartWrecked",
+      "Objective": null,
+      "Line": {
+        "Text": "There goes the warden cart. Good iron, that was. I\u0027ll take it out of your wages, if you live to draw any.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "There goes the warden cart. Good iron, that was. I\u0027ll take it out of your wages, if you live to draw any.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "CartWrecked",
+      "Objective": null,
+      "Line": {
+        "Text": "Wrecked. Walk the rest, hirelings, and listen for the bell. It rings for you now.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Wrecked. Walk the rest, hirelings, and listen for the bell. It rings for you now.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "SlagDerailed",
+      "Objective": null,
+      "Line": {
+        "Text": "That was my cart and my crew, and neither cost me a penny. Throw all you like. I\u0027ve a yard full of both.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "That was my cart and my crew, and neither cost me a penny. Throw all you like. I\u0027ve a yard full of both.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "SlagDerailed",
+      "Objective": null,
+      "Line": {
+        "Text": "Off the rails and into the slag. Bloody vandals. The next cart is heavier.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Off the rails and into the slag. Vandals. The next cart is heavier.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "SlagDerailed",
+      "Objective": null,
+      "Line": {
+        "Text": "Break my brake shoes, then. I buy them by the cartload, hirelings, and I pay the smith in cinders.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Break my brake shoes, then. I buy them by the cartload, hirelings, and I pay the smith in cinders.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GolemEntrance",
+      "Objective": null,
+      "Line": {
+        "Text": "Thought the last cage was the end of it? I keep something in my kiln wall for hirelings who get this far.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Thought the last cage was the end of it? I keep something in my kiln wall for hirelings who get this far.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "GolemEntrance",
+      "Objective": null,
+      "Line": {
+        "Text": "One stop from my stair, hirelings. Very good. Now outrun what I built to haul the heavy loads.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "One stop from my stair, hirelings. Very good. Now outrun what I built to haul the heavy loads.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "BufferSmashed",
+      "Objective": null,
+      "Line": {
+        "Text": "Through my buffer and off my line. Fine. Take your grey little crew home. I\u0027ll send the town the bill for the buffer.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "Through my buffer and off my line. Fine. Take your grey little crew home. I\u0027ll send the town the bill for the buffer.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
+    },
+    {
+      "Trigger": "BufferSmashed",
+      "Objective": null,
+      "Line": {
+        "Text": "You broke my line from one end to the other, hirelings. Bloody expensive. I\u0027ll be waiting where the rails don\u0027t reach.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "CleanLine": {
+        "Text": "You broke my line from one end to the other, hirelings. Expensive. I\u0027ll be waiting where the rails don\u0027t reach.",
+        "VoiceId": null,
+        "Delivery": null
+      },
+      "RequiresFlag": null,
+      "ForbidsFlag": null,
+      "FromStock": false
     }
   ],
   "Merchant": {

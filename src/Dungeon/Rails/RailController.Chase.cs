@@ -26,7 +26,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// </summary>
 public partial class RailController
 {
-    const string ChaserSourceName = "the spare cart";
+    const string ChaserSourceName = RunOverRules.ChaserSource;
 
     private sealed class Chase
     {

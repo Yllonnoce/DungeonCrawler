@@ -1,3 +1,5 @@
+using DungeonCrawler.Adventure.Objectives;
+
 namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
@@ -11,4 +13,16 @@ public static class RideLines
 
     /// <summary>Her call as the cart leaves stop <paramref name="stopLeft"/> (0-based): "ride1" for the first ride, and so on. Null for any other moment.</summary>
     public static string? GriselCallFor(CartEventKind kind, int stopLeft) => kind == CartEventKind.Departed ? $"ride{stopLeft + 1}" : null;
+
+    /// <summary>
+    /// The orc's taunt for a cart moment, or null: a departure from one of the first stops (<paramref name="stopLeft"/> at most
+    /// <paramref name="stopCount"/> − 3: rides 1–3 of five stops; the last ride's opening belongs to the golem) starts the ride,
+    /// and a wreck is gloated over. The run-overs, the derails, the golem and the buffer are told where they happen.
+    /// </summary>
+    public static TauntTrigger? TauntFor(CartEventKind kind, int stopLeft, int stopCount) => kind switch
+    {
+        CartEventKind.Departed when stopLeft >= 0 && stopLeft <= stopCount - 3 => TauntTrigger.RideStart,
+        CartEventKind.Wrecked => TauntTrigger.CartWrecked,
+        _ => null,
+    };
 }

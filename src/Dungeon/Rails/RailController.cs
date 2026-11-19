@@ -30,7 +30,7 @@ public partial class RailController : Node
     /// <summary>The cart's HUD line shows while a hero is seated or this close.</summary>
     public const float HudRange = 12f;
     const float HudEvery = 0.25f;
-    const string SourceName = "the warden cart";
+    const string SourceName = RunOverRules.PartyCartSource;
 
     public MineCart Cart { get; private set; } = null!;
     /// <summary>The party's cart on the party track: its state, stepping and pose.</summary>
@@ -201,11 +201,20 @@ public partial class RailController : Node
 
     private void Raise(CartEvent e) => _pending.Add(e);
 
-    /// <summary>Tell the queued events, in order (one a listener raises meanwhile is told too).</summary>
+    /// <summary>Tell the queued events, in order (one a listener raises meanwhile is told too). The orc taunts a ride's start and a wreck (server and solo: the director's RailTaunt).</summary>
     private void Flush()
     {
         if (_pending.Count == 0) return;
-        try { for (var i = 0; i < _pending.Count; i++) CartEvents?.Invoke(_pending[i]); }
+        try
+        {
+            for (var i = 0; i < _pending.Count; i++)
+            {
+                var e = _pending[i];
+                CartEvents?.Invoke(e);
+                if (RideLines.TauntFor(e.Kind, e.Stop, StopS.Length) is { } taunt)
+                    AdventureDirector.Instance?.RailTaunt(taunt, urgent: taunt == Adventure.Objectives.TauntTrigger.CartWrecked);
+            }
+        }
         finally { _pending.Clear(); }
     }
 

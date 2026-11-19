@@ -11,7 +11,7 @@ public partial class RunawayWagon : MineCart
 {
     /// <summary>A body mangled by a runaway wagon carries this as MangledBy (no hazard has it, so it always counts as armed).</summary>
     public const int HazardIndex = 1002;
-    public const string SourceName = "a runaway wagon";
+    public const string SourceName = RunOverRules.RunawaySource;
 
     /// <summary>When each body was last run over (<see cref="RunOverSweep.Judge"/> keeps it).</summary>
     public Dictionary<ulong, double> HitAt { get; } = new();

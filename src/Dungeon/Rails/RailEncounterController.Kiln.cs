@@ -283,6 +283,7 @@ public partial class RailEncounterController
         Dust(root, at + Vector3.Up * 1f, outward.LengthSquared() > 0.01f ? -outward.Normalized() : Vector3.Up, 60);
         GD.Print($"[rails] golem {enc.Id} ({golem.DisplayName}, {golem.Profile.Name}, boss={golem.IsBoss}, elite=[{string.Join(",", golem.Profile.Affixes ?? Array.Empty<EliteAffix>())}], hp {golem.Hp:0}/{golem.MaxHp:0}, scale {golem.Profile.Scale:0.00}) bursts onto the enemy line at S={s:0.0} (party S={partyS:0.0})");
         ShowLine(index, enc);
+        AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.GolemEntrance, urgent: true); // held for the wall line (GolemHoldSeconds)
     }
 
     /// <summary>A one-shot dust burst (as a creature breaking cover).</summary>
@@ -610,8 +611,9 @@ public partial class RailEncounterController
         if (!rolling || piece.Buffer is not { Smashed: false } buffer || _rails.Party.FrontS < buffer.FaceS || GetParent() is not Node3D root) return;
         buffer.Smash(root, _rails.Cart.Velocity);
         EventBus.Instance.Log("The cart smashes through the buffer!");
+        var taunt = AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.BufferSmashed, urgent: true) == true; // the line's last word: held for a line being said (BufferHoldSeconds), never lost to the cooldown after the golem's
         foreach (var rider in _rails.Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.06f, 0.3f);
-        GD.Print($"[rails] buffer {piece.Plan.Id} smashed at S={_rails.State.S:0.0} (v {_rails.State.V:0.0})");
+        GD.Print($"[rails] buffer {piece.Plan.Id} smashed at S={_rails.State.S:0.0} (v {_rails.State.V:0.0}); taunt said or held={taunt}");
     }
 }

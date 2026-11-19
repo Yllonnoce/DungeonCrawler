@@ -6,6 +6,13 @@ public readonly record struct TrackBody(float S, float Lateral, float Height, fl
 /// <summary>When a cart runs a body over, and what that does. Engine-free.</summary>
 public static class RunOverRules
 {
+    /// <summary>The hazard source each cart names when it runs a body over (the log line, the death cause, the orc's gloat).</summary>
+    public const string PartyCartSource = "the warden cart", SlagCartSource = "the slag cart", RunawaySource = "a runaway wagon", ChaserSource = "the spare cart",
+        TrafficSource = "a slag cart";
+
+    /// <summary>A run-over by one of the carts (the party's, an armed slag cart, the slag line's traffic, a runaway, a left-behind player's chaser): the orc says RolledOver, not the Press's Crushed.</summary>
+    public static bool IsCartSource(string? source) => source is PartyCartSource or SlagCartSource or TrafficSource or RunawaySource or ChaserSource;
+
     public const float BigBodyPlatingDamage = 15f;
     /// <summary>A hero who gets out at or above this speed is run over by their own cart.</summary>
     public const float ThrownAtSpeed = 1f;

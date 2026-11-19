@@ -146,7 +146,7 @@ public partial class RailEncounterController
         }
     }
 
-    private const string TrafficSource = "a slag cart";
+    private const string TrafficSource = RunOverRules.TrafficSource;
 
     private void TickRunaway(float dt, PartyController party)
     {

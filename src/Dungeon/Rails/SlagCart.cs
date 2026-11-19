@@ -21,7 +21,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
 {
     /// <summary>A hero mangled by a slag cart carries this as MangledBy: no hazard has it, so it always counts as armed.</summary>
     public const int HazardIndex = 1001;
-    public const string SourceName = "the slag cart";
+    public const string SourceName = RunOverRules.SlagCartSource;
     public const int MaxRiders = 3;
 
     public const float TubBottom = 0.45f;
@@ -165,6 +165,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
         Props.Tremor.ShakeOnly(0.03f, 0.4f);
         EventBus.Instance.Log("The slag cart derails!"); // relayed to clients as a log line
+        Adventure.AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.SlagDerailed);
         var groundY = Run.Track.Point(Run.State.S).Y;
         foreach (var rider in Aboard)
         {

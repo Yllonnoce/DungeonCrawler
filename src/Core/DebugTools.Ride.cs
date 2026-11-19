@@ -9,7 +9,8 @@ namespace DungeonCrawler.Core;
 // ---- --test-ride -------------------------------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3: the line is there (five stops), the party boards and rides to stop 1
 // over a small enemy, the stop survives a save and a load with nobody aboard, a companion who jumps out at speed is
-// mangled while the cart rolls on, and a big enemy on thin plating wrecks the cart. Prints [ride] lines and [ride] RESULT.
+// mangled while the cart rolls on (and the orc gloats with a RolledOver line, never the Press's Crushed one), and a big
+// enemy on thin plating wrecks the cart (and he gloats with a CartWrecked line). Prints [ride] lines and [ride] RESULT.
 public partial class DebugTools
 {
     private bool _testRide;
@@ -22,6 +23,38 @@ public partial class DebugTools
     private Adventurer? _rideThrown;
     private float _rideThrownS;
     private readonly Dictionary<int, (float Hp, float Max)> _rideHpBefore = new();
+    /// <summary>Every villain line heard since the floor loaded: when (seconds since start-up) and its words inside the quotes, coarse and clean.</summary>
+    private readonly List<(double At, string Text, string? Clean)> _rideVillain = new();
+    private double _rideThrownAt, _rideWreckedAt;
+
+    private static double RideNow => Time.GetTicksMsec() / 1000.0;
+
+    /// <summary>Every line the orc may say for a trigger: the campaign's own and the stock, coarse and clean.</summary>
+    private static HashSet<string> RideTauntTexts(Adventure.Objectives.TauntTrigger trigger)
+    {
+        var id = Adventure.Objectives.TauntTriggers.Id(trigger);
+        var set = new HashSet<string>();
+        foreach (var t in (Game.Instance.Adventure.Campaign?.Taunts ?? new List<Adventure.TauntPlan>()).Concat(Adventure.Objectives.TauntBank.All()))
+            if (t.Trigger == id) { set.Add(t.Line.Text); if (t.CleanLine != null) set.Add(t.CleanLine.Text); }
+        return set;
+    }
+
+    /// <summary>The first villain line heard at or after <paramref name="since"/> (within <paramref name="within"/> s) that is one of the trigger's lines, or null.</summary>
+    private string? RideTauntHeard(Adventure.Objectives.TauntTrigger trigger, double since, double within)
+    {
+        var texts = RideTauntTexts(trigger);
+        foreach (var (at, text, clean) in _rideVillain)
+            if (at >= since && at - since <= within && (texts.Contains(text) || clean != null && texts.Contains(clean))) return text;
+        return null;
+    }
+
+    /// <summary>The words of a "Villain: \"…\"" narration, or null when it is not the villain's.</summary>
+    private static string? RideVillainWords(string? line)
+    {
+        var villain = Adventure.Objectives.ObjectiveText.Villain(Game.Instance.Adventure.Campaign?.Antagonist.Name);
+        if (line == null || !line.StartsWith(villain + ": \"") || !line.EndsWith('"')) return null;
+        return line[(villain.Length + 3)..^1];
+    }
 
     private void RunRideTest()
     {
@@ -57,6 +90,7 @@ public partial class DebugTools
                     _rideListening = true;
                     EventBus.Instance.EnemyKilledByHazard += (e, _) => { if (e == _rideCinder) _rideCinderByHazard = true; };
                     EventBus.Instance.EnemyDied += e => { if (e == _rideCinder && !_rideCinderByHazard) _rideCinderOther = true; };
+                    EventBus.Instance.NarrationEx += (text, _, clean, _) => { if (RideVillainWords(text) is { } words) _rideVillain.Add((RideNow, words, RideVillainWords(clean))); };
                 }
                 GD.Print($"[ride] 0 floor 12: stops={layout.Rail.Stops.Count} StopS=[{string.Join(", ", rc.StopS.Select(s => s.ToString("0.0")))}] length={b.PartyTrack.Length:0.0} lethality={TierRules.Lethality} heroes={party.Active.Count()}");
                 _rideStep++;
@@ -160,6 +194,7 @@ public partial class DebugTools
                 var mate = party.Active.FirstOrDefault(a => a.Seated && a.Control == ControlKind.Companion);
                 if (mate == null) { Fail("no seated companion to jump out"); return; }
                 var v = rc.State.V;
+                _rideThrownAt = RideNow; // the mangling (and the orc's line for it) comes inside the get-out call
                 rc.Cart.Interact(party, mate); // the controller's get-out path, at speed
                 _rideThrown = mate;
                 _rideThrownS = rc.State.S;
@@ -175,6 +210,11 @@ public partial class DebugTools
                 GD.Print($"[ride] 6 one second later: mode={rc!.State.Mode} V={rc.State.V:0.00} S {_rideThrownS:0.0} -> {rc.State.S:0.0}, still seated={still}");
                 if (rc.State.Mode != CartMode.Rolling || rc.State.S <= _rideThrownS + 0.5f) { Fail("the cart did not roll on after the jump"); return; }
                 if (still != 3) { Fail($"{still} still seated (the others should ride on)"); return; }
+                // the orc gloats over the run-over as a cart's, within a second, and never as the Press's
+                if (RideTauntHeard(Adventure.Objectives.TauntTrigger.Crushed, _rideThrownAt, double.PositiveInfinity) is { } pressed) { Fail($"the run-over was taunted as a crushing: \"{pressed}\""); return; }
+                if (RideTauntHeard(Adventure.Objectives.TauntTrigger.RolledOver, _rideThrownAt, 1.0) is not { } rolled)
+                { Fail($"no RolledOver taunt within 1 s of {_rideThrown?.State.Name} being run over (villain lines since: {_rideVillain.Count(x => x.At >= _rideThrownAt)})"); return; }
+                GD.Print($"[ride] taunt RolledOver \"{rolled}\"");
                 // step 7: thin plating and a big enemy ahead: the cart is wrecked
                 rc.DebugSetPlating(15f);
                 _rideBrute = RideSpawnAhead(main, layout, rc, "enemy.horde_cinder_brute", 20f, out _rideBruteAt, out var cell);
@@ -208,9 +248,22 @@ public partial class DebugTools
                 if (rc.StopIndex < 1 || rc.StopIndex > rc.StopS.Length - 2) fails.Add($"the spare stands at stop {rc.StopIndex}, not an intermediate stop");
                 if (_rideHpBefore.Count == 0) fails.Add("nobody was seated when the cart wrecked");
                 if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
-                GD.Print("[ride] RESULT ok");
-                _done = true;
-                GetTree().Quit();
+                _rideWreckedAt = RideNow - Mathf.Max(0.5f, (float)GetProcessDeltaTime() * 2f); // the wreck was judged in a physics tick just before this frame
+                _rideStep++;
+                _rideClock = 0f;
+                break;
+            }
+            case 10:
+            {
+                // the orc gloats over the wreck (the cart's Wrecked event, told at its flush)
+                if (RideTauntHeard(Adventure.Objectives.TauntTrigger.CartWrecked, _rideWreckedAt, 2.0) is { } wrecked)
+                {
+                    GD.Print($"[ride] taunt CartWrecked \"{wrecked}\"");
+                    GD.Print("[ride] RESULT ok");
+                    _done = true;
+                    GetTree().Quit();
+                }
+                else if (_rideClock > 1f) Fail($"no CartWrecked taunt within 1 s of the wreck (villain lines: {string.Join(" | ", _rideVillain.Select(x => x.Text))})");
                 break;
             }
         }

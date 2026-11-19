@@ -11,6 +11,10 @@ public enum TauntTrigger
     Crushed,
     // the Depths update: a named creature's death, an altar, a hungry chest, a lost or refusing ally, the merchant's dice
     EliteSlain, ShrineUsed, MimicSprung, AllyDead, AllyLeft, Gamble,
+    // the railed floor's cart moments: house triggers (the designer never makes a railed floor, so the planner is never asked for
+    // them and the stock covers any campaign): the ride sets off, a hero rolled over by a cart, the cart wrecked, a slag cart
+    // derailed, the golem out of the kiln wall, the buffer smashed at the end of the line
+    RideStart, RolledOver, CartWrecked, SlagDerailed, GolemEntrance, BufferSmashed,
 }
 
 public static class TauntTriggers
@@ -95,16 +99,28 @@ public sealed class TauntDirector
     /// <summary>The longest a rite's opening taunt waits for the voice channel before it is no longer worth saying.</summary>
     public const double RitualStartHoldSeconds = 30;
 
+    /// <summary>The longest the golem's entrance taunt waits for the narrator's kiln-wall line before it is no longer worth saying.</summary>
+    public const double GolemHoldSeconds = 10;
+
+    /// <summary>
+    /// The longest the buffer's smash (the line's last word, urgent: it comes a few seconds after the golem's line, inside the
+    /// twelve-second cooldown) waits for a line being said, so that it never talks over one.
+    /// </summary>
+    public const double BufferHoldSeconds = 10;
+
     /// <summary>
     /// How long a taunt may wait for a line being said instead of cutting it off or being dropped: the objective's last
     /// words (urgent) as long as it takes, a rite's opening (the defence starts while the shrine room is being narrated)
-    /// <see cref="RitualStartHoldSeconds"/>; null for the rest (the openings, a crushing and a wipe speak at once, and a
+    /// <see cref="RitualStartHoldSeconds"/>, the golem's entrance (the narrator tells the wall bursting first)
+    /// <see cref="GolemHoldSeconds"/>, the buffer smashed (urgent) <see cref="BufferHoldSeconds"/>; null for the rest (the openings, a crushing, a wreck and a wipe speak at once, and a
     /// moment-bound taunt is dropped when someone is speaking).
     /// </summary>
     public static double? HoldSeconds(TauntTrigger trigger, bool urgent) => trigger switch
     {
         TauntTrigger.AllFreed or TauntTrigger.RitualDone or TauntTrigger.VaultOpened or TauntTrigger.ObjectiveDone when urgent => double.PositiveInfinity,
         TauntTrigger.RitualStart => RitualStartHoldSeconds,
+        TauntTrigger.GolemEntrance => GolemHoldSeconds,
+        TauntTrigger.BufferSmashed when urgent => BufferHoldSeconds,
         _ => null,
     };
 
@@ -192,6 +208,19 @@ public static class TauntBank
         (TauntTrigger.AllyLeft, null, "Walked off, did they? Smart. Smarter than you lot, which is a low fucking bar.", "Walked off, did they? Smart. Smarter than you lot, which is a low bar."),
         (TauntTrigger.Gamble, null, "Rolling dice in my house, {party}? Go on. The house always wins, and I AM the house.", "Rolling dice in my house, {party}? Go on. The house always wins, and I AM the house."),
         (TauntTrigger.Gamble, null, "Cloth and luck. The merchant's robbing you blind and you're thanking him. Bloody marvellous.", "Cloth and luck. The merchant's robbing you blind and you're thanking him. Marvellous."),
+        // the railed floor: the ride, a run-over, a wreck, a derail, the golem, the buffer (no tokens: said as written)
+        (TauntTrigger.RideStart, null, "All aboard my little railway. Mind the bends, mind the carts, mind everything, you bloody tourists.", "All aboard my little railway. Mind the bends, mind the carts, mind everything, you tourists."),
+        (TauntTrigger.RideStart, null, "Ride my rails, then. Nobody has reached the end of the line yet. Not in one piece.", "Ride my rails, then. Nobody has reached the end of the line yet. Not in one piece."),
+        (TauntTrigger.RolledOver, null, "Should have stayed in the cart. My carts don't stop for anyone, you poor sod.", "Should have stayed in the cart. My carts don't stop for anyone, you poor fool."),
+        (TauntTrigger.RolledOver, null, "Flattened. The rails will want a scrub. Somebody fetch a bucket.", "Flattened. The rails will want a scrub. Somebody fetch a bucket."),
+        (TauntTrigger.CartWrecked, null, "Your cart is scrap. Walk, then, and listen for the bell. It rings for you.", "Your cart is scrap. Walk, then, and listen for the bell. It rings for you."),
+        (TauntTrigger.CartWrecked, null, "Wrecked! Oh, that was lovely. Do it again; there's a spare at the next stop.", "Wrecked! Oh, that was lovely. Do it again; there's a spare at the next stop."),
+        (TauntTrigger.SlagDerailed, null, "Derailed my cart? Damned vandals. I'll send two more.", "Derailed my cart? Vandals. I'll send two more."),
+        (TauntTrigger.SlagDerailed, null, "Off the rails and into the slag. Never mind. I've a yard full of carts.", "Off the rails and into the slag. Never mind. I've a yard full of carts."),
+        (TauntTrigger.GolemEntrance, null, "You thought that was the end of it? Something in the wall disagrees.", "You thought that was the end of it? Something in the wall disagrees."),
+        (TauntTrigger.GolemEntrance, null, "Meet the one I keep for heroes who get this far.", "Meet the one I keep for heroes who get this far."),
+        (TauntTrigger.BufferSmashed, null, "Through the buffer and off my line. Fine. The stairs are yours. So is the bill.", "Through the buffer and off my line. Fine. The stairs are yours. So is the bill."),
+        (TauntTrigger.BufferSmashed, null, "Smashed my buffer. Bloody marvellous. Go on, then. Go down.", "Smashed my buffer. Marvellous. Go on, then. Go down."),
     };
 
     /// <summary>Every stock line as a plan entry.</summary>

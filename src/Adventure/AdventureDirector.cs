@@ -655,7 +655,7 @@ public partial class AdventureDirector : Node
         bus.LevelUp += i => Bark(Member(i), BarkTrigger.LevelUp);
         bus.LeadChanged += i => Bark(Member(i), BarkTrigger.Possess);
         bus.MemberDowned += i => { Bark(Member(i), BarkTrigger.Downed); if (Member(i) is not { Mangled: true }) Taunt(Objectives.TauntTrigger.MemberDowned, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name); }; // a crushing gets its own gloat
-        bus.MemberKilledByHazard += (i, _) => Taunt(Objectives.TauntTrigger.Crushed, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name, urgent: true);
+        bus.MemberKilledByHazard += (i, src) => Taunt(Dungeon.Rails.RunOverRules.IsCartSource(src) ? Objectives.TauntTrigger.RolledOver : Objectives.TauntTrigger.Crushed, Main.Instance?.Builder.Layout?.Objective?.Kind ?? FloorObjectiveKind.None, Member(i)?.Name, urgent: true); // a cart's run-over is not the Press
         bus.EnemyKilledByHazard += (e, _) =>
         {
             var witness = Main.Instance?.Party?.Active.Where(a => !a.Downed).OrderBy(a => a.GlobalPosition.DistanceSquaredTo(e.GlobalPosition)).FirstOrDefault();
