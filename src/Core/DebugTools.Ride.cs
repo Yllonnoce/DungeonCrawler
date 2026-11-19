@@ -36,6 +36,72 @@ public partial class DebugTools
 
     private static double RideNow => Time.GetTicksMsec() / 1000.0;
 
+    // ---- the ride's sound (plan 6 task 5): what played where, for --test-ride and --test-crew --------------------------------------
+
+    private bool _soundListening;
+    /// <summary>Every one-shot heard since the test began: when, its cue, and whether a cart's sound played it (else a positional PlayAt). Ambient plays are left out.</summary>
+    private readonly List<(double At, string Cue, bool Cart)> _soundPlays = new();
+    /// <summary>Rail cues raised on the non-positional path (EventBus.Sfx): there must be none.</summary>
+    private readonly List<string> _soundRelayed = new();
+    private double _rideDepartAt = -1, _rideLoadAt = -1, _rideWreckSeenAt = -1;
+    private float _rideMaxV;
+    private bool _rideRollChecked, _ridePitchChecked;
+    private int _ridePitchSamples;
+
+    private void SoundListen()
+    {
+        if (_soundListening) return;
+        _soundListening = true;
+        Audio.AudioManager.PlayedAt += (cue, _, ambient) => { if (!ambient) _soundPlays.Add((RideNow, cue, false)); };
+        CartSound.Played += (cue, _) => _soundPlays.Add((RideNow, cue, true));
+        EventBus.Instance.Sfx += cue => { if (RideSound.Clips.ContainsKey(cue)) _soundRelayed.Add(cue); };
+    }
+
+    private int SoundCount(string cue, double from, double to, bool? cart = null)
+        => _soundPlays.Count(p => p.Cue == cue && p.At >= from && p.At <= to && (cart == null || p.Cart == cart));
+
+    /// <summary>The plays of <paramref name="cues"/> within <paramref name="seconds"/> after <paramref name="since"/>, as "cue@+t" words (empty: none).</summary>
+    private List<string> SoundsAfter(double since, double seconds, params string[] cues)
+        => _soundPlays.Where(p => p.At >= since && p.At <= since + seconds && cues.Contains(p.Cue)).Select(p => $"{p.Cue}@+{p.At - since:0.00}s").ToList();
+
+    /// <summary>Stop 3's place on the party line against the nearest drop hammer and the pour: the hazards' 30 m cues must not reach a cart held there.</summary>
+    private static (float Hammer, float Pour) Stop3Distances(Node root, RailController rc)
+    {
+        if (rc.StopS.Length < 4 || Main.Instance?.Builder.PartyTrack is not { } track) return (float.NaN, float.NaN);
+        var at = track.ToGlobal(track.Curve.SampleBaked(rc.StopS[3], true));
+        float hammer = float.PositiveInfinity, pour = float.PositiveInfinity;
+        foreach (var child in root.GetChildren())
+        {
+            if (child is MoltenPour p) pour = Mathf.Min(pour, p.GlobalPosition.DistanceTo(at));
+            else if (child is Node3D holder)
+                foreach (var h in holder.GetChildren().OfType<DropHammer>()) hammer = Mathf.Min(hammer, h.GlobalPosition.DistanceTo(at));
+        }
+        return (hammer, pour);
+    }
+
+    /// <summary>Print stop 3's distances; null when both lie beyond the cues' range, else why not.</summary>
+    private static string? Stop3Check(string tag, Node root, RailController rc)
+    {
+        var (hammer, pour) = Stop3Distances(root, rc);
+        GD.Print($"[{tag}] sound: stop 3 lies {hammer:0.0} m from the nearest drop hammer and {pour:0.0} m from the pour (within 30 m: the cues' range is {DropHammer.CueRange:0.0} m and {MoltenPour.CueRange:0.0} m, 2 m short of it)");
+        // a seated head sits up to 0.7 m along the cart from its middle: the range ends at least 2 m short of stop 3, less a hair for the print's rounding
+        if (!(hammer - DropHammer.CueRange >= 1.95f) || !(pour - MoltenPour.CueRange >= 1.95f)) return $"stop 3 lies within 2 m of the hazards' cue range (hammer {hammer:0.0} m against {DropHammer.CueRange:0.0}, pour {pour:0.0} m against {MoltenPour.CueRange:0.0})";
+        return null;
+    }
+
+    /// <summary>Each frame of the ride: the party cart's roll follows the rules (on above a crawl, its pitch RideSound.RollPitch of V). Null, or why not.</summary>
+    private string? RideRollCheck(RailController rc)
+    {
+        if (rc.State.Mode != CartMode.Rolling || rc.Cart.Sound is not { } sound) return null;
+        var v = rc.State.V;
+        _rideMaxV = Mathf.Max(_rideMaxV, v);
+        _ridePitchSamples++;
+        if (v > 0.3f) { _rideRollChecked = true; if (sound.RollDbNow <= -80f) return $"the roll is silent at V={v:0.00} (RollDbNow {sound.RollDbNow:0.0})"; }
+        if (v > 5.5f) { _ridePitchChecked = true; if (sound.RollPitchNow <= 1.0f) return $"the roll's pitch is {sound.RollPitchNow:0.000} at V={v:0.00} (want over 1.0)"; }
+        if (Mathf.Abs(sound.RollPitchNow - RideSound.RollPitch(v)) > 0.02f) return $"the roll's pitch is {sound.RollPitchNow:0.000} at V={v:0.00}, the rule says {RideSound.RollPitch(v):0.000}";
+        return null;
+    }
+
     /// <summary>Every line the orc may say for a trigger: the campaign's own and the stock, coarse and clean.</summary>
     private static HashSet<string> RideTauntTexts(Adventure.Objectives.TauntTrigger trigger)
     {
@@ -83,6 +149,8 @@ public partial class DebugTools
             Pin(_rideBrute, _rideBruteAt); // a hit brute is knocked aside and wrecks the cart in the same tick: never pinned back
         }
 
+        if (rc != null && _rideStep is >= 3 and <= 9 && RideRollCheck(rc) is { } rollWrong) { Fail(rollWrong); return; }
+
         switch (_rideStep)
         {
             case 0 when _rideClock >= 1.0f:
@@ -92,6 +160,8 @@ public partial class DebugTools
                     Fail($"floor 12 has no rail line ({layout.RailFailure ?? (layout.Rail == null ? "no line" : rc == null ? $"{layout.Rail.Stops.Count} stops, no RailController" : $"{layout.Rail.Stops.Count} stops")})");
                     return;
                 }
+                SoundListen();
+                if (Stop3Check("ride", root, rc) is { } near) { Fail(near); return; }
                 if (!_rideListening)
                 {
                     _rideListening = true;
@@ -138,6 +208,7 @@ public partial class DebugTools
                 if (rc!.State.Mode == CartMode.Rolling)
                 {
                     GD.Print($"[ride] 2 departed after {_rideClock:0.00} s at S={rc.State.S:0.00}; ride-start taunt said or held={rc.RideStartTaunted}");
+                    _rideDepartAt = RideNow;
                     if (rc.RideStartTaunted != true) { Fail($"the first departure's RideStart taunt was {(rc.RideStartTaunted == null ? "never asked" : "dropped")}"); return; }
                     _rideStep++;
                     _rideClock = 0f;
@@ -166,9 +237,14 @@ public partial class DebugTools
                     if (off > 0.05f) { Fail($"the cart stopped {off:0.000} m from stop 1"); return; }
                     if (_rideSeatDrift > 0.1f) { Fail($"a seated companion left its seat by {_rideSeatDrift:0.000} m"); return; }
                     if (_rideAllAboard != 1) { Fail($"{_rideAllAboard} AllAboard calls before the load, not 1"); return; }
+                    var clacks = SoundCount("rail_clack", _rideDepartAt, _rideDepartAt + 10.0, cart: true);
+                    GD.Print($"[ride] sound: {clacks} rail_clack from the cart within 10 s of the departure; the roll checked on {_ridePitchSamples} frame(s), V up to {_rideMaxV:0.00}, roll on above 0.3 m/s {(_rideRollChecked ? "yes" : "NO")}, pitch over 1.0 above 5.5 m/s {(_ridePitchChecked ? "yes" : "not reached")}");
+                    if (clacks < 5) { Fail($"only {clacks} rail_clack from the cart within 10 s of the departure, not 5"); return; }
+                    if (!_rideRollChecked) { Fail("the cart never rolled above 0.3 m/s to check its roll"); return; }
                     // brief step 5: save at the stop with everyone aboard, load
                     main.SaveGame("ridetest");
                     if (!main.LoadGame("ridetest")) { Fail("the save would not load"); return; }
+                    _rideLoadAt = RideNow;
                     _rideCinder = null;
                     _rideStep++;
                     _rideClock = 0f;
@@ -270,21 +346,29 @@ public partial class DebugTools
                 if (_rideHpBefore.Count == 0) fails.Add("nobody was seated when the cart wrecked");
                 if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
                 _rideWreckedAt = RideNow - Mathf.Max(0.5f, (float)GetProcessDeltaTime() * 2f); // the wreck was judged in a physics tick just before this frame
+                _rideWreckSeenAt = RideNow;
                 _rideStep++;
                 _rideClock = 0f;
                 break;
             }
-            case 10:
+            case 10 when _rideClock >= 1.05f: // a second after the wreck: its sounds are all in
             {
                 // the orc gloats over the wreck (the cart's Wrecked event, told at its flush)
                 if (RideTauntHeard(Adventure.Objectives.TauntTrigger.CartWrecked, _rideWreckedAt, 2.0) is { } wrecked)
                 {
                     GD.Print($"[ride] taunt CartWrecked \"{wrecked}\"");
+                    var wrecks = SoundCount("cart_wreck", _rideWreckSeenAt - 1.0, _rideWreckSeenAt + 1.0);
+                    var squeals = SoundCount("brake_squeal", _rideWreckSeenAt - 1.0, _rideWreckSeenAt + 1.0);
+                    var afterLoad = SoundsAfter(_rideLoadAt, 2.0, "hammer_wind", "pour_hiss");
+                    GD.Print($"[ride] sound: the wreck with a spare played cart_wreck x{wrecks}, brake_squeal x{squeals} within a second; after the load [{string.Join(", ", afterLoad)}]; rail cues relayed on the plain path [{string.Join(", ", _soundRelayed)}]; one-shots heard {_soundPlays.Count}");
+                    if (wrecks != 1 || squeals != 0) { Fail($"the wreck with a spare played cart_wreck x{wrecks} and brake_squeal x{squeals} (want 1 and 0)"); return; }
+                    if (afterLoad.Count > 0) { Fail($"a hazard's cue played within 2 s of the load: {string.Join(", ", afterLoad)}"); return; }
+                    if (_soundRelayed.Count > 0) { Fail($"rail cues went through EventBus.Sfx: {string.Join(", ", _soundRelayed)}"); return; }
                     GD.Print("[ride] RESULT ok");
                     _done = true;
                     GetTree().Quit();
                 }
-                else if (_rideClock > 1f) Fail($"no CartWrecked taunt within 1 s of the wreck (villain lines: {string.Join(" | ", _rideVillain.Select(x => x.Text))})");
+                else Fail($"no CartWrecked taunt within 1 s of the wreck (villain lines: {string.Join(" | ", _rideVillain.Select(x => x.Text))})");
                 break;
             }
         }

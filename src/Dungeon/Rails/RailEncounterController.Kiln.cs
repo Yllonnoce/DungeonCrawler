@@ -33,8 +33,6 @@ public partial class RailEncounterController
     /// <summary>A body mangled by a ride-4 hazard (a hammer) carries this as MangledBy: no floor hazard has it, so it always counts as armed.</summary>
     public const int KilnHazardIndex = 1003;
     const float PourBurnEvery = 0.8f;
-    /// <summary>A hazard's warning cue plays only while the party's cart is this close along the line (EventBus.PlaySfx is not positional).</summary>
-    const float SfxReach = 25f;
     const string GolemName = "Kilnheart the Hulking";
 
     private sealed class Golem
@@ -58,6 +56,8 @@ public partial class RailEncounterController
         public int Slams;
         /// <summary>The spur it was sent down (while <see cref="OnSpur"/>).</summary>
         public SpurSwitch? Spur;
+        /// <summary>Its runner's sound: a track change only.</summary>
+        public CartSound? Sound;
     }
 
     private Golem? _golem;
@@ -260,13 +260,15 @@ public partial class RailEncounterController
         var s = Mathf.Clamp(PaceRules.TargetS(Lanes.EnemyS(partyS), enc.Offset), 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
         var runner = new Node3D { Name = $"GolemRunner_{enc.Id}" };
         root.AddChild(runner);
+        var sound = new CartSound { Wheels = false };
+        runner.AddChild(sound);
         var run = new CartRun(_enemy, runner, new CartState(s, _rails.State.V * Lanes.Stretch(partyS), CartMode.Rolling, CartRules.MaxPlating)) { Limit = _enemy.Length };
         run.PoseAt(s);
         var elite = new EliteRoll(new[] { EliteAffix.Hulking }, GolemName);
         if (_builder.SpawnEnemy(enc.Riders[0].EnemyId, runner.GlobalPosition + Vector3.Up * 0.05f, _builder.CurrentFloor, elite: elite) is not { } golem) { runner.QueueFree(); return; }
         if (golem.IsBoss) GD.PushError($"[rails] the golem {enc.Id} ({golem.Profile.Name}) spawned as a boss: its death would unlock the stairs"); // an authored id must never be a boss (the validator drops them)
         golem.IsReinforcement = true; // it came with the ride (an elite still pays its loot: it never comes again once dead, GolemDefeated)
-        var g = new Golem { Body = golem, Runner = runner, Run = run, EncounterId = enc.Id, Ride = enc.Ride, CartId = NextCartId() };
+        var g = new Golem { Body = golem, Runner = runner, Run = run, EncounterId = enc.Id, Ride = enc.Ride, CartId = NextCartId(), Sound = sound };
         _golem = g;
         _golemSpot ??= () => _golem is { } x && IsInstanceValid(x.Runner) ? new Transform3D(x.Runner.GlobalBasis, x.Runner.GlobalPosition + Vector3.Up * 0.05f) : Transform3D.Identity;
         _golemDrop ??= () => _golem is { } x ? x.Run.Track.Point(x.Run.State.S) + Vector3.Up * 0.05f : Vector3.Zero; // it falls between the rails
@@ -351,8 +353,8 @@ public partial class RailEncounterController
             g.WindingUp = true;
             g.Clock = GolemEvery - GolemWindup;
             TelegraphFx.HandGlow(g.Body, GolemWindup);
-            EventBus.Instance.RaiseEnemyTelegraph(g.Body, TelegraphRules.RailSlam); // clients glow its fist too (EnemyStateMsg); nothing hears it in single player
-            EventBus.Instance.PlaySfx("golem_windup"); // placeholder: plan 6 adds the sound
+            EventBus.Instance.RaiseEnemyTelegraph(g.Body, TelegraphRules.RailSlam); // clients glow its fist too (EnemyStateMsg) and hear its wind-up there (Enemy.ClientTelegraph)
+            RideAudio.At("golem_windup", g.Body.GlobalPosition);
             return;
         }
         if (g.Clock < GolemEvery) return;
@@ -360,8 +362,7 @@ public partial class RailEncounterController
         g.Clock = 0f;
         if (!alongside || g.Body.Effects.IsStunned) return; // the cart got away from it (or it was stunned): the fist falls on nothing
         g.Slams++;
-        EventBus.Instance.Log("The golem slams the cart!");
-        EventBus.Instance.PlaySfx("golem_slam"); // placeholder: plan 6 adds the sound
+        EventBus.Instance.Log("The golem slams the cart!"); // every peer hears the slam once: the party cart's Hit edge, the golem beside it (CartSound)
         foreach (var rider in _rails.Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.08f, 0.4f);
         GD.Print($"[rails] t={_now:0.00} golem slam {g.Slams} at party S={_rails.State.S:0.0} (golem S={g.Run.State.S:0.0}): plating {_rails.State.Plating:0} -> {Mathf.Max(0f, _rails.State.Plating - GolemDent):0}");
@@ -381,8 +382,7 @@ public partial class RailEncounterController
             g.WindingUp = false;
             var v = Mathf.Max(g.Run.State.V, 2f);
             g.Run = new CartRun(spur.Sampler, g.Runner, new CartState(0f, v, CartMode.Rolling, CartRules.MaxPlating)) { Limit = spur.Sampler.Length + 100f }; // no braking for the stop: it runs into it
-            g.Run.PoseAt(0f);
-            EventBus.Instance.PlaySfx("switch_clunk"); // placeholder: plan 6 adds the sound
+            g.Run.PoseAt(0f); // the points' clunk is the runner's sound's track change (enemy line to the spur)
             GD.Print($"[rails] golem takes the spur at enemy S={spur.EnemyPointsS:0.0} (v {v:0.0}); the stop is {spur.CrashS:0.0} m on");
             g.Spur = spur;
             return;
@@ -455,13 +455,17 @@ public partial class RailEncounterController
         if (_golem is not { Done: false } g || !IsInstanceValid(g.Runner) || !IsInstanceValid(g.Body)) return;
         g.Run.Pose(frac);
         g.Body.FollowCarrier();
+        if (!NetSession.IsServer && g.Sound != null && IsInstanceValid(g.Sound)) g.Sound.FeedTrack(GolemTrack(g));
     }
+
+    /// <summary>The golem runner's track as the wire numbers it, on every role: 1 the enemy line, the spur's 2+k once it is on it.</summary>
+    private byte GolemTrack(Golem g) => g.OnSpur ? SpurTrackNumber(g.Spur) : (byte)1;
 
     // ---- the set pieces --------------------------------------------------------------------------
 
     /// <summary>
-    /// The hammers' beat: the glow (the warning) cues its sound once a cycle; at the drop, a walker under a hammer is crushed (any
-    /// time), and with <paramref name="judgeCart"/> (their ride is armed) a cart under it loses <see cref="HammerDent"/> plating and
+    /// The hammers' beat (each hammer cues its own wind and fall, positional: <see cref="DropHammer"/>): at the drop, a walker under a
+    /// hammer is crushed (any time), and with <paramref name="judgeCart"/> (their ride is armed) a cart under it loses <see cref="HammerDent"/> plating and
     /// its riders are shaken (never mangled).
     /// </summary>
     private void TickHammers(Piece piece, bool judgeCart)
@@ -474,8 +478,7 @@ public partial class RailEncounterController
             var was = hammer.Judged;
             hammer.Judged = phase;
             if (phase == was) continue;
-            if (phase == HammerPhase.Glow && Mathf.Abs(_rails.State.S - hammer.S) <= SfxReach) EventBus.Instance.PlaySfx("hammer_wind"); // placeholder: plan 6 adds the sound (not positional: only near the cart)
-            if (phase != HammerPhase.Fall) continue;
+            if (phase != HammerPhase.Fall) continue; // the wind and the fall are heard from the hammer itself (DropHammer)
             if (judgeCart && _rails.State.Mode != CartMode.Wrecked && !_rails.OnEnemyLane(hammer.S) && Mathf.Abs(_rails.State.S - hammer.S) <= CartRules.HalfLength + DropHammer.HalfLength + 0.05f)
             {
                 HammerHits++;
@@ -485,14 +488,14 @@ public partial class RailEncounterController
                 GD.Print($"[rails] t={_now:0.00} hammer {hammer.Index} at S={hammer.S:0.0} hits the cart at S={_rails.State.S:0.0}: plating {_rails.State.Plating:0} -> {Mathf.Max(0f, _rails.State.Plating - HammerDent):0}");
                 _rails.DentPlating(HammerDent);
             }
-            CrushUnder(hammer.S, DropHammer.HalfLength);
+            CrushUnder(hammer.S, DropHammer.HalfLength, gated: !judgeCart);
         }
     }
 
     /// <summary>Walkers under a falling hammer at party S <paramref name="s"/> are crushed (by the lethality, as any hazard).</summary>
-    private void CrushUnder(float s, float halfLength)
+    private void CrushUnder(float s, float halfLength, bool gated)
     {
-        if (!Under(s, halfLength, 2.6f)) return;
+        if (!Under(s, halfLength, 2.6f, gated)) return;
         foreach (var body in _under)
         {
             if (body is not IHazardVictim victim) continue;
@@ -501,8 +504,14 @@ public partial class RailEncounterController
         }
     }
 
-    /// <summary>Fill <see cref="_under"/> with the walkers on the party lane within <paramref name="halfLength"/> (plus their radius) of S <paramref name="s"/>. True when there are any.</summary>
-    private bool Under(float s, float halfLength, float height)
+    /// <summary>An unarmed piece's scan (gated, in <see cref="Under"/>) looks only at bodies this close to it. Nothing the scan reaches lies that far: it changes nothing.</summary>
+    public const float UnarmedScan = 30f;
+
+    /// <summary>
+    /// Fill <see cref="_under"/> with the walkers on the party lane within <paramref name="halfLength"/> (plus their radius) of S <paramref name="s"/>.
+    /// True when there are any. <paramref name="gated"/> (a piece whose ride is not armed): only bodies within <see cref="UnarmedScan"/>.
+    /// </summary>
+    private bool Under(float s, float halfLength, float height, bool gated = false)
     {
         _under.Clear();
         var party = Main.Instance.Party;
@@ -513,7 +522,9 @@ public partial class RailEncounterController
         {
             if (!IsInstanceValid(body) || body is Adventurer { Seated: true }) continue;
             var pos = body.GlobalPosition;
-            if (pos.DistanceSquaredTo(at) > 25f) continue;
+            var d2 = pos.DistanceSquaredTo(at);
+            if (gated && d2 > UnarmedScan * UnarmedScan) continue;
+            if (d2 > 25f) continue;
             if (!track.Measure(pos, s, 3f, out var b)) continue;
             var r = RunOverSweep.RadiusOf(body);
             if (Mathf.Abs(b.S - s) > halfLength + r || b.Lateral > UnderReach || b.Height < -0.5f || b.Height > height) continue;
@@ -523,7 +534,8 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// The pour's clock: the warning cues its hiss; while it pours, a walker in it burns every <see cref="PourBurnEvery"/> s (any
+    /// The pour's clock (the pour cues its own hiss and stream, positional: <see cref="MoltenPour"/>): while it pours, a walker in it
+    /// burns every <see cref="PourBurnEvery"/> s (any
     /// time), and with <paramref name="judgeCart"/> (its ride is armed) a cart through the stream loses <see cref="PourDent"/> plating
     /// and each seated hero is burned twice, once per pour.
     /// </summary>
@@ -535,7 +547,6 @@ public partial class RailEncounterController
         piece.Phase = (int)phase;
         if (phase != was)
         {
-            if (phase == PourPhase.Warn && Mathf.Abs(_rails.State.S - piece.S) <= SfxReach) EventBus.Instance.PlaySfx("pour_hiss"); // placeholder: plan 6 adds the sound (not positional: only near the cart)
             if (phase == PourPhase.Pouring) { piece.PourCount++; piece.BurnClock = 0f; }
         }
         if (phase != PourPhase.Pouring) return;
@@ -561,7 +572,7 @@ public partial class RailEncounterController
         }
         if ((piece.BurnClock -= dt) > 0f) return;
         piece.BurnClock = PourBurnEvery;
-        if (!Under(piece.S, MoltenPour.Zone, 2.5f)) return;
+        if (!Under(piece.S, MoltenPour.Zone, 2.5f, gated: !judgeCart)) return;
         var rng = Main.Instance.Party.Rng;
         var lick = TrapRules.FloorFire(_builder.CurrentFloor);
         foreach (var body in _under)
@@ -580,15 +591,14 @@ public partial class RailEncounterController
             if (!rolling || _rails.Party.FrontS < trestle.From) return;
             piece.Timer = SetPieceRules.TrestleGrace;
             EventBus.Instance.Log("The trestle groans under the cart.");
-            EventBus.Instance.PlaySfx("trestle_creak"); // placeholder: plan 6 adds the sound
+            RideAudio.At("trestle_creak", trestle.Entry); // a client's from its own cart's front (ClientPresent)
             GD.Print($"[rails] t={_now:0.00} the cart's front enters the trestle at S={_rails.State.S:0.0} (v {_rails.State.V:0.0}): it falls in {SetPieceRules.TrestleGrace:0.0} s");
             return;
         }
         if ((piece.Timer -= dt) > 0f) return;
         var on = _rails.State.Mode != CartMode.Wrecked && _rails.Party.BackS < trestle.To && _rails.Party.FrontS > trestle.From;
-        if (GetParent() is Node3D root) trestle.Collapse(root);
+        if (GetParent() is Node3D root) trestle.Collapse(root); // with its cue
         Tremor.ShakeOnly(0.04f, 0.8f);
-        EventBus.Instance.PlaySfx("timber_collapse"); // placeholder: plan 6 adds the sound
         GD.Print($"[rails] t={_now:0.00} the trestle falls with the cart at S={_rails.State.S:0.0} (back {_rails.Party.BackS:0.0}, trestle to {trestle.To:0.0}): {(on ? "caught" : "clear")}");
         if (on) _rails.Catch("The trestle gives way under the cart!");
         else EventBus.Instance.Log("The trestle collapses behind the cart.");

@@ -77,6 +77,13 @@ if [ "${RIDE:-}" = 1 ]; then
   echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -50
   echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -40
   if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
+  # the ride heard where it happens (plan 6 task 5): each client heard the party cart's roll from the synced state, no rail cue came
+  # relayed as a plain sfx, and the joiner (who watches the wreck with a spare) heard cart_wreck once
+  echo "--- ride sound"; grep -h "\[net\] ride sound" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | tail -4
+  for f in client joiner; do
+    if ! grep -q "\[net\] ride sound roll=on" "$TMP/$f.log" 2>/dev/null || grep -q "\[net\] ride sound .* railsfx=[1-9]" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f's ride sound: no roll heard, or a rail cue relayed)"; exit 1; fi
+  done
+  if ! grep "\[net\] ride sound" "$TMP/joiner.log" | tail -1 | grep -q "wreck=1"; then echo "NET TEST: FAIL (the joiner did not hear the wreck with a spare once)"; exit 1; fi
   # a joiner mid-ride (task 8): ready during ride 2 on the server; 1 s after its Ready it traced joined-mid-ride ok; it boarded at stop 2
   if ! grep -q "\[net\] RESULT ok" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner's pass)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner is ready at .*: mid-ride 2" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not ready during ride 2)"; exit 1; fi

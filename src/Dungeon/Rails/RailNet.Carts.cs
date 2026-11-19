@@ -23,6 +23,9 @@ public partial class RailNet
         /// <summary>A chaser's tub: its riders are booked and seated in it here (SeatMsgs).</summary>
         public MineCart? Chaser;
         public Enemy? Rider;
+        /// <summary>Its sound (the golem runner's: a track change only), and the follower's snaps it was last fed at (a snap primes it).</summary>
+        public CartSound? Sound;
+        public int Snaps = int.MinValue;
         /// <summary>The riders' net ids by spot as the server last named them (−1 none).</summary>
         public readonly int[] Wanted = { -1, -1, -1 };
         /// <summary>A chaser's countdown seconds left as the server last told (−1 none), and this client's server time then.</summary>
@@ -54,6 +57,17 @@ public partial class RailNet
         {
             foreach (var cc in _carts.Values)
                 if (cc.Chaser is { } m && IsInstanceValid(m) && !m.IsQueuedForDeletion()) return (m, cc.Follow);
+            return null;
+        }
+    }
+
+    /// <summary>Client: the golem's runner here (its body's place: the party cart's sound hears a hit beside it as the golem's slam), or null.</summary>
+    internal Node3D? ClientGolem
+    {
+        get
+        {
+            foreach (var cc in _carts.Values)
+                if (cc.Kind == CartKind.Golem && IsInstanceValid(cc.Body) && !cc.Body.IsQueuedForDeletion()) return cc.Body;
             return null;
         }
     }
@@ -124,6 +138,8 @@ public partial class RailNet
                 cc.Body = cart;
                 cc.Slag = cart;
                 cc.Run = cart.Run;
+                cc.Sound = cart.Sound;
+                if (cart.Sound != null) cart.Sound.AnnounceOnStart = kind == CartKind.Traffic; // as the server's traffic cart rings entering the line
                 break;
             }
             case CartKind.Runaway:
@@ -132,12 +148,16 @@ public partial class RailNet
                 root.AddChild(wagon);
                 cc.Body = wagon;
                 cc.Run = new CartRun(track, wagon, state, d.Dir);
+                cc.Sound = wagon.Sound;
+                if (wagon.Sound != null) wagon.Sound.AnnounceOnStart = true; // it rings breaking loose, as the server's
                 break;
             }
             case CartKind.Golem:
             {
                 var runner = new Node3D { Name = $"GolemRunner_{d.EncounterId ?? d.Cart.ToString(CultureInfo.InvariantCulture)}" };
                 root.AddChild(runner);
+                cc.Sound = new CartSound { Wheels = false };
+                runner.AddChild(cc.Sound);
                 cc.Body = runner;
                 cc.Run = new CartRun(track, runner, state, d.Dir);
                 break;
@@ -153,6 +173,7 @@ public partial class RailNet
                 cc.Chaser = chaser;
                 cc.Run = new CartRun(track, chaser, state, d.Dir);
                 (chaser.NetRun, chaser.NetFollow) = (cc.Run, cc.Follow); // a seated headset's comfort inputs read the server's ride
+                cc.Sound = chaser.Sound;
                 break;
             }
             default:
@@ -161,6 +182,7 @@ public partial class RailNet
         cc.Run.Limit = d.Limit;
         cc.Run.PoseAt(d.S);
         _carts[d.Cart] = cc;
+        if (cc.Chaser is { } placed) _rails.ChaserPlacedSound(placed, track, d.S); // its first state: announced, and the spawn bell by the server's rule
         return cc;
     }
 
@@ -247,10 +269,28 @@ public partial class RailNet
             else if (cc.Chaser is { } chaser)
                 foreach (var rider in chaser.Riders.Values)
                     if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
+            Hear(cc, s);
         }
         if (NetSession.Instance.Client is not { } client) return;
         FlyLeaps(client.ServerNow); // after every cart is posed: the arcs start on one and end on another
         FollowBoarders();
         if (NetSession.Instance.TestRide) RideTraceClient(client.ServerNow);
+    }
+
+    /// <summary>
+    /// Client, each rendered frame: a copy's sound from its follower (its S, speed, mode and plating; its track), a follower snap priming it.
+    /// The golem's runner hears its track only (the DTO's: its one sound is the points' clunk, and a track change snaps the follower, so its
+    /// snaps never prime it).
+    /// </summary>
+    private static void Hear(ClientCart cc, float s)
+    {
+        if (cc.Sound is not { } sound || !IsInstanceValid(sound)) return;
+        if (!sound.Wheels) { sound.FeedTrack(cc.Track); return; }
+        if (cc.Follow.Snaps != cc.Snaps)
+        {
+            if (cc.Snaps != int.MinValue) sound.Prime();
+            cc.Snaps = cc.Follow.Snaps;
+        }
+        sound.FeedRun(cc.Run, s, cc.Follow.V, cc.Follow.Mode, cc.Follow.Plating, cc.Track);
     }
 }

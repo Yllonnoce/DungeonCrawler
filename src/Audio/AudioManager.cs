@@ -182,9 +182,10 @@ public partial class AudioManager : Node
         return true;
     }
 
-    /// <summary>Play a cue at a volume (dB offset) with slight pitch variation; grunt cues also shift by their set's pitch offset.</summary>
+    /// <summary>Play a cue at a volume (dB offset) with slight pitch variation; grunt cues also shift by their set's pitch offset. A looping cue never plays this way.</summary>
     public void Play(string cue, float volumeDb = 0f)
     {
+        if (RideSound.Loops.Contains(cue)) return; // a looping clip on a pooled player would never stop: loops go through Stream() into a player their owner keeps
         if (!_streams.TryGetValue(cue, out var list) || list.Length == 0) return;
         var idx = _next.GetValueOrDefault(cue);
         _next[cue] = (idx + 1) % list.Length;

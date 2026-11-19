@@ -661,7 +661,11 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
             return;
         }
         if (state is "Attack" or "Shoot") BeginWindup(WindupSeconds);
-        else if (state == TelegraphRules.RailSlam) TelegraphFx.HandGlow(this, TelegraphRules.RailSlamWindup); // the kiln golem's fist, as the server's glows
+        else if (state == TelegraphRules.RailSlam)
+        {
+            TelegraphFx.HandGlow(this, TelegraphRules.RailSlamWindup); // the kiln golem's fist, as the server's glows
+            if (Dungeon.Rails.RideSound.TelegraphCue(state) is { } cue) Dungeon.Rails.RideAudio.At(cue, GlobalPosition); // and its wind-up heard here
+        }
         else if (state.StartsWith("Signature:") && Enum.TryParse<Signature>(state[10..], out var sig) && sig != Signature.None) BeginSignatureTelegraph(sig);
     }
 

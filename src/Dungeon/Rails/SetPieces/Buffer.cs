@@ -65,7 +65,7 @@ public partial class BufferStop : StaticBody3D
     {
         if (Smashed) return;
         Break(root, cartVelocity);
-        EventBus.Instance.PlaySfx("timber_smash"); // placeholder: plan 6 adds the sound
+        RideAudio.At("timber_smash", GlobalPosition + Vector3.Up * BeamHeight); // a client's comes from its "smashed" (RideAudio.OnProp)
         Tell("smashed");
     }
 
@@ -122,12 +122,12 @@ public partial class BufferStop : StaticBody3D
         }
     }
 
-    /// <summary>Standing again, or (<paramref name="smashed"/>) gone without a sound: the cart is past it already.</summary>
+    /// <summary>Standing again, or (<paramref name="smashed"/>) gone without a sound: the cart is past it already (a load). The quiet "smashed-quiet" is told, which no peer hears.</summary>
     public void Restore(bool smashed = false)
     {
         var was = Smashed;
         Smashed = smashed;
-        if (was != smashed) Tell(smashed ? "smashed" : "restored");
+        if (was != smashed) Tell(smashed ? "smashed-quiet" : "restored");
         if (_look == null) return;
         _look.Visible = !smashed;
         _shape.Disabled = smashed;

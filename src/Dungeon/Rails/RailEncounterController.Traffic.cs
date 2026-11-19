@@ -10,8 +10,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// Traffic on a railed floor. Every <see cref="SetPieceRules.SlagTrafficEvery"/> s with no ride's slag cart live, a riderless slag
 /// cart rolls the whole enemy line at cruise (at most one); every <see cref="SetPieceRules.RunawayEvery"/> s with the party's cart
 /// held at a stop and nobody aboard, a <see cref="RunawayWagon"/> runs the party line from just past that stop to just short of
-/// the next (at most one), halts and is freed. Both ring the bell, warn a body on their lane (<see cref="RailEncounterController"/>'s
-/// Warn) and run over whoever is on it; a pocket is safe. An AI-controlled body on foot on a warned lane (a companion, a crew or
+/// the next (at most one), halts and is freed. Both ring the bell as they start and for a body ahead (their <see cref="CartSound"/>),
+/// warn a body on their lane (<see cref="RailEncounterController"/>'s Warn) and run over whoever is on it; a pocket is safe. An AI-controlled body on foot on a warned lane (a companion, a crew or
 /// escorting NPC) walks to the nearest pocket of that lane within <see cref="SeekRange"/> and holds until the cart has passed, else
 /// to the nearest walkable cell off the rails. Server only.
 /// </summary>
@@ -103,7 +103,7 @@ public partial class RailEncounterController
         cart.Run.PoseAt(0f);
         cart.Run.Sync();
         _traffic = cart;
-        EventBus.Instance.PlaySfx("cart_bell");
+        if (cart.Sound != null) cart.Sound.AnnounceOnStart = true; // it rings as it enters the line
         GD.Print($"[rails] t={_now:0.00} traffic slag cart enters the enemy line (party cart S={_rails.State.S:0.0})");
     }
 
@@ -119,7 +119,7 @@ public partial class RailEncounterController
         run.PoseAt(from);
         run.Sync();
         _runaway = new Runaway { Run = run, Body = wagon };
-        EventBus.Instance.PlaySfx("cart_bell");
+        if (wagon.Sound != null) wagon.Sound.AnnounceOnStart = true; // it rings as it breaks loose
         EventBus.Instance.Log("An ore wagon breaks loose up the line!");
         GD.Print($"[rails] t={_now:0.00} runaway wagon at party S={from:0.0}, to S={to:0.0}");
     }

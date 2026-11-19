@@ -106,7 +106,7 @@ public partial class RailController
 
     /// <summary>
     /// Right after a step: the front reached the lip. Fast enough, the cart flies (the arc poses it); too slow, it drops in and
-    /// the plating goes (the caller wrecks it). The landing shakes the riders. True when it dropped in.
+    /// the plating goes (the caller wrecks it). The landing shakes the riders. True when it dropped in. The cart's sound hears the leap and the landing (<see cref="Airborne"/>); a drop in ends in the wreck's cue.
     /// </summary>
     private bool JudgeJump()
     {
@@ -118,7 +118,6 @@ public partial class RailController
                 _landed = true;
                 foreach (var rider in Cart.Riders.Values)
                     if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.08f, 0.35f);
-                EventBus.Instance.PlaySfx("cart_land"); // placeholder: plan 6 adds the sound
                 GD.Print($"[rails] the cart lands past the gap at S={State.S:0.0} (v {State.V:0.0})");
             }
             return false;
@@ -129,13 +128,11 @@ public partial class RailController
         {
             _jumpV = State.V;
             EventBus.Instance.Log("The cart leaps the gap!");
-            EventBus.Instance.PlaySfx("cart_jump"); // placeholder: plan 6 adds the sound
             GD.Print($"[rails] the cart leaps the gap {_gapFrom:0.0}-{_gapTo:0.0} at v {State.V:0.00} (front {Party.FrontS:0.0}); apex {SetPieceRules.ArcHeight(ArcLength / 2f, ArcLength, _jumpV):0.00} m over {ArcLength:0.0} m");
             return false;
         }
         GD.Print($"[rails] the cart is too slow for the gap {_gapFrom:0.0}-{_gapTo:0.0}: v {State.V:0.00} < {SetPieceRules.JumpSpeed:0.0} (front {Party.FrontS:0.0})");
         EventBus.Instance.Log("The cart drops into the gap!");
-        EventBus.Instance.PlaySfx("cart_crash"); // placeholder: plan 6 adds the sound
         foreach (var rider in Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.14f, 0.8f);
         Props.Tremor.ShakeOnly(0.05f, 0.6f);

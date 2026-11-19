@@ -207,8 +207,7 @@ public partial class RailEncounterController
         foreach (var p in _pieces)
             if (p.Plan.Ride == piece.Plan.Ride && p.Plan.Kind == "switch_back" && p.S > piece.S && (float.IsNaN(backS) || p.S < backS)) backS = p.S;
         _rails.Cross(piece.S, backS);
-        EventBus.Instance.Log("The cart takes the switch onto the slag line.");
-        EventBus.Instance.PlaySfx("switch_clunk"); // placeholder: plan 6 adds the sound
+        EventBus.Instance.Log("The cart takes the switch onto the slag line."); // the clunk is the cart's sound's (its Cross edge, on every peer)
         GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, back from {backS:0.0}");
     }
 
@@ -225,7 +224,6 @@ public partial class RailEncounterController
         if (aim - front > look) return;
         piece.Barked = true;
         var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.LineBlocked, "Line's blocked — switch!");
-        EventBus.Instance.PlaySfx("cart_bell"); // placeholder: plan 6 adds the sound
         GD.Print($"[rails] heap {piece.Plan.Id} called at front S={front:0.0} ({heap.FaceS - front:0.0} m to the heap, aim {aim:0.0}); bark={by ?? "none"}");
     }
 
@@ -243,11 +241,12 @@ public partial class RailEncounterController
         return false;
     }
 
-    /// <summary>The heap's lantern blinks or not; the RIDE pass prints each change on both sides (server time).</summary>
+    /// <summary>The heap's lantern blinks or not, its bell ringing at the heap as it starts (every role, by the same rule); the RIDE pass prints each change on both sides (server time).</summary>
     private static void SetAlarm(OreHeap heap, bool alarm)
     {
         if (heap.Alarm == alarm) return;
         heap.Alarm = alarm;
+        if (alarm) RideAudio.At("cart_bell", heap.GlobalPosition);
         if (NetSession.Instance?.TestRide == true)
             GD.Print(FormattableString.Invariant($"[{(NetSession.IsClient ? "net" : "net-server")}] ride heap alarm={(alarm ? "on" : "off")} t={(NetSession.IsClient ? NetSession.Instance.Client?.ServerNow ?? 0 : NetSession.Instance.Now):0.000}"));
     }

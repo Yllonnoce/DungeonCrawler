@@ -117,6 +117,7 @@ public partial class RailController
         var run = new CartRun(Party.Track, cart, new CartState(s, 0f, CartMode.Held, CartRules.MaxPlating)) { Limit = s };
         run.PoseAt(s);
         run.Sync();
+        ChaserPlacedSound(cart, run.Track, s); // its departure is announced; a body at it hears the bell now
         _chase = new Chase { Stop = stop, Cart = cart, Run = run };
         _chaseHitAt.Clear();
         _chaseWarned.Clear();
@@ -364,11 +365,13 @@ public partial class RailController
         hero.GetOut(at, Vector3.Zero);
     }
 
-    /// <summary>Server, each rendered frame: the chaser and its riders posed.</summary>
+    /// <summary>Server, each rendered frame: the chaser and its riders posed, and its sound fed while the chase runs.</summary>
     private void PoseChaser()
     {
         if (_chase is not { } c || !IsInstanceValid(c.Cart)) return;
-        c.Run.Pose((float)Engine.GetPhysicsInterpolationFraction());
+        var s = c.Run.RenderS((float)Engine.GetPhysicsInterpolationFraction());
+        c.Run.PoseAt(s);
+        FeedChaserSound(c.Cart, c.Run, s); // an ended chase stands Held: its loops fall silent
         foreach (var rider in c.Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
     }

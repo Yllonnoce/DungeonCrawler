@@ -30,9 +30,15 @@ public partial class Trestle : Node3D
     private readonly StandardMaterial3D _dark = new() { AlbedoColor = new Color(0.17f, 0.11f, 0.06f), Roughness = 1f };
     private readonly List<MeshInstance3D> _timbers = new();
 
+    /// <summary>Where it creaks and falls from (the node itself stays at the origin): the line at its middle, and where the cart's front comes onto it.</summary>
+    public Vector3 Middle { get; private set; }
+    public Vector3 Entry { get; private set; }
+
     /// <summary>Build along <paramref name="track"/> from <see cref="From"/> to <see cref="To"/>. The node itself stays at the origin.</summary>
     public void Build(TrackSampler track)
     {
+        Middle = track.Point(S);
+        Entry = track.Point(From);
         // the deck: a plank per metre across the line, just under the sleepers
         for (var s = From + 0.5f; s < To; s += 1f)
             Timber(track.Frame(s), new Vector3(DeckWidth, 0.06f, 0.92f), new Vector3(0, 0.03f, 0), _dark);
@@ -67,11 +73,12 @@ public partial class Trestle : Node3D
         _timbers.Add(mesh);
     }
 
-    /// <summary>The trestle gives way: every timber goes; a few of them tumble down as cosmetic rigid bodies under <paramref name="root"/>.</summary>
+    /// <summary>The trestle gives way (server and single player, with its cue): every timber goes; a few of them tumble down as cosmetic rigid bodies under <paramref name="root"/>.</summary>
     public void Collapse(Node3D root)
     {
         if (Collapsed) return;
         Fall(root);
+        RideAudio.At("timber_collapse", Middle); // a client's comes from its "collapsed" (RideAudio.OnProp)
         Tell("collapsed");
     }
 

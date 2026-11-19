@@ -48,6 +48,8 @@ public partial class OreBuckets : Node3D
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.2f, 0.17f, 0.15f), Metallic = 0.6f, Roughness = 0.6f };
     private readonly StandardMaterial3D _hot = new() { AlbedoColor = new Color(0.5f, 0.15f, 0.05f), Metallic = 0.4f, EmissionEnabled = true, Emission = new Color(1f, 0.4f, 0.08f), EmissionEnergyMultiplier = 2.5f };
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.27f, 0.18f, 0.1f), Roughness = 0.9f };
+    /// <summary>A creak or a pour more than this late here (a joiner's or a resync's catch-up through <see cref="ClientTick"/>) is shown silently.</summary>
+    const float LateQuiet = 0.5f;
     private TrackSampler _track = null!;
     private float _clock;
     private int _next;
@@ -181,7 +183,7 @@ public partial class OreBuckets : Node3D
         {
             _creaking = Order[_next % Order.Length];
             Look(_creaking, true);
-            if (!NetSession.IsClient) EventBus.Instance.PlaySfx("bucket_creak"); // placeholder: plan 6 adds the sound (a server's sfx reach every client)
+            if (OnTime(SetPieceRules.BucketStateAt(clock, _next).SecondsIn)) RideAudio.At("bucket_creak", BucketAt(_creaking)); // every peer at its own moment
         }
         if (_creaking >= 0 && SetPieceRules.BucketStateAt(clock, _next) is { Phase: BucketPhase.Poured } poured)
         {
@@ -193,6 +195,12 @@ public partial class OreBuckets : Node3D
         }
     }
 
+    /// <summary>A moment <paramref name="secondsIn"/> past (on this peer's clock) is heard: at most <see cref="LateQuiet"/> late.</summary>
+    private static bool OnTime(double secondsIn) => secondsIn <= LateQuiet;
+
+    /// <summary>Where bucket <paramref name="i"/> hangs (its hook), for its creak.</summary>
+    private Vector3 BucketAt(int i) => i >= 0 && i < _pivots.Length && _pivots[i] != null ? _pivots[i].GlobalPosition : GlobalPosition;
+
     /// <summary>Bucket <paramref name="i"/> pours <paramref name="late"/> seconds after its schedule said (0 on the server's tick; a client's frame or catch-up may be later).</summary>
     private void Pour(int i, float late = 0f)
     {
@@ -203,7 +211,7 @@ public partial class OreBuckets : Node3D
         AddChild(patch);
         patch.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin);
         Patches.Add(patch);
-        if (!NetSession.IsClient) EventBus.Instance.PlaySfx("cinder_pour"); // placeholder: plan 6 adds the sound
+        if (late <= LateQuiet) RideAudio.At("cinder_pour", patch.GlobalPosition + Vector3.Up * 0.5f); // every peer at its own moment; one more than half a second late (a catch-up) pours silently
     }
 
     private void Look(int i, bool creaking)

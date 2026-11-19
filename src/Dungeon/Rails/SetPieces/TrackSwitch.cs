@@ -99,7 +99,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget
     {
         if (NetSession.IsClient || Fixed || Taken) return false;
         SetThrown(!Thrown);
-        EventBus.Instance.PlaySfx("switch_clunk"); // placeholder: plan 6 adds the sound
+        RideAudio.At("switch_clunk", GlobalPosition + Vector3.Up * 0.9f); // a client's comes from its "thrown" or "straight" (RideAudio.OnProp)
         EventBus.Instance.Log(Thrown ? $"{who} throws the switch." : $"{who} sets the switch back.");
         Tell(Thrown ? "thrown" : "straight");
         return true;

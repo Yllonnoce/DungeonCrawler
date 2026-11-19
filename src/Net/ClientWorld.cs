@@ -105,7 +105,10 @@ public partial class ClientWorld : Node
             case Vitals v: ApplyVitals(v); break;
             case LogMsg log: foreach (var line in log.Lines) EventBus.Instance.Log(line); break;
             case ChatMsg chat: EventBus.Instance.Log($"[{chat.From}] {chat.Text}"); Trace.Add("chat"); break;
-            case SfxMsg sfx: EventBus.Instance.PlaySfx(sfx.Name); break;
+            case SfxMsg sfx:
+                if (Dungeon.Rails.RideSound.Clips.ContainsKey(sfx.Name)) RailSfxSeen++; // the RIDE pass: a rail cue is never relayed (each peer plays its own)
+                EventBus.Instance.PlaySfx(sfx.Name);
+                break;
             case ObjectiveMsg o: EventBus.Instance.RaiseObjectiveChanged(o.Text); break;
             case PlayerJoined pj: OnPlayerJoined(pj.Player); break;
             case PlayerLeft pl: OnPlayerLeft(pl); break;
@@ -508,6 +511,9 @@ public partial class ClientWorld : Node
         }
     }
 
+    /// <summary>Relayed sound cues that were a rail cue (the RIDE pass wants none: every peer plays the ride's own sound).</summary>
+    public int RailSfxSeen { get; private set; }
+
     private void OnProp(PropEvt pe)
     {
         if (Root is not { } root || NetRefResolver.Resolve(root, pe.Ref) is not { } node) return;
@@ -529,8 +535,10 @@ public partial class ClientWorld : Node
             case (Dungeon.Props.Trap t, "disarmed"): t.Disarm(); break;
             case (Dungeon.Props.Trap t, "sprung"): t.ShowSprung(); break;
             case (Dungeon.Props.Breakable b, "broken"): b.Vanish(); break;
-            // a railed floor's props (plan 5): the server judged them; our copies only show it, silently (its log and cues come apart)
+            // a railed floor's props (plan 5): the server judged them; our copies show it, then make its sound here (RideAudio.OnProp, after
+            // the switch: a quiet change makes none). The quiet tells ("raised", "burst-quiet", "smashed-quiet") are a load's: shown silently
             case (Dungeon.Rails.RailGate g, "up"): g.ShowUp(); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.RailGate g, "raised"): g.ShowUp(animate: false); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.TrackSwitch sw, "thrown"): sw.ShowThrown(true); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.TrackSwitch sw, "straight"): sw.ShowThrown(false); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.TrackSwitch sw, "taken"): sw.ShowTaken(); break;
@@ -539,16 +547,19 @@ public partial class ClientWorld : Node
             case (Dungeon.Rails.OreHeap h, "cleared"): h.ShowCleared(); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.OreHeap h, "rebuilt"): h.ShowRebuilt(); break;
             case (Dungeon.Rails.QuenchValve v, "broken"): v.ShowBroken(); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.QuenchValve v, "burst-quiet"): v.ShowBroken(steam: false); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.QuenchValve v, "rebuilt"): v.ShowRebuilt(); break;
             case (Dungeon.Rails.Trestle t, "collapsed"): t.ShowCollapsed(root); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.Trestle t, "rebuilt"): t.ShowRebuilt(); break;
             case (Dungeon.Rails.BufferStop b, "smashed"): b.ShowSmashed(root, Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc.Cart) ? rc.Cart.Velocity : Vector3.Zero); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.BufferStop b, "smashed-quiet"): b.ShowSmashed(root, Vector3.Zero, debris: false); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.BufferStop b, "restored"): b.ShowRestored(); break;
             case (Dungeon.Rails.MineCart spare, "used"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: true); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.MineCart spare, "restored"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: false); break;
             case (Dungeon.Rails.CageWagon w, "opened"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowCageOpen(w.Stop); Trace.Add("rail-prop"); break;
             case (Adventure.Objectives.OrcKeyring, "taken"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowKeysTaken(); Trace.Add("rail-prop"); break;
         }
+        Dungeon.Rails.RideAudio.OnProp(pe.Ref, pe.What); // a rail prop's sound (RideSound.PropCue; none for any other): the live event only, never a prop state's catch-up
     }
 
     private void OnTrapPlaced(Save.PlacedTrapDto dto)

@@ -94,7 +94,7 @@ public partial class OreHeap : StaticBody3D, ICombatTarget
     {
         if (!IsAlive || NetSession.IsClient) return DamageResult.Miss(attack.Type);
         Left--;
-        EventBus.Instance.PlaySfx("crate_break"); // placeholder: plan 6 adds the sound
+        RideAudio.At("crate_break", GlobalPosition + Vector3.Up * 0.6f); // each box knocked off, where it plays today; a client hears the heap cleared (RideAudio.OnProp)
         if (Left > 0)
         {
             EventBus.Instance.Log($"{attackerName} knocks boxes off the ore heap.");

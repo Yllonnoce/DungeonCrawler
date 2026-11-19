@@ -32,6 +32,7 @@ public partial class DebugTools
     private Enemies.Enemy? _crewBrute;
     private Vector3 _crewBruteAt;
     private const string CrewSlot = "crewtest";
+    private double _crewLoadAt = -1;
     private bool _crewListening;
     /// <summary>Grisel's calls heard through Npc.Said, by key ("?" for a line that is none of her calls).</summary>
     private readonly Dictionary<string, int> _crewGriselSaid = new();
@@ -103,6 +104,7 @@ public partial class DebugTools
         if (rc == null || ctrl == null) { if (_crewClock > 3f) Fail($"floor 12 has {(rc == null ? "no RailController" : "")}{(rc == null && ctrl == null ? " and " : "")}{(ctrl == null ? $"no CrewRescueController ({ObjectiveController.Instance?.GetType().Name ?? "no objective"})" : "")}"); return; }
         if (_crewSection2 && rc == _crewRails) return; // the floor is being built again: wait for the new one
         CrewListen();
+        SoundListen();
 
         // the test owns the floor's fights: everything is culled as it appears except the guards that hold the stops
         // (section 1: they die by the test's hand at their stop) and the brute of section 2
@@ -121,6 +123,7 @@ public partial class DebugTools
         {
             case 0 when _crewClock >= 1.5f:
             {
+                if (Stop3Check("crew", root, rc) is { } near) { Fail(near); return; }
                 // 1. guard
                 var crew = ctrl.Crew;
                 var caged = crew.Count(c => ctrl.StateOf(c) == CrewState.Caged && c.Seated);
@@ -211,6 +214,7 @@ public partial class DebugTools
                     GD.Print($"[crew] 5 saved mid-ride at S={rc.State.S:0.0} (stop 2 {rc.StopS[2]:0.0}, stop 3 {rc.StopS[3]:0.0}): train={rc.Train.Count} orcKeys={ctrl.OrcKeys} {CrewStates(ctrl)}");
                     main.SaveGame(CrewSlot);
                     if (!main.LoadGame(CrewSlot)) { Fail("the save would not load"); return; }
+                    _crewLoadAt = RideNow;
                     _crewStep++;
                     _crewClock = 0f;
                 }
@@ -478,6 +482,12 @@ public partial class DebugTools
                 if (rc.StopIndex is not (1 or 2)) { fail($"the spare stands at stop {rc.StopIndex}, not stop 1 or 2"); return; }
                 if (Mathf.Abs(rc.State.S - rc.StopS[rc.StopIndex]) > 0.05f || rc.State.Plating < CartRules.MaxPlating - 0.01f) { fail("the spare is not a whole cart at its stop"); return; }
                 if (CrewGriselVerdict() is { } wrong) { fail(wrong); return; }
+                // the save and load between stops 2 and 3 were quiet: no prop's cue, no hazard's warning within 2 s; no rail cue on the plain path
+                var props = SoundsAfter(_crewLoadAt, 2.0, "gate_lift", "timber_collapse", "timber_smash", "crate_break", "steam_burst", "switch_clunk");
+                var hazards = SoundsAfter(_crewLoadAt, 2.0, "hammer_wind", "pour_hiss");
+                GD.Print($"[crew] sound: within 2 s of the load props [{string.Join(", ", props)}] hazards [{string.Join(", ", hazards)}]; rail cues relayed on the plain path [{string.Join(", ", _soundRelayed)}]; one-shots heard {_soundPlays.Count}");
+                if (props.Count > 0 || hazards.Count > 0) { fail($"the load was not quiet: {string.Join(", ", props.Concat(hazards))}"); return; }
+                if (_soundRelayed.Count > 0) { fail($"rail cues went through EventBus.Sfx: {string.Join(", ", _soundRelayed)}"); return; }
                 GD.Print($"[crew] Grisel's calls heard: [{string.Join(", ", _crewGriselSaid.OrderBy(k => k.Key).Select(k => $"{k.Key}x{k.Value}"))}]");
                 LockRules.ForcedChance = null;
                 GD.Print($"[crew] RESULT ok ({CrewBranch})");

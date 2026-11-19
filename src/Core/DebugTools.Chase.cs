@@ -775,7 +775,7 @@ public partial class DebugTools
             var bus = EventBus.Instance;
             bus.Message += OnChaseMessage;
             RailCalls.Called += OnChaseCall;
-            bus.Sfx += OnChaseSfx;
+            Audio.AudioManager.PlayedAt += (cue, _, ambient) => { if (!ambient) OnChaseSfx(cue); }; // the warnings' cues are positional now (RideAudio.At)
             bus.EnemySpawned += e => { if (_chEnc != null && IsInstanceValid(_chEnc)) _chSpawnRide[e] = _chEnc.ArmedRide; };
             bus.EnemyKilledByHazard += (e, source) =>
             {

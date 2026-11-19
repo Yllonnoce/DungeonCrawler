@@ -8,7 +8,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// The party's cart on the wire. The server captures its state for <see cref="RailNet"/> (<see cref="CaptureNet"/>, with a cheap
 /// <see cref="NetSignature"/> to tell when it changed). A client follows that state: <see cref="ApplyNet"/> feeds a
 /// <see cref="CartFollower"/> (this controller is its <see cref="ISlopeSource"/>), applies the lane, the gap, the train, the
-/// flags and the HUD fields, and plays the tumble on a wreck's rising edge; each rendered frame poses the cart, the train and
+/// flags and the HUD fields, and plays the tumble and the wreck's cue on a wreck's rising edge; each rendered frame poses the cart, the train and
 /// the riders at the follower's S (<see cref="ClientPose"/>). A client never steps, judges or raises anything.
 /// </summary>
 public partial class RailController : ISlopeSource
@@ -179,7 +179,8 @@ public partial class RailController : ISlopeSource
         {
             NetWrecksSeen++;
             NetWreckedAt = d.ServerTime;
-            if (Cart.Visible) Tumble(sound: false); // where it stands now, before the state moves it
+            if (Cart.Visible) Tumble(); // where it stands now, before the state moves it
+            RideAudio.At("cart_wreck", Cart.GlobalPosition); // once per wreck, shown or not (a wreck frame comes even when a spare takes over in the same tick)
         }
         _netFlags = d.Flags;
         var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;
@@ -239,6 +240,7 @@ public partial class RailController : ISlopeSource
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         _train.Follow();
+        FeedPartySound(s);
         _hudTimer -= dt;
         if (_hudTimer <= 0f) RefreshHud();
     }

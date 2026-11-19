@@ -59,10 +59,21 @@ public partial class DropHammer : Node3D
         _block.AddChild(_light);
     }
 
+    /// <summary>
+    /// The hammer's cues carry this far: a walker near it hears it, a cart held at stop 3 does not. The plan's 30 m would reach stop 3, which
+    /// lies 13.1 m from ride 4's nearest hammer: the range is that less 2 m (--test-ride and --test-crew print the distance and check it).
+    /// </summary>
+    public const float CueRange = 11.1f;
+    /// <summary>A phase seen this late (a floor clock that jumped: a load, a client's catch-up) is shown silently.</summary>
+    const int LateTicks = 30;
+    private HammerPhase _heard;
+    private int _heardTick = int.MinValue;
+
     public override void _Process(double delta)
     {
         if (_block == null || Main.Instance?.Builder is not { } builder) return;
         var phase = SetPieceRules.Phase(builder.FloorTick, Index, out var into);
+        Hear(phase, builder.FloorTick);
         var fall = Mathf.Clamp(into / FallSeconds, 0f, 1f);
         var down = phase switch
         {
@@ -82,5 +93,20 @@ public partial class DropHammer : Node3D
         var pulse = phase == HammerPhase.Glow ? 0.75f + 0.25f * Mathf.Sin(into * 18f) : 1f;
         _head.EmissionEnergyMultiplier = 3f * heat * pulse;
         _light.LightEnergy = 2.5f * heat * pulse;
+    }
+
+    /// <summary>
+    /// The wind as the glow starts and the blow as it falls, at the hammer (every role but a dedicated server, armed ride or not: it hurts
+    /// walkers whenever it falls). The first frame after a build or a load, and a floor clock that jumped, only note the phase.
+    /// </summary>
+    private void Hear(HammerPhase phase, int tick)
+    {
+        var quiet = _heardTick == int.MinValue || tick < _heardTick || tick - _heardTick > LateTicks;
+        var was = _heard;
+        _heard = phase;
+        _heardTick = tick;
+        if (quiet || phase == was || Net.NetSession.IsServer) return;
+        if (phase == HammerPhase.Glow) RideAudio.At("hammer_wind", GlobalPosition + Vector3.Up * BeamHeight, 0f, CueRange);
+        else if (was == HammerPhase.Glow) RideAudio.At("hammer_fall", GlobalPosition + Vector3.Up * 1.5f, 0f, CueRange); // a long frame may pass the fall itself
     }
 }

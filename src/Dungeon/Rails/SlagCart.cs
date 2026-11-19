@@ -76,6 +76,8 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     public void Admit(ICartRider rider) => RiderChanged?.Invoke(rider, true);
     public void Release(ICartRider rider) { }
 
+    /// <summary>Its sound (a child once built): fed by its run on the server and in single player, by its follower on a client.</summary>
+    public CartSound? Sound { get; private set; }
     private Node3D? _body;
     private bool _built;
 
@@ -163,6 +165,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         var at = GlobalPosition;
         Sparks(root, at + Vector3.Up * 0.4f);
         Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
+        RideAudio.At("cart_crash", at); // its sound goes with it in this call: the crash is a one-shot
         Props.Tremor.ShakeOnly(0.03f, 0.4f);
         EventBus.Instance.Log("The slag cart derails!"); // relayed to clients as a log line
         Adventure.AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.SlagDerailed);
@@ -185,7 +188,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     }
 
     /// <summary>
-    /// Client: the server derailed this cart. The same sparks, thud, tremor and tumble; its riders are set down on the line where they
+    /// Client: the server derailed this cart. The same sparks, thud, crash, tremor and tumble; its riders are set down on the line where they
     /// stand (the server kills them: their deaths come as their own messages); then it is freed. No log line (the server's comes).
     /// </summary>
     public void ShowDerailed()
@@ -195,6 +198,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         var at = GlobalPosition;
         Sparks(root, at + Vector3.Up * 0.4f);
         Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
+        RideAudio.At("cart_crash", at);
         Props.Tremor.ShakeOnly(0.03f, 0.4f);
         var groundY = Run.Track.Valid ? Run.Track.Point(Run.State.S).Y : at.Y;
         foreach (var rider in Aboard)
@@ -327,6 +331,8 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         // the brake shoe: on the inner side by the back wheel, where the heroes in the cart can see and hit it
         Shoe = new BrakeShoe(this) { Name = "BrakeShoe", Position = new Vector3(InnerSide * (halfW + 0.12f), axleY + 0.05f, halfL - 0.35f) };
         AddChild(Shoe);
+        Sound = new CartSound();
+        AddChild(Sound);
     }
 
     private static void Box(Node3D parent, Vector3 size, Vector3 at, Material material)

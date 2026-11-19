@@ -56,7 +56,12 @@ public partial class RailEncounterController
         foreach (var p in _pieces)
         {
             var armed = ride >= 1 && p.Plan.Ride == ride;
-            if (armed) p.Fired = p.Plan.Kind == "beam" && front > p.S + 0.5f; // a joiner mid-ride past the beam does not duck for it
+            if (armed) p.Fired = p.Plan.Kind switch // a joiner mid-ride past the beam does not duck for it, nor hear a trestle already behind its front creak
+            {
+                "beam" => front > p.S + 0.5f,
+                "trestle" => p.Trestle is { } t && front >= t.From,
+                _ => false,
+            };
             if (p.Buckets is { } buckets) { if (armed) buckets.Arm(); else buckets.Clear(); }
             if (!armed && p.Heap is { } heap) heap.Alarm = false;
         }
@@ -65,8 +70,8 @@ public partial class RailEncounterController
     /// <summary>
     /// Client, each rendered frame (after the cart is posed): the armed ride's presentation under the server's own rules, from this screen's
     /// cart (the follower's S, speed, lane and mode): the beam ducks our seated desktop camera as the front passes it, the heap's lantern
-    /// blinks while the cart bears down on it (no bark: a companion's call comes from the server), and the buckets run the server's schedule
-    /// from its arm time. Nothing is judged here. No allocation.
+    /// blinks while the cart bears down on it (no bark: a companion's call comes from the server), the buckets run the server's schedule
+    /// from its arm time, and the trestle groans as the front comes onto it. Nothing is judged here. No allocation.
     /// </summary>
     private void ClientPresent(float dt)
     {
@@ -87,6 +92,10 @@ public partial class RailEncounterController
                     break;
                 case "buckets":
                     piece.Buckets?.ClientTick(client.ServerNow - ArmedAt, dt);
+                    break;
+                case "trestle":
+                    // the server's rule from our own cart: it groans once as the front first comes onto it, while it stands
+                    if (rolling && !piece.Fired && piece.Trestle is { Collapsed: false } trestle && front >= trestle.From) { piece.Fired = true; RideAudio.At("trestle_creak", trestle.Entry); }
                     break;
             }
         }
@@ -117,7 +126,7 @@ public partial class RailEncounterController
         if (_runaway is { } w && IsInstanceValid(w.Body) && !w.Body.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(w.Body.CartId, CartKind.Runaway, 0, w.Run, w.Body, 0f, null, null, null));
         if (_golem is { Done: false } g && IsInstanceValid(g.Runner) && !g.Runner.IsQueuedForDeletion())
-            into.Add(new RailNet.LiveCart(g.CartId, CartKind.Golem, g.OnSpur ? SpurTrackNumber(g.Spur) : (byte)1, g.Run, g.Runner, 0f, g.EncounterId,
+            into.Add(new RailNet.LiveCart(g.CartId, CartKind.Golem, GolemTrack(g), g.Run, g.Runner, 0f, g.EncounterId,
                 null, IsInstanceValid(g.Body) && g.Body.Carried ? g.Body : null));
     }
 }

@@ -76,6 +76,9 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     /// <summary>A hero pressed interact on the cart. Set by the RailController.</summary>
     public Action<Adventurer>? OnUse { get; set; }
 
+    /// <summary>Its sound (a child once built): fed by whoever runs it; a spare's is never fed and stays silent.</summary>
+    public CartSound? Sound { get; private set; }
+
     private readonly Marker3D[] _seats = new Marker3D[CartSeats.HeroSeats + CartSeats.BenchSeats];
     private bool _built;
 
@@ -279,6 +282,8 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
             _seats[i] = new Marker3D { Name = $"Seat{i}", Position = new Vector3(SeatSpots[i].X, y, SeatSpots[i].Y) };
             AddChild(_seats[i]);
         }
+        Sound = new CartSound();
+        AddChild(Sound);
     }
 
     private static void Box(Node3D parent, string name, Vector3 size, Vector3 at, Material material)

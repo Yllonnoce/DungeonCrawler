@@ -175,7 +175,7 @@ public partial class RailController
         RefreshHud(); // a Boarding event raised here is told at the end of the next physics tick
     }
 
-    /// <summary>Right after a step: the front reached the obstacle on the party lane. The cart is put back at its face and the plating takes the hit (the caller wrecks or halts it).</summary>
+    /// <summary>Right after a step: the front reached the obstacle on the party lane. The cart is put back at its face and the plating takes the hit (the caller wrecks or halts it; the halt is the cart's sound's crash).</summary>
     private bool HitBlock()
     {
         if (!LineBlocked || State.Mode != CartMode.Rolling) return false;
@@ -184,7 +184,6 @@ public partial class RailController
         var s = BlockedAt - CartRules.HalfLength;
         Party.State = State with { S = Mathf.Min(State.S, s), V = 0f, Plating = Mathf.Max(0f, State.Plating - _blockDent) };
         EventBus.Instance.Log("The cart crashes into the ore heap!");
-        EventBus.Instance.PlaySfx("cart_crash"); // placeholder: plan 6 adds the sound
         foreach (var rider in Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.12f, 0.7f);
         Props.Tremor.ShakeOnly(0.04f, 0.5f);

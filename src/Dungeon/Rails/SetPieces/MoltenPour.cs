@@ -105,17 +105,54 @@ public partial class MoltenPour : Node3D
         Valve.ShowRebuilt();
     }
 
+    /// <summary>
+    /// The pour's cues carry this far: a walker near it hears it, a cart held at stop 3 does not. The plan's 30 m would reach stop 3, which
+    /// lies 25.9 m from the pour: the range is that less 2 m (--test-ride and --test-crew print the distance and check it).
+    /// </summary>
+    public const float CueRange = 23.9f;
+    /// <summary>A phase seen this late (a floor clock that jumped: a load, a client's catch-up) is shown silently.</summary>
+    const int LateTicks = 30;
+    private PourPhase _heard;
+    private int _heardTick = int.MinValue;
+    private AudioStreamPlayer3D? _loop;
+
     public override void _Process(double delta)
     {
         if (_stream == null || Main.Instance?.Builder is not { } builder) return;
         float into = 0f;
         Phase = Quenched ? PourPhase.Dry : SetPieceRules.Pour(builder.FloorTick, out into);
+        Hear(Phase, builder.FloorTick);
         var pouring = Phase == PourPhase.Pouring;
         _stream.Visible = pouring;
         _puddle.Visible = pouring;
         var warn = Phase == PourPhase.Warn ? Mathf.Clamp(into / 1.5f, 0f, 1f) : 0f;
         _lip.EmissionEnergyMultiplier = Quenched ? 0.05f : pouring ? 4f : 0.4f + 3.6f * warn * (0.8f + 0.2f * Mathf.Sin(into * 20f));
         _light.LightEnergy = Quenched ? 0.05f : pouring ? 3.5f : 0.3f + 2.5f * warn;
+    }
+
+    /// <summary>
+    /// The hiss as the warning starts, at the trough, and the molten stream's loop while it pours (its own player, every role but a dedicated
+    /// server, armed ride or not). The first frame after a build or a load, and a floor clock that jumped, only note the phase.
+    /// </summary>
+    private void Hear(PourPhase phase, int tick)
+    {
+        if (NetSession.IsServer) return;
+        var quiet = _heardTick == int.MinValue || tick < _heardTick || tick - _heardTick > LateTicks;
+        var was = _heard;
+        _heard = phase;
+        _heardTick = tick;
+        if (!quiet && phase == PourPhase.Warn && was != PourPhase.Warn) RideAudio.At("pour_hiss", GlobalPosition + Vector3.Up * TroughHeight, 0f, CueRange);
+        if (phase == PourPhase.Pouring)
+        {
+            if (_loop == null)
+            {
+                _loop = new AudioStreamPlayer3D { Name = "MoltenLoop", Bus = "SFX", MaxDistance = CueRange, UnitSize = 6f, VolumeDb = -4f, Position = new Vector3(0, 1.5f, 0) };
+                AddChild(_loop);
+            }
+            _loop.Stream ??= Audio.AudioManager.Instance?.Stream("molten_loop");
+            if (!_loop.Playing && _loop.Stream != null) _loop.Play();
+        }
+        else if (_loop is { Playing: true }) _loop.Stop();
     }
 }
 
@@ -181,7 +218,7 @@ public partial class QuenchValve : StaticBody3D, ICombatTarget
     {
         BurstLook(steam: true);
         EventBus.Instance.Log("The quench valve bursts — the pour gutters out.");
-        EventBus.Instance.PlaySfx("steam_burst"); // placeholder: plan 6 adds the sound
+        RideAudio.At("steam_burst", GlobalPosition + Vector3.Up * WheelHeight); // a client's comes from its "broken" (RideAudio.OnProp)
         Broken?.Invoke();
         Tell("broken");
     }
@@ -209,12 +246,12 @@ public partial class QuenchValve : StaticBody3D, ICombatTarget
         }
     }
 
-    /// <summary>Burst without steam, sound or a message (a load puts it back as it was).</summary>
+    /// <summary>Burst without steam, sound or a message (a load puts it back as it was): told as the quiet "burst-quiet", which no peer hears.</summary>
     public void BreakQuietly()
     {
         var was = IsAlive;
         BurstLook(steam: false);
-        if (was) Tell("broken");
+        if (was) Tell("burst-quiet");
     }
 
     /// <summary>Whole again.</summary>

@@ -895,6 +895,7 @@ public partial class NetTestFlow : Node
     private void RideClientTick(NetSession net, ClientWorld client, Main main)
     {
         FightBoarders(main);
+        RideSoundSample(client);
         switch (_step)
         {
             case 50:
@@ -983,6 +984,7 @@ public partial class NetTestFlow : Node
                 }
                 if (_rideAtEndAt >= 0 && _rideSawChaser && Dungeon.Rails.RailNet.Instance?.ClientChaser == null)
                 {
+                    if (RideSoundVerdict(client, joiner: false) is { } unheard) { Finish("[net]", false, $"ride: sound: {unheard}"); net.Disconnect("test finished"); return; }
                     GD.Print($"[net] ride: seated at stop {rc.StopIndex} in seat {me.Seat}; the joiner's chaser came and went; leaving the game seated; {client.ShakesHeard} shake(s) from the server reached this screen");
                     Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons; our hero boarded through the intent, pumped (shown by the server), braked, got out where the server put it; saw gate 1 rise, took the keys, opened cage 1 and revived {_rideDownedHere?.NpcName} through the intents; boarded again, threw ride 3's switch from the seat, crossed, rode ride 4 to the end of the line while the joiner chased the train in a spare, and leaves seated");
                     net.Disconnect("test finished");
@@ -1055,6 +1057,46 @@ public partial class NetTestFlow : Node
     /// (chase-done); step 66 (task 11): once the first client has left, the server wrecks the cart at the end of the line by a test hook and a
     /// spare takes over: we see the Wrecked state, then the cart held at the spare's stop (wreck-spare); then leave.
     /// </summary>
+    // ---- the ride's sound on a client (plan 6 task 5): the party cart's roll from the synced state, no rail cue relayed, the wreck heard once ----
+
+    private bool _soundListening, _soundOk;
+    private int _soundWrecks;
+    private double _soundLineAt = double.NegativeInfinity;
+
+    /// <summary>Each physics tick of a RIDE client: while the server's cart rolls here, a <c>[net] ride sound</c> line every 2 s (and at once the first time the roll reaches RollPitch(5)).</summary>
+    private void RideSoundSample(ClientWorld client)
+    {
+        if (!_soundListening)
+        {
+            _soundListening = true;
+            Audio.AudioManager.PlayedAt += (cue, _, _) => { if (cue == "cart_wreck") _soundWrecks++; };
+        }
+        if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || !rc.Following || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || rc.Cart.Sound is not { } sound) return;
+        var rises = !_soundOk && sound.RollDbNow > -80f && sound.RollPitchNow >= Dungeon.Rails.RideSound.RollPitch(5f);
+        if (!rises && _elapsed - _soundLineAt < 2.0) return;
+        _soundLineAt = _elapsed;
+        RideSoundLine(client, rc);
+    }
+
+    private void RideSoundLine(ClientWorld client, Dungeon.Rails.RailController rc)
+    {
+        var sound = rc.Cart.Sound;
+        var on = sound != null && sound.RollDbNow > -80f;
+        var pitch = sound?.RollPitchNow ?? 0f;
+        if (on && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && pitch >= Dungeon.Rails.RideSound.RollPitch(5f)) _soundOk = true;
+        GD.Print(FormattableString.Invariant($"[net] ride sound roll={(on ? "on" : "off")} pitch={pitch:0.000} railsfx={client.RailSfxSeen} wreck={_soundWrecks}"));
+    }
+
+    /// <summary>The RIDE client's sound, judged before its RESULT: the roll heard at speed while the server's cart rolled, no rail cue relayed, and (the joiner, who watches it) the wreck heard once. Null, or why not.</summary>
+    private string? RideSoundVerdict(ClientWorld client, bool joiner)
+    {
+        if (Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc)) RideSoundLine(client, rc);
+        if (!_soundOk) return FormattableString.Invariant($"the party cart's roll was never heard on with its pitch at RollPitch(5) = {Dungeon.Rails.RideSound.RollPitch(5f):0.000} or more while the server's cart rolled");
+        if (client.RailSfxSeen != 0) return $"{client.RailSfxSeen} rail cue(s) came relayed as SfxMsg";
+        if (joiner && _soundWrecks != 1) return $"the wreck with a spare played cart_wreck {_soundWrecks} time(s) here, not once";
+        return null;
+    }
+
     private void RideJoinerClient(NetSession net, ClientWorld client, Main main)
     {
         FightBoarders(main);
@@ -1311,6 +1353,7 @@ public partial class NetTestFlow : Node
             }
             case 72: // out of the halted cart beside the lane (no throw), then leave
                 if (me != null && me.Seated && _clock < 5) return;
+                if (RideSoundVerdict(client, joiner: true) is { } unheard) { Finish("[net]", false, $"ride: sound: {unheard}"); net.Disconnect("test finished"); return; }
                 Finish("[net]", true, $"ride: the joiner joined mid-ride 2 and saw the ride as it is (joined-mid-ride ok), boarded at stop 2, was thrown from the cart at speed on ride 3 and stood at the server's landing, had floor 12 resent mid-ride 3 and saw the ride as it is again (resynced-mid-ride ok), took stop 3's spare through the intent after the train, its chaser halted behind the train (chase-done), saw the server's wreck and spare {_joinSpareStop}'s takeover (wreck-spare), rode ride 3 again in it and halted at the heap's face without passing it here (heap-halt)");
                 net.Disconnect("test finished");
                 return;

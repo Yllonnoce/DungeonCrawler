@@ -134,8 +134,7 @@ public partial class RailController : Node
     private bool _throwing;
     /// <summary>Hero indices the save had seated in the cart: the deferred pass after a load sets them down beside it.</summary>
     private readonly HashSet<int> _restoredRiders = new();
-    const float WarnEvery = 4f;
-    const float WarnSeconds = 3f;
+    const float WarnEvery = RideSound.BellEvery;
     const float WreckHpFraction = 0.25f;
     const float BodyRadius = RunOverSweep.BodyRadius;
 
@@ -187,7 +186,11 @@ public partial class RailController : Node
 
     public override void _EnterTree() => Instance = this;
 
-    public override void _Ready() => Party.PoseAt(State.S);
+    public override void _Ready()
+    {
+        Party.PoseAt(State.S);
+        AddSoundscape();
+    }
 
     public override void _ExitTree()
     {
@@ -311,6 +314,7 @@ public partial class RailController : Node
         Cart.Riders.Clear();
         Party.Sync();
         Party.PoseAt(State.S);
+        Cart.Sound?.Prime(); // back from a save: the jump to the stop makes no sound
         Raise(new CartEvent(CartEventKind.Restored, Stop: StopIndex));
         ClearRiders();
         Flush();
@@ -767,26 +771,20 @@ public partial class RailController : Node
         RefreshHud();
     }
 
-    /// <summary>"Cart coming!" for a hero on foot with the cart bearing down: a seated hero calls it in their own words (<see cref="RailCalls"/>, else the log), once per hero per few seconds.</summary>
+    /// <summary>
+    /// "Cart coming!" for a hero on foot with the cart bearing down (<see cref="RailWarn.Ahead"/>): a seated hero calls it in their own words
+    /// (<see cref="RailCalls"/>, else the log), once per hero per few seconds. The bell is the cart's own (<see cref="CartSound"/>).
+    /// </summary>
     private void Warn(PartyController party)
     {
         var run = JudgedRun(); // the lane the front is on
-        var look = Mathf.Max(State.V, RunOverRules.WarnMinSpeed) * WarnSeconds;
-        float hint = run.FrontS + look / 2f, window = look / 2f + 2f;
-        // a warned body stands within 2 m of the line at most look + HalfLength ahead, and no stretch of line is shorter than the straight way
-        var reach = look + CartRules.HalfLength + 3f;
-        var at = run.Track.Point(run.State.S);
         foreach (var hero in party.Adventurers)
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || hero.Downed) continue;
-            var pos = hero.GlobalPosition;
-            if (pos.DistanceSquaredTo(at) > reach * reach) continue;
-            if (!run.Track.Measure(pos, hint, window, out var b)) continue;
-            if (!RunOverRules.InWarning(run.State.S, State.V, b with { Radius = BodyRadius }, WarnSeconds)) continue;
+            if (!RailWarn.Ahead(run.Track, run.State.S, State.V, hero.GlobalPosition)) continue;
             if (_warnedAt.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
             _warnedAt[hero.Index] = _now;
             RailCalls.Say(party, Cart, BarkTrigger.CartComing, "Cart coming!");
-            EventBus.Instance.PlaySfx("cart_bell"); // no clip yet: AudioManager.Play ignores unknown cues; plan 6 adds the sound
         }
     }
 
@@ -813,6 +811,7 @@ public partial class RailController : Node
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
         Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
+        RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here: the cart's sound sees no wreck (a spare takes over in this call)
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
         EventBus.Instance.Log("The cart is wrecked!");
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
@@ -832,9 +831,9 @@ public partial class RailController : Node
 
     /// <summary>
     /// The tub's look on a rigid body thrown along the cart's way and up, with a little spin, gone after <see cref="TumbleSeconds"/>.
-    /// Cosmetic: layer 0, the floor only. A client plays it without the cue (the server's comes relayed).
+    /// Cosmetic: layer 0, the floor only, and silent (the wreck's cue plays beside it, once per wreck on each peer).
     /// </summary>
-    private void Tumble(bool sound = true)
+    private void Tumble()
     {
         if (!IsInsideTree() || GetParent() is not Node3D root || Cart.GetNodeOrNull<Node3D>("Body") is not { } body) return;
         var tub = new RigidBody3D { Name = "CartTumble", CollisionLayer = 0, CollisionMask = 1, Mass = 300f };
@@ -846,7 +845,6 @@ public partial class RailController : Node
         tub.LinearVelocity = Cart.Velocity + Vector3.Up * 4f;
         tub.AngularVelocity = -basis.Z * 3f + basis.X * 1.5f + Vector3.Up * 1f;
         GetTree().CreateTimer(TumbleSeconds).Timeout += () => { if (IsInstanceValid(tub)) tub.QueueFree(); };
-        if (sound) EventBus.Instance.PlaySfx("cart_wreck"); // placeholder cue
     }
 
     /// <summary>No spare took over: the real cart's body is hidden and not solid, and kept for a Restore.</summary>
@@ -979,6 +977,7 @@ public partial class RailController : Node
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         _train.Follow();
+        FeedPartySound(s);
         PoseChaser();
         _hudTimer -= (float)delta;
         if (_hudTimer <= 0f) RefreshHud();
@@ -1007,5 +1006,68 @@ public partial class RailController : Node
         if (Halted) return "Cart — on the line";
         if (StopIndex == 0) return "Cart — at the landing";
         return StopIndex >= StopS.Length - 1 ? "Cart — end of the line" : $"Cart — at stop {StopIndex}";
+    }
+}
+
+/// <summary>
+/// The "cart coming" geometry, one rule for the bark (<see cref="RailController"/>'s Warn) and every peer's bell (<see cref="CartSound"/>):
+/// a body on the rails ahead of a cart at <c>s</c> (its middle, running toward higher S) within the 3 s look-ahead (at
+/// <see cref="RunOverRules.WarnMinSpeed"/> at least). No allocation.
+/// </summary>
+public static class RailWarn
+{
+    public const float Seconds = 3f;
+
+    /// <summary>A body at <paramref name="pos"/> stands in the way of a cart at <paramref name="s"/> moving at <paramref name="v"/> on <paramref name="track"/>.</summary>
+    public static bool Ahead(TrackSampler track, float s, float v, Vector3 pos)
+    {
+        if (!track.Valid) return false;
+        var look = Mathf.Max(v, RunOverRules.WarnMinSpeed) * Seconds;
+        float hint = s + CartRules.HalfLength + look / 2f, window = look / 2f + 2f;
+        // a warned body stands within 2 m of the line at most look + HalfLength ahead, and no stretch of line is shorter than the straight way
+        var reach = look + CartRules.HalfLength + 3f;
+        if (pos.DistanceSquaredTo(track.Point(s)) > reach * reach) return false;
+        if (!track.Measure(pos, hint, window, out var b)) return false;
+        return RunOverRules.InWarning(s, v, b with { Radius = RunOverSweep.BodyRadius }, Seconds);
+    }
+
+    /// <summary>Any of <paramref name="bodies"/> (the heroes this peer sees on foot) stands in the way of the cart (<see cref="Ahead"/>).</summary>
+    public static bool AnyoneAhead(TrackSampler track, float s, float v, IReadOnlyList<Node3D> bodies)
+    {
+        for (var i = 0; i < bodies.Count; i++)
+            if (GodotObject.IsInstanceValid(bodies[i]) && Ahead(track, s, v, bodies[i].GlobalPosition)) return true;
+        return false;
+    }
+
+    /// <summary>The nearest of <paramref name="bodies"/> on the rails within a few metres of <paramref name="s"/>, either side, as a distance along the line (+∞ for none).</summary>
+    public static float NearestGap(TrackSampler track, float s, IReadOnlyList<Node3D> bodies)
+    {
+        var best = float.PositiveInfinity;
+        if (!track.Valid) return best;
+        var at = track.Point(s);
+        const float near = CartRules.HalfLength + 4f;
+        for (var i = 0; i < bodies.Count; i++)
+        {
+            if (!GodotObject.IsInstanceValid(bodies[i])) continue;
+            var pos = bodies[i].GlobalPosition;
+            if (pos.DistanceSquaredTo(at) > near * near || !track.Measure(pos, s, near, out var b)) continue;
+            // on the rails: InWarning from a cart a little behind it (it is past that cart's middle and within its look)
+            if (!RunOverRules.InWarning(b.S - 0.01f, 0f, b with { Radius = RunOverSweep.BodyRadius })) continue;
+            best = Mathf.Min(best, Mathf.Abs(b.S - s));
+        }
+        return best;
+    }
+
+    /// <summary>Seconds until a cart at <paramref name="s"/> (front a half length on) moving at <paramref name="v"/> reaches a body on the rails ahead at <paramref name="pos"/>, within 6 s; else +∞.</summary>
+    public static float SecondsTo(TrackSampler track, float s, float v, Vector3 pos)
+    {
+        if (!track.Valid || v < 0.1f) return float.PositiveInfinity;
+        const float horizon = 6f;
+        var look = Mathf.Max(v, RunOverRules.WarnMinSpeed) * horizon;
+        var reach = look + CartRules.HalfLength + 3f;
+        if (pos.DistanceSquaredTo(track.Point(s)) > reach * reach) return float.PositiveInfinity;
+        if (!track.Measure(pos, s + CartRules.HalfLength + look / 2f, look / 2f + 2f, out var b)) return float.PositiveInfinity;
+        if (!RunOverRules.InWarning(s, v, b with { Radius = RunOverSweep.BodyRadius }, horizon)) return float.PositiveInfinity;
+        return Mathf.Max(0f, b.S - (s + CartRules.HalfLength)) / v;
     }
 }

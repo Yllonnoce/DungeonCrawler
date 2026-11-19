@@ -331,7 +331,7 @@ public partial class RailEncounterController : Node
 
     /// <summary>
     /// A cart bears down (the body stands on its lane within <see cref="WarnSeconds"/> of look-ahead): a hero on foot gets the bark
-    /// and the bell, and an AI-controlled body (a companion, a crew or escorting NPC) within 30 m also walks to a refuge
+    /// (the bell is the cart's own sound's), and an AI-controlled body (a companion, a crew or escorting NPC) within 30 m also walks to a refuge
     /// (<see cref="SeekRefuge"/>). <paramref name="warned"/> throttles the bark per hero. A seated hero of <paramref name="speakFrom"/>
     /// (the party's cart unless named: a chaser's riders call their own) calls it in their own words (<see cref="RailCalls"/>), else the log.
     /// </summary>
@@ -352,8 +352,7 @@ public partial class RailEncounterController : Node
             if (hero.Control == ControlKind.Companion) SeekRefuge(hero, run, carrier, partyLane, b.S);
             if (warned.TryGetValue(hero.Index, out var t) && _now - t < WarnEvery) continue;
             warned[hero.Index] = _now;
-            RailCalls.Say(party, speakers, BarkTrigger.CartComing, "Cart coming!");
-            EventBus.Instance.PlaySfx("cart_bell"); // no clip yet: plan 6 adds the sound
+            RailCalls.Say(party, speakers, BarkTrigger.CartComing, "Cart coming!"); // the bell is the cart's own (CartSound)
             if (TraceTraffic) GD.Print($"[rails] t={_now:0.00} warn {hero.State.Name} by {carrier.Name}: cart S={run.State.S:0.0} v={run.State.V:0.0}, body S={b.S:0.0} ({b.S - run.State.S:0.0} m ahead)");
         }
         for (var i = 0; i < _bodies.Count; i++)
@@ -411,10 +410,18 @@ public partial class RailEncounterController : Node
         foreach (var cart in _carts)
         {
             if (!IsInstanceValid(cart) || cart.Derailed) continue;
-            cart.Run.Pose(frac);
+            PoseAndHear(cart.Run, cart.Sound, frac, 1);
             cart.FollowRiders();
         }
-        if (_traffic != null && IsInstanceValid(_traffic) && !_traffic.Derailed) _traffic.Run.Pose(frac);
-        if (_runaway != null && IsInstanceValid(_runaway.Body)) _runaway.Run.Pose(frac);
+        if (_traffic != null && IsInstanceValid(_traffic) && !_traffic.Derailed) PoseAndHear(_traffic.Run, _traffic.Sound, frac, 1);
+        if (_runaway != null && IsInstanceValid(_runaway.Body)) PoseAndHear(_runaway.Run, _runaway.Body.Sound, frac, 0);
+    }
+
+    /// <summary>A cart of the ride posed for this frame and its sound fed from its run (server and single player).</summary>
+    private static void PoseAndHear(CartRun run, CartSound? sound, float frac, byte track)
+    {
+        var s = run.RenderS(frac);
+        run.PoseAt(s);
+        if (!NetSession.IsServer && sound != null && IsInstanceValid(sound)) sound.FeedRun(run, s, run.State.V, run.State.Mode, run.State.Plating, track);
     }
 }

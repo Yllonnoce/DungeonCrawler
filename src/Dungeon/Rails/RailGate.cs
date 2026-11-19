@@ -121,19 +121,19 @@ public partial class RailGate : Node3D
         if (Up) return;
         Up = true;
         EventBus.Instance.Log("The gate lifts.");
-        EventBus.Instance.PlaySfx("gate_lift"); // no clip yet: plan 6 adds the sound
+        RideAudio.At("gate_lift", GlobalPosition + Vector3.Up * 2f); // a client's comes from its "up" (RideAudio.OnProp)
         Lifted?.Invoke(this);
-        Tell();
+        Tell("up");
         Wind();
     }
 
-    /// <summary>Up at once, with no animation or log (a restored save).</summary>
+    /// <summary>Up at once, with no animation, log or sound (a restored save, the quiet lift after one): told as the quiet "raised", which no peer hears.</summary>
     public void SetUp()
     {
         var was = Up;
         Up = true;
         SetLifted();
-        if (!was) Tell();
+        if (!was) Tell("raised");
     }
 
     /// <summary>Client: the gate goes up as on the server (the bar winds up, <paramref name="animate"/>), with no log, cue or event.</summary>
@@ -144,9 +144,9 @@ public partial class RailGate : Node3D
         if (animate) Wind(); else SetLifted();
     }
 
-    private void Tell()
+    private void Tell(string what)
     {
-        if (!NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRefs.Gate(Stop), "up");
+        if (!NetSession.IsClient) EventBus.Instance?.RaisePropChanged(NetRefs.Gate(Stop), what);
     }
 
     private void Wind()
