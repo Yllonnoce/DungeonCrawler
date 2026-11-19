@@ -1,4 +1,6 @@
 using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Rails;
+using DungeonCrawler.Net;
 using DungeonCrawler.Enemies;
 using Godot;
 
@@ -97,9 +99,11 @@ public partial class AudioManager : Node
         _voice = new AudioStreamPlayer { Bus = "Voice", VolumeDb = 0 };
         AddChild(_voice);
 
-        foreach (var (cue, files) in Cues)
+        foreach (var (cue, files) in Cues.Concat(RideSound.Clips))
         {
             var list = files.Where(f => ResourceLoader.Exists(f)).Select(f => GD.Load<AudioStream>(f)).ToArray();
+            if (RideSound.Loops.Contains(cue))
+                foreach (var s in list) if (s is AudioStreamOggVorbis ogg) ogg.Loop = true;
             if (list.Length == 0) GD.PushWarning($"[Audio] no clips found for cue '{cue}'");
             _streams[cue] = list;
         }
@@ -192,6 +196,33 @@ public partial class AudioManager : Node
             pitch = Mathf.Clamp(pitch + VoiceSets.PitchOffset(cue[(cue.LastIndexOf('_') + 1)..]), 0.5f, 1.6f);
         player.PitchScale = pitch;
         player.Play();
+    }
+
+    /// <summary>Raised on every <see cref="PlayAt"/> (cue, position, ambient), a dedicated server included: a test hook.</summary>
+    public static event Action<string, Vector3, bool>? PlayedAt;
+
+    /// <summary>The next clip of a cue (round-robin), or null for a cue with none. A looping cue's clip loops.</summary>
+    public AudioStream? Stream(string cue)
+    {
+        if (!_streams.TryGetValue(cue, out var list) || list.Length == 0) return null;
+        var idx = _next.GetValueOrDefault(cue);
+        _next[cue] = (idx + 1) % list.Length;
+        var stream = list[idx];
+        if (RideSound.Loops.Contains(cue) && stream is AudioStreamOggVorbis ogg) ogg.Loop = true;
+        return stream;
+    }
+
+    /// <summary>
+    /// Play a cue once at a spot in the world, with the same pitch jitter as <see cref="Play"/>. A looping cue never
+    /// plays this way (a looping one-shot would never free itself), and a dedicated server makes no sound.
+    /// </summary>
+    public void PlayAt(string cue, Vector3 at, float volumeDb = 0f, float maxDistance = 30f, bool ambient = false)
+    {
+        PlayedAt?.Invoke(cue, at, ambient);
+        if (NetSession.IsServer || RideSound.Loops.Contains(cue)) return;
+        if (Stream(cue) is not { } stream) return;
+        var pitch = 0.92f + (float)_rng.NextDouble() * 0.16f;
+        Synth.PlayAt(Main.Instance?.Builder.FloorRoot ?? (Node)this, stream, at, volumeDb, maxDistance, pitch);
     }
 
     // ---- ambience: a generated low hum plus filtered noise, colored per tier ---------------------

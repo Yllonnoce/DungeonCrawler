@@ -84,9 +84,9 @@ public static class Synth
     }
 
     /// <summary>Play a stream once at a spot; the player frees itself.</summary>
-    public static void PlayAt(Node parent, AudioStream stream, Vector3 at, float volumeDb = 0f, float maxDistance = 30f)
+    public static void PlayAt(Node parent, AudioStream stream, Vector3 at, float volumeDb = 0f, float maxDistance = 30f, float pitch = 1f)
     {
-        var p = new AudioStreamPlayer3D { Stream = stream, Bus = "SFX", VolumeDb = volumeDb, MaxDistance = maxDistance, UnitSize = 6f };
+        var p = new AudioStreamPlayer3D { Stream = stream, Bus = "SFX", VolumeDb = volumeDb, MaxDistance = maxDistance, UnitSize = 6f, PitchScale = pitch };
         parent.AddChild(p);
         p.GlobalPosition = at;
         p.Finished += p.QueueFree;

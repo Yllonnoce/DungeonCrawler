@@ -112,3 +112,31 @@ CC0 (https://creativecommons.org/publicdomain/zero/1.0/); fetched by `scripts/fe
 
 - "80 CC0 creature SFX" by rubberduck, https://opengameart.org/content/80-cc0-creature-sfx
 - "80 CC0 creture SFX #2" by rubberduck, https://opengameart.org/content/80-cc0-creture-sfx-2
+
+## Mine cart chase sounds (Freesound, CC0)
+
+CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/); each licence link was read on the sound's page on 2026-11-18. Cut from Freesound's public HQ previews with ffmpeg (mono, 44.1 kHz, Ogg Vorbis q5, 10 ms fade in and 50 ms fade out, 20 ms at both ends of a loop; `A` is the start in seconds, `D` the length). Clips of 3 s or more are loudness-normalised (loudnorm I=-18 TP=-1.5), shorter ones gained to a -1.5 dB peak. The rail cues also reuse the Kenney Impact Sounds above.
+
+- assets/audio/rails/cart_roll.ogg: "minecart.wav" (351382) by wmquincy101, https://freesound.org/people/wmquincy101/sounds/351382/, CC0. A=2 D=10, a steady stretch, loop.
+- assets/audio/rails/clack_1.ogg: "Train Turntable Track" (689228) by Mouffette, https://freesound.org/people/Mouffette/sounds/689228/, CC0. A=0.95 D=0.25. The source is one continuous rhythmic clatter with no isolated hit, so the three cuts take its loudest transients (at about 1.05 s, 3.0 s and 4.45 s).
+- assets/audio/rails/clack_2.ogg: same source and page as clack_1.ogg. A=2.85 D=0.25.
+- assets/audio/rails/clack_3.ogg: same source and page as clack_1.ogg. A=4.4 D=0.25.
+- assets/audio/rails/screech_loop.ogg: "train screech.wav" (181868) by cognito perceptu, https://freesound.org/people/cognito%20perceptu/sounds/181868/, CC0. A=1 D=4, a sustained squeal, loop.
+- assets/audio/rails/brake_squeal.ogg: same source and page as screech_loop.ogg. A=0 D=1.5, the onset.
+- assets/audio/rails/rail_sing.ogg: same source and page as screech_loop.ogg, high-passed at 2.5 kHz and lowered 6 dB. A=1 D=4, loop.
+- assets/audio/rails/lever_1.ogg: "Metal Lever 1.aif" (151271) by timgormly, https://freesound.org/people/timgormly/sounds/151271/, CC0. Whole clip, A=0 D=0.62.
+- assets/audio/rails/lever_2.ogg: "Clank1.wav" (94127) by BMacZero, https://freesound.org/people/BMacZero/sounds/94127/, CC0. Whole clip, A=0 D=0.67.
+- assets/audio/rails/gate_chain.ogg: "Chain Rattling" (448917) by Kp69606, https://freesound.org/people/Kp69606/sounds/448917/, CC0. A=0.2 D=2.5, the rattle.
+- assets/audio/rails/bell.ogg: "bell ding 1.wav" (611113) by 5ro4, https://freesound.org/people/5ro4/sounds/611113/, CC0. Whole clip, A=0 D=2.5.
+- assets/audio/rails/metal_crash.ogg: "Metal hit_1" (475416) by o_ciz, https://freesound.org/people/o_ciz/sounds/475416/, CC0. A=0.7 D=1.2, the first hit.
+- assets/audio/rails/beams_collapse.ogg: "S30-04 Mine tunnel collapsing; wooden beams.wav" (675898) by craigsmith, https://freesound.org/people/craigsmith/sounds/675898/, CC0. A=7.5 D=2.5, the first heavy collapse.
+- assets/audio/rails/timber_collapse.ogg: "R29-04 Crashing Collapse of Wood Building" (487142) by craigsmith, https://freesound.org/people/craigsmith/sounds/487142/, CC0. A=0 D=4.
+- assets/audio/rails/creak_1.ogg: "Wood Creak Single V2" (502504) by Rudmer_Rotteveel, https://freesound.org/people/Rudmer_Rotteveel/sounds/502504/, CC0. Whole clip, A=0 D=0.9.
+- assets/audio/rails/anvil_1.ogg: "Hammer hitting an anvil" (434339) by draftcraft, https://freesound.org/people/draftcraft/sounds/434339/, CC0. A=0.2 D=0.8, the first strike.
+- assets/audio/rails/anvil_2.ogg: same source and page as anvil_1.ogg. A=2.35 D=0.8, the second strike.
+- assets/audio/rails/windup.ogg: "Rumble fade in 10s" (258341) by unfa, https://freesound.org/people/unfa/sounds/258341/, CC0. A=8.5 D=1.5, ending at the peak.
+- assets/audio/rails/lava_hiss.ogg: "Lava Loop 3" (474851) by Fission9, https://freesound.org/people/Fission9/sounds/474851/, CC0. A=2 D=1.5.
+- assets/audio/rails/lava_loop.ogg: same source and page as lava_hiss.ogg. A=10 D=8, a steady stretch, loop.
+- assets/audio/rails/steam.ogg: "Steam.wav" (365071) by sniperous, https://freesound.org/people/sniperous/sounds/365071/, CC0. A=0.4 D=2.
+- assets/audio/rails/rumble_bed.ogg: "Earthquake in cave" (524307) by Bertsz, https://freesound.org/people/Bertsz/sounds/524307/, CC0. A=2 D=12, a steady stretch, loop.
+- assets/audio/rails/cinders.ogg: "Metal Cracking.wav" (51262) by RutgerMuller, https://freesound.org/people/RutgerMuller/sounds/51262/, CC0. Whole clip, A=0 D=1.15.
