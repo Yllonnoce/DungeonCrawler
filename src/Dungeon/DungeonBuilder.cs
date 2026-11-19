@@ -2020,10 +2020,12 @@ public partial class DungeonBuilder : Node3D
     /// <summary>
     /// A box the rail code still reads, dressed with <paramref name="model"/> (null: the box stays as it is): the box is kept with its
     /// size and transform but not drawn, and the model hangs under it standing on the box's bottom, so hiding the box hides both.
+    /// A model that cannot be hung (the box is not a BoxMesh) is freed: it is off-tree, and would otherwise be orphaned.
     /// </summary>
     private static void Dress(MeshInstance3D box, Node3D? model)
     {
-        if (model == null || box.Mesh is not BoxMesh mesh) return;
+        if (model == null) return;
+        if (box.Mesh is not BoxMesh mesh) { model.Free(); return; }
         box.VisibilityRangeBegin = NeverDrawn; // culled at every distance (a layer mask of 0 upsets the renderer's light pairing)
         box.CastShadow = GeometryInstance3D.ShadowCastingSetting.Off;
         box.AddChild(model);

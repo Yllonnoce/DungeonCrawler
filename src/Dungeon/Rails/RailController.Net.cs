@@ -115,10 +115,10 @@ public partial class RailController : ISlopeSource
     /// <summary>Test hook (--test-net-server's RIDE pass): the stop's holders die by the test's hand, so its gate lifts for real at the next gate check. Returns how many died.</summary>
     internal int DebugKillHolders(int stop) => NetSession.IsClient ? 0 : _gates.DebugKillHolders(stop);
 
-    /// <summary>Test hook (--test-net-server's RIDE pass, and only there): the cart is wrecked where it stands, as a lost plating would (a spare takes over when one is left).</summary>
+    /// <summary>Test hook (--test-net-server's RIDE pass, and --test-crew in single player): the cart is wrecked where it stands, as a lost plating would (a spare takes over when one is left).</summary>
     internal void DebugWreck()
     {
-        if (NetSession.IsClient || NetSession.Instance is not { TestServer: true, TestRide: true }) return;
+        if (NetSession.IsClient || NetSession.IsNetworked && NetSession.Instance is not { TestServer: true, TestRide: true }) return; // the RIDE server's, or a single-player test flow's
         Wreck();
     }
 

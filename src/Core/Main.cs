@@ -61,7 +61,16 @@ public partial class Main : Node
     public override void _ExitTree()
     {
         EventBus.Instance.FloorChanged -= OnFloorChanged;
-        Dungeon.Props.MinePack.Release(); // its off-tree copy source: nothing kept in a static past the tree
+        // nothing left playing as the engine shuts down (a playing player's playback outlives the tree in the audio server)
+        Audio.AudioManager.Instance?.StopAllAtExit(GetTree().Root);
+        // the static caches let go of their resources: nothing kept in a static past the tree
+        Dungeon.Props.MinePack.Release(); // its off-tree copy source
+        Combat.Fx.HitFx.Release();
+        Dungeon.Props.Tremor.Release();
+        Dungeon.Props.Fire.Release();
+        Dungeon.Props.WaterSurface.Release();
+        UI.Hud.EnemyBars.Release();
+        Audio.Synth.Release();
     }
 
     // ---- run-structure: the stakes and the solo autosave ---------------------------------------------------
@@ -183,13 +192,16 @@ public partial class Main : Node
         if (adv.Run == RunKind.Daily && adv.DailyDate is { } date) ProfileRules.RecordDaily(ProfileStore.Current, date, summary);
     }
 
+    /// <summary>The server reveals the map round every body six times a second of elapsed time (at 60 Hz every 10th tick), whatever the physics rate.</summary>
+    private Cadence _revealCadence = new(1.0 / 6);
+
     public override void _PhysicsProcess(double delta)
     {
         TickWaiting();
         if (!InGame || Builder.Layout is not { } layout || Exploration == null) return;
         if (NetSession.IsServer)
         {
-            if (Engine.GetPhysicsFrames() % 10 == 0) foreach (var b in Party.Active) Exploration.Reveal(layout, DungeonBuilder.WorldToCell(b.GlobalPosition));
+            if (_revealCadence.Advance(delta) > 0) foreach (var b in Party.Active) Exploration.Reveal(layout, DungeonBuilder.WorldToCell(b.GlobalPosition));
             return;
         }
         if (!Party.HasBodies) return;

@@ -77,7 +77,10 @@ public partial class OreBuckets : Node3D
             pivot.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), at);
             pivot.AddChild(new MeshInstance3D { Mesh = new CylinderMesh { TopRadius = 0.015f, BottomRadius = 0.015f, Height = 0.2f, RadialSegments = 6 }, MaterialOverride = _iron, Position = new Vector3(0, -0.1f, 0) });
             MeshInstance3D body;
-            if (MinePack.Piece("Bucket", new Vector3(0, BucketModelTall, 0)) is { } bucket && MinePack.MeshOf(bucket) is { } mesh)
+            var bucket = MinePack.Piece("Bucket", new Vector3(0, BucketModelTall, 0));
+            var mesh = bucket != null ? MinePack.MeshOf(bucket) : null;
+            if (bucket != null && mesh == null) { bucket.Free(); bucket = null; } // a piece with no mesh to glow: off-tree, so freed now, not orphaned
+            if (bucket != null && mesh != null)
             {
                 // the mine pack's bucket, its bail on the hook: its own look at rest, the hot glow while it creaks
                 pivot.AddChild(bucket);

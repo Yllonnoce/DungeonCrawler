@@ -105,6 +105,7 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: the train left stop 3 without us .* offers \"Take the spare cart\" .* took it through the intent (spare:3)" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never took stop 3's spare through its intent)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner took spare 3 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never placed the joiner's chaser)"; exit 1; fi
   if ! grep -q "\[net\] ride: our chaser halted .* behind the train's last body here" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's chaser never halted behind the train)"; exit 1; fi
+  if ! grep -q "\[net\] ride: chaser hud \"Spare cart — after the train\"" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's cart bar did not read the chaser's line while it rolled)"; exit 1; fi
   if ! grep -q "\[net\] ride: chase-done" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done on the joiner and the server)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: chase-done: .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 4's gap)"; exit 1; fi
   if ! grep -q "\[net\] ride: .*the joiner's chaser came and went" "$TMP/client.log"; then echo "NET TEST: FAIL (the first client never saw the joiner's chaser come and go)"; exit 1; fi

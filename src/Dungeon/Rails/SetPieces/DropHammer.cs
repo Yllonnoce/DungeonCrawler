@@ -105,7 +105,7 @@ public partial class DropHammer : Node3D
         var was = _heard;
         _heard = phase;
         _heardTick = tick;
-        if (quiet || phase == was || Net.NetSession.IsServer) return;
+        if (quiet || phase == was || Net.NetSession.IsServer || !SetPieceRules.CueAudible(CueRange)) return; // a range of 0 plays nothing (0 would be unlimited)
         if (phase == HammerPhase.Glow) RideAudio.At("hammer_wind", GlobalPosition + Vector3.Up * BeamHeight, 0f, CueRange);
         else if (was == HammerPhase.Glow) RideAudio.At("hammer_fall", GlobalPosition + Vector3.Up * 1.5f, 0f, CueRange); // a long frame may pass the fall itself
     }

@@ -42,6 +42,25 @@ public static class RideMusic
     /// <summary>The ride a cart is on, from the stop it left (ride 1 runs from stop 0 to stop 1; ride 4 is the kiln's).</summary>
     public static int Ride(int stopLeft) => stopLeft + 1;
 
+    /// <summary>Rides 1-3's track (the music folder's file name), looped.</summary>
+    public const string ChaseTrack = "chase_determined_pursuit.ogg";
+    /// <summary>
+    /// Ride 4's track (160 BPM by its source's name; its onsets measure <see cref="PourTrackBpm"/>): played at <see cref="PourPitch"/> so its
+    /// beat keeps the hammers' 160, once through from <see cref="PhaseSeek"/>, and locked again each time it ends.
+    /// </summary>
+    public const string PourTrack = "forge_heavy_dungeon.ogg";
+
+    /// <summary>Rides 1-3 loop the chase; ride 4 (the kiln's hammers and pour) plays the forge piece on the hammers' beat.</summary>
+    public static string TrackFor(int ride) => ride == 4 ? PourTrack : ChaseTrack;
+
+    /// <summary>The last stop at or behind <paramref name="s"/> on the party line (a chaser's stop left); 0 before stop 1 or with no stops.</summary>
+    public static int StopBehind(IReadOnlyList<float> stopS, float s)
+    {
+        var stop = 0;
+        for (var i = 1; i < stopS.Count; i++) if (stopS[i] <= s) stop = i;
+        return stop;
+    }
+
     /// <summary>
     /// Where to start the pour track (in its own seconds) at <paramref name="floorSeconds"/> so its downbeat (<paramref name="beatOrigin"/>)
     /// lands on a hammer's fall, played at <paramref name="pitch"/>: the origin plus the floor time since the last fall

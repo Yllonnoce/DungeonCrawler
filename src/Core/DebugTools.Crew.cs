@@ -47,7 +47,7 @@ public partial class DebugTools
     {
         if (_crewListening) return;
         _crewListening = true;
-        Npc.Said += (npc, line) =>
+        Action<Npc, Line> said = (npc, line) =>
         {
             if (_done || !_testCrew || npc.Id != CrewRescueController.GriselId) return;
             var calls = Main.Instance?.Builder.Contents?.Plan?.Npcs.FirstOrDefault(n => n.Id == CrewRescueController.GriselId)?.Calls ?? new List<NpcCallPlan>();
@@ -55,6 +55,8 @@ public partial class DebugTools
             _crewGriselSaid[key] = _crewGriselSaid.GetValueOrDefault(key) + 1;
             GD.Print($"[crew] grisel said {key}{(key == "?" ? $" \"{line.Text}\"" : "")}");
         };
+        Npc.Said += said;
+        _staticUnhooks.Add(() => Npc.Said -= said);
         EventBus.Instance.NarrationEx += (text, _, _, _) =>
         {
             if (_done || !_testCrew || _crewGriselNarrated != null || text == null) return;
@@ -489,6 +491,29 @@ public partial class DebugTools
                 if (props.Count > 0 || hazards.Count > 0) { fail($"the load was not quiet: {string.Join(", ", props.Concat(hazards))}"); return; }
                 if (_soundRelayed.Count > 0) { fail($"rail cues went through EventBus.Sfx: {string.Join(", ", _soundRelayed)}"); return; }
                 GD.Print($"[crew] Grisel's calls heard: [{string.Join(", ", _crewGriselSaid.OrderBy(k => k.Key).Select(k => $"{k.Key}x{k.Value}"))}]");
+                // the last wrecks: the cart is wrecked where it stands, with the local hero beside it, until no spare is left to take
+                // over; the wreck is then hidden, and the cart bar must show nothing over it (not "Cart — wrecked")
+                if (party.Local is not { } me) { fail("no local hero for the last wreck"); return; }
+                var more = 0;
+                while (rc.Cart.Visible && more < 4)
+                {
+                    me.Teleport(rc.Cart.GlobalPosition + rc.Cart.GlobalTransform.Basis.X * 3f);
+                    rc.DebugWreck();
+                    more++;
+                }
+                if (rc.Cart.Visible) { fail($"the cart still stands after {more} more wreck(s) (spares used [{string.Join(",", rc.SparesUsed)}])"); return; }
+                GD.Print($"[crew] 8 no spare left after {more} more wreck(s): spares used [{string.Join(",", rc.SparesUsed)}], the wreck hidden at S={rc.State.S:0.0}");
+                _crewStep++;
+                _crewClock = 0f;
+                break;
+            }
+            case 3 when _crewClock >= 0.5f:
+            {
+                // half a second on: the bar has been refreshed (every 0.25 s) with the hero still within its range of the hidden wreck
+                var distance = party.Local is { } me ? me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition) : float.PositiveInfinity;
+                GD.Print($"[crew] hud after the last wreck: {(rc.HudText is { } hud ? $"\"{hud}\"" : "none")} (the local hero {distance:0.0} m from the hidden cart)");
+                if (distance > RailController.HudRange) { fail($"the local hero stands {distance:0.0} m from the hidden wreck, beyond the bar's {RailController.HudRange} m: the check means nothing"); return; }
+                if (rc.HudText != null) { fail($"the cart bar shows \"{rc.HudText}\" over a hidden wreck"); return; }
                 LockRules.ForcedChance = null;
                 GD.Print($"[crew] RESULT ok ({CrewBranch})");
                 _done = true;

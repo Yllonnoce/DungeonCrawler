@@ -527,7 +527,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         var rails = _rails;
         var left = e.Stop;
         if (AdventureDirector.Instance?.SayAs(g, call, $"grisel:{key}", () => IsInstanceValid(rails)
-            && (rails.StopIndex == left || rails.StopIndex == left + 1 && rails.State.Mode == CartMode.Held && !rails.Halted)) == true)
+            && RideLines.CallStillDue(rails.StopIndex, left, rails.State.Mode == CartMode.Held, rails.Halted)) == true)
             rails.ClaimDeparture();
     }
 

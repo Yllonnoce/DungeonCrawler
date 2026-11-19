@@ -1,3 +1,5 @@
+using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Objectives;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Enemies;
@@ -107,17 +109,24 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
         return _seats[Math.Clamp(i, 0, _seats.Length - 1)].GlobalTransform;
     }
 
+    /// <summary>
+    /// The rider (its seat booked, its own SitIn under way) rides here now. A crew member's name is raised by the bench seat it stands at
+    /// (<see cref="CrewRules.LabelLift"/>; <see cref="Npc.SitIn(ICartBody, int)"/> set its Seat first), so the two names over a cage stand apart.
+    /// </summary>
     public void Admit(ICartRider rider)
     {
         Riders[rider.RiderId] = rider;
+        if (rider is Npc n) n.SetLabelLift(CrewRules.LabelLift(Math.Max(0, n.Seat - CartSeats.HeroSeats)));
         RiderChanged?.Invoke(rider, true);
     }
 
+    /// <summary>The rider leaves the book (its GetOut or a teleport): its seat is free again, and a crew member's name drops back in place.</summary>
     public void Release(ICartRider rider)
     {
         if (!Riders.TryGetValue(rider.RiderId, out var aboard) || aboard != rider) return;
         Riders.Remove(rider.RiderId);
         Seats.Leave(rider.RiderId);
+        if (rider is Npc n) n.SetLabelLift(0f);
         RiderChanged?.Invoke(rider, false);
     }
 

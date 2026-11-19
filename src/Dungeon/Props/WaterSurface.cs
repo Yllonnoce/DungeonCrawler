@@ -18,6 +18,15 @@ public partial class WaterSurface : Node3D
     private static Shader? _shader;
     private static NoiseTexture2D? _normalA, _normalB;
 
+    /// <summary>Main's exit: the shared resources are let go, so no static field holds one past the tree.</summary>
+    public static void Release()
+    {
+        _shader = null;
+        _normalA = _normalB = null;
+        Ripple.Release();
+        WaterAudio.Release();
+    }
+
     public static WaterSurface Build(FloorLayout layout, WaterFeature feature, Func<GridPos, Vector3> surface, float cellSize, Material bedMaterial, Material plankMaterial)
     {
         var node = new WaterSurface { Name = $"Water_{feature.Kind}_{feature.Cells[0].X}_{feature.Cells[0].Y}" };
@@ -188,6 +197,8 @@ public partial class WaterSurface : Node3D
 public partial class Ripple : MeshInstance3D
 {
     private static Texture2D? _ring;
+
+    internal static void Release() => _ring = null;
     private float _age;
     private const float Life = 0.9f;
     private StandardMaterial3D _mat = null!;
@@ -237,6 +248,8 @@ public static class WaterAudio
 {
     private const int Rate = 22050;
     private static AudioStreamWav? _stream, _pond, _splash;
+
+    internal static void Release() => _stream = _pond = _splash = null;
     private static readonly Random Rng = new(); // splash sounds only: unseeded, nothing here is game state
 
     public static AudioStreamWav Ambience(bool stream) => stream ? (_stream ??= Loop(4f, bright: 0.55f)) : (_pond ??= Loop(5f, bright: 0.18f));

@@ -61,6 +61,14 @@ public partial class RailNet
         }
     }
 
+    /// <summary>Client: when <paramref name="seat"/> is the chaser's copy here, its mode (the follower's) and countdown left (−1 none) for the HUD, else null. No allocation.</summary>
+    internal (CartMode Mode, float Left)? ClientChaserHud(MineCart seat)
+    {
+        foreach (var cc in _carts.Values)
+            if (cc.Chaser is { } m && m == seat && IsInstanceValid(m) && !m.IsQueuedForDeletion()) return (cc.Follow.Mode, cc.BoardingLeftNow());
+        return null;
+    }
+
     /// <summary>Client: the golem's runner here (its body's place: the party cart's sound hears a hit beside it as the golem's slam), or null.</summary>
     internal Node3D? ClientGolem
     {

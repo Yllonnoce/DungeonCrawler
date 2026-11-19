@@ -16,11 +16,12 @@ public static class RideAudio
     /// <summary>
     /// Play <paramref name="cue"/> once at <paramref name="at"/>, heard within <paramref name="range"/> metres. One that starts beyond its range of
     /// the active camera is not played at all (a short one-shot never reaches a listener who walks up later); with no camera (a dedicated
-    /// server) it goes on to <see cref="AudioManager.PlayAt"/>, which only raises the test hook there.
+    /// server) it goes on to <see cref="AudioManager.PlayAt"/>, which only raises the test hook there. A range of 0 or less plays nothing
+    /// (a 3D player reads a MaxDistance of 0 as unlimited; <see cref="SetPieceRules.CueAudible"/>).
     /// </summary>
     public static void At(string cue, Vector3 at, float db = 0f, float range = 30f, bool ambient = false)
     {
-        if (AudioManager.Instance is not { } audio) return;
+        if (range <= 0f || AudioManager.Instance is not { } audio) return;
         if (audio.GetViewport()?.GetCamera3D() is { } camera && camera.GlobalPosition.DistanceSquaredTo(at) > range * range) return;
         audio.PlayAt(cue, at, db, range, ambient);
     }

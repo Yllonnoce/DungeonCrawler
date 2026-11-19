@@ -343,6 +343,8 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
                 Position = coalAt[i] + new Vector3(0, top - 0.05f, 0),
             });
         AddChild(new OmniLight3D { Name = "CoalGlow", Position = new Vector3(0, top + 0.4f, 0), OmniRange = 4f, LightEnergy = 1.2f, LightColor = new Color(1f, 0.45f, 0.15f), ShadowEnabled = false });
+        // its head lamp, an enemy's orange, at the front wall's middle (on the cart node: the tumble copies the Body only)
+        CartLamp.Attach(this, new Vector3(0, TubBottom + 0.4f, -halfL - 0.08f), enemy: true);
 
         // the brake shoe: on the inner side by the back wheel, where the heroes in the cart can see and hit it
         Shoe = new BrakeShoe(this) { Name = "BrakeShoe", Position = new Vector3(InnerSide * (halfW + 0.12f), axleY + 0.05f, halfL - 0.35f) };

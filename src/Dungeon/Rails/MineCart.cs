@@ -46,6 +46,9 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     /// </summary>
     protected virtual string? TubModel => null;
 
+    /// <summary>Its lamp burns an enemy cart's orange (<see cref="CartLamp"/>): the runaway wagon's; the party's cart, spares and chasers burn white.</summary>
+    protected virtual bool EnemyLamp => false;
+
     private Net.CartKind _kind = Net.CartKind.Party;
     /// <summary>What it is on the wire: the party's cart (a spare is one too), a chaser (a spare running after the train, <see cref="AsChaser"/>), or a runaway wagon.</summary>
     public virtual Net.CartKind Kind => _kind;
@@ -280,28 +283,8 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
             tubModel.Position = new Vector3(0, TubBottom, 0);
         }
 
-        // the lamp: a warm spot on the front board aimed down the track, tilted a little to the floor, and a small glow round it
-        var lampAt = new Vector3(0, TubBottom + 0.45f, -halfL - 0.12f);
-        AddChild(new SpotLight3D
-        {
-            Name = "Lamp",
-            Position = lampAt,
-            RotationDegrees = new Vector3(-8f, 0, 0),
-            SpotRange = 18f,
-            SpotAngle = 35f,
-            LightEnergy = 2f,
-            LightColor = new Color(1f, 0.85f, 0.6f),
-            ShadowEnabled = false,
-        });
-        AddChild(new OmniLight3D
-        {
-            Name = "LampGlow",
-            Position = lampAt,
-            OmniRange = 3f,
-            LightEnergy = 0.6f,
-            LightColor = new Color(1f, 0.85f, 0.6f),
-            ShadowEnabled = false,
-        });
+        // the lamp on the front board (on the cart node, not the Body a tumble copies): warm for the party's, hot for a runaway's
+        CartLamp.Attach(this, new Vector3(0, TubBottom + 0.45f, -halfL - 0.12f), EnemyLamp);
 
         for (var i = 0; i < _seats.Length; i++)
         {

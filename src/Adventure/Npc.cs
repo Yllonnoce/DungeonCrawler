@@ -103,6 +103,9 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     private bool? _talking; // in a conversation: true while its line is spoken, false while it waits; null outside one
     private MeshInstance3D _body = null!, _head = null!;
     private Label3D _label = null!;
+    /// <summary>The label's place in the scene, and how far it is raised above it (<see cref="SetLabelLift"/>).</summary>
+    private Vector3 _labelBase;
+    private float _labelLift;
     private AnimatedModel? _model;
     private readonly PathMover _mover = new();
     /// <summary>Running from an enemy that came within <see cref="NpcFlight.FleeRange"/> (quest NPCs standing about); walks back to its spot once the enemy has been gone a while.</summary>
@@ -122,6 +125,8 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         _body = GetNode<MeshInstance3D>("Body");
         _head = GetNode<MeshInstance3D>("Head");
         _label = GetNode<Label3D>("Label");
+        _labelBase = _label.Position;
+        if (_labelLift != 0f) _label.Position = _labelBase + Vector3.Up * _labelLift;
         _gravity = (float)ProjectSettings.GetSetting("physics/3d/default_gravity", 9.8f).AsDouble();
         MaxHp = Hp = TierRules.NpcHp(Floor) * (Mode == NpcMode.Fighter ? NpcFight.HpMultiplier : 1f);
         var tint = new Color(0.75f, 0.65f, 0.45f);
@@ -498,6 +503,16 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         MoveTarget = null;
         _mover.Reset();
         FollowSeat();
+    }
+
+    /// <summary>
+    /// Raise the name label <paramref name="metres"/> above its place in the scene (0: back in place): a cage wagon stands its two crew's
+    /// names one above the other (<see cref="Objectives.CrewRules.LabelLift"/>).
+    /// </summary>
+    public void SetLabelLift(float metres)
+    {
+        _labelLift = metres;
+        if (_label != null && IsInstanceValid(_label)) _label.Position = _labelBase + Vector3.Up * metres;
     }
 
     /// <summary>Take the booked <paramref name="seat"/> of a cart (<see cref="RiderId"/> in its book).</summary>

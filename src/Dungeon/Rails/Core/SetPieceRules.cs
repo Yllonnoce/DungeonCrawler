@@ -35,6 +35,12 @@ public static class SetPieceRules
     /// <summary>A hazard's cue range when it stands <paramref name="metresToStopThree"/> from stop 3: 30 m, or less so a cart held there never hears it (never below 0).</summary>
     public static float CueRange(float metresToStopThree) => Math.Clamp(metresToStopThree - StopThreeMargin, 0f, MaxCueRange);
 
+    /// <summary>
+    /// A piece with this cue range makes any sound at all: a range of 0 (a piece within the margin of stop 3) plays nothing, its one-shots
+    /// skipped and its loop kept stopped, since a 3D player reads a MaxDistance of 0 as unlimited.
+    /// </summary>
+    public static bool CueAudible(float cueRange) => cueRange > 0f;
+
     const float UpS = 1.6f, GlowS = 1.5f, FallS = 0.15f, DownS = 0.5f, RiseS = 0.75f;
     const int UpT = (int)(UpS * TicksPerSecond), GlowT = (int)(GlowS * TicksPerSecond), FallT = (int)(FallS * TicksPerSecond),
         DownT = (int)(DownS * TicksPerSecond), RiseT = (int)(RiseS * TicksPerSecond);

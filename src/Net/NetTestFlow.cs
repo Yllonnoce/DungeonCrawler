@@ -1033,7 +1033,9 @@ public partial class NetTestFlow : Node
     private bool _rideFourTold, _rideSawChaser;
     private double _rideAtEndAt = -1;
     // the joiner left behind at stop 3 (plan 5 task 9)
-    private bool _joinHeldTold, _joinChaserRolled, _joinGapTold;
+    private bool _joinHeldTold, _joinChaserRolled, _joinGapTold, _joinHudTold;
+    /// <summary>When the joiner's chaser was first seen rolling here (its bar is read 0.6 s on).</summary>
+    private double _joinChaserRolledAt = -1;
     private double _joinSpareAskedAt = -1;
     // the joiner thrown at speed on ride 3, its floor resent mid-ride, and the wreck it watches at the end (plan 5 task 11)
     private double _joinRolledAt = -1, _joinThrowNow = -1, _joinResyncAt = -1;
@@ -1050,13 +1052,18 @@ public partial class NetTestFlow : Node
     private int _soundWrecks;
     private double _soundLineAt = double.NegativeInfinity;
 
+    private void OnPlayedAt(string cue, Vector3 at, bool ambient) { if (cue == "cart_wreck") _soundWrecks++; }
+
+    /// <summary>The static test hook (AudioManager.PlayedAt) is taken off as this node leaves the tree: no static event holds it past exit.</summary>
+    public override void _ExitTree() => Audio.AudioManager.PlayedAt -= OnPlayedAt;
+
     /// <summary>Each physics tick of a RIDE client: while the server's cart rolls here, a <c>[net] ride sound</c> line every 2 s (and at once the first time the roll reaches RollPitch(5)).</summary>
     private void RideSoundSample(ClientWorld client)
     {
         if (!_soundListening)
         {
             _soundListening = true;
-            Audio.AudioManager.PlayedAt += (cue, _, _) => { if (cue == "cart_wreck") _soundWrecks++; };
+            Audio.AudioManager.PlayedAt += OnPlayedAt;
         }
         if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || !rc.Following || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || rc.Cart.Sound is not { } sound) return;
         var rises = !_soundOk && sound.RollDbNow > -80f && sound.RollPitchNow >= Dungeon.Rails.RideSound.RollPitch(5f);
@@ -1264,9 +1271,17 @@ public partial class NetTestFlow : Node
                 if (rc == null || me == null) return;
                 if (Dungeon.Rails.RailNet.Instance?.ClientChaser is { } ch)
                 {
-                    if (ch.Follow.Mode == Dungeon.Rails.CartMode.Rolling) _joinChaserRolled = true;
+                    if (ch.Follow.Mode == Dungeon.Rails.CartMode.Rolling && !_joinChaserRolled) { _joinChaserRolled = true; _joinChaserRolledAt = _clock; }
+                    // the cart bar while it rolls with us in it (refreshed every 0.25 s): the chaser's own line, however far the train is
+                    if (_joinChaserRolled && !_joinHudTold && ch.Follow.Mode == Dungeon.Rails.CartMode.Rolling && ReferenceEquals(me.Cart, ch.Cart) && _clock - _joinChaserRolledAt >= 0.6)
+                    {
+                        _joinHudTold = true;
+                        GD.Print($"[net] ride: chaser hud \"{rc.HudText ?? "none"}\"");
+                        if (rc.HudText != "Spare cart — after the train") { Finish("[net]", false, $"ride: the cart bar reads \"{rc.HudText ?? "nothing"}\" in the rolling chaser (want \"Spare cart — after the train\")"); net.Disconnect("test finished"); return; }
+                    }
                     if (_joinChaserRolled && !_joinGapTold && ch.Follow.Mode == Dungeon.Rails.CartMode.Held && rc.State.Mode == Dungeon.Rails.CartMode.Held)
                     {
+                        if (!_joinHudTold) { Finish("[net]", false, "ride: the chaser halted before its cart bar was read while it rolled"); net.Disconnect("test finished"); return; }
                         _joinGapTold = true;
                         var lastBack = rc.State.S - rc.Train.Count * Dungeon.Rails.RailController.WagonSpacing - Dungeon.Rails.CartRules.HalfLength;
                         var gap = lastBack - (ch.Follow.S + Dungeon.Rails.CartRules.HalfLength);

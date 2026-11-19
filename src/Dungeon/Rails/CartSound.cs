@@ -7,8 +7,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// One cart's sound, a child of its body (the party's cart, a spare, a chaser, a slag or traffic cart, a runaway wagon; the golem's
 /// runner with <see cref="Wheels"/> off). Its owner feeds it the cart's state once per rendered frame (<see cref="Feed"/>), on every peer
-/// from what that peer shows: the server's and single player's own runs, a client's followers. It keeps four pooled players on the SFX bus
-/// (the roll and screech loops, the clack, one for the edges and the bell) and a wheel-spark emitter, and follows
+/// from what that peer shows: the server's and single player's own runs, a client's followers. It keeps five pooled players on the SFX bus
+/// (the roll and screech loops, the clack, one for the edges and one for the bell, so a hit never cuts a warning off) and a wheel-spark
+/// emitter, and follows
 /// <see cref="RideSound"/>'s rules: the roll's volume and pitch by speed, the screech on a bend or under hard braking, a clack at every
 /// joint, the bell for a body ahead, and one edge cue a feed (a crash, a jump, a landing, a hit, an arrival, a track change or a thrown
 /// switch taken). The first feed, and the first after <see cref="Prime"/> (a restore, a client's follower snap), only primes: a quiet
@@ -32,7 +33,7 @@ public partial class CartSound : Node3D
     /// <summary>The braking rate is smoothed over about this long (V changes per physics tick, frames come between).</summary>
     const float DvdtSmoothing = 0.12f;
 
-    private AudioStreamPlayer3D? _roll, _screech, _clack, _event;
+    private AudioStreamPlayer3D? _roll, _screech, _clack, _event, _bell;
     private CpuParticles3D? _sparks;
     private bool _silent;
     private CartSoundInput _prev;
@@ -46,6 +47,7 @@ public partial class CartSound : Node3D
     {
         if (NetSession.IsServer) { _silent = true; return; } // a dedicated server does no sound work
         _event = Player("Event");
+        _bell = Player("Bell");
         if (!Wheels) return;
         _roll = Player("Roll");
         _screech = Player("Screech");
@@ -89,7 +91,7 @@ public partial class CartSound : Node3D
     public void RingNow()
     {
         _lastRing = Now;
-        if (Hearable()) OneShot(_event, "cart_bell");
+        if (Hearable()) OneShot(_bell, "cart_bell");
     }
 
     private static double Now => Time.GetTicksMsec() / 1000.0;

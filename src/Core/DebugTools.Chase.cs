@@ -781,7 +781,9 @@ public partial class DebugTools
             var bus = EventBus.Instance;
             bus.Message += OnChaseMessage;
             RailCalls.Called += OnChaseCall;
-            Audio.AudioManager.PlayedAt += (cue, _, ambient) => { if (!ambient) OnChaseSfx(cue); }; // the warnings' cues are positional now (RideAudio.At)
+            Action<string, Vector3, bool> playedAt = (cue, _, ambient) => { if (!ambient) OnChaseSfx(cue); }; // the warnings' cues are positional now (RideAudio.At)
+            Audio.AudioManager.PlayedAt += playedAt;
+            _staticUnhooks.Add(() => { RailCalls.Called -= OnChaseCall; Audio.AudioManager.PlayedAt -= playedAt; });
             bus.EnemySpawned += e => { if (_chEnc != null && IsInstanceValid(_chEnc)) _chSpawnRide[e] = _chEnc.ArmedRide; };
             bus.EnemyKilledByHazard += (e, source) =>
             {
@@ -924,17 +926,13 @@ public partial class DebugTools
     }
 
     /// <summary>
-    /// Every physics tick: when each hammer began to glow and when the pour began its warning, for a piece whose cue did not
-    /// play (the cart was far). Seen here at most a tick late, which only makes a measured warning shorter.
-    /// </summary>
-    /// <summary>
     /// Each frame: the music's front player is at the pitch it should be (the pour's in the Chase mood on ride 4, else 1: the two players
     /// are reused, so a later track must not keep the pour's). Notes the pour and the first other track after it.
     /// </summary>
     private void ChaseMusicPoll()
     {
         if (Audio.MusicDirector.Instance is not { } music || music.CurrentTrack == "") return;
-        var pour = music.Mood == Audio.Mood.Chase && music.CurrentTrack == "forge_heavy_dungeon.ogg";
+        var pour = music.Mood == Audio.Mood.Chase && music.CurrentTrack == RideMusic.PourTrack;
         if (Mathf.Abs(music.FrontPitch - music.ExpectedPitch) > 1e-5f)
         {
             _chFail ??= $"the music's {music.CurrentTrack} ({music.Mood}) plays at pitch {music.FrontPitch:0.00000}, want {music.ExpectedPitch:0.00000}";
@@ -944,6 +942,10 @@ public partial class DebugTools
         else if (_chPourPitch != null) _chAfterPour ??= $"{music.CurrentTrack} ({music.Mood}) at pitch {music.FrontPitch:0.00000}";
     }
 
+    /// <summary>
+    /// Every physics tick: when each hammer began to glow and when the pour began its warning, for a piece whose cue did not
+    /// play (the cart was far). Seen here at most a tick late, which only makes a measured warning shorter.
+    /// </summary>
     private void ChasePoll()
     {
         if (_done || _chEnc == null || !IsInstanceValid(_chEnc)) return;

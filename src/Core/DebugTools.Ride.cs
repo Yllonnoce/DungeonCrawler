@@ -55,8 +55,11 @@ public partial class DebugTools
     {
         if (_soundListening) return;
         _soundListening = true;
-        Audio.AudioManager.PlayedAt += (cue, _, ambient) => { if (!ambient) _soundPlays.Add((RideNow, cue, false)); };
-        CartSound.Played += (cue, _) => _soundPlays.Add((RideNow, cue, true));
+        Action<string, Vector3, bool> playedAt = (cue, _, ambient) => { if (!ambient) _soundPlays.Add((RideNow, cue, false)); };
+        Action<string, Vector3> cartPlayed = (cue, _) => _soundPlays.Add((RideNow, cue, true));
+        Audio.AudioManager.PlayedAt += playedAt;
+        CartSound.Played += cartPlayed;
+        _staticUnhooks.Add(() => { Audio.AudioManager.PlayedAt -= playedAt; CartSound.Played -= cartPlayed; });
         EventBus.Instance.Sfx += cue => { if (RideSound.Clips.ContainsKey(cue)) _soundRelayed.Add(cue); };
     }
 
@@ -170,7 +173,7 @@ public partial class DebugTools
                     EventBus.Instance.EnemyKilledByHazard += (e, _) => { if (e == _rideCinder) _rideCinderByHazard = true; };
                     EventBus.Instance.EnemyDied += e => { if (e == _rideCinder && !_rideCinderByHazard) _rideCinderOther = true; };
                     EventBus.Instance.NarrationEx += (text, _, clean, _) => { if (RideVillainWords(text) is { } words) _rideVillain.Add((RideNow, words, RideVillainWords(clean))); };
-                    RailCalls.Called += (trigger, by) =>
+                    Action<Adventure.BarkTrigger, string?> called = (trigger, by) =>
                     {
                         if (_done || !_testRide) return;
                         if (Main.Instance?.Party is { Local: { } me } p && by == me.State.Name && me.Cart is { } cart
@@ -180,6 +183,8 @@ public partial class DebugTools
                         _rideAllAboard++;
                         GD.Print($"[ride] call {trigger} #{_rideAllAboard} by {by ?? "the log"} at step {_rideStep}");
                     };
+                    RailCalls.Called += called;
+                    _staticUnhooks.Add(() => RailCalls.Called -= called);
                 }
                 GD.Print($"[ride] 0 floor 12: stops={layout.Rail.Stops.Count} StopS=[{string.Join(", ", rc.StopS.Select(s => s.ToString("0.0")))}] length={b.PartyTrack.Length:0.0} lethality={TierRules.Lethality} heroes={party.Active.Count()}");
                 _rideStep++;

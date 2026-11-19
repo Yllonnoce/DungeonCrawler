@@ -192,7 +192,7 @@ public partial class AudioManager : Node
         var player = _players.FirstOrDefault(p => !p.Playing) ?? _players[_rng.Next(_players.Count)];
         player.Stream = list[idx];
         player.VolumeDb = volumeDb;
-        var pitch = 0.92f + (float)_rng.NextDouble() * 0.16f;
+        var pitch = Jitter();
         if (cue.StartsWith(GruntPrefix))
             pitch = Mathf.Clamp(pitch + VoiceSets.PitchOffset(cue[(cue.LastIndexOf('_') + 1)..]), 0.5f, 1.6f);
         player.PitchScale = pitch;
@@ -202,16 +202,17 @@ public partial class AudioManager : Node
     /// <summary>Raised on every <see cref="PlayAt"/> (cue, position, ambient), a dedicated server included: a test hook.</summary>
     public static event Action<string, Vector3, bool>? PlayedAt;
 
-    /// <summary>The next clip of a cue (round-robin), or null for a cue with none. A looping cue's clip loops.</summary>
+    /// <summary>The next clip of a cue (round-robin), or null for a cue with none. A looping cue's clip loops (set once, at load).</summary>
     public AudioStream? Stream(string cue)
     {
         if (!_streams.TryGetValue(cue, out var list) || list.Length == 0) return null;
         var idx = _next.GetValueOrDefault(cue);
         _next[cue] = (idx + 1) % list.Length;
-        var stream = list[idx];
-        if (RideSound.Loops.Contains(cue) && stream is AudioStreamOggVorbis ogg) ogg.Loop = true;
-        return stream;
+        return list[idx];
     }
+
+    /// <summary>A one-shot's slight pitch variation (0.92-1.08), shared by <see cref="Play"/> and <see cref="PlayAt"/>.</summary>
+    private float Jitter() => 0.92f + (float)_rng.NextDouble() * 0.16f;
 
     /// <summary>
     /// Play a cue once at a spot in the world, with the same pitch jitter as <see cref="Play"/>. A looping cue never
@@ -222,8 +223,39 @@ public partial class AudioManager : Node
         PlayedAt?.Invoke(cue, at, ambient);
         if (NetSession.IsServer || RideSound.Loops.Contains(cue)) return;
         if (Stream(cue) is not { } stream) return;
-        var pitch = 0.92f + (float)_rng.NextDouble() * 0.16f;
-        Synth.PlayAt(Main.Instance?.Builder.FloorRoot ?? (Node)this, stream, at, volumeDb, maxDistance, pitch);
+        Synth.PlayAt(Main.Instance?.Builder.FloorRoot ?? (Node)this, stream, at, volumeDb, maxDistance, Jitter());
+    }
+
+    /// <summary>
+    /// Main's exit: every player under <paramref name="root"/> stopped (the pools, the ambience, the music, every cart's and prop's 3D
+    /// player) and the ambience's generator playback this manager holds let go. A player still playing as the engine shuts down leaves its
+    /// playback, and the stream under it, in the audio server: reported as "resources still in use" at exit. Stopping them here, before
+    /// the nodes are freed, gives the audio thread its mix cycles to free them first.
+    /// </summary>
+    public void StopAllAtExit(Node root)
+    {
+        _ambientPlayback = null;
+        _ambientGen = null;
+        StopUnder(root);
+        // the audio server frees a stopped playback on its mixing thread, a fade and a mix step later (about 12 ms each at the
+        // default buffer): give it a few before the engine tears the server down
+        OS.DelayMsec(ExitDrainMs);
+    }
+
+    /// <summary>How long Main's exit waits for the audio thread to free the stopped playbacks.</summary>
+    private const int ExitDrainMs = 100;
+
+    private static void StopUnder(Node node)
+    {
+        // every one, playing or not: Main's own children have already left the tree by its exit, and leaving pauses a player's
+        // playback (Playing reads false) without taking it out of the audio server
+        switch (node)
+        {
+            case AudioStreamPlayer p: p.Stop(); break;
+            case AudioStreamPlayer3D p3: p3.Stop(); break;
+            case AudioStreamPlayer2D p2: p2.Stop(); break;
+        }
+        foreach (var child in node.GetChildren()) StopUnder(child);
     }
 
     // ---- ambience: a generated low hum plus filtered noise, colored per tier ---------------------

@@ -15,6 +15,17 @@ public static class HitFx
     private static GradientTexture1D? _bloodRamp;
     private static Texture2D? _drop;
 
+    /// <summary>Main's exit: the shared resources are let go, so no static field holds one past the tree.</summary>
+    public static void Release()
+    {
+        _bloodQuad = _burstQuad = null;
+        _bloodMat = _burstMat = null;
+        _bloodRamp = null;
+        _drop = null;
+        _shaftMesh = _fletchMesh = null;
+        _shaftMat = _fletchMat = null;
+    }
+
     /// <summary>The soft radial blob the fire props draw with, shared.</summary>
     public static Texture2D Puff() => Fire.Puff();
 

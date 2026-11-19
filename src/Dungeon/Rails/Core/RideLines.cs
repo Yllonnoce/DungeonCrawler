@@ -16,6 +16,14 @@ public static class RideLines
     public static string? GriselCallFor(CartEventKind kind, int stopLeft) => kind == CartEventKind.Departed ? $"ride{stopLeft + 1}" : null;
 
     /// <summary>
+    /// Grisel's call for the ride from <paramref name="stopLeft"/>, still waiting to be said, still names the right cage: the cart is still
+    /// at or riding from the stop it left (<paramref name="stopIndex"/> is that stop, halted on the line or not), or it stands held
+    /// (<paramref name="held"/>, not <paramref name="halted"/> past it) at the next stop it rode to. Gone on, or set back by a spare: stale.
+    /// </summary>
+    public static bool CallStillDue(int stopIndex, int stopLeft, bool held, bool halted)
+        => stopIndex == stopLeft || (stopIndex == stopLeft + 1 && held && !halted);
+
+    /// <summary>
     /// Who calls a moment of the ride from a cart, by party order: the first hero seated in it and up whom no player controls
     /// (a companion), else the first player's hero seated in it and up; -1 when nobody in it can. Each entry is one party member.
     /// </summary>

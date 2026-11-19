@@ -19,6 +19,9 @@ public partial class Fire : Node3D
     private static Texture2D? _puff;
     private static readonly Random Rng = new();
 
+    /// <summary>Main's exit: the shared resources are let go, so no static field holds one past the tree.</summary>
+    public static void Release() => _puff = null;
+
     public static Fire Create(float radius, float height, float energy, float range)
         => new() { Radius = radius, Height = height, LightEnergy = energy, LightRange = range };
 

@@ -323,13 +323,17 @@ public partial class Hud : Control
 
     public string ObjectiveText => _objective.Text;
 
-    /// <summary>The mine cart's plating (0-1) and status line under the objective; a null plating hides both.</summary>
+    /// <summary>
+    /// The mine cart's plating (0-1) and status line under the objective: a null plating hides the bar (a line alone, the chaser's, still
+    /// shows), and with no line either both are hidden.
+    /// </summary>
     public void SetCart(float? plating01, string? line)
     {
         if (!IsInstanceValid(_cart)) return;
-        _cart.Visible = plating01 != null;
-        if (plating01 is not { } p) return;
-        _cartBar.Value = Mathf.Clamp(p, 0f, 1f);
+        _cart.Visible = plating01 != null || line != null;
+        if (!_cart.Visible) return;
+        _cartBar.Visible = plating01 != null;
+        if (plating01 is { } p) _cartBar.Value = Mathf.Clamp(p, 0f, 1f);
         _cartLine.Text = line ?? "";
     }
     private void OnObjectiveChanged(string text) => _objective.Text = text;

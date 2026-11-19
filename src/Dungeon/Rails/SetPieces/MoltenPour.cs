@@ -143,8 +143,9 @@ public partial class MoltenPour : Node3D
         var was = _heard;
         _heard = phase;
         _heardTick = tick;
-        if (!quiet && phase == PourPhase.Warn && was != PourPhase.Warn) RideAudio.At("pour_hiss", GlobalPosition + Vector3.Up * TroughHeight, 0f, CueRange);
-        if (phase == PourPhase.Pouring)
+        var audible = SetPieceRules.CueAudible(CueRange); // a range of 0 plays nothing: no hiss, and the loop stays stopped (a MaxDistance of 0 is unlimited)
+        if (audible && !quiet && phase == PourPhase.Warn && was != PourPhase.Warn) RideAudio.At("pour_hiss", GlobalPosition + Vector3.Up * TroughHeight, 0f, CueRange);
+        if (audible && phase == PourPhase.Pouring)
         {
             if (_loop == null)
             {
@@ -152,7 +153,11 @@ public partial class MoltenPour : Node3D
                 AddChild(_loop);
             }
             _loop.Stream ??= Audio.AudioManager.Instance?.Stream("molten_loop");
-            if (!_loop.Playing && _loop.Stream != null) _loop.Play();
+            if (!_loop.Playing && _loop.Stream != null)
+            {
+                _loop.MaxDistance = CueRange;
+                _loop.Play();
+            }
         }
         else if (_loop is { Playing: true }) _loop.Stop();
     }

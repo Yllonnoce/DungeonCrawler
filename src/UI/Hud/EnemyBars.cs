@@ -20,6 +20,9 @@ public partial class EnemyBars : Node3D
     private float _now;
     private static StandardMaterial3D? _backMat, _fillMat;
 
+    /// <summary>Main's exit: the shared resources are let go, so no static field holds one past the tree.</summary>
+    public static void Release() => _backMat = _fillMat = null;
+
     public bool Showing(Enemy e) => _shown.ContainsKey(e);
 
     public override void _Ready()

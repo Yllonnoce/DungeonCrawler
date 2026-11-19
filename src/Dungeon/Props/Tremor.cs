@@ -25,6 +25,9 @@ public partial class Tremor : Node
     private Material? _stone;
     private static Texture2D? _puff;
 
+    /// <summary>Main's exit: the shared resources are let go, so no static field holds one past the tree.</summary>
+    public static void Release() => _puff = null;
+
     public override void _Ready()
     {
         Instance = this;

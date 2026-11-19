@@ -254,6 +254,18 @@ public partial class DebugTools : Node
     private double _musicClock;
     private readonly List<string> _musicFails = new();
 
+    /// <summary>
+    /// The test hooks' subscriptions to static events (AudioManager.PlayedAt, CartSound.Played, RailCalls.Called, Npc.Said): each handler
+    /// captures this node, so each is taken off again when it leaves the tree, and no static event holds it past exit.
+    /// </summary>
+    private readonly List<Action> _staticUnhooks = new();
+
+    public override void _ExitTree()
+    {
+        foreach (var unhook in _staticUnhooks) unhook();
+        _staticUnhooks.Clear();
+    }
+
     public override void _Ready()
     {
         ProcessMode = ProcessModeEnum.Always; // keep automation alive while the pause menu holds the tree

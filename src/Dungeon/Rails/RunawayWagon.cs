@@ -19,6 +19,8 @@ public partial class RunawayWagon : MineCart
     public override Net.CartKind Kind => Net.CartKind.Runaway;
     /// <summary>An ore wagon, not a seated cart: it wears the mine pack's tall tub over its box tub's size.</summary>
     protected override string? TubModel => "Cart_1";
+    /// <summary>A loose enemy wagon: its lamp burns orange.</summary>
+    protected override bool EnemyLamp => true;
 
     public RunawayWagon()
     {

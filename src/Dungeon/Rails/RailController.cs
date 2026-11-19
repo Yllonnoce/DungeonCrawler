@@ -207,7 +207,8 @@ public partial class RailController : Node
     /// <summary>
     /// Tell the queued events, in order (one a listener raises meanwhile is told too). The orc taunts a ride's start and a wreck
     /// (server and solo: the director's RailTaunt; both urgent, the start held for a line being said), unless a rider's own call
-    /// carries the departure (<see cref="ClaimDeparture"/>).
+    /// carries the departure (<see cref="ClaimDeparture"/>): the taunt is raised after the listeners have heard the event. A listener that
+    /// throws is logged and costs neither that event's taunt nor the rest of the batch.
     /// </summary>
     private void Flush()
     {
@@ -218,7 +219,8 @@ public partial class RailController : Node
             {
                 var e = _pending[i];
                 _departureClaimed = false;
-                CartEvents?.Invoke(e);
+                try { CartEvents?.Invoke(e); }
+                catch (Exception ex) { GD.PushError($"[rails] a CartEvents listener threw on {e.Kind} (stop {e.Stop}): {ex}"); }
                 if (RideLines.TauntFor(e.Kind, e.Stop, StopS.Length) is { } taunt)
                 {
                     if (taunt == Adventure.Objectives.TauntTrigger.RideStart && _departureClaimed)
@@ -240,7 +242,12 @@ public partial class RailController : Node
 
     private bool _departureClaimed;
 
-    /// <summary>A listener of the departure being told (Grisel naming the cage ahead) says its own line for it: the orc's RideStart taunt is not raised for this one.</summary>
+    /// <summary>
+    /// A listener of the departure being told (Grisel naming the cage ahead) says its own line for it: the orc's RideStart taunt is not
+    /// raised for this one. It works only when called synchronously inside a <see cref="CartEvents"/> handler, while <see cref="Flush"/>
+    /// tells that Departed event: the claim is cleared before each event and read right after its listeners return, so a call made
+    /// later (a deferred call, a timer, a held line's callback) claims nothing.
+    /// </summary>
     public void ClaimDeparture() => _departureClaimed = true;
 
     /// <summary>Whether the last departure's RideStart taunt was said or held (false: dropped; null: no ride has started). For the scripted checks.</summary>
@@ -290,7 +297,7 @@ public partial class RailController : Node
     public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null, IEnumerable<int>? sparesUsed = null)
     {
         if (NetSession.IsClient) return; // a join or revisit: a client's cart stays parked at the first stop and nobody's seat is its to change (co-op riding is plan 5)
-        EndChase(atOnce: true); // a load ends a chase at once (its riders set down beside the chaser); the chase is not saved, its spare stays spent
+        EndChase(atOnce: true); // a load ends a chase at once (its riders set down beside the chaser); the chase is not saved, and the spares stand as the save has them (_spares.Restore below)
         FreeChaser();
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
@@ -985,89 +992,49 @@ public partial class RailController : Node
 
     // ---- HUD -------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// The cart's bar and line (<see cref="RailHud"/>): the party cart's while the local hero rides it or stands within <see cref="HudRange"/>,
+    /// nothing over a hidden cart (a wreck no spare replaced), and the chaser's line, with no plating bar, while the hero rides the chaser
+    /// however far behind the train.
+    /// </summary>
     private void RefreshHud()
     {
         _hudTimer = HudEvery;
         var me = Main.Instance?.Party?.Local;
-        var show = me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange);
-        HudText = show ? Line() : null;
-        Main.Instance?.Hud?.SetCart(show ? State.Plating / CartRules.MaxPlating : null, HudText);
+        if (me != null && !IsInstanceValid(me)) me = null;
+        var chaserMode = CartMode.Held;
+        var chaserLeft = -1f;
+        var inChaser = me != null && ChaserHud(me, out chaserMode, out chaserLeft);
+        var show = inChaser || me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange);
+        HudText = show ? RailHud.Text(HudState(inChaser, chaserMode, chaserLeft)) : null;
+        Main.Instance?.Hud?.SetCart(HudText != null && !inChaser ? State.Plating / CartRules.MaxPlating : null, HudText);
     }
 
-    /// <summary>The line's words: from the cart's own state on the server or solo, from the server's flags and countdown on a client.</summary>
-    private string Line()
+    /// <summary>The HUD's view of the cart: from the cart's own state on the server or solo, from the server's flags and countdown on a client.</summary>
+    private RailHudState HudState(bool inChaser, CartMode chaserMode, float chaserLeft)
     {
-        if (State.Mode == CartMode.Wrecked) return "Cart — wrecked";
-        if (Halted && LineBlocked) return "Cart — line blocked";
-        if (State.Mode == CartMode.Held && !GateClear) return "Cart — gate down";
         var left = NetSession.IsClient ? NetBoardingLeft() : Boarding.Running ? Mathf.Max(0f, Boarding.Left) : -1f;
-        if (left >= 0f) return $"Cart — {Mathf.RoundToInt(State.Plating / CartRules.MaxPlating * 100f)}% — departs in {Mathf.CeilToInt(left)}";
-        if (State.Mode == CartMode.Rolling) return "Cart — rolling";
-        if (Halted) return "Cart — on the line";
-        if (StopIndex == 0) return "Cart — at the landing";
-        return StopIndex >= StopS.Length - 1 ? "Cart — end of the line" : $"Cart — at stop {StopIndex}";
-    }
-}
-
-/// <summary>
-/// The "cart coming" geometry, one rule for the bark (<see cref="RailController"/>'s Warn) and every peer's bell (<see cref="CartSound"/>):
-/// a body on the rails ahead of a cart at <c>s</c> (its middle, running toward higher S) within the 3 s look-ahead (at
-/// <see cref="RunOverRules.WarnMinSpeed"/> at least). No allocation.
-/// </summary>
-public static class RailWarn
-{
-    public const float Seconds = 3f;
-
-    /// <summary>A body at <paramref name="pos"/> stands in the way of a cart at <paramref name="s"/> moving at <paramref name="v"/> on <paramref name="track"/>.</summary>
-    public static bool Ahead(TrackSampler track, float s, float v, Vector3 pos)
-    {
-        if (!track.Valid) return false;
-        var look = Mathf.Max(v, RunOverRules.WarnMinSpeed) * Seconds;
-        float hint = s + CartRules.HalfLength + look / 2f, window = look / 2f + 2f;
-        // a warned body stands within 2 m of the line at most look + HalfLength ahead, and no stretch of line is shorter than the straight way
-        var reach = look + CartRules.HalfLength + 3f;
-        if (pos.DistanceSquaredTo(track.Point(s)) > reach * reach) return false;
-        if (!track.Measure(pos, hint, window, out var b)) return false;
-        return RunOverRules.InWarning(s, v, b with { Radius = RunOverSweep.BodyRadius }, Seconds);
+        return new RailHudState(State.Mode, Hidden: !Cart.Visible, Halted, LineBlocked, GateClear, Boarding: left >= 0f, BoardingLeft: left,
+            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft);
     }
 
-    /// <summary>Any of <paramref name="bodies"/> (the heroes this peer sees on foot) stands in the way of the cart (<see cref="Ahead"/>).</summary>
-    public static bool AnyoneAhead(TrackSampler track, float s, float v, IReadOnlyList<Node3D> bodies)
+    /// <summary>
+    /// <paramref name="me"/> sits in the live chase's chaser (a client's copy on a client): its mode and countdown (−1 none) as this peer shows them.
+    /// </summary>
+    private bool ChaserHud(Adventurer me, out CartMode mode, out float left)
     {
-        for (var i = 0; i < bodies.Count; i++)
-            if (GodotObject.IsInstanceValid(bodies[i]) && Ahead(track, s, v, bodies[i].GlobalPosition)) return true;
-        return false;
-    }
-
-    /// <summary>The nearest of <paramref name="bodies"/> on the rails within a few metres of <paramref name="s"/>, either side, as a distance along the line (+∞ for none).</summary>
-    public static float NearestGap(TrackSampler track, float s, IReadOnlyList<Node3D> bodies)
-    {
-        var best = float.PositiveInfinity;
-        if (!track.Valid) return best;
-        var at = track.Point(s);
-        const float near = CartRules.HalfLength + 4f;
-        for (var i = 0; i < bodies.Count; i++)
+        mode = CartMode.Held;
+        left = -1f;
+        if (!ChaseLive || me.Cart is not MineCart seat) return false;
+        if (NetSession.IsClient)
         {
-            if (!GodotObject.IsInstanceValid(bodies[i])) continue;
-            var pos = bodies[i].GlobalPosition;
-            if (pos.DistanceSquaredTo(at) > near * near || !track.Measure(pos, s, near, out var b)) continue;
-            // on the rails: InWarning from a cart a little behind it (it is past that cart's middle and within its look)
-            if (!RunOverRules.InWarning(b.S - 0.01f, 0f, b with { Radius = RunOverSweep.BodyRadius })) continue;
-            best = Mathf.Min(best, Mathf.Abs(b.S - s));
+            if (RailNet.Instance is not { } net || !IsInstanceValid(net) || net.ClientChaserHud(seat) is not { } hud) return false;
+            (mode, left) = hud;
+            return true;
         }
-        return best;
-    }
-
-    /// <summary>Seconds until a cart at <paramref name="s"/> (front a half length on) moving at <paramref name="v"/> reaches a body on the rails ahead at <paramref name="pos"/>, within 6 s; else +∞.</summary>
-    public static float SecondsTo(TrackSampler track, float s, float v, Vector3 pos)
-    {
-        if (!track.Valid || v < 0.1f) return float.PositiveInfinity;
-        const float horizon = 6f;
-        var look = Mathf.Max(v, RunOverRules.WarnMinSpeed) * horizon;
-        var reach = look + CartRules.HalfLength + 3f;
-        if (pos.DistanceSquaredTo(track.Point(s)) > reach * reach) return float.PositiveInfinity;
-        if (!track.Measure(pos, s + CartRules.HalfLength + look / 2f, look / 2f + 2f, out var b)) return float.PositiveInfinity;
-        if (!RunOverRules.InWarning(s, v, b with { Radius = RunOverSweep.BodyRadius }, horizon)) return float.PositiveInfinity;
-        return Mathf.Max(0f, b.S - (s + CartRules.HalfLength)) / v;
+        if (_chase is not { Ended: false } c || !IsInstanceValid(c.Cart) || seat != c.Cart) return false;
+        mode = c.Run.State.Mode;
+        left = ChaserBoardingLeft;
+        return true;
     }
 }

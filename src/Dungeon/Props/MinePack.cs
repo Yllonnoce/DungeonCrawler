@@ -103,6 +103,7 @@ public static class MinePack
         if (_source == null) { _scene = null; return null; }
         Strip(_source);
         Unlit(_source);
+        TintEnemyTubs(_source);
         GD.Print($"[MinePack] loaded {Count(_source)} pieces");
         return _source;
     }
@@ -146,6 +147,39 @@ public static class MinePack
             for (var i = 0; i < mesh.GetSurfaceCount(); i++)
                 if (mesh.SurfaceGetMaterial(i) is BaseMaterial3D { EmissionEnabled: true } m) m.EmissionEnabled = false;
         foreach (var child in node.GetChildren()) Unlit(child);
+    }
+
+    /// <summary>
+    /// The enemy carts' tubs (Cart_1 the runaway wagon's, Cart_2 the slag cart's) are the pack's bright cartoon red: toned to a dark rusted
+    /// oxblood by one albedo multiply, about half the value and the saturation roughly halved, still red so an enemy cart reads apart from
+    /// the party's iron. The texture under these tubs is red throughout (no grey trim to shift). Multiplied by its albedo colour.
+    /// </summary>
+    public static readonly Color EnemyTubTint = new(0.5f, 0.95f, 1.05f);
+    static readonly string[] EnemyTubs = { "Cart_1", "Cart_2" };
+
+    /// <summary>
+    /// The tint goes on a copy of the shared imported material, set as a surface override on the two tub pieces of the off-tree source (the
+    /// copies <see cref="Piece"/> hands out keep it): the axles and frame share the original and keep it. Nothing static holds the copy; it
+    /// goes with the source at <see cref="Release"/>.
+    /// </summary>
+    private static void TintEnemyTubs(Node source)
+    {
+        BaseMaterial3D? from = null, tinted = null;
+        foreach (var name in EnemyTubs)
+        {
+            if (source.FindChild(name, true, false) is not MeshInstance3D { Mesh: { } mesh } mi) continue;
+            for (var i = 0; i < mesh.GetSurfaceCount(); i++)
+            {
+                if ((mi.GetSurfaceOverrideMaterial(i) ?? mesh.SurfaceGetMaterial(i)) is not BaseMaterial3D m) continue;
+                if (m != from)
+                {
+                    from = m;
+                    tinted = (BaseMaterial3D)m.Duplicate();
+                    tinted.AlbedoColor = m.AlbedoColor * EnemyTubTint;
+                }
+                mi.SetSurfaceOverrideMaterial(i, tinted);
+            }
+        }
     }
 
     private static void Bounds(Node node, Transform3D toPiece, ref Aabb bounds, ref bool any)

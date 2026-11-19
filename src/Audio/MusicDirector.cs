@@ -34,12 +34,9 @@ public partial class MusicDirector : Node
     };
     private static readonly string[] CombatTracks = { "combat_battle_theme_a.mp3", "combat_battle_theme_b.mp3", "combat_medieval_battle.mp3" };
     private static readonly string[] BossTracks = { "boss_battle_rpg_theme.ogg" };
-    private static readonly string[] ChaseTracks = { "chase_determined_pursuit.ogg" };
-    /// <summary>
-    /// Ride 4's track (160 BPM by its source's name; its onsets measure 159.66): played at <see cref="RideMusic.PourPitch"/> so its beat
-    /// keeps the hammers' 160, once through from <see cref="RideMusic.PhaseSeek"/>, and locked again each time it ends.
-    /// </summary>
-    private const string PourTrack = "forge_heavy_dungeon.ogg";
+    private static readonly string[] ChaseTracks = { RideMusic.ChaseTrack };
+    /// <summary>Ride 4's track (<see cref="RideMusic.PourTrack"/>), played on the hammers' beat.</summary>
+    private const string PourTrack = RideMusic.PourTrack;
     private const string VictorySting = "sting_victory.mp3";
     private const string DefeatSting = "sting_defeat.mp3";
 
@@ -168,7 +165,7 @@ public partial class MusicDirector : Node
     private bool RideWanted(Main main)
     {
         if (RailController.Instance is not { } rc || !IsInstanceValid(rc) || !IsInstanceValid(rc.Cart)) return false;
-        var me = main.Party.Local;
+        var me = main.Party.Local is { } local && IsInstanceValid(local) ? local : null;
         var cartRolling = rc.State.Mode == CartMode.Rolling;
         var seated = me != null && ReferenceEquals(me.Cart, rc.Cart);
         var distance = me != null ? me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition) : float.PositiveInfinity;
@@ -185,20 +182,9 @@ public partial class MusicDirector : Node
         }
         var inChaser = me != null && chaser != null && ReferenceEquals(me.Cart, chaser);
         var wanted = RideMusic.Wanted(cartRolling, seated, distance, chaserRolling, inChaser, _clock, ref _rideSeen);
-        if (cartRolling && (seated || distance <= RideMusic.NearMetres)) _chaseWanted = TrackFor(RideMusic.Ride(rc.StopIndex));
-        else if (chaserRolling && inChaser) _chaseWanted = TrackFor(RideMusic.Ride(StopBehind(rc.StopS, chaserS)));
+        if (cartRolling && (seated || distance <= RideMusic.NearMetres)) _chaseWanted = RideMusic.TrackFor(RideMusic.Ride(rc.StopIndex));
+        else if (chaserRolling && inChaser) _chaseWanted = RideMusic.TrackFor(RideMusic.Ride(RideMusic.StopBehind(rc.StopS, chaserS)));
         return wanted;
-    }
-
-    /// <summary>Rides 1-3 loop the chase; ride 4 (the kiln's hammers and pour) plays the forge piece on the hammers' beat.</summary>
-    private static string TrackFor(int ride) => ride == 4 ? PourTrack : ChaseTracks[0];
-
-    /// <summary>The last stop at or behind <paramref name="s"/> on the party line (a chaser's stop left).</summary>
-    private static int StopBehind(float[] stopS, float s)
-    {
-        var stop = 0;
-        for (var i = 1; i < stopS.Length; i++) if (stopS[i] <= s) stop = i;
-        return stop;
     }
 
     private void PlayChase()

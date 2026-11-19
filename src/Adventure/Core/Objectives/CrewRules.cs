@@ -41,4 +41,10 @@ public static class CrewRules
 
     /// <summary>The CartInput.CrewWagons value: one coupled wagon is one load step.</summary>
     public static float LoadFactorWagons(int coupledWagons) => coupledWagons;
+
+    /// <summary>
+    /// How far a cage wagon's crew member's name rises above its usual place (m), by the bench seat it stands at (0 the first,
+    /// 1 the second: the seat book's seat less <c>CartSeats.HeroSeats</c>): the two names over one cage stand apart.
+    /// </summary>
+    public static float LabelLift(int benchIndex) => benchIndex * 0.32f;
 }
