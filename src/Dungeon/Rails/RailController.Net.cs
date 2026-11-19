@@ -115,6 +115,13 @@ public partial class RailController : ISlopeSource
     /// <summary>Test hook (--test-net-server's RIDE pass): the stop's holders die by the test's hand, so its gate lifts for real at the next gate check. Returns how many died.</summary>
     internal int DebugKillHolders(int stop) => NetSession.IsClient ? 0 : _gates.DebugKillHolders(stop);
 
+    /// <summary>Test hook (--test-net-server's RIDE pass): the cart is wrecked where it stands, as a lost plating would (a spare takes over when one is left).</summary>
+    internal void DebugWreck()
+    {
+        if (NetSession.IsClient) return;
+        Wreck();
+    }
+
     // ---- a client's side ---------------------------------------------------------------------
 
     private bool _sentPump, _sentBrake;
@@ -158,6 +165,9 @@ public partial class RailController : ISlopeSource
     internal double NetDepartedAt { get; private set; } = -1;
     /// <summary>Client: the server's clock as this screen reckons it when the train last changed here, or −1 (the RIDE pass reads it).</summary>
     internal double NetTrainChangedAt { get; private set; } = -1;
+    /// <summary>Client: how many wrecks this screen has shown (a Wrecked flag's rising edge), and the server's clock of the last one's state (the RIDE pass reads them).</summary>
+    internal int NetWrecksSeen { get; private set; }
+    internal double NetWreckedAt { get; private set; } = -1;
 
     /// <summary>Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state.</summary>
     internal void ApplyNet(CartStateDto d, double serverNow)
@@ -165,7 +175,12 @@ public partial class RailController : ISlopeSource
         if (!NetSession.IsClient || !Current) return;
         _follow ??= new CartFollower(this);
         (Cart.NetRun, Cart.NetFollow) = (Party, _follow); // a seated headset's comfort inputs read the server's ride
-        if (CartSendRules.WreckedRose(_netFlags, d.Flags) && Cart.Visible) Tumble(sound: false); // where it stands now, before the state moves it
+        if (CartSendRules.WreckedRose(_netFlags, d.Flags))
+        {
+            NetWrecksSeen++;
+            NetWreckedAt = d.ServerTime;
+            if (Cart.Visible) Tumble(sound: false); // where it stands now, before the state moves it
+        }
         _netFlags = d.Flags;
         var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;
         if (mode == CartMode.Rolling && _netMode == CartMode.Held && !Halted) NetDepartedAt = d.ServerTime; // left a stop (a halt's resume is not a departure)

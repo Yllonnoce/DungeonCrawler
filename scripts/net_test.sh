@@ -20,12 +20,18 @@
 #                                     on the server's schedule (0.1 s) and ride 4's hammer falls within 50 ms of the server's;
 #                                     a second client, the Joiner, joins as the cart leaves stop 1: within 1 s of its Ready it holds
 #                                     the cart (within 1.5 m), the seats, the train and the props' hash as the server has them, then
-#                                     boards at stop 2 and rides ride 3 with the first; at stop 3 it gets out and stays on foot while
-#                                     the train leaves on ride 4 with the first client: stop 3's spare, which offered nothing while the
-#                                     train was held there, offers itself once it has gone; the joiner takes it through its intent
-#                                     (spare:3), and its chaser runs up behind the train (hopping ride 4's gap and the fallen trestle)
-#                                     and halts within 3 m of its last body
-#                                     (chase-done on both sides); the first client leaves seated once the chaser has gone)
+#                                     boards at stop 2 and rides ride 3 with the first; 2 s into ride 3 it gets out at speed and is
+#                                     thrown onto the line behind the cart (it stands at the server's landing); it then asks for the
+#                                     floor again and, rebuilt mid-ride 3, holds the ride as the server has it within 1 s again; on foot
+#                                     at stop 3 while the train leaves on ride 4 with the first client: stop 3's spare, which offered
+#                                     nothing while the train was held there, offers itself once it has gone; the joiner takes it through
+#                                     its intent (spare:3), and its chaser runs up behind the train (hopping ride 4's gap and the fallen
+#                                     trestle) and halts within 3 m of its last body (chase-done on both sides); the first client leaves
+#                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
+#                                     hook, and the joiner sees the Wrecked state and then a spare's takeover; it boards that cart
+#                                     and rides ride 3 again with its switch straight, into the ore heap: its rendered S never passes
+#                                     the heap's face; both clients' slag carts
+#                                     (and their riders) and boarding hounds must match the server's on the grid as well)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -76,6 +82,15 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net-server\] ride: Joiner is ready at .*: mid-ride 2" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not ready during ride 2)"; exit 1; fi
   if ! grep -q "\[net\] ride: joined-mid-ride ok" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never traced joined-mid-ride ok)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner boarded at stop 2 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded at stop 2)"; exit 1; fi
+  # task 11: the joiner gets out at speed on ride 3 (thrown onto the line, at the server's landing), then has the floor resent mid-ride 3
+  # and holds the ride again within 1 s; at the end of the line the server wrecks the cart with a spare left, and the joiner sees both
+  if ! grep -q "Joiner jumps from the moving cart" "$TMP/server.log" || ! grep -q "\[net-server\] ride: Joiner got out of the rolling cart on ride 3 .* on the line behind the cart" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not thrown from the rolling cart onto the line on ride 3)"; exit 1; fi
+  if ! grep -q "\[net\] ride: thrown at speed: the joiner .* on the line behind the cart" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the thrown joiner did not stand at the server's landing on the line)"; exit 1; fi
+  if ! grep -q "\[net\] floor 12 (build [0-9]*) rebuilt from the server's resend" "$TMP/joiner.log" || ! grep -q "\[net\] ride: resynced-mid-ride ok" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's resync mid-ride 3 did not rebuild the floor or did not show the ride as it is)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: wreck: .* took over" "$TMP/server.log" || ! grep -q "\[net\] ride: wreck: the cart showed Wrecked here" "$TMP/joiner.log" || ! grep -q "\[net\] ride: wreck-spare:" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: no spare took over, or the joiner did not see the Wrecked state and then the takeover)"; exit 1; fi
+  # then the joiner rides the spare's cart into ride 3 again with its switch straight: the cart halts at the ore heap, and the joiner's
+  # rendered S never passes the face (the follower's clamp at BlockedAt) nor steps back while it rolls
+  if ! grep -q "\[net-server\] ride: heap: the cart halted at the ore heap on ride 3" "$TMP/server.log" || ! grep -q "\[net\] ride: heap: halted here at S=" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the spare's cart never halted at the ore heap with the joiner watching)"; exit 1; fi
   # the left-behind spare (task 9): the joiner, out at stop 3, sees stop 3's spare offer nothing while the train is held there; the train
   # leaves on ride 4 with the first client; the joiner takes the spare through its intent, and its chaser halts within 3 m of the train
   if ! grep -q "\[net-server\] ride: the cart departs stop 3 with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the train never left stop 3 with the first client aboard and the joiner on foot)"; exit 1; fi
@@ -189,28 +204,49 @@ if [ "${RIDE:-}" = 1 ]; then
     function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
     function key(t) { return sprintf("%.1f", t) }
     file == 1 && /^\[net-server\] ride t=/ { srv[val("t")] = val("S") }
-    file == 1 && /^\[net-server\] ride book / { sb[val("t")] = val("seats") " " val("train") " " val("props") }
-    file == 2 && /^\[net\] ride book / { cb[val("t")] = val("seats") " " val("train") " " val("props") }
+    file == 1 && /^\[net-server\] ride book / { sb[val("t")] = val("seats") " " val("train") " " val("props"); sc[val("t")] = val("carts") " " val("boarders") }
+    file == 2 && /^\[net\] ride book / { cb[val("t")] = val("seats") " " val("train") " " val("props"); cc[val("t")] = val("carts") " " val("boarders") }
     file == 3 && /^\[net\] ride: joined mid-ride; ready at t=/ { split($0, a, "ready at t="); split(a[2], b, " "); ready = b[1] + 0 }
+    file == 3 && /^\[net\] ride: resynced; ready at t=/ { split($0, a, "ready at t="); split(a[2], b, " "); rready = b[1] + 0 }
     file == 3 && /^\[net\] ride t=/ { js[val("t")] = val("S") }
-    file == 3 && /^\[net\] ride book / { n3++; jt[n3] = val("t"); jnow[n3] = val("now") + 0; jb[val("t")] = val("seats") " " val("train") " " val("props") }
+    file == 3 && /^\[net\] ride book / { n3++; jt[n3] = val("t"); jnow[n3] = val("now") + 0; jb[val("t")] = val("seats") " " val("train") " " val("props"); jc[val("t")] = val("carts") " " val("boarders") }
     function stable(t) { return (key(t - 0.5) in sb) && (key(t + 0.5) in sb) && sb[key(t - 0.5)] == sb[key(t)] && sb[key(t + 0.5)] == sb[key(t)] }
-    END {
-      match_at = -1
+    function cstable(t) { return (key(t - 0.5) in sc) && (key(t + 0.5) in sc) && sc[key(t - 0.5)] == sc[key(t)] && sc[key(t + 0.5)] == sc[key(t)] }
+    # the first grid point at or after a Ready (the join, the resync) where the joiner holds the seats, train and props of the server and its cart within 1.5 m
+    function matched(from,   i, t, d) {
       for (i = 1; i <= n3; i++) {
-        t = jt[i]; if (jnow[i] < ready) continue
+        t = jt[i]; if (jnow[i] < from) continue
         if (!(t in sb) || !(t in srv) || !(t in js)) continue
         d = js[t] - srv[t]; if (d < 0) d = -d
-        if (jb[t] == sb[t] && d <= 1.5) { match_at = jnow[i] - ready; match_t = t; break }
+        if (jb[t] == sb[t] && d <= 1.5) { mt = t; return jnow[i] - from }
       }
+      return -1
+    }
+    # a slag cart (a "Slag[" word) and a living boarder (a hound id other than -1 in P[...] or W<n>[...]) in a carts-and-boarders word
+    function hasslag(w) { return index(w, "Slag[") > 0 }
+    function hasboarder(w,   p, n, b) { n = split(w, p, " "); b = p[n]; gsub(/W[0-9]+\[/, "[", b); gsub(/-1/, "", b); return b ~ /[0-9]/ }
+    END {
+      match_at = matched(ready); match_t = mt
+      rmatch_at = -1; rmatch_t = ""
+      if (rready > 0) { rmatch_at = matched(rready); rmatch_t = mt }
       jp = 0; jover = 0; jworst = 0
       for (t in js) if (t in srv) { d = js[t] - srv[t]; if (d < 0) d = -d; jp++; if (d > jworst) jworst = d; if (d > 1.5) { jover++; print "  joiner pair over 1.5 m: t=" t " server " srv[t] " joiner " js[t] > "/dev/stderr" } }
       jm = 0; jbad = 0
       for (t in jb) if ((t in sb) && match_at >= 0 && t + 0 >= match_t + 0) { jm++; if (jb[t] != sb[t] && stable(t + 0)) { jbad++; print "  joiner book differs: t=" t " server " sb[t] " joiner " jb[t] > "/dev/stderr" } }
       cm = 0; cbad = 0
       for (t in cb) if (t in sb) { cm++; if (cb[t] != sb[t] && stable(t + 0)) { cbad++; print "  client book differs: t=" t " server " sb[t] " client " cb[t] > "/dev/stderr" } }
-      printf "joiner ready t=%.3f, matched the server (seats, train, props, cart within 1.5 m) %.3f s after its Ready (grid t=%s); joiner cart pairs=%d max=%.3f over=%d; books compared: joiner %d (%d differ), client %d (%d differ)\n", ready, match_at, match_t, jp, jworst, jover, jm, jbad, cm, cbad
-      exit !(ready > 0 && match_at >= 0 && match_at <= 1.0 && jp >= 10 && jover == 0 && jm >= 10 && jbad == 0 && cm >= 20 && cbad == 0)
+      # the other carts (their riders) and the boarders: the first client all along; the joiner from its match on, except in the second after a Ready
+      ccm = 0; ccbad = 0; ccslag = 0; ccboard = 0
+      for (t in cc) if ((t in sc) && cstable(t + 0)) { ccm++; if (hasslag(sc[t])) ccslag++; if (hasboarder(sc[t])) ccboard++; if (cc[t] != sc[t]) { ccbad++; print "  client carts/boarders differ: t=" t " server " sc[t] " client " cc[t] > "/dev/stderr" } }
+      jcm = 0; jcbad = 0; jcslag = 0; jcboard = 0
+      for (i = 1; i <= n3; i++) {
+        t = jt[i]; if (!(t in jc) || !(t in sc) || match_at < 0 || t + 0 < match_t + 0) continue
+        if (jnow[i] - ready < 1.0 || (rready > 0 && jnow[i] >= rready && jnow[i] - rready < 1.0) || !cstable(t + 0)) continue
+        jcm++; if (hasslag(sc[t])) jcslag++; if (hasboarder(sc[t])) jcboard++
+        if (jc[t] != sc[t]) { jcbad++; print "  joiner carts/boarders differ: t=" t " server " sc[t] " joiner " jc[t] > "/dev/stderr" }
+      }
+      printf "joiner ready t=%.3f, matched the server (seats, train, props, cart within 1.5 m) %.3f s after its Ready (grid t=%s); resynced t=%.3f, matched %.3f s after that Ready (grid t=%s); joiner cart pairs=%d max=%.3f over=%d; books compared: joiner %d (%d differ), client %d (%d differ); carts and boarders compared: joiner %d (%d with a slag cart, %d with a boarder; %d differ), client %d (%d, %d; %d differ)\n", ready, match_at, match_t, rready, rmatch_at, rmatch_t, jp, jworst, jover, jm, jbad, cm, cbad, jcm, jcslag, jcboard, jcbad, ccm, ccslag, ccboard, ccbad
+      exit !(ready > 0 && match_at >= 0 && match_at <= 1.0 && rready > 0 && rmatch_at >= 0 && rmatch_at <= 1.0 && jp >= 10 && jover == 0 && jm >= 10 && jbad == 0 && cm >= 20 && cbad == 0 && jcm >= 10 && jcslag >= 1 && jcbad == 0 && ccm >= 20 && ccslag >= 1 && ccbad == 0)
     }' "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log")
   BOOKS_RC=$?
   echo "--- the joiner and the books, client vs server: $BOOKS"

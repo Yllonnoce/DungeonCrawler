@@ -63,6 +63,8 @@ public sealed class CartFollower
     public int Snaps { get; private set; }
     /// <summary>The integrator's StopAt (the DTO's Limit).</summary>
     public float Limit => _input.StopAt;
+    /// <summary>Where the cart's middle stops for the obstacle ahead on its lane (the heap's face less a half length), or NaN (the RIDE pass reads it).</summary>
+    public float BlockedS => _block;
     public float Plating => _auth.Plating;
 
     /// <summary>Forget everything: the next <see cref="Apply"/> snaps.</summary>

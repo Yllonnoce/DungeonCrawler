@@ -211,8 +211,12 @@ public partial class RailNet : Node
 
     private long _rideGrid = long.MinValue;
 
+    /// <summary>The RIDE pass's server stops printing its grid lines (set by the pass before it wrecks the cart: the jump to a spare's stop is not a pair).</summary>
+    internal bool RideTraceOff { get; set; }
+
     private void RideTraceServer(double now, RailEncounterController? enc)
     {
+        if (RideTraceOff) return;
         var grid = (long)Math.Floor(now / RideGrid);
         if (grid == _rideGrid) return;
         _rideGrid = grid;
@@ -239,8 +243,53 @@ public partial class RailNet : Node
                 BookSeats(b, "W" + wagon.Stop.ToString(CultureInfo.InvariantCulture), wagon);
         b.Append(" train=").Append(_rails.Train.Count == 0 ? "-" : string.Join(",", _rails.Train.Select(w => w.Stop)));
         b.Append(" props=").Append(GetParent() is Node3D root ? PropCheck.Hash(PropSync.Capture(root)).ToString("X8", CultureInfo.InvariantCulture) : "-");
+        BookCarts(b);
+        BookBoarders(b);
         return b.ToString();
     }
+
+    /// <summary>
+    /// The RIDE pass: the other carts (id, kind and, for a slag cart, its living riders' net ids by spot) as this side has them, sorted
+    /// by id: the server's live carts, a client's copies. Test only.
+    /// </summary>
+    private void BookCarts(System.Text.StringBuilder b)
+    {
+        var carts = new List<(int Id, CartKind Kind, SlagCart? Slag)>();
+        if (NetSession.IsClient) { foreach (var cc in _carts.Values) if (IsInstanceValid(cc.Body) && !cc.Body.IsQueuedForDeletion()) carts.Add((cc.Id, cc.Kind, cc.Slag)); }
+        else foreach (var c in _live) carts.Add((c.Id, c.Kind, c.Slag));
+        carts.Sort((x, y) => x.Id.CompareTo(y.Id));
+        b.Append(" carts=");
+        if (carts.Count == 0) { b.Append('-'); return; }
+        for (var i = 0; i < carts.Count; i++)
+        {
+            var (id, kind, slag) = carts[i];
+            if (i > 0) b.Append(';');
+            b.Append(id.ToString(CultureInfo.InvariantCulture)).Append(kind);
+            if (slag == null || !IsInstanceValid(slag)) continue;
+            b.Append('[');
+            for (var s = 0; s < SlagCart.MaxRiders; s++) b.Append(s > 0 ? "," : "").Append(LiveId(slag.RiderNetIdAt(s) >= 0 ? slag.RiderAt(s) : null).ToString(CultureInfo.InvariantCulture));
+            b.Append(']');
+        }
+    }
+
+    /// <summary>The RIDE pass: the hounds riding the party's cart by spot and each coupled wagon's roof (living, carried there), as this side has them. Test only.</summary>
+    private void BookBoarders(System.Text.StringBuilder b)
+    {
+        b.Append(" boarders=P[");
+        var held = _rails.Cart.Boarders;
+        for (var i = 0; i < held.Length; i++) b.Append(i > 0 ? "," : "").Append(LiveId(held[i] is { } h && IsInstanceValid(h) && h.Carrier == _rails.Cart ? h : null).ToString(CultureInfo.InvariantCulture));
+        b.Append(']');
+        var train = _rails.Train;
+        for (var k = 0; k < train.Count; k++)
+        {
+            if (!IsInstanceValid(train[k])) continue;
+            var roof = train[k].Boarders[0];
+            b.Append('W').Append(train[k].Stop.ToString(CultureInfo.InvariantCulture)).Append('[')
+                .Append(LiveId(roof is { } r && IsInstanceValid(r) && r.Carrier == train[k] ? r : null).ToString(CultureInfo.InvariantCulture)).Append(']');
+        }
+    }
+
+    private static int LiveId(Enemy? e) => e != null && IsInstanceValid(e) && !e.IsQueuedForDeletion() && e.IsAlive ? e.NetId : -1;
 
     /// <summary>The chaser on this side (the server's own, a client's copy), or null.</summary>
     private MineCart? BookChaser()

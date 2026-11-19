@@ -291,6 +291,14 @@ public partial class ClientWorld : Node
     /// <summary>The net test drops this many FloorChanges on purpose (the watchdog must recover them).</summary>
     public int TestDropFloorChanges { get; set; }
 
+    /// <summary>The net test (the RIDE pass): ask the server for the floor we stand on again, as the floor watchdog does, so it is rebuilt here mid-ride.</summary>
+    public void TestAskFloorAgain(string why)
+    {
+        _floorWatch.Begin(NetSession.Instance.Now); // a resend of the build we hold is applied, not dropped as one that crossed our ask
+        NetSession.Instance.Send(new FloorResyncIntent(Game.Instance.CurrentFloor, _epoch, why));
+        Trace.Add("floor-ask");
+    }
+
     private void OnFloorChange(FloorChange fc)
     {
         // our ask crossed the change it was about: the build we hold is already this one
