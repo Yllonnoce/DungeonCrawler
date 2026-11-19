@@ -118,9 +118,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     private ShapeCast3D _meleeCast = null!;
     private RayCast3D _interactRay = null!;
-    /// <summary>The seated window offered a lever last view tick, and when (this machine's clock, seconds) the last one closed: E does nothing for a second after (−∞: never).</summary>
-    private bool _inSwitchWindow;
-    private double _switchWindowClosedAt = double.NegativeInfinity;
+    /// <summary>The seated window over time (this machine's clock): E does nothing for a second after one closes while this body is played and up.</summary>
+    private readonly SeatedWindowClock _switchWindow = new();
+    /// <summary>The last seated-window press, so a second press on the same lever waits for the first's answer (<see cref="SeatedSwitchRules.IgnoreRepress"/>).</summary>
+    private readonly SeatedPressGuard _switchPress = new();
+    /// <summary>This view tick's <see cref="LookingAt"/> is the seated window's lever, not the ray's.</summary>
+    private bool _lookingAtWindowLever;
     private MeshInstance3D _body = null!;
     private MeshInstance3D _head = null!;
     private Label3D _label = null!;
@@ -544,27 +547,25 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             _fpWeapon.SetGuard(Guarding);
             _interactRay.ForceRaycastUpdate(); // the VR beam's length reads the ray, window or not
             var lever = Seated && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? enc.SeatedLeverFor(this) : null;
+            _lookingAtWindowLever = lever != null;
             if (lever != null)
             {
                 LookingAt = lever;
-                _inSwitchWindow = true;
+                _switchWindow.Offered();
             }
+            else if (_switchWindow.NotOffered(Seated, Time.GetTicksMsec() / 1000.0)) LookingAt = null;
             else
             {
-                if (_inSwitchWindow)
-                {
-                    _switchWindowClosedAt = Time.GetTicksMsec() / 1000.0;
-                    _inSwitchWindow = false;
-                }
-                if (SeatedSwitchRules.InGrace(Seated, Time.GetTicksMsec() / 1000.0, _switchWindowClosedAt)) LookingAt = null;
-                else
-                {
-                    LookingAt = _interactRay.IsColliding() ? _interactRay.GetCollider() as IInteractable : null;
-                    if (LookingAt is { Prompt: "" }) LookingAt = null;
-                }
+                LookingAt = _interactRay.IsColliding() ? _interactRay.GetCollider() as IInteractable : null;
+                if (LookingAt is { Prompt: "" }) LookingAt = null;
             }
         }
-        else LookingAt = null;
+        else
+        {
+            LookingAt = null;
+            _lookingAtWindowLever = false;
+            _switchWindow.NotPlayed(); // downed or not played mid-window: no grace starts when it is played and up again
+        }
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
     }
 
@@ -1251,6 +1252,16 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             EventBus.Instance.PlaySfx("ui_close");
             return;
         }
+        // a second seated-window press on the same lever waits for the first's answer (or 0.5 s): a double tap or a mash never undoes a throw
+        var windowLever = _lookingAtWindowLever && target is TrackSwitch offered && ReferenceEquals(offered, LookingAt) ? offered : null;
+        if (windowLever != null)
+        {
+            var now = Time.GetTicksMsec() / 1000.0;
+            if (_switchPress.Ignore(windowLever, windowLever.Thrown, now)) return;
+            WindowPress(windowLever);
+            _switchPress.Pressed(windowLever, windowLever.Thrown, now);
+            return;
+        }
         // talking is local (the choice goes over the wire); everything else the server does for us
         if (Net.NetSession.IsClient && target is not Npc)
         {
@@ -1259,6 +1270,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             return;
         }
         target.Interact(Party, this);
+    }
+
+    /// <summary>The seated window's lever used: a client sends its intent (the server judges the window), solo or the server toggles it here.</summary>
+    private void WindowPress(TrackSwitch lever)
+    {
+        if (Net.NetSession.IsClient)
+        {
+            if (Net.NetRefResolver.RefOf(lever) is { } netRef) Net.NetSession.Instance.Send(new Net.InteractIntent(netRef));
+            return;
+        }
+        lever.Interact(Party, this);
     }
 
     /// <summary>

@@ -16,7 +16,8 @@ namespace DungeonCrawler.Core;
 // (a brake shoe broken by a debug hit derails one, a hound leaps), ride 3's switch thrown by a hit that a second hit leaves
 // thrown (the slag cart ahead rammed, the cart back on its own lane), ride 4's golem diverted at the spur by a lever
 // debug-thrown ahead on ride 2 (the arrivals at stops 2 and 3 leave it thrown) that the seated lead sets back and throws
-// again from the seat as ride 4's seated window offers it (no aim, two presses through the dispatch E uses), the jump made
+// again from the seat as ride 4's seated window offers it (no aim, two presses through the dispatch E uses, a mash between
+// them ignored by the re-press guard), the jump made
 // with two pumping and the buffer smashed into the last stop; the crew home and the stairs open. Section 2 builds the floor
 // again: ride 1 departs (its thrower a full enemy, the floor's first), a save mid-ride 1 is loaded and ride 1 departs again
 // (the thrower given back a reinforcement: the save keeps that it was sent); ride 3 with the switch left straight (the heap
@@ -106,6 +107,8 @@ public partial class DebugTools
     /// <summary>Section 1's seated presses on ride 4's spur lever (0: none, 1: set back, 2: thrown again), and the first mismatch they met.</summary>
     private int _chSeatSpur;
     private string? _chSeatSpurFail;
+    /// <summary>When (this machine's clock) the first seated press went: the second waits out the re-press guard (<see cref="SeatedSwitchRules.RepressGuardSeconds"/>).</summary>
+    private double _chSeatSpurAt;
     private int _chPumpers = -1, _chSlams;
     private float _chJumpV;
     // traffic
@@ -1045,8 +1048,10 @@ public partial class DebugTools
             _chOnSpur = true;
             GD.Print($"[chase] 4 the golem's runner takes the spur (party S={rc.State.S:0.0})");
         }
-        // section 1, ride 4: the spur lever (thrown ahead on ride 2) offered from the seat is set back, then thrown again on a later frame
+        // section 1, ride 4: the spur lever (thrown ahead on ride 2) offered from the seat is set back (a mash at once after it is ignored by
+        // the re-press guard), then thrown again once the guard's half second is out
         if (!_chSection2 && _chSeatSpur < 2 && _chSeatSpurFail == null && enc.ArmedRide == 4 && rc.State.Mode == CartMode.Rolling
+            && (_chSeatSpur == 0 || Time.GetTicksMsec() / 1000.0 - _chSeatSpurAt >= SeatedSwitchRules.RepressGuardSeconds)
             && enc.SetPieceNode("r4_spur") is SpurSwitch seatSpur && party.Local is { } me && me.Cart == rc.Cart && party.LookingAt == seatSpur.Lever)
         {
             var lever = seatSpur.Lever;
@@ -1061,7 +1066,18 @@ public partial class DebugTools
             var seated = me.Cart == rc.Cart;
             GD.Print($"[chase] 4 seated window: \"{prompt}\" pressed {ahead:0.0} m before the spur lever, {dist:0.0} m off: thrown={lever.Thrown}, still seated={seated}");
             if (lever.Thrown != (_chSeatSpur == 2) || !seated)
+            {
                 _chSeatSpurFail = $"the seated press \"{prompt}\" on ride 4's spur lever left it thrown={lever.Thrown}, still seated={seated}";
+                return;
+            }
+            if (_chSeatSpur == 1)
+            {
+                _chSeatSpurAt = Time.GetTicksMsec() / 1000.0;
+                party.VrUse(true); // a mash right after the set-back: the re-press guard ignores it
+                party.VrUse(false);
+                GD.Print($"[chase] 4 seated mash: a second press at once after the set-back: thrown={lever.Thrown} (want False: ignored), still seated={me.Cart == rc.Cart}");
+                if (lever.Thrown || me.Cart != rc.Cart) _chSeatSpurFail = $"a mashed second press right after the seated set-back left ride 4's spur lever thrown={lever.Thrown}, still seated={me.Cart == rc.Cart}";
+            }
         }
     }
 

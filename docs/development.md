@@ -1420,12 +1420,14 @@ closes when the front reaches the points (or the lever is taken). It is offered 
 while it rolls, only for the armed ride's throwable levers (never a fixed `switch_back`), the nearer of two by S
 (`RailEncounterController.SeatedLeverFor`). In the window the rider's `LookingAt` is that lever whatever the aim
 (`Adventurer.TickView`; the look ray still runs for the VR beam), so the HUD shows `[E] Throw the switch` (or "Set the switch
-back"), E or the grip toggles it through the usual interact dispatch, and "Get out" is not offered. For 1 s after the
+back"), E or the grip toggles it through the usual interact dispatch, and "Get out" is not offered. A second window press on
+the same lever is ignored on the presser's machine until the lever changes there or 0.5 s passes (`SeatedPressGuard`), so a
+client's double tap inside one round trip, or a solo mash, never sets back what the first press threw. For 1 s after the
 window closes, timed on the rider's own machine, a seated rider's E does nothing, so a press mashed past the points cannot
-throw them out at speed. A held cart never offers the lever, so E stays "Get out" (and the cage hold) at a stop or at the
+throw them out at speed (`SeatedWindowClock`; a rider downed, or swapped out of the player's hands, mid-window owes no grace). A held cart never offers the lever, so E stays "Get out" (and the cage hold) at a stop or at the
 heap. On a co-op client the press is the lever's ordinary `InteractIntent`. The server accepts it by the usual reach or when
 the lever is in that rider's window as it recomputes it (`RailEncounterController.InSeatedWindow`; no lag allowance: the
-lever being taken ends it), and refuses an out-of-reach set-back within 1 s of another rider's toggle (the last toggle's
+lever being taken ends it), and refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
 time and hero name are kept on the server's `TrackSwitch`), so two riders cued by the same call do not undo each other into
 the heap (`[net-server] interact … seated window: set back … ignored`).
 
@@ -1499,7 +1501,8 @@ a hit (`ReceiveAttack`), and a second hit must leave it thrown: the cart must cr
 and the arrival at stop 3 must set that lever back. On ride 4 the golem must come out as a carried elite, never a boss. As
 ride 4's seated window offers the spur lever (thrown on ride 2), the seated lead sets it back and throws it again from the
 seat (`PartyController.VrUse`, the dispatch E uses; two `[chase] 4 seated window:` lines, the prompts "Set the switch back"
-then "Throw the switch", the lead still seated each time), and the golem must be diverted by it. The jump must be made at 6.1 m/s or more with two pumping, and the cart must reach the end of the line through the
+then "Throw the switch", the lead still seated each time). A mashed press at once after the set-back must be ignored (`[chase] 4
+seated mash:`), and the throw waits out that half second. The golem must be diverted by the re-thrown lever. The jump must be made at 6.1 m/s or more with two pumping, and the cart must reach the end of the line through the
 buffer. There the crew must be home and the stairs must open. Section 2 builds floor 12 again and restores the cart at stop
 2 (`RestoreGates`, `Restore(2)`). Ride 3's switch is left straight: the cart must crash into the heap (40 plating, a `Halted`
 event). The lead gets out and breaks the heap with real swings (mouse look and `PartyController.Attack`, the input path),
