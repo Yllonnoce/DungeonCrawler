@@ -36,8 +36,8 @@ public partial class MusicDirector : Node
     private static readonly string[] BossTracks = { "boss_battle_rpg_theme.ogg" };
     private static readonly string[] ChaseTracks = { "chase_determined_pursuit.ogg" };
     /// <summary>
-    /// Ride 4's track (160 BPM by its source's name; its onsets measure 159.66, so its beat falls about 2 ms a second behind the hammers'):
-    /// played once through from <see cref="RideMusic.PhaseSeek"/>, and locked again each time it ends.
+    /// Ride 4's track (160 BPM by its source's name; its onsets measure 159.66): played at <see cref="RideMusic.PourPitch"/> so its beat
+    /// keeps the hammers' 160, once through from <see cref="RideMusic.PhaseSeek"/>, and locked again each time it ends.
     /// </summary>
     private const string PourTrack = "forge_heavy_dungeon.ogg";
     private const string VictorySting = "sting_victory.mp3";
@@ -66,6 +66,10 @@ public partial class MusicDirector : Node
     /// <summary>File name of the track in front, "" while silent.</summary>
     public string CurrentTrack { get; private set; } = "";
     public bool Enabled { get; set; } = true;
+    /// <summary>The pitch scale of the player in front (1, but <see cref="RideMusic.PourPitch"/> for the pour on ride 4; tests read it).</summary>
+    public float FrontPitch => _front.PitchScale;
+    /// <summary>The pitch the front player should have now: the pour's while the Chase mood plays it, else 1 (tests check it).</summary>
+    public float ExpectedPitch => Mood == Mood.Chase && CurrentTrack == PourTrack ? (float)RideMusic.PourPitch : 1f;
 
     public override void _Ready()
     {
@@ -210,8 +214,8 @@ public partial class MusicDirector : Node
         var stream = Load(PourTrack, loop: false);
         if (stream == null || Main.Instance is not { } main) return;
         var from = RideMusic.PhaseSeek(main.Builder.FloorSeconds, SetPieceRules.HammerFallSeconds(0), SetPieceRules.HammerCycleSeconds,
-            RideMusic.PourBeatOrigin, stream.GetLength());
-        Play(PourTrack, loop: false, fadeSeconds: 1.2f, from: (float)from);
+            RideMusic.PourBeatOrigin, stream.GetLength(), RideMusic.PourPitch);
+        Play(PourTrack, loop: false, fadeSeconds: 1.2f, from: (float)from, pitch: (float)RideMusic.PourPitch);
     }
 
     /// <summary>An engaged enemy within earshot of a standing member: the party is in a fight (the idle razzing holds its tongue too).</summary>
@@ -241,7 +245,8 @@ public partial class MusicDirector : Node
 
     // ---- players -----------------------------------------------------------------------------
 
-    private void Play(string file, bool loop, float fadeSeconds, float from = 0)
+    /// <summary>Crossfade to <paramref name="file"/> from <paramref name="from"/> s at <paramref name="pitch"/> (every other track 1: the two players are reused).</summary>
+    private void Play(string file, bool loop, float fadeSeconds, float from = 0, float pitch = 1f)
     {
         var stream = Load(file, loop);
         if (stream == null) return;
@@ -249,6 +254,7 @@ public partial class MusicDirector : Node
         _front = back == _a ? _b : _a;
         _front.Stream = stream;
         _front.VolumeDb = -80f;
+        _front.PitchScale = pitch;
         _front.Play(from);
         _frontTarget = BaseDb;
         _backTarget = -80f;

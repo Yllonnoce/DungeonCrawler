@@ -58,6 +58,8 @@ public partial class DebugTools
     private bool _chListening, _chSwept0;
     private int _chSwept = -1;
     private string? _chFail;
+    /// <summary>The ride music's pitch (plan 6 task 6): the pour heard at its pitch on ride 4, and the first track in front after it, at 1.</summary>
+    private string? _chPourPitch, _chAfterPour;
     private const string ChaseSlot = "chasetest";
     private readonly Dictionary<Enemies.Enemy, int> _chSpawnRide = new();
     // ride 1
@@ -137,6 +139,7 @@ public partial class DebugTools
         if (rc == null || enc == null || ctrl == null) { if (_chClock > 3f) Fail($"floor 12 lacks {(rc == null ? "a RailController " : "")}{(enc == null ? "a RailEncounterController " : "")}{(ctrl == null ? "a CrewRescueController" : "")}"); return; }
         if (_chSection2 && rc == _chRails) return; // the floor is being built again: wait for the new one
         ChaseListen(rc, enc);
+        ChaseMusicPoll();
         if (_chFail != null) { Fail(_chFail); return; }
 
         // throughout: nothing on the floor is a boss, and the stairs stay sealed until the crew are home
@@ -639,6 +642,9 @@ public partial class DebugTools
                 if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 1 || rc.Train.Count != 3) { fail($"the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping and {rc.Train.Count} wagons (want made, >= {SetPieceRules.JumpSpeed}, 1, 3)"); return; }
                 if (buffer is not { Smashed: true }) { fail("after the load the buffer went wrong"); return; }
                 if (!ChaseTimings(fail)) return;
+                GD.Print($"[chase] music: the pour {_chPourPitch ?? "never played"}; after it {_chAfterPour ?? "no track"}");
+                if (_chPourPitch == null) { fail("the pour track never played in the Chase mood"); return; }
+                if (_chAfterPour == null) { fail("no track played after the pour to check its pitch"); return; }
                 GD.Print("[chase] RESULT ok");
                 _done = true;
                 GetTree().Quit();
@@ -921,6 +927,23 @@ public partial class DebugTools
     /// Every physics tick: when each hammer began to glow and when the pour began its warning, for a piece whose cue did not
     /// play (the cart was far). Seen here at most a tick late, which only makes a measured warning shorter.
     /// </summary>
+    /// <summary>
+    /// Each frame: the music's front player is at the pitch it should be (the pour's in the Chase mood on ride 4, else 1: the two players
+    /// are reused, so a later track must not keep the pour's). Notes the pour and the first other track after it.
+    /// </summary>
+    private void ChaseMusicPoll()
+    {
+        if (Audio.MusicDirector.Instance is not { } music || music.CurrentTrack == "") return;
+        var pour = music.Mood == Audio.Mood.Chase && music.CurrentTrack == "forge_heavy_dungeon.ogg";
+        if (Mathf.Abs(music.FrontPitch - music.ExpectedPitch) > 1e-5f)
+        {
+            _chFail ??= $"the music's {music.CurrentTrack} ({music.Mood}) plays at pitch {music.FrontPitch:0.00000}, want {music.ExpectedPitch:0.00000}";
+            return;
+        }
+        if (pour) _chPourPitch ??= $"at pitch {music.FrontPitch:0.00000} (want {RideMusic.PourPitch:0.00000})";
+        else if (_chPourPitch != null) _chAfterPour ??= $"{music.CurrentTrack} ({music.Mood}) at pitch {music.FrontPitch:0.00000}";
+    }
+
     private void ChasePoll()
     {
         if (_done || _chEnc == null || !IsInstanceValid(_chEnc)) return;

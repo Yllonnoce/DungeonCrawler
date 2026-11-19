@@ -19,6 +19,14 @@ public static class RideMusic
     public const double PourBeatOrigin = 0.0;
 
     /// <summary>
+    /// The pour track's own tempo, measured 2026-11-19 (a 1 ms comb fit of its hi-hat onsets over the whole track; its source file
+    /// name says 160): played at 1×, its beat would fall about 2 ms a second behind the hammers' 160.
+    /// </summary>
+    public const double PourTrackBpm = 159.66;
+    /// <summary>The pour track's pitch scale, so it runs at the hammers' 160 BPM (about 1.0021, +3.7 cents).</summary>
+    public const double PourPitch = 160.0 / PourTrackBpm;
+
+    /// <summary>
     /// The Chase music is wanted now: the party cart rolls with the listener seated in it or within <see cref="NearMetres"/> of it, or a
     /// chaser rolls (the chase is live) with the listener seated in it, however far behind the train; and for <see cref="HoldSeconds"/>
     /// after either. <paramref name="lastSeen"/> is the last time it was live (−∞: never, or reset by a load or a floor change).
@@ -35,16 +43,18 @@ public static class RideMusic
     public static int Ride(int stopLeft) => stopLeft + 1;
 
     /// <summary>
-    /// Where to start the pour track at <paramref name="floorSeconds"/> so its downbeat (<paramref name="beatOrigin"/>) lands on a hammer's
-    /// fall: the origin plus the time since the last fall (<paramref name="fallSeconds"/> on a <paramref name="cycleSeconds"/> cycle),
-    /// brought back below <paramref name="trackLength"/> by whole cycles. Always in [0, trackLength).
+    /// Where to start the pour track (in its own seconds) at <paramref name="floorSeconds"/> so its downbeat (<paramref name="beatOrigin"/>)
+    /// lands on a hammer's fall, played at <paramref name="pitch"/>: the origin plus the floor time since the last fall
+    /// (<paramref name="fallSeconds"/> on a <paramref name="cycleSeconds"/> cycle) times the pitch (track time runs pitch× the floor's),
+    /// brought back below <paramref name="trackLength"/> by whole cycles of cycle·pitch track seconds. Always in [0, trackLength).
     /// </summary>
-    public static double PhaseSeek(double floorSeconds, double fallSeconds, double cycleSeconds, double beatOrigin, double trackLength)
+    public static double PhaseSeek(double floorSeconds, double fallSeconds, double cycleSeconds, double beatOrigin, double trackLength, double pitch = 1)
     {
         if (trackLength <= 0) return 0;
-        if (cycleSeconds <= 0) return beatOrigin >= 0 && beatOrigin < trackLength ? beatOrigin : 0;
-        var at = beatOrigin + Mod(floorSeconds - fallSeconds, cycleSeconds);
-        while (at >= trackLength) at -= cycleSeconds;
+        if (cycleSeconds <= 0 || pitch <= 0) return beatOrigin >= 0 && beatOrigin < trackLength ? beatOrigin : 0;
+        var trackCycle = cycleSeconds * pitch;
+        var at = beatOrigin + Mod(floorSeconds - fallSeconds, cycleSeconds) * pitch;
+        while (at >= trackLength) at -= trackCycle;
         if (at < 0) at = Mod(at, trackLength); // a track shorter than the origin and a cycle cannot keep the beat: stay inside it
         return at < trackLength ? at : 0;
     }
