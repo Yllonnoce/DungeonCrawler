@@ -1208,7 +1208,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     // ---- combat --------------------------------------------------------------------------------
 
-    public void TryInteract()
+    public void TryInteract() => TryInteract(LookingAt);
+
+    /// <summary>Use <paramref name="lookedAt"/> (what this body looks at, or looked at when a waiting press went down).</summary>
+    private void TryInteract(IInteractable? lookedAt)
     {
         if (Downed)
         {
@@ -1216,7 +1219,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             if (Net.NetSession.IsClient && State.Mangled) Net.NetSession.Instance.Send(new Net.ShoutIntent());
             return;
         }
-        if (LookingAt is not { } target) return;
+        if (lookedAt is not { } target) return;
         if (target is LootDrop { Coins: 0 } full && !Party.Bag.HasRoomFor(full.Item))
         {
             Main.Instance?.Hud?.ShowSubtitle(LootDrop.BagFullLine);
@@ -1233,10 +1236,23 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         target.Interact(Party, this);
     }
 
-    /// <summary>Interact held down for <see cref="InteractHold.HoldSeconds"/> on what this body looks at, when that offers a held use (plan 7).</summary>
-    public void TryHoldInteract()
+    /// <summary>
+    /// A tap released on <paramref name="target"/>, the held target the press went down on: its plain use, while it still stands within
+    /// reach (<see cref="InHoldReach"/>); else nothing, whatever this body looks at now.
+    /// </summary>
+    public void TryTapInteract(IHoldInteractable? target)
     {
-        if (Downed || LookingAt is not IHoldInteractable { HoldOffered: true } target) return;
+        if (target == null || !InHoldReach(target)) return;
+        TryInteract(target);
+    }
+
+    /// <summary>
+    /// Interact held down for <see cref="InteractHold.HoldSeconds"/> on <paramref name="target"/>, the held target the press went down on
+    /// (plan 7): its held use, while it still offers one and stands within reach (<see cref="InHoldReach"/>); else nothing.
+    /// </summary>
+    public void TryHoldInteract(IHoldInteractable? target)
+    {
+        if (Downed || target is not { HoldOffered: true } || !InHoldReach(target)) return;
         if (Net.NetSession.IsClient)
         {
             if (Net.NetRefResolver.RefOf(target) is { } netRef) Net.NetSession.Instance.Send(new Net.InteractIntent(Net.NetRefs.Hold(netRef)));
@@ -1244,6 +1260,17 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         }
         target.HoldInteract(Party, this);
     }
+
+    /// <summary>
+    /// <paramref name="target"/> (a held target) still stands and is within <see cref="Dungeon.Rails.PropPromptRules.InteractReach"/>:
+    /// a cart measured to its tub, anything else to the nearer of this body and its eye. The server checks a held intent the same way.
+    /// </summary>
+    public bool InHoldReach(IHoldInteractable target)
+        => target is Node3D node && IsInstanceValid(node) && node.IsInsideTree() && HoldDistance(node) <= Dungeon.Rails.PropPromptRules.InteractReach;
+
+    /// <summary>How far a held target stands from this body: a cart's tub (<see cref="Dungeon.Rails.MineCart.TubDistance(Adventurer)"/>), else the nearer of the body and its eye.</summary>
+    public float HoldDistance(Node3D node) => node is Dungeon.Rails.MineCart tub ? tub.TubDistance(this)
+        : Math.Min(node.GlobalPosition.DistanceTo(GlobalPosition), node.GlobalPosition.DistanceTo(Camera.GlobalPosition));
 
     /// <summary>Use the active ability. Heavy/perfect only matter for melee weapon swings.</summary>
     public void Attack(bool heavy = false, bool perfect = false)

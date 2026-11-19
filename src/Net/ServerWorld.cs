@@ -531,8 +531,7 @@ public partial class ServerWorld : Node
                         if (NetSession.Instance.TestServer) GD.Print($"[net-server] hold {inner} from {slot.Name}: not found");
                         break;
                     }
-                    var holdDist = held is Dungeon.Rails.MineCart heldTub ? heldTub.TubDistance(body)
-                        : Math.Min(held.GlobalPosition.DistanceTo(body.GlobalPosition), held.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
+                    var holdDist = body.HoldDistance(held);
                     if (NetSession.Instance.TestServer) GD.Print($"[net-server] hold {inner} from {slot.Name}: {holdDist:0.0} m");
                     if (holdDist > Dungeon.Rails.PropPromptRules.InteractReach) break;
                     holdTarget.HoldInteract(party, body);

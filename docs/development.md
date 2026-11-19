@@ -1184,7 +1184,9 @@ shown first ("Cart — gate down"); the hold does not depend on the gate. A coun
 `CartEventKind.CageHeld` event instead (not on the wire), and the log says "The cage here is still locked." once for that
 stop. A seated player who is on their feet is offered "Get out (hold to leave the prisoners behind)" (`CageHoldRules.SeatedPrompt`).
 A tap of E still gets out; holding E for 1 s (`InteractHold.HoldSeconds`), or the VR use grip, leaves the prisoners behind
-(`MineCart.HoldInteract`, `IHoldInteractable`). The log says "<name> leaves the prisoners behind." The countdown the cage
+(`MineCart.HoldInteract`, `IHoldInteractable`). The tap and the held use both act on the cart looked at when E went down
+(`PartyController`'s kept target), and only while it is still in reach (`Adventurer.InHoldReach`, the server's own check);
+a release at or past 1 s, even before the frame's tick saw the mark, is the held use (`InteractRelease.Hold`), never a tap. The log says "<name> leaves the prisoners behind." The countdown the cage
 held back then starts with its own call: the arrival's starts uncalled, a boarding's or a gate's lift calls all aboard.
 Left while the gate is still down, the gate's lift starts it as usual. A cage opened while the riders sit waiting (Grisel
 from the bench, a pick, the keys), or whose last crew die, ends the hold, and the countdown starts by itself. The hold
@@ -1779,7 +1781,7 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
 its seated prompt ("Get out (hold to leave the prisoners behind)") match the server's. A client's held interact (E held 1 s,
 or the VR grip) sends `InteractIntent("hold:cart:0")`: `NetRefs.HoldKind` ("hold") wraps the ref (`NetRefs.Hold`). The server
 resolves the inner ref to an `IHoldInteractable`, checks the reach as for the cart (`PropPromptRules.InteractReach` to the
-tub), and calls `HoldInteract`. A tap still sends the plain `InteractIntent("cart:0")`. The protocol is unchanged (17,
+tub, `Adventurer.HoldDistance`), and calls `HoldInteract`. A tap still sends the plain `InteractIntent("cart:0")`. The protocol is unchanged (17,
 `MessageKindCount` 114): the hold rides on a flag bit and a ref kind.
 
 **Getting out.**
