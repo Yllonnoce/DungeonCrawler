@@ -1100,6 +1100,13 @@ still be reachable on foot. The up stairs can never be on a lane. A requested li
 line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets.
 `DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
+The centreline is straight 0.5 m pieces laid with no handles, so `TrackSampler.Frame` takes its heading from the chord ±0.25 m
+about S (`Rails/Core/ChordHeading.cs`; the origin and the up are the baked curve's): every cart, rider and camera turns
+evenly through a bend instead of in a 9.5 degree step at each join, and the points, the length and every S are unchanged.
+Each track's rails, sleepers and ballast are one shadowless mesh per 20 m of S (`RailTrack.ChunkLength`: `Rails0..N` under
+`Rails`, likewise `Sleepers` and `Ballast`; the normals are generated over the whole track before the split, so no seam), so
+the stretches out of view are culled. The timber frames and pocket lanterns fade out around 40 m (`VisibilityRangeEnd` with a
+5 m margin) and the pocket lamps over 35 to 45 m (`DungeonBuilder.RailDressingRange`), where the fog has taken most of them.
 
 Riding (`Dungeon/Rails/RailController.cs`, a node under the floor root; the engine-free rules are in `Dungeon/Rails/Core`):
 the party's cart waits at the first stop. Board it with E (not at the end of the line); companions within 25 m hop in with
