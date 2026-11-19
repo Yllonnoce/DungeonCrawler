@@ -27,8 +27,24 @@ public sealed class TrackSampler
 
     private float Clamp(float s) => Mathf.Clamp(s, 0f, Track.Length);
 
-    /// <summary>The curve's frame at S in global space: −Z along the line toward higher S, Y up from the track.</summary>
-    public Transform3D Frame(float s) => Track.GlobalTransform * Track.Curve.SampleBakedWithRotation(Clamp(s), true, true);
+    /// <summary>
+    /// The curve's frame at S in global space: −Z along the line toward higher S, Y up from the track. The origin and the up
+    /// (tilt included) are the baked curve's at S; the heading is the chord ±0.25 m about S (<see cref="ChordHeading"/>), so
+    /// the cart turns evenly through a bend of straight 0.5 m pieces instead of in a 9.5 degree step at each join.
+    /// </summary>
+    public Transform3D Frame(float s)
+    {
+        var curve = Track.Curve;
+        var at = Clamp(s);
+        var frame = curve.SampleBakedWithRotation(at, true, true);
+        var (from, to) = ChordHeading.Window(at, Track.Length);
+        if (ChordHeading.Axes(Num(curve.SampleBaked(from, true)), Num(curve.SampleBaked(to, true)), Num(frame.Basis.Y), out var x, out var y, out var z))
+            frame.Basis = new Basis(Gd(x), Gd(y), Gd(z));
+        return Track.GlobalTransform * frame;
+    }
+
+    private static System.Numerics.Vector3 Num(Vector3 v) => new(v.X, v.Y, v.Z);
+    private static Vector3 Gd(System.Numerics.Vector3 v) => new(v.X, v.Y, v.Z);
 
     public Vector3 Point(float s) => Track.ToGlobal(Track.Curve.SampleBaked(Clamp(s), true));
 
