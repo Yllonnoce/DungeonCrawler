@@ -47,6 +47,9 @@ public partial class DebugTools
     private float _rideMaxV;
     private bool _rideRollChecked, _ridePitchChecked;
     private int _ridePitchSamples;
+    /// <summary>The ride's music (plan 6 task 6): when the cart was first held at stop 1 (a wall clock that outlives the load), and which checks have run.</summary>
+    private double _rideArriveAt = -1;
+    private bool _rideMusicOn, _rideMusicOff;
 
     private void SoundListen()
     {
@@ -148,6 +151,7 @@ public partial class DebugTools
         }
 
         if (rc != null && _rideStep is >= 3 and <= 9 && RideRollCheck(rc) is { } rollWrong) { Fail(rollWrong); return; }
+        if (RideMusicCheck(rc) is { } musicWrong) { Fail(musicWrong); return; }
 
         switch (_rideStep)
         {
@@ -242,6 +246,7 @@ public partial class DebugTools
                     if (clacks < 5) { Fail($"only {clacks} rail_clack from the cart within 10 s of the departure, not 5"); return; }
                     if (squeals < 1) { Fail("the cart rolled into stop 1 without a brake_squeal"); return; }
                     if (!_rideRollChecked) { Fail("the cart never rolled above 0.3 m/s to check its roll"); return; }
+                    _rideArriveAt = RideNow;
                     // brief step 5: save at the stop with everyone aboard, load
                     main.SaveGame("ridetest");
                     if (!main.LoadGame("ridetest")) { Fail("the save would not load"); return; }
@@ -253,7 +258,7 @@ public partial class DebugTools
                 else if (_rideClock > 60f) Fail($"the cart was not held at stop 1 within 60 s (mode {rc.State.Mode}, S={rc.State.S:0.0}, stop index {rc.StopIndex})");
                 break;
             }
-            case 5 when _rideClock >= 1f:
+            case 5 when _rideClock >= 1f && _rideMusicOff: // the music check 4.6 s after the arrival runs first: the full party re-departs 2 s after it boards
             {
                 if (rc == null) { Fail("no RailController after the load"); return; }
                 var seated = party.Adventurers.Count(a => IsInstanceValid(a) && a.Seated);
@@ -373,6 +378,35 @@ public partial class DebugTools
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// The ride's music, each frame: the Chase mood within 1 s of the first departure, and gone 4.6 s after the cart is held at stop 1
+    /// (the 4 s hold, the 0.5 s poll and a margin; the load in between resets the hold, which can only end it sooner), the cart still
+    /// held there then (step 5 boards again only after this check: a full party departs 2 s after boarding). Null, or why not.
+    /// </summary>
+    private string? RideMusicCheck(RailController? rc)
+    {
+        var music = Audio.MusicDirector.Instance;
+        if (!_rideMusicOn && _rideDepartAt >= 0)
+        {
+            var since = RideNow - _rideDepartAt;
+            if (music is { Mood: Audio.Mood.Chase })
+            {
+                _rideMusicOn = true;
+                GD.Print($"[ride] music {music.Mood} {music.CurrentTrack} ({since:0.00} s after the departure)");
+            }
+            else if (since > 1.0) return $"the music is {music?.Mood.ToString() ?? "absent"}, not Chase, {since:0.00} s after the departure";
+        }
+        if (!_rideMusicOff && _rideArriveAt >= 0 && RideNow - _rideArriveAt >= 4.6)
+        {
+            _rideMusicOff = true;
+            var mode = rc?.State.Mode.ToString() ?? "no controller";
+            GD.Print($"[ride] music {music?.Mood.ToString() ?? "absent"} {music?.CurrentTrack} ({RideNow - _rideArriveAt:0.00} s after the arrival at stop 1, cart {mode})");
+            if (music == null || music.Mood == Audio.Mood.Chase) return $"the music is still {music?.Mood.ToString() ?? "absent"} 4.6 s after the cart was held at stop 1";
+            if (rc == null || rc.State.Mode != CartMode.Held || rc.StopIndex != 1) return $"the cart was not held at stop 1 4.6 s after the arrival (mode {mode}, stop {rc?.StopIndex})";
+        }
+        return null;
     }
 
     /// <summary>Companions to Hold (they fight only what is within 3 m, so the cart gets the test's enemies), the party beside the cart, the lead uses it.</summary>

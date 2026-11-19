@@ -251,7 +251,11 @@ OpenGameArt (but for one owner-supplied track), fetched by `scripts/fetch_music.
 three exploration pieces per tier (Crypt, Caves, Forge, Abyss) shuffled with a few seconds of quiet between them (plus one owner-supplied exploration track, `explore_dungeon_walking.mp3`, that plays in every tier), three battle
 tracks, a boss track, and victory and defeat stings. `Audio/MusicDirector.cs` crossfades between them: battle music starts the
 moment an enemy is fighting the party within 26 m and holds for six seconds after the last one stops, the boss track runs from
-the guardian noticing you until it falls, and everything ducks under spoken lines. The "Music and ambience" slider covers it all.
+the guardian noticing you until it falls, and everything ducks under spoken lines. Floor 12's rides play a Chase mood
+(`Dungeon/Rails/Core/RideMusic.cs`): while the party cart rolls with the local hero seated in it or within 30 m of it, or a chaser
+rolls with them in it, and for 4 s after. Rides 1-3 loop `chase_determined_pursuit.ogg` (CC0, downloaded by hand, not by the
+script); ride 4 plays `forge_heavy_dungeon.ogg` started at `RideMusic.PhaseSeek` of the floor clock so its downbeat meets the
+hammers' fall, locked again each time it ends. The "Music and ambience" slider covers it all.
 Enemy grunts are CC0 creature SFX from rubberduck's packs, fetched by `scripts/fetch_grunts.py` into `assets/audio/grunts/<set>/`;
 `VoiceSets` picks the set by enemy size and plays a hurt or death clip (pitch varied), and falls back to the old `enemy_hurt` and
 `enemy_die` cues when a set has no clips. They are listed in `assets/LICENSES.md`.
@@ -1284,7 +1288,7 @@ even as a reinforcement.
 
 The other pieces of ride 4. Three drop hammers stand 3 m apart on the floor's metronome (`DungeonBuilder.FloorTick`). Each
 cycle is 4.5 s: up 1.6 s, a red glow for 1.5 s (the warning, `hammer_wind`), a 0.15 s fall, 0.5 s down and 0.75 s to rise.
-Each hammer runs 40 ticks behind the last. A hammer that falls on the cart takes 15 plating and shakes the riders (never
+Each hammer runs 45 ticks (0.75 s, two beats at 160 BPM) behind the last, so all three fall on the beat of ride 4's music. A hammer that falls on the cart takes 15 plating and shakes the riders (never
 mangling a seated rider). A walker under it is crushed by the lethality. The pour runs on a 10.5 s clock: 6 s dry, 1.5 s of
 warning (the lip glows, `pour_hiss`), then 3 s of pouring. A cart through the stream loses 20 plating and each seated hero
 is burned twice, once per pour. A walker in it burns every 0.8 s. Its quench valve (`QuenchValve`, a layer-4 prop on the side

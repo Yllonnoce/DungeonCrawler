@@ -104,6 +104,7 @@ All tracks but the last are CC0 (https://creativecommons.org/publicdomain/zero/1
 - boss_battle_rpg_theme.ogg: "Boss Battle Theme (variation)" by CleytonKauffman, https://opengameart.org/content/boss-battle-theme
 - sting_victory.mp3: "Medieval: Victory Theme" by RandomMind, https://opengameart.org/content/medieval-victory-theme
 - sting_defeat.mp3: "Medieval: Defeat Theme" by RandomMind, https://opengameart.org/content/medieval-defeat-theme
+- chase_determined_pursuit.ogg: "Determined Pursuit (epic orchestra loop)" by Emma_MA, https://opengameart.org/content/determined-pursuit-epic-orchestra-loop (CC0, checked 2026-11-19): the whole 1:48 loop, `determined_pursuit_loop.wav`, converted to OGG Vorbis (`ffmpeg -c:a libvorbis -q:a 5`), looped on import; floor 12's rides 1-3 (downloaded by hand; not in `scripts/fetch_music.py`)
 - explore_dungeon_walking.mp3: "DungeonWalking", supplied by the project owner (not fetched from OpenGameArt; licence as the owner holds it).
 
 ## Enemy grunts (CC0)

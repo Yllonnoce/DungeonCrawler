@@ -39,7 +39,14 @@ public static class SetPieceRules
     const int UpT = (int)(UpS * TicksPerSecond), GlowT = (int)(GlowS * TicksPerSecond), FallT = (int)(FallS * TicksPerSecond),
         DownT = (int)(DownS * TicksPerSecond), RiseT = (int)(RiseS * TicksPerSecond);
     const int HammerCycleT = UpT + GlowT + FallT + DownT + RiseT;
-    public const int HammerIndexOffsetTicks = 40;
+    /// <summary>Hammer i runs i·this many ticks ahead of hammer 0: 0.75 s, two beats of the pour track at 160 BPM, so every hammer falls on a beat.</summary>
+    public const int HammerIndexOffsetTicks = 45;
+
+    /// <summary>One hammer's whole cycle in seconds (4.5: twelve beats at 160 BPM).</summary>
+    public static double HammerCycleSeconds => HammerCycleT / (double)TicksPerSecond;
+
+    /// <summary>The floor second, within a cycle, at which hammer <paramref name="index"/> begins to fall (hammer 0: 3.1).</summary>
+    public static double HammerFallSeconds(int index) => Mod(UpT + GlowT - (long)index * HammerIndexOffsetTicks, HammerCycleT) / (double)TicksPerSecond;
 
     const int DryT = 6 * TicksPerSecond, WarnT = (int)(1.5f * TicksPerSecond), PouringT = 3 * TicksPerSecond;
     const int PourCycleT = DryT + WarnT + PouringT;

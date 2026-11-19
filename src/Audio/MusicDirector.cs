@@ -1,16 +1,18 @@
 using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Rails;
 using DungeonCrawler.Enemies;
 using Godot;
 
 namespace DungeonCrawler.Audio;
 
-public enum Mood { Silent, Menu, Tavern, Explore, Combat, Boss }
+public enum Mood { Silent, Menu, Tavern, Explore, Combat, Boss, Chase }
 
 /// <summary>
 /// Picks and crossfades the CC0 tracks under assets/audio/music: a tavern tune on the title screen and in the tavern, an exploration
 /// track per tier (shuffled, with a breath of silence between), a battle track while anything is fighting the party,
-/// the boss track from the moment a guardian notices you until it falls, and short stings for victory and a wipe.
-/// Music ducks under spoken lines. A dedicated server plays nothing.
+/// the boss track from the moment a guardian notices you until it falls, and short stings for victory and a wipe. Floor 12's rides
+/// play the Chase mood (<see cref="RideMusic.Wanted"/>): a looping chase on rides 1-3, and on ride 4 the forge piece phase-locked to
+/// the floor clock so the drop hammers fall on its beat. Music ducks under spoken lines. A dedicated server plays nothing.
 /// </summary>
 public partial class MusicDirector : Node
 {
@@ -32,6 +34,12 @@ public partial class MusicDirector : Node
     };
     private static readonly string[] CombatTracks = { "combat_battle_theme_a.mp3", "combat_battle_theme_b.mp3", "combat_medieval_battle.mp3" };
     private static readonly string[] BossTracks = { "boss_battle_rpg_theme.ogg" };
+    private static readonly string[] ChaseTracks = { "chase_determined_pursuit.ogg" };
+    /// <summary>
+    /// Ride 4's track (160 BPM by its source's name; its onsets measure 159.66, so its beat falls about 2 ms a second behind the hammers'):
+    /// played once through from <see cref="RideMusic.PhaseSeek"/>, and locked again each time it ends.
+    /// </summary>
+    private const string PourTrack = "forge_heavy_dungeon.ogg";
     private const string VictorySting = "sting_victory.mp3";
     private const string DefeatSting = "sting_defeat.mp3";
 
@@ -49,6 +57,10 @@ public partial class MusicDirector : Node
     private bool _victoryPlayed;
     private string _lastExplore = "";
     private int _tier;
+    /// <summary>The last poll the ride wanted the Chase music (−∞: never, or since a load or a floor change).</summary>
+    private double _rideSeen = double.NegativeInfinity;
+    /// <summary>The Chase track the ride last asked for (kept through the hold), and the one this mood last started.</summary>
+    private string _chaseWanted = ChaseTracks[0], _chaseStarted = "";
 
     public Mood Mood { get; private set; } = Mood.Silent;
     /// <summary>File name of the track in front, "" while silent.</summary>
@@ -69,9 +81,10 @@ public partial class MusicDirector : Node
         var bus = EventBus.Instance;
         bus.BossSeen += _ => _bossActive = true;
         bus.BossDefeated += _ => _bossActive = false;
-        bus.FloorChanged += (_, _) => { _bossActive = false; _combatUntil = -1; };
+        bus.FloorChanged += (_, _) => { _bossActive = false; _combatUntil = -1; _rideSeen = double.NegativeInfinity; };
+        bus.FloorBuilt += (_, _, _) => _rideSeen = double.NegativeInfinity; // a load rebuilds the floor: no hold carried over from before it
         bus.PartyWiped += () => PlaySting(DefeatSting);
-        var found = MenuTracks.Concat(ExploreByTier.SelectMany(t => t)).Concat(CombatTracks).Concat(BossTracks).Count(f => ResourceLoader.Exists(Dir + f));
+        var found = MenuTracks.Concat(ExploreByTier.SelectMany(t => t)).Concat(CombatTracks).Concat(BossTracks).Concat(ChaseTracks).Count(f => ResourceLoader.Exists(Dir + f));
         GD.Print($"[Music] {found} tracks available");
         if (found == 0) Enabled = false;
     }
@@ -119,13 +132,18 @@ public partial class MusicDirector : Node
             _tier = tier;
             if (Game.Instance.CurrentFloor == 0) wanted = Mood.Tavern; // the tavern over the dungeon keeps the title tune
             else if (_bossActive) wanted = Mood.Boss;
+            else if (RideWanted(main)) wanted = Mood.Chase;
             else
             {
                 if (AnyoneFighting(main)) _combatUntil = _clock + CombatHoldSeconds;
                 wanted = _clock < _combatUntil ? Mood.Combat : Mood.Explore;
             }
         }
-        if (wanted == Mood) return;
+        if (wanted == Mood)
+        {
+            if (Mood == Mood.Chase && _chaseWanted != _chaseStarted) PlayChase(); // the next ride began before the hold ran out
+            return;
+        }
         var from = Mood;
         Mood = wanted;
         switch (wanted)
@@ -135,7 +153,65 @@ public partial class MusicDirector : Node
             case Mood.Explore: _gapLeft = 0f; Play(PickExplore(), loop: false, fadeSeconds: from == Mood.Menu ? 2f : 3.5f); break;
             case Mood.Combat: Play(CombatTracks[_rng.Next(CombatTracks.Length)], loop: true, fadeSeconds: 1.2f); break;
             case Mood.Boss: Play(BossTracks[_rng.Next(BossTracks.Length)], loop: true, fadeSeconds: 1.5f); break;
+            case Mood.Chase: PlayChase(); break;
         }
+    }
+
+    /// <summary>
+    /// The ride wants the Chase music, as this peer shows it (a client: the follower, the server's flags and its chaser copy), and which
+    /// track (<see cref="_chaseWanted"/>, set while a cart rolls and kept through the hold). No allocation.
+    /// </summary>
+    private bool RideWanted(Main main)
+    {
+        if (RailController.Instance is not { } rc || !IsInstanceValid(rc) || !IsInstanceValid(rc.Cart)) return false;
+        var me = main.Party.Local;
+        var cartRolling = rc.State.Mode == CartMode.Rolling;
+        var seated = me != null && ReferenceEquals(me.Cart, rc.Cart);
+        var distance = me != null ? me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition) : float.PositiveInfinity;
+        MineCart? chaser = null;
+        var chaserRolling = false;
+        var chaserS = 0f;
+        if (rc.ChaseLive)
+        {
+            if (Net.NetSession.IsClient)
+            {
+                if (RailNet.Instance?.ClientChaser is { } cc) { chaser = cc.Cart; chaserRolling = cc.Follow.Mode == CartMode.Rolling; chaserS = cc.Follow.S; }
+            }
+            else if (rc.Chaser is { } c && rc.ChaserRun is { } run) { chaser = c; chaserRolling = run.State.Mode == CartMode.Rolling; chaserS = run.State.S; }
+        }
+        var inChaser = me != null && chaser != null && ReferenceEquals(me.Cart, chaser);
+        var wanted = RideMusic.Wanted(cartRolling, seated, distance, chaserRolling, inChaser, _clock, ref _rideSeen);
+        if (cartRolling && (seated || distance <= RideMusic.NearMetres)) _chaseWanted = TrackFor(RideMusic.Ride(rc.StopIndex));
+        else if (chaserRolling && inChaser) _chaseWanted = TrackFor(RideMusic.Ride(StopBehind(rc.StopS, chaserS)));
+        return wanted;
+    }
+
+    /// <summary>Rides 1-3 loop the chase; ride 4 (the kiln's hammers and pour) plays the forge piece on the hammers' beat.</summary>
+    private static string TrackFor(int ride) => ride == 4 ? PourTrack : ChaseTracks[0];
+
+    /// <summary>The last stop at or behind <paramref name="s"/> on the party line (a chaser's stop left).</summary>
+    private static int StopBehind(float[] stopS, float s)
+    {
+        var stop = 0;
+        for (var i = 1; i < stopS.Length; i++) if (stopS[i] <= s) stop = i;
+        return stop;
+    }
+
+    private void PlayChase()
+    {
+        _chaseStarted = _chaseWanted;
+        if (_chaseWanted == PourTrack) PlayPour();
+        else Play(_chaseWanted, loop: true, fadeSeconds: 1.2f);
+    }
+
+    /// <summary>The pour track from where its downbeat meets hammer 0's fall on the floor clock (every hammer falls a whole two beats apart).</summary>
+    private void PlayPour()
+    {
+        var stream = Load(PourTrack, loop: false);
+        if (stream == null || Main.Instance is not { } main) return;
+        var from = RideMusic.PhaseSeek(main.Builder.FloorSeconds, SetPieceRules.HammerFallSeconds(0), SetPieceRules.HammerCycleSeconds,
+            RideMusic.PourBeatOrigin, stream.GetLength());
+        Play(PourTrack, loop: false, fadeSeconds: 1.2f, from: (float)from);
     }
 
     /// <summary>An engaged enemy within earshot of a standing member: the party is in a fight (the idle razzing holds its tongue too).</summary>
@@ -165,7 +241,7 @@ public partial class MusicDirector : Node
 
     // ---- players -----------------------------------------------------------------------------
 
-    private void Play(string file, bool loop, float fadeSeconds)
+    private void Play(string file, bool loop, float fadeSeconds, float from = 0)
     {
         var stream = Load(file, loop);
         if (stream == null) return;
@@ -173,7 +249,7 @@ public partial class MusicDirector : Node
         _front = back == _a ? _b : _a;
         _front.Stream = stream;
         _front.VolumeDb = -80f;
-        _front.Play();
+        _front.Play(from);
         _frontTarget = BaseDb;
         _backTarget = -80f;
         _fadeSpeed = Math.Max(4f, 75f / Math.Max(fadeSeconds, 0.1f));
@@ -182,7 +258,9 @@ public partial class MusicDirector : Node
 
     private void OnFinished(AudioStreamPlayer p)
     {
-        if (p != _front || Mood != Mood.Explore) return;
+        if (p != _front) return;
+        if (Mood == Mood.Chase) { if (CurrentTrack == PourTrack) PlayPour(); return; } // locked again: the audio clock drifts from the floor's
+        if (Mood != Mood.Explore) return;
         _gapLeft = 4f + (float)_rng.NextDouble() * 6f; // a breath before the next piece
         CurrentTrack = "";
     }
