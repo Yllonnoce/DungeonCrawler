@@ -29,6 +29,8 @@ public partial class PartyController : Node3D
     private readonly Dictionary<string, AbilityProfile> _abilities = new();
     private readonly List<int> _effectVersions = new();
     private double _time;
+    /// <summary>Interact held down on a target that offers a held use (plan 7: leave the prisoners behind); keys and the VR grip share it.</summary>
+    private readonly InteractHold _hold = new();
     private float _lockpickCooldown;
     private float _trapScanTimer;
     private float _calmTimer;
@@ -243,6 +245,7 @@ public partial class PartyController : Node3D
         if (!AllowPossession || index < 0 || index >= Adventurers.Length || index == LocalIndex || !Members[index].IsAlive) return;
         if (Adventurers[index].Control is ControlKind.Remote or ControlKind.Parked) return;
         Local?.CancelHold();
+        _hold.Cancel(); // a hold started as one hero never fires as another
         LocalIndex = index;
         FocusedIndex = index;
         RefreshControl();
@@ -344,7 +347,8 @@ public partial class PartyController : Node3D
         }
         if (!MouseCaptured) return;
 
-        if (@event.IsActionPressed("interact")) local.TryInteract();
+        if (@event.IsActionPressed("interact")) Interact(true);
+        else if (@event.IsActionReleased("interact")) Interact(false);
         else if (@event.IsActionPressed("focus_next")) Possess(NextAlive(LocalIndex));
         else if (@event.IsActionPressed("ability_next")) CycleAbility(LocalIndex, +1);
         else if (@event.IsActionPressed("swap_rank")) CycleAllStances();
@@ -366,7 +370,22 @@ public partial class PartyController : Node3D
         if (pressed) local.BeginAttack(_time); else local.EndAttack(_time);
     }
 
-    public void VrUse() { if (PartyAlive) Local?.TryInteract(); }
+    /// <summary>The use grip squeezed or let go.</summary>
+    public void VrUse(bool pressed) { if (PartyAlive) Interact(pressed); }
+
+    /// <summary>
+    /// Interact (E or the VR grip) went down or came up. On a target that offers a held use the press waits: a tap uses it on the
+    /// release, a press held <see cref="InteractHold.HoldSeconds"/> fires the held use from <see cref="_Process"/>. Anything else is used at once.
+    /// </summary>
+    private void Interact(bool pressed)
+    {
+        if (Local is not { } local) return;
+        if (pressed)
+        {
+            if (_hold.Press(_time, local.LookingAt is IHoldInteractable { HoldOffered: true })) local.TryInteract();
+        }
+        else if (_hold.Release(_time)) local.TryInteract();
+    }
 
     public void VrNextAbility() { if (PartyAlive && Local != null) CycleAbility(LocalIndex, +1); }
 
@@ -424,6 +443,9 @@ public partial class PartyController : Node3D
         if (Adventurers.Length == 0) return;
         var dt = (float)delta;
         _time += delta;
+        // the held interact, before a client's return so its hold fires too
+        if (!PartyAlive || InputLocked || !MouseCaptured && Local?.VrRig == null) _hold.Cancel();
+        else if (_hold.Tick(_time)) Local?.TryHoldInteract();
         if (Net.NetSession.IsClient)
         {
             // vitals, effects and falls all come from the server; the effect timers only count down here for the portraits.

@@ -9,10 +9,11 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// The party's mine cart: an iron tub on four wheels with two rows of two seats and a rear bench. A dumb prop: its
 /// owner (the RailController, through a <see cref="CartRun"/>) poses it, books <see cref="Seats"/>, and answers the
-/// interact key through <see cref="PromptFor"/> and <see cref="OnUse"/>; it keeps who rides it in <see cref="Riders"/>.
+/// interact key through <see cref="PromptFor"/> and <see cref="OnUse"/> (and a held interact through <see cref="HoldFor"/> and
+/// <see cref="OnHold"/>); it keeps who rides it in <see cref="Riders"/>.
 /// Its origin sits on the track (the floor under the rails); forward is −Z.
 /// </summary>
-public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
+public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
 {
     /// <summary>The tub's outside bottom, above the track; the wheels hang below it.</summary>
     public const float TubBottom = 0.5f;
@@ -83,6 +84,10 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     public Func<Adventurer, string>? PromptFor { get; set; }
     /// <summary>A hero pressed interact on the cart. Set by the RailController.</summary>
     public Action<Adventurer>? OnUse { get; set; }
+    /// <summary>Whether the held interact is offered to a hero (plan 7: seated at a stop its locked cage holds). Set by the RailController.</summary>
+    public Func<Adventurer, bool>? HoldFor { get; set; }
+    /// <summary>A hero held interact on the cart (leaves the prisoners behind). Set by the RailController.</summary>
+    public Action<Adventurer>? OnHold { get; set; }
 
     /// <summary>Its sound (a child once built): fed by whoever runs it; a spare's is never fed and stays silent.</summary>
     public CartSound? Sound { get; private set; }
@@ -114,6 +119,11 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     public float TubDistance(Adventurer hero) => Mathf.Min(TubDistance(hero.GlobalPosition), TubDistance(hero.Camera.GlobalPosition));
 
     public void Interact(PartyController party, Adventurer actor) => OnUse?.Invoke(actor);
+
+    /// <summary>The held interact is offered to the hero this machine plays, since it has no actor (as <see cref="Prompt"/>).</summary>
+    public bool HoldOffered => Main.Instance?.Party?.Local is { } me && HoldFor?.Invoke(me) == true;
+
+    public void HoldInteract(PartyController party, Adventurer actor) => OnHold?.Invoke(actor);
 
     /// <summary>Where a rider in <paramref name="seat"/> sits, in world space: the origin on the tub floor under the seat, facing forward (−Z).</summary>
     public Transform3D SeatTransform(int seat)

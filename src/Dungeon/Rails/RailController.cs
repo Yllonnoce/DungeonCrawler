@@ -44,6 +44,47 @@ public partial class RailController : Node
     public string? HudText { get; private set; }
     public Boarding Boarding { get; } = new();
 
+    // ---- the cage hold (plan 7) ------------------------------------------------------------------
+
+    /// <summary>The stop's cage wagon is locked with living crew (<see cref="CageHoldRules.Holds"/>). Set by the crew controller; null holds nothing.</summary>
+    public Func<int, bool>? CageHolds { get; set; }
+    /// <summary>The stops whose prisoners a player left behind (held interact in the seat). Not saved: a load holds the cart again.</summary>
+    private readonly HashSet<int> _crewLeftAt = new();
+    /// <summary>The stops whose prisoners a player left behind (their crew count as lost).</summary>
+    internal IReadOnlyCollection<int> CrewLeftAt => _crewLeftAt;
+    /// <summary>The call of the first countdown the cage held back (kept by ??=): it starts with that call once the hold ends. Null when none waits.</summary>
+    private bool? _heldStartCall;
+
+    /// <summary>
+    /// The cart stands at a stop whose cage wagon is locked with living crew and nobody has left them behind: no countdown
+    /// (<see cref="CageHoldRules.Held"/>). It does not depend on the gate (the HUD shows a gate down first). A client reads the server's flag.
+    /// </summary>
+    public bool CageHeld => NetSession.IsClient ? (_netFlags & (byte)CartFlags.CageHeld) != 0
+        : CageHoldRules.Held(State.Mode, Halted, StopIndex, StopS.Length, _crewLeftAt.Contains(StopIndex), CageHolds?.Invoke(StopIndex) == true);
+
+    /// <summary><paramref name="hero"/> may leave the prisoners behind now (seated in the held cart, on their feet): the prompt and the held interact ask it.</summary>
+    private bool HoldFor(Adventurer hero) => CageHoldRules.MayLeaveBehind(hero.Cart == Cart, hero.Downed, CageHeld);
+
+    private void Hold(Adventurer actor)
+    {
+        LeaveCrew(actor);
+        Flush();
+    }
+
+    /// <summary>
+    /// A seated player held interact (server or solo; a remote player's through its hold:cart:0 intent): the stop's prisoners are left
+    /// behind, so the cage no longer holds the cart and the countdown held back starts (with its own call), or the gate's lift starts it.
+    /// </summary>
+    private void LeaveCrew(Adventurer actor)
+    {
+        if (NetSession.IsClient || !Current || !IsPlayer(actor) || !HoldFor(actor)) return;
+        _crewLeftAt.Add(StopIndex);
+        EventBus.Instance.Log($"{actor.State.Name} leaves the prisoners behind.");
+        GD.Print($"[rails] the prisoners at stop {StopIndex} are left behind ({actor.State.Name})");
+        if (!Boarding.Running && GateClear && !(Halted && LineBlocked) && PlayerAboard()) StartBoarding(_heldStartCall ?? true);
+        RefreshHud();
+    }
+
     // ---- the gates (StopGates) -------------------------------------------------------------------
 
     private StopGates _gates = null!;
@@ -169,7 +210,7 @@ public partial class RailController : Node
             stops.Clear();
         }
         StopS = stops.Select(p => p.S).ToArray();
-        Cart = new MineCart { PromptFor = PromptFor, OnUse = Use };
+        Cart = new MineCart { PromptFor = PromptFor, OnUse = Use, HoldFor = HoldFor, OnHold = Hold };
         var start = StopS.Length > 0 ? StopS[0] : 0f;
         Party = new CartRun(new TrackSampler(track), Cart, new CartState(start, 0f, CartMode.Held, CartRules.MaxPlating)) { Limit = start };
         Cart.RiderChanged += OnRiderChanged;
@@ -310,6 +351,8 @@ public partial class RailController : Node
         Party.Limit = StopS[StopIndex];
         ResetLine();
         Boarding.Cancel();
+        _crewLeftAt.Clear(); // the waiver is not saved: after a load the cage holds again
+        _heldStartCall = null;
         _hitAt.Clear();
         _warnedAt.Clear();
         foreach (var rider in Aboard()) // everyone still in a seat gets up where they sit (as a teleport does); ClearRiders sets them down
@@ -378,11 +421,14 @@ public partial class RailController : Node
     /// <summary>
     /// The countdown starts at the stop the cart is held at (a Boarding event says where). With <paramref name="call"/> (someone got
     /// in, or the stop's gate lifted: the party may be out fighting) a seated hero calls all aboard (<see cref="RailCalls"/>); a
-    /// countdown restarted under riders who never got out (an arrival, a cleared halt) goes uncalled.
+    /// countdown restarted under riders who never got out (an arrival, a cleared halt) goes uncalled. At a stop whose locked cage holds
+    /// the cart (<see cref="CageHeld"/>) nothing starts: a CageHeld event is raised and the first such start's call is kept for later.
     /// </summary>
     private void StartBoarding(bool call = false)
     {
         if (Halted && LineBlocked) return; // held at an obstacle on the line: nobody leaves until it is cleared
+        if (CageHeld) { _heldStartCall ??= call; Raise(new CartEvent(CartEventKind.CageHeld, Stop: StopIndex)); return; }
+        _heldStartCall = null;
         Boarding.Start();
         Raise(new CartEvent(CartEventKind.Boarding, Stop: Halted ? -1 : StopIndex));
         if (call && RideLines.BarkFor(CartEventKind.Boarding) is { } bark && Main.Instance?.Party is { } party) RailCalls.Say(party, Cart, bark, "All aboard!");
@@ -392,6 +438,7 @@ public partial class RailController : Node
     private string PromptFor(Adventurer hero)
     {
         if (hero.Seated && hero.Cart != Cart) return ""; // in another seat book
+        if (HoldFor(hero)) return CageHoldRules.SeatedPrompt; // a tap still gets out; a held press leaves the prisoners behind
         var seatedHere = hero.Cart == Cart;
         var inReach = seatedHere || RideInputRules.InBoardReach(Cart.TubDistance(hero)); // the server's intent check measures the same
         return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach);
@@ -715,7 +762,16 @@ public partial class RailController : Node
             if (!playerAboard) SetDownRiders(); // no player aboard: companions do not ride off on their own
             else if ((_hopTimer -= dt) <= 0f) { _hopTimer = HopEvery; HopInNearby(party); }
             CountHeroes(party, out var seated, out var living);
-            if (!playerAboard || seated == 0 || !GateClear || Halted && LineBlocked) { if (Boarding.Running) Boarding.Cancel(); } // the cart does not leave empty, with only the fallen, without a player, or into the obstacle it stopped at
+            // a countdown the cage held back starts once the hold ends with players sitting ready (the cage opened, or its last crew died)
+            if (_heldStartCall is { } held && playerAboard && seated > 0 && GateClear && !(Halted && LineBlocked) && !Boarding.Running && !CageHeld) StartBoarding(held);
+            if (!playerAboard || seated == 0 || !GateClear || Halted && LineBlocked || CageHeld) // the cart does not leave empty, with only the fallen, without a player, into the obstacle it stopped at, or from its stop's locked cage
+            {
+                if (Boarding.Running)
+                {
+                    if (CageHeld) _heldStartCall ??= false; // it restarts by itself once the hold ends
+                    Boarding.Cancel();
+                }
+            }
             else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
@@ -723,6 +779,7 @@ public partial class RailController : Node
                 SetCartLayer();
                 Party.Settle(); // it sets off from a standstill: nothing banked from the wait
                 Raise(new CartEvent(Halted ? CartEventKind.Resumed : CartEventKind.Departed, Stop: StopIndex)); // a halt left is not a departure: the ride stays armed
+                _heldStartCall = null;
                 Halted = false;
                 RefreshHud();
             }
@@ -1015,7 +1072,7 @@ public partial class RailController : Node
     {
         var left = NetSession.IsClient ? NetBoardingLeft() : Boarding.Running ? Mathf.Max(0f, Boarding.Left) : -1f;
         return new RailHudState(State.Mode, Hidden: !Cart.Visible, Halted, LineBlocked, GateClear, Boarding: left >= 0f, BoardingLeft: left,
-            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft);
+            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft, CageHeld: CageHeld);
     }
 
     /// <summary>

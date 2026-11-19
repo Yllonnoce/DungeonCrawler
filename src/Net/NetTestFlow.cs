@@ -713,7 +713,9 @@ public partial class NetTestFlow : Node
                     main.Party.ForcedMoveInput = null;
                     if (rc.GateAt(1) is { } downGate) GD.Print($"[net] ride: at stop 1 its gate is {(downGate.Up ? "up" : "down")} here and the winch offers \"{downGate.Winch?.Prompt}\"");
                     var prompt = rc.Cart.Prompt;
-                    if (prompt != "Get out" || NetRefResolver.RefOf(rc.Cart) is not { } cartRef) { Finish("[net]", false, $"ride: at stop 1 the cart's prompt here says \"{prompt}\" (want Get out)"); net.Disconnect("test finished"); return true; }
+                    // cage 1 is locked: the cage holds the cart (CartFlags.CageHeld) and the seat offers the hold; a tap still gets out
+                    if (prompt != Dungeon.Rails.CageHoldRules.SeatedPrompt || NetRefResolver.RefOf(rc.Cart) is not { } cartRef) { Finish("[net]", false, $"ride: at stop 1 the cart's prompt here says \"{prompt}\" (want {Dungeon.Rails.CageHoldRules.SeatedPrompt})"); net.Disconnect("test finished"); return true; }
+                    GD.Print($"[net] ride: at stop 1 the cart offers \"{prompt}\" here (cage 1 locked)");
                     net.Send(new InteractIntent(cartRef));
                     _ridePhase = 2;
                     GD.Print("[net] ride: at stop 1; asked to get out through the intent");
@@ -764,6 +766,7 @@ public partial class NetTestFlow : Node
         if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || main.Builder.FloorRoot is not { } root) return false;
         var wagon = crew.Wagons.FirstOrDefault(w => w.Stop == 1);
         if (wagon == null) return RideFail(net, "no cage wagon at stop 1 here");
+        if (_ridePhase >= 7) RideLeaveCrew(net, rc, me, "the rider"); // seated again from stop 1 on: stop 2's cage is left behind
         if (_ridePhase is >= 3 and <= 7 && _clock - _ridePhaseAt > 60) return RideFail(net, $"stuck at the props' phase {_ridePhase} (gate 1 up {rc.GateAt(1)?.Up}, keys {crew.OrcKeys}, cage open {wagon.Open}, wagon prompt \"{wagon.Prompt}\", seated {me.Seated})");
         switch (_ridePhase)
         {
@@ -836,6 +839,23 @@ public partial class NetTestFlow : Node
     }
 
     private int _rideSwitchHere = -1;
+
+    /// <summary>The stops whose prisoners this client left behind through the intent (once per stop).</summary>
+    private readonly HashSet<int> _rideLeftAt = new();
+
+    /// <summary>
+    /// Seated in the party's cart held by its stop's locked cage (the server's CartFlags.CageHeld) with the seat offering the hold: leave
+    /// the prisoners behind through the held intent (hold:cart:0), once per stop, so the countdown starts as soon as the hold shows (the
+    /// RIDE pass departs stops 2 and 3 with their cages locked, as before the cage hold).
+    /// </summary>
+    private void RideLeaveCrew(NetSession net, Dungeon.Rails.RailController rc, Party.Adventurer me, string who)
+    {
+        if (me.Cart != rc.Cart || !rc.CageHeld) return;
+        var prompt = rc.Cart.Prompt;
+        if (prompt != Dungeon.Rails.CageHoldRules.SeatedPrompt || !_rideLeftAt.Add(rc.StopIndex)) return;
+        net.Send(new InteractIntent(NetRefs.Hold(NetRefs.Cart)));
+        GD.Print($"[net] ride: left the prisoners at stop {rc.StopIndex} behind through the intent (the prompt read \"{prompt}\"); {who}");
+    }
 
     // crew, gates and set pieces (plan 5 task 7): the bleed label, the wagon coupled at the departure
     private bool _rideBleedOk, _rideTrainTold;
@@ -982,6 +1002,7 @@ public partial class NetTestFlow : Node
                 // we leave the game seated
                 if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || main.Party.Local is not { } me) return;
                 if (!me.Seated || me.Cart != rc.Cart) { Finish("[net]", false, $"ride: our hero is not in the cart at stop {rc.StopIndex} (seated {me.Seated})"); net.Disconnect("test finished"); return; }
+                RideLeaveCrew(net, rc, me, "the rider"); // stop 3's cage is left behind: the train leaves on ride 4 when its gate lifts
                 if (rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 3)
                 {
                     if (!_rideFourTold) { _rideFourTold = true; GD.Print($"[net] ride: the train leaves stop 3 on ride 4 with us aboard; pumping (stick forward)"); }
@@ -1164,6 +1185,7 @@ public partial class NetTestFlow : Node
             }
             case 62: // put beside the cart at stop 2: board through the intent
                 if (rc == null || me == null) return;
+                RideLeaveCrew(net, rc, me, "the joiner");
                 if (me.Seated && me.Cart == rc.Cart)
                 {
                     GD.Print($"[net] ride: the joiner boarded at stop 2 through the intent in seat {me.Seat}");
@@ -1175,6 +1197,7 @@ public partial class NetTestFlow : Node
                 return;
             case 63: // ride 3 seated; 2 s after it rolls, at speed, get out through the intent: thrown onto the line behind the cart
                 if (rc == null || me == null) return;
+                RideLeaveCrew(net, rc, me, "the joiner");
                 if (!me.Seated || me.Cart != rc.Cart) { Finish("[net]", false, $"ride: the joiner is not in the cart on ride 3 (stop {rc.StopIndex}, mode {rc.State.Mode})"); net.Disconnect("test finished"); return; }
                 var rolling3 = rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 2 && !rc.Halted;
                 if (rolling3 && _joinRolledAt < 0) _joinRolledAt = _clock;
@@ -1352,6 +1375,7 @@ public partial class NetTestFlow : Node
             }
             case 70: // put beside the spare's cart by the server: board it through the intent
                 if (rc == null || me == null) return;
+                RideLeaveCrew(net, rc, me, "the joiner");
                 if (me.Seated && me.Cart == rc.Cart)
                 {
                     GD.Print($"[net] ride: heap: the joiner boarded the spare's cart at stop {rc.StopIndex} through the intent in seat {me.Seat}");
@@ -1364,6 +1388,7 @@ public partial class NetTestFlow : Node
             case 71: // ride 3 again with its switch straight: the cart halts at the heap; our rendered S never passes the face nor steps back
             {
                 if (rc == null || me == null || rc.Follower is not { HasState: true } f) return;
+                RideLeaveCrew(net, rc, me, "the joiner");
                 if (f.Mode == Dungeon.Rails.CartMode.Rolling)
                 {
                     _heapSawRolling = true;

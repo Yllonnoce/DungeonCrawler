@@ -14,13 +14,25 @@ public static class CrewRules
     /// <summary>The dead Grisel's NPC id on the condemned branch: no crew member may take it.</summary>
     public const string GriselBodyId = "grisel_body";
 
-    /// <summary>Every cage open and every crew member Home or Lost. An empty crew means not set up yet.</summary>
+    /// <summary>No cage blocking (<paramref name="cagesClosed"/>: <see cref="CagesBlocking"/>) and every crew member Home or Lost. An empty crew means not set up yet.</summary>
     public static bool Completed(IReadOnlyList<CrewState> crew, int cagesClosed)
     {
         if (crew.Count == 0 || cagesClosed != 0) return false;
         foreach (var s in crew)
             if (s is CrewState.Caged or CrewState.Freed or CrewState.Downed) return false;
         return true;
+    }
+
+    /// <summary>A caged crew member's state: Lost once a player left their cage behind (plan 7), else still Caged.</summary>
+    public static CrewState JudgeCaged(bool leftBehind) => leftBehind ? CrewState.Lost : CrewState.Caged;
+
+    /// <summary>The cages that still block the win: neither open nor left behind (a left cage's crew count as lost).</summary>
+    public static int CagesBlocking(IReadOnlyList<(bool Open, bool LeftBehind)> cages)
+    {
+        var n = 0;
+        foreach (var (open, leftBehind) in cages)
+            if (!open && !leftBehind) n++;
+        return n;
     }
 
     public static string HudText(IReadOnlyList<CrewState> crew)

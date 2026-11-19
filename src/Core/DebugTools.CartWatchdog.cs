@@ -33,6 +33,7 @@ public partial class DebugTools
             if (e.IsAlive) e.Kill(); // no enemies: the stop mobs, ambushers and riders are culled as they appear
         var rc = RailController.Instance;
         if (rc == null) { if (_wdClock > 3f) Fail("no RailController on floor 12"); return; }
+        RideWaiveCages(main, rc, "watchdog");
 
         switch (_wdStep)
         {

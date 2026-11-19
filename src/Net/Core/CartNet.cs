@@ -37,6 +37,8 @@ public enum CartFlags : byte
     Derailed = 32,
     /// <summary>The party's cart: a left-behind player's chaser runs after the train (one at a time: no spare is offered meanwhile).</summary>
     ChaseLive = 64,
+    /// <summary>The party's cart stands at a stop whose cage wagon is locked with living crew, and nobody has chosen to leave them: no countdown.</summary>
+    CageHeld = 128,
 }
 
 /// <summary>

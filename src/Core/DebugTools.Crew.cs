@@ -15,7 +15,8 @@ namespace DungeonCrawler.Core;
 // when she was condemned, Grisel's own voice from the bench when she was forgiven), the wagon couples on at the departure,
 // a save and a load between stops 2 and 3 keep the train, one crew member let out at stop 2 bleeds out and is lost, and
 // the end of the line brings the rest home and opens the stairs. Then the floor is built again and the cart is wrecked
-// between stops 1 and 2: a spare takes over. Forgiven, Grisel says each of her ride1-ride3 calls exactly once and her cage
+// between stops 1 and 2: a spare takes over. On the way the cart is held at stop 1 by its locked cage (the cage hold, plan 7:
+// no countdown, "Cart — cage locked", the hold prompt) until the lead leaves the prisoners behind, who then count as lost. Forgiven, Grisel says each of her ride1-ride3 calls exactly once and her cage
 // call at least once, all through her own line (Npc.Said), never as narration; condemned, she says nothing. Prints [crew]
 // lines and [crew] RESULT.
 public partial class DebugTools
@@ -41,6 +42,8 @@ public partial class DebugTools
     /// name): the old channel. Forgiven, her escort's completion is told as narration under her name, as it always was.
     /// </summary>
     private string? _crewGriselNarrated;
+    /// <summary>Section 2 (the cage hold): "The cage here is still locked." heard since the rebuild.</summary>
+    private int _crewLockedHeard;
 
     /// <summary>Hear Grisel on the real path (Npc.Said) and on the narration channel, once.</summary>
     private void CrewListen()
@@ -57,6 +60,7 @@ public partial class DebugTools
         };
         Npc.Said += said;
         _staticUnhooks.Add(() => Npc.Said -= said);
+        EventBus.Instance.Message += text => { if (_crewSection2 && text == "The cage here is still locked.") _crewLockedHeard++; };
         EventBus.Instance.NarrationEx += (text, _, _, _) =>
         {
             if (_done || !_testCrew || _crewGriselNarrated != null || text == null) return;
@@ -437,6 +441,7 @@ public partial class DebugTools
         _crewRails = RailController.Instance;
         _crewStep = 0;
         _crewClock = 0f;
+        _crewLockedHeard = 0;
         Game.Instance.Floors.Remove(12); // a fresh floor, not the one just won
         GD.Print("[crew] 8 floor 12 is built again for the wreck");
         Game.Instance.JumpToFloor(12);
@@ -460,6 +465,52 @@ public partial class DebugTools
             }
             case 1:
             {
+                // the cage hold: the rebuilt floor rides into stop 1 with cage 1 locked (its guards culled, its gate up), and the cart waits
+                var lead = party.Local;
+                if (rc.State.Mode == CartMode.Held && rc.StopIndex == 1 && rc.GateUp(1) && lead != null && lead.Cart == rc.Cart)
+                {
+                    _crewStep++; // the hold's clock starts now
+                    _crewClock = 0f;
+                }
+                else if (_crewClock > 60f) fail($"the cart was not held at stop 1 with its gate up and the lead seated within 60 s (mode {rc.State.Mode}, stop {rc.StopIndex}, gate up {rc.GateUp(1)}, lead seated {lead?.Cart == rc.Cart})");
+                break;
+            }
+            case 2:
+            {
+                // still held a countdown and two seconds later: no countdown runs, the bar says the cage is locked, the seat offers the hold
+                if (rc.State.Mode != CartMode.Held || rc.Boarding.Running) { fail($"the cart is {rc.State.Mode} (boarding {rc.Boarding.Running}) {_crewClock:0.0} s into the hold at stop 1 with cage 1 locked"); return; }
+                if (_crewClock < Boarding.Countdown + 2f) break;
+                if (party.Local is not { } lead || lead.Cart != rc.Cart) { fail("the lead is not seated in the cart held at stop 1"); return; }
+                var hud = rc.HudText;
+                var prompt = rc.Cart.Prompt;
+                if (!rc.CageHeld) { fail("CageHeld is false at stop 1 with cage 1 locked"); return; }
+                if (hud != "Cart — cage locked") { fail($"the bar reads \"{hud}\", not \"Cart — cage locked\""); return; }
+                if (prompt != CageHoldRules.SeatedPrompt || !rc.Cart.HoldOffered) { fail($"the seat offers \"{prompt}\" (hold offered {rc.Cart.HoldOffered}), not \"{CageHoldRules.SeatedPrompt}\""); return; }
+                if (_crewLockedHeard != 1) { fail($"\"The cage here is still locked.\" was heard {_crewLockedHeard} times since the rebuild, not once"); return; }
+                rc.Cart.HoldInteract(party, lead);
+                GD.Print($"[crew] 8 held at stop 1 by its locked cage for {_crewClock:0} s (hud \"{hud}\", prompt \"{prompt}\"); the lead leaves the prisoners behind");
+                _crewStep++;
+                _crewClock = 0f;
+                break;
+            }
+            case 3:
+            {
+                if (rc.State.Mode != CartMode.Rolling) { if (_crewClock > 6f) fail($"the cart did not leave stop 1 within 6 s of leaving the prisoners (mode {rc.State.Mode}, boarding {rc.Boarding.Running}, CageHeld {rc.CageHeld})"); break; }
+                var ctrl = (CrewRescueController)ObjectiveController.Instance!;
+                var wagon = ctrl.Wagons.First(w => w.Stop == 1);
+                var crew = ctrl.Crew.Where(c => c.Ride == wagon).ToList();
+                if (wagon.Coupled || wagon.Open) { fail($"wagon 1 left with the train (coupled {wagon.Coupled}, open {wagon.Open})"); return; }
+                if (!rc.CrewLeftAt.Contains(1)) { fail("CrewLeftAt does not list stop 1"); return; }
+                if (crew.Count != CrewRules.PerWagon || crew.Any(c => ctrl.StateOf(c) != CrewState.Lost)) { fail($"wagon 1's crew are not two lost: [{string.Join(", ", crew.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}]"); return; }
+                if (!ctrl.HudText.Contains(", 2 lost")) { fail($"the crew line reads \"{ctrl.HudText}\", with no \", 2 lost\""); return; }
+                if (ctrl.Completed) { fail("the floor is complete with cages 2 and 3 still locked"); return; }
+                GD.Print($"[crew] 8 departed stop 1 without its prisoners: wagon 1 coupled={wagon.Coupled}, its crew Lost (hud \"{ctrl.HudText}\")");
+                _crewStep++;
+                _crewClock = 0f;
+                break;
+            }
+            case 4:
+            {
                 // through stop 1 (its guards culled, its gate up) and on: thin plating and a brute between stops 1 and 2
                 if (rc.State.Mode == CartMode.Rolling && rc.StopIndex == 1 && rc.State.S > rc.StopS[1] + 1f)
                 {
@@ -475,7 +526,7 @@ public partial class DebugTools
                 else if (_crewClock > 60f) fail($"the cart never left stop 1 (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})");
                 break;
             }
-            case 2:
+            case 5:
             {
                 if (rc.State.Mode == CartMode.Rolling) { if (_crewClock > 15f) fail($"the cart was not wrecked within 15 s (plating {rc.State.Plating:0}, S={rc.State.S:0.0})"); break; }
                 GD.Print($"[crew] 8 wrecked after {_crewClock:0.0} s: mode={rc.State.Mode} stop={rc.StopIndex} S={rc.State.S:0.0} (stop {rc.StopS[Math.Clamp(rc.StopIndex, 0, rc.StopS.Length - 1)]:0.0}) plating={rc.State.Plating:0} SparesUsed=[{string.Join(",", rc.SparesUsed)}] left={rc.SparesLeft} seated={party.Active.Count(a => a.Seated)}");
@@ -507,7 +558,7 @@ public partial class DebugTools
                 _crewClock = 0f;
                 break;
             }
-            case 3 when _crewClock >= 0.5f:
+            case 6 when _crewClock >= 0.5f:
             {
                 // half a second on: the bar has been refreshed (every 0.25 s) with the hero still within its range of the hidden wreck
                 var distance = party.Local is { } me ? me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition) : float.PositiveInfinity;

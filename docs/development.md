@@ -442,6 +442,7 @@ You possess one of the four characters at a time (the local body); the other thr
 | K | Skill tree (spend skill points). F switches character |
 | Tab or I | Inventory: drag to move or equip, double-click or right-click to equip, unequip, or drink. Drag to DROP to throw away. The party's gold shows at the top of the info panel |
 | E | Interact (pick up loot, use stairs, open doors and chests, disarm traps, push secret walls) |
+| E (hold 1 s, VR grip) | Seated at a stop whose cage is locked: leave the prisoners behind (a tap still gets out) |
 | M | Toggle full-floor map (corner minimap is always on) |
 | J | Journal: quests on this floor and the rest of the run |
 | 1-4 in a conversation | Pick that reply (Esc leaves) |
@@ -1167,10 +1168,30 @@ train is posed along the line behind the cart. Each coupled wagon slows the cart
 wagon). An open wagon offers "Let them out" only when it cannot ride: on its siding while the cart is not held at its
 stop (the cart is elsewhere, or already gone past), or anywhere once the cart is wrecked with no spare left. Its crew
 climb out and follow the party on foot, and crew on foot never board again (neither a wagon nor the bench). While the
-cart is held at the wagon's stop the choice is not offered, since the wagon couples on at the departure. A boarding that
-starts at a stop whose cage is still locked logs "The cage here is still locked." once for that stop. A follower whose
+cart is held at the wagon's stop the choice is not offered, since the wagon couples on at the departure. A follower whose
 lead rides the cart never regroups into the tub or onto the line: stuck, it holds where it is, and only when it is more
 than 30 m behind (`Npc.SeatedLeadCatchUp`) is it set down beside the cart, as a rider steps out at a stop.
+
+The cage hold (plan 7). The cart does not count down at a stop whose cage wagon is still locked with living crew
+(`RailController.CageHeld`, from `CageHoldRules.Held`: Held at an intermediate stop, not halted on the line, nobody has left
+that stop's prisoners, and the stop's cage holds). The crew controller answers `RailController.CageHolds` for each stop: a
+locked cage holds the cart while any of its crew lives (`CageHoldRules.Holds`). A downed crew member is living and still
+holds it; once all of them are dead the cage holds nothing. The HUD says "Cart — cage locked", but a gate still down is
+shown first ("Cart — gate down"); the hold does not depend on the gate. A countdown that would start there raises a
+`CartEventKind.CageHeld` event instead (not on the wire), and the log says "The cage here is still locked." once for that
+stop. A seated player who is on their feet is offered "Get out (hold to leave the prisoners behind)" (`CageHoldRules.SeatedPrompt`).
+A tap of E still gets out; holding E for 1 s (`InteractHold.HoldSeconds`), or the VR use grip, leaves the prisoners behind
+(`MineCart.HoldInteract`, `IHoldInteractable`). The log says "<name> leaves the prisoners behind." The countdown the cage
+held back then starts with its own call: the arrival's starts uncalled, a boarding's or a gate's lift calls all aboard.
+Left while the gate is still down, the gate's lift starts it as usual. A cage opened while the riders sit waiting (Grisel
+from the bench, a pick, the keys), or whose last crew die, ends the hold, and the countdown starts by itself. The hold
+applies in every mode: solo, and online through the server's state (see "Riding together"). Leaving the prisoners is
+not saved (`RailController.CrewLeftAt` is cleared by `Restore`): after a load the cage holds the cart again.
+
+A cage left behind. Its crew count as lost (`CrewRules.JudgeCaged`), and the cage no longer blocks the stairs
+(`CrewRules.CagesBlocking` counts only the cages neither open nor left behind). Opening it later on foot frees its crew
+as any cage does, and they follow on foot ("Let them out" on its siding). The save still lists only the dead as lost, so
+after a load the cage holds again and its crew are caged.
 
 The crew. Floor 12's six are Hob Tallow, Merrin Ash, Dace Wicker, Old Pell, Juno Brack and Selby Crane (wagon 1 holds Hob
 and Merrin, wagon 2 Dace and Old Pell, wagon 3 Juno and Selby). A plan with no `Crew` falls back to the floor's stock
@@ -1199,7 +1220,7 @@ The stairs. On a railed floor the sealed down stairs say "<villain> has sealed t
 
 The win. A crew member is home once they stand in the exit room (`Stops[^1].Room`) on foot, or sit in a coupled wagon while
 the cart is held at the end of the line. Home is kept unless they go down outside the exit room. The floor completes when
-every cage is open and every crew member is home or lost. The lost never block it. The floor's reward vault, if it has one, opens, the flag
+every cage is open or left behind and every crew member is home or lost. The lost never block it, and a left cage's crew are lost. The floor's reward vault, if it has one, opens, the flag
 `jailbreak_freed_all` is set, and the log says "The crew are home. The stairs grind open." If no stop had room for a
 wagon, or wagons stand but there is nobody to bring home and every cage is open, the trial is waived and the stairs open
 on the next tick.
@@ -1222,7 +1243,14 @@ accept event (`QuestAccepted`), so her dialogue's accept button is not covered. 
 rail cell. Each wagon must couple on as the cart leaves. Between stops 2 and 3 the run saves and loads, and the train, crew, `OrcKeys` and gates
 must come back. A crew member taken out of wagon 2 is downed and bleeds out (the clock is wound on through
 `Npc.DebugBleed`) and is lost. The end of the line must bring the other five home and unlock the stairs; forgiven, Grisel
-walks with the party to the stairs and `q_grisel_out` must complete. Then the floor is built again, and a cart on thin
+walks with the party to the stairs and `q_grisel_out` must complete. Then the floor is built again. The rebuilt floor's cart rides into stop 1 with cage 1 locked: it must be held there
+(`CageHeld`) a countdown and two seconds later with no countdown run, the bar "Cart — cage locked", the seat's prompt
+`CageHoldRules.SeatedPrompt` with the hold offered, and "The cage here is still locked." heard once. The lead then
+leaves the prisoners behind (`[crew] 8 held at stop 1 by its locked cage`). The cart must leave within 6 s with wagon 1
+uncoupled and still locked, `CrewLeftAt` listing stop 1, its two crew lost, the crew line saying ", 2 lost" and the floor
+not complete (`[crew] 8 departed stop 1 without its prisoners`). (The other solo ride flows, `--test-ride`,
+`--test-ride-edges`, `--test-chase` and `--test-cart-watchdog`, leave each held stop's prisoners the frame the hold shows,
+through `DebugTools.RideWaiveCages`, so their timings are as before.) Then a cart on thin
 plating hits a cinder brute between stops 1 and 2. One spare must take over, holding the cart at a stop. The run ends
 with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
 as it appears. A run with no RESULT line 10 s before its quit timeout fails with "timed out at step N" and exit code 1.
@@ -1570,7 +1598,7 @@ At 60 Hz each fires every n ticks as the old `tick % n` did, counted from the ca
 - S, V, mode and Limit (the integrator's StopAt);
 - the integrator's input: pumpers, brake, crew wagons, commanded speed;
 - plating and stop;
-- flags: Halted 1, Wrecked 2, Hidden 4, LineBlocked 8, GateClear 16, Derailed 32, ChaseLive 64;
+- flags: Halted 1, Wrecked 2, Hidden 4, LineBlocked 8, GateClear 16, Derailed 32, ChaseLive 64, CageHeld 128 (plan 7: the cage hold, the byte's last free bit);
 - the server's time of the state.
 
 The party's cart adds:
@@ -1675,6 +1703,13 @@ The snapshot's `PlayerPoseState` carries both, and NPCs carry `NpcState` bit 128
 - A player who boards brings their own companions within 25 m (online, the bots whose `BotOwner` is that player) and the bench.
 - A companion near a held cart hops in only when its own player is seated in it.
 - `PlayerAboard` counts every seated, awake, unparked player's hero (LocalHuman or Remote).
+
+**The cage hold (plan 7).** The server decides the hold; a client reads it from `CartFlags.CageHeld` (128), so its HUD and
+its seated prompt ("Get out (hold to leave the prisoners behind)") match the server's. A client's held interact (E held 1 s,
+or the VR grip) sends `InteractIntent("hold:cart:0")`: `NetRefs.HoldKind` ("hold") wraps the ref (`NetRefs.Hold`). The server
+resolves the inner ref to an `IHoldInteractable`, checks the reach as for the cart (`PropPromptRules.InteractReach` to the
+tub), and calls `HoldInteract`. A tap still sends the plain `InteractIntent("cart:0")`. The protocol is unchanged (17,
+`MessageKindCount` 114): the hold rides on a flag bit and a ref kind.
 
 **Getting out.**
 - A downed rider cannot get out (`RideInputRules.MayGetOut`): a "Get out" intent from one is refused.
@@ -1884,10 +1919,10 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 
 **The script, in order:**
 1. **Floor 12.** The party goes to floor 12. The server throws ride 4's spur lever, and the client must show it. The client's set pieces stand and its props, rail part included, hash as the server's.
-2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping), brakes for 0.6 s (the server's V drops at least 1 m/s), and gets out at stop 1, within 0.5 m of the server's landing within 0.5 s.
+2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping), brakes for 0.6 s (the server's V drops at least 1 m/s), and gets out at stop 1, within 0.5 m of the server's landing within 0.5 s. Cage 1 is locked there, so the client's seat must offer "Get out (hold to leave the prisoners behind)" (the server's `CartFlags.CageHeld`); the client still gets out with the plain tap.
 3. **Stop 1's props.** The holders die by a hook (`DebugKillHolders`), and the gate rises on the client. The client takes the keys, opens cage 1, and revives a crewman the server downed there, each through its intent. The bleed label counts down on the client.
 4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
-5. **Ride 3.** The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat, and the cart crosses on both sides. Ride 3's buckets pour on the server's schedule.
+5. **Ride 3.** Stops 2 and 3 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat, and the cart crosses on both sides. Ride 3's buckets pour on the server's schedule.
 6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
 7. **Ride 4 and the chase.** At stop 3 the joiner, on foot beside the spare, is offered nothing while the train is held there. The train leaves on ride 4 with the client pumping. The joiner takes `spare:3`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`).
 8. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.

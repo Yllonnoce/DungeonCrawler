@@ -34,6 +34,8 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private readonly Dictionary<Npc, CrewState> _state = new();
     private readonly HashSet<string> _home = new();
     private readonly List<CrewState> _states = new();
+    /// <summary>Each wagon's (open, left behind) for the win rule, reused every tick.</summary>
+    private readonly List<(bool Open, bool LeftBehind)> _cages = new();
     private RailController? _rails;
     private DungeonBuilder? _builder;
     private Node3D? _root;
@@ -93,7 +95,11 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     public override void _ExitTree()
     {
-        if (_rails != null && IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
+        if (_rails != null && IsInstanceValid(_rails))
+        {
+            _rails.CartEvents -= OnCartEvent;
+            if (Equals(_rails.CageHolds, (Func<int, bool>)HoldsCart)) _rails.CageHolds = null; // still ours (a delegate equals another on the same target and method)
+        }
         base._ExitTree();
     }
 
@@ -115,6 +121,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             return;
         }
         _rails.CartEvents += OnCartEvent;
+        _rails.CageHolds = HoldsCart;
         _exitRoom = Layout.Rooms[rail.Stops[^1].Room];
         if (root.GetNodeOrNull<Stairs>("DownStairs") is { } stairs) stairs.LockReason = ObjectiveText.CrewLockReason(Game.Instance?.Adventure?.Campaign?.Antagonist?.Name);
 
@@ -304,7 +311,36 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (Completed) return;
         if (_wagons.Count == 0 || (_crew.Count == 0 && ClosedCages == 0)) { Complete(); return; } // no cage could stand anywhere (Build warned), or nobody to bring home: waived
         Evaluate();
-        if (CrewRules.Completed(States(), ClosedCages)) Win();
+        if (CrewRules.Completed(States(), CrewRules.CagesBlocking(Cages()))) Win();
+    }
+
+    /// <summary>Each wagon's (open, left behind), into the reused list.</summary>
+    private List<(bool Open, bool LeftBehind)> Cages()
+    {
+        _cages.Clear();
+        foreach (var w in _wagons) _cages.Add((w.Open, LeftBehind(w)));
+        return _cages;
+    }
+
+    /// <summary>A player left this wagon's prisoners behind (plan 7): its crew count as lost and it no longer blocks the stairs. Not saved.</summary>
+    private bool LeftBehind(CageWagon w) => _rails != null && IsInstanceValid(_rails) && _rails.CrewLeftAt.Contains(w.Stop);
+
+    /// <summary>
+    /// The rail controller's <see cref="RailController.CageHolds"/>: the stop's cage wagon is locked with living crew (a downed crew
+    /// member is living and still holds the cart; the dead do not). No allocation.
+    /// </summary>
+    private bool HoldsCart(int stop)
+    {
+        foreach (var wagon in _wagons)
+        {
+            if (wagon.Stop != stop) continue;
+            var living = 0;
+            if (!wagon.Open)
+                foreach (var c in _crew)
+                    if (WagonOf(c) == wagon && IsInstanceValid(c) && !c.Dead) living++;
+            return CageHoldRules.Holds(wagon.Open, living);
+        }
+        return false;
     }
 
     /// <summary>Where each crew member stands now: caged, freed, down, home (and staying home) or lost.</summary>
@@ -325,7 +361,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private CrewState Judge(Npc npc, bool atEnd)
     {
         if (!IsInstanceValid(npc) || npc.Dead) { _home.Remove(npc.Id); return CrewState.Lost; }
-        if (WagonOf(npc) is { Open: false }) return CrewState.Caged;
+        if (WagonOf(npc) is { Open: false } w) return CrewRules.JudgeCaged(LeftBehind(w)); // a cage left behind: its crew are lost
         var inTrain = npc.Ride is CageWagon { Coupled: true };
         var inExit = (inTrain && atEnd) || (!npc.Seated && InExitRoom(npc));
         if (_home.Contains(npc.Id))
@@ -503,7 +539,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 if (wagon.Coupled && wagon.Open && AnyAboard(wagon)) LetOut(wagon);
             return;
         }
-        if (e.Kind == CartEventKind.Boarding) { WarnLocked(e.Stop); return; }
+        if (e.Kind is CartEventKind.Boarding or CartEventKind.CageHeld) { WarnLocked(e.Stop); return; }
         if (e.Kind != CartEventKind.Departed) return;
         foreach (var wagon in _wagons)
         {
@@ -547,7 +583,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// <summary>Stops whose locked cage has been pointed out: once per stop.</summary>
     private readonly HashSet<int> _warnedLocked = new();
 
-    /// <summary>The boarding starts at a stop whose cage is still locked: say so, once.</summary>
+    /// <summary>The boarding starts (or the cage holds the cart) at a stop whose cage is still locked: say so, once.</summary>
     private void WarnLocked(int stop)
     {
         if (!_wagons.Any(w => w.Stop == stop && !w.Open) || !_warnedLocked.Add(stop)) return;

@@ -1233,6 +1233,18 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         target.Interact(Party, this);
     }
 
+    /// <summary>Interact held down for <see cref="InteractHold.HoldSeconds"/> on what this body looks at, when that offers a held use (plan 7).</summary>
+    public void TryHoldInteract()
+    {
+        if (Downed || LookingAt is not IHoldInteractable { HoldOffered: true } target) return;
+        if (Net.NetSession.IsClient)
+        {
+            if (Net.NetRefResolver.RefOf(target) is { } netRef) Net.NetSession.Instance.Send(new Net.InteractIntent(Net.NetRefs.Hold(netRef)));
+            return;
+        }
+        target.HoldInteract(Party, this);
+    }
+
     /// <summary>Use the active ability. Heavy/perfect only matter for melee weapon swings.</summary>
     public void Attack(bool heavy = false, bool perfect = false)
     {

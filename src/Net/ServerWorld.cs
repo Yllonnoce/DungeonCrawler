@@ -523,6 +523,21 @@ public partial class ServerWorld : Node
             case InteractIntent i:
             {
                 if (main.Builder.FloorRoot is not { } root) break;
+                // a held interact (plan 7: leave the prisoners behind) on the wrapped ref, in reach as a plain use is
+                if (NetRefs.TryParse(i.Ref, out var holdKind, out var inner) && holdKind == NetRefs.HoldKind)
+                {
+                    if (NetRefResolver.Resolve(root, inner) is not { } held || held is not IHoldInteractable holdTarget)
+                    {
+                        if (NetSession.Instance.TestServer) GD.Print($"[net-server] hold {inner} from {slot.Name}: not found");
+                        break;
+                    }
+                    var holdDist = held is Dungeon.Rails.MineCart heldTub ? heldTub.TubDistance(body)
+                        : Math.Min(held.GlobalPosition.DistanceTo(body.GlobalPosition), held.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
+                    if (NetSession.Instance.TestServer) GD.Print($"[net-server] hold {inner} from {slot.Name}: {holdDist:0.0} m");
+                    if (holdDist > Dungeon.Rails.PropPromptRules.InteractReach) break;
+                    holdTarget.HoldInteract(party, body);
+                    break;
+                }
                 var resolved = NetRefResolver.Resolve(root, i.Ref);
                 if (resolved is not { } node || node is not IInteractable target)
                 {

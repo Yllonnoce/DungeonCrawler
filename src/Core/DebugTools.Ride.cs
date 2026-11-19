@@ -36,6 +36,19 @@ public partial class DebugTools
 
     private static double RideNow => Time.GetTicksMsec() / 1000.0;
 
+    /// <summary>
+    /// The solo ride flows (--test-ride, --test-ride-edges, --test-chase, --test-cart-watchdog) depart stops with the cage still locked:
+    /// every frame, once the cage holds the cart with the local hero seated in it, the hero leaves the prisoners behind (the held
+    /// interact), so the countdown starts as the arrival used to start it, with the same call. --test-crew checks the hold itself.
+    /// </summary>
+    internal static void RideWaiveCages(Main main, RailController rc, string tag)
+    {
+        if (!rc.CageHeld || main.Party?.Local is not { } me || me.Cart != rc.Cart) return;
+        var stop = rc.StopIndex;
+        rc.Cart.HoldInteract(main.Party, me);
+        if (!rc.CageHeld) GD.Print($"[{tag}] leaves the prisoners at stop {stop} behind (the cage hold is --test-crew's to check)");
+    }
+
     // ---- the ride's sound (plan 6 task 5): what played where, for --test-ride and --test-crew --------------------------------------
 
     private bool _soundListening;
@@ -142,6 +155,7 @@ public partial class DebugTools
         var b = main.Builder;
         var party = main.Party;
         var rc = RailController.Instance;
+        if (rc != null) RideWaiveCages(main, rc, "ride");
         // the test owns the only enemies on the floor (as --clear-enemies): the stop mobs, ambushers and portals are culled as they appear
         if (_rideStep >= 1)
             foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())

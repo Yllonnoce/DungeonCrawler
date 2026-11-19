@@ -150,6 +150,12 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: revived .* through the intent" "$TMP/client.log" || ! grep -q "\[net-server\] ride: .* is up again" "$TMP/server.log"; then echo "NET TEST: FAIL (the downed crewman was not revived through the client's intent)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: the cart departs stop 1 with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart never left stop 1 for real with the client aboard)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: the cart departs stop 2 with 2 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart never left stop 2 for real with both clients aboard)"; exit 1; fi
+  # the cage hold (plan 7): at stop 1 (cage 1 locked) the seat offers the hold and a tap still gets out; stops 2 and 3 are left with
+  # their cages locked through the held intent (hold:cart:0), stop 3's by the first client
+  if ! grep -q "\[net\] ride: at stop 1 the cart offers \"Get out (hold to leave the prisoners behind)\" here (cage 1 locked)" "$TMP/client.log"; then echo "NET TEST: FAIL (at stop 1 the client's seat did not offer the hold with cage 1 locked)"; exit 1; fi
+  if ! grep -hq "\[net\] ride: left the prisoners at stop 2 behind through the intent" "$TMP/client.log" "$TMP/joiner.log"; then echo "NET TEST: FAIL (no client left stop 2's prisoners behind through the held intent)"; exit 1; fi
+  if ! grep -q "\[rails\] the prisoners at stop 2 are left behind (" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never left stop 2's prisoners behind)"; exit 1; fi
+  if ! grep -q "\[rails\] the prisoners at stop 3 are left behind (Rider)" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never left stop 3's prisoners behind for the first client)"; exit 1; fi
   if ! grep -q "\[net\] ride: ride 3's lever offers \"Throw the switch\" .* thrown through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never threw ride 3's switch from the seat)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: the cart takes ride 3's switch .* thrown through the intent" "$TMP/server.log" || ! grep -q "\[net\] ride: the cart crosses here (CrossOut set" "$TMP/client.log"; then echo "NET TEST: FAIL (ride 3's switch thrown by the client did not send the cart across on both)"; exit 1; fi
   # crew, gates and set pieces (task 7): the opened wagon couples here within 0.5 s of stop 1's departure (the cart's Train), the downed

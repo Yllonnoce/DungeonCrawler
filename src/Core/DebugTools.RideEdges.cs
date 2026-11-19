@@ -38,6 +38,7 @@ public partial class DebugTools
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
             if (e.IsAlive) e.Kill();
         if (rc == null) { if (_edgeClock > 3f) Fail("no RailController on floor 12"); return; }
+        RideWaiveCages(main, rc, "ride-edges");
 
         switch (_edgeStep)
         {

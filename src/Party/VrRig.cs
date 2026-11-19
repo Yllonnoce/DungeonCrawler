@@ -249,7 +249,7 @@ public partial class VrRig : XROrigin3D
         if (live)
         {
             if (attack != _attackHeld) party.VrAttack(attack);
-            if (use && !_useHeld) party.VrUse();
+            if (use != _useHeld) party.VrUse(use);
             if (next && !_nextHeld) party.VrNextAbility();
 
             // seated too: the room turns about the head, and FollowSeat then takes the seat yaw from the head (RideAlong adds only the bend)

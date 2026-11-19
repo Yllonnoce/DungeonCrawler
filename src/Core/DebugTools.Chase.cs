@@ -138,6 +138,7 @@ public partial class DebugTools
         var ctrl = ObjectiveController.Instance as CrewRescueController;
         if (rc == null || enc == null || ctrl == null) { if (_chClock > 3f) Fail($"floor 12 lacks {(rc == null ? "a RailController " : "")}{(enc == null ? "a RailEncounterController " : "")}{(ctrl == null ? "a CrewRescueController" : "")}"); return; }
         if (_chSection2 && rc == _chRails) return; // the floor is being built again: wait for the new one
+        RideWaiveCages(main, rc, "chase");
         ChaseListen(rc, enc);
         ChaseMusicPoll();
         if (_chFail != null) { Fail(_chFail); return; }

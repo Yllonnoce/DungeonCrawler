@@ -45,6 +45,10 @@ public static class NetRefs
         Net.CartKind.Chaser => spareStop >= 0 ? Spare(spareStop) : null,
         _ => null,
     };
+    /// <summary>A held interact (the leave-the-prisoners-behind press) on the wrapped ref.</summary>
+    public const string HoldKind = "hold";
+    /// <summary>A held interact (the leave-the-prisoners-behind press) on the wrapped ref, e.g. "hold:cart:0".</summary>
+    public static string Hold(string inner) => $"{HoldKind}:{inner}";
     public static string Npc(string id) => $"{NpcKind}:{id}";
     public static string Loot(Guid id) => $"{LootKind}:{id:N}";
 

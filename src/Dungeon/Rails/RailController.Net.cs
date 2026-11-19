@@ -37,6 +37,7 @@ public partial class RailController : ISlopeSource
         if (LineBlocked) f |= CartFlags.LineBlocked;
         if (GateClear) f |= CartFlags.GateClear;
         if (ChaseLive) f |= CartFlags.ChaseLive;
+        if (CageHeld) f |= CartFlags.CageHeld;
         return (byte)f;
     }
 
