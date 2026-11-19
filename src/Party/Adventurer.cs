@@ -118,6 +118,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     private ShapeCast3D _meleeCast = null!;
     private RayCast3D _interactRay = null!;
+    /// <summary>The seated window offered a lever last view tick, and when (this machine's clock, seconds) the last one closed: E does nothing for a second after (−∞: never).</summary>
+    private bool _inSwitchWindow;
+    private double _switchWindowClosedAt = double.NegativeInfinity;
     private MeshInstance3D _body = null!;
     private MeshInstance3D _head = null!;
     private Label3D _label = null!;
@@ -529,15 +532,37 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         EventBus.Instance.RaiseMemberChanged(Index);
     }
 
-    /// <summary>What the body you play is looking at (the interact prompt), and a crushed client body's spectating.</summary>
+    /// <summary>
+    /// What the body you play is looking at (the interact prompt), and a crushed client body's spectating. Seated in the party's rolling
+    /// cart as a lever of the armed ride comes up, it is that lever whatever the aim (the seated window: E throws it and never gets out),
+    /// and for <see cref="SeatedSwitchRules.GraceSeconds"/> after the window closes it is nothing (<see cref="SeatedSwitchRules.InGrace"/>).
+    /// </summary>
     private void TickView()
     {
         if (IsLocal && !Downed)
         {
             _fpWeapon.SetGuard(Guarding);
-            _interactRay.ForceRaycastUpdate();
-            LookingAt = _interactRay.IsColliding() ? _interactRay.GetCollider() as IInteractable : null;
-            if (LookingAt is { Prompt: "" }) LookingAt = null;
+            _interactRay.ForceRaycastUpdate(); // the VR beam's length reads the ray, window or not
+            var lever = Seated && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? enc.SeatedLeverFor(this) : null;
+            if (lever != null)
+            {
+                LookingAt = lever;
+                _inSwitchWindow = true;
+            }
+            else
+            {
+                if (_inSwitchWindow)
+                {
+                    _switchWindowClosedAt = Time.GetTicksMsec() / 1000.0;
+                    _inSwitchWindow = false;
+                }
+                if (SeatedSwitchRules.InGrace(Seated, Time.GetTicksMsec() / 1000.0, _switchWindowClosedAt)) LookingAt = null;
+                else
+                {
+                    LookingAt = _interactRay.IsColliding() ? _interactRay.GetCollider() as IInteractable : null;
+                    if (LookingAt is { Prompt: "" }) LookingAt = null;
+                }
+            }
         }
         else LookingAt = null;
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();

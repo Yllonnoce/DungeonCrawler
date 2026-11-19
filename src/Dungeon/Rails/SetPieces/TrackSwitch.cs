@@ -28,6 +28,14 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
 
     /// <summary>The party line's S at the points (where the cart takes the switch), not the lever's own S.</summary>
     public float PointsS { get; init; }
+    /// <summary>The party line's S at the lever, set by its builder on every peer (the seated window opens from it: <see cref="SeatedSwitchRules"/>).</summary>
+    public float LeverS { get; init; }
+    /// <summary>What the seated window reads of this lever (<see cref="SeatedSwitchRules.InWindow"/>).</summary>
+    public SeatedLever SeatedView => new(LeverS, PointsS, Fixed, Taken);
+    /// <summary>Server and solo: when it was last toggled by a use or a hit (<c>NetSession.Instance.Now</c>; never: −∞), and by whom (a hero's or attacker's name), for the seated set-back guard (<see cref="SeatedSwitchRules.RefuseSetBack"/>).</summary>
+    public double LastToggledAt { get; private set; } = double.NegativeInfinity;
+    /// <inheritdoc cref="LastToggledAt"/>
+    public string? LastToggledBy { get; private set; }
     /// <summary>Always thrown and not to be touched: the return switch brings the cart home before the ride ends.</summary>
     public bool Fixed { get; init; }
     public bool Thrown { get; private set; }
@@ -113,6 +121,8 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     {
         if (NetSession.IsClient || Fixed || Taken) return false;
         SetThrown(!Thrown);
+        LastToggledAt = NetSession.Instance?.Now ?? 0;
+        LastToggledBy = who;
         RideAudio.At("switch_clunk", SoundPoint); // a client's comes from its "thrown" or "straight" (RideAudio.OnProp), at the same point
         EventBus.Instance.Log(Thrown ? $"{who} throws the switch." : $"{who} sets the switch back.");
         Tell(Thrown ? "thrown" : "straight");
@@ -125,6 +135,8 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
         var changed = _taken || (Thrown && !Fixed);
         _taken = false;
         if (!Fixed) SetThrown(false);
+        LastToggledAt = double.NegativeInfinity;
+        LastToggledBy = null;
         if (changed) Tell("reset");
     }
 

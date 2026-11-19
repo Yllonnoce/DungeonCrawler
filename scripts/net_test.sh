@@ -11,7 +11,8 @@
 #                                     holders die by the test's hand and its gate rises on the client; the client takes the
 #                                     orc's keys, opens cage 1 and revives a crewman the server downed in it, each through its
 #                                     intent; it boards again, rides on (every departure a real one) and throws ride 3's switch
-#                                     from the seat, and the cart crosses on both; the client's carts must keep within 1.5 m (2 m
+#                                     from the seat through the seated window (beyond plain reach, no aim; the joiner's quick
+#                                     set-back is refused), and the cart crosses on both; the client's carts must keep within 1.5 m (2 m
 #                                     for ride 3's slag cart) of the server's on a shared server-time grid; the crew sit in their
 #                                     wagons on the client as on the server; at stop 3 the client leaves the game seated, and the
 #                                     server unseats it quietly beside the lane with its parked pose there; the crew, the gates and the
@@ -157,7 +158,10 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -hq "\[net\] ride: left the prisoners at stop 2 behind through the intent" "$TMP/client.log" "$TMP/joiner.log"; then echo "NET TEST: FAIL (no client left stop 2's prisoners behind through the held intent)"; exit 1; fi
   if ! grep -q "\[rails\] the prisoners at stop 2 are left behind (" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never left stop 2's prisoners behind)"; exit 1; fi
   if ! grep -q "\[rails\] the prisoners at stop 3 are left behind (Rider)" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never left stop 3's prisoners behind for the first client)"; exit 1; fi
-  if ! grep -q "\[net\] ride: ride 3's lever offers \"Throw the switch\" .* thrown through the intent" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never threw ride 3's switch from the seat)"; exit 1; fi
+  if ! grep -q "\[net\] ride: ride 3's lever offers \"Throw the switch\" in the seated window .* thrown through the intent from the seat" "$TMP/client.log"; then echo "NET TEST: FAIL (the client never threw ride 3's switch from the seat)"; exit 1; fi
+  if ! grep -q "\[net-server\] interact switch:[0-9]* from .* seated window yes" "$TMP/server.log"; then echo "NET TEST: FAIL (the server did not accept ride 3's switch through the seated window)"; exit 1; fi
+  if ! grep -q "\[net\] ride: the joiner presses \"Set the switch back\" from the seat" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never pressed set-back from the seat)"; exit 1; fi
+  if ! grep -q "\[net-server\] interact switch:[0-9]* from .*: seated window: set back .* ignored" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner's quick set-back was not refused)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: the cart takes ride 3's switch .* thrown through the intent" "$TMP/server.log" || ! grep -q "\[net\] ride: the cart crosses here (CrossOut set" "$TMP/client.log"; then echo "NET TEST: FAIL (ride 3's switch thrown by the client did not send the cart across on both)"; exit 1; fi
   # crew, gates and set pieces (task 7): the opened wagon couples here within 0.5 s of stop 1's departure (the cart's Train), the downed
   # crewman's label counts down here from the server's objective state, and the beam ducks our seated camera as our own cart's front passes

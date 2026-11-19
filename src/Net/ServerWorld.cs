@@ -556,8 +556,21 @@ public partial class ServerWorld : Node
                 // a cart is measured to its tub (2.2 m long), as its prompt measures it (RideInputRules.BoardReach): its end is in reach, not only its middle
                 var dist = node is Dungeon.Rails.MineCart tub ? tub.TubDistance(body)
                     : Math.Min(node.GlobalPosition.DistanceTo(body.GlobalPosition), node.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
-                if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: {dist:0.0} m (reach {reach}) body={body.GlobalPosition:0.0} node={node.GlobalPosition:0.0}");
-                if (dist > reach) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
+                // a lever in the sender's seated window (seated in the party's rolling cart, the lever coming up on the armed ride) is taken from
+                // any distance, as their screen offered it (SeatedSwitchRules); its taking at the points ends that. Another rider's set-back right
+                // after a toggle is refused, so two riders cued by the same call do not undo each other into the heap
+                var lever = node as Dungeon.Rails.TrackSwitch;
+                var window = lever != null && Dungeon.Rails.RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.InSeatedWindow(body, lever);
+                if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: {dist:0.0} m (reach {reach}) body={body.GlobalPosition:0.0} node={node.GlobalPosition:0.0}{(lever != null ? $" seated window {(window ? "yes" : "no")}" : "")}");
+                if (dist > reach)
+                {
+                    if (!window) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
+                    if (Dungeon.Rails.SeatedSwitchRules.RefuseSetBack(lever!.Thrown, NetSession.Instance.Now, lever.LastToggledAt, lever.LastToggledBy, body.State.Name))
+                    {
+                        GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: seated window: set back {NetSession.Instance.Now - lever.LastToggledAt:0.00} s after {lever.LastToggledBy} threw it, ignored");
+                        break;
+                    }
+                }
                 // recovery: the altar is paid and its card still waits for a pick, but this player's screen lost it: hand it back
                 if (node is Dungeon.Props.Shrine && FortuneDirector.Instance?.PendingShrine is { } pendingCard) { SendTo(slot.PeerId, pendingCard); Trace.Add("shrine-resent"); break; }
                 // the bag filled here (a bot's pickup) before this player's copy showed it: tell them, not the whole party, and

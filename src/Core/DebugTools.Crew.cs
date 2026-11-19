@@ -118,9 +118,25 @@ public partial class DebugTools
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
             if (e.IsAlive && e != _crewBrute && (_crewSection2 || !HoldsAStop(main, layout, e))) e.Kill();
         if (rc.State.Mode == CartMode.Rolling) Pin(_crewBrute, _crewBruteAt);
-        // ride 3's heap blocks the party lane: the test throws the switch_out lever as the ride arms, so the cart goes round on the enemy lane
-        if (rc.State.Mode == CartMode.Rolling && root.GetNodeOrNull<RailEncounterController>("RailEncounterController") is { ArmedRide: 3 } enc && enc.DebugThrowSwitches(3) > 0)
-            GD.Print($"[crew] ride 3 armed at S={rc.State.S:0.0}: the switch_out lever is thrown (the ore heap blocks the party lane)");
+        // ride 3's heap blocks the party lane: the seated lead throws the switch_out lever from the seat as the seated window offers it
+        // (no aim, beyond the look ray's reach, through the dispatch E uses), so the cart goes round on the enemy lane
+        if (root.GetNodeOrNull<RailEncounterController>("RailEncounterController") is { ArmedRide: 3 } enc && enc.SetPieceNode("r3_switch_out") is TrackSwitch r3)
+        {
+            if (r3 is { Taken: true, Thrown: false }) { Fail("ride 3's switch_out lever was never offered to the seated lead before its points"); return; }
+            if (rc.State.Mode == CartMode.Rolling && r3 is { Thrown: false, Taken: false } && party.Local is { } me && me.Cart == rc.Cart && party.LookingAt == r3)
+            {
+                var dist = me.GlobalPosition.DistanceTo(r3.GlobalPosition);
+                var ahead = r3.LeverS - rc.Party.FrontS;
+                var prompt = r3.Prompt;
+                party.VrUse(true);
+                party.VrUse(false);
+                GD.Print($"[crew] ride 3: the seated lead throws the switch_out lever from the seat (the seated window, prompt \"{prompt}\", {ahead:0.0} m before the lever, {dist:0.0} m off): thrown={r3.Thrown}, still seated={me.Cart == rc.Cart}");
+                if (prompt != "Throw the switch") { Fail($"the seated window offered ride 3's lever as \"{prompt}\", not \"Throw the switch\""); return; }
+                if (dist <= PropPromptRules.InteractReach) { Fail($"the seated window first offered ride 3's lever {dist:0.00} m off, inside the look ray's reach"); return; }
+                if (!r3.Thrown) { Fail("the seated press did not throw ride 3's switch_out lever"); return; }
+                if (me.Cart != rc.Cart) { Fail("the seated press on ride 3's lever got the lead out of the cart"); return; }
+            }
+        }
 
         if (_crewSection2) { RunCrewWreck(main, layout, rc, Fail); return; }
         var wagons = ctrl.Wagons;

@@ -813,7 +813,7 @@ public partial class NetTestFlow : Node
                 if (me.Seated && me.Cart == rc.Cart) { GD.Print($"[net] ride: boarded again at stop 1 in seat {me.Seat}"); Next(8); return false; }
                 if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 1) TryBoard(net, rc, me, "stop 1");
                 return false;
-            case 8: // ride 3: throw the switch from the seat as its lever passes
+            case 8: // ride 3: throw the switch from the seat as the seated window offers its lever, beyond plain reach
             {
                 if (_rideSwitchHere < 0 && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) _rideSwitchHere = enc.PieceIndexOf("switch_out", 3);
                 if (NetRefResolver.Resolve(root, NetRefs.Switch(_rideSwitchHere)) is not Dungeon.Rails.TrackSwitch lever) return RideFail(net, $"ride 3's switch ({NetRefs.Switch(_rideSwitchHere)}) does not resolve here");
@@ -824,14 +824,17 @@ public partial class NetTestFlow : Node
                     Next(9);
                     return false;
                 }
-                if (!me.Seated || rc.StopIndex != 2 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || _rideThrowAsked) return false;
+                if (!me.Seated || rc.StopIndex != 2 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || _rideThrowAsked || Main.Instance.Party.LookingAt != lever) return false;
                 var dist = me.GlobalPosition.DistanceTo(lever.GlobalPosition);
-                if (dist > 3f) return false;
-                if (lever.Prompt != "Throw the switch") return RideFail(net, $"in reach of ride 3's lever it offers \"{lever.Prompt}\" (want Throw the switch)");
+                var ahead = lever.LeverS - rc.Party.FrontS;
+                var prompt = lever.Prompt;
+                if (prompt != "Throw the switch") return RideFail(net, $"the seated window offers ride 3's lever as \"{prompt}\" (want Throw the switch)");
+                if (dist <= Dungeon.Rails.PropPromptRules.InteractReach + Dungeon.Rails.PropPromptRules.SeatedLagCap) return RideFail(net, FormattableString.Invariant($"the seated window first offered ride 3's lever {dist:0.00} m off, inside the plain reach"));
                 _rideThrowAsked = true;
                 _rideThrowDist = dist;
-                net.Send(new InteractIntent(NetRefResolver.RefOf(lever)!));
-                GD.Print(FormattableString.Invariant($"[net] ride: ride 3's lever offers \"{lever.Prompt}\" {dist:0.00} m from our seat at V={rc.State.V:0.00} m/s; thrown through the intent ({NetRefs.Switch(_rideSwitchHere)})"));
+                Main.Instance.Party.VrUse(true); // the dispatch E uses: our TryInteract sends the lever's intent
+                Main.Instance.Party.VrUse(false);
+                GD.Print(FormattableString.Invariant($"[net] ride: ride 3's lever offers \"{prompt}\" in the seated window {ahead:0.0} m before the lever, {dist:0.00} m from our seat at V={rc.State.V:0.00} m/s; thrown through the intent from the seat ({NetRefs.Switch(_rideSwitchHere)})"));
                 return false;
             }
             default:
@@ -1078,6 +1081,8 @@ public partial class NetTestFlow : Node
     // the joiner thrown at speed on ride 3, its floor resent mid-ride, and the wreck it watches at the end (plan 5 task 11)
     private double _joinRolledAt = -1, _joinThrowNow = -1, _joinResyncAt = -1;
     private float _joinThrowV;
+    /// <summary>Ride 3 (plan 8): the joiner pressed "Set the switch back" from the seat as the first client's throw showed here, or saw its seated window open (and close without one).</summary>
+    private bool _joinSetBackSent, _joinWindowSeen, _joinWindowClosed;
     private bool _joinWreckTold;
     private int _joinSpareStop = -1;
     // the joiner's heap halt (task 11): the most S rendered while the face stood ahead, where its stop is, and the largest backward step while rolling
@@ -1196,13 +1201,32 @@ public partial class NetTestFlow : Node
                 if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 2) TryBoard(net, rc, me, "stop 2");
                 if (rc.StopIndex >= 3 || _clock > 150) { Finish("[net]", false, $"ride: the joiner never boarded at stop 2 (stop {rc.StopIndex}, mode {rc.State.Mode})"); net.Disconnect("test finished"); }
                 return;
-            case 63: // ride 3 seated; 2 s after it rolls, at speed, get out through the intent: thrown onto the line behind the cart
+            case 63: // ride 3 seated: the first client's throw shows here and we set it back from the seat at once (the server refuses it);
+                     // 2 s after it rolls, at speed, once that press went (or the window closed without one), get out through the intent: thrown onto the line behind the cart
+            {
                 if (rc == null || me == null) return;
                 RideLeaveCrew(net, rc, me, "the joiner");
                 if (!me.Seated || me.Cart != rc.Cart) { Finish("[net]", false, $"ride: the joiner is not in the cart on ride 3 (stop {rc.StopIndex}, mode {rc.State.Mode})"); net.Disconnect("test finished"); return; }
                 var rolling3 = rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 2 && !rc.Halted;
                 if (rolling3 && _joinRolledAt < 0) _joinRolledAt = _clock;
-                if (rolling3 && _joinRolledAt >= 0 && _clock - _joinRolledAt >= 2 && rc.State.V >= 2.5f)
+                if (!_joinSetBackSent && !_joinWindowClosed && rc.StopIndex == 2 && Dungeon.Rails.RailEncounterController.Instance is { } enc3 && IsInstanceValid(enc3)
+                    && main.Builder.FloorRoot is { } root3 && NetRefResolver.Resolve(root3, NetRefs.Switch(enc3.PieceIndexOf("switch_out", 3))) is Dungeon.Rails.TrackSwitch lever3)
+                {
+                    if (main.Party.LookingAt == lever3)
+                    {
+                        _joinWindowSeen = true;
+                        if (lever3.Thrown)
+                        {
+                            if (lever3.Prompt != "Set the switch back") { Finish("[net]", false, $"ride: the first client's throw shows here, but the joiner's seat offers ride 3's lever as \"{lever3.Prompt}\" (want Set the switch back)"); net.Disconnect("test finished"); return; }
+                            _joinSetBackSent = true;
+                            main.Party.VrUse(true);
+                            main.Party.VrUse(false);
+                            GD.Print(FormattableString.Invariant($"[net] ride: the joiner presses \"Set the switch back\" from the seat as the first client's throw shows here ({lever3.LeverS - rc.Party.FrontS:0.0} m before the lever, {me.GlobalPosition.DistanceTo(lever3.GlobalPosition):0.00} m off)"));
+                        }
+                    }
+                    else if (_joinWindowSeen || lever3.Taken) _joinWindowClosed = true;
+                }
+                if (rolling3 && _joinRolledAt >= 0 && _clock - _joinRolledAt >= 2 && rc.State.V >= 2.5f && (_joinSetBackSent || _joinWindowClosed))
                 {
                     if (rc.Cart.Prompt != "Get out" || NetRefResolver.RefOf(rc.Cart) is not { } cartRef) { Finish("[net]", false, $"ride: on ride 3 the joiner's cart offers \"{rc.Cart.Prompt}\" (want Get out)"); net.Disconnect("test finished"); return; }
                     _joinThrowV = rc.State.V;
@@ -1212,8 +1236,9 @@ public partial class NetTestFlow : Node
                     _clock = 0; _step = 67;
                     return;
                 }
-                if (rc.StopIndex >= 3 || _clock > 120) { Finish("[net]", false, $"ride: the joiner's ride 3 never ran at speed here (stop {rc.StopIndex}, mode {rc.State.Mode}, V={rc.State.V:0.00})"); net.Disconnect("test finished"); }
+                if (rc.StopIndex >= 3 || _clock > 120) { Finish("[net]", false, $"ride: the joiner's ride 3 never ran at speed here (stop {rc.StopIndex}, mode {rc.State.Mode}, V={rc.State.V:0.00}, set back pressed {_joinSetBackSent}, window seen {_joinWindowSeen} closed {_joinWindowClosed})"); net.Disconnect("test finished"); }
                 return;
+            }
             case 67: // thrown: at the server's landing, on the line behind the cart; then ask for the floor again mid-ride 3
             {
                 if (rc == null || me == null) return;

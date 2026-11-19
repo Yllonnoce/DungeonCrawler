@@ -45,15 +45,6 @@ public partial class RailEncounterController
         return null;
     }
 
-    /// <summary>Test hook (--test-crew): throw ride <paramref name="ride"/>'s switch_out levers that are not thrown. Returns how many.</summary>
-    internal int DebugThrowSwitches(int ride)
-    {
-        var n = 0;
-        foreach (var p in _pieces)
-            if (p.Plan.Ride == ride && p.Plan.Kind == "switch_out" && p.Switch is { Thrown: false } sw) { sw.DebugThrow(); n++; }
-        return n;
-    }
-
     // ---- building --------------------------------------------------------------------------------
 
     private Node3D? BuildSwitch(Node3D root, Piece piece)
@@ -64,7 +55,7 @@ public partial class RailEncounterController
         var frame = party.Frame(leverS);
         var x = frame.Basis.X.Normalized();
         var side = (_enemy.Point(Lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
-        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, Fixed = back, NetRef = Net.NetRefs.Switch(piece.Index) };
+        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back, NetRef = Net.NetRefs.Switch(piece.Index) };
         root.AddChild(sw);
         sw.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * LeverOut));
         piece.Switch = sw;
@@ -211,7 +202,11 @@ public partial class RailEncounterController
         GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, back from {backS:0.0}");
     }
 
-    /// <summary>The heap ahead: its lantern blinks while a cart bears down on it, and a seated hero calls it once (<see cref="RailCalls"/>), while it can still be switched round.</summary>
+    /// <summary>
+    /// The heap ahead: its lantern blinks while a cart bears down on it, and a seated hero calls it once (<see cref="RailCalls"/>), while it
+    /// can still be switched round: as the seated window opens (<see cref="SeatedSwitchRules.WindowAhead"/> before the lever), or with no
+    /// lever ahead, <see cref="SetPieceRules.HeapLook"/> before the heap.
+    /// </summary>
     private void TickHeap(Piece piece, PartyController party, bool rolling)
     {
         if (piece.Heap is not { IsAlive: true } heap) return;
@@ -220,8 +215,9 @@ public partial class RailEncounterController
         var look = SetPieceRules.HeapLook(_rails.State.V);
         SetAlarm(heap, SetPieceRules.HeapAlarm(headed, heap.FaceS, front, _rails.State.V));
         if (piece.Barked || !headed) return;
-        var aim = LeverAheadOf(piece, front) ?? heap.FaceS; // the call is useful while the lever is still ahead
-        if (aim - front > look) return;
+        var lever = LeverAheadOf(piece, front); // the call is useful while the lever is still ahead: at the seated window's start
+        var aim = lever ?? heap.FaceS;
+        if (lever != null ? aim - front > SeatedSwitchRules.WindowAhead : aim - front > look) return;
         piece.Barked = true;
         var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.LineBlocked, "Line's blocked — switch!");
         GD.Print($"[rails] heap {piece.Plan.Id} called at front S={front:0.0} ({heap.FaceS - front:0.0} m to the heap, aim {aim:0.0}); bark={by ?? "none"}");
@@ -251,12 +247,51 @@ public partial class RailEncounterController
             GD.Print(FormattableString.Invariant($"[{(NetSession.IsClient ? "net" : "net-server")}] ride heap alarm={(alarm ? "on" : "off")} t={(NetSession.IsClient ? NetSession.Instance.Client?.ServerNow ?? 0 : NetSession.Instance.Now):0.000}"));
     }
 
-    /// <summary>The lever of an untaken switch_out before the heap that the front has not reached yet, or null.</summary>
+    /// <summary>The lever's S (<see cref="TrackSwitch.LeverS"/>, which the seated window measures from) of an untaken switch_out before the heap that the front has not reached yet, or null.</summary>
     private float? LeverAheadOf(Piece heap, float front)
     {
         foreach (var p in _pieces)
-            if (p.Plan.Ride == heap.Plan.Ride && p.Plan.Kind == "switch_out" && !p.Fired && p.S < heap.S && p.S - LeverLead > front) return p.S - LeverLead;
+            if (p.Plan.Ride == heap.Plan.Ride && p.Plan.Kind == "switch_out" && !p.Fired && p.S < heap.S && p.Switch!.LeverS > front) return p.Switch!.LeverS;
         return null;
+    }
+
+    // ---- the seated window (SeatedSwitchRules) ---------------------------------------------------
+
+    private readonly List<SeatedLever> _seatedViews = new();
+    private readonly List<TrackSwitch> _seatedSwitches = new();
+
+    /// <summary>
+    /// The armed ride's lever offered to <paramref name="hero"/> from the seat (the nearer of two), or null: seated in the party's cart,
+    /// up, the cart rolling, the front in the lever's window (<see cref="SeatedSwitchRules.Nearest"/>). Every peer: a client's pieces,
+    /// <see cref="ArmedRide"/>, the levers' Taken and the cart's state are the server's, as told.
+    /// </summary>
+    public TrackSwitch? SeatedLeverFor(Adventurer hero)
+    {
+        if (!Current) return null;
+        _seatedViews.Clear();
+        _seatedSwitches.Clear();
+        for (var i = 0; i < _pieces.Count; i++)
+        {
+            var p = _pieces[i];
+            if (p.Plan.Ride != ArmedRide || p.Switch is not { } sw) continue;
+            _seatedViews.Add(sw.SeatedView);
+            _seatedSwitches.Add(sw);
+        }
+        var k = SeatedSwitchRules.Nearest(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, _seatedViews);
+        return k < 0 ? null : _seatedSwitches[k];
+    }
+
+    /// <summary><paramref name="lever"/>, a piece of the armed ride, is in <paramref name="hero"/>'s seated window (not only the nearest): the server's acceptance of a use out of reach.</summary>
+    public bool InSeatedWindow(Adventurer hero, TrackSwitch lever)
+    {
+        if (!Current) return false;
+        for (var i = 0; i < _pieces.Count; i++)
+        {
+            var p = _pieces[i];
+            if (p.Plan.Ride != ArmedRide || p.Switch != lever) continue;
+            return SeatedSwitchRules.InWindow(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
+        }
+        return false;
     }
 
     /// <summary>The buckets tip; a live patch the cart's body is over dents the plating and burns each seated hero, once per patch.</summary>

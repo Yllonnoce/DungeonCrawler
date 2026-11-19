@@ -15,7 +15,8 @@ namespace DungeonCrawler.Core;
 // traffic (a hero on the enemy lane at stop 1 warned, then mangled; one in a pocket untouched), ride 2's three slag carts
 // (a brake shoe broken by a debug hit derails one, a hound leaps), ride 3's switch thrown by a hit that a second hit leaves
 // thrown (the slag cart ahead rammed, the cart back on its own lane), ride 4's golem diverted at the spur by a lever
-// debug-thrown ahead on ride 2 (the arrivals at stops 2 and 3 leave it thrown), the jump made
+// debug-thrown ahead on ride 2 (the arrivals at stops 2 and 3 leave it thrown) that the seated lead sets back and throws
+// again from the seat as ride 4's seated window offers it (no aim, two presses through the dispatch E uses), the jump made
 // with two pumping and the buffer smashed into the last stop; the crew home and the stairs open. Section 2 builds the floor
 // again: ride 1 departs (its thrower a full enemy, the floor's first), a save mid-ride 1 is loaded and ride 1 departs again
 // (the thrower given back a reinforcement: the save keeps that it was sent); ride 3 with the switch left straight (the heap
@@ -102,6 +103,9 @@ public partial class DebugTools
     private int _chRams0, _chRamsSeen;
     // ride 4
     private bool _chDiverted, _chOnSpur, _chJumped, _chBuffer;
+    /// <summary>Section 1's seated presses on ride 4's spur lever (0: none, 1: set back, 2: thrown again), and the first mismatch they met.</summary>
+    private int _chSeatSpur;
+    private string? _chSeatSpurFail;
     private int _chPumpers = -1, _chSlams;
     private float _chJumpV;
     // traffic
@@ -171,7 +175,7 @@ public partial class DebugTools
                 : HoldsAStop(main, layout, e) || enc.ArmedRide >= 1 && (e == enc.GolemBody || (e.IsReinforcement || enc.IsThrower(e)) && _chSpawnRide.TryGetValue(e, out var r) && r == enc.ArmedRide);
             if (!keep) e.Kill();
         }
-        ChaseTrackRides(rc, enc);
+        ChaseTrackRides(rc, enc, party);
         if (_chTrafficOn) ChaseHoldTraffic(enc);
 
         if (_chSection2) { RunChaseSection2(main, layout, root, rc, enc, ctrl, Fail); return; }
@@ -402,6 +406,8 @@ public partial class DebugTools
                 var buffer = enc.SetPieceNode("r4_buffer") as BufferStop;
                 var golem = enc.GolemBody;
                 GD.Print($"[chase] 4 ride 4 done, held at stop 4 (the end of the line): golem took the spur={_chOnSpur} off the spur={_chDiverted} ({(golem == null ? "gone" : $"alive={golem.IsAlive} hp {golem.Hp:0}/{golem.MaxHp:0}")}), slams={_chSlams}; jump made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping; buffer smashed={buffer?.Smashed} (cue={_chBuffer}); plating={rc.State.Plating:0}");
+                if (_chSeatSpurFail != null) { Fail(_chSeatSpurFail); return; }
+                if (_chSeatSpur != 2) { Fail($"the seated window did not set ride 4's spur lever back and throw it again (presses {_chSeatSpur})"); return; }
                 if (!_chDiverted) { Fail("the golem was not diverted at the spur"); return; }
                 if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 2) { Fail($"the jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping (want made, >= {SetPieceRules.JumpSpeed}, 2)"); return; }
                 if (buffer is not { Smashed: true } || !_chBuffer) { Fail("the cart did not come through the buffer"); return; }
@@ -857,7 +863,10 @@ public partial class DebugTools
         {
             case CartEventKind.Halted: _chHalted = true; break;
             case CartEventKind.Resumed: _chResumed = true; break;
-            case CartEventKind.Departed: _chJumped = false; _chPumpers = -1; _chJumpV = 0f; _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = false; break;
+            case CartEventKind.Departed:
+                _chJumped = false; _chPumpers = -1; _chJumpV = 0f; _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = false;
+                if (!_chSection2) _chSeatSpur = 0;
+                break;
             case CartEventKind.Wrecked: _chFail ??= $"the cart was wrecked at S={rc.State.S:0.0} (plating {rc.State.Plating:0})"; break;
             case CartEventKind.OnFoot: _chFail ??= "the party ended up on foot"; break;
         }
@@ -1015,8 +1024,8 @@ public partial class DebugTools
         return false;
     }
 
-    /// <summary>Per frame: the slag carts that came and pulled alongside, the lane blend of the cart, the golem on the spur.</summary>
-    private void ChaseTrackRides(RailController rc, RailEncounterController enc)
+    /// <summary>Per frame: the slag carts that came and pulled alongside, the lane blend of the cart, the golem on the spur, section 1's seated presses on the spur lever.</summary>
+    private void ChaseTrackRides(RailController rc, RailEncounterController enc, PartyController party)
     {
         foreach (var c in enc.SlagCarts)
         {
@@ -1035,6 +1044,24 @@ public partial class DebugTools
         {
             _chOnSpur = true;
             GD.Print($"[chase] 4 the golem's runner takes the spur (party S={rc.State.S:0.0})");
+        }
+        // section 1, ride 4: the spur lever (thrown ahead on ride 2) offered from the seat is set back, then thrown again on a later frame
+        if (!_chSection2 && _chSeatSpur < 2 && _chSeatSpurFail == null && enc.ArmedRide == 4 && rc.State.Mode == CartMode.Rolling
+            && enc.SetPieceNode("r4_spur") is SpurSwitch seatSpur && party.Local is { } me && me.Cart == rc.Cart && party.LookingAt == seatSpur.Lever)
+        {
+            var lever = seatSpur.Lever;
+            var prompt = lever.Prompt;
+            var want = _chSeatSpur == 0 ? "Set the switch back" : "Throw the switch";
+            var dist = me.GlobalPosition.DistanceTo(lever.GlobalPosition);
+            var ahead = lever.LeverS - rc.Party.FrontS;
+            if (prompt != want) { _chSeatSpurFail = $"the seated window offered ride 4's spur lever as \"{prompt}\" at press {_chSeatSpur + 1}, not \"{want}\""; return; }
+            party.VrUse(true);
+            party.VrUse(false);
+            _chSeatSpur++;
+            var seated = me.Cart == rc.Cart;
+            GD.Print($"[chase] 4 seated window: \"{prompt}\" pressed {ahead:0.0} m before the spur lever, {dist:0.0} m off: thrown={lever.Thrown}, still seated={seated}");
+            if (lever.Thrown != (_chSeatSpur == 2) || !seated)
+                _chSeatSpurFail = $"the seated press \"{prompt}\" on ride 4's spur lever left it thrown={lever.Thrown}, still seated={seated}";
         }
     }
 

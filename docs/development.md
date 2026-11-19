@@ -1250,7 +1250,10 @@ Condemned, the party takes the orc's keys from Grisel's body. Forgiven, Grisel m
 reach) at every cage, and each cage must offer "Open the cage (Grisel)". Her escort quest is accepted by raising its
 accept event (`QuestAccepted`), so her dialogue's accept button is not covered. After the load she must not stand on a
 rail cell. Each wagon must couple on as the cart leaves. Between stops 2 and 3 the run saves and loads, and the train, crew, `OrcKeys` and gates
-must come back. A crew member taken out of wagon 2 is downed and bleeds out (the clock is wound on through
+must come back. On ride 3 the seated lead throws the `switch_out` lever from the seat as the seated window offers it, out of
+the look ray's reach and through `PartyController.VrUse` (the dispatch E uses): the prompt must be "Throw the switch", the
+lever thrown and the lead still seated (`[crew] ride 3: the seated lead throws …`), and the lever must never pass its points
+straight. A crew member taken out of wagon 2 is downed and bleeds out (the clock is wound on through
 `Npc.DebugBleed`) and is lost. The end of the line must bring the other five home and unlock the stairs; forgiven, Grisel
 walks with the party to the stairs and `q_grisel_out` must complete. Then the floor is built again. The rebuilt floor's cart rides into stop 1 with cage 1 locked: it must be held there
 (`CageHeld`) a countdown and two seconds later with no countdown run, the bar "Cart — cage locked", the seat's prompt
@@ -1411,9 +1414,24 @@ When the front reaches its back end it is rammed: it derails and the plating tak
 when the cart is wrecked or restored, or the party goes on foot. An arrival at stop k sets back only the levers of rides
 1..k, so a lever a walker threw ahead for a later ride (ride 3's switch, ride 4's spur) stays thrown.
 
+Throwing a switch from the seat (plan 8, `Rails/Core/SeatedSwitchRules.cs`). Nobody can aim at a thin post from a rolling
+cart, so a lever has a seated window. It opens with the cart's front 15 m before the lever (`TrackSwitch.LeverS`) and
+closes when the front reaches the points (or the lever is taken). It is offered to a seated, up rider of the party's cart
+while it rolls, only for the armed ride's throwable levers (never a fixed `switch_back`), the nearer of two by S
+(`RailEncounterController.SeatedLeverFor`). In the window the rider's `LookingAt` is that lever whatever the aim
+(`Adventurer.TickView`; the look ray still runs for the VR beam), so the HUD shows `[E] Throw the switch` (or "Set the switch
+back"), E or the grip toggles it through the usual interact dispatch, and "Get out" is not offered. For 1 s after the
+window closes, timed on the rider's own machine, a seated rider's E does nothing, so a press mashed past the points cannot
+throw them out at speed. A held cart never offers the lever, so E stays "Get out" (and the cage hold) at a stop or at the
+heap. On a co-op client the press is the lever's ordinary `InteractIntent`. The server accepts it by the usual reach or when
+the lever is in that rider's window as it recomputes it (`RailEncounterController.InSeatedWindow`; no lag allowance: the
+lever being taken ends it), and refuses an out-of-reach set-back within 1 s of another rider's toggle (the last toggle's
+time and hero name are kept on the server's `TrackSwitch`), so two riders cued by the same call do not undo each other into
+the heap (`[net-server] interact … seated window: set back … ignored`).
+
 The heap. An `OreHeap` blocks the party lane (`RailController.BlockLine`). Its lantern blinks while a cart bears down on
-it. A seated companion calls "Line's blocked — switch!" once, at 3 s of look-ahead to the lever while the lever is still
-ahead. A cart that reaches the heap on the party lane crashes: the plating takes 40, the cart stops at the heap's face and
+it. A seated companion calls "Line's blocked — switch!" once, as the seated window opens (the front 15 m before the lever)
+while the lever is still ahead; with no lever ahead, at 3 s of look-ahead to the heap. A cart that reaches the heap on the party lane crashes: the plating takes 40, the cart stops at the heap's face and
 is Held on the line (`RailController.Halted`, a `Halted` event). The HUD says "Cart — line blocked", and nobody boards on
 until the heap is cleared by three hits from anyone on foot. Then the cart boards as at a stop and goes on to the next stop
 (a `Resumed` event, not a `Departed` one: the ride stays armed). The heap stands again after a wreck or a load. Ore buckets
@@ -1425,7 +1443,7 @@ bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is n
 its death opens nothing. It is carried by an unseen runner paced beside the party's cart. While it is alongside (or within
 6.5 m) it slams the cart every 4 s after a 1.5 s hand glow, for 12 plating and a shake. The spur (`SpurSwitch`) is a dead-end
 8 m track off the enemy line into the wall. Its lever stands between the lanes 2 m short of the party line's points, past
-the jump's landing and within reach of a rolling cart's seats. If the lever is thrown when the runner reaches the points,
+the jump's landing; a rider throws it from the seat through the seated window, as ride 3's switch. If the lever is thrown when the runner reaches the points,
 the golem goes down the spur into its stop: three big run-overs' worth of damage, then a creature on its own feet. If the
 ride ends with the lever thrown and the golem still alive short of the stop, it goes off the spur then, so a thrown lever
 always pays off. Once the golem has died on a floor it never comes again (`GolemDefeated`), because an elite pays its loot
@@ -1456,8 +1474,7 @@ stays dead) and `ValveBroken` (a broken valve stays broken, for the floor). The 
 cart throws a cosmetic tub that tumbles and is freed after 6 s. With no spare left, the real cart is hidden at the wreck, and a
 load brings it back whole at its last stop.
 
-Debug hooks (internal, for the scripted tests): `RailEncounterController.DebugThrowSwitches(ride)` throws a ride's
-`switch_out` levers, `TrackSwitch.DebugThrow()` throws one lever (the spur's is `SpurSwitch.Lever`), `OreHeap.DebugClear()`,
+Debug hooks (internal, for the scripted tests): `TrackSwitch.DebugThrow()` throws one lever (the spur's is `SpurSwitch.Lever`), `OreHeap.DebugClear()`,
 `RailController.DebugSetPlating(p)`, and the settable `TrafficClock` and `RunawayClock` start a traffic cart or a runaway
 wagon now. `RailEncounterController.TraceTraffic` prints the warnings and refuges. For tests to read there are
 `SetPieceNode(id)`, `SlagCarts`, `TrafficCart`, `RunawayCart`, `GolemBody`, `GolemRun`, `GolemDefeated`, and the counters
@@ -1479,8 +1496,10 @@ Each boarder and who killed it (a hero by name, a crew member or a hazard) is lo
 most one companion may go down by stop 2. At every stop the cart must stand with full plating. Ride 4's spur lever is
 thrown through `DebugThrow()` as ride 2 starts, and must still be thrown at stops 2 and 3. On ride 3 the switch is thrown by
 a hit (`ReceiveAttack`), and a second hit must leave it thrown: the cart must cross, ram the slag cart ahead and cross back,
-and the arrival at stop 3 must set that lever back. On ride 4 the golem must come out as a carried elite, never a boss, and
-must be diverted by the lever thrown on ride 2. The jump must be made at 6.1 m/s or more with two pumping, and the cart must reach the end of the line through the
+and the arrival at stop 3 must set that lever back. On ride 4 the golem must come out as a carried elite, never a boss. As
+ride 4's seated window offers the spur lever (thrown on ride 2), the seated lead sets it back and throws it again from the
+seat (`PartyController.VrUse`, the dispatch E uses; two `[chase] 4 seated window:` lines, the prompts "Set the switch back"
+then "Throw the switch", the lead still seated each time), and the golem must be diverted by it. The jump must be made at 6.1 m/s or more with two pumping, and the cart must reach the end of the line through the
 buffer. There the crew must be home and the stairs must open. Section 2 builds floor 12 again and restores the cart at stop
 2 (`RestoreGates`, `Restore(2)`). Ride 3's switch is left straight: the cart must crash into the heap (40 plating, a `Halted`
 event). The lead gets out and breaks the heap with real swings (mouse look and `PartyController.Attack`, the input path),
@@ -1995,7 +2014,10 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping), brakes for 0.6 s (the server's V drops at least 1 m/s), and gets out at stop 1, within 0.5 m of the server's landing within 0.5 s. Cage 1 is locked there, so the client's seat must offer "Get out (hold to leave the prisoners behind)" (the server's `CartFlags.CageHeld`); the client still gets out with the plain tap.
 3. **Stop 1's props.** The holders die by a hook (`DebugKillHolders`), and the gate rises on the client. The client takes the keys, opens cage 1, and revives a crewman the server downed there, each through its intent. The bleed label counts down on the client.
 4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
-5. **Ride 3.** Stops 2 and 3 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat, and the cart crosses on both sides. Ride 3's buckets pour on the server's schedule.
+5. **Ride 3.** Stops 2 and 3 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat through the seated window (no aim, the
+first offer beyond the plain reach plus the seated lag allowance; the server logs `seated window yes`), and the cart crosses on
+both sides. As the throw shows on the joiner's screen, the joiner presses "Set the switch back" from its seat, and the server
+refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Ride 3's buckets pour on the server's schedule.
 6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
 7. **Ride 4 and the chase.** At stop 3 the joiner, on foot beside the spare, is offered nothing while the train is held there. The train leaves on ride 4 with the client pumping. The joiner takes `spare:3`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
 8. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
