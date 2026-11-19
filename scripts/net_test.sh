@@ -20,7 +20,11 @@
 #                                     on the server's schedule (0.1 s) and ride 4's hammer falls within 50 ms of the server's;
 #                                     a second client, the Joiner, joins as the cart leaves stop 1: within 1 s of its Ready it holds
 #                                     the cart (within 1.5 m), the seats, the train and the props' hash as the server has them, then
-#                                     boards at stop 2 and rides ride 3 with the first)
+#                                     boards at stop 2 and rides ride 3 with the first; at stop 3 it gets out and stays on foot while
+#                                     the train leaves on ride 4 with the first client: stop 3's spare, which offered nothing while the
+#                                     train was held there, offers itself once it has gone; the joiner takes it through its intent
+#                                     (spare:3), and its chaser runs up behind the train and halts within 3 m of its last body
+#                                     (chase-done on both sides); the first client leaves seated once the chaser has gone)
 set -u
 cd "$(dirname "$0")/.."
 PORT=${PORT:-7790}
@@ -35,15 +39,16 @@ SERVER_EXE=${SERVER_BIN:-}   # e.g. build/server/DungeonCrawler.x86_64 to test t
 run_server() { if [ -n "$SERVER_EXE" ]; then "$SERVER_EXE" --headless -- "$@"; else "$GODOT" --headless --path . -- "$@"; fi; }
 
 if [ "${RIDE:-}" = 1 ]; then
-  # the RIDE pass: one server on the built-in campaign, one client; floor 12 after the client is ready. A scripted server deals
+  # the RIDE pass: one server on the built-in campaign, one client; floor 12 after the client is ready. A test server quits after
+  # 120 s unless told (the pass now rides to the end of the line: about 150 s), and ends anyway once empty. A scripted server deals
   # no objective unless one is named: --objective=jailbreak gives floor 12 the campaign's own (the crew in their cage wagons)
-  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --objective=jailbreak --seed=4242 --lethality=1 --quit-when-empty > "$TMP/server.log" 2>&1 &
+  XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --objective=jailbreak --seed=4242 --lethality=1 --quit-when-empty --quit-after=600 > "$TMP/server.log" 2>&1 &
   SERVER=$!
   for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.5; done
   # the built-in floor 1 takes a while to build (the socket is not served meanwhile): wait for the server to say it is built
   for i in $(seq 1 180); do grep -q "\[net-server\] floor 1 built" "$TMP/server.log" 2>/dev/null && break; sleep 0.5; done
   sleep 1
-  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=360 > "$TMP/client.log" 2>&1 &
+  XDG_DATA_HOME="$TMP/client" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --join="$URL" --name=Rider --class=class.warrior --quit-after=480 > "$TMP/client.log" 2>&1 &
   CLIENT=$!
   # the joiner: a second client starts as the cart leaves stop 1, so its Ready falls during ride 2 (it boards at stop 2 and rides ride 3)
   JOINER=""
@@ -53,7 +58,7 @@ if [ "${RIDE:-}" = 1 ]; then
     sleep 0.5
   done
   if grep -q "\[net-server\] ride: the cart departs stop 1 with" "$TMP/server.log" 2>/dev/null; then
-    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=240 > "$TMP/joiner.log" 2>&1 &
+    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=360 > "$TMP/joiner.log" 2>&1 &
     JOINER=$!
   fi
   wait $CLIENT 2>/dev/null
@@ -62,13 +67,22 @@ if [ "${RIDE:-}" = 1 ]; then
   kill $SERVER 2>/dev/null; wait $SERVER 2>/dev/null
   echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT|.* left while seated)|Unhandled|ERROR" "$TMP/server.log" | head -50
   echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -50
-  echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -30
+  echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -40
   if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
   # a joiner mid-ride (task 8): ready during ride 2 on the server; 1 s after its Ready it traced joined-mid-ride ok; it boarded at stop 2
   if ! grep -q "\[net\] RESULT ok" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner's pass)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner is ready at .*: mid-ride 2" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not ready during ride 2)"; exit 1; fi
   if ! grep -q "\[net\] ride: joined-mid-ride ok" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never traced joined-mid-ride ok)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner boarded at stop 2 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded at stop 2)"; exit 1; fi
+  # the left-behind spare (task 9): the joiner, out at stop 3, sees stop 3's spare offer nothing while the train is held there; the train
+  # leaves on ride 4 with the first client; the joiner takes the spare through its intent, and its chaser halts within 3 m of the train
+  if ! grep -q "\[net-server\] ride: the cart departs stop 3 with 1 player(s) aboard" "$TMP/server.log"; then echo "NET TEST: FAIL (the train never left stop 3 with the first client aboard and the joiner on foot)"; exit 1; fi
+  if ! grep -q "\[net\] ride: beside stop 3's spare .* with the train held at stop 3 it offers \"\" here" "$TMP/joiner.log"; then echo "NET TEST: FAIL (stop 3's spare was not seen to offer nothing while the train was held there)"; exit 1; fi
+  if ! grep -q "\[net\] ride: the train left stop 3 without us .* offers \"Take the spare cart\" .* took it through the intent (spare:3)" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never took stop 3's spare through its intent)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: Joiner took spare 3 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never placed the joiner's chaser)"; exit 1; fi
+  if ! grep -q "\[net\] ride: our chaser halted .* behind the train's last body here" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's chaser never halted behind the train)"; exit 1; fi
+  if ! grep -q "\[net\] ride: chase-done" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done on the joiner and the server)"; exit 1; fi
+  if ! grep -q "\[net\] ride: .*the joiner's chaser came and went" "$TMP/client.log"; then echo "NET TEST: FAIL (the first client never saw the joiner's chaser come and go)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi
   # the set pieces stand on the client as on the server, and its props (the rail part too) hash as the server's
   if ! grep -q "\[net\] ride: set pieces on the client:" "$TMP/client.log"; then echo "NET TEST: FAIL (the client's floor 12 set pieces were not checked)"; exit 1; fi

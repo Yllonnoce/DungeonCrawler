@@ -35,8 +35,12 @@ public static class NetRefs
     public static string Keyring => $"{KeyringKind}:0";
     /// <summary>The party's cart (there is one).</summary>
     public static string Cart => $"{CartKind}:0";
-    /// <summary>A cart's wire name: only the party's own cart (the one the rail controller rides) is <see cref="Cart"/>; any other cart (a runaway wagon, a slag cart, a spare) has none here.</summary>
-    public static string? CartRef(Net.CartKind kind, bool isThePartysCart) => kind == Net.CartKind.Party && isThePartysCart ? Cart : null;
+    /// <summary>
+    /// A cart's wire name: the party's own cart (the one the rail controller rides) is <see cref="Cart"/>; a stop's spare (<paramref name="spareStop"/>
+    /// its stop, −1 for none) is <see cref="Spare"/>; any other cart (a runaway wagon, a slag cart, a chaser) has none.
+    /// </summary>
+    public static string? CartRef(Net.CartKind kind, bool isThePartysCart, int spareStop = -1)
+        => kind != Net.CartKind.Party ? null : isThePartysCart ? Cart : spareStop >= 0 ? Spare(spareStop) : null;
     public static string Npc(string id) => $"{NpcKind}:{id}";
     public static string Loot(Guid id) => $"{LootKind}:{id:N}";
 

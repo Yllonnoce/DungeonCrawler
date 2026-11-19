@@ -180,7 +180,9 @@ public partial class RailController : Node
         _gates = new StopGates(builder, layout, OnGateLifted, RefreshHud);
         _gates.Build(root, StopS, Party.Track);
         _spares = new SpareYard(builder, layout, track, _train.Sidings);
-        _spares.Build(root, StopS.Length);
+        // online a spare is a thing to use too: a co-op player left behind takes it after the train (RailController.Chase); solo it is looks only
+        if (NetSession.IsNetworked) _spares.Build(root, StopS.Length, SparePrompt, UseSpare);
+        else _spares.Build(root, StopS.Length);
     }
 
     public override void _EnterTree() => Instance = this;
@@ -239,7 +241,7 @@ public partial class RailController : Node
         List<int>? riders = null;
         if (Main.Instance?.Party is { } party)
             foreach (var hero in party.Adventurers)
-                if (IsInstanceValid(hero) && hero.Cart == Cart) (riders ??= new()).Add(hero.Index);
+                if (IsInstanceValid(hero) && hero.Seated && (hero.Cart == Cart || hero.Cart == Chaser)) (riders ??= new()).Add(hero.Index); // a chaser's riders too: the chase is not saved, a load sets them down
         return riders;
     }
 
@@ -251,6 +253,8 @@ public partial class RailController : Node
     public void Restore(int stopIndex, IReadOnlyCollection<int>? riders = null, IEnumerable<int>? sparesUsed = null)
     {
         if (NetSession.IsClient) return; // a join or revisit: a client's cart stays parked at the first stop and nobody's seat is its to change (co-op riding is plan 5)
+        EndChase(atOnce: true); // a load ends a chase at once (its riders set down beside the chaser); the chase is not saved, its spare stays spent
+        FreeChaser();
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
@@ -448,7 +452,12 @@ public partial class RailController : Node
     /// </summary>
     public void UnseatQuietly(Adventurer hero)
     {
-        if (NetSession.IsClient || !Current || !IsInstanceValid(hero) || hero.Cart != Cart) return;
+        if (NetSession.IsClient || !Current || !IsInstanceValid(hero)) return;
+        if (hero.Cart != Cart)
+        {
+            if (hero.Cart == Chaser) { UnseatChaserQuietly(hero); RefreshHud(); Flush(); }
+            return;
+        }
         var at = _builder.Surface(ExitCellNear(Cart.GlobalPosition, atStop: true, useTaken: false));
         hero.GetOut(at, Vector3.Zero); // the cart tells it (Unseated), never as a throw
         RefreshHud();
@@ -672,6 +681,7 @@ public partial class RailController : Node
 
         Party.Sync();
         _train.Sync();
+        TickChase(party, dt); // after the train has moved: the chaser's limit is where its tail stands now
     }
 
     // ---- run-over --------------------------------------------------------------------------------
@@ -753,6 +763,7 @@ public partial class RailController : Node
     /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
     private void Wreck()
     {
+        EndChase(atOnce: true); // a chase ends with the train's wreck: its riders step out beside the chaser
         Wrecks++;
         WreckedAt = Cart.GlobalPosition;
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
@@ -925,6 +936,7 @@ public partial class RailController : Node
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         _train.Follow();
+        PoseChaser();
         _hudTimer -= (float)delta;
         if (_hudTimer <= 0f) RefreshHud();
     }

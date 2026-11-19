@@ -59,6 +59,7 @@ public partial class RailNet : Node
         if (_rails != null && IsInstanceValid(_rails))
         {
             _rails.CartEvents -= OnCartEvent;
+            _rails.ChaserPlaced -= OnChaserPlaced;
             if (IsInstanceValid(_rails.Cart)) _rails.Cart.RiderChanged -= OnPartyRider;
         }
         foreach (var (wagon, handler) in _wagonsHeard) if (IsInstanceValid(wagon)) wagon.RiderChanged -= handler;
@@ -70,6 +71,7 @@ public partial class RailNet : Node
         if (!NetSession.IsServer || _rails == null) return;
         _rails.CartEvents += OnCartEvent;
         _rails.Cart.RiderChanged += OnPartyRider;
+        _rails.ChaserPlaced += OnChaserPlaced;
     }
 
     private bool Current => _rails != null && IsInstanceValid(_rails) && RailController.Instance == _rails && Main.Instance is { InGame: true, Rebuilding: false };
@@ -124,6 +126,7 @@ public partial class RailNet : Node
         // the others: new ones, a track change or new riders, and the ones gone (freed or derailed)
         if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) enc.CollectNetCarts(_live);
         else _live.Clear();
+        _rails.CollectChaser(_live); // a left-behind player's chaser (task 9)
         foreach (var k in _known.Values) k.Seen = false;
         foreach (var c in _live)
         {
@@ -171,16 +174,17 @@ public partial class RailNet : Node
         }
     }
 
-    /// <summary>The riders' net ids folded into one number (no allocation): a change sends the cart.</summary>
+    /// <summary>The riders' net ids folded into one number (no allocation): a change sends the cart. A chaser's mode is in it too (its departure, its halt behind the train).</summary>
     private static int RiderSignature(in LiveCart c)
     {
         var h = 17;
+        if (c.Kind == CartKind.Chaser) h = h * 31 + (int)c.Run.State.Mode;
         if (c.Slag is { } slag) for (var i = 0; i < SlagCart.MaxRiders; i++) h = h * 31 + slag.RiderNetIdAt(i);
         if (c.Golem is { } golem && IsInstanceValid(golem)) h = h * 31 + golem.NetId;
         return h;
     }
 
-    private static CartStateDto Capture(in LiveCart c, double now)
+    private CartStateDto Capture(in LiveCart c, double now)
     {
         var run = c.Run;
         var input = run.LastInput;
@@ -198,6 +202,8 @@ public partial class RailNet : Node
             S = run.State.S, V = run.State.V, Mode = (byte)run.State.Mode, Limit = run.Limit,
             Pumpers = (byte)Math.Clamp(input.Pumpers, 0, 255), Brake = input.Brake, CrewWagons = (byte)Math.Clamp(input.CrewWagons, 0, 255), TargetOverride = input.TargetOverride,
             Plating = run.State.Plating, Offset = c.Offset, EncounterId = c.EncounterId, RiderNetIds = riders, ServerTime = now,
+            // a chaser: its spare's stop and its own countdown
+            StopIndex = c.Kind == CartKind.Chaser ? c.Id - CartIds.ChaserBase : 0, BoardingLeft = c.Kind == CartKind.Chaser ? _rails.ChaserBoardingLeft : -1f,
         };
     }
 
@@ -227,12 +233,21 @@ public partial class RailNet : Node
         var b = new System.Text.StringBuilder();
         b.Append("seats=");
         BookSeats(b, "P", _rails.Cart);
+        if (BookChaser() is { } chaser) BookSeats(b, "C" + (chaser.CartId - CartIds.ChaserBase).ToString(CultureInfo.InvariantCulture), chaser);
         if (ObjectiveController.Instance is CrewRescueController crew)
             foreach (var wagon in crew.Wagons.Where(w => IsInstanceValid(w)).OrderBy(w => w.Stop))
                 BookSeats(b, "W" + wagon.Stop.ToString(CultureInfo.InvariantCulture), wagon);
         b.Append(" train=").Append(_rails.Train.Count == 0 ? "-" : string.Join(",", _rails.Train.Select(w => w.Stop)));
         b.Append(" props=").Append(GetParent() is Node3D root ? PropCheck.Hash(PropSync.Capture(root)).ToString("X8", CultureInfo.InvariantCulture) : "-");
         return b.ToString();
+    }
+
+    /// <summary>The chaser on this side (the server's own, a client's copy), or null.</summary>
+    private MineCart? BookChaser()
+    {
+        if (!NetSession.IsClient) return _rails.Chaser;
+        foreach (var cc in _carts.Values) if (cc.Chaser is { } m && IsInstanceValid(m) && !m.IsQueuedForDeletion()) return m;
+        return null;
     }
 
     private static void BookSeats(System.Text.StringBuilder b, string name, ICartBody cart)

@@ -20,6 +20,8 @@ public partial class RailNet
         public CartRun Run = null!;
         public CartFollower Follow = null!;
         public SlagCart? Slag;
+        /// <summary>A chaser's tub: its riders are booked and seated in it here (SeatMsgs).</summary>
+        public MineCart? Chaser;
         public Enemy? Rider;
         /// <summary>The riders' net ids by spot as the server last named them (−1 none).</summary>
         public readonly int[] Wanted = { -1, -1, -1 };
@@ -29,9 +31,21 @@ public partial class RailNet
     private readonly HashSet<int> _listed = new();
     private readonly List<int> _drop = new();
     private readonly HashSet<byte> _unresolved = new();
+    private readonly List<ICartRider> _freeRiders = new();
 
     /// <summary>Client: the carts besides the party's that run here now (the RIDE pass reads them).</summary>
     internal int ClientCartCount => _carts.Count;
+
+    /// <summary>Client: the chaser's copy here and its follower (the RIDE pass reads them), or null.</summary>
+    internal (MineCart Cart, CartFollower Follow)? ClientChaser
+    {
+        get
+        {
+            foreach (var cc in _carts.Values)
+                if (cc.Chaser is { } m && IsInstanceValid(m) && !m.IsQueuedForDeletion()) return (m, cc.Follow);
+            return null;
+        }
+    }
 
     /// <summary>Client: cart states from the server (<paramref name="correction"/>: every live cart, so any other one here is freed).</summary>
     internal void OnCarts(List<CartStateDto> carts, bool correction)
@@ -73,6 +87,7 @@ public partial class RailNet
         }
         cc.Run.Limit = d.Limit;
         cc.Follow.Apply(d, now);
+        if (cc.Chaser is { } chaser) chaser.CollisionLayer = d.Mode == (byte)CartMode.Held ? 1u : 0u; // solid while it stands, as the server's
         for (var i = 0; i < cc.Wanted.Length; i++) cc.Wanted[i] = d.RiderNetIds != null && i < d.RiderNetIds.Count ? d.RiderNetIds[i] : -1;
         Bind(cc);
     }
@@ -115,8 +130,18 @@ public partial class RailNet
                 cc.Run = new CartRun(track, runner, state, d.Dir);
                 break;
             }
+            case CartKind.Chaser:
+            {
+                // a left-behind player's spare running after the train: the party's tub, nothing to use, its riders seated by SeatMsgs
+                var chaser = new MineCart { Name = $"ChaserCart{d.Cart - CartIds.ChaserBase}", CartId = d.Cart, PromptFor = _ => "", CollisionLayer = 1 }.AsChaser();
+                root.AddChild(chaser);
+                cc.Body = chaser;
+                cc.Chaser = chaser;
+                cc.Run = new CartRun(track, chaser, state, d.Dir);
+                break;
+            }
             default:
-                return null; // a chaser comes with Task 9
+                return null;
         }
         cc.Run.Limit = d.Limit;
         cc.Run.PoseAt(d.S);
@@ -175,6 +200,15 @@ public partial class RailNet
             slag.Aboard.Clear();
         }
         else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.Drop(golem.GlobalPosition);
+        else if (cc.Chaser is { } chaser && chaser.Riders.Count > 0)
+        {
+            // the server sets its riders down before it goes; one still seated here (an unseat still in flight) gets out where it sits
+            _freeRiders.Clear();
+            foreach (var rider in chaser.Riders.Values) _freeRiders.Add(rider);
+            foreach (var rider in _freeRiders)
+                if (rider is Node3D n && IsInstanceValid(n)) rider.GetOut(n.GlobalPosition, Vector3.Zero);
+            _freeRiders.Clear();
+        }
         cc.Body.QueueFree();
     }
 
@@ -195,6 +229,9 @@ public partial class RailNet
             }
             if (cc.Slag != null) cc.Slag.FollowRiders();
             else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.FollowCarrier();
+            else if (cc.Chaser is { } chaser)
+                foreach (var rider in chaser.Riders.Values)
+                    if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         }
         if (NetSession.Instance.Client is not { } client) return;
         FlyLeaps(client.ServerNow); // after every cart is posed: the arcs start on one and end on another

@@ -1,6 +1,6 @@
 namespace DungeonCrawler.Net;
 
-/// <summary>What runs on the rails: the party's cart, a ride's slag cart, a traffic slag cart, a runaway wagon, the golem's runner, a chaser (Task 9).</summary>
+/// <summary>What runs on the rails: the party's cart, a ride's slag cart, a traffic slag cart, a runaway wagon, the golem's runner, a chaser (a left-behind co-op player's spare running after the train).</summary>
 public enum CartKind : byte { Party, Slag, Traffic, Runaway, Golem, Chaser }
 
 /// <summary>
@@ -35,6 +35,8 @@ public enum CartFlags : byte
     GateClear = 16,
     /// <summary>A slag cart jumped the rails (its tumble plays, then it is freed).</summary>
     Derailed = 32,
+    /// <summary>The party's cart: a left-behind player's chaser runs after the train (one at a time: no spare is offered meanwhile).</summary>
+    ChaseLive = 64,
 }
 
 /// <summary>

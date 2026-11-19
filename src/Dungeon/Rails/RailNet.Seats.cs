@@ -22,6 +22,13 @@ public partial class RailNet
     /// <summary>The party cart's book changed (any path): sent after this tick's cart state. The seat is read now, while the rider still holds it.</summary>
     private void OnPartyRider(ICartRider rider, bool seated) => _seats.Add(new SeatChange(rider, CartIds.Party, rider.Seat, seated));
 
+    /// <summary>A chaser was placed (task 9): its book is heard from before anyone sits in it, under its wire id (ChaserBase + its stop). Once per chase.</summary>
+    private void OnChaserPlaced(MineCart chaser, int stop)
+    {
+        var id = CartIds.Chaser(stop);
+        chaser.RiderChanged += (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
+    }
+
     /// <summary>Listen to each cage wagon's book (the crew controller builds them after this node): once, the first tick they stand.</summary>
     private void HearWagons()
     {
@@ -79,11 +86,13 @@ public partial class RailNet
         var now = NetSession.Instance.Now;
         if (RailEncounterController.Instance is { } live && IsInstanceValid(live)) live.CollectNetCarts(_catchUpLive);
         else _catchUpLive.Clear();
+        _rails.CollectChaser(_catchUpLive);
         var carts = new List<CartStateDto>(_catchUpLive.Count + 1) { _rails.CaptureNet(now) };
         foreach (var c in _catchUpLive) carts.Add(Capture(c, now));
         _catchUpLive.Clear();
         world.SendTo(peer, new CartStateMsg(Game.Instance.CurrentFloor, world.FloorEpoch, carts)); // before the seats and leaps that name them
         SendSeated(world, peer, _rails.Cart, CartIds.Party);
+        if (_rails.Chaser is { } chaser) SendSeated(world, peer, chaser, chaser.CartId);
         if (ObjectiveController.Instance is CrewRescueController crew)
             foreach (var wagon in crew.Wagons)
                 if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Stop));
@@ -135,11 +144,12 @@ public partial class RailNet
     /// <summary>Client: where the server last set this client's own hero down from a seat, and when (this process's clock); the RIDE pass reads it.</summary>
     internal (Vector3 At, double When)? LastLocalLanding { get; private set; }
 
-    /// <summary>A cart on the wire as a seat book here: the party's, or a cage wagon by its stop (a chaser comes with Task 9).</summary>
+    /// <summary>A cart on the wire as a seat book here: the party's, a cage wagon by its stop, or a chaser's copy (its riders, NPCs too, sit in it here).</summary>
     private ICartBody? CartById(int id)
     {
         if (id == CartIds.Party) return IsInstanceValid(_rails.Cart) ? _rails.Cart : null;
         if (id >= CartIds.WagonBase && id < CartIds.ChaserBase) return WagonAt(id - CartIds.WagonBase);
+        if (id >= CartIds.ChaserBase && _carts.TryGetValue(id, out var cc) && cc.Chaser is { } chaser && IsInstanceValid(chaser) && !chaser.IsQueuedForDeletion()) return chaser;
         return null;
     }
 

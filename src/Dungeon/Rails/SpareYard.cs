@@ -2,15 +2,18 @@ using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Net;
+using DungeonCrawler.Party;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
-/// The spare carts, owned by the RailController: one stand-in cart beside each intermediate stop's platform, for looks
-/// only. When the party's cart is wrecked, <see cref="Pick"/> (by <see cref="SpareRules"/>) names the stop whose spare
-/// takes over and <see cref="Use"/> spends it (it vanishes). Which are spent is kept for the save. The server tells "used" and
-/// "restored" ("spare:{stop}"); a client's yard shows them (<see cref="Show"/>).
+/// The spare carts, owned by the RailController: one stand-in cart beside each intermediate stop's platform. When the party's
+/// cart is wrecked, <see cref="Pick"/> (by <see cref="SpareRules"/>) names the stop whose spare takes over and <see cref="Use"/>
+/// spends it (it vanishes). Solo a spare is for looks only; online it is also a thing to use (layer 8) whose prompt the
+/// RailController answers (a co-op player left behind takes it after the train, <see cref="SpareRules.MayChase"/>). Which are spent
+/// is kept for the save. The server tells "used" and "restored" ("spare:{stop}"); a restored spare stands parked again on every
+/// peer (shown and solid); a client's yard shows them (<see cref="Show"/>).
 /// </summary>
 public sealed class SpareYard
 {
@@ -21,6 +24,8 @@ public sealed class SpareYard
     private readonly HashSet<GridPos> _sidings;
     private readonly Dictionary<int, MineCart> _spares = new();
     private readonly HashSet<int> _used = new();
+    /// <summary>A parked spare's layers: solid (1), and online a thing to use (8).</summary>
+    private uint _layer = 1;
 
     public SpareYard(DungeonBuilder builder, FloorLayout layout, RailTrack track, HashSet<GridPos> sidings)
     {
@@ -35,10 +40,15 @@ public sealed class SpareYard
     /// <summary>Spares still parked.</summary>
     public int Left => _spares.Count - _used.Count;
 
-    /// <summary>One stand-in cart per intermediate stop, on a free cell of the stop's room beside the platform (never a rail, a siding or a blocked cell), facing along the track. It is looks only: no prompt, never boarded.</summary>
-    public void Build(Node3D root, int stopCount)
+    /// <summary>
+    /// One stand-in cart per intermediate stop, on a free cell of the stop's room beside the platform (never a rail, a siding or a blocked
+    /// cell), facing along the track. Solo it is looks only (no prompt, never boarded). Online (<paramref name="prompt"/> and
+    /// <paramref name="use"/> given) it is a thing to use too: its prompt and its use, by stop, are the owner's.
+    /// </summary>
+    public void Build(Node3D root, int stopCount, Func<int, Adventurer, string>? prompt = null, Action<int, Adventurer>? use = null)
     {
         if (_layout.Rail is not { } rail) return;
+        _layer = prompt != null ? 1u | 8u : 1u;
         for (var i = 1; i < stopCount - 1 && i < rail.Stops.Count; i++)
         {
             var stop = rail.Stops[i];
@@ -70,7 +80,14 @@ public sealed class SpareYard
             var s = _track.Curve.GetClosestOffset(_track.ToLocal(_builder.Surface(platform)));
             var along = -(_track.GlobalTransform * _track.Curve.SampleBakedWithRotation(s, true, true)).Basis.Z;
             var basis = new Basis(Vector3.Up, Mathf.Atan2(-along.X, -along.Z));
-            var spare = new MineCart { Name = $"SpareCart{i}", PromptFor = _ => "", CollisionLayer = 1 };
+            var stopIndex = i;
+            var spare = new MineCart
+            {
+                Name = $"SpareCart{i}",
+                PromptFor = prompt != null ? hero => prompt(stopIndex, hero) : _ => "",
+                OnUse = use != null ? hero => use(stopIndex, hero) : null,
+                CollisionLayer = _layer,
+            };
             root.AddChild(spare);
             spare.GlobalTransform = new Transform3D(basis, at);
             _builder.BlockCell(cell);
@@ -88,6 +105,9 @@ public sealed class SpareYard
         if (_used.Add(stop)) Tell(stop, "used");
         Hide(stop);
     }
+
+    /// <summary>The stop's spare has been spent (a takeover or a chase), as this peer knows it.</summary>
+    public bool IsUsed(int stop) => _used.Contains(stop);
 
     /// <summary>The stop's spare cart, or null (none stands there).</summary>
     public MineCart? At(int stop) => _spares.TryGetValue(stop, out var spare) && GodotObject.IsInstanceValid(spare) ? spare : null;
@@ -116,13 +136,15 @@ public sealed class SpareYard
     /// <summary>The stops whose spare cart is spent, or null when none is.</summary>
     public List<int>? Capture() => _used.Count == 0 ? null : _used.OrderBy(i => i).ToList();
 
-    /// <summary>Back from a save: exactly the listed spares (those that exist) are spent and hidden.</summary>
+    /// <summary>Back from a save: exactly the listed spares (those that exist) are spent and hidden; the others stand parked (shown and solid).</summary>
     public void Restore(IEnumerable<int>? used)
     {
         var before = _used.ToList();
         _used.Clear();
         if (used != null) foreach (var i in used) if (_spares.ContainsKey(i)) { _used.Add(i); Hide(i); }
-        foreach (var i in before) if (!_used.Contains(i)) Tell(i, "restored"); // (a load builds the floor afresh: its spares stand already)
+        // a spare no longer spent stands parked again, here as on a client told "restored" (a load builds the floor afresh: its spares
+        // stand already, so solo only the test shortcuts' in-place restores ever reach this)
+        foreach (var i in before) if (!_used.Contains(i)) { Park(i); Tell(i, "restored"); }
         foreach (var i in _used) if (!before.Contains(i)) Tell(i, "used");
     }
 
@@ -137,6 +159,6 @@ public sealed class SpareYard
     {
         if (!_spares.TryGetValue(stop, out var spare) || !GodotObject.IsInstanceValid(spare)) return;
         spare.Visible = true;
-        spare.CollisionLayer = 1;
+        spare.CollisionLayer = _layer;
     }
 }

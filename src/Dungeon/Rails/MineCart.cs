@@ -41,9 +41,16 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.8f, Roughness = 0.5f };
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
 
-    /// <summary>What it is on the wire: the party's cart (a spare is one too), or a runaway wagon.</summary>
-    public virtual Net.CartKind Kind => Net.CartKind.Party;
-    /// <summary>Its id on the wire (<see cref="Net.CartIds"/>): 0 the party's, the server's count for a runaway wagon.</summary>
+    private Net.CartKind _kind = Net.CartKind.Party;
+    /// <summary>What it is on the wire: the party's cart (a spare is one too), a chaser (a spare running after the train, <see cref="AsChaser"/>), or a runaway wagon.</summary>
+    public virtual Net.CartKind Kind => _kind;
+    /// <summary>This tub is a chaser (a co-op player's spare running after the train), as built: its kind on the wire.</summary>
+    public MineCart AsChaser()
+    {
+        _kind = Net.CartKind.Chaser;
+        return this;
+    }
+    /// <summary>Its id on the wire (<see cref="Net.CartIds"/>): 0 the party's, the server's count for a runaway wagon, ChaserBase + its stop for a chaser.</summary>
     public int CartId { get; set; }
     public CartSeats Seats { get; } = new();
     /// <summary>Who rides this cart, by <see cref="ICartRider.RiderId"/>: entered by <see cref="Admit"/> (the rider's SitIn), removed by <see cref="Release"/>.</summary>

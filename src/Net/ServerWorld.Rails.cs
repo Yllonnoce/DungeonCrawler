@@ -48,14 +48,14 @@ public partial class ServerWorld
     }
 
     /// <summary>
-    /// A player (or a bot) leaves the world while seated in the party's cart: it steps out beside the lane, quietly (no run-over, no log),
+    /// A player (or a bot) leaves the world while seated in the party's cart (or a left-behind player's chaser): it steps out beside the lane, quietly (no run-over, no log),
     /// and its seat is freed, before its body is parked; the parked pose is that spot. Its ride intent goes with it.
     /// </summary>
     private void UnseatLeaving(PlayerSlot slot)
     {
         _rides.Remove(slot.MemberIndex);
         _unseatedPending.Remove(slot.MemberIndex);
-        if (BodyOf(slot) is not { Seated: true } body || RailController.Instance is not { } rc || !GodotObject.IsInstanceValid(rc) || body.Cart != rc.Cart) return;
+        if (BodyOf(slot) is not { Seated: true } body || RailController.Instance is not { } rc || !GodotObject.IsInstanceValid(rc) || body.Cart != rc.Cart && body.Cart != rc.Chaser) return; // the party's cart, or a chaser (task 9)
         rc.UnseatQuietly(body);
         _unseatedPending.Remove(slot.MemberIndex); // nobody is left to send poses
         var at = body.GlobalPosition;
