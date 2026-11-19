@@ -41,6 +41,10 @@
 | Leave-them-behind | Hold interact for **1.0 s** (`InteractHold.HoldSeconds`) while seated in the party cart at a stop whose cage holds it. Keyboard E and the VR grip both work. A tap still gets out, firing on release whenever a hold is offered | InteractHold |
 | Seated prompt | `Get out (hold to leave the prisoners behind)` | CageHoldRules.SeatedPrompt |
 | HUD | `Cart — cage locked`; the relief's bar reads `Relief cart — departs in N` / `Relief cart — after the train` / `Relief cart — behind the train` | RailHud |
+| Win rule (ruled 2026-11-19) | The crew of a cage the player left behind count as **Lost**, as dead crew do: they never block the win, and their closed cage does not either. If the player later opens that cage on foot, its crew are Freed again and follow on foot as today. Without this, leaving them would seal the stairs for good | CrewRules, CrewRescueController |
+| Seat over a hole (ruled) | A relief's seat never lies inside a jump gap or fallen-trestle span. It stops short of the near lip (`SpareRules.HoleLimit`), and the player walks a few metres to it | ReliefRules.SeatLimit |
+| After a wreck (ruled) | A relief may come after a wreck whose spare took over at a stop ahead of the player. The player is left behind with the train ahead, and "never stranded" wins over the spec's silence. Nothing in `Wreck()` sets `_met` | RailController.Relief |
+| "Met" at a build or a load (ruled) | `_met` starts **false**. `ReliefRules.Met` sets it on the first tick the player sits in the standing cart or stands within 12 m of the train, so a player still far behind after a load gets a relief | RailController.Relief |
 
 **Why hold E is feasible.** `PartyController._UnhandledInput` sees the press and the release of `interact` (it already times `attack_primary` the same way for heavy swings). `VrRig.Read` already keeps `_useHeld`, so it can report both edges. The only cost is that "Get out" fires on release instead of on press, and only while a hold is offered.
 
@@ -65,20 +69,24 @@
 - Modify `src/Dungeon/Rails/Core/RailHud.cs`
 - Modify `src/Dungeon/Rails/RailController.cs` (`Setup`, `Restore`, `StartBoarding`, `PromptFor`, `Tick`, `HudState`)
 - Modify `src/Dungeon/Rails/RailController.Net.cs` (`NetFlags`)
-- Modify `src/Adventure/Objectives/CrewRescueController.cs` (`Build`, `_ExitTree`, `OnCartEvent`)
+- Modify `src/Adventure/Objectives/CrewRescueController.cs` (`Build`, `_ExitTree`, `OnCartEvent`, `Judge`, `Tick`)
+- Modify `src/Adventure/Core/Objectives/CrewRules.cs` (the win rule for a cage left behind)
 - Modify `src/Core/DebugTools.Ride.cs`, `DebugTools.RideEdges.cs`, `DebugTools.Chase.cs`, `DebugTools.CartWatchdog.cs`, `DebugTools.Crew.cs`
 - Modify `src/Net/NetTestFlow.cs` and `scripts/net_test.sh`
 - Modify `docs/development.md`
-- Tests: create `tests/Dungeon/Rails/CageHoldRulesTests.cs` and `tests/Party/InteractHoldTests.cs`; modify `tests/Dungeon/Rails/RailHudTests.cs` and `tests/Net/CartNetTests.cs`; add a NetRefs test to the existing NetRefs test file (find it with `grep -rl "NetRefs.TryParse" tests`), or to `tests/Net/CartNetTests.cs` if there is none
+- Tests: create `tests/Dungeon/Rails/CageHoldRulesTests.cs` and `tests/Party/InteractHoldTests.cs`; modify `tests/Dungeon/Rails/RailHudTests.cs`, `tests/Net/CartNetTests.cs` and `tests/Adventure/CrewRulesTests.cs`; add a NetRefs test to the existing NetRefs test file (find it with `grep -rl "NetRefs.TryParse" tests`), or to `tests/Net/CartNetTests.cs` if there is none
 
 **Interfaces:**
-- Produces, used by Task 2 and the flows:
-  - `RailController.CageHeld` (bool)
-  - `RailController.CageHolds` (`Func<int,bool>?`)
-  - `RailHudState(..., bool CageHeld = false)`
-  - `MineCart.HoldFor` (`Func<Adventurer,bool>?`), `MineCart.OnHold` (`Action<Adventurer>?`), `MineCart.HoldOffered`, `MineCart.HoldInteract(PartyController, Adventurer)`
-  - `NetRefs.Hold(string)`
-  - `DebugTools.RideWaiveCages(Main, RailController, string)`
+- Produces:
+  - **Used by Task 2:** `RailHudState(..., bool CageHeld = false)`. Task 2 appends after it.
+  - **Used by the crew controller and the flows:**
+    - `RailController.CageHeld` (bool)
+    - `RailController.CageHolds` (`Func<int,bool>?`)
+    - `RailController.CrewLeftAt` (`IReadOnlyCollection<int>`)
+    - `MineCart.HoldFor` (`Func<Adventurer,bool>?`), `MineCart.OnHold` (`Action<Adventurer>?`), `MineCart.HoldOffered`, `MineCart.HoldInteract(PartyController, Adventurer)`
+    - `NetRefs.Hold(string)`
+    - `DebugTools.RideWaiveCages(Main, RailController, string)`
+    - `CrewRules.JudgeCaged(bool leftBehind)` and `CrewRules.CagesBlocking(IReadOnlyList<(bool Open, bool LeftBehind)>)`
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -130,6 +138,15 @@
 }
 ```
 
+`tests/Adventure/CrewRulesTests.cs` (uses the file's own `C(...)` helper):
+```csharp
+[Fact] public void JudgeCaged_LeftBehind_IsLost() => Assert.Equal(CrewState.Lost, CrewRules.JudgeCaged(leftBehind: true));
+[Fact] public void JudgeCaged_StillWaiting_IsCaged() => Assert.Equal(CrewState.Caged, CrewRules.JudgeCaged(false));
+[Fact] public void CagesBlocking_ALeftCageDoesNotBlock() => Assert.Equal(0, CrewRules.CagesBlocking(new[] { (false, true), (true, false) }));
+[Fact] public void CagesBlocking_ALockedCageStillBlocks() => Assert.Equal(1, CrewRules.CagesBlocking(new[] { (false, false), (false, true) }));
+[Fact] public void Done_WithALeftCagesCrewLost() => Assert.True(CrewRules.Completed(C(CrewState.Home, CrewState.Home, CrewState.Lost, CrewState.Lost), CrewRules.CagesBlocking(new[] { (true, false), (false, true) })));
+```
+
 NetRefs test:
 ```csharp
 [Fact] public void Hold_WrapsARef()
@@ -143,8 +160,8 @@ NetRefs test:
 
 - [ ] **Step 2: Run them and see them fail**
 
-Run: `dotnet test tests/DungeonCrawler.Tests.csproj --filter "FullyQualifiedName~CageHoldRulesTests|FullyQualifiedName~InteractHoldTests|FullyQualifiedName~RailHudTests|FullyQualifiedName~CartNetTests|FullyQualifiedName~Hold_WrapsARef"`
-Expected: build errors (`CageHoldRules`, `InteractHold`, `CageHeld`, `NetRefs.Hold` not defined).
+Run: `dotnet test tests/DungeonCrawler.Tests.csproj --filter "FullyQualifiedName~CageHoldRulesTests|FullyQualifiedName~InteractHoldTests|FullyQualifiedName~RailHudTests|FullyQualifiedName~CartNetTests|FullyQualifiedName~Hold_WrapsARef|FullyQualifiedName~CrewRulesTests"`
+Expected: build errors (`CageHoldRules`, `InteractHold`, `CageHeld`, `NetRefs.Hold`, `CrewRules.JudgeCaged` not defined).
 
 - [ ] **Step 3: The engine-free pieces**
 
@@ -164,6 +181,10 @@ Expected: build errors (`CageHoldRules`, `InteractHold`, `CageHeld`, `NetRefs.Ho
 - `NetRefs`: `public const string HoldKind = "hold";` and `public static string Hold(string inner) => $"{HoldKind}:{inner}";`. Doc: "A held interact (the leave-the-prisoners-behind press) on the wrapped ref."
 - `CartEventKind`: append `CageHeld`. It is raised when a countdown would start at a stop but the cage holds the cart (`Stop` = that stop). It is not on the wire (`grep CartEventKind src/Net` is empty).
 - `RailHudState`: append `bool CageHeld = false`. In `RailHud.Text`, after the gate-down line and before the boarding line: `if (s.Mode == CartMode.Held && s.CageHeld && !s.Boarding) return "Cart — cage locked";`
+- `CrewRules`:
+  - `public static CrewState JudgeCaged(bool leftBehind) => leftBehind ? CrewState.Lost : CrewState.Caged;`
+  - `public static int CagesBlocking(IReadOnlyList<(bool Open, bool LeftBehind)> cages)`: counts the cages that are neither open nor left behind.
+  - `Completed` is unchanged; its caller now passes `CagesBlocking` in place of every closed cage.
 
 - [ ] **Step 4: Run Step 1's tests and see them pass**
 
@@ -171,21 +192,24 @@ Same command. Expected: PASS.
 
 - [ ] **Step 5: The input layer**
 
-- `IInteractable.cs`: add `public interface IHoldInteractable { bool HoldOffered { get; } void HoldInteract(PartyController party, Adventurer actor); }`, with a doc saying what holding interact for `InteractHold.HoldSeconds` does on it.
+- `IInteractable.cs`: add `public interface IHoldInteractable : IInteractable { bool HoldOffered { get; } void HoldInteract(PartyController party, Adventurer actor); }`, with a doc saying what holding interact for `InteractHold.HoldSeconds` does on it. Extending `IInteractable` lets `NetRefResolver.RefOf(target)` take it as is.
 - `PartyController`: add a field `readonly InteractHold _hold = new()` and a private `void Interact(bool pressed)` that keyboard and VR share:
   - Pressed: `if (_hold.Press(_time, local.LookingAt is IHoldInteractable { HoldOffered: true })) local.TryInteract();`
   - Released: `if (_hold.Release(_time)) local.TryInteract();`
   - In `_UnhandledInput`, the `interact` press calls `Interact(true)`. Add `else if (@event.IsActionReleased("interact")) Interact(false);` to the chain.
   - `VrUse()` becomes `VrUse(bool pressed)` and calls `Interact(pressed)`.
-  - In `_Process`, after `_time += delta`: if `!PartyAlive || InputLocked || !MouseCaptured && Local?.VrRig == null`, call `_hold.Cancel()`. Otherwise, when `_hold.Tick(_time)` fires, call `Local?.TryHoldInteract()`.
+  - In `_Process`, immediately after `_time += delta;` and **before** the `if (Net.NetSession.IsClient) { … return; }` block (`PartyController.cs:426-433`), so that a client's hold fires too:
+    - If `!PartyAlive || InputLocked || !MouseCaptured && Local?.VrRig == null`, call `_hold.Cancel()`.
+    - Otherwise, when `_hold.Tick(_time)` fires, call `Local?.TryHoldInteract()`.
+  - `Possess` calls `_hold.Cancel()`, so a hold started as one hero never fires as another.
 - `VrRig.Read`: replace `if (use && !_useHeld) party.VrUse();` with `if (use != _useHeld) party.VrUse(use);`.
 - `Adventurer.TryHoldInteract()`:
   - Do nothing if `Downed` or `LookingAt is not IHoldInteractable { HoldOffered: true } target`.
-  - On a client, send `new Net.InteractIntent(Net.NetRefs.Hold(netRef))`, where `netRef = NetRefResolver.RefOf((Node)target)`.
+  - On a client, send `new Net.InteractIntent(Net.NetRefs.Hold(netRef))`, where `netRef = Net.NetRefResolver.RefOf(target)` (do nothing when it is null).
   - Otherwise call `target.HoldInteract(Party, this)`.
 - `ServerWorld` `case InteractIntent i`: first handle `NetRefs.TryParse(i.Ref, out var k, out var inner) && k == NetRefs.HoldKind`:
   - Resolve `inner` with `NetRefResolver.Resolve(root, inner)` and require `IHoldInteractable`.
-  - Check reach as for a cart: `MineCart.TubDistance(body)` against `PropPromptRules.InteractReach`.
+  - Check reach as for a cart: `node is Dungeon.Rails.MineCart tub ? tub.TubDistance(body) : <the existing min of the node's distance to body and camera>` against `PropPromptRules.InteractReach`.
   - On a test server, print `[net-server] hold {inner} from {slot.Name}: {dist:0.0} m`.
   - Call `HoldInteract(party, body)` and `break`. Everything else is unchanged.
 - `MineCart : IHoldInteractable`:
@@ -206,10 +230,10 @@ Same command. Expected: PASS.
   - It does not depend on the gate. The HUD shows the gate first. A player may leave the prisoners while the gate is still down, and the gate's lift then starts the countdown as it does today.
 - `StartBoarding(bool call)`, after the existing `Halted && LineBlocked` guard: `if (CageHeld) { _heldStartCall ??= call; Raise(new CartEvent(CartEventKind.CageHeld, Stop: StopIndex)); return; }`. On a start that goes through, set `_heldStartCall = null`.
 - `Tick`, Held branch:
-  - Add `|| CageHeld` to the cancel condition on line 718.
+  - Add `|| CageHeld` to the cancel condition on line 718. When `CageHeld` is what cancels a running countdown, also set `_heldStartCall ??= false`, so the countdown restarts by itself once the hold ends. Today nothing starts a countdown under a held cage, so this is a guard.
   - Before that if/else, as its own statement: `if (_heldStartCall is { } held && playerAboard && seated > 0 && GateClear && !(Halted && LineBlocked) && !Boarding.Running && !CageHeld) StartBoarding(held);`. This covers a cage opened while players sit waiting (Grisel from the bench, a pick, the keys) and its last crew dying. The existing cancel/departure if/else then runs unchanged.
-- `PromptFor`: when `hero.Cart == Cart && CageHoldRules.MayLeaveBehind(true, hero.Downed, CageHeld)`, return `CageHoldRules.SeatedPrompt`. Otherwise keep today's `BoardPrompt`.
-- `private bool HoldFor(Adventurer hero) => hero.Cart == Cart && CageHoldRules.MayLeaveBehind(true, hero.Downed, CageHeld);`
+- `private bool HoldFor(Adventurer hero) => CageHoldRules.MayLeaveBehind(hero.Cart == Cart, hero.Downed, CageHeld);` is the one helper.
+- `PromptFor`: `if (HoldFor(hero)) return CageHoldRules.SeatedPrompt;`. Otherwise keep today's `BoardPrompt`.
 - `private void LeaveCrew(Adventurer actor)`, wired in `Setup` as `OnHold` (wrapped so it ends in `Flush()`, like `Use`):
   - Return if on a client, if `!Current`, if `!IsPlayer(actor)`, or if `!HoldFor(actor)`.
   - `_crewLeftAt.Add(StopIndex)`.
@@ -224,6 +248,11 @@ Same command. Expected: PASS.
 - In `Build`, after `_rails.CartEvents += OnCartEvent;`: `_rails.CageHolds = HoldsCart;`. In `_ExitTree`, set it to null when it is still ours.
 - `private bool HoldsCart(int stop)`: for each wagon at `stop` that is not `Open`, count the crew with `WagonOf(c) == wagon && IsInstanceValid(c) && !c.Dead`. A downed crew member is living and still holds the cart. Return `CageHoldRules.Holds(wagon.Open, count)` for the first wagon at that stop.
 - `OnCartEvent`: `if (e.Kind is CartEventKind.Boarding or CartEventKind.CageHeld) { WarnLocked(e.Stop); return; }`. "The cage here is still locked." is still said once per stop, now as the cart is held.
+- **The win rule.** Add `private bool LeftBehind(CageWagon w) => _rails != null && IsInstanceValid(_rails) && _rails.CrewLeftAt.Contains(w.Stop);`.
+  - In `Judge`, replace `if (WagonOf(npc) is { Open: false }) return CrewState.Caged;` with `if (WagonOf(npc) is { Open: false } w) return CrewRules.JudgeCaged(LeftBehind(w));`. The dead are still judged Lost first.
+  - In `Tick`, pass `CrewRules.CagesBlocking(<each wagon's (Open, LeftBehind(w))>)` to `CrewRules.Completed` in place of `ClosedCages`. Build the list without allocating each tick (a reused list field). Leave the "waived" check above it on `ClosedCages`.
+  - Opening a left cage later frees its crew through today's path (`OpenCage`, then "Let them out" on the siding).
+  - `Capture` is unchanged: `LostCrew` still lists only the dead, because `Restore` kills whoever it lists. So the waiver stays unsaved: after a load the cage holds again and its crew are Caged. On a co-op client, the crew HUD shows a left cage's crew as caged, since it learns them from the server's `LostCrew`. That is accepted; there is no wire change.
 - Grisel: no new line. `GriselNamesTheRide` is unchanged (on `Departed`).
 - Companions' auto-boarding (`HopIn`, `HopInNearby`) is unchanged. Their `StartBoarding(call: true)` is held back like any other start; `??=` keeps the first start's call, so a hop-in never adds an "All aboard!".
 
@@ -238,7 +267,7 @@ These flows depart intermediate stops with the cage still locked, so they would 
 - Add `internal static void RideWaiveCages(Main main, RailController rc, string tag)` to `DebugTools.Ride.cs`:
   - When `rc.CageHeld` and `main.Party.Local is { } me && me.Cart == rc.Cart`, call `rc.Cart.HoldInteract(main.Party, me)`.
   - Print `[{tag}] leaves the prisoners at stop {k} behind (the cage hold is --test-crew's to check)` once per stop.
-- Call it every frame, right after the `rc` null check, in `RunRideTest`, `RunRideEdgesTest`, `RunChaseTest` and `RunCartWatchdogTest`. A waiver made at the arrival frame starts the countdown just as the arrival used to, with the same `call`, so these flows keep their timings and their AllAboard counts (--test-ride still expects 2).
+- Call it every frame in `RunRideTest`, `RunRideEdgesTest`, `RunChaseTest` and `RunCartWatchdogTest`, at the top of the frame once `rc != null`. `RunRideTest` has no early return on a null `rc`, so guard the call there. A waiver made at the arrival frame starts the countdown just as the arrival used to, with the same `call`, so these flows keep their timings and their AllAboard counts (--test-ride still expects 2).
 - --test-crew main path: it opens each cage before it departs, so it needs no waiver. Its countdown now starts when the cage opens instead of when the gate lifts, and `CrewDepart`'s 8 s budget covers that.
 - --test-crew section 2 (`RunCrewWreck`) is the single-player proof of the cage hold. The rebuilt floor rides through stop 1 with cage 1 locked. Insert three steps before today's case 1 and renumber the rest:
   - **Held at stop 1.** Wait (60 s budget) until the cart is Held at stop 1 with `rc.GateUp(1)` and the local hero seated, then note the time.
@@ -249,12 +278,19 @@ These flows depart intermediate stops with the cage still locked, so they would 
     - the log line "The cage here is still locked." heard exactly once since the rebuild (hook `EventBus.Instance.Message`)
 
     Then call `rc.Cart.HoldInteract(party, lead)` and print `[crew] 8 held at stop 1 by its locked cage for 7 s (hud "…", prompt "…"); the lead leaves the prisoners behind`.
-  - **Departs within 6 s.** Then assert that wagon 1 is not coupled, its two crew are still `CrewState.Caged`, and `rc.CrewLeftAt` contains 1. Print `[crew] 8 departed stop 1 without its prisoners: wagon 1 coupled=False, caged 2`.
+  - **Departs within 6 s.** Then assert:
+    - wagon 1 is not coupled and still locked
+    - `rc.CrewLeftAt` contains 1
+    - its two crew are `CrewState.Lost` (the win rule)
+    - `ctrl.HudText` contains `", 2 lost"`
+    - `!ctrl.Completed`
+
+    Print `[crew] 8 departed stop 1 without its prisoners: wagon 1 coupled=False, its crew Lost (hud "…")`.
   - Then today's thin-plating brute between stops 1 and 2.
 - `NetTestFlow` (co-op, the RIDE pass):
   - **Phase 1, stop 1 (`NetTestFlow.cs:716`).** Cage 1 is locked here, so the client's prompt is now the hold prompt. Require `prompt == CageHoldRules.SeatedPrompt`, print `[net] ride: at stop 1 the cart offers "<prompt>" here (cage 1 locked)`, and still send the plain tap (`InteractIntent(cartRef)`) to get out.
   - **A helper `void RideLeaveCrew(NetSession net, RailController rc, Adventurer me, string who)`.** Once per stop, when `me.Cart == rc.Cart && rc.CageHeld && rc.Cart.Prompt == CageHoldRules.SeatedPrompt`, send `new InteractIntent(NetRefs.Hold(NetRefs.Cart))` and print `[net] ride: left the prisoners at stop {k} behind through the intent (the prompt read "<prompt>")`.
-  - Call the helper every frame for the first client while it rides (phases 7 to 9, and wherever it sits in `rc.Cart` after that) and for the joiner while it sits in `rc.Cart` (phases 62, 63, 70 and 71). As in single player, the waiver goes out the moment the hold shows, so the stop 2 and stop 3 departures keep today's timing.
+  - Call the helper every frame for the first client whenever it sits in `rc.Cart`: the RideProps phases 7 and 8, then its steps 52 and 53 (it stays seated at stop 3 for ride 4). Call it for the joiner while it sits in `rc.Cart` (steps 62, 63, 70 and 71). As in single player, the waiver goes out the moment the hold shows, so the stop 2 and stop 3 departures keep today's timing.
 - `scripts/net_test.sh`, RIDE pass, new checks next to the stop-1 and stop-2 departure checks:
   - `grep -q "\[net\] ride: at stop 1 the cart offers \"Get out (hold to leave the prisoners behind)\" here (cage 1 locked)" client.log`
   - `grep -hq "\[net\] ride: left the prisoners at stop 2 behind through the intent" client.log joiner.log`
@@ -291,6 +327,7 @@ In `docs/development.md`:
   - The log line, and that the held-back countdown starts with its own call.
   - That this applies in every mode.
   - That the waiver is not saved.
+  - **The win rule:** a left cage's crew count as lost and their cage does not block the stairs. Opening it later on foot frees them to follow on foot. After a load the cage holds again, because the waiver is not saved. Update "The win." paragraph to match.
 - **"Riding together".** Add `CartFlags.CageHeld` (128) and the `hold:<ref>` intent (`NetRefs.HoldKind`). Note that the protocol is unchanged.
 - **Controls table.** Add the row `E (hold 1 s, VR grip) | Seated at a stop whose cage is locked: leave the prisoners behind (a tap still gets out)`.
 - **`--test-crew` paragraph.** Add the section-2 cage-hold check.
@@ -300,7 +337,7 @@ In `docs/development.md`:
 
 ```bash
 git add src/ docs/development.md scripts/net_test.sh   # include the new .cs.uid files Godot generated
-git commit -m "feat(rails): the cage hold: no countdown at a stop whose cage is locked; hold E to leave the prisoners behind (CartFlags.CageHeld, hold:<ref>)
+git commit -m "feat(rails): the cage hold: no countdown at a stop whose cage is locked; hold E to leave the prisoners behind, who then count as lost (CartFlags.CageHeld, hold:<ref>)
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -329,24 +366,26 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Modify `src/Core/DebugTools.cs` (the flag, the doc list, the automation list, the dispatch) and `src/Core/DebugTools.RideEdges.cs`
 - Modify `src/Net/NetTestFlow.cs` and `scripts/net_test.sh` (the online guard)
 - Modify `docs/development.md`
-- Tests: create `tests/Dungeon/Rails/ReliefRulesTests.cs`; modify `tests/Dungeon/Rails/RailHudTests.cs` and `tests/Dungeon/Rails/RunOverRulesTests.cs` (only if the rename breaks a reference)
+- Tests: create `tests/Dungeon/Rails/ReliefRulesTests.cs`; modify `tests/Dungeon/Rails/RailHudTests.cs`. `OnTheRails` is private, so no test references it.
 
 **Interfaces:**
 - Consumes:
-  - Task 1's `RailHudState` (append after `CageHeld`) and `RailController.CageHeld`
+  - Task 1's `RailHudState` (append after `CageHeld`)
   - Plan 5's `SpareRules.ChaseLimit`, `ChaseRolls`, `HoleLimit`, `HeapLimit`, `Hop`, `ChaserPrompt`, `ChaseGap` and `HideSeconds`
   - `Boarding`, `RideInputRules.BoardPrompt` and `InBoardReach`
 - Produces:
   - **`ReliefRules` and `ReliefClock`**, as below.
   - **Test hooks on `RailController`, all `internal`:**
     - `int ReliefsSent`
-    - `int ReliefHits` (bodies the relief ran over)
+    - `int ReliefHits`: times a relief ran over the local player. Companions, crew and enemies are not counted.
     - `bool LeftBehindNow`
     - `ReliefPhase? ReliefPhaseNow`
     - `MineCart? ReliefCart`
     - `float ReliefRunS` (NaN when none)
     - `int ReliefSpawnStop` (−1 when none)
     - `float PlayerLineS` (NaN when none)
+
+    `ReliefsSent`, `ReliefHits` and `ReliefSpawnStop` are reset in `Restore`. `ReliefSpawnStop` also goes back to −1 when a relief ends.
   - **`DebugTools.NoRelief`** (`public bool { get; set; }`)
 
 - [ ] **Step 1: Write the failing tests** (`tests/Dungeon/Rails/ReliefRulesTests.cs`)
@@ -398,6 +437,11 @@ public void SpawnStop_TheLastStopAtOrBehindThePlayer(float playerS, int stop) =>
 [Fact] public void Next_Waiting30s_Goes() => Assert.Equal(ReliefPhase.Leaving, ReliefRules.Next(ReliefPhase.Waiting, true, false, 30f));
 [Fact] public void Next_RidingGotOutStanding_WaitsAgain() => Assert.Equal(ReliefPhase.Waiting, ReliefRules.Next(ReliefPhase.Riding, true, false, 0f));
 [Fact] public void Next_RidingRolling_Rides() => Assert.Equal(ReliefPhase.Riding, ReliefRules.Next(ReliefPhase.Riding, false, false, 0f));
+[Fact] public void Next_RidingHeldWithThePlayer_Rides() => Assert.Equal(ReliefPhase.Riding, ReliefRules.Next(ReliefPhase.Riding, true, true, 0f)); // held short of the train at a heap face or a lip, rider aboard
+// SeatLimit(limit, target, holes): the seat never stands over a gap or trestle span
+[Fact] public void SeatLimit_ClearOfHoles_IsTheTarget() => Assert.Equal(106f, ReliefRules.SeatLimit(300f, 106f, new[] { (100f, 104f) }), 3); // back end 104.9 clears the far lip
+[Fact] public void SeatLimit_OverAHole_StopsShortOfTheNearLip() => Assert.Equal(98.9f, ReliefRules.SeatLimit(300f, 104.5f, new[] { (100f, 104f) }), 3); // 100 − 1.1
+[Fact] public void SeatLimit_TheTrainCloser_IsTheLimit() => Assert.Equal(90f, ReliefRules.SeatLimit(90f, 120f, new[] { (100f, 104f) }), 3);
 [Fact] public void Next_Leaving_Stays() => Assert.Equal(ReliefPhase.Leaving, ReliefRules.Next(ReliefPhase.Leaving, true, true, 0f));
 // Rolls(phase, boarded, s, limit)
 [Fact] public void Rolls_ComingTowardYou() => Assert.True(ReliefRules.Rolls(ReliefPhase.Coming, false, 10f, 11f));
@@ -449,6 +493,7 @@ public readonly record struct ReliefView(bool Solo, bool LineLive, bool PlayerUp
 - **`SpawnS(float stopS, float playerS, float chaseLimit)`:** `Math.Max(0, Math.Min(Math.Min(stopS, playerS - CartRules.HalfLength - BodyRadius - SpawnClear), chaseLimit))`
 - **`SeatS(float spawnS, float playerS, bool onRails)`:** `spawnS` when `playerS - spawnS <= WaitAtStopRange`; otherwise `playerS + HalfLength + BodyRadius + PastRunOver` on the rails, else `playerS`.
 - **`Target(float current, float seatS) => Math.Max(current, seatS)`**
+- **`SeatLimit(float limit, float target, IReadOnlyList<(float From, float To)> holes) => SpareRules.HoleLimit(Math.Min(limit, target), holes)`:** the Coming relief's limit. A seat over a gap or trestle span is pulled back short of its near lip.
 - **`Next(ReliefPhase phase, bool held, bool playerAboard, float waited)`:** follows the tests above.
 - **`Rolls(ReliefPhase phase, bool boarded, float s, float limit)`:** Coming and Leaving use `SpareRules.ChaseRolls(true, s, limit)`; Riding uses `SpareRules.ChaseRolls(boarded, s, limit)`; Waiting is false.
 - **`Prompt(ReliefPhase phase, bool held, bool seatedHere, bool onFootPlayer, bool inReach, bool downed, float boardingLeft)`:**
@@ -482,47 +527,53 @@ Same command as Step 2. Expected: PASS.
 
 **Plan 5 code made relief-aware:**
 - `EndChase`: `_spares.GiveBack` only when `!c.Relief`. A relief never spends or gives back a spare.
-- `ChaseRunOver`: after the judge, `if (c.Relief) ReliefHits += _chaseHits.Count;`
+- `ChaseRunOver`: after the judge, `if (c.Relief)` add one to `ReliefHits` for each hit whose body is the local player (`Main.Instance.Party.Local`). Companions, crew and enemies do not count.
 - `CollectChaser` and `ChaserPlaced`: a relief is never collected and never raises `ChaserPlaced`; it is solo only.
-- `ChaserHud`: gains `out bool relief`, and `HudState` passes `ChaserRelief`.
+- `ChaserHud`: gains `out bool relief`. Thread it through `RefreshHud` into `HudState`, which passes `ChaserRelief`.
 
 **`TrackSampler.ClosestS(Vector3 pos)`:** `Track.Curve.GetClosestOffset(Track.ToLocal(pos))`.
 
 **`RunOverRules`:** rename the private `OnTheRails` to `public static bool OnRails(in TrackBody b)`; behaviour is unchanged.
 
-**`src/Dungeon/Rails/RailController.Relief.cs`** (a partial). Fields: `ReliefClock _reliefClock = new()`, `bool _met = true`. Methods:
+**`src/Dungeon/Rails/RailController.Relief.cs`** (a partial). Fields: `ReliefClock _reliefClock = new()`, `bool _met` (starts **false**: see the settled values), `bool _playerOnRails` (the last tick's rails test). Methods:
 
 - **`private void TickRelief(PartyController party, float dt)`.** It is called in `Tick` right after `TickChase`. It returns at once when `NetSession.IsNetworked`, when `DebugTools.Instance?.NoRelief == true`, or when `StopS.Length < 2`.
-  - The player: `me = party.Local`.
-  - Their line position: `PlayerLineS = Party.Track.ClosestS(me.GlobalPosition)`. Then `Party.Track.Measure(me.GlobalPosition, PlayerLineS, 2f, out var b)`, and `onRails = RunOverRules.OnRails(b with { Radius = RunOverSweep.BodyRadius })`.
+  - The player: `if (party.Local is not { } me || !IsInstanceValid(me)) { PlayerLineS = float.NaN; LeftBehindNow = false; return; }`.
+  - Their line position: `PlayerLineS = Party.Track.ClosestS(me.GlobalPosition)`. Then `Party.Track.Measure(me.GlobalPosition, PlayerLineS, 2f, out var b)`, and `_playerOnRails = RunOverRules.OnRails(b with { Radius = RunOverSweep.BodyRadius })`.
   - The train's back: `lastBackS = SpareRules.TrainBackS(Party.BackS, _train.Count, WagonSpacing) + CartRules.HalfLength`, and `behind = ReliefRules.Behind(lastBackS, PlayerLineS)`.
   - `_met = ReliefRules.Met(_met, State.Mode == CartMode.Rolling, me.Cart == Cart, behind)`.
   - `LeftBehindNow = ReliefRules.LeftBehind(new ReliefView(true, ReliefRules.LineLive(StopS.Length, StopIndex, State.Mode, Halted, !Cart.Visible), !me.Downed && !me.Parked, me.Seated, State.Mode != CartMode.Rolling, _met, behind))`.
   - Counting runs while no chase is out, while the chase has ended, or while it is a relief in Leaving: `counting = _chase is null or { Ended: true } or { Relief: true, Phase: ReliefPhase.Leaving }`.
-  - `if (_reliefClock.Tick(dt, LeftBehindNow, counting)) SendRelief(me, PlayerLineS, onRails);`
+  - `if (_reliefClock.Tick(dt, LeftBehindNow, counting)) SendRelief(me, PlayerLineS, _playerOnRails);`
 
 - **`private void SendRelief(Adventurer me, float playerS, bool onRails)`:**
   - `FreeChaser()` any chaser still standing.
   - `stop = ReliefRules.SpawnStop(StopS, playerS)`.
   - `s = SpareRules.HoleLimit(ReliefRules.SpawnS(StopS[stop], playerS, ChaseLimitNow()), holes)`, with the holes from `CollectPartyLaneHoles`.
-  - `new MineCart { Name = "ReliefCart", CartId = CartIds.Chaser(stop), PromptFor = ReliefPromptFor, OnUse = UseRelief, CollisionLayer = 0 }.AsChaser()`.
+  - `new MineCart { Name = $"ReliefCart{_reliefClock.Sent}", CartId = CartIds.Chaser(stop), PromptFor = ReliefPromptFor, OnUse = UseRelief, CollisionLayer = ChaserHeldLayer }.AsChaser()`.
+    - The name is unique, because Godot would rename a second `ReliefCart` added while the last one is still queued for deletion.
+    - It is created solid and usable (`ChaserHeldLayer`), as `StartChase` does. A relief that spawns within `WaitAtStopRange` never rolls, and the look ray sees only layer 8, so it could never be boarded otherwise.
+    - Only the change to Rolling sets layer 0.
   - A `CartRun` Held at `s` with `Limit = s`; `PoseAt`, `Sync` and `ChaserPlacedSound`, as `StartChase` does.
   - `_chase = new Chase { Relief = true, Phase = ReliefPhase.Coming, Stop = stop, SpawnS = s, Target = ReliefRules.SeatS(s, playerS, onRails), Boarded = false }`.
   - Clear `_chaseHitAt` and `_chaseWarned`.
-  - Set `ReliefsSent = _reliefClock.Sent` and `ReliefSpawnStop = stop`.
+  - Set `ReliefsSent = _reliefClock.Sent` and `ReliefSpawnStop = stop`. The run-over source and `HopHoles`' print keep the chaser's "spare cart" words (ruled). The relief logs its own lines below and never co-op's "The spare cart rolls after the train.".
   - Log "A relief cart comes down the line." and `GD.Print($"[rails] relief {n}: sent from stop {stop} at S={s:0.0} for the player at S={playerS:0.0} ({(onRails ? "on the rails" : "beside the line")}), seat at S={target:0.0}")`.
 
 - **`TickChase` relief branch.** It runs when `c.Relief && !c.Ended`, after the shared `limit` (train, heap, holes) is computed, and replaces the co-op `!c.Boarded` / `ChaseRolls` / `ChaseDone` block.
-  - **Coming.** `c.Target = ReliefRules.Target(c.Target, ReliefRules.SeatS(c.SpawnS, PlayerLineS, onRails-now))`, using the player's S and rails test this tick (keep them in fields from `TickRelief`, which runs right after). Then `limit = Math.Min(limit, c.Target)`.
+  - **Coming.** When `PlayerLineS` is not NaN, `c.Target = ReliefRules.Target(c.Target, ReliefRules.SeatS(c.SpawnS, PlayerLineS, _playerOnRails))`. These are the previous tick's values, because `TickRelief` runs after `TickChase`. Then `limit = ReliefRules.SeatLimit(limit, c.Target, _chaseHoles)`, so the seat never stands over a gap or trestle span.
   - **Waiting.** `c.Waited += dt`. It does not roll.
-  - **Riding.** The chaser's countdown, exactly as co-op does it (`CountChasers`, `c.Boarding.Tick`, `c.Boarded`).
+  - **Riding.** The chaser's countdown (`CountChasers`, `c.Boarding.Tick`, `c.Boarded`), **without** co-op's `if (seated == 0) { EndChase(atOnce: true); return; }`. A relief with no player in it goes back to Waiting; it never ends.
   - **Leaving.** It uses the chase limit.
-  - **Rolling.** When `ReliefRules.Rolls(c.Phase, c.Boarded, s, limit)` holds: Rolling, `CollisionLayer = 0`. While it rolls it shares the co-op code: `run.Limit = max(limit, S)`, `Step`, `HopHoles`, `ChaseRunOver`, `WarnPartyLane`. Once it is Held: `Settle` and `CollisionLayer = ChaserHeldLayer`.
+  - **Rolling.** When `ReliefRules.Rolls(c.Phase, c.Boarded, s, limit)` holds: Rolling, `CollisionLayer = 0`, and `c.Departed = true` (that field is unused for a relief otherwise, because `GiveBack` is guarded). While it rolls it shares the co-op code: `run.Limit = max(limit, S)`, `Step`, `HopHoles`, `ChaseRunOver`, `WarnPartyLane`. Once it is Held: `Settle` and `CollisionLayer = ChaserHeldLayer`.
   - **The phase.** Then `c.Phase = ReliefRules.Next(c.Phase, held, PlayerIn(c.Cart), c.Waited)`. On a change:
-    - **→ Waiting:** `c.Waited = 0`, `c.Boarded = false`, `c.Boarding.Cancel()`. Log "The relief cart waits for you." and GD.Print the relief's S, the player's S and its tub distance.
-    - **→ Leaving:** `_reliefClock.Went()`, `CollisionLayer = 0`. Log "The relief cart rolls on without you."
+    - **→ Waiting:** `c.Waited = 0`, `c.Boarded = false`, `c.Boarding.Cancel()`.
+      - From Riding (no player left in it), `SetDownChasers(c.Cart)` sets down every rider still in it: escorts on the bench, a downed player, companions. The bench never rides up behind the train without the player.
+      - Log "The relief cart waits for you." and GD.Print the relief's S, the player's S and its tub distance.
+    - **→ Leaving:** `_reliefClock.Went()`, `c.Departed = false`, `CollisionLayer = 0`. Log "The relief cart rolls on without you."
   - **Riding: done.** When `SpareRules.ChaseDone(c.Boarded, held, State.Mode == Held, s, trainLimit)` holds, do what the co-op chase does: `LastChaseGap`, `ChasesDone++`, and `EndChase(atOnce: false)`. Log "The relief cart pulls up behind the train."
-  - **Leaving: done.** Once Held, `EndChase(atOnce: false)`; it is hidden after `HideSeconds`.
+  - **Leaving: done.** Evaluate this after the roll, never in the tick it turned Leaving. End it with `EndChase(atOnce: false)` (hidden after `HideSeconds`) only when `c.Phase == Leaving && c.Departed && held`. A Leaving relief that is Held and cannot roll (`!ReliefRules.Rolls(...)`: its limit is not ahead) ends at once.
+  - **On any end:** `ReliefSpawnStop = -1`.
 
 - **`private string ReliefPromptFor(Adventurer hero)`:** `ReliefRules.Prompt(c.Phase, held, hero.Cart == c.Cart, onFootPlayer: IsPlayer(hero) && !hero.Seated && !hero.Downed, inReach: RideInputRules.InBoardReach(c.Cart.TubDistance(hero)), hero.Downed, ChaserBoardingLeft)`. Return `""` when there is no live relief.
 
@@ -533,9 +584,10 @@ Same command as Step 2. Expected: PASS.
     - `SeatBench(cart, actor.GlobalPosition)`.
     - `c.Boarding.Start()`, `c.Phase = ReliefPhase.Riding`.
     - Log "{name} climbs into the relief cart."
-  - **"Get out":** `SetDownFromChaser` for the actor and their own companions. With no player left in it, the relief goes back to Waiting through `Next` on the next tick. It never ends the chase or gives a spare back.
+  - **"Get out":** `SetDownFromChaser` for the actor and their own companions. With no player left in it, the relief goes back to Waiting through `Next` on the next tick, which sets every remaining rider down. It never ends the chase or gives a spare back.
 
-- **`Restore`:** add `_reliefClock.Reset(); _met = true; ReliefsSent = 0;`. The existing `EndChase(atOnce: true); FreeChaser();` already removes a relief.
+- **`Restore`:** next to the existing `EndChase(atOnce: true); FreeChaser();` near its top, before the client and empty-line returns, add `_reliefClock.Reset(); _met = false; ReliefsSent = 0; ReliefHits = 0; ReliefSpawnStop = -1;`. `EndChase` and `FreeChaser` already remove a relief.
+- **After a wreck (ruled):** nothing in `Wreck()` touches `_met`. A spare that takes over at a stop more than 12 m ahead of the set-down player leaves them left behind, and a relief comes.
 
 - **Test hooks:**
   - `ReliefPhaseNow => _chase is { Relief: true, Ended: false } c ? c.Phase : null`
@@ -544,6 +596,13 @@ Same command as Step 2. Expected: PASS.
 
 **`DebugTools.cs` and `DebugTools.RideEdges.cs`:**
 - `DebugTools.NoRelief`: --test-ride-edges sets it to `true` just before its throw (step 6). That flow pins the party cart's own run-over ("hit once, not again") and waits up to 66 s afterwards with the thrown human on the line, so a relief would run them over and break the check. The relief has its own flow. Set it back to false at RESULT.
+- **The audit of the other solo flows.** A flow needs `NoRelief` if it leaves the local player up, on foot and more than 12 m behind a standing cart it has not met (or a rolling one) for 15 s:
+  - --test-ride: its RESULT comes about 1 s after its wreck.
+  - --test-crew: the player rides or stands at the line's end (`LineLive` false), and section 2 ends 0.5 s after its last wreck.
+  - --test-chase: the lead leaves the seat only to swing at the heap beside the halted cart it met. Its traffic heroes are companions. Each `Restore(k)` shortcut boards again within 1 s.
+  - --test-cart-watchdog: seated throughout. `Restore(3)` boards again 1 s later.
+
+  None of these needs `NoRelief`. The Step 8 rerun is the safety net: grep each flow's output for `[rails] relief`. A flow that trips a relief either asserts it or sets `NoRelief`, and the commit message names it.
 
 - [ ] **Step 6: Build and run the unit suite**
 
@@ -605,6 +664,7 @@ Expected: build succeeds, all pass.
   - `!me.Seated`
   - `rc.ReliefsSent == 0`
   - the cart Held at a stop
+- **R10.** The player is still more than 12 m behind the train after the load, and `_met` starts false, so `rc.ReliefsSent == 1` at the load + 15 s ± 0.5 s. A load never strands the player.
 
 **ahead:**
 - Board at the landing and ride to stop 1, seated (no jump). Fail if `StopS[2] - StopS[1] < 40` or `StopS[1] - StopS[0] < 40`.
@@ -621,12 +681,13 @@ Expected: build succeeds, all pass.
 | `godot --headless --path . -- --test-relief=rails` | `[relief] RESULT ok (rails)` |
 | `godot --headless --path . -- --test-relief=refuse` | `[relief] RESULT ok (refuse)` |
 | `godot --headless --path . -- --test-relief=ahead` | `[relief] RESULT ok (ahead)` |
-| Task 1 Step 9's five single-player flows | each prints its `RESULT ok` line |
+| Task 1 Step 9's six single-player flows (crew ×2, ride, ride-edges, chase, watchdog) | each prints its `RESULT ok` line, and its output has no `[rails] relief` line unless the flow asserts it |
 
 - [ ] **Step 9: The online guard in the RIDE pass**
 
 - In `NetTestFlow`'s server half, in the `chase-done` print block (`NetTestFlow.cs:447`), add `GD.Print($"[net-server] ride: relief carts sent online: {rc.ReliefsSent}")`.
 - In `scripts/net_test.sh` (RIDE pass), add: `grep -q "\[net-server\] ride: relief carts sent online: 0" server.log || { echo "NET TEST: FAIL (a relief cart was sent online)"; exit 1; }`
+- This is cheap insurance (ruled): a tripwire for someone who removes the `!NetSession.IsNetworked` guard, not proof of the guard.
 
 Run in turn, each alone, and expect `NET TEST: ok` from each:
 - `scripts/net_test.sh`
@@ -643,6 +704,9 @@ In `docs/development.md`:
   - that it reuses the chaser (limit, hops, heap, sweep, bell, countdown, HUD line)
   - the log lines
   - not saved, no spare spent, solo only
+  - a relief may come after a wreck whose spare took over ahead of the player
+  - a seat over a gap or trestle stops short of the near lip
+  - at the default lethality 3, a relief rolling over a player on the rails mangles them as any cart does; the next relief comes only after they are back up
   - `--test-relief` and its four variants
 - **The `--test-ride-edges` sentence:** it turns the relief off from its throw.
 - **The headless list in "Build, test, run":** add `godot --headless --path . -- --test-relief[=beside|rails|refuse|ahead]   # floor 12 solo, lethality 1: …; prints [relief] RESULT`.
@@ -661,7 +725,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## Review Focus
 
-1. **A save and a load while a relief cart is out.** The relief must be gone, nobody seated in it, the clock reset, and no spare spent. Pinned by Task 2, --test-relief=refuse, R9.
+1. **A save and a load while a relief cart is out.** The relief must be gone, nobody seated in it, the clock reset, and no spare spent; a player still left behind gets a new relief 15 s later. Pinned by Task 2, --test-relief=refuse, R9 and R10.
 2. **The menu opens or the mouse is freed in the middle of a hold.** Neither the get-out tap nor the leave-behind may fire. Pinned by `InteractHoldTests.Cancel_MidHold_NeitherTapNorHold` and the cancel in `PartyController._Process` (Task 1).
 3. **E held past the second, or released right after it fired.** The prisoners are left behind once and the player stays seated: no stray "Get out" on release. Pinned by `InteractHoldTests.Release_AfterTheHoldFired_IsNoTap` (Task 1).
 4. **A cage whose crew are downed but alive, or who all died while the party sat waiting.**
