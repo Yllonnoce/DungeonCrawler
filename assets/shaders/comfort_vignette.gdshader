@@ -5,8 +5,8 @@
 // The circle is measured as an ANGLE from straight ahead in each eye's own view space (the view's −Z), not on the
 // screen: an OpenXR eye's frustum is asymmetric (more field outward than toward the nose), so the screen's centre is
 // not where the eye looks, and a screen-space circle would sit off-axis, mirrored between the eyes, and never fuse.
-// INV_PROJECTION_MATRIX is each eye's own under multiview, so both eyes see the same circle about their forward axis,
-// the same angular size on every headset.
+// INV_PROJECTION_MATRIX is each eye's own under multiview; the angle is taken from the pixel's ray DIRECTION (see
+// fragment()), so both eyes see the same circle about their forward axis, the same angular size on every headset.
 //
 // The mapping from ComfortState.Radius (1 open) to angles: the clear cone's half-angle is radius × OPEN_DEGREES and
 // the dark comes in over the next FEATHER_DEGREES. Radius 1 clears 75°, past the edge of any common headset's view
@@ -37,10 +37,16 @@ void vertex() {
 }
 
 void fragment() {
-	// back through this eye's projection: the view-space ray through this pixel (any depth on it gives the same direction)
-	vec4 view = INV_PROJECTION_MATRIX * vec4(ndc, 0.5, 1.0);
-	vec3 ray = view.xyz / view.w;
-	float off_axis = degrees(atan(length(ray.xy), -ray.z)); // the angle from straight ahead
+	// back through this eye's projection to the ray through this pixel. Its DIRECTION, not a point on it: under multiview
+	// Godot bakes each eye's offset from the head into that eye's projection (view_projection[v] = projection[v] *
+	// view_offset[v].inverse()), so INV_PROJECTION_MATRIX lands in the head's shared space, where the eye is not at the
+	// origin. A point's angle seen from the head's centre would put each eye's clear cone ~18 deg toward the nose,
+	// mirrored between the eyes. Two depths on the same ray (reverse-Z: 1.0 is the near plane, 0.5 further on) differ by
+	// the ray's direction alone, whatever the eye's offset.
+	vec4 near_point = INV_PROJECTION_MATRIX * vec4(ndc, 1.0, 1.0);
+	vec4 far_point = INV_PROJECTION_MATRIX * vec4(ndc, 0.5, 1.0);
+	vec3 ray = far_point.xyz / far_point.w - near_point.xyz / near_point.w;
+	float off_axis = degrees(atan(length(ray.xy), -ray.z)); // the angle from straight ahead (the eye's −Z; the eyes look parallel)
 	float inner = radius * OPEN_DEGREES;
 	float v = smoothstep(inner, inner + FEATHER_DEGREES, off_axis) * EDGE;
 	ALBEDO = vec3(0.0);
