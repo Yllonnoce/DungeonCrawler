@@ -55,8 +55,12 @@ public sealed class CartFollower
     public CartMode Mode => _auth.Mode;
     public byte Track { get; private set; }
     public int Dir => _dir;
-    /// <summary>The authoritative copy's S now (tests, and the RIDE pass's trace).</summary>
+    /// <summary>The authoritative copy's S now (tests, the RIDE pass's trace, and a seated headset's comfort inputs).</summary>
     public float AuthS => _authNow;
+    /// <summary>The authoritative copy's speed along the way of travel (0 while not Rolling): the ride without the rendered corrections.</summary>
+    public float AuthV => _auth.Mode == CartMode.Rolling ? _auth.V : 0f;
+    /// <summary>How many times the rendered S has jumped (a first state, a track change, an error past <see cref="SnapError"/>, a Held or Wrecked state): a reader that saw it change knows the pose jumped.</summary>
+    public int Snaps { get; private set; }
     /// <summary>The integrator's StopAt (the DTO's Limit).</summary>
     public float Limit => _input.StopAt;
     public float Plating => _auth.Plating;
@@ -102,7 +106,9 @@ public sealed class CartFollower
         var snap = !HasState || trackChanged || mode != CartMode.Rolling || Math.Abs(_authNow - _rendered) > SnapError;
         HasState = true;
         if (!snap) return;
-        _rendered = mode == CartMode.Rolling ? _authNow : s.S; // Held sits where the server says (a halt short of any stop)
+        var to = mode == CartMode.Rolling ? _authNow : s.S; // Held sits where the server says (a halt short of any stop)
+        if (to != _rendered || Snaps == 0) Snaps++;
+        _rendered = to;
         _v = mode == CartMode.Rolling ? _auth.V : 0f;
     }
 
@@ -117,14 +123,18 @@ public sealed class CartFollower
             for (var i = 0; i < steps; i++) StepAuth();
         }
         _authNow = AuthNow();
-        if (_auth.Mode == CartMode.Wrecked) { _rendered = _authNow; _v = 0f; return _rendered; }
+        if (_auth.Mode == CartMode.Wrecked)
+        {
+            if (Math.Abs(_authNow - _rendered) > 1e-3f) Snaps++;
+            _rendered = _authNow; _v = 0f; return _rendered;
+        }
 
         var speed = _auth.Mode == CartMode.Rolling ? _auth.V : 0f;
         var limit = Math.Max(CorrectShare * speed, MinCorrect);
         var v = speed + Math.Clamp(Gain * error, -limit, limit);
         v = speed >= SlowSpeed ? Math.Max(v, 0f) : Math.Max(v, -SlowSpeed);
         _rendered += _dir * v * dt;
-        if (Math.Abs(_authNow - _rendered) > SnapError) _rendered = _authNow;
+        if (Math.Abs(_authNow - _rendered) > SnapError) { _rendered = _authNow; Snaps++; }
         if (_dir * (_rendered - _input.StopAt) > 0f) _rendered = _input.StopAt; // never past the stop
         if (!float.IsNaN(_block) && _dir * (_rendered - _block) > 0f) { _rendered = _block; v = 0f; } // nor into the obstacle
         _v = v;

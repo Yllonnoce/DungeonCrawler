@@ -14,6 +14,8 @@ public enum ComfortLevel
 /// <summary>
 /// The comfort vignette's state: <see cref="Radius"/> 1 is fully open, smaller closes the view toward its centre;
 /// <see cref="Fade"/> (0..1) dims the whole view (Strong's drop fade); <see cref="FadeLeft"/> is how long the fade still holds.
+/// The vignette's shader reads the radius as an angle from straight ahead in each eye's view: the clear cone's half-angle is
+/// Radius × 75° (1 is past any headset's edge; Recommended's 0.55 is 41°, Strong's 0.35 is 26°), darkening over the next 15°.
 /// </summary>
 public readonly record struct ComfortState(float Radius, float Fade, float FadeLeft)
 {
@@ -61,7 +63,8 @@ public static class ComfortRules
     }
 
     /// <summary>
-    /// One rendered frame of the vignette. Off opens it at once. The radius eases toward <see cref="TargetRadius"/>; in Strong a
+    /// One rendered frame of the vignette. Off opens it at once. The radius eases toward <see cref="TargetRadius"/> (from below too,
+    /// when a gentler level was chosen mid-ride); in Strong a
     /// vertical acceleration below <see cref="DropAccel"/> holds the fade at <see cref="FadePeak"/> for <see cref="FadeHold"/>, after
     /// which it eases to nothing. Any other level lets a fade in progress go.
     /// </summary>
@@ -70,8 +73,8 @@ public static class ComfortRules
         if (level == ComfortLevel.Off) return ComfortState.Open;
         dt = Math.Max(dt, 0f);
         var target = TargetRadius(accel, yawRateDeg, level);
-        var radius = s.Radius + (target - s.Radius) * (1f - MathF.Exp(-dt / RadiusTimeConstant));
-        radius = Math.Clamp(radius, Floor(level), 1f); // a level just made gentler never shows a tighter view than it allows
+        // a level changed mid-ride (Strong to Recommended) eases out to its own floor like any other change: no jump
+        var radius = Math.Min(1f, s.Radius + (target - s.Radius) * (1f - MathF.Exp(-dt / RadiusTimeConstant)));
         var fadeLeft = level == ComfortLevel.Strong ? s.FadeLeft : 0f;
         if (level == ComfortLevel.Strong && verticalAccel < DropAccel) fadeLeft = FadeHold;
         float fade;
@@ -111,6 +114,8 @@ public static class ComfortRules
 /// heading's turn (degrees a second, either way) and <see cref="VerticalAccel"/> the seat height's second difference,
 /// smoothed over 0.1 s like the acceleration so frame-to-frame jitter at 90-120 Hz cannot pass for a drop. A second call in
 /// the same frame is ignored; a gap (a menu, a load) or a clock that went back starts a fresh baseline. Allocation-free.
+/// A co-op client feeds <see cref="SampleRates"/> instead: the turn rate and the vertical speed of the server's cart as its
+/// follower runs it (not the rendered corrections), so only the vertical speed is differenced.
 /// </summary>
 public sealed class ComfortSampler
 {
@@ -120,6 +125,7 @@ public sealed class ComfortSampler
     public const double MinStep = 0.002, MaxGap = 0.25;
 
     private int _samples;
+    private bool _rates; // the samples so far came through SampleRates
     private double _at;
     private float _speed, _heading, _y, _vy;
 
@@ -137,12 +143,7 @@ public sealed class ComfortSampler
     /// <summary>The seat at time <paramref name="now"/> (seconds): the cart's speed, the seat's flat heading (radians) and its height. False when ignored (the same frame).</summary>
     public bool Sample(double now, float speed, float heading, float y)
     {
-        if (_samples > 0)
-        {
-            var gap = now - _at;
-            if (gap < 0 || gap > MaxGap) Reset(); // the clock went back (the physics rate changed) or the ride was away a while
-            else if (gap < MinStep) return false;
-        }
+        if (!Due(now, rates: false)) return false;
         if (_samples == 0)
         {
             (_at, _speed, _heading, _y, _vy) = (now, speed, heading, y, 0f);
@@ -160,6 +161,42 @@ public sealed class ComfortSampler
         return true;
     }
 
+    /// <summary>
+    /// The cart's motion at time <paramref name="now"/> as rates: its speed, its flat heading's turn rate (degrees a second) and
+    /// its vertical speed (m/s). The acceleration and the vertical acceleration are first differences, smoothed as in <see cref="Sample"/>.
+    /// False when ignored (the same frame).
+    /// </summary>
+    public bool SampleRates(double now, float speed, float yawRateDeg, float verticalVelocity)
+    {
+        if (!Due(now, rates: true)) return false;
+        if (_samples == 0)
+        {
+            (_at, _speed, _vy) = (now, speed, verticalVelocity);
+            _samples = 2;
+            return true;
+        }
+        var dt = (float)(now - _at);
+        var k = 1f - MathF.Exp(-dt / SmoothSeconds);
+        Accel += ((speed - _speed) / dt - Accel) * k;
+        YawRateDeg = MathF.Abs(yawRateDeg);
+        VerticalAccel += ((verticalVelocity - _vy) / dt - VerticalAccel) * k;
+        (_at, _speed, _vy) = (now, speed, verticalVelocity);
+        return true;
+    }
+
+    /// <summary>Whether a sample at <paramref name="now"/> counts: a new baseline after a gap, a clock that went back or a change of kind; not within one frame.</summary>
+    private bool Due(double now, bool rates)
+    {
+        if (_samples > 0)
+        {
+            var gap = now - _at;
+            if (gap < 0 || gap > MaxGap || rates != _rates) Reset(); // the clock went back (the physics rate changed), the ride was away a while, or the feed changed kind
+            else if (gap < MinStep) return false;
+        }
+        _rates = rates;
+        return true;
+    }
+
     /// <summary>An angle wrapped into −π..π.</summary>
     private static float Wrap(float a)
     {
@@ -167,26 +204,5 @@ public sealed class ComfortSampler
         if (a > MathF.PI) a -= 2f * MathF.PI;
         else if (a < -MathF.PI) a += 2f * MathF.PI;
         return a;
-    }
-}
-
-/// <summary>
-/// The right stick's snap turn (VrRig.Read, every physics tick, seated or on foot): pushed past <see cref="Push"/> it turns the
-/// room <see cref="Degrees"/> once; it must come back inside <see cref="Release"/> before it turns again. Engine-free.
-/// </summary>
-public static class SnapTurn
-{
-    /// <summary>A flick turns the view this far at once (a smooth turn is what makes people ill).</summary>
-    public const float Degrees = 30f;
-    /// <summary>How far the stick must be pushed to turn, and how far it must come back before it turns again.</summary>
-    public const float Push = 0.6f, Release = 0.3f;
-
-    /// <summary>The turn this tick in radians (positive turns left, the body's measure of yaw; a stick pushed right turns right), or 0.</summary>
-    public static float Read(ref bool armed, float stickX)
-    {
-        if (MathF.Abs(stickX) < Release) { armed = true; return 0f; }
-        if (!armed || MathF.Abs(stickX) <= Push) return 0f;
-        armed = false;
-        return -MathF.Sign(stickX) * Degrees * (MathF.PI / 180f);
     }
 }

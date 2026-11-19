@@ -140,6 +140,7 @@ public partial class RailNet
                 cc.Body = chaser;
                 cc.Chaser = chaser;
                 cc.Run = new CartRun(track, chaser, state, d.Dir);
+                (chaser.NetRun, chaser.NetFollow) = (cc.Run, cc.Follow); // a seated headset's comfort inputs read the server's ride
                 break;
             }
             default:

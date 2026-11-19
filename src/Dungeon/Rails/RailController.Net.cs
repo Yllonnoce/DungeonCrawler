@@ -164,6 +164,7 @@ public partial class RailController : ISlopeSource
     {
         if (!NetSession.IsClient || !Current) return;
         _follow ??= new CartFollower(this);
+        (Cart.NetRun, Cart.NetFollow) = (Party, _follow); // a seated headset's comfort inputs read the server's ride
         if (CartSendRules.WreckedRose(_netFlags, d.Flags) && Cart.Visible) Tumble(sound: false); // where it stands now, before the state moves it
         _netFlags = d.Flags;
         var mode = d.Mode <= (byte)CartMode.Wrecked ? (CartMode)d.Mode : CartMode.Held;

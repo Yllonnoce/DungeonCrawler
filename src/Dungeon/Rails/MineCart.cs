@@ -63,6 +63,13 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     public float Curvature { get; set; }
     /// <summary>The cart's velocity in the world: forward (−Z) at <see cref="Speed"/>.</summary>
     public Vector3 Velocity => -GlobalTransform.Basis.Z * Speed;
+    /// <summary>
+    /// A co-op client's copy: the run it is posed on and the follower that moves it (set by whoever follows it), so a seated
+    /// headset's comfort vignette reads the server's ride (<see cref="CartFollower.AuthV"/>, <see cref="CartRun.MotionAt"/>),
+    /// not the rendered corrections, and knows when the pose snapped. Null on a server and alone.
+    /// </summary>
+    public CartRun? NetRun { get; set; }
+    public CartFollower? NetFollow { get; set; }
 
     /// <summary>The prompt for the hero looking at the cart; null or "" offers nothing. Set by the RailController.</summary>
     public Func<Adventurer, string>? PromptFor { get; set; }

@@ -111,6 +111,24 @@ public sealed class CartRun
     /// <summary>The frame the cart is posed in at <paramref name="s"/>: <see cref="FrameAt"/> when set, else the track's.</summary>
     public Transform3D FrameOf(float s) => FrameAt != null ? FrameAt(s) : Track.Frame(s);
 
+    /// <summary>
+    /// How a cart at <paramref name="s"/> moving at <paramref name="v"/> (m/s along its way of travel) moves on the path it is
+    /// posed on (<see cref="FrameOf"/>: the track, a lane blend, a jump's arc), read half a metre either side: its flat heading's
+    /// turn rate (degrees a second, either way) and its vertical speed (m/s, up positive). A co-op client's comfort inputs come
+    /// from these at the follower's authoritative S and speed, so the rendered corrections never read as motion. No allocation.
+    /// </summary>
+    public (float YawRateDeg, float VerticalVelocity) MotionAt(float s, float v)
+    {
+        if (!Track.Valid) return (0f, 0f);
+        const float half = 0.25f;
+        Transform3D a = FrameOf(s - half), b = FrameOf(s + half);
+        var fa = -a.Basis.Z;
+        var fb = -b.Basis.Z;
+        var turn = Mathf.Wrap(Mathf.Atan2(-fb.X, -fb.Z) - Mathf.Atan2(-fa.X, -fa.Z), -Mathf.Pi, Mathf.Pi) / (2f * half); // radians per metre of S
+        var rise = (b.Origin.Y - a.Origin.Y) / (2f * half); // metres up per metre of S
+        return (Mathf.RadToDeg(Mathf.Abs(turn * v)), Dir * v * rise);
+    }
+
     /// <summary>Put the body on the line at <paramref name="s"/> (<see cref="FrameOf"/>), facing its way of travel.</summary>
     public void PoseAt(float s)
     {

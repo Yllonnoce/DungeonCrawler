@@ -4,7 +4,8 @@ namespace DungeonCrawler.Party;
 
 /// <summary>
 /// The headset's comfort vignette (<see cref="ComfortRules"/>): a quad hung on the head camera whose shader
-/// (assets/shaders/comfort_vignette.gdshader) fills each eye's view and darkens it outside a clear circle. Hidden while
+/// (assets/shaders/comfort_vignette.gdshader) fills each eye's view and darkens it outside a clear cone about that eye's
+/// forward axis (radius × 75° half-angle, measured in the eye's own view space, so the two eyes fuse). Hidden while
 /// fully open, so a rider at rest, anyone on foot and the comfort setting Off draw nothing. Head-locked, it never moves
 /// the view; only the darkness around it changes. Allocation-free per frame.
 /// </summary>

@@ -111,6 +111,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private float _lastSeatHeading = float.NaN;
     /// <summary>The comfort vignette's inputs from the seat's motion, while a headset rides (<see cref="FeedComfort"/>).</summary>
     private readonly ComfortSampler _comfortIn = new();
+    /// <summary>The co-op follower's snap count at the last comfort sample: a change means the pose jumped (the sampler starts over).</summary>
+    private int _comfortSnaps = -1;
     // the seated desktop camera's ride feel (CartFeel): roll spring, a share of the track pitch, a speed FOV boost; all zero on foot
     private float _feelRoll, _feelRollVel, _feelPitch, _feelFov;
 
@@ -664,11 +666,23 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// <summary>
     /// The seat's motion, for the headset's comfort vignette: sampled at the time the cart's pose stands for (the physics
     /// tick plus the interpolation fraction the rail posed it at), once a frame however many times the seat is followed.
+    /// A co-op client reads the server's ride instead (the follower's authoritative speed and its path's turn and rise there),
+    /// so the follower's corrections never narrow the view, and a frame where the follower snapped starts the sampler over:
+    /// it reads calm, and Strong's fade never fires on a snap.
     /// </summary>
     private void FeedComfort(ICartBody cart, float heading, float y)
     {
         var now = (Engine.GetPhysicsFrames() + Engine.GetPhysicsInterpolationFraction()) / Engine.PhysicsTicksPerSecond;
-        if (_comfortIn.Sample(now, cart.Speed, heading, y)) _vr!.FeedComfort(_comfortIn.Accel, _comfortIn.YawRateDeg, _comfortIn.VerticalAccel);
+        bool fed;
+        if (Net.NetSession.IsClient && cart is MineCart { NetRun: { } run, NetFollow: { HasState: true } follow })
+        {
+            if (follow.Snaps != _comfortSnaps) { _comfortSnaps = follow.Snaps; _comfortIn.Reset(); }
+            var v = follow.AuthV;
+            var (yawRate, rise) = run.MotionAt(follow.AuthS, v);
+            fed = _comfortIn.SampleRates(now, v, yawRate, rise);
+        }
+        else fed = _comfortIn.Sample(now, cart.Speed, heading, y);
+        if (fed) _vr!.FeedComfort(_comfortIn.Accel, _comfortIn.YawRateDeg, _comfortIn.VerticalAccel);
     }
 
     /// <summary>The yaw of a seat's forward (−Z) laid flat: the way the cart points, without its pitch or roll.</summary>
