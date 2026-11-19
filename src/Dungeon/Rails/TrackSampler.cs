@@ -32,6 +32,9 @@ public sealed class TrackSampler
 
     public Vector3 Point(float s) => Track.ToGlobal(Track.Curve.SampleBaked(Clamp(s), true));
 
+    /// <summary>The S of the whole line's closest point to <paramref name="pos"/> (the baked curve's closest offset: it may pick another stretch passing near).</summary>
+    public float ClosestS(Vector3 pos) => Track.Curve.GetClosestOffset(Track.ToLocal(pos));
+
     /// <summary>Rise over run at S (toward higher S): the track's height half a metre either side.</summary>
     public float Slope(float s)
     {

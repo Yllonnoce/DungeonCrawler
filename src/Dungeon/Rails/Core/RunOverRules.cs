@@ -19,7 +19,8 @@ public static class RunOverRules
     private const float BigScale = 1.05f;
     private const float FeetBelow = -0.5f;
 
-    private static bool OnTheRails(in TrackBody b) =>
+    /// <summary>The body stands on the rails: within the cart's half width (plus its radius) of the line, its feet between just below the track and the cart's clearance.</summary>
+    public static bool OnRails(in TrackBody b) =>
         b.Lateral <= CartRules.HalfWidth + b.Radius && b.Height >= FeetBelow && b.Height <= CartRules.Clearance;
 
     /// <summary>
@@ -32,7 +33,7 @@ public static class RunOverRules
         if (dir >= 0 ? sNow <= sPrev : sNow >= sPrev) return false;
         float frontPrev = sPrev + dir * CartRules.HalfLength, frontNow = sNow + dir * CartRules.HalfLength;
         bool swept = dir >= 0 ? frontPrev < b.S && b.S <= frontNow : frontNow <= b.S && b.S < frontPrev;
-        return swept && OnTheRails(b);
+        return swept && OnRails(b);
     }
 
     /// <summary>A crawling cart still warns this far ahead: the look-ahead reckons with at least this speed.</summary>
@@ -40,7 +41,7 @@ public static class RunOverRules
 
     /// <summary>A body on the rails ahead, within the distance the cart covers in the given seconds (at <see cref="WarnMinSpeed"/> at least).</summary>
     public static bool InWarning(float sNow, float v, in TrackBody b, float seconds = 3f) =>
-        b.S >= sNow && b.S - sNow <= Math.Max(v, WarnMinSpeed) * seconds + CartRules.HalfLength && OnTheRails(b);
+        b.S >= sNow && b.S - sNow <= Math.Max(v, WarnMinSpeed) * seconds + CartRules.HalfLength && OnRails(b);
 
     public static bool IsBig(float profileScale, bool isBoss) => isBoss || profileScale >= BigScale;
 

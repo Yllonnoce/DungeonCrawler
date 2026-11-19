@@ -23,6 +23,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// and the chaser is gone after <see cref="SpareRules.HideSeconds"/>. A wreck, a load or nobody in it before it leaves ends it at once. A
 /// chase that ends before its chaser ever rolled gives the spare back (<see cref="SpareRules.GivesSpareBack"/>: parked and offered again);
 /// once it has rolled the spare stays spent. The chase is not saved. One chase at a time. Never solo: solo the spares stay looks only.
+/// Solo, the same chaser is sent to a player left behind as a relief cart (plan 7, <see cref="Chase.Relief"/>, RailController.Relief):
+/// it spends no spare, is never sent to a client, and runs its own phases (<see cref="ReliefPhase"/>) over the shared run below.
 /// </summary>
 public partial class RailController
 {
@@ -42,6 +44,16 @@ public partial class RailController
         /// <summary>Its riders are set down: it only waits to be hidden.</summary>
         public bool Ended;
         public double HideAt = double.PositiveInfinity;
+        /// <summary>A relief cart sent to a solo player left behind (plan 7): no spare spent or given back, never sent online.</summary>
+        public bool Relief;
+        /// <summary>The relief's phase (a relief only).</summary>
+        public ReliefPhase Phase;
+        /// <summary>Seconds the relief has stood Waiting.</summary>
+        public float Waited;
+        /// <summary>Where the relief was placed (centre S).</summary>
+        public float SpawnS;
+        /// <summary>The coming relief's stop point (centre S): it only moves forward.</summary>
+        public float Target;
     }
 
     private Chase? _chase;
@@ -211,6 +223,7 @@ public partial class RailController
         else _chaseHoles.Clear();
         var limit = enc != null ? SpareRules.HeapLimit(trainLimit, run.FrontS, enc.LiveHeapFaceAhead(run.FrontS)) : trainLimit;
         if (_chaseHoles.Count > 0) limit = SpareRules.HoleLimit(limit, _chaseHoles);
+        if (c.Relief) { TickReliefChase(party, c, enc, limit, trainLimit, dt); return; }
         if (!c.Boarded)
         {
             CountChasers(party, c.Cart, out var seated, out var living);
@@ -225,6 +238,23 @@ public partial class RailController
             if (!c.Departed) EventBus.Instance.Log("The spare cart rolls after the train.");
             c.Departed = true;
         }
+        StepChaser(party, c, enc, limit, dt);
+        if (SpareRules.ChaseDone(c.Boarded, run.State.Mode == CartMode.Held, State.Mode == CartMode.Held, run.State.S, trainLimit))
+        {
+            LastChaseGap = TrainBackS + CartRules.HalfLength - (run.State.S + CartRules.HalfLength); // the last body's back to the chaser's front
+            ChasesDone++;
+            EventBus.Instance.Log("The spare cart pulls up behind the train.");
+            EndChase(atOnce: false);
+        }
+    }
+
+    /// <summary>
+    /// One physics step of the chaser's run (the co-op chaser's and a relief's): a rolling one steps toward <paramref name="limit"/>, hops
+    /// the line's holes, sweeps bodies and warns the lane, and is solid and usable again once it stands; a standing one is settled.
+    /// </summary>
+    private void StepChaser(PartyController party, Chase c, RailEncounterController? enc, float limit, float dt)
+    {
+        var run = c.Run;
         if (run.State.Mode == CartMode.Rolling)
         {
             run.Limit = Mathf.Max(limit, run.State.S); // the train never backs: a limit behind S would only pull the chaser back
@@ -237,13 +267,6 @@ public partial class RailController
         }
         else run.Settle();
         run.Sync();
-        if (SpareRules.ChaseDone(c.Boarded, run.State.Mode == CartMode.Held, State.Mode == CartMode.Held, run.State.S, trainLimit))
-        {
-            LastChaseGap = TrainBackS + CartRules.HalfLength - (run.State.S + CartRules.HalfLength); // the last body's back to the chaser's front
-            ChasesDone++;
-            EventBus.Instance.Log("The spare cart pulls up behind the train.");
-            EndChase(atOnce: false);
-        }
     }
 
     /// <summary>
@@ -301,6 +324,7 @@ public partial class RailController
         }
         RunOverSweep.Judge(c.Run, _bodies, _now, _chaseHitAt, _chaseHits);
         if (_chaseHits.Count == 0) return;
+        if (c.Relief) CountReliefHits(); // the local player only
         RunOverEffects.Apply(_chaseHits, ChaserSourceName, TierRules.Lethality, _setAside);
         foreach (var rider in c.Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.06f, 0.4f);
@@ -314,7 +338,8 @@ public partial class RailController
     {
         if (_chase is not { Ended: false } c) return;
         c.Ended = true;
-        if (SpareRules.GivesSpareBack(c.Departed)) _spares.GiveBack(c.Stop); // it never rolled: the spare stands parked again ("restored")
+        if (!c.Relief && SpareRules.GivesSpareBack(c.Departed)) _spares.GiveBack(c.Stop); // it never rolled: the spare stands parked again ("restored"); a relief never spent one
+        if (c.Relief) ReliefSpawnStop = -1;
         c.HideAt = _now + SpareRules.HideSeconds;
         if (IsInstanceValid(c.Cart))
         {
@@ -379,7 +404,7 @@ public partial class RailController
     /// <summary>The chaser as a live cart for the cart sender (server), or nothing.</summary>
     internal void CollectChaser(List<RailNet.LiveCart> into)
     {
-        if (_chase is not { } c || !IsInstanceValid(c.Cart) || c.Cart.IsQueuedForDeletion()) return;
+        if (_chase is not { } c || c.Relief || !IsInstanceValid(c.Cart) || c.Cart.IsQueuedForDeletion()) return; // a relief is solo only: never sent
         into.Add(new RailNet.LiveCart(c.Cart.CartId, CartKind.Chaser, 0, c.Run, c.Cart, 0f, null, null, null));
     }
 

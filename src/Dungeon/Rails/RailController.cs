@@ -340,6 +340,7 @@ public partial class RailController : Node
         if (NetSession.IsClient) return; // a join or revisit: a client's cart stays parked at the first stop and nobody's seat is its to change (co-op riding is plan 5)
         EndChase(atOnce: true); // a load ends a chase at once (its riders set down beside the chaser); the chase is not saved, and the spares stand as the save has them (_spares.Restore below)
         FreeChaser();
+        ResetRelief(); // a relief is not saved either: the clock starts clean and the standing cart has met nobody yet
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
@@ -803,6 +804,7 @@ public partial class RailController : Node
         Party.Sync();
         _train.Sync();
         TickChase(party, dt); // after the train has moved: the chaser's limit is where its tail stands now
+        TickRelief(party, dt); // solo: a player left behind gets a relief cart (plan 7)
     }
 
     // ---- run-over --------------------------------------------------------------------------------
@@ -1061,27 +1063,30 @@ public partial class RailController : Node
         if (me != null && !IsInstanceValid(me)) me = null;
         var chaserMode = CartMode.Held;
         var chaserLeft = -1f;
-        var inChaser = me != null && ChaserHud(me, out chaserMode, out chaserLeft);
+        var relief = false;
+        var inChaser = me != null && ChaserHud(me, out chaserMode, out chaserLeft, out relief);
         var show = inChaser || me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange);
-        HudText = show ? RailHud.Text(HudState(inChaser, chaserMode, chaserLeft)) : null;
+        HudText = show ? RailHud.Text(HudState(inChaser, chaserMode, chaserLeft, relief)) : null;
         Main.Instance?.Hud?.SetCart(HudText != null && !inChaser ? State.Plating / CartRules.MaxPlating : null, HudText);
     }
 
     /// <summary>The HUD's view of the cart: from the cart's own state on the server or solo, from the server's flags and countdown on a client.</summary>
-    private RailHudState HudState(bool inChaser, CartMode chaserMode, float chaserLeft)
+    private RailHudState HudState(bool inChaser, CartMode chaserMode, float chaserLeft, bool relief)
     {
         var left = NetSession.IsClient ? NetBoardingLeft() : Boarding.Running ? Mathf.Max(0f, Boarding.Left) : -1f;
         return new RailHudState(State.Mode, Hidden: !Cart.Visible, Halted, LineBlocked, GateClear, Boarding: left >= 0f, BoardingLeft: left,
-            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft, CageHeld: CageHeld);
+            Plating01: State.Plating / CartRules.MaxPlating, StopIndex, StopS.Length, inChaser, chaserMode, chaserLeft, CageHeld: CageHeld, ChaserRelief: relief);
     }
 
     /// <summary>
-    /// <paramref name="me"/> sits in the live chase's chaser (a client's copy on a client): its mode and countdown (−1 none) as this peer shows them.
+    /// <paramref name="me"/> sits in the live chase's chaser (a client's copy on a client): its mode and countdown (−1 none) as this peer shows them,
+    /// and whether it is a relief cart (single player only: a client's chaser never is).
     /// </summary>
-    private bool ChaserHud(Adventurer me, out CartMode mode, out float left)
+    private bool ChaserHud(Adventurer me, out CartMode mode, out float left, out bool relief)
     {
         mode = CartMode.Held;
         left = -1f;
+        relief = false;
         if (!ChaseLive || me.Cart is not MineCart seat) return false;
         if (NetSession.IsClient)
         {
@@ -1092,6 +1097,7 @@ public partial class RailController : Node
         if (_chase is not { Ended: false } c || !IsInstanceValid(c.Cart) || seat != c.Cart) return false;
         mode = c.Run.State.Mode;
         left = ChaserBoardingLeft;
+        relief = c.Relief;
         return true;
     }
 }

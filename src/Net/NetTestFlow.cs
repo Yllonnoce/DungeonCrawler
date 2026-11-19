@@ -453,6 +453,7 @@ public partial class NetTestFlow : Node
             _chaseHops = rc.ChaserHops;
             world.Trace.Add("chase-done");
             GD.Print(FormattableString.Invariant($"[net-server] ride: chase-done: the chaser halted {_chaseGap:0.00} m behind the train's last body (the train held at stop {rc.StopIndex}, S={rc.State.S:0.0}, {rc.Train.Count} wagon(s)); {RideJoinerName} set down beside the lane: {(_chaseSetDown ? "yes" : "NO")}; it hopped {_chaseHops} hole(s) in the line (ride 4's gap, the fallen trestle)"));
+            GD.Print($"[net-server] ride: relief carts sent online: {rc.ReliefsSent}"); // a tripwire for the relief's single-player guard (plan 7)
         }
         if (_joinOut && !_joinSpareHeldRefused && !_chaseDepartTold && rc.SpareAt(3) is { } held && rc.StopIndex == 3 && rc.State.Mode == Dungeon.Rails.CartMode.Held)
             _joinSpareHeldRefused = (held.PromptFor?.Invoke(hero) ?? "") == "" && held.TubDistance(hero) <= Dungeon.Rails.SpareRules.SpareReach;

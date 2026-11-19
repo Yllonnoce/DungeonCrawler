@@ -11,7 +11,8 @@ namespace DungeonCrawler.Core;
 // boards is left behind, gets back up during the ride and never regroups into or ahead of the cart (it hops in at stop 1);
 // a save between stops and a load put the cart back at the stop it left with every hero beside it, none on a rail; the
 // human thrown from the moving cart at lethality 1 is hurt once, not downed and not hit again; and the companions riding
-// on without a player are set down at the next stop, where the cart stays. Prints [ride-edges] lines and a RESULT.
+// on without a player are set down at the next stop, where the cart stays. The relief cart is off from the throw (NoRelief): this flow
+// pins the party cart's own run-over and leaves the thrown human on the line; --test-relief covers the relief. Prints [ride-edges] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testRideEdges;
@@ -158,6 +159,7 @@ public partial class DebugTools
                 _edgeMaxHp = me.State.Stats[Characters.Stat.MaxHp];
                 me.State.Hp = _edgeMaxHp;
                 var v = rc.State.V;
+                NoRelief = true; // "hit once, not again": a relief sent to the thrown human would run them over (--test-relief covers it)
                 rc.Cart.Interact(party, me);
                 _edgeHpAfter = _edgeHpLow = me.State.Hp;
                 var lost = (_edgeMaxHp - me.State.Hp) / _edgeMaxHp;
@@ -206,6 +208,7 @@ public partial class DebugTools
                 if (_edgeClock < Boarding.Countdown + 1f) break;
                 GD.Print($"[ride-edges] 7 still held at stop 2 {_edgeClock:0.0} s later, nobody aboard");
                 TierRules.Lethality = 3f;
+                NoRelief = false;
                 GD.Print("[ride-edges] RESULT ok");
                 _done = true;
                 GetTree().Quit();

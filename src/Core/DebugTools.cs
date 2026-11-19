@@ -32,6 +32,7 @@ namespace DungeonCrawler.Core;
 ///   --smoke             scripted end-to-end run: get hit, kill an enemy, loot it, descend twice, ascend once, report
 ///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart
 ///   --test-ride-edges   floor 12: a companion revived behind the cart, a mid-ride load, the human thrown at lethality 1, companions left at a stop
+///   --test-relief[=beside|rails|refuse|ahead]  floor 12 solo, lethality 1: the relief cart for a player left behind (beside the line, on the rails, refused twice with a save and a load, or never while ahead of the train or beside the cart that met them)
 ///   --test-crew[=forgiven|condemned]  floor 12: the scripted rescue (stops, gates, cages, Grisel's branch, a save mid-ride, a lost crew member, the win), then a wreck and a spare
 ///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), companions answer the wagon boarders, then a save mid-ride 1 (the thrower stays sent), the heap, a save mid-ride 4 and a one-pumper jump with three wagons; warning timings checked
 ///   --party-level=N     --test-chase levels the party to N first (default 12, the shipped campaign's level by floor 12)
@@ -105,6 +106,8 @@ public partial class DebugTools : Node
     public bool NoPortals { get; private set; }
     /// <summary>--no-gathering: the safe room's clock never sends creatures to its door.</summary>
     public bool NoGathering { get; private set; }
+    /// <summary>No relief cart is sent to a solo player left behind on floor 12 (a test flow that strands its player on purpose sets it).</summary>
+    public bool NoRelief { get; set; }
     private bool _testAmbush, _testPortal;
     private int _dangerStep;
     private float _dangerClock;
@@ -296,6 +299,12 @@ public partial class DebugTools : Node
             else if (arg == "--test-hit-fx") { _testHitFx = true; NoAmbush = true; NoPortals = true; TraceAi = false; _quitAfter = 40; }
             else if (arg == "--test-vertical") { _testVertical = true; _quitAfter = 14; }
             else if (arg == "--test-stairs") { _testStairs = true; _quitAfter = 40; }
+            else if (arg == "--test-relief" || arg.StartsWith("--test-relief="))
+            {
+                var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "beside";
+                if (v is not ("beside" or "rails" or "refuse" or "ahead")) { GD.PrintErr($"[relief] --test-relief={v}: the variant is beside, rails, refuse or ahead; running beside"); v = "beside"; }
+                _testRelief = true; _relVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 1f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200;
+            }
             else if (arg == "--test-ride-edges") { _testRideEdges = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 200; }
             else if (arg == "--test-crew" || arg.StartsWith("--test-crew="))
             {
@@ -452,7 +461,7 @@ public partial class DebugTools : Node
             if (Dungeon.Generation.FloorObjectives.TryParse(ForcedObjective, out var srObjective) && srObjective != Dungeon.Generation.FloorObjectiveKind.None && _startFloor < 2) { _startFloor = 2; ForcedLayout ??= "standard"; } // floor 1 never carries an objective, and not every shape takes every objective
         }
         // Automation never spends the player's keys unless --ai is given explicitly: scripted runs use the offline designer and no live voice.
-        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly || _testRide || _testRideEdges || _testCrew || _testChase;
+        var automation = _screenshotPath != null || _quitAfter > 0 || _facePit || _faceNode != null || _faceCell != null || _faceEnemy || _autoAttack || _smoke || _testDrag || _testSave || _levelUp || _pressActions.Count > 0 || _openMap || _talk || _dance || _wander > 0 || _builtin || _menuOnly || _testRide || _testRideEdges || _testCrew || _testChase || _testRelief;
         if (automation && !ForceAi) { NoAi = true; NoVoice = !FakeVoice; }
         // scripted scenarios were written against the plain floors of their seeds: no objective floor unless one is asked for by name
         // (--test-floors and --builtin keep the deal, so the ground under objective floors is checked and the shipped campaign plays as shipped)
@@ -873,6 +882,7 @@ public partial class DebugTools : Node
         if (_testGasWipe) RunGasWipeTest();
         if (_testRide && !ScriptStalled("ride", _rideStep)) RunRideTest();
         if (_testRideEdges && !ScriptStalled("ride-edges", _edgeStep)) RunRideEdgesTest();
+        if (_testRelief && !ScriptStalled("relief", _relStep)) RunReliefTest();
         if (_testCrew && !ScriptStalled("crew", _crewSection2 ? 100 + _crewStep : _crewStep)) RunCrewTest();
         if (_testChase && !ScriptStalled("chase", _chSection2 ? 100 + _chStep : _chStep)) RunChaseTest();
         if (_testCartWatchdog && !ScriptStalled("watchdog", _wdStep)) RunCartWatchdogTest();

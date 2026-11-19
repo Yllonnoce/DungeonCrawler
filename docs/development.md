@@ -338,6 +338,7 @@ godot --headless --path . -- --test-hazard=press    # floor 1, lethality 3: an e
 godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, raises, impales the lead and an enemy, is rescued; a periodic bed keeps the floor tick's phase; a jumping body is missed
 godot --headless --path . -- --test-tick-rate --physics-hz=90   # floor 1: the drop hammer's beat and the periodic spike cycle on the floor clock (DungeonBuilder.FloorTick) take 4.5 s of wall time; prints [tick-rate] RESULT ok hammer=<s> spikes=<s> (run it bare for 60 Hz; --physics-hz=N runs the physics at a headset's rate, debug only)
 godot --headless --path . -- --test-cart-watchdog   # floor 12, no enemies: a caught cart braked 15 s is not freed; let go it grinds free to stop 1 10 s later; caught short of ride 4's gap it is set at the lip and leaps it; prints [watchdog] RESULT
+godot --headless --path . -- --test-relief[=beside|rails|refuse|ahead]   # floor 12 solo, lethality 1: the relief cart for a player who jumped from the cart (beside the line, on the rails, refused twice with a save and a load), and none while ahead of the train or behind the cart that met them; prints [relief] RESULT
 RIDE=1 scripts/net_test.sh                           # floor 12 in co-op: a server, a client and a joiner ride the whole line (see Rails, "Riding together"); run it alone, about 3 minutes
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
 godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
@@ -1124,7 +1125,9 @@ of the built-in campaign at lethality 3:
 board, run over an enemy on the way to stop 1, save and load there, a companion jumping out at speed, and a wreck.
 `--test-ride-edges` covers the edges: a companion downed at boarding gets up far behind the rolling cart and never
 regroups into or ahead of it (it hops in at stop 1), a save between stops and a load, the human thrown at lethality 1 (hurt
-once, not downed), and the companions it leaves riding are set down at the next stop, where the cart stays.
+once, not downed), and the companions it leaves riding are set down at the next stop, where the cart stays. It turns the
+relief cart off from its throw (`DebugTools.NoRelief`): its "hit once, not again" check leaves the thrown human on the line,
+where a relief would run them over (`--test-relief` covers the relief; see "The relief cart (single player)" below).
 
 Floor 12's stops (built-in campaign; `Rail.Stops[i].Room`) and what waits at them:
 
@@ -1256,6 +1259,65 @@ plating hits a cinder brute between stops 1 and 2. One spare must take over, hol
 with `[crew] RESULT ok` or a FAIL line and exit code 1. Every enemy but the stop guards (and the test's brute) is culled
 as it appears. A run with no RESULT line 10 s before its quit timeout fails with "timed out at step N" and exit code 1.
 `--test-ride` and `--test-ride-edges` share this watchdog.
+
+### The relief cart (single player)
+
+Solo, a player left behind by the train gets a relief cart (plan 7; `Rails/Core/ReliefRules.cs`, `RailController.Relief.cs`).
+It is the co-op chaser (see "The left-behind chaser" under "Riding together") sent to them.
+
+**Left behind** (`ReliefRules.LeftBehind`). The local player is up (not downed, not parked), seated in no cart, and the train's
+last body's back is more than 12 m (`LeftBehindRange`) ahead of them along the line (`ReliefRules.Behind`; their S is the
+line's closest point, `TrackSampler.ClosestS`). The line must still be live (`LineLive`): two stops or more, the party cart
+neither wrecked nor hidden, and not Held at the last stop. A standing cart that has *met* the player waits for them, so no
+relief comes (`ReliefRules.Met`): the cart has met them when, since it stopped, they sat in it or stood within 12 m of its
+train's back. Met is cleared while the cart rolls and starts false on a build and a load. So a player who jumps out gets a
+relief (the cart rolls on and stands at the next stop without them), and one who gets out at a stop and walks back from the
+cart does not. None comes while the player is ahead of the train, online (`!NetSession.IsNetworked`), or with
+`DebugTools.NoRelief`. Nothing in a wreck touches met: a spare that takes over at a stop more than 12 m ahead of the set-down
+player leaves them left behind, and a relief comes.
+
+**Timings** (`ReliefClock`). The first relief comes 15 s (`FirstWait`) after the player is left behind; the clock starts
+over whenever they are not. It waits beside them 30 s (`WaitBeside`), then rolls on empty after the train and is hidden once
+it stops; the next comes 15 s (`NextWait`) after it set off. The clock does not count while a relief is out (it counts again
+once the last one rolls on or has ended). One relief at a time; each is named `ReliefCart{n}`.
+
+**Where it comes from and where it stops.** It is placed Held at the last stop at or behind the player (`SpawnStop`), with its
+front at least 1 m short of their body (`SpawnS`), never past the chase limit (behind the train) and never over a hole
+(`SpareRules.HoleLimit`). It comes down the line to its seat (`SeatS`): beside the player; on the rails, its back 1.5 m
+(`PastRunOver`) past them, having run them over; or, when they stand within 6 m (`WaitAtStopRange`) of where it was placed,
+it waits there. The seat only moves forward (`Target`): a player walking back never pulls it back. A seat over a gap or a
+trestle span stops short of the near lip (`SeatLimit`).
+
+**It is the chaser.** It is a `MineCart.AsChaser()` with the chaser's run: its limit behind the train
+(`SpareRules.ChaseLimit`), hops over the line's holes, the halt at a live heap's face, the run-over sweep (its source is
+"the spare cart"), the bell and the lane warning, the 5 s countdown with "Get out" closed for its first 2 s, and the bar,
+which reads "Relief cart — departs in N", "Relief cart — after the train" or "Relief cart — behind the train"
+(`RailHudState.ChaserRelief`). It is solid and usable while it stands. "Board the cart" seats the player, their companions on
+foot within 25 m and the escorts on its bench, and starts its countdown; it then runs up behind the train and sets everyone
+down there. Getting out while it stands sets the player and their companions down; with no player left in it, it waits again
+and sets every other rider down. The phases are `ReliefPhase` Coming, Waiting, Riding and Leaving (`ReliefRules.Next`, `Rolls`,
+`Prompt`).
+
+**Log lines.** "A relief cart comes down the line.", "The relief cart waits for you.", "{name} climbs into the relief cart.",
+"The relief cart pulls up behind the train." and "The relief cart rolls on without you."; on stdout `[rails] relief {n}: sent
+from stop …`, `[rails] the relief cart waits at S=…`, `[rails] the relief cart rolls on without the player …` and
+`[rails] the relief cart pulls up behind the train …`. No line is voiced.
+
+**Not saved, no spare, solo only.** A relief spends and gives back no spare, and is never sent to a client
+(`CollectChaser` skips it). A load ends it and resets the clock (`RailController.Restore`); a player still left behind gets a
+new one 15 s later. At the default lethality 3 a relief rolling over a player on the rails mangles them as any cart does; the
+next relief comes only after they are back up.
+
+`--test-relief[=beside|rails|refuse|ahead]` (beside by default) runs floor 12 solo at lethality 1 with no enemies and prints
+`[relief]` lines. beside, rails and refuse board at the landing and jump from the cart 25 m on at 4 m/s or more; the player
+stands beside the line (on it for rails), must be left behind within 6 s, and a relief must come from the landing 15 ± 0.5 s
+later. beside: it waits beside them in reach with "Board the cart" and nobody hurt, is boarded ("Relief cart — departs in"),
+pulls up within 3 m of the train held at stop 1 and sets the player down off the rails, is gone within 3 s, and no second
+comes. rails: it runs the player over once (the lethality-1 share of max HP, not downed) and waits with its back past them,
+then is boarded as beside. refuse: it rolls on 30 ± 0.5 s after it began to wait, a second comes 15 ± 0.5 s later, and a
+save and a load while that one waits leave no relief node, nobody seated, the count at 0 and the cart held at a stop, and a
+relief comes 15 ± 0.5 s after the load. ahead: the player rides to stop 1, gets out, stands 30 m ahead of the train for 20 s
+and 30 m behind the cart for 20 s, and no relief comes. Every run also checks that no two relief carts ever stand at once.
 
 ### The four rides
 
@@ -1925,7 +1987,7 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
 5. **Ride 3.** Stops 2 and 3 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat, and the cart crosses on both sides. Ride 3's buckets pour on the server's schedule.
 6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
-7. **Ride 4 and the chase.** At stop 3 the joiner, on foot beside the spare, is offered nothing while the train is held there. The train leaves on ride 4 with the client pumping. The joiner takes `spare:3`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`).
+7. **Ride 4 and the chase.** At stop 3 the joiner, on foot beside the spare, is offered nothing while the train is held there. The train leaves on ride 4 with the client pumping. The joiner takes `spare:3`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
 8. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
 9. **The wreck.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 and 2 unused. The joiner sees the Wrecked state and then spare 2's takeover, Held at stop 2 (`wreck-spare`).
 10. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).

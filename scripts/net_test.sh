@@ -26,7 +26,7 @@
 #                                     at stop 3 while the train leaves on ride 4 with the first client: stop 3's spare, which offered
 #                                     nothing while the train was held there, offers itself once it has gone; the joiner takes it through
 #                                     its intent (spare:3), and its chaser runs up behind the train (hopping ride 4's gap and the fallen
-#                                     trestle) and halts within 3 m of its last body (chase-done on both sides); the first client leaves
+#                                     trestle) and halts within 3 m of its last body (chase-done on both sides; no relief cart was sent online); the first client leaves
 #                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
 #                                     hook, and the joiner sees the Wrecked state and then a spare's takeover; it boards that cart
 #                                     and rides ride 3 again with its switch straight, into the ore heap: its rendered S never passes
@@ -116,6 +116,7 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: chaser hud \"Spare cart — after the train\"" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's cart bar did not read the chaser's line while it rolled)"; exit 1; fi
   if ! grep -q "\[net\] ride: chase-done" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done on the joiner and the server)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: chase-done: .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 4's gap)"; exit 1; fi
+  grep -q "\[net-server\] ride: relief carts sent online: 0" "$TMP/server.log" || { echo "NET TEST: FAIL (a relief cart was sent online)"; exit 1; }
   if ! grep -q "\[net\] ride: .*the joiner's chaser came and went" "$TMP/client.log"; then echo "NET TEST: FAIL (the first client never saw the joiner's chaser come and go)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi
   # the set pieces stand on the client as on the server, and its props (the rail part too) hash as the server's
