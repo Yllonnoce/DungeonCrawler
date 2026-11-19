@@ -338,7 +338,9 @@ public partial class RailController : Node
     private string PromptFor(Adventurer hero)
     {
         if (hero.Seated && hero.Cart != Cart) return ""; // in another seat book
-        return RideInputRules.BoardPrompt(hero.Cart == Cart, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree());
+        var seatedHere = hero.Cart == Cart;
+        var inReach = seatedHere || RideInputRules.InBoardReach(Cart.TubDistance(hero)); // the server's intent check measures the same
+        return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach);
     }
 
     /// <summary>A hero seat (0-3) of the cart's book is free. No allocation.</summary>
@@ -359,9 +361,22 @@ public partial class RailController : Node
     {
         if (mate.Control != ControlKind.Companion) return false;
         if (!NetSession.IsServer || NetSession.Instance.Server is not { } world) return true;
-        var bot = world.Registry.ByMember(mate.Index);
-        var owner = world.Registry.ByMember(player.Index);
+        Net.PlayerSlot? bot = null, owner = null;
+        var slots = world.Registry.All; // by index: no allocation (the hop-in asks four times a second)
+        for (var i = 0; i < slots.Count; i++)
+        {
+            if (slots[i].MemberIndex == mate.Index) bot ??= slots[i];
+            if (slots[i].MemberIndex == player.Index) owner ??= slots[i];
+        }
         return bot is { IsBot: true } && owner != null && string.Equals(bot.BotOwner, owner.Name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>A seated, awake player in this cart owns <paramref name="mate"/> (<see cref="OwnCompanion"/>). No allocation.</summary>
+    private bool OwnerAboard(Adventurer mate)
+    {
+        foreach (var rider in Cart.Riders.Values)
+            if (rider is Adventurer player && IsInstanceValid(player) && !player.Downed && !player.Parked && IsPlayer(player) && OwnCompanion(mate, player)) return true;
+        return false;
     }
 
     private void Use(Adventurer actor)
@@ -462,6 +477,7 @@ public partial class RailController : Node
         {
             if (!IsInstanceValid(hero) || hero.Control != ControlKind.Companion || hero.Parked || hero.Seated || hero.Downed) continue;
             if (hero.GlobalPosition.DistanceSquaredTo(at) > HopInRange * HopInRange) continue;
+            if (!OwnerAboard(hero)) continue; // another player's bot waits for its own player (solo: the one player owns every companion)
             if (SeatHero(hero)) RefreshHud();
         }
         SeatBench(at);
@@ -838,6 +854,7 @@ public partial class RailController : Node
         var companionsWant = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
         var most = DebugTools.Instance?.PumperCap ?? RideInputRules.MaxPumpers; // a test's cap (--test-chase's one-pumper jump); the game's is two
         var (pumpers, brakeOn) = RideInputRules.Inputs(playersPumping, anyBrake, companionsWant, companions, most);
+        _playersPumping = brakeOn ? 0 : playersPumping; // the cart sender's dirty test: a player's pump or brake goes out at once
         var companionPumps = pumpers - (brakeOn ? 0 : playersPumping);
         foreach (var hero in party.Adventurers)
         {

@@ -78,6 +78,16 @@ public partial class MineCart : AnimatableBody3D, IInteractable, ICartBody
     /// <summary>The prompt asks about the hero this machine plays, since a prompt has no actor.</summary>
     public string Prompt => Main.Instance?.Party?.Local is { } me ? PromptFor?.Invoke(me) ?? "" : "";
 
+    /// <summary>How far <paramref name="world"/> lies from the tub's box (its nearest point; 0 inside): a hero's boarding reach is measured to it.</summary>
+    public float TubDistance(Vector3 world)
+    {
+        var local = GlobalTransform.AffineInverse() * world;
+        return RideInputRules.TubDistance(local.X, local.Y, local.Z, TubWidth / 2f, CartRules.HalfLength, TubBottom, TubBottom + TubHeight);
+    }
+
+    /// <summary>The nearer of <paramref name="hero"/>'s body and eye to the tub (<see cref="TubDistance"/>), as the reach of a boarding is judged.</summary>
+    public float TubDistance(Adventurer hero) => Mathf.Min(TubDistance(hero.GlobalPosition), TubDistance(hero.Camera.GlobalPosition));
+
     public void Interact(PartyController party, Adventurer actor) => OnUse?.Invoke(actor);
 
     /// <summary>Where a rider in <paramref name="seat"/> sits, in world space: the origin on the tub floor under the seat, facing forward (−Z).</summary>

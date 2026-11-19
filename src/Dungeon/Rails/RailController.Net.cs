@@ -51,8 +51,14 @@ public partial class RailController : ISlopeSource
         var boarders = 17;
         for (var i = 0; i < Cart.Boarders.Length; i++) boarders = boarders * 31 + AboardId(Cart.Boarders[i], Cart);
         for (var i = 0; i < _train.Count; i++) boarders = boarders * 31 + AboardId(_train.Wagons[i].Boarders[0], _train.Wagons[i]);
-        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders));
+        // a player's brake or pump (their RideIntent) reaches clients at once, not with the next correction; companions' pumping is left
+        // out (it can flip at the 0.7·Cruise threshold, and it follows the state smoothly)
+        var input = HashCode.Combine(Party.LastInput.Brake, _playersPumping);
+        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input));
     }
+
+    /// <summary>Players pumping the cart this tick (<see cref="Inputs"/>; 0 under a brake).</summary>
+    private int _playersPumping;
 
     /// <summary>The net id of a hound riding <paramref name="body"/> at a boarder spot (landed: carried by it), or −1 (free, reserved for a leap still in the air, gone).</summary>
     private static int AboardId(Enemies.Enemy? hound, Node3D body)

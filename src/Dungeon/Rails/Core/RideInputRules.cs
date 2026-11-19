@@ -31,9 +31,31 @@ public static class RideInputRules
     /// <summary>A seated player's stick (the move vector's Y; forward is −Y): forward pumps, back brakes.</summary>
     public static (bool Pump, bool Brake) FromMove(float moveY) => (moveY < -StickThreshold, moveY > StickThreshold);
 
-    /// <summary>"Get out" when seated in this cart; "Board the cart" when it is Held short of the end of the line with a hero seat free; else nothing.</summary>
-    public static string BoardPrompt(bool seatedHere, bool held, bool lastStop, bool heroSeatFree)
-        => seatedHere ? "Get out" : held && !lastStop && heroSeatFree ? "Board the cart" : "";
+    /// <summary>A hero boards from this close to the tub itself (its nearest point, not its middle): the server's intent check and the prompt agree.</summary>
+    public const float BoardReach = 3.5f;
+
+    /// <summary>
+    /// "Get out" when seated in this cart; "Board the cart" when it is Held short of the end of the line with a hero seat free and the
+    /// hero within <see cref="BoardReach"/> of the tub; else nothing.
+    /// </summary>
+    public static string BoardPrompt(bool seatedHere, bool held, bool lastStop, bool heroSeatFree, bool inReach)
+        => seatedHere ? "Get out" : held && !lastStop && heroSeatFree && inReach ? "Board the cart" : "";
+
+    /// <summary>
+    /// How far a point in the cart's own frame (<paramref name="x"/> across, <paramref name="y"/> up, <paramref name="z"/> along) lies
+    /// from the tub's box: |x| ≤ <paramref name="halfWidth"/>, <paramref name="bottom"/> ≤ y ≤ <paramref name="top"/>,
+    /// |z| ≤ <paramref name="halfLength"/>; 0 inside.
+    /// </summary>
+    public static float TubDistance(float x, float y, float z, float halfWidth, float halfLength, float bottom, float top)
+    {
+        var dx = Math.Max(0f, Math.Abs(x) - halfWidth);
+        var dz = Math.Max(0f, Math.Abs(z) - halfLength);
+        var dy = y < bottom ? bottom - y : y > top ? y - top : 0f;
+        return MathF.Sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /// <summary>A hero this far from the tub may board it.</summary>
+    public static bool InBoardReach(float tubDistance) => tubDistance <= BoardReach;
 
     /// <summary>A held pump or brake last heard at <paramref name="lastAt"/> is stale at <paramref name="now"/> (a let-go never is).</summary>
     public static bool Stale(bool holding, double lastAt, double now) => holding && now - lastAt > HeldTimeoutSeconds;
