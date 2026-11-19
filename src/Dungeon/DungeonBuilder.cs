@@ -216,6 +216,11 @@ public partial class DungeonBuilder : Node3D
     /// client it follows the server's.
     /// </summary>
     public int FloorTick { get; private set; }
+    /// <summary>
+    /// The server's clock (<c>NetSession.Instance.Now</c>) when <see cref="FloorSeconds"/> was last set here (a server or single player):
+    /// the floor clock's pair is (FloorSeconds, this), stamped where the floor time is made, never a step later.
+    /// </summary>
+    public double FloorStampNow { get; private set; }
     private Net.ElapsedSeconds _floorElapsed;
     public override void _PhysicsProcess(double delta)
     {
@@ -224,6 +229,7 @@ public partial class DungeonBuilder : Node3D
         {
             _floorElapsed.Add(delta);
             FloorSeconds = _floorElapsed.Value;
+            FloorStampNow = Net.NetSession.Instance?.Now ?? 0;
         }
         FloorTick = Net.FloorClock.TickOf(FloorSeconds);
     }
@@ -361,6 +367,7 @@ public partial class DungeonBuilder : Node3D
         _hazards.Clear();
         _floorElapsed.Reset();
         FloorSeconds = 0;
+        FloorStampNow = Net.NetSession.Instance?.Now ?? 0;
         FloorTick = 0;
         _grid = null;
         if (_floorRoot == null) return;

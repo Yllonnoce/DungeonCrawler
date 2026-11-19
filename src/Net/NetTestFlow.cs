@@ -714,6 +714,7 @@ public partial class NetTestFlow : Node
         _rideTrainTold = true;
         var after = rc.NetTrainChangedAt - rc.NetDepartedAt;
         GD.Print(FormattableString.Invariant($"[net] ride: the cage wagon coupled here {after:0.000} s after the cart left stop 1 (Train [{string.Join(", ", rc.Train.Select(w => w.Stop))}])"));
+        if (after < 0) return FormattableString.Invariant($"the wagon was coupled here {-after:0.000} s before the cart left stop 1 (the train must come with or after the departure)");
         return after <= 0.5 ? null : FormattableString.Invariant($"the wagon coupled here {after:0.000} s after the cart left stop 1 (over 0.5 s)");
     }
 

@@ -297,11 +297,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     /// <summary>
     /// Rattle the camera: a tremor, a horde tearing loose. Amplitude in metres, fading over the seconds given. On a server a remote
-    /// player's body has no camera anyone looks through: its own screen is told instead (<see cref="EventBus.RemoteShake"/>, a ShakeEvt).
+    /// player's body has no camera anyone looks through: its own screen is told instead (<see cref="EventBus.RemoteShake"/>, a ShakeEvt),
+    /// unless <paramref name="relay"/> is false (a party-wide shake every screen makes for itself: a tremor, a horde, an ambush).
     /// </summary>
-    public void Shake(float amplitude, float seconds)
+    public void Shake(float amplitude, float seconds, bool relay = true)
     {
-        if (Net.NetSession.IsServer && Control == ControlKind.Remote) EventBus.Instance?.RaiseRemoteShake(Index, amplitude, seconds);
+        if (relay && Net.NetSession.IsServer && Control == ControlKind.Remote) EventBus.Instance?.RaiseRemoteShake(Index, amplitude, seconds);
         _shakeAmp = Math.Max(_shakeAmp * (_shakeLeft / Math.Max(_shakeTotal, 0.01f)), amplitude);
         _shakeLeft = _shakeTotal = Math.Max(seconds, 0.05f);
     }

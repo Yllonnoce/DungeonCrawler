@@ -163,8 +163,12 @@ public partial class ServerWorld : Node
             elites.Select(e => e.SpawnIndex).ToList(), _floorEpoch, resync, NetSession.Instance.Now, main.Builder.FloorSeconds);
     }
 
-    /// <summary>The floor clock's pair now: the floor's seconds (the sum of its physics steps) at the server's time.</summary>
-    private FloorClockMsg FloorClockNow() => new(Game.Instance.CurrentFloor, _floorEpoch, Main.Instance.Builder.FloorSeconds, NetSession.Instance.Now);
+    /// <summary>
+    /// The floor clock's pair now: the floor's seconds (the sum of its physics steps) at the server's time the builder stamped with them.
+    /// This node ticks before the builder (an autoload's child), so <c>NetSession.Instance.Now</c> here would pair last step's floor time
+    /// with this step's clock and put every client's floor a step behind.
+    /// </summary>
+    private FloorClockMsg FloorClockNow() => new(Game.Instance.CurrentFloor, _floorEpoch, Main.Instance.Builder.FloorSeconds, Main.Instance.Builder.FloorStampNow);
 
     /// <summary>A peer finished building the floor everyone moved to: its poses count again and it gets a full picture.</summary>
     private void OnFloorReady(PlayerSlot slot, int floor)

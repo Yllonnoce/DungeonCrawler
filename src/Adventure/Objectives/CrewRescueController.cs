@@ -373,9 +373,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             {
                 if (NetSession.IsServer)
                 {
-                    // a dedicated server has no HUD to bark on: her line goes to every screen as narration, her name in it (plan 6 voices her this way)
+                    // a dedicated server has no HUD to bark on: every screen hears her through the NPC's own line (as the merchant's), her name on it
                     EventBus.Instance.Log("Grisel works the lock.");
-                    NetSession.Instance.Server?.Broadcast(new NarrationMsg($"{grisel.NpcName}: \"{GriselLine}\"", null));
+                    NetSession.Instance.Server?.Broadcast(new NpcSay(grisel.Id, new Line(GriselLine)));
                 }
                 else
                 {

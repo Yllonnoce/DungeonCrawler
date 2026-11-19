@@ -69,7 +69,7 @@ public partial class Tremor : Node
         _rockTimer = 0.4f;
         Tremors++;
         var lead = main.Party.Lead;
-        lead.Shake(0.05f + 0.09f * _strength, 1.6f + _strength * 1.4f);
+        lead.Shake(0.05f + 0.09f * _strength, 1.6f + _strength * 1.4f, relay: false); // the whole party's, not one remote player's: never a ShakeEvt
         Audio.Synth.PlayAt(this, Audio.Synth.Rumble(), lead.GlobalPosition + Vector3.Up * 3f, -6f + 4f * _strength, 40f);
         EventBus.Instance.Log(_strength >= 1f ? "The ground heaves. Stone cracks somewhere above." : "The ground shudders. Dust sifts from the ceiling.");
         // dust sifting down around the party
@@ -81,7 +81,7 @@ public partial class Tremor : Node
     public static void ShakeOnly(float amplitude, float seconds)
     {
         var party = Main.Instance?.Party;
-        if (party != null && party.HasBodies) party.Anchor.Shake(amplitude, seconds);
+        if (party != null && party.HasBodies) party.Anchor.Shake(amplitude, seconds, relay: false); // every screen makes its own (the horde, the ambush): never a ShakeEvt
     }
 
     private bool RandomCellNear(Main main, float radius, out GridPos cell)

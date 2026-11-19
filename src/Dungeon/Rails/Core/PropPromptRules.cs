@@ -50,12 +50,13 @@ public static class PropPromptRules
 
     /// <summary>
     /// How far a lever (a track switch or a spur's) may be from the body when the server judges its use. A player seated in a rolling cart
-    /// saw it in reach a round trip ago: the cart has carried them on by <paramref name="cartSpeed"/> × <paramref name="rtt"/> since, so that
-    /// much is allowed on top of <see cref="InteractReach"/>, at most <see cref="SeatedLagCap"/>. On foot, or with nothing sane to go on, none.
+    /// saw it in reach as the cart stood at the server's present (the follower renders that); the intent takes half a round trip to arrive,
+    /// so the cart has carried them on by <paramref name="cartSpeed"/> × <paramref name="rtt"/> / 2 since: that much is allowed on top of
+    /// <see cref="InteractReach"/>, at most <see cref="SeatedLagCap"/>. On foot, or with nothing sane to go on, none.
     /// </summary>
     public static float LeverReach(bool seated, float cartSpeed, double rtt)
     {
         if (!seated || !(cartSpeed > 0f) || !(rtt > 0)) return InteractReach; // NaN fails both tests
-        return InteractReach + (float)Math.Min(SeatedLagCap, cartSpeed * rtt);
+        return InteractReach + (float)Math.Min(SeatedLagCap, cartSpeed * rtt / 2);
     }
 }

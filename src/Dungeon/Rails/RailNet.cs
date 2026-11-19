@@ -243,7 +243,7 @@ public partial class RailNet : Node
         b.Append(name).Append('[').Append(string.Join(",", taken)).Append(']');
     }
 
-    private int _rideHammer = int.MinValue;
+    private int _rideHammer = -1;
     private HammerPhase _rideHammerWas = HammerPhase.Up;
 
     /// <summary>
@@ -254,7 +254,7 @@ public partial class RailNet : Node
     private void RideHammerTrace(double serverNow, string tag)
     {
         if (Main.Instance?.Builder is not { } builder || RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return;
-        if (_rideHammer == int.MinValue) _rideHammer = enc.HammerIndexOf(4);
+        if (_rideHammer < 0) _rideHammer = enc.HammerIndexOf(4); // asked again until the pieces are built: a −1 is never kept
         if (_rideHammer < 0) return;
         var phase = SetPieceRules.Phase(builder.FloorTick, _rideHammer, out _);
         if (phase == HammerPhase.Fall && _rideHammerWas == HammerPhase.Glow)
