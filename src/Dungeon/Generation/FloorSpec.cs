@@ -43,6 +43,10 @@ public sealed record FloorSpec
     public int FireCount { get; init; }
     /// <summary>Stops on a mine-cart line round a ring floor's outside (0 = no rails; ring only).</summary>
     public int RailCount { get; init; }
+    /// <summary>The mine-cart line runs the whole ring: the down stairs go in the start's ring neighbour (railed rings only).</summary>
+    public bool RailLoop { get; init; }
+    /// <summary>Cells of rock between a railed ring's rooms and the grid's edge; wider than RailRules.Band, the line meanders.</summary>
+    public int RailBand { get; init; } = RailRules.Band;
     /// <summary>Tier-final floor: a large arena room is placed and the down stairs live inside it.</summary>
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;

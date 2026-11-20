@@ -59,11 +59,15 @@ public sealed class SpecOverrides
     [AiDescription("Ponds or streams laid in rooms, 0 to 3.")]
     [AiNotNull] public int? WaterCount { get; set; }
     // hidden from the AI planner until a railed floor plays as a chase; hand-written plans may still set it
-    [AiDescription("Stops on a mine-cart line round the outside of a ring floor, 0 to 3; 0 means no rails.")]
+    [AiDescription("Stops on a mine-cart line round the outside of a ring floor, 0 to 6; 0 means no rails.")]
     [AiIgnore] public int? RailCount { get; set; }
+    [AiDescription("True: the mine-cart line runs the whole way round the ring, and the stairs down are beside the start.")]
+    [AiIgnore] public bool? RailLoop { get; set; }
+    [AiDescription("Cells of rock outside a railed ring's rooms for the line to weave in, 6 to 16.")]
+    [AiIgnore] public int? RailBand { get; set; }
 
     public bool IsEmpty => EnemyCount == null && ChestCount == null && LockedChestCount == null && TrapCount == null && VaultCount == null
-                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null;
+                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null;
 
     public FloorSpec Apply(FloorSpec spec) => spec with
     {
@@ -80,7 +84,9 @@ public sealed class SpecOverrides
         RubbleCount = Math.Clamp(RubbleCount ?? spec.RubbleCount, 0, 6),
         NestCount = Math.Clamp(NestCount ?? spec.NestCount, 0, 8),
         WaterCount = Math.Clamp(WaterCount ?? spec.WaterCount, 0, 3),
-        RailCount = Math.Clamp(RailCount ?? spec.RailCount, 0, 3),
+        RailCount = Math.Clamp(RailCount ?? spec.RailCount, 0, 6),
+        RailLoop = RailLoop ?? spec.RailLoop,
+        RailBand = Math.Clamp(RailBand ?? spec.RailBand, RailRules.Band, 16),
     };
 }
 
