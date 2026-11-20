@@ -388,6 +388,7 @@ public partial class ServerWorld : Node
         UnseatLeaving(slot); // a seat is never left booked to a body that is gone: it steps out beside the lane first
         _rttOf.Remove(slot.MemberIndex);
         _shovedPending.Remove(slot.MemberIndex);
+        _returnedPending.Remove(slot.MemberIndex);
         if (party != null && GodotObject.IsInstanceValid(party)) party.Park(slot.MemberIndex);
         EventBus.Instance.Log($"{slot.Name} leaves the party.");
         Broadcast(new PlayerLeft(slot.MemberIndex, slot.Name));
@@ -735,6 +736,14 @@ public partial class ServerWorld : Node
     /// <summary>Members the server shoved (<c>Adventurer.Shove</c>): where from, where to and when, until a pose from the new spot arrives (<see cref="PoseGuardRules.DropAfterShove"/>).</summary>
     private readonly Dictionary<int, (Vector3 From, Vector3 To, double At)> _shovedPending = new();
 
+    /// <summary>Members the server returned from a crevasse (<c>Adventurer.ReturnFromCrevasse</c>) and when, until a pose off a drop arrives or the guard gives up (<see cref="PoseGuardRules.DropAfterReturn"/>).</summary>
+    private readonly Dictionary<int, double> _returnedPending = new();
+    /// <summary>Poses dropped by the returned-pose guard (for tests).</summary>
+    public int ReturnedPosesDropped { get; private set; }
+
+    /// <summary>The server returned remote member <paramref name="member"/> from a crevasse: its poses over a drop still in flight are dropped.</summary>
+    public void NoteReturned(int member) => _returnedPending[member] = NetSession.Instance.Now;
+
     /// <summary>The server moved remote member <paramref name="member"/>'s body from <paramref name="from"/> to <paramref name="to"/> (its ForcePose is on its way): its poses still in flight are dropped.</summary>
     public void NoteShoved(int member, Vector3 from, Vector3 to) => _shovedPending[member] = (from, to, NetSession.Instance.Now);
 
@@ -785,6 +794,14 @@ public partial class ServerWorld : Node
         {
             if (PoseGuardRules.DropAfterShove(at.DistanceTo(shove.From), at.DistanceTo(shove.To), NetSession.Instance.Now - shove.At)) { ShovedPosesDropped++; return; } // sent before its screen heard of the shove
             _shovedPending.Remove(slot.MemberIndex);
+        }
+        // just returned from a crevasse: poses over a drop still in flight from its client's held body would send it straight back in
+        if (_returnedPending.TryGetValue(slot.MemberIndex, out var returnedAt))
+        {
+            var rlayout = Main.Instance?.Builder.Layout;
+            var overDrop = rlayout != null && CrevasseRules.IsDrop(rlayout, DungeonBuilder.WorldToCell(at));
+            if (PoseGuardRules.DropAfterReturn(overDrop, NetSession.Instance.Now - returnedAt)) { ReturnedPosesDropped++; return; }
+            _returnedPending.Remove(slot.MemberIndex);
         }
         // fallen into a crevasse: the server holds the body under the lip (CrevasseWatch.Take) until a return; its client's held body says nothing
         if (body.State.Fallen) return;

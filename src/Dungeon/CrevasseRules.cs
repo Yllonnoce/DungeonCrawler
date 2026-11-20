@@ -23,6 +23,8 @@ public static class CrevasseRules
 {
     /// <summary>A body this far below the floor of the drop cell it is over has fallen.</summary>
     public const float FallDepth = 2.5f;
+    /// <summary>How far below a chasm's lip a diagonal (corner) neighbour's ground may sit: the observed metre the generator's corners reach.</summary>
+    public const float CornerLipSlack = 1f;
     /// <summary>A fallen hero's body is held this far below the lip: above <c>Adventurer.FellOutY</c>, so it never trips the fell-out guard.</summary>
     public const float HoldDepth = 6f;
     /// <summary>A fallen hero comes back with this fraction of max HP.</summary>

@@ -2001,7 +2001,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         Visible = !Parked;
         // on a server a remote player's body is shoved out of the hold first, so the shove guard knows where it was: its client's poses
         // still in flight from its own held body (in the drop, below the lip: poses the server keeps, to judge a fall) are dropped
-        if (Net.NetSession.IsServer && Control == ControlKind.Remote) Shove(at);
+        if (Net.NetSession.IsServer && Control == ControlKind.Remote) { Shove(at); Net.NetSession.Instance.Server?.NoteReturned(Index); }
         Teleport(at);
         EventBus.Instance.Log($"{m.Name} climbs back out of the dark.");
         EventBus.Instance.RaiseMemberChanged(Index);

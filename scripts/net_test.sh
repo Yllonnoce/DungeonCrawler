@@ -302,8 +302,10 @@ if [ "${RIDE:-}" = 1 ]; then
   # of its body ([crevasse] Joiner fell ..., before the wipe asks anything: nothing hands the joiner to the crevasse), and the joiner's
   # sheet shows it Fallen; the wipe's rise then brings it back up, placed beside the cart by the server's ForcePose (the check above)
   echo "--- walk-off"; grep -h "\[net\] ride: walk-off: \|\[net-server\] ride: walk-off: \|\[crevasse\] Joiner fell" "$TMP/server.log" "$TMP/joiner.log" 2>/dev/null
-  FELL_AT=$(grep -n "\[crevasse\] Joiner fell at .*: Dead" "$TMP/server.log" | head -1 | cut -d: -f1)
+  MARK=$(grep -n "\[net-server\] ride: walk-off: armed" "$TMP/server.log" | head -1 | cut -d: -f1)
+  FELL_AT=$(awk -v m="${MARK:-999999999}" 'NR>m && /\[crevasse\] Joiner fell at .*: Dead/ {print NR; exit}' "$TMP/server.log")
   WIPE_AT=$(grep -n "\[net-server\] ride: wipe: the joiner is ready" "$TMP/server.log" | head -1 | cut -d: -f1)
+  if [ -z "$MARK" ]; then echo "NET TEST: FAIL (walk-off: no armed marker on the server)"; exit 1; fi
   if ! grep -q "\[net\] ride: walk-off: the joiner steps onto the lip at" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (walk-off: the joiner never stepped onto a lip to walk off)"; exit 1; fi
   if [ -z "$FELL_AT" ] || [ -z "$WIPE_AT" ] || [ "$FELL_AT" -ge "$WIPE_AT" ]; then echo "NET TEST: FAIL (walk-off: the server never judged the joiner's own fall before the wipe: no [crevasse] Joiner fell line ahead of it)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: walk-off: Joiner is Fallen here before the wipe" "$TMP/server.log"; then echo "NET TEST: FAIL (walk-off: the server's copy of the joiner was not Fallen before the wipe)"; exit 1; fi

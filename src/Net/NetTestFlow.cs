@@ -377,6 +377,7 @@ public partial class NetTestFlow : Node
             if (_heapOutAt < 0) _heapOutAt = _elapsed;
             if (_elapsed - _heapOutAt < 3) return;
             _lastWreckDone = true;
+            GD.Print("[net-server] ride: walk-off: armed (the last wreck stands)");
             var wrecks = 0;
             while (wrecks < 8 && (rc.Cart.Visible || rc.State.Mode != Dungeon.Rails.CartMode.Wrecked)) { rc.DebugWreck(); wrecks++; }
             _lastWreckOk = rc.State.Mode == Dungeon.Rails.CartMode.Wrecked && !rc.Cart.Visible;

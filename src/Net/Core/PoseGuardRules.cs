@@ -18,6 +18,16 @@ public static class PoseGuardRules
     public static bool DropAfterShove(float fromShoved, float toShoved, double secondsSinceShove)
         => secondsSinceShove < ShoveHoldSeconds && toShoved > fromShoved;
 
+    /// <summary>The returned-pose guard gives up this long after a crevasse return (a client that never lands must not be filtered forever).</summary>
+    public const double ReturnHoldSeconds = 3.0;
+
+    /// <summary>
+    /// A pose over a drop that arrives <paramref name="secondsSinceReturn"/> after the server returned the body from a crevasse is dropped:
+    /// it was sent from the client's own held body, before the client heard of the return, and would send the body straight back in.
+    /// </summary>
+    public static bool DropAfterReturn(bool overDrop, double secondsSinceReturn)
+        => overDrop && secondsSinceReturn < ReturnHoldSeconds;
+
     /// <summary>A pose over a drop may sit this far above the drop cell's floor: a body just stepping off the lip.</summary>
     public const float DropPoseSlack = 0.05f;
 
