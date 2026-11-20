@@ -474,13 +474,21 @@
         {
           "Key": "ride3",
           "Line": {
-            "Text": "Last cage. Juno Brack and Selby Crane. Selby said we shouldn\u0027t go down unpaid. She was right.",
+            "Text": "Juno Brack and Selby Crane next. Selby said we shouldn\u0027t go down unpaid. She was right.",
             "VoiceId": null,
             "Delivery": null
           }
         },
         {
           "Key": "ride4",
+          "Line": {
+            "Text": "Last cage. Hal Sumpter and Bet Wynn. Hal carried my lamp the day I ran. I let him think I\u0027d come back.",
+            "VoiceId": null,
+            "Delivery": null
+          }
+        },
+        {
+          "Key": "ride5",
           "Line": {
             "Text": "That\u0027s the last cage behind us. Get us to the stair before he thinks of something worse.",
             "VoiceId": null,
@@ -608,8 +616,43 @@
       "Line": null
     },
     {
-      "Id": "r4_golem",
+      "Id": "r4_hounds",
       "Ride": 4,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2,
+          "Elite": null
+        }
+      ],
+      "At": 0.3,
+      "Offset": -4,
+      "Line": null
+    },
+    {
+      "Id": "r4_slag",
+      "Ride": 4,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 1,
+          "Elite": null
+        },
+        {
+          "EnemyId": "enemy.forge_priest",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.7,
+      "Offset": -3,
+      "Line": null
+    },
+    {
+      "Id": "r5_golem",
+      "Ride": 5,
       "Kind": "golem",
       "Riders": [
         {
@@ -618,7 +661,7 @@
           "Elite": null
         }
       ],
-      "At": 0.05,
+      "At": 0.55,
       "Offset": 0,
       "Line": {
         "Text": "The kiln wall bursts outward, and something huge drops onto the slag line.",
@@ -659,38 +702,44 @@
       "At": 0.75
     },
     {
-      "Id": "r4_hammers",
+      "Id": "r4_beam",
       "Ride": 4,
+      "Kind": "beam",
+      "At": 0.15
+    },
+    {
+      "Id": "r5_hammers",
+      "Ride": 5,
       "Kind": "hammers",
-      "At": 0.25
+      "At": 0.2
     },
     {
-      "Id": "r4_pour",
-      "Ride": 4,
+      "Id": "r5_pour",
+      "Ride": 5,
       "Kind": "pour",
-      "At": 0.45
+      "At": 0.4
     },
     {
-      "Id": "r4_trestle",
-      "Ride": 4,
+      "Id": "r5_trestle",
+      "Ride": 5,
       "Kind": "trestle",
       "At": 0.6
     },
     {
-      "Id": "r4_jump",
-      "Ride": 4,
+      "Id": "r5_jump",
+      "Ride": 5,
       "Kind": "jump",
       "At": 0.75
     },
     {
-      "Id": "r4_spur",
-      "Ride": 4,
+      "Id": "r5_spur",
+      "Ride": 5,
       "Kind": "spur_switch",
       "At": 0.85
     },
     {
-      "Id": "r4_buffer",
-      "Ride": 4,
+      "Id": "r5_buffer",
+      "Ride": 5,
       "Kind": "buffer",
       "At": 0.95
     }
@@ -731,6 +780,18 @@
       "Name": "Selby Crane",
       "Sex": "woman",
       "Body": "npc_old_woman"
+    },
+    {
+      "Id": "crew_hal",
+      "Name": "Hal Sumpter",
+      "Sex": "man",
+      "Body": "npc_young_man"
+    },
+    {
+      "Id": "crew_bet",
+      "Name": "Bet Wynn",
+      "Sex": "woman",
+      "Body": "npc_young_woman"
     }
   ],
   "Quests": [

@@ -253,8 +253,8 @@ tracks, a boss track, and victory and defeat stings. `Audio/MusicDirector.cs` cr
 moment an enemy is fighting the party within 26 m and holds for six seconds after the last one stops, the boss track runs from
 the guardian noticing you until it falls, and everything ducks under spoken lines. Floor 12's rides play a Chase mood
 (`Dungeon/Rails/Core/RideMusic.cs`): while the party cart rolls with the local hero seated in it or within 30 m of it, or a chaser
-rolls with them in it, and for 4 s after. Rides 1-3 loop `chase_determined_pursuit.ogg` (CC0, downloaded by hand, not by the
-script); ride 4 plays `forge_heavy_dungeon.ogg` started at `RideMusic.PhaseSeek` of the floor clock so its downbeat meets the
+rolls with them in it, and for 4 s after. Rides 1-4 loop `chase_determined_pursuit.ogg` (CC0, downloaded by hand, not by the
+script); the last ride (5) plays `forge_heavy_dungeon.ogg` started at `RideMusic.PhaseSeek` of the floor clock so its downbeat meets the
 hammers' fall, locked again each time it ends. The "Music and ambience" slider covers it all.
 Enemy grunts are CC0 creature SFX from rubberduck's packs, fetched by `scripts/fetch_grunts.py` into `assets/audio/grunts/<set>/`;
 `VoiceSets` picks the set by enemy size and plays a hurt or death clip (pitch varied), and falls back to the old `enemy_hurt` and
@@ -627,7 +627,7 @@ no keys, so such a run renders none of them. A run with keys present is differen
 user://voice live, piecemeal, and spends money. They are, by kind and speaker:
 - the six ride taunts (16 lines in `campaign.json`, two stock lines each in `TauntBank.Stock`): Morg Ashtusk, a man (`Voices.Villain`,
   Fenrir, rendered as Dominus);
-- Grisel Thorn's calls `ride1` to `ride4` and `cage` (`npc_grisel.Calls` in `floor_12.json`): a woman (her persona's Despina, rendered
+- Grisel Thorn's calls `ride1` to `ride5` and `cage` (`npc_grisel.Calls` in `floor_12.json`): a woman (her persona's Despina, rendered
   as Abby);
 - the six ride barks (`RideBarks`, topped up into every bark set): each hero in their own class voice; Brand, Wren and Ilex are men,
   Sable is a woman;
@@ -1195,7 +1195,7 @@ Founders' Strongbox (10, the reward vault, `col_vault`), The Kiln Cages (11, the
 runs the long way round the ring, from the landing to the Cooling Stair beside it (`RailCount` 4, `RailLoop`, `RailBand`
 14): five rides of 206 to 281 m, 1214 m in all, with the cavern span on ride 4.
 
-The six named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon)
+The eight named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon, two per wagon across four stops)
 are seated by the crew controller, not the resolver. A crew id another NPC of the plan holds, or `grisel_body` (dead
 Grisel on the condemned branch), is dropped ("crew <id>: dropped (id taken)"). The "caged crew" narration fires at S1.
 
@@ -1388,7 +1388,7 @@ save and a load while that one waits leave no relief node, nobody seated, the co
 relief comes 15 ± 0.5 s after the load. ahead: the player rides to stop 1, gets out, stands 30 m ahead of the train for 20 s
 and 30 m behind the cart for 20 s, and no relief comes. Every run also checks that no two relief carts ever stand at once.
 
-### The four rides
+### The five rides
 
 Ride k is the stretch from stop k−1 to stop k. What happens on it is plan data: `FloorPlan.RailEncounters`
 (`RailEncounterPlan`: Id, Ride, Kind, Riders, At, Offset, Line) and `FloorPlan.RailSetPieces` (`RailSetPiecePlan`: Id,
@@ -1416,14 +1416,15 @@ look-ahead. The cues (`cart_bell`, `switch_clunk`,
 `cart_jump`, `cart_land`) are placeholder names and stay silent until plan 6. The numbers are in
 `Dungeon/Rails/Core/SetPieceRules.cs` (`PaceRules`, `SetPieceRules`) and the controller's constants.
 
-Floor 12's rides (`data/adventures/builtin/floor_12.json`):
+Floor 12's five rides (`data/adventures/builtin/floor_12.json`; the lengths are the shipped seed's, `RailCount` 4 on a loop):
 
-| Ride | Stops | Encounters | Set pieces |
-|---|---|---|---|
-| 1 (≈71 m) | landing → S1 | a lone cinder on the rails (0.45), a forge priest thrower in a pocket (0.8) | the low beam (0.6) |
-| 2 (≈185 m) | S1 → S2 | three slag carts: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | — |
-| 3 (≈142 m) | S2 → S3 | a slag cart with a cinder brute (0.3, +8) | switch out (0.2), the ore heap (0.35), switch back (0.55), ore buckets (0.75) |
-| 4 (≈75 m) | S3 → exit | the golem (0.05) | drop hammers (0.25), the pour (0.45), the trestle (0.6), the jump (0.75), the spur (0.85), the buffer (0.95) |
+| Ride | Stops | Encounters | Set pieces | Slots left for later plans |
+|---|---|---|---|---|
+| 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_beam` the low beam (0.6) | plan 11: `r1_barricade` ~0.25 |
+| 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | — | plan 11: `r2_barricade` ~0.6, defended |
+| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.55), `r3_buckets` (0.75) | plan 11: `switch_back` live and later, the broken bridge past the last return |
+| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.3, −4), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15) | plan 12: the dark ~0.1-0.4, the runaway from ~0.1, the split ~0.45; plans 10/13: the cavern on `Rail.Cavern` (bridge and spiral); plan 14: the leap beside `r4_slag`; plan 15: the loop |
+| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.55) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.6), `r5_jump` (0.75), `r5_spur` (0.85), `r5_buffer` (0.95) | plan 10: the trestle and the jump over a crevasse; plan 11: `r5_barricade` ~0.9 |
 
 Ride 1. The lone cinder stands on the party lane where the cart will come, and the cart runs it over. The thrower stands in
 the nearest party-side pocket and throws at the riders, with a hand glow of at least 1.5 s for its wind-up; it stays until a
@@ -1496,7 +1497,7 @@ until the heap is cleared by three hits from anyone on foot. Then the cart board
 on a cable over the line tip one at a time every 3 s, after a 1.5 s creak and glow. Each pours a cinder patch that burns
 for 4 s. A cart through a live patch loses 5 plating, and each seated hero takes one lick of the floor's cinder fire.
 
-The golem (ride 4, `RailEncounterController.Kiln.cs`). As the ride arms, an elite forge golem, "Kilnheart the Hulking",
+The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.55) on that ride, an elite forge golem, "Kilnheart the Hulking",
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and
 its death opens nothing. It is carried by an unseen runner paced beside the party's cart. While it is alongside (or within
 6.5 m) it slams the cart every 4 s after a 1.5 s hand glow, for 12 plating and a shake. The spur (`SpurSwitch`) is a dead-end
@@ -1585,7 +1586,7 @@ owner OKs a paid voice pass (see "Voice").
 
 **The orc's taunts.** Morg Ashtusk taunts six ride moments (`TauntTrigger.RideStart`, `RolledOver`, `CartWrecked`,
 `SlagDerailed`, `GolemEntrance`, `BufferSmashed`), each through `AdventureDirector.RailTaunt`, which does nothing on a client:
-- RideStart: `RailController.Flush`, on a Departed event from stops 0 to 2 (`RideLines.TauntFor`: rides 1 to 3; ride 4's opening
+- RideStart: `RailController.Flush`, on every Departed event (`RideLines.TauntFor`; the last ride's opening
   belongs to the golem). It is urgent and held up to `TauntDirector.RideHoldSeconds` (10 s) while a line is being said. It is not raised
   when a `CartEvents` listener claims the departure (`RailController.ClaimDeparture`, called synchronously inside the handler: Grisel's
   ride call carries it). `[rails] departed stop N: ride-start taunt said or held=…` is printed.
@@ -1617,8 +1618,8 @@ say it the old text goes to the log. Where each is called:
 Each raises `RailCalls.Called` (a test hook). `Voices.BarkDelivery` shouts CartComing, Heads and LineBlocked, says HoundLeap and
 JumpCall frantically and AllAboard cheerfully.
 
-**Grisel's calls.** `NpcPlan.Calls` (keyed lines; `CallFor(key)`) on `npc_grisel` in `floor_12.json` holds `ride1` to `ride4`
-(`RideLines.GriselCallFor`: the ride from stop 0 to 3) and `cage` (`RideLines.CageCall`). `CrewRescueController` says them with
+**Grisel's calls.** `NpcPlan.Calls` (keyed lines; `CallFor(key)`) on `npc_grisel` in `floor_12.json` holds `ride1` to `ride5`
+(`RideLines.GriselCallFor`: the ride from stop 0 to 4; `ride4` opens "Last cage.", `ride5` names no crew) and `cage` (`RideLines.CageCall`). `CrewRescueController` says them with
 `AdventureDirector.SayAs(npc, line, onceKey, stillDue)`: `npc.Say` here and `NpcSay` to clients, once per floor and key
 (`call:{floor}:{key}`, marked in `BarksSaid`), 0.05 s after the speech channel frees, never as narration. Forgiven and seated in the
 party's cart, she names the ride ahead at each departure and claims it, so no RideStart taunt is raised for it. A ride call still
