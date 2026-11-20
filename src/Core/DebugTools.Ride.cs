@@ -7,7 +7,7 @@ using Godot;
 namespace DungeonCrawler.Core;
 
 // ---- --test-ride -------------------------------------------------------------------------------------------
-// The built-in campaign's floor 12 at lethality 3: the line is there (five stops), the party boards and rides to stop 1
+// The built-in campaign's floor 12 at lethality 3: the line is there (six stops, five rides; no hammer's or pour's cue reaches a stop), the party boards and rides to stop 1
 // over a small enemy, the stop survives a save and a load with nobody aboard, a companion who jumps out at speed is
 // mangled while the cart rolls on (and the orc gloats with a RolledOver line, never the Press's Crushed one), and a big
 // enemy on thin plating wrecks the cart (and he gloats with a CartWrecked line). The first departure's RideStart taunt is said
@@ -84,26 +84,31 @@ public partial class DebugTools
         => _soundPlays.Where(p => p.At >= since && p.At <= since + seconds && cues.Contains(p.Cue)).Select(p => $"{p.Cue}@+{p.At - since:0.00}s").ToList();
 
     /// <summary>
-    /// Stop 3's place on the party line against every drop hammer and the pour: each piece's cue range (its own, set at the build) must end
-    /// at least 2 m short of a cart held there. Prints the nearest of each; null when every piece passes, else why not.
+    /// Every stop's place on the party line against every drop hammer and the pour: each piece's cue range (its own, set at the build) must
+    /// end at least 2 m short of a cart held at any stop. Prints the nearest of each to any stop; null when every piece passes, else why not.
     /// </summary>
-    private static string? Stop3Check(string tag, Node root, RailController rc)
+    private static string? StopsCheck(string tag, Node root, RailController rc)
     {
-        if (rc.StopS.Length < 4 || Main.Instance?.Builder.PartyTrack is not { } track) return null;
-        var at = track.ToGlobal(track.Curve.SampleBaked(rc.StopS[3], true));
-        var pieces = new List<(string What, float Distance, float Range)>();
+        if (rc.StopS.Length < 2 || Main.Instance?.Builder.PartyTrack is not { } track) return null;
+        var pieces = new List<(string What, Node3D Node, float Range)>();
         foreach (var child in root.GetChildren())
         {
-            if (child is MoltenPour p) pieces.Add(("pour", p.GlobalPosition.DistanceTo(at), p.CueRange));
+            if (child is MoltenPour p) pieces.Add(("pour", p, p.CueRange));
             else if (child is Node3D holder)
-                foreach (var h in holder.GetChildren().OfType<DropHammer>()) pieces.Add(($"hammer {h.Index}", h.GlobalPosition.DistanceTo(at), h.CueRange));
+                foreach (var h in holder.GetChildren().OfType<DropHammer>()) pieces.Add(($"hammer {h.Index}", h, h.CueRange));
         }
         if (pieces.Count == 0) return "no drop hammer or pour on the floor to check";
-        string Nearest(string kind) => pieces.Where(x => x.What.StartsWith(kind)).OrderBy(x => x.Distance).Select(x => $"{x.What} {x.Distance:0.0} m (range {x.Range:0.0} m)").FirstOrDefault() ?? "none";
-        GD.Print($"[{tag}] sound: stop 3 against the hazards' cues: nearest {Nearest("hammer")}, {Nearest("pour")}; each range is min(30, distance - 2)");
+        var checks = new List<(string What, int Stop, float Distance, float Range)>();
+        for (var k = 0; k < rc.StopS.Length; k++)
+        {
+            var at = track.ToGlobal(track.Curve.SampleBaked(rc.StopS[k], true));
+            foreach (var (what, node, range) in pieces) checks.Add((what, k, node.GlobalPosition.DistanceTo(at), range));
+        }
+        string Nearest(string kind) => checks.Where(x => x.What.StartsWith(kind)).OrderBy(x => x.Distance - x.Range).Select(x => $"{x.What} {x.Distance:0.0} m from stop {x.Stop} (range {x.Range:0.0} m)").FirstOrDefault() ?? "none";
+        GD.Print($"[{tag}] sound: the {rc.StopS.Length} stops against the hazards' cues: nearest {Nearest("hammer")}, {Nearest("pour")}; each range is min(30, distance - 2)");
         // a hair under 2 m for float rounding
-        var near = pieces.Where(x => x.Distance - x.Range < SetPieceRules.StopThreeMargin - 0.01f).Select(x => $"{x.What} {x.Distance:0.00} m against range {x.Range:0.00} m").ToList();
-        return near.Count == 0 ? null : $"a hazard's cue reaches within 2 m of stop 3: {string.Join(", ", near)}";
+        var near = checks.Where(x => x.Distance - x.Range < SetPieceRules.StopThreeMargin - 0.01f).Select(x => $"{x.What} {x.Distance:0.00} m from stop {x.Stop} against range {x.Range:0.00} m").ToList();
+        return near.Count == 0 ? null : $"a hazard's cue reaches within 2 m of a stop: {string.Join(", ", near)}";
     }
 
     /// <summary>Each frame of the ride: the party cart's roll follows the rules (on above a crawl, its pitch RideSound.RollPitch of V). Null, or why not.</summary>
@@ -174,13 +179,13 @@ public partial class DebugTools
         {
             case 0 when _rideClock >= 1.0f:
             {
-                if (layout.Rail?.Stops.Count != 5 || rc == null || b.PartyTrack == null)
+                if (layout.Rail?.Stops.Count != Floor12Stops || rc == null || b.PartyTrack == null)
                 {
                     Fail($"floor 12 has no rail line ({layout.RailFailure ?? (layout.Rail == null ? "no line" : rc == null ? $"{layout.Rail.Stops.Count} stops, no RailController" : $"{layout.Rail.Stops.Count} stops")})");
                     return;
                 }
                 SoundListen();
-                if (Stop3Check("ride", root, rc) is { } near) { Fail(near); return; }
+                if (StopsCheck("ride", root, rc) is { } near) { Fail(near); return; }
                 if (!_rideListening)
                 {
                     _rideListening = true;

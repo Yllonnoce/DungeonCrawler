@@ -310,10 +310,10 @@ public partial class DebugTools : Node
             {
                 var branch = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "condemned";
                 if (branch is not ("forgiven" or "condemned")) { GD.PrintErr($"[crew] --test-crew={branch}: the branch is forgiven or condemned"); branch = "condemned"; }
-                _testCrew = true; _crewForgiven = branch == "forgiven"; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240;
+                _testCrew = true; _crewForgiven = branch == "forgiven"; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 570;
             }
             else if (arg.StartsWith("--party-level=")) _chPartyLevel = Math.Clamp(int.Parse(arg["--party-level=".Length..]), 1, Characters.Leveling.MaxLevel);
-            else if (arg == "--test-chase") { _testChase = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 420; }
+            else if (arg == "--test-chase") { _testChase = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 750; }
             else if (arg.StartsWith("--physics-hz=")) Engine.PhysicsTicksPerSecond = Math.Clamp(int.Parse(arg["--physics-hz=".Length..]), 10, 240);
             else if (arg == "--test-tick-rate") { _testTickRate = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 40; }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }

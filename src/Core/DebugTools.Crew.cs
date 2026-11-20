@@ -13,18 +13,21 @@ namespace DungeonCrawler.Core;
 // The railed jailbreak on the built-in campaign's floor 12 at lethality 3, scripted end to end: the cart rides to each
 // stop, the stop's guards die by a debug kill and the gate lifts, the cage opens free (the orc's keys from Grisel's body
 // when she was condemned, Grisel's own voice from the bench when she was forgiven), the wagon couples on at the departure,
-// a save and a load between stops 2 and 3 keep the train, one crew member let out at stop 2 bleeds out and is lost, and
-// the end of the line brings the rest home and opens the stairs. Then the floor is built again and the cart is wrecked
+// a save and a load between stops 2 and 3 keep the train, one crew member let out at stop 2 bleeds out and is lost, every
+// stop from 3 on to the last crew stop is ridden to and its cage opened the same way, and the end of the line brings the rest
+// home and opens the stairs (the counts read LineShape: four wagons, eight crew on the shipped line). Then the floor is built again and the cart is wrecked
 // between stops 1 and 2: a spare takes over. On the way the cart is held at stop 1 by its locked cage (the cage hold, plan 7:
 // no countdown, "Cart — cage locked", the hold prompt) until the lead leaves the prisoners behind, who then count as lost; after the wreck the spare rides on to stop 2, and a save and a
-// load there keep stop 1's prisoners left behind (lost, blocking nothing) while stop 2's cage holds the cart again. Forgiven, Grisel says each of her ride1-ride3 calls exactly once and her cage
-// call at least once, all through her own line (Npc.Said), never as narration; condemned, she says nothing. Prints [crew]
+// load there keep stop 1's prisoners left behind (lost, blocking nothing) while stop 2's cage holds the cart again. Forgiven, Grisel says each of her ride calls (ride1 to ride5 on the
+// shipped line: one per ride) exactly once and her cage call at least once, all through her own line (Npc.Said), never as narration; condemned, she says nothing. Prints [crew]
 // lines and [crew] RESULT.
 public partial class DebugTools
 {
     private bool _testCrew;
     private bool _crewForgiven;
     private int _crewStep;
+    /// <summary>Section 1 from stop 3 on: the crew stop the cart rides to next (3 up to the last crew stop).</summary>
+    private int _crewStop = 3;
     private float _crewClock;
     private bool _crewSection2;
     private RailController? _crewRails;
@@ -76,8 +79,9 @@ public partial class DebugTools
         var heard = string.Join(", ", _crewGriselSaid.OrderBy(k => k.Key).Select(k => $"{k.Key}x{k.Value}"));
         if (_crewGriselNarrated != null) return $"Grisel was heard as narration: \"{_crewGriselNarrated}\"";
         if (!_crewForgiven) return _crewGriselSaid.Count == 0 ? null : $"condemned, but Grisel said [{heard}]";
-        foreach (var key in new[] { "ride1", "ride2", "ride3" })
-            if (_crewGriselSaid.GetValueOrDefault(key) != 1) return $"Grisel said {key} {_crewGriselSaid.GetValueOrDefault(key)} times, not once (heard [{heard}])";
+        var rides = RailController.Instance is { } rc ? Shape(rc).Rides : 0;
+        for (var n = 1; n <= rides; n++)
+            if (_crewGriselSaid.GetValueOrDefault($"ride{n}") != 1) return $"Grisel said ride{n} {_crewGriselSaid.GetValueOrDefault($"ride{n}")} times, not once (heard [{heard}])";
         if (_crewGriselSaid.GetValueOrDefault("cage") < 1) return $"Grisel never said her cage call (heard [{heard}])";
         return null;
     }
@@ -146,16 +150,19 @@ public partial class DebugTools
         {
             case 0 when _crewClock >= 1.5f:
             {
-                if (Stop3Check("crew", root, rc) is { } near) { Fail(near); return; }
+                if (StopsCheck("crew", root, rc) is { } near) { Fail(near); return; }
                 // 1. guard
                 var crew = ctrl.Crew;
                 var caged = crew.Count(c => ctrl.StateOf(c) == CrewState.Caged && c.Seated);
-                var gatesDown = Enumerable.Range(1, Math.Max(0, rc.StopS.Length - 2)).Count(i => !rc.GateUp(i));
+                var shape = Shape(rc);
+                var gatesDown = Enumerable.Range(1, shape.Intermediate).Count(i => !rc.GateUp(i));
+                var guarded = CrewGuardedStops(main, layout).Count;
                 var grisel = GriselNpc(root);
                 GD.Print($"[crew] 1 floor 12 ({CrewBranch}): stops={rc.StopS.Length} wagons={wagons.Count} [{string.Join(", ", wagons.Select(w => $"stop {w.Stop} cell {w.Cell}"))}] crew={crew.Count} caged={caged} gates down={gatesDown} train={rc.Train.Count} lethality={TierRules.Lethality} grisel={(grisel == null ? "none" : $"{grisel.NpcName} dead={grisel.Dead}")} body={(ctrl.Body == null ? "none" : "on the floor")} orcKeys={ctrl.OrcKeys}");
-                if (rc.StopS.Length != 5) { Fail($"{rc.StopS.Length} stops, not 5"); return; }
-                if (wagons.Count != 3 || crew.Count != 6 || caged != 6 || gatesDown != 3) { Fail($"wagons={wagons.Count} crew={crew.Count} caged={caged} gates down={gatesDown} (want 3, 6, 6, 3)"); return; }
-                if (wagons.Select(w => w.Stop).OrderBy(s => s).SequenceEqual(new[] { 1, 2, 3 }) == false) { Fail("the wagons do not stand at stops 1, 2 and 3"); return; }
+                if (rc.StopS.Length != Floor12Stops) { Fail($"{rc.StopS.Length} stops, not {Floor12Stops}"); return; }
+                if (wagons.Count != shape.Intermediate || crew.Count != 2 * shape.Intermediate || caged != 2 * shape.Intermediate || gatesDown != guarded)
+                { Fail($"wagons={wagons.Count} crew={crew.Count} caged={caged} gates down={gatesDown} (want {shape.Intermediate}, {2 * shape.Intermediate}, {2 * shape.Intermediate}, {guarded}: the stops whose room a Guard or Defend group holds)"); return; }
+                if (wagons.Select(w => w.Stop).OrderBy(s => s).SequenceEqual(Enumerable.Range(1, shape.Intermediate)) == false) { Fail($"the wagons do not stand at stops 1 to {shape.Intermediate}"); return; }
                 if (_crewForgiven)
                 {
                     if (grisel == null || grisel.Dead) { Fail("forgiven, but Grisel is not on floor 12 alive"); return; }
@@ -249,15 +256,17 @@ public partial class DebugTools
                 var fails = new List<string>();
                 var train = string.Join(",", rc.Train.Select(w => w.Stop));
                 var inWagons = ctrl.Crew.Where(c => !c.Dead && c.Ride is CageWagon { Stop: 1 or 2, Coupled: true }).Select(c => c.NpcName).ToList();
-                var gatesUp = $"{rc.GateUp(1)},{rc.GateUp(2)},{rc.GateUp(3)}";
+                var shape = Shape(rc);
+                var guarded = CrewGuardedStops(main, layout);
+                var gatesUp = string.Join(",", Enumerable.Range(1, shape.Intermediate).Select(k => rc.GateUp(k)));
                 GD.Print($"[crew] 5 after the load: mode={rc.State.Mode} stop={rc.StopIndex} train=[{train}] riding the train [{string.Join(", ", inWagons)}] orcKeys={ctrl.OrcKeys} (saved {_crewOrcKeys}) gates up {gatesUp} cages open [{string.Join(",", wagons.Where(w => w.Open).Select(w => w.Stop))}] {CrewStates(ctrl)}; Grisel {GriselWhere(root, layout, rc)}");
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != 2) fails.Add($"the cart came back {rc.State.Mode} at stop {rc.StopIndex}, not held at stop 2");
                 if (train != "1,2") fails.Add($"the train is [{train}], not wagons 1 and 2");
                 if (rc.Train.Any(w => !w.Coupled || !w.Open)) fails.Add("a train wagon is not coupled and open");
                 if (inWagons.Count != 4) fails.Add($"{inWagons.Count} crew ride the train, not 4");
                 if (ctrl.OrcKeys != _crewOrcKeys) fails.Add($"OrcKeys came back {ctrl.OrcKeys}, saved {_crewOrcKeys}");
-                if (!rc.GateUp(1) || !rc.GateUp(2) || rc.GateUp(3)) fails.Add($"gates up {gatesUp}: stops 1 and 2 should be up, stop 3 down");
-                if (wagons.First(w => w.Stop == 3).Open || ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Caged) != 2) fails.Add("cage 3 is not still locked on its two crew");
+                if (!rc.GateUp(1) || !rc.GateUp(2) || Enumerable.Range(3, shape.Intermediate - 2).Any(k => rc.GateUp(k) == guarded.Contains(k))) fails.Add($"gates up {gatesUp}: stops 1 and 2 should be up, every later guarded stop down");
+                if (wagons.Any(w => w.Stop >= 3 && w.Open) || ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Caged) != 2 * (shape.Intermediate - 2)) fails.Add("the cages from stop 3 on are not still locked on their crew");
                 if (_crewForgiven && GriselNpc(root) is { } gl && layout.IsRail(DungeonBuilder.WorldToCell(gl.GlobalPosition))) fails.Add($"Grisel stands on a rail cell {DungeonBuilder.WorldToCell(gl.GlobalPosition)} after the load");
                 if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
                 // 6. a crew member is let out at stop 2 and goes down: nobody revives them
@@ -305,16 +314,22 @@ public partial class DebugTools
                 _crewClock = 0f;
                 break;
             }
-            case 14: if (CrewArriveAndKill(main, layout, rc, 3, Fail)) { _crewStep++; _crewClock = 0f; } break;
+            // stops 3 to the last crew stop, each ridden to for real: its guards die, its cage opens, its wagon couples on
+            case 14: if (CrewArriveAndKill(main, layout, rc, _crewStop, Fail)) { _crewStep++; _crewClock = 0f; } break;
             case 15:
             {
-                if (!rc.GateUp(3)) { if (_crewClock > 2f) Fail("stop 3's gate did not lift with its guards dead"); break; }
-                if (!CrewOpen(main, ctrl, wagons.First(w => w.Stop == 3), _crewForgiven ? "Open the cage (Grisel)" : "Open the cage (the orc's keys)", Fail)) return;
+                if (!rc.GateUp(_crewStop)) { if (_crewClock > 2f) Fail($"stop {_crewStop}'s gate did not lift with its guards dead"); break; }
+                if (!CrewOpen(main, ctrl, wagons.First(w => w.Stop == _crewStop), _crewForgiven ? "Open the cage (Grisel)" : "Open the cage (the orc's keys)", Fail)) return;
                 _crewStep++;
                 _crewClock = 0f;
                 break;
             }
-            case 16: if (CrewDepart(rc, ctrl, 3, Fail)) { _crewStep++; _crewClock = 0f; } break;
+            case 16:
+                if (!CrewDepart(rc, ctrl, _crewStop, Fail)) break;
+                _crewClock = 0f;
+                if (_crewStop < Shape(rc).Intermediate) { _crewStop++; _crewStep = 14; } // on to the next crew stop
+                else _crewStep++;
+                break;
             case 17:
             {
                 // 7. the end of the line
@@ -325,17 +340,21 @@ public partial class DebugTools
                 var living = ctrl.Crew.Where(c => !c.Dead).ToList();
                 var home = living.Count(c => ctrl.StateOf(c) == CrewState.Home);
                 var lostN = ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Lost);
-                GD.Print($"[crew] 7 the end of the line after {_crewClock:0.0} s: completed={ctrl.Completed} home={home}/{living.Count} lost={lostN} stairs locked={stairs?.Locked} cages open={wagons.Count(w => w.Open)}/3 train={rc.Train.Count} {CrewStates(ctrl)}");
-                if (home != living.Count || living.Count != 5 || lostN != 1) { Fail($"{home} of {living.Count} living crew home, {lostN} lost (want 5 of 5, 1 lost)"); return; }
+                var crewN = 2 * Shape(rc).Intermediate;
+                GD.Print($"[crew] 7 the end of the line after {_crewClock:0.0} s: completed={ctrl.Completed} home={home}/{living.Count} lost={lostN} stairs locked={stairs?.Locked} cages open={wagons.Count(w => w.Open)}/{wagons.Count} train={rc.Train.Count} {CrewStates(ctrl)}");
+                if (home != living.Count || living.Count != crewN - 1 || lostN != 1) { Fail($"{home} of {living.Count} living crew home, {lostN} lost (want {crewN - 1} of {crewN - 1}, 1 lost)"); return; }
                 if (stairs == null || stairs.Locked) { Fail("the down stairs are still locked"); return; }
                 _crewStep++;
                 _crewClock = 0f;
                 if (!_crewForgiven) { CrewSection2(main); break; }
                 // forgiven: Grisel gets down with the party and walks with them to the stairs
                 if (lead!.Cart == rc.Cart) rc.Cart.Interact(party, lead);
+                // onto the head of the flight (its upper treads, short of the landing that asks): Grisel stops Npc.FollowDistance short of
+                // the lead, in front of the flight and inside the 4.5 m its foot counts, wherever the cart stops beside the stairs room
                 var near = DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs);
-                party.Teleport(main.Builder.Surface(near) + Vector3.Up * 0.3f, main.Builder.Surface(layout.DownStairs));
-                GD.Print($"[crew] 7 the party gets out and walks to the stairs ({near}); Grisel {GriselWhere(root, layout, rc)}");
+                var at = stairs.GlobalTransform * new Vector3(0f, 0.3f, 1.2f);
+                party.Teleport(at, main.Builder.Surface(near));
+                GD.Print($"[crew] 7 the party gets out and walks to the head of the stairs ({DungeonBuilder.WorldToCell(at)}); Grisel {GriselWhere(root, layout, rc)}");
                 break;
             }
             case 18:
@@ -412,6 +431,16 @@ public partial class DebugTools
         return false;
     }
 
+    /// <summary>The intermediate stops whose room a Guard or Defend group of the floor's contents holds: the gates that start down.</summary>
+    private static HashSet<int> CrewGuardedStops(Main main, FloorLayout layout)
+    {
+        var rooms = (main.Builder.Contents?.Collectives ?? new List<CollectiveContents>()).Where(c => c.Goal is GoalKind.Guard or GoalKind.Defend).Select(c => c.Room).ToHashSet();
+        var stops = new HashSet<int>();
+        if (layout.Rail is { } rail)
+            for (var i = 1; i < rail.Stops.Count - 1; i++) if (rooms.Contains(rail.Stops[i].Room)) stops.Add(i);
+        return stops;
+    }
+
     private static IEnumerable<Enemies.Enemy> StopGuards(Main main, int room)
     {
         if (main.Builder.Collectives is not { } reg) yield break;
@@ -474,7 +503,7 @@ public partial class DebugTools
                 foreach (var a in party.Adventurers)
                     if (IsInstanceValid(a) && !a.Parked) { a.State.Hp = a.State.Stats[Characters.Stat.MaxHp]; a.Revive(); }
                 GD.Print($"[crew] 8 rebuilt: mode={rc.State.Mode} stop={rc.StopIndex} spares left={rc.SparesLeft} used={rc.SparesUsed.Count} train={rc.Train.Count}");
-                if (rc.SparesUsed.Count != 0 || rc.StopIndex != 0 || rc.SparesLeft != 3) { fail($"the rebuilt floor is not fresh (stop {rc.StopIndex}, spares used {rc.SparesUsed.Count}, left {rc.SparesLeft})"); return; }
+                if (rc.SparesUsed.Count != 0 || rc.StopIndex != 0 || rc.SparesLeft != Shape(rc).Intermediate) { fail($"the rebuilt floor is not fresh (stop {rc.StopIndex}, spares used {rc.SparesUsed.Count}, left {rc.SparesLeft})"); return; }
                 _crewStep++;
                 _crewClock = 0f;
                 if (!RideBoard(main, layout, rc, out var why)) { fail(why); return; }
@@ -519,8 +548,9 @@ public partial class DebugTools
                 if (wagon.Coupled || wagon.Open) { fail($"wagon 1 left with the train (coupled {wagon.Coupled}, open {wagon.Open})"); return; }
                 if (!rc.CrewLeftAt.Contains(1)) { fail("CrewLeftAt does not list stop 1"); return; }
                 if (crew.Count != CrewRules.PerWagon || crew.Any(c => ctrl.StateOf(c) != CrewState.Lost)) { fail($"wagon 1's crew are not two lost: [{string.Join(", ", crew.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}]"); return; }
-                if (ctrl.HudText != "Crew freed 0/6, home 0, 2 lost.") { fail($"the crew line reads \"{ctrl.HudText}\", not \"Crew freed 0/6, home 0, 2 lost.\" (a left cage's crew are lost, never freed)"); return; }
-                if (ctrl.Completed) { fail("the floor is complete with cages 2 and 3 still locked"); return; }
+                var line = $"Crew freed 0/{ctrl.Crew.Count}, home 0, 2 lost.";
+                if (ctrl.HudText != line) { fail($"the crew line reads \"{ctrl.HudText}\", not \"{line}\" (a left cage's crew are lost, never freed)"); return; }
+                if (ctrl.Completed) { fail("the floor is complete with the cages from stop 2 on still locked"); return; }
                 GD.Print($"[crew] 8 departed stop 1 without its prisoners: wagon 1 coupled={wagon.Coupled}, its crew Lost (hud \"{ctrl.HudText}\")");
                 _crewStep++;
                 _crewClock = 0f;
@@ -597,8 +627,9 @@ public partial class DebugTools
                 if (wagon1.Open) { fail("cage 1 came back open"); return; }
                 if (left != "1") { fail($"after the load the prisoners are left behind at [{left}], not stop 1 alone"); return; }
                 if (crew1.Count != CrewRules.PerWagon || crew1.Any(c => ctrl.StateOf(c) != CrewState.Lost)) { fail($"after the load wagon 1's crew are not two lost: [{string.Join(", ", crew1.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}]"); return; }
-                if (ctrl.CagesBlockingNow != 2) { fail($"{ctrl.CagesBlockingNow} cages block the stairs after the load, not 2 (cage 1 was left behind)"); return; }
-                if (ctrl.HudText != "Crew freed 0/6, home 0, 2 lost.") { fail($"after the load the crew line reads \"{ctrl.HudText}\", not \"Crew freed 0/6, home 0, 2 lost.\""); return; }
+                if (ctrl.CagesBlockingNow != ctrl.Wagons.Count - 1) { fail($"{ctrl.CagesBlockingNow} cages block the stairs after the load, not {ctrl.Wagons.Count - 1} (cage 1 was left behind)"); return; }
+                var line = $"Crew freed 0/{ctrl.Crew.Count}, home 0, 2 lost.";
+                if (ctrl.HudText != line) { fail($"after the load the crew line reads \"{ctrl.HudText}\", not \"{line}\""); return; }
                 if (!rc.CageHeld) { fail("cage 2 does not hold the cart restored at stop 2"); return; }
                 GD.Print("[crew] 9 the load kept stop 1's prisoners left behind; the cage at stop 2, where the cart stands, holds again");
                 // the last wrecks: the cart is wrecked where it stands, with the local hero beside it, until no spare is left to take

@@ -311,14 +311,14 @@ public partial class RailNet : Node
     private HammerPhase _rideHammerWas = HammerPhase.Up;
 
     /// <summary>
-    /// The RIDE pass, each physics tick on both sides (after the floor clock's tick): ride 4's first drop hammer entering its Fall from its
-    /// glow, printed at the server's clock. The hammers fall on the floor clock whether or not their ride is armed, so the pass (which
-    /// ends at stop 3) pairs them all along: a client's must fall within 50 ms of the server's.
+    /// The RIDE pass, each physics tick on both sides (after the floor clock's tick): the kiln's (the last ride's) first drop hammer entering
+    /// its Fall from its glow, printed at the server's clock. The hammers fall on the floor clock whether or not their ride is armed, so the
+    /// pass pairs them all along: a client's must fall within 50 ms of the server's.
     /// </summary>
     private void RideHammerTrace(double serverNow, string tag)
     {
         if (Main.Instance?.Builder is not { } builder || RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return;
-        if (_rideHammer < 0) _rideHammer = enc.HammerIndexOf(4); // asked again until the pieces are built: a −1 is never kept
+        if (_rideHammer < 0) _rideHammer = enc.HammerIndexOf(new LineShape(_rails.StopS.Length).LastRide); // asked again until the pieces are built: a −1 is never kept
         if (_rideHammer < 0) return;
         var phase = SetPieceRules.Phase(builder.FloorTick, _rideHammer, out _);
         if (phase == HammerPhase.Fall && _rideHammerWas == HammerPhase.Glow)

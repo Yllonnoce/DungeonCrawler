@@ -9,22 +9,25 @@ using Godot;
 namespace DungeonCrawler.Core;
 
 // ---- --test-chase ----------------------------------------------------------------------------------------------
-// The four rides of the built-in campaign's floor 12 at lethality 3, scripted end to end (the condemned branch: the cages
+// The five rides of the built-in campaign's floor 12 at lethality 3, scripted end to end (the condemned branch: the cages
 // open with the orc's keys). The stop guards die by the test's hand on arrival and each cage is opened as the cart is
-// held there, so it is a ride test. Section 1 rides the line: ride 1's lone cinder run over and the beam passed, the slag
-// traffic (a hero on the enemy lane at stop 1 warned, then mangled; one in a pocket untouched), ride 2's three slag carts
-// (a brake shoe broken by a debug hit derails one, a hound leaps), ride 3's switch thrown by a hit that a second hit leaves
-// thrown (the slag cart ahead rammed, the cart back on its own lane), ride 4's golem diverted at the spur by a lever
-// debug-thrown ahead on ride 2 (the arrivals at stops 2 and 3 leave it thrown) that the seated lead sets back and throws
-// again from the seat as ride 4's seated window offers it (no aim, two presses through the dispatch E uses, a mash between
-// them ignored by the re-press guard), the jump made
-// with two pumping and the buffer smashed into the last stop; the crew home and the stairs open. Section 2 builds the floor
-// again: ride 1 departs (its thrower a full enemy, the floor's first), a save mid-ride 1 is loaded and ride 1 departs again
-// (the thrower given back a reinforcement: the save keeps that it was sent); ride 3 with the switch left straight (the heap
-// halts the cart, a hero breaks it with real swings, the ride resumes), then ride 4 crawled under a hammer and the pour so
-// each hits, the golem killed, the valve broken, a save and a load mid-ride, a stunned cinder under a hammer hurt with no
-// ride armed, and ride 4 again from stop 3 (no golem, the valve still broken) with every cage open, three wagons coupled and
-// the pumpers capped at one: the jump is still made (JumpSpeed with one pumper and three wagons, the lip's slope and all).
+// held there, so it is a ride test. Every number that names the kiln (the last ride, the stop it leaves from) or the end of
+// the line reads LineShape, and the kiln's pieces are "r{LastRide}_*" (r5_* on the shipped floor). Section 1 rides the line:
+// ride 1's lone cinder run over and the beam passed, the slag traffic (a hero on the enemy lane at stop 1 warned, then mangled;
+// one in a pocket untouched), ride 2's three slag carts (a brake shoe broken by a debug hit derails one, a hound leaps), ride
+// 3's switch thrown by a hit that a second hit leaves thrown (the slag cart ahead rammed, the cart back on its own lane), the
+// rides after it up to the kiln's stop ridden for real (RideOnTo), then the kiln: its golem out of the wall as the cart
+// reaches the golem's At (never short of it by more than 1 m), diverted at the spur by a lever debug-thrown ahead on ride 2
+// (every arrival before the kiln leaves it thrown) that the seated lead sets back and throws again from the seat as the
+// kiln's seated window offers it (no aim, two presses through the dispatch E uses, a mash between them ignored by the
+// re-press guard), the jump made with two pumping and the buffer smashed into the last stop; the crew home and the stairs
+// open. Section 2 builds the floor again: ride 1 departs (its thrower a full enemy, the floor's first), a save mid-ride 1
+// is loaded and ride 1 departs again (the thrower given back a reinforcement: the save keeps that it was sent); ride 3 with
+// the switch left straight (the heap halts the cart, a hero breaks it with real swings, the ride resumes), on to the kiln's
+// stop, then the kiln crawled under a hammer and the pour so each hits, the golem killed, the valve broken, a save and a load
+// mid-ride, a stunned cinder under a hammer hurt with no ride armed, and the kiln again from its stop (no golem, the valve
+// still broken) with every cage open, every wagon coupled and the pumpers capped at one: the jump is still made (JumpSpeed
+// with one pumper, the load counting three wagons at most, the lip's slope and all).
 // Throughout: no boss on the floor, the
 // stairs stay sealed until the crew are home, every hazard's warning comes at least 1.5 s before its hit (physics
 // frames logged), and the cart is mended to full plating at every stop. At stop 1, before ride 2, the party is levelled to
@@ -60,7 +63,7 @@ public partial class DebugTools
     private bool _chListening, _chSwept0;
     private int _chSwept = -1;
     private string? _chFail;
-    /// <summary>The ride music's pitch (plan 6 task 6): the pour heard at its pitch on ride 4, and the first track in front after it, at 1.</summary>
+    /// <summary>The ride music's pitch (plan 6 task 6): the pour heard at its pitch on the kiln's ride, and the first track in front after it, at 1.</summary>
     private string? _chPourPitch, _chAfterPour;
     private const string ChaseSlot = "chasetest";
     private readonly Dictionary<Enemies.Enemy, int> _chSpawnRide = new();
@@ -102,9 +105,11 @@ public partial class DebugTools
     // ride 3
     private bool _chThrown, _chAcross, _chBack;
     private int _chRams0, _chRamsSeen;
-    // ride 4
+    // the kiln's ride
     private bool _chDiverted, _chOnSpur, _chJumped, _chBuffer;
-    /// <summary>Section 1's seated presses on ride 4's spur lever (0: none, 1: set back, 2: thrown again), and the first mismatch they met.</summary>
+    /// <summary>The party cart's S as the kiln's golem spawned (its burst), NaN before.</summary>
+    private float _chGolemSpawnS = float.NaN;
+    /// <summary>Section 1's seated presses on the kiln's spur lever (0: none, 1: set back, 2: thrown again), and the first mismatch they met.</summary>
     private int _chSeatSpur;
     private string? _chSeatSpurFail;
     /// <summary>When (this machine's clock) the first seated press went: the second waits out the re-press guard (<see cref="SeatedSwitchRules.RepressGuardSeconds"/>).</summary>
@@ -120,7 +125,7 @@ public partial class DebugTools
     private bool _chHalted, _chResumed;
     private float _chPlatingBefore;
     private int _chSwings, _chHammer0, _chPour0;
-    private bool _chGolemKilled;
+    private bool _chGolemKilled, _chGolemSeen;
     // warnings and hits, in physics frames
     private readonly Dictionary<string, ulong> _chWarn = new();
     private readonly List<(string Hazard, ulong Warn, ulong Hit, string Note)> _chHits = new();
@@ -164,7 +169,7 @@ public partial class DebugTools
         }
 
         // the test owns the floor's fights: everything is culled as it appears except the stop guards (section 1: they die
-        // by the test's hand at their stop) and the armed ride's own enemies; section 2 culls all but ride 4's golem
+        // by the test's hand at their stop) and the armed ride's own enemies; section 2 culls all but the kiln's golem
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
         {
             if (!e.IsAlive) continue;
@@ -189,7 +194,7 @@ public partial class DebugTools
             {
                 var keyring = root.GetNodeOrNull<OrcKeyring>("OrcKeyring");
                 GD.Print($"[chase] 0 floor 12: stops={rc.StopS.Length} StopS=[{string.Join(", ", rc.StopS.Select(s => s.ToString("0.0")))}] lethality={TierRules.Lethality} set pieces={enc.SetPieceCount} wagons={ctrl.Wagons.Count} caged={ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Caged)} stairs locked={stairs.Locked} keyring={(keyring == null ? "none" : $"\"{keyring.Prompt}\"")}");
-                if (rc.StopS.Length != 5 || ctrl.Wagons.Count != 3 || keyring == null || !stairs.Locked) { Fail("floor 12 is not the shipped line (5 stops, 3 wagons, the orc's keys, sealed stairs)"); return; }
+                if (rc.StopS.Length != Floor12Stops || ctrl.Wagons.Count != Shape(rc).Intermediate || keyring == null || !stairs.Locked) { Fail($"floor 12 is not the shipped line ({Floor12Stops} stops, {Floor12Stops - 2} wagons, the orc's keys, sealed stairs)"); return; }
                 if (Mathf.Abs(TierRules.Lethality - 3f) > 0.01f) { Fail($"lethality {TierRules.Lethality}, not 3"); return; }
                 _chStep++;
                 _chClock = 0f;
@@ -318,11 +323,11 @@ public partial class DebugTools
                     GD.Print($"[chase] 2 debug hit on {slag1.Name}'s brake shoe at party S={rc.State.S:0.0}: hit={r.Hit} shoe alive={slag1.Shoe.IsAlive}; riders [{string.Join(", ", _chShoeRiders.Select(e => e.Profile.Id))}]");
                     _chClock = 0f;
                 }
-                if (!_chSpurEarly && enc.ArmedRide == 2 && enc.SetPieceNode("r4_spur") is SpurSwitch early)
+                if (!_chSpurEarly && enc.ArmedRide == 2 && enc.SetPieceNode(Kiln(rc, "spur")) is SpurSwitch early)
                 {
                     _chSpurEarly = true;
-                    early.Lever.DebugThrow(); // a walker threw ride 4's lever ahead: the arrivals at stops 2 and 3 must leave it thrown
-                    GD.Print($"[chase] 2 ride 4's spur lever thrown ahead during ride 2 (S={rc.State.S:0.0}): thrown={early.Lever.Thrown}");
+                    early.Lever.DebugThrow(); // a walker threw the kiln's lever ahead: every arrival before the kiln must leave it thrown
+                    GD.Print($"[chase] 2 ride {Shape(rc).LastRide}'s spur lever thrown ahead during ride 2 (S={rc.State.S:0.0}): thrown={early.Lever.Thrown}");
                 }
                 foreach (var a in party.Adventurers)
                     if (IsInstanceValid(a) && !a.Parked && a.Control == ControlKind.Companion && a.Downed && _chDownedRide2.Add(a.Index))
@@ -330,7 +335,7 @@ public partial class DebugTools
                 if (!ChaseTrackBoarders(party, root, rc, Fail)) return;
                 if (!ChaseHeldAt(rc, 2, Fail)) break;
                 if (!ChaseBoarderReport(main, rc, Fail)) return;
-                if (enc.SetPieceNode("r4_spur") is not SpurSwitch { Lever.Thrown: true }) { Fail("arriving at stop 2 set back ride 4's spur lever, thrown ahead"); return; }
+                if (enc.SetPieceNode(Kiln(rc, "spur")) is not SpurSwitch { Lever.Thrown: true }) { Fail($"arriving at stop 2 set back ride {Shape(rc).LastRide}'s spur lever, thrown ahead"); return; }
                 var ridersDead = _chShoeRiders.All(e => !IsInstanceValid(e) || !e.IsAlive);
                 GD.Print($"[chase] 2 ride 2 done, held at stop 2: slag carts seen [{string.Join(",", _chSlagSeen.OrderBy(x => x))}] alongside [{string.Join(",", _chSlagBeside.OrderBy(x => x))}]; {(_chShoeCart == null ? "no shoe hit" : $"{_chShoeCart.EncounterId} derailed={_chDerailed} riders dead={ridersDead}")}; hound leaps={_chLeaps}; plating={rc.State.Plating:0}");
                 var ride2 = new[] { "r2_slag1", "r2_slag2", "r2_slag3" };
@@ -375,7 +380,7 @@ public partial class DebugTools
                 if (!_chThrown || !_chAcross) { Fail("the cart did not take the switch onto the enemy lane"); return; }
                 if (enc.Rams - _chRams0 < 1) { Fail("the cart did not ram the slag cart ahead"); return; }
                 if (!_chBack) { Fail("the cart did not cross back to its own lane"); return; }
-                if (enc.SetPieceNode("r4_spur") is not SpurSwitch { Lever.Thrown: true }) { Fail("arriving at stop 3 set back ride 4's spur lever, thrown ahead"); return; }
+                if (enc.SetPieceNode(Kiln(rc, "spur")) is not SpurSwitch { Lever.Thrown: true }) { Fail($"arriving at stop 3 set back ride {Shape(rc).LastRide}'s spur lever, thrown ahead"); return; }
                 if (enc.SetPieceNode("r3_switch_out") is not TrackSwitch { Thrown: false }) { Fail("arriving at stop 3 did not set ride 3's lever back"); return; }
                 if (!ChaseKillGuards(main, layout, rc, 3, Fail)) return;
                 _chStep++;
@@ -387,31 +392,62 @@ public partial class DebugTools
                 if (!rc.GateUp(3)) { if (_chClock > 2f) Fail("stop 3's gate did not lift with its guards dead"); break; }
                 ChaseMend(main, root);
                 if (!ChaseOpenCage(main, ctrl, 3, Fail)) return;
-                _chStep++;
+                _chStep = Shape(rc).LastRideStop == 3 ? 16 : 13; // a four-ride line leaves stop 3 on the kiln
                 _chClock = 0f;
                 break;
             }
             case 13:
-            {
-                if (rc.State.Mode == CartMode.Rolling && enc.GolemBody == null && _chClock < 8f) break; // the golem bursts out as the cart reaches its At: wait
                 if (!ChaseDepart(rc, enc, ctrl, 3, Fail)) break;
-                // 4. ride 4: the golem out of the kiln wall; the spur lever thrown ahead on ride 2 (the debug hook)
-                if (!ChaseGolemOut(enc, Fail)) return;
-                if (enc.SetPieceNode("r4_spur") is not SpurSwitch spur) { Fail("no spur on ride 4"); return; }
-                GD.Print($"[chase] 4 the spur lever, thrown ahead on ride 2, at the departure from stop 3 (S={rc.State.S:0.0}): thrown={spur.Lever.Thrown}");
-                if (!spur.Lever.Thrown) { Fail("the spur lever thrown on ride 2 is not thrown as ride 4 starts"); return; }
+                _chStep++;
+                _chClock = 0f;
+                break;
+            case 14:
+            {
+                // 4. rides 4 up to the kiln's stop, ridden for real (a stop on the way: its holders die, its cage is left, the party boards)
+                var kilnStop = Shape(rc).LastRideStop;
+                if (!RideOnTo(main, rc, kilnStop, "chase", Fail)) break;
+                if (!ChaseHeldAt(rc, kilnStop, Fail)) break;
+                GD.Print($"[chase] 4 held at stop {kilnStop}, the kiln's stop: plating={rc.State.Plating:0}, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}]");
+                if (enc.SetPieceNode(Kiln(rc, "spur")) is not SpurSwitch { Lever.Thrown: true }) { Fail($"arriving at stop {kilnStop} set back ride {Shape(rc).LastRide}'s spur lever, thrown ahead"); return; }
+                if (!ChaseKillGuards(main, layout, rc, kilnStop, Fail)) return;
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
-            case 14:
+            case 15:
             {
-                if (!ChaseHeldAt(rc, 4, Fail)) break;
-                var buffer = enc.SetPieceNode("r4_buffer") as BufferStop;
+                var kilnStop = Shape(rc).LastRideStop;
+                if (!rc.GateUp(kilnStop)) { if (_chClock > 2f) Fail($"stop {kilnStop}'s gate did not lift with its guards dead"); break; }
+                ChaseMend(main, root);
+                if (!ChaseOpenCage(main, ctrl, kilnStop, Fail)) return;
+                _chStep++;
+                _chClock = 0f;
+                break;
+            }
+            case 16:
+            {
+                var shape = Shape(rc);
+                if (rc.State.Mode == CartMode.Rolling && enc.GolemBody == null && !(rc.State.S >= ChaseGolemS(main, rc) + 10f) && _chClock < 60f) break; // the golem bursts out as the cart reaches its At: wait
+                if (!ChaseDepart(rc, enc, ctrl, shape.LastRideStop, Fail)) break;
+                // 5. the kiln: the golem out of the kiln wall as the cart reaches its At; the spur lever thrown ahead on ride 2 (the debug hook)
+                if (!ChaseGolemOut(main, rc, enc, Fail)) break;
+                if (!ChaseGolemAtItsAt(main, rc, Fail)) return;
+                if (enc.SetPieceNode(Kiln(rc, "spur")) is not SpurSwitch spur) { Fail($"no spur on ride {shape.LastRide}"); return; }
+                GD.Print($"[chase] 4 the spur lever, thrown ahead on ride 2, at the departure from stop {shape.LastRideStop} (S={rc.State.S:0.0}): thrown={spur.Lever.Thrown}");
+                if (!spur.Lever.Thrown) { Fail($"the spur lever thrown on ride 2 is not thrown as ride {shape.LastRide} starts"); return; }
+                _chStep++;
+                _chClock = 0f;
+                break;
+            }
+            case 17:
+            {
+                var shape = Shape(rc);
+                if (!ChaseHeldAt(rc, shape.Rides, Fail)) break;
+                var buffer = enc.SetPieceNode(Kiln(rc, "buffer")) as BufferStop;
                 var golem = enc.GolemBody;
-                GD.Print($"[chase] 4 ride 4 done, held at stop 4 (the end of the line): golem took the spur={_chOnSpur} off the spur={_chDiverted} ({(golem == null ? "gone" : $"alive={golem.IsAlive} hp {golem.Hp:0}/{golem.MaxHp:0}")}), slams={_chSlams}; jump made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping; buffer smashed={buffer?.Smashed} (cue={_chBuffer}); plating={rc.State.Plating:0}");
+                GD.Print($"[chase] 4 ride {shape.LastRide} done, held at stop {shape.Rides} (the end of the line): golem took the spur={_chOnSpur} off the spur={_chDiverted} ({(golem == null ? "gone" : $"alive={golem.IsAlive} hp {golem.Hp:0}/{golem.MaxHp:0}")}), slams={_chSlams}; jump made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping; buffer smashed={buffer?.Smashed} (cue={_chBuffer}); plating={rc.State.Plating:0}");
                 if (_chSeatSpurFail != null) { Fail(_chSeatSpurFail); return; }
-                if (_chSeatSpur != 2) { Fail($"the seated window did not set ride 4's spur lever back and throw it again (presses {_chSeatSpur})"); return; }
+                if (_chSeatSpur != 2) { Fail($"the seated window did not set ride {shape.LastRide}'s spur lever back and throw it again (presses {_chSeatSpur})"); return; }
                 if (!_chDiverted) { Fail("the golem was not diverted at the spur"); return; }
                 if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 2) { Fail($"the jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping (want made, >= {SetPieceRules.JumpSpeed}, 2)"); return; }
                 if (buffer is not { Smashed: true } || !_chBuffer) { Fail("the cart did not come through the buffer"); return; }
@@ -419,7 +455,7 @@ public partial class DebugTools
                 _chClock = 0f;
                 break;
             }
-            case 15:
+            case 18:
             {
                 if (!ctrl.Completed) { if (_chClock > 3f) Fail($"held at the end of the line but the floor is not complete: {CrewStates(ctrl)}"); break; }
                 var home = ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Home);
@@ -438,7 +474,7 @@ public partial class DebugTools
         }
     }
 
-    // ---- section 2: the heap, the hazards hit, a save and a load mid-ride 4 ------------------------------------------
+    // ---- section 2: the heap, the hazards hit, a save and a load mid-kiln ----------------------------------------------
 
     private void RunChaseSection2(Main main, FloorLayout layout, Node3D root, RailController rc, RailEncounterController enc, CrewRescueController ctrl, Action<string> fail)
     {
@@ -450,7 +486,7 @@ public partial class DebugTools
             case 0 when _chClock >= 1.5f:
             {
                 ChaseMend(main, root);
-                rc.RestoreGates(new[] { 1, 2, 3 }); // the test's shortcut over rides 1 and 2 (section 1 rode them): the cart stands at stop 2
+                rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut over rides 1 and 2 (section 1 rode them): the cart stands at stop 2
                 rc.Restore(2);
                 GD.Print($"[chase] 7 rebuilt: the cart restored at stop {rc.StopIndex} (mode {rc.State.Mode}, plating {rc.State.Plating:0}); golem defeated={enc.GolemDefeated}; stairs locked={root.GetNode<Stairs>("DownStairs").Locked}");
                 _chStep++;
@@ -530,36 +566,56 @@ public partial class DebugTools
                 if (!ChaseHeldAt(rc, 3, fail)) break;
                 GD.Print($"[chase] 7 the heap path reached stop 3 (the heap took {RailEncounterController.HeapDent:0} on the way): plating {rc.State.Plating:0}, mended at the stop");
                 ChaseMend(main, root);
-                _chHammer0 = enc.HammerHits;
-                _chPour0 = enc.PourHits;
-                _chGolemKilled = false;
-                _chSlams = 0;
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
             case 9:
             {
-                if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 10f) fail($"the cart did not leave stop 3 (mode {rc.State.Mode}, gate up {rc.GateUp(3)})"); break; }
-                if (!ChaseGolemOut(enc, fail)) return;
+                // on to the kiln's stop, every ride for real (a stop on the way: its gate stands up, its cage is left, the party boards)
+                var kilnStop = Shape(rc).LastRideStop;
+                if (!RideOnTo(main, rc, kilnStop, "chase", fail)) break;
+                if (!ChaseHeldAt(rc, kilnStop, fail)) break;
+                GD.Print($"[chase] 8 held at stop {kilnStop}, the kiln's stop: plating {rc.State.Plating:0}, mended at the stop");
+                ChaseMend(main, root);
+                _chHammer0 = enc.HammerHits;
+                _chPour0 = enc.PourHits;
+                _chGolemKilled = false;
+                _chGolemSeen = false;
+                _chSlams = 0;
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
             case 10:
             {
-                // 8. ride 4, first try: the cart crawls under a hammer and the pour until each hits; the golem dies after a slam
+                var kilnStop = Shape(rc).LastRideStop;
+                if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 10f) fail($"the cart did not leave stop {kilnStop} (mode {rc.State.Mode}, gate up {rc.GateUp(kilnStop)})"); break; }
+                _chStep++;
+                _chClock = 0f;
+                break;
+            }
+            case 11:
+            {
+                // 8. the kiln, first try: the cart crawls under a hammer and the pour until each hits; the golem (out at its At, past
+                // them) dies after a slam
+                var kiln = Shape(rc).LastRide;
                 if (rc.State.Mode != CartMode.Rolling) { fail($"the cart stopped ({rc.State.Mode} at stop {rc.StopIndex}) before the save"); return; }
                 var s = rc.State.S;
+                if (!_chGolemSeen && enc.GolemBody != null)
+                {
+                    _chGolemSeen = true;
+                    if (!ChaseGolemOut(main, rc, enc, fail)) return;
+                }
                 if (!_chGolemKilled && enc.GolemBody is { IsAlive: true } golem && enc.GolemSlams >= 1)
                 {
                     _chGolemKilled = true;
                     golem.Kill();
                     GD.Print($"[chase] 8 the golem killed by the test after {enc.GolemSlams} slam(s) at S={s:0.0}");
                 }
-                var mid = (enc.SetPieceNode("r4_hammers") as Node3D)?.GetNodeOrNull<DropHammer>("Hammer1");
-                var pour = enc.SetPieceNode("r4_pour") as MoltenPour;
-                if (mid == null || pour == null) { fail("ride 4 has no hammers or no pour"); return; }
+                var mid = (enc.SetPieceNode(Kiln(rc, "hammers")) as Node3D)?.GetNodeOrNull<DropHammer>("Hammer1");
+                var pour = enc.SetPieceNode(Kiln(rc, "pour")) as MoltenPour;
+                if (mid == null || pour == null) { fail($"ride {kiln} has no hammers or no pour"); return; }
                 var crawl = (enc.HammerHits == _chHammer0 && s >= mid.S - 0.3f) || (enc.PourHits == _chPour0 && s >= pour.S - 1.5f);
                 if (crawl) rc.Party.State = rc.State with { V = Mathf.Min(rc.State.V, 0.15f) }; // the test holds the cart under it until it hits
                 if (enc.HammerHits > _chHammer0 && enc.PourHits > _chPour0 && enc.GolemDefeated)
@@ -569,15 +625,16 @@ public partial class DebugTools
                     _chStep++;
                     _chClock = 0f;
                 }
-                else if (_chClock > 50f) fail($"ride 4's first try: hammer hits {enc.HammerHits - _chHammer0}, pour hits {enc.PourHits - _chPour0}, slams {_chSlams}, golem defeated {enc.GolemDefeated} after 50 s (S={s:0.0})");
+                else if (_chClock > 80f) fail($"ride {kiln}'s first try: hammer hits {enc.HammerHits - _chHammer0}, pour hits {enc.PourHits - _chPour0}, slams {_chSlams}, golem defeated {enc.GolemDefeated} after 80 s (S={s:0.0})");
                 break;
             }
-            case 11 when _chClock >= 0.1f:
+            case 12 when _chClock >= 0.1f:
             {
-                var pour = (MoltenPour)enc.SetPieceNode("r4_pour")!;
+                var shape = Shape(rc);
+                var pour = (MoltenPour)enc.SetPieceNode(Kiln(rc, "pour"))!;
                 if (!pour.Quenched) { fail("the valve's hit did not quench the pour"); return; }
                 if (rc.State.Mode != CartMode.Rolling) { fail("the cart is not mid-ride for the save"); return; }
-                GD.Print($"[chase] 8 saved mid-ride 4 at S={rc.State.S:0.0} (stop 3 {rc.StopS[3]:0.0}, stop 4 {rc.StopS[4]:0.0}): golem defeated={enc.GolemDefeated} valve broken={pour.Quenched}");
+                GD.Print($"[chase] 8 saved mid-ride {shape.LastRide} at S={rc.State.S:0.0} (stop {shape.LastRideStop} {rc.StopS[shape.LastRideStop]:0.0}, stop {shape.Rides} {rc.StopS[shape.Rides]:0.0}): golem defeated={enc.GolemDefeated} valve broken={pour.Quenched}");
                 main.SaveGame(ChaseSlot);
                 if (!main.LoadGame(ChaseSlot)) { fail("the save would not load"); return; }
                 _chSwept = -1;
@@ -585,28 +642,29 @@ public partial class DebugTools
                 _chClock = 0f;
                 break;
             }
-            case 12 when _chClock >= 1f:
+            case 13 when _chClock >= 1f:
             {
-                var pour = enc.SetPieceNode("r4_pour") as MoltenPour;
+                var shape = Shape(rc);
+                var pour = enc.SetPieceNode(Kiln(rc, "pour")) as MoltenPour;
                 GD.Print($"[chase] 8 after the load: mode={rc.State.Mode} stop={rc.StopIndex} armed ride={enc.ArmedRide} golem defeated={enc.GolemDefeated} valve broken={pour?.Quenched} slag carts={enc.SlagCarts.Count} golem={(enc.GolemBody == null ? "none" : enc.GolemBody.Name)}");
-                if (rc.State.Mode != CartMode.Held || rc.StopIndex != 3 || enc.ArmedRide >= 1) { fail($"the cart came back {rc.State.Mode} at stop {rc.StopIndex} (armed ride {enc.ArmedRide}), not held at stop 3"); return; }
+                if (rc.State.Mode != CartMode.Held || rc.StopIndex != shape.LastRideStop || enc.ArmedRide >= 1) { fail($"the cart came back {rc.State.Mode} at stop {rc.StopIndex} (armed ride {enc.ArmedRide}), not held at stop {shape.LastRideStop}"); return; }
                 if (!enc.GolemDefeated || pour is not { Quenched: true }) { fail("the load lost the golem's death or the broken valve"); return; }
                 ChaseMend(main, root);
                 // the hammers fall on walkers with no ride armed: a stunned cinder stood under the middle hammer must be hurt
-                var mid = (enc.SetPieceNode("r4_hammers") as Node3D)?.GetNodeOrNull<DropHammer>("Hammer1");
-                if (mid == null) { fail("ride 4 has no hammers"); return; }
+                var mid = (enc.SetPieceNode(Kiln(rc, "hammers")) as Node3D)?.GetNodeOrNull<DropHammer>("Hammer1");
+                if (mid == null) { fail($"ride {shape.LastRide} has no hammers"); return; }
                 var at = rc.Party.Track.Point(mid.S) + Vector3.Up * 0.05f;
                 _chProbe = main.Builder.SpawnEnemy("enemy.horde_cinder", at, main.Builder.CurrentFloor);
                 if (_chProbe == null) { fail("could not spawn the cinder for the hammer"); return; }
                 _chProbe.Effects.Apply(new Combat.StatusApplication(Combat.StatusKind.Stun, 30f, 0f));
                 _chProbeHp = _chProbe.Hp;
                 _chProbeBy = "";
-                GD.Print($"[chase] 8 a stunned cinder {_chProbe.Name} stands under hammer {mid.Index} at S={mid.S:0.0} (hp {_chProbeHp:0}); the cart is held at stop 3, armed ride {enc.ArmedRide}");
+                GD.Print($"[chase] 8 a stunned cinder {_chProbe.Name} stands under hammer {mid.Index} at S={mid.S:0.0} (hp {_chProbeHp:0}); the cart is held at stop {shape.LastRideStop}, armed ride {enc.ArmedRide}");
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
-            case 13:
+            case 14:
             {
                 var p = _chProbe;
                 var hurt = p == null || !IsInstanceValid(p) || !p.IsAlive || p.Hp < _chProbeHp - 0.01f;
@@ -621,36 +679,40 @@ public partial class DebugTools
                 if (!RideBoard(main, layout, rc, out var why)) { fail(why); return; }
                 break;
             }
-            case 14:
+            case 15:
             {
-                if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 8f) fail($"re-boarded at stop 3 after the load, but the cart did not depart (mode {rc.State.Mode})"); break; }
-                GD.Print($"[chase] 10 departed stop 3 for the one-pumper jump: train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], {party.Active.Count(a => a.Seated)} heroes seated, pumper cap {PumperCap}; cruise with one pumper and {rc.Train.Count} wagons {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00} m/s, unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, the jump wants {SetPieceRules.JumpSpeed:0.0}");
-                if (rc.Train.Count != 3) { fail($"the one-pumper jump wants three coupled wagons, the train has {rc.Train.Count}"); return; }
+                var shape = Shape(rc);
+                if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 8f) fail($"re-boarded at stop {shape.LastRideStop} after the load, but the cart did not depart (mode {rc.State.Mode})"); break; }
+                GD.Print($"[chase] 10 departed stop {shape.LastRideStop} for the one-pumper jump: train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], {party.Active.Count(a => a.Seated)} heroes seated, pumper cap {PumperCap}; cruise with one pumper and {rc.Train.Count} wagons {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00} m/s, unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, the jump wants {SetPieceRules.JumpSpeed:0.0}");
+                if (rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump wants every wagon coupled ({shape.Intermediate}), the train has {rc.Train.Count}"); return; }
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
-            case 15 when _chClock >= 0.3f:
+            case 16 when _chClock >= 0.3f:
             {
-                var golems = _chSpawnRide.Count(kv => kv.Value == 4 && IsInstanceValid(kv.Key) && kv.Key.Profile.Id == "enemy.forge_golem"); // spawned since the load (the map starts again with the loaded floor)
-                var pour = enc.SetPieceNode("r4_pour") as MoltenPour;
-                GD.Print($"[chase] 8 departed stop 3 after the load: armed ride {enc.ArmedRide}, golem={(enc.GolemBody == null ? "none" : enc.GolemBody.Name)}, forge golems spawned with the ride={golems}, valve broken={pour?.Quenched}");
-                if (enc.ArmedRide != 4 || enc.GolemBody != null || golems > 0) { fail("a golem came again after it was killed and the game loaded"); return; }
+                var kiln = Shape(rc).LastRide;
+                var golems = _chSpawnRide.Count(kv => kv.Value == kiln && IsInstanceValid(kv.Key) && kv.Key.Profile.Id == "enemy.forge_golem"); // spawned since the load (the map starts again with the loaded floor)
+                var pour = enc.SetPieceNode(Kiln(rc, "pour")) as MoltenPour;
+                GD.Print($"[chase] 8 departed stop {Shape(rc).LastRideStop} after the load: armed ride {enc.ArmedRide}, golem={(enc.GolemBody == null ? "none" : enc.GolemBody.Name)}, forge golems spawned with the ride={golems}, valve broken={pour?.Quenched}");
+                if (enc.ArmedRide != kiln || enc.GolemBody != null || golems > 0) { fail("a golem came again after it was killed and the game loaded"); return; }
                 if (pour is not { Quenched: true }) { fail("the valve was mended by the departure"); return; }
                 _chStep++;
                 _chClock = 0f;
                 break;
             }
-            case 16:
+            case 17:
             {
-                if (!ChaseHeldAt(rc, 4, fail)) break;
-                var buffer = enc.SetPieceNode("r4_buffer") as BufferStop;
-                var pour = enc.SetPieceNode("r4_pour") as MoltenPour;
+                var shape = Shape(rc);
+                if (!ChaseHeldAt(rc, shape.Rides, fail)) break;
+                var golems = _chSpawnRide.Count(kv => kv.Value == shape.LastRide && IsInstanceValid(kv.Key) && kv.Key.Profile.Id == "enemy.forge_golem");
+                var buffer = enc.SetPieceNode(Kiln(rc, "buffer")) as BufferStop;
+                var pour = enc.SetPieceNode(Kiln(rc, "pour")) as MoltenPour;
                 PumperCap = null;
-                GD.Print($"[chase] 8 ride 4 again, held at stop 4: no golem={enc.GolemBody == null}, pour hits={enc.PourHits} (valve broken={pour?.Quenched}), hammer hits={enc.HammerHits}, buffer smashed={buffer?.Smashed}");
+                GD.Print($"[chase] 8 ride {shape.LastRide} again, held at stop {shape.Rides}: no golem={enc.GolemBody == null && golems == 0}, pour hits={enc.PourHits} (valve broken={pour?.Quenched}), hammer hits={enc.HammerHits}, buffer smashed={buffer?.Smashed}");
                 GD.Print($"[chase] 10 the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s (want >= {SetPieceRules.JumpSpeed:0.0}) with {_chPumpers} pumping and {rc.Train.Count} wagons coupled [{string.Join(",", rc.Train.Select(w => w.Stop))}]");
-                if (enc.GolemBody != null || enc.PourHits > 0 || pour is not { Quenched: true }) { fail("after the load the golem came or the pour ran"); return; }
-                if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 1 || rc.Train.Count != 3) { fail($"the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping and {rc.Train.Count} wagons (want made, >= {SetPieceRules.JumpSpeed}, 1, 3)"); return; }
+                if (enc.GolemBody != null || golems > 0 || enc.PourHits > 0 || pour is not { Quenched: true }) { fail("after the load the golem came or the pour ran"); return; }
+                if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 1 || rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping and {rc.Train.Count} wagons (want made, >= {SetPieceRules.JumpSpeed}, 1, {shape.Intermediate})"); return; }
                 if (buffer is not { Smashed: true }) { fail("after the load the buffer went wrong"); return; }
                 if (!ChaseTimings(fail)) return;
                 GD.Print($"[chase] music: the pour {_chPourPitch ?? "never played"}; after it {_chAfterPour ?? "no track"}");
@@ -723,7 +785,7 @@ public partial class DebugTools
             case 4 when _chClock >= 1f:
             {
                 ChaseMend(main, root);
-                rc.RestoreGates(new[] { 1, 2, 3 }); // the test's shortcut: no guards to kill on this pass
+                rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no guards to kill on this pass
                 rc.Restore(1);
                 if (!ctrl.OrcKeys && root.GetNodeOrNull<OrcKeyring>("OrcKeyring") is { } ring) ring.Interact(main.Party, main.Party.Local!);
                 if (!ctrl.OrcKeys) { fail("the orc's keys could not be taken for the second ride-2 pass"); return; }
@@ -764,20 +826,22 @@ public partial class DebugTools
     }
 
     /// <summary>
-    /// 10. Before ride 4 is ridden again: the orc's keys taken, every cage opened, wagons 1 and 2 coupled on by the test's hand (wagon
-    /// 3 couples at the departure), and the pumpers capped at one: the jump must still be made with one pumper and three wagons.
+    /// 10. Before the kiln's ride is ridden again: the orc's keys taken, every cage opened, every wagon but the kiln stop's coupled on by
+    /// the test's hand (that one couples at the departure), and the pumpers capped at one: the jump must still be made with one pumper
+    /// and every wagon (CartRules.MaxLoadWagons counts three of them at most).
     /// </summary>
     private bool ChaseOnePumperSetUp(Main main, Node3D root, RailController rc, CrewRescueController ctrl, Action<string> fail)
     {
         var party = main.Party;
         if (!ctrl.OrcKeys && root.GetNodeOrNull<OrcKeyring>("OrcKeyring") is { } ring) ring.Interact(party, party.Local!);
         if (!ctrl.OrcKeys) { fail("the orc's keys could not be taken for the one-pumper jump"); return false; }
-        foreach (var stop in new[] { 1, 2, 3 })
+        var shape = Shape(rc);
+        for (var stop = 1; stop <= shape.Intermediate; stop++)
             if (!ctrl.Wagons.First(w => w.Stop == stop).Open && !ChaseOpenCage(main, ctrl, stop, fail)) return false;
-        foreach (var stop in new[] { 1, 2 })
+        for (var stop = 1; stop < shape.LastRideStop; stop++)
             if (ctrl.Wagons.First(w => w.Stop == stop) is { Coupled: false } wagon) rc.Couple(wagon);
         PumperCap = 1;
-        GD.Print($"[chase] 10 the one-pumper jump set up at stop {rc.StopIndex}: cages open [{string.Join(",", ctrl.Wagons.Where(w => w.Open).Select(w => w.Stop))}], train=[{string.Join(",", rc.Train.Select(w => w.Stop))}] (wagon 3 couples at the departure), pumpers capped at {PumperCap}");
+        GD.Print($"[chase] 10 the one-pumper jump set up at stop {rc.StopIndex}: cages open [{string.Join(",", ctrl.Wagons.Where(w => w.Open).Select(w => w.Stop))}], train=[{string.Join(",", rc.Train.Select(w => w.Stop))}] (wagon {shape.LastRideStop} couples at the departure), pumpers capped at {PumperCap}");
         return true;
     }
 
@@ -795,7 +859,11 @@ public partial class DebugTools
             Action<string, Vector3, bool> playedAt = (cue, _, ambient) => { if (!ambient) OnChaseSfx(cue); }; // the warnings' cues are positional now (RideAudio.At)
             Audio.AudioManager.PlayedAt += playedAt;
             _staticUnhooks.Add(() => { RailCalls.Called -= OnChaseCall; Audio.AudioManager.PlayedAt -= playedAt; });
-            bus.EnemySpawned += e => { if (_chEnc != null && IsInstanceValid(_chEnc)) _chSpawnRide[e] = _chEnc.ArmedRide; };
+            bus.EnemySpawned += e =>
+            {
+                if (_chEnc != null && IsInstanceValid(_chEnc)) _chSpawnRide[e] = _chEnc.ArmedRide;
+                if (e.Profile.Id == "enemy.forge_golem" && RailController.Instance is { } line) _chGolemSpawnS = line.State.S; // the party S the golem's burst prints
+            };
             bus.EnemyKilledByHazard += (e, source) =>
             {
                 if (e == _chLone) { _chLoneByCart = true; _chLoneSource = source; }
@@ -940,7 +1008,7 @@ public partial class DebugTools
     }
 
     /// <summary>
-    /// Each frame: the music's front player is at the pitch it should be (the pour's in the Chase mood on ride 4, else 1: the two players
+    /// Each frame: the music's front player is at the pitch it should be (the pour's in the Chase mood on the kiln's ride, else 1: the two players
     /// are reused, so a later track must not keep the pour's). Notes the pour and the first other track after it.
     /// </summary>
     private void ChaseMusicPoll()
@@ -969,7 +1037,7 @@ public partial class DebugTools
             if (h.Judged != HammerPhase.Glow) { _chGlowOpen.Remove(h.Index); continue; }
             if (_chGlowOpen.Add(h.Index)) _chGlowAt[h.Index] = t;
         }
-        if (_chEnc.SetPieceNode("r4_pour") is MoltenPour pour)
+        if (RailController.Instance is { } rc && _chEnc.SetPieceNode(Kiln(rc, "pour")) is MoltenPour pour)
         {
             if (pour.Phase == PourPhase.Dry) _chPourOpen = false;
             else if (pour.Phase == PourPhase.Warn && !_chPourOpen) { _chPourOpen = true; _chWarn["pour"] = t; }
@@ -977,7 +1045,7 @@ public partial class DebugTools
     }
 
     private static IEnumerable<DropHammer> ChaseHammers(RailEncounterController enc) =>
-        enc.SetPieceNode("r4_hammers") is Node3D holder ? holder.GetChildren().OfType<DropHammer>() : Enumerable.Empty<DropHammer>();
+        RailController.Instance is { } rc && enc.SetPieceNode(Kiln(rc, "hammers")) is Node3D holder ? holder.GetChildren().OfType<DropHammer>() : Enumerable.Empty<DropHammer>();
 
     /// <summary>A hazard hit: it must have warned at least 1.5 s before (the gap is printed, in physics frames' seconds).</summary>
     private void ChaseHit(string hazard, ulong t, string note)
@@ -1044,23 +1112,23 @@ public partial class DebugTools
             if (enc.Rams > _chRamsSeen) { _chRamsSeen = enc.Rams; GD.Print($"[chase] 3 the cart rams a slag cart at S={rc.State.S:0.0} on the enemy lane={rc.FrontOnEnemyLane}: plating {rc.State.Plating:0}"); }
             if (_chAcross && !_chBack && rc.Crossing && rc.LaneBlend <= 0.001f) { _chBack = true; GD.Print($"[chase] 3 the cart is back on its own lane at S={rc.State.S:0.0}"); }
         }
-        if (enc.ArmedRide == 4 && !_chOnSpur && enc.SetPieceNode("r4_spur") is SpurSwitch spur && enc.GolemRun is { } run && run.Track == spur.Sampler)
+        if (Shape(rc).IsLastRide(enc.ArmedRide) && !_chOnSpur && enc.SetPieceNode(Kiln(rc, "spur")) is SpurSwitch spur && enc.GolemRun is { } run && run.Track == spur.Sampler)
         {
             _chOnSpur = true;
             GD.Print($"[chase] 4 the golem's runner takes the spur (party S={rc.State.S:0.0})");
         }
-        // section 1, ride 4: the spur lever (thrown ahead on ride 2) offered from the seat is set back (a mash at once after it is ignored by
+        // section 1, the kiln's ride: the spur lever (thrown ahead on ride 2) offered from the seat is set back (a mash at once after it is ignored by
         // the re-press guard), then thrown again once the guard's half second is out
-        if (!_chSection2 && _chSeatSpur < 2 && _chSeatSpurFail == null && enc.ArmedRide == 4 && rc.State.Mode == CartMode.Rolling
+        if (!_chSection2 && _chSeatSpur < 2 && _chSeatSpurFail == null && Shape(rc).IsLastRide(enc.ArmedRide) && rc.State.Mode == CartMode.Rolling
             && (_chSeatSpur == 0 || Time.GetTicksMsec() / 1000.0 - _chSeatSpurAt >= SeatedSwitchRules.RepressGuardSeconds)
-            && enc.SetPieceNode("r4_spur") is SpurSwitch seatSpur && party.Local is { } me && me.Cart == rc.Cart && party.LookingAt == seatSpur.Lever)
+            && enc.SetPieceNode(Kiln(rc, "spur")) is SpurSwitch seatSpur && party.Local is { } me && me.Cart == rc.Cart && party.LookingAt == seatSpur.Lever)
         {
             var lever = seatSpur.Lever;
             var prompt = lever.Prompt;
             var want = _chSeatSpur == 0 ? "Set the switch back" : "Throw the switch";
             var dist = me.GlobalPosition.DistanceTo(lever.GlobalPosition);
             var ahead = lever.LeverS - rc.Party.FrontS;
-            if (prompt != want) { _chSeatSpurFail = $"the seated window offered ride 4's spur lever as \"{prompt}\" at press {_chSeatSpur + 1}, not \"{want}\""; return; }
+            if (prompt != want) { _chSeatSpurFail = $"the seated window offered ride {Shape(rc).LastRide}'s spur lever as \"{prompt}\" at press {_chSeatSpur + 1}, not \"{want}\""; return; }
             party.VrUse(true);
             party.VrUse(false);
             _chSeatSpur++;
@@ -1068,7 +1136,7 @@ public partial class DebugTools
             GD.Print($"[chase] 4 seated window: \"{prompt}\" pressed {ahead:0.0} m before the spur lever, {dist:0.0} m off: thrown={lever.Thrown}, still seated={seated}");
             if (lever.Thrown != (_chSeatSpur == 2) || !seated)
             {
-                _chSeatSpurFail = $"the seated press \"{prompt}\" on ride 4's spur lever left it thrown={lever.Thrown}, still seated={seated}";
+                _chSeatSpurFail = $"the seated press \"{prompt}\" on ride {Shape(rc).LastRide}'s spur lever left it thrown={lever.Thrown}, still seated={seated}";
                 return;
             }
             if (_chSeatSpur == 1)
@@ -1077,7 +1145,7 @@ public partial class DebugTools
                 party.VrUse(true); // a mash right after the set-back: the re-press guard ignores it
                 party.VrUse(false);
                 GD.Print($"[chase] 4 seated mash: a second press at once after the set-back: thrown={lever.Thrown} (want False: ignored), still seated={me.Cart == rc.Cart}");
-                if (lever.Thrown || me.Cart != rc.Cart) _chSeatSpurFail = $"a mashed second press right after the seated set-back left ride 4's spur lever thrown={lever.Thrown}, still seated={me.Cart == rc.Cart}";
+                if (lever.Thrown || me.Cart != rc.Cart) _chSeatSpurFail = $"a mashed second press right after the seated set-back left ride {Shape(rc).LastRide}'s spur lever thrown={lever.Thrown}, still seated={me.Cart == rc.Cart}";
             }
         }
     }
@@ -1119,19 +1187,41 @@ public partial class DebugTools
         if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 10f) fail($"the cart did not leave stop {stop} (mode {rc.State.Mode}, boarding {rc.Boarding.Running})"); return false; }
         var wagon = ctrl.Wagons.First(w => w.Stop == stop);
         GD.Print($"[chase] . departed stop {stop}: ride {enc.ArmedRide} armed, wagon {stop} coupled={wagon.Coupled}, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], {Main.Instance.Party.Active.Count(a => a.Seated)} heroes seated");
-        if (wagon.Coupled && rc.Train.Count == stop) return true;
+        if (wagon.Coupled && rc.Train.Count == ctrl.Wagons.Count(w => w.Open && w.Stop <= stop)) return true; // every cage opened so far rides behind (a left one does not)
         fail($"wagon {stop} did not couple on at the departure (train {rc.Train.Count})");
         return false;
     }
 
-    /// <summary>Ride 4's golem is out on the enemy line (waited for up to 8 s after the departure): alive, carried, an elite and no boss.</summary>
-    private bool ChaseGolemOut(RailEncounterController enc, Action<string> fail)
+    /// <summary>The kiln golem's plan (its ride and At) on this floor, or null.</summary>
+    private static RailEncounterPlan? ChaseGolemPlan(Main main) => main.Builder.Contents?.RailEncounters.FirstOrDefault(e => e.Kind == "golem");
+
+    /// <summary>Where on the party line the golem's At falls: StopS[ride − 1] + At × the ride's length; NaN without a golem.</summary>
+    private static float ChaseGolemS(Main main, RailController rc) =>
+        ChaseGolemPlan(main) is { } g && g.Ride >= 1 && g.Ride < rc.StopS.Length ? rc.StopS[g.Ride - 1] + g.At * (rc.StopS[g.Ride] - rc.StopS[g.Ride - 1]) : float.NaN;
+
+    /// <summary>
+    /// The kiln's golem is out on the enemy line (waited for until the cart is 10 m past its At, or 8 s without a planned golem): alive,
+    /// carried, an elite and no boss. False while it waits or once it failed.
+    /// </summary>
+    private bool ChaseGolemOut(Main main, RailController rc, RailEncounterController enc, Action<string> fail)
     {
         var g = enc.GolemBody;
-        if (g == null && _chClock < 8f) return false; // the golem bursts out as the cart reaches its At, a moment after the departure: wait for it
-        GD.Print($"[chase] 4 ride 4 armed: golem {(g == null ? "none" : $"{g.Name} \"{g.DisplayName}\" ({g.Profile.Id}) alive={g.IsAlive} carried={g.Carried} on the runner={enc.GolemRun != null} elite={g.IsElite} affixes=[{string.Join(",", g.Profile.Affixes ?? Array.Empty<Enemies.EliteAffix>())}] boss={g.IsBoss} hp {g.Hp:0}/{g.MaxHp:0}")}");
+        var at = ChaseGolemS(main, rc);
+        if (g == null && rc.State.Mode == CartMode.Rolling && (float.IsNaN(at) ? _chClock < 8f : rc.State.S < at + 10f)) return false; // the golem bursts out as the cart reaches its At: wait for it
+        GD.Print($"[chase] 4 ride {Shape(rc).LastRide} armed: golem {(g == null ? "none" : $"{g.Name} \"{g.DisplayName}\" ({g.Profile.Id}) alive={g.IsAlive} carried={g.Carried} on the runner={enc.GolemRun != null} elite={g.IsElite} affixes=[{string.Join(",", g.Profile.Affixes ?? Array.Empty<Enemies.EliteAffix>())}] boss={g.IsBoss} hp {g.Hp:0}/{g.MaxHp:0}")}");
         if (g is { IsAlive: true, IsBoss: false, IsElite: true, Carried: true } && enc.GolemRun != null) return true;
         fail("the golem did not come out on the enemy line as a carried elite (never a boss)");
+        return false;
+    }
+
+    /// <summary>The golem burst out with the party's cart at its At, never before: the party S at its spawn is at least the At's S less 1 m.</summary>
+    private bool ChaseGolemAtItsAt(Main main, RailController rc, Action<string> fail)
+    {
+        var at = ChaseGolemS(main, rc);
+        GD.Print($"[chase] 4 the golem burst out with the party at S={_chGolemSpawnS:0.0}; its At {ChaseGolemPlan(main)?.At:0.00} of ride {ChaseGolemPlan(main)?.Ride} falls at S={at:0.0}");
+        if (float.IsNaN(at) || float.IsNaN(_chGolemSpawnS)) { fail("no golem in the floor's plan, or its spawn was not seen"); return false; }
+        if (_chGolemSpawnS >= at - 1f) return true;
+        fail($"the golem burst out with the party at S={_chGolemSpawnS:0.0}, short of its At's S={at:0.0} less 1 m");
         return false;
     }
 
