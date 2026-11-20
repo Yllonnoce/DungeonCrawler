@@ -221,18 +221,14 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         npc.Crew = true;
         _crew.Add(npc);
         _crewIds.Add(npc.Id);
-        _trainNpcIds.Add(npc.Id);
         return npc;
     }
 
     private readonly HashSet<string> _crewIds = new();
-    private readonly HashSet<string> _trainNpcIds = new() { GriselId };
     private static readonly HashSet<string> EscortIdSet = new() { GriselId };
-    /// <summary>The people a wipe's rise takes back from the last stop's arrival (<see cref="Save.RailArrival.Merge"/>): every crew member's id and Grisel's.</summary>
-    public IReadOnlySet<string> TrainNpcIds => _trainNpcIds;
-    /// <summary>The crew's ids (of <see cref="TrainNpcIds"/>): they always come back as the arrival had them.</summary>
+    /// <summary>The crew's ids: a wipe's rise (<see cref="Save.RailArrival.Merge"/>) always brings them back as the last stop's arrival had them.</summary>
     public IReadOnlySet<string> CrewIds => _crewIds;
-    /// <summary>The escort's id (of <see cref="TrainNpcIds"/>: Grisel): she comes back as the arrival had her unless she died or turned since.</summary>
+    /// <summary>The escort's id (Grisel): a wipe's rise brings her back as the arrival had her unless she died or turned since, and a fall never kills her (<see cref="Dungeon.CrevasseRules.NpcBody"/>).</summary>
     public static IReadOnlySet<string> EscortIds => EscortIdSet;
 
     /// <summary>Free floor of the start room, off the line and away from anything standing there, nearest its platform's middle.</summary>
