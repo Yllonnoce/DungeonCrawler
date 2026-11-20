@@ -701,7 +701,7 @@ public partial class RailController : Node
     public Vector3 SetAsideBesideEnemyLane(Vector3 at)
     {
         var lane = _layout.Rail!.Enemy;
-        var cell = CartSeats.ExitCell(lane, NearestOf(lane, DungeonBuilder.WorldToCell(at)), c => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c), true);
+        var cell = CartSeats.ExitCell(lane, NearestOf(lane, DungeonBuilder.WorldToCell(at)), c => CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c), true);
         if (_layout.IsRail(cell)) cell = ExitCellNear(at, true, false);
         return _builder.Surface(cell);
     }
@@ -735,7 +735,7 @@ public partial class RailController : Node
 
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
-        bool Free(GridPos c) => _layout.IsWalkable(c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c);
+        bool Free(GridPos c) => CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c); // never a drop: a plank is walkable, not a place to put someone
         var lane = _layout.Rail!.Party;
         var best = NearestOf(lane, DungeonBuilder.WorldToCell(at));
         if (!useTaken) return CartSeats.ExitCell(lane, best, Free, atStop);

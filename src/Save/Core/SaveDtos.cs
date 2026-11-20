@@ -148,6 +148,8 @@ public sealed class CharacterDto
     /// <summary>Down to a lethal hazard (v9+); old saves read false / -1.</summary>
     public bool Mangled { get; set; }
     public int MangledBy { get; set; } = -1;
+    /// <summary>Fell into a crevasse and not yet back (plan 10); old saves read false. Clients see it in the PartySync sheet.</summary>
+    public bool Fallen { get; set; }
 }
 
 public sealed class StatusDto

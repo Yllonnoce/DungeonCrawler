@@ -7,7 +7,8 @@ namespace DungeonCrawler.Party;
 
 /// <summary>
 /// A* path following for a body that walks the floor grid: companions and escorted NPCs share it. Keeps the current
-/// path and re-plans every half second or when the goal cell changes; goes straight when the target is close and visible.
+/// path and re-plans every half second or when the goal cell changes; goes straight when the target is close and visible
+/// and the straight way crosses no danger and no drop (it would cut over a crevasse's edge or off a plank's side).
 /// </summary>
 public sealed class PathMover
 {
@@ -37,7 +38,7 @@ public sealed class PathMover
         var pos = body.GlobalPosition;
         var flatDist = new Vector2(target.X - pos.X, target.Z - pos.Z).Length();
         if (flatDist <= stopWithin) { Unreachable = 0f; return null; }
-        if (layout == null || builder == null || (flatDist < 5f && Math.Abs(target.Y - pos.Y) < 1.5f && clearLine(target) && !builder.DangerAlong(pos, target)))
+        if (layout == null || builder == null || (flatDist < 5f && Math.Abs(target.Y - pos.Y) < 1.5f && clearLine(target) && !builder.DangerAlong(pos, target) && !builder.DropAlong(pos, target)))
         {
             _path = null;
             straight = true;

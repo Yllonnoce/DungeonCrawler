@@ -47,6 +47,8 @@ public sealed class CharacterState
     public bool Mangled { get; set; }
     /// <summary>The hazard (its placement index on the floor) that mangled them, -1 when none.</summary>
     public int MangledBy { get; set; } = -1;
+    /// <summary>Fell into a crevasse: down, hidden and frozen under the lip, until the party next reaches a stop (never auto-revived or rescued).</summary>
+    public bool Fallen { get; set; }
     public bool IsStunned => Effects.IsStunned;
     public WeaponProfile WeaponProfile => Weapon?.Weapon ?? WeaponProfile.Fists;
 
@@ -86,6 +88,7 @@ public sealed class CharacterState
         Effects.Clear();
         AbilityCooldowns.Clear();
         CooldownRemaining = 0;
+        Fallen = false;
     }
 
     public bool AllocateStat(Stat stat)

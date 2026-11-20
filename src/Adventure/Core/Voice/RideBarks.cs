@@ -11,10 +11,11 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls.</summary>
+    /// <summary>The six ride calls, and the warning at a crevasse's edge on foot.</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
+        BarkTrigger.Crevasse,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -129,5 +130,16 @@ public static class RideBarks
             Ranger: new[] { "Pump.", "Faster." },
             Mage: new[] { "Pump! More speed!", "Faster, all of you!" },
             Generic: new[] { "Pump it, we have to jump!", "Faster!", "Push!" }),
+
+        [BarkTrigger.Crevasse] = new Bank(
+            Brand: new[] { "Mind the edge. That drop has no bottom.", "Stay off the lip. Nobody climbs out of that.", "Easy here. One wrong step and you're gone." },
+            Sable: new[] { "Careful, darling. That hole goes all the way down.", "Mind your feet. I'm not fishing you out.", "Back from the edge, loves. It's hungry." },
+            Wren: new[] { "Edge. Careful.", "Long drop. Don't.", "Stay back from that." },
+            Ilex: new[] { "Mind the edge! I estimate it has no bottom.", "Do not lean over that. Gravity is unforgiving.", "A chasm! Single file, and look where you step!" },
+            Warrior: new[] { "Mind the edge!", "Stay off the lip!" },
+            Rogue: new[] { "Careful, big drop!", "Watch your feet!" },
+            Ranger: new[] { "Edge. Careful.", "Long drop." },
+            Mage: new[] { "Mind the chasm!", "Stay back from the edge!" },
+            Generic: new[] { "Mind the edge!", "That drop has no bottom!", "Watch your step!" }),
     };
 }

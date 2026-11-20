@@ -328,7 +328,12 @@ public partial class PartyController : Node3D
             if (adv == anchor) continue;
             var slot = FormationSlot(adv.Index);
             var world = position + anchor.GlobalTransform.Basis * new Vector3(slot.X, 0, slot.Y);
-            if (layout != null && !layout.IsWalkable(DungeonBuilder.WorldToCell(world))) world = position + new Vector3(0.3f * adv.Index, 0, 0.3f * adv.Index);
+            if (layout != null && !CrevasseRules.SetDownOk(layout, DungeonBuilder.WorldToCell(world)))
+            {
+                world = position + new Vector3(0.3f * adv.Index, 0, 0.3f * adv.Index);
+                // the anchor beside a drop or on a bridge: on the anchor's own spot rather than over the lip or off the boards
+                if (layout.ChasmCount > 0 && !CrevasseRules.FootingAlong(layout, DungeonBuilder.CellSize, new(position.X, position.Z), new(world.X, world.Z))) world = position;
+            }
             adv.Teleport(world, lookTarget);
         }
     }
@@ -510,10 +515,10 @@ public partial class PartyController : Node3D
         }
     }
 
-    /// <summary>Downed members get up at 1 HP once no enemy has been fighting the party for a few seconds.</summary>
+    /// <summary>Downed members get up at 1 HP once no enemy has been fighting the party for a few seconds; never the fallen (a crevasse gives them back only at a stop).</summary>
     private void AutoRevive(float dt)
     {
-        var down = Active.Where(a => a.Downed && MangledRules.CanAutoRevive(a.State.Mangled, hazardArmed: true)).ToList();
+        var down = Active.Where(a => a.Downed && !a.State.Fallen && MangledRules.CanAutoRevive(a.State.Mangled, hazardArmed: true)).ToList();
         if (down.Count == 0) { _calmTimer = 0; return; }
         var fighting = false;
         if (Main.Instance.Builder.FloorRoot is { } root)
@@ -538,7 +543,7 @@ public partial class PartyController : Node3D
     /// <summary>Start (or keep) pulling a Mangled member free: the hazard that took them must be at rest and the rescuer within reach. Progress runs in <see cref="TickRescues"/>.</summary>
     public bool TryRescue(Adventurer target, Adventurer rescuer, Func<bool> hazardArmed)
     {
-        if (!target.State.Mangled || !target.Downed) return false;
+        if (target.State.Fallen || !target.State.Mangled || !target.Downed) return false; // nobody reaches into a crevasse
         var distance = rescuer.GlobalPosition.DistanceTo(target.GlobalPosition);
         if (!MangledRules.RescueAllowed(hazardArmed(), distance, rescuer.Downed))
         {

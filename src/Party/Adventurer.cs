@@ -133,6 +133,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private float _gravity;
     private float _fallStart;
     private bool _falling;
+    /// <summary>The body is hidden in a crevasse (<see cref="CharacterState.Fallen"/>): shown again once the flag clears.</summary>
+    private bool _inCrevasse;
+    /// <summary>Where a steered body's centre last had footing (<see cref="CrevasseRules.Footing"/>): a shoved one heads back there.</summary>
+    private System.Numerics.Vector2? _lastFooting;
     private float _stepTimer;
 
     private CompanionAction _action = CompanionAction.Idle;
@@ -428,6 +432,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     {
         var dt = (float)delta;
         if (Parked) return;
+        // fallen into a crevasse: hidden, not solid and frozen under the lip until the party next reaches a stop (a client
+        // hides its copy on the sheet's word); every role
+        if (State.Fallen) { HoldInCrevasse(); return; }
+        if (_inCrevasse) { _inCrevasse = false; Visible = true; } // out again (a wipe's restore, or the server's word on a client); a parked body never gets here
         // recovery: a body still lying in the fallen look (no collision layer, so the stairs landing and the enemies miss it)
         // while its state is alive again missed its revive; stand it up
         if (_shownDowned && !Downed) Revive();
@@ -504,6 +512,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             velocity.X = Mathf.MoveToward(velocity.X, target.X, Acceleration * dt);
             velocity.Z = Mathf.MoveToward(velocity.Z, target.Z, Acceleration * dt);
         }
+        if (Control == ControlKind.Companion) velocity = KeepFooting(velocity); // walking, dodging, retreating, pushed aside: never over the lip on its own
         Velocity = velocity;
         var before = GlobalPosition;
         MoveAndSlide();
@@ -914,10 +923,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (_model != null) _model.Root.Scale = new Vector3(_model.Root.Scale.X, _model.Root.Scale.X * (Seated || Crouching ? 0.7f : 1f), _model.Root.Scale.Z);
     }
 
-    /// <summary>Fell out of the world (a hole in the geometry): put the body back on the last ground it stood on.</summary>
+    /// <summary>
+    /// Fell out of the world (a hole in the geometry): put the body back on the last ground it stood on. Over a crevasse (a chasm or
+    /// bridge cell) it is held still instead: the fall is the server's to judge (<see cref="CrevasseWatch"/>), and a client's body
+    /// waits for its word rather than climbing back out.
+    /// </summary>
     private void FellOut()
     {
         var builder = Main.Instance.Builder;
+        if (builder.Layout is { } drops && CrevasseRules.IsDrop(drops, DungeonBuilder.WorldToCell(GlobalPosition))) { Velocity = Vector3.Zero; return; }
         var safe = _lastGround.Y > FellOutY + 4f ? _lastGround : builder.Layout is { } layout ? builder.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.UpStairs)) : Vector3.Zero;
         GD.PushWarning($"[Adventurer] {State.Name} fell out of the world at {GlobalPosition:0.0} (cell {DungeonBuilder.WorldToCell(GlobalPosition)}); returned to {safe:0.0}");
         EventBus.Instance.Log($"{State.Name} slips into a crack in the dark and claws back out.");
@@ -995,7 +1009,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 _action = CompanionAction.HoldPosition;
                 return Vector3.Zero;
             case ActionKind.Regroup:
-                Teleport(lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f), lead.GlobalPosition + -lead.GlobalTransform.Basis.Z * 5f);
+                var behind = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
+                if (Main.Instance.Builder.Layout is { ChasmCount: > 0 } drops) behind = SpotBehind(drops, lead, behind, 0); // never into the drop beside a lead on a bridge
+                Teleport(behind, lead.GlobalPosition + -lead.GlobalTransform.Basis.Z * 5f);
                 _unreachable = 0;
                 _mover.Reset();
                 _action = CompanionAction.Idle;
@@ -1069,14 +1085,46 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         return push;
     }
 
+    /// <summary>
+    /// The formation slot behind the lead. Where it is not walkable, the lead's own spot; on a crevasse floor never over a chasm,
+    /// off a plank's boards or across the drop from the lead: a slot beside a lead on a deck or plank falls in file behind them on
+    /// the bridge (<see cref="CrevasseRules.FollowSpot"/>).
+    /// </summary>
     private Vector3 FormationSpot()
     {
         var lead = FollowLead;
         var slot = Leader != null ? Party.FormationSlotBehind(lead, Index) : Party.FormationSlot(Index);
         var world = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(slot.X, 0, slot.Y);
         var layout = Main.Instance.Builder.Layout;
+        if (layout is { ChasmCount: > 0 })
+        {
+            var rank = (slot.Y > 2f ? 2 : 0) + (slot.X > 0f ? 1 : 0); // the near pair first, left before right (FormationSlot's places)
+            return SpotBehind(layout, lead, world, rank);
+        }
         if (layout != null && !layout.IsWalkable(DungeonBuilder.WorldToCell(world))) world = lead.GlobalPosition;
         return world;
+    }
+
+    /// <summary><see cref="CrevasseRules.FollowSpot"/> for a spot behind <paramref name="lead"/>, at the lead's height.</summary>
+    private static Vector3 SpotBehind(FloorLayout layout, Adventurer lead, Vector3 spot, int rank)
+    {
+        var back = lead.GlobalTransform.Basis.Z;
+        var at = CrevasseRules.FollowSpot(layout, DungeonBuilder.CellSize, new(lead.GlobalPosition.X, lead.GlobalPosition.Z), new(back.X, back.Z), new(spot.X, spot.Z), rank);
+        return new Vector3(at.X, lead.GlobalPosition.Y, at.Y);
+    }
+
+    /// <summary>
+    /// A steered body's velocity kept on its footing (<see cref="CrevasseRules.KeepFooting"/>): on a crevasse floor it never
+    /// carries the body's centre over a chasm cell or off a plank's boards, and one shoved off while still on the lip heads back
+    /// (one already in the air drops straight).
+    /// </summary>
+    private Vector3 KeepFooting(Vector3 velocity)
+    {
+        if (Main.Instance?.Builder.Layout is not { ChasmCount: > 0 } layout) return velocity;
+        var pos = new System.Numerics.Vector2(GlobalPosition.X, GlobalPosition.Z);
+        if (CrevasseRules.Footing(layout, pos, DungeonBuilder.CellSize)) _lastFooting = pos;
+        var kept = CrevasseRules.KeepFooting(layout, DungeonBuilder.CellSize, pos, new System.Numerics.Vector2(velocity.X, velocity.Z), Downed || !IsOnFloor() ? null : _lastFooting); // a body that is down, or already falling, only stops
+        return new Vector3(kept.X, velocity.Y, kept.Y);
     }
 
     private void Think()
@@ -1888,6 +1936,69 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         SpectateTarget = null;
         ApplyPosture(); // the eye for standing, crouching or a seat
         Camera.Rotation = new Vector3(_pitch, 0, 0);
+    }
+
+    /// <summary>
+    /// Into a crevasse (server and single player; <see cref="CrevasseWatch.Take"/>): out of any seat (a remote player's screen is
+    /// told, as a teleport tells it), <see cref="CharacterState.Fallen"/>, at 0 HP, not Mangled, effects cleared, harmed by the
+    /// crevasse, and down as any fall (the wipe counts them, the possession passes on); then the body is hidden, not solid, at
+    /// <paramref name="hold"/> under the lip, where <see cref="_PhysicsProcess"/> keeps it until <see cref="ReturnFromCrevasse"/>.
+    /// </summary>
+    public void FallIntoCrevasse(Vector3 hold)
+    {
+        if (State.Fallen) return;
+        if (Seated) { LeaveSeat(); UnseatedOnServer(hold); }
+        var m = State;
+        m.Fallen = true;
+        m.Hp = 0;
+        m.Mangled = false;
+        m.MangledBy = -1;
+        m.Effects.Clear();
+        m.LastHarm = new Adventure.Run.HarmSource(Adventure.Run.HarmCauses.Generic, "The crevasse", Game.Instance.PlaySeconds);
+        Guarding = false;
+        _dance.Cancel();
+        _mover.Reset();
+        RescueTarget = null;
+        EventBus.Instance.Log($"{m.Name} falls into the crevasse!");
+        EventBus.Instance.PlaySfx("fall");
+        EventBus.Instance.RaiseMemberChanged(Index);
+        OnDowned();
+        GlobalPosition = hold;
+        Velocity = Vector3.Zero;
+        _fallStart = hold.Y;
+        _falling = false;
+        if (Remote != null) { Remote.Position = hold; Remote.Velocity = Vector3.Zero; }
+        HoldInCrevasse();
+    }
+
+    /// <summary>A fallen body out of the world: unseen, not solid, still.</summary>
+    private void HoldInCrevasse()
+    {
+        _inCrevasse = true;
+        if (Visible) Visible = false;
+        CollisionLayer = 0;
+        Velocity = Vector3.Zero;
+    }
+
+    /// <summary>
+    /// Back out of the crevasse at <paramref name="at"/> (Task 7's returns: a stop, a restore): not fallen, at
+    /// <see cref="CrevasseRules.ReturnHpFraction"/> of max HP, effects cleared, stood up, seen and solid again, then teleported there;
+    /// on a server a remote player's body is shoved there too, so its own screen is told (a ForcePose).
+    /// </summary>
+    public void ReturnFromCrevasse(Vector3 at)
+    {
+        if (!State.Fallen) return;
+        var m = State;
+        m.Fallen = false;
+        m.Effects.Clear();
+        m.Hp = MathF.Max(1f, m.Stats[Stat.MaxHp] * CrevasseRules.ReturnHpFraction);
+        Revive();
+        _inCrevasse = false;
+        Visible = !Parked;
+        Teleport(at);
+        if (Net.NetSession.IsServer && Control == ControlKind.Remote) Shove(at);
+        EventBus.Instance.Log($"{m.Name} climbs back out of the dark.");
+        EventBus.Instance.RaiseMemberChanged(Index);
     }
 
     public void Revive()

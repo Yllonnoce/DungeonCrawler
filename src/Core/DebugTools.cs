@@ -37,6 +37,7 @@ namespace DungeonCrawler.Core;
 ///   --test-chase        floor 12: the line's rides scripted (five on floor 12) (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), companions answer the wagon boarders, then a save mid-ride 1 (the thrower stays sent), the heap, a save mid-ride 5 and a one-pumper jump with four wagons; warning timings checked
 ///   --party-level=N     --test-chase levels the party to N first (default 12, the shipped campaign's level by floor 12)
 ///   --physics-hz=N      run the physics at N ticks a second (a headset's rate, as Vr.MatchPhysicsTo sets it); debug and tests only
+///   --test-crevasse[=trestle|survivor]  floor 12: the deck and a plank walked with companions following (nobody falls), then a companion, an enemy, a crew member and Grisel each over a chasm (fallen, swallowed, lost, caught at the lip)
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
@@ -316,6 +317,12 @@ public partial class DebugTools : Node
             else if (arg == "--test-chase") { _testChase = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 750; }
             else if (arg.StartsWith("--physics-hz=")) Engine.PhysicsTicksPerSecond = Math.Clamp(int.Parse(arg["--physics-hz=".Length..]), 10, 240);
             else if (arg == "--test-tick-rate") { _testTickRate = true; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 40; }
+            else if (arg == "--test-crevasse" || arg.StartsWith("--test-crevasse="))
+            {
+                var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "fall";
+                if (v is not ("fall" or "trestle" or "survivor")) { GD.PrintErr($"[crevasse] --test-crevasse={v}: the variant is trestle or survivor (none: the fall); running the fall"); v = "fall"; }
+                _testCrevasse = true; _crvVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
+            }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
@@ -481,6 +488,7 @@ public partial class DebugTools : Node
                 if (!Main.Instance.StartBuiltinCampaign()) { GD.Print("[builtin] RESULT FAIL: no built-in campaign"); GetTree().Quit(); }
                 else if (_testCrew) Game.Instance.Adventure.Memory.Flags.Add(_crewForgiven ? "grisel_forgiven" : "grisel_condemned"); // floor 9's choice, before floor 12 is built
                 else if (_testChase) Game.Instance.Adventure.Memory.Flags.Add("grisel_condemned"); // the cages open with the orc's keys
+                else if (_testCrevasse) Game.Instance.Adventure.Memory.Flags.Add("grisel_forgiven"); // Grisel alive on floor 12, to escort and drop
             }
             else if (_bakeDir != null && _bakeResume && BuiltinCampaign.LoadFrom(_bakeDir + ".partial") is { } partial)
             {
@@ -886,6 +894,7 @@ public partial class DebugTools : Node
         if (_testCrew && !ScriptStalled("crew", _crewSection2 ? 100 + _crewStep : _crewStep)) RunCrewTest();
         if (_testChase && !ScriptStalled("chase", _chSection2 ? 100 + _chStep : _chStep)) RunChaseTest();
         if (_testCartWatchdog && !ScriptStalled("watchdog", _wdStep)) RunCartWatchdogTest();
+        if (_testCrevasse && !ScriptStalled("crevasse", _crvStep)) RunCrevasseTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

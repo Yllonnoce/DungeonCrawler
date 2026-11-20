@@ -254,7 +254,7 @@ public partial class RailEncounterController
         if (TraceTraffic) GD.Print($"[rails] t={_now:0.00} {body.Name} seeks a {kind} at {spot} ({new Vector2(spot.X - pos.X, spot.Z - pos.Z).Length():0.0} m from {pos}); cart front S={run.FrontS:0.0}, body S={bodyS:0.0}");
     }
 
-    /// <summary>The nearest walkable cell within <see cref="OffLineCells"/> of <paramref name="pos"/> that is no rail cell.</summary>
+    /// <summary>The nearest walkable cell within <see cref="OffLineCells"/> of <paramref name="pos"/> that is no rail cell and no drop (<see cref="CrevasseRules.SetDownOk"/>).</summary>
     private Vector3? OffLine(Vector3 pos)
     {
         var here = DungeonBuilder.WorldToCell(pos);
@@ -265,7 +265,7 @@ public partial class RailEncounterController
             {
                 var c = new Dungeon.Generation.GridPos(here.X + dx, here.Y + dy);
                 var d = dx * dx + dy * dy;
-                if (d >= bestD || !_layout.IsWalkable(c) || _layout.IsRail(c)) continue;
+                if (d >= bestD || !CrevasseRules.SetDownOk(_layout, c) || _layout.IsRail(c)) continue; // a refuge is never a drop
                 bestD = d;
                 best = c;
             }

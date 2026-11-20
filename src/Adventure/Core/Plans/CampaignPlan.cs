@@ -10,6 +10,8 @@ public enum BarkTrigger
     TrapSprung, Fell, PerfectBlow, Parried, Mimic, SecretFound, EliteSeen, Broke, ShrineBoon, ShrineCurse, GambleWin, GambleDud, LowHp, Cheer, CheerAnswer,
     // the mine cart's calls (stock only, never asked of the planner: RideBarks)
     CartComing, AllAboard, Heads, HoundLeap, LineBlocked, JumpCall,
+    // a hero on foot nears a crevasse (stock only: RideBarks)
+    Crevasse,
 }
 
 public sealed class VoicedCharacter

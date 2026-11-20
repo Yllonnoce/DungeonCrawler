@@ -204,6 +204,10 @@ public partial class DungeonBuilder : Node3D
         return false;
     }
 
+    /// <summary>The straight way between two points leaves a steered body's footing (<see cref="CrevasseRules.FootingAlong"/>): over a chasm, or off a plank's boards.</summary>
+    public bool DropAlong(Vector3 from, Vector3 to)
+        => Layout is { ChasmCount: > 0 } layout && !CrevasseRules.FootingAlong(layout, CellSize, new System.Numerics.Vector2(from.X, from.Z), new System.Numerics.Vector2(to.X, to.Z));
+
     /// <summary>
     /// Seconds this floor has run: on the server and in single player the sum of the physics steps since it was built (1/60 s a
     /// tick at 60 Hz, 1/90 s at 90 Hz), so the floor keeps real time at any rate; on a client the server's floor clock
@@ -343,7 +347,10 @@ public partial class DungeonBuilder : Node3D
             foreach (var water in layout.Water) _floorRoot.AddChild(WaterSurface.Build(layout, water, cell => Surface(cell), CellSize, bedMat, plank));
         }
         if (layout.ChasmCount > 0) // the drops and the bridges' footings, which stand on every role (the look is skipped headless)
+        {
             _floorRoot.AddChild(ChasmDressing.Build(layout, cell => Surface(cell), CellSize, Material("weathered_planks", new Color(0.5f, 0.38f, 0.24f), 1.6f)));
+            if (!Net.NetSession.IsClient) _floorRoot.AddChild(CrevasseWatch.Build(this, layout)); // falls are the server's (or single player's) to judge
+        }
         PlaceLightsAndDecor(layout, _floorRoot, tier, seed);
         if (layout.Kind == LayoutKind.Tavern) { DressTavern(layout, _floorRoot); PlaceTavernMerchant(layout, _floorRoot); }
         var tremor = new Tremor { Name = "Tremor" };
@@ -576,13 +583,14 @@ public partial class DungeonBuilder : Node3D
         return null;
     }
 
+    /// <summary>A plain floor cell beside <paramref name="cell"/> a body may be set down on (never a drop: <see cref="CrevasseRules.SetDownOk"/>), else the cell itself.</summary>
     public static GridPos WalkableNeighbor(FloorLayout layout, GridPos cell)
     {
         ReadOnlySpan<GridPos> dirs = stackalloc GridPos[] { new(0, 1), new(1, 0), new(0, -1), new(-1, 0) };
         foreach (var d in dirs)
         {
             var n = cell + d;
-            if (layout.IsWalkable(n) && n != layout.UpStairs && n != layout.DownStairs && layout[n] is Cell.Floor && layout.CanStep(cell, n)) return n;
+            if (CrevasseRules.SetDownOk(layout, n) && n != layout.UpStairs && n != layout.DownStairs && layout[n] is Cell.Floor && layout.CanStep(cell, n)) return n;
         }
         return cell;
     }

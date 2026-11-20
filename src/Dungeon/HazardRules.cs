@@ -12,7 +12,7 @@ public enum PressPhase : byte { Armed, Warning, Closing, Crush, Hold, Retract, C
 /// <summary>The spike bed's state machine. The kill check runs on the Click to Up transition.</summary>
 public enum SpikePhase : byte { Down, Click, Up, Retract, Rearm }
 
-public enum HazardDamage : byte { Crush, Impale, RunOver }
+public enum HazardDamage : byte { Crush, Impale, RunOver, Fall }
 
 /// <summary>Who a hazard hit, which decides what "lethal" means for them.</summary>
 public enum VictimKind : byte { Member, Ally, QuestNpc, Enemy, Boss }
@@ -34,7 +34,7 @@ public static class HazardRules
 
     public static bool IsLethal(float lethality) => lethality >= LethalFrom;
 
-    public static string Verb(HazardDamage kind) => kind switch { HazardDamage.Crush => "crushes", HazardDamage.RunOver => "runs over", _ => "impales" };
+    public static string Verb(HazardDamage kind) => kind switch { HazardDamage.Crush => "crushes", HazardDamage.RunOver => "runs over", HazardDamage.Fall => "swallows", _ => "impales" };
 
     /// <summary>Below the lethal threshold: half of max HP at lethality 1, rising linearly.</summary>
     public static float DamageFraction(float lethality) => (0.5f + 0.25f * (lethality - 1f)) * TierRules.HazardFactor;

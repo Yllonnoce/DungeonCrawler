@@ -47,10 +47,10 @@ public static class PortraitText
         return true;
     }
 
-    /// <summary>The attack button: down, whose to take control of, stunned, the cooldown in tenths, the swing's recovery; the arrows left when given.</summary>
-    public static string Attack(bool alive, bool focused, int index, bool stunned, string ability, float cooldown, float recovery, int? arrows)
+    /// <summary>The attack button: down (fallen into a crevasse), whose to take control of, stunned, the cooldown in tenths, the swing's recovery; the arrows left when given.</summary>
+    public static string Attack(bool alive, bool focused, int index, bool stunned, string ability, float cooldown, float recovery, int? arrows, bool fallen = false)
     {
-        var text = !alive ? "Down"
+        var text = !alive ? (fallen ? "Fallen" : "Down")
             : !focused ? $"Control ({index + 1})"
             : stunned ? "Stunned"
             : cooldown > 0 ? $"{ability} ({cooldown:0.0}s)"

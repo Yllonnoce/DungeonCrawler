@@ -72,7 +72,7 @@ public partial class PortraitPanel : PanelContainer
     // ---- what was last written: Refresh runs every frame and writes a label, a bar or a colour only when its value changed ----
     private bool _wrote;
     private (int Index, bool Focused, string Name, int Level, int Tag, string? BotOwner, ActionKind Action) _nameKey;
-    private (bool Alive, bool Focused, bool Stunned, string Ability, int Cooldown, bool Recovering, int Arrows) _attackKey;
+    private (bool Alive, bool Focused, bool Stunned, string Ability, int Cooldown, bool Recovering, int Arrows, bool Fallen) _attackKey;
     private readonly List<int> _statusKey = new();
     private bool _attackShown, _stanceShown, _attackDisabled;
     private Stance _stanceShownAs;
@@ -115,11 +115,11 @@ public partial class PortraitPanel : PanelContainer
         var ability = _party.GetAbility(m.ActiveAbilityId); // the name, id and kind are the upgraded ability's too (upgrades change numbers only)
         var cd = m.AbilityCooldown(ability.Id);
         var arrows = focused && m.WeaponProfile.IsRanged && ability.Kind == DungeonCrawler.Combat.AbilityKind.WeaponAttack ? _party.ArrowCount : -1;
-        var attackKey = (m.IsAlive, focused, m.IsStunned, ability.Name, PortraitText.CooldownKey(cd), m.CooldownRemaining > 0, arrows);
+        var attackKey = (m.IsAlive, focused, m.IsStunned, ability.Name, PortraitText.CooldownKey(cd), m.CooldownRemaining > 0, arrows, m.Fallen);
         if (first || !attackKey.Equals(_attackKey))
         {
             _attackKey = attackKey;
-            _attack.Text = PortraitText.Attack(m.IsAlive, focused, _index, m.IsStunned, ability.Name, cd, m.CooldownRemaining, arrows >= 0 ? arrows : null);
+            _attack.Text = PortraitText.Attack(m.IsAlive, focused, _index, m.IsStunned, ability.Name, cd, m.CooldownRemaining, arrows >= 0 ? arrows : null, m.Fallen);
         }
         if (first || _attackDisabled != !m.IsAlive) _attack.Disabled = _attackDisabled = !m.IsAlive;
         if (_flashLeft <= 0f && _pulseLeft <= 0f) Modulate = m.IsAlive ? Colors.White : new Color(0.5f, 0.5f, 0.5f);
