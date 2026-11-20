@@ -70,6 +70,7 @@ public static partial class FloorGenerator
         HazardPlanner.PlaceHazards(spec, new Random(seed ^ 0x4A2D), layout); // the lethal hazards, last and from their own seed: a floor without them is untouched
         PlaceObjectiveLate(spec, new Random(seed ^ 0x0B1F), layout); // keys and props that go among the spawns; a no-op without one
         LayRails(spec, new Random(seed ^ 0x2A11), layout); // the mine-cart line round a railed ring, from its own seed; a no-op without RailCount
+        CarveChasms(spec, layout); // the crevasses cut beside the line; a no-op without Crevasses
         // fortune's passes, last and from their own seeds (the shrine from none): the floor around them is as it was
         PlaceSecretRooms(spec, new Random(seed ^ 0x5EC2), layout);
         if (spec.Layout == LayoutKind.Mine) DigDrifts(spec, new Random(seed ^ 0x0D1F), layout); // the drifts after the safe room, vaults and spawns: dead-end tunnels into free rock, nothing else moves

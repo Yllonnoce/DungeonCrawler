@@ -42,8 +42,14 @@ public sealed record RailLine(IReadOnlyList<GridPos> Party, IReadOnlyList<GridPo
     /// <summary>
     /// A straight span of the party lane on the second-to-last ride kept for a cavern, or null (always null unless the line
     /// meandered). For each of its cells, the cells 3 to 2 + <see cref="RailRules.CavernDepth"/> steps outward (the enemy
-    /// lane's side, past the enemy lane at 1 and its pockets at 2) were solid rock outside every room when the line was
-    /// planned, and nothing of the line takes them. Not part of the content hash.
+    /// lane's side, past the enemy lane at 1 and its pocket row at 2: <c>FloorGenerator.CavernBox</c>) were solid rock
+    /// outside every room when the line was planned, and nothing of the line takes them: the stretches routed after it keep
+    /// off them, no pocket opens from 2 steps out (<c>FloorGenerator.CavernReach</c>), and a span whose box a line or pocket
+    /// cell took after all is dropped (<see cref="CavernBreached"/>). With <see cref="FloorSpec.Crevasses"/> the reach is cut
+    /// to a chasm and both lanes over the span ride a deck. Not part of the content hash.
     /// </summary>
     public RailSpan? Cavern { get; init; }
+
+    /// <summary>True when the line kept a cavern window but a line or pocket cell landed in its rock box, so <see cref="Cavern"/> was dropped. Not part of the content hash.</summary>
+    public bool CavernBreached { get; init; }
 }

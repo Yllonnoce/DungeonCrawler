@@ -371,12 +371,17 @@ public static partial class FloorGenerator
         return cells;
     }
 
-    /// <summary>Everything the stretch being routed keeps off: the rooms still ahead and those behind, and the stretches already routed (both lanes).</summary>
+    /// <summary>
+    /// Everything the stretch being routed keeps off: the rooms still ahead and those behind, the stretches already routed
+    /// (both lanes), and the rock box (<see cref="CavernBox"/>) of any cavern window kept on them.
+    /// </summary>
     private static HashSet<GridPos> Foreign(HashSet<GridPos> ahead, HashSet<GridPos> behind, List<RailSegment> segs, int sign, RailRoom a)
     {
         var foreign = new HashSet<GridPos>(ahead);
         foreign.UnionWith(behind);
         if (segs.Count > 0 && LineCells(segs, sign, out _, out _) is { } line) { foreign.UnionWith(line.party); foreign.UnionWith(line.enemy); }
+        foreach (var seg in segs)
+            if (seg.Cavern is { } window) foreign.UnionWith(CavernBox(window, sign));
         foreign.ExceptWith(a.Owned);
         foreign.ExceptWith(a.Platform);
         return foreign;
@@ -691,7 +696,8 @@ public static partial class FloorGenerator
     /// beside a straight lane cell outside the stops, in rock with nothing round them but rock, their own lane and its other
     /// pockets. First a cover, so every lane cell outside a stop has one within <see cref="RailRules.PocketEvery"/> cells
     /// along the lane (for the first cell without, the farthest cell that still reaches it); then one wherever none is within
-    /// a cell, so they come about every PocketEvery cells. Null when a cell cannot be covered.
+    /// a cell, so they come about every PocketEvery cells. Null when a cell cannot be covered. No pocket opens in the
+    /// cavern's reach (<see cref="CavernReach"/>), and the cavern window's cells of either lane need no cover, as a stop's do not.
     /// </summary>
     private static List<GridPos>? PlaceRailPockets(FloorLayout layout, List<RailSegment> segs, List<GridPos> party, List<GridPos> enemy, List<RampInfo?> ramps, int sign)
     {
@@ -700,6 +706,14 @@ public static partial class FloorGenerator
         bool InStop(GridPos p) => rooms.Any(r => r.Room.Contains(p));
         var taken = new HashSet<GridPos>(party);
         taken.UnionWith(enemy);
+        var reach = new HashSet<GridPos>();
+        var span = new HashSet<GridPos>(); // the window's lane cells, both lanes
+        if (CavernOf(segs) is { } window)
+        {
+            reach.UnionWith(CavernReach(window, sign));
+            var side = RailSide(window[1] - window[0], sign);
+            foreach (var c in window) { span.Add(c); span.Add(c + side); }
+        }
         var pockets = new List<GridPos>();
         Twin(party, sign, out var source);
         var enemyRamps = source.Select(i => ramps[i]).ToList();
@@ -715,7 +729,7 @@ public static partial class FloorGenerator
             // first a cover: for the first cell with no pocket in reach, the farthest cell that can take one and still reach it
             for (var i = 0; i < lane.Count; i++)
             {
-                if (InStop(lane[i]) || Covered(i)) continue;
+                if (InStop(lane[i]) || span.Contains(lane[i]) || Covered(i)) continue;
                 var placed = false;
                 for (var j = i + RailRules.PocketEvery; j >= i - RailRules.PocketEvery && !placed; j--) placed = TryAt(j);
                 if (!placed) return false;
@@ -743,7 +757,7 @@ public static partial class FloorGenerator
                 var d = lane[i] - lane[i - 1];
                 if (lane[i + 1] - lane[i] != d) return false; // straight cells only: a corner has no one free side
                 var q = lane[i] + (freeHand > 0 ? RailSide(d, sign) : -RailSide(d, sign));
-                if (!InRailRange(layout, q) || !Rock(layout, q) || taken.Contains(q) || layout.Rooms.Any(r => r.Contains(q))) return false;
+                if (!InRailRange(layout, q) || !Rock(layout, q) || taken.Contains(q) || reach.Contains(q) || layout.Rooms.Any(r => r.Contains(q))) return false;
                 foreach (var n in Around8(q))
                     if (!own.Contains(n) && !mine.Contains(n) && (!Rock(layout, n) || taken.Contains(n))) return false;
                 pockets.Add(q);
@@ -754,6 +768,9 @@ public static partial class FloorGenerator
             }
         }
     }
+
+    /// <summary>The cavern window the line keeps: the one on the stretch into the last stop before the exit, or null.</summary>
+    private static List<GridPos>? CavernOf(List<RailSegment> segs) => segs.Count >= 2 ? segs[^2].Cavern : null;
 
     // ---- carving -----------------------------------------------------------------------------------
 
@@ -786,9 +803,20 @@ public static partial class FloorGenerator
         }
         var rooms = new List<RailRoom> { segs[0].From };
         rooms.AddRange(segs.Select(s => s.To));
-        // the cavern window kept on the stretch into the last stop before the exit, as party-lane indices
-        var cavern = segs.Count >= 2 && segs[^2].Cavern is { } w ? new RailSpan(line.party.IndexOf(w[0]), line.party.IndexOf(w[^1])) : null;
-        layout.Rail = new RailLine(line.party, line.enemy, rooms.Select(r => new RailStop(r.Index, r.Platform)).ToList(), pockets) { Cavern = cavern };
+        // the cavern window kept on the stretch into the last stop before the exit, as party-lane indices; dropped, and the
+        // line kept, when any line or pocket cell landed in its rock box after all
+        var window = CavernOf(segs);
+        var breached = false;
+        if (window != null)
+        {
+            var lineCells = new HashSet<GridPos>(line.party);
+            lineCells.UnionWith(line.enemy);
+            lineCells.UnionWith(pockets);
+            breached = CavernBox(window, sign).Any(lineCells.Contains);
+        }
+        var cavern = window != null && !breached ? new RailSpan(line.party.IndexOf(window[0]), line.party.IndexOf(window[^1])) : null;
+        layout.Rail = new RailLine(line.party, line.enemy, rooms.Select(r => new RailStop(r.Index, r.Platform)).ToList(), pockets)
+            { Cavern = cavern, CavernBreached = breached };
         for (var i = 1; i < rooms.Count; i++) layout.Connections.Add((rooms[i - 1].Index, rooms[i].Index));
         RaiseWalls(layout);
     }

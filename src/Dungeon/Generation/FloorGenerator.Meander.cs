@@ -150,4 +150,21 @@ public static partial class FloorGenerator
             for (var t = -1; t <= RailRules.CavernDepth + 3; t++)
                 yield return window[0] + Times(d, i) + Times(side, t);
     }
+
+    /// <summary>
+    /// The cavern's rock box: for each cell of the window, the cells 3 to 2 + <see cref="RailRules.CavernDepth"/> steps
+    /// outward (<see cref="RailSide"/>), past the enemy lane at 1 and its pocket row at 2. Nothing of the line may take them.
+    /// </summary>
+    internal static IEnumerable<GridPos> CavernBox(IReadOnlyList<GridPos> window, int sign) => CavernBand(window, sign, 3);
+
+    /// <summary>The cavern's reach: <see cref="CavernBox"/> and the enemy lane's pocket row beside the window (2 steps out). No pocket opens there.</summary>
+    internal static IEnumerable<GridPos> CavernReach(IReadOnlyList<GridPos> window, int sign) => CavernBand(window, sign, 2);
+
+    private static IEnumerable<GridPos> CavernBand(IReadOnlyList<GridPos> window, int sign, int from)
+    {
+        var side = RailSide(window[1] - window[0], sign);
+        foreach (var c in window)
+            for (var t = from; t <= 2 + RailRules.CavernDepth; t++)
+                yield return c + Times(side, t);
+    }
 }
