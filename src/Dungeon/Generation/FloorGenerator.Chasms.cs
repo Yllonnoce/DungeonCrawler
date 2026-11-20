@@ -56,7 +56,8 @@ public static partial class FloorGenerator
     /// side has one, else outward of the enemy lane. A ride takes its longest run of at least <see cref="RailRules.StripMinCells"/>
     /// (the middle <see cref="RailRules.StripMaxCells"/> of a longer one), but for the cavern's ride, which has the cavern;
     /// the last ride takes every run of two or more cells within <see cref="RailRules.GorgeFrom"/> to
-    /// <see cref="RailRules.GorgeTo"/> of it, platform middle to platform middle: the gorge. Returns the strips in line order
+    /// <see cref="RailRules.GorgeTo"/> of it, platform middle to platform middle, each run on its own side (inward where that
+    /// is free, else outward): the gorge. Returns the strips in line order
     /// and the gorge's; the pockets cut away are added to <paramref name="dropped"/>.
     /// </summary>
     private static (List<RailSpan> Strips, List<RailSpan> Gorge) CarveStrips(FloorLayout layout, RailLine rail, int sign, HashSet<GridPos> pockets, HashSet<GridPos> dropped)
@@ -83,39 +84,60 @@ public static partial class FloorGenerator
                 minimum = 2;
             }
             if (from > to) continue;
+            if (k == last) { CutGorge(); continue; }
             // the side to cut: inward of the party lane when it has a run long enough
-            var way = Runs(-1, false).Any(r => r.Count >= minimum) ? -1 : 1;
-            if (k == last)
-            {
-                // every run on that side, each cut as soon as it ends, so a later one (the far leg of a bulge, say) sees it
-                // as the drop it is and keeps its wall
-                Runs(way, true);
-                continue;
-            }
-            var runs = Runs(way, false).Where(r => r.Count >= minimum).ToList();
+            var way = Runs(-1).Any(r => r.Count >= minimum) ? -1 : 1;
+            var runs = Runs(way).Where(r => r.Count >= minimum).ToList();
             if (runs.Count == 0) continue;
             var longest = runs.OrderByDescending(r => r.Count).First(); // the earliest of the longest
             var cut = Math.Max(0, longest.Count - RailRules.StripMaxCells);
             Carve(longest.Skip(cut / 2).Take(RailRules.StripMaxCells).ToList(), false);
 
-            // the maximal runs of consecutive cells a strip can lie beside on one side (-1 inward, +1 outward); with
-            // gorgeCut, each run of at least the minimum is cut into the gorge as it ends
-            List<List<(int I, GridPos[] Cells)>> Runs(int side, bool gorgeCut)
+            // the maximal runs of consecutive cells a strip can lie beside on one side (-1 inward, +1 outward)
+            List<List<(int I, GridPos[] Cells)>> Runs(int side)
             {
                 var found = new List<List<(int, GridPos[])>>();
                 List<(int, GridPos[])>? run = null;
-                for (var i = from; i <= to + 1; i++)
+                for (var i = from; i <= to; i++)
                 {
-                    if (i <= to && StripCells(layout, rail, enemy, pockets, taken, sign, i, side) is { } cells)
+                    if (StripCells(layout, rail, enemy, pockets, taken, sign, i, side) is { } cells)
                     {
                         if (run == null) found.Add(run = new());
                         run.Add((i, cells));
-                        continue;
                     }
-                    if (gorgeCut && run != null && run.Count >= minimum) Carve(run, true);
-                    run = null;
+                    else run = null;
                 }
                 return found;
+            }
+
+            // the gorge: each cell inward of the party lane when that side is free there, else outward of the enemy lane; a
+            // run keeps one side and ends where the side changes, and each run of at least the minimum is cut as soon as it
+            // ends, so a later one (the far leg of a bulge, say) sees it as the drop it is and keeps its wall
+            void CutGorge()
+            {
+                List<(int I, GridPos[] Cells)>? run = null;
+                var runSide = 0;
+                for (var i = from; i <= to + 1; i++)
+                {
+                    var side = -1;
+                    var cells = i <= to ? StripCells(layout, rail, enemy, pockets, taken, sign, i, side) : null;
+                    if (cells == null && i <= to) cells = StripCells(layout, rail, enemy, pockets, taken, sign, i, side = 1);
+                    if (cells != null && (run == null || side == runSide))
+                    {
+                        run ??= new();
+                        runSide = side;
+                        run.Add((i, cells));
+                        continue;
+                    }
+                    if (run != null && run.Count >= minimum) Carve(run, true);
+                    run = null;
+                    // the side changed here: a run starts on the new one, judged again now the run before it is cut
+                    if (cells != null && StripCells(layout, rail, enemy, pockets, taken, sign, i, side) is { } again)
+                    {
+                        run = new() { (i, again) };
+                        runSide = side;
+                    }
+                }
             }
         }
         return (strips, gorge);
