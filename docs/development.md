@@ -895,10 +895,11 @@ makes them real and is the authority (the server in co-op, solo otherwise).
   broadcasts `FortuneSync`.
 - **The shrine** (`ShrineRules.cs`, `Dungeon/Props/Shrine.cs`, `UI/Fortune/ShrineCard.cs`). `FloorGenerator.PlaceShrine`
   (the last pass, no rng) reserves one cell per floor from floor 2 (`FloorLayout.ShrineCell`, `IsReserved`): a room that
-  is not the stairs', the arena, the safe room, the objective's jail or shrine, a vault or a secret room, with at least
-  five free cells; dead ends first, then nearest the midpoint of the stairs route; the cell nearest the room's centre
-  that holds nothing, is a cell away from every entrance and cuts nothing off when blocked. `DungeonBuilder.PlaceShrine`
-  puts the altar there (`AltarMeshes`, shared with the objective's altar) with its price written over it. One in three
+  is not the stairs', the arena, the safe room, the objective's jail or shrine, a vault, a secret room or a mine-cart
+  stop (`Rail.Stops`), with at least five free cells; dead ends first, then nearest the midpoint of the stairs route;
+  the cell nearest the room's centre that holds nothing, is a cell away from every entrance and cuts nothing off when
+  blocked. `DungeonBuilder.PlaceShrine` puts the altar there (`AltarMeshes`, shared with the objective's altar) with
+  its price written over it. One in three
   shrines is priced (`PriceFor`, actor seed 9001): blood (a quarter of every living member's current HP, straight off the
   breath), gold (60 + 15 x floor; a broke party is refused and the shrine stays usable) or a curse (then four boons on
   the card). The card (`ShrineCardMsg`): three boons by `Offer` (actor seed 9000; boons not held, weighted 1 + 2 per

@@ -69,7 +69,8 @@ public static class ShrineRules
 
     /// <summary>
     /// The shrine's cell, or null when no room can hold one. Rooms other than the stairs', the arena, the safe room, the
-    /// objective's jail and shrine, vaults and secret rooms; dead ends first, then nearest the midpoint of the stairs route.
+    /// objective's jail and shrine, vaults, secret rooms and the mine-cart line's stops; dead ends first, then nearest the
+    /// midpoint of the stairs route.
     /// The cell: nearest the room's centre, plain floor at the room's level, nothing on it, a cell away from every entrance,
     /// and blocking it cuts nothing off.
     /// </summary>
@@ -81,7 +82,8 @@ public static class ShrineRules
         var safe = layout.SafeRoom >= 0 && layout.SafeRoom < layout.Rooms.Count ? layout.Rooms[layout.SafeRoom] : null;
         var rooms = layout.Rooms.Where(r => r != upRoom && r != downRoom && r != layout.BossArena && r != safe
             && r != layout.Objective?.JailRoom && r != layout.Objective?.ShrineRoom
-            && layout.Vaults.All(v => v.Room != r) && layout.SecretRooms.All(s => s.Room != r)).ToList();
+            && layout.Vaults.All(v => v.Room != r) && layout.SecretRooms.All(s => s.Room != r)
+            && (layout.Rail == null || layout.Rail.Stops.All(s => layout.Rooms[s.Room] != r))).ToList();
         if (rooms.Count == 0) return null;
 
         var route = GridPathfinder.FindPath(layout, layout.UpStairs, layout.DownStairs, maxExpansions: 20000);
