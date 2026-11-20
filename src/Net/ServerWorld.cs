@@ -786,10 +786,15 @@ public partial class ServerWorld : Node
             if (PoseGuardRules.DropAfterShove(at.DistanceTo(shove.From), at.DistanceTo(shove.To), NetSession.Instance.Now - shove.At)) { ShovedPosesDropped++; return; } // sent before its screen heard of the shove
             _shovedPending.Remove(slot.MemberIndex);
         }
-        // a body cannot be steered off the map: keep it on floor the layout knows
-        if (Main.Instance!.Builder.Layout is { } layout && !layout.IsWalkable(DungeonBuilder.WorldToCell(at)) && !Main.Instance.Builder.IsUnderAt(at)) { RejectedPoses++; if (NetSession.Instance.TestServer && RejectedPoses <= 12) GD.Print($"[net-server] pose from {slot.Name} rejected at {at:0.0} cell {DungeonBuilder.WorldToCell(at)} ({layout[DungeonBuilder.WorldToCell(at)]})"); return; }
+        // fallen into a crevasse: the server holds the body under the lip (CrevasseWatch.Take) until a return; its client's held body says nothing
+        if (body.State.Fallen) return;
+        // a body cannot be steered off the map: keep it on floor the layout knows, or falling into a drop at or below its floor (the
+        // server's copy must follow it in for the crevasse watch to judge the fall; above a chasm's floor it would walk on air)
+        var builder = Main.Instance!.Builder;
+        var cell = DungeonBuilder.WorldToCell(at);
+        if (builder.Layout is { } layout && PoseGuardRules.OffTheMap(layout.IsWalkable(cell), builder.IsUnderAt(at), CrevasseRules.IsDrop(layout, cell), at.Y, builder.Surface(cell).Y)) { RejectedPoses++; if (NetSession.Instance.TestServer && RejectedPoses <= 12) GD.Print($"[net-server] pose from {slot.Name} rejected at {at:0.0} cell {cell} ({layout[cell]})"); return; }
         // nor into a Press that is holding shut: there is no room for a body between the slabs
-        if (Main.Instance.Builder.Hazards.OfType<Dungeon.Props.Press>().Any(p => p.Phase == PressPhase.Hold && p.Placement.Cells.Contains(DungeonBuilder.WorldToCell(at)))) { RejectedPoses++; return; }
+        if (builder.Hazards.OfType<Dungeon.Props.Press>().Any(p => p.Phase == PressPhase.Hold && p.Placement.Cells.Contains(cell))) { RejectedPoses++; return; }
         body.Remote ??= new RemotePose();
         body.Remote.Position = at;
         body.Remote.Yaw = pose.Yaw;

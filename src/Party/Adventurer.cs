@@ -1963,7 +1963,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         _dance.Cancel();
         _mover.Reset();
         RescueTarget = null;
-        EventBus.Instance.Log($"{m.Name} falls into the crevasse!");
+        EventBus.Instance.Log($"{m.Name} falls into the crevasse! Back when the party next reaches a stop.");
         EventBus.Instance.PlaySfx("fall");
         EventBus.Instance.RaiseMemberChanged(Index);
         OnDowned();
@@ -1999,8 +1999,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         Revive();
         _inCrevasse = false;
         Visible = !Parked;
-        Teleport(at);
+        // on a server a remote player's body is shoved out of the hold first, so the shove guard knows where it was: its client's poses
+        // still in flight from its own held body (in the drop, below the lip: poses the server keeps, to judge a fall) are dropped
         if (Net.NetSession.IsServer && Control == ControlKind.Remote) Shove(at);
+        Teleport(at);
         EventBus.Instance.Log($"{m.Name} climbs back out of the dark.");
         EventBus.Instance.RaiseMemberChanged(Index);
     }
