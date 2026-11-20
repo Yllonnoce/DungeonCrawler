@@ -195,8 +195,14 @@ public partial class PartyController : Node3D
     {
         if (index < 0 || index >= Adventurers.Length) return;
         var adv = Adventurers[index];
+        var wasParked = adv.Parked;
         adv.SetControl(control);
         if (at is { } p) adv.Teleport(p, lookTarget);
+        // a hero who fell (or was left fallen) while parked comes back as they return to the game, beside the party, after the
+        // teleport to wherever they rejoin (a parked pose in the dark would put them straight back under the lip); never during a
+        // floor build, whose own rule returns them (ruling 8)
+        if (wasParked && control != ControlKind.Parked && adv.State.Fallen && Main.Instance is { InGame: true, Rebuilding: false })
+            ReturnFallen(Active.FirstOrDefault(a => a != adv && !a.Downed)?.GlobalPosition ?? adv.GlobalPosition, "back in the game", only: adv); // nobody up: beside where they rejoin (never a drop)
         if (control == ControlKind.LocalHuman) { LocalIndex = index; FocusedIndex = index; }
         RefreshControl();
         EventBus.Instance.RaiseRosterChanged();
@@ -315,29 +321,33 @@ public partial class PartyController : Node3D
 
     public void ApplySettings() { foreach (var a in Adventurers) a.ApplySettings(); }
 
-    /// <summary>Place the anchor at a position facing a point; companions fall in around them.</summary>
     /// <summary>
     /// Every fallen hero (<paramref name="only"/>: just that one), parked or not, climbs back out of the crevasse
-    /// (<see cref="Adventurer.ReturnFromCrevasse"/>: a quarter of their HP) on the cell nearest <paramref name="near"/> a body may be set
-    /// down on: a floor change, a load or rebuild of a floor with no line (<see cref="CrevasseRules.ReturnOnRebuild"/>), an unpark.
-    /// Server and solo. Returns how many came back.
+    /// (<see cref="Adventurer.ReturnFromCrevasse"/>: a quarter of their HP), each on its own cell near <paramref name="near"/> a body
+    /// may be set down on (<see cref="CrevasseRules.SetDownCells"/>: never the arrival's own cell while another is free): a floor
+    /// change, a load or rebuild of a floor with no line (<see cref="CrevasseRules.ReturnOnRebuild"/>), an unpark. Server and solo.
+    /// Returns how many came back.
     /// </summary>
     public int ReturnFallen(Vector3 near, string why, Adventurer? only = null)
     {
         if (Net.NetSession.IsClient || Main.Instance?.Builder is not { Layout: { } layout } builder) return 0;
-        var here = DungeonBuilder.WorldToCell(near);
-        var cell = CrevasseRules.SetDownOk(layout, here) ? here : CrevasseRules.NearestSetDown(layout, here) ?? here;
+        var count = 0;
+        foreach (var hero in Adventurers)
+            if (IsInstanceValid(hero) && hero.State.Fallen && (only == null || hero == only)) count++;
+        if (count == 0) return 0;
+        var cells = CrevasseRules.SetDownCells(layout, DungeonBuilder.WorldToCell(near), count);
         var back = 0;
         foreach (var hero in Adventurers)
         {
             if (!IsInstanceValid(hero) || !hero.State.Fallen || (only != null && hero != only)) continue;
+            var cell = cells[back++];
             hero.ReturnFromCrevasse(builder.Surface(cell) + Vector3.Up * 0.3f);
-            back++;
             GD.Print($"[crevasse] {hero.State.Name} comes back out of the crevasse at {cell} ({why}{(hero.Parked ? ", parked" : "")})");
         }
         return back;
     }
 
+    /// <summary>Place the anchor at a position facing a point; companions fall in around them.</summary>
     public void Teleport(Vector3 position, Vector3? lookTarget = null)
     {
         if (!HasBodies) { GlobalPosition = position; return; }

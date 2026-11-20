@@ -114,6 +114,36 @@ public static class CrevasseRules
     /// </summary>
     public static bool ReturnOnRebuild(bool floorChange, bool lineOnFloor) => floorChange || !lineOnFloor;
 
+    /// <summary>
+    /// A player rejoins at the pose their body was parked at (cell <paramref name="cell"/>, height <paramref name="y"/> over its floor
+    /// <paramref name="floorY"/>) only when they were not fallen and the pose is not below a drop's lip (<see cref="Fell"/>): a fallen
+    /// body's pose is its hold in the dark, and one parked mid-fall would be taken again. Else they come in at the stairs.
+    /// </summary>
+    public static bool RejoinAtParkedPose(FloorLayout l, GridPos cell, float y, float floorY, bool fallen) => !fallen && !Fell(l, cell, y, floorY);
+
+    /// <summary>
+    /// <paramref name="count"/> cells a body may be set down on (<see cref="SetDownOk"/>) for heroes coming back beside an arrival at
+    /// <paramref name="near"/>: distinct, within <paramref name="reach"/> cells, nearest first (ties by (Y, X)), never
+    /// <paramref name="near"/> itself (the hero arriving stands there); when too few, the rest share the arrival's own cell (or the
+    /// nearest set-down cell anywhere).
+    /// </summary>
+    public static List<GridPos> SetDownCells(FloorLayout l, GridPos near, int count, int reach = 4)
+    {
+        var found = new List<(int D, GridPos C)>();
+        for (var dy = -reach; dy <= reach; dy++)
+            for (var dx = -reach; dx <= reach; dx++)
+            {
+                var c = new GridPos(near.X + dx, near.Y + dy);
+                if (c != near && SetDownOk(l, c)) found.Add((dx * dx + dy * dy, c));
+            }
+        found.Sort((a, b) => a.D != b.D ? a.D.CompareTo(b.D) : a.C.Y != b.C.Y ? a.C.Y.CompareTo(b.C.Y) : a.C.X.CompareTo(b.C.X));
+        var cells = new List<GridPos>(Math.Max(0, count));
+        for (var i = 0; i < found.Count && cells.Count < count; i++) cells.Add(found[i].C);
+        var spare = SetDownOk(l, near) ? near : NearestSetDown(l, near) ?? near;
+        while (cells.Count < count) cells.Add(spare);
+        return cells;
+    }
+
     /// <summary>A fall that takes the train spends a spare only while a hero still stands.</summary>
     public static bool SpareAfterFall(int standingHeroes) => standingHeroes > 0;
 

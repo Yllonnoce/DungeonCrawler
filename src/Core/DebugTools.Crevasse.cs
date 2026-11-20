@@ -62,6 +62,12 @@ public partial class DebugTools
     private int _crvLostStop = -1;
     private readonly List<string> _crvLostIds = new();
     private string _crvFloorVictim = "";
+    /// <summary>Each hero's HP as they climbed back out (the return's own log line): a companion may drink a potion a moment later.</summary>
+    private readonly Dictionary<string, float> _crvReturnHp = new();
+
+    /// <summary>The hero came back with a quarter of their max HP (± 1), as the return's log line found them.</summary>
+    private bool CrvBackAtAQuarter(Adventurer a)
+        => _crvReturnHp.TryGetValue(a.State.Name, out var hp) && Mathf.Abs(hp - a.State.Stats[Characters.Stat.MaxHp] * CrevasseRules.ReturnHpFraction) <= 1f;
 
     private void CrevasseListen()
     {
@@ -72,6 +78,8 @@ public partial class DebugTools
             if (_done || !_testCrevasse) return;
             if (text.Contains("falls into the crevasse") || text.Contains("slips into a crack")) _crvFallLog.Add(text);
             if (text.StartsWith("The crevasse swallows")) _crvSwallowed = true;
+            if (text.EndsWith(" climbs back out of the dark.") && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && text.StartsWith(a.State.Name + " ")) is { } back)
+                _crvReturnHp[back.State.Name] = back.State.Hp; // ReturnFromCrevasse logs right after it sets the HP
             if (text is "The cart drops into the crevasse!" or "The trestle gives way into the crevasse!") _crvFallWhy ??= text;
             if (text.StartsWith("A spare cart waits at stop ") && int.TryParse(text["A spare cart waits at stop ".Length..].TrimEnd('.'), out var n)) _crvSpareStop = n;
         };
@@ -272,7 +280,7 @@ public partial class DebugTools
                 var v = _crvVictim!;
                 var maxHp = v.State.Stats[Characters.Stat.MaxHp];
                 var off = v.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition);
-                var hpOk = Mathf.Abs(v.State.Hp - maxHp * CrevasseRules.ReturnHpFraction) <= 1f;
+                var hpOk = CrvBackAtAQuarter(v);
                 if (v.State.Fallen || v.Downed || !v.Visible || !hpOk || off > 6f)
                 {
                     if (_crvClock > 1f) Fail($"A4 within 1 s of the arrival at stop 1: {v.State.Name} fallen={v.State.Fallen} downed={v.Downed} visible={v.Visible} hp {v.State.Hp:0}/{maxHp:0} {off:0.0} m from the cart");
@@ -386,7 +394,7 @@ public partial class DebugTools
                 GD.Print($"[crevasse] =survivor back beside the human: [{string.Join(", ", fallen.Select(a => $"{a.State.Name} hp {a.State.Hp:0}/{a.State.Stats[Characters.Stat.MaxHp]:0} {a.GlobalPosition.DistanceTo(me.GlobalPosition):0.0} m"))}]; capture LostCages=[{string.Join(",", lostCages)}] LostCrew=[{string.Join(",", lostCrew)}]");
                 if (!lostCages.Contains(_crvWagon!.Stop)) { Fail($"the capture does not name wagon {_crvWagon.Stop} lost"); return; }
                 if (_crvWagonCrew.FirstOrDefault(c => !lostCrew.Contains(c.Id)) is { } missing) { Fail($"the capture does not name {missing.NpcName} lost"); return; }
-                if (fallen.FirstOrDefault(a => Mathf.Abs(a.State.Hp - a.State.Stats[Characters.Stat.MaxHp] * CrevasseRules.ReturnHpFraction) > 1f) is { } hp) { Fail($"{hp.State.Name} came back with {hp.State.Hp:0} HP, not a quarter"); return; }
+                if (fallen.FirstOrDefault(a => !CrvBackAtAQuarter(a)) is { } hp) { Fail($"{hp.State.Name} came back with {(_crvReturnHp.TryGetValue(hp.State.Name, out var h) ? h : float.NaN):0} HP, not a quarter"); return; }
                 _crvMayFall.Clear(); // back: nobody falls again but the floor change's own victim
                 // I1: a save and a load after the fall: nothing lost may come back, and nobody the crevasse took is lifted to the lip
                 _crvLostStop = _crvWagon.Stop;
@@ -458,7 +466,7 @@ public partial class DebugTools
         var maxHp = v.State.Stats[Characters.Stat.MaxHp];
         var off = v.GlobalPosition.DistanceTo(me.GlobalPosition);
         GD.Print($"[crevasse] =survivor on floor 13: nobody fallen; {v.State.Name} up={!v.Downed} visible={v.Visible} hp {v.State.Hp:0}/{maxHp:0}, {off:0.0} m from the human");
-        if (v.Downed || !v.Visible || off > 12f || v.State.Hp > maxHp * CrevasseRules.ReturnHpFraction + 1f + maxHp * 0.05f) { Fail($"{v.State.Name} did not come back as a fallen hero does on the floor change"); return; }
+        if (v.Downed || !v.Visible || off > 12f || !CrvBackAtAQuarter(v)) { Fail($"{v.State.Name} did not come back as a fallen hero does on the floor change"); return; }
         GD.Print($"[crevasse] RESULT ok (survivor): A0-A3 as ever; A4 {_crvA4Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}) with the human on foot: {_crvFallSummary}; nobody wiped, the fallen came back on stop {_crvSpareStop}'s platform, the capture names wagon {_crvLostStop} and its crew lost; a save and load kept the lost wagon hidden and its crew dead below the lip; {_crvFloorVictim} fell and came back on the floor change to 13");
         _done = true;
         GetTree().Quit(0);

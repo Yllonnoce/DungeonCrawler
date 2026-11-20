@@ -313,6 +313,19 @@ public partial class ServerWorld : Node
         if (peer < 0) Broadcast(msg); else SendTo(peer, msg);
     }
 
+    /// <summary>
+    /// The parked pose is somewhere to rejoin (<see cref="CrevasseRules.RejoinAtParkedPose"/>): not for a hero who fell (its pose is
+    /// the hold in the dark; it comes back beside the party as it unparks), nor below a drop's lip. Else the stairs.
+    /// </summary>
+    private static bool ParkedPoseHolds(Main main, int index, Vector3 pose)
+    {
+        if (main.Builder.Layout is not { } layout || index < 0 || index >= main.Party.Members.Length) return true;
+        var cell = DungeonBuilder.WorldToCell(pose);
+        var holds = CrevasseRules.RejoinAtParkedPose(layout, cell, pose.Y, main.Builder.Surface(cell).Y, main.Party.Members[index].Fallen);
+        if (!holds) GD.Print($"[net-server] member {index}'s parked pose at {cell} (y {pose.Y:0.0}) is in the dark or fallen: rejoins at the stairs");
+        return holds;
+    }
+
     private void OnPlayerReady(PlayerSlot slot)
     {
         var main = Main.Instance;
@@ -327,7 +340,7 @@ public partial class ServerWorld : Node
         if (behind) { slot.Ready = false; GD.Print($"[net-server] {slot.Name} joined on floor {slot.ReadyFloor} while the party went to {Game.Instance.CurrentFloor}: it follows"); }
         Vector3? at = null;
         Vector3? look = null;
-        if (slot.ParkedPose is { } p && slot.ParkedFloor == Game.Instance.CurrentFloor) at = new Vector3(p.X, p.Y, p.Z);
+        if (slot.ParkedPose is { } p && slot.ParkedFloor == Game.Instance.CurrentFloor && ParkedPoseHolds(main, index, new Vector3(p.X, p.Y, p.Z))) at = new Vector3(p.X, p.Y, p.Z);
         else if (main.Builder.Layout is { } layout)
         {
             var stairs = layout.UpStairs;

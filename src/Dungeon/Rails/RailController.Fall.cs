@@ -65,7 +65,7 @@ public partial class RailController
     private void TakeTheTrain(List<CageWagon> wagons)
     {
         var watch = CrevasseWatch.Instance!;
-        var at = OverTheDrop(Cart.GlobalPosition);
+        var at = OverTheDrop(Cart.GlobalPosition, Cart.GlobalPosition); // the cart is over a crevasse: a drop is always near it
         _fellRiders = 0;
         _fellWagons = wagons.Count;
         foreach (var rider in Aboard())
@@ -78,7 +78,7 @@ public partial class RailController
         foreach (var wagon in wagons)
         {
             if (!IsInstanceValid(wagon)) continue;
-            var wagonAt = OverTheDrop(wagon.GlobalPosition);
+            var wagonAt = OverTheDrop(wagon.GlobalPosition, at); // a wagon far back on a straight run: the cart's drop
             _fallRiders.Clear();
             _fallRiders.AddRange(wagon.Riders.Values);
             foreach (var rider in _fallRiders)
@@ -149,11 +149,11 @@ public partial class RailController
     /// Where the crevasse takes a body riding at <paramref name="from"/>: the middle of the nearest drop cell (a chasm or a bridge,
     /// <see cref="CrevasseRules.IsDrop"/>) within <see cref="PlungeReach"/>, so the held and the dead lie under a drop (a load and a
     /// client's copy judge a dead body there as gone into the dark: <c>Npc.InTheDark</c>), not under the lane's solid floor beside it;
-    /// <paramref name="from"/> itself when none is near (it is a drop then, or the caller is not over a crevasse).
+    /// <paramref name="fallback"/> when none is near (a wagon far back from the drop: the cart's own drop point).
     /// </summary>
-    private Vector3 OverTheDrop(Vector3 from)
+    private Vector3 OverTheDrop(Vector3 from, Vector3 fallback)
     {
-        if (_layout == null || _builder == null) return from;
+        if (_layout == null || _builder == null) return fallback;
         var here = DungeonBuilder.WorldToCell(from);
         if (CrevasseRules.IsDrop(_layout, here)) return from;
         GridPos? best = null;
@@ -165,7 +165,7 @@ public partial class RailController
                 var d = dx * dx + dy * dy;
                 if (d < bestD && CrevasseRules.IsDrop(_layout, c)) { best = c; bestD = d; }
             }
-        return best is { } cell ? _builder.Surface(cell) : from;
+        return best is { } cell ? _builder.Surface(cell) : fallback;
     }
 
     /// <summary>The flat unit direction from <paramref name="from"/> to the nearest chasm cell within <see cref="PlungeReach"/>, or zero.</summary>
