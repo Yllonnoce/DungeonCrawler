@@ -34,10 +34,10 @@ namespace DungeonCrawler.Core;
 ///   --test-ride-edges   floor 12: a companion revived behind the cart, a mid-ride load, the human thrown at lethality 1, companions left at a stop
 ///   --test-relief[=beside|rails|refuse|ahead]  floor 12 solo, lethality 1: the relief cart for a player left behind (beside the line, on the rails, refused twice with a save and a load, or never while ahead of the train or beside the cart that met them)
 ///   --test-crew[=forgiven|condemned]  floor 12: the scripted rescue (stops, gates, cages, Grisel's branch, a save mid-ride, a lost crew member, the win), then a wreck and a spare
-///   --test-chase        floor 12: the four rides scripted (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), companions answer the wagon boarders, then a save mid-ride 1 (the thrower stays sent), the heap, a save mid-ride 4 and a one-pumper jump with three wagons; warning timings checked
+///   --test-chase        floor 12: the line's rides scripted (five on floor 12) (the lone cinder, the beam, traffic, slag carts, the switch and the ram, the golem and the spur, the jump, the buffer), companions answer the wagon boarders, then a save mid-ride 1 (the thrower stays sent), the heap, a save mid-ride 5 and a one-pumper jump with four wagons; warning timings checked
 ///   --party-level=N     --test-chase levels the party to N first (default 12, the shipped campaign's level by floor 12)
 ///   --physics-hz=N      run the physics at N ticks a second (a headset's rate, as Vr.MatchPhysicsTo sets it); debug and tests only
-///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of ride 4's gap it is set at the lip and leaps it
+///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
 public partial class DebugTools : Node

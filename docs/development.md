@@ -1472,7 +1472,7 @@ laid as dressing, and timber posts in the way are taken down. While the front is
 bodies against the enemy lane. There, a slag cart ahead cannot outrun the party's cart (it runs at most 2 m/s slower).
 When the front reaches its back end it is rammed: it derails and the plating takes 10. Levers fall back to straight
 when the cart is wrecked or restored, or the party goes on foot. An arrival at stop k sets back only the levers of rides
-1..k, so a lever a walker threw ahead for a later ride (ride 3's switch, ride 4's spur) stays thrown.
+1..k, so a lever a walker threw ahead for a later ride (ride 3's switch, ride 5's spur (`r5_spur`)) stays thrown.
 
 Throwing a switch from the seat (plan 8, `Rails/Core/SeatedSwitchRules.cs`). Nobody can aim at a thin post from a rolling
 cart, so a lever has a seated window. It opens with the cart's front 15 m before the lever (`TrackSwitch.LeverS`) and
@@ -2074,7 +2074,7 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 **How to run it.** Build first, then run `RIDE=1 scripts/net_test.sh`.
 - It starts one server on the built-in campaign: `--test-net-server --net-test-ride --objective=jailbreak --seed=4242 --lethality=1`.
 - It starts the first client ("Rider") once floor 1 is built, and a second ("Joiner", `--net-test-ride-join`) as the cart leaves stop 1.
-- It takes about 5 minutes (293 s measured). Seed 4242's floor 12 is not the shipped seed's, but it has the same five rides.
+- It takes about 5 minutes (293 s measured). Seed 4242's floor 12 builds the shipped layout (the same line, five rides).
 - Every stop and ride the pass names for the kiln or the end of the line reads `LineShape` (`NetTestFlow.Line`): the kiln is ride
   `LastRide` (5) from stop `LastRideStop` (4), the end of the line stop `Rides` (5). The script's strings name them as numbers.
 

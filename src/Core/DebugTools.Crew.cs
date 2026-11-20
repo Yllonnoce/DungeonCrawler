@@ -636,7 +636,7 @@ public partial class DebugTools
                 // over; the wreck is then hidden, and the cart bar must show nothing over it (not "Cart — wrecked")
                 if (party.Local is not { } me) { fail("no local hero for the last wreck"); return; }
                 var more = 0;
-                while (rc.Cart.Visible && more < 4)
+                while (rc.Cart.Visible && more < Shape(rc).Intermediate)
                 {
                     me.Teleport(rc.Cart.GlobalPosition + rc.Cart.GlobalTransform.Basis.X * 3f);
                     rc.DebugWreck();

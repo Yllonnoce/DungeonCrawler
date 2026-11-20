@@ -1,5 +1,10 @@
 # Mine Cart Chase, Plan 9: the full circle Implementation Plan
 
+> **Amended 2026-11-19: five rides, not six.** After measurement the plan was amended to five rides (spec commit d2a809b):
+> `RailCount` 4, not 5; the stops are rooms [1,2,4,6,8,9]; the rides are 267/206/281/252/209 m, 1214 m in all; the cavern is on
+> ride 4; there are eight crew in four cages; the kiln ids are `r5_*`; `LastRide` 5, `LastRideStop` 4, `Intermediate` 4.
+> The task text below keeps the original numbers.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Floor 12's line runs the whole way round the ring to a Cooling Stair beside Kiln-Mouth Landing, through five
