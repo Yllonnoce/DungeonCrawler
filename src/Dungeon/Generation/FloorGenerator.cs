@@ -47,7 +47,7 @@ public static partial class FloorGenerator
                 break;
         }
         RaiseWalls(layout);
-        PlaceStairs(layout);
+        PlaceStairs(layout, spec.RailLoop && spec.RailCount > 0 && spec.Layout == LayoutKind.Ring);
         if (layout.Kind == LayoutKind.Tavern) PlaceTavernStairs(layout);
         PlaceVaults(spec, rng, layout);
         Verticality.AssignLevels(spec, rng, layout);
@@ -397,7 +397,9 @@ public static partial class FloorGenerator
         layout.DownStairs = new GridPos(room.X + room.W - 1, room.Y + room.H - 1);
     }
 
-    private static void PlaceStairs(FloorLayout layout)
+    /// <summary>Up stairs far from the middle; down stairs in the farthest room, or with <paramref name="loop"/> (a railed ring that runs the long way
+    /// round) in the start's nearer ring neighbour, so the short way has no stop and the line must take the whole ring. A boss arena keeps the stairs.</summary>
+    private static void PlaceStairs(FloorLayout layout, bool loop)
     {
         var rooms = layout.Rooms;
         if (rooms.Count == 0) return;
@@ -416,11 +418,23 @@ public static partial class FloorGenerator
         layout.UpStairs = upRoom.Center;
 
         var downRoom = layout.BossArena
+                       ?? (loop ? NearerRingNeighbour(layout, upRoom) : null)
                        ?? rooms.Where(r => r != upRoom).OrderByDescending(r => Dist2(r.Center, upRoom.Center)).ThenBy(rooms.IndexOf).FirstOrDefault()
                        ?? upRoom;
         var down = downRoom.Center;
         if (down == layout.UpStairs) down = new GridPos(down.X + 1, down.Y); // degenerate single-room floor
         layout.DownStairs = down;
+    }
+
+    /// <summary>The ring neighbour of <paramref name="up"/> whose centre is nearer (ties to the lower index); null when <paramref name="up"/> is not a ring room or the ring has under three rooms.</summary>
+    private static Room? NearerRingNeighbour(FloorLayout layout, Room up)
+    {
+        var n = layout.RingRooms;
+        var u = layout.Rooms.IndexOf(up);
+        if (n < 3 || u < 1 || u > n) return null;
+        int a = u == 1 ? n : u - 1, b = u == n ? 1 : u + 1;
+        long da = Dist2(layout.Rooms[a].Center, up.Center), db = Dist2(layout.Rooms[b].Center, up.Center);
+        return layout.Rooms[da < db ? a : db < da ? b : Math.Min(a, b)];
     }
 
     private static void PlaceSpawns(FloorSpec spec, Random rng, FloorLayout layout)
