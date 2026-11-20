@@ -47,4 +47,32 @@ public static class ChordHeading
 
     /// <summary>The flat heading of a forward vector, in radians: 0 facing −Z, positive turned left (toward −X).</summary>
     public static float Yaw(Vector3 forward) => MathF.Atan2(-forward.X, -forward.Z);
+
+    /// <summary>How far ahead <see cref="Curvature"/> looks: the change in heading over the next two metres.</summary>
+    public const float CurvatureSpan = 2f;
+
+    /// <summary>The flat heading (<see cref="Yaw"/>) of the chord at <paramref name="s"/> on a line read by <paramref name="point"/>.</summary>
+    public static float Heading(Func<float, Vector3> point, float s, float length)
+    {
+        var (from, to) = Window(s, length);
+        return Yaw(point(to) - point(from));
+    }
+
+    /// <summary>
+    /// The signed change in flat heading over the next <paramref name="span"/> metres toward higher S, per metre (positive bends
+    /// left), between the chord headings at either end, as <c>TrackSampler.Frame</c> heads the cart: the lean's target turns
+    /// evenly through a bend instead of stepping by a join's ~9.5 degrees as the span takes in four joins or five.
+    /// </summary>
+    public static float Curvature(Func<float, Vector3> point, float s, float length, float span = CurvatureSpan)
+    {
+        float a = Math.Clamp(s, 0f, Math.Max(0f, length)), b = Math.Min(length, a + span);
+        if (b - a < 0.01f) return 0f;
+        return Wrap(Heading(point, b, length) - Heading(point, a, length)) / (b - a);
+    }
+
+    private static float Wrap(float angle)
+    {
+        angle = MathF.IEEERemainder(angle, 2f * MathF.PI);
+        return angle;
+    }
 }

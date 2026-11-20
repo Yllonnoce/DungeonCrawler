@@ -10,7 +10,6 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// </summary>
 public sealed class TrackSampler
 {
-    const float CurvatureSpan = 2f;
     const float SearchStep = 0.25f;
     /// <summary>A body whose nearest point is at the edge of the searched window and farther than this is outside it.</summary>
     const float OutsideBeyond = 2f;
@@ -18,7 +17,14 @@ public sealed class TrackSampler
 
     public RailTrack Track { get; }
 
-    public TrackSampler(RailTrack track) => Track = track;
+    /// <summary><see cref="Point"/> in System.Numerics, made once: the engine-free <see cref="ChordHeading.Curvature"/> reads the line through it.</summary>
+    private readonly Func<float, System.Numerics.Vector3> _numPoint;
+
+    public TrackSampler(RailTrack track)
+    {
+        Track = track;
+        _numPoint = s => Num(Point(s));
+    }
 
     public float Length => Track.Length;
 
@@ -58,19 +64,12 @@ public sealed class TrackSampler
         return b - a < 0.01f ? 0f : (Point(b).Y - Point(a).Y) / (b - a);
     }
 
-    /// <summary>The signed change in flat heading over the next two metres toward higher S, per metre (positive bends left).</summary>
-    public float Curvature(float s)
-    {
-        float a = Clamp(s), b = Mathf.Min(Track.Length, a + CurvatureSpan);
-        if (b - a < 0.01f) return 0f;
-        return Mathf.Wrap(Heading(b) - Heading(a), -Mathf.Pi, Mathf.Pi) / (b - a);
-    }
-
-    private float Heading(float s)
-    {
-        var f = -(Track.GlobalBasis * Track.Curve.SampleBakedWithRotation(s, true, true).Basis).Z;
-        return Mathf.Atan2(-f.X, -f.Z);
-    }
+    /// <summary>
+    /// The signed change in flat heading over the next two metres toward higher S, per metre (positive bends left), between the
+    /// chord headings <see cref="Frame"/> turns the cart by (<see cref="ChordHeading.Curvature"/>): the lean's target turns
+    /// evenly through a bend instead of stepping as the span takes in four joins or five.
+    /// </summary>
+    public float Curvature(float s) => ChordHeading.Curvature(_numPoint, s, Track.Length);
 
     /// <summary>
     /// Where a body at <paramref name="pos"/> stands relative to the line, looking only at

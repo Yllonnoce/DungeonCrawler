@@ -1103,6 +1103,8 @@ line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy
 The centreline is straight 0.5 m pieces laid with no handles, so `TrackSampler.Frame` takes its heading from the chord ±0.25 m
 about S (`Rails/Core/ChordHeading.cs`; the origin and the up are the baked curve's): every cart, rider and camera turns
 evenly through a bend instead of in a 9.5 degree step at each join, and the points, the length and every S are unchanged.
+`TrackSampler.Curvature` (the lean's input: the heading's change over the next 2 m) reads the same chord headings
+(`ChordHeading.Curvature`), so the lean's target no longer steps by a join's worth as the span takes in four joins or five.
 Each track's rails, sleepers and ballast are one shadowless mesh per 20 m of S (`RailTrack.ChunkLength`: `Rails0..N` under
 `Rails`, likewise `Sleepers` and `Ballast`; the normals are generated over the whole track before the split, so no seam), so
 the stretches out of view are culled. The timber frames and pocket lanterns fade out around 40 m (`VisibilityRangeEnd` with a

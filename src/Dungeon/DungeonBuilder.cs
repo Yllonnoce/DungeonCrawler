@@ -1974,7 +1974,7 @@ public partial class DungeonBuilder : Node3D
                 Dress(Box(frames, cap, centre + Vector3.Up * (post + 0.12f), wood, collide: false, yaw: yaw),
                     MinePack.Paint(MinePack.Piece("WoodPostBeams_2", cap, keepAspect: false), wood));
             }
-        FadeBeyond(frames, RailDressingRange);
+        FadeBeyond(frames);
 
         // Pocket lanterns: every other pocket (about 45 small lights on a full line).
         var torch = CurrentTheme?.TorchColor ?? new Color(1f, 0.85f, 0.65f);
@@ -1994,9 +1994,9 @@ public partial class DungeonBuilder : Node3D
                 lantern.Name = $"RailLantern{i}";
                 node.AddChild(lantern);
                 lantern.GlobalPosition = at - Vector3.Up * 0.18f; // its middle where the box's was
-                FadeBeyond(lantern, RailDressingRange);
+                FadeBeyond(lantern);
             }
-            else FadeBeyond(Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false), RailDressingRange);
+            else FadeBeyond(Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false));
         }
 
         for (var i = 0; i < rail.Stops.Count; i++)
@@ -2032,16 +2032,16 @@ public partial class DungeonBuilder : Node3D
     /// </summary>
     const float RailDressingRange = 40f, RailDressingFade = 5f;
 
-    /// <summary>Every mesh under <paramref name="node"/> (itself included) fades out <paramref name="end"/> metres off; a box drawn by its model stays hidden.</summary>
-    private static void FadeBeyond(Node node, float end)
+    /// <summary>Every mesh under <paramref name="node"/> (itself included) fades out <see cref="RailDressingRange"/> off, over <see cref="RailDressingFade"/> either side; a box drawn by its model stays hidden.</summary>
+    private static void FadeBeyond(Node node)
     {
         if (node is GeometryInstance3D g && g.VisibilityRangeBegin < NeverDrawn)
         {
-            g.VisibilityRangeEnd = end;
+            g.VisibilityRangeEnd = RailDressingRange;
             g.VisibilityRangeEndMargin = RailDressingFade;
             g.VisibilityRangeFadeMode = GeometryInstance3D.VisibilityRangeFadeModeEnum.Self;
         }
-        foreach (var child in node.GetChildren()) FadeBeyond(child, end);
+        foreach (var child in node.GetChildren()) FadeBeyond(child);
     }
 
     /// <summary>

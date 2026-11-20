@@ -155,8 +155,17 @@ public partial class RailTrack : Node3D
         AddChild(holder);
         if (verts.Length != chunkOfQuad.Count * 6 || normals.Length != verts.Length)
         {
-            GD.PushWarning($"[rails] {Name}/{name}: {verts.Length} vertices for {chunkOfQuad.Count} quads; laid as one mesh");
-            chunkOfQuad = Enumerable.Repeat(0, verts.Length / 6).ToList();
+            // not the six plain vertices per quad the split reads (an indexed result, normals missing): the committed arrays
+            // as they came, whole, so whatever SurfaceTool made draws as it would have in one mesh
+            GD.PushWarning($"[rails] {Name}/{name}: {verts.Length} vertices, {normals.Length} normals for {chunkOfQuad.Count} quads; laid as one mesh");
+            var whole = new ArrayMesh();
+            whole.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            holder.AddChild(new MeshInstance3D
+            {
+                Name = $"{name}0", Mesh = whole, MaterialOverride = material,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
+            return;
         }
         var count = 0;
         foreach (var c in chunkOfQuad) count = Math.Max(count, c + 1);
