@@ -29,6 +29,9 @@ public static class SetPieceRules
 
     /// <summary>A hammer's or the pour's cues carry at most this far (a walker near it hears its warning).</summary>
     public const float MaxCueRange = 30f;
+
+    /// <summary>The kinds that stand on the line from the ride's departure rather than starting as the cart reaches them (a golem arms at its At).</summary>
+    public static bool StandsFromDeparture(string kind) => kind is "lone" or "thrower";
     /// <summary>The cue range ends at least this far short of stop 3 (a seated head sits up to 0.7 m along the cart from its middle).</summary>
     public const float StopThreeMargin = 2f;
 

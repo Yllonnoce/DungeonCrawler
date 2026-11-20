@@ -12,7 +12,7 @@ using Godot;
 namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
-/// Ride 4, the kiln run. A "golem" bursts out of the kiln wall onto the enemy line as the ride arms: an elite forge golem (never a
+/// The last ride, the kiln run. A "golem" bursts out of the kiln wall onto the enemy line as the cart reaches its At: an elite forge golem (never a
 /// boss) carried by an unseen runner that holds pace beside the party's cart, slamming it every <see cref="GolemEvery"/> s after a
 /// <see cref="GolemWindup"/> s glow, until it dies or a thrown "spur_switch" sends it off the line into the wall. "hammers" drop on
 /// the party line on the floor's metronome; a "pour" of slag runs on its clock until its quench valve is broken; a "trestle" falls
@@ -30,7 +30,7 @@ public partial class RailEncounterController
     public const float PourDent = 20f;
     /// <summary>A walker this close (flat) to the line's centre is under a hammer or the pour.</summary>
     public const float UnderReach = 1f;
-    /// <summary>A body mangled by a ride-4 hazard (a hammer) carries this as MangledBy: no floor hazard has it, so it always counts as armed.</summary>
+    /// <summary>A body mangled by a last-ride hazard (a hammer) carries this as MangledBy: no floor hazard has it, so it always counts as armed.</summary>
     public const int KilnHazardIndex = 1003;
     const float PourBurnEvery = 0.8f;
     const string GolemName = "Kilnheart the Hulking";
@@ -161,9 +161,9 @@ public partial class RailEncounterController
         return buffer;
     }
 
-    /// <summary>A hazard's cue range at <paramref name="at"/>, by its distance to stop 3 (<see cref="SetPieceRules.CueRange"/>; 30 m on a line without one). Every role builds the same.</summary>
+    /// <summary>A hazard's cue range at <paramref name="at"/>, by its distance to the last ride's stop (<see cref="SetPieceRules.CueRange"/>; 30 m on a line without one). Every role builds the same.</summary>
     private float CueRangeAt(Vector3 at)
-        => _rails.StopS.Length > 3 ? SetPieceRules.CueRange(at.DistanceTo(_rails.Party.Track.Point(_rails.StopS[3]))) : SetPieceRules.MaxCueRange;
+        => _rails.StopS.Length >= 2 ? SetPieceRules.CueRange(at.DistanceTo(_rails.Party.Track.Point(_rails.StopS[^2]))) : SetPieceRules.MaxCueRange;
 
     /// <summary>The party line is laid bare over the floor's gaps (the curve and every S stay as they were).</summary>
     private void CutGaps(List<(float from, float to)> gaps)

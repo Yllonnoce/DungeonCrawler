@@ -347,6 +347,10 @@ public static class PlanValidator
     }
 
     public const int MaxRailEncounters = 12, MaxRailSetPieces = 20, MaxSlagRiders = 3;
+    /// <summary>The encounters a line of <paramref name="rides"/> rides keeps: three a ride, never fewer than today's cap.</summary>
+    public static int RailEncounterCap(int rides) => Math.Max(MaxRailEncounters, 3 * rides);
+    /// <summary>The set pieces a line of <paramref name="rides"/> rides keeps: five a ride, never fewer than today's cap.</summary>
+    public static int RailSetPieceCap(int rides) => Math.Max(MaxRailSetPieces, 5 * rides);
     private static readonly string[] EncounterKinds = { "slag_cart", "lone", "thrower", "golem" };
     private static readonly string[] SetPieceKinds = { "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch", "buffer" };
 
@@ -396,7 +400,8 @@ public static class PlanValidator
             }
             return false;
         });
-        if (plan.RailEncounters.Count > MaxRailEncounters) { report.Repairs.Add($"rail encounters: dropped {plan.RailEncounters.Count - MaxRailEncounters} over the cap of {MaxRailEncounters}"); plan.RailEncounters.RemoveRange(MaxRailEncounters, plan.RailEncounters.Count - MaxRailEncounters); }
+        var encounterCap = RailEncounterCap(rides);
+        if (plan.RailEncounters.Count > encounterCap) { report.Repairs.Add($"rail encounters: dropped {plan.RailEncounters.Count - encounterCap} over the cap of {encounterCap}"); plan.RailEncounters.RemoveRange(encounterCap, plan.RailEncounters.Count - encounterCap); }
         var pieceIds = new HashSet<string>();
         plan.RailSetPieces.RemoveAll(p =>
         {
@@ -406,7 +411,8 @@ public static class PlanValidator
             p.At = Clamp("rail set piece", p.Id, p.At);
             return false;
         });
-        if (plan.RailSetPieces.Count > MaxRailSetPieces) { report.Repairs.Add($"rail set pieces: dropped {plan.RailSetPieces.Count - MaxRailSetPieces} over the cap of {MaxRailSetPieces}"); plan.RailSetPieces.RemoveRange(MaxRailSetPieces, plan.RailSetPieces.Count - MaxRailSetPieces); }
+        var pieceCap = RailSetPieceCap(rides);
+        if (plan.RailSetPieces.Count > pieceCap) { report.Repairs.Add($"rail set pieces: dropped {plan.RailSetPieces.Count - pieceCap} over the cap of {pieceCap}"); plan.RailSetPieces.RemoveRange(pieceCap, plan.RailSetPieces.Count - pieceCap); }
     }
 
     private static void ValidateNpcsAndQuests(FloorPlan plan, FloorMenu menu, int start, ValidationReport report, CampaignPlan? campaign = null)

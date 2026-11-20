@@ -241,8 +241,8 @@ public partial class MusicDirector : Node
         }
         var inChaser = me != null && chaser != null && ReferenceEquals(me.Cart, chaser);
         var wanted = RideMusic.Wanted(cartRolling, seated, distance, chaserRolling, inChaser, _clock, ref _rideSeen);
-        if (cartRolling && (seated || distance <= RideMusic.NearMetres)) _chaseWanted = RideMusic.TrackFor(RideMusic.Ride(rc.StopIndex));
-        else if (chaserRolling && inChaser) _chaseWanted = RideMusic.TrackFor(RideMusic.Ride(RideMusic.StopBehind(rc.StopS, chaserS)));
+        if (cartRolling && (seated || distance <= RideMusic.NearMetres)) _chaseWanted = RideMusic.TrackFor(RideMusic.Ride(rc.StopIndex), rc.StopS.Length - 1);
+        else if (chaserRolling && inChaser) _chaseWanted = RideMusic.TrackFor(RideMusic.Ride(RideMusic.StopBehind(rc.StopS, chaserS)), rc.StopS.Length - 1);
         return wanted;
     }
 

@@ -44,13 +44,13 @@ public static class RideLines
     public static BarkTrigger? BarkFor(CartEventKind kind) => kind == CartEventKind.Boarding ? BarkTrigger.AllAboard : null;
 
     /// <summary>
-    /// The orc's taunt for a cart moment, or null: a departure from one of the first stops (<paramref name="stopLeft"/> at most
-    /// <paramref name="stopCount"/> − 3: rides 1–3 of five stops; the last ride's opening belongs to the golem) starts the ride,
+    /// The orc's taunt for a cart moment, or null: a departure from any stop (<paramref name="stopLeft"/> below
+    /// <paramref name="stopCount"/> − 1: every ride, the last one's too) starts the ride,
     /// and a wreck is gloated over. The run-overs, the derails, the golem and the buffer are told where they happen.
     /// </summary>
     public static TauntTrigger? TauntFor(CartEventKind kind, int stopLeft, int stopCount) => kind switch
     {
-        CartEventKind.Departed when stopLeft >= 0 && stopLeft <= stopCount - 3 => TauntTrigger.RideStart,
+        CartEventKind.Departed when stopLeft >= 0 && stopLeft < stopCount - 1 => TauntTrigger.RideStart,
         CartEventKind.Wrecked => TauntTrigger.CartWrecked,
         _ => null,
     };

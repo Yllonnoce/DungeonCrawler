@@ -32,6 +32,8 @@ public static class CartRules
     public const float PumpBoost2 = 0.3f;
 
     public const float LoadPerWagon = 0.05f;
+    /// <summary>The wagons the load counts: a longer train weighs no more, so a line of any length keeps the same pace and the same jump.</summary>
+    public const int MaxLoadWagons = 3;
 
     public const float MaxPlating = 100f;
 
@@ -56,7 +58,7 @@ public static class CartPhysics
     static float Scaled(float speed, int pumpers, int crewWagons)
     {
         float boost = pumpers >= 2 ? CartRules.PumpBoost2 : pumpers == 1 ? CartRules.PumpBoost1 : 0f;
-        return speed * (1f + boost) / (1f + CartRules.LoadPerWagon * crewWagons);
+        return speed * (1f + boost) / (1f + CartRules.LoadPerWagon * Math.Min(crewWagons, CartRules.MaxLoadWagons));
     }
 
     /// <summary>One step. Only a Rolling cart moves; it never passes StopAt and holds there. The controller must set StopAt ahead of S before switching Held to Rolling.</summary>

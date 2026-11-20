@@ -71,15 +71,12 @@ public partial class RailEncounterController
 
     // ---- extension point 1: arming (spawn what stands on the line) ------------------------------
 
-    /// <summary>The kinds that stand on the line from the ride's departure rather than starting as the cart reaches them.</summary>
-    private static bool StandsFromDeparture(string kind) => kind is "lone" or "thrower" or "golem";
-
     private void ArmStanders(int ride)
     {
         for (var i = 0; i < _encounters.Count; i++)
         {
             var enc = _encounters[i];
-            if (enc.Ride != ride || !StandsFromDeparture(enc.Kind)) continue;
+            if (enc.Ride != ride || !SetPieceRules.StandsFromDeparture(enc.Kind)) continue;
             _started[i] = true; // StartReached leaves it be
             SpawnStander(i, enc);
         }

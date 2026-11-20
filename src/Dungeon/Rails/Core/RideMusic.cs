@@ -39,19 +39,19 @@ public static class RideMusic
         return now - lastSeen < HoldSeconds;
     }
 
-    /// <summary>The ride a cart is on, from the stop it left (ride 1 runs from stop 0 to stop 1; ride 4 is the kiln's).</summary>
+    /// <summary>The ride a cart is on, from the stop it left (ride 1 runs from stop 0 to stop 1; the last ride is the kiln's).</summary>
     public static int Ride(int stopLeft) => stopLeft + 1;
 
-    /// <summary>Rides 1-3's track (the music folder's file name), looped.</summary>
+    /// <summary>Every ride but the last one's track (the music folder's file name), looped.</summary>
     public const string ChaseTrack = "chase_determined_pursuit.ogg";
     /// <summary>
-    /// Ride 4's track (160 BPM by its source's name; its onsets measure <see cref="PourTrackBpm"/>): played at <see cref="PourPitch"/> so its
+    /// The last ride's track (160 BPM by its source's name; its onsets measure <see cref="PourTrackBpm"/>): played at <see cref="PourPitch"/> so its
     /// beat keeps the hammers' 160, once through from <see cref="PhaseSeek"/>, and locked again each time it ends.
     /// </summary>
     public const string PourTrack = "forge_heavy_dungeon.ogg";
 
-    /// <summary>Rides 1-3 loop the chase; ride 4 (the kiln's hammers and pour) plays the forge piece on the hammers' beat.</summary>
-    public static string TrackFor(int ride) => ride == 4 ? PourTrack : ChaseTrack;
+    /// <summary>Every ride but the last loops the chase; the last (the kiln's hammers and pour) plays the forge piece on the hammers' beat.</summary>
+    public static string TrackFor(int ride, int rides) => ride == rides ? PourTrack : ChaseTrack;
 
     /// <summary>Every track a ride plays (<see cref="TrackFor"/>): the music loads them when a railed floor is built.</summary>
     public static readonly IReadOnlyList<string> Tracks = new[] { ChaseTrack, PourTrack };
