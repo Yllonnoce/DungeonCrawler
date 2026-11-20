@@ -88,6 +88,22 @@ public partial class RailEncounterController : Node
     {
         _rails.CartEvents += OnCartEvent;
         BuildSetPieces(); // every role: a client's copies are dressing that shows what the server tells
+        WarmModels(ride: null); // every role (a client spawns the server's riders too): the floor's creatures read on a loader thread while the party walks to the cart
+        if (_encounters.Any(e => e.Kind == "slag_cart") && _enemy.Valid) SlagCart.Prewarm(_enemy); // every role: a client builds the server's carts as dressing
+    }
+
+    /// <summary>Have the models of the creatures the rides spawn (ride <paramref name="ride"/>'s only, when given) read on a loader thread, so no spawn reads one from disk.</summary>
+    private void WarmModels(int? ride)
+    {
+        foreach (var id in RailWarmup.EnemyIds(_encounters, ride))
+            if (_builder.EnemyProfile(id) is { } profile) Enemies.EnemyModels.Warm(profile.Model);
+    }
+
+    /// <summary>Have ride <paramref name="ride"/>'s encounter lines read on a loader thread: each plays as the cart comes up to it.</summary>
+    private void WarmLines(int ride)
+    {
+        if (Adventure.VoiceRenderer.Instance is not { } voice) return;
+        foreach (var id in RailWarmup.VoiceIds(_encounters, ride)) voice.Prefetch(id);
     }
 
     public override void _ExitTree()
@@ -141,7 +157,10 @@ public partial class RailEncounterController : Node
         if (ArmedRide >= 1) FreeTraffic(); // the ride has the enemy line: a traffic cart in the way goes, so the two are never live together
         for (var i = 0; i < _encounters.Count; i++)
             if (_encounters[i].Ride == ride) _started[i] = false;
-        if (ArmedRide >= 1) ArmStanders(ArmedRide);
+        if (ArmedRide < 1) return;
+        WarmModels(ArmedRide); // nothing to do once the floor's warm-up is in: a model is kept for the session
+        WarmLines(ArmedRide);
+        ArmStanders(ArmedRide);
     }
 
     /// <summary>The ride is over (or undone): its live items go, the riders without a death or a word.</summary>

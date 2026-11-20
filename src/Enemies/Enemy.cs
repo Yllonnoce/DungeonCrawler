@@ -306,12 +306,9 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
 
     private void LoadModel()
     {
-        if (Profile.Model == "") return;
-        // a plain name is a Quaternius monster; a path under assets/models is any other pack (KayKit characters are .glb)
-        var path = Profile.Model.Contains('/') ? $"res://assets/models/{Profile.Model}.glb" : $"res://assets/models/quaternius_monsters/{Profile.Model}.gltf";
-        if (!ResourceLoader.Exists(path) && Profile.Model.Contains('/')) path = $"res://assets/models/{Profile.Model}.gltf";
-        if (!ResourceLoader.Exists(path)) return;
-        _model = GD.Load<PackedScene>(path).Instantiate<Node3D>();
+        // a plain name is a Quaternius monster; a path under assets/models is any other pack (KayKit characters are .glb); loaded once a session
+        if (EnemyModels.Scene(Profile.Model) is not { } scene) return;
+        _model = scene.Instantiate<Node3D>();
         _model.Name = "Model";
         AddChild(_model);
         var keep = Profile.Kind == EnemyKind.Ranged ? "2H_Crossbow" : FindMeshes(_model).Select(m => m.Name.ToString()).FirstOrDefault(n => n is "Knife" or "1H_Axe" or "1H_Sword") ?? "";
@@ -322,16 +319,19 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
         _anim = FindAnimationPlayer(_model);
         PlayAnim("Idle");
         _anim?.Seek(0, update: true);
-        // scale the model so it stands 1.8 m tall times the profile scale
-        var aabb = new Aabb();
-        var first = true;
-        foreach (var mi in FindMeshes(_model))
+        // scale the model so it stands 1.8 m tall times the profile scale; its Idle stance is measured once a session per model
+        // and weapon shown (the skinned box reads every vertex: ~1 ms and ~190 KB a spawn), the same box every time
+        if (!EnemyModels.TryStandBox(Profile.Model, keep, out var aabb))
         {
-            if (!mi.Visible) continue;
-            var box = (AnimatedModel.SkinnedBox(mi) ?? mi.GetAabb()).Abs();
-            var xf = mi.GlobalTransform.AffineInverse() * mi.GlobalTransform; // identity; keep local box
-            aabb = first ? box : aabb.Merge(box);
-            first = false;
+            var first = true;
+            foreach (var mi in FindMeshes(_model))
+            {
+                if (!mi.Visible) continue;
+                var box = (AnimatedModel.SkinnedBox(mi) ?? mi.GetAabb()).Abs(); // the local box
+                aabb = first ? box : aabb.Merge(box);
+                first = false;
+            }
+            EnemyModels.KeepStandBox(Profile.Model, keep, aabb);
         }
         var height = Math.Max(0.5f, aabb.Size.Y);
         var scale = 1.8f * Profile.Scale / height;
@@ -349,7 +349,7 @@ public partial class Enemy : CharacterBody3D, ICombatTarget, IHazardVictim
                 _modelMaterials.Add(mat);
             }
         if (Profile.Weapon != "" && WeaponGrip.Attach(_model, Profile.Weapon, "Right", GripMath.HeldScale(Profile.Weapon)) == null) GD.Print($"[Enemy] {Profile.Id}: no grip bone or no file for weapon {Profile.Weapon}");
-        if (Profile.Model.Contains('/')) GD.Print($"[Enemy] {Profile.Id}: {path} box {aabb.Position:0.000} size {aabb.Size:0.000} scale {_model.Scale.Y:0.00} lift {_model.Position.Y:0.000}");
+        if (Profile.Model.Contains('/')) GD.Print($"[Enemy] {Profile.Id}: {EnemyModels.PathOf(Profile.Model)} box {aabb.Position:0.000} size {aabb.Size:0.000} scale {_model.Scale.Y:0.00} lift {_model.Position.Y:0.000}");
     }
 
     private static IEnumerable<MeshInstance3D> FindMeshes(Node n)

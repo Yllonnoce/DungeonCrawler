@@ -97,6 +97,18 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
 
     public override void _Ready() => Build();
 
+    /// <summary>
+    /// Build one cart off the tree and free it, as the floor is built (under the loading card): the ride's first slag cart then
+    /// spawns without its type's first-use cost (~5 ms of JIT and static set-up, on the physics tick it appears in).
+    /// </summary>
+    public static void Prewarm(TrackSampler track)
+    {
+        var cart = new SlagCart { Name = "SlagCart_prewarm" };
+        cart.Setup(track, new CartState(0f, 0f, CartMode.Rolling, CartRules.MaxPlating), 0f);
+        cart.Build();
+        cart.Free(); // off the tree: its children go with it
+    }
+
     /// <summary>Where rider <paramref name="i"/> stands, in world space (−Z forward): on the heap at its spot.</summary>
     public Transform3D RiderSpot(int i)
     {

@@ -71,6 +71,7 @@ public partial class Main : Node
         Dungeon.Props.WaterSurface.Release();
         UI.Hud.EnemyBars.Release();
         Audio.Synth.Release();
+        Enemies.EnemyModels.Release(); // the creatures' models, kept loaded for the session
     }
 
     // ---- run-structure: the stakes and the solo autosave ---------------------------------------------------
