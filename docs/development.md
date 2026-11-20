@@ -279,9 +279,12 @@ let the scene go with the last creature wearing it), with each model's Idle-stan
 `RailEncounterController` asks for its riders', standers' and golem's models on a loader thread as the floor is built
 (`Rails/Core/RailWarmup.cs` lists them) and builds one slag cart off the tree so the first one spawns without its JIT. `MusicDirector`
 reads the floor's tracks on a loader thread when it is built (the tier's exploration pool, battle and boss, and on a railed floor
-`RideMusic.Tracks`). `VoiceRenderer` keeps the last 16 recordings (`Adventure/Core/Voice/RecentCache.cs`), so a line whose length
-was read to time what follows it is not read again to play it, and a ride's encounter lines are read on a loader thread when the
-ride arms (`VoiceRenderer.Prefetch`). The model cache, like `MinePack`'s and the other static caches, is let go at Main's exit.
+`RideMusic.Tracks`) and lets go of every other track it holds but the one playing (`Audio/Core/FloorMusic.cs`), so only the
+current floor's music stays loaded. `VoiceRenderer` keeps the last 16 recordings (`Adventure/Core/Voice/RecentCache.cs`), so a line
+whose length was read to time what follows it is not read again to play it, and a ride's encounter lines are read on a loader thread
+when the ride arms (`VoiceRenderer.Prefetch`; on a co-op client when its cart's state names the ride armed; a dedicated server
+prefetches them too, since its director reads every narrated line's length to time what follows it). A loader-thread read that failed is still collected (`LoadThreadedGet`), so Godot forgets its task. The model cache, like
+`MinePack`'s and the other static caches, is let go at Main's exit.
 The HUD portraits (`UI/Hud/PortraitPanel.cs`) refresh every frame but build their strings only when what they show has changed
 (`Characters/PortraitText.cs`), which took ~1 MB/s of garbage, and a collection every few seconds, off a quiet ride.
 After adding files under `assets/`, run `godot --headless --import --path .` once so Godot imports them.

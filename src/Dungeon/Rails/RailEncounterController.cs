@@ -99,7 +99,11 @@ public partial class RailEncounterController : Node
             if (_builder.EnemyProfile(id) is { } profile) Enemies.EnemyModels.Warm(profile.Model);
     }
 
-    /// <summary>Have ride <paramref name="ride"/>'s encounter lines read on a loader thread: each plays as the cart comes up to it.</summary>
+    /// <summary>
+    /// Have ride <paramref name="ride"/>'s encounter lines read on a loader thread: each plays as the cart comes up to it. At the arming
+    /// (solo and a dedicated server, whose director reads each narrated line's length to time what follows it, <c>AdventureDirector.Heard</c>),
+    /// and on a co-op client, which plays them, when its cart's state names the ride armed (<see cref="ApplyArmNet"/>).
+    /// </summary>
     private void WarmLines(int ride)
     {
         if (Adventure.VoiceRenderer.Instance is not { } voice) return;

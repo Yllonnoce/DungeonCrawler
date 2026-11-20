@@ -43,7 +43,8 @@ public partial class RailEncounterController
     /// <summary>
     /// Client: the party cart's state named the armed ride and the server's clock when it armed. A new arming (another ride, or the same
     /// ride armed again after a wreck or a load) starts its pieces as the server's arming does: the beam may duck again and the buckets
-    /// start their round; the other rides' buckets hang still and their lanterns stop.
+    /// start their round; the other rides' buckets hang still and their lanterns stop. The ride's encounter lines are prefetched here, as
+    /// the server's arming prefetches them there.
     /// </summary>
     internal void ApplyArmNet(int ride, double armedAt)
     {
@@ -52,6 +53,7 @@ public partial class RailEncounterController
         if (ride == ArmedRide && (ride < 1 || armedAt == ArmedAt)) return;
         ArmedRide = ride;
         ArmedAt = armedAt;
+        if (ride >= 1) WarmLines(ride); // this screen plays the lines: read on a loader thread before the cart comes up to them
         var front = _rails.Party.FrontS;
         foreach (var p in _pieces)
         {
