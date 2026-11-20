@@ -47,6 +47,8 @@ public sealed record FloorSpec
     public bool RailLoop { get; init; }
     /// <summary>Cells of rock between a railed ring's rooms and the grid's edge; wider than RailRules.Band, the line meanders.</summary>
     public int RailBand { get; init; } = RailRules.Band;
+    /// <summary>Crevasses cut the floor: chasms beside the mine-cart line and plank crossings in the halls.</summary>
+    public bool Crevasses { get; init; }
     /// <summary>Tier-final floor: a large arena room is placed and the down stairs live inside it.</summary>
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;

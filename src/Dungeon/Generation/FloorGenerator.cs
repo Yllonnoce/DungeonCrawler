@@ -135,7 +135,7 @@ public static partial class FloorGenerator
                     {
                         var q = new GridPos(c.X + ox, c.Y + oy);
                         if (q == s.Alcove || room.Contains(q) || passage.Contains(q)) continue;
-                        if (!layout.InBounds(q.X, q.Y) || layout.IsWalkable(q) || layout[q] == Cell.Secret || layout.IsUnder(q)) { ok = false; break; }
+                        if (!layout.InBounds(q.X, q.Y) || layout.IsWalkable(q) || layout[q] is Cell.Secret or Cell.Chasm || layout.IsUnder(q)) { ok = false; break; }
                     }
                 if (!ok) break;
             }
@@ -375,7 +375,7 @@ public static partial class FloorGenerator
                 if (layout[x, y] != Cell.Void) continue;
                 for (var oy = -1; oy <= 1 && layout[x, y] == Cell.Void; oy++)
                     for (var ox = -1; ox <= 1; ox++)
-                        if ((ox != 0 || oy != 0) && layout[x + ox, y + oy] == Cell.Floor)
+                        if ((ox != 0 || oy != 0) && layout[x + ox, y + oy] is Cell.Floor or Cell.Chasm)
                         {
                             layout[x, y] = Cell.Wall;
                             break;

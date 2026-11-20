@@ -51,6 +51,12 @@ public sealed class FloorLayout
     /// <summary>Under-layer floor (cellars and their tunnels) at height 0 beneath the main grid.</summary>
     public bool[] Under { get; }
     public Dictionary<GridPos, RampInfo> Ramps { get; } = new();
+    /// <summary>Floor cells that cross a drop (a chasm or a pit). Not part of the content hash.</summary>
+    public Dictionary<GridPos, BridgeKind> Bridges { get; } = new();
+    public bool IsBridge(GridPos p) => Bridges.ContainsKey(p);
+    public bool IsChasm(GridPos p) => this[p] == Cell.Chasm;
+    /// <summary>How many chasm cells the floor was cut with.</summary>
+    public int ChasmCount { get; internal set; }
     public List<Ledge> Ledges { get; } = new();
     public List<Cellar> Cellars { get; } = new();
     public List<SecretAlcove> Secrets { get; } = new();
@@ -293,7 +299,7 @@ public sealed class FloorLayout
                           Rail?.Party.Contains(p) == true ? '=' : Rail?.Enemy.Contains(p) == true ? '%' : Rail?.Pockets.Contains(p) == true ? ')' :
                           EnemySpawns.Contains(p) ? 'e' : ChestSpawns.Contains(p) ? '$' : BreakableSpawns.Contains(p) ? 'b' :
                           TrapSpawns.Contains(p) ? '^' : KeySpawns.Contains(p) || Vaults.Any(v => v.Key == p) ? 'k' : Vaults.Any(v => v.Lever == p) ? 'L' :
-                          IsWater(p) ? '~' : Fires.Contains(p) ? '*' :
+                          IsBridge(p) ? '=' : this[x, y] == Cell.Chasm ? '~' : IsWater(p) ? '~' : Fires.Contains(p) ? '*' :
                           this[x, y] switch { Cell.Floor => LevelOf(p) == 1 ? ':' : '.', Cell.Wall => IsUnder(p) ? '_' : '#', Cell.Door => '+', Cell.Ramp => '/', Cell.Pit => 'O', Cell.Secret => 'S', _ => IsUnder(p) ? '_' : ' ' });
             }
             sb.Append('\n');

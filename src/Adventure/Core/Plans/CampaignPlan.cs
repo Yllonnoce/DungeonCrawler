@@ -65,9 +65,11 @@ public sealed class SpecOverrides
     [AiIgnore] public bool? RailLoop { get; set; }
     [AiDescription("Cells of rock outside a railed ring's rooms for the line to weave in, 6 to 16.")]
     [AiIgnore] public int? RailBand { get; set; }
+    [AiDescription("True: crevasses cut the floor: chasms beside the mine-cart line and plank crossings in the halls.")]
+    [AiIgnore] public bool? Crevasses { get; set; }
 
     public bool IsEmpty => EnemyCount == null && ChestCount == null && LockedChestCount == null && TrapCount == null && VaultCount == null
-                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null;
+                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null && Crevasses == null;
 
     public FloorSpec Apply(FloorSpec spec) => spec with
     {
@@ -87,6 +89,7 @@ public sealed class SpecOverrides
         RailCount = Math.Clamp(RailCount ?? spec.RailCount, 0, 6),
         RailLoop = RailLoop ?? spec.RailLoop,
         RailBand = Math.Clamp(RailBand ?? spec.RailBand, RailRules.Band, 16),
+        Crevasses = Crevasses ?? spec.Crevasses,
     };
 }
 

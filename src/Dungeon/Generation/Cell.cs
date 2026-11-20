@@ -13,7 +13,12 @@ public enum Cell : byte
     Pit = 5,
     /// <summary>A wall that opens once found; not walkable until then.</summary>
     Secret = 6,
+    /// <summary>A crevasse: not walkable, not rock; a bridge (FloorLayout.Bridges) is a Floor cell over a drop.</summary>
+    Chasm = 7,
 }
+
+/// <summary>What a bridge cell is built of.</summary>
+public enum BridgeKind : byte { Deck, Plank }
 
 public readonly record struct GridPos(int X, int Y)
 {
