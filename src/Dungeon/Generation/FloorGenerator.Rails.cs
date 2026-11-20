@@ -115,8 +115,8 @@ public static partial class FloorGenerator
             var chosen = new List<RailRoom>();
             for (var k = 0; k < count; k++) chosen.Add(MakeRailRoom(layout, eligible[(int)((k + 0.5) * eligible.Count / count)], way)!);
             var s = -way; // increasing index runs the way Perp turns, so the outward side is the opposite hand
-            // a meandered line that does not hold is routed again plain before the next way is tried
-            if ((Way(meander) ?? (meander ? Way(false) : null)) is not { } found) continue;
+            // a meandered line that does not hold, or holds fewer stops, is routed again plain before the next way is tried
+            if ((meander ? LongerWay(Way(true), () => Way(false), w => w.segs.Count, count + 1) : Way(false)) is not { } found) continue;
             var (segs, pk) = found;
             if (best == null || segs.Count > best.Value.segs.Count) best = (segs, s, pk);
             if (segs.Count == railCount + 1) break;
@@ -137,6 +137,18 @@ public static partial class FloorGenerator
         sign = best.Value.s;
         pockets = best.Value.pk;
         return best.Value.segs;
+    }
+
+    /// <summary>
+    /// The meandered way's line, unless it is missing or has fewer than <paramref name="full"/> rides: then the plain way
+    /// is routed too and the one with more rides kept, the meandered one on a tie. So a meandered line never has fewer
+    /// stops than the plain one would on the same way.
+    /// </summary>
+    internal static T? LongerWay<T>(T? bent, Func<T?> plain, Func<T, int> rides, int full) where T : struct
+    {
+        if (bent is { } b && rides(b) >= full) return bent;
+        if (plain() is not { } p) return bent;
+        return bent is { } c && rides(c) >= rides(p) ? bent : p;
     }
 
     private static int Step(int i, int way, int n) => way > 0 ? (i == n ? 1 : i + 1) : (i == 1 ? n : i - 1);
