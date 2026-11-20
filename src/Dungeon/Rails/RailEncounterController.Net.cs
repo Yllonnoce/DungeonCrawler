@@ -94,8 +94,12 @@ public partial class RailEncounterController
                         SetAlarm(heap, SetPieceRules.HeapAlarm(SetPieceRules.HeapHeaded(rolling, heap.FaceS, front, _rails.OnEnemyLane(heap.FaceS), SwitchSetBefore(piece)), heap.FaceS, front, _rails.State.V));
                     break;
                 case "barricade":
+                case "slag_barricade":
                     if (piece.Barricade is { IsStanding: true } barricade)
-                        SetBarricadeAlarm(barricade, SetPieceRules.HeapAlarm(SetPieceRules.HeapHeaded(rolling, barricade.FaceS, front, _rails.OnEnemyLane(barricade.FaceS), false), barricade.FaceS, front, _rails.State.V));
+                    {
+                        var (_, at, onItsLane) = PartyFrontAt(barricade); // the server's reading, from our own cart
+                        SetBarricadeAlarm(barricade, SetPieceRules.HeapAlarm(SetPieceRules.HeapHeaded(rolling, barricade.FaceS, at, !onItsLane, false), barricade.FaceS, at, _rails.State.V));
+                    }
                     break;
                 case "buckets":
                     piece.Buckets?.ClientTick(client.ServerNow - ArmedAt, dt);

@@ -135,6 +135,7 @@ public partial class RailEncounterController
         run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit, CartRules.Cruise), dt);
         run.Sync();
         run.PoseAt(run.State.S);
+        SmashAhead(run, cart, enemyTrack: true, cart.Aboard); // riderless: only the timber and its speed pay
         RunOver(run, cart.HitAt, TrafficSource, SlagCart.HazardIndex, _setAside);
         Warn(run, cart, _warnedTraffic, false, party);
         if (run.State.S >= _enemy.Length - LineEnd || run.State.Mode != CartMode.Rolling || OwnProgressStuck(ref cart.Watch, run, dt, cart))
@@ -166,6 +167,7 @@ public partial class RailEncounterController
             run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit, CartRules.Cruise), dt);
             run.Sync();
             run.PoseAt(run.State.S);
+            SmashAhead(run, w.Body, enemyTrack: false, riders: null); // timber on the party line ahead of it
             RunOver(run, w.Body.HitAt, RunawayWagon.SourceName, RunawayWagon.HazardIndex, _setAsideParty);
             Warn(run, w.Body, _warnedRunaway, true, party);
             if (run.State.Mode != CartMode.Rolling)

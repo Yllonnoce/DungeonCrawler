@@ -33,6 +33,8 @@ public partial class RailEncounterController
         public bool Barked;
         /// <summary>A wreck or a load undid the ride: the heap or the barricade stands again at the next arming (a broken valve stays broken for the floor).</summary>
         public bool Rebuild;
+        /// <summary>The barricade went down while its ride was armed (or was cut): it stays down until the ride is undone (Ruling 5).</summary>
+        public bool DownArmed;
         public DropHammer[]? Hammers;
         public MoltenPour? Pour;
         public Trestle? Trestle;
@@ -222,7 +224,8 @@ public partial class RailEncounterController
                     node = BuildBuffer(root, piece);
                     break;
                 case "barricade":
-                    node = BuildBarricade(root, piece);
+                case "slag_barricade":
+                    node = BuildBarricade(root, piece, slagLine: plan.Kind == "slag_barricade");
                     break;
             }
             if (node == null) continue;
@@ -279,6 +282,7 @@ public partial class RailEncounterController
                     TickBuffer(piece, rolling);
                     break;
                 case "barricade":
+                case "slag_barricade":
                     TickBarricade(piece, party, rolling);
                     break;
             }

@@ -352,7 +352,7 @@ public static class PlanValidator
     /// <summary>The set pieces a line of <paramref name="rides"/> rides keeps: five a ride, never fewer than today's cap.</summary>
     public static int RailSetPieceCap(int rides) => Math.Max(MaxRailSetPieces, 5 * rides);
     private static readonly string[] EncounterKinds = { "slag_cart", "lone", "thrower", "golem" };
-    private static readonly string[] SetPieceKinds = { "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch", "buffer", "barricade" };
+    private static readonly string[] SetPieceKinds = { "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch", "buffer", "barricade", "slag_barricade" };
 
     private static void ValidateRailPlans(FloorPlan plan, FloorLayout layout, FloorMenu menu, ValidationReport report)
     {

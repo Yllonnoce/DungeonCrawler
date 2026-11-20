@@ -30,7 +30,7 @@ namespace DungeonCrawler.Core;
 // with one pumper, the load counting three wagons at most, the lip's slope and all).
 // Throughout: no boss on the floor, the
 // stairs stay sealed until the crew are home, every hazard's warning comes at least 1.5 s before its hit (physics
-// frames logged), and the cart is mended to full plating at every stop. At stop 1, before ride 2, the party is levelled to
+// frames logged; a barricade the cart smashes, each one its own call), and the cart is mended to full plating at every stop. At stop 1, before ride 2, the party is levelled to
 // --party-level=N (default ChaseDefaultLevel = 12, the level a run of the shipped campaign has by floor 12), its points spent; on
 // ride 2 the lead sits idle, who kills each boarder is logged, and at that level or higher at most one companion may be
 // down by stop 2; a hound must board the cage wagon, a wagon boarder must be struck by a companion within 6 s (the reach from
@@ -133,7 +133,7 @@ public partial class DebugTools
     private readonly HashSet<int> _chGlowOpen = new();
     private bool _chPourOpen;
 
-    private static readonly string[] ChaseHazards = { "bell", "heap", "hammer", "pour", "golem", "jump" };
+    private static readonly string[] ChaseHazards = { "bell", "heap", "hammer", "pour", "golem", "jump", "barricade" };
 
     private static ulong ChaseMinGap => (ulong)Mathf.CeilToInt(1.5f * Engine.PhysicsTicksPerSecond);
     private static double ChaseSeconds(ulong frames) => frames / (double)Engine.PhysicsTicksPerSecond;
@@ -955,6 +955,7 @@ public partial class DebugTools
         if (_done || !_testChase) return;
         var t = Engine.GetPhysicsFrames();
         if (text == "The cart crashes into the ore heap!") ChaseHit("heap", t, "the cart into the heap");
+        else if (text == "The cart smashes through the barricade!") ChaseHit("barricade", t, $"the cart through the timber at S={(RailController.Instance?.State.S ?? 0f):0.0} on ride {_chEnc?.ArmedRide ?? -1}");
         else if (text == "A drop hammer slams into the cart!")
         {
             var rc = RailController.Instance;
@@ -984,7 +985,7 @@ public partial class DebugTools
         else if (text == "The slag cart derails!") _chDerailed = true;
     }
 
-    /// <summary>The warnings are stamped as the heroes call them (said or only logged): the bell while the traffic runs, the heap, the jump.</summary>
+    /// <summary>The warnings are stamped as the heroes call them (said or only logged): the bell while the traffic runs, the heap, the jump, the barricade.</summary>
     private void OnChaseCall(Adventure.BarkTrigger trigger, string? by)
     {
         if (_done || !_testChase) return;
@@ -994,6 +995,7 @@ public partial class DebugTools
             case Adventure.BarkTrigger.CartComing: if (_chTrafficOn) _chWarn.TryAdd("bell", t); break;
             case Adventure.BarkTrigger.LineBlocked: _chWarn["heap"] = t; break;
             case Adventure.BarkTrigger.JumpCall: _chWarn["jump"] = t; break;
+            case Adventure.BarkTrigger.Barricade: _chWarn["barricade"] = t; break;
         }
     }
 
@@ -1064,7 +1066,7 @@ public partial class DebugTools
         _chHits.Add((hazard, w, t, note));
         GD.Print($"[chase] 5 {hazard}: warned at t={ChaseSeconds(w):0.000} s, hit at t={ChaseSeconds(t):0.000} s ({note}): {ChaseSeconds(gap):0.000} s{(gap < ChaseMinGap ? " UNDER 1.5 s" : "")}");
         if (gap < ChaseMinGap) _chFail ??= $"{hazard} hit {ChaseSeconds(gap):0.000} s after its warning ({note}), under 1.5 s";
-        if (hazard is "bell" or "heap" or "jump" or "trestle") _chWarn.Remove(hazard); // one warning, one hit
+        if (hazard is "bell" or "heap" or "jump" or "trestle" or "barricade") _chWarn.Remove(hazard); // one warning, one hit
     }
 
     /// <summary>The end: every hazard kind hit at least once, each a full 1.5 s after its warning (the table of first hits).</summary>

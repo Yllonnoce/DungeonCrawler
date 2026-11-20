@@ -296,6 +296,7 @@ public partial class RailEncounterController : Node
             if (!IsInstanceValid(cart) || cart.Derailed) { _carts.RemoveAt(i); continue; }
             if (Ram(cart)) { _carts.RemoveAt(i); continue; } // before it moves or sweeps: a rammed cart does nothing more
             Pace(cart, dt);
+            SmashAhead(cart.Run, cart, enemyTrack: true, cart.Aboard); // timber on the slag line ahead of it
             RunOver(cart);
             Warn(cart, party);
             if (cart.Run.State.S >= _enemy.Length - LineEnd || cart.Run.State.Mode != CartMode.Rolling || PacingStuck(cart, dt)) { Free(cart); _carts.RemoveAt(i); }

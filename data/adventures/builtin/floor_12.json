@@ -690,6 +690,12 @@
       "At": 0.7
     },
     {
+      "Id": "r2_slag_barricade",
+      "Ride": 2,
+      "Kind": "slag_barricade",
+      "At": 0.3
+    },
+    {
       "Id": "r3_switch_out",
       "Ride": 3,
       "Kind": "switch_out",

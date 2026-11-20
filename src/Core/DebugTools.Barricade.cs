@@ -18,15 +18,21 @@ namespace DungeonCrawler.Core;
 // brake is let go; the plating is unchanged across it and no smash is logged. C, ride 2's smash: at stop 1 a companion is set to 5% HP
 // (held there until the smash) with Grisel on the bench; nobody brakes or hits; the cart smashes r2_barricade: the plating drops by 25,
 // each other seated hero loses 15% of max HP, the 5% companion is up with 1 HP or more, Grisel's HP is unchanged, and V is 0.8 of what
-// it was. D: arrived at stop 2, rc.Restore(1): r2_barricade stays down until ride 2 arms again, then stands. Prints [barricade] lines and
-// a RESULT.
+// it was. D: arrived at stop 2, rc.Restore(1): r2_barricade and r2_slag_barricade stay down until ride 2 arms again, then stand. E, on
+// ride 2 before C's smash (r2_slag1's two cinders are spared the cull until then, and the companion goes to 5% only after it): r2_slag1
+// smashes r2_slag_barricade on the slag line, each cinder down 15% (+-1) of its max HP or dead, while the party's cart, on its own lane,
+// passes it with no smash and the plating unchanged. Prints [barricade] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testBarricade;
     private int _brStep;
     private float _brClock;
     private bool _brListening;
-    private Barricade? _brR1, _brR2, _brR5;
+    private Barricade? _brR1, _brR2, _brR5, _brSlag;
+    /// <summary>Step E: r2_slag1's riders and their HP the frame before the smash; the plating as ride 2 departed; E judged.</summary>
+    private readonly Dictionary<Enemies.Enemy, (float Hp, float Max)> _brSlagRiders = new();
+    private float _brPlatingRide2 = float.NaN;
+    private bool _brEDone;
     private Adventurer? _brLow;
     private float _brLowMax;
     private Npc? _brGrisel;
@@ -76,10 +82,12 @@ public partial class DebugTools
         void Fail(string why) { GD.Print($"[barricade] RESULT FAIL: {why}"); party.ForcedMoveInput = null; _done = true; GetTree().Quit(1); }
         if (RailController.Instance is not { } rc || RailEncounterController.Instance is not { } enc) { if (_brClock > 3f) Fail("floor 12 has no line"); return; }
         BarricadeListen(rc);
-        foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive) e.Kill(); // the flow owns the plating and the HP
+        var spared = _brEDone ? null : enc.SlagCarts.FirstOrDefault(c => c.EncounterId == "r2_slag1")?.Aboard; // E: its cinders ride on to the slag-line barricade
+        foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive && (spared == null || !spared.Contains(e))) e.Kill(); // the flow owns the plating and the HP
         RideWaiveCages(main, rc, "barricade");
         if (party.Local is not { } me) { Fail("no human"); return; }
-        if (_brLow != null && !_brSmashLogged && _brStep >= BrLowFrom && IsInstanceValid(_brLow) && !_brLow.Downed) _brLow.State.Hp = _brLowMax * 0.05f; // held at 5% until the smash (a potion would lift it)
+        if (_brLow != null && _brEDone && !_brSmashLogged && _brStep >= BrLowFrom && IsInstanceValid(_brLow) && !_brLow.Downed) _brLow.State.Hp = _brLowMax * 0.05f; // held at 5% from E to the smash (a potion would lift it)
+        if (_brStep >= BrLowFrom && _brStep <= BrLowFrom + 1 && !_brEDone && BarricadeStepE(rc, enc, party, Fail)) return;
 
         switch (_brStep)
         {
@@ -88,9 +96,11 @@ public partial class DebugTools
                 _brR1 = enc.SetPieceNode("r1_barricade") as Barricade;
                 _brR2 = enc.SetPieceNode("r2_barricade") as Barricade;
                 _brR5 = enc.SetPieceNode("r5_barricade") as Barricade;
-                if (_brR1 == null || _brR2 == null || _brR5 == null) { Fail($"floor 12 lacks a barricade (r1 {_brR1 != null}, r2 {_brR2 != null}, r5 {_brR5 != null})"); return; }
+                _brSlag = enc.SetPieceNode("r2_slag_barricade") as Barricade;
+                if (_brR1 == null || _brR2 == null || _brR5 == null || _brSlag == null) { Fail($"floor 12 lacks a barricade (r1 {_brR1 != null}, r2 {_brR2 != null}, r5 {_brR5 != null}, r2 slag {_brSlag != null})"); return; }
                 if (_brR1.SlagLine || _brR2.SlagLine || _brR5.SlagLine) { Fail("a party-line barricade is on the slag line"); return; }
-                GD.Print($"[barricade] floor 12: r1 S={_brR1.S:0.0}, r2 S={_brR2.S:0.0}, r5 S={_brR5.S:0.0}; stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}, party damage scale {TierRules.PartyDamageScale:0.00}: a smash takes {BarricadeRules.SmashFraction(TierRules.PartyDamageScale):P1} of max HP");
+                if (!_brSlag.SlagLine) { Fail("r2_slag_barricade is not on the slag line"); return; }
+                GD.Print($"[barricade] floor 12: r1 S={_brR1.S:0.0}, r2 S={_brR2.S:0.0}, r5 S={_brR5.S:0.0}, r2 slag S={_brSlag.S:0.0} on the enemy line (party S={enc.Lanes.PartyS(_brSlag.S):0.0}); stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}, party damage scale {TierRules.PartyDamageScale:0.00}: a smash takes {BarricadeRules.SmashFraction(TierRules.PartyDamageScale):P1} of max HP");
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
                 _brGrisel = GriselNpc(root);
                 if (_brGrisel is not { Dead: false }) { Fail("no living Grisel on floor 12 (forgiven)"); return; }
@@ -132,7 +142,7 @@ public partial class DebugTools
                 if (!me.Seated || me.Cart != rc.Cart) { Fail("the lead did not take a seat"); return; }
                 if (_brGrisel!.Cart != rc.Cart) { Fail("Grisel did not take the bench at the landing"); return; }
                 GD.Print($"[barricade] B boarded at stop {rc.StopIndex}: {party.Active.Count(a => a.Cart == rc.Cart)} heroes seated (the lead in seat {rc.Cart.Seats.SeatOf(me.Index)}), Grisel on the bench");
-                if (BarricadeSight(rc, me) is { } blind) { Fail(blind); return; }
+                if (BarricadeSight(rc, enc, me) is { } blind) { Fail(blind); return; }
                 _brStep++; _brClock = 0f;
                 break;
             }
@@ -233,8 +243,7 @@ public partial class DebugTools
                 _brLow = party.Active.FirstOrDefault(a => a.Control == ControlKind.Companion && a.Cart == rc.Cart && !a.Downed);
                 if (_brLow == null) { Fail("C: no seated companion to bring to 5%"); return; }
                 _brLowMax = _brLow.State.Stats[Characters.Stat.MaxHp];
-                _brLow.State.Hp = _brLowMax * 0.05f;
-                GD.Print($"[barricade] C at stop 1: {_brLow.State.Name} set to 5% ({_brLow.State.Hp:0.0}/{_brLowMax:0}); Grisel seated={_brGrisel!.Cart == rc.Cart}, hp {_brGrisel.Hp:0.0}");
+                GD.Print($"[barricade] C at stop 1: {_brLow.State.Name} goes to 5% once E is judged ({_brLow.State.Hp:0.0}/{_brLowMax:0} now); Grisel seated={_brGrisel!.Cart == rc.Cart}, hp {_brGrisel.Hp:0.0}");
                 _brStep = BrLowFrom; _brClock = 0f;
                 break;
             }
@@ -242,6 +251,7 @@ public partial class DebugTools
             {
                 if (rc.State.Mode != CartMode.Rolling || enc.ArmedRide != 2) { if (_brClock > 20f) Fail($"ride 2 did not depart stop 1 (mode {rc.State.Mode}, armed {enc.ArmedRide}, gate {rc.GateUp(1)}, cage held {rc.CageHeld})"); break; }
                 if (_brGrisel!.Cart != rc.Cart) { Fail("C: Grisel is not on the bench for ride 2"); return; }
+                _brPlatingRide2 = rc.State.Plating;
                 GD.Print($"[barricade] C departed stop 1 with Grisel on the bench; nobody brakes or hits; r2_barricade's face at S={_brR2!.FaceS:0.0}");
                 _brStep++; _brClock = 0f;
                 break;
@@ -250,6 +260,7 @@ public partial class DebugTools
             {
                 party.ForcedMoveInput = null;
                 if (!_brSmashLogged) { if (_brClock > 90f || rc.StopIndex >= 2) Fail($"C: the cart did not smash r2_barricade (front {rc.Party.FrontS:0.0}, face {_brR2!.FaceS:0.0}, standing={_brR2.IsStanding}, stop {rc.StopIndex})"); break; }
+                if (!_brEDone) { Fail("E: r2_barricade was smashed before E was judged (the slag-line barricade)"); return; }
                 _brStep++; _brClock = 0f;
                 break;
             }
@@ -288,8 +299,8 @@ public partial class DebugTools
             {
                 if (rc.State.Mode != CartMode.Held || rc.Halted || rc.StopIndex != 2) { if (_brClock > 90f) Fail($"ride 2 did not reach stop 2 (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})"); break; }
                 rc.Restore(1);
-                GD.Print($"[barricade] D arrived at stop 2; rc.Restore(1): the cart at stop {rc.StopIndex}; r2_barricade standing={_brR2!.IsStanding} (it stands at ride 2's next arming)");
-                if (_brR2.IsStanding) { Fail("D: r2_barricade stood at the restore, before its ride armed"); return; }
+                GD.Print($"[barricade] D arrived at stop 2; rc.Restore(1): the cart at stop {rc.StopIndex}; r2_barricade standing={_brR2!.IsStanding}, r2_slag_barricade standing={_brSlag!.IsStanding} (they stand at ride 2's next arming)");
+                if (_brR2.IsStanding || _brSlag.IsStanding) { Fail("D: a ride-2 barricade stood at the restore, before its ride armed"); return; }
                 _brStep++; _brClock = 0f;
                 break;
             }
@@ -303,9 +314,10 @@ public partial class DebugTools
             {
                 if (enc.ArmedRide != 2) { if (_brClock > 15f) Fail($"D: ride 2 did not arm again from stop 1 (mode {rc.State.Mode}, stop {rc.StopIndex}, armed {enc.ArmedRide})"); break; }
                 var bar = _brR2!;
-                GD.Print($"[barricade] D ride 2 armed again: r2_barricade standing={bar.IsStanding}, left {bar.Left}, solid layer {bar.CollisionLayer}");
+                GD.Print($"[barricade] D ride 2 armed again: r2_barricade standing={bar.IsStanding}, left {bar.Left}, solid layer {bar.CollisionLayer}; r2_slag_barricade standing={_brSlag!.IsStanding}, left {_brSlag.Left}, solid layer {_brSlag.CollisionLayer}");
                 if (!bar.IsStanding || bar.Left != BarricadeRules.Toughness || bar.CollisionLayer != (1u | 4u)) { Fail("D: r2_barricade did not stand again at ride 2's arming"); return; }
-                GD.Print($"[barricade] D ok: down from the restore until ride 2 armed, then standing whole");
+                if (!_brSlag.IsStanding || _brSlag.Left != BarricadeRules.Toughness || _brSlag.CollisionLayer != (1u | 4u)) { Fail("D: r2_slag_barricade did not stand again at ride 2's arming"); return; }
+                GD.Print($"[barricade] D ok: both of ride 2's barricades down from the restore until ride 2 armed, then standing whole");
                 GD.Print("[barricade] RESULT ok");
                 party.ForcedMoveInput = null;
                 _done = true;
@@ -315,26 +327,75 @@ public partial class DebugTools
         }
     }
 
-    /// <summary>The step from which the 5% companion is held at 5% (until the smash).</summary>
+    /// <summary>The step from which the 5% companion is held at 5% (from E's judging until the smash).</summary>
     private const int BrLowFrom = 20;
 
     /// <summary>
-    /// Each barricade seen from the seated lead's eye with the cart's front 15 m and 35 m short of its face: a layer-1 ray to its lantern.
+    /// Step E, each frame of ride 2 until judged: r2_slag1's riders' HP is read every frame while r2_slag_barricade stands; once it is
+    /// down, each must be down 15% (+-1) of its max HP or dead, the party's cart must not have smashed it, and the plating must be as it
+    /// was at ride 2's departure with the front past it. Then the companion goes to 5% for C. True when the flow failed.
+    /// </summary>
+    private bool BarricadeStepE(RailController rc, RailEncounterController enc, PartyController party, Action<string> fail)
+    {
+        if (enc.ArmedRide != 2 || _brSlag == null) return false;
+        var bar = _brSlag;
+        var partyFace = enc.Lanes.PartyS(bar.FaceS);
+        if (bar.IsStanding)
+        {
+            if (enc.SlagCarts.FirstOrDefault(c => c.EncounterId == "r2_slag1") is { } cart)
+            {
+                _brSlagRiders.Clear();
+                foreach (var r in cart.Aboard) if (IsInstanceValid(r) && r.IsAlive) _brSlagRiders[r] = (r.Hp, r.MaxHp);
+            }
+            if (rc.Party.FrontS > partyFace + 40f) { fail($"E: the party's front is 40 m past r2_slag_barricade (party S {partyFace:0.0}) and it still stands (r2_slag1 on the line: {enc.SlagCarts.Any(c => c.EncounterId == "r2_slag1")})"); return true; }
+            return false;
+        }
+        // down: r2_slag1 smashed it this frame or the last (the riders' HP above is the frame before)
+        var lines = new List<string>();
+        var problems = new List<string>();
+        foreach (var (rider, (hp, max)) in _brSlagRiders)
+        {
+            var dead = !IsInstanceValid(rider) || !rider.IsAlive;
+            var now = dead ? 0f : rider.Hp;
+            var lost = hp - now;
+            lines.Add($"{rider.Name} {hp:0.0}->{(dead ? "dead" : now.ToString("0.0"))}/{max:0} (-{lost:0.0}, want -{max * BarricadeRules.SmashHpFraction:0.0})");
+            if (!dead && Mathf.Abs(lost - max * BarricadeRules.SmashHpFraction) > 1f) problems.Add($"{rider.Name} lost {lost:0.0} of {max:0}, not 15%");
+        }
+        if (_brSlagRiders.Count != 2) problems.Add($"r2_slag1 carried {_brSlagRiders.Count} rider(s) to the barricade, not its two cinders");
+        if (_brSmashLogged || enc.BarricadesSmashed > 0) problems.Add("the party's cart logged a smash");
+        if (rc.FrontOnEnemyLane) problems.Add("the party's cart is across on the slag line");
+        GD.Print($"[barricade] E r2_slag_barricade down (cut by \"{bar.CutBy}\") with the party's front at S={rc.Party.FrontS:0.0} (the barricade beside party S={partyFace:0.0}); riders [{string.Join(", ", lines)}]");
+        if (problems.Count > 0) { fail($"E: {string.Join("; ", problems)}"); return true; }
+        if (rc.Party.FrontS < partyFace + 1f) return false; // the party's front past its place before the plating is read
+        if (float.IsNaN(_brPlatingRide2) || !Mathf.IsEqualApprox(rc.State.Plating, _brPlatingRide2)) { fail($"E: the plating went {_brPlatingRide2:0.0} -> {rc.State.Plating:0.0} past r2_slag_barricade"); return true; }
+        GD.Print($"[barricade] E ok: r2_slag1 smashed r2_slag_barricade on the slag line, its {_brSlagRiders.Count} cinders each down 15% of max HP or dead; the party's cart passed it on its own lane, no smash, plating {rc.State.Plating:0} unchanged");
+        _brEDone = true;
+        if (_brLow != null && IsInstanceValid(_brLow) && !_brLow.Downed)
+        {
+            _brLow.State.Hp = _brLowMax * 0.05f;
+            GD.Print($"[barricade] C {_brLow.State.Name} set to 5% ({_brLow.State.Hp:0.0}/{_brLowMax:0}) for r2_barricade");
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Each barricade seen from the seated lead's eye with the cart's front 15 m and 35 m short of its face (a slag-line one's face read
+    /// across on the party's lane): a layer-1 ray to its lantern.
     /// The eye keeps its place in the cart's frame as it sits now. Null when every one is clear at 15 m, else why not.
     /// </summary>
-    private string? BarricadeSight(RailController rc, Adventurer lead)
+    private string? BarricadeSight(RailController rc, RailEncounterController enc, Adventurer lead)
     {
         var track = rc.Party.Track;
         var here = track.Frame(rc.State.S);
         var eyeLocal = here.AffineInverse() * lead.Camera.GlobalPosition;
         var space = lead.GetWorld3D().DirectSpaceState;
-        foreach (var bar in new[] { _brR1!, _brR2!, _brR5! })
+        foreach (var bar in new[] { _brR1!, _brR2!, _brSlag!, _brR5! })
         {
             var results = new List<string>();
             string? blocked15 = null;
             foreach (var d in new[] { 15f, 35f })
             {
-                var cartS = bar.FaceS - d - CartRules.HalfLength;
+                var cartS = (bar.SlagLine ? enc.Lanes.PartyS(bar.FaceS - d) : bar.FaceS - d) - CartRules.HalfLength; // a slag-line one from the party's own lane beside it
                 var eye = track.Frame(cartS) * eyeLocal;
                 var ray = PhysicsRayQueryParameters3D.Create(eye, bar.LanternPoint, 1, new Godot.Collections.Array<Rid> { bar.GetRid() });
                 var hit = space.IntersectRay(ray);
