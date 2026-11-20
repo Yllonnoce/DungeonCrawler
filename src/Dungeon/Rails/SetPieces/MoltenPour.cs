@@ -108,8 +108,8 @@ public partial class MoltenPour : Node3D
     }
 
     /// <summary>
-    /// The pour's cues (its hiss, its stream's loop) carry this far: a walker near it hears it, a cart held at stop 3 does not
-    /// (<see cref="SetPieceRules.CueRange"/> of its distance to stop 3, set at the floor's build on every role; 30 m until then).
+    /// The pour's cues (its hiss, its stream's loop) carry this far: a walker near it hears it, a cart held at any stop does not
+    /// (<see cref="SetPieceRules.CueRangeNearest"/>: the cue range of its distance to the nearest stop, set at the floor's build on every role; 30 m until then).
     /// </summary>
     public float CueRange { get; set; } = SetPieceRules.MaxCueRange;
     /// <summary>A phase seen this late (a floor clock that jumped: a load, a client's catch-up) is shown silently.</summary>

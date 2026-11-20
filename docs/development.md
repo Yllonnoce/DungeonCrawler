@@ -353,6 +353,7 @@ godot --headless --path . -- --test-hazard=spikes   # a pressure bed clicks, rai
 godot --headless --path . -- --test-tick-rate --physics-hz=90   # floor 1: the drop hammer's beat and the periodic spike cycle on the floor clock (DungeonBuilder.FloorTick) take 4.5 s of wall time; prints [tick-rate] RESULT ok hammer=<s> spikes=<s> (run it bare for 60 Hz; --physics-hz=N runs the physics at a headset's rate, debug only)
 godot --headless --path . -- --test-cart-watchdog   # floor 12, no enemies: a caught cart braked 15 s is not freed; let go it grinds free to stop 1 10 s later; caught short of ride 5's gap (the kiln's, from rc.Restore(LastRideStop)) it is set at the lip and leaps it; prints [watchdog] RESULT
 godot --headless --path . -- --test-relief[=beside|rails|refuse|ahead]   # floor 12 solo, lethality 1: the relief cart for a player who jumped from the cart (beside the line, on the rails, refused twice with a save and a load), and none while ahead of the train or behind the cart that met them; prints [relief] RESULT
+godot --headless --path . -- --test-crevasse[=trestle|survivor]   # floor 12 solo, lethality 3: walk the deck and a plank with companions (nobody falls), a companion, an enemy, a crew member and Grisel over a chasm (fallen, swallowed, lost, caught at the lip), the fallen back at stop 1, then the train falls at the jump (=trestle: with the trestle) and the wipe rises beside a fresh cart at the stop it left (=survivor: the human on foot, nobody wipes, the fallen come back on the platform, a save and load, the floor change to 13); see Rails, "Crevasses"; prints [crevasse] RESULT
 RIDE=1 scripts/net_test.sh                           # floor 12 in co-op: a server, a client and a joiner ride the whole line (see Rails, "Riding together"); run it alone, about 5 minutes
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
 godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
@@ -1094,8 +1095,8 @@ Item level is the floor (`TierRules.ItemLevel`). Base damage and the Armor base 
 
 ## Rails
 
-Ring floors can carry a mine-cart line round their outside (the floor 12 chase). Three `FloorSpec` knobs drive it, each set
-by a campaign floor through `SpecOverrides` (`"RailCount"`, `"RailLoop"`, `"RailBand"`); they only apply to the ring layout,
+Ring floors can carry a mine-cart line round their outside (the floor 12 chase). Four `FloorSpec` knobs drive it, each set
+by a campaign floor through `SpecOverrides` (`"RailCount"`, `"RailLoop"`, `"RailBand"`, `"Crevasses"`); they only apply to the ring layout,
 and with `RailCount` 0 (the default) nothing changes, byte for byte:
 - `RailCount` (0..6, clamped by `CampaignPlan`) is the number of stops past the start.
 - `RailLoop` puts the down stairs in the start room's nearer ring neighbour (by centre distance, ties to the lower index),
@@ -1104,6 +1105,9 @@ and with `RailCount` 0 (the default) nothing changes, byte for byte:
 - `RailBand` (default `RailRules.Band`, 6; clamped 6..16) is the band of rock outside the ring for the line. A railed ring
   grows the grid by the band on every side while the ring's radius shrinks by the same band, so the same rooms come out,
   translated by the band; room indices and order do not change, so plans keep pointing at the same rooms.
+- `Crevasses` (bool, default false, `[AiIgnore]`) cuts chasms beside a laid line and plank crossings in the halls (see
+  "Crevasses" below). It is its own knob, not keyed on `RailBand`, so with it false every floor's `ContentHash` is
+  unchanged. Floor 12 sets it in the built-in campaign's overrides.
 
 A band wider than 6 meanders the line (`FloorGenerator.Meander.cs`, no rng). After each stretch is routed, a ride
 (platform middle to platform middle) shorter than `RailRules.RideMinCells` (55 cells, 220 m) gets outward rectangular
@@ -1120,7 +1124,11 @@ party-lane indices at least `RailRules.CavernCells` (10) long, straight, whose c
 (3..7) steps outward were solid rock outside every room when the line was planned (the enemy lane is at 1 and its pockets
 at 2, so every pocket rule still holds). The window is taken on the plain route and the meander keeps off it; it is null
 when that stretch has no straight run long enough (about a third of seeds) and on every line that did not meander. It is
-not part of the content hash. Plan 10 carves the cavern from it in `LayRails`, right after `CommitRails`.
+not part of the content hash. The box is enforced, not only tested: stretches routed after the cavern's stretch treat it as
+foreign, no refuge pocket is placed in the cavern's reach (t = 2 .. 2 + `CavernDepth`) and the window's enemy-lane cells need
+no pocket cover; if a line or pocket cell still lands in the box, `CommitRails` drops the span (`Cavern = null`,
+`CavernBreached` true) rather than losing the line. With `Crevasses` on, `CarveChasms` cuts the cavern from it right after
+`CommitRails` (see "Crevasses" below).
 
 `FloorGenerator.LayRails` (`FloorGenerator.Rails.cs`) runs after the ring and its ramps, from its own salted rng
 (`new Random(seed ^ 0x2A11)`). On a railed floor the grid grows and the keep-clear rules change corridors, side rooms,
@@ -1136,7 +1144,9 @@ still be reachable on foot. The up stairs can never be on a lane. A requested li
 line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets. Before the drawing it
 prints `LayoutReport`: a `[map] room {i}: ({X},{Y}) {W}x{H} level={L} {hub|ring|side|secret}` line per room with its tags
 (`up`, `down`, `stop={k}`, `vault={index}`, `jail`, `safe`, `nest`, `camp`, `shrine`), then
-`[map] rail: stops=[rooms] rides~[m] total~{m} cavern={From}..{To}|none` (cells x 4 m), and the cart's measured
+`[map] rail: stops=[rooms] rides~[m] total~{m} cavern={From}..{To}|none|breached chasm={cells} strips={n} gorge=[{From}..{To}@{fFrom}-{fTo},…] planks={n}`
+(rides in cells x 4 m, platform middle to platform middle; `chasm` the floor's chasm cells, `strips` the edge strips, `gorge`
+each gorge span by party-lane index and as fractions of the last ride, `planks` the hall crossings), and the cart's measured
 `[map] rail StopS=[...] rides=[...] m total=... m`.
 `DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
@@ -1426,8 +1436,8 @@ Floor 12's five rides (`data/adventures/builtin/floor_12.json`; the lengths are 
 | 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_beam` the low beam (0.6) | plan 11: `r1_barricade` ~0.25 |
 | 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | — | plan 11: `r2_barricade` ~0.6, defended |
 | 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.55), `r3_buckets` (0.75) | plan 11: `switch_back` live and later, the broken bridge past the last return |
-| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.3, −4), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15) | plan 12: the dark ~0.1-0.4, the runaway from ~0.1, the split ~0.45; plans 10/13: the cavern on `Rail.Cavern` (bridge and spiral); plan 14: the leap beside `r4_slag`; plan 15: the loop |
-| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.55) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.6), `r5_jump` (0.75), `r5_spur` (0.85), `r5_buffer` (0.95) | plan 10: the trestle and the jump over a crevasse; plan 11: `r5_barricade` ~0.9 |
+| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.3, −4), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); the cavern under its deck (plan 10) | plan 12: the dark ~0.1-0.4, the runaway from ~0.1, the split ~0.45; plan 13: the cavern's collapsing bridge and spiral; plan 14: the leap beside `r4_slag`; plan 15: the loop |
+| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | plan 11: `r5_barricade` ~0.9 |
 
 Ride 1. The lone cinder stands on the party lane where the cart will come, and the cart runs it over. The thrower stands in
 the nearest party-side pocket and throws at the riders, with a hand glow of at least 1.5 s for its wind-up; it stays until a
@@ -1500,7 +1510,7 @@ until the heap is cleared by three hits from anyone on foot. Then the cart board
 on a cable over the line tip one at a time every 3 s, after a 1.5 s creak and glow. Each pours a cinder patch that burns
 for 4 s. A cart through a live patch loses 5 plating, and each seated hero takes one lick of the floor's cinder fire.
 
-The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.55) on that ride, an elite forge golem, "Kilnheart the Hulking",
+The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.49) on that ride, an elite forge golem, "Kilnheart the Hulking",
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and
 its death opens nothing. It is carried by an unseen runner paced beside the party's cart. While it is alongside (or within
 6.5 m) it slams the cart every 4 s after a 1.5 s hand glow, for 12 plating and a shake. The spur (`SpurSwitch`) is a dead-end
@@ -1563,8 +1573,8 @@ most one companion may go down by stop 2. At every stop the cart must stand with
 thrown through `DebugThrow()` as ride 2 starts, and must still be thrown at stops 2, 3 and 4. On ride 3 the switch is thrown by
 a hit (`ReceiveAttack`), and a second hit must leave it thrown: the cart must cross, ram the slag cart ahead and cross back,
 and the arrival at stop 3 must set that lever back. Ride 4 runs for real to stop 4, the kiln's stop. On ride 5, the kiln, the golem must
-come out as the cart reaches its At (0.55): the party S at its spawn (the `(party S=…)` of `[rails] golem r5_golem … bursts onto
-the enemy line`) must be at least StopS[4] + 0.55 × (StopS[5] − StopS[4]) − 1, and it must be a carried elite, never a boss. As
+come out as the cart reaches its At (0.49): the party S at its spawn (the `(party S=…)` of `[rails] golem r5_golem … bursts onto
+the enemy line`) must be at least StopS[4] + At × (StopS[5] − StopS[4]) − 1, and it must be a carried elite, never a boss. As
 the kiln's seated window offers the spur lever (thrown on ride 2), the seated lead sets it back and throws it again from the
 seat (`PartyController.VrUse`, the dispatch E uses; two `[chase] 4 seated window:` lines, the prompts "Set the switch back"
 then "Throw the switch", the lead still seated each time). A mashed press at once after the set-back must be ignored (`[chase] 4
@@ -1588,6 +1598,139 @@ after its warning, and the run ends with a table of each kind's first hit. A mis
 Tests: `tests/Dungeon/RailLineTests.cs` (the generator and the solvability check), `tests/Dungeon/RailCurvesTests.cs`
 (the smoothed rail centrelines), `tests/Dungeon/Rails/*` (the engine-free cart rules, `SetPieceRulesTests` among them) and
 `tests/Adventure/RailEncounterPlanTests.cs` (the ride plans and their validation). `tests/` is local and not in git.
+
+### Crevasses
+
+A railed floor with `FloorSpec.Crevasses` on has drops cut into its rock (plan 10; floor 12 in the built-in campaign).
+Everything here is built from the shared seed: clients build the same chasms and bridges, and nothing new goes on the wire
+but three fields in existing messages (`CharacterDto.Fallen`, `CartStateDto.Fell`, `ObjectiveStateDto.LostCages`). The
+protocol stays at 17. No crevasse code reads `TierRules.Lethality`: a fall is the same at every lethality.
+
+**Where the generator cuts them.** `FloorGenerator.CarveChasms` (`FloorGenerator.Chasms.cs`) runs in `LayRails` right after
+`CommitRails`, draws from no rng, and turns only rock and listed pockets into `Cell.Chasm`, so no walk is ever cut. Every
+chasm cell takes the level of the lane beside it, so its lip is that lane's floor. A crevasse never cuts a spawn, chest, key,
+trap, breakable, hazard, vault door, lever, objective cell, stair or platform (`TakenCells`), and never lies beside a ramp or
+over a cellar, a tunnel or the under layer. It cuts four kinds of drop:
+- **The cavern.** When the line kept its cavern window (`RailLine.Cavern`, see above), every rock or pocket cell of the
+  cavern's reach becomes chasm and both lanes over the span become timber **decks** (`BridgeKind.Deck`: walkable bridge
+  cells with no stone floor under them). The cart rides a plain trestle deck over the drop until plan 13 replaces it.
+- **Edge strips** (`RailLine.Strips`), 2 cells deep (`RailRules.StripDepth`), beside straight party-lane runs at least
+  `StripPlatformGap` (4) cells from either platform, at level 0 or 1 when the run is flat (no ramp in, beside or within a
+  cell of it, nothing walkable at another level round it), always with rock behind. A strip lies inward of the party lane
+  (t = −1, −2) when that rock is free, else outward of the enemy lane (t = 2, 3). Each ride takes its longest run of at
+  least `StripMinCells` (4; the middle `StripMaxCells`, 8, of a longer one), except the cavern's ride.
+- **The gorge** (`RailLine.Gorge`): on the last ride, every eligible run of two or more cells between fractions
+  `GorgeFrom` 0.30 and `GorgeTo` 0.90 of the ride (platform middle to platform middle) is cut, each run choosing its own
+  side (inward where free, else outward), so the gorge can switch sides along the ride. A pocket inside a strip or the
+  gorge is dropped, and a lane cell with a chasm within 2 cells needs no pocket cover.
+- **Plank crossings** (`FloorLayout.Walkways`, `BridgeKind.Plank`): up to `WalkwayCount` (3) level-0 cells of straight
+  one-cell halls at least `WalkwayRoomGap` (3) cells from any room, the rock `WalkwayReach` (2) cells deep either side cut
+  to chasm, chosen farthest-point from the up stairs and then from each other, at least `WalkwaySpacing` (8) apart. They are
+  planks only, never detours.
+
+`FloorLayout.Bridges`, `IsBridge`, `IsChasm` and `ChasmCount` read them; `--print-map` reports them on the `[map] rail` line
+(see above). Floor 12 (the shipped layout): cavern 238..259 on ride 4, chasm=210, strips=7, four gorge spans on
+ride 5 and planks=3. The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
+(At ± 2 m) inside a gorge span, since a trestle bridges a gorge from lip to lip, and `r5_jump` (0.65) has its whole gap
+(At ± 2.5 m) inside one span with half a cell to spare at each end; the order pour < trestle < jump < spur is kept, the golem
+going to 0.49. Building the kiln logs `[rails] r5_trestle over a crevasse: True` and `[rails] r5_jump over a crevasse: True`.
+
+**What it looks like.** `ChasmDressing` (`Dungeon/ChasmDressing.cs`) builds in two halves. The footings are built on every
+role, headless and the dedicated server included: a bridge cell has no stone floor, so a deck's or a plank's
+`StaticBody3D` box (a plank's boards 1.6 m wide, `CrevasseRules.PlankWidth`) is the only thing a walker stands on there.
+The look is skipped headless: per 4-connected region of chasm-or-bridge cells, shaft walls (near-black at the rim, warming
+with depth), an ember floor and its light far below, two drifting smoke layers that fade as you near them (never a pale
+plane), the deck slabs on bents and the planks, on the existing `weathered_planks` texture. Every build prints
+`[chasm] regions= decks= planks=` (floor 12: 11, 44, 3). A level-1 bridge beside lower walkable ground would leave an
+open band under its deck; `FloorLayout.IsShutUnder` keeps a plinth there, so nobody walks in under a deck.
+
+**Who falls.** `CrevasseWatch` (`Dungeon/CrevasseWatch.cs`, a node on a crevasse floor) judges falls on the server and in
+single player only. Each physics tick it checks every hero on foot (a remote player's by the server's copy of its body),
+every living enemy no cart carries and every NPC alive and on foot: a body over a drop cell (`CrevasseRules.IsDrop`, a
+chasm or a bridge) and `FallDepth` (2.5 m) below that cell's floor has fallen (`CrevasseRules.Fell`), and is taken
+(`CrevasseWatch.Take`). Its fate (`CrevasseRules.FateOf`; an NPC's kind by `CrevasseRules.NpcBody`):
+- **A hero** is `CharacterState.Fallen`: down at 0 HP, hidden, not solid and held 6 m under the lip (`HoldDepth`, above
+  `Adventurer.FellOutY`, so it never trips the fell-out guard). Heal, Regenerate, Revive and a level-up's heal do nothing
+  while fallen, and `Downed` counts it, so a party with every hero fallen or down wipes. `Fallen` is saved
+  (`CharacterDto.Fallen`) and reaches clients in the `PartySync` sheet. `Adventurer.FellOut` over a chasm or bridge cell
+  holds the body still instead of putting it back on its last ground: a client waits for the server's word.
+- **Crew and any other NPC** are lost: they die, hidden and held where they fell (a dead fallen NPC is hidden on clients
+  and after a load too, unseated below the lip).
+- **An escort** (any NPC escorting the party, and Grisel, any id in `CrewRescueController.EscortIds`, whether or not she is
+  escorting at that moment) is caught at the lip: laid down but not Mangled on the lip cell (`CrevasseRules.LipCell`: the
+  nearest settable cell off the lanes within `LipReach`, 3, else the nearest within `LipSearch`, 6; else any cell a body may
+  be set down on, `EscortCell`), so the usual "Revive {name}" prompt serves. A fall never kills an escort and never lays
+  her over a drop; with no walkable cell at all (it should not happen) she is held on the stop platform and an ERROR is logged.
+- **An enemy** (a boss too) dies with no loot; the log says "The crevasse swallows …" (`HazardDamage.Fall`, byte 3).
+
+**The walking warning.** A hero on foot within `WarnCells` (2) of a chasm region not yet warned of on this floor visit makes
+the nearest companion within 12 m (else that hero) call `BarkTrigger.Crevasse` (subtitle-only stock lines in `RideBarks`);
+the log says "Mind the edge — that drop has no bottom." The jump keeps its own `JumpCall`.
+
+**The footing guard** (no death the player could not see coming). A body the game steers (a companion, a hero bot) never
+walks itself into a drop: `CrevasseRules.KeepFooting` clamps its velocity before `MoveAndSlide` so it never leaves a chasm's
+edge or a plank's boards (`FootingMargin` 0.2 m inside them), `FollowSpot` puts its formation slot and regroup point on
+footing (followers go in file along a bridge, `FileGap` 1.5 m apart), `NearestStandable` finds the nearest footing to a
+point, `PathMover` refuses a shortcut that crosses a drop, and every set-down (a stop, a traffic refuge) goes through
+`SetDownOk`. The existing regroup teleport usually pulls a companion knocked over a lip back before it drops 2.5 m.
+
+**The train falls.** Over a crevasse is geometry, not data: a party-lane cell that is a bridge or has a chasm within
+`OverReach` (2) cells (`CrevasseRules.OverCrevasse`). A missed jump or a trestle collapse over such cells calls
+`RailController.Fall(why)` (`RailController.Fall.cs`), the entry later plans call; anywhere else it is the plain wreck.
+A fall is a wreck with no tumble: the riders, the hounds aboard, every coupled wagon and its crew go into the crevasse
+(`TakeTheTrain` takes the riders over the nearest drop), the wagons are hidden and marked lost
+(`ObjectiveStateDto.LostCages`). A spare takes over only if a hero still stands (`CrevasseRules.SpareAfterFall`), so a fall
+that takes everyone spends no spare before the wipe. On the wire it is the usual Wrecked state plus `CartStateDto.Fell`
+(`CartFlags` has no free bit): a client plays the plunge, not the tumble, on that rising edge; the sound reuses `cart_wreck`.
+
+**The fallen come back** (`FallenReturn`, `RailController.ReturnFallen`, `PartyController.ReturnFallen`) at 25 % of max HP
+(`ReturnHpFraction`) with effects cleared, on a cell of their own (`SetDownCells`), when:
+- the party's cart rolls into a stop (its arrival, never a spare's takeover), beside the cart;
+- a living hero on foot steps onto any stop's platform after the fall (one standing on a platform at the fall must step off
+  and back on), beside that hero;
+- the cart is restored (`RailController.Restore`: a load, a wipe's rise), beside the cart at its stop;
+- the floor changes, or a floor with no line is loaded (`CrevasseRules.ReturnOnRebuild`), at the arrival spot;
+- a parked hero (a player who left fallen) unparks: it comes back after the unpark's teleport. A rejoining player is put
+  at its parked pose only when `CrevasseRules.RejoinAtParkedPose` holds (never for a fallen hero, never below a lip);
+  otherwise at the stairs, so it never rejoins in the dark.
+
+**The arrival snapshot and the wipe's rise** (rulings 14 and 15). On the server and in single player,
+`RailController.ArrivalSnapshot` is a whole `FloorStateDto` captured one frame after every `Arrived` and `Restored` event.
+A wipe on a floor whose cart has a snapshot (any cause, on foot or aboard; `Main.RiseAtTheLastStop`) keeps its own live
+capture and takes the train from the snapshot (`Save.Core.RailArrival.Merge`): always the `RailStop`. On the crew trial's
+floor (a `CrewRescueController` is built) it also takes the crew's `NpcDto`s and the objective's `Completed`, `FreedNpcs`,
+`OpenCages`, `CoupledCages`, `HomeCrew`, `LostCrew` and `LostCages`; Grisel's (an escort's) entry comes from the arrival too,
+unless she is Dead or Fled at the wipe (a fall never kills her, so that came from combat or her betrayal), when her live
+entry and quest state stand. On any other railed floor only the stop is taken: its objective stands as the wipe found it.
+Spares, gates, the orc's keys, enemies and chests stay as they are at the wipe. A win since the arrival is taken back with
+the train (`CrewRescueController.TakeBackWin` clears the flag this build set, `AdventureDirector.ClearFlag`, e.g.
+`jailbreak_freed_all`, and the stairs stay shut); while the rise is pending (`Main.RiseAtCartPending`) the crew trial wins
+nothing. The rebuild then calls `RailController.RiseBesideCart` deferred, after `Restore`'s own set-down: every hero not
+parked (remote players' too) and every escort on foot is put on its own cell beside the fresh cart at that stop
+(`ExitCellNear`: never a drop, a rail or a siding), facing it, and no spare is spent (`[rails] wipe-rise: N hero(es) beside
+the cart at stop K`). The server places a remote hero before its client is ready again, so the `OnFloorReady` ForcePose
+lands it there (the RIDE pass's last step proves it). A wipe before the first arrival rises at the up stairs, beside stop 0.
+
+`--test-crevasse[=trestle|survivor]` (`DebugTools.Crevasse.cs`) plays floor 12 of the built-in campaign at lethality 3, solo,
+Grisel forgiven, and prints `[crevasse]` lines and a `[crevasse] RESULT`. A0: the human walks the cavern deck end to end and a
+plank there and back with the companions following, and nobody falls (the footing guard). A1: a companion over a chasm falls
+(fallen, down, hidden, no auto-revive 8 s on). A2: an enemy dies to it ("The crevasse swallows"). A3: a crew member out of
+their wagon is lost, Grisel caught at the lip (down, not dead, escorting, revivable). A4: on ride 1's arrival at stop 1 A1's
+companion is back within 1 s, up at a quarter of its HP beside the cart. B: with stop 1's wagon coupled and Grisel on the bench,
+the cart restored at the kiln's stop and nobody pumping, the train misses the jump over the gorge and falls: every rider
+fallen, the wagon lost, its crew dead, Grisel down at the lip, no spare spent. C: the wipe that follows rises at the stop the
+train left within 10 s: the cart Held, whole and seen, the train as it arrived, the crew alive again, Grisel up and
+escorting, every hero up beside the cart at full HP, no spare spent, a fifth of the gold gone, the Scar on, the trial (its flag,
+the stairs) as at the arrival. After every step nobody but the step's own victim is fallen. `=trestle` makes the human brake on
+the trestle, which falls with the train on it, then C. `=survivor` has the human get out at the stop as the cart departs: after
+the fall nobody wipes, a spare waits, and the human stepping onto its platform brings the fallen back; a fresh capture names the
+lost wagon and its crew, a save and load keep the wagon hidden and its crew dead below the lip, and a hero fallen again comes
+back on the floor change to 13.
+
+Tests: `tests/Dungeon/ChasmTests.cs` (the carving, the walkways, `IsShutUnder`), `tests/Dungeon/CrevasseRulesTests.cs` (the
+fates, `NpcBody`, the lip, the footing guard, the rejoin and return rules), `tests/Dungeon/Rails/FallenReturnTests.cs`,
+`tests/Save/RailArrivalTests.cs` (the merge), `tests/Adventure/RideBarksTests.cs` and `tests/Dungeon/RailLineTests.cs`
+(`DefaultKnobs_BuildTodaysFloors` pins every floor with `Crevasses` off; the strip, gorge and cavern sweeps).
 
 ### Lines, sound and music
 
@@ -2074,7 +2217,7 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 **How to run it.** Build first, then run `RIDE=1 scripts/net_test.sh`.
 - It starts one server on the built-in campaign: `--test-net-server --net-test-ride --objective=jailbreak --seed=4242 --lethality=1`.
 - It starts the first client ("Rider") once floor 1 is built, and a second ("Joiner", `--net-test-ride-join`) as the cart leaves stop 1.
-- It takes about 5 minutes (293 s measured). Seed 4242's floor 12 builds the shipped layout (the same line, five rides).
+- It takes about 5 minutes (291 s measured with the wipe's rise at the end). Seed 4242's floor 12 builds the shipped layout (the same line, five rides).
 - Every stop and ride the pass names for the kiln or the end of the line reads `LineShape` (`NetTestFlow.Line`): the kiln is ride
   `LastRide` (5) from stop `LastRideStop` (4), the end of the line stop `Rides` (5). The script's strings name them as numbers.
 
@@ -2100,6 +2243,7 @@ refuses it within 1 s of the first client's toggle (`seated window: set back …
 10. **The wrecks.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 to 3 unused, and spare 3 takes over (`SpareRules.Pick`: the nearest unused stop). The heap stands on ride 3, so 3 s later the server wrecks it again and spare 2 takes over, Held at stop 2 (`wreck-spare`): on a line of any length it wrecks every 3 s until the spare of the stop the heap's ride leaves stands (`NetTestFlow.HeapStop`). The joiner sees each Wrecked state (two) and the takeover at stop 2, and must hear `cart_wreck` once: the end's wreck stands beside it, the second far out of a wreck's 30 m earshot (`RideAudio.At`).
 11. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
 12. **The last wreck.** The joiner gets out. 3 s later the server wrecks the cart (`DebugWreck`) until no spare is left, so it stands wrecked and hidden (`wreck-last`). The joiner hears that wreck live (`cart_wreck` at least once). 7 s later it asks for the floor again. Its rebuilt cart's first state carries Wrecked, and that catch-up must play nothing: no wreck shown (`NetWrecksSeen` 0), no `cart_wreck`, no tumble (`last-wreck-resync ok`).
+13. **The wipe's rise** (plan 10). The joiner says it is ready (a chat line, `ride: ready for the wipe`). The server gives every hero not parked to the crevasse where it stands (`CrevasseWatch.Take`), so the party wipes; the wipe rises at the last stop reached beside a fresh cart (`RailController.RiseBesideCart`), and the server prints `[net-server] ride: wipe-rise: N hero(es) beside the cart at stop K` (its RESULT needs every hero not parked, the joiner among them, up within 10 m of the cart). The joiner waits for the rebuilt floor 12 and for a ForcePose after it (the `OnFloorReady` answer to its Ready), then half a second, and prints `[net] ride: rose beside the cart at stop K (d=… m)`, its own hero's distance from the party's cart. The script fails with "the wipe did not set the remote player down beside the cart" unless the server's line is there and d ≤ 6.0. This is the proof that the server places a remote hero before its client is ready again.
 
 The kiln's first hammer (`HammerIndexOf(LastRide)`) is paired all through the pass.
 
@@ -2139,7 +2283,8 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - a floor change with a hero seated in the chaser: it relies on the `Teleport` unseat, the same path the party cart's riders take live;
 - a downed rider's "Get out" intent and a seated pose's Dodge flag, both now refused on the server (code and rule tests only);
 - the rim-spot cap with one awake rider (the RIDE pass's hounds went to the crewed wagon), and a remote seated body's presentation (no run gait or footsteps; nothing checks animation or audio);
-- a wipe's reload mid-ride. The resync runs the same `OnFloorReady` catch-up;
+- a wipe's reload mid-ride. The pass's wipe (step 13) comes with the cart wrecked and held, and the resync runs the same `OnFloorReady` catch-up;
+- a fall on a client: the plunge (`CartStateDto.Fell`), a remote player's own fall over a drop, the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire;
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing.
 

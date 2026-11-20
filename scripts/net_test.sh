@@ -286,6 +286,14 @@ if [ "${RIDE:-}" = 1 ]; then
   BOOKS_RC=$?
   echo "--- the joiner and the books, client vs server: $BOOKS"
   if [ $BOOKS_RC -ne 0 ]; then echo "NET TEST: FAIL (the joiner or the client did not see the ride as the server has it: $BOOKS)"; exit 1; fi
+  # the wipe's rise (plan 10 task 9): every hero the server holds is given to the crevasse, the party wipes and rises beside the
+  # fresh cart at the last stop reached; the joiner, placed there by the server before it is ready again, stands within 6 m of the
+  # party's cart once the floor-ready ForcePose has landed
+  echo "--- wipe-rise"; grep -h "\[net-server\] ride: wipe-rise: \|\[net\] ride: rose beside the cart" "$TMP/server.log" "$TMP/joiner.log" 2>/dev/null
+  RISE_D=$(grep -o "\[net\] ride: rose beside the cart at stop [0-9]* (d=[0-9.]* m)" "$TMP/joiner.log" 2>/dev/null | head -1 | sed 's/.*(d=\([0-9.]*\) m)/\1/')
+  if ! grep -q "\[net-server\] ride: wipe-rise: [1-9][0-9]* hero(es) beside the cart at stop [0-9]*$" "$TMP/server.log" || [ -z "$RISE_D" ] || ! awk -v d="$RISE_D" 'BEGIN { exit !(d <= 6.0) }'; then
+    echo "NET TEST: FAIL (the wipe did not set the remote player down beside the cart)"; exit 1
+  fi
   echo "NET TEST: ok"; exit 0
 fi
 
