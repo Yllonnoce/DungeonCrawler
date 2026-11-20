@@ -74,6 +74,13 @@ public static class CrevasseRules
     public static GridPos? NearestSetDown(FloorLayout l, GridPos near)
         => Nearest(l, near, Math.Max(l.Width, l.Height), c => SetDownOk(l, c));
 
+    /// <summary>
+    /// Where an escort who fell near <paramref name="near"/> is laid: the <see cref="LipCell"/>, else the <see cref="NearestSetDown"/>
+    /// anywhere on the floor; null when the floor has no such cell (unreachable: the caller then lays her at the fall's lip point).
+    /// A fall never kills an escort.
+    /// </summary>
+    public static GridPos? EscortCell(FloorLayout l, GridPos near) => LipCell(l, near) ?? NearestSetDown(l, near);
+
     private static GridPos? Nearest(FloorLayout l, GridPos near, int reach, Func<GridPos, bool> ok)
     {
         GridPos? best = null;

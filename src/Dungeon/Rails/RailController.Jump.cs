@@ -8,7 +8,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// A gap in the party line (<see cref="SetGap"/>, a jump on ride 4): when the cart's front reaches its lip the cart either flies
 /// (<see cref="SetPieceRules.JumpMade"/>: S runs on and the pose rises by <see cref="SetPieceRules.ArcHeight"/> over the gap, read
-/// per S so each coupled wagon flies at its own S) or drops in and is wrecked. Companions pump while the lip is within
+/// per S so each coupled wagon flies at its own S) or drops in and is wrecked; over a crevasse (<see cref="OverCrevasse"/>) the
+/// train falls instead (<see cref="Fall"/>). Companions pump while the lip is within
 /// <see cref="PumpForJump"/> metres ahead. The pose composes with a lane blend (<see cref="LaneFrame"/>) through one
 /// <see cref="CartRun.FrameAt"/>. Server only.
 /// </summary>
@@ -23,6 +24,8 @@ public partial class RailController
     /// <summary>The speed the cart left the lip at, or 0 while it has not flown.</summary>
     private float _jumpV;
     private bool _landed;
+    /// <summary>The gap set this ride lies over a crevasse (<see cref="OverCrevasse"/>): a drop in is a fall, not a wreck.</summary>
+    private bool _gapOverCrevasse;
     private Func<float, Transform3D>? _partyFrame;
 
     /// <summary>The party line's S where the gap starts (the lip), or NaN when no gap waits this ride.</summary>
@@ -42,7 +45,34 @@ public partial class RailController
         _gapTo = to;
         _jumpJudged = _landed = false;
         _jumpV = 0f;
+        _gapOverCrevasse = OverCrevasse(from, to);
         RefreshFrameAt();
+    }
+
+    /// <summary>A party-line S is sampled this often by <see cref="OverCrevasse"/>.</summary>
+    const float OverCrevasseEvery = 1f;
+
+    /// <summary>
+    /// Some party-lane cell under the line from S <paramref name="from"/> to <paramref name="to"/> (sampled every metre, both ends
+    /// included) is over a crevasse (<see cref="CrevasseRules.OverCrevasse"/>, ruling 7): a missed jump or a fallen trestle there is a
+    /// fall. False on a floor without chasms.
+    /// </summary>
+    public bool OverCrevasse(float from, float to)
+    {
+        if (_layout == null || _layout.ChasmCount == 0 || !Party.Track.Valid) return false;
+        for (var s = from; ; s += OverCrevasseEvery)
+        {
+            var at = Mathf.Min(s, to);
+            if (CrevasseRules.OverCrevasse(_layout, DungeonBuilder.WorldToCell(Party.Track.Point(at)))) return true;
+            if (at >= to) return false;
+        }
+    }
+
+    /// <summary>The cart dropped into the gap (<see cref="JudgeJump"/>): over a crevasse the train falls, anywhere else it is wrecked.</summary>
+    private void DropIn()
+    {
+        if (_gapOverCrevasse) FallNow("The cart drops into the crevasse!");
+        else Wreck();
     }
 
     /// <summary>
@@ -67,6 +97,7 @@ public partial class RailController
         _gapFrom = _gapTo = float.NaN;
         _jumpJudged = _landed = false;
         _jumpV = 0f;
+        _gapOverCrevasse = false;
         RefreshFrameAt();
     }
 
@@ -106,7 +137,7 @@ public partial class RailController
 
     /// <summary>
     /// Right after a step: the front reached the lip. Fast enough, the cart flies (the arc poses it); too slow, it drops in and
-    /// the plating goes (the caller wrecks it). The landing shakes the riders. True when it dropped in. The cart's sound hears the leap and the landing (<see cref="Airborne"/>); a drop in ends in the wreck's cue.
+    /// the plating goes (the caller drops it in: <see cref="DropIn"/>, a wreck or, over a crevasse, a fall). The landing shakes the riders. True when it dropped in. The cart's sound hears the leap and the landing (<see cref="Airborne"/>); a drop in ends in the wreck's cue.
     /// </summary>
     private bool JudgeJump()
     {
@@ -132,7 +163,7 @@ public partial class RailController
             return false;
         }
         GD.Print($"[rails] the cart is too slow for the gap {_gapFrom:0.0}-{_gapTo:0.0}: v {State.V:0.00} < {SetPieceRules.JumpSpeed:0.0} (front {Party.FrontS:0.0})");
-        EventBus.Instance.Log("The cart drops into the gap!");
+        if (!_gapOverCrevasse) EventBus.Instance.Log("The cart drops into the gap!"); // over a crevasse the fall says why
         foreach (var rider in Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.14f, 0.8f);
         Props.Tremor.ShakeOnly(0.05f, 0.6f);

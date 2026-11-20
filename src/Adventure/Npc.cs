@@ -336,6 +336,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     private void ClientTick(float dt)
     {
         ClientBleed(dt);
+        if (Dead && Visible && InTheDark()) Visible = false; // the server hid it as it fell (CrevasseWatch.Take): its copy here is hidden too
         var before = GlobalPosition;
         // a seat here (the server's SeatMsg) carries it: its ride's owner calls FollowSeat each rendered frame. One the server says is
         // seated whose SeatMsg has not come yet stays put rather than slide 100 ms behind a moving cart
@@ -843,6 +844,19 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             _model?.Play(downed ? "Death" : "Idle", force: true);
         }
         if (dead) { Dead = true; CollisionLayer = 0; _label.Text = $"{NpcName} (dead)"; _model?.Play("Death", force: true); }
+        if (Dead && position != null && !Net.NetSession.IsClient && InTheDark()) { Visible = false; Velocity = Vector3.Zero; SetPhysicsProcess(false); } // a save's body gone into a crevasse stays there, unseen, as the fall left it
+    }
+
+    /// <summary>
+    /// The body lies below the lip of the drop it is over (<see cref="CrevasseRules.Fell"/>): a crevasse took it. A dead one there is
+    /// hidden on every role: the server's fall hides it (<see cref="CrevasseWatch.Take"/>), a client's copy and a load hide it by this.
+    /// </summary>
+    private bool InTheDark()
+    {
+        if (Main.Instance?.Builder is not { Layout: { } layout } builder) return false;
+        var at = GlobalPosition;
+        var cell = DungeonBuilder.WorldToCell(at);
+        return CrevasseRules.IsDrop(layout, cell) && CrevasseRules.Fell(layout, cell, at.Y, builder.Surface(cell).Y);
     }
 
     public void FaceToward(Vector3 target)

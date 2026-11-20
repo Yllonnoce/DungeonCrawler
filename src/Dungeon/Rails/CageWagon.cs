@@ -51,6 +51,8 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     public bool Open { get; private set; }
     /// <summary>Coupled behind the party's cart: the RailController poses it.</summary>
     public bool Coupled { get; private set; }
+    /// <summary>Gone into a crevasse with the train (plan 10): hidden, not solid, offering nothing. Saved (<c>ObjectiveStateDto.LostCages</c>).</summary>
+    public bool Lost { get; private set; }
 
     public CartSeats Seats { get; } = new();
     public Dictionary<int, ICartRider> Riders { get; } = new();
@@ -94,8 +96,17 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     public void SetCoupled(bool coupled)
     {
         Coupled = coupled;
-        CollisionLayer = coupled ? 8u : 1u | 8u;
+        CollisionLayer = Lost ? 0u : coupled ? 8u : 1u | 8u;
         if (!coupled) Speed = 0f;
+    }
+
+    /// <summary>Lost (true) into a crevasse: hidden and not solid where it stands; false shows it again (the crew controller's coupling clears it).</summary>
+    public void SetLost(bool lost)
+    {
+        Lost = lost;
+        Visible = !lost;
+        CollisionLayer = lost ? 0u : Coupled ? 8u : 1u | 8u;
+        if (lost) Speed = 0f;
     }
 
     /// <summary>

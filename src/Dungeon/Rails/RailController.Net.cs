@@ -8,7 +8,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// The party's cart on the wire. The server captures its state for <see cref="RailNet"/> (<see cref="CaptureNet"/>, with a cheap
 /// <see cref="NetSignature"/> to tell when it changed). A client follows that state: <see cref="ApplyNet"/> feeds a
 /// <see cref="CartFollower"/> (this controller is its <see cref="ISlopeSource"/>), applies the lane, the gap, the train, the
-/// flags and the HUD fields, and plays the tumble and the wreck's cue on a wreck's rising edge; each rendered frame poses the cart, the train and
+/// flags and the HUD fields, and plays the tumble (or, for a fall, the plunge) and the wreck's cue on a wreck's rising edge; each rendered frame poses the cart, the train and
 /// the riders at the follower's S (<see cref="ClientPose"/>). A client never steps, judges or raises anything.
 /// </summary>
 public partial class RailController : ISlopeSource
@@ -58,7 +58,7 @@ public partial class RailController : ISlopeSource
         var input = HashCode.Combine(Party.LastInput.Brake, _playersPumping);
         // the armed ride and its arm time (a client's buckets run from it): an arming in a cart event is sent with it anyway, this is the backstop
         var armed = RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? HashCode.Combine(enc.ArmedRide, enc.ArmedAt) : 0;
-        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input, armed));
+        return HashCode.Combine((int)State.Mode, StopIndex, NetFlags(), line, train, Boarding.Running, (int)State.Plating, HashCode.Combine(Wrecks, boarders, input, armed, LastWreckFell));
     }
 
     /// <summary>Players pumping the cart this tick (<see cref="Inputs"/>; 0 under a brake).</summary>
@@ -110,6 +110,7 @@ public partial class RailController : ISlopeSource
             BlockedAt = LineBlocked && !OnEnemyLane(BlockedAt) ? BlockedAt : float.NaN, // as HitBlock judges it: a cart across on the enemy lane passes it
             BoardingLeft = Boarding.Running ? Boarding.Left : -1f, Train = train, Boarders = boarders, WagonBoarders = wagonBoarders, ServerTime = serverTime,
             ArmedRide = enc?.ArmedRide ?? -1, ArmedAt = enc != null && enc.ArmedRide >= 1 ? enc.ArmedAt : 0,
+            Fell = LastWreckFell,
         };
     }
 
@@ -174,6 +175,9 @@ public partial class RailController : ISlopeSource
     /// Client: the server's state of the party's cart, applied at <paramref name="serverNow"/>. Sets no server state. The first state
     /// this controller takes (a join, a floor's resend, a revisit) is a catch-up and primes the edges: its flags and mode are adopted,
     /// but a cart already wrecked plays no wreck (no cue, no tumble, not counted) and a cart already rolling records no departure.
+    /// A wreck that was a fall (<see cref="CartStateDto.Fell"/>) plays the plunge for the cart and the wagons of the last train told here,
+    /// and hides those wagons as lost once the state's train (none: the server uncoupled it) is applied. A catch-up plays nothing: it
+    /// has been told no train yet, and the floor's objective state hides the lost wagons (<c>ObjectiveStateDto.LostCages</c>).
     /// </summary>
     internal void ApplyNet(CartStateDto d, double serverNow)
     {
@@ -181,11 +185,17 @@ public partial class RailController : ISlopeSource
         var firstState = _follow is not { HasState: true }; // before this state is applied: nothing seen yet, so nothing rises
         _follow ??= new CartFollower(this);
         (Cart.NetRun, Cart.NetFollow) = (Party, _follow); // a seated headset's comfort inputs read the server's ride
+        List<CageWagon>? lost = null;
         if (!firstState && CartSendRules.WreckedRose(_netFlags, d.Flags))
         {
             NetWrecksSeen++;
             NetWreckedAt = d.ServerTime;
-            if (Cart.Visible) Tumble(); // where it stands now, before the state moves it
+            if (d.Fell)
+            {
+                lost = new List<CageWagon>(_train.Wagons); // the last train told: it went over with the cart
+                Plunge(lost, cart: Cart.Visible); // where they stand now, before the state moves them
+            }
+            else if (Cart.Visible) Tumble(); // where it stands now, before the state moves it
             RideAudio.At("cart_wreck", Cart.GlobalPosition); // once per wreck, shown or not (a wreck frame comes even when a spare takes over in the same tick)
         }
         _netFlags = d.Flags;
@@ -197,6 +207,9 @@ public partial class RailController : ISlopeSource
         ApplyLaneNet(d.CrossOut, d.CrossBack);
         ApplyGapNet(d.GapFrom, d.GapTo, d.JumpV);
         ApplyTrain(d.Train);
+        if (lost != null)
+            foreach (var wagon in lost)
+                if (IsInstanceValid(wagon) && !wagon.Coupled) wagon.SetLost(true); // after the train: its uncoupling shows every wagon it lets go
         Party.Dir = d.Dir >= 0 ? 1 : -1;
         Party.Limit = d.Limit;
         _follow.Apply(d, serverNow);

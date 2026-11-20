@@ -407,13 +407,13 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// and mode from its state; the server judges the use again when the intent arrives.
     /// </summary>
     private string WagonPrompt(CageWagon wagon, Adventurer hero)
-        => PropPromptRules.CagePrompt(wagon.Open, OrcKeys, !wagon.Open && !OrcKeys && GriselOpens(wagon) is not null, wagon.Open && CanLetOut(wagon),
+        => wagon.Lost ? "" : PropPromptRules.CagePrompt(wagon.Open, OrcKeys, !wagon.Open && !OrcKeys && GriselOpens(wagon) is not null, wagon.Open && CanLetOut(wagon),
             wagon.Open ? DownedAboard(wagon)?.NpcName : null);
 
     /// <summary>A hero used the wagon: the server's (or solo) work, a remote player's through its InteractIntent (the server checked the reach); a hero who is down does nothing.</summary>
     private void UseWagon(CageWagon wagon, Adventurer actor)
     {
-        if (NetSession.IsClient || actor.Downed || Main.Instance is not { InGame: true } main || main.Builder.Layout != Layout) return;
+        if (NetSession.IsClient || actor.Downed || wagon.Lost || Main.Instance is not { InGame: true } main || main.Builder.Layout != Layout) return;
         var party = main.Party;
         if (!wagon.Open)
         {
@@ -555,7 +555,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (e.Kind != CartEventKind.Departed) return;
         foreach (var wagon in _wagons)
         {
-            if (wagon.Stop != e.Stop || !wagon.Open || wagon.Coupled || !AnyAboard(wagon)) continue;
+            if (wagon.Stop != e.Stop || !wagon.Open || wagon.Coupled || wagon.Lost || !AnyAboard(wagon)) continue;
             Couple(wagon);
             EventBus.Instance.Log("The cage wagon couples on behind.");
         }
@@ -604,6 +604,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     private void Couple(CageWagon wagon)
     {
+        wagon.SetLost(false); // a wagon on the train is never lost
         _rails!.Couple(wagon);
         _builder?.UnblockCell(wagon.Cell);
         foreach (var npc in Aboard(wagon)) npc.FollowSeat();
@@ -626,6 +627,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         dto.CoupledCages = _rails != null && IsInstanceValid(_rails) ? _rails.Train.Select(w => w.Stop).ToList() : new List<int>();
         dto.HomeCrew = _crew.Where(c => _home.Contains(c.Id)).Select(c => c.Id).ToList();
         dto.LostCrew = _crew.Where(c => !IsInstanceValid(c) || c.Dead).Select(c => c.Id).ToList();
+        dto.LostCages = _wagons.Any(w => w.Lost) ? _wagons.Where(w => w.Lost).Select(w => w.Stop).ToList() : null;
         dto.OrcKeys = OrcKeys;
         dto.GatesUp = _rails != null && IsInstanceValid(_rails) ? _rails.GatesUpList.ToList() : null;
         dto.CrewDownedLeft = NetSession.IsServer ? DownedLeft() : null; // the broadcast's (a client counts its labels down); a solo save stays as it was
@@ -663,6 +665,12 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         _home.Clear();
         foreach (var id in dto.HomeCrew ?? new List<string>()) _home.Add(id);
         var lost = (dto.LostCrew ?? new List<string>()).ToHashSet();
+        var lostCages = dto.LostCages ?? new List<int>();
+        foreach (var wagon in _wagons)
+        {
+            wagon.SetLost(lostCages.Contains(wagon.Stop)); // gone into a crevasse with the train: hidden for good, its siding free
+            if (wagon.Lost) _builder?.UnblockCell(wagon.Cell);
+        }
         if (_rails != null && IsInstanceValid(_rails))
             foreach (var stop in dto.CoupledCages ?? new List<int>())
                 if (_wagons.FirstOrDefault(w => w.Stop == stop) is { Open: true, Coupled: false } wagon) Couple(wagon);
@@ -715,6 +723,15 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             foreach (var wagon in _wagons)
                 if (IsInstanceValid(wagon) && !wagon.Open && open.Contains(wagon.Stop)) wagon.SetOpen(true);
         if (dto.OrcKeys == true && !OrcKeys) OrcKeys = true; // a client's setter takes the keyring off Grisel's belt and tells nothing
+        ShowLost(dto);
+    }
+
+    /// <summary>Client: the wagons the state names lost are hidden, forward only (a wagon lost into a crevasse never comes back on this floor visit).</summary>
+    private void ShowLost(ObjectiveStateDto dto)
+    {
+        if (dto.LostCages is not { } lost) return;
+        foreach (var wagon in _wagons)
+            if (IsInstanceValid(wagon) && !wagon.Lost && !wagon.Coupled && lost.Contains(wagon.Stop)) wagon.SetLost(true);
     }
 
     /// <summary>The exit room's free floor (no rail, nothing blocking), nearest the down stairs first.</summary>
@@ -735,6 +752,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         base.Restore(dto);
         var home = (dto.HomeCrew ?? new List<string>()).ToHashSet();
         var lost = (dto.LostCrew ?? new List<string>()).ToHashSet();
+        ShowLost(dto); // the lost wagons (the cart state's Fell hid them already on a fall seen here)
         foreach (var npc in _crew)
             _state[npc] = lost.Contains(npc.Id) ? CrewState.Lost
                 : WagonOf(npc) is { Open: false } ? CrewState.Caged
@@ -745,6 +763,19 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (dto.CrewDownedLeft is { } left)
             foreach (var npc in _crew)
                 if (IsInstanceValid(npc) && left.TryGetValue(npc.Id, out var secondsLeft)) npc.ApplyBleedLeft(secondsLeft);
+    }
+
+    /// <summary>
+    /// Test hook (--test-crevasse): the stop's cage opened (as a key would) and its wagon coupled on behind the cart with its crew aboard,
+    /// as a departure couples it. False when there is no such wagon, it is coupled or lost already, or this is a client.
+    /// </summary>
+    internal bool DebugCouple(int stop)
+    {
+        if (NetSession.IsClient || _rails == null || !IsInstanceValid(_rails) || Main.Instance?.Party is not { } party) return false;
+        if (_wagons.FirstOrDefault(w => w.Stop == stop) is not { Coupled: false, Lost: false } wagon) return false;
+        if (!wagon.Open) OpenCage(wagon, party);
+        Couple(wagon);
+        return true;
     }
 
     /// <summary>Open every cage and bring every living crew member to the exit room (tests).</summary>

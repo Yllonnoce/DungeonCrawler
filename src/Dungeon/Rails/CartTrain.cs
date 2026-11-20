@@ -40,7 +40,10 @@ public sealed class CartTrain
         return true;
     }
 
-    /// <summary>Client: every wagon off the train, where it stands, shown (the server's train is coupled again from its cart state).</summary>
+    /// <summary>
+    /// Every wagon off the train, where it stands, shown: a client's (its train is coupled again from the server's cart state), and the
+    /// server's after a fall (which then hides each wagon as lost).
+    /// </summary>
     public void UncoupleAll()
     {
         foreach (var wagon in _wagons)

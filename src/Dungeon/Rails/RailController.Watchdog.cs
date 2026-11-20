@@ -50,7 +50,7 @@ public partial class RailController
         {
             case FreeTo.GapLip: // the watchdog never carries a cart across the gap: the jump is judged now, at the jump's speed
                 GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0}; set at the gap's lip (S={freed.S:0.0}) at {freed.V:0.0} m/s");
-                if (JudgeJump()) Wreck(); // made at the jump's speed (JumpMade): this only wrecks if the rules change
+                if (JudgeJump()) DropIn(); // made at the jump's speed (JumpMade): this only wrecks if the rules change
                 break;
             case FreeTo.ObstacleFace: // nor through an obstacle: it halts at the face (no crash, no dent)
                 GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0}; set at the obstacle's face (S={freed.S:0.0})");

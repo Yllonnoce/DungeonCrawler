@@ -126,6 +126,7 @@ public partial class RailEncounterController
         trestle.Build(_rails.Party.Track);
         piece.Trestle = trestle;
         GD.Print($"[rails] trestle {piece.Plan.Id} from party S={trestle.From:0.0} to {trestle.To:0.0}");
+        GD.Print($"[rails] {piece.Plan.Id} over a crevasse: {_rails.OverCrevasse(trestle.From, trestle.To)}"); // its collapse under the cart is a fall (TickTrestle)
         return trestle;
     }
 
@@ -137,6 +138,7 @@ public partial class RailEncounterController
         piece.Gap = gap;
         gaps.Add((gap.From, gap.To));
         GD.Print($"[rails] gap {piece.Plan.Id} from party S={gap.From:0.0} to {gap.To:0.0}");
+        GD.Print($"[rails] {piece.Plan.Id} over a crevasse: {_rails.OverCrevasse(gap.From, gap.To)}"); // a missed jump is a fall (RailController.DropIn)
         return gap;
     }
 
@@ -588,7 +590,10 @@ public partial class RailEncounterController
         }
     }
 
-    /// <summary>The cart's front on the trestle starts its grace; at the end of it the trestle falls, and catches a cart still on it.</summary>
+    /// <summary>
+    /// The cart's front on the trestle starts its grace; at the end of it the trestle falls, and catches a cart still on it: over a
+    /// crevasse (<see cref="RailController.OverCrevasse"/>) the train falls with it, anywhere else it is wrecked.
+    /// </summary>
     private void TickTrestle(Piece piece, bool rolling, float dt)
     {
         if (piece.Trestle is not { Collapsed: false } trestle) return;
@@ -606,7 +611,8 @@ public partial class RailEncounterController
         if (GetParent() is Node3D root) trestle.Collapse(root); // with its cue
         Tremor.ShakeOnly(0.04f, 0.8f);
         GD.Print($"[rails] t={_now:0.00} the trestle falls with the cart at S={_rails.State.S:0.0} (back {_rails.Party.BackS:0.0}, trestle to {trestle.To:0.0}): {(on ? "caught" : "clear")}");
-        if (on) _rails.Catch("The trestle gives way under the cart!");
+        if (on && _rails.OverCrevasse(trestle.From, trestle.To)) _rails.Fall("The trestle gives way into the crevasse!");
+        else if (on) _rails.Catch("The trestle gives way under the cart!");
         else EventBus.Instance.Log("The trestle collapses behind the cart.");
     }
 

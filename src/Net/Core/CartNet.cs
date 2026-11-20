@@ -93,6 +93,11 @@ public sealed class CartStateDto
     public int ArmedRide { get; set; } = -1;
     /// <summary>The server's clock when <see cref="ArmedRide"/> armed: a client's ore buckets run the server's schedule from it.</summary>
     public double ArmedAt { get; set; }
+    /// <summary>
+    /// The party's cart: its last wreck was a fall into a crevasse (plan 10; <see cref="CartFlags"/> has no free bit). On the Wrecked
+    /// flag's rising edge a client plays the plunge, not the tumble, and hides the wagons of the last train it was told.
+    /// </summary>
+    public bool Fell { get; set; }
 
     // slag and traffic carts
     public float Offset { get; set; }

@@ -323,7 +323,8 @@ public partial class RailEncounterController
     /// <summary>
     /// The ride is over: boarders and leapers go silently like riders, or, when the cart wrecked, drop beside the lane where it was
     /// wrecked (<see cref="RailController.WreckedAt"/>: a spare may have moved the cart, and its boarders with it, before the
-    /// Wrecked event is told) and fight on foot.
+    /// Wrecked event is told) and fight on foot. A wreck that was a fall (<see cref="RailController.LastWreckFell"/>) took the boarders
+    /// with the train: one still aboard and alive here goes into the crevasse too; a leaper in the air lands beside the lip.
     /// </summary>
     private void ClearLeaps(bool wrecked)
     {
@@ -337,6 +338,8 @@ public partial class RailEncounterController
             h.BoardTarget = null;
             h.DeathDrop = null;
             if (l.Phase == LeapPhase.Crouch) continue; // still a rider of its slag cart: that cart frees it
+            if (wrecked && _rails.LastWreckFell && l.Phase == LeapPhase.Aboard && h.IsAlive && CrevasseWatch.Instance is { } watch)
+                watch.Take(h, wreck ?? h.GlobalPosition); // the train's fall took it (RailController.Fall); dead, it is freed below
             if (wrecked && h.IsAlive)
             {
                 var at = Beside(wreck ?? h.GlobalPosition);

@@ -344,6 +344,8 @@ public partial class RailController : Node
         EndChase(atOnce: true); // a load ends a chase at once (its riders set down beside the chaser); the chase is not saved, and the spares stand as the save has them (_spares.Restore below)
         FreeChaser();
         ResetRelief(); // a relief is not saved either: the clock starts clean and the standing cart has met nobody yet
+        LastWreckFell = false;
+        _arrivedStop = -1;
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
         if (riders != null) foreach (var i in riders) _restoredRiders.Add(i);
@@ -372,8 +374,15 @@ public partial class RailController : Node
         Cart.Sound?.Prime(); // back from a save: the jump to the stop makes no sound
         Raise(new CartEvent(CartEventKind.Restored, Stop: StopIndex));
         ClearRiders();
+        ReturnAllFallen();
         Flush();
-        Callable.From(() => { ClearRiders(); _restoredRiders.Clear(); Flush(); }).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
+        Callable.From(() => { ClearRiders(); ReturnAllFallen(); _restoredRiders.Clear(); Flush(); }).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
+    }
+
+    /// <summary>A restore (a load, a wipe's rise) brings every fallen hero back beside the cart at its stop (ruling 8).</summary>
+    private void ReturnAllFallen()
+    {
+        if (Current) ReturnFallen(Main.Instance.Party, Cart.GlobalPosition, $"the cart restored at stop {StopIndex}");
     }
 
     /// <summary>
@@ -796,9 +805,10 @@ public partial class RailController : Node
             Party.Step(input, dt);
             if (DebugStall) Party.State = State with { S = Party.PrevS, V = 0f }; // a test's stuck cart: it rolls and goes nowhere
             var crashed = HitBlock(); // an obstacle on the party lane: the cart is put back at its face
-            JudgeJump(); // a gap's lip: the cart flies, or drops in with its plating gone (wrecked below)
+            var droppedIn = JudgeJump(); // a gap's lip: the cart flies, or drops in with its plating gone (wrecked, or over a crevasse fallen, below)
             RunOver(party); // the arrival tick too: the last stretch before the stop is swept
-            if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
+            if (droppedIn && _gapOverCrevasse) FallNow("The cart drops into the crevasse!"); // the train goes over with every rider and wagon
+            else if (State.Plating <= 0f) Wreck(); // before Arrive: a cart wrecked as it rolls in keeps the stop it left, and its riders take the wreck as anywhere
             else if (crashed) Halt();
             else if (State.Mode == CartMode.Held) { SetCartLayer(); Arrive(); }
             else { Warn(party); Watch(dt); }
@@ -809,6 +819,7 @@ public partial class RailController : Node
         _train.Sync();
         TickChase(party, dt); // after the train has moved: the chaser's limit is where its tail stands now
         TickRelief(party, dt); // solo: a player left behind gets a relief cart (plan 7)
+        TickFallen(party); // after the arrival: the fallen come back at the stop the cart rolled into, or the platform a hero stepped onto
     }
 
     // ---- run-over --------------------------------------------------------------------------------
@@ -871,29 +882,280 @@ public partial class RailController : Node
     /// </summary>
     public Vector3? WreckedAt { get; private set; }
 
-    /// <summary>Plating gone: the cart stops for good, riders climb out beside the lane and are hurt.</summary>
-    private void Wreck()
+    /// <summary>
+    /// Plating gone: the cart stops for good, riders climb out beside the lane and are hurt. With <paramref name="fall"/> (<see cref="Fall"/>)
+    /// the train goes into the crevasse instead: no tumble but the plunge, every rider and every coupled wagon's riders and the hounds
+    /// aboard taken by the crevasse (<see cref="CrevasseWatch.Take"/>), the wagons hidden and lost off an uncoupled train, and a spare takes
+    /// over only while a hero still stands (<see cref="CrevasseRules.SpareAfterFall"/>): a fall that takes everyone spends none.
+    /// </summary>
+    private void Wreck(bool fall = false)
     {
         EndChase(atOnce: true); // a chase ends with the train's wreck: its riders step out beside the chaser
         Wrecks++;
         WreckedAt = Cart.GlobalPosition;
+        LastWreckFell = fall;
+        var lost = fall ? new List<CageWagon>(_train.Wagons) : null;
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
-        Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
-        RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here: the cart's sound sees no wreck (a spare takes over in this call)
+        if (lost != null) Plunge(lost, cart: true); // before the speed is zeroed: the train goes over the way it was going
+        else Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
+        RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here (at the lip, for a fall): the cart's sound sees no wreck (a spare takes over in this call)
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
-        EventBus.Instance.Log("The cart is wrecked!");
+        if (lost == null) EventBus.Instance.Log("The cart is wrecked!"); // a fall has said why
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
         _exitTaken.Clear();
+        if (lost != null) TakeTheTrain(lost);
+        else
+            foreach (var rider in Aboard())
+            {
+                GetOut(rider); // V is 0: no thrown run-over
+                if (rider is IHazardVictim victim && !(rider is Adventurer { Downed: true }) && !(rider is Npc { Downed: true }))
+                    victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
+            }
+        Boarding.Cancel();
+        if (lost == null || CrevasseRules.SpareAfterFall(StandingHeroes())) SpareTakesOver();
+        else
+        {
+            HideWreck(); // nobody stands: no spare is spent before the wipe
+            EventBus.Instance.Log("The train is gone into the dark.");
+        }
+        RefreshHud();
+    }
+
+    // ---- a fall into a crevasse (plan 10) --------------------------------------------------------
+
+    /// <summary>The last wreck was a fall (<see cref="Fall"/>): true from it until the next wreck (a plain one clears it) or a <see cref="Restore"/>. Clients see it as <see cref="CartStateDto.Fell"/>.</summary>
+    public bool LastWreckFell { get; private set; }
+    /// <summary>Falls so far (the server's).</summary>
+    public int Falls { get; private set; }
+    /// <summary>Where the train last fell (the cart's body's place), or null before any fall.</summary>
+    public Vector3? FellAt { get; private set; }
+    /// <summary>The last fall's toll: the riders the crevasse took (the cart's and the wagons'), and the wagons lost.</summary>
+    private int _fellRiders, _fellWagons;
+
+    /// <summary>
+    /// A train over a crevasse that misses its jump or loses its trestle under it falls (server only; a no-op while wrecked): <paramref name="why"/>
+    /// is logged, then the wreck as a fall (<see cref="Wreck"/>). Lethality changes none of it. Its events are told before this returns
+    /// (a trestle's fall is judged in the encounter controller's tick): the fall is heard before anything that follows it in the frame.
+    /// </summary>
+    public void Fall(string why)
+    {
+        FallNow(why);
+        Flush();
+    }
+
+    /// <summary>The fall itself (<see cref="Fall"/>); this controller's own tick calls it and tells the events at its end.</summary>
+    private void FallNow(string why)
+    {
+        if (NetSession.IsClient || State.Mode == CartMode.Wrecked) return;
+        if (CrevasseWatch.Instance is not { } watch || !IsInstanceValid(watch))
+        {
+            GD.PushError($"[rails] ERROR: the train would fall ({why}) on a floor with no CrevasseWatch: wrecked instead");
+            Wreck();
+            return;
+        }
+        var s = State.S;
+        EventBus.Instance.Log(why);
+        Falls++;
+        FellAt = Cart.GlobalPosition;
+        Props.Tremor.ShakeOnly(0.05f, 0.8f);
+        Wreck(fall: true);
+        GD.Print($"[rails] the train falls at S={s:0.0} ({why}): {_fellRiders} rider(s), {_fellWagons} wagon(s)");
+    }
+
+    /// <summary>
+    /// The fall's toll (inside <see cref="Wreck"/>): every rider of the cart and of each coupled wagon, and every hound held at a boarder
+    /// spot on either, is taken by the crevasse at the cart's or the wagon's place; then the train is uncoupled and each of its wagons
+    /// is lost (<see cref="CageWagon.SetLost"/>: hidden, not solid, saved in <c>ObjectiveStateDto.LostCages</c>).
+    /// </summary>
+    private void TakeTheTrain(List<CageWagon> wagons)
+    {
+        var watch = CrevasseWatch.Instance!;
+        var at = Cart.GlobalPosition;
+        _fellRiders = 0;
+        _fellWagons = wagons.Count;
         foreach (var rider in Aboard())
         {
-            GetOut(rider); // V is 0: no thrown run-over
-            if (rider is IHazardVictim victim && !(rider is Adventurer { Downed: true }) && !(rider is Npc { Downed: true }))
-                victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
+            if (rider is Adventurer or Npc) watch.Take((Node3D)rider, at);
+            else GetOut(rider); // nothing else rides the bench; were it to, it steps out at the lip
+            _fellRiders++;
         }
-        Boarding.Cancel();
-        SpareTakesOver();
+        TakeBoarders(watch, Cart.Boarders, Cart, at);
+        foreach (var wagon in wagons)
+        {
+            if (!IsInstanceValid(wagon)) continue;
+            var wagonAt = wagon.GlobalPosition;
+            _fallRiders.Clear();
+            _fallRiders.AddRange(wagon.Riders.Values);
+            foreach (var rider in _fallRiders)
+            {
+                if (rider is GodotObject o && !IsInstanceValid(o)) continue;
+                if (rider is Adventurer or Npc) watch.Take((Node3D)rider, wagonAt);
+                else rider.GetOut(wagonAt, Vector3.Zero);
+                _fellRiders++;
+            }
+            _fallRiders.Clear();
+            TakeBoarders(watch, wagon.Boarders, wagon, wagonAt);
+        }
+        _train.UncoupleAll();
+        foreach (var wagon in wagons)
+            if (IsInstanceValid(wagon)) wagon.SetLost(true);
+    }
+    private readonly List<ICartRider> _fallRiders = new();
+
+    /// <summary>The hounds landed on <paramref name="body"/>'s boarder spots go with it (the crevasse kills an enemy: no loot).</summary>
+    private static void TakeBoarders(CrevasseWatch watch, Enemies.Enemy?[] spots, Node3D body, Vector3 at)
+    {
+        foreach (var hound in spots)
+            if (hound != null && IsInstanceValid(hound) && !hound.IsQueuedForDeletion() && hound.IsAlive && hound.Carrier == body) watch.Take(hound, at);
+    }
+
+    /// <summary>Heroes in the world and on their feet (not down, not fallen, not parked). No allocation.</summary>
+    private static int StandingHeroes()
+    {
+        var standing = 0;
+        if (Main.Instance?.Party is { } party)
+            foreach (var hero in party.Adventurers)
+                if (IsInstanceValid(hero) && !hero.Parked && !hero.Downed) standing++;
+        return standing;
+    }
+
+    private const float PlungeSeconds = 4f;
+    /// <summary>How far round the cart (cells) the plunge looks for the drop to throw the train toward.</summary>
+    private const int PlungeReach = 4;
+
+    /// <summary>
+    /// The train's look going over (every peer; the server's fall, a client's Wrecked edge with Fell): the cart's body (with
+    /// <paramref name="cart"/>) and each of <paramref name="wagons"/>' copied onto a rigid body that nothing holds (layer 0, mask 0),
+    /// thrown along the way it was going, toward the nearest chasm cell and down, freed after <see cref="PlungeSeconds"/>. Cosmetic and
+    /// silent (the wreck's cue plays beside it).
+    /// </summary>
+    private void Plunge(IReadOnlyList<CageWagon> wagons, bool cart)
+    {
+        if (!IsInsideTree() || GetParent() is not Node3D root) return;
+        var toward = TowardTheDrop(Cart.GlobalPosition);
+        if (cart && Cart.GetNodeOrNull<Node3D>("Body") is { } body) PlungeBody(root, "CartPlunge", body, Cart.GlobalTransform, Cart.Velocity, toward);
+        foreach (var wagon in wagons)
+            if (IsInstanceValid(wagon) && wagon.GetNodeOrNull<Node3D>("Body") is { } wagonBody)
+                PlungeBody(root, "WagonPlunge", wagonBody, wagon.GlobalTransform, wagon.Velocity, TowardTheDrop(wagon.GlobalPosition));
+    }
+
+    private void PlungeBody(Node3D root, string name, Node3D body, Transform3D at, Vector3 velocity, Vector3 toward)
+    {
+        var falling = new RigidBody3D { Name = name, CollisionLayer = 0, CollisionMask = 0, Mass = 300f };
+        falling.AddChild(body.Duplicate());
+        root.AddChild(falling);
+        falling.GlobalTransform = at;
+        falling.LinearVelocity = velocity * 0.6f + toward * 2.5f + Vector3.Down * 1.5f;
+        falling.AngularVelocity = at.Basis.Z * 1.2f + toward.Cross(Vector3.Up) * 1.5f;
+        GetTree().CreateTimer(PlungeSeconds).Timeout += () => { if (IsInstanceValid(falling)) falling.QueueFree(); };
+    }
+
+    /// <summary>The flat unit direction from <paramref name="from"/> to the nearest chasm cell within <see cref="PlungeReach"/>, or zero.</summary>
+    private Vector3 TowardTheDrop(Vector3 from)
+    {
+        if (_layout == null || _builder == null) return Vector3.Zero;
+        var here = DungeonBuilder.WorldToCell(from);
+        GridPos? best = null;
+        var bestD = int.MaxValue;
+        for (var dy = -PlungeReach; dy <= PlungeReach; dy++)
+            for (var dx = -PlungeReach; dx <= PlungeReach; dx++)
+            {
+                var c = new GridPos(here.X + dx, here.Y + dy);
+                var d = dx * dx + dy * dy;
+                if (d < bestD && _layout.IsChasm(c)) { best = c; bestD = d; }
+            }
+        if (best is not { } cell) return Vector3.Zero;
+        var flat = _builder.Surface(cell) - from;
+        flat.Y = 0f;
+        return flat.LengthSquared() > 1e-4f ? flat.Normalized() : Vector3.Zero;
+    }
+
+    // ---- the fallen come back (ruling 8) ---------------------------------------------------------
+
+    private readonly FallenReturn _fallenReturn = new();
+    /// <summary>The stop the cart rolled into this tick (<see cref="Arrive"/>), or −1: the fallen come back there.</summary>
+    private int _arrivedStop = -1;
+    /// <summary>A hero was fallen at the last tick (the baseline is taken when the first falls).</summary>
+    private bool _anyFallen;
+    private readonly List<int> _fallenBaseline = new();
+    private readonly List<(bool Living, bool Seated, int PlatformStop)> _fallenRows = new();
+
+    /// <summary>Fallen returns so far (test hook).</summary>
+    internal int FallenReturns { get; private set; }
+
+    /// <summary>
+    /// Each server or solo tick: while any hero is fallen, <see cref="FallenReturn"/> says when they come back: the cart rolled into a
+    /// stop (each beside the cart), or a living hero on foot stepped onto a stop's platform after the fall (each beside that hero).
+    /// No allocation.
+    /// </summary>
+    private void TickFallen(PartyController party)
+    {
+        var arrived = _arrivedStop;
+        _arrivedStop = -1;
+        var any = false;
+        foreach (var hero in party.Adventurers)
+            if (IsInstanceValid(hero) && hero.State.Fallen) { any = true; break; }
+        if (!any) { _anyFallen = false; return; }
+        if (!_anyFallen)
+        {
+            _anyFallen = true;
+            _fallenBaseline.Clear();
+            foreach (var hero in party.Adventurers) _fallenBaseline.Add(IsInstanceValid(hero) && !hero.Parked && !hero.Seated ? PlatformStopOf(hero.GlobalPosition) : -1);
+            _fallenReturn.Baseline(_fallenBaseline);
+        }
+        _fallenRows.Clear();
+        foreach (var hero in party.Adventurers)
+        {
+            var valid = IsInstanceValid(hero) && !hero.Parked;
+            _fallenRows.Add((valid && !hero.Downed, valid && hero.Seated, valid ? PlatformStopOf(hero.GlobalPosition) : -1));
+        }
+        var stop = _fallenReturn.Tick(_fallenRows, arrived);
+        if (stop < 0) return;
+        var by = _fallenReturn.Hero;
+        if (by >= 0 && by < party.Adventurers.Length && IsInstanceValid(party.Adventurers[by]))
+        {
+            var lead = party.Adventurers[by];
+            ReturnFallen(party, lead.GlobalPosition, $"{lead.State.Name} stepped onto stop {stop}'s platform", DungeonBuilder.WorldToCell(lead.GlobalPosition));
+        }
+        else ReturnFallen(party, Cart.GlobalPosition, $"the cart rolled into stop {stop}");
+    }
+
+    /// <summary>The stop whose room <paramref name="at"/> stands in (its platform), or −1 off every stop.</summary>
+    private int PlatformStopOf(Vector3 at)
+    {
+        if (_layout?.Rail is not { } rail) return -1;
+        var cell = DungeonBuilder.WorldToCell(at);
+        for (var i = 0; i < rail.Stops.Count; i++)
+        {
+            var room = rail.Stops[i].Room;
+            if (room >= 0 && room < _layout.Rooms.Count && _layout.Rooms[room].Contains(cell)) return i;
+        }
+        return -1;
+    }
+
+    /// <summary>
+    /// Every fallen hero in the world climbs back out (<see cref="Adventurer.ReturnFromCrevasse"/>: a quarter of their HP), each on its
+    /// own cell beside the lane near <paramref name="near"/> (<see cref="ExitCellNear"/>: never a drop, a rail or a siding), never on
+    /// <paramref name="standing"/> (the cell of the hero they come back beside). Server and solo.
+    /// </summary>
+    private void ReturnFallen(PartyController party, Vector3 near, string why, GridPos? standing = null)
+    {
+        if (NetSession.IsClient || _layout?.Rail == null) return;
+        _exitTaken.Clear();
+        if (standing is { } own) _exitTaken.Add(own); // beside the hero who stepped on, not on top of them
+        foreach (var hero in party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Parked || !hero.State.Fallen) continue;
+            var cell = ExitCellNear(near, atStop: true, useTaken: true);
+            _exitTaken.Add(cell);
+            hero.ReturnFromCrevasse(_builder.Surface(cell) + Vector3.Up * 0.3f);
+            FallenReturns++;
+            GD.Print($"[rails] {hero.State.Name} comes back out of the crevasse at {cell} ({why})");
+        }
+        _exitTaken.Clear();
+        _anyFallen = false; // a hero who falls after this is a new fall, with its own baseline
         RefreshHud();
     }
 
@@ -1010,6 +1272,7 @@ public partial class RailController : Node
     private void Arrive()
     {
         StopIndex++;
+        _arrivedStop = StopIndex; // the fallen come back here (TickFallen); a spare's takeover never sets it
         Party.State = State with { Plating = CartRules.MaxPlating };
         ResetLine();
         foreach (var rider in Cart.Riders.Values) if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Pumping = false;

@@ -87,10 +87,22 @@ public partial class CrevasseWatch : Node
                 fate = CrevasseRules.FateOf(npc.Crew ? FallBody.Crew : npc.Escorting ? FallBody.Escort : FallBody.OtherNpc);
                 if (fate == FallFate.CaughtAtLip)
                 {
-                    if ((CrevasseRules.LipCell(_layout, cell) ?? CrevasseRules.NearestSetDown(_layout, cell)) is not { } lip) { fate = FallFate.Lost; npc.Die(); break; } // nowhere on the floor to lay her: never back on a drop
-                    npc.GetOut(_builder.Surface(lip) + Vector3.Up * 0.1f); // out of any seat, at the lip, still
+                    // a fall never kills an escort: the lip cell, else the nearest cell anywhere a body may be set down; else (no such cell
+                    // on the floor, which should not happen) the fall's own point at the lip, said as an error
+                    Vector3 layAt;
+                    if (CrevasseRules.EscortCell(_layout, cell) is { } lip)
+                    {
+                        layAt = _builder.Surface(lip) + Vector3.Up * 0.1f;
+                        who += $" (laid at {lip})";
+                    }
+                    else
+                    {
+                        layAt = new Vector3(at.X, _builder.Surface(cell).Y + 0.1f, at.Z);
+                        GD.PushError($"[crevasse] ERROR: no cell on the floor to lay {npc.NpcName} at after a fall at {cell}: laid at the fall's lip point");
+                        who += " (laid at the fall's lip point)";
+                    }
+                    npc.GetOut(layAt); // out of any seat, at the lip, still
                     npc.ReceiveHazard(HazardDamage.Fall, new HazardOutcome(false, 1f, 0f), "The crevasse", -1); // down, revivable, escorting
-                    who += $" (laid at {lip})";
                 }
                 else
                 {

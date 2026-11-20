@@ -14,8 +14,14 @@ namespace DungeonCrawler.Core;
 // companion never walks itself into the drop). A1: a companion put over a chasm falls in: fallen, down, hidden, and no
 // auto-revive 8 s on. A2: an enemy put over a chasm dies to it ("The crevasse swallows"). A3: a crew member out of their wagon
 // and Grisel (escorting), put over a chasm: the crew member is lost, Grisel caught at the lip (down, not dead, escorting, on a
-// cell by the drop) and revivable. After every step nobody but the test's own victim is fallen. The variants (Tasks 7 and 8)
-// add steps after A3. Prints [crevasse] lines and a RESULT.
+// cell by the drop) and revivable. After every step to A4 nobody but the test's own victim is fallen. A4: the party boards at the
+// landing with A1's companion still fallen; on ride 1's arrival at stop 1 that companion is back within 1 s (up, a quarter of their
+// HP, beside the cart). B, the fall: stop 1's cage opened and its wagon coupled, the cart restored at the kiln's stop, everyone
+// boarded with Grisel on the bench, no pumping: the train misses the jump over the gorge and falls; every rider fallen, the wagon
+// lost, its crew dead, Grisel down at the lip, no spare spent (the wipe that follows is Task 8's). =trestle: as B, but the human
+// brakes on the trestle and it falls with the train on it. =survivor: as B, but the human gets out at the stop as the cart departs;
+// after the fall nobody wipes, a spare waits, and the human stepping onto that stop's platform brings the fallen back beside them;
+// a fresh capture names the lost wagon and its crew. Prints [crevasse] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testCrevasse;
@@ -35,6 +41,19 @@ public partial class DebugTools
     private int _crvWayAt;
     private float _crvWalked;
     private Vector3 _crvLast;
+    // ---- A4, B and the variants (Task 7)
+    private CageWagon? _crvWagon;
+    private readonly List<Npc> _crvWagonCrew = new();
+    private readonly List<Adventurer> _crvRiders = new();
+    private int _crvSparesBefore;
+    private RailController? _crvHooked;
+    private bool _crvWiped;
+    /// <summary>The fall as the train's Wrecked event found it: null before it; "" when every check held, else what failed.</summary>
+    private string? _crvFallVerdict;
+    private string _crvFallSummary = "";
+    private string? _crvFallWhy;
+    /// <summary>The stop a spare waits at after the survivor's fall (its log line), or −1.</summary>
+    private int _crvSpareStop = -1;
 
     private void CrevasseListen()
     {
@@ -45,7 +64,10 @@ public partial class DebugTools
             if (_done || !_testCrevasse) return;
             if (text.Contains("falls into the crevasse") || text.Contains("slips into a crack")) _crvFallLog.Add(text);
             if (text.StartsWith("The crevasse swallows")) _crvSwallowed = true;
+            if (text is "The cart drops into the crevasse!" or "The trestle gives way into the crevasse!") _crvFallWhy ??= text;
+            if (text.StartsWith("A spare cart waits at stop ") && int.TryParse(text["A spare cart waits at stop ".Length..].TrimEnd('.'), out var n)) _crvSpareStop = n;
         };
+        EventBus.Instance.PartyWiped += () => { if (!_done && _testCrevasse) _crvWiped = true; };
     }
 
     private void RunCrevasseTest()
@@ -64,8 +86,9 @@ public partial class DebugTools
         RideWaiveCages(main, rc, "crevasse");
         if (party.Local is not { } me) { Fail("no human"); return; }
         var companions = party.Active.Where(a => a.Control == ControlKind.Companion).ToList();
-        // nobody falls but the test's own victim, at any step
-        if (party.Active.FirstOrDefault(a => a.State.Fallen && a != _crvVictim) is { } stray) { Fail($"{stray.State.Name} fell at step {_crvStep} (cell {DungeonBuilder.WorldToCell(stray.GlobalPosition)}): nobody fell but the test's"); return; }
+        if (_crvHooked != rc) { _crvHooked = rc; rc.CartEvents += e => { if (e.Kind == CartEventKind.Wrecked) CrevasseFallSeen(); }; } // each floor build's controller (the floor may be built again before the flow starts)
+        // nobody falls but the test's own victim, at any step before the train's fall
+        if (_crvStep < CrvRide && party.Active.FirstOrDefault(a => a.State.Fallen && a != _crvVictim) is { } stray) { Fail($"{stray.State.Name} fell at step {_crvStep} (cell {DungeonBuilder.WorldToCell(stray.GlobalPosition)}): nobody fell but the test's"); return; }
 
         switch (_crvStep)
         {
@@ -219,13 +242,186 @@ public partial class DebugTools
                 break;
             }
             case 17:
-                // Tasks 7 and 8 add their steps here
-                GD.Print($"[crevasse] RESULT ok ({_crvVariant}): A0 nobody fell on the deck or the plank; A1 {_crvVictim!.State.Name} fell in, still fallen 8 s on; A2 an enemy swallowed; A3 {_crvCrew!.NpcName} lost, Grisel caught at the lip and revived");
+            {
+                // A4: the party boards at the landing with A1's companion still fallen (seated in the same frame it is set down there: a
+                // hero stepping onto a platform would bring them back first; this checks the arrival)
+                var v = _crvVictim!;
+                if (!v.State.Fallen) { Fail($"{v.State.Name} came back before A4"); return; }
+                rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
+                if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
+                GD.Print($"[crevasse] A4 the party boards at stop {rc.StopIndex} with {v.State.Name} still fallen: {party.Active.Count(a => a.Cart == rc.Cart)} seated");
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case 18:
+                if (rc.State.Mode == CartMode.Held && !rc.Halted && rc.StopIndex == 1) { _crvStep++; _crvClock = 0f; break; }
+                if (_crvClock > 120f) Fail($"ride 1 did not reach stop 1 in 120 s (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})");
+                break;
+            case 19:
+            {
+                var v = _crvVictim!;
+                var maxHp = v.State.Stats[Characters.Stat.MaxHp];
+                var off = v.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition);
+                var hpOk = Mathf.Abs(v.State.Hp - maxHp * CrevasseRules.ReturnHpFraction) <= 1f;
+                if (v.State.Fallen || v.Downed || !v.Visible || !hpOk || off > 6f)
+                {
+                    if (_crvClock > 1f) Fail($"A4 within 1 s of the arrival at stop 1: {v.State.Name} fallen={v.State.Fallen} downed={v.Downed} visible={v.Visible} hp {v.State.Hp:0}/{maxHp:0} {off:0.0} m from the cart");
+                    break;
+                }
+                GD.Print($"[crevasse] A4 ride 1 rolled into stop 1: {v.State.Name} back after {_crvClock:0.00} s, up, hp {v.State.Hp:0}/{maxHp:0} ({v.State.Hp / maxHp:P0}), {off:0.0} m from the cart at {DungeonBuilder.WorldToCell(v.GlobalPosition)}");
+                if (!CrevasseRules.SetDownOk(layout, DungeonBuilder.WorldToCell(v.GlobalPosition))) { Fail($"{v.State.Name} came back on a cell no body may be set down on"); return; }
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case 20:
+            {
+                // B: a wagon with crew aboard coupled on (stop 1's, as a departure would couple it), the cart restored at the kiln's stop
+                if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller"); return; }
+                bool Manned(CageWagon w) => !w.Lost && !w.Coupled && ctrl.Crew.Any(c => !c.Dead && c.Ride == w);
+                _crvWagon = ctrl.Wagons.FirstOrDefault(w => w.Stop == 1 && Manned(w)) ?? ctrl.Wagons.OrderBy(w => w.Stop).FirstOrDefault(Manned);
+                if (_crvWagon == null || !ctrl.DebugCouple(_crvWagon.Stop)) { Fail($"no wagon with crew aboard to couple ({_crvWagon?.Stop})"); return; }
+                _crvWagonCrew.Clear();
+                _crvWagonCrew.AddRange(ctrl.Crew.Where(c => !c.Dead && c.Ride == _crvWagon));
+                rc.Restore(Shape(rc).LastRideStop);
+                rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate));
+                _crvSparesBefore = rc.SparesUsed.Count;
+                PumperCap = 0; // nobody pumps: the cart comes to the jump too slow
+                if (_crvVariant == "survivor") NoRelief = true; // the spare's way, not a relief's: the human stays on foot at the stop
+                GD.Print($"[crevasse] B wagon {_crvWagon.Stop} coupled with [{string.Join(", ", _crvWagonCrew.Select(c => c.NpcName))}] aboard; the cart restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], spares used {_crvSparesBefore}, pumpers capped at 0");
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case 21 when _crvClock >= 1f:
+            {
+                var g = _crvGrisel!;
+                if (!IsInstanceValid(g) || g.Dead) { Fail("Grisel is gone before B"); return; }
+                if (g.Downed) g.TryRevive();
+                g.GetOut(rc.StandBesideCart()); // beside the cart, on foot: the bench takes her as the human boards
+                if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
+                _crvRiders.Clear();
+                _crvRiders.AddRange(party.Active.Where(a => a.Cart == rc.Cart));
+                if (_crvRiders.Count != party.Active.Count() || g.Cart != rc.Cart) { Fail($"not everyone boarded: {_crvRiders.Count} of {party.Active.Count()} heroes seated, Grisel seated={g.Cart == rc.Cart}"); return; }
+                GD.Print($"[crevasse] B boarded at stop {rc.StopIndex}: [{string.Join(", ", _crvRiders.Select(a => a.State.Name))}] and Grisel on the bench, wagon {_crvWagon!.Stop} coupled");
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case CrvRide:
+            {
+                if (_crvFallVerdict != null) { _crvStep++; _crvClock = 0f; break; }
+                if (rc.State.Mode == CartMode.Held && rc.StopIndex > Shape(rc).LastRideStop) { Fail($"the cart reached stop {rc.StopIndex}: it did not fall"); return; }
+                if (rc.State.Mode == CartMode.Wrecked || rc.Falls == 0 && rc.State.Mode == CartMode.Held && rc.SparesUsed.Count > _crvSparesBefore) { Fail("the cart was wrecked, not fallen"); return; }
+                if (rc.State.Mode == CartMode.Rolling)
+                {
+                    if (_crvVariant == "trestle" && root.GetNodeOrNull<Trestle>($"Trestle_{Kiln(rc, "trestle")}") is { } trestle && rc.Party.FrontS >= trestle.From && party.ForcedMoveInput == null)
+                    {
+                        party.ForcedMoveInput = new Vector2(0, 1); // the stick back: the brake, until the trestle falls with the cart on it
+                        GD.Print($"[crevasse] =trestle the human brakes at front S={rc.Party.FrontS:0.0} (the trestle {trestle.From:0.0}-{trestle.To:0.0}), v {rc.State.V:0.00}");
+                    }
+                    if (_crvVariant == "survivor" && me.Cart == rc.Cart)
+                    {
+                        me.Teleport(rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[rc.StopIndex]))); // out at the stop as the cart departs (no throw)
+                        _crvRiders.Remove(me);
+                        GD.Print($"[crevasse] =survivor the human gets out at stop {rc.StopIndex} as the cart departs (S={rc.State.S:0.0}) and stays on foot at {DungeonBuilder.WorldToCell(me.GlobalPosition)}");
+                    }
+                }
+                if (_crvClock > 120f) Fail($"the train did not fall within 120 s (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})");
+                break;
+            }
+            case CrvRide + 1:
+            {
                 party.ForcedMoveInput = null;
+                if (_crvFallVerdict!.Length > 0) { Fail($"B the fall: {_crvFallVerdict}"); return; }
+                if (_crvVariant != "survivor")
+                {
+                    GD.Print($"[crevasse] RESULT ok ({_crvVariant}): A0-A3 as ever; A4 {_crvVictim!.State.Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}): {_crvFallSummary}");
+                    _done = true;
+                    GetTree().Quit(0);
+                    return;
+                }
+                if (_crvClock < 1f) break;
+                if (_crvWiped) { Fail("the party wiped with the human standing"); return; }
+                if (_crvSpareStop < 1 || rc.State.Mode != CartMode.Held) { Fail($"no spare waits after the survivor's fall (spare stop {_crvSpareStop}, cart {rc.State.Mode} at stop {rc.StopIndex})"); return; }
+                // off every platform first (the human stood on stop N's when the train fell), then onto stop N's
+                var away = Enumerable.Range(1, 40).Select(k => rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[_crvSpareStop] + 5f * k))).FirstOrDefault(p => CrevassePlatform(layout, p) < 0);
+                if (away == default) { Fail($"no spot off every platform past stop {_crvSpareStop}"); return; }
+                me.Teleport(away);
+                GD.Print($"[crevasse] =survivor nobody wiped; a spare waits at stop {_crvSpareStop}; the human steps off every platform to {DungeonBuilder.WorldToCell(away)}");
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case CrvRide + 2 when _crvClock >= 0.5f:
+            {
+                if (party.Active.FirstOrDefault(a => a.Control == ControlKind.Companion && !a.State.Fallen) is { } early) { Fail($"{early.State.Name} came back off every platform"); return; }
+                var onto = rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[_crvSpareStop]));
+                if (CrevassePlatform(layout, onto) != _crvSpareStop) { Fail($"stop {_crvSpareStop}'s platform spot {DungeonBuilder.WorldToCell(onto)} is not in its room"); return; }
+                me.Teleport(onto);
+                GD.Print($"[crevasse] =survivor the human steps onto stop {_crvSpareStop}'s platform at {DungeonBuilder.WorldToCell(onto)}");
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case CrvRide + 3:
+            {
+                var fallen = _crvRiders.Where(a => a.Control == ControlKind.Companion).ToList();
+                var notBack = fallen.FirstOrDefault(a => a.State.Fallen || a.Downed || a.GlobalPosition.DistanceTo(me.GlobalPosition) > CrvBeside);
+                if (notBack != null) { if (_crvClock > 1f) Fail($"{notBack.State.Name} not back beside the human within 1 s (fallen={notBack.State.Fallen}, {notBack.GlobalPosition.DistanceTo(me.GlobalPosition):0.0} m off)"); break; }
+                if (_crvWagonCrew.FirstOrDefault(c => !c.Dead) is { } risen) { Fail($"{risen.NpcName} who fell is not dead"); return; }
+                if (_crvWiped) { Fail("the party wiped"); return; }
+                var dto = Save.FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
+                var lostCages = dto.Objective?.LostCages ?? new List<int>();
+                var lostCrew = dto.Objective?.LostCrew ?? new List<string>();
+                GD.Print($"[crevasse] =survivor back beside the human: [{string.Join(", ", fallen.Select(a => $"{a.State.Name} hp {a.State.Hp:0}/{a.State.Stats[Characters.Stat.MaxHp]:0} {a.GlobalPosition.DistanceTo(me.GlobalPosition):0.0} m"))}]; capture LostCages=[{string.Join(",", lostCages)}] LostCrew=[{string.Join(",", lostCrew)}]");
+                if (!lostCages.Contains(_crvWagon!.Stop)) { Fail($"the capture does not name wagon {_crvWagon.Stop} lost"); return; }
+                if (_crvWagonCrew.FirstOrDefault(c => !lostCrew.Contains(c.Id)) is { } missing) { Fail($"the capture does not name {missing.NpcName} lost"); return; }
+                if (fallen.FirstOrDefault(a => Mathf.Abs(a.State.Hp - a.State.Stats[Characters.Stat.MaxHp] * CrevasseRules.ReturnHpFraction) > 1f) is { } hp) { Fail($"{hp.State.Name} came back with {hp.State.Hp:0} HP, not a quarter"); return; }
+                GD.Print($"[crevasse] RESULT ok (survivor): A0-A3 as ever; A4 {_crvVictim!.State.Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}) with the human on foot: {_crvFallSummary}; nobody wiped, the fallen came back on stop {_crvSpareStop}'s platform, the capture names wagon {_crvWagon.Stop} and its crew lost");
                 _done = true;
                 GetTree().Quit(0);
                 break;
+            }
         }
+    }
+
+    /// <summary>"Beside" the human for the survivor's return: each fallen hero on its own 4 m cell by the lane, two cells off at most.</summary>
+    private const float CrvBeside = 2.5f * DungeonBuilder.CellSize;
+
+    /// <summary>The ride step of B: the train rolls from the kiln's stop until it falls.</summary>
+    private const int CrvRide = 22;
+
+    /// <summary>
+    /// The train's Wrecked event (told inside the fall, before anything else in the frame: the wipe that follows is Task 8's): the
+    /// fall checked as it stands. Every rider fallen, the coupled wagon lost and hidden, its crew dead, Grisel down at the lip, and a
+    /// spare spent only with the human standing (=survivor).
+    /// </summary>
+    private void CrevasseFallSeen()
+    {
+        if (_done || _crvStep != CrvRide || _crvFallVerdict != null || RailController.Instance is not { } rc || Main.Instance?.Builder.Layout is not { } layout) return;
+        var problems = new List<string>();
+        if (rc.Falls == 0) problems.Add("a wreck, not a fall");
+        foreach (var h in _crvRiders) if (!h.State.Fallen) problems.Add($"{h.State.Name} not fallen"); // hidden at its next physics tick (a possession passing on may show a body for that tick)
+        var w = _crvWagon!;
+        if (!w.Lost || w.Visible || w.Coupled || rc.Train.Count > 0) problems.Add($"wagon {w.Stop} lost={w.Lost} visible={w.Visible} coupled={w.Coupled}, train {rc.Train.Count}");
+        foreach (var c in _crvWagonCrew) if (!c.Dead || c.Visible) problems.Add($"{c.NpcName} dead={c.Dead} visible={c.Visible}");
+        var g = _crvGrisel!;
+        var cell = DungeonBuilder.WorldToCell(g.GlobalPosition);
+        var byDrop = Enumerable.Range(-CrevasseRules.LipReach, 2 * CrevasseRules.LipReach + 1).Any(dy => Enumerable.Range(-CrevasseRules.LipReach, 2 * CrevasseRules.LipReach + 1).Any(dx => CrevasseRules.IsDrop(layout, new GridPos(cell.X + dx, cell.Y + dy))));
+        if (g.Dead || !g.Downed || !g.Escorting || g.Seated || !CrevasseRules.SetDownOk(layout, cell) || !byDrop) problems.Add($"Grisel dead={g.Dead} downed={g.Downed} escorting={g.Escorting} seated={g.Seated} at {cell} (set-down {CrevasseRules.SetDownOk(layout, cell)}, a drop within {CrevasseRules.LipReach}: {byDrop})");
+        var survivor = _crvVariant == "survivor";
+        var spares = rc.SparesUsed.Count - _crvSparesBefore;
+        if (spares != (survivor ? 1 : 0)) problems.Add($"{spares} spare(s) spent");
+        if (survivor && Main.Instance.Party.Local is { } me && (me.State.Fallen || me.Downed)) problems.Add("the human on foot fell too");
+        _crvFallSummary = $"{_crvRiders.Count} hero rider(s) fallen [{string.Join(", ", _crvRiders.Select(a => a.State.Name))}], wagon {w.Stop} lost with [{string.Join(", ", _crvWagonCrew.Select(c => c.NpcName))}] dead, Grisel down at {cell} (a lip cell), spares used {_crvSparesBefore}+{spares}, the cart went over at {rc.FellAt?.ToString() ?? "?"}";
+        GD.Print($"[crevasse] B the train fell ({_crvFallWhy}): {_crvFallSummary}{(problems.Count > 0 ? $"; WRONG: {string.Join("; ", problems)}" : "")}");
+        _crvFallVerdict = string.Join("; ", problems);
+    }
+
+    /// <summary>The stop whose room <paramref name="at"/> stands in (its platform, as the fallen's return reads it), or −1.</summary>
+    private static int CrevassePlatform(FloorLayout layout, Vector3 at)
+    {
+        if (layout.Rail is not { } rail) return -1;
+        var cell = DungeonBuilder.WorldToCell(at);
+        for (var i = 0; i < rail.Stops.Count; i++)
+            if (rail.Stops[i].Room is var r && r >= 0 && r < layout.Rooms.Count && layout.Rooms[r].Contains(cell)) return i;
+        return -1;
     }
 
     /// <summary>The party set down at <paramref name="start"/>, facing the first of <paramref name="cells"/>: the human's walk, one cell centre after another.</summary>
