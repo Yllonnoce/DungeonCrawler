@@ -107,7 +107,7 @@ public partial class DebugTools
         string Nearest(string kind) => checks.Where(x => x.What.StartsWith(kind)).OrderBy(x => x.Distance - x.Range).Select(x => $"{x.What} {x.Distance:0.0} m from stop {x.Stop} (range {x.Range:0.0} m)").FirstOrDefault() ?? "none";
         GD.Print($"[{tag}] sound: the {rc.StopS.Length} stops against the hazards' cues: nearest {Nearest("hammer")}, {Nearest("pour")}; each range is min(30, distance - 2)");
         // a hair under 2 m for float rounding
-        var near = checks.Where(x => x.Distance - x.Range < SetPieceRules.StopThreeMargin - 0.01f).Select(x => $"{x.What} {x.Distance:0.00} m from stop {x.Stop} against range {x.Range:0.00} m").ToList();
+        var near = checks.Where(x => x.Distance - x.Range < SetPieceRules.StopMargin - 0.01f).Select(x => $"{x.What} {x.Distance:0.00} m from stop {x.Stop} against range {x.Range:0.00} m").ToList();
         return near.Count == 0 ? null : $"a hazard's cue reaches within 2 m of a stop: {string.Join(", ", near)}";
     }
 

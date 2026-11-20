@@ -55,6 +55,17 @@ public sealed class FloorLayout
     public Dictionary<GridPos, BridgeKind> Bridges { get; } = new();
     public bool IsBridge(GridPos p) => Bridges.ContainsKey(p);
     public bool IsChasm(GridPos p) => this[p] == Cell.Chasm;
+    /// <summary>
+    /// An upper bridge with walkable ground beside it (not another bridge) lower than its deck where they meet: the band between
+    /// that ground and the deck's underside is shut by a plinth, so nobody walks in under the deck. A ramp climbing onto the deck
+    /// meets it at its high end and leaves no band. Every other bridge stands over its open drop.
+    /// </summary>
+    public bool IsShutUnder(GridPos p)
+        => IsBridge(p) && LevelOf(p) >= 1 && p.Neighbours4().Any(n => IsWalkable(n) && !IsBridge(n) && EdgeHeight(n, p) < LevelOf(p) * 4f);
+
+    /// <summary>A cell's floor height at its edge toward a 4-neighbour: a ramp's high end, else its low (a side runs down to it).</summary>
+    private float EdgeHeight(GridPos n, GridPos toward)
+        => Ramps.TryGetValue(n, out var r) ? (toward - n == r.Dir ? r.HighHeight : r.LowHeight) : LevelOf(n) * 4f;
     /// <summary>How many chasm cells the floor was cut with.</summary>
     public int ChasmCount { get; internal set; }
     /// <summary>The plank crossings cut into the halls (<see cref="FloorSpec.Crevasses"/>), in the order they were chosen; each is also in <see cref="Bridges"/> as <see cref="BridgeKind.Plank"/>.</summary>

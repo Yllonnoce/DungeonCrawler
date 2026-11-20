@@ -633,7 +633,8 @@ public partial class DungeonBuilder : Node3D
                         if (besideUpper) grid.SetCellItem(new Vector3I(x, level + 1, y), ItemWall);
                         else grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, level));
                         // an upper floor stands on a solid plinth unless a cellar or tunnel runs beneath it, or a bridge's drop
-                        if (level == 1 && !under && p != layout.DownStairs && !bridge) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
+                        // (kept under a bridge beside lower ground, so nobody walks in under its deck: FloorLayout.IsShutUnder)
+                        if (level == 1 && !under && p != layout.DownStairs && (!bridge || layout.IsShutUnder(p))) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
                         break;
                     case Cell.Pit or Cell.Chasm: // a crevasse is open below (ChasmDressing draws its drop), roofed like a pit
                         grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, level));

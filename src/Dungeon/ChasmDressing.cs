@@ -6,8 +6,8 @@ namespace DungeonCrawler.Dungeon;
 /// <summary>
 /// A crevasse floor's drops and the bridges over them, in two halves. The footings (<see cref="BuildFootings"/>) are built on every
 /// role, headless included: a bridge cell has no stone floor, so a deck's or a plank's box is the only thing a walker stands on there.
-/// The look (<see cref="BuildLook"/>) is skipped headless: for each 4-connected region of chasm-or-bridge cells, near-black shaft
-/// walls from the rim down <see cref="DrawDepth"/>, an ember floor and its light at the bottom, two drifting mist layers below
+/// The look (<see cref="BuildLook"/>) is skipped headless: for each 4-connected region of chasm-or-bridge cells, shaft
+/// walls (near-black at the rim, warming with depth) from the rim down <see cref="DrawDepth"/>, an ember floor and its light at the bottom, two drifting mist layers below
 /// the lip; the deck slabs with a trestle bent under each, and the planks.
 /// </summary>
 public partial class ChasmDressing : Node3D
@@ -19,8 +19,11 @@ public partial class ChasmDressing : Node3D
     private const float PlankWidth = 1.6f;   // a plank across a hall's crevasse
     private const float TrestleDepth = 12f;  // a deck cell's bent reaches this far below the deck
     private const float WallInset = 0.02f;   // a shaft face sits this far inside the drop, off its neighbour's own faces
-    private static readonly float[] MistDepths = { 4f, 10f };
-    private static readonly float[] MistAlphas = { 0.35f, 0.2f };
+    // two layers of wisps, deep enough that the shaft walls are seen falling away first; smoke lit from the embers below, the
+    // lower layer the warmer. Each layer is about half clear (the noise's alpha ramp), so the glow shows through the gaps.
+    private static readonly float[] MistDepths = { 8f, 18f };
+    private static readonly float[] MistAlphas = { 0.25f, 0.32f };
+    private static readonly Color[] MistColors = { new(0.25f, 0.14f, 0.1f), new(0.45f, 0.18f, 0.07f) };
 
     /// <summary>The 4-connected regions of chasm-or-bridge cells.</summary>
     public int Regions { get; private set; }
@@ -42,7 +45,6 @@ public partial class ChasmDressing : Node3D
         node.Planks = layout.Bridges.Values.Count(k => k == BridgeKind.Plank);
         node.AddChild(BuildFootings(layout, surface, cellSize));
         if (DrawsLook) node.BuildLook(layout, regions, surface, cellSize, plank);
-        else node.SetProcess(false);
         GD.Print($"[chasm] regions={node.Regions} decks={node.Decks} planks={node.Planks}");
         return node;
     }
@@ -129,19 +131,22 @@ public partial class ChasmDressing : Node3D
 
     private void BuildLook(FloorLayout layout, List<List<GridPos>> regions, Func<GridPos, Vector3> surface, float cellSize, Material plank)
     {
-        var rock = new StandardMaterial3D { AlbedoColor = new Color(0.045f, 0.04f, 0.038f), Roughness = 1f, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
+        // near-black rock that warms with depth, as if lit by the embers far below (unshaded: the glow is painted down the walls,
+        // since the ember light reaches only the lowest part of the shaft and a player at the lip sees only its upper walls)
+        var rock = new StandardMaterial3D { ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, VertexColorUseAsAlbedo = true, VertexColorIsSrgb = true, CullMode = BaseMaterial3D.CullModeEnum.Disabled };
         var ember = new StandardMaterial3D
         {
-            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, DisableFog = true, // a glow far down, not lost in the floor's haze
             AlbedoTexture = Noise(0.03f, 7, new[] { 0f, 0.55f, 1f }, new[] { new Color(0.08f, 0.01f, 0f), new Color(0.62f, 0.13f, 0.02f), new Color(1f, 0.56f, 0.16f) }),
         };
-        var mistNoise = Noise(0.012f, 19, new[] { 0.3f, 1f }, new[] { new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 1f) });
+        var mistNoise = Noise(0.012f, 19, new[] { 0.55f, 0.9f }, new[] { new Color(1f, 1f, 1f, 0f), new Color(1f, 1f, 1f, 1f) });
         for (var m = 0; m < MistDepths.Length; m++)
             _mists.Add(new StandardMaterial3D
             {
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
                 CullMode = BaseMaterial3D.CullModeEnum.Disabled, AlbedoTexture = mistNoise,
-                AlbedoColor = new Color(0.36f, 0.3f, 0.28f, MistAlphas[m]), Uv1Scale = Vector3.One * (m == 0 ? 1f : 0.7f),
+                AlbedoColor = MistColors[m] with { A = MistAlphas[m] }, Uv1Scale = Vector3.One * (m == 0 ? 1f : 0.7f),
+                ProximityFadeEnabled = true, ProximityFadeDistance = 2.5f, // no hard line where a layer meets the shaft or a post
             });
 
         for (var r = 0; r < regions.Count; r++)
@@ -161,10 +166,15 @@ public partial class ChasmDressing : Node3D
                     var side = new Vector3(-d.Z, 0, d.X);
                     var mid = new Vector3((c.X + 0.5f) * cellSize, 0, (c.Y + 0.5f) * cellSize) + d * (cellSize / 2f - WallInset);
                     var top = surface(n).Y;
+                    var lip = surface(c).Y;
                     var h = cellSize / 2f;
-                    Quad(shaft, -d,
-                        (mid + side * h) with { Y = top }, (mid - side * h) with { Y = top },
-                        (mid - side * h) with { Y = bottom }, (mid + side * h) with { Y = bottom });
+                    Color Glow(Vector3 p) => WallGlow(lip - p.Y);
+                    // in bands, so the warming shows in the upper walls a player can see
+                    var bands = new[] { top, lip - 3f, lip - 8f, bottom }.Where(y => y <= top && y >= bottom).Distinct().OrderByDescending(y => y).ToArray();
+                    for (var k = 0; k + 1 < bands.Length; k++)
+                        Quad(shaft, -d,
+                            (mid + side * h) with { Y = bands[k] }, (mid - side * h) with { Y = bands[k] },
+                            (mid - side * h) with { Y = bands[k + 1] }, (mid + side * h) with { Y = bands[k + 1] }, colour: Glow);
                 }
             AddMesh(shaft, rock, $"Shaft{r}", shadows: false);
 
@@ -215,11 +225,25 @@ public partial class ChasmDressing : Node3D
         AddMesh(wood, plank, "Bridges", shadows: true);
     }
 
+    /// <summary>Only the drawn look drifts its mist: a headless dressing (no mist) does not process at all.</summary>
+    public override void _Ready() => SetProcess(_mists.Count > 0);
+
     public override void _Process(double delta)
     {
+        if (_mists.Count == 0) return;
         _time += (float)delta;
         for (var m = 0; m < _mists.Count; m++)
             _mists[m].Uv1Offset = m == 0 ? new Vector3(_time * 0.012f, _time * 0.007f, 0) : new Vector3(-_time * 0.008f, _time * 0.011f, 0);
+    }
+
+    /// <summary>The shaft wall's colour this far below its lip: near-black at the rim, a dull ember red by 8 m, brighter at the bottom.</summary>
+    private static Color WallGlow(float depth)
+    {
+        ReadOnlySpan<float> at = stackalloc float[] { 0f, 3f, 8f, DrawDepth };
+        var colours = new[] { new Color(0.03f, 0.025f, 0.022f), new Color(0.07f, 0.03f, 0.018f), new Color(0.2f, 0.065f, 0.025f), new Color(0.5f, 0.16f, 0.045f) };
+        for (var k = 0; k + 1 < at.Length; k++)
+            if (depth <= at[k + 1]) return colours[k].Lerp(colours[k + 1], Mathf.Clamp((depth - at[k]) / (at[k + 1] - at[k]), 0f, 1f));
+        return colours[^1];
     }
 
     /// <summary>A seamless noise texture coloured through a ramp.</summary>
@@ -248,13 +272,14 @@ public partial class ChasmDressing : Node3D
     /// A quad a-b-c-d (in order round its edge) facing <paramref name="normal"/>: Godot's front faces wind clockwise seen from the
     /// front, so the winding is flipped when (b - a) x (c - a) points along the normal. UVs are world X/Z, or X/Y on a wall.
     /// </summary>
-    private static void Quad(SurfaceTool st, Vector3 normal, Vector3 a, Vector3 b, Vector3 c, Vector3 d, float uvPerMetre = 0.25f)
+    private static void Quad(SurfaceTool st, Vector3 normal, Vector3 a, Vector3 b, Vector3 c, Vector3 d, float uvPerMetre = 0.25f, Func<Vector3, Color>? colour = null)
     {
         var ring = (b - a).Cross(c - a).Dot(normal) > 0f ? new[] { a, d, c, b } : new[] { a, b, c, d };
         Vector2 Uv(Vector3 p) => Mathf.Abs(normal.Y) > 0.5f ? new Vector2(p.X, p.Z) * uvPerMetre : new Vector2(p.X + p.Z, p.Y) * uvPerMetre;
         foreach (var i in new[] { 0, 1, 2, 0, 2, 3 })
         {
             st.SetNormal(normal);
+            if (colour != null) st.SetColor(colour(ring[i]));
             st.SetUV(Uv(ring[i]));
             st.AddVertex(ring[i]);
         }

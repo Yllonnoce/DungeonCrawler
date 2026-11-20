@@ -32,11 +32,11 @@ public static class SetPieceRules
 
     /// <summary>The kinds that stand on the line from the ride's departure rather than starting as the cart reaches them (a golem arms at its At).</summary>
     public static bool StandsFromDeparture(string kind) => kind is "lone" or "thrower";
-    /// <summary>The cue range ends at least this far short of stop 3 (a seated head sits up to 0.7 m along the cart from its middle).</summary>
-    public const float StopThreeMargin = 2f;
+    /// <summary>The cue range ends at least this far short of every stop (a seated head sits up to 0.7 m along the cart from its middle).</summary>
+    public const float StopMargin = 2f;
 
-    /// <summary>A hazard's cue range when it stands <paramref name="metresToStopThree"/> from stop 3: 30 m, or less so a cart held there never hears it (never below 0).</summary>
-    public static float CueRange(float metresToStopThree) => Math.Clamp(metresToStopThree - StopThreeMargin, 0f, MaxCueRange);
+    /// <summary>A hazard's cue range when it stands <paramref name="metresToStop"/> from its nearest stop: 30 m, or less so a cart held there never hears it (never below 0).</summary>
+    public static float CueRange(float metresToStop) => Math.Clamp(metresToStop - StopMargin, 0f, MaxCueRange);
 
     /// <summary>
     /// A hazard's cue range against every stop on the line: <see cref="CueRange"/> of the nearest, so a cart held at any stop never
@@ -50,7 +50,7 @@ public static class SetPieceRules
     }
 
     /// <summary>
-    /// A piece with this cue range makes any sound at all: a range of 0 (a piece within the margin of stop 3) plays nothing, its one-shots
+    /// A piece with this cue range makes any sound at all: a range of 0 (a piece within the margin of a stop) plays nothing, its one-shots
     /// skipped and its loop kept stopped, since a 3D player reads a MaxDistance of 0 as unlimited.
     /// </summary>
     public static bool CueAudible(float cueRange) => cueRange > 0f;
