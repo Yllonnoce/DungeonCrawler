@@ -39,6 +39,17 @@ public static class SetPieceRules
     public static float CueRange(float metresToStopThree) => Math.Clamp(metresToStopThree - StopThreeMargin, 0f, MaxCueRange);
 
     /// <summary>
+    /// A hazard's cue range against every stop on the line: <see cref="CueRange"/> of the nearest, so a cart held at any stop never
+    /// hears it (<see cref="MaxCueRange"/> on a line with no stops).
+    /// </summary>
+    public static float CueRangeNearest(IEnumerable<float> metresToEachStop)
+    {
+        var nearest = float.PositiveInfinity;
+        foreach (var metres in metresToEachStop) nearest = Math.Min(nearest, metres);
+        return float.IsPositiveInfinity(nearest) ? MaxCueRange : CueRange(nearest);
+    }
+
+    /// <summary>
     /// A piece with this cue range makes any sound at all: a range of 0 (a piece within the margin of stop 3) plays nothing, its one-shots
     /// skipped and its loop kept stopped, since a 3D player reads a MaxDistance of 0 as unlimited.
     /// </summary>

@@ -161,9 +161,9 @@ public partial class RailEncounterController
         return buffer;
     }
 
-    /// <summary>A hazard's cue range at <paramref name="at"/>, by its distance to the last ride's stop (<see cref="SetPieceRules.CueRange"/>; 30 m on a line without one). Every role builds the same.</summary>
+    /// <summary>A hazard's cue range at <paramref name="at"/>, by its distance to the nearest of every stop (<see cref="SetPieceRules.CueRangeNearest"/>; 30 m on a line without one). Every role builds the same.</summary>
     private float CueRangeAt(Vector3 at)
-        => _rails.StopS.Length >= 2 ? SetPieceRules.CueRange(at.DistanceTo(_rails.Party.Track.Point(_rails.StopS[^2]))) : SetPieceRules.MaxCueRange;
+        => SetPieceRules.CueRangeNearest(_rails.StopS.Select(s => at.DistanceTo(_rails.Party.Track.Point(s))));
 
     /// <summary>The party line is laid bare over the floor's gaps (the curve and every S stay as they were).</summary>
     private void CutGaps(List<(float from, float to)> gaps)

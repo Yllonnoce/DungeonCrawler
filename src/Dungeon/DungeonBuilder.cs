@@ -342,6 +342,8 @@ public partial class DungeonBuilder : Node3D
             var plank = Material("weathered_planks", new Color(0.5f, 0.38f, 0.24f), 1.6f);
             foreach (var water in layout.Water) _floorRoot.AddChild(WaterSurface.Build(layout, water, cell => Surface(cell), CellSize, bedMat, plank));
         }
+        if (layout.ChasmCount > 0) // the drops and the bridges' footings, which stand on every role (the look is skipped headless)
+            _floorRoot.AddChild(ChasmDressing.Build(layout, cell => Surface(cell), CellSize, Material("weathered_planks", new Color(0.5f, 0.38f, 0.24f), 1.6f)));
         PlaceLightsAndDecor(layout, _floorRoot, tier, seed);
         if (layout.Kind == LayoutKind.Tavern) { DressTavern(layout, _floorRoot); PlaceTavernMerchant(layout, _floorRoot); }
         var tremor = new Tremor { Name = "Tremor" };
@@ -622,17 +624,18 @@ public partial class DungeonBuilder : Node3D
                 switch (layout[p])
                 {
                     case Cell.Floor or Cell.Door:
-                        // the down-stairs cell is a well the stairs prop floors itself
-                        if (!layout.IsWater(p) && p != layout.DownStairs) grid.SetCellItem(new Vector3I(x, level, y), _buckled.TryGetValue(p, out var variant) ? ItemBuckledBase + variant : ItemFloor);
+                        // the down-stairs cell is a well the stairs prop floors itself; a bridge cell stands on its deck or plank (ChasmDressing)
+                        var bridge = layout.IsBridge(p);
+                        if (!layout.IsWater(p) && p != layout.DownStairs && !bridge) grid.SetCellItem(new Vector3I(x, level, y), _buckled.TryGetValue(p, out var variant) ? ItemBuckledBase + variant : ItemFloor);
                         // a low cell beside a taller one (an upper room, a ledge's tall room) gets a wall cube above it: its
                         // ceiling doubles as the taller space's side, a lintel over the doorway rather than a view over the vault
                         var besideUpper = level == 0 && Neighbours4(p).Any(n => layout[n] is Cell.Floor or Cell.Door && layout.CeilingLayer(n) > ceilingLayer);
                         if (besideUpper) grid.SetCellItem(new Vector3I(x, level + 1, y), ItemWall);
                         else grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, level));
-                        // an upper floor stands on a solid plinth unless a cellar or tunnel runs beneath it
-                        if (level == 1 && !under && p != layout.DownStairs) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
+                        // an upper floor stands on a solid plinth unless a cellar or tunnel runs beneath it, or a bridge's drop
+                        if (level == 1 && !under && p != layout.DownStairs && !bridge) grid.SetCellItem(new Vector3I(x, 0, y), ItemWall);
                         break;
-                    case Cell.Pit:
+                    case Cell.Pit or Cell.Chasm: // a crevasse is open below (ChasmDressing draws its drop), roofed like a pit
                         grid.SetCellItem(new Vector3I(x, ceilingLayer, y), CeilingFor(layout, p, level));
                         break;
                     case Cell.Ramp:
