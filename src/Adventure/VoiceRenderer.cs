@@ -187,6 +187,52 @@ public partial class VoiceRenderer : Node
 
     private readonly Dictionary<string, double?> _lengths = new();
 
+    /// <summary>How many loaded recordings are kept (a line is 0.1 to 0.5 MB): enough for a line's length to be read and the line played moments later.</summary>
+    private const int StreamsKept = 16;
+    /// <summary>The recordings loaded last, by id: what waits for a line reads its length and then plays it, and each read the file once.</summary>
+    private readonly RecentCache<string, AudioStream> _streams = new(StreamsKept);
+    /// <summary>Shipped lines asked of the loader thread (<see cref="Prefetch"/>) and not collected yet, by id.</summary>
+    private readonly HashSet<string> _prefetching = new();
+    private readonly List<string> _prefetched = new();
+
+    /// <summary>A line's recording, read from disk once while it is among the last <see cref="StreamsKept"/> used (a prefetched one from its loader thread).</summary>
+    private AudioStream? Stream(string id)
+    {
+        if (_streams.TryGet(id, out var kept)) return kept;
+        AudioStream? stream = null;
+        if (_prefetching.Remove(id)) stream = ResourceLoader.LoadThreadedGet(Builtin(id)) as AudioStream; // waits for it if still loading
+        stream ??= Load(id);
+        if (stream != null) _streams.Put(id, stream);
+        return stream;
+    }
+
+    private static string Builtin(string id) => $"{BuiltinDir}/{id}.wav";
+
+    /// <summary>
+    /// Start reading a shipped line on a loader thread, for a line that will be spoken a little later (a ride's encounter lines
+    /// when the ride arms): its playing then finds it loaded. Nothing for a line already loaded or loading, or not in the bank.
+    /// </summary>
+    public void Prefetch(string? id)
+    {
+        if (string.IsNullOrEmpty(id) || _prefetching.Contains(id) || _streams.TryGet(id, out _) || !ResourceLoader.Exists(Builtin(id))) return;
+        if (ResourceLoader.LoadThreadedRequest(Builtin(id)) == Error.Ok) _prefetching.Add(id);
+    }
+
+    /// <summary>Take in the prefetched lines whose loads have finished (into the bounded cache: one never spoken is let go in time).</summary>
+    private void CollectPrefetched()
+    {
+        if (_prefetching.Count == 0) return;
+        _prefetched.Clear();
+        foreach (var id in _prefetching)
+        {
+            var status = ResourceLoader.LoadThreadedGetStatus(Builtin(id));
+            if (status == ResourceLoader.ThreadLoadStatus.InProgress) continue;
+            _prefetched.Add(id);
+            if (status == ResourceLoader.ThreadLoadStatus.Loaded && ResourceLoader.LoadThreadedGet(Builtin(id)) is AudioStream stream) _streams.Put(id, stream);
+        }
+        foreach (var id in _prefetched) _prefetching.Remove(id);
+    }
+
     /// <summary>
     /// How long a line's recording runs, in seconds, from the shipped bank or the cache; null when it has no recording.
     /// What waits for a line waits this long (<see cref="NarrationRules.HeardSeconds"/>). Cached by id: an id is its content.
@@ -195,7 +241,7 @@ public partial class VoiceRenderer : Node
     {
         if (string.IsNullOrEmpty(id)) return null;
         if (_lengths.TryGetValue(id, out var known)) return known;
-        double? length = HasAudio(id) && Load(id) is { } stream ? stream.GetLength() : null;
+        double? length = HasAudio(id) && Stream(id) is { } stream ? stream.GetLength() : null; // kept for the line's playing
         if (length is <= 0) length = null;
         if (length != null) _lengths[id] = length; // a line not rendered yet may be by the next time it is asked about
         return length;
@@ -205,7 +251,7 @@ public partial class VoiceRenderer : Node
     public bool Play(string? id, bool interrupt)
     {
         if (id == null || AudioManager.Instance == null) return false;
-        var stream = Load(id);
+        var stream = Stream(id);
         if (stream == null) { GD.Print($"[Voice] no audio for line {id} ({(HasBuiltin(id) ? "in the shipped bank but it did not load" : "not in the shipped bank or the cache")})"); return false; }
         var played = AudioManager.Instance.PlayVoice(stream, interrupt);
         GD.Print($"[Voice] {(played ? "playing" : "skipped (busy)")} line {id}, {stream.GetLength():0.0} s, from {(HasBuiltin(id) ? "the shipped bank" : "the cache")}");
@@ -237,8 +283,16 @@ public partial class VoiceRenderer : Node
         if (AudioManager.Instance is { VoiceBusy: false }) { _held = null; Play(held.Id, interrupt: false); }
     }
 
+    public override void _ExitTree()
+    {
+        foreach (var id in _prefetching) ResourceLoader.LoadThreadedGet(Builtin(id)); // a load still on its thread is waited for, then dropped
+        _prefetching.Clear();
+        _streams.Clear();
+    }
+
     public override void _Process(double delta)
     {
+        CollectPrefetched();
         TickHeld();
         _combatTimer -= (float)delta;
         if (_combatTimer <= 0f)

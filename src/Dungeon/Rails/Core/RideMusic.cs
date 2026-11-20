@@ -53,6 +53,9 @@ public static class RideMusic
     /// <summary>Rides 1-3 loop the chase; ride 4 (the kiln's hammers and pour) plays the forge piece on the hammers' beat.</summary>
     public static string TrackFor(int ride) => ride == 4 ? PourTrack : ChaseTrack;
 
+    /// <summary>Every track a ride plays (<see cref="TrackFor"/>): the music loads them when a railed floor is built.</summary>
+    public static readonly IReadOnlyList<string> Tracks = new[] { ChaseTrack, PourTrack };
+
     /// <summary>The last stop at or behind <paramref name="s"/> on the party line (a chaser's stop left); 0 before stop 1 or with no stops.</summary>
     public static int StopBehind(IReadOnlyList<float> stopS, float s)
     {

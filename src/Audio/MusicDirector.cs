@@ -83,11 +83,57 @@ public partial class MusicDirector : Node
         bus.BossSeen += _ => _bossActive = true;
         bus.BossDefeated += _ => _bossActive = false;
         bus.FloorChanged += (_, _) => { _bossActive = false; _combatUntil = -1; _rideSeen = double.NegativeInfinity; };
-        bus.FloorBuilt += (_, _, _) => _rideSeen = double.NegativeInfinity; // a load rebuilds the floor: no hold carried over from before it
+        bus.FloorBuilt += (_, _, _) => { _rideSeen = double.NegativeInfinity; PreloadFloor(); }; // a load rebuilds the floor: no hold carried over from before it
         bus.PartyWiped += () => PlaySting(DefeatSting);
         var found = MenuTracks.Concat(ExploreByTier.SelectMany(t => t)).Concat(CombatTracks).Concat(BossTracks).Concat(ChaseTracks).Count(f => ResourceLoader.Exists(Dir + f));
         GD.Print($"[Music] {found} tracks available");
         if (found == 0) Enabled = false;
+    }
+
+    /// <summary>Tracks asked of the loader thread (<see cref="PreloadFloor"/>) and not collected yet, by file name.</summary>
+    private readonly HashSet<string> _preloading = new();
+    private readonly List<string> _preloaded = new();
+
+    /// <summary>
+    /// A floor was built: have every track it can play read on a loader thread (the tier's exploration pool, the battle and
+    /// boss tracks, and on a railed floor the rides' chase and pour), so no mood change reads one from disk as it starts (7 to
+    /// 11 ms on the frame). A track loaded once stays in <see cref="_cache"/>; a dedicated server plays nothing and loads nothing.
+    /// </summary>
+    private void PreloadFloor()
+    {
+        if (!Enabled || Net.NetSession.IsServer || Main.Instance is not { InGame: true } main) return;
+        var tier = Math.Clamp(main.Builder.CurrentTier?.Index ?? 0, 0, ExploreByTier.Length - 1);
+        foreach (var file in ExploreByTier[tier]) Preload(file);
+        foreach (var file in CombatTracks) Preload(file);
+        foreach (var file in BossTracks) Preload(file);
+        if (main.Builder.Layout?.Rail != null) foreach (var file in RideMusic.Tracks) Preload(file);
+    }
+
+    private void Preload(string file)
+    {
+        if (_cache.ContainsKey(file) || _preloading.Contains(file) || !ResourceLoader.Exists(Dir + file)) return;
+        if (ResourceLoader.LoadThreadedRequest(Dir + file) == Error.Ok) _preloading.Add(file);
+    }
+
+    /// <summary>Take the finished preloads into the cache; one that failed is forgotten (its first play loads it the plain way).</summary>
+    private void CollectPreloaded()
+    {
+        if (_preloading.Count == 0) return;
+        _preloaded.Clear();
+        foreach (var file in _preloading)
+        {
+            var status = ResourceLoader.LoadThreadedGetStatus(Dir + file);
+            if (status == ResourceLoader.ThreadLoadStatus.InProgress) continue;
+            _preloaded.Add(file);
+            if (status == ResourceLoader.ThreadLoadStatus.Loaded && ResourceLoader.LoadThreadedGet(Dir + file) is AudioStream stream) _cache[file] = stream;
+        }
+        foreach (var file in _preloaded) _preloading.Remove(file);
+    }
+
+    public override void _ExitTree()
+    {
+        foreach (var file in _preloading) ResourceLoader.LoadThreadedGet(Dir + file); // a load still on its thread is waited for, then dropped
+        _preloading.Clear();
     }
 
     private AudioStream? Load(string file, bool loop)
@@ -96,7 +142,8 @@ public partial class MusicDirector : Node
         {
             var path = Dir + file;
             if (!ResourceLoader.Exists(path)) return null;
-            stream = GD.Load<AudioStream>(path);
+            if (_preloading.Remove(file)) stream = ResourceLoader.LoadThreadedGet(path) as AudioStream; // a preload still on its thread: wait for it
+            stream ??= GD.Load<AudioStream>(path);
             _cache[file] = stream;
         }
         switch (stream)
@@ -113,6 +160,7 @@ public partial class MusicDirector : Node
     {
         var dt = (float)delta;
         _clock += delta;
+        CollectPreloaded();
         if (!Enabled || Net.NetSession.IsServer) { if (_front.Playing) { _frontTarget = -80f; } Fade(dt); return; }
         _pollTimer -= dt;
         if (_pollTimer <= 0f) { _pollTimer = 0.5f; Decide(); }
