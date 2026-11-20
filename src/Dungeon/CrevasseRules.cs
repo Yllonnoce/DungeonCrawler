@@ -36,7 +36,7 @@ public static class CrevasseRules
     /// <summary>A party-lane cell with a chasm this close (Chebyshev) is over a crevasse (Ruling 7).</summary>
     public const int OverReach = 2;
 
-    /// <summary>A plank's boards across its hall, as <c>ChasmDressing</c> lays them (its PlankWidth).</summary>
+    /// <summary>A plank's boards across its hall: <c>ChasmDressing</c> lays its collision box this wide.</summary>
     public const float PlankWidth = 1.6f;
     /// <summary>A steered body's centre keeps this far inside a plank's edge.</summary>
     public const float FootingMargin = 0.2f;
@@ -69,6 +69,10 @@ public static class CrevasseRules
     /// </summary>
     public static GridPos? LipCell(FloorLayout l, GridPos near)
         => Nearest(l, near, LipReach, c => SetDownOk(l, c) && !l.IsRail(c)) ?? Nearest(l, near, LipSearch, c => SetDownOk(l, c));
+
+    /// <summary>The nearest cell anywhere on the floor a body may be set down on (<see cref="SetDownOk"/>), ties by (Y, X); null when there is none.</summary>
+    public static GridPos? NearestSetDown(FloorLayout l, GridPos near)
+        => Nearest(l, near, Math.Max(l.Width, l.Height), c => SetDownOk(l, c));
 
     private static GridPos? Nearest(FloorLayout l, GridPos near, int reach, Func<GridPos, bool> ok)
     {
@@ -108,10 +112,10 @@ public static class CrevasseRules
 
     public static GridPos CellOf(Vector2 at, float cellSize) => new((int)MathF.Floor(at.X / cellSize), (int)MathF.Floor(at.Y / cellSize));
 
-    /// <summary>A plank runs along X unless the drop lies east or west of it (as <c>ChasmDressing</c> lays it).</summary>
+    /// <summary>A plank runs along X unless the drop lies east or west of it (<c>ChasmDressing</c> lays its box by this).</summary>
     public static bool PlankRunsAlongX(FloorLayout l, GridPos cell) => !(l.IsChasm(cell + new GridPos(1, 0)) || l.IsChasm(cell + new GridPos(-1, 0)));
 
-    /// <summary>A deck runs along its lane: the step between its neighbours in the party or the enemy lane (X when neither holds it), as <c>ChasmDressing</c> lays it.</summary>
+    /// <summary>A deck runs along its lane: the step between its neighbours in the party or the enemy lane (X when neither holds it); <c>ChasmDressing</c> lays its box by this.</summary>
     public static bool DeckRunsAlongX(FloorLayout l, GridPos cell)
     {
         if (l.Rail is not { } rail) return true;
@@ -155,9 +159,12 @@ public static class CrevasseRules
         if (length < 1e-4f) return true;
         const float eps = 1e-3f;
         for (var t = 0.1f / length; t < 1f; t += 0.1f / length) if (!Ok(a + d * t)) return false;
-        foreach (var (from, delta) in new[] { (a.X, d.X), (a.Y, d.Y) })
+        return Crossings(a.X, d.X) && Crossings(a.Y, d.Y);
+
+        // either side of every cell edge the segment crosses along one axis
+        bool Crossings(float from, float delta)
         {
-            if (MathF.Abs(delta) < 1e-6f) continue;
+            if (MathF.Abs(delta) < 1e-6f) return true;
             var k0 = (int)MathF.Floor(MathF.Min(from, from + delta) / cellSize);
             var k1 = (int)MathF.Floor(MathF.Max(from, from + delta) / cellSize);
             for (var k = k0 + 1; k <= k1; k++)
@@ -166,44 +173,70 @@ public static class CrevasseRules
                 if (t <= 0f || t >= 1f) continue;
                 if (!Ok(a + d * MathF.Max(0f, t - eps / length)) || !Ok(a + d * MathF.Min(1f, t + eps / length))) return false;
             }
+            return true;
         }
-        return true;
     }
 
     /// <summary>A spot a follower may be sent to: a walkable cell, with footing.</summary>
     public static bool Standable(FloorLayout l, Vector2 at, float cellSize) => l.IsWalkable(CellOf(at, cellSize)) && Footing(l, at, cellSize);
 
+    /// <summary>How far (cells, Chebyshev) <see cref="NearestStandable"/> looks round a point.</summary>
+    public const int StandSearch = 2;
+
+    /// <summary>
+    /// The <see cref="Standable"/> point nearest <paramref name="p"/>: itself when it is one; else, in each walkable cell within
+    /// <see cref="StandSearch"/>, the point of it nearest <paramref name="p"/> (on a plank, on its line); null when there is none.
+    /// Where a body off its footing heads, and where a follower of a lead off its footing measures from: never a remembered point.
+    /// </summary>
+    public static Vector2? NearestStandable(FloorLayout l, Vector2 p, float cellSize)
+    {
+        if (Standable(l, p, cellSize)) return p;
+        var here = CellOf(p, cellSize);
+        Vector2? best = null;
+        var bestD = float.MaxValue;
+        const float inset = 0.05f;
+        for (var dy = -StandSearch; dy <= StandSearch; dy++)
+            for (var dx = -StandSearch; dx <= StandSearch; dx++)
+            {
+                var c = new GridPos(here.X + dx, here.Y + dy);
+                if (!l.IsWalkable(c)) continue;
+                var q = new Vector2(Math.Clamp(p.X, c.X * cellSize + inset, (c.X + 1) * cellSize - inset), Math.Clamp(p.Y, c.Y * cellSize + inset, (c.Y + 1) * cellSize - inset));
+                if (l.Bridges.TryGetValue(c, out var kind) && kind == BridgeKind.Plank)
+                    q = PlankRunsAlongX(l, c) ? q with { Y = (c.Y + 0.5f) * cellSize } : q with { X = (c.X + 0.5f) * cellSize };
+                var d = Vector2.DistanceSquared(p, q);
+                if (d < bestD && Standable(l, q, cellSize)) { best = q; bestD = d; }
+            }
+        return best;
+    }
+
     /// <summary>
     /// The planar velocity a steered body at <paramref name="pos"/> may move at when it would move at <paramref name="wish"/>:
     /// the wish while the ground ahead holds (<see cref="Footing"/> all the way out to <see cref="ProbeAhead"/> plus
     /// <see cref="ProbeSeconds"/> of travel, and no rock there, which would turn the step along itself); else the wish along X alone or Z alone (along the lip), or toward the line of the
-    /// plank ahead, whichever holds and keeps more of its speed; else standing still. A body already off its footing heads back
-    /// to <paramref name="lastFooting"/>, where it last stood (still, when there is none). On a floor with no chasm, the wish.
+    /// plank ahead, whichever holds and keeps more of its speed; else standing still. A body already off its footing heads, when
+    /// <paramref name="recover"/> (it stands, and is not down), for the nearest point it can stand on (<see cref="NearestStandable"/>),
+    /// else stops. On a floor with no chasm, the wish.
     /// </summary>
-    public static Vector2 KeepFooting(FloorLayout l, float cellSize, Vector2 pos, Vector2 wish, Vector2? lastFooting)
+    public static Vector2 KeepFooting(FloorLayout l, float cellSize, Vector2 pos, Vector2 wish, bool recover)
     {
         if (l.ChasmCount == 0) return wish;
         var speed = wish.Length();
         if (!Footing(l, pos, cellSize))
-            return lastFooting is { } back && Vector2.DistanceSquared(back, pos) > 1e-4f ? Vector2.Normalize(back - pos) * MathF.Max(speed, 1.5f) : Vector2.Zero;
+            return recover && NearestStandable(l, pos, cellSize) is { } back && Vector2.DistanceSquared(back, pos) > 1e-4f ? Vector2.Normalize(back - pos) * MathF.Max(speed, 1.5f) : Vector2.Zero;
         if (speed < 1e-3f || Holds(wish)) return wish;
         var best = Vector2.Zero;
-        foreach (var v in Slides())
-            if (v.LengthSquared() > best.LengthSquared() && Holds(v)) best = v;
+        Consider(new Vector2(wish.X, 0f));
+        Consider(new Vector2(0f, wish.Y));
+        var ahead = pos + wish / speed * (ProbeAhead + speed * ProbeSeconds);
+        var cell = CellOf(ahead, cellSize);
+        if (l.Bridges.TryGetValue(cell, out var kind) && kind == BridgeKind.Plank)
+        {
+            var line = PlankRunsAlongX(l, cell) ? ahead with { Y = (cell.Y + 0.5f) * cellSize } : ahead with { X = (cell.X + 0.5f) * cellSize };
+            if (Vector2.DistanceSquared(line, pos) > 1e-4f) Consider(Vector2.Normalize(line - pos) * speed);
+        }
         return best;
 
-        IEnumerable<Vector2> Slides()
-        {
-            yield return new Vector2(wish.X, 0f);
-            yield return new Vector2(0f, wish.Y);
-            var ahead = pos + wish / speed * (ProbeAhead + speed * ProbeSeconds);
-            var cell = CellOf(ahead, cellSize);
-            if (l.Bridges.TryGetValue(cell, out var kind) && kind == BridgeKind.Plank)
-            {
-                var line = PlankRunsAlongX(l, cell) ? ahead with { Y = (cell.Y + 0.5f) * cellSize } : ahead with { X = (cell.X + 0.5f) * cellSize };
-                if (Vector2.DistanceSquared(line, pos) > 1e-4f) yield return Vector2.Normalize(line - pos) * speed;
-            }
-        }
+        void Consider(Vector2 v) { if (v.LengthSquared() > best.LengthSquared() && Holds(v)) best = v; }
 
         // the whole way ahead holds, and none of it is rock: a wall would turn the step along itself, maybe over the lip
         bool Holds(Vector2 v)
@@ -215,25 +248,27 @@ public static class CrevasseRules
 
     /// <summary>
     /// Where a follower walks to keep its formation <paramref name="slot"/> behind a leader at <paramref name="lead"/> facing away
-    /// from <paramref name="back"/>: the slot itself when it is <see cref="Standable"/> and the ground between the leader and it
-    /// holds; else, the leader on a bridge, in file behind them along the bridge (on a plank's line), the follower of
-    /// <paramref name="rank"/> (0 first) <see cref="FileGap"/> × (rank + 1) back, nearer when that does not hold; else where the
-    /// leader stands.
+    /// from <paramref name="back"/>. Measured from the leader's own footing (<see cref="NearestStandable"/>: a leader off a plank's
+    /// line is taken on it, one over a lip at the floor beside it): the slot itself when it is <see cref="Standable"/> and the
+    /// ground from there to it holds; else, that footing on a bridge, in file behind it along the bridge (on a plank's line), the
+    /// follower of <paramref name="rank"/> (0 first) <see cref="FileGap"/> × (rank + 1) back, nearer when that does not hold; else
+    /// that footing itself. The result always has footing, unless nothing within <see cref="StandSearch"/> cells of the leader does.
     /// </summary>
     public static Vector2 FollowSpot(FloorLayout l, float cellSize, Vector2 lead, Vector2 back, Vector2 slot, int rank)
     {
-        if (Standable(l, slot, cellSize) && FootingAlong(l, cellSize, lead, slot)) return slot;
-        var cell = CellOf(lead, cellSize);
-        if (!l.Bridges.TryGetValue(cell, out var kind)) return lead;
+        var anchor = NearestStandable(l, lead, cellSize) ?? lead;
+        if (Standable(l, slot, cellSize) && FootingAlong(l, cellSize, anchor, slot)) return slot;
+        var cell = CellOf(anchor, cellSize);
+        if (!l.Bridges.TryGetValue(cell, out var kind)) return anchor;
         var alongX = kind == BridgeKind.Plank ? PlankRunsAlongX(l, cell) : DeckRunsAlongX(l, cell);
         var axis = alongX ? new Vector2(back.X < 0f ? -1f : 1f, 0f) : new Vector2(0f, back.Y < 0f ? -1f : 1f);
-        var from = kind != BridgeKind.Plank ? lead : alongX ? lead with { Y = (cell.Y + 0.5f) * cellSize } : lead with { X = (cell.X + 0.5f) * cellSize };
+        var from = kind != BridgeKind.Plank ? anchor : alongX ? anchor with { Y = (cell.Y + 0.5f) * cellSize } : anchor with { X = (cell.X + 0.5f) * cellSize };
         for (var depth = FileGap * (Math.Max(0, rank) + 1); depth > 0.25f; depth -= 0.5f)
         {
             var p = from + axis * depth;
-            if (Standable(l, p, cellSize) && FootingAlong(l, cellSize, lead, p)) return p;
+            if (Standable(l, p, cellSize) && FootingAlong(l, cellSize, from, p)) return p;
         }
-        return lead;
+        return from;
     }
 
     // ---- the walking warning -------------------------------------------------------------------------------------------
@@ -270,5 +305,14 @@ public static class CrevasseRules
             for (var dx = -WarnCells; dx <= WarnCells; dx++)
                 if (regions.TryGetValue(new GridPos(cell.X + dx, cell.Y + dy), out var r)) near.Add(r);
         return near;
+    }
+
+    /// <summary>The first region within <see cref="WarnCells"/> of <paramref name="cell"/> (row by row) not yet in <paramref name="warned"/>, or −1. Allocates nothing.</summary>
+    public static int UnwarnedNear(IReadOnlyDictionary<GridPos, int> regions, GridPos cell, HashSet<int> warned)
+    {
+        for (var dy = -WarnCells; dy <= WarnCells; dy++)
+            for (var dx = -WarnCells; dx <= WarnCells; dx++)
+                if (regions.TryGetValue(new GridPos(cell.X + dx, cell.Y + dy), out var r) && !warned.Contains(r)) return r;
+        return -1;
     }
 }

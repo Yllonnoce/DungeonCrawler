@@ -16,7 +16,6 @@ public partial class ChasmDressing : Node3D
     public const float DrawDepth = 30f;
 
     private const float SlabThick = 0.2f;    // a deck or a plank, as thick as a stone floor slab
-    private const float PlankWidth = 1.6f;   // a plank across a hall's crevasse
     private const float TrestleDepth = 12f;  // a deck cell's bent reaches this far below the deck
     private const float WallInset = 0.02f;   // a shaft face sits this far inside the drop, off its neighbour's own faces
     // two layers of wisps, deep enough that the shaft walls are seen falling away first; smoke lit from the embers below, the
@@ -82,31 +81,14 @@ public partial class ChasmDressing : Node3D
         return (surface(cell), along, Vector3.Up.Cross(along)); // (across, up, along) is a right-handed basis
     }
 
-    /// <summary>A deck cell runs along its lane: the step between its neighbours in the party or the enemy line (X when neither holds it).</summary>
-    private static Vector3 DeckAlong(FloorLayout layout, GridPos cell)
-    {
-        if (layout.Rail is { } rail)
-            foreach (var lane in new[] { rail.Party, rail.Enemy })
-            {
-                var i = IndexOf(lane, cell);
-                if (i < 0) continue;
-                var step = lane[Math.Min(lane.Count - 1, i + 1)] - lane[Math.Max(0, i - 1)];
-                return Math.Abs(step.X) >= Math.Abs(step.Y) ? Vector3.Right : Vector3.Back;
-            }
-        return Vector3.Right;
-    }
+    /// <summary>A deck cell runs along its lane (<see cref="CrevasseRules.DeckRunsAlongX"/>): the one rule the companions' footing reads too.</summary>
+    private static Vector3 DeckAlong(FloorLayout layout, GridPos cell) => CrevasseRules.DeckRunsAlongX(layout, cell) ? Vector3.Right : Vector3.Back;
 
-    private static int IndexOf(IReadOnlyList<GridPos> lane, GridPos cell)
-    {
-        for (var i = 0; i < lane.Count; i++) if (lane[i] == cell) return i;
-        return -1;
-    }
+    /// <summary>A plank runs along its hall, the axis without the drop on either side (<see cref="CrevasseRules.PlankRunsAlongX"/>).</summary>
+    private static Vector3 PlankAlong(FloorLayout layout, GridPos cell) => CrevasseRules.PlankRunsAlongX(layout, cell) ? Vector3.Right : Vector3.Back;
 
-    /// <summary>A plank runs along its hall, the axis without the drop on either side.</summary>
-    private static Vector3 PlankAlong(FloorLayout layout, GridPos cell)
-        => layout.IsChasm(cell + new GridPos(1, 0)) || layout.IsChasm(cell + new GridPos(-1, 0)) ? Vector3.Back : Vector3.Right;
-
-    private static Vector3 SlabSize(BridgeKind kind, float cellSize) => new(kind == BridgeKind.Plank ? PlankWidth : cellSize, SlabThick, cellSize);
+    /// <summary>A deck fills its cell; a plank is <see cref="CrevasseRules.PlankWidth"/> across, the band a companion's footing keeps to.</summary>
+    private static Vector3 SlabSize(BridgeKind kind, float cellSize) => new(kind == BridgeKind.Plank ? CrevasseRules.PlankWidth : cellSize, SlabThick, cellSize);
 
     /// <summary>
     /// One static body on layer 1 with a box per bridge cell, its top the cell's floor. Built on every role. A deck on a ramp

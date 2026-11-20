@@ -75,7 +75,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private bool _lowHpSaid;
     private int _lastTelegraphDecided = -1;
     private Enemy? _telegraphing;
-    public bool Downed => !State.IsAlive;
+    /// <summary>Down: no HP, or fallen into a crevasse (whatever its HP says, until it climbs back out).</summary>
+    public bool Downed => !State.IsAlive || State.Fallen;
     /// <summary>The fallen look is showing (<see cref="ShowDowned"/> ran and <see cref="Revive"/> has not).</summary>
     private bool _shownDowned;
     public Stance Stance { get; set; } = Stance.Defensive;
@@ -135,8 +136,6 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private bool _falling;
     /// <summary>The body is hidden in a crevasse (<see cref="CharacterState.Fallen"/>): shown again once the flag clears.</summary>
     private bool _inCrevasse;
-    /// <summary>Where a steered body's centre last had footing (<see cref="CrevasseRules.Footing"/>): a shoved one heads back there.</summary>
-    private System.Numerics.Vector2? _lastFooting;
     private float _stepTimer;
 
     private CompanionAction _action = CompanionAction.Idle;
@@ -435,7 +434,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         // fallen into a crevasse: hidden, not solid and frozen under the lip until the party next reaches a stop (a client
         // hides its copy on the sheet's word); every role
         if (State.Fallen) { HoldInCrevasse(); return; }
-        if (_inCrevasse) { _inCrevasse = false; Visible = true; } // out again (a wipe's restore, or the server's word on a client); a parked body never gets here
+        if (_inCrevasse) // out again (a wipe's restore, or the server's word on a client); a parked body never gets here
+        {
+            _inCrevasse = false;
+            Visible = true;
+            CollisionLayer = Downed ? (State.Mangled ? 8u : 0u) : 2u; // a client's revive may have come before the sheet that cleared the fall
+        }
         // recovery: a body still lying in the fallen look (no collision layer, so the stairs landing and the enemies miss it)
         // while its state is alive again missed its revive; stand it up
         if (_shownDowned && !Downed) Revive();
@@ -1115,15 +1119,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     /// <summary>
     /// A steered body's velocity kept on its footing (<see cref="CrevasseRules.KeepFooting"/>): on a crevasse floor it never
-    /// carries the body's centre over a chasm cell or off a plank's boards, and one shoved off while still on the lip heads back
-    /// (one already in the air drops straight).
+    /// carries the body's centre over a chasm cell or off a plank's boards, and one off its footing while still on the lip heads for
+    /// the nearest point it can stand on (one already in the air drops straight). It clamps a body in the air too while its centre
+    /// is still over footing: a companion knocked toward an edge stops at it, where a human would go over.
     /// </summary>
     private Vector3 KeepFooting(Vector3 velocity)
     {
         if (Main.Instance?.Builder.Layout is not { ChasmCount: > 0 } layout) return velocity;
         var pos = new System.Numerics.Vector2(GlobalPosition.X, GlobalPosition.Z);
-        if (CrevasseRules.Footing(layout, pos, DungeonBuilder.CellSize)) _lastFooting = pos;
-        var kept = CrevasseRules.KeepFooting(layout, DungeonBuilder.CellSize, pos, new System.Numerics.Vector2(velocity.X, velocity.Z), Downed || !IsOnFloor() ? null : _lastFooting); // a body that is down, or already falling, only stops
+        var kept = CrevasseRules.KeepFooting(layout, DungeonBuilder.CellSize, pos, new System.Numerics.Vector2(velocity.X, velocity.Z), recover: !Downed && IsOnFloor()); // a body that is down, or already falling, only stops
         return new Vector3(kept.X, velocity.Y, kept.Y);
     }
 
@@ -2003,6 +2007,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
 
     public void Revive()
     {
+        if (State.Fallen) return; // only ReturnFromCrevasse (or a wipe's FullRestore) brings a fallen hero back
         var wasDown = State.Hp <= 0f || _shownDowned; // a caller that restored the hp first (rescue, wipe, self-recovery) still revived a fallen body: say so, or clients never stand it up
         _shownDowned = false;
         State.Mangled = false;

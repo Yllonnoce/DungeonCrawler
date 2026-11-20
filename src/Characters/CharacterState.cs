@@ -124,7 +124,7 @@ public sealed class CharacterState
     /// <summary>Natural regeneration, all three rates times <paramref name="multiplier"/> (the safe room's). Stamina does not return while the character is holding a block.</summary>
     public void Regenerate(float dt, bool blocking, float multiplier = 1f)
     {
-        if (!IsAlive) return;
+        if (!IsAlive || Fallen) return;
         Hp = Math.Min(Stats[Stat.MaxHp], Hp + Stats[Stat.HpRegen] * multiplier * Effects.HealingMultiplier * dt);
         if (!blocking) Stamina = Math.Min(Stats[Stat.MaxStamina], Stamina + Stats[Stat.StaminaRegen] * multiplier * dt);
         Mana = Math.Min(Stats[Stat.MaxMana], Mana + Stats[Stat.ManaRegen] * multiplier * dt);
@@ -136,5 +136,6 @@ public sealed class CharacterState
         if (amount > 0 && Hp - amount <= 0 && DeathWards > 0) { DeathWards--; Hp = 1; return; }
         Hp = Math.Max(0, Hp - amount);
     }
-    public void Heal(float amount) => Hp = Math.Min(Stats[Stat.MaxHp], Hp + amount * Effects.HealingMultiplier);
+    /// <summary>Healing; never for the fallen (only the climb back out, or a full restore, brings them back).</summary>
+    public void Heal(float amount) { if (!Fallen) Hp = Math.Min(Stats[Stat.MaxHp], Hp + amount * Effects.HealingMultiplier); }
 }

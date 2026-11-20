@@ -87,7 +87,7 @@ public partial class CrevasseWatch : Node
                 fate = CrevasseRules.FateOf(npc.Crew ? FallBody.Crew : npc.Escorting ? FallBody.Escort : FallBody.OtherNpc);
                 if (fate == FallFate.CaughtAtLip)
                 {
-                    var lip = CrevasseRules.LipCell(_layout, cell) ?? DungeonBuilder.WalkableNeighbor(_layout, cell);
+                    if ((CrevasseRules.LipCell(_layout, cell) ?? CrevasseRules.NearestSetDown(_layout, cell)) is not { } lip) { fate = FallFate.Lost; npc.Die(); break; } // nowhere on the floor to lay her: never back on a drop
                     npc.GetOut(_builder.Surface(lip) + Vector3.Up * 0.1f); // out of any seat, at the lip, still
                     npc.ReceiveHazard(HazardDamage.Fall, new HazardOutcome(false, 1f, 0f), "The crevasse", -1); // down, revivable, escorting
                     who += $" (laid at {lip})";
@@ -119,9 +119,9 @@ public partial class CrevasseWatch : Node
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Downed || hero.Seated) continue;
             var cell = DungeonBuilder.WorldToCell(hero.GlobalPosition);
-            foreach (var region in CrevasseRules.RegionsNear(_regions, cell))
+            for (var region = CrevasseRules.UnwarnedNear(_regions, cell, _warned); region >= 0; region = CrevasseRules.UnwarnedNear(_regions, cell, _warned))
             {
-                if (!_warned.Add(region)) continue;
+                _warned.Add(region);
                 var speaker = party.Adventurers
                     .Where(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && !a.Parked && !a.Downed && a.GlobalPosition.DistanceTo(hero.GlobalPosition) <= WarnSpeakerReach)
                     .OrderBy(a => a.GlobalPosition.DistanceSquaredTo(hero.GlobalPosition)).FirstOrDefault() ?? hero;
