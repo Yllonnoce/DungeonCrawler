@@ -63,6 +63,8 @@ public partial class DebugTools
     /// <summary>The ride's music (plan 6 task 6): when the cart was first held at stop 1 (a wall clock that outlives the load), and which checks have run.</summary>
     private double _rideArriveAt = -1;
     private bool _rideMusicOn, _rideMusicOff;
+    /// <summary>The Chase music must be gone this long after the load at stop 1: its hold, one 0.5 s poll of MusicDirector's, and 0.25 s for frame jitter.</summary>
+    private const double MusicOffAfterLoad = RideMusic.HoldSeconds + 0.5 + 0.25;
 
     private void SoundListen()
     {
@@ -282,7 +284,7 @@ public partial class DebugTools
                 else if (_rideClock > 60f) Fail($"the cart was not held at stop 1 within 60 s (mode {rc.State.Mode}, S={rc.State.S:0.0}, stop index {rc.StopIndex})");
                 break;
             }
-            case 5 when _rideClock >= 1f && _rideMusicOff: // the music check 4.6 s after the arrival runs first: the full party re-departs 2 s after it boards
+            case 5 when _rideClock >= 1f && _rideMusicOff: // the music check after the load runs first: the full party re-departs 2 s after it boards
             {
                 if (rc == null) { Fail("no RailController after the load"); return; }
                 var seated = party.Adventurers.Count(a => IsInstanceValid(a) && a.Seated);
@@ -405,9 +407,11 @@ public partial class DebugTools
     }
 
     /// <summary>
-    /// The ride's music, each frame: the Chase mood within 1 s of the first departure, and gone 4.6 s after the cart is held at stop 1
-    /// (the 4 s hold, the 0.5 s poll and a margin; the load in between resets the hold, which can only end it sooner), the cart still
-    /// held there then (step 5 boards again only after this check: a full party departs 2 s after boarding). Null, or why not.
+    /// The ride's music, each frame: the Chase mood within 1 s of the first departure, and gone <see cref="MusicOffAfterLoad"/> after the
+    /// save and load at stop 1 (the cart held there then; step 5 boards again only after this check: a full party departs 2 s after
+    /// boarding). Timed from the load, not the arrival: the hold runs on the music's own clock from its last poll of the rolling cart,
+    /// before the arrival, and that clock stands nearly still through the load's long frame, so the wall time the load takes is not
+    /// hold time. Null, or why not.
     /// </summary>
     private string? RideMusicCheck(RailController? rc)
     {
@@ -422,13 +426,13 @@ public partial class DebugTools
             }
             else if (since > 1.0) return $"the music is {music?.Mood.ToString() ?? "absent"}, not Chase, {since:0.00} s after the departure";
         }
-        if (!_rideMusicOff && _rideArriveAt >= 0 && RideNow - _rideArriveAt >= 4.6)
+        if (!_rideMusicOff && _rideLoadAt >= 0 && RideNow - _rideLoadAt >= MusicOffAfterLoad)
         {
             _rideMusicOff = true;
             var mode = rc?.State.Mode.ToString() ?? "no controller";
-            GD.Print($"[ride] music {music?.Mood.ToString() ?? "absent"} {music?.CurrentTrack} ({RideNow - _rideArriveAt:0.00} s after the arrival at stop 1, cart {mode})");
-            if (music == null || music.Mood == Audio.Mood.Chase) return $"the music is still {music?.Mood.ToString() ?? "absent"} 4.6 s after the cart was held at stop 1";
-            if (rc == null || rc.State.Mode != CartMode.Held || rc.StopIndex != 1) return $"the cart was not held at stop 1 4.6 s after the arrival (mode {mode}, stop {rc?.StopIndex})";
+            GD.Print($"[ride] music {music?.Mood.ToString() ?? "absent"} {music?.CurrentTrack} ({RideNow - _rideLoadAt:0.00} s after the load at stop 1, {RideNow - _rideArriveAt:0.00} s after the arrival, cart {mode})");
+            if (music == null || music.Mood == Audio.Mood.Chase) return $"the music is still {music?.Mood.ToString() ?? "absent"} {MusicOffAfterLoad:0.00} s after the load at stop 1 (the hold and one poll)";
+            if (rc == null || rc.State.Mode != CartMode.Held || rc.StopIndex != 1) return $"the cart was not held at stop 1 {MusicOffAfterLoad:0.00} s after the load (mode {mode}, stop {rc?.StopIndex})";
         }
         return null;
     }
