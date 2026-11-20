@@ -96,9 +96,6 @@ public partial class RailEncounterController
         var at = track.Point(s) + Vector3.Up * 0.05f;
         switch (enc.Kind)
         {
-            case "golem":
-                SpawnGolem(index, enc); // it bursts out of the kiln wall beside the cart as it sets off
-                break;
             case "lone":
             {
                 if (_builder.SpawnEnemy(id, at, _builder.CurrentFloor) is not { } lone) return;

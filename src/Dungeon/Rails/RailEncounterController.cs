@@ -210,13 +210,16 @@ public partial class RailEncounterController : Node
         }
     }
 
-    /// <summary>One encounter starts, by its kind, as the cart reaches it. "lone", "thrower" and "golem" are there from the ride's departure instead (<see cref="ArmStanders"/>).</summary>
+    /// <summary>One encounter starts, by its kind, as the cart reaches it. "lone" and "thrower" are there from the ride's departure instead (<see cref="ArmStanders"/>).</summary>
     private void Spawn(int index, RailEncounterPlan enc)
     {
         switch (enc.Kind)
         {
             case "slag_cart":
                 SpawnSlagCart(index, enc);
+                break;
+            case "golem":
+                SpawnGolem(index, enc); // it bursts out of the kiln wall beside the cart as the cart reaches its At
                 break;
         }
     }

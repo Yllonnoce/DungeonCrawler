@@ -393,6 +393,7 @@ public partial class DebugTools
             }
             case 13:
             {
+                if (rc.State.Mode == CartMode.Rolling && enc.GolemBody == null && _chClock < 8f) break; // the golem bursts out as the cart reaches its At: wait
                 if (!ChaseDepart(rc, enc, ctrl, 3, Fail)) break;
                 // 4. ride 4: the golem out of the kiln wall; the spur lever thrown ahead on ride 2 (the debug hook)
                 if (!ChaseGolemOut(enc, Fail)) return;
@@ -1123,10 +1124,11 @@ public partial class DebugTools
         return false;
     }
 
-    /// <summary>Ride 4's golem is out on the enemy line: alive, carried, an elite and no boss.</summary>
-    private static bool ChaseGolemOut(RailEncounterController enc, Action<string> fail)
+    /// <summary>Ride 4's golem is out on the enemy line (waited for up to 8 s after the departure): alive, carried, an elite and no boss.</summary>
+    private bool ChaseGolemOut(RailEncounterController enc, Action<string> fail)
     {
         var g = enc.GolemBody;
+        if (g == null && _chClock < 8f) return false; // the golem bursts out as the cart reaches its At, a moment after the departure: wait for it
         GD.Print($"[chase] 4 ride 4 armed: golem {(g == null ? "none" : $"{g.Name} \"{g.DisplayName}\" ({g.Profile.Id}) alive={g.IsAlive} carried={g.Carried} on the runner={enc.GolemRun != null} elite={g.IsElite} affixes=[{string.Join(",", g.Profile.Affixes ?? Array.Empty<Enemies.EliteAffix>())}] boss={g.IsBoss} hp {g.Hp:0}/{g.MaxHp:0}")}");
         if (g is { IsAlive: true, IsBoss: false, IsElite: true, Carried: true } && enc.GolemRun != null) return true;
         fail("the golem did not come out on the enemy line as a carried elite (never a boss)");
