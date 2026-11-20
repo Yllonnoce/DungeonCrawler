@@ -63,42 +63,72 @@ public partial class PortraitPanel : PanelContainer
     {
         _party = party;
         _index = index;
+        _wrote = false; // a slot bound again writes everything afresh
+        _statusKey.Clear();
+        _hpMax = _hpNow = _staminaMax = _staminaNow = _manaMax = _manaNow = float.NaN;
         Refresh();
     }
 
+    // ---- what was last written: Refresh runs every frame and writes a label, a bar or a colour only when its value changed ----
+    private bool _wrote;
+    private (int Index, bool Focused, string Name, int Level, int Tag, string? BotOwner, ActionKind Action) _nameKey;
+    private (bool Alive, bool Focused, bool Stunned, string Ability, int Cooldown, bool Recovering, int Arrows) _attackKey;
+    private readonly List<int> _statusKey = new();
+    private bool _attackShown, _stanceShown, _attackDisabled;
+    private Stance _stanceShownAs;
+    private float _hpMax = float.NaN, _hpNow = float.NaN, _staminaMax = float.NaN, _staminaNow = float.NaN, _manaMax = float.NaN, _manaNow = float.NaN;
+
+    /// <summary>
+    /// Bring the slot up to date (every frame, from the HUD): the strings are built only when what they show changed
+    /// (<see cref="PortraitText"/>'s keys), so a quiet frame allocates nothing; what is shown is what a full rebuild would show.
+    /// </summary>
     public void Refresh()
     {
         var m = _party.Members[_index];
         var focused = _party.LocalIndex == _index;
         var adv = _party.Adventurers.Length > _index ? _party.Adventurers[_index] : null;
-        _attack.Visible = focused || (_party.AllowPossession && adv is { Control: ControlKind.Companion });
+        var first = !_wrote;
+        _wrote = true;
+        var attackShown = focused || (_party.AllowPossession && adv is { Control: ControlKind.Companion });
+        if (first || attackShown != _attackShown) _attack.Visible = _attackShown = attackShown;
         // a co-op hero bot says whose it is
         var botOwner = Net.NetSession.Instance?.Client?.Roster.TryGetValue(_index, out var known) == true ? known.BotOwner : null;
-        var tag = focused ? "[YOU]" : adv switch { null => "", { Parked: true } => "[away]", { Control: ControlKind.Remote } => botOwner != null ? $"[{botOwner}'s bot]" : "[player]", _ => $"[{adv.CurrentActionName}]" };
-        _name.Text = $"{_index + 1} {m.Name}  L{m.Level}  {tag}";
-        _stance.Visible = adv is { Control: ControlKind.Companion };
-        if (adv != null) _stance.Text = adv.Stance.ToString();
-        _name.AddThemeColorOverride("font_color", focused ? FocusColor : Colors.White);
+        var tag = focused ? 0 : adv switch { null => 1, { Parked: true } => 2, { Control: ControlKind.Remote } => 3, _ => 4 };
+        var nameKey = (_index, focused, m.Name, m.Level, tag, tag == 3 ? botOwner : null, tag == 4 ? adv!.CurrentActionKind : ActionKind.Idle);
+        if (first || !nameKey.Equals(_nameKey))
+        {
+            var tagText = tag switch { 0 => "[YOU]", 1 => "", 2 => "[away]", 3 => botOwner != null ? $"[{botOwner}'s bot]" : "[player]", _ => $"[{adv!.CurrentActionName}]" };
+            _name.Text = $"{_index + 1} {m.Name}  L{m.Level}  {tagText}";
+            if (first || focused != _nameKey.Focused) _name.AddThemeColorOverride("font_color", focused ? FocusColor : Colors.White);
+            _nameKey = nameKey;
+        }
+        var stanceShown = adv is { Control: ControlKind.Companion };
+        if (first || stanceShown != _stanceShown) _stance.Visible = _stanceShown = stanceShown;
+        if (adv != null && (first || adv.Stance != _stanceShownAs)) { _stanceShownAs = adv.Stance; _stance.Text = adv.Stance.ToString(); }
 
-        _hp.MaxValue = m.Stats[Stat.MaxHp]; _hp.Value = m.Hp;
-        _stamina.MaxValue = m.Stats[Stat.MaxStamina]; _stamina.Value = m.Stamina;
-        _mana.MaxValue = Math.Max(1, m.Stats[Stat.MaxMana]); _mana.Value = m.Mana;
+        Bar(_hp, m.Stats[Stat.MaxHp], m.Hp, ref _hpMax, ref _hpNow);
+        Bar(_stamina, m.Stats[Stat.MaxStamina], m.Stamina, ref _staminaMax, ref _staminaNow);
+        Bar(_mana, Math.Max(1, m.Stats[Stat.MaxMana]), m.Mana, ref _manaMax, ref _manaNow);
 
-        var statuses = string.Join("  ", m.Effects.Active.Select(e => e.ToString()));
-        if (m.StatPoints > 0) statuses = (statuses.Length > 0 ? statuses + "  " : "") + $"+{m.StatPoints} pts (C)";
-        if (m.SkillPoints > 0) statuses = (statuses.Length > 0 ? statuses + "  " : "") + $"+{m.SkillPoints} skill (K)";
-        _status.Text = statuses;
+        if (PortraitText.StatusesChanged(m, _statusKey)) _status.Text = PortraitText.Statuses(m);
 
-        var ability = _party.GetAbilityFor(m, m.ActiveAbilityId);
+        var ability = _party.GetAbility(m.ActiveAbilityId); // the name, id and kind are the upgraded ability's too (upgrades change numbers only)
         var cd = m.AbilityCooldown(ability.Id);
-        _attack.Disabled = !m.IsAlive;
-        _attack.Text = !m.IsAlive ? "Down"
-            : !focused ? $"Control ({_index + 1})"
-            : m.IsStunned ? "Stunned"
-            : cd > 0 ? $"{ability.Name} ({cd:0.0}s)"
-            : m.CooldownRemaining > 0 ? $"{ability.Name} ..."
-            : ability.Name;
-        if (focused && m.WeaponProfile.IsRanged && ability.Kind == DungeonCrawler.Combat.AbilityKind.WeaponAttack) _attack.Text += $"  [{_party.ArrowCount}]";
+        var arrows = focused && m.WeaponProfile.IsRanged && ability.Kind == DungeonCrawler.Combat.AbilityKind.WeaponAttack ? _party.ArrowCount : -1;
+        var attackKey = (m.IsAlive, focused, m.IsStunned, ability.Name, PortraitText.CooldownKey(cd), m.CooldownRemaining > 0, arrows);
+        if (first || !attackKey.Equals(_attackKey))
+        {
+            _attackKey = attackKey;
+            _attack.Text = PortraitText.Attack(m.IsAlive, focused, _index, m.IsStunned, ability.Name, cd, m.CooldownRemaining, arrows >= 0 ? arrows : null);
+        }
+        if (first || _attackDisabled != !m.IsAlive) _attack.Disabled = _attackDisabled = !m.IsAlive;
         if (_flashLeft <= 0f && _pulseLeft <= 0f) Modulate = m.IsAlive ? Colors.White : new Color(0.5f, 0.5f, 0.5f);
+    }
+
+    /// <summary>Set a bar's maximum and value, each only when it changed (the maximum first, so the value is never clamped to a stale one).</summary>
+    private static void Bar(ProgressBar bar, float max, float value, ref float shownMax, ref float shownValue)
+    {
+        if (max != shownMax) { bar.MaxValue = shownMax = max; shownValue = float.NaN; }
+        if (value != shownValue) bar.Value = shownValue = value;
     }
 }

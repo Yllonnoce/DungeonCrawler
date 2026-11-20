@@ -86,6 +86,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     public Vector2? ForcedMoveInput { get; set; }
     public float DistanceTravelled { get; private set; }
     public string CurrentActionName => _action.Kind.ToString();
+    /// <summary>What the companion brain is doing now (the HUD portrait's tag compares it before it builds <see cref="CurrentActionName"/>).</summary>
+    public ActionKind CurrentActionKind => _action.Kind;
 
     // ---- seated in a mine cart -------------------------------------------------------------------
     /// <summary>The cart this body sits in (null on foot). The RailController seats and unseats; see <see cref="SitIn"/>.</summary>

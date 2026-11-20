@@ -36,10 +36,15 @@ public sealed class StatusEffectController
     /// <summary>Bumps whenever the set of effects (or their modifiers) changes, so owners know to recalculate stats.</summary>
     public int Version { get; private set; }
 
-    public bool IsStunned => _active.Any(e => e.Kind == StatusKind.Stun);
+    public bool IsStunned => Has(StatusKind.Stun);
     public float ShieldPoints => _active.Where(e => e.Kind == StatusKind.Shield).Sum(e => e.Magnitude);
-    public bool Has(StatusKind kind) => _active.Any(e => e.Kind == kind);
-    public StatusEffect? Get(StatusKind kind) => _active.FirstOrDefault(e => e.Kind == kind);
+    public bool Has(StatusKind kind) => Get(kind) != null;
+    /// <summary>The effect of that kind, or null (a loop: the HUD and every creature ask every frame).</summary>
+    public StatusEffect? Get(StatusKind kind)
+    {
+        foreach (var e in _active) if (e.Kind == kind) return e;
+        return null;
+    }
     /// <summary>Vulnerable: every hit and tick taken is a quarter heavier.</summary>
     public float DamageTakenMultiplier => Has(StatusKind.Vulnerable) ? CombatRules.VulnerableMultiplier : 1f;
     /// <summary>Bleeding halves every heal received (potions, regen, Second Wind's kin).</summary>

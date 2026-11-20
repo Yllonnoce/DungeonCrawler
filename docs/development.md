@@ -273,6 +273,17 @@ author and cut. `Dungeon/Rails/Core/RideSound.cs` names them as cues (`RideSound
 `RideSound.Loops` are the looping ones), and `AudioManager` loads them beside its own cues. The chase track,
 `chase_determined_pursuit.ogg`, is CC0 from OpenGameArt, downloaded by hand (not by `scripts/fetch_music.py`), and listed in
 LICENSES.md with the music.
+Nothing a fight or a ride needs is read from disk on the frame it appears (each read was 3 to 11 ms through the NTFS mount):
+`Enemies/EnemyModels.cs` keeps every creature model loaded for the session once a creature of its kind has spawned (Godot used to
+let the scene go with the last creature wearing it), with each model's Idle-stance box measured once, and a railed floor's
+`RailEncounterController` asks for its riders', standers' and golem's models on a loader thread as the floor is built
+(`Rails/Core/RailWarmup.cs` lists them) and builds one slag cart off the tree so the first one spawns without its JIT. `MusicDirector`
+reads the floor's tracks on a loader thread when it is built (the tier's exploration pool, battle and boss, and on a railed floor
+`RideMusic.Tracks`). `VoiceRenderer` keeps the last 16 recordings (`Adventure/Core/Voice/RecentCache.cs`), so a line whose length
+was read to time what follows it is not read again to play it, and a ride's encounter lines are read on a loader thread when the
+ride arms (`VoiceRenderer.Prefetch`). The model cache, like `MinePack`'s and the other static caches, is let go at Main's exit.
+The HUD portraits (`UI/Hud/PortraitPanel.cs`) refresh every frame but build their strings only when what they show has changed
+(`Characters/PortraitText.cs`), which took ~1 MB/s of garbage, and a collection every few seconds, off a quiet ride.
 After adding files under `assets/`, run `godot --headless --import --path .` once so Godot imports them.
 
 ## Build, test, run

@@ -86,7 +86,12 @@ public sealed class Inventory
         (_slots[a], _slots[b]) = (ib, ia);
     }
 
-    public int Count(string defId) => _slots.Where(s => s != null && s.DefId == defId).Sum(s => s!.StackCount);
+    public int Count(string defId)
+    {
+        var n = 0;
+        foreach (var s in _slots) if (s != null && s.DefId == defId) n += s.StackCount; // a loop: the HUD asks for the arrows every frame
+        return n;
+    }
 
     /// <summary>Remove <paramref name="amount"/> units of a stackable. Returns false (and takes nothing) if short.</summary>
     public bool Consume(string defId, int amount)

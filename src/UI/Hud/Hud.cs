@@ -484,7 +484,7 @@ public partial class Hud : Control
         TickMangledBanner((float)delta);
         if (_sheet.Visible) _sheet.Refresh();
         TickNetLabel();
-        foreach (var p in _panels) p.Refresh(); // cheap; keeps cooldown text live
+        foreach (var p in _panels) p.Refresh(); // every frame keeps the cooldown text live; each writes only what changed (no strings built on a quiet frame)
     }
 
     /// <summary>A crushed player on a client: how long until the server carries them ahead, then that they can be freed.</summary>
