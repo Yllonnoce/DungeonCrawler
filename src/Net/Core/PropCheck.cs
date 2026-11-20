@@ -54,6 +54,8 @@ public sealed class RailPropsDto
     public List<int> BrokenValves { get; set; } = new();
     public List<int> CollapsedTrestles { get; set; } = new();
     public List<int> SmashedBuffers { get; set; } = new();
+    /// <summary>Barricades cut or smashed down (plan 11).</summary>
+    public List<int> DownBarricades { get; set; } = new();
     public List<int> SparesUsed { get; set; } = new();
     public List<int> OpenCages { get; set; } = new();
     public bool KeysTaken { get; set; }
@@ -99,7 +101,7 @@ public static class PropCheck
         {
             sb.Append("|R");
             List('G', r.GatesUp); List('S', r.ThrownSwitches); List('T', r.TakenSwitches); List('P', r.ThrownSpurs);
-            List('H', r.ClearedHeaps); List('V', r.BrokenValves); List('E', r.CollapsedTrestles); List('B', r.SmashedBuffers);
+            List('H', r.ClearedHeaps); List('V', r.BrokenValves); List('E', r.CollapsedTrestles); List('B', r.SmashedBuffers); List('D', r.DownBarricades);
             List('C', r.SparesUsed); List('W', r.OpenCages);
             sb.Append(r.KeysTaken ? 'K' : '-');
         }
@@ -134,6 +136,7 @@ public static class PropCheck
             Compare("switches taken", a.TakenSwitches, b.TakenSwitches); Compare("spurs thrown", a.ThrownSpurs, b.ThrownSpurs);
             Compare("heaps cleared", a.ClearedHeaps, b.ClearedHeaps); Compare("valves broken", a.BrokenValves, b.BrokenValves);
             Compare("trestles collapsed", a.CollapsedTrestles, b.CollapsedTrestles); Compare("buffers smashed", a.SmashedBuffers, b.SmashedBuffers);
+            Compare("barricades down", a.DownBarricades, b.DownBarricades);
             Compare("spares used", a.SparesUsed, b.SparesUsed); Compare("cages open", a.OpenCages, b.OpenCages);
             if (a.KeysTaken != b.KeysTaken) diffs.Add($"orc's keys {(b.KeysTaken ? "taken" : "at the belt")} on the server");
         }

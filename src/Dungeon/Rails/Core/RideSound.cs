@@ -85,6 +85,8 @@ public static class RideSound
         ("valve", "broken") => "steam_burst",
         ("trestle", "collapsed") => "timber_collapse",
         ("buffer", "smashed") => "timber_smash",
+        ("barricade", "cut") => "crate_break",
+        ("barricade", "smashed") => "timber_smash",
         _ => null,
     };
 

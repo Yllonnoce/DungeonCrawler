@@ -169,14 +169,14 @@ public partial class RailEncounterController
     /// <summary>
     /// The ride is over or undone (arrived, wrecked, restored, on foot): the levers fall back to straight, only those of rides up to
     /// <paramref name="upToRide"/> (an arrival at stop k: rides 1..k are behind the cart, and a lever a walker threw ahead for a later
-    /// ride stays thrown); a wreck or a load stacks the heap again at the next arming.
+    /// ride stays thrown); a wreck or a load stacks the heap again, and stands the barricades again, at the next arming.
     /// </summary>
     private void ResetSwitchyard(bool undone, int upToRide = int.MaxValue)
     {
         foreach (var p in _pieces)
         {
             if (p.Plan.Ride <= upToRide) p.Switch?.Reset();
-            if (undone && p.Heap != null) p.Rebuild = true;
+            if (undone && (p.Heap != null || p.Barricade != null)) p.Rebuild = true; // the heap and the barricades stand again at the ride's next arming
         }
     }
 

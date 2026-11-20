@@ -794,6 +794,20 @@ public partial class RailController : Node
         if (State.Plating <= 0f && State.Mode == CartMode.Rolling) Wreck();
     }
 
+    /// <summary>
+    /// The rolling cart smashes through something on the line (a barricade): the plating takes <paramref name="dent"/> (which wrecks
+    /// it at 0, as any dent), the cart keeps <paramref name="speedKept"/> of its speed, and the riders and the ground feel it. Server only.
+    /// </summary>
+    internal void Smash(float dent, float speedKept)
+    {
+        if (NetSession.IsClient || State.Mode != CartMode.Rolling) return;
+        DentPlating(dent);
+        if (State.Mode == CartMode.Rolling) Party.State = State with { V = State.V * speedKept };
+        foreach (var rider in Cart.Riders.Values)
+            if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.1f, 0.5f);
+        Props.Tremor.ShakeOnly(0.04f, 0.4f);
+    }
+
     /// <summary>The index of the lane cell nearest <paramref name="here"/> (squared grid distance, first wins).</summary>
     private static int NearestOf(IReadOnlyList<GridPos> lane, GridPos here)
     {

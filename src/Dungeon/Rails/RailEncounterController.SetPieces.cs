@@ -31,7 +31,7 @@ public partial class RailEncounterController
         public OreBuckets? Buckets;
         /// <summary>Its warning has been called this arming.</summary>
         public bool Barked;
-        /// <summary>A wreck or a load undid the ride: the heap stands again at the next arming (a broken valve stays broken for the floor).</summary>
+        /// <summary>A wreck or a load undid the ride: the heap or the barricade stands again at the next arming (a broken valve stays broken for the floor).</summary>
         public bool Rebuild;
         public DropHammer[]? Hammers;
         public MoltenPour? Pour;
@@ -39,6 +39,7 @@ public partial class RailEncounterController
         public RailGap? Gap;
         public SpurSwitch? Spur;
         public BufferStop? Buffer;
+        public Barricade? Barricade;
         /// <summary>The trestle's seconds left before it falls, or −1 before the cart's front is on it.</summary>
         public float Timer = -1f;
         /// <summary>The pour's phase last tick (a <see cref="PourPhase"/>).</summary>
@@ -83,6 +84,7 @@ public partial class RailEncounterController
         for (var i = 0; i < _pieces.Count; i++) if (_pieces[i].Plan.Ride == ride) _pieces[i].Fired = false;
         ArmSwitchyard(ride);
         ArmKiln(ride);
+        ArmBarricades(ride);
     }
 
     private void SpawnStander(int index, RailEncounterPlan enc)
@@ -219,6 +221,9 @@ public partial class RailEncounterController
                 case "buffer":
                     node = BuildBuffer(root, piece);
                     break;
+                case "barricade":
+                    node = BuildBarricade(root, piece);
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;
@@ -273,6 +278,9 @@ public partial class RailEncounterController
                 case "buffer":
                     TickBuffer(piece, rolling);
                     break;
+                case "barricade":
+                    TickBarricade(piece, party, rolling);
+                    break;
             }
         }
     }
@@ -315,7 +323,7 @@ public partial class RailEncounterController
         return -1;
     }
 
-    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer), or null.</summary>
+    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer, barricade), or null.</summary>
     internal Node3D? NetNode(string kind, int index)
     {
         foreach (var p in _pieces)
@@ -329,6 +337,7 @@ public partial class RailEncounterController
                 Net.NetRefs.ValveKind => p.Pour?.Valve,
                 Net.NetRefs.TrestleKind => p.Trestle,
                 Net.NetRefs.BufferKind => p.Buffer,
+                Net.NetRefs.BarricadeKind => p.Barricade,
                 _ => null,
             };
         }
@@ -349,6 +358,7 @@ public partial class RailEncounterController
             if (p.Pour is { Quenched: true }) r.BrokenValves.Add(p.Index);
             if (p.Trestle is { Collapsed: true }) r.CollapsedTrestles.Add(p.Index);
             if (p.Buffer is { Smashed: true }) r.SmashedBuffers.Add(p.Index);
+            if (p.Barricade is { IsStanding: false }) r.DownBarricades.Add(p.Index);
         }
     }
 
@@ -384,6 +394,11 @@ public partial class RailEncounterController
             {
                 if (buffer.Smashed) buffer.ShowRestored(); else buffer.ShowSmashed(root, Vector3.Zero, debris: false);
                 changed.Add($"buffer {i} {(buffer.Smashed ? "smashed" : "restored")}");
+            }
+            if (p.Barricade is { } barricade && r.DownBarricades.Contains(i) == barricade.IsStanding && GetParent() is Node3D at)
+            {
+                if (barricade.IsStanding) barricade.ShowSmashed(at, debris: false); else barricade.ShowStanding();
+                changed.Add($"barricade {i} {(barricade.IsStanding ? "standing" : "down")}");
             }
         }
     }

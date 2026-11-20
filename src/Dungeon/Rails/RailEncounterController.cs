@@ -173,6 +173,7 @@ public partial class RailEncounterController : Node
         ArmedRide = -1;
         ClearStanders();
         ClearSwitchyard();
+        ClearBarricades();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
         ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
         foreach (var cart in _carts) Free(cart);

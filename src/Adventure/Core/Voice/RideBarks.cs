@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,11 +11,11 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, and the warning at a crevasse's edge on foot.</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, and the call of a barricade across the line ahead.</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
-        BarkTrigger.Crevasse,
+        BarkTrigger.Crevasse, BarkTrigger.Barricade,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -141,5 +141,16 @@ public static class RideBarks
             Ranger: new[] { "Edge. Careful.", "Long drop." },
             Mage: new[] { "Mind the chasm!", "Stay back from the edge!" },
             Generic: new[] { "Mind the edge!", "That drop has no bottom!", "Watch your step!" }),
+
+        [BarkTrigger.Barricade] = new Bank(
+            Brand: new[] { "Timber on the line! Cut it down!", "Barricade ahead! Hack it or brace!", "Planks across the track! Chop them!" },
+            Sable: new[] { "Barricade, darling! Cut it or kiss it!", "Planks on the line! Somebody chop!", "Timber ahead, loves. Hack it down!" },
+            Wren: new[] { "Barricade. Cut it.", "Timber ahead. Chop.", "Planks. Hit them." },
+            Ilex: new[] { "A barricade! Hew it before we meet it!", "Timber across the rails! Cut it, or brace!", "Obstruction ahead! A spell would do nicely!" },
+            Warrior: new[] { "Barricade! Cut it!", "Timber ahead! Chop!" },
+            Rogue: new[] { "Planks ahead! Hack them!", "Barricade! Quick, cut it!" },
+            Ranger: new[] { "Barricade. Cut.", "Timber. Chop." },
+            Mage: new[] { "A barricade! Burn it or cut it!", "Timber ahead! Clear it!" },
+            Generic: new[] { "Timber across the line — cut it!", "Barricade ahead!", "Cut it down!" }),
     };
 }

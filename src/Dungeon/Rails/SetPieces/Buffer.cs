@@ -8,7 +8,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// A timber-and-iron buffer stop across the party line just short of the last stop: a heavy beam on two iron uprights, braced
 /// back. Solid to walkers (layer 1) while it stands. The cart's front smashes it (<see cref="Smash"/>): it vanishes in a burst of
-/// splinters and a few tumbling timbers (cosmetic, freed after <see cref="TimberSeconds"/>), with a thud. It does no harm.
+/// splinters and a few tumbling timbers (<see cref="TimberDebris"/>: cosmetic, freed after <see cref="TimberDebris.TimberSeconds"/>), with a thud. It does no harm.
 /// <see cref="Restore"/> stands it up again. The server tells "smashed" and "restored" (<see cref="NetRef"/>); a client's
 /// copy shows them (<see cref="ShowSmashed"/>, with its splinters and timbers).
 /// </summary>
@@ -20,7 +20,6 @@ public partial class BufferStop : StaticBody3D, ISoundPoint
     /// <summary>From the buffer's middle to the face the cart meets.</summary>
     public const float HalfDepth = 0.3f;
     const float BeamHeight = 0.65f, Width = 1.7f;
-    const float TimberSeconds = 4f;
 
     /// <summary>The party line's S at the buffer's middle.</summary>
     public float S { get; init; }
@@ -103,32 +102,8 @@ public partial class BufferStop : StaticBody3D, ISoundPoint
         CollisionLayer = 0;
         var at = GlobalPosition + Vector3.Up * BeamHeight;
         Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
-        var splinters = new GpuParticles3D
-        {
-            Name = "Splinters", Amount = 70, Lifetime = 1.2, OneShot = true, Explosiveness = 0.95f, Emitting = true,
-            ProcessMaterial = new ParticleProcessMaterial
-            {
-                Direction = -GlobalBasis.Z + Vector3.Up * 0.6f, Spread = 60f, InitialVelocityMin = 2.5f, InitialVelocityMax = 6f, Gravity = new Vector3(0, -9f, 0),
-                ScaleMin = 0.6f, ScaleMax = 1.4f, EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box, EmissionBoxExtents = new Vector3(0.8f, 0.2f, 0.15f),
-            },
-            DrawPass1 = new BoxMesh { Size = new Vector3(0.05f, 0.03f, 0.18f) },
-            MaterialOverride = _wood,
-        };
-        root.AddChild(splinters);
-        splinters.GlobalPosition = at;
-        GetTree().CreateTimer(2f).Timeout += () => { if (IsInstanceValid(splinters)) splinters.QueueFree(); };
-        for (var i = 0; i < _parts.Count; i += 2) // a few timbers fly on ahead of the cart
-        {
-            var (size, local, material) = _parts[i];
-            var body = new RigidBody3D { Name = "BufferTimber", CollisionLayer = 0, CollisionMask = 1, Mass = 20f };
-            body.AddChild(new CollisionShape3D { Shape = new BoxShape3D { Size = size } });
-            body.AddChild(new MeshInstance3D { Mesh = new BoxMesh { Size = size }, MaterialOverride = material });
-            root.AddChild(body);
-            body.GlobalTransform = GlobalTransform * local;
-            body.LinearVelocity = cartVelocity * 0.8f + Vector3.Up * (2f + i * 0.3f) + GlobalBasis.X * ((i % 3) - 1f);
-            body.AngularVelocity = new Vector3(2f, (i % 2) * 3f - 1.5f, 1f);
-            GetTree().CreateTimer(TimberSeconds).Timeout += () => { if (IsInstanceValid(body)) body.QueueFree(); };
-        }
+        TimberDebris.Burst(root, new Transform3D(GlobalBasis, at), Width, _wood);
+        TimberDebris.Tumble(root, GlobalTransform, _parts, cartVelocity); // a few timbers fly on ahead of the cart
     }
 
     /// <summary>Standing again, or (<paramref name="smashed"/>) gone without a sound: the cart is past it already (a load). The quiet "smashed-quiet" is told, which no peer hears.</summary>

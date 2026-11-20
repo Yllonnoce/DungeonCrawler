@@ -12,6 +12,8 @@ public enum BarkTrigger
     CartComing, AllAboard, Heads, HoundLeap, LineBlocked, JumpCall,
     // a hero on foot nears a crevasse (stock only: RideBarks)
     Crevasse,
+    // timber across the line ahead of the cart (plan 11; stock only: RideBarks)
+    Barricade,
 }
 
 public sealed class VoicedCharacter

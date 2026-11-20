@@ -678,6 +678,18 @@
       "At": 0.6
     },
     {
+      "Id": "r1_barricade",
+      "Ride": 1,
+      "Kind": "barricade",
+      "At": 0.25
+    },
+    {
+      "Id": "r2_barricade",
+      "Ride": 2,
+      "Kind": "barricade",
+      "At": 0.7
+    },
+    {
       "Id": "r3_switch_out",
       "Ride": 3,
       "Kind": "switch_out",
@@ -742,6 +754,12 @@
       "Ride": 5,
       "Kind": "buffer",
       "At": 0.95
+    },
+    {
+      "Id": "r5_barricade",
+      "Ride": 5,
+      "Kind": "barricade",
+      "At": 0.88
     }
   ],
   "Crew": [

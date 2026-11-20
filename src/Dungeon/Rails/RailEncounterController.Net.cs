@@ -66,13 +66,14 @@ public partial class RailEncounterController
             };
             if (p.Buckets is { } buckets) { if (armed) buckets.Arm(); else buckets.Clear(); }
             if (!armed && p.Heap is { } heap) heap.Alarm = false;
+            if (!armed && p.Barricade is { } barricade) barricade.Alarm = false;
         }
     }
 
     /// <summary>
     /// Client, each rendered frame (after the cart is posed): the armed ride's presentation under the server's own rules, from this screen's
-    /// cart (the follower's S, speed, lane and mode): the beam ducks our seated desktop camera as the front passes it, the heap's lantern
-    /// blinks while the cart bears down on it (no bark: a companion's call comes from the server), the buckets run the server's schedule
+    /// cart (the follower's S, speed, lane and mode): the beam ducks our seated desktop camera as the front passes it, the heap's and the barricades' lanterns
+    /// blink while the cart bears down on them (no bark: a companion's call comes from the server), the buckets run the server's schedule
     /// from its arm time, and the trestle groans as the front comes onto it. Nothing is judged here. No allocation.
     /// </summary>
     private void ClientPresent(float dt)
@@ -91,6 +92,10 @@ public partial class RailEncounterController
                 case "heap":
                     if (piece.Heap is { IsAlive: true } heap)
                         SetAlarm(heap, SetPieceRules.HeapAlarm(SetPieceRules.HeapHeaded(rolling, heap.FaceS, front, _rails.OnEnemyLane(heap.FaceS), SwitchSetBefore(piece)), heap.FaceS, front, _rails.State.V));
+                    break;
+                case "barricade":
+                    if (piece.Barricade is { IsStanding: true } barricade)
+                        SetBarricadeAlarm(barricade, SetPieceRules.HeapAlarm(SetPieceRules.HeapHeaded(rolling, barricade.FaceS, front, _rails.OnEnemyLane(barricade.FaceS), false), barricade.FaceS, front, _rails.State.V));
                     break;
                 case "buckets":
                     piece.Buckets?.ClientTick(client.ServerNow - ArmedAt, dt);

@@ -271,7 +271,7 @@ public sealed record RailEncounterPlan
     [AiNotNull, System.Text.Json.Serialization.JsonConverter(typeof(LineOrTextConverter))] public Line? Line { get; set; }
 }
 
-/// <summary>A scripted set piece on a ride. Kind is "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch" or "buffer".</summary>
+/// <summary>A scripted set piece on a ride. Kind is "beam", "buckets", "switch_out", "switch_back", "heap", "hammers", "pour", "trestle", "jump", "spur_switch", "buffer" or "barricade" (timber across the party line: cut it down or the cart smashes through).</summary>
 public sealed record RailSetPiecePlan
 {
     public string Id { get; set; } = "";

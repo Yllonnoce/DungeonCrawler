@@ -554,6 +554,9 @@ public partial class ClientWorld : Node
             case (Dungeon.Rails.BufferStop b, "smashed"): b.ShowSmashed(root, Dungeon.Rails.RailController.Instance is { } rc && IsInstanceValid(rc.Cart) ? rc.Cart.Velocity : Vector3.Zero); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.BufferStop b, "smashed-quiet"): b.ShowSmashed(root, Vector3.Zero, debris: false); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.BufferStop b, "restored"): b.ShowRestored(); break;
+            case (Dungeon.Rails.Barricade b, "cut"): b.ShowCut(); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.Barricade b, "smashed"): b.ShowSmashed(root); Trace.Add("rail-prop"); break;
+            case (Dungeon.Rails.Barricade b, "standing"): b.ShowStanding(); break;
             case (Dungeon.Rails.MineCart spare, "used"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: true); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.MineCart spare, "restored"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: false); break;
             case (Dungeon.Rails.CageWagon w, "opened"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowCageOpen(w.Stop); Trace.Add("rail-prop"); break;

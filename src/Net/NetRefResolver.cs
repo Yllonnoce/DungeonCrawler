@@ -71,7 +71,7 @@ public static class NetRefResolver
             case NetRefs.WinchKind: return rails?.GateAt(index)?.Winch;
             case NetRefs.SpareKind: return rails?.ChaserStop == index && rails.Chaser is { } chaser ? chaser : rails?.SpareAt(index); // a spare running after the train is its chaser
             case NetRefs.CartKind: return index == 0 && rails != null && GodotObject.IsInstanceValid(rails.Cart) ? rails.Cart : null;
-            case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind:
+            case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind or NetRefs.BarricadeKind:
                 return RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.GetParent() == root ? enc.NetNode(kind, index) : null;
             case NetRefs.WagonKind or NetRefs.KeyringKind:
                 if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || !GodotObject.IsInstanceValid(crew) || crew.GetParent() != root) return null;
