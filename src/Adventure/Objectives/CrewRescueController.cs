@@ -220,8 +220,13 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         var npc = builder.SpawnObjectiveNpc(root, plan.Id, plan.Name, cell, NpcMode.Prisoner, path);
         npc.Crew = true;
         _crew.Add(npc);
+        _trainNpcIds.Add(npc.Id);
         return npc;
     }
+
+    private readonly HashSet<string> _trainNpcIds = new() { GriselId };
+    /// <summary>The people a wipe's rise takes back from the last stop's arrival (<see cref="Save.RailArrival.Merge"/>): every crew member's id and Grisel's.</summary>
+    public IReadOnlySet<string> TrainNpcIds => _trainNpcIds;
 
     /// <summary>Free floor of the start room, off the line and away from anything standing there, nearest its platform's middle.</summary>
     private List<GridPos> LandingCells(RailStop start, HashSet<GridPos> taken)
@@ -317,7 +322,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     protected override void Tick(float dt, Main main)
     {
-        if (Completed) return;
+        if (Completed || main.RiseAtCartPending) return; // a wipe's rise is coming: the floor is built again from the arrival, and nothing won now may outlive it
         if (_wagons.Count == 0 || (_crew.Count == 0 && ClosedCages == 0)) { Complete(); return; } // no cage could stand anywhere (Build warned), or nobody to bring home: waived
         Evaluate();
         if (CrewRules.Completed(States(), CrewRules.CagesBlocking(Cages()))) Win();
@@ -390,11 +395,29 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     private bool InExitRoom(Npc npc) => _exitRoom != null && _exitRoom.Contains(DungeonBuilder.WorldToCell(npc.GlobalPosition));
 
+    /// <summary>The flag every crew member home (or lost) sets for the run.</summary>
+    public const string FreedAllFlag = "jailbreak_freed_all";
+    /// <summary>This build's win set <see cref="FreedAllFlag"/> (it was not set before): a wipe's rise from an arrival before the win takes it back.</summary>
+    private bool _setFreedAll;
+
     private void Win()
     {
-        AdventureDirector.Instance?.SetFlag("jailbreak_freed_all", "the prisoners");
+        _setFreedAll = AdventureDirector.Instance is { } director && !director.HasFlag(FreedAllFlag);
+        AdventureDirector.Instance?.SetFlag(FreedAllFlag, "the prisoners");
         if (_rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(); EventBus.Instance.Log("Somewhere on this floor, a vault door swings wide for you."); }
         Complete(); // its line is CompletedLine
+    }
+
+    /// <summary>
+    /// A wipe rises at a stop the cart reached before the crew were won (<see cref="Save.RailArrival.Merge"/> takes the completion back
+    /// with the train): the run forgets the flag this build's win set. The stairs follow the merged state when the floor is built again.
+    /// </summary>
+    public void TakeBackWin()
+    {
+        if (!_setFreedAll) return;
+        _setFreedAll = false;
+        AdventureDirector.Instance?.ClearFlag(FreedAllFlag);
+        GD.Print($"[CrewRescue] the wipe rises before the crew were won: {FreedAllFlag} taken back");
     }
 
     protected override string CompletedLine => _wagons.Count == 0 ? ObjectiveText.Completed(FloorObjectiveKind.None) : "The crew are home. The stairs grind open.";

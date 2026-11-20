@@ -1075,6 +1075,16 @@ public partial class AdventureDirector : Node
         GD.Print($"[Adventure] flag set: {flag}");
     }
 
+    public bool HasFlag(string flag) => Memory.Flags.Contains(flag);
+
+    /// <summary>A flag taken back (a wipe's rise from before the deed that set it): gone from the run and from this floor's record of choices.</summary>
+    public void ClearFlag(string flag)
+    {
+        if (!Memory.Flags.Remove(flag)) return;
+        _record?.Choices.RemoveAll(c => c.StartsWith($"{flag} (with ", StringComparison.Ordinal));
+        GD.Print($"[Adventure] flag cleared: {flag}");
+    }
+
     /// <summary>The NPC turns: they vanish and their creatures stand where they stood, the first wearing their name. An escort betrayal: the NPC flees to those creatures instead, and none wears their name.</summary>
     private void Betray(string npcId, QuestState? quest)
     {

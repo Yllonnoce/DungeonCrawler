@@ -116,6 +116,7 @@ public partial class Main : Node
         var adv = game.Adventure;
         var floor = game.CurrentFloor;
         CaptureCurrentFloor();
+        if (!ClauseRules.Active.Hardcore) RiseAtTheLastStop(floor);
         adv.Wipes++;
         var onFloor = adv.Memory.For(floor).Wipes + 1; // the director counts this wipe on PartyWiped, which fires after us
         Party.AddGold(WipeRules.GoldAfterWipe(Party.Gold) - Party.Gold);
@@ -143,6 +144,30 @@ public partial class Main : Node
         GD.Print($"[Main] wipe on floor {floor} ({cause} by {killer}), wipe {onFloor} here, gold {Party.Gold}, {(hardcore ? "the run is over" : "the party rises")}");
         return !hardcore;
     }
+
+    /// <summary>A wipe on the line rises beside the cart at the last stop reached (set by <see cref="OnPartyWiped"/>, cleared by the rebuild).</summary>
+    private bool _riseAtCart;
+    /// <summary>A wipe's rise at the cart waits for the floor's rebuild: the floor ticking on meanwhile wins nothing (the crew trial).</summary>
+    public bool RiseAtCartPending => _riseAtCart;
+
+    /// <summary>
+    /// Ruling 14 and 15: a wipe on a floor whose cart has an arrival snapshot (any cause) keeps its own capture of the floor with the train
+    /// taken from the snapshot (<see cref="RailArrival.Merge"/>), and the rebuild sets the party down beside the cart there. A crew trial
+    /// won since the arrival is taken back with the train: its flag goes, and the stairs the rebuild opens on the objective's completion stay shut.
+    /// </summary>
+    private void RiseAtTheLastStop(int floor)
+    {
+        var game = Game.Instance;
+        if (Dungeon.Rails.RailController.Instance is not { ArrivalSnapshot: { } arrival } rails || !IsInstanceValid(rails) || rails.GetParent() != Builder.FloorRoot
+            || !game.Floors.TryGetValue(floor, out var live)) return;
+        var crew = ObjectiveController.Instance is CrewRescueController c && IsInstanceValid(c) && c.GetParent() == Builder.FloorRoot ? c : null;
+        var merged = RailArrival.Merge(live, arrival, crew?.TrainNpcIds ?? NoTrainNpcs);
+        if (live.Objective?.Completed == true && merged.Objective?.Completed == false) crew?.TakeBackWin();
+        game.Floors[floor] = merged;
+        _riseAtCart = true;
+        GD.Print($"[Main] the wipe rises at stop {merged.RailStop}: the train as it arrived (coupled [{string.Join(",", merged.Objective?.CoupledCages ?? new List<int>())}], objective completed {live.Objective?.Completed == true}->{merged.Objective?.Completed == true})");
+    }
+    private static readonly HashSet<string> NoTrainNpcs = new();
 
     /// <summary>The Death Clause's end: the recap, whose button leads to the menu and the Records.</summary>
     public void EndRun(bool victory) => ShowRecap(victory);
@@ -614,6 +639,8 @@ public partial class Main : Node
     {
         if (!InGame) return;
         var game = Game.Instance;
+        var riseAtCart = _riseAtCart && delta == 0; // the wipe's reload; any other build (a load, a floor change) ends the wait
+        _riseAtCart = false;
 
         // a fighter who joined the party comes along: lifted off the old floor before it is remembered, set down by the party on the new one
         var travelling = new List<(string Id, string Name, string? Model, float HpFraction, Adventure.NpcScript Script, bool ShowMoves)>();
@@ -670,6 +697,7 @@ public partial class Main : Node
         var spawnCell = DungeonBuilder.WalkableNeighbor(layout, stairs);
         Party.Teleport(Builder.Surface(spawnCell) + Vector3.Up * 0.3f, Builder.Surface(stairs));
         ReturnFallenOnRebuild(floorChange: delta != 0, Builder.Surface(spawnCell));
+        if (riseAtCart) Callable.From(() => Dungeon.Rails.RailController.Instance?.RiseBesideCart()).CallDeferred(); // after Restore's own deferred set-down
         foreach (var t in travelling)
         {
             if (Builder.FloorRoot is not { } here) break;

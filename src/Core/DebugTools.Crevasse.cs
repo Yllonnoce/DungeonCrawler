@@ -18,10 +18,14 @@ namespace DungeonCrawler.Core;
 // landing with A1's companion still fallen; on ride 1's arrival at stop 1 that companion is back within 1 s (up, a quarter of their
 // HP, beside the cart). B, the fall: stop 1's cage opened and its wagon coupled, the cart restored at the kiln's stop, everyone
 // boarded with Grisel on the bench, no pumping: the train misses the jump over the gorge and falls; every rider fallen, the wagon
-// lost, its crew dead, Grisel down at the lip, no spare spent (the wipe that follows is Task 8's). =trestle: as B, but the human
-// brakes on the trestle and it falls with the train on it. =survivor: as B, but the human gets out at the stop as the cart departs;
-// after the fall nobody wipes, a spare waits, and the human stepping onto that stop's platform brings the fallen back beside them;
-// a fresh capture names the lost wagon and its crew. Prints [crevasse] lines and a RESULT.
+// lost, its crew dead, Grisel down at the lip, no spare spent. C, the rise (Task 8): the wipe that follows rises at the stop the train
+// left (its arrival snapshot), within 10 s: the cart there Held, whole and seen, the train as it arrived, every crew member then alive
+// alive again (seen, moving, not in the dark), Grisel up and escorting, every hero up beside the cart (each on its own cell by the lane,
+// two cells off at most: CrvBeside) at full HP (no return from the crevasse on top), no spare spent, a fifth of the gold gone, the Scar
+// on, and the crew trial (its flag, the stairs) as at the arrival. =trestle: as B, but the human brakes on the trestle and it falls with
+// the train on it, then C. =survivor: as B, but the human gets out at the stop as the cart departs; after the fall nobody wipes, a spare
+// waits, and the human stepping onto that stop's platform brings the fallen back beside them; a fresh capture names the lost wagon and
+// its crew. Prints [crevasse] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testCrevasse;
@@ -64,6 +68,13 @@ public partial class DebugTools
     private string _crvFloorVictim = "";
     /// <summary>Each hero's HP as they climbed back out (the return's own log line): a companion may drink a potion a moment later.</summary>
     private readonly Dictionary<string, float> _crvReturnHp = new();
+    // ---- C, the wipe's rise (Task 8)
+    private int _crvGoldBefore;
+    private int _crvClimbs, _crvClimbsAtWipe;
+    private bool _crvFlagBefore, _crvCompletedAtWipe;
+    private Save.FloorStateDto? _crvArrival;
+    private RailController? _crvWipeRc;
+    private const int CrvRise = CrvRide + 10;
 
     /// <summary>The hero came back with a quarter of their max HP (± 1), as the return's log line found them.</summary>
     private bool CrvBackAtAQuarter(Adventurer a)
@@ -79,11 +90,24 @@ public partial class DebugTools
             if (text.Contains("falls into the crevasse") || text.Contains("slips into a crack")) _crvFallLog.Add(text);
             if (text.StartsWith("The crevasse swallows")) _crvSwallowed = true;
             if (text.EndsWith(" climbs back out of the dark.") && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && text.StartsWith(a.State.Name + " ")) is { } back)
+            {
                 _crvReturnHp[back.State.Name] = back.State.Hp; // ReturnFromCrevasse logs right after it sets the HP
+                _crvClimbs++;
+            }
             if (text is "The cart drops into the crevasse!" or "The trestle gives way into the crevasse!") _crvFallWhy ??= text;
             if (text.StartsWith("A spare cart waits at stop ") && int.TryParse(text["A spare cart waits at stop ".Length..].TrimEnd('.'), out var n)) _crvSpareStop = n;
         };
-        EventBus.Instance.PartyWiped += () => { if (!_done && _testCrevasse) _crvWiped = true; };
+        EventBus.Instance.PartyWiped += () =>
+        {
+            if (_done || !_testCrevasse) return;
+            _crvWiped = true;
+            // what the rise is judged against: the floor's arrival snapshot, and the trial as the wipe found it (the merge is done: Main's own
+            // capture has taken the train back, the controller still holds the floor's live state until the rebuild)
+            _crvWipeRc = RailController.Instance;
+            _crvArrival = _crvWipeRc?.ArrivalSnapshot;
+            _crvCompletedAtWipe = ObjectiveController.Instance?.Completed == true;
+            _crvClimbsAtWipe = _crvClimbs;
+        };
     }
 
     private void RunCrevasseTest()
@@ -305,6 +329,7 @@ public partial class DebugTools
                 rc.Restore(Shape(rc).LastRideStop);
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate));
                 _crvSparesBefore = rc.SparesUsed.Count;
+                if (_crvVariant != "survivor") party.AddGold(100); // C: the wipe takes a fifth of something
                 PumperCap = 0; // nobody pumps: the cart comes to the jump too slow
                 if (_crvVariant == "survivor") NoRelief = true; // the spare's way, not a relief's: the human stays on foot at the stop
                 GD.Print($"[crevasse] B wagon {_crvWagon.Stop} coupled with [{string.Join(", ", _crvWagonCrew.Select(c => c.NpcName))}] aboard; the cart restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], spares used {_crvSparesBefore}, pumpers capped at 0");
@@ -355,10 +380,11 @@ public partial class DebugTools
                 if (_crvFallVerdict!.Length > 0) { Fail($"B the fall: {_crvFallVerdict}"); return; }
                 if (_crvVariant != "survivor")
                 {
-                    GD.Print($"[crevasse] RESULT ok ({_crvVariant}): A0-A3 as ever; A4 {_crvVictim!.State.Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}): {_crvFallSummary}");
-                    _done = true;
-                    GetTree().Quit(0);
-                    return;
+                    if (!_crvWiped) { if (_crvClock > 5f) Fail("B: the party did not wipe within 5 s of the fall"); break; }
+                    GD.Print($"[crevasse] C the party has fallen: the rise is judged against the arrival snapshot at stop {_crvArrival?.RailStop?.ToString() ?? "none"} (coupled [{string.Join(",", _crvArrival?.Objective?.CoupledCages ?? new List<int>())}], completed {_crvArrival?.Objective?.Completed}); the trial completed at the wipe {_crvCompletedAtWipe}");
+                    if (_crvArrival == null) { Fail("C: the cart had no arrival snapshot at the wipe"); return; }
+                    _crvStep = CrvRise; _crvClock = 0f;
+                    break;
                 }
                 if (_crvClock < 1f) break;
                 if (_crvWiped) { Fail("the party wiped with the human standing"); return; }
@@ -370,6 +396,19 @@ public partial class DebugTools
                 GD.Print($"[crevasse] =survivor nobody wiped; a spare waits at stop {_crvSpareStop}; the human steps off every platform to {DungeonBuilder.WorldToCell(away)}");
                 _crvStep++; _crvClock = 0f;
                 break;
+            }
+            case CrvRise:
+            {
+                if (rc == _crvWipeRc || main.Rebuilding) { if (_crvClock > 10f) Fail("C: the floor was not built again within 10 s of the wipe"); break; }
+                _crvMayFall.Clear(); // risen: nobody may fall now
+                if (_crvClock < 1f) break; // the rise's deferred set-down, then a moment to stand
+                var problems = CrevasseRiseProblems(main, root, party, rc, out var summary);
+                if (problems.Count > 0) { if (_crvClock > 10f) Fail($"C within 10 s of the wipe: {string.Join("; ", problems)} ({summary})"); break; }
+                GD.Print($"[crevasse] C the rise after {_crvClock:0.0} s: {summary}");
+                GD.Print($"[crevasse] RESULT ok ({_crvVariant}): A0-A3 as ever; A4 {_crvVictim!.State.Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}): {_crvFallSummary}; C the wipe rose at stop {rc.StopIndex} beside a fresh cart with the train as it arrived, no spare spent");
+                _done = true;
+                GetTree().Quit(0);
+                return;
             }
             case CrvRide + 2 when _crvClock >= 0.5f:
             {
@@ -500,9 +539,68 @@ public partial class DebugTools
         var spares = rc.SparesUsed.Count - _crvSparesBefore;
         if (spares != (survivor ? 1 : 0)) problems.Add($"{spares} spare(s) spent");
         if (survivor && Main.Instance.Party.Local is { } me && (me.State.Fallen || me.Downed)) problems.Add("the human on foot fell too");
+        _crvGoldBefore = Main.Instance.Party.Gold; // the wipe that follows takes its fifth of this
+        _crvFlagBefore = AdventureDirector.Instance?.HasFlag(CrewRescueController.FreedAllFlag) == true;
         _crvFallSummary = $"{_crvRiders.Count} hero rider(s) fallen [{string.Join(", ", _crvRiders.Select(a => a.State.Name))}], wagon {w.Stop} lost with [{string.Join(", ", _crvWagonCrew.Select(c => c.NpcName))}] dead, Grisel down at {cell} (a lip cell), spares used {_crvSparesBefore}+{spares}, the cart went over at {rc.FellAt?.ToString() ?? "?"}";
         GD.Print($"[crevasse] B the train fell ({_crvFallWhy}): {_crvFallSummary}{(problems.Count > 0 ? $"; WRONG: {string.Join("; ", problems)}" : "")}");
         _crvFallVerdict = string.Join("; ", problems);
+    }
+
+    /// <summary>
+    /// C, the rise as it stands (see the header): what is wrong, and a summary line. The crew alive at the arrival snapshot, Grisel and
+    /// the heroes are checked on the rebuilt floor's own nodes; the train against the snapshot's coupled cages; the trial (its completion,
+    /// the stairs, the flag) against the arrival's.
+    /// </summary>
+    private List<string> CrevasseRiseProblems(Main main, Node3D root, PartyController party, RailController rc, out string summary)
+    {
+        var problems = new List<string>();
+        var arrival = _crvArrival!;
+        var layout = main.Builder.Layout!;
+        var adv = Game.Instance.Adventure;
+        if (rc.StopIndex != Shape(rc).LastRideStop) problems.Add($"the cart at stop {rc.StopIndex}, not {Shape(rc).LastRideStop}");
+        if (rc.State.Mode != CartMode.Held || rc.State.Plating < CartRules.MaxPlating || !rc.Cart.Visible) problems.Add($"the cart {rc.State.Mode}, plating {rc.State.Plating:0}/{CartRules.MaxPlating:0}, visible={rc.Cart.Visible}");
+        var train = rc.Train.Select(w => w.Stop).ToList();
+        var coupled = arrival.Objective?.CoupledCages ?? new List<int>();
+        if (!train.SequenceEqual(coupled)) problems.Add($"train [{string.Join(",", train)}], the arrival's [{string.Join(",", coupled)}]");
+        if (ObjectiveController.Instance is not CrewRescueController ctrl) { problems.Add("no crew controller"); summary = ""; return problems; }
+        var npcs = root.GetChildren().OfType<Npc>().ToDictionary(n => n.Id);
+        var crewLines = new List<string>();
+        foreach (var d in arrival.NpcStates.Where(d => !d.Dead && d.Id != CrewRescueController.GriselId && ctrl.TrainNpcIds.Contains(d.Id)))
+        {
+            if (!npcs.TryGetValue(d.Id, out var n)) { problems.Add($"no {d.Id} on the rebuilt floor"); continue; }
+            var rode = _crvWagonCrew.Any(c => c.Id == d.Id); // the fallen wagon's crew: seated in it again, coupled behind the cart
+            crewLines.Add($"{n.NpcName}{(n.Seated ? $" in {n.Ride?.Name}" : "")}");
+            if (n.Dead || !n.Visible || !n.IsPhysicsProcessing() || n.InTheDark()) problems.Add($"{n.NpcName} alive at the arrival: dead={n.Dead} visible={n.Visible} physics={n.IsPhysicsProcessing()} in the dark={n.InTheDark()}");
+            if (rode && n.Ride is not CageWagon { Coupled: true }) problems.Add($"{n.NpcName} not seated in the coupled wagon (ride {n.Ride?.Name ?? "none"})");
+        }
+        if (crewLines.Count == 0) problems.Add("nobody of the crew was alive at the arrival");
+        var g = GriselNpc(root);
+        if (g == null || g.Dead || g.Downed || !g.Escorting || !g.Visible || !g.IsPhysicsProcessing() || g.InTheDark())
+            problems.Add($"Grisel dead={g?.Dead} downed={g?.Downed} escorting={g?.Escorting} visible={g?.Visible} physics={g?.IsPhysicsProcessing()}");
+        var heroLines = new List<string>();
+        foreach (var a in party.Active)
+        {
+            var off = a.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition);
+            var max = a.State.Stats[Characters.Stat.MaxHp];
+            heroLines.Add($"{a.State.Name} hp {a.State.Hp:0}/{max:0} {off:0.0} m");
+            if (a.State.Fallen || a.Downed || !a.Visible || off > CrvBeside || !CrevasseRules.SetDownOk(layout, DungeonBuilder.WorldToCell(a.GlobalPosition))) problems.Add($"{a.State.Name} fallen={a.State.Fallen} downed={a.Downed} visible={a.Visible} {off:0.0} m from the cart at {DungeonBuilder.WorldToCell(a.GlobalPosition)}");
+            if (a.State.Hp < max - 1f) problems.Add($"{a.State.Name} at {a.State.Hp:0}/{max:0} HP: not the wipe's full restore (a return on top?)");
+        }
+        if (_crvClimbs != _crvClimbsAtWipe) problems.Add($"{_crvClimbs - _crvClimbsAtWipe} hero(es) climbed back out of the crevasse after the wipe");
+        if (rc.SparesUsed.Count != _crvSparesBefore) problems.Add($"spares used {rc.SparesUsed.Count}, {_crvSparesBefore} before the ride");
+        var gold = Adventure.Objectives.WipeRules.GoldAfterWipe(_crvGoldBefore);
+        if (party.Gold != gold) problems.Add($"gold {party.Gold}, not {gold} (a fifth of {_crvGoldBefore} gone)");
+        if (!adv.Curses.Contains(Adventure.Objectives.WipeRules.ScarId) || adv.ScarUntilFloor != 13) problems.Add($"the Scar: curses [{string.Join(",", adv.Curses)}] until {adv.ScarUntilFloor}");
+        var won = arrival.Objective?.Completed == true;
+        var stairs = root.GetNodeOrNull<Stairs>("DownStairs");
+        var flag = AdventureDirector.Instance?.HasFlag(CrewRescueController.FreedAllFlag) == true;
+        if (ctrl.Completed != won || stairs == null || stairs.Locked == won || flag != (_crvFlagBefore || won))
+            problems.Add($"the trial completed={ctrl.Completed} stairs locked={stairs?.Locked} flag={flag}: the arrival's completed={won}, the flag before the fall {_crvFlagBefore}");
+        summary = $"stop {rc.StopIndex} cart {rc.State.Mode} plating {rc.State.Plating:0}/{CartRules.MaxPlating:0} visible={rc.Cart.Visible}; train [{string.Join(",", train)}] (the arrival's [{string.Join(",", coupled)}]); "
+            + $"crew alive at the arrival [{string.Join(", ", crewLines)}]; Grisel downed={g?.Downed} escorting={g?.Escorting} {(g == null ? 0f : g.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition)):0.0} m from the cart; "
+            + $"heroes [{string.Join(", ", heroLines)}], none climbed out after the wipe; spares used {rc.SparesUsed.Count} (before the ride {_crvSparesBefore}); gold {_crvGoldBefore}->{party.Gold}; "
+            + $"scar until {adv.ScarUntilFloor}; the trial completed at the wipe {_crvCompletedAtWipe} -> {ctrl.Completed} (the arrival's {won}), stairs locked={stairs?.Locked}, {CrewRescueController.FreedAllFlag} set={flag}";
+        return problems;
     }
 
     /// <summary>The stop whose room <paramref name="at"/> stands in (its platform, as the fallen's return reads it), or −1.</summary>

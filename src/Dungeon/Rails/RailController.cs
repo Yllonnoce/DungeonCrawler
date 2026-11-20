@@ -265,6 +265,7 @@ public partial class RailController : Node
                 _departureClaimed = false;
                 try { CartEvents?.Invoke(e); }
                 catch (Exception ex) { GD.PushError($"[rails] a CartEvents listener threw on {e.Kind} (stop {e.Stop}): {ex}"); }
+                if (e.Kind is CartEventKind.Arrived or CartEventKind.Restored) SnapshotSoon();
                 if (RideLines.TauntFor(e.Kind, e.Stop, StopS.Length) is { } taunt)
                 {
                     if (taunt == Adventure.Objectives.TauntTrigger.RideStart && _departureClaimed)
@@ -377,6 +378,69 @@ public partial class RailController : Node
         ReturnAllFallen();
         Flush();
         Callable.From(() => { ClearRiders(); ReturnAllFallen(); _restoredRiders.Clear(); Flush(); }).CallDeferred(); // the party is set down after the floor state is applied: look again once it stands
+    }
+
+    // ---- the wipe's rise (ruling 14, 15) -----------------------------------------------------------
+
+    /// <summary>
+    /// The floor as it stood just after the cart last arrived at a stop or was restored there (server and solo; null on a client and before
+    /// the first): a wipe on this floor rises there with the train as it was then (<see cref="Save.RailArrival.Merge"/>).
+    /// </summary>
+    public Save.FloorStateDto? ArrivalSnapshot { get; private set; }
+    private bool _snapshotDue;
+
+    /// <summary>An Arrived or Restored event was told: the floor is captured once the frame's work is done (the set-downs, the crew's seats).</summary>
+    private void SnapshotSoon()
+    {
+        if (NetSession.IsClient || _snapshotDue) return;
+        _snapshotDue = true;
+        Callable.From(TakeArrivalSnapshot).CallDeferred();
+    }
+
+    private void TakeArrivalSnapshot()
+    {
+        _snapshotDue = false;
+        if (!IsInstanceValid(this) || !Current || Main.Instance.Builder.FloorRoot is not { } root || GetParent() != root || Main.Instance.Exploration is not { } exploration) return;
+        ArrivalSnapshot = Save.FloorStateCapture.Capture(root, _layout, Main.Instance.Builder.Contents, exploration);
+        var alive = 0;
+        foreach (var npc in ArrivalSnapshot.NpcStates) if (!npc.Dead) alive++;
+        GD.Print($"[rails] arrival snapshot at stop {StopIndex}: train [{string.Join(",", _train.Wagons.Select(w => w.Stop))}] npcs alive {alive}");
+    }
+
+    /// <summary>
+    /// The wipe's rise (server and solo, after the rebuild's <see cref="Restore"/> and its deferred set-down): every hero in the world
+    /// (remote players' too: the server places them before their clients are ready, and the floor-ready ForcePose lands them there)
+    /// and every escort on foot, each on its own cell beside the cart (<see cref="ExitCellNear"/>: never a drop, a rail or a siding),
+    /// facing it. No spare is spent. Returns the heroes placed.
+    /// </summary>
+    public int RiseBesideCart()
+    {
+        if (NetSession.IsClient || !Current || _layout?.Rail == null || StopS.Length == 0) return 0;
+        _exitTaken.Clear();
+        var placed = 0;
+        foreach (var hero in Main.Instance.Party.Adventurers)
+        {
+            if (!IsInstanceValid(hero) || hero.Parked) continue;
+            var cell = ExitCellNear(Cart.GlobalPosition, atStop: true, useTaken: true);
+            _exitTaken.Add(cell);
+            var at = _builder.Surface(cell) + Vector3.Up * 0.3f;
+            hero.Teleport(at, Cart.GlobalPosition); // out of any seat first (a teleport frees it)
+            if (hero.Remote != null) { hero.Remote.Position = at; hero.Remote.Velocity = Vector3.Zero; }
+            placed++;
+        }
+        foreach (var child in GetParent().GetChildren())
+            if (child is Npc { Dead: false, Escorting: true, Seated: false } npc)
+            {
+                var cell = ExitCellNear(Cart.GlobalPosition, atStop: true, useTaken: true);
+                _exitTaken.Add(cell);
+                npc.GlobalPosition = _builder.Surface(cell);
+                npc.Velocity = Vector3.Zero;
+                npc.FaceToward(Cart.GlobalPosition);
+            }
+        _exitTaken.Clear();
+        GD.Print($"[rails] wipe-rise: {placed} hero(es) beside the cart at stop {StopIndex}");
+        RefreshHud();
+        return placed;
     }
 
     /// <summary>A restore (a load, a wipe's rise) brings every fallen hero back beside the cart at its stop (ruling 8).</summary>
