@@ -261,7 +261,7 @@ public partial class NetTestFlow : Node
             var chase = _joinSpareHeldRefused && _chaseTaken && _chaseDone && _chaseGapOk && _chaseSetDown && _chaseHops >= 1; // the kiln's gap is always cut
             var thrown = _joinThrown;
             var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner && chase && thrown && _wreckOk && _heapHalt && _lastWreckOk && _wipeOk;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; boarded again from stop 3 to the kiln's {Yes(_joinRideOnDone)}; the left-behind spare: refused while the train was held at the kiln's stop {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; the wreck at the end of the line with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {string.Join(" then ", _wreckSpares)}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}, then wrecked until no spare was left {Yes(_lastWreckOk)}, then wiped by the crevasse and risen beside the cart with the joiner {Yes(_wipeOk)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {rides}"));
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; boarded again from stop 3 to the kiln's {Yes(_joinRideOnDone)}; the left-behind spare: refused while the train was held at the kiln's stop {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; the wreck at the end of the line with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {string.Join(" then ", _wreckSpares)}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}, then wrecked until no spare was left {Yes(_lastWreckOk)}, then, the joiner walked off an edge on its own (fallen here {Yes(_walkOffFell)}), wiped by the crevasse and risen beside the cart with the joiner {Yes(_wipeOk)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {rides}"));
             return;
         }
         if (_elapsed > 560) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
@@ -392,7 +392,7 @@ public partial class NetTestFlow : Node
     // parked is given to the crevasse where it stands, the party wipes, and the rise sets every hero down beside the fresh cart at the
     // last stop reached: the remote joiner too, placed here before its client is ready again, so its floor-ready ForcePose lands it there
     private const string RideWipeReady = "ride: ready for the wipe";
-    private bool _wipeAsked, _wipeTold, _wipeOk;
+    private bool _wipeAsked, _wipeTold, _wipeOk, _walkOffFell;
     private Dungeon.Rails.RailController? _wipeRc;
     private double _wipeAt;
     private int _wipeHeroes;
@@ -408,6 +408,11 @@ public partial class NetTestFlow : Node
             _wipeAt = _elapsed;
             var heroes = party.Adventurers.Where(a => IsInstanceValid(a) && !a.Parked).ToList();
             _wipeHeroes = heroes.Count;
+            // the walk-off (final review C1): the joiner walked its own hero off an edge before it said so; the crevasse watch judged the
+            // server's copy of its body, which followed its poses into the drop
+            var walker = world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name == RideJoinerName) is { } ws && ws.MemberIndex < party.Adventurers.Length ? party.Adventurers[ws.MemberIndex] : null;
+            _walkOffFell = walker is { State.Fallen: true };
+            GD.Print(walker == null ? "[net-server] ride: walk-off: the joiner is OFFLINE" : FormattableString.Invariant($"[net-server] ride: walk-off: {walker.State.Name} is {(_walkOffFell ? "Fallen" : "NOT fallen")} here before the wipe (held at y {walker.GlobalPosition.Y:0.0} over {Dungeon.DungeonBuilder.WorldToCell(walker.GlobalPosition)}, the server's copy of its body)"));
             GD.Print($"[net-server] ride: wipe: the joiner is ready; {heroes.Count} hero(es) given to the crevasse where they stand [{string.Join(", ", heroes.Select(h => $"{h.State.Name} ({h.Control})"))}] (the arrival snapshot at stop {rc.ArrivalSnapshot?.RailStop?.ToString() ?? "none"})");
             foreach (var hero in heroes) watch.Take(hero, hero.GlobalPosition);
             return;
@@ -423,7 +428,7 @@ public partial class NetTestFlow : Node
         var standing = party.Adventurers.Where(a => IsInstanceValid(a) && !a.Parked).ToList();
         var beside = standing.Where(a => !a.State.Fallen && !a.Downed && a.GlobalPosition.DistanceTo(now.Cart.GlobalPosition) <= 10f).ToList();
         var joiner = world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name == RideJoinerName) is { } js && js.MemberIndex < party.Adventurers.Length ? party.Adventurers[js.MemberIndex] : null;
-        _wipeOk = beside.Count == standing.Count && beside.Count >= 1 && joiner != null && beside.Contains(joiner);
+        _wipeOk = beside.Count == standing.Count && beside.Count >= 1 && joiner != null && beside.Contains(joiner) && _walkOffFell;
         GD.Print($"[net-server] ride: wipe-rise: {beside.Count} hero(es) beside the cart at stop {now.StopIndex}");
         GD.Print(FormattableString.Invariant($"[net-server] ride: wipe-rise: [{string.Join(", ", standing.Select(a => $"{a.State.Name} {a.GlobalPosition.DistanceTo(now.Cart.GlobalPosition):0.0} m{(a.State.Fallen ? " FALLEN" : "")}{(a.Downed ? " down" : "")}"))}] of {_wipeHeroes} given; the joiner {(joiner == null ? "OFFLINE" : beside.Contains(joiner) ? "among them" : "NOT beside the cart")} ({(_wipeOk ? "ok" : "FAIL")})"));
     }
@@ -1210,6 +1215,35 @@ public partial class NetTestFlow : Node
     // the last wreck (plan 6 final review): cart_wreck plays counted when the sound was judged, the resends seen before our ask, and the rebuilt Ready's server time
     private int _lastWreckSoundsAt, _lastWreckResyncs;
     private int _wipeBuilds, _placedAtBuilds;
+    // the walk-off (plan 10 final review C1): the lip the joiner steps off and the chasm cell it walks into
+    private Dungeon.Generation.GridPos _walkLip, _walkDrop;
+    private bool _walkBotAsked;
+    private const string RideWalkBot = "Brand";
+
+    /// <summary>
+    /// The edge nearest <paramref name="from"/> for the walk-off: a chasm cell and a 4-neighbour lip a body may be set down on
+    /// (<see cref="Dungeon.CrevasseRules.SetDownOk"/>), level with the chasm's lip, with ground behind it to stand on; off the lanes
+    /// first (nothing rolls there), else a lane cell. Ties by (Y, X).
+    /// </summary>
+    private static (Dungeon.Generation.GridPos Lip, Dungeon.Generation.GridPos Drop)? WalkOffEdge(Dungeon.Generation.FloorLayout l, Dungeon.Generation.GridPos from)
+    {
+        (Dungeon.Generation.GridPos, Dungeon.Generation.GridPos)? best = null;
+        var bestKey = (1, long.MaxValue);
+        for (var y = 0; y < l.Height; y++)
+            for (var x = 0; x < l.Width; x++)
+            {
+                var drop = new Dungeon.Generation.GridPos(x, y);
+                if (!l.IsChasm(drop)) continue;
+                foreach (var lip in drop.Neighbours4())
+                {
+                    var behind = lip + (lip - drop);
+                    if (!Dungeon.CrevasseRules.SetDownOk(l, lip) || !Dungeon.CrevasseRules.SetDownOk(l, behind) || l.Ramps.ContainsKey(lip) || l.IsUnder(lip) || l.HeightOf(lip) != l.HeightOf(drop)) continue;
+                    var key = (l.IsRail(lip) ? 1 : 0, (long)(lip.X - from.X) * (lip.X - from.X) + (long)(lip.Y - from.Y) * (lip.Y - from.Y));
+                    if (key.CompareTo(bestKey) < 0 || best == null) { best = (lip, drop); bestKey = key; }
+                }
+            }
+        return best;
+    }
     private double _lastWreckReadyAt = -1, _lastWreckSeenAt = -1;
 
     // ---- the ride's sound on a client (plan 6 task 5): the party cart's roll from the synced state, no rail cue relayed, the wreck heard once ----
@@ -1650,12 +1684,57 @@ public partial class NetTestFlow : Node
                 }
                 client.Trace.Add("last-wreck-resync ok");
                 GD.Print($"[net] ride: last-wreck-resync ok: {line}");
-                // the tail (plan 10 task 9): we tell the server we are ready for the wipe; it gives every hero to the crevasse, the party wipes
-                // and rises beside the cart at the last stop reached, our body placed there by the server before we are ready again
-                _wipeBuilds = client.Trace.Count(t => t == "floor:12");
-                net.Send(new ChatIntent(RideWipeReady));
-                GD.Print("[net] ride: the joiner is ready for the wipe");
-                _clock = 0; _step = 77;
+                _clock = 0; _step = 79;
+                return;
+            }
+            case 79: // the walk-off (plan 10 final review C1): first a hero bot of ours (the first client's hero is parked: we are the only one
+                     // standing, and our fall alone would wipe the party before our sheet could say Fallen), brought in behind us by the server
+            {
+                if (me == null || main.Rebuilding || main.Builder.Layout is not { ChasmCount: > 0 } lay) { if (_clock > 20) { Finish("[net]", false, "ride: walk-off: no crevasse floor to walk off here"); net.Disconnect("test finished"); } return; }
+                if (!_walkBotAsked) { _walkBotAsked = true; net.Send(new AddBotIntent(RideWalkBot)); GD.Print($"[net] ride: walk-off: the joiner calls {RideWalkBot} in, so a hero still stands when it falls"); return; }
+                var entry = client.Roster.Values.FirstOrDefault(p => p.Name == RideWalkBot);
+                if (!(client.Trace.Contains($"bot:{RideWalkBot}") && entry is { Online: true } && entry.BotOwner == net.JoinName && entry.MemberIndex < main.Party!.Adventurers.Length && !main.Party.Adventurers[entry.MemberIndex].Parked && _clock > 1.0))
+                {
+                    if (_clock > 15) { Finish("[net]", false, $"ride: walk-off: the bot {RideWalkBot} never joined (roster {(entry == null ? "-" : $"online {entry.Online} owner {entry.BotOwner}")})"); net.Disconnect("test finished"); }
+                    return;
+                }
+                var botBody = main.Party.Adventurers[entry.MemberIndex];
+                GD.Print(FormattableString.Invariant($"[net] ride: walk-off: {RideWalkBot} stands {botBody.GlobalPosition.DistanceTo(me.GlobalPosition):0.0} m from us (member {entry.MemberIndex})"));
+                if (WalkOffEdge(lay, Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition)) is not { } edge) { Finish("[net]", false, "ride: walk-off: no lip beside a chasm on floor 12"); net.Disconnect("test finished"); return; }
+                _walkLip = edge.Lip;
+                _walkDrop = edge.Drop;
+                var from = me.GlobalPosition;
+                me.Teleport(main.Builder.Surface(edge.Lip) + Vector3.Up * 0.1f, main.Builder.Surface(edge.Drop));
+                GD.Print(FormattableString.Invariant($"[net] ride: walk-off: the joiner steps onto the lip at {edge.Lip} ({(lay.IsRail(edge.Lip) ? "a lane cell" : "floor")}, {(lay.Walkways.Any(w => Math.Max(Math.Abs(w.X - edge.Drop.X), Math.Abs(w.Y - edge.Drop.Y)) <= 2) ? "beside a plank" : lay.Rail?.Cavern != null && lay.Bridges.Keys.Any(b => Math.Max(Math.Abs(b.X - edge.Drop.X), Math.Abs(b.Y - edge.Drop.Y)) <= 2) ? "beside a deck" : "a strip's edge")}) of the chasm at {edge.Drop}, {from.DistanceTo(me.GlobalPosition):0.0} m from where it stood; it walks off on its own input"));
+                _clock = 0; _step = 80;
+                return;
+            }
+            case 80: // a second for the server to have our pose on the lip, then we walk on into the drop until our sheet (the server's) says Fallen
+            {
+                if (me == null || main.Party is not { } walkers) return;
+                if (_clock < 1.0) { walkers.ForcedMoveInput = null; return; }
+                if (me.State.Fallen && !me.Visible) // the sheet's Fallen, and our body hidden in the crevasse for it (the next physics tick)
+                {
+                    walkers.ForcedMoveInput = null;
+                    var cell = Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition);
+                    GD.Print(FormattableString.Invariant($"[net] ride: walk-off: the sheet shows the joiner Fallen here {_clock - 1.0:0.00} s after it stepped off the lip at {_walkLip} (held at y {me.GlobalPosition.Y:0.0} over {cell}, a drop {Yes(main.Builder.Layout is { } l && Dungeon.CrevasseRules.IsDrop(l, cell))}; hidden {Yes(!me.Visible)}, downed {Yes(me.Downed)})"));
+                    client.Trace.Add("walk-off");
+                    // the tail (plan 10 task 9): we tell the server we are ready for the wipe; it gives every other hero to the crevasse, the party
+                    // wipes and rises beside the cart at the last stop reached, our body placed there by the server before we are ready again
+                    _wipeBuilds = client.Trace.Count(t => t == "floor:12");
+                    net.Send(new ChatIntent(RideWipeReady));
+                    GD.Print("[net] ride: the joiner is ready for the wipe");
+                    _clock = 0; _step = 77;
+                    return;
+                }
+                me.FaceToward(main.Builder.Surface(_walkDrop) + (main.Builder.Surface(_walkDrop) - main.Builder.Surface(_walkLip)));
+                walkers.ForcedMoveInput = new Vector2(0f, -0.5f); // forward, a walk: off the lip
+                if (_clock > 20)
+                {
+                    walkers.ForcedMoveInput = null;
+                    Finish("[net]", false, FormattableString.Invariant($"ride: walk-off: the joiner walked off the lip at {_walkLip} but its sheet never showed Fallen (at {me.GlobalPosition:0.0}, cell {Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition)})"));
+                    net.Disconnect("test finished");
+                }
                 return;
             }
             case 77: // the wipe's rebuild of floor 12 (a FloorChange, not a resend), then the server's ForcePose after our Ready
@@ -1678,8 +1757,11 @@ public partial class NetTestFlow : Node
                 if (_clock < 0.5 || rc == null || me == null || rc.Follower is not { HasState: true }) { if (_clock > 30) { Finish("[net]", false, "ride: wipe-rise: the cart's state never came after the rebuild"); net.Disconnect("test finished"); } return; }
                 var d = me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition);
                 GD.Print(FormattableString.Invariant($"[net] ride: rose beside the cart at stop {rc.StopIndex} (d={d:0.0} m)"));
+                var up = !me.State.Fallen && !me.Downed && me.Visible;
+                GD.Print($"[net] ride: walk-off: back from the fall here: {(up ? "up" : "NOT up")} (fallen {Yes(me.State.Fallen)}, downed {Yes(me.Downed)}, shown {Yes(me.Visible)}), placed by the server's ForcePose after the rebuild");
+                if (!up) { Finish("[net]", false, "ride: walk-off: the joiner who walked off the edge did not come back up with the wipe's rise"); net.Disconnect("test finished"); return; }
                 client.Trace.Add("wipe-rise");
-                Finish("[net]", true, $"ride: the joiner joined mid-ride 2 and saw the ride as it is (joined-mid-ride ok), boarded at stop 2, was thrown from the cart at speed on ride 3 and stood at the server's landing, had floor 12 resent mid-ride 3 and saw the ride as it is again (resynced-mid-ride ok), took stop 3's spare through the intent after the train, its chaser halted behind the train (chase-done), saw the server's wreck and spare {_joinSpareStop}'s takeover (wreck-spare), rode ride 3 again in it and halted at the heap's face without passing it here (heap-halt), heard the last wreck live, had the floor resent with the cart wrecked for good and heard and saw no wreck from that catch-up (last-wreck-resync ok), and, the party wiped by the crevasse, rose beside the cart at stop {rc.StopIndex} (wipe-rise)");
+                Finish("[net]", true, $"ride: the joiner joined mid-ride 2 and saw the ride as it is (joined-mid-ride ok), boarded at stop 2, was thrown from the cart at speed on ride 3 and stood at the server's landing, had floor 12 resent mid-ride 3 and saw the ride as it is again (resynced-mid-ride ok), took stop 3's spare through the intent after the train, its chaser halted behind the train (chase-done), saw the server's wreck and spare {_joinSpareStop}'s takeover (wreck-spare), rode ride 3 again in it and halted at the heap's face without passing it here (heap-halt), heard the last wreck live, had the floor resent with the cart wrecked for good and heard and saw no wreck from that catch-up (last-wreck-resync ok), walked its own hero off the lip at {_walkLip} into the crevasse and was shown Fallen by the server's sheet (walk-off), and, the party wiped by the crevasse, rose beside the cart at stop {rc.StopIndex}, up (wipe-rise)");
                 net.Disconnect("test finished");
                 return;
             }

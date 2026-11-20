@@ -37,7 +37,10 @@
 #                                     the heap's face; out of it, the server wrecks the cart until no spare is
 #                                     left (the joiner hears that wreck live), and the joiner asks for the floor
 #                                     again: its first cart state carries Wrecked and must play nothing there
-#                                     (no wreck shown, no cart_wreck, no tumble); both clients' slag carts
+#                                     (no wreck shown, no cart_wreck, no tumble); then it walks its own hero off the lip of a
+#                                     chasm on its own input: the server judges the fall ([crevasse] Joiner fell) and the joiner's
+#                                     sheet shows Fallen; the rest of the party is given to the crevasse, and the wipe rises beside
+#                                     a fresh cart with the joiner up and set down there by the server's ForcePose; both clients' slag carts
 #                                     (and their riders) and boarding hounds must match the server's on the grid as well)
 set -u
 cd "$(dirname "$0")/.."
@@ -294,6 +297,18 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net-server\] ride: wipe-rise: [1-9][0-9]* hero(es) beside the cart at stop [0-9]*$" "$TMP/server.log" || [ -z "$RISE_D" ] || ! awk -v d="$RISE_D" 'BEGIN { exit !(d <= 6.0) }'; then
     echo "NET TEST: FAIL (the wipe did not set the remote player down beside the cart)"; exit 1
   fi
+  # the walk-off (plan 10 final review C1): before it says it is ready for the wipe, the joiner's own client walks its hero off the lip
+  # of the chasm nearest it on its own input; the server keeps its poses into the drop, so the crevasse watch judges the server's copy
+  # of its body ([crevasse] Joiner fell ..., before the wipe asks anything: nothing hands the joiner to the crevasse), and the joiner's
+  # sheet shows it Fallen; the wipe's rise then brings it back up, placed beside the cart by the server's ForcePose (the check above)
+  echo "--- walk-off"; grep -h "\[net\] ride: walk-off: \|\[net-server\] ride: walk-off: \|\[crevasse\] Joiner fell" "$TMP/server.log" "$TMP/joiner.log" 2>/dev/null
+  FELL_AT=$(grep -n "\[crevasse\] Joiner fell at .*: Dead" "$TMP/server.log" | head -1 | cut -d: -f1)
+  WIPE_AT=$(grep -n "\[net-server\] ride: wipe: the joiner is ready" "$TMP/server.log" | head -1 | cut -d: -f1)
+  if ! grep -q "\[net\] ride: walk-off: the joiner steps onto the lip at" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (walk-off: the joiner never stepped onto a lip to walk off)"; exit 1; fi
+  if [ -z "$FELL_AT" ] || [ -z "$WIPE_AT" ] || [ "$FELL_AT" -ge "$WIPE_AT" ]; then echo "NET TEST: FAIL (walk-off: the server never judged the joiner's own fall before the wipe: no [crevasse] Joiner fell line ahead of it)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: walk-off: Joiner is Fallen here before the wipe" "$TMP/server.log"; then echo "NET TEST: FAIL (walk-off: the server's copy of the joiner was not Fallen before the wipe)"; exit 1; fi
+  if ! grep -q "\[net\] ride: walk-off: the sheet shows the joiner Fallen here" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (walk-off: the joiner's sheet never showed it Fallen)"; exit 1; fi
+  if ! grep -q "\[net\] ride: walk-off: back from the fall here: up " "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (walk-off: the joiner was not back up after the wipe's rise)"; exit 1; fi
   echo "NET TEST: ok"; exit 0
 fi
 

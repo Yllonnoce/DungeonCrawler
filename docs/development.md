@@ -1105,9 +1105,9 @@ and with `RailCount` 0 (the default) nothing changes, byte for byte:
 - `RailBand` (default `RailRules.Band`, 6; clamped 6..16) is the band of rock outside the ring for the line. A railed ring
   grows the grid by the band on every side while the ring's radius shrinks by the same band, so the same rooms come out,
   translated by the band; room indices and order do not change, so plans keep pointing at the same rooms.
-- `Crevasses` (bool, default false, `[AiIgnore]`) cuts chasms beside a laid line and plank crossings in the halls (see
-  "Crevasses" below). It is its own knob, not keyed on `RailBand`, so with it false every floor's `ContentHash` is
-  unchanged. Floor 12 sets it in the built-in campaign's overrides.
+- `Crevasses` (bool, default false) cuts chasms beside a laid line and plank crossings in the halls (see "Crevasses"
+  below). It is its own knob, not keyed on `RailBand`, so with it false every floor's `ContentHash` is unchanged. Floor 12
+  sets it in the built-in campaign's overrides (`SpecOverrides.Crevasses`, which is `[AiIgnore]`: the planner never sees it).
 
 A band wider than 6 meanders the line (`FloorGenerator.Meander.cs`, no rng). After each stretch is routed, a ride
 (platform middle to platform middle) shorter than `RailRules.RideMinCells` (55 cells, 220 m) gets outward rectangular
@@ -1648,12 +1648,19 @@ open band under its deck; `FloorLayout.IsShutUnder` keeps a plinth there, so nob
 single player only. Each physics tick it checks every hero on foot (a remote player's by the server's copy of its body),
 every living enemy no cart carries and every NPC alive and on foot: a body over a drop cell (`CrevasseRules.IsDrop`, a
 chasm or a bridge) and `FallDepth` (2.5 m) below that cell's floor has fallen (`CrevasseRules.Fell`), and is taken
-(`CrevasseWatch.Take`). Its fate (`CrevasseRules.FateOf`; an NPC's kind by `CrevasseRules.NpcBody`):
+(`CrevasseWatch.Take`). For a remote player the server's copy follows its client's poses into the drop: `ServerWorld.ApplyPose`
+drops a pose off the map (`PoseGuardRules.OffTheMap`: rock, a wall, not the under layer) but keeps one over a drop cell at or
+below that cell's floor (`DropPoseSlack`, 0.05 m, for a body just stepping off the lip; above it is walking on air), so a
+player who walks off an edge on their own screen is judged by the server like anyone else. A fallen body's poses are ignored
+(the server holds it under the lip), and its return shoves it out first so the poses still in flight from its client's held
+body are dropped (`PoseGuardRules.DropAfterShove`). Its fate (`CrevasseRules.FateOf`; an NPC's kind by `CrevasseRules.NpcBody`):
 - **A hero** is `CharacterState.Fallen`: down at 0 HP, hidden, not solid and held 6 m under the lip (`HoldDepth`, above
   `Adventurer.FellOutY`, so it never trips the fell-out guard). Heal, Regenerate, Revive and a level-up's heal do nothing
   while fallen, and `Downed` counts it, so a party with every hero fallen or down wipes. `Fallen` is saved
   (`CharacterDto.Fallen`) and reaches clients in the `PartySync` sheet. `Adventurer.FellOut` over a chasm or bridge cell
-  holds the body still instead of putting it back on its last ground: a client waits for the server's word.
+  holds the body still instead of putting it back on its last ground: a client waits for the server's word, which comes
+  because the server keeps its poses into the drop (above). The log says "{name} falls into the crevasse! Back when the
+  party next reaches a stop."
 - **Crew and any other NPC** are lost: they die, hidden and held where they fell (a dead fallen NPC is hidden on clients
   and after a load too, unseated below the lip).
 - **An escort** (any NPC escorting the party, and Grisel, any id in `CrewRescueController.EscortIds`, whether or not she is
@@ -1671,11 +1678,14 @@ the log says "Mind the edge — that drop has no bottom." The jump keeps its own
 walks itself into a drop: `CrevasseRules.KeepFooting` clamps its velocity before `MoveAndSlide` so it never leaves a chasm's
 edge or a plank's boards (`FootingMargin` 0.2 m inside them), `FollowSpot` puts its formation slot and regroup point on
 footing (followers go in file along a bridge, `FileGap` 1.5 m apart), `NearestStandable` finds the nearest footing to a
-point, `PathMover` refuses a shortcut that crosses a drop, and every set-down (a stop, a traffic refuge) goes through
-`SetDownOk`. The existing regroup teleport usually pulls a companion knocked over a lip back before it drops 2.5 m.
+point, `PathMover` refuses a shortcut that crosses a drop, and every set-down (a stop, a traffic refuge, the cells crew
+are let out on) goes through `SetDownOk`. A body put down behind a lead (a hero bot brought in behind its owner,
+`ServerWorld.BringIn`; an escort caught up after 5 s unreachable, `Npc`) goes through `CrevasseRules.SetDownNear`: the spot
+when its cell may take a body and the ground to it from the lead's footing holds, else the lead's footing. The existing regroup teleport usually pulls a companion knocked over a lip back before it drops 2.5 m.
 
 **The train falls.** Over a crevasse is geometry, not data: a party-lane cell that is a bridge or has a chasm within
-`OverReach` (2) cells (`CrevasseRules.OverCrevasse`). A missed jump or a trestle collapse over such cells calls
+`OverReach` (2) cells (`CrevasseRules.OverCrevasse`). A seated hero calls the drop as the cart's front enters a trestle over a crevasse (`RailCalls`, `BarkTrigger.Crevasse`;
+`[rails] ... over the crevasse, called by ...`). A missed jump or a trestle collapse over such cells calls
 `RailController.Fall(why)` (`RailController.Fall.cs`), the entry later plans call; anywhere else it is the plain wreck.
 A fall is a wreck with no tumble: the riders, the hounds aboard, every coupled wagon and its crew go into the crevasse
 (`TakeTheTrain` takes the riders over the nearest drop), the wagons are hidden and marked lost
@@ -1696,6 +1706,8 @@ that takes everyone spends no spare before the wipe. On the wire it is the usual
 
 **The arrival snapshot and the wipe's rise** (rulings 14 and 15). On the server and in single player,
 `RailController.ArrivalSnapshot` is a whole `FloorStateDto` captured one frame after every `Arrived` and `Restored` event.
+A spare's takeover raises `Arrived` at its stop, so it counts as the last stop reached for the rise (though it never returns
+the fallen).
 A wipe on a floor whose cart has a snapshot (any cause, on foot or aboard; `Main.RiseAtTheLastStop`) keeps its own live
 capture and takes the train from the snapshot (`Save.Core.RailArrival.Merge`): always the `RailStop`. On the crew trial's
 floor (a `CrewRescueController` is built) it also takes the crew's `NpcDto`s and the objective's `Completed`, `FreedNpcs`,
@@ -2243,7 +2255,7 @@ refuses it within 1 s of the first client's toggle (`seated window: set back …
 10. **The wrecks.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 to 3 unused, and spare 3 takes over (`SpareRules.Pick`: the nearest unused stop). The heap stands on ride 3, so 3 s later the server wrecks it again and spare 2 takes over, Held at stop 2 (`wreck-spare`): on a line of any length it wrecks every 3 s until the spare of the stop the heap's ride leaves stands (`NetTestFlow.HeapStop`). The joiner sees each Wrecked state (two) and the takeover at stop 2, and must hear `cart_wreck` once: the end's wreck stands beside it, the second far out of a wreck's 30 m earshot (`RideAudio.At`).
 11. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
 12. **The last wreck.** The joiner gets out. 3 s later the server wrecks the cart (`DebugWreck`) until no spare is left, so it stands wrecked and hidden (`wreck-last`). The joiner hears that wreck live (`cart_wreck` at least once). 7 s later it asks for the floor again. Its rebuilt cart's first state carries Wrecked, and that catch-up must play nothing: no wreck shown (`NetWrecksSeen` 0), no `cart_wreck`, no tumble (`last-wreck-resync ok`).
-13. **The wipe's rise** (plan 10). The joiner says it is ready (a chat line, `ride: ready for the wipe`). The server gives every hero not parked to the crevasse where it stands (`CrevasseWatch.Take`), so the party wipes; the wipe rises at the last stop reached beside a fresh cart (`RailController.RiseBesideCart`), and the server prints `[net-server] ride: wipe-rise: N hero(es) beside the cart at stop K` (its RESULT needs every hero not parked, the joiner among them, up within 10 m of the cart). The joiner waits for the rebuilt floor 12 and for a ForcePose after it (the `OnFloorReady` answer to its Ready), then half a second, and prints `[net] ride: rose beside the cart at stop K (d=… m)`, its own hero's distance from the party's cart. The script fails with "the wipe did not set the remote player down beside the cart" unless the server's line is there and d ≤ 6.0. This is the proof that the server places a remote hero before its client is ready again.
+13. **The walk-off and the wipe's rise** (plan 10). First the joiner's own client puts its hero on the lip of the chasm nearest it (a cell a body may be set down on, level with the chasm, off the lanes when one is: `NetTestFlow.WalkOffEdge`) and, a second later, walks it off on its own input (`ForcedMoveInput`), printing `[net] ride: walk-off: the joiner steps onto the lip at …`. The server keeps its poses into the drop, the crevasse watch judges the server's copy (`[crevasse] Joiner fell at …: Dead`), and the joiner waits for its sheet to say Fallen (`[net] ride: walk-off: the sheet shows the joiner Fallen here …`). Then the joiner says it is ready (a chat line, `ride: ready for the wipe`); the server prints whether the joiner is already Fallen (`[net-server] ride: walk-off: Joiner is Fallen here before the wipe`, part of its RESULT) and gives every other hero not parked to the crevasse where it stands (`CrevasseWatch.Take`), so the party wipes; the wipe rises at the last stop reached beside a fresh cart (`RailController.RiseBesideCart`), and the server prints `[net-server] ride: wipe-rise: N hero(es) beside the cart at stop K` (its RESULT needs every hero not parked, the joiner among them, up within 10 m of the cart). The joiner waits for the rebuilt floor 12 and for a ForcePose after it (the `OnFloorReady` answer to its Ready), then half a second, and prints `[net] ride: rose beside the cart at stop K (d=… m)`, its own hero's distance from the party's cart. The joiner then prints `[net] ride: walk-off: back from the fall here: up …` (not fallen, not down, shown) or fails. The script fails with "the wipe did not set the remote player down beside the cart" unless the server's line is there and d ≤ 6.0, and with a "walk-off: …" reason unless the joiner stepped onto a lip, the server's `[crevasse] Joiner fell` line comes before the wipe's ask, the server saw the joiner Fallen, its sheet showed Fallen and it came back up. This is the proof that a remote player's own fall is judged by the server, and that the server places a remote hero before its client is ready again.
 
 The kiln's first hammer (`HammerIndexOf(LastRide)`) is paired all through the pass.
 
@@ -2284,7 +2296,7 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - a downed rider's "Get out" intent and a seated pose's Dodge flag, both now refused on the server (code and rule tests only);
 - the rim-spot cap with one awake rider (the RIDE pass's hounds went to the crewed wagon), and a remote seated body's presentation (no run gait or footsteps; nothing checks animation or audio);
 - a wipe's reload mid-ride. The pass's wipe (step 13) comes with the cart wrecked and held, and the resync runs the same `OnFloorReady` catch-up;
-- a fall on a client: the plunge (`CartStateDto.Fell`), a remote player's own fall over a drop, the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire;
+- a fall on a client: the plunge (`CartStateDto.Fell`), the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire. A remote player's own fall is proven over the wire (step 13's walk-off): a walk off a lip on the joiner's own input, judged by the server, shown Fallen on the joiner's sheet and brought back by the wipe's rise. A return at a stop arrival or a platform step for a remote player, and a jump across a chasm (its airborne poses above the lip are dropped until it lands), are not;
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing.
 
