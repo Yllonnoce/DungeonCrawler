@@ -1183,10 +1183,17 @@ Floor 12's stops (built-in campaign; `Rail.Stops[i].Room`) and what waits at the
 | Stop | Room | Name | Mobs |
 |---|---|---|---|
 | 0 | 1 | Kiln-Mouth Landing (start) | Grisel, when forgiven |
-| S1 | 9 | Ladle Ledge | `col_stop1` The Cage Watch, 2 cinders (on `col_ring`'s patrol route) |
-| S2 | 7 | Tenders' Quarters | `col_stop2` The Slag Crew, 2 cinders and an ember hound |
-| S3 | 6 | Cinder Breaches (horde nest) | `col_stop3` The Pour Guard, a forge priest and a cinder brute |
-| 4 | 5 | Cooling Stair (exit) | `col_stairbell`, an ember hound |
+| S1 | 2 | Ladle Ledge | `col_stop1` The Cage Watch, 2 cinders (on `col_ring`'s patrol route) |
+| S2 | 4 | Oddfellows' Fire (camp) | `col_oddfellows`, 2 bandits, a bandit archer and the chief, hold the gate; `col_ring`'s patrol (a forge priest, hub 0, 3, S1, 3, S2) ends here |
+| S3 | 6 | The Pouring Gallery | `col_stop3` The Pour Guard, a forge priest and a cinder brute |
+| S4 | 8 | Shelf of Blanks | `col_stop4` The Clinker Watch, a cinder and an ember hound |
+| 5 | 9 | Cooling Stair (exit, beside the landing) | `col_stairbell`, an ember hound |
+
+Off the line: the hub (0, The Casting Floor, the shrine), The Slag Walk (3, the locked chest), The Cinder Breaches (5,
+the horde nest and its chest), Tenders' Quarters (7, `col_stop2` The Slag Crew, a cinder and an ember hound), The
+Founders' Strongbox (10, the reward vault, `col_vault`), The Kiln Cages (11, the jail) and the safe room (12). The line
+runs the long way round the ring, from the landing to the Cooling Stair beside it (`RailCount` 4, `RailLoop`, `RailBand`
+14): five rides of 206 to 281 m, 1214 m in all, with the cavern span on ride 4.
 
 The six named crew (`FloorPlan.Crew`, validated by `PlanValidator.ValidateCrew`: no cast names, capped at two per wagon)
 are seated by the crew controller, not the resolver. A crew id another NPC of the plan holds, or `grisel_body` (dead

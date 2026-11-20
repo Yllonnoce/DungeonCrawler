@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 12,
   "Source": "builtin",
-  "LayoutHash": 8298920822430557376,
+  "LayoutHash": 7045622127910295017,
   "Title": "The Casting Hall",
   "IntroLine": {
     "Text": "Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn\u0027s crew, taken first in the spring and turned the furthest.",
@@ -23,12 +23,12 @@
     {
       "Index": 2,
       "Role": "Passage",
-      "Name": "The Slag Walk"
+      "Name": "The Ladle Ledge"
     },
     {
       "Index": 3,
-      "Role": "Hall",
-      "Name": "The Pouring Gallery"
+      "Role": "Passage",
+      "Name": "The Slag Walk"
     },
     {
       "Index": 4,
@@ -37,13 +37,13 @@
     },
     {
       "Index": 5,
-      "Role": "Exit",
-      "Name": "The Cooling Stair"
+      "Role": "Lair",
+      "Name": "The Cinder Breaches"
     },
     {
       "Index": 6,
-      "Role": "Lair",
-      "Name": "The Cinder Breaches"
+      "Role": "Hall",
+      "Name": "The Pouring Gallery"
     },
     {
       "Index": 7,
@@ -57,8 +57,8 @@
     },
     {
       "Index": 9,
-      "Role": "Passage",
-      "Name": "The Ladle Ledge"
+      "Role": "Exit",
+      "Name": "The Cooling Stair"
     },
     {
       "Index": 10,
@@ -109,11 +109,6 @@
           "EnemyId": "enemy.forge_priest",
           "Count": 1,
           "Elite": null
-        },
-        {
-          "EnemyId": "enemy.ember_hound",
-          "Count": 1,
-          "Elite": null
         }
       ],
       "Goal": {
@@ -122,9 +117,10 @@
         "Objective": null,
         "Route": [
           0,
-          9,
-          8,
-          7
+          3,
+          2,
+          3,
+          4
         ],
         "AlarmTarget": null,
         "RallyRoom": 0
@@ -143,7 +139,7 @@
       ],
       "Goal": {
         "Kind": "Alarm",
-        "Room": 5,
+        "Room": 9,
         "Objective": null,
         "Route": [],
         "AlarmTarget": "col_vault",
@@ -193,11 +189,11 @@
       ],
       "Goal": {
         "Kind": "Guard",
-        "Room": 9,
+        "Room": 2,
         "Objective": null,
         "Route": [],
         "AlarmTarget": null,
-        "RallyRoom": 9
+        "RallyRoom": 2
       }
     },
     {
@@ -207,7 +203,7 @@
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
-          "Count": 2,
+          "Count": 1,
           "Elite": null
         },
         {
@@ -249,6 +245,31 @@
         "AlarmTarget": null,
         "RallyRoom": 6
       }
+    },
+    {
+      "Id": "col_stop4",
+      "Name": "The Clinker Watch",
+      "FactionId": "fac_bellows",
+      "Members": [
+        {
+          "EnemyId": "enemy.horde_cinder",
+          "Count": 1,
+          "Elite": null
+        },
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "Goal": {
+        "Kind": "Guard",
+        "Room": 8,
+        "Objective": null,
+        "Route": [],
+        "AlarmTarget": null,
+        "RallyRoom": 8
+      }
     }
   ],
   "Loners": [],
@@ -256,7 +277,7 @@
     {
       "Id": "horde_breach",
       "Name": "The Spill",
-      "Room": 6,
+      "Room": 5,
       "Members": [
         {
           "EnemyId": "enemy.horde_cinder",
@@ -288,12 +309,12 @@
   "Boss": null,
   "Chests": [
     {
-      "Room": 6,
+      "Room": 5,
       "Locked": false,
       "QuestId": null
     },
     {
-      "Room": 2,
+      "Room": 3,
       "Locked": true,
       "QuestId": null
     }
@@ -304,11 +325,11 @@
       "Kind": "Fire"
     },
     {
-      "Room": 9,
+      "Room": 2,
       "Kind": "Spikes"
     },
     {
-      "Room": 3,
+      "Room": 6,
       "Kind": "Fire"
     }
   ],
@@ -767,7 +788,7 @@
   "Narration": [
     {
       "Trigger": "RoomEnter",
-      "Room": 9,
+      "Room": 2,
       "Line": {
         "Text": "The cages hold Grisel Thorn\u0027s crew, taken first in the spring and nearly gone: grey to the eyes and past speaking. A few days more and they would be running with the cinders.",
         "VoiceId": "34001ffef70beef3",
@@ -778,7 +799,7 @@
     },
     {
       "Trigger": "RoomEnter",
-      "Room": 9,
+      "Room": 2,
       "Line": {
         "Text": "Grisel Thorn lies dead by the cage door, the orc\u0027s keys still on her belt. To save herself she kept her own crew caged for him, and the moment you reached this floor, he had his iron cut her down.",
         "VoiceId": "571934dd1bff9e56",

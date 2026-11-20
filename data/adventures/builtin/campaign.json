@@ -531,7 +531,9 @@
         "NestCount": 1,
         "WaterCount": 0,
         "IsEmpty": false,
-        "RailCount": 3
+        "RailCount": 4,
+        "RailLoop": true,
+        "RailBand": 14
       }
     },
     {
