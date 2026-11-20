@@ -35,7 +35,7 @@ public static class RailRules
     /// <summary>Party-lane cells kept clear of strips at either end of a ride, next to each platform.</summary>
     public const int StripPlatformGap = 4;
     /// <summary>The gorge's window on the last ride, as fractions of the ride from platform middle to platform middle.</summary>
-    public const float GorgeFrom = 0.50f, GorgeTo = 0.85f;
+    public const float GorgeFrom = 0.30f, GorgeTo = 0.90f;
     /// <summary>The most plank crossings (<c>FloorLayout.Walkways</c>) cut into a crevasse floor's halls.</summary>
     public const int WalkwayCount = 3;
     /// <summary>How many cells of chasm a plank crossing has on each side, across its corridor.</summary>

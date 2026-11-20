@@ -36,6 +36,8 @@ public static partial class FloorGenerator
             }
             foreach (var c in window)
             {
+                for (var t = 2; t <= 2 + RailRules.CavernDepth; t++) // the drop's lip is the lane's floor beside it
+                    if (layout.IsChasm(c + Times(side, t))) layout.SetLevel(c + Times(side, t), layout.LevelOf(c));
                 layout.Bridges[c] = BridgeKind.Deck;
                 layout.Bridges[c + side] = BridgeKind.Deck; // the enemy twin
             }
@@ -81,56 +83,66 @@ public static partial class FloorGenerator
                 minimum = 2;
             }
             if (from > to) continue;
-            // the runs on each side, and the side to cut: inward of the party lane when it has a run long enough
-            var inward = Runs(-1);
-            var runs = inward.Any(r => r.Count >= minimum) ? inward : Runs(1);
-            runs = runs.Where(r => r.Count >= minimum).ToList();
+            // the side to cut: inward of the party lane when it has a run long enough
+            var way = Runs(-1, false).Any(r => r.Count >= minimum) ? -1 : 1;
+            if (k == last)
+            {
+                // every run on that side, each cut as soon as it ends, so a later one (the far leg of a bulge, say) sees it
+                // as the drop it is and keeps its wall
+                Runs(way, true);
+                continue;
+            }
+            var runs = Runs(way, false).Where(r => r.Count >= minimum).ToList();
             if (runs.Count == 0) continue;
-            if (k != last)
-            {
-                var longest = runs.OrderByDescending(r => r.Count).First(); // the earliest of the longest
-                var cut = Math.Max(0, longest.Count - RailRules.StripMaxCells);
-                runs = new List<List<(int I, GridPos[] Cells)>> { longest.Skip(cut / 2).Take(RailRules.StripMaxCells).ToList() };
-            }
-            foreach (var run in runs)
-            {
-                foreach (var (_, cells) in run)
-                    foreach (var c in cells)
-                    {
-                        if (pockets.Contains(c)) dropped.Add(c);
-                        layout[c] = Cell.Chasm;
-                    }
-                var strip = new RailSpan(run[0].I, run[^1].I);
-                strips.Add(strip);
-                if (k == last) gorge.Add(strip);
-            }
+            var longest = runs.OrderByDescending(r => r.Count).First(); // the earliest of the longest
+            var cut = Math.Max(0, longest.Count - RailRules.StripMaxCells);
+            Carve(longest.Skip(cut / 2).Take(RailRules.StripMaxCells).ToList(), false);
 
-            // the maximal runs of consecutive cells a strip can lie beside on one side (-1 inward, +1 outward)
-            List<List<(int I, GridPos[] Cells)>> Runs(int way)
+            // the maximal runs of consecutive cells a strip can lie beside on one side (-1 inward, +1 outward); with
+            // gorgeCut, each run of at least the minimum is cut into the gorge as it ends
+            List<List<(int I, GridPos[] Cells)>> Runs(int side, bool gorgeCut)
             {
                 var found = new List<List<(int, GridPos[])>>();
                 List<(int, GridPos[])>? run = null;
-                for (var i = from; i <= to; i++)
+                for (var i = from; i <= to + 1; i++)
                 {
-                    if (StripCells(layout, rail, enemy, pockets, taken, sign, i, way) is { } cells)
+                    if (i <= to && StripCells(layout, rail, enemy, pockets, taken, sign, i, side) is { } cells)
                     {
                         if (run == null) found.Add(run = new());
                         run.Add((i, cells));
+                        continue;
                     }
-                    else run = null;
+                    if (gorgeCut && run != null && run.Count >= minimum) Carve(run, true);
+                    run = null;
                 }
                 return found;
             }
         }
         return (strips, gorge);
+
+        void Carve(List<(int I, GridPos[] Cells)> run, bool inGorge)
+        {
+            foreach (var (i, cells) in run)
+                foreach (var c in cells)
+                {
+                    if (pockets.Contains(c)) dropped.Add(c);
+                    layout[c] = Cell.Chasm;
+                    layout.SetLevel(c, layout.LevelOf(rail.Party[i])); // the drop's lip is the lane's floor beside it
+                }
+            var strip = new RailSpan(run[0].I, run[^1].I);
+            strips.Add(strip);
+            if (inGorge) gorge.Add(strip);
+        }
     }
 
     /// <summary>
     /// The two cells a strip cuts beside party-lane cell <paramref name="i"/> (inward of the party lane at t = -1, -2 for
-    /// <paramref name="way"/> -1; outward of the enemy lane at t = 2, 3 for +1), or null when it cannot: the lane is straight
-    /// there with its enemy twin beside it, the lane cells beside the strip are level ground and no ramp, and in the block
-    /// round the two cells there is only that lane's own stretch, its pockets and rock, with rock behind them. Each cell is
-    /// rock or a pocket of the lane, level 0, outside every room, not under anything, reserved or taken (<see cref="TakenCells"/>).
+    /// <paramref name="way"/> -1; outward of the enemy lane at t = 2, 3 for +1), or null when it cannot. The lane is straight
+    /// there with its enemy twin beside it, and the stretch is flat at either level (0 or 1): both lane cells at one level and
+    /// neither a ramp, no ramp within a cell of the strip, and nothing walkable at another level round it. In the
+    /// block round the two cells there is only that lane's own stretch, its pockets and rock, with rock behind them, and
+    /// nothing under anything (a cellar, a tunnel, the under layer). Each cell is rock or a pocket of the lane, outside every
+    /// room, not reserved or taken (<see cref="TakenCells"/>); once cut it takes the lane's level, so the drop's lip is the lane's floor.
     /// </summary>
     private static GridPos[]? StripCells(FloorLayout layout, RailLine rail, HashSet<GridPos> enemy, HashSet<GridPos> pockets, HashSet<GridPos> taken, int sign, int i, int way)
     {
@@ -143,27 +155,37 @@ public static partial class FloorGenerator
         var lane = way < 0 ? rail.Party[i] : twin; // the lane the strip runs beside
         var u = way < 0 ? -side : side;            // away from that lane
         var own = way < 0 ? (Func<GridPos, bool>)layout.IsPartyRail : enemy.Contains;
-        foreach (var c in new[] { rail.Party[i], twin })
-            if (layout.LevelOf(c) != 0 || layout[c] == Cell.Ramp || layout.Ramps.ContainsKey(c)) return null;
+        var level = layout.LevelOf(rail.Party[i]);
+        if (layout.LevelOf(twin) != level) return null;
+        var cells = new[] { lane + u, lane + Times(u, 2) };
+        // no ramp in the strip, beside it or within a cell of it, and neither lane cell beside the strip a ramp
+        if (layout.Ramps.ContainsKey(rail.Party[i]) || layout.Ramps.ContainsKey(twin)) return null;
+        foreach (var c in cells)
+            for (var oy = -1; oy <= 1; oy++)
+                for (var ox = -1; ox <= 1; ox++)
+                {
+                    var q = new GridPos(c.X + ox, c.Y + oy);
+                    if (layout[q] == Cell.Ramp || layout.Ramps.ContainsKey(q)) return null;
+                }
         // the block round the strip's two cells: the lane's own cells (m = 0), the strip's rows (m = 1, 2), the rock behind (m = 3)
         for (var along = -1; along <= 1; along++)
             for (var m = 0; m <= 3; m++)
             {
                 var q = lane + Times(d, along) + Times(u, m);
                 if (layout.IsUnder(q)) return null;
+                if (layout.IsWalkable(q) && layout.LevelOf(q) != level) return null; // nothing walkable at another level round it
                 var ok = m switch
                 {
-                    0 => (own(q) && layout.LevelOf(q) == 0 && layout[q] != Cell.Ramp) || Rock(layout, q),
+                    0 => own(q) || Rock(layout, q),
                     1 => Rock(layout, q) || pockets.Contains(q),
                     _ => Rock(layout, q),
                 };
                 if (!ok) return null;
             }
-        var cells = new[] { lane + u, lane + Times(u, 2) };
         foreach (var c in cells)
         {
             var pocket = pockets.Contains(c);
-            if (layout.LevelOf(c) != 0 || layout.RoomAt(c) != null || taken.Contains(c)) return null;
+            if (layout.RoomAt(c) != null || taken.Contains(c)) return null;
             if (!pocket && layout.IsReserved(c)) return null; // a pocket is the line's, which is what reserves it
         }
         return cells;
@@ -198,8 +220,11 @@ public static partial class FloorGenerator
             WalkwayCell(layout, taken, plank, out var across);
             for (var t = 1; t <= RailRules.WalkwayReach; t++)
             {
-                layout[plank + Times(across, t)] = Cell.Chasm;
-                layout[plank - Times(across, t)] = Cell.Chasm;
+                foreach (var q in new[] { plank + Times(across, t), plank - Times(across, t) })
+                {
+                    layout[q] = Cell.Chasm;
+                    layout.SetLevel(q, 0); // the drop's lip is the hall's floor
+                }
             }
             layout.Bridges[plank] = BridgeKind.Plank;
             layout.Walkways.Add(plank);
