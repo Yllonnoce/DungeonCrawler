@@ -43,8 +43,9 @@ public partial class CrevasseWatch : Node
         if (Net.NetSession.IsClient || _builder == null || _layout == null || _builder.Layout != _layout || _builder.FloorRoot is not { } root || Main.Instance?.Party is not { HasBodies: true } party) return;
         foreach (var hero in party.Adventurers)
             if (IsInstanceValid(hero) && !hero.Parked && !hero.State.Fallen && !hero.Seated) Judge(hero);
-        foreach (var child in root.GetChildren())
+        for (var i = 0; i < root.GetChildCount(); i++) // by index, in child order: no array of the floor's children every physics tick (a Take frees nothing at once)
         {
+            var child = root.GetChild(i);
             if (child is Enemy { IsAlive: true, Carried: false } enemy) Judge(enemy);
             else if (child is Npc { Dead: false, Seated: false } npc) Judge(npc);
         }

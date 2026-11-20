@@ -265,7 +265,7 @@ public partial class RailEncounterController
                     TickPour(piece, dt, judgeCart: true);
                     break;
                 case "trestle":
-                    TickTrestle(piece, rolling, dt);
+                    TickTrestle(piece, party, rolling, dt);
                     break;
                 case "jump":
                     TickJump(piece, party, rolling);

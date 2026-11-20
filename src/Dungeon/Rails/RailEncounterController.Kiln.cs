@@ -592,9 +592,10 @@ public partial class RailEncounterController
 
     /// <summary>
     /// The cart's front on the trestle starts its grace; at the end of it the trestle falls, and catches a cart still on it: over a
-    /// crevasse (<see cref="RailController.OverCrevasse"/>) the train falls with it, anywhere else it is wrecked.
+    /// crevasse (<see cref="RailController.OverCrevasse"/>) the train falls with it, anywhere else it is wrecked. Over a crevasse a seated
+    /// hero calls the drop on entry (<see cref="RailCalls"/>, <see cref="BarkTrigger.Crevasse"/>): a fall from it kills, so it is said.
     /// </summary>
-    private void TickTrestle(Piece piece, bool rolling, float dt)
+    private void TickTrestle(Piece piece, PartyController party, bool rolling, float dt)
     {
         if (piece.Trestle is not { Collapsed: false } trestle) return;
         if (piece.Timer < 0f)
@@ -603,7 +604,9 @@ public partial class RailEncounterController
             piece.Timer = SetPieceRules.TrestleGrace;
             EventBus.Instance.Log("The trestle groans under the cart.");
             RideAudio.At("trestle_creak", trestle.Entry); // a client's from its own cart's front (ClientPresent)
-            GD.Print($"[rails] t={_now:0.00} the cart's front enters the trestle at S={_rails.State.S:0.0} (v {_rails.State.V:0.0}): it falls in {SetPieceRules.TrestleGrace:0.0} s");
+            var over = _rails.OverCrevasse(trestle.From, trestle.To);
+            var by = over ? RailCalls.Say(party, _rails.Cart, BarkTrigger.Crevasse, CrevasseWatch.WarnLog) : null;
+            GD.Print($"[rails] t={_now:0.00} the cart's front enters the trestle at S={_rails.State.S:0.0} (v {_rails.State.V:0.0}): it falls in {SetPieceRules.TrestleGrace:0.0} s{(over ? $"; over the crevasse, called by {by ?? "none (logged)"}" : "")}");
             return;
         }
         if ((piece.Timer -= dt) > 0f) return;

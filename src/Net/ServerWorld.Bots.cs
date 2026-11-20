@@ -84,7 +84,12 @@ public partial class ServerWorld
         var index = bot.MemberIndex;
         if (BodyOf(owner) is not { } lead || index < 0 || index >= party.Adventurers.Length) return;
         var at = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.6f);
-        if (Main.Instance.Builder.Layout is { } layout && !layout.IsWalkable(DungeonBuilder.WorldToCell(at))) at = lead.GlobalPosition;
+        // a cell that may take a body, the ground to it holding from the owner's footing (never off a plank's boards or over a drop)
+        if (Main.Instance.Builder.Layout is { } layout)
+        {
+            var spot = CrevasseRules.SetDownNear(layout, DungeonBuilder.CellSize, new(lead.GlobalPosition.X, lead.GlobalPosition.Z), new(at.X, at.Z));
+            at = new Vector3(spot.X, lead.GlobalPosition.Y, spot.Y);
+        }
         party.Unpark(index, ControlKind.Companion, at + Vector3.Up * 0.3f, lead.GlobalPosition - lead.GlobalTransform.Basis.Z * 4f);
         party.Adventurers[index].Leader = lead;
         _dirtyMembers.Add(index);

@@ -138,6 +138,10 @@ public partial class DebugTools
                 var watch = CrevasseWatch.Instance;
                 GD.Print($"[crevasse] floor 12 ({_crvVariant}): chasm cells {layout.ChasmCount}, cavern {(rail.Cavern is { } cv ? $"{cv.From}..{cv.To}" : "none")}, planks {layout.Walkways.Count}, watch {(watch == null ? "none" : "on")}, lethality {TierRules.Lethality}, companions {companions.Count}");
                 if (layout.ChasmCount == 0 || rail.Cavern == null || layout.Walkways.Count == 0) { Fail("floor 12 has no cavern, chasm or plank"); return; }
+                // the lip-level invariant on the shipped floor itself (the sweep in ChasmTests pins the generator's family of floors)
+                var low = CrevasseRules.LowGroundBesideDrops(layout).Concat(CrevasseRules.LowGroundBesideDrops(layout, diagonals: true, below: CrevasseRules.FallDepth)).ToList();
+                GD.Print($"[crevasse] floor 12 lips: {low.Count} walkable cell(s) beside a chasm below its lip");
+                if (low.Count > 0) { Fail($"ground below a chasm's lip: {string.Join("; ", low.Take(4).Select(p => $"{p.Low} beside {p.Chasm}"))}"); return; }
                 if (watch == null) { Fail("no CrevasseWatch on a crevasse floor"); return; }
                 if (companions.Count < 3) { Fail($"{companions.Count} companions, not 3"); return; }
                 var span = rail.Cavern;

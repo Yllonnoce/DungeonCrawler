@@ -152,6 +152,43 @@ public static class CrevasseRules
         return cells;
     }
 
+    /// <summary>
+    /// Where a body is set down near a lead at <paramref name="lead"/> (a bot brought in behind its owner, an escort caught up behind
+    /// the lead): <paramref name="spot"/> when its cell may take a body (<see cref="SetDownOk"/>) and, on a floor with drops, the ground
+    /// from the lead's own footing (<see cref="NearestStandable"/>) to it holds (<see cref="FootingAlong"/>); else that footing, else
+    /// <paramref name="lead"/>. On a floor with no drop it is today's rule: the spot when walkable, else the lead's point.
+    /// </summary>
+    public static Vector2 SetDownNear(FloorLayout l, float cellSize, Vector2 lead, Vector2 spot)
+    {
+        if (l.ChasmCount == 0) return l.IsWalkable(CellOf(spot, cellSize)) ? spot : lead;
+        var anchor = NearestStandable(l, lead, cellSize) ?? lead;
+        return SetDownOk(l, CellOf(spot, cellSize)) && FootingAlong(l, cellSize, anchor, spot) ? spot : anchor;
+    }
+
+    /// <summary>
+    /// Every walkable cell beside a chasm (a 4-neighbour, a bridge or not; with <paramref name="diagonals"/> the corners too) whose
+    /// floor is more than <paramref name="below"/> under that chasm's lip, with the chasm: with 0, a walker there would step into the
+    /// shaft's open band; with <see cref="FallDepth"/>, it would be judged fallen at once. The generator never makes a 4-neighbour
+    /// one at 0 (the lip-level invariant the sweeps pin); in (Y, X) scan order.
+    /// </summary>
+    public static IEnumerable<(GridPos Chasm, GridPos Low)> LowGroundBesideDrops(FloorLayout l, bool diagonals = false, float below = 0f)
+    {
+        for (var y = 0; y < l.Height; y++)
+            for (var x = 0; x < l.Width; x++)
+            {
+                var c = new GridPos(x, y);
+                if (!l.IsChasm(c)) continue;
+                var lip = l.HeightOf(c);
+                for (var dy = -1; dy <= 1; dy++)
+                    for (var dx = -1; dx <= 1; dx++)
+                    {
+                        if ((dx == 0 && dy == 0) || (!diagonals && dx != 0 && dy != 0)) continue;
+                        var n = new GridPos(x + dx, y + dy);
+                        if (l.IsWalkable(n) && l.HeightOf(n) < lip - below - 0.01f) yield return (c, n);
+                    }
+            }
+    }
+
     /// <summary>A fall that takes the train spends a spare only while a hero still stands.</summary>
     public static bool SpareAfterFall(int standingHeroes) => standingHeroes > 0;
 

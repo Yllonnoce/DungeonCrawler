@@ -549,7 +549,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         RefreshHud();
     }
 
-    /// <summary>Up to <paramref name="count"/> distinct walkable cells round <paramref name="at"/>, nearest first: no rail, nothing blocking, no siding.</summary>
+    /// <summary>Up to <paramref name="count"/> distinct cells round <paramref name="at"/> a body may be set down on (<see cref="CrevasseRules.SetDownOk"/>: never a drop), nearest first: no rail, nothing blocking, no siding.</summary>
     private List<GridPos> FreeCellsNear(GridPos at, int count)
     {
         var cells = new List<GridPos>();
@@ -560,7 +560,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 {
                     if (Math.Max(Math.Abs(dx), Math.Abs(dy)) != r) continue;
                     var c = new GridPos(at.X + dx, at.Y + dy);
-                    if (!Layout.IsWalkable(c) || Layout.IsRail(c) || sidings.Contains(c) || _builder!.IsCellBlocked(c) || Layout.LevelOf(c) != Layout.LevelOf(at)) continue;
+                    if (!CrevasseRules.SetDownOk(Layout, c) || Layout.IsRail(c) || sidings.Contains(c) || _builder!.IsCellBlocked(c) || Layout.LevelOf(c) != Layout.LevelOf(at)) continue;
                     cells.Add(c);
                 }
         if (cells.Count == 0) cells.Add(DungeonBuilder.WalkableNeighbor(Layout, at));

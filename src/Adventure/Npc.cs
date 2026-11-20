@@ -409,7 +409,17 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             else FaceToward(lead.GlobalPosition);
             if (_mover.Unreachable > 5f)
             {
-                if (!lead.Seated) GlobalPosition = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
+                if (!lead.Seated)
+                {
+                    var behind = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
+                    // on a crevasse floor never over a drop nor off a plank's boards: the spot when the ground to it holds, else the lead's footing
+                    if (Main.Instance?.Builder.Layout is { ChasmCount: > 0 } drops)
+                    {
+                        var spot = CrevasseRules.SetDownNear(drops, DungeonBuilder.CellSize, new(lead.GlobalPosition.X, lead.GlobalPosition.Z), new(behind.X, behind.Z));
+                        behind = new Vector3(spot.X, lead.GlobalPosition.Y, spot.Y);
+                    }
+                    GlobalPosition = behind;
+                }
                 // the lead rides: never into the tub or onto the line; far behind, beside the cart (as a rider gets out), else hold here
                 else if (gap + FollowDistance > SeatedLeadCatchUp && RailController.Instance is { } rails) GlobalPosition = rails.StandBesideCart();
                 _mover.Reset();
