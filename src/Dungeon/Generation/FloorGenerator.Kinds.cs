@@ -231,7 +231,7 @@ public static partial class FloorGenerator
         layout.Rooms.Add(hub);
         if (spec.BossFloor) layout.BossArena = hub;
 
-        var radius = Math.Min(spec.Width, spec.Height) / 2 - spec.MaxRoomSize / 2 - 2 - (spec.RailCount > 0 ? RailRules.Band : 0);
+        var radius = Math.Min(spec.Width, spec.Height) / 2 - spec.MaxRoomSize / 2 - 2 - (spec.RailCount > 0 ? spec.RailBand : 0);
         var count = Math.Clamp(rng.Next(spec.MinRooms, spec.MaxRooms + 1), 5, 12);
         var a0 = rng.NextDouble() * Math.PI * 2;
         for (var i = 0; i < count; i++)

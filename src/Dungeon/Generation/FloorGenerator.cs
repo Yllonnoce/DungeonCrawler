@@ -10,10 +10,10 @@ public static partial class FloorGenerator
     {
         spec = FloorObjectives.Tune(LayoutKinds.Tune(spec));
         // a railed ring is the same ring inset by a band all round, so the rail line has room outside the rooms
-        if (spec.RailCount > 0 && spec.Layout == LayoutKind.Ring) spec = spec with { Width = spec.Width + 2 * RailRules.Band, Height = spec.Height + 2 * RailRules.Band };
+        if (spec.RailCount > 0 && spec.Layout == LayoutKind.Ring) spec = spec with { Width = spec.Width + 2 * spec.RailBand, Height = spec.Height + 2 * spec.RailBand };
         var rng = new Random(seed);
         var layout = new FloorLayout(seed, spec.Width, spec.Height) { Kind = spec.Layout };
-        if (spec.RailCount > 0 && spec.Layout == LayoutKind.Ring) layout.RailBand = RailRules.Band + 2;
+        if (spec.RailCount > 0 && spec.Layout == LayoutKind.Ring) layout.RailBand = spec.RailBand + 2;
         if (spec.Objective != FloorObjectiveKind.None) layout.Objective = new ObjectiveLayout { Kind = spec.Objective };
 
         // the shape: how rooms are laid and joined; everything after works the same on any of them (see FloorGenerator.Kinds.cs)
