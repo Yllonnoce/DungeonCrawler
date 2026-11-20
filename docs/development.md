@@ -1093,12 +1093,33 @@ Item level is the floor (`TierRules.ItemLevel`). Base damage and the Armor base 
 
 ## Rails
 
-Ring floors can carry a mine-cart line round their outside (the floor 12 chase). `FloorSpec.RailCount` is the knob: 0 (the
-default) lays nothing, 1 to 3 is the number of stops past the start; it only applies to the ring layout, and a campaign
-floor sets it through `SpecOverrides` as `"RailCount"` (`CampaignPlan` clamps it 0..3). A railed ring grows the grid by
-`RailRules.Band` (6 cells) on every side while the ring's radius shrinks by the same band, so the same rooms come out,
-shifted by the band, with an outer band for the line to run in; room indices and order do not change, so plans keep
-pointing at the same rooms. Floors with `RailCount` 0 are unchanged, byte for byte.
+Ring floors can carry a mine-cart line round their outside (the floor 12 chase). Three `FloorSpec` knobs drive it, each set
+by a campaign floor through `SpecOverrides` (`"RailCount"`, `"RailLoop"`, `"RailBand"`); they only apply to the ring layout,
+and with `RailCount` 0 (the default) nothing changes, byte for byte:
+- `RailCount` (0..6, clamped by `CampaignPlan`) is the number of stops past the start.
+- `RailLoop` puts the down stairs in the start room's nearer ring neighbour (by centre distance, ties to the lower index),
+  so the line has to run the long way, the whole ring round. An objective that moves the stairs (a ShiftingVault, a boss
+  arena) wins, and such a floor may get no line.
+- `RailBand` (default `RailRules.Band`, 6; clamped 6..16) is the band of rock outside the ring for the line. A railed ring
+  grows the grid by the band on every side while the ring's radius shrinks by the same band, so the same rooms come out,
+  translated by the band; room indices and order do not change, so plans keep pointing at the same rooms.
+
+A band wider than 6 meanders the line (`FloorGenerator.Meander.cs`, no rng). After each stretch is routed, a ride
+(platform middle to platform middle) shorter than `RailRules.RideMinCells` (55 cells, 220 m) gets outward rectangular
+bulges, the deepest first (up to `RailRules.BulgeMaxDepth`, 9), `BulgeSpan` (4) cells along, nearest the middle of the
+stretch first, until it reaches 220 m, never past `RideMaxCells` (82, 330 m). Every new cell of both lanes must pass the
+same lane rules as the route; bulges keep off the platforms' shadows and the ramp's run, and the lane must stay clear of
+itself (`SelfClear`: line cells that touch are at most `RailRules.SelfClearGap`, 4, party indices apart, which allows the
+enemy lane's inside corners but not two legs side by side). When the bent stretch, or the whole bent line (pockets,
+validation), does not hold, the plain route is used instead, so a wider band never costs the line. Floor 12's chase is
+tuned for band 14.
+
+On a meandered line the stretch into the last stop before the exit keeps a cavern window: `RailLine.Cavern`, a span of
+party-lane indices at least `RailRules.CavernCells` (10) long, straight, whose cells 3 to 2 + `RailRules.CavernDepth`
+(3..7) steps outward were solid rock outside every room when the line was planned (the enemy lane is at 1 and its pockets
+at 2, so every pocket rule still holds). The window is taken on the plain route and the meander keeps off it; it is null
+when that stretch has no straight run long enough (about a third of seeds) and on every line that did not meander. It is
+not part of the content hash. Plan 10 carves the cavern from it in `LayRails`, right after `CommitRails`.
 
 `FloorGenerator.LayRails` (`FloorGenerator.Rails.cs`) runs after the ring and its ramps, from its own salted rng
 (`new Random(seed ^ 0x2A11)`). On a railed floor the grid grows and the keep-clear rules change corridors, side rooms,
@@ -1111,7 +1132,11 @@ height. On a railed ring the outer edges of the ring rooms are kept clear so the
 reports every problem that appears only then, as "with the rails blocked, ...": the stairs, every cage and every key must
 still be reachable on foot. The up stairs can never be on a lane. A requested line that could not be laid leaves
 `FloorLayout.Rail` null and says why in `FloorLayout.RailFailure` (also warned from `DungeonBuilder.Build`; the floor log
-line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets.
+line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy lane, `)` pockets. Before the drawing it
+prints `LayoutReport`: a `[map] room {i}: ({X},{Y}) {W}x{H} level={L} {hub|ring|side|secret}` line per room with its tags
+(`up`, `down`, `stop={k}`, `vault={index}`, `jail`, `safe`, `nest`, `camp`, `shrine`), then
+`[map] rail: stops=[rooms] rides~[m] total~{m} cavern={From}..{To}|none` (cells x 4 m), and the cart's measured
+`[map] rail StopS=[...] rides=[...] m total=... m`.
 `DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
 The centreline is straight 0.5 m pieces laid with no handles, so `TrackSampler.Frame` takes its heading from the chord ±0.25 m

@@ -44,8 +44,11 @@ public static partial class FloorGenerator
         public HashSet<GridPos> Owned { get; } = new();
     }
 
-    /// <summary>A routed stretch of party lane between two rooms' mouths, with the level (and ramp) of each cell.</summary>
-    private sealed record RailSegment(RailRoom From, RailRoom To, List<GridPos> Cells, List<int> Levels, List<RampInfo?> Ramps);
+    /// <summary>
+    /// A routed stretch of party lane between two rooms' mouths, with the level (and ramp) of each cell, and the straight
+    /// window of it kept for the cavern (see <see cref="RailLine.Cavern"/>), or null.
+    /// </summary>
+    private sealed record RailSegment(RailRoom From, RailRoom To, List<GridPos> Cells, List<int> Levels, List<RampInfo?> Ramps, List<GridPos>? Cavern = null);
 
     /// <summary>
     /// Lay the line, or leave the floor untouched with <see cref="FloorLayout.Rail"/> null when it will not fit. The stops
@@ -64,7 +67,8 @@ public static partial class FloorGenerator
         int sign = 0;
         try
         {
-            plan = PlanRails(spec.RailCount, rng, layout, out sign, out pockets);
+            // a band wider than today's meanders the line (see FloorGenerator.Meander.cs)
+            plan = PlanRails(spec.RailCount, rng, layout, out sign, out pockets, meander: spec.RailBand > RailRules.Band);
         }
         catch (Exception e)
         {
@@ -78,7 +82,7 @@ public static partial class FloorGenerator
 
     // ---- planning ----------------------------------------------------------------------------------
 
-    private static List<RailSegment>? PlanRails(int railCount, Random rng, FloorLayout layout, out int sign, out List<GridPos>? pockets)
+    private static List<RailSegment>? PlanRails(int railCount, Random rng, FloorLayout layout, out int sign, out List<GridPos>? pockets, bool meander = false)
     {
         sign = 0;
         pockets = null;
@@ -111,15 +115,23 @@ public static partial class FloorGenerator
             var chosen = new List<RailRoom>();
             for (var k = 0; k < count; k++) chosen.Add(MakeRailRoom(layout, eligible[(int)((k + 0.5) * eligible.Count / count)], way)!);
             var s = -way; // increasing index runs the way Perp turns, so the outward side is the opposite hand
-            var segs = RouteLine(layout, from, chosen, to, s);
-            if (segs == null || segs.Count < 2) continue; // every stop dropped: no line this way
-            var line = LineCells(segs, s, out var levels, out var ramps);
-            if (line == null) continue;
-            if (!LaneHeightsOk(line.Value.party, line.Value.enemy, levels, ramps, s)) continue;
-            var pk = PlaceRailPockets(layout, segs, line.Value.party, line.Value.enemy, ramps, s);
-            if (pk == null || !ValidateLine(layout, segs, line.Value.party, line.Value.enemy, pk, null)) continue;
+            // a meandered line that does not hold is routed again plain before the next way is tried
+            if ((Way(meander) ?? (meander ? Way(false) : null)) is not { } found) continue;
+            var (segs, pk) = found;
             if (best == null || segs.Count > best.Value.segs.Count) best = (segs, s, pk);
             if (segs.Count == railCount + 1) break;
+
+            (List<RailSegment> segs, List<GridPos> pk)? Way(bool bend)
+            {
+                var segs = RouteLine(layout, from, chosen, to, s, bend);
+                if (segs == null || segs.Count < 2) return null; // every stop dropped: no line this way
+                var line = LineCells(segs, s, out var levels, out var ramps);
+                if (line == null) return null;
+                if (!LaneHeightsOk(line.Value.party, line.Value.enemy, levels, ramps, s)) return null;
+                var pk = PlaceRailPockets(layout, segs, line.Value.party, line.Value.enemy, ramps, s);
+                if (pk == null || !ValidateLine(layout, segs, line.Value.party, line.Value.enemy, pk, null)) return null;
+                return (segs, pk);
+            }
         }
         if (best == null) return null;
         sign = best.Value.s;
@@ -141,7 +153,7 @@ public static partial class FloorGenerator
            && (layout.SafeRoom < 0 || layout.Rooms[layout.SafeRoom] != r);
 
     /// <summary>The side of travel the enemy lane runs on: outward, for a line going round the circle in <paramref name="sign"/>'s sense.</summary>
-    private static GridPos RailSide(GridPos d, int sign) => sign > 0 ? d.Perp : -d.Perp;
+    internal static GridPos RailSide(GridPos d, int sign) => sign > 0 ? d.Perp : -d.Perp;
 
     private static bool Rock(FloorLayout layout, GridPos p) => layout[p] is Cell.Void or Cell.Wall && !layout.IsUnder(p);
 
@@ -307,7 +319,7 @@ public static partial class FloorGenerator
     /// Route the tunnel room to room. A stop that cannot be reached is dropped and the next one tried; when the exit cannot
     /// be reached the last stop is given up and the exit tried from the one before. Null when the exit cannot be reached at all.
     /// </summary>
-    private static List<RailSegment>? RouteLine(FloorLayout layout, RailRoom start, List<RailRoom> stops, RailRoom exit, int sign)
+    private static List<RailSegment>? RouteLine(FloorLayout layout, RailRoom start, List<RailRoom> stops, RailRoom exit, int sign, bool meander = false)
     {
         var queue = new List<RailRoom>(stops) { exit };
         var segs = new List<RailSegment>();
@@ -318,7 +330,8 @@ public static partial class FloorGenerator
             var target = queue[next];
             var ahead = RoomCells(queue.Skip(next + 1));
             var behind = RoomCells(new[] { start }.Concat(segs.Select(s => s.From)).Where(r => r != at));
-            var seg = RouteSegment(layout, at, target, sign, Foreign(ahead, behind, segs, sign, at), ahead, segs);
+            // a meandered line keeps a cavern window on the stretch into the last stop before the exit
+            var seg = RouteSegment(layout, at, target, sign, Foreign(ahead, behind, segs, sign, at), ahead, segs, meander, meander && next == queue.Count - 2);
             if (seg != null)
             {
                 segs.Add(seg);
@@ -363,8 +376,11 @@ public static partial class FloorGenerator
     /// of line. Step cost 1, +<see cref="RailTurnCost"/> per turn, +<see cref="RailNoPocketCost"/> for each lane that could not
     /// take a pocket there; turns at least two cells apart, and the legs at both mouths straight for two cells. The stretch,
     /// its ramp and the line so far must then hold (<see cref="ValidateLine"/>, <see cref="LaneHeightsOk"/>), or it is no route.
+    /// With <paramref name="meander"/> a ride shorter than <see cref="RailRules.RideMinCells"/> is lengthened with outward
+    /// bulges (<see cref="Meander"/>), clear of the platforms' shadows, the ramp's run and, with <paramref name="cavern"/>, the
+    /// cavern window and its rock; when the bent stretch does not hold, the plain one is used, with no window.
     /// </summary>
-    private static RailSegment? RouteSegment(FloorLayout layout, RailRoom a, RailRoom b, int sign, HashSet<GridPos> foreign, HashSet<GridPos> ahead, List<RailSegment> prior)
+    private static RailSegment? RouteSegment(FloorLayout layout, RailRoom a, RailRoom b, int sign, HashSet<GridPos> foreign, HashSet<GridPos> ahead, List<RailSegment> prior, bool meander = false, bool cavern = false)
     {
         int w = layout.Width, h = layout.Height;
         var laneOk = new bool[w * h];
@@ -453,16 +469,42 @@ public static partial class FloorGenerator
         cells.Reverse();
         if (cells.Distinct().Count() != cells.Count) return null;
 
-        var levels = cells.Select(_ => a.Level).ToList();
-        var ramps = cells.Select(_ => (RampInfo?)null).ToList();
-        if (a.Level != b.Level && !PlaceRailRamp(cells, levels, ramps, a.Level, b.Level)) return null;
-        var seg = new RailSegment(a, b, cells, levels, ramps);
-        // the line so far with this stretch on the end must hold before the next is routed
-        var local = new List<RailSegment>(prior) { seg };
-        var line = LineCells(local, sign, out var lv, out var rp);
-        if (line == null || !ValidateLine(layout, local, line.Value.party, line.Value.enemy, new List<GridPos>(), ahead)) return null;
-        if (!LaneHeightsOk(line.Value.party, line.Value.enemy, lv, rp, sign)) return null;
-        return seg;
+        if (meander)
+        {
+            var keep = new HashSet<GridPos>(shadow);
+            // the run the ramp would take on the plain stretch, and the enemy lane beside it, stay straight
+            if (a.Level != b.Level && RampIndex(cells) is var r && r >= 0)
+            {
+                var side = RailSide(cells[r + 1] - cells[r], sign);
+                for (var i = r - 2; i <= r + 3; i++) { keep.Add(cells[i]); keep.Add(cells[i] + side); }
+            }
+            List<GridPos>? window = null;
+            if (cavern)
+            {
+                window = CavernWindow(cells, sign, p => InRailRange(layout, p) && Rock(layout, p) && !foreign.Contains(p) && !layout.Rooms.Any(rm => rm.Contains(p)));
+                if (window != null) keep.UnionWith(CavernKeep(window, sign));
+            }
+            var rideCells = a.Platform.Count / 2 + cells.Count + (b.Platform.Count + 1) / 2;
+            var bent = rideCells < RailRules.RideMinCells
+                ? Meander(cells, sign, Ok, keep, RailRules.RideMinCells - rideCells, RailRules.RideMaxCells - rideCells)
+                : cells;
+            if (Finish(bent, window) is { } bentSeg) return bentSeg;
+        }
+        return Finish(cells, null);
+
+        RailSegment? Finish(List<GridPos> route, List<GridPos>? window)
+        {
+            var levels = route.Select(_ => a.Level).ToList();
+            var ramps = route.Select(_ => (RampInfo?)null).ToList();
+            if (a.Level != b.Level && !PlaceRailRamp(route, levels, ramps, a.Level, b.Level)) return null;
+            var seg = new RailSegment(a, b, route, levels, ramps, window);
+            // the line so far with this stretch on the end must hold before the next is routed
+            var local = new List<RailSegment>(prior) { seg };
+            var line = LineCells(local, sign, out var lv, out var rp);
+            if (line == null || !ValidateLine(layout, local, line.Value.party, line.Value.enemy, new List<GridPos>(), ahead)) return null;
+            if (!LaneHeightsOk(line.Value.party, line.Value.enemy, lv, rp, sign)) return null;
+            return seg;
+        }
 
         int Penalty(GridPos q, GridPos nd) => (Free(q - RailSide(nd, sign)) ? 0 : RailNoPocketCost) + (Free(q + RailSide(nd, sign) + RailSide(nd, sign)) ? 0 : RailNoPocketCost);
 
@@ -480,16 +522,7 @@ public static partial class FloorGenerator
     /// </summary>
     private static bool PlaceRailRamp(List<GridPos> cells, List<int> levels, List<RampInfo?> ramps, int fromLevel, int toLevel)
     {
-        var best = -1;
-        var mid = (cells.Count - 2) / 2.0;
-        for (var k = 2; k + 3 < cells.Count; k++)
-        {
-            var d = cells[k + 1] - cells[k];
-            var straight = true;
-            for (var i = k - 2; i < k + 3 && straight; i++) straight = cells[i + 1] - cells[i] == d;
-            if (!straight) continue;
-            if (best < 0 || Math.Abs(k - mid) < Math.Abs(best - mid)) best = k;
-        }
+        var best = RampIndex(cells);
         if (best < 0) return false;
         var dir = cells[best + 1] - cells[best];
         var low = Math.Min(fromLevel, toLevel);
@@ -502,11 +535,30 @@ public static partial class FloorGenerator
     }
 
     /// <summary>
+    /// The index of the first ramp cell <see cref="PlaceRailRamp"/> picks: the cell nearest the middle of the stretch with
+    /// five steps straight round it (cells k-2..k+3), or -1 when there is none.
+    /// </summary>
+    private static int RampIndex(List<GridPos> cells)
+    {
+        var best = -1;
+        var mid = (cells.Count - 2) / 2.0;
+        for (var k = 2; k + 3 < cells.Count; k++)
+        {
+            var d = cells[k + 1] - cells[k];
+            var straight = true;
+            for (var i = k - 2; i < k + 3 && straight; i++) straight = cells[i + 1] - cells[i] == d;
+            if (!straight) continue;
+            if (best < 0 || Math.Abs(k - mid) < Math.Abs(best - mid)) best = k;
+        }
+        return best;
+    }
+
+    /// <summary>
     /// The enemy lane for an ordered party lane: each cell's twin one step to the outer side; on the outside of a turn the
     /// corner cell joins them, on the inside the twins meet and the duplicate is dropped. <paramref name="source"/> gives the
     /// party index each enemy cell stands beside. Null for a U-turn.
     /// </summary>
-    private static List<GridPos>? Twin(IReadOnlyList<GridPos> party, int sign, out List<int> source)
+    internal static List<GridPos>? Twin(IReadOnlyList<GridPos> party, int sign, out List<int> source)
     {
         var enemy = new List<GridPos>();
         var from = new List<int>();
@@ -722,7 +774,9 @@ public static partial class FloorGenerator
         }
         var rooms = new List<RailRoom> { segs[0].From };
         rooms.AddRange(segs.Select(s => s.To));
-        layout.Rail = new RailLine(line.party, line.enemy, rooms.Select(r => new RailStop(r.Index, r.Platform)).ToList(), pockets);
+        // the cavern window kept on the stretch into the last stop before the exit, as party-lane indices
+        var cavern = segs.Count >= 2 && segs[^2].Cavern is { } w ? new RailSpan(line.party.IndexOf(w[0]), line.party.IndexOf(w[^1])) : null;
+        layout.Rail = new RailLine(line.party, line.enemy, rooms.Select(r => new RailStop(r.Index, r.Platform)).ToList(), pockets) { Cavern = cavern };
         for (var i = 1; i < rooms.Count; i++) layout.Connections.Add((rooms[i - 1].Index, rooms[i].Index));
         RaiseWalls(layout);
     }

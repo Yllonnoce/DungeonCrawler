@@ -899,6 +899,13 @@ public partial class DebugTools : Node
                 for (var i = 0; i < pz.LeverCount; i++) GD.Print($"[map] lever {i} at {pz.Levers[i]} (room {mapLayout.Rooms.IndexOf(mapLayout.RoomAt(pz.Levers[i])!)}): {Dungeon.Generation.VaultPuzzles.LeverClue(pz, i)}");
                 foreach (var (cell, clue) in o.Plaques) GD.Print($"[map] plaque at {cell} clue={clue}");
             }
+            foreach (var line in Dungeon.Generation.LayoutReport.Rooms(mapLayout)) GD.Print($"[map] {line}");
+            if (Dungeon.Generation.LayoutReport.Rail(mapLayout) is { } railLine) GD.Print($"[map] {railLine}");
+            if (Dungeon.Rails.RailController.Instance is { StopS.Length: > 0 } cart)
+            {
+                var rides = cart.StopS.Skip(1).Zip(cart.StopS, (b, a) => b - a).ToList();
+                GD.Print($"[map] rail StopS=[{string.Join(",", cart.StopS.Select(x => x.ToString("F1")))}] rides=[{string.Join(",", rides.Select(x => x.ToString("F0")))}] m total={cart.StopS[^1] - cart.StopS[0]:F0} m");
+            }
             GD.Print(mapLayout.ToAscii());
             GetTree().Quit();
         }
