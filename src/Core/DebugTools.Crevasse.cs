@@ -565,7 +565,7 @@ public partial class DebugTools
         if (ObjectiveController.Instance is not CrewRescueController ctrl) { problems.Add("no crew controller"); summary = ""; return problems; }
         var npcs = root.GetChildren().OfType<Npc>().ToDictionary(n => n.Id);
         var crewLines = new List<string>();
-        foreach (var d in arrival.NpcStates.Where(d => !d.Dead && d.Id != CrewRescueController.GriselId && ctrl.TrainNpcIds.Contains(d.Id)))
+        foreach (var d in arrival.NpcStates.Where(d => !d.Dead && ctrl.CrewIds.Contains(d.Id)))
         {
             if (!npcs.TryGetValue(d.Id, out var n)) { problems.Add($"no {d.Id} on the rebuilt floor"); continue; }
             var rode = _crvWagonCrew.Any(c => c.Id == d.Id); // the fallen wagon's crew: seated in it again, coupled behind the cart

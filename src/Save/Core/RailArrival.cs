@@ -10,13 +10,16 @@ public static class RailArrival
 {
     /// <summary>
     /// A new floor state (a copy of <paramref name="live"/>; neither input changes) whose train is <paramref name="arrival"/>'s: the
-    /// stop (<see cref="FloorStateDto.RailStop"/>), nobody seated (<see cref="FloorStateDto.RailRiders"/> null), the
-    /// <see cref="FloorStateDto.NpcStates"/> entries whose id is in <paramref name="trainNpcIds"/> (added when the live capture lacks
-    /// them), and the objective's open, coupled and lost cages, home, lost and freed crew, and its completion (the trial's crew come back
-    /// with the train, so a completion won after the arrival goes too). Everything else is the wipe's: the dead stay dead, the spares,
-    /// the gates and the orc's keys stand as they were.
+    /// stop (<see cref="FloorStateDto.RailStop"/>), nobody seated (<see cref="FloorStateDto.RailRiders"/> null), and the train's people:
+    /// the crew (<paramref name="crewIds"/>) as they were at the arrival, and each escort (<paramref name="escortIds"/>: Grisel) as she was
+    /// then too, unless the wipe found her dead or fled: a fall never kills an escort (she is caught at the lip), so that came from a fight
+    /// or her betrayal, whose quest state lives in the run and stands. An entry the live capture lacks is added. Only on a floor that runs
+    /// the crew trial (<paramref name="crewTrial"/>) does the objective come from the arrival too: its open, coupled and lost cages, its
+    /// home, lost and freed crew, and its completion (the crew come back with the train, so a win since the arrival goes too). Everything
+    /// else is the wipe's: the dead stay dead, the spares, the gates and the orc's keys stand as they were, and another objective's
+    /// progress (a ritual, the gas, a walk-in jailbreak) is untouched.
     /// </summary>
-    public static FloorStateDto Merge(FloorStateDto live, FloorStateDto arrival, IReadOnlySet<string> trainNpcIds)
+    public static FloorStateDto Merge(FloorStateDto live, FloorStateDto arrival, IReadOnlySet<string> crewIds, IReadOnlySet<string> escortIds, bool crewTrial)
     {
         var merged = Copy(live);
         var from = Copy(arrival);
@@ -24,12 +27,14 @@ public static class RailArrival
         merged.RailRiders = null;
         foreach (var npc in from.NpcStates)
         {
-            if (!trainNpcIds.Contains(npc.Id)) continue;
+            var crew = crewIds.Contains(npc.Id);
+            if (!crew && !escortIds.Contains(npc.Id)) continue;
             var at = merged.NpcStates.FindIndex(n => n.Id == npc.Id);
-            if (at >= 0) merged.NpcStates[at] = npc;
-            else merged.NpcStates.Add(npc);
+            if (at < 0) { merged.NpcStates.Add(npc); continue; }
+            if (!crew && merged.NpcStates[at] is { Dead: true } or { Fled: true }) continue; // the escort died or turned since: that stands
+            merged.NpcStates[at] = npc;
         }
-        if (merged.Objective is { } o && from.Objective is { } a)
+        if (crewTrial && merged.Objective is { } o && from.Objective is { } a)
         {
             o.OpenCages = a.OpenCages;
             o.CoupledCages = a.CoupledCages;

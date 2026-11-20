@@ -152,8 +152,10 @@ public partial class Main : Node
 
     /// <summary>
     /// Ruling 14 and 15: a wipe on a floor whose cart has an arrival snapshot (any cause) keeps its own capture of the floor with the train
-    /// taken from the snapshot (<see cref="RailArrival.Merge"/>), and the rebuild sets the party down beside the cart there. A crew trial
-    /// won since the arrival is taken back with the train: its flag goes, and the stairs the rebuild opens on the objective's completion stay shut.
+    /// taken from the snapshot (<see cref="RailArrival.Merge"/>), and the rebuild sets the party down beside the cart there. On the crew
+    /// trial's floor (its controller built: Jailbreak on a line of three stops or more) the crew, Grisel and the trial come from the arrival,
+    /// and a win since then is taken back with the train: its flag goes, and the stairs the rebuild opens on the objective's completion stay
+    /// shut. Any other railed floor takes only the stop: its objective stands as the wipe found it.
     /// </summary>
     private void RiseAtTheLastStop(int floor)
     {
@@ -161,7 +163,9 @@ public partial class Main : Node
         if (Dungeon.Rails.RailController.Instance is not { ArrivalSnapshot: { } arrival } rails || !IsInstanceValid(rails) || rails.GetParent() != Builder.FloorRoot
             || !game.Floors.TryGetValue(floor, out var live)) return;
         var crew = ObjectiveController.Instance is CrewRescueController c && IsInstanceValid(c) && c.GetParent() == Builder.FloorRoot ? c : null;
-        var merged = RailArrival.Merge(live, arrival, crew?.TrainNpcIds ?? NoTrainNpcs);
+        var merged = crew != null
+            ? RailArrival.Merge(live, arrival, crew.CrewIds, CrewRescueController.EscortIds, crewTrial: true)
+            : RailArrival.Merge(live, arrival, NoTrainNpcs, NoTrainNpcs, crewTrial: false); // another objective's floor: only the stop
         if (live.Objective?.Completed == true && merged.Objective?.Completed == false) crew?.TakeBackWin();
         game.Floors[floor] = merged;
         _riseAtCart = true;
