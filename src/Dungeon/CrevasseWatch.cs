@@ -62,9 +62,9 @@ public partial class CrevasseWatch : Node
 
     /// <summary>
     /// <paramref name="body"/> went into the crevasse at <paramref name="at"/> (a fall judged here, or the train's: Task 7). Its fate
-    /// (<see cref="CrevasseRules.FateOf"/>): a hero falls in, held under the lip; crew and other NPCs die; an escort is laid on the
-    /// lip cell (<see cref="CrevasseRules.LipCell"/>), down but not Mangled, still escorting; an enemy dies (no loot). Server and
-    /// single player only.
+    /// (<see cref="CrevasseRules.FateOf"/>, an NPC's by <see cref="CrevasseRules.NpcBody"/>): a hero falls in, held under the lip;
+    /// crew and other NPCs die; an escort (Grisel always, escorting or not) is laid on the lip cell (<see cref="CrevasseRules.LipCell"/>),
+    /// down but not Mangled, her escort as it was; an enemy dies (no loot). Server and single player only.
     /// </summary>
     public void Take(Node3D body, Vector3 at)
     {
@@ -84,7 +84,7 @@ public partial class CrevasseWatch : Node
             case Npc npc:
                 if (npc.Dead) return;
                 who = npc.NpcName;
-                fate = CrevasseRules.FateOf(npc.Crew ? FallBody.Crew : npc.Escorting ? FallBody.Escort : FallBody.OtherNpc);
+                fate = CrevasseRules.FateOf(CrevasseRules.NpcBody(npc.Crew, npc.Escorting, Adventure.Objectives.CrewRescueController.EscortIds.Contains(npc.Id)));
                 if (fate == FallFate.CaughtAtLip)
                 {
                     // a fall never kills an escort, nor lays her where she falls again: the lip cell, else the nearest cell anywhere a body

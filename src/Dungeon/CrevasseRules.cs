@@ -63,6 +63,14 @@ public static class CrevasseRules
     };
 
     /// <summary>
+    /// What a fallen NPC counts as: crew are crew; an NPC escorting the party, or one named as the line's escort
+    /// (<paramref name="namedEscort"/>: Grisel, of <c>CrewRescueController.EscortIds</c>) whether or not she is escorting at that
+    /// moment, is an escort (caught at the lip: Grisel never dies in a fall); any other NPC is lost.
+    /// </summary>
+    public static FallBody NpcBody(bool crew, bool escorting, bool namedEscort)
+        => crew ? FallBody.Crew : escorting || namedEscort ? FallBody.Escort : FallBody.OtherNpc;
+
+    /// <summary>
     /// Where an escort who fell near <paramref name="near"/> is laid (Ruling 12): the nearest cell a body may be set down on
     /// (<see cref="SetDownOk"/>) that is no lane cell (a pocket counts) within <see cref="LipReach"/> cells, else the nearest
     /// within <see cref="LipSearch"/>; nearest by straight distance, ties by (Y, X). Null when there is none.
