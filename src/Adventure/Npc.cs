@@ -844,14 +844,22 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             _model?.Play(downed ? "Death" : "Idle", force: true);
         }
         if (dead) { Dead = true; CollisionLayer = 0; _label.Text = $"{NpcName} (dead)"; _model?.Play("Death", force: true); }
-        if (Dead && position != null && !Net.NetSession.IsClient && InTheDark()) { Visible = false; Velocity = Vector3.Zero; SetPhysicsProcess(false); } // a save's body gone into a crevasse stays there, unseen, as the fall left it
+        if (Dead && position != null && !Net.NetSession.IsClient && InTheDark())
+        {
+            // a save's body gone into a crevasse stays there, unseen and still, as the fall left it: out of the seat the build gave it, where
+            // it lies (a crew controller's "seated dead get out at the floor of their cell" would lift it to the lip, for clients and the next save)
+            if (Seated) GetOut(GlobalPosition);
+            Visible = false;
+            Velocity = Vector3.Zero;
+            SetPhysicsProcess(false);
+        }
     }
 
     /// <summary>
     /// The body lies below the lip of the drop it is over (<see cref="CrevasseRules.Fell"/>): a crevasse took it. A dead one there is
     /// hidden on every role: the server's fall hides it (<see cref="CrevasseWatch.Take"/>), a client's copy and a load hide it by this.
     /// </summary>
-    private bool InTheDark()
+    internal bool InTheDark()
     {
         if (Main.Instance?.Builder is not { Layout: { } layout } builder) return false;
         var at = GlobalPosition;

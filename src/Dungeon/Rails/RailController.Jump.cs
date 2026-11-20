@@ -59,7 +59,7 @@ public partial class RailController
     /// </summary>
     public bool OverCrevasse(float from, float to)
     {
-        if (_layout == null || _layout.ChasmCount == 0 || !Party.Track.Valid) return false;
+        if (_layout == null || _layout.ChasmCount == 0 || !Party.Track.Valid || !float.IsFinite(from) || !float.IsFinite(to)) return false;
         for (var s = from; ; s += OverCrevasseEvery)
         {
             var at = Mathf.Min(s, to);

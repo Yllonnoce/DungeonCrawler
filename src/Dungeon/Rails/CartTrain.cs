@@ -29,10 +29,14 @@ public sealed class CartTrain
     /// <summary>A siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
     public void ReserveSiding(GridPos cell) => Sidings.Add(cell);
 
-    /// <summary>Couple <paramref name="wagon"/> on behind the last body of the train. It is posed behind the lead at once. False when it is gone or already coupled.</summary>
+    /// <summary>
+    /// Couple <paramref name="wagon"/> on behind the last body of the train: a wagon on the train is never lost (both peers' rule). It is
+    /// posed behind the lead at once. False when it is gone or already coupled.
+    /// </summary>
     public bool Couple(CageWagon wagon)
     {
         if (!GodotObject.IsInstanceValid(wagon) || _wagons.Contains(wagon)) return false;
+        wagon.SetLost(false);
         _wagons.Add(wagon);
         wagon.SetCoupled(true);
         Pose(_lead.State.S);

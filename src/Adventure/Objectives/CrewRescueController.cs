@@ -604,8 +604,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
 
     private void Couple(CageWagon wagon)
     {
-        wagon.SetLost(false); // a wagon on the train is never lost
-        _rails!.Couple(wagon);
+        _rails!.Couple(wagon); // a wagon on the train is never lost (CartTrain.Couple clears it)
         _builder?.UnblockCell(wagon.Cell);
         foreach (var npc in Aboard(wagon)) npc.FollowSeat();
     }
@@ -688,7 +687,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             if (npc.Dead)
             {
                 _home.Remove(npc.Id);
-                if (npc.Seated) npc.GetOut(_builder!.Surface(DungeonBuilder.WorldToCell(npc.GlobalPosition)));
+                if (npc.Seated) npc.GetOut(npc.InTheDark() ? npc.GlobalPosition : _builder!.Surface(DungeonBuilder.WorldToCell(npc.GlobalPosition))); // one a crevasse took stays below the lip
                 continue;
             }
             if (wagon is { Open: false }) { Seat(npc, wagon); continue; }

@@ -246,6 +246,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// <summary>Switch who drives this body. Parked bodies leave the world (no collision, invisible, no physics).</summary>
     public void SetControl(ControlKind control)
     {
+        var unparked = Control == ControlKind.Parked && control != ControlKind.Parked;
         Control = control;
         Guarding = false;
         _holdStart = -1;
@@ -257,6 +258,10 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (parked) { Target = null; _action = CompanionAction.Idle; LookingAt = null; }
         _seatYaw = ClampSeatYaw(_seatYaw); // a companion may have turned right round in its seat; a view may not
         SetLocalView(control == ControlKind.LocalHuman);
+        // a hero who fell (or was left fallen) while parked comes back as they return to the game, beside the party (ruling 8; not
+        // during a floor build, whose own rule returns them)
+        if (unparked && State.Fallen && !Net.NetSession.IsClient && Main.Instance is { InGame: true, Rebuilding: false } main && main.Party is { } party && party.Anchor is { } anchor && anchor != this)
+            party.ReturnFallen(anchor.GlobalPosition, "back in the game", only: this);
     }
 
     [Obsolete("Use SetControl.")]

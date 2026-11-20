@@ -54,6 +54,14 @@ public partial class DebugTools
     private string? _crvFallWhy;
     /// <summary>The stop a spare waits at after the survivor's fall (its log line), or −1.</summary>
     private int _crvSpareStop = -1;
+    /// <summary>The heroes (by name: a load makes new bodies) the flow lets fall now; any other fallen hero fails it.</summary>
+    private readonly HashSet<string> _crvMayFall = new();
+    // ---- the survivor's load and floor change (fix round 1)
+    private const string CrvSlot = "crevassetest";
+    private string _crvA4Name = "";
+    private int _crvLostStop = -1;
+    private readonly List<string> _crvLostIds = new();
+    private string _crvFloorVictim = "";
 
     private void CrevasseListen()
     {
@@ -73,6 +81,7 @@ public partial class DebugTools
     private void RunCrevasseTest()
     {
         var main = Main.Instance;
+        if (_crvStep == CrvRide + 6) { RunCrevasseFloorChange(main); return; } // on floor 13
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _crvClock += (float)GetProcessDeltaTime();
         var party = main.Party;
@@ -87,8 +96,8 @@ public partial class DebugTools
         if (party.Local is not { } me) { Fail("no human"); return; }
         var companions = party.Active.Where(a => a.Control == ControlKind.Companion).ToList();
         if (_crvHooked != rc) { _crvHooked = rc; rc.CartEvents += e => { if (e.Kind == CartEventKind.Wrecked) CrevasseFallSeen(); }; } // each floor build's controller (the floor may be built again before the flow starts)
-        // nobody falls but the test's own victim, at any step before the train's fall
-        if (_crvStep < CrvRide && party.Active.FirstOrDefault(a => a.State.Fallen && a != _crvVictim) is { } stray) { Fail($"{stray.State.Name} fell at step {_crvStep} (cell {DungeonBuilder.WorldToCell(stray.GlobalPosition)}): nobody fell but the test's"); return; }
+        // nobody falls but the test's own victims, at any step
+        if (party.Active.FirstOrDefault(a => a.State.Fallen && !_crvMayFall.Contains(a.State.Name)) is { } stray) { Fail($"{stray.State.Name} fell at step {_crvStep} (cell {DungeonBuilder.WorldToCell(stray.GlobalPosition)}): nobody fell but the test's"); return; }
 
         switch (_crvStep)
         {
@@ -155,6 +164,7 @@ public partial class DebugTools
             {
                 // A1: a companion put over the nearest chasm cell beside a walkable one, 0.5 m above its lip
                 _crvVictim = companions[0];
+                _crvMayFall.Add(_crvVictim.State.Name);
                 var cell = NearestChasm(layout, DungeonBuilder.WorldToCell(_crvVictim.GlobalPosition));
                 if (cell is not { } c) { Fail("no chasm cell beside a walkable one"); return; }
                 _crvVictim.Stance = Characters.Stance.Hold; // held where it is put: off the grid, a following companion's failed paths would regroup it out of the drop first
@@ -270,6 +280,8 @@ public partial class DebugTools
                 }
                 GD.Print($"[crevasse] A4 ride 1 rolled into stop 1: {v.State.Name} back after {_crvClock:0.00} s, up, hp {v.State.Hp:0}/{maxHp:0} ({v.State.Hp / maxHp:P0}), {off:0.0} m from the cart at {DungeonBuilder.WorldToCell(v.GlobalPosition)}");
                 if (!CrevasseRules.SetDownOk(layout, DungeonBuilder.WorldToCell(v.GlobalPosition))) { Fail($"{v.State.Name} came back on a cell no body may be set down on"); return; }
+                _crvA4Name = v.State.Name;
+                _crvMayFall.Clear();
                 _crvStep++; _crvClock = 0f;
                 break;
             }
@@ -300,6 +312,7 @@ public partial class DebugTools
                 if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
                 _crvRiders.Clear();
                 _crvRiders.AddRange(party.Active.Where(a => a.Cart == rc.Cart));
+                foreach (var a in _crvRiders) _crvMayFall.Add(a.State.Name); // the train's fall takes them
                 if (_crvRiders.Count != party.Active.Count() || g.Cart != rc.Cart) { Fail($"not everyone boarded: {_crvRiders.Count} of {party.Active.Count()} heroes seated, Grisel seated={g.Cart == rc.Cart}"); return; }
                 GD.Print($"[crevasse] B boarded at stop {rc.StopIndex}: [{string.Join(", ", _crvRiders.Select(a => a.State.Name))}] and Grisel on the bench, wagon {_crvWagon!.Stop} coupled");
                 _crvStep++; _crvClock = 0f;
@@ -321,6 +334,7 @@ public partial class DebugTools
                     {
                         me.Teleport(rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[rc.StopIndex]))); // out at the stop as the cart departs (no throw)
                         _crvRiders.Remove(me);
+                        _crvMayFall.Remove(me.State.Name); // on foot: the human never falls
                         GD.Print($"[crevasse] =survivor the human gets out at stop {rc.StopIndex} as the cart departs (S={rc.State.S:0.0}) and stays on foot at {DungeonBuilder.WorldToCell(me.GlobalPosition)}");
                     }
                 }
@@ -373,12 +387,81 @@ public partial class DebugTools
                 if (!lostCages.Contains(_crvWagon!.Stop)) { Fail($"the capture does not name wagon {_crvWagon.Stop} lost"); return; }
                 if (_crvWagonCrew.FirstOrDefault(c => !lostCrew.Contains(c.Id)) is { } missing) { Fail($"the capture does not name {missing.NpcName} lost"); return; }
                 if (fallen.FirstOrDefault(a => Mathf.Abs(a.State.Hp - a.State.Stats[Characters.Stat.MaxHp] * CrevasseRules.ReturnHpFraction) > 1f) is { } hp) { Fail($"{hp.State.Name} came back with {hp.State.Hp:0} HP, not a quarter"); return; }
-                GD.Print($"[crevasse] RESULT ok (survivor): A0-A3 as ever; A4 {_crvVictim!.State.Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}) with the human on foot: {_crvFallSummary}; nobody wiped, the fallen came back on stop {_crvSpareStop}'s platform, the capture names wagon {_crvWagon.Stop} and its crew lost");
-                _done = true;
-                GetTree().Quit(0);
+                _crvMayFall.Clear(); // back: nobody falls again but the floor change's own victim
+                // I1: a save and a load after the fall: nothing lost may come back, and nobody the crevasse took is lifted to the lip
+                _crvLostStop = _crvWagon.Stop;
+                _crvLostIds.Clear();
+                _crvLostIds.AddRange(lostCrew);
+                GD.Print($"[crevasse] =survivor the fallen came back on stop {_crvSpareStop}'s platform; saved and loaded (lost crew [{string.Join(",", _crvLostIds)}])");
+                main.SaveGame(CrvSlot);
+                if (!main.LoadGame(CrvSlot)) { Fail("the save after the fall would not load"); return; }
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case CrvRide + 4 when _crvClock >= 1.5f:
+            {
+                if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller after the load"); return; }
+                var wagon = ctrl.Wagons.FirstOrDefault(w => w.Stop == _crvLostStop);
+                if (wagon is not { Lost: true, Visible: false, Coupled: false }) { Fail($"wagon {_crvLostStop} came back after the load (lost={wagon?.Lost}, visible={wagon?.Visible})"); return; }
+                var npcs = root.GetChildren().OfType<Npc>().ToDictionary(n => n.Id);
+                var again = Save.FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
+                var saved = again.NpcStates.ToDictionary(n => n.Id);
+                var lines = new List<string>();
+                foreach (var id in _crvLostIds)
+                {
+                    if (!npcs.TryGetValue(id, out var n)) { Fail($"no {id} after the load"); return; }
+                    var cell = DungeonBuilder.WorldToCell(n.GlobalPosition);
+                    var lip = main.Builder.Surface(cell).Y;
+                    lines.Add($"{n.NpcName} dead={n.Dead} visible={n.Visible} seated={n.Seated} y {n.GlobalPosition.Y:0.0} (lip {lip:0.0}) at {cell}");
+                    if (!n.Dead || n.Visible || n.Seated || !n.InTheDark()) { Fail($"after the load {lines[^1]}: not dead, hidden and below the lip"); return; }
+                    if (!saved.TryGetValue(id, out var d) || !CrevasseRules.Fell(layout, DungeonBuilder.WorldToCell(new Vector3(d.X, d.Y, d.Z)), d.Y, main.Builder.Surface(DungeonBuilder.WorldToCell(new Vector3(d.X, d.Y, d.Z))).Y))
+                    { Fail($"the capture after the load records {n.NpcName} at y {d?.Y:0.0}, not below the lip"); return; }
+                }
+                if ((again.Objective?.LostCages ?? new List<int>()).Contains(_crvLostStop) != true) { Fail($"the capture after the load does not name wagon {_crvLostStop} lost"); return; }
+                GD.Print($"[crevasse] =survivor after the load: wagon {_crvLostStop} lost and hidden; [{string.Join("; ", lines)}]; the second capture keeps them below the lip");
+                // I2: a companion falls, then the party goes down to floor 13: nobody is fallen there
+                var victim = companions.FirstOrDefault();
+                var drop = victim == null ? null : NearestChasm(layout, DungeonBuilder.WorldToCell(victim.GlobalPosition));
+                if (victim == null || drop is not { } c) { Fail("no companion or chasm for the floor change"); return; }
+                _crvFloorVictim = victim.State.Name;
+                _crvMayFall.Add(_crvFloorVictim);
+                victim.Stance = Characters.Stance.Hold;
+                victim.Teleport(main.Builder.Surface(c) + Vector3.Up * 0.5f);
+                GD.Print($"[crevasse] =survivor {_crvFloorVictim} put over the chasm at {c} before the floor change");
+                _crvStep++; _crvClock = 0f;
+                break;
+            }
+            case CrvRide + 5:
+            {
+                if (party.Active.FirstOrDefault(a => a.State.Name == _crvFloorVictim) is not { State.Fallen: true }) { if (_crvClock > 3f) Fail($"{_crvFloorVictim} did not fall within 3 s"); break; }
+                GD.Print($"[crevasse] =survivor {_crvFloorVictim} fell; the party goes down to floor 13");
+                if (!Game.Instance.ChangeFloor(+1)) { Fail("could not go down to floor 13"); return; }
+                _crvStep++; _crvClock = 0f;
                 break;
             }
         }
+    }
+
+    /// <summary>
+    /// The survivor's last step, on floor 13 (ruling 8): the floor change brought every fallen hero back, at a quarter of their HP,
+    /// beside the party's arrival.
+    /// </summary>
+    private void RunCrevasseFloorChange(Main? main)
+    {
+        if (main == null || !main.InGame || Game.Instance.CurrentFloor != 13 || main.Builder.Layout == null || main.Party?.Local is not { } me) return;
+        _crvClock += (float)GetProcessDeltaTime();
+        if (_crvClock < 1.5f) return;
+        var party = main.Party;
+        void Fail(string why) { GD.Print($"[crevasse] RESULT FAIL ({_crvVariant}): {why}"); _done = true; GetTree().Quit(1); }
+        if (party.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && a.State.Fallen) is { } still) { Fail($"{still.State.Name} is still fallen on floor 13"); return; }
+        if (party.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && a.State.Name == _crvFloorVictim) is not { } v) { Fail($"no {_crvFloorVictim} on floor 13"); return; }
+        var maxHp = v.State.Stats[Characters.Stat.MaxHp];
+        var off = v.GlobalPosition.DistanceTo(me.GlobalPosition);
+        GD.Print($"[crevasse] =survivor on floor 13: nobody fallen; {v.State.Name} up={!v.Downed} visible={v.Visible} hp {v.State.Hp:0}/{maxHp:0}, {off:0.0} m from the human");
+        if (v.Downed || !v.Visible || off > 12f || v.State.Hp > maxHp * CrevasseRules.ReturnHpFraction + 1f + maxHp * 0.05f) { Fail($"{v.State.Name} did not come back as a fallen hero does on the floor change"); return; }
+        GD.Print($"[crevasse] RESULT ok (survivor): A0-A3 as ever; A4 {_crvA4Name} back at stop 1's arrival; B the train fell ({_crvFallWhy}) with the human on foot: {_crvFallSummary}; nobody wiped, the fallen came back on stop {_crvSpareStop}'s platform, the capture names wagon {_crvLostStop} and its crew lost; a save and load kept the lost wagon hidden and its crew dead below the lip; {_crvFloorVictim} fell and came back on the floor change to 13");
+        _done = true;
+        GetTree().Quit(0);
     }
 
     /// <summary>"Beside" the human for the survivor's return: each fallen hero on its own 4 m cell by the lane, two cells off at most.</summary>

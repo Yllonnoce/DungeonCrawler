@@ -76,10 +76,12 @@ public static class CrevasseRules
 
     /// <summary>
     /// Where an escort who fell near <paramref name="near"/> is laid: the <see cref="LipCell"/>, else the <see cref="NearestSetDown"/>
-    /// anywhere on the floor; null when the floor has no such cell (unreachable: the caller then lays her at the fall's lip point).
+    /// anywhere on the floor (any level), else the nearest walkable cell at all (a bridge: its middle, on the boards, holds a body);
+    /// never a chasm cell. Null when the floor has no walkable cell (unreachable: the caller lays her on the line's stop platform).
     /// A fall never kills an escort.
     /// </summary>
-    public static GridPos? EscortCell(FloorLayout l, GridPos near) => LipCell(l, near) ?? NearestSetDown(l, near);
+    public static GridPos? EscortCell(FloorLayout l, GridPos near)
+        => LipCell(l, near) ?? NearestSetDown(l, near) ?? Nearest(l, near, Math.Max(l.Width, l.Height), l.IsWalkable); // a chasm cell is never walkable
 
     private static GridPos? Nearest(FloorLayout l, GridPos near, int reach, Func<GridPos, bool> ok)
     {
@@ -105,6 +107,12 @@ public static class CrevasseRules
                 if (l.IsChasm(new GridPos(laneCell.X + dx, laneCell.Y + dy))) return true;
         return false;
     }
+
+    /// <summary>
+    /// A floor built anew brings every fallen hero back (ruling 8), parked ones too: on a floor change (the stairs), and on a load or
+    /// a rebuild of a floor with no line. A floor with a line brings them back beside its cart (<c>RailController.Restore</c>).
+    /// </summary>
+    public static bool ReturnOnRebuild(bool floorChange, bool lineOnFloor) => floorChange || !lineOnFloor;
 
     /// <summary>A fall that takes the train spends a spare only while a hero still stands.</summary>
     public static bool SpareAfterFall(int standingHeroes) => standingHeroes > 0;

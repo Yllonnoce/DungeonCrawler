@@ -87,8 +87,9 @@ public partial class CrevasseWatch : Node
                 fate = CrevasseRules.FateOf(npc.Crew ? FallBody.Crew : npc.Escorting ? FallBody.Escort : FallBody.OtherNpc);
                 if (fate == FallFate.CaughtAtLip)
                 {
-                    // a fall never kills an escort: the lip cell, else the nearest cell anywhere a body may be set down; else (no such cell
-                    // on the floor, which should not happen) the fall's own point at the lip, said as an error
+                    // a fall never kills an escort, nor lays her where she falls again: the lip cell, else the nearest cell anywhere a body
+                    // may be set down, else any footing (CrevasseRules.EscortCell); else (a floor with no walkable cell: it should not happen)
+                    // the line's stop platform, held there, said as an error
                     Vector3 layAt;
                     if (CrevasseRules.EscortCell(_layout, cell) is { } lip)
                     {
@@ -97,9 +98,13 @@ public partial class CrevasseWatch : Node
                     }
                     else
                     {
-                        layAt = new Vector3(at.X, _builder.Surface(cell).Y + 0.1f, at.Z);
-                        GD.PushError($"[crevasse] ERROR: no cell on the floor to lay {npc.NpcName} at after a fall at {cell}: laid at the fall's lip point");
-                        who += " (laid at the fall's lip point)";
+                        var stops = _layout.Rail?.Stops;
+                        var stop = stops is { Count: > 0 } ? stops[Math.Clamp(Rails.RailController.Instance?.StopIndex ?? 0, 0, stops.Count - 1)] : null;
+                        var platform = stop is { Platform.Count: > 0 } ? stop.Platform[stop.Platform.Count / 2] : DungeonBuilder.WorldToCell(at);
+                        layAt = _builder.Surface(platform) + Vector3.Up * 0.1f;
+                        npc.SetPhysicsProcess(false); // held: never judged over a drop again
+                        GD.PushError($"[crevasse] ERROR: no walkable cell on the floor to lay {npc.NpcName} at after a fall at {cell}: held on the stop platform at {platform}");
+                        who += $" (held on the stop platform at {platform})";
                     }
                     npc.GetOut(layAt); // out of any seat, at the lip, still
                     npc.ReceiveHazard(HazardDamage.Fall, new HazardOutcome(false, 1f, 0f), "The crevasse", -1); // down, revivable, escorting

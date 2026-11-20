@@ -660,6 +660,7 @@ public partial class Main : Node
         {
             Party.RestoreState(pending, keepControl: NetSession.IsNetworked);
             _pendingPartyState = null;
+            ReturnFallenOnRebuild(floorChange: false, Party.Anchor.GlobalPosition); // a load: a floor with a line brings them back beside its cart instead
             Hud?.Refresh();
             if (!NetSession.IsClient) AdventureDirector.Instance?.OnFloorBuilt(Builder.Contents!, floor, firstVisit: false);
             return;
@@ -668,6 +669,7 @@ public partial class Main : Node
         var stairs = delta >= 0 ? layout.UpStairs : layout.DownStairs;
         var spawnCell = DungeonBuilder.WalkableNeighbor(layout, stairs);
         Party.Teleport(Builder.Surface(spawnCell) + Vector3.Up * 0.3f, Builder.Surface(stairs));
+        ReturnFallenOnRebuild(floorChange: delta != 0, Builder.Surface(spawnCell));
         foreach (var t in travelling)
         {
             if (Builder.FloorRoot is not { } here) break;
@@ -686,6 +688,17 @@ public partial class Main : Node
         EventBus.Instance.RaiseFloorBuilt(floor, delta, saved == null);
         if (delta != 0 && floor >= 1 && !NetSession.IsClient) { RecordRunInProfile(); ProfileStore.Save(); }
         if (delta != 0 && floor >= 1) Autosave($"floor {floor}"); // solo only (Autosave refuses the rest)
+    }
+
+    /// <summary>
+    /// Ruling 8: a floor change, or a load or rebuild of a floor with no line, brings every fallen hero (parked ones too) back beside
+    /// <paramref name="arrival"/> (<see cref="CrevasseRules.ReturnOnRebuild"/>). Server and solo.
+    /// </summary>
+    private void ReturnFallenOnRebuild(bool floorChange, Vector3 arrival)
+    {
+        if (NetSession.IsClient) return;
+        var line = Dungeon.Rails.RailController.Instance is { } rails && IsInstanceValid(rails) && rails.GetParent() == Builder.FloorRoot;
+        if (CrevasseRules.ReturnOnRebuild(floorChange, line)) Party.ReturnFallen(arrival, floorChange ? $"the party reached floor {Game.Instance.CurrentFloor}" : "the floor was built again");
     }
 
     /// <summary>A client following the server to another floor: same seed, same plan, same snapshot, then everyone's poses.</summary>
