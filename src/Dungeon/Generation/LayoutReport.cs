@@ -30,8 +30,10 @@ public static class LayoutReport
     }
 
     /// <summary>
-    /// The line in one row, or null when the floor has none: <c>rail: stops=[rooms] rides~[metres] total~{metres} cavern={From}..{To}|none</c>,
-    /// each ride counted in cells of 4 m from platform middle to platform middle.
+    /// The line in one row, or null when the floor has none: <c>rail: stops=[rooms] rides~[metres] total~{metres}
+    /// cavern={From}..{To}|none|breached chasm={cells} strips={n} gorge=[{From}..{To}@{fFrom}-{fTo},…] planks={n}</c>, each ride
+    /// counted in cells of 4 m from platform middle to platform middle, and each gorge span's ends as fractions of the last ride
+    /// measured the same way.
     /// </summary>
     public static string? Rail(FloorLayout l)
     {
@@ -40,7 +42,11 @@ public static class LayoutReport
         for (var i = 0; i < rail.Party.Count; i++) index[rail.Party[i]] = i;
         var mids = rail.Stops.Select(s => index[s.Platform[0]] + s.Platform.Count / 2).ToList();
         var rides = mids.Skip(1).Zip(mids, (b, a) => (b - a) * 4).ToList();
-        var cavern = rail.Cavern is { } c ? $"{c.From}..{c.To}" : "none";
-        return $"rail: stops=[{string.Join(",", rail.Stops.Select(s => s.Room))}] rides~[{string.Join(",", rides)}] total~{rides.Sum()} cavern={cavern}";
+        var cavern = rail.Cavern is { } c ? $"{c.From}..{c.To}" : rail.CavernBreached ? "breached" : "none";
+        var (from, to) = mids.Count >= 2 ? (mids[^2], mids[^1]) : (0, 1);
+        string Fraction(int i) => ((i - from) / (float)(to - from)).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        var gorge = string.Join(",", rail.Gorge.Select(g => $"{g.From}..{g.To}@{Fraction(g.From)}-{Fraction(g.To)}"));
+        return $"rail: stops=[{string.Join(",", rail.Stops.Select(s => s.Room))}] rides~[{string.Join(",", rides)}] total~{rides.Sum()} cavern={cavern}"
+            + $" chasm={l.ChasmCount} strips={rail.Strips.Count} gorge=[{gorge}] planks={l.Walkways.Count}";
     }
 }

@@ -12,6 +12,8 @@ namespace DungeonCrawler.Dungeon.Generation;
 /// <item>Jailbreak: the jail door and every prisoner out on the floor reachable, and a spare key somewhere the party can get to.</item>
 /// <item>Ritual: the altar and every breach lever reachable.</item>
 /// <item>Rising gas: the exit gate's lever reachable without passing that gate.</item>
+/// <item>Crevasses: with the rails blocked, nothing the party could walk to were the chasm floor (a room, a chest, a key, an
+/// objective cell, the stairs down) is cut off by it, and no chasm lies on a spawn, chest, key, objective or platform cell.</item>
 /// </list>
 /// </summary>
 public static class FloorSolvability
@@ -21,15 +23,76 @@ public static class FloorSolvability
     {
         var problems = Problems(layout, null);
         // a railed floor must also be finishable on foot: the lines are the mine cart's, the halls have to do the job alone
-        if (layout.Rail is { } rail)
+        var rails = RailsBlocked(layout);
+        if (rails != null)
         {
-            var platform = rail.Stops.SelectMany(s => s.Platform).ToHashSet();
-            bool Rails(GridPos p) => (layout.IsRail(p) || layout.IsRailPocket(p)) && !(layout.IsPartyRail(p) && platform.Contains(p));
             var already = problems.ToHashSet();
-            foreach (var q in Problems(layout, Rails))
+            foreach (var q in Problems(layout, rails))
                 if (!already.Contains(q)) problems.Add("with the rails blocked, " + q);
         }
+        if (layout.ChasmCount > 0) problems.AddRange(ChasmProblems(layout, rails));
         return problems;
+    }
+
+    /// <summary>The line's lanes and pockets as walls, but the party lane's platform cells (they are the stop rooms' floor); null on a floor with no line.</summary>
+    private static Func<GridPos, bool>? RailsBlocked(FloorLayout layout)
+    {
+        if (layout.Rail is not { } rail) return null;
+        var platform = rail.Stops.SelectMany(s => s.Platform).ToHashSet();
+        return p => (layout.IsRail(p) || layout.IsRailPocket(p)) && !(layout.IsPartyRail(p) && platform.Contains(p));
+    }
+
+    /// <summary>
+    /// What the crevasses got wrong: anything reachable on foot (the rails blocked) were the chasm cells floor that is not
+    /// reachable as the floor is, and any chasm cell on something that has to be stood on.
+    /// </summary>
+    private static List<string> ChasmProblems(FloorLayout layout, Func<GridPos, bool>? rails)
+    {
+        var problems = new List<string>();
+        var now = layout.Reachable(layout.UpStairs, rails);
+        var open = layout.Reachable(layout.UpStairs, rails, layout.IsChasm);
+        bool Cut(GridPos p) => open.Contains(p) && !now.Contains(p);
+        for (var i = 0; i < layout.Rooms.Count; i++)
+        {
+            var cells = layout.Rooms[i].Cells().ToList();
+            if (cells.Any(open.Contains) && !cells.Any(now.Contains)) problems.Add($"the chasm cuts off room {i}");
+        }
+        var objective = ObjectiveCells(layout);
+        var keys = layout.KeySpawns.Concat(layout.Vaults.Where(v => v.Key != null).Select(v => v.Key!.Value)).ToList();
+        foreach (var c in layout.ChestSpawns) if (Cut(c)) problems.Add($"the chasm cuts off the chest at {c}");
+        foreach (var c in keys) if (Cut(c)) problems.Add($"the chasm cuts off the key at {c}");
+        foreach (var c in objective) if (Cut(c)) problems.Add($"the chasm cuts off the objective cell at {c}");
+        if (Cut(layout.DownStairs)) problems.Add($"the chasm cuts off the stairs down at {layout.DownStairs}");
+
+        var spawns = layout.EnemySpawns.Concat(layout.LedgeSpawns).Concat(layout.CellarSpawns).Concat(layout.TrapSpawns).Concat(layout.BreakableSpawns).ToHashSet();
+        var chests = layout.ChestSpawns.ToHashSet();
+        var keySet = keys.ToHashSet();
+        var platform = layout.Rail?.Stops.SelectMany(s => s.Platform).ToHashSet() ?? new HashSet<GridPos>();
+        for (var y = 0; y < layout.Height; y++)
+            for (var x = 0; x < layout.Width; x++)
+            {
+                var c = new GridPos(x, y);
+                if (!layout.IsChasm(c)) continue;
+                if (spawns.Contains(c)) problems.Add($"a chasm on a spawn at {c}");
+                if (chests.Contains(c)) problems.Add($"a chasm on a chest at {c}");
+                if (keySet.Contains(c)) problems.Add($"a chasm on a key at {c}");
+                if (objective.Contains(c)) problems.Add($"a chasm on an objective cell at {c}");
+                if (platform.Contains(c)) problems.Add($"a chasm on a platform at {c}");
+            }
+        return problems;
+    }
+
+    /// <summary>The cells the floor's objective lays things on or keeps: its reserved cells, the prisoners, the spare keys, the altar and the breach levers.</summary>
+    private static HashSet<GridPos> ObjectiveCells(FloorLayout layout)
+    {
+        var cells = new HashSet<GridPos>();
+        if (layout.Objective is not { } o) return cells;
+        cells.UnionWith(o.Reserved);
+        cells.UnionWith(o.PrisonerCells);
+        cells.UnionWith(o.ExtraKeyCells);
+        if (o.Altar is { } altar) cells.Add(altar);
+        foreach (var (lever, _) in o.BreachLevers) cells.Add(lever);
+        return cells;
     }
 
     private static List<string> Problems(FloorLayout layout, Func<GridPos, bool>? extraBlocked)

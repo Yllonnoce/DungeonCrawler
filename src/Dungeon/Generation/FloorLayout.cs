@@ -57,6 +57,8 @@ public sealed class FloorLayout
     public bool IsChasm(GridPos p) => this[p] == Cell.Chasm;
     /// <summary>How many chasm cells the floor was cut with.</summary>
     public int ChasmCount { get; internal set; }
+    /// <summary>The plank crossings cut into the halls (<see cref="FloorSpec.Crevasses"/>), in the order they were chosen; each is also in <see cref="Bridges"/> as <see cref="BridgeKind.Plank"/>.</summary>
+    public List<GridPos> Walkways { get; } = new();
     public List<Ledge> Ledges { get; } = new();
     public List<Cellar> Cellars { get; } = new();
     public List<SecretAlcove> Secrets { get; } = new();
@@ -179,9 +181,12 @@ public sealed class FloorLayout
     public float HeightOf(GridPos p) => Ramps.TryGetValue(p, out var r) ? r.MidHeight : LevelOf(p) * 4f;
 
     /// <summary>Can something walking on the main layer step from a to b? Height difference at most a half ramp; ramps only along their axis.</summary>
-    public bool CanStep(GridPos a, GridPos b, bool secretsOpen = false)
+    public bool CanStep(GridPos a, GridPos b, bool secretsOpen = false) => CanStep(a, b, secretsOpen, null);
+
+    /// <summary><see cref="CanStep(GridPos, GridPos, bool)"/>, with the cells <paramref name="open"/> accepts counted as walkable.</summary>
+    private bool CanStep(GridPos a, GridPos b, bool secretsOpen, Func<GridPos, bool>? open)
     {
-        if (!IsWalkable(a, secretsOpen) || !IsWalkable(b, secretsOpen)) return false;
+        if (!(IsWalkable(a, secretsOpen) || (open != null && open(a))) || !(IsWalkable(b, secretsOpen) || (open != null && open(b)))) return false;
         var d = b - a;
         if (Math.Abs(d.X) + Math.Abs(d.Y) != 1) return false;
         if (IsEdgeBlocked(a, b)) return false;
@@ -267,10 +272,16 @@ public sealed class FloorLayout
     public HashSet<GridPos> Reachable(GridPos start) => Reachable(start, null);
 
     /// <summary>Flood fill on the main layer honouring heights and ramps; cells where <paramref name="blocked"/> is true count as walls (closed doors).</summary>
-    public HashSet<GridPos> Reachable(GridPos start, Func<GridPos, bool>? blocked, bool secretsOpen = false)
+    public HashSet<GridPos> Reachable(GridPos start, Func<GridPos, bool>? blocked, bool secretsOpen = false) => Reachable(start, blocked, null, secretsOpen);
+
+    /// <summary>
+    /// <see cref="Reachable(GridPos, Func{GridPos, bool}?, bool)"/>, with the cells <paramref name="open"/> accepts counted as
+    /// walkable at their own level (a chasm read as floor, say), without touching the cells.
+    /// </summary>
+    public HashSet<GridPos> Reachable(GridPos start, Func<GridPos, bool>? blocked, Func<GridPos, bool>? open, bool secretsOpen = false)
     {
         var seen = new HashSet<GridPos>();
-        if (!IsWalkable(start, secretsOpen)) return seen;
+        if (!IsWalkable(start, secretsOpen) && (open == null || !open(start))) return seen;
         var stack = new Stack<GridPos>();
         stack.Push(start);
         seen.Add(start);
@@ -281,7 +292,7 @@ public sealed class FloorLayout
             foreach (var d in dirs)
             {
                 var n = p + d;
-                if (CanStep(p, n, secretsOpen) && (blocked == null || !blocked(n)) && seen.Add(n)) stack.Push(n);
+                if (CanStep(p, n, secretsOpen, open) && (blocked == null || !blocked(n)) && seen.Add(n)) stack.Push(n);
             }
         }
         return seen;

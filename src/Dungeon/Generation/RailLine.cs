@@ -25,6 +25,25 @@ public static class RailRules
     /// indices apart, but never for two legs of the line side by side.
     /// </summary>
     public const int SelfClearGap = 4;
+
+    /// <summary>The shortest straight run of party lane an edge strip (a crevasse beside the line) is cut along...</summary>
+    public const int StripMinCells = 4;
+    /// <summary>...and the most of a longer run it takes (the gorge on the last ride is not capped).</summary>
+    public const int StripMaxCells = 8;
+    /// <summary>How many cells deep an edge strip is cut, beside the lane it runs along.</summary>
+    public const int StripDepth = 2;
+    /// <summary>Party-lane cells kept clear of strips at either end of a ride, next to each platform.</summary>
+    public const int StripPlatformGap = 4;
+    /// <summary>The gorge's window on the last ride, as fractions of the ride from platform middle to platform middle.</summary>
+    public const float GorgeFrom = 0.50f, GorgeTo = 0.85f;
+    /// <summary>The most plank crossings (<c>FloorLayout.Walkways</c>) cut into a crevasse floor's halls.</summary>
+    public const int WalkwayCount = 3;
+    /// <summary>How many cells of chasm a plank crossing has on each side, across its corridor.</summary>
+    public const int WalkwayReach = 2;
+    /// <summary>The fewest cells (Chebyshev) between a plank and any room.</summary>
+    public const int WalkwayRoomGap = 3;
+    /// <summary>The fewest cells (Manhattan) between two planks.</summary>
+    public const int WalkwaySpacing = 8;
 }
 
 /// <summary>A stop on the line: a room the cart halts in, and the party-lane cells inside it, in line order.</summary>
@@ -52,4 +71,16 @@ public sealed record RailLine(IReadOnlyList<GridPos> Party, IReadOnlyList<GridPo
 
     /// <summary>True when the line kept a cavern window but a line or pocket cell landed in its rock box, so <see cref="Cavern"/> was dropped. Not part of the content hash.</summary>
     public bool CavernBreached { get; init; }
+
+    /// <summary>
+    /// The edge strips cut beside the line (<see cref="FloorSpec.Crevasses"/>), as party-lane index spans in line order:
+    /// one per ride but the cavern's and the last, and the last ride's gorge (<see cref="Gorge"/>). Not part of the content hash.
+    /// </summary>
+    public IReadOnlyList<RailSpan> Strips { get; init; } = Array.Empty<RailSpan>();
+
+    /// <summary>
+    /// The last ride's strips, the gorge: every eligible straight run within <see cref="RailRules.GorgeFrom"/> to
+    /// <see cref="RailRules.GorgeTo"/> of the ride, as party-lane index spans (also in <see cref="Strips"/>). Not part of the content hash.
+    /// </summary>
+    public IReadOnlyList<RailSpan> Gorge { get; init; } = Array.Empty<RailSpan>();
 }
