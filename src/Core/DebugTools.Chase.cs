@@ -182,6 +182,10 @@ public partial class DebugTools
                 ? e == enc.GolemBody && !_chGolemKilled || e == _chProbe
                 : HoldsAStop(main, layout, e) || enc.ArmedRide >= 1 && (e == enc.GolemBody || (e.IsReinforcement || enc.IsThrower(e)) && _chSpawnRide.TryGetValue(e, out var r) && r == enc.ArmedRide);
             if (!keep) e.Kill();
+            // a stop's guards leave their post as the cart comes in sight and meet it at the platform, where the seated companions
+            // (who shoot at any distance from a seat) can kill them before it is held; section 1 owns them (they die by the test's
+            // hand at their stop), so the party's blows miss them, as the lone cinder's do (a hazard's blow ignores Untargetable)
+            else if (!_chSection2 && !e.Untargetable && HoldsAStop(main, layout, e)) e.SetUntargetable(true);
         }
         ChaseTrackRides(rc, enc, party);
         if (_chTrafficOn) ChaseHoldTraffic(enc);
@@ -1164,9 +1168,7 @@ public partial class DebugTools
     {
         var guards = StopGuards(main, layout.Rail!.Stops[stop].Room).ToList();
         GD.Print($"[chase] . stop {stop}: gate up={rc.GateUp(stop)}, {guards.Count} guards [{string.Join(", ", guards.Select(e => e.Profile.Id.Replace("enemy.", "")))}] die by the test's hand; plating {rc.State.Plating:0}, hp [{string.Join(" ", main.Party.Active.Select(a => $"{a.State.Name}:{a.State.Hp:0}"))}]");
-        // the kiln stop's guards (room 8's cinder and hound) are already dead by the time the cart is held (seen on HEAD too, before crevasses)
-        // Then the gate lifts by itself (step 15 checks it); only an already-lifted gate is wrong.
-        if (rc.GateUp(stop) || (guards.Count == 0 && stop != Shape(rc).LastRideStop)) { fail($"stop {stop}'s gate is not held down by living guards"); return false; }
+        if (rc.GateUp(stop) || guards.Count == 0) { fail($"stop {stop}'s gate is not held down by living guards"); return false; }
         foreach (var e in guards) e.Kill();
         return true;
     }
