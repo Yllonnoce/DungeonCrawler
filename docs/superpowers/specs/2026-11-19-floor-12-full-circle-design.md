@@ -30,7 +30,10 @@ it. Today's hazards also hurt too little:
 
 1. **Full circle.** The line runs all the way round the ring, through the west half, and ends at a new Cooling Stair
    beside Kiln-Mouth Landing. It is one track that completes a loop.
-2. **Much longer.** Six rides of about 40–60 s each, with a line of about 1.5–2 km. Each ride adds one new thing.
+2. **Much longer.** Five rides of about 200–280 m each (about 35–50 s at cruise, longer with fights and braking),
+   with a line of about 1.2 km, two and a half times today's. Each ride adds one new thing. This was six rides and
+   about 1.5–2 km in the first draft. On the shipped floor, three pairs of ring rooms sit side by side, so five intermediate stops
+   always leave one ride of about 75 m. Five stops give five full rides.
 3. **Wrong choices kill or maim.** Every live switch has a right branch and a wrong branch. The wrong branch is
    telegraphed and is deadly or badly hurts.
 4. **Barricades that bite.** Timber barricades across the track must be hacked or shot down before the cart hits them.
@@ -96,14 +99,14 @@ dropped without touching the rest.
   - The down stairs go in the ring room next to the start, on the far side of the loop. The line leaves the start one
     way, goes all the way round, and arrives at the Cooling Stair beside Kiln-Mouth Landing.
   - The two rooms stay separate. There is no walking shortcut between them unless the halls already join them.
-- **Stops:** five intermediate stops, evenly round the ring, from eligible rooms under the existing `RailRoleOk` and
-  platform rules. That makes six rides.
+- **Stops:** four intermediate stops, evenly round the ring, from eligible rooms under the existing `RailRoleOk` and
+  platform rules. That makes five rides. No stop room holds the shrine.
 - **Meander:** within the wider band the route weaves (switchbacks between ring rooms) so each ride is about 220–330 m.
   The rules for pockets, turns and twin lanes stay. The builder picks the method: forced waypoints, a cost on
   straightness, or another.
-- **Crevasse cavern:** the generator carves one deep crevasse cavern on ride 5's segment. It is a large open
-  chasm region with the track crossing and descending it. Its cells are a new `Cell.Chasm` kind: not walkable, a hole
-  with no floor. Ride 6 also crosses a crevasse at the jump and the trestle.
+- **Crevasse cavern:** the generator carves one deep crevasse cavern on ride 4's segment, the one before the
+  last. It is a large open chasm region with the track crossing and descending it. Its cells are a new `Cell.Chasm`
+  kind: not walkable, a hole with no floor. Ride 5 also crosses a crevasse at the jump and the trestle.
 - **Crevasse edges elsewhere:** chasm strips beside parts of the track, and cutting across some walkways in the halls.
   Every room, cage, key and the stair must still be reachable on foot (`FloorSolvability` with the rails and chasms
   blocked), and no chasm sits on a spawn, chest, key, objective or platform cell.
@@ -115,7 +118,7 @@ dropped without touching the rest.
   - Only floor 12's hash may move.
 - **Protocol** stays 17, because the branch is unreleased.
 
-### The six rides (one new thing each)
+### The five rides (one new thing each)
 
 1. **The Ore Run: learn the cart.** The lone cinder, the low beam ("Heads!") and the slag thrower, as today. Plus the
    **first barricade**, called out early ("Timber across the line — cut it!") and easy to hack.
@@ -129,20 +132,21 @@ dropped without touching the rest.
      The train falls. Telegraph: a dead red signal lamp, a companion's "The slag line's out past the bridge — switch
      back!", and the bridge's broken end visible ahead.
    - The ore buckets, as today.
-4. **The Dark: outrun it.**
+4. **The Dark and the Throat: outrun it into the cavern.** (Revised 2026-11-19 after measuring the shipped floor: five
+   rides, not six. See the calls below. The dark and the runaway open this ride, and the cavern closes it.)
    - A stretch with every lamp out. Only cart lamps and sparks light it, and hounds leap out of the dark.
    - A **runaway ore train** comes down the party line from behind, bell ringing. If it catches you it rams the train
      (a big plating hit, and riders are thrown). Pump to stay ahead.
    - A **split track**: a live switch where one branch sends the runaway down a spur into a crevasse, and the other
      keeps it on your tail. Throw it after you pass, or ride the wrong branch yourself and pay for it.
-5. **The Throat: the crevasse cavern.**
+   - Then the line breaks out into **the crevasse cavern**:
    - The line enters a huge chasm on a timber bridge that **collapses behind you**. Too slow and it goes under you.
    - A **downhill spiral** round the cavern walls. Brake in the bends or the cart tips and is thrown into the crevasse.
    - A **loop-the-loop.** Enter it fast enough or the cart falls off at the top. The entry speed is called out and
      a speed lamp shows green when you are fast enough.
    - A **leap to the enemy cart:** a slag cart runs beside you on the twin line. A seated player can jump across to
      fight its riders on it, and jump back before the slag line drops into the crevasse (see the calls below).
-6. **The Pour: the climax.** The golem, hammers, pours, spur and buffer, as today. Plus:
+5. **The Pour: the climax.** The golem, hammers, pours, spur and buffer, as today. Plus:
    - the trestle and the jump are now **over a crevasse**;
    - a missed jump drops the whole train into it;
    - a barricade before the buffer.
@@ -212,6 +216,14 @@ dropped without touching the rest.
 - **The loop-the-loop is its own plan, built last.** The owner may drop it before then. The cavern and spiral plan
   builds the free 3D track it needs (a helix is already off the grid), so nothing is wasted either way.
 
+- **Five rides, not six (measured 2026-11-19).** On the shipped seed:
+  - With five intermediate stops, the rides came out at 267, 206, 224, 75, 252 and 209 m. Two stops were neighbouring
+    rooms only a few cells apart, which the meander cannot lengthen. Picking the stops differently gave the same
+    result.
+  - With four intermediate stops, the rides are 267, 206, 281, 252 and 209 m, about 1.2 km in all, and the cavern span
+    still fits on the ride before the last.
+  - So the dark and the runaway open ride 4, and the cavern closes it.
+
 ## Calls left to the builder (mine)
 
 - **Numbers:**
@@ -228,7 +240,7 @@ dropped without touching the rest.
   - The cart's physics gains a normal-force check for the loop.
   - **VR:** the view fades through the loop and on the spiral's steepest turns under the Recommended and Strong
     presets. Off skips the fade.
-- **Crew count:** ten named crew of Grisel's, two per wagon across five stops. The four new names are written into
+- **Crew count:** eight named crew of Grisel's, two per wagon across four stops. The two new names are written into
   `floor_12.json`.
 - **Music:** the climax track plays on the last ride, worked out from the stop count, not "ride 4".
 - **Debug flows:** the existing ride, crew, chase and net flows are generalised to any stop count.
