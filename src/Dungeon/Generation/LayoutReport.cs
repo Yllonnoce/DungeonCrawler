@@ -33,7 +33,9 @@ public static class LayoutReport
     /// The line in one row, or null when the floor has none: <c>rail: stops=[rooms] rides~[metres] total~{metres}
     /// cavern={From}..{To}|none|breached chasm={cells} strips={n} gorge=[{From}..{To}@{fFrom}-{fTo},…] planks={n}</c>, each ride
     /// counted in cells of 4 m from platform middle to platform middle, and each gorge span's ends as fractions of the last ride
-    /// measured the same way.
+    /// measured the same way. When a broken bridge was asked for (<see cref="RailLine.BreakWhy"/>), then
+    /// <c> break={Gap}@{f} run={From}..{To}</c>, f the gap's fraction of its own ride measured the same way, or
+    /// <c> break=none</c> or <c> break=refused</c>.
     /// </summary>
     public static string? Rail(FloorLayout l)
     {
@@ -44,9 +46,13 @@ public static class LayoutReport
         var rides = mids.Skip(1).Zip(mids, (b, a) => (b - a) * 4).ToList();
         var cavern = rail.Cavern is { } c ? $"{c.From}..{c.To}" : rail.CavernBreached ? "breached" : "none";
         var (from, to) = mids.Count >= 2 ? (mids[^2], mids[^1]) : (0, 1);
-        string Fraction(int i) => ((i - from) / (float)(to - from)).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
-        var gorge = string.Join(",", rail.Gorge.Select(g => $"{g.From}..{g.To}@{Fraction(g.From)}-{Fraction(g.To)}"));
-        return $"rail: stops=[{string.Join(",", rail.Stops.Select(s => s.Room))}] rides~[{string.Join(",", rides)}] total~{rides.Sum()} cavern={cavern}"
+        string Fraction(int i, int a, int b) => ((i - a) / (float)(b - a)).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+        var gorge = string.Join(",", rail.Gorge.Select(g => $"{g.From}..{g.To}@{Fraction(g.From, from, to)}-{Fraction(g.To, from, to)}"));
+        var line = $"rail: stops=[{string.Join(",", rail.Stops.Select(s => s.Room))}] rides~[{string.Join(",", rides)}] total~{rides.Sum()} cavern={cavern}"
             + $" chasm={l.ChasmCount} strips={rail.Strips.Count} gorge=[{gorge}] planks={l.Walkways.Count}";
+        if (rail.BreakWhy == null) return line;
+        return rail.Break is { } b
+            ? line + $" break={b.Gap}@{Fraction(b.Gap, mids[b.Ride - 1], mids[b.Ride])} run={b.Run.From}..{b.Run.To}"
+            : line + $" break={rail.BreakWhy}";
     }
 }

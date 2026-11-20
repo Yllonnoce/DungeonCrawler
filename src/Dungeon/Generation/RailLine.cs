@@ -44,6 +44,10 @@ public static class RailRules
     public const int WalkwayRoomGap = 3;
     /// <summary>The fewest cells (Manhattan) between two planks.</summary>
     public const int WalkwaySpacing = 8;
+    /// <summary>The broken bridge's window on its ride (<see cref="FloorSpec.BrokenBridgeRide"/>), as fractions of the ride from platform middle to platform middle.</summary>
+    public const float BreakFrom = 0.55f, BreakTo = 0.90f;
+    /// <summary>The shortest outward straight run the broken bridge is laid along (a longer one is clipped to its middle <see cref="StripMaxCells"/>).</summary>
+    public const int BreakMinCells = 5;
 }
 
 /// <summary>A stop on the line: a room the cart halts in, and the party-lane cells inside it, in line order.</summary>
@@ -51,6 +55,13 @@ public sealed record RailStop(int Room, IReadOnlyList<GridPos> Platform);
 
 /// <summary>A run of party-lane cells, by their indices in <see cref="RailLine.Party"/>, both ends included.</summary>
 public sealed record RailSpan(int From, int To);
+
+/// <summary>
+/// The broken bridge (<see cref="FloorSpec.BrokenBridgeRide"/>): on 1-based ride <paramref name="Ride"/>, the slag line runs
+/// over a strip of chasm cut outward of it along <paramref name="Run"/> (party-lane indices) on a deck, but for the enemy
+/// twin of party index <paramref name="Gap"/> (the run's middle), which is a <see cref="Cell.Chasm"/>: the 4 m gap.
+/// </summary>
+public sealed record RailBreak(int Ride, RailSpan Run, int Gap);
 
 /// <summary>
 /// The mine-cart line round a ring floor: two parallel ordered, 4-connected lanes from the start room to the exit room.
@@ -83,4 +94,13 @@ public sealed record RailLine(IReadOnlyList<GridPos> Party, IReadOnlyList<GridPo
     /// <see cref="RailRules.GorgeTo"/> of the ride, as party-lane index spans (also in <see cref="Strips"/>). Not part of the content hash.
     /// </summary>
     public IReadOnlyList<RailSpan> Gorge { get; init; } = Array.Empty<RailSpan>();
+
+    /// <summary>The broken bridge cut on <see cref="FloorSpec.BrokenBridgeRide"/>'s ride (its run is also in <see cref="Strips"/>), or null. Not part of the content hash.</summary>
+    public RailBreak? Break { get; init; }
+
+    /// <summary>
+    /// Null when no break was asked for (<see cref="FloorSpec.BrokenBridgeRide"/> 0, or no crevasses); otherwise "ok" (cut),
+    /// "none" (the ride had no fitting run) or "refused" (the cavern's ride, the last ride, or no such ride). Not part of the content hash.
+    /// </summary>
+    public string? BreakWhy { get; init; }
 }
