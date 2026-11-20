@@ -94,19 +94,25 @@ public partial class MusicDirector : Node
     private readonly HashSet<string> _preloading = new();
     private readonly List<string> _preloaded = new();
 
+    /// <summary>The tracks the floor built last can play (<see cref="FloorMusic.Wanted"/>): what <see cref="_cache"/> keeps past the next floor's build.</summary>
+    private IReadOnlySet<string> _floorTracks = new HashSet<string>();
+
     /// <summary>
     /// A floor was built: have every track it can play read on a loader thread (the tier's exploration pool, the battle and
     /// boss tracks, and on a railed floor the rides' chase and pour), so no mood change reads one from disk as it starts (7 to
-    /// 11 ms on the frame). A track loaded once stays in <see cref="_cache"/>; a dedicated server plays nothing and loads nothing.
+    /// 11 ms on the frame). Every other track loaded before (a tier left behind, the menu's, a sting) is let go but the one
+    /// playing (<see cref="FloorMusic.Stale"/>), so only this floor's music stays in <see cref="_cache"/>; a dedicated server
+    /// plays nothing and loads nothing.
     /// </summary>
     private void PreloadFloor()
     {
-        if (!Enabled || Net.NetSession.IsServer || Main.Instance is not { InGame: true } main) return;
-        var tier = Math.Clamp(main.Builder.CurrentTier?.Index ?? 0, 0, ExploreByTier.Length - 1);
-        foreach (var file in ExploreByTier[tier]) Preload(file);
-        foreach (var file in CombatTracks) Preload(file);
-        foreach (var file in BossTracks) Preload(file);
-        if (main.Builder.Layout?.Rail != null) foreach (var file in RideMusic.Tracks) Preload(file);
+        var main = Enabled && !Net.NetSession.IsServer && Main.Instance is { InGame: true } m ? m : null;
+        _floorTracks = main != null
+            ? FloorMusic.Wanted(ExploreByTier, main.Builder.CurrentTier?.Index ?? 0, CombatTracks, BossTracks, main.Builder.Layout?.Rail != null ? RideMusic.Tracks : null)
+            : new HashSet<string>();
+        foreach (var file in FloorMusic.Stale(_cache.Keys, _floorTracks, CurrentTrack)) _cache.Remove(file); // a player still holding one keeps its own reference
+        if (main == null) return;
+        foreach (var file in _floorTracks) Preload(file);
     }
 
     private void Preload(string file)
@@ -115,7 +121,10 @@ public partial class MusicDirector : Node
         if (ResourceLoader.LoadThreadedRequest(Dir + file) == Error.Ok) _preloading.Add(file);
     }
 
-    /// <summary>Take the finished preloads into the cache; one that failed is forgotten (its first play loads it the plain way).</summary>
+    /// <summary>
+    /// Take the finished preloads into the cache (one an earlier floor asked for and this one does not want is collected and let go);
+    /// one that failed is collected too, so the loader forgets its task, and its first play loads it the plain way.
+    /// </summary>
     private void CollectPreloaded()
     {
         if (_preloading.Count == 0) return;
@@ -125,7 +134,9 @@ public partial class MusicDirector : Node
             var status = ResourceLoader.LoadThreadedGetStatus(Dir + file);
             if (status == ResourceLoader.ThreadLoadStatus.InProgress) continue;
             _preloaded.Add(file);
-            if (status == ResourceLoader.ThreadLoadStatus.Loaded && ResourceLoader.LoadThreadedGet(Dir + file) is AudioStream stream) _cache[file] = stream;
+            if (status is not (ResourceLoader.ThreadLoadStatus.Loaded or ResourceLoader.ThreadLoadStatus.Failed)) continue; // InvalidResource: no task to collect
+            var loaded = ResourceLoader.LoadThreadedGet(Dir + file);
+            if (status == ResourceLoader.ThreadLoadStatus.Loaded && loaded is AudioStream stream && FloorMusic.Keep(file, _floorTracks, CurrentTrack)) _cache[file] = stream;
         }
         foreach (var file in _preloaded) _preloading.Remove(file);
     }

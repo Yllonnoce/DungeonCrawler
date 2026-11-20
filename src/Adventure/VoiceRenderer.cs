@@ -228,7 +228,8 @@ public partial class VoiceRenderer : Node
             var status = ResourceLoader.LoadThreadedGetStatus(Builtin(id));
             if (status == ResourceLoader.ThreadLoadStatus.InProgress) continue;
             _prefetched.Add(id);
-            if (status == ResourceLoader.ThreadLoadStatus.Loaded && ResourceLoader.LoadThreadedGet(Builtin(id)) is AudioStream stream) _streams.Put(id, stream);
+            if (status is not (ResourceLoader.ThreadLoadStatus.Loaded or ResourceLoader.ThreadLoadStatus.Failed)) continue; // InvalidResource: no task to collect
+            if (ResourceLoader.LoadThreadedGet(Builtin(id)) is AudioStream stream && status == ResourceLoader.ThreadLoadStatus.Loaded) _streams.Put(id, stream); // a failed one is collected so the loader forgets its task
         }
         foreach (var id in _prefetched) _prefetching.Remove(id);
     }

@@ -57,7 +57,7 @@ public static class EnemyModels
         if (ResourceLoader.LoadThreadedRequest(path) == Error.Ok) Pending.Add(path);
     }
 
-    /// <summary>Take in every threaded load that has finished; one that failed is forgotten (a spawn loads it the plain way).</summary>
+    /// <summary>Take in every threaded load that has finished; one that failed is collected too, so the loader forgets its task, and then forgotten (a spawn loads it the plain way).</summary>
     private static void Collect()
     {
         if (Pending.Count == 0) return;
@@ -67,7 +67,8 @@ public static class EnemyModels
             var status = ResourceLoader.LoadThreadedGetStatus(path);
             if (status == ResourceLoader.ThreadLoadStatus.InProgress) continue;
             Collected.Add(path);
-            if (status == ResourceLoader.ThreadLoadStatus.Loaded && ResourceLoader.LoadThreadedGet(path) is PackedScene scene) Scenes[path] = scene;
+            if (status is not (ResourceLoader.ThreadLoadStatus.Loaded or ResourceLoader.ThreadLoadStatus.Failed)) continue; // InvalidResource: no task to collect
+            if (ResourceLoader.LoadThreadedGet(path) is PackedScene scene && status == ResourceLoader.ThreadLoadStatus.Loaded) Scenes[path] = scene;
         }
         foreach (var path in Collected) Pending.Remove(path);
     }
