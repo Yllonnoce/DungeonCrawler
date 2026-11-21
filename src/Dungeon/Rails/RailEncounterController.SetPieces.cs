@@ -232,6 +232,9 @@ public partial class RailEncounterController
                 case "slag_barricade":
                     node = BuildBarricade(root, piece, slagLine: plan.Kind == "slag_barricade");
                     break;
+                case "dark":
+                    node = BuildDark(root, piece);
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;

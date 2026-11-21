@@ -791,8 +791,9 @@ public partial class Main : Node
         if (_world.GetNodeOrNull<WorldEnvironment>("Env")?.Environment is { } env)
         {
             env.AmbientLightColor = ambientColor;
-            env.AmbientLightEnergy = look.AmbientEnergy * (fogScale > 1f ? 1.15f : 1f);
-            env.FogLightColor = fogColor;
+            _baseAmbientEnergy = look.AmbientEnergy * (fogScale > 1f ? 1.15f : 1f);
+            env.AmbientLightEnergy = _baseAmbientEnergy * Dungeon.Rails.DarkRules.Kept(_darkness, Dungeon.Rails.DarkRules.AmbientKept);
+            env.FogLightColor = DarkFog();
             env.FogDensity = look.FogDensity * fogScale;
             env.BackgroundColor = fogColor.Darkened(0.5f);
         }
@@ -803,6 +804,34 @@ public partial class Main : Node
 
     private Color _baseFog = new(0.05f, 0.05f, 0.06f), _baseAmbient = Colors.Black;
     private float _baseFogDensity = 0.035f;
+    /// <summary>The air's light before the ride's dark (<see cref="ApplyDarkness"/>): the ambient energy and the volumetric fog's emission energy.</summary>
+    private float _baseAmbientEnergy = 1f, _baseFogEmission = 0.02f;
+    /// <summary>How dark this view is in the ride's dark stretch now (0 = the floor's own light).</summary>
+    private float _darkness;
+
+    /// <summary>
+    /// The ride's dark stretch on this view (<see cref="Dungeon.Rails.RideDarkness"/>, Ruling 16), <paramref name="factor"/> from 0 (the floor's
+    /// own light) to 1: from the base values, the ambient energy keeps <see cref="Dungeon.Rails.DarkRules.AmbientKept"/>, the fog light's colour
+    /// <see cref="Dungeon.Rails.DarkRules.FogKept"/> and the volumetric fog's emission none. Lights and emissive materials (cart lamps, sparks,
+    /// warning lamps) are not touched. A no-op unless the factor moved by 0.01 or reached 0 or 1.
+    /// </summary>
+    public void ApplyDarkness(float factor)
+    {
+        factor = Mathf.Clamp(factor, 0f, 1f);
+        var settled = factor == _darkness || (Mathf.Abs(factor - _darkness) < 0.01f && factor > 0f && factor < 1f);
+        if (settled || _world.GetNodeOrNull<WorldEnvironment>("Env")?.Environment is not { } env) return;
+        _darkness = factor;
+        env.AmbientLightEnergy = _baseAmbientEnergy * Dungeon.Rails.DarkRules.Kept(factor, Dungeon.Rails.DarkRules.AmbientKept);
+        env.FogLightColor = DarkFog();
+        env.VolumetricFogEmissionEnergy = _baseFogEmission * Dungeon.Rails.DarkRules.Kept(factor, 0f);
+    }
+
+    /// <summary>The fog light's colour at the view's darkness now: the base's RGB scaled, its alpha kept.</summary>
+    private Color DarkFog()
+    {
+        var k = Dungeon.Rails.DarkRules.Kept(_darkness, Dungeon.Rails.DarkRules.FogKept);
+        return new Color(_baseFog.R * k, _baseFog.G * k, _baseFog.B * k, _baseFog.A);
+    }
 
     /// <summary>The gas on a Toxic floor: the air around the player goes green and thick with its level (0 = the floor's own air).</summary>
     public void ApplyGasTint(float level)
@@ -844,7 +873,8 @@ public partial class Main : Node
         var fogColor = tintedFog;
         env.VolumetricFogAlbedo = new Color(0.72f, 0.68f, 0.62f).Lerp(fogColor.Lightened(0.6f), 0.35f);
         env.VolumetricFogEmission = fogColor;
-        env.VolumetricFogEmissionEnergy = 0.02f + 0.03f * haze;
+        _baseFogEmission = 0.02f + 0.03f * haze;
+        env.VolumetricFogEmissionEnergy = _baseFogEmission * Dungeon.Rails.DarkRules.Kept(_darkness, 0f);
         env.VolumetricFogAnisotropy = 0.4f;
         env.VolumetricFogLength = 56f;
         env.VolumetricFogDetailSpread = 2.5f;

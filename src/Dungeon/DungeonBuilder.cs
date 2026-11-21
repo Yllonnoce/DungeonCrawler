@@ -2008,7 +2008,12 @@ public partial class DungeonBuilder : Node3D
                 lantern.GlobalPosition = at - Vector3.Up * 0.18f; // its middle where the box's was
                 FadeBeyond(lantern);
             }
-            else FadeBeyond(Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false));
+            else
+            {
+                var box = Box(node, new Vector3(0.14f, 0.2f, 0.14f), at, lamp, collide: false);
+                box.Name = $"RailLantern{i}"; // the dark stretch finds its lanterns by pocket index, the pack's or this box
+                FadeBeyond(box);
+            }
         }
 
         for (var i = 0; i < rail.Stops.Count; i++)
