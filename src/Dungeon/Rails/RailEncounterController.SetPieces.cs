@@ -237,8 +237,28 @@ public partial class RailEncounterController
             piece.Node = node;
             _pieces.Add(piece);
         }
+        if (DebugFixedBackFor(root) is { } extra) _pieces.Add(extra);
         CutGaps(gaps);
         GuardBreak(); // last: it reads the ride's switches
+    }
+
+    /// <summary>
+    /// Test hook (solo flows only, Ruling 20): metres before the broken bridge's gap at which <see cref="BuildSetPieces"/> adds a second, fixed
+    /// switch back on the break's ride (<c>r3_switch_back2</c>, plan index <c>RailSetPieces.Count</c>), past the live one; NaN (the default) for none.
+    /// </summary>
+    internal static float DebugFixedBackBeforeGap = float.NaN;
+
+    /// <summary>The <see cref="DebugFixedBackBeforeGap"/> switch back, built after the break (it reads the gap); null without the hook or a break.</summary>
+    private Piece? DebugFixedBackFor(Node3D root)
+    {
+        if (float.IsNaN(DebugFixedBackBeforeGap) || float.IsNaN(BreakGapS) || BreakRide < 1 || BreakRide >= _rails.StopS.Length) return null;
+        var s = BreakGapS - DebugFixedBackBeforeGap;
+        float from = _rails.StopS[BreakRide - 1], to = _rails.StopS[BreakRide];
+        var plan = new RailSetPiecePlan { Id = $"r{BreakRide}_switch_back2", Ride = BreakRide, Kind = "switch_back", At = (s - from) / (to - from) };
+        var piece = new Piece { Plan = plan, Index = _setPieces.Count, S = s };
+        if (BuildSwitch(root, piece) is not { } node) return null;
+        piece.Node = node;
+        return piece;
     }
 
     /// <summary>

@@ -5,6 +5,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>A companion's call of a live switch back (Ruling 17): none due, the early one, or the last.</summary>
 public enum BackCall { None, Early, Last }
 
+/// <summary>A press on a deadly lever after its moment (<see cref="SwitchBackRules.Late"/>): not late, too late (straight), or already thrown.</summary>
+public enum LatePress { None, TooLate, AlreadyThrown }
+
 /// <summary>
 /// The live switch back and the broken bridge past it (plan 11). A ride's <c>switch_back</c> is live (deadly) only when a broken
 /// bridge's gap lies <see cref="LeadMin"/> to <see cref="LeadMax"/> metres past its points on that ride (<see cref="LiveBack"/>);
@@ -95,8 +98,13 @@ public static class SwitchBackRules
     /// <summary>A rider who could throw a deadly lever from the seat: a human (<see cref="MayToggle"/>: not a companion, a bot or a parked body), up (not downed or fallen) and seated in the party's cart.</summary>
     public static bool AbleToThrow(ControlKind actor, bool downed, bool seatedInPartyCart) => MayToggle(true, actor) && !downed && seatedInPartyCart;
 
-    /// <summary>A press on a deadly lever comes too late (the server refuses it and says so): it is taken, or the front is at or past its points (a NaN front never is).</summary>
-    public static bool TooLate(bool taken, float front, float pointsS) => taken || front >= pointsS;
+    /// <summary>
+    /// A press on a deadly lever after its moment (Ruling 21): none while it is untaken and the front short of its points (a NaN front never is
+    /// past them); otherwise, the lever straight, too late (the server refuses it and says so); thrown, already thrown (ignored quietly: never
+    /// "Too late" to the rider who threw it, and never un-thrown).
+    /// </summary>
+    public static LatePress Late(bool taken, bool thrown, float front, float pointsS)
+        => !(taken || front >= pointsS) ? LatePress.None : thrown ? LatePress.AlreadyThrown : LatePress.TooLate; // NaN compares false
 
     /// <summary>The line the server sends the presser of a deadly lever it refused as too late.</summary>
     public const string TooLateLine = "Too late to throw it.";

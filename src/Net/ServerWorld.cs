@@ -582,12 +582,18 @@ public partial class ServerWorld : Node
                     GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: seated window: set back {NetSession.Instance.Now - lever.LastToggledAt:0.00} s after {lever.LastToggledBy} threw it, ignored");
                     break;
                 }
-                // a press on a deadly lever (a live switch back) after the cart took it as it stood, or at its points: refused out loud, so the
-                // presser does not believe it thrown (final review M4; the client's cart may run behind the server's near the points)
-                if (lever is { Deadly: true } && Dungeon.Rails.RailEncounterController.Instance is { } lateEnc && GodotObject.IsInstanceValid(lateEnc) && lateEnc.TooLateToThrow(lever))
+                // a press on a deadly lever (a live switch back) after the cart took it as it stood, or at its points: refused out loud while it is
+                // straight, so the presser does not believe it thrown (final review M4; the client's cart may run behind the server's near the
+                // points); thrown, it is ignored quietly (Ruling 21): never "Too late" to the rider who threw it, and never un-thrown
+                if (lever is { Deadly: true } && Dungeon.Rails.RailEncounterController.Instance is { } lateEnc && GodotObject.IsInstanceValid(lateEnc)
+                    && lateEnc.LateFor(lever) is var late && late != Dungeon.Rails.LatePress.None)
                 {
-                    Tell(slot, Dungeon.Rails.SwitchBackRules.TooLateLine);
-                    GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: too late to throw the live switch back (taken {lever.Taken}): told them");
+                    if (late == Dungeon.Rails.LatePress.TooLate)
+                    {
+                        Tell(slot, Dungeon.Rails.SwitchBackRules.TooLateLine);
+                        GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: too late to throw the live switch back (taken {lever.Taken}): told them");
+                    }
+                    else GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: the deadly lever was thrown (taken {lever.Taken}): ignored quietly");
                     break;
                 }
                 if (dist > reach && !window) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }

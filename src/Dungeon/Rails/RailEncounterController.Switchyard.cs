@@ -280,15 +280,21 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// Server: a press on <paramref name="lever"/> comes too late to throw it, so the server refuses it out loud (final review M4): a deadly lever
-    /// of the armed ride that is taken, or with the cart's front at or past its points (<see cref="SwitchBackRules.TooLate"/>).
+    /// Server: a press on <paramref name="lever"/> after its moment (final review M4, Ruling 21): a deadly lever of the armed ride that is taken,
+    /// or with the cart's front at or past its points (the seated window's end), is too late while straight (refused out loud) and already thrown
+    /// when thrown (ignored quietly). <see cref="LatePress.None"/> otherwise (<see cref="SwitchBackRules.Late"/>).
     /// </summary>
-    public bool TooLateToThrow(TrackSwitch lever)
+    public LatePress LateFor(TrackSwitch lever)
     {
-        if (!Current || !lever.Deadly) return false;
+        if (!Current || !lever.Deadly) return LatePress.None;
         foreach (var p in _pieces)
-            if (p.Switch == lever) return p.Plan.Ride == ArmedRide && SwitchBackRules.TooLate(lever.Taken, _rails.Party.FrontS, lever.PointsS);
-        return false;
+        {
+            if (p.Switch != lever) continue;
+            if (p.Plan.Ride != ArmedRide) return LatePress.None;
+            var view = lever.SeatedView;
+            return SwitchBackRules.Late(view.Taken, lever.Thrown, _rails.Party.FrontS, view.PointsS);
+        }
+        return LatePress.None;
     }
 
     /// <summary>

@@ -7,7 +7,7 @@ using Godot;
 
 namespace DungeonCrawler.Core;
 
-// ---- --test-switch-back[=wrong|stall|lone] ----------------------------------------------------------------------
+// ---- --test-switch-back[=wrong|stall|lone|fixedafter] ----------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo. Every enemy is culled as it appears. The build: ride 3 has the broken bridge,
 // its gap on the slag line (a chasm, no footing: a ray down finds nothing) between deck cells (a ray down finds their footing), the enemy
 // track's rails and sleepers cut bare over the gap and no timber frame over it, the party lane beside it and at r3_buckets solid floor
@@ -36,7 +36,11 @@ namespace DungeonCrawler.Core;
 // never carries it across. =lone (ruling R-lone): nobody presses, and the lead, the only human, is downed in the seat just before the
 // window (held down until the back is taken; possession off, so no companion becomes the human); at the points the cart takes the safe
 // line with the lever straight ("No one could reach the switch — the cart takes the safe line."), comes home and arrives at stop 3 with
-// no fall. Prints [switchback] lines and a RESULT.
+// no fall. =fixedafter (Ruling 20): a fixed switch back r3_switch_back2 is added 8 m before the gap
+// (RailEncounterController.DebugFixedBackBeforeGap), the fall still armed; nobody presses the live back and the cart passes it straight;
+// with the front 3 m past its points the cart is caught (RailController.DebugStall), and the watchdog sets its front at r3_switch_back2's
+// points, never past them; the fixed back takes it home there (back from its points), it is on its own lane (blend <= 0.01) with the front
+// 1 m short of the gap, never falls and arrives at stop 3. Prints [switchback] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testSwitchBack;
@@ -51,6 +55,10 @@ public partial class DebugTools
     private int _sbStalls, _sbGroundAtWreck = -1, _sbGroundBefore;
     private bool WrongBranch => _sbVariant is "wrong" or "stall";
     private bool LoneBranch => _sbVariant == "lone";
+    /// <summary>=fixedafter: the live back left straight, a fixed one past it (<see cref="RailEncounterController.DebugFixedBackBeforeGap"/>) takes the cart home.</summary>
+    private bool FixedAfterBranch => _sbVariant == "fixedafter";
+    /// <summary>=fixedafter: the cart caught past the live back, the watchdog's grind seen, and the front 1 m short of the gap checked home.</summary>
+    private bool _sbFaStalled, _sbFaGround, _sbFaNearGap;
     /// <summary>=lone: the lead downed in the seat, and the safe-line line heard.</summary>
     private bool _sbLoneDowned, _sbLoneLogged;
     private int _sbStep;
@@ -150,6 +158,12 @@ public partial class DebugTools
                 if (enc.SetPieceNode("r3_switch_back") is not TrackSwitch back || enc.SetPieceNode("r3_switch_out") is not TrackSwitch) { Fail("floor 12 lacks ride 3's switches"); return; }
                 GD.Print($"[switchback] floor 12 ({_sbVariant}): broken bridge on ride {enc.BreakRide}, gap at party S={enc.BreakGapS:0.0} (enemy S={enc.BreakGapEnemyS:0.0}), r3_switch_back points S={back.PointsS:0.0} ({enc.BreakGapS - back.PointsS:0.0} m before the gap, fixed={back.Fixed}); stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}");
                 if (SwitchBackBuild(main, root, layout, rail, brk, rc, enc) is { } bad) { Fail(bad); return; }
+                if (FixedAfterBranch)
+                {
+                    if (enc.SetPieceNode("r3_switch_back2") is not TrackSwitch fixedBack) { Fail("fixedafter: no r3_switch_back2 built from the hook"); return; }
+                    GD.Print($"[switchback] fixedafter: r3_switch_back2 points S={fixedBack.PointsS:0.0} ({enc.BreakGapS - fixedBack.PointsS:0.0} m before the gap, {fixedBack.PointsS - back.PointsS:0.0} m past r3_switch_back), fixed={fixedBack.Fixed} deadly={fixedBack.Deadly} thrown={fixedBack.Thrown}; the fall armed {enc.BreakArmed}");
+                    if (!fixedBack.Fixed || fixedBack.Deadly || !fixedBack.Thrown || !back.Deadly || !enc.BreakArmed) { Fail("fixedafter: r3_switch_back2 is not a fixed, thrown back past a live r3_switch_back, or the fall is disarmed"); return; }
+                }
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
                 rc.Restore(2);
                 _sbStep++; _sbClock = 0f;
@@ -268,7 +282,7 @@ public partial class DebugTools
                 GD.Print($"[switchback] B the cart took the switch at S={rc.CrossOutS:0.0}: its return {(float.IsNaN(rc.CrossBackS) ? "open (no back set)" : $"set at {rc.CrossBackS:0.0}")}; r3_switch_back deadly={back.Deadly} fixed={back.Fixed} thrown={back.Thrown}");
                 if (!float.IsNaN(rc.CrossBackS)) { Fail("B: with the live back the cart crossed with a return already set"); return; }
                 if (!back.Deadly || back.Fixed || back.Thrown) { Fail("B: r3_switch_back is not a straight live lever (deadly, not fixed)"); return; }
-                _sbStep = LoneBranch ? SbLone : WrongBranch ? SbFall : SbHome; _sbClock = 0f;
+                _sbStep = LoneBranch ? SbLone : FixedAfterBranch ? SbFixedAfter : WrongBranch ? SbFall : SbHome; _sbClock = 0f;
                 break;
             }
             case SbHome:
@@ -340,6 +354,43 @@ public partial class DebugTools
                 party.AllowPossession = true;
                 _sbStep = SbHome + 1; _sbClock = 0f; // home on its own lane, then on to stop 3, as the thrown branch
                 break;
+            }
+            case SbFixedAfter:
+            {
+                // =fixedafter: nobody presses the live back (passed straight); caught 3 m past its points, the watchdog sets the front at the
+                // fixed back's points, which take the cart home
+                if (enc.SetPieceNode("r3_switch_back") is not TrackSwitch liveBack || enc.SetPieceNode("r3_switch_back2") is not TrackSwitch fixedBack) { Fail("fixedafter: no r3_switch_back or r3_switch_back2"); return; }
+                if (SwitchBackRide(main, rc, enc, liveBack, me, Fail)) return;
+                if (rc.State.Mode == CartMode.Wrecked || rc.Falls != _sbFallsBefore) { Fail($"fixedafter: the train was wrecked or fell (falls {rc.Falls - _sbFallsBefore}) with a fixed back before the gap"); return; }
+                var at = rc.Party.FrontS;
+                if (!_sbFaStalled && _sbBackTaken && rc.State.Mode == CartMode.Rolling && at >= liveBack.PointsS + 3f)
+                {
+                    if (!float.IsNaN(rc.CrossBackS) || fixedBack.Taken) { Fail($"fixedafter: past the live back the cart's return is {(float.IsNaN(rc.CrossBackS) ? "open" : $"set at {rc.CrossBackS:0.0}")} and r3_switch_back2 taken {fixedBack.Taken}, not open and untaken"); return; }
+                    _sbFaStalled = true;
+                    rc.DebugStall = true;
+                    GD.Print($"[switchback] fixedafter: the cart caught at front S={at:0.0}, {at - liveBack.PointsS:0.0} m past r3_switch_back's points (passed straight) and {fixedBack.PointsS - at:0.0} m short of r3_switch_back2's; its return open");
+                }
+                if (_sbFaStalled && !_sbFaGround && rc.GroundFree - _sbGroundBefore >= 1)
+                {
+                    // freed to the fixed back's points, never past them: taken there (this tick or the next)
+                    _sbFaGround = true;
+                    GD.Print($"[switchback] fixedafter: the watchdog freed the cart to front S={at:0.0} (r3_switch_back2's points {fixedBack.PointsS:0.0}); r3_switch_back2 taken {fixedBack.Taken}, the return {(float.IsNaN(rc.CrossBackS) ? "open" : $"set at {rc.CrossBackS:0.0}")}");
+                    if (at < fixedBack.PointsS - 0.05f || at > fixedBack.PointsS + 1.5f) { Fail($"fixedafter: the watchdog set the front at S={at:0.0}, not r3_switch_back2's points {fixedBack.PointsS:0.0}"); return; }
+                }
+                if (_sbFaGround && fixedBack.Taken && !(Mathf.Abs(rc.CrossBackS - fixedBack.PointsS) < 0.01f)) { Fail($"fixedafter: r3_switch_back2 was taken but the cart's return is {rc.CrossBackS:0.0}, not its points {fixedBack.PointsS:0.0}"); return; }
+                if (_sbFaGround && fixedBack.Taken && !_sbFaNearGap && rc.State.Mode == CartMode.Rolling && at >= enc.BreakGapS - 1f)
+                {
+                    GD.Print($"[switchback] fixedafter: the front at S={at:0.0} ({enc.BreakGapS - at:0.0} m short of the gap): lane blend {rc.LaneBlend:0.000}, across at the gap {rc.LaneBlendAt(enc.BreakGapS):0.000}");
+                    if (rc.LaneBlend > 0.01f || at > enc.BreakGapS) { Fail($"fixedafter: the cart is not home on its own lane 1 m short of the gap (blend {rc.LaneBlend:0.000}, front S={at:0.0})"); return; }
+                    _sbFaNearGap = true;
+                }
+                if (rc.State.Mode != CartMode.Held || rc.StopIndex != 3) { if (_sbClock > 120f) Fail($"fixedafter: the cart did not arrive at stop 3 (mode {rc.State.Mode}, stop {rc.StopIndex}, front S={at:0.0}, stalled {_sbFaStalled}, ground {_sbFaGround}, r3_switch_back2 taken {fixedBack.Taken})"); break; }
+                if (!_sbFaStalled || !_sbFaGround || !_sbFaNearGap || _sbSight != "clear") { Fail($"fixedafter: the cart reached stop 3 without the stall ({_sbFaStalled}), the grind ({_sbFaGround}), the home check by the gap ({_sbFaNearGap}) or the sight from the lever ({_sbSight ?? "never cast"})"); return; }
+                GD.Print($"[switchback] B the cart arrived at stop 3 (S={rc.State.S:0.0}) with no fall: plating {rc.State.Plating:0}, riders [{string.Join(", ", _sbRiders.Select(a => $"{a.State.Name}{(a.State.Fallen ? " FALLEN" : "")}"))}]");
+                GD.Print($"[switchback] RESULT ok (fixedafter): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the live back called early and last, never thrown, passed straight; caught 3 m past its points, the watchdog set the front at r3_switch_back2's points ({fixedBack.PointsS:0.0}, {enc.BreakGapS - fixedBack.PointsS:0.0} m before the gap), which took the cart home (back from {fixedBack.PointsS:0.0}); home with the front 1 m short of the gap, no fall, arrived at stop 3; nobody fell");
+                _done = true;
+                GetTree().Quit(0);
+                return;
             }
             case SbFall:
             {
@@ -459,6 +510,8 @@ public partial class DebugTools
     private const int SbHome = 20;
     /// <summary>The ride step of B on the lone branch: the lead downed before the window, the back taken home anyway; then <see cref="SbHome"/> + 1.</summary>
     private const int SbLone = 30;
+    /// <summary>The ride step of B on the fixedafter branch: the live back passed straight, the stall ground to the fixed back, home and on to stop 3.</summary>
+    private const int SbFixedAfter = 40;
 
     /// <summary>
     /// Each rolling tick of B after the cross, both branches: no hand on the live back until the lead's press (a companion never moves it),
@@ -514,7 +567,7 @@ public partial class DebugTools
             if (!(Mathf.Abs(rc.CrossBackS - back.PointsS) < 0.01f)) { fail($"lone: the cart's return is {rc.CrossBackS:0.0}, not the back's points {back.PointsS:0.0}"); return true; }
             if (!_sbLoneLogged) { fail($"lone: \"{SwitchBackRules.SafeLineLog}\" was not logged at the take"); return true; }
         }
-        else if (WrongBranch)
+        else if (WrongBranch || FixedAfterBranch)
         {
             if (back.Thrown || home) { fail("B: nobody pressed, but the back was thrown or the cart crossed home"); return true; }
             if (!_sbWindowSeen) { fail("B: the seated window never offered r3_switch_back to the lead before its points"); return true; }
