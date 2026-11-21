@@ -1216,7 +1216,7 @@ and each ramp lengthens its lane by about 0.64 m (the 8.94 m slope against the o
 floor 12 grew from 8.1 to 8.9 m): every S past a ramp moves up by that much per ramp, and a set piece on a ramp's ride (a fraction
 of its ride) by its fraction of it. A lane cell is never heaved (`BuckleRules.Pick` spares every `IsRail` cell, keeping both rng
 draws), so the track lies on a flat slab wherever the floor is not a ramp. `--track-depth` (below) is the proof: floor 12 reads
-`buried=0`, with only `r5_spur`'s outer sleeper end inside the wall at (48,62) left over.
+`buried=0 inside=0 nofloorOff=0 budget=0` (the kiln spur bends in short of the wall at (48,62): see the spur in "The five rides").
 `TrackSampler.Curvature` (the lean's input: the heading's change over the next 2 m) reads the same chord headings
 (`ChordHeading.Curvature`), so the lean's target no longer steps by a join's worth as the span takes in four joins or five.
 Each track's rails, sleepers and ballast are one shadowless mesh per 20 m of S (`RailTrack.ChunkLength`: `Rails0..N` under
@@ -1884,7 +1884,12 @@ The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart rea
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and
 its death opens nothing. It is carried by an unseen runner paced beside the party's cart. While it is alongside (or within
 6.5 m) it slams the cart every 4 s after a 1.5 s hand glow, for 12 plating and a shake. The spur (`SpurSwitch`) is a dead-end
-8 m track off the enemy line into the wall. Its lever stands between the lanes 2 m short of the party line's points, past
+8 m track off the enemy line into the wall. It bends 1.8 m out from the enemy lane (`SetPieceRules.SpurBendMax`), unless that
+layout's footprint (both sleeper ends at every point of its path and the stop beam's four corners, `SetPieceRules.SpurFootprint`)
+touches rock; then it bends only to its lane cell's wall face, `SpurBend(2 m)` = 1.1 m, so its stop beam ends 0.1 m short of the rock
+(`SpurWallMargin`). If even that touches rock the build logs an ERROR. The build line says which (`spur … m, bend 1.1 m (rock
+beyond)`). On floor 12 the full bend's stop ran 0.10 m into the wall cube at (48,62), on the curve where the outward runs
+diagonally; at 1.1 m its stop clears the wall face by 0.44 m and its sleepers by 0.52 m, and the spur is 8.7 m long. Its lever stands between the lanes 2 m short of the party line's points, past
 the jump's landing; a rider throws it from the seat through the seated window, as ride 3's switch. If the lever is thrown when the runner reaches the points,
 the golem goes down the spur into its stop: three big run-overs' worth of damage, then a creature on its own feet. If the
 ride ends with the lever thrown and the golem still alive short of the stop, it goes off the spur then, so a thrown lever

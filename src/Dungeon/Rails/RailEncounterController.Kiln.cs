@@ -2,6 +2,7 @@ using DungeonCrawler.Adventure;
 using DungeonCrawler.Combat;
 using DungeonCrawler.Combat.Fx;
 using DungeonCrawler.Core;
+using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Dungeon.Props;
 using DungeonCrawler.Enemies;
 using DungeonCrawler.Net;
@@ -147,7 +148,7 @@ public partial class RailEncounterController
         var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S, LeverRef = NetRefs.Spur(piece.Index) };
         root.AddChild(spur);
         var path = spur.Build(_rails.Party.Track, _enemy, Lanes, _steel ??= DungeonBuilder.RailSteel(),
-            _sleeper ??= DungeonBuilder.RailSleeper());
+            _sleeper ??= DungeonBuilder.RailSleeper(), w => _layout[DungeonBuilder.WorldToCell(w)] == Cell.Wall);
         ClearTimber(root, path);
         piece.Spur = spur;
         piece.Switch = spur.Lever; // armed and reset with the other levers

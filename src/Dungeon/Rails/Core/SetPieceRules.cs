@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>How a slag cart paces itself against the party cart. Engine-free.</summary>
@@ -167,5 +169,77 @@ public static class SetPieceRules
         if (gapLength <= 0f) return 0f;
         var x = Math.Clamp(u / gapLength, 0f, 1f);
         return 4f * x * (1f - x) * 0.12f * gapLength * v / JumpSpeed;
+    }
+
+    /// <summary>The kiln spur's end stands out at most this far from the enemy lane's centre, away from the party's lane.</summary>
+    public const float SpurBendMax = 1.8f;
+    /// <summary>Half the width of the spur's stop beam (1.6 m across the spur's end).</summary>
+    public const float SpurStopHalf = 0.8f;
+    /// <summary>The stop beam's end stays this far short of the rock beyond the spur.</summary>
+    public const float SpurWallMargin = 0.1f;
+
+    /// <summary>
+    /// How far the spur's end bends out, given <paramref name="roomBeyond"/>, the open distance outward from the enemy lane's centre:
+    /// <see cref="SpurBendMax"/>, or less so its stop beam ends <see cref="SpurWallMargin"/> short of the rock (1.1 m against a lane
+    /// cell's wall face, 2 m out).
+    /// </summary>
+    public static float SpurBend(float roomBeyond) => MathF.Min(SpurBendMax, roomBeyond - SpurStopHalf - SpurWallMargin);
+
+    /// <summary>
+    /// The kiln spur's bend: <see cref="SpurBendMax"/> unless that layout's footprint (<see cref="SpurFootprint"/>) touches rock, then
+    /// <see cref="SpurBend"/>(<paramref name="roomAgainstRock"/>) (the lane cell's wall face, half a cell out). <paramref name="layAt"/> lays the
+    /// spur's path (X, Z) for a bend. <c>StillInRock</c>: the bent-in layout's footprint touches rock too (an error the builder logs).
+    /// </summary>
+    public static (float Bend, bool RockBeyond, bool StillInRock) SpurBendFor(Func<float, IReadOnlyList<Vector2>> layAt,
+        Func<Vector2, bool> rockAt, float roomAgainstRock, float stopBack, float stopDepth)
+    {
+        bool InRock(float bend) => SpurFootprint(layAt(bend), stopBack, stopDepth).Any(rockAt);
+        if (!InRock(SpurBendMax)) return (SpurBendMax, false, false);
+        var bent = SpurBend(roomAgainstRock);
+        return (bent, true, InRock(bent));
+    }
+
+    /// <summary>
+    /// The spur's footprint in the plane (X, Z) of its polyline <paramref name="path"/>: both sleeper ends
+    /// (<see cref="TrackDepthRules.SleeperHalf"/> either side) at every point of it, and the four corners of its stop beam
+    /// (<see cref="SpurStopHalf"/> across, <paramref name="stopDepth"/> deep along it) centred <paramref name="stopBack"/> short of its end.
+    /// </summary>
+    public static IEnumerable<Vector2> SpurFootprint(IReadOnlyList<Vector2> path, float stopBack, float stopDepth)
+    {
+        if (path.Count < 2) yield break;
+        for (var i = 0; i < path.Count; i++)
+        {
+            var across = Across(path[Math.Min(i + 1, path.Count - 1)] - path[Math.Max(i - 1, 0)]);
+            yield return path[i] - across * TrackDepthRules.SleeperHalf;
+            yield return path[i] + across * TrackDepthRules.SleeperHalf;
+        }
+        var length = 0f;
+        for (var i = 1; i < path.Count; i++) length += Vector2.Distance(path[i - 1], path[i]);
+        var (at, along) = AlongPath(path, MathF.Max(0f, length - stopBack));
+        var side = Across(along);
+        foreach (var a in new[] { -SpurStopHalf, SpurStopHalf })
+            foreach (var z in new[] { -stopDepth / 2f, stopDepth / 2f })
+                yield return at + side * a + along * z;
+    }
+
+    /// <summary>The unit vector square to <paramref name="along"/> in the plane.</summary>
+    static Vector2 Across(Vector2 along)
+    {
+        var n = new Vector2(-along.Y, along.X);
+        return n.LengthSquared() > 1e-12f ? Vector2.Normalize(n) : Vector2.UnitX;
+    }
+
+    /// <summary>The point <paramref name="s"/> along the polyline and its unit heading there.</summary>
+    static (Vector2 At, Vector2 Along) AlongPath(IReadOnlyList<Vector2> path, float s)
+    {
+        for (var i = 1; i < path.Count; i++)
+        {
+            var seg = path[i] - path[i - 1];
+            var len = seg.Length();
+            if (len < 1e-6f) continue;
+            if (s <= len || i == path.Count - 1) return (path[i - 1] + seg * (MathF.Min(s, len) / len), seg / len);
+            s -= len;
+        }
+        return (path[^1], Vector2.UnitY);
     }
 }
