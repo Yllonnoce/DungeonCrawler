@@ -17,9 +17,15 @@ namespace DungeonCrawler.Core;
 // inside a GridMap item (a plinth, a wall cube, a ramp box). Findings merge into runs per track; the ramps on both lanes, the set
 // pieces' S and the cavern's span follow, and the verdict is the last line. A probe whose ray finds no drawn floor is counted
 // nofloorDrop over a chasm or pit cell (a legitimate drop) and nofloorOff anywhere else (a track deeper or higher than the ray's
-// window, or a probe inside a wall cube): the pass is buried=0 inside=0 nofloorOff=0. With --track-depth-float a sample whose curve stands
-// more than CM cm over the highest floor under its probes is listed as a float (not counted in the verdict). The physics queries
-// run on the physics tick after the --print-map block, which then prints the ASCII map and quits.
+// window, or a probe inside a wall cube); a ray that spent its MaxCasts on other colliders is counted budget, never a drop: the pass
+// is buried=0 inside=0 nofloorOff=0 budget=0. Every track is sampled at each Step and at its own Length. Each per-track line and the
+// verdict carry the worst float (the curve over the highest floor under its probes); with --track-depth-float each sample standing
+// more than CM cm over it is listed (floats are not counted as failures). The ramp lines' sag and crest S are the curve's nearest
+// point to the ramp's end edge in XZ (the track's height there does not matter). The physics queries run on the physics tick after
+// the --print-map block, which then prints the ASCII map and quits.
+// Blind spots: a track 3 m or more under the upper half of a ramp is silent (the ray starts inside or under the slope box and reads
+// the ramp item's under-slab as the floor: neither buried, inside nor nofloorOff; the next samples enter the plinth and are caught).
+// RayUp cannot grow past 3.8 m: the vaults spring 3.8 m over the floor top, and a ray started above that would read a ceiling as floor.
 public partial class DebugTools
 {
     private bool _trackDepth, _trackDepthFloat, _trackDepthDue;
@@ -41,8 +47,8 @@ public partial class DebugTools
         static string Label(RailTrack t) => t.Name.ToString() is "PartyTrack" or "EnemyTrack" ? t.Name.ToString() : $"{t.GetParent()?.Name}/{t.Name}";
         DepthLine($"threshold={cm}cm step={TrackDepthRules.Step}m tracks={string.Join(",", tracks.Select(Label))}");
 
-        int totalBuried = 0, totalInside = 0, totalRuns = 0, totalOff = 0;
-        var totalWorst = 0f;
+        int totalBuried = 0, totalInside = 0, totalRuns = 0, totalOff = 0, totalBudget = 0;
+        float totalWorst = 0f, totalFloat = 0f;
         foreach (var track in tracks)
         {
             var label = Label(track);
@@ -50,11 +56,11 @@ public partial class DebugTools
             var floats = new List<DepthHit>();
             var buriedS = new HashSet<float>();
             var insideS = new HashSet<float>();
-            int samples = 0, noFloorDrop = 0, noFloorOff = 0;
+            int samples = 0, noFloorDrop = 0, noFloorOff = 0, budget = 0;
             DepthHit? worst = null;
-            for (var k = 0; k * TrackDepthRules.Step <= track.Length + 1e-4f; k++)
+            float worstFloat = 0f, worstFloatS = 0f;
+            foreach (var s in SampleS(track.Length))
             {
-                var s = k * TrackDepthRules.Step;
                 samples++;
                 var f = track.GlobalTransform * track.Curve.SampleBakedWithRotation(s, true, true);
                 var x = f.Basis.X.Normalized();
@@ -77,9 +83,11 @@ public partial class DebugTools
                 for (var i = 0; i < probes.Length; i++)
                 {
                     var p = probes[i];
-                    if (DrawnFloorUnder(space, p, bed.Y) is not { } floorY)
+                    var (found, exhausted) = DrawnFloorUnder(space, p, bed.Y);
+                    if (found is not { } floorY)
                     {
-                        if (TrackDepthRules.OverDrop(layout[DungeonBuilder.WorldToCell(p)])) noFloorDrop++;
+                        if (exhausted) budget++;
+                        else if (TrackDepthRules.OverDrop(layout[DungeonBuilder.WorldToCell(p)])) noFloorDrop++;
                         else noFloorOff++;
                         continue;
                     }
@@ -115,7 +123,8 @@ public partial class DebugTools
                     DepthLine($"{label} S={s:0.0} cell={cell} {layout[cell]} L{layout.LevelOf(cell)} probe={name} inside={inside.Item}@({inside.Map.X},{inside.Map.Y},{inside.Map.Z}) cause={CauseName(cause, variant)}");
                 }
 
-                // the curve standing over the floor (a sag), listed on request
+                // the curve standing over the floor (a sag): the worst always, each sample on request
+                if (highest is { } over && bed.Y - over > worstFloat) { worstFloat = bed.Y - over; worstFloatS = s; }
                 if (_trackDepthFloat && highest is { } top && TrackDepthRules.Buried(bed.Y - top, cm))
                 {
                     var buckled = builder.BuckledCells.TryGetValue(laneCell, out var variant);
@@ -131,11 +140,14 @@ public partial class DebugTools
             foreach (var run in TrackDepthRules.Runs(floats))
                 DepthLine($"float run {run.Track} S={run.FromS:0.0}..{run.ToS:0.0} cells=[{string.Join(",", run.Cells)}] samples={run.Samples} worst={Cm(run.Worst)}cm cause={CauseName(run.Cause, -1)}");
             var at = worst is { } ww ? $" at S={ww.S.ToString("0.0", CultureInfo.InvariantCulture)} cell={ww.Cell}" : "";
-            DepthLine($"{label} length={track.Length:0.0} samples={samples} buried={buriedS.Count} inside={insideS.Count} runs={runs.Count} worst={Cm(worst?.Under ?? 0f)}cm{at} nofloorDrop={noFloorDrop} nofloorOff={noFloorOff}");
+            var floatAt = Cm(worstFloat) > 0 ? $" at S={worstFloatS.ToString("0.0", CultureInfo.InvariantCulture)}" : "";
+            DepthLine($"{label} length={track.Length:0.0} samples={samples} buried={buriedS.Count} inside={insideS.Count} runs={runs.Count} worst={Cm(worst?.Under ?? 0f)}cm{at} float={Cm(worstFloat)}cm{floatAt} nofloorDrop={noFloorDrop} nofloorOff={noFloorOff} budget={budget}");
             totalBuried += buriedS.Count;
             totalInside += insideS.Count;
             totalRuns += runs.Count;
             totalOff += noFloorOff;
+            totalBudget += budget;
+            totalFloat = MathF.Max(totalFloat, worstFloat);
             if (worst is { } tw) totalWorst = MathF.Max(totalWorst, tw.Under);
         }
 
@@ -162,8 +174,8 @@ public partial class DebugTools
                     var crest2 = RailBed.CrestEdge(r, DungeonBuilder.CellSize);
                     var sag = new Vector3(sag2.X, DungeonBuilder.FloorTop + layout.Ramps[r.Low].LowHeight, sag2.Y);
                     var crest = new Vector3(crest2.X, DungeonBuilder.FloorTop + layout.Ramps[r.High].HighHeight, crest2.Y);
-                    var ride = builder.PartyTrack is { } party ? RideAt(party.Curve.GetClosestOffset(party.ToLocal(sag))) : 0;
-                    DepthLine($"ramp {name} ride={ride} cells={r.Low}->{r.High} {(r.Climb ? "climb" : "descent")} sag S={track.Curve.GetClosestOffset(track.ToLocal(sag)):0.0} crest S={track.Curve.GetClosestOffset(track.ToLocal(crest)):0.0}");
+                    var ride = builder.PartyTrack is { } party ? RideAt(ClosestSInXz(party, sag)) : 0;
+                    DepthLine($"ramp {name} ride={ride} cells={r.Low}->{r.High} {(r.Climb ? "climb" : "descent")} sag S={ClosestSInXz(track, sag):0.0} crest S={ClosestSInXz(track, crest):0.0}");
                 }
             }
             if (RailEncounterController.Instance is { } enc)
@@ -178,7 +190,7 @@ public partial class DebugTools
         }
 
         var buckledLane = builder.BuckledCells.Keys.Count(layout.IsRail);
-        GD.Print("[track-depth] " + TrackDepthRules.Verdict(totalBuried, totalInside, totalOff, totalRuns, totalWorst, buckledLane, ramps));
+        GD.Print("[track-depth] " + TrackDepthRules.Verdict(totalBuried, totalInside, totalOff, totalBudget, totalRuns, totalWorst, totalFloat, buckledLane, ramps));
     }
 
     private static void CollectTracks(Node node, List<RailTrack> into)
@@ -190,14 +202,43 @@ public partial class DebugTools
         }
     }
 
+    /// <summary>The S of every sample: each <see cref="TrackDepthRules.Step"/> from 0, and the track's own end.</summary>
+    private static IEnumerable<float> SampleS(float length)
+    {
+        var last = 0f;
+        for (var k = 0; k * TrackDepthRules.Step <= length + 1e-4f; k++) yield return last = k * TrackDepthRules.Step;
+        if (length - last > 1e-3f) yield return length;
+    }
+
+    /// <summary>
+    /// The S of the track's point nearest <paramref name="world"/> in XZ: the 3D-nearest point first, then a scan 4 m either side of
+    /// it every centimetre. The 3D-nearest alone slides along a slope when the track runs over or under the point's height.
+    /// </summary>
+    private static float ClosestSInXz(RailTrack t, Vector3 world)
+    {
+        var s0 = t.Curve.GetClosestOffset(t.ToLocal(world));
+        float best = s0, bestD = float.MaxValue;
+        for (var s = Mathf.Max(0f, s0 - 4f); s <= Mathf.Min(t.Length, s0 + 4f); s += 0.01f)
+        {
+            var p = TrackPoint(t, s);
+            var d = (p.X - world.X) * (p.X - world.X) + (p.Z - world.Z) * (p.Z - world.Z);
+            if (d < bestD) { bestD = d; best = s; }
+        }
+        return best;
+    }
+
     private static Vector3 TrackPoint(RailTrack t, float s) => t.ToGlobal(t.Curve.SampleBaked(Mathf.Clamp(s, 0f, t.Length), true));
 
     /// <summary>The drawn floor: the cell grid, or a crevasse's deck footings. Every other collider (carts, barricades, props) is not.</summary>
     private static bool IsDrawnFloor(GodotObject? o) => o is GridMap grid && grid.Name.ToString() == "Structure"
         || o is StaticBody3D body && body.Name.ToString() == "Footings" && body.GetParent()?.Name.ToString() == "Chasms";
 
-    /// <summary>The height of the drawn floor straight under <paramref name="p"/>, from <see cref="TrackDepthRules.RayUp"/> over the curve to <see cref="TrackDepthRules.RayDown"/> under it; null over a drop.</summary>
-    private static float? DrawnFloorUnder(PhysicsDirectSpaceState3D space, Vector3 p, float bedY)
+    /// <summary>
+    /// The height of the drawn floor straight under <paramref name="p"/>, from <see cref="TrackDepthRules.RayUp"/> over the curve to
+    /// <see cref="TrackDepthRules.RayDown"/> under it; null with no floor in that window, and <c>Exhausted</c> when every one of the
+    /// <see cref="TrackDepthRules.MaxCasts"/> casts met another collider (no answer, not a drop).
+    /// </summary>
+    private static (float? Y, bool Exhausted) DrawnFloorUnder(PhysicsDirectSpaceState3D space, Vector3 p, float bedY)
     {
         var from = new Vector3(p.X, bedY + TrackDepthRules.RayUp, p.Z);
         var to = new Vector3(p.X, bedY - TrackDepthRules.RayDown, p.Z);
@@ -205,11 +246,11 @@ public partial class DebugTools
         for (var cast = 0; cast < TrackDepthRules.MaxCasts; cast++)
         {
             var hit = space.IntersectRay(PhysicsRayQueryParameters3D.Create(from, to, 1, exclude));
-            if (hit.Count == 0) return null;
-            if (IsDrawnFloor(hit["collider"].AsGodotObject())) return hit["position"].AsVector3().Y;
+            if (hit.Count == 0) return (null, false);
+            if (IsDrawnFloor(hit["collider"].AsGodotObject())) return (hit["position"].AsVector3().Y, false);
             exclude.Add(hit["rid"].AsRid());
         }
-        return null;
+        return (null, true);
     }
 
     /// <summary>The drawn item <paramref name="p"/> lies inside, by its map cell and library name; null when none (a concave bump is caught by the ray instead).</summary>

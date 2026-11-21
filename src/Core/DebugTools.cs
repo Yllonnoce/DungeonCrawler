@@ -34,7 +34,7 @@ namespace DungeonCrawler.Core;
 ///                       height between them, sleeper tops; rays and point queries) and list each probe buried more than CM cm (default 3)
 ///                       or inside a drawn item, with its cause (buckled{v}, ramp-crest, wall, plinth, other), the runs per track, the
 ///                       line's ramps with their sag and crest S, every set piece's S, the cavern's span and the verdict ([track-depth] total ...;
-///                       the pass is buried=0 inside=0 nofloorOff=0, nofloorOff counting probes with no floor under them off a chasm or pit)
+///                       the pass is buried=0 inside=0 nofloorOff=0 budget=0, nofloorOff counting probes with no floor under them off a chasm or pit)
 ///   --track-depth-float with --track-depth: also list each sample whose track stands more than CM cm over the floor (ramp-sag)
 ///   --smoke             scripted end-to-end run: get hit, kill an enemy, loot it, descend twice, ascend once, report
 ///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart

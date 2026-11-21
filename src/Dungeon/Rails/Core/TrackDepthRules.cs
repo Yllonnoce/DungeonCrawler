@@ -87,13 +87,14 @@ public static class TrackDepthRules
     }
 
     /// <summary>
-    /// The probe's last line: the totals over every track, the worst depth in whole centimetres. <paramref name="noFloorOff"/>
-    /// counts the probes with no drawn floor in the ray's window anywhere but over a drop (a chasm or a pit): a track too deep
-    /// or too high for the ray. The pass is buried=0 inside=0 nofloorOff=0.
+    /// The probe's last line: the totals over every track, the worst depth and the worst float in whole centimetres.
+    /// <paramref name="noFloorOff"/> counts the probes with no drawn floor in the ray's window anywhere but over a drop (a chasm or
+    /// a pit): a track too deep or too high for the ray. <paramref name="budget"/> counts the probes whose ray spent every cast on
+    /// other colliders (no answer at all). The pass is buried=0 inside=0 nofloorOff=0 budget=0.
     /// </summary>
-    public static string Verdict(int buried, int inside, int noFloorOff, int runs, float worstM, int buckledLaneCells, int ramps)
+    public static string Verdict(int buried, int inside, int noFloorOff, int budget, int runs, float worstM, float worstFloatM, int buckledLaneCells, int ramps)
         => string.Create(CultureInfo.InvariantCulture,
-            $"total buried={buried} inside={inside} nofloorOff={noFloorOff} runs={runs} worst={(int)MathF.Round(worstM * 100f)}cm buckledLaneCells={buckledLaneCells} rampsOnLine={ramps}");
+            $"total buried={buried} inside={inside} nofloorOff={noFloorOff} budget={budget} runs={runs} worst={(int)MathF.Round(worstM * 100f)}cm float={(int)MathF.Round(worstFloatM * 100f)}cm buckledLaneCells={buckledLaneCells} rampsOnLine={ramps}");
 
     /// <summary>A probe over a drop (a chasm, crevasse or cavern cell, or a pit) legitimately finds no drawn floor under it.</summary>
     public static bool OverDrop(Cell cell) => cell is Cell.Chasm or Cell.Pit;
