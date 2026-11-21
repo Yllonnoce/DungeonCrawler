@@ -167,7 +167,7 @@ public partial class RailEncounterController
     {
         var w = _rideRunaway;
         if (w == null) return;
-        if (!IsInstanceValid(w.Body)) { _rideRunaway = null; _warnedRideRunaway.Clear(); return; }
+        if (!IsInstanceValid(w.Body)) { _rideRunaway = null; _warnedRideRunaway.Clear(); ResetSplitIfWaiting("the runaway's body is gone"); return; }
         if (_rails.State.Mode == CartMode.Wrecked || _rails.Wrecks != w.Wrecks) { FreeRideRunaway("the train is wrecked"); return; } // before the event's flush
         if (_rails.Chaser != null) { FreeRideRunaway("a chaser on the party line"); return; }
         if (w.OnSpur) { TickRunawayOnSpur(w, dt, party); return; }

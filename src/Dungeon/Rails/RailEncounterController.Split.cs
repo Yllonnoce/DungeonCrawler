@@ -181,7 +181,7 @@ public partial class RailEncounterController
     {
         if (ride != SplitRide) return;
         _partyOnSpur = false;
-        _splitResetWaits = false;
+        ResetSplitIfWaiting("the ride arms again"); // never left waiting past a new arming (fix round 2)
         _splitWaitCalled = _splitNotYetCalled = _splitNowCalled = false;
         _splitHeldShort = float.NaN;
         _split?.Lever.DropHeld();
@@ -247,7 +247,7 @@ public partial class RailEncounterController
         }
         GD.Print($"[rails] split {id}: the train passes straight at S={_rails.State.S:0.0} (front {front:0.0})");
         if (lever.HeldBy is { } held && lever.ThrowHeld(held))
-            GD.Print($"[rails] split {id}: {held}'s throw held to the points ({_splitHeldShort:0.0} m short): thrown behind the train at front S={front:0.0}");
+            GD.Print($"[rails] split {id}: {held}'s throw held to the points ({(_splitHeldShort > 0f ? $"{_splitHeldShort:0.0} m short" : $"pressed {-_splitHeldShort:0.0} m past them, the branch not yet decided")}): thrown behind the train at front S={front:0.0}");
         _splitHeldShort = float.NaN;
     }
 

@@ -297,6 +297,7 @@ public partial class DebugTools
     private readonly HashSet<string> _spMayFall = new();
     private readonly List<Adventurer> _spRiders = new();
     private int _spHeldLogs;
+    private bool _spLeadChecked;
     private bool _spListening, _spWiped, _spTakesSpurLog, _spFallLog, _spLoneLog, _spPlungeLog;
     private RailController? _spHooked, _spWipeRc;
     private float _spTime, _spWaitFront = float.NaN, _spNotYetFront = float.NaN, _spNowFront = float.NaN;
@@ -444,17 +445,32 @@ public partial class DebugTools
                         if (!_spPressedAfter && front > points + 3f && rolling) { Fail($"no press 1-3 m past the points (front S={front:0.0}, offered {offered})"); return; }
                         break;
                     default:
+                        if (v == "early" && !_spLeadChecked && rolling && front >= points - 10.5f)
+                        {
+                            // short of the server's early lead (the window less 5 m) a remote press is not taken
+                            _spLeadChecked = true;
+                            var from = points - SplitRules.PressReach(split.WindowAhead);
+                            var window = front < from && enc.InSeatedWindow(me, lever);
+                            GD.Print($"[split] early: short of the early lead (front S={front:0.0}, the lead from S={from:0.0}): the server's seated window {(front < from ? (window ? "yes" : "no") : "not checked (the front already in the lead)")}");
+                            if (window) { Fail("the server takes a press short of its early lead"); return; }
+                        }
                         if (!_spThrown9 && rolling && front >= points - 9f)
                         {
                             if (front > points - 8f) { Fail($"the front passed 9 m short unseen (S={front:0.0})"); return; }
                             if (v == "early")
                             {
-                                // a press 9 m short is never thrown: the seat does not offer it there, and the lever itself refuses it (or holds it)
+                                // a press 9 m short is never thrown: the seat does not offer it there; a remote seat's press, judged as the server judges
+                                // an InteractIntent (ServerWorld: InSeatedWindow, the late check, then Interact), is taken in the early lead and held
                                 party.VrUse(true);
                                 party.VrUse(false);
-                                lever.Interact(party, me);
-                                GD.Print($"[split] early: the lead presses 9 m short (front S={front:0.0}; the seat offers {(offered ? "it" : "nothing")}, the lever's prompt \"{lever.Prompt}\"): thrown={lever.Thrown}, held by {lever.HeldBy ?? "nobody"}");
-                                if (lever.Thrown) { Fail("a press 9 m short threw the split"); return; }
+                                if (lever.Thrown || lever.HeldBy != null) { Fail("the seat's press 9 m short threw or held the split (the window is not open there)"); return; }
+                                var window = enc.InSeatedWindow(me, lever);
+                                var late = enc.LateFor(lever);
+                                GD.Print($"[split] early: a remote seat's press as the server takes it, 9 m short (front S={front:0.0}; the seat offers {(offered ? "it" : "nothing")}, the prompt \"{lever.Prompt}\"): seated window {(window ? "yes" : "no")} (from S={points - SplitRules.PressReach(split.WindowAhead):0.0}), late {late}");
+                                if (!window || late != LatePress.None) { Fail("the server would drop a remote press 9 m short, in its early lead"); return; }
+                                lever.Interact(party, me); // ServerWorld's next step for a press in the window
+                                GD.Print($"[split] early: the press taken: thrown={lever.Thrown}, held by {lever.HeldBy ?? "nobody"}");
+                                if (lever.Thrown || lever.HeldBy != me.State.Name) { Fail("the server's press 9 m short was not held to the points"); return; }
                             }
                             lever.DebugThrow(); // the test's hook: a lever thrown short of its window (no press can do it)
                             _spThrown9 = true;

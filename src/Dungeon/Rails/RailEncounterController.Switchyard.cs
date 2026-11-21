@@ -413,7 +413,7 @@ public partial class RailEncounterController
         {
             var p = _pieces[i];
             if (p.Plan.Ride != ArmedRide || p.Switch != lever) continue;
-            return LeverOffered(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
+            return LeverAccepted(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
         }
         return false;
     }
@@ -423,6 +423,12 @@ public partial class RailEncounterController
 
     /// <summary>A piece's lever may be offered from the seat now: the split's only while its runaway is coming (<see cref="SplitOffered"/>), a live back by <see cref="BackOffered"/>.</summary>
     private bool LeverOffered(Piece p) => p.Split != null ? SplitOffered(p) : BackOffered(p);
+
+    /// <summary>
+    /// The server takes a seated press on a piece's lever now (<see cref="InSeatedWindow"/>): the split's from its early lead before the window
+    /// (<see cref="SplitAccepts"/>, fix round 2: a remote press there is held, not dropped), a live back by <see cref="BackOffered"/>.
+    /// </summary>
+    private bool LeverAccepted(Piece p) => p.Split != null ? SplitAccepts(p) : BackOffered(p);
 
     /// <summary>The buckets tip; a live patch the cart's body is over dents the plating and burns each seated hero, once per patch.</summary>
     private void TickBuckets(Piece piece, float dt)
