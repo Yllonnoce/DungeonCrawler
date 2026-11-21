@@ -4,6 +4,11 @@
 > track when you choose correctly: the full ring (plan 9) and switches whose right choice keeps the line whole and
 > whose wrong choice kills (plans 11 and 12). Plan 15 is not built. Every loop-the-loop item below is withdrawn; the
 > cavern plan (13) keeps the collapsing bridge and the spiral.
+>
+> **Owner decision, 2026-11-22: the spiral is removed for now.** A spiral down into the cavern would have to come
+> back up to stop 4 at floor height (a chain lift or a second helix), and the owner chose to drop it. Plan 13 is the
+> cavern's collapsing bridge only; the track stays on the floor's two levels, with no free 3D track. Every spiral item
+> below is withdrawn (it may return in a later plan).
 
 Approved by the owner on 2026-11-19. After their solo play test they asked for:
 - barricades;
