@@ -68,6 +68,9 @@ public partial class RailEncounterController
 
     /// <summary>The set pieces built on this floor (tests and the smoke read it).</summary>
     public int SetPieceCount => _pieces.Count;
+    /// <summary>Every built set piece in index order: its id, ride, kind and party S (--track-depth reads it).</summary>
+    internal IEnumerable<(string Id, int Ride, string Kind, float S)> DebugPieces()
+        => _pieces.OrderBy(p => p.Index).Select(p => (p.Plan.Id, p.Plan.Ride, p.Plan.Kind, p.S));
     /// <summary>Whether <paramref name="enemy"/> is one of the floor's trackside throwers (tests read it).</summary>
     internal bool IsThrower(Enemy enemy)
     {

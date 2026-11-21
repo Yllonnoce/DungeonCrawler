@@ -29,6 +29,13 @@ namespace DungeonCrawler.Core;
 ///   --auto-attack       every member swings whenever ready (headless combat smoke test)
 ///   --trace-ai          print enemy state transitions
 ///   --quit-after=SECONDS quit without a screenshot
+///   --print-map         once the floor stands, print its rooms, its line ([map] rail ...) and its ASCII map, then quit
+///   --track-depth[=CM]  with --print-map (implied): probe every rail track against the drawn floor every 0.5 m (rail tops, rail-top
+///                       height between them, sleeper tops; rays and point queries) and list each probe buried more than CM cm (default 3)
+///                       or inside a drawn item, with its cause (buckled{v}, ramp-crest, wall, plinth, other), the runs per track, the
+///                       line's ramps with their sag and crest S, every set piece's S, the cavern's span and the verdict ([track-depth] total ...;
+///                       the pass is buried=0 inside=0 nofloorOff=0, nofloorOff counting probes with no floor under them off a chasm or pit)
+///   --track-depth-float with --track-depth: also list each sample whose track stands more than CM cm over the floor (ramp-sag)
 ///   --smoke             scripted end-to-end run: get hit, kill an enemy, loot it, descend twice, ascend once, report
 ///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart
 ///   --test-ride-edges   floor 12: a companion revived behind the cart, a mid-ride load, the human thrown at lethality 1, companions left at a stop
@@ -438,6 +445,8 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--layout=")) ForcedLayout = arg["--layout=".Length..];
             else if (arg.StartsWith("--objective=")) ForcedObjective = arg["--objective=".Length..];
             else if (arg == "--print-map") { _printMap = true; if (_quitAfter <= 0) _quitAfter = 4; }
+            else if (arg == "--track-depth-float") _trackDepthFloat = true;
+            else if (arg == "--track-depth" || arg.StartsWith("--track-depth=")) { _trackDepth = true; _printMap = true; if (arg.Contains('=')) _trackDepthCm = int.Parse(arg[(arg.IndexOf('=') + 1)..], System.Globalization.CultureInfo.InvariantCulture); _quitAfter = Math.Max(_quitAfter, 20); }
             else if (arg.StartsWith("--lethality=")) ForcedLethality = float.Parse(arg["--lethality=".Length..], System.Globalization.CultureInfo.InvariantCulture);
             else if (arg.StartsWith("--vault=")) ForcedVault = arg["--vault=".Length..];
             else if (arg.StartsWith("--inspect=")) { var xy = arg["--inspect=".Length..].Split(','); _inspect = (int.Parse(xy[0]), int.Parse(xy[1])); _quitAfter = Math.Max(_quitAfter, 3); }
@@ -949,8 +958,12 @@ public partial class DebugTools : Node
                     GD.Print($"[map] rail split: ride {spl.Ride} points at party S={S(spl.Points):0.0}, crevasse S={S(spl.Crevasse.From) - half:0.0}..{S(spl.Crevasse.To) + half:0.0}");
                 }
             }
-            GD.Print(mapLayout.ToAscii());
-            GetTree().Quit();
+            if (_trackDepth) _trackDepthDue = true; // the probe's physics queries run on the next physics tick, which prints the map and quits
+            else
+            {
+                GD.Print(mapLayout.ToAscii());
+                GetTree().Quit();
+            }
         }
         if (_testParty) RunPartyTest();
         if (_testGold) RunGoldTest();
@@ -5051,6 +5064,14 @@ public partial class DebugTools : Node
 
     public override void _PhysicsProcess(double delta)
     {
+        if (_trackDepthDue)
+        {
+            _trackDepthDue = false;
+            RunTrackDepth();
+            if (Main.Instance?.Builder.Layout is { } depthLayout) GD.Print(depthLayout.ToAscii());
+            GetTree().Quit();
+            return;
+        }
         if (_testChase) ChasePoll();
         if (_testTickRate) TickRatePoll(delta);
         if (_pathTarget == null || !IsInstanceValid(_pathTarget) || _depthStep != 3) return;
