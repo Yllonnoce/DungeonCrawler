@@ -16,7 +16,9 @@ public interface ISlopeSource
 /// moves the rendered S toward it: at the copy's speed plus 2·error, the correction held within ±max(0.15·V, 0.5 m/s), never
 /// against the way of travel while V ≥ 0.5 m/s (below it easing back at most 0.5 m/s). It snaps when the error passes
 /// <see cref="SnapError"/>, when the state turns Held or Wrecked (Held to the state's own S: a halt sits short of any stop) and
-/// when the track changes. Engine-free, no allocation.
+/// when the track changes. A snap to a state older than the catch-up's reach (the states sent while this client built the floor,
+/// read after the build) stands short of the server's cart by what was not stepped: the next state within reach snaps again.
+/// Engine-free, no allocation.
 /// </summary>
 public sealed class CartFollower
 {
@@ -42,6 +44,8 @@ public sealed class CartFollower
     private float _v;
     /// <summary>The cart's middle stops here while an obstacle stands ahead on its lane (its face minus a half length in Dir), or NaN.</summary>
     private float _block = float.NaN;
+    /// <summary>The rendered S was last snapped to a state too old to catch up in full (<see cref="MaxCatchUp"/>): the next state within reach snaps it.</summary>
+    private bool _shortSnap;
 
     public CartFollower(ISlopeSource? slopes) => _slopes = slopes;
 
@@ -71,6 +75,7 @@ public sealed class CartFollower
     public void Reset()
     {
         HasState = false;
+        _shortSnap = false;
         _lastTime = double.NegativeInfinity;
         _clock.Reset();
         _v = 0f;
@@ -95,19 +100,21 @@ public sealed class CartFollower
         // catch up from the state's time to now, in whole fixed steps; the part step left is banked
         var elapsed = serverNow - s.ServerTime;
         var banked = 0f;
+        var unstepped = false; // more than a step of the state's age left unstepped: the copy stands short of the server's cart
         if (elapsed > 0 && mode == CartMode.Rolling)
         {
             var n = (int)(elapsed / CartClock.FixedStep + 1e-4);
-            if (n >= MaxCatchUp) n = MaxCatchUp;
+            if (n >= MaxCatchUp) { n = MaxCatchUp; unstepped = elapsed - MaxCatchUp * (double)CartClock.FixedStep > CartClock.FixedStep; }
             else banked = (float)(elapsed - n * (double)CartClock.FixedStep);
             for (var i = 0; i < n; i++) StepAuth();
         }
         _clock.Reset(banked);
         _authNow = AuthNow();
 
-        var snap = !HasState || trackChanged || mode != CartMode.Rolling || Math.Abs(_authNow - _rendered) > SnapError;
+        var snap = !HasState || trackChanged || mode != CartMode.Rolling || Math.Abs(_authNow - _rendered) > SnapError || (_shortSnap && !unstepped);
         HasState = true;
         if (!snap) return;
+        _shortSnap = unstepped;
         var to = mode == CartMode.Rolling ? _authNow : s.S; // Held sits where the server says (a halt short of any stop)
         if (to != _rendered || Snaps == 0) Snaps++;
         _rendered = to;

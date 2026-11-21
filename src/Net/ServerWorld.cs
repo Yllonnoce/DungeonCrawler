@@ -124,6 +124,7 @@ public partial class ServerWorld : Node
         var game = Game.Instance;
         var party = main.Party;
         var poses = party.Adventurers.Select(a => new PoseDto { X = a.GlobalPosition.X, Y = a.GlobalPosition.Y, Z = a.GlobalPosition.Z, Yaw = a.Rotation.Y }).ToList();
+        for (var i = 0; i < poses.Count; i++) _spawnSent[i] = new Vector3(poses[i].X, poses[i].Y, poses[i].Z);
         game.Floors.TryGetValue(floor, out var state);
         _floorEpoch++; // a new build, even of the same floor number (a wipe's reload): checks about the old one no longer apply
         _floorDelta = delta;
@@ -146,6 +147,12 @@ public partial class ServerWorld : Node
     private double _floorBuiltAt;
     /// <summary>The floor build each joining peer's Welcome described (until its Ready): a rebuild in between makes it follow like a floor change.</summary>
     private readonly Dictionary<int, int> _welcomeEpoch = new();
+    /// <summary>
+    /// Where each member's client was told it stands on the floor it builds (the FloorChange's poses, taken as the floor is built), until
+    /// its Ready: a body the server moved since (a wipe's rise beside the cart) is put there by the floor-ready ForcePose, and the poses its
+    /// client sent from the spot it was told, before that ForcePose landed, are dropped (the shove guard), not applied as a step back there.
+    /// </summary>
+    private readonly Dictionary<int, Vector3> _spawnSent = new();
 
     /// <summary>
     /// The FloorChange for the floor on the server now: the one every peer gets when it is built, or (resync) the answer to
@@ -180,6 +187,8 @@ public partial class ServerWorld : Node
         {
             var body = party.Adventurers[slot.MemberIndex];
             SendTo(slot.PeerId, new ForcePose(slot.MemberIndex, new PoseDto { X = body.GlobalPosition.X, Y = body.GlobalPosition.Y, Z = body.GlobalPosition.Z, Yaw = body.Rotation.Y }));
+            if (_spawnSent.Remove(slot.MemberIndex, out var told) && body.Control == ControlKind.Remote && told.DistanceTo(body.GlobalPosition) > 0.5f)
+                NoteShoved(slot.MemberIndex, told, body.GlobalPosition); // its poses in flight from where the FloorChange put it would pull the body back there
         }
         SendSnapshotTo(slot.PeerId, full: true);
         foreach (var q in AdventureDirector.Instance.Quests.Values) SendTo(slot.PeerId, new QuestSync(q));
@@ -331,6 +340,7 @@ public partial class ServerWorld : Node
         var main = Main.Instance;
         var party = main.Party;
         var index = slot.MemberIndex;
+        _spawnSent.Remove(index); // a join places its body itself (below): a floor's told spot is not its
         FlushJoinQueue(slot.PeerId);
         // the floor changed while this player built the old one (the held FloorChange is on its way to it now): its poses
         // must not count until it has built the new floor and said so (OnFloorReady sets Ready and sends the full picture)

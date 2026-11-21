@@ -80,6 +80,7 @@ public partial class ServerWorld
         if (slot.MemberIndex < party.Adventurers.Length) party.Adventurers[slot.MemberIndex].Remote = null;
         var state = FloorStateCapture.Capture(root, layout, main.Builder.Contents, exploration);
         var poses = party.Adventurers.Select(a => new PoseDto { X = a.GlobalPosition.X, Y = a.GlobalPosition.Y, Z = a.GlobalPosition.Z, Yaw = a.Rotation.Y }).ToList();
+        if (slot.MemberIndex < poses.Count) _spawnSent[slot.MemberIndex] = new Vector3(poses[slot.MemberIndex].X, poses[slot.MemberIndex].Y, poses[slot.MemberIndex].Z);
         // the change it missed, if it holds an older build (its log says it descended); a rebuild in place otherwise
         var delta = r.Epoch != _floorEpoch ? _floorDelta : 0;
         SendTo(slot.PeerId, FloorChangeOf(game.CurrentFloor, delta, state, poses, firstVisit: false, resync: true));

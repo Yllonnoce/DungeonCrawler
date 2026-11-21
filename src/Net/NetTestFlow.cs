@@ -237,8 +237,10 @@ public partial class NetTestFlow : Node
         }
         RideWreckServer(world);
         RideWipeServer(world);
+        RideRiseWatch(world);
         if (world.Trace.Contains("empty"))
         {
+            RideRiseWatchJudge(world);
             var keys = _rideKeyring ? new[] { $"prop:{NetRefs.Keyring}:taken" } : Array.Empty<string>();
             var want = new[] { "join:", "ready:", "floor:12", "aboard:" }.Concat(keys)
                 .Concat(new[] { $"prop:{NetRefs.Wagon(1)}:open", $"prop:{NetRefs.Switch(_rideSwitch)}:thrown", $"prop:{NetRefs.Switch(_rideBack)}:thrown", "chase:", "chase-done", "unseat-quiet:", "left:", "wreck-spare:", "heap-halt", "wreck-last" }).ToArray();
@@ -435,6 +437,44 @@ public partial class NetTestFlow : Node
         GD.Print(FormattableString.Invariant($"[net-server] ride: wipe-rise: [{string.Join(", ", standing.Select(a => $"{a.State.Name} {a.GlobalPosition.DistanceTo(now.Cart.GlobalPosition):0.0} m{(a.State.Fallen ? " FALLEN" : "")}{(a.Downed ? " down" : "")}"))}] of {_wipeHeroes} given; the joiner {(joiner == null ? "OFFLINE" : beside.Contains(joiner) ? "among them" : "NOT beside the cart")} ({(_wipeOk ? "ok" : "FAIL")})"));
     }
     private bool _wipeSettled;
+
+    // the rise watched (the wipe-rise intermittent): from the rise until the joiner leaves, each tick, how far the server's copy of the
+    // joiner's body stands from the party's cart. The server placed it beside the cart; its client, built at the spot the FloorChange
+    // told it, is put there by the floor-ready ForcePose, and its poses sent from the told spot before that landed must not pull the body
+    // back there even for a tick (a companion following it would take that tick to regroup there, as Brand did: 68 m from the cart)
+    private bool _riseWatching, _riseWatchDone, _riseReadySeen, _riseSettled;
+    private float _riseWorst = -1f;
+    private double _riseWorstAt;
+    private int _riseDropsFrom;
+
+    private void RideRiseWatch(ServerWorld world)
+    {
+        if (_riseWatchDone || !_wipeAsked || Main.Instance is not { } main || main.Party is not { } party) return;
+        if (!_riseWatching)
+        {
+            // from the tick after the rebuild stands (its deferred rise done), not from the judge's second: the joiner may be ready before it
+            if (main.Rebuilding || main.RiseAtCartPending || Dungeon.Rails.RailController.Instance is not { } built || !IsInstanceValid(built) || built == _wipeRc) return;
+            if (!_riseSettled) { _riseSettled = true; return; }
+            _riseWatching = true;
+            _riseDropsFrom = world.ShovedPosesDropped;
+        }
+        if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc)) return;
+        var js = world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name == RideJoinerName);
+        if (js == null || js.MemberIndex >= party.Adventurers.Length || party.Adventurers[js.MemberIndex] is not { } body || !IsInstanceValid(body) || body.Parked) { _riseWatchDone = true; return; }
+        if (js.Ready) _riseReadySeen = true;
+        var d = body.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition);
+        if (d > _riseWorst) { _riseWorst = d; _riseWorstAt = NetSession.Instance.Now; }
+    }
+
+    private void RideRiseWatchJudge(ServerWorld world)
+    {
+        if (!_riseWatching || _riseJudged) return;
+        _riseJudged = true;
+        var ok = _riseReadySeen && _riseWorst >= 0f && _riseWorst <= 10f;
+        GD.Print(FormattableString.Invariant($"[net-server] ride: wipe-rise watch: from the rise until the joiner left, its body here stood at most {_riseWorst:0.0} m from the cart (t={_riseWorstAt:0.000}); its client ready again here {Yes(_riseReadySeen)}; {world.ShovedPosesDropped - _riseDropsFrom} pose(s) dropped by the shove guard ({(ok ? "ok" : "FAIL")})"));
+        _wipeOk &= ok;
+    }
+    private bool _riseJudged;
 
     // riding (plan 5 task 5): the server's side of the boarding, the pump, the brake and the quiet unseat
     private bool _rideShoved, _rideLeftLanding, _ridePumpTold, _ridePumpOk, _rideHeroPumped, _rideBrakeTold, _rideBrakeOk, _rideHeldAtStop;
