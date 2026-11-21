@@ -126,6 +126,7 @@ public partial class DebugTools
         var main = Main.Instance;
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _sbClock += (float)GetProcessDeltaTime();
+        HoldTheRunaway("switchback"); // Ruling 22: not this flow's business
         var party = main.Party;
         void Fail(string why) { GD.Print($"[switchback] RESULT FAIL ({_sbVariant}): {why}"); party.ForcedMoveInput = null; _done = true; GetTree().Quit(1); }
         if (RailController.Instance is not { } rc || RailEncounterController.Instance is not { } enc || layout.Rail is not { } rail) { if (_sbClock > 3f) Fail("floor 12 has no line"); return; }

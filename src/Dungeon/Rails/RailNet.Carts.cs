@@ -31,6 +31,8 @@ public partial class RailNet
         /// <summary>A chaser's countdown seconds left as the server last told (−1 none), and this client's server time then.</summary>
         public float BoardingLeft = -1f;
         public double BoardingAt;
+        /// <summary>A runaway on the party line: seconds toward its next ring behind our train (<see cref="RunawayRules.Rings"/>, the server's rule).</summary>
+        public float BellClock;
 
         /// <summary>The chaser's countdown seconds left now, run on from the server's last word (−1 none). No allocation.</summary>
         public float BoardingLeftNow()
@@ -85,6 +87,7 @@ public partial class RailNet
     {
         if (!NetSession.IsClient || !Current || NetSession.Instance.Client is not { } client) return;
         var now = client.ServerNow;
+        _rearBefore = OwnTrainRearS(); // a ram that wrecks the train comes with the spare's cart state first: the ram is read against the train as it was
         _listed.Clear();
         foreach (var d in carts)
         {
@@ -249,6 +252,7 @@ public partial class RailNet
                 if (IsInstanceValid(rider) && rider.Carrier == slag && !rider.IsQueuedForDeletion()) rider.QueueFree();
             slag.Aboard.Clear();
         }
+        else if (cc.Kind == CartKind.Runaway && cc.Track == 0 && !derailed) ReadRam(cc);
         else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.Drop(golem.GlobalPosition);
         else if (cc.Chaser is { } chaser && chaser.Riders.Count > 0)
         {
@@ -260,6 +264,38 @@ public partial class RailNet
             _freeRiders.Clear();
         }
         cc.Body.QueueFree();
+    }
+
+    /// <summary>
+    /// Client: a runaway gone from the party line where our own train's last body is (<see cref="RunawayRules.RammedAt"/>, from our copy's last
+    /// place: the server frees it in the tick of its ram, Ruling 19) rammed it: the jolt and the smash, once. The seat shake is the server's
+    /// (relayed); the HP and the plating come as their own messages.
+    /// </summary>
+    private void ReadRam(ClientCart cc)
+    {
+        var front = cc.Run.State.S + cc.Run.Dir * CartRules.HalfLength;
+        var rear = _rearBefore;
+        if (!RunawayRules.RammedAt(front, rear)) return;
+        Props.Tremor.ShakeOnly(0.04f, 0.4f);
+        RideAudio.At("timber_smash", cc.Body.GlobalPosition);
+        GD.Print(FormattableString.Invariant($"[net] ride: the runaway rammed the train here (its front S={front:0.0}, our train's rear S={rear:0.0})"));
+    }
+
+    /// <summary>Client: our own train's last body's back S, as this screen shows it.</summary>
+    private float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
+
+    /// <summary>Client: <see cref="OwnTrainRearS"/> as the cart message being applied found it.</summary>
+    private float _rearBefore = float.NaN;
+
+    /// <summary>Client: a runaway on the party line rings behind our train by the server's rule (<see cref="RunawayRules.Rings"/>), from its own place: positional.</summary>
+    private void RingBehind(ClientCart cc, float s, float dt)
+    {
+        if (cc.Kind != CartKind.Runaway || cc.Track != 0 || cc.Sound is not { } bell || !IsInstanceValid(bell)) return;
+        var front = s + cc.Run.Dir * CartRules.HalfLength;
+        var rear = OwnTrainRearS();
+        if (!RunawayRules.Rings(cc.Follow.Mode == CartMode.Rolling, front, rear) || (cc.BellClock += dt) < RunawayRules.BellEvery) return;
+        cc.BellClock = 0f;
+        bell.RingNow();
     }
 
     public override void _Process(double delta)
@@ -283,6 +319,7 @@ public partial class RailNet
                 foreach (var rider in chaser.Riders.Values)
                     if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
             Hear(cc, s);
+            RingBehind(cc, s, dt);
         }
         if (NetSession.Instance.Client is not { } client) return;
         FlyLeaps(client.ServerNow); // after every cart is posed: the arcs start on one and end on another

@@ -116,6 +116,7 @@ public partial class DebugTools
         if (_crvStep == CrvRide + 6) { RunCrevasseFloorChange(main); return; } // on floor 13
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _crvClock += (float)GetProcessDeltaTime();
+        HoldTheRunaway("crevasse"); // Ruling 22: not this flow's business
         var party = main.Party;
         void Fail(string why) { GD.Print($"[crevasse] RESULT FAIL ({_crvVariant}): {why}"); party.ForcedMoveInput = null; _done = true; GetTree().Quit(1); }
         CrevasseListen();

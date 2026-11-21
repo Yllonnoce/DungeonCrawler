@@ -146,6 +146,7 @@ public partial class DebugTools
         var main = Main.Instance;
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _chClock += (float)GetProcessDeltaTime();
+        HoldTheRunaway("chase"); // Ruling 22: not this flow's business
         void Fail(string why) { GD.Print($"[chase] RESULT FAIL: {why}"); _done = true; GetTree().Quit(1); }
         var party = main.Party;
         var rc = RailController.Instance;

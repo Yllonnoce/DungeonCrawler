@@ -114,6 +114,7 @@ public partial class RailEncounterController : Node
     {
         if (Instance == this) Instance = null;
         if (IsInstanceValid(_rails)) _rails.CartEvents -= OnCartEvent;
+        FreeRideRunaway("the controller leaves");
         ReleaseSeekers(); // a hero must not keep walking to a refuge on a floor that is gone
     }
 
@@ -128,25 +129,29 @@ public partial class RailEncounterController : Node
         switch (e.Kind)
         {
             case CartEventKind.Departed:
+                FreeRideRunaway("the train departs"); // one lingering behind the stop goes before the next ride arms
                 ClearRide();
                 Arm(e.Stop + 1);
                 break;
             case CartEventKind.Wrecked:
+                FreeRideRunaway("the train is wrecked"); // a fall too
                 ClearRide(wrecked: true);
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
                 break;
             case CartEventKind.Restored:
+                FreeRideRunaway("the cart is restored"); // a wipe's rise or a load
                 ClearRide(loaded: true);
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
                 break;
             case CartEventKind.Arrived:
-                ClearRide();
+                ClearRide(); // the ride's runaway is not cleared: it halts behind the held train first (Ruling 13)
                 ResetSwitchyard(undone: false, upToRide: e.Stop); // the finished rides' levers only: one thrown ahead for a later ride stays thrown
                 break;
             case CartEventKind.OnFoot:
+                FreeRideRunaway("the party is on foot");
                 ClearRide();
                 ResetSwitchyard(undone: false);
                 break;
@@ -284,7 +289,7 @@ public partial class RailEncounterController : Node
         TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
         TickTrafficClocks(dt); // may start a traffic cart or a runaway wagon
-        if (_carts.Count == 0 && _traffic == null && _runaway == null)
+        if (_carts.Count == 0 && _traffic == null && _runaway == null && _rideRunaway == null)
         {
             TickSeekers();
             return;
@@ -305,6 +310,7 @@ public partial class RailEncounterController : Node
         }
         TickTraffic(dt, party);
         TickRunaway(dt, party);
+        TickRideRunaway(dt, party); // ride 4's, behind the train
         TickSeekers();
     }
 
@@ -445,6 +451,7 @@ public partial class RailEncounterController : Node
         }
         if (_traffic != null && IsInstanceValid(_traffic) && !_traffic.Derailed) PoseAndHear(_traffic.Run, _traffic.Sound, frac, 1);
         if (_runaway != null && IsInstanceValid(_runaway.Body)) PoseAndHear(_runaway.Run, _runaway.Body.Sound, frac, 0);
+        if (_rideRunaway != null && IsInstanceValid(_rideRunaway.Body)) PoseAndHear(_rideRunaway.Run, _rideRunaway.Body.Sound, frac, 0);
     }
 
     /// <summary>A cart of the ride posed for this frame and its sound fed from its run (server and single player).</summary>

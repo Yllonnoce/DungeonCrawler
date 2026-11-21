@@ -16,6 +16,8 @@ public enum BarkTrigger
     Barricade,
     // ride 3's live switch back: the early call and the last moment's (plan 11; stock only: RideBarks)
     SwitchBack, SwitchBackNow,
+    // ride 4's runaway ore wagon breaking loose behind the train (plan 12; stock only: RideBarks)
+    Runaway,
 }
 
 public sealed class VoicedCharacter

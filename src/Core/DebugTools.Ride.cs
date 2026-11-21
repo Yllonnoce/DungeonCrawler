@@ -158,6 +158,7 @@ public partial class DebugTools
         var main = Main.Instance;
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _rideClock += (float)GetProcessDeltaTime();
+        HoldTheRunaway("ride"); // Ruling 22: not this flow's business
         void Fail(string why) { GD.Print($"[ride] RESULT FAIL: {why}"); _done = true; GetTree().Quit(1); }
         var b = main.Builder;
         var party = main.Party;

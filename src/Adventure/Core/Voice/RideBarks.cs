@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,11 +11,11 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, and a live switch back's two calls.</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, and the runaway behind.</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
-        BarkTrigger.Crevasse, BarkTrigger.Barricade, BarkTrigger.SwitchBack, BarkTrigger.SwitchBackNow,
+        BarkTrigger.Crevasse, BarkTrigger.Barricade, BarkTrigger.SwitchBack, BarkTrigger.SwitchBackNow, BarkTrigger.Runaway,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -174,5 +174,16 @@ public static class RideBarks
             Ranger: new[] { "Now.", "Pull it." },
             Mage: new[] { "Now! The lever!", "Pull it, now!" },
             Generic: new[] { "Switch back — now!", "Now! The lever!", "Pull it now!" }),
+
+        [BarkTrigger.Runaway] = new Bank(
+            Brand: new[] { "Wagon loose behind us! Pump!", "Runaway on our tail! Put your backs in!", "Something's coming down the line! Pump!" },
+            Sable: new[] { "Runaway behind us, darling! Pump!", "That wagon wants a kiss, loves. Pump!", "Loose wagon on our tail! Faster!" },
+            Wren: new[] { "Wagon behind. Pump.", "Runaway. Faster.", "Behind us. Pump." },
+            Ilex: new[] { "A runaway wagon behind us! Pump, all of you!", "It gains on us! More speed!", "Loose ore wagon astern! Pump or be rammed!" },
+            Warrior: new[] { "Runaway behind! Pump!", "Wagon on our tail!" },
+            Rogue: new[] { "Loose wagon behind! Pump!", "It's catching us! Faster!" },
+            Ranger: new[] { "Wagon behind. Pump.", "Runaway. Faster." },
+            Mage: new[] { "A runaway behind us! Pump!", "It gains on us! Faster!" },
+            Generic: new[] { "Runaway on the line behind us — pump!", "Wagon loose behind us!", "Pump, it's gaining!" }),
     };
 }

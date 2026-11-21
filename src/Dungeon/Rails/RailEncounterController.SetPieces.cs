@@ -235,6 +235,12 @@ public partial class RailEncounterController
                 case "dark":
                     node = BuildDark(root, piece);
                     break;
+                case "runaway":
+                    node = BuildRunawayMarker(root, piece); // the wagon breaks loose as the front reaches it (ArmRunaway)
+                    break;
+                case "split":
+                    node = BuildSplitMarker(root, piece); // until Task 6: the layout's points, live or dead
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;
@@ -317,6 +323,9 @@ public partial class RailEncounterController
                 case "barricade":
                 case "slag_barricade":
                     TickBarricade(piece, party, rolling);
+                    break;
+                case "runaway":
+                    if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) { piece.Fired = true; ArmRunaway(piece.Plan.Ride); }
                     break;
             }
         }

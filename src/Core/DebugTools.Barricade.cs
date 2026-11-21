@@ -78,6 +78,7 @@ public partial class DebugTools
         var main = Main.Instance;
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _brClock += (float)GetProcessDeltaTime();
+        HoldTheRunaway("barricade"); // Ruling 22: not this flow's business
         var party = main.Party;
         void Fail(string why) { GD.Print($"[barricade] RESULT FAIL: {why}"); party.ForcedMoveInput = null; _done = true; GetTree().Quit(1); }
         if (RailController.Instance is not { } rc || RailEncounterController.Instance is not { } enc) { if (_brClock > 3f) Fail("floor 12 has no line"); return; }

@@ -42,6 +42,7 @@ namespace DungeonCrawler.Core;
 ///                       =survivor the human is on foot when the train falls: nobody wipes, a spare waits, the fallen come back when the human steps onto its stop's platform; a save and load keep the lost wagon and its dead crew below the lip, and a hero fallen again comes back on the floor change to 13
 ///   --test-barricade    floor 12, lethality 3: each barricade's lantern in sight from the seat 15 m out; A a spell cuts ride 1's barricade on foot; B on ride 1 the call comes 30-35 m out, the human brakes and the seated lead's blade cuts it in three hits (no smash, no dent); E on ride 2 r2_slag1 smashes the slag-line barricade (its riders each -15%) while the party's cart passes on its own lane; C the cart smashes ride 2's barricade (plating -25, 15% of max HP to each seated hero, never below 1, an NPC on the bench unhurt, 80% of the speed kept); D a restore stands both of ride 2's again at its next arming
 ///   --test-switch-back[=wrong|stall|lone|fixedafter]  floor 12, lethality 3: the broken bridge as built (the gap bare of footing and track, the deck and the party lane beside it whole); a traffic cart drops through the gap quietly (told only with a hero within 40 m), and with the cart at stop 4 traffic starts past the gap; ride 3 across the slag line: the live switch back called early, untouched by any companion, the bridge's lamp in sight from its lever; the seated lead throws it from the seat, the cart takes it at its points, goes home and arrives at stop 3 (RIDE=1 scripts/net_test.sh proves the same throw from a remote seat, the late CrossBack on both clients, ride 1's barricade cut from the seat and ride 2's smash shown); =wrong: nobody throws it and the train falls; =stall: as =wrong with the watchdog freeing a stuck train to the window, the last call's mark, the points, then the gap; =lone: the only human downed in the seat before the window, the cart takes the safe line home; =fixedafter: a fixed back added 8 m before the gap, the live one left straight, a stall past it ground to the fixed back's points, which take the cart home: no fall, on to stop 3
+///   --test-runaway[=tail|ram]  floor 12, lethality 3: ride 4's runaway ore wagon from stop 3 (rc.Restore(3)), nobody pressing; =tail: the lead pumps, it breaks loose 14-16 m behind the last body with its call, never closes within 3 m, halts 2.5-4 m behind the train held at stop 4 and is gone within 2 s, nobody run over; =ram: three crew wagons, nobody pumping: one ram (plating -40, each seated hero -20% of max HP, never below 1, seated NPCs unhurt, nobody unseated), none more; then with the plating at 30 the ram wrecks the cart, the runaway gone by the wreck and a spare taking over
 ///                       =wrong  nobody throws it: the last call comes 5-6.5 m before its points, the cart passes it straight, the train falls at the gap and the wipe rises at stop 2
 ///                       =stall  as wrong, the cart caught short of the back's points and again past them: the watchdog sets it at the points, then grinds it into the gap (a fall), never across
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
@@ -335,6 +336,12 @@ public partial class DebugTools : Node
                 if (v is not ("thrown" or "wrong" or "stall" or "lone" or "fixedafter")) { GD.PrintErr($"[switchback] --test-switch-back={v}: the variant is wrong, stall, lone or fixedafter (none: thrown); running thrown"); v = "thrown"; }
                 if (v == "fixedafter") Dungeon.Rails.RailEncounterController.DebugFixedBackBeforeGap = 8f; // a fixed back 8 m before the gap, past the live one (Ruling 20)
                 _testSwitchBack = true; _sbVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
+            }
+            else if (arg == "--test-runaway" || arg.StartsWith("--test-runaway="))
+            {
+                var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "tail";
+                if (v is not ("tail" or "ram")) { GD.PrintErr($"[runaway] --test-runaway={v}: the variant is tail or ram; running tail"); v = "tail"; }
+                _testRunaway = true; _rwVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
             }
             else if (arg == "--test-barricade") { _testBarricade = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
@@ -912,6 +919,7 @@ public partial class DebugTools : Node
         if (_testCrevasse && !ScriptStalled("crevasse", _crvStep)) RunCrevasseTest();
         if (_testBarricade && !ScriptStalled("barricade", _brStep)) RunBarricadeTest();
         if (_testSwitchBack && !ScriptStalled("switchback", _sbStep)) RunSwitchBackTest();
+        if (_testRunaway && !ScriptStalled("runaway", _rwStep)) RunRunawayTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;

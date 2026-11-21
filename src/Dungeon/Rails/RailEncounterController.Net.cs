@@ -136,6 +136,8 @@ public partial class RailEncounterController
             into.Add(new RailNet.LiveCart(traffic.CartId, traffic.Kind, 1, traffic.Run, traffic, 0f, traffic.EncounterId, traffic, null));
         if (_runaway is { } w && IsInstanceValid(w.Body) && !w.Body.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(w.Body.CartId, CartKind.Runaway, 0, w.Run, w.Body, 0f, null, null, null));
+        if (_rideRunaway is { } r && IsInstanceValid(r.Body) && !r.Body.IsQueuedForDeletion())
+            into.Add(new RailNet.LiveCart(r.Body.CartId, CartKind.Runaway, 0, r.Run, r.Body, 0f, null, null, null)); // ride 4's, behind the train
         if (_golem is { Done: false } g && IsInstanceValid(g.Runner) && !g.Runner.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(g.CartId, CartKind.Golem, GolemTrack(g), g.Run, g.Runner, 0f, g.EncounterId,
                 null, IsInstanceValid(g.Body) && g.Body.Carried ? g.Body : null));
