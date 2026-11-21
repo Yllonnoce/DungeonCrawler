@@ -1936,7 +1936,7 @@ public partial class DungeonBuilder : Node3D
         RailTrack Lay(IReadOnlyList<GridPos> lane, string name)
         {
             var pts = new List<Vector3>();
-            foreach (var p in RailCurves.Centreline(lane, c => FloorTop + layout.HeightOf(c), cell: CellSize))
+            foreach (var p in RailCurves.CentrelineOver(lane, xz => FloorTop + RailBed.SurfaceAt(layout, xz, CellSize), cell: CellSize))
             {
                 var v = new Vector3(p.X, p.Y, p.Z);
                 if (pts.Count > 0 && pts[^1].DistanceTo(v) < 0.05f) continue;

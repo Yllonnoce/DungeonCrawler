@@ -4,7 +4,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
 /// The heading a cart takes at S: along the chord from S − <see cref="HalfSpan"/> to S + <see cref="HalfSpan"/>, not the
-/// tangent of the straight piece under S. The centreline is straight 0.5 m pieces (<c>RailCurves.Centreline</c>), laid with
+/// tangent of the straight piece under S. The centreline is straight 0.5 m pieces (<c>RailCurves.CentrelineOver</c>), laid with
 /// no handles, so the tangent jumps ~9.5 degrees at each join of a 3 m bend and holds between; a chord as long as a piece
 /// always spans one join at most, and turns evenly through it. The points and every S stay as they are. Engine-free.
 /// </summary>

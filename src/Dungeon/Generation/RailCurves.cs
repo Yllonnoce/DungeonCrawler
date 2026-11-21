@@ -9,10 +9,56 @@ public static class RailCurves
     /// World-space points along the lane: straight between cell centres, each 90 degree turn replaced by a quarter circle
     /// (radius clamped so an arc uses at most half the run to a neighbouring corner, the full run to a lane end), heights
     /// interpolated linearly between cell-centre heights, resampled every <paramref name="step"/> metres of path length.
-    /// The first point is the first cell's centre and the last point the last cell's centre.
+    /// The first point is the first cell's centre and the last point the last cell's centre. The heights are taken only at the
+    /// path's vertices (the lane's ends and its arcs), so a rise along a straight is spread over the whole straight; the track
+    /// is laid with <see cref="CentrelineOver"/>, which follows the bed point by point.
     /// </summary>
     public static IReadOnlyList<Vector3> Centreline(IReadOnlyList<GridPos> lane, Func<GridPos, float> heightOf,
         float cell = 4f, float cornerRadius = 3f, float step = 0.5f)
+    {
+        Check(lane, cell, cornerRadius, step);
+        if (lane.Count == 0) return Array.Empty<Vector3>();
+        if (lane.Count == 1) { var c = Centre(lane[0], cell); return new[] { new Vector3(c.X, heightOf(lane[0]), c.Y) }; }
+
+        int n = lane.Count;
+        float Height(float t)
+        {
+            int i = Math.Clamp((int)MathF.Floor(t), 0, n - 2);
+            float f = Math.Clamp(t - i, 0f, 1f);
+            return heightOf(lane[i]) + (heightOf(lane[i + 1]) - heightOf(lane[i])) * f;
+        }
+        return Resample(Path(lane, cell, cornerRadius).Select(q => new Vector3(q.P.X, Height(q.T), q.P.Y)).ToList(), step);
+    }
+
+    /// <summary>The longest straight piece <see cref="CentrelineOver"/> takes a height across: finer than the bed's 1 m eases.</summary>
+    private const float BedPiece = 0.125f;
+
+    /// <summary>
+    /// The lane's centreline laid on a bed: the same 2D path as <see cref="Centreline"/> (straights between cell centres, a quarter
+    /// circle at each turn), the straight pieces cut to at most <see cref="BedPiece"/>, each point's height
+    /// <paramref name="surfaceAt"/> of its world XZ, then the same resample every <paramref name="step"/> metres of path length.
+    /// A point function, so a ramp's rise stays on the ramp, and an arc onto one is exact.
+    /// </summary>
+    public static IReadOnlyList<Vector3> CentrelineOver(IReadOnlyList<GridPos> lane, Func<Vector2, float> surfaceAt,
+        float cell = 4f, float cornerRadius = 3f, float step = 0.5f)
+    {
+        Check(lane, cell, cornerRadius, step);
+        if (lane.Count == 0) return Array.Empty<Vector3>();
+        Vector3 On(Vector2 p) => new(p.X, surfaceAt(p), p.Y);
+        if (lane.Count == 1) return new[] { On(Centre(lane[0], cell)) };
+
+        var path = Path(lane, cell, cornerRadius);
+        var poly = new List<Vector3> { On(path[0].P) };
+        for (int i = 1; i < path.Count; i++)
+        {
+            Vector2 a = path[i - 1].P, b = path[i].P;
+            int pieces = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b) / BedPiece));
+            for (int k = 1; k <= pieces; k++) poly.Add(On(k == pieces ? b : Vector2.Lerp(a, b, k / (float)pieces)));
+        }
+        return Resample(poly, step);
+    }
+
+    private static void Check(IReadOnlyList<GridPos> lane, float cell, float cornerRadius, float step)
     {
         if (step <= 0f) throw new ArgumentOutOfRangeException(nameof(step), "step must be positive");
         if (cell <= 0f) throw new ArgumentOutOfRangeException(nameof(cell), "cell must be positive");
@@ -20,27 +66,33 @@ public static class RailCurves
         for (int i = 1; i < lane.Count; i++)
             if (Math.Abs(lane[i].X - lane[i - 1].X) + Math.Abs(lane[i].Y - lane[i - 1].Y) != 1)
                 throw new ArgumentException($"lane cells {lane[i - 1]} and {lane[i]} are not 4-adjacent", nameof(lane));
-        if (lane.Count == 0) return Array.Empty<Vector3>();
-        Vector2 Centre(GridPos g) => new(g.X * cell + cell / 2f, g.Y * cell + cell / 2f);
-        if (lane.Count == 1) return new[] { new Vector3(Centre(lane[0]).X, heightOf(lane[0]), Centre(lane[0]).Y) };
+    }
 
+    private static Vector2 Centre(GridPos g, float cell) => new(g.X * cell + cell / 2f, g.Y * cell + cell / 2f);
+
+    /// <summary>
+    /// The lane's 2D path (two cells or more): its first cell's centre, each corner's arc (radius clamped so an arc uses at most
+    /// half the run to a neighbouring corner, the full run to a lane end) and its last cell's centre, with each point's
+    /// fractional lane index T.
+    /// </summary>
+    private static List<(Vector2 P, float T)> Path(IReadOnlyList<GridPos> lane, float cell, float cornerRadius)
+    {
         int n = lane.Count;
         var dir = new Vector2[n - 1];
         for (int i = 0; i < n - 1; i++)
-            dir[i] = Vector2.Normalize(Centre(lane[i + 1]) - Centre(lane[i]));
+            dir[i] = Vector2.Normalize(Centre(lane[i + 1], cell) - Centre(lane[i], cell));
         var corners = new List<int>();
         for (int i = 1; i < n - 1; i++)
             if (Vector2.Dot(dir[i - 1], dir[i]) < 0.99f) corners.Add(i);
 
-        // (x, z, param) where param is the fractional lane index, used to interpolate height.
-        var path = new List<(Vector2 P, float T)> { (Centre(lane[0]), 0f) };
+        var path = new List<(Vector2 P, float T)> { (Centre(lane[0], cell), 0f) };
         for (int c = 0; c < corners.Count; c++)
         {
             int k = corners[c];
             float before = (k - (c > 0 ? corners[c - 1] : 0)) * cell * (c > 0 ? 0.5f : 1f);
             float after = ((c + 1 < corners.Count ? corners[c + 1] : n - 1) - k) * cell * (c + 1 < corners.Count ? 0.5f : 1f);
             float r = MathF.Min(cornerRadius, MathF.Min(before, after));
-            var din = dir[k - 1]; var dout = dir[k]; var p = Centre(lane[k]);
+            var din = dir[k - 1]; var dout = dir[k]; var p = Centre(lane[k], cell);
             var a = p - din * r; var b = p + dout * r;
             var centre = a + dout * r; // arc centre: perpendicular offset from the entry tangent point
             float tA = k - r / cell, tB = k + r / cell;
@@ -56,16 +108,13 @@ public static class RailCurves
                 path.Add((pt, tA + (tB - tA) * u));
             }
         }
-        path.Add((Centre(lane[n - 1]), n - 1));
+        path.Add((Centre(lane[n - 1], cell), n - 1));
+        return path;
+    }
 
-        float Height(float t)
-        {
-            int i = Math.Clamp((int)MathF.Floor(t), 0, n - 2);
-            float f = Math.Clamp(t - i, 0f, 1f);
-            return heightOf(lane[i]) + (heightOf(lane[i + 1]) - heightOf(lane[i])) * f;
-        }
-        var poly = path.Select(q => new Vector3(q.P.X, Height(q.T), q.P.Y)).ToList();
-
+    /// <summary>Points every <paramref name="step"/> metres along the 3D polyline from its first point, and its last point.</summary>
+    private static IReadOnlyList<Vector3> Resample(List<Vector3> poly, float step)
+    {
         var result = new List<Vector3> { poly[0] };
         float nextAt = step, walked = 0f;
         for (int i = 1; i < poly.Count; i++)

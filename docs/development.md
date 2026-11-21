@@ -370,6 +370,7 @@ godot --path . -- --ai --record-plans=user://ai/log # force the Claude planner (
 godot --headless --path . -- --replay-plans=DIR     # answer planning calls from a recorded folder instead of the network
 godot --headless --path . -- --test-floors --seed=N # walk-off detector: steps from every surface of floors 1-6 (secrets opened) and reports any step onto nothing; --builtin for the shipped campaign
 godot --headless --path . -- --builtin --floor=N --inspect=X,Y   # print a cell's 7x7 neighbourhood: cell type, level, grid items, ray hits
+godot --headless --path . -- --builtin --no-ai --floor=12 --print-map --track-depth=3 --track-depth-float   # --track-depth[=CM] (implies --print-map; 3 cm by default) probes every rail track against the drawn floor every 0.5 m (rail tops, sleepers, walls) and lists the line's ramps, set pieces and cavern S, then the verdict ([track-depth] total buried=N inside=N nofloorOff=N budget=N ...; the pass is buried=0 inside=0 nofloorOff=0 budget=0); --track-depth-float also lists each sample standing more than CM over the floor
 godot --headless --path . -- --test-structures                    # picks a seed whose floors 1-4 hold a gate, a camp, a pond and a stream; checks braziers, hut walls, bandits at the fire, water beds, 45° corners, wading
 godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   # stand N cells back from a node (Gate_, Camp_, Water_, Barrel0, Enemy...) and look at it; --face-cell=X,Y:N for a grid cell; --face-node=chamfer:N for the first cut corner, --face-node=buckled for a heaved tile, --face-node=bridge for a stream's bridge, --face-node=vault / groin for the ceiling (add --vault=pointed etc. to force a profile)
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back; the VR comfort level round-trips through Save/Load
@@ -1198,6 +1199,24 @@ lane's S beside the gap's near edge, good to about 1 m; the switch back's build 
 The centreline is straight 0.5 m pieces laid with no handles, so `TrackSampler.Frame` takes its heading from the chord ±0.25 m
 about S (`Rails/Core/ChordHeading.cs`; the origin and the up are the baked curve's): every cart, rider and camera turns
 evenly through a bend instead of in a 9.5 degree step at each join, and the points, the length and every S are unchanged.
+
+**The track bed.** `PlaceRails` lays each lane with `RailCurves.CentrelineOver(lane, xz => FloorTop + RailBed.SurfaceAt(layout,
+xz, CellSize))`: the same 2D path as `Centreline` (straights between cell centres, a quarter circle at each turn), its straight
+pieces cut to 0.125 m, each point's height the drawn floor under that point, then the same 0.5 m resample. `RailBed.DrawnAt`
+is the walk surface the GridMap draws: a flat cell's level·4, a ramp cell's tilted slab top `LowHeight + RampSlabRise +
+RampSlope·u` (u along its `Dir` from the cell's low edge; `RampSlabRise` 0.0118 m is the 0.2 m slab's tilt, 0.1/cos 26.6° − 0.1,
+so the ballast clears the slope instead of z-fighting it). `SurfaceAt` is that, eased over `EaseLength` (1 m) at every ramp end
+with a parabola tangent to the flat and to the ramp (`RailBed.Ease`; the lines meet 0.0236 m outside a ramp's low edge and inside
+its high edge). The ease costs a crest dip of at most about 7 cm under the upper floor's edge (6.25 cm from the ease plus the slab
+rise's step) and a sag float of at most about 7 cm (the probe reads 6 cm on floor 12); the sleeper tops stay proud. Before this
+the heights were taken only at the path's vertices, so a ramp's 4 m rise was spread over the whole straight between two corners
+(a slope of 0.13 over about 30 m): the track ran up to 2.4 m inside the upper level and floated up to 2 m over the lower one. Now
+the cart climbs the drawn 26.6° ramp itself (the haul rope holds 3.06 m/s up it, the descent peaks at 7.55 m/s, `RampRideTests`),
+and each ramp lengthens its lane by about 0.64 m (the 8.94 m slope against the old smeared rise; each `ramp` line's span on
+floor 12 grew from 8.1 to 8.9 m): every S past a ramp moves up by that much per ramp, and a set piece on a ramp's ride (a fraction
+of its ride) by its fraction of it. A lane cell is never heaved (`BuckleRules.Pick` spares every `IsRail` cell, keeping both rng
+draws), so the track lies on a flat slab wherever the floor is not a ramp. `--track-depth` (below) is the proof: floor 12 reads
+`buried=0`, with only `r5_spur`'s outer sleeper end inside the wall at (48,62) left over.
 `TrackSampler.Curvature` (the lean's input: the heading's change over the next 2 m) reads the same chord headings
 (`ChordHeading.Curvature`), so the lean's target no longer steps by a join's worth as the span takes in four joins or five.
 Each track's rails, sleepers and ballast are one shadowless mesh per 20 m of S (`RailTrack.ChunkLength`: `Rails0..N` under
