@@ -6,15 +6,22 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// The broken bridge's dressing (plan 11, Ruling 18): the slag line's deck ends at its 4 m gap (<see cref="RailEncounterController.BreakGapS"/>),
 /// its track cut over it. Splintered plank ends hang down over the gap from both edges, the two rails end in stubs bent
 /// <see cref="StubBend"/>° down at the near edge, and a steady red lamp (an <see cref="OmniLight3D"/>, <see cref="LampRange"/> m,
-/// energy <see cref="LampEnergy"/>, no shadow) stands on a stub post at the near edge on the party lane's side. Placed in the enemy
-/// track's frame at the near edge (−Z along the line, across the gap). Dressing only: no collision (the deck's footings end where the
-/// gap begins). Every role builds the same, from the layout.
+/// energy <see cref="LampEnergy"/>, no shadow) stands on a stub post at the near edge on the party lane's side. So the break reads from
+/// the switch back's lever (~25 m off, Ruling 19), the embers below light the gap from under the deck (<see cref="GlowRange"/> m,
+/// energy <see cref="GlowEnergy"/>: the hanging boards, the far deck's broken face and the rock around it glow), their warm haze rises
+/// out of it (a soft camera-facing glow, <see cref="HazeSize"/>, procedural), and a second red lamp stands at the far edge on the outer
+/// side, the two framing the gap. Placed in the enemy track's frame at the near edge (−Z along the line, across the gap). Dressing only:
+/// no collision (the deck's footings end where the gap begins). Every role builds the same, from the layout.
 /// </summary>
 public partial class BrokenBridge : Node3D
 {
     /// <summary>The rail stubs are bent this far down (degrees).</summary>
     public const float StubBend = 30f;
     public const float LampRange = 6f, LampEnergy = 2f;
+    /// <summary>The ember glow out of the gap: its reach and energy, and how far under the deck it shines from.</summary>
+    public const float GlowRange = 8f, GlowEnergy = 4f, GlowDepth = 1.2f;
+    /// <summary>The haze out of the gap: a round glow as wide as the deck, centred on the deck's level (its lower half is down in the gap).</summary>
+    public const float HazeSize = 3.6f;
     /// <summary>The lamp's post stands this far from the slag line's middle, toward the party lane.</summary>
     const float PostOut = 1.6f;
     const float PostHeight = 1.3f;
@@ -53,16 +60,50 @@ public partial class BrokenBridge : Node3D
                 CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             });
         }
-        // the red lamp on its stub post at the near edge, on the deck short of the gap, steady
-        var post = new Vector3(InnerSide * PostOut, 0f, 0.3f);
-        AddChild(new MeshInstance3D { Name = "LampPost", Mesh = new BoxMesh { Size = new Vector3(0.12f, PostHeight, 0.12f) }, MaterialOverride = wood, Position = post + Vector3.Up * (PostHeight / 2f) });
-        var red = new Color(1f, 0.08f, 0.04f);
+        // the red lamps on their stub posts, steady: at the near edge on the deck short of the gap (the party lane's side), and at the far
+        // edge on the outer side
+        Lamp(wood, "", new Vector3(InnerSide * PostOut, 0f, 0.3f));
+        Lamp(wood, "Far", new Vector3(-InnerSide * PostOut, 0f, -GapLength - 0.3f));
+        // the embers' glow up through the gap, from under the deck: no shadow, so it reaches the boards' undersides and the broken faces
+        AddChild(new OmniLight3D
+        {
+            Name = "GapGlow", LightColor = new Color(1f, 0.45f, 0.15f), LightEnergy = GlowEnergy, OmniRange = GlowRange, ShadowEnabled = false,
+            Position = new Vector3(0f, -GlowDepth, -GapLength / 2f),
+        });
+        // and the embers' warm haze rising out of it: brightest at the deck's level, fading to nothing at its rim (additive, turned to the eye
+        // about the vertical, not lost in the floor's haze; the decks hide its lower half from afar)
+        var haze = new GradientTexture2D
+        {
+            Width = 64, Height = 64, Fill = GradientTexture2D.FillEnum.Radial, FillFrom = new Vector2(0.5f, 0.5f), FillTo = new Vector2(0.5f, 0f),
+            Gradient = new Gradient
+            {
+                Offsets = new[] { 0f, 0.45f, 1f },
+                Colors = new[] { new Color(1f, 0.5f, 0.16f, 0.75f), new Color(1f, 0.32f, 0.07f, 0.28f), new Color(1f, 0.25f, 0.05f, 0f) },
+            },
+        };
         AddChild(new MeshInstance3D
         {
-            Name = "Lamp", Mesh = new BoxMesh { Size = new Vector3(0.2f, 0.24f, 0.2f) }, Position = post + Vector3.Up * (PostHeight + 0.12f),
+            Name = "GapHaze", Mesh = new QuadMesh { Size = new Vector2(HazeSize, HazeSize) }, Position = new Vector3(0f, 0f, -GapLength / 2f),
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+                BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY, CullMode = BaseMaterial3D.CullModeEnum.Disabled, DisableFog = true, AlbedoTexture = haze,
+            },
+        });
+    }
+
+    /// <summary>A red lamp on a stub post standing at <paramref name="post"/> (its foot, on the deck): the post, the emissive lamp and its light.</summary>
+    private void Lamp(Material wood, string name, Vector3 post)
+    {
+        var red = new Color(1f, 0.08f, 0.04f);
+        AddChild(new MeshInstance3D { Name = $"{name}LampPost", Mesh = new BoxMesh { Size = new Vector3(0.12f, PostHeight, 0.12f) }, MaterialOverride = wood, Position = post + Vector3.Up * (PostHeight / 2f) });
+        AddChild(new MeshInstance3D
+        {
+            Name = $"{name}Lamp", Mesh = new BoxMesh { Size = new Vector3(0.2f, 0.24f, 0.2f) }, Position = post + Vector3.Up * (PostHeight + 0.12f),
             MaterialOverride = new StandardMaterial3D { AlbedoColor = red, EmissionEnabled = true, Emission = red, EmissionEnergyMultiplier = 3f },
         });
-        AddChild(new OmniLight3D { Name = "LampLight", LightColor = red, LightEnergy = LampEnergy, OmniRange = LampRange, ShadowEnabled = false, Position = post + Vector3.Up * (PostHeight + 0.2f) });
+        AddChild(new OmniLight3D { Name = $"{name}LampLight", LightColor = red, LightEnergy = LampEnergy, OmniRange = LampRange, ShadowEnabled = false, Position = post + Vector3.Up * (PostHeight + 0.2f) });
     }
 
     /// <summary>One broken board: hinged at <paramref name="hinge"/>, running <paramref name="way"/> along Z into the gap, drooping <paramref name="droop"/>°.</summary>

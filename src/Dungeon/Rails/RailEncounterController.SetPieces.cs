@@ -29,8 +29,12 @@ public partial class RailEncounterController
         public TrackSwitch? Switch;
         public OreHeap? Heap;
         public OreBuckets? Buckets;
-        /// <summary>Its warning has been called this arming.</summary>
+        /// <summary>Its warning has been called this arming (a live switch back's early call).</summary>
         public bool Barked;
+        /// <summary>A live switch back's last call has been made this arming.</summary>
+        public bool BarkedLast;
+        /// <summary>A switch back with the broken bridge 12-40 m past it (<see cref="SwitchBackRules.LiveBack"/>): a player's deadly lever.</summary>
+        public bool Live;
         /// <summary>A wreck or a load undid the ride: the heap or the barricade stands again at the next arming (a broken valve stays broken for the floor).</summary>
         public bool Rebuild;
         /// <summary>The barricade went down while its ride was armed (or was cut): it stays down until the ride is undone (Ruling 5).</summary>
@@ -234,6 +238,7 @@ public partial class RailEncounterController
             _pieces.Add(piece);
         }
         CutGaps(gaps);
+        GuardBreak(); // last: it reads the ride's switches
     }
 
     /// <summary>
@@ -260,6 +265,10 @@ public partial class RailEncounterController
                     break;
                 case "switch_out":
                     if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) TakeSwitch(piece);
+                    break;
+                case "switch_back":
+                    TickBackCalls(piece, party);
+                    if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) TakeBack(piece);
                     break;
                 case "heap":
                     TickHeap(piece, party, rolling);

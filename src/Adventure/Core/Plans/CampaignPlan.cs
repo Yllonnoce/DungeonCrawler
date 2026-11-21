@@ -14,6 +14,8 @@ public enum BarkTrigger
     Crevasse,
     // timber across the line ahead of the cart (plan 11; stock only: RideBarks)
     Barricade,
+    // ride 3's live switch back: the early call and the last moment's (plan 11; stock only: RideBarks)
+    SwitchBack, SwitchBackNow,
 }
 
 public sealed class VoicedCharacter

@@ -240,7 +240,7 @@ public partial class NetTestFlow : Node
         {
             var keys = _rideKeyring ? new[] { $"prop:{NetRefs.Keyring}:taken" } : Array.Empty<string>();
             var want = new[] { "join:", "ready:", "floor:12", "aboard:" }.Concat(keys)
-                .Concat(new[] { $"prop:{NetRefs.Wagon(1)}:open", $"prop:{NetRefs.Switch(_rideSwitch)}:thrown", "chase:", "chase-done", "unseat-quiet:", "left:", "wreck-spare:", "heap-halt", "wreck-last" }).ToArray();
+                .Concat(new[] { $"prop:{NetRefs.Wagon(1)}:open", $"prop:{NetRefs.Switch(_rideSwitch)}:thrown", $"prop:{NetRefs.Switch(_rideBack)}:thrown", "chase:", "chase-done", "unseat-quiet:", "left:", "wreck-spare:", "heap-halt", "wreck-last" }).ToArray();
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -256,12 +256,12 @@ public partial class NetTestFlow : Node
             var seats = _rideSeated && _rideSetDown;
             var riding = _ridePumpOk && _rideHeroPumped && _rideBrakeOk;
             var quiet = QuietUnseatChecked(world, out var quietWhy);
-            var props = _rideGateUp && _rideCageOpen && _rideRevived && _rideReboarded && _rideCrossed;
+            var props = _rideGateUp && _rideCageOpen && _rideRevived && _rideReboarded && _rideCrossed && _rideBackTaken;
             var joiner = _joinReadyMidRide && _joinSeated && _joinRideOnDone;
             var chase = _joinSpareHeldRefused && _chaseTaken && _chaseDone && _chaseGapOk && _chaseSetDown && _chaseHops >= 1; // the kiln's gap is always cut
             var thrown = _joinThrown;
             var ok = missing.Count == 0 && ordered && _rideBuiltSeen && rode && seats && riding && quiet && props && joiner && chase && thrown && _wreckOk && _heapHalt && _lastWreckOk && _wipeOk;
-            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; boarded again from stop 3 to the kiln's {Yes(_joinRideOnDone)}; the left-behind spare: refused while the train was held at the kiln's stop {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; the wreck at the end of the line with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {string.Join(" then ", _wreckSpares)}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}, then wrecked until no spare was left {Yes(_lastWreckOk)}, then, the joiner walked off an edge on its own (fallen here {Yes(_walkOffFell)}), wiped by the crevasse and risen beside the cart with the joiner {Yes(_wipeOk)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {rides}"));
+            Finish("[net-server]", ok, $"ride: {_rideDeparts} departure(s), the cart at stop {reached}; the client's hero boarded and got out: {(seats ? "yes" : "NO")}; pumped {(_ridePumpOk ? "yes" : "NO")} (shown {(_rideHeroPumped ? "yes" : "NO")}), braked {(_rideBrakeOk ? "yes" : "NO")}; props: gate 1 up {Yes(_rideGateUp)}, keys {(_rideKeyring ? Yes(_rideKeysTaken) : "none on this branch")}, cage 1 {Yes(_rideCageOpen)}, revived {Yes(_rideRevived)}, boarded at stop 1 {Yes(_rideReboarded)}, crossed on ride 3 {Yes(_rideCrossed)}, home by its live switch back thrown from the seat {Yes(_rideBackTaken)}; the joiner ready mid-ride 2 {Yes(_joinReadyMidRide)}, boarded at stop 2 {Yes(_joinSeated)}; boarded again from stop 3 to the kiln's {Yes(_joinRideOnDone)}; the left-behind spare: refused while the train was held at the kiln's stop {Yes(_joinSpareHeldRefused)}, taken {Yes(_chaseTaken)}, halted behind the train {(_chaseDone ? FormattableString.Invariant($"{_chaseGap:0.00} m") : "NO")} ({(_chaseGapOk ? "within 3 m" : "NOT within 3 m")}), riders set down {Yes(_chaseSetDown)}, holes hopped {_chaseHops}; the joiner thrown at speed on ride 3 {Yes(_joinThrown)}; the wreck at the end of the line with a spare {(_wreckAsked ? (_wreckOk ? $"taken over at stop {string.Join(" then ", _wreckSpares)}" : "NOT taken over") : "NOT done")}, then halted at the ore heap on ride 3 {Yes(_heapHalt)}, then wrecked until no spare was left {Yes(_lastWreckOk)}, then, the joiner walked off an edge on its own (fallen here {Yes(_walkOffFell)}), wiped by the crevasse and risen beside the cart with the joiner {Yes(_wipeOk)}; the riders fought their boarders and were topped up {_rideTopUps} time(s), the cart's plating {_ridePlatingTopUps} time(s); left seated: {quietWhy}; trace=[{string.Join(", ", world.Trace)}]" + (missing.Count > 0 ? $" missing=[{string.Join(", ", missing)}]" : "") + (ordered ? "" : " out of order") + (_rideBuiltSeen ? "" : " floor 12 never built its rides") + (rode ? "" : $" the cart never rode to stop {rides}"));
             return;
         }
         if (_elapsed > 560) Finish("[net-server]", false, $"ride: timed out, trace=[{string.Join(", ", world.Trace)}]");
@@ -600,8 +600,9 @@ public partial class NetTestFlow : Node
     private bool _rideHoldersKilled, _rideGateUp, _rideKeyring, _rideAtKeys, _rideKeysTaken, _rideAtCage, _rideCageOpen, _rideRevived, _rideAtCart,
         _rideReboarded, _rideCrossed;
     private Npc? _rideDowned;
-    /// <summary>Ride 3's switch_out (its wire name's number), the one the client throws from the seat.</summary>
-    private int _rideSwitch = -1;
+    /// <summary>Ride 3's switch_out (its wire name's number), the one the client throws from the seat; and its live switch_back, thrown from the seat too.</summary>
+    private int _rideSwitch = -1, _rideBack = -1;
+    private bool _rideBackTaken;
 
     /// <summary>
     /// The server's steps at stop 1 and on: the stop's holders die once the client's hero is set down there (its gate lifts for real), the
@@ -612,7 +613,7 @@ public partial class NetTestFlow : Node
     private void RideProps(ServerWorld world, Dungeon.Rails.RailController rc, Party.Adventurer hero)
     {
         if (!_rideSetDown || Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || Main.Instance is not { } main) return;
-        if (_rideSwitch < 0 && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) _rideSwitch = enc.PieceIndexOf("switch_out", 3);
+        if (_rideSwitch < 0 && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) { _rideSwitch = enc.PieceIndexOf("switch_out", 3); _rideBack = enc.PieceIndexOf("switch_back", 3); }
         var wagon = crew.Wagons.FirstOrDefault(w => w.Stop == 1);
         if (!_rideHoldersKilled && rc.StopIndex == 1)
         {
@@ -677,7 +678,12 @@ public partial class NetTestFlow : Node
         if (_rideReboarded && !_rideCrossed && rc.Crossing && rc.StopIndex == 2)
         {
             _rideCrossed = true;
-            GD.Print($"[net-server] ride: the cart takes ride 3's switch at S={rc.State.S:0.0} (the lever traced {(world.Trace.Contains($"prop:{NetRefs.Switch(_rideSwitch)}:thrown") ? "thrown through the intent" : "NOT thrown through the intent")})");
+            GD.Print($"[net-server] ride: the cart takes ride 3's switch at S={rc.State.S:0.0} (the lever traced {(world.Trace.Contains($"prop:{NetRefs.Switch(_rideSwitch)}:thrown") ? "thrown through the intent" : "NOT thrown through the intent")}); its return open: {float.IsNaN(rc.CrossBackS)}");
+        }
+        if (_rideCrossed && !_rideBackTaken && rc.Crossing && !float.IsNaN(rc.CrossBackS) && rc.StopIndex == 2)
+        {
+            _rideBackTaken = true;
+            GD.Print($"[net-server] ride: the cart takes ride 3's switch_back at S={rc.State.S:0.0}: back from {rc.CrossBackS:0.0} (the lever traced {(world.Trace.Contains($"prop:{NetRefs.Switch(_rideBack)}:thrown") ? "thrown through the intent" : "NOT thrown through the intent")})");
         }
     }
 
@@ -880,7 +886,8 @@ public partial class NetTestFlow : Node
     /// Phases 3-9 of step 52: gate 1 rises here (its PropEvt, the winch no longer offered); the orc's keys (if this branch has them)
     /// and cage 1 are used through the intent with the prompts the shared rules give; a crewman the server downs in the open cage is
     /// revived through the intent ("Revive {name}"); our hero boards again at stop 1 and throws ride 3's switch from the seat as the
-    /// lever passes (the server's lever, by its NetRefs name); the cart crosses here (the server's CrossOut). True when it failed.
+    /// lever passes (the server's lever, by its NetRefs name); the cart crosses here (the server's CrossOut) with its return open, and
+    /// our hero throws the live switch back from the seat as its window offers it, the cart crossing home (the server's CrossBack). True when it failed.
     /// </summary>
     private bool RideProps(NetSession net, Main main, Dungeon.Rails.RailController rc, Party.Adventurer me)
     {
@@ -947,6 +954,7 @@ public partial class NetTestFlow : Node
                 if (!me.Seated || rc.StopIndex != 2 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || _rideThrowAsked || Main.Instance.Party.LookingAt != lever) return false;
                 var dist = me.GlobalPosition.DistanceTo(lever.GlobalPosition);
                 var ahead = lever.LeverS - rc.Party.FrontS;
+                if (ahead > RideWindowPress) return false; // into the window: our cart can lead the server's by a few metres, and a press it gets short of its own window is refused
                 var prompt = lever.Prompt;
                 if (prompt != "Throw the switch") return RideFail(net, $"the seated window offers ride 3's lever as \"{prompt}\" (want Throw the switch)");
                 if (dist <= Dungeon.Rails.PropPromptRules.InteractReach + Dungeon.Rails.PropPromptRules.SeatedLagCap) return RideFail(net, FormattableString.Invariant($"the seated window first offered ride 3's lever {dist:0.00} m off, inside the plain reach"));
@@ -957,12 +965,42 @@ public partial class NetTestFlow : Node
                 GD.Print(FormattableString.Invariant($"[net] ride: ride 3's lever offers \"{prompt}\" in the seated window {ahead:0.0} m before the lever, {dist:0.00} m from our seat at V={rc.State.V:0.00} m/s; thrown through the intent from the seat ({NetRefs.Switch(_rideSwitchHere)})"));
                 return false;
             }
+            case 9: // across on ride 3 with its return open: the live switch back, offered in the seated window only now, thrown through the intent
+            {
+                if (_rideBackHere < 0 && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) _rideBackHere = enc.PieceIndexOf("switch_back", 3);
+                if (NetRefResolver.Resolve(root, NetRefs.Switch(_rideBackHere)) is not Dungeon.Rails.TrackSwitch back) return RideFail(net, $"ride 3's switch_back ({NetRefs.Switch(_rideBackHere)}) does not resolve here");
+                if (_rideBackAsked && rc.Crossing && !float.IsNaN(rc.CrossBackS))
+                {
+                    GD.Print(FormattableString.Invariant($"[net] ride: the cart crosses home here (CrossBack set at S={rc.CrossBackS:0.0}, the server's); the switch_back shows {(back.Thrown ? "thrown" : "straight")}"));
+                    Next(10);
+                    return false;
+                }
+                if (back.Taken && !_rideBackAsked) return RideFail(net, "ride 3's switch_back was taken before its seated window offered it here");
+                if (!me.Seated || rc.StopIndex != 2 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || _rideBackAsked || Main.Instance.Party.LookingAt != back) return false;
+                var ahead = back.LeverS - rc.Party.FrontS;
+                if (ahead > RideWindowPress) return false; // as the switch_out's: into the window
+                var prompt = back.Prompt;
+                if (prompt != "Throw the switch") return RideFail(net, $"the seated window offers ride 3's switch_back as \"{prompt}\" (want Throw the switch)");
+                if (!back.Deadly || !rc.Crossing || !float.IsNaN(rc.CrossBackS)) return RideFail(net, FormattableString.Invariant($"ride 3's switch_back offered here while not a live lever across with its return open (deadly {back.Deadly}, crossing {rc.Crossing}, back {rc.CrossBackS:0.0})"));
+                _rideBackAsked = true;
+                Main.Instance.Party.VrUse(true); // the dispatch E uses: our TryInteract sends the lever's intent
+                Main.Instance.Party.VrUse(false);
+                GD.Print(FormattableString.Invariant($"[net] ride: ride 3's switch_back offers \"{prompt}\" in the seated window {ahead:0.0} m before the lever; thrown through the intent from the seat ({NetRefs.Switch(_rideBackHere)})"));
+                return false;
+            }
             default:
                 return false;
         }
     }
 
-    private int _rideSwitchHere = -1;
+    private int _rideSwitchHere = -1, _rideBackHere = -1;
+    /// <summary>
+    /// The RIDE pass presses a seated-window lever once its front is this far before the lever (5 m into the window): our cart can lead the
+    /// server's by 1-3 m (more the longer the ride runs), so a press on the window's first frame here can reach the server short of the
+    /// window there, and be refused.
+    /// </summary>
+    private const float RideWindowPress = Dungeon.Rails.SeatedSwitchRules.WindowAhead - 5f;
+    private bool _rideBackAsked;
 
     /// <summary>The stops whose prisoners this client left behind through the intent (once per stop).</summary>
     private readonly HashSet<int> _rideLeftAt = new();
@@ -1112,7 +1150,7 @@ public partial class NetTestFlow : Node
                     if (!rc.Following || _rideMostCarts == 0) { Finish("[net]", false, $"ride: the cart never followed a state (following={rc.Following}) or no slag cart ever showed here ({_rideMostCarts})"); net.Disconnect("test finished"); return; }
                     if (!_rideCrewOk || !_rideSeatOk || !_rideLandOk) { Finish("[net]", false, $"ride: seats: crew in their wagons {(_rideCrewOk ? "yes" : "NO")}, our hero seated {(_rideSeatOk ? "yes" : "NO")}, set down at the server's landing {(_rideLandOk ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
                     if (!_rideSawPumping || !_rideBraked) { Finish("[net]", false, $"ride: riding: the server showed our pump {(_rideSawPumping ? "yes" : "NO")}, we braked {(_rideBraked ? "yes" : "NO")}"); net.Disconnect("test finished"); return; }
-                    if (_ridePhase < 9) { Finish("[net]", false, $"ride: props: reached stop {rc.StopIndex} in the props' phase {_ridePhase} (9: the switch thrown and crossed)"); net.Disconnect("test finished"); return; }
+                    if (_ridePhase < 10) { Finish("[net]", false, $"ride: props: reached stop {rc.StopIndex} in the props' phase {_ridePhase} (9: the switch thrown and crossed; 10: the live switch back thrown from the seat and the cart home)"); net.Disconnect("test finished"); return; }
                     if (!_rideBleedOk || !_rideTrainTold) { Finish("[net]", false, $"ride: crew: the bleed label counted down here {Yes(_rideBleedOk)}, the wagon coupled at stop 1's departure {Yes(_rideTrainTold)}"); net.Disconnect("test finished"); return; }
                     _clock = 0; _step = 53; // stay seated from stop 3 on: the rides to the kiln's stop with the joiner, the kiln's with the train while the joiner chases it, then leave seated
                     return;
@@ -1149,7 +1187,7 @@ public partial class NetTestFlow : Node
                 {
                     if (RideSoundVerdict(client, joiner: false) is { } unheard) { Finish("[net]", false, $"ride: sound: {unheard}"); net.Disconnect("test finished"); return; }
                     GD.Print($"[net] ride: seated at stop {rc.StopIndex} in seat {me.Seat}; the joiner's chaser came and went; leaving the game seated; {client.ShakesHeard} shake(s) from the server reached this screen");
-                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons; our hero boarded through the intent, pumped (shown by the server), braked, got out where the server put it; saw gate 1 rise, took the keys, opened cage 1 and revived {_rideDownedHere?.NpcName} through the intents; boarded again, threw ride 3's switch from the seat, crossed, rode on with the joiner to stop {line.LastRideStop} and ride {line.LastRide} to the end of the line while the joiner chased the train in a spare, and leaves seated");
+                    Finish("[net]", true, $"ride: floor 12's set pieces built on the client and its props hash as the server's ({_ridePropMatched} checks); the cart followed the server's to stop {rc.StopIndex} with {_rideMostCarts} other cart(s) at most; {_rideCrewSeated} crew seated in their wagons; our hero boarded through the intent, pumped (shown by the server), braked, got out where the server put it; saw gate 1 rise, took the keys, opened cage 1 and revived {_rideDownedHere?.NpcName} through the intents; boarded again, threw ride 3's switch from the seat, crossed, threw its live switch back from the seat, came home, rode on with the joiner to stop {line.LastRideStop} and ride {line.LastRide} to the end of the line while the joiner chased the train in a spare, and leaves seated");
                     net.Disconnect("test finished");
                     return;
                 }

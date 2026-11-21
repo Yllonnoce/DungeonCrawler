@@ -701,7 +701,7 @@ public partial class Main : Node
         var spawnCell = DungeonBuilder.WalkableNeighbor(layout, stairs);
         Party.Teleport(Builder.Surface(spawnCell) + Vector3.Up * 0.3f, Builder.Surface(stairs));
         ReturnFallenOnRebuild(floorChange: delta != 0, Builder.Surface(spawnCell));
-        if (riseAtCart) Callable.From(() => Dungeon.Rails.RailController.Instance?.RiseBesideCart()).CallDeferred(); // after Restore's own deferred set-down
+        if (riseAtCart) Callable.From(() => { Dungeon.Rails.RailController.Instance?.RiseBesideCart(); }).CallDeferred(); // after Restore's own deferred set-down (a statement: Godot cannot marshal the int? an expression would return)
         foreach (var t in travelling)
         {
             if (Builder.FloorRoot is not { } here) break;

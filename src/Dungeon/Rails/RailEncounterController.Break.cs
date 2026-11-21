@@ -12,7 +12,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// as its front reaches the gap falls (<see cref="RailController.Fall"/>); a ride's slag cart or the traffic cart whose front reaches it on
 /// the enemy track drops through, its riders lost to the crevasse (<see cref="CrevasseWatch.Take"/>), quietly (<see cref="SlagCart.PlungeThrough"/>:
 /// a line in the log only with a hero near, <see cref="SwitchBackRules.PlungeTold"/>). Traffic started with the party's cart past the gap starts
-/// past its far edge (<see cref="SwitchBackRules.TrafficStartS"/>), so the stops beyond keep their traffic.
+/// past its far edge (<see cref="SwitchBackRules.TrafficStartS"/>), so the stops beyond keep their traffic. A ride where a correct switch_out
+/// could still leave the train across at the gap has the fall disarmed (<see cref="GuardBreak"/>), and the watchdog never grinds a train across
+/// the gap (<see cref="WatchdogBreak"/>).
 /// </summary>
 public partial class RailEncounterController
 {
@@ -26,6 +28,8 @@ public partial class RailEncounterController
     public int BreakRide { get; private set; } = -1;
     /// <summary>Carts (slag and traffic) that dropped through the gap on this floor build (tests read it).</summary>
     internal int BreakDrops { get; private set; }
+    /// <summary>The train falls at the gap (<see cref="TickBreak"/>): false on a ride where a correct switch_out could still meet it across (<see cref="GuardBreak"/>).</summary>
+    internal bool BreakArmed { get; private set; } = true;
 
     /// <summary>
     /// The broken bridge on this floor, if the layout has one (every role, before the set pieces): the gap's S on both lanes, the enemy
@@ -94,13 +98,51 @@ public partial class RailEncounterController
     /// </summary>
     private void TickBreak()
     {
-        if (float.IsNaN(BreakGapS) || _rails.State.Mode != CartMode.Rolling) return;
+        if (float.IsNaN(BreakGapS) || !BreakArmed || _rails.State.Mode != CartMode.Rolling) return;
         var run = _rails.Party;
         var prevFront = BarricadeRules.FrontOf(run.Dir, run.PrevS);
         if (!SwitchBackRules.Falls(prevFront, run.FrontS, BreakGapS, _rails.LaneBlendAt(BreakGapS))) return;
         var front = run.FrontS;
         _rails.Fall("The slag line ends at the broken bridge!");
         GD.Print($"[rails] the cart runs off the broken bridge at S={front:0.0}");
+    }
+
+    /// <summary>
+    /// The guard (every role, after the set pieces): on the break's ride, every switch_out short of the gap must have a first switch back after it
+    /// that brings the cart wholly home before the gap (<see cref="SwitchBackRules.FallArmed"/>): a fixed one, or a live one, which is home if it
+    /// is thrown. Otherwise a correct choice could fall, so the gap's fall is disarmed for that ride (an error in the log: the plan is wrong).
+    /// </summary>
+    private void GuardBreak()
+    {
+        BreakArmed = true;
+        if (float.IsNaN(BreakGapS)) return;
+        var outs = new List<float>();
+        var backs = new List<float>();
+        foreach (var p in _pieces)
+        {
+            if (p.Plan.Ride != BreakRide) continue;
+            if (p.Plan.Kind == "switch_out") outs.Add(p.S);
+            else if (p.Plan.Kind == "switch_back") backs.Add(p.S);
+        }
+        BreakArmed = SwitchBackRules.FallArmed(outs, backs, BreakGapS);
+        var switches = $"switch_out at [{string.Join(", ", outs.Select(s => s.ToString("0.0")))}], switch_back at [{string.Join(", ", backs.Select(s => s.ToString("0.0")))}]";
+        if (BreakArmed) GD.Print($"[rails] broken bridge on ride {BreakRide}: its fall armed ({switches}; every switch_out short of the gap at S={BreakGapS:0.0} has its switch back home before it)");
+        else GD.PushError($"[rails] ERROR: broken bridge on ride {BreakRide}: a switch_out short of the gap at S={BreakGapS:0.0} has no switch back home before it ({switches}): the gap's fall is disarmed on ride {BreakRide}, so a correct choice cannot fall");
+    }
+
+    /// <summary>
+    /// The watchdog's view of the broken bridge (server, <see cref="RailController"/>'s grind): with the break's ride armed, its fall armed and the
+    /// train across at the gap as it stands (<see cref="RailController.LaneBlendAt"/> ≥ 0.5 there), the gap's party S and the points of the
+    /// nearest live switch back of that ride the front has not reached (NaN: none); else both NaN.
+    /// </summary>
+    internal (float BackPoints, float Gap) WatchdogBreak()
+    {
+        if (float.IsNaN(BreakGapS) || !BreakArmed || ArmedRide != BreakRide || _rails.LaneBlendAt(BreakGapS) < 0.5f) return (float.NaN, float.NaN);
+        var front = _rails.Party.FrontS;
+        var back = float.NaN;
+        foreach (var p in _pieces)
+            if (p.Live && p.Plan.Ride == BreakRide && !p.Fired && p.S > front && p.S < BreakGapS && (float.IsNaN(back) || p.S < back)) back = p.S;
+        return (back, BreakGapS);
     }
 
     /// <summary>

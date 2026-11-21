@@ -123,7 +123,8 @@ public partial class DebugTools
             if (e.IsAlive && e != _crewBrute && (_crewSection2 || !HoldsAStop(main, layout, e))) e.Kill();
         if (rc.State.Mode == CartMode.Rolling) Pin(_crewBrute, _crewBruteAt);
         // ride 3's heap blocks the party lane: the seated lead throws the switch_out lever from the seat as the seated window offers it
-        // (no aim, beyond the look ray's reach, through the dispatch E uses), so the cart goes round on the enemy lane
+        // (no aim, beyond the look ray's reach, through the dispatch E uses), so the cart goes round on the enemy lane, and the live
+        // switch back as its window offers it, so the cart comes home before the broken bridge
         if (root.GetNodeOrNull<RailEncounterController>("RailEncounterController") is { ArmedRide: 3 } enc && enc.SetPieceNode("r3_switch_out") is TrackSwitch r3)
         {
             if (r3 is { Taken: true, Thrown: false }) { Fail("ride 3's switch_out lever was never offered to the seated lead before its points"); return; }
@@ -139,6 +140,23 @@ public partial class DebugTools
                 if (dist <= PropPromptRules.InteractReach) { Fail($"the seated window first offered ride 3's lever {dist:0.00} m off, inside the look ray's reach"); return; }
                 if (!r3.Thrown) { Fail("the seated press did not throw ride 3's switch_out lever"); return; }
                 if (me.Cart != rc.Cart) { Fail("the seated press on ride 3's lever got the lead out of the cart"); return; }
+            }
+            // across on the slag line with its return open, the live switch back is the seated lead's too: thrown from the seat in its window
+            // (a companion never moves it), or the train runs on to the broken bridge
+            if (enc.SetPieceNode("r3_switch_back") is TrackSwitch { Deadly: true } back)
+            {
+                var across = rc.Crossing && float.IsNaN(rc.CrossBackS);
+                if (back is { Taken: true, Thrown: false } && across) { Fail("ride 3's live switch_back was never offered to the seated lead before its points: the cart stays on the slag line"); return; }
+                if (!back.Thrown && back.LastToggledBy != null) { Fail($"ride 3's live switch_back was set back by {back.LastToggledBy}"); return; }
+                if (across && rc.State.Mode == CartMode.Rolling && back is { Thrown: false, Taken: false } && party.Local is { } rider && rider.Cart == rc.Cart && party.LookingAt == back)
+                {
+                    var ahead = back.LeverS - rc.Party.FrontS;
+                    var prompt = back.Prompt;
+                    party.VrUse(true);
+                    party.VrUse(false);
+                    GD.Print($"[crew] ride 3: the seated lead throws the switch_back lever from the seat (the seated window, prompt \"{prompt}\", {ahead:0.0} m before the lever, the cart across with its return open): thrown={back.Thrown} by {back.LastToggledBy}, still seated={rider.Cart == rc.Cart}");
+                    if (prompt != "Throw the switch" || !back.Thrown || back.LastToggledBy != rider.State.Name || rider.Cart != rc.Cart) { Fail("the seated press did not throw ride 3's live switch_back, or got the lead out"); return; }
+                }
             }
         }
 

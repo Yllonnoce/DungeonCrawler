@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,11 +11,11 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, and the call of a barricade across the line ahead.</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, and a live switch back's two calls.</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
-        BarkTrigger.Crevasse, BarkTrigger.Barricade,
+        BarkTrigger.Crevasse, BarkTrigger.Barricade, BarkTrigger.SwitchBack, BarkTrigger.SwitchBackNow,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -152,5 +152,27 @@ public static class RideBarks
             Ranger: new[] { "Barricade. Cut.", "Timber. Chop." },
             Mage: new[] { "A barricade! Burn it or cut it!", "Timber ahead! Clear it!" },
             Generic: new[] { "Timber across the line — cut it!", "Barricade ahead!", "Cut it down!" }),
+
+        [BarkTrigger.SwitchBack] = new Bank(
+            Brand: new[] { "The bridge is out ahead! Throw the switch back!", "This line ends in the drop! Switch us back!", "Lever coming up! Back to our track!" },
+            Sable: new[] { "That bridge is broken, darling! Switch us back!", "Lever, loves! Unless we fancy flying!", "Back onto our line! The bridge is gone!" },
+            Wren: new[] { "Bridge out. Switch back.", "Lever ahead. Pull it.", "Back to our track." },
+            Ilex: new[] { "The bridge ahead is broken! Throw the lever back!", "This line ends in a chasm! The switch, please!", "Return us to our track! Physics will not!" },
+            Warrior: new[] { "Bridge is out! Switch back!", "Pull the lever back!" },
+            Rogue: new[] { "Broken bridge! Switch us back!", "Lever! Quick, back over!" },
+            Ranger: new[] { "Bridge out. Switch.", "Lever. Back over." },
+            Mage: new[] { "The bridge is broken! The lever!", "Switch us back, now!" },
+            Generic: new[] { "The slag line's out past the bridge — switch back!", "Bridge out ahead!", "Throw the switch back!" }),
+
+        [BarkTrigger.SwitchBackNow] = new Bank(
+            Brand: new[] { "Now! Pull it now!", "The lever! Now!", "Switch back, now!" },
+            Sable: new[] { "Now, darling, NOW!", "Pull it! Pull it now!", "The lever, love! Now!" },
+            Wren: new[] { "Now.", "Pull. Now.", "Lever. Now." },
+            Ilex: new[] { "Now! The lever, now!", "Pull it this instant!", "Now, or never at all!" },
+            Warrior: new[] { "Now! Pull it!", "Lever, now!" },
+            Rogue: new[] { "Now! Pull it!", "Lever! Now!" },
+            Ranger: new[] { "Now.", "Pull it." },
+            Mage: new[] { "Now! The lever!", "Pull it, now!" },
+            Generic: new[] { "Switch back — now!", "Now! The lever!", "Pull it now!" }),
     };
 }

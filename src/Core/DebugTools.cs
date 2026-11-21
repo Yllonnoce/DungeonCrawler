@@ -41,7 +41,9 @@ namespace DungeonCrawler.Core;
 ///                       =trestle  the train falls with the trestle under it instead of at the jump, then the same rise
 ///                       =survivor the human is on foot when the train falls: nobody wipes, a spare waits, the fallen come back when the human steps onto its stop's platform; a save and load keep the lost wagon and its dead crew below the lip, and a hero fallen again comes back on the floor change to 13
 ///   --test-barricade    floor 12, lethality 3: a spell cuts ride 1's barricade on foot; on ride 1 the call comes 30-35 m out, the human brakes and the seated lead's blade cuts it in three hits (no smash, no dent); on ride 2 the cart smashes its barricade (plating -25, 15% of max HP to each seated hero, never below 1, an NPC on the bench unhurt, 80% of the speed kept); a restore stands it again at its ride's next arming
-///   --test-switch-back=wrong  floor 12, lethality 3: the broken bridge as built (the gap bare of footing and track, the deck and the party lane beside it whole); a traffic cart drops through the gap quietly (told only with a hero within 40 m), and with the cart at stop 4 traffic starts past the gap; the train kept on the slag line past ride 3's switch back (a test hook for now) falls at the gap and the wipe rises at stop 2
+///   --test-switch-back[=wrong|stall]  floor 12, lethality 3: the broken bridge as built (the gap bare of footing and track, the deck and the party lane beside it whole); a traffic cart drops through the gap quietly (told only with a hero within 40 m), and with the cart at stop 4 traffic starts past the gap; ride 3 across the slag line: the live switch back called early, untouched by any companion, the bridge's lamp in sight from its lever; the seated lead throws it from the seat, the cart takes it at its points, goes home and arrives at stop 3
+///                       =wrong  nobody throws it: the last call comes 5-6.5 m before its points, the cart passes it straight, the train falls at the gap and the wipe rises at stop 2
+///                       =stall  as wrong, the cart caught short of the back's points and again past them: the watchdog sets it at the points, then grinds it into the gap (a fall), never across
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
@@ -327,10 +329,10 @@ public partial class DebugTools : Node
                 if (v is not ("fall" or "trestle" or "survivor")) { GD.PrintErr($"[crevasse] --test-crevasse={v}: the variant is trestle or survivor (none: the fall); running the fall"); v = "fall"; }
                 _testCrevasse = true; _crvVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
             }
-            else if (arg.StartsWith("--test-switch-back="))
+            else if (arg == "--test-switch-back" || arg.StartsWith("--test-switch-back="))
             {
-                var v = arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant();
-                if (v != "wrong") { GD.PrintErr($"[switchback] --test-switch-back={v}: the variant built so far is wrong; running it"); v = "wrong"; }
+                var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "thrown";
+                if (v is not ("thrown" or "wrong" or "stall")) { GD.PrintErr($"[switchback] --test-switch-back={v}: the variant is wrong or stall (none: thrown); running thrown"); v = "thrown"; }
                 _testSwitchBack = true; _sbVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
             }
             else if (arg == "--test-barricade") { _testBarricade = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }

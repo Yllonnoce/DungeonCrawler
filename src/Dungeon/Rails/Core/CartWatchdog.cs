@@ -13,8 +13,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <item>Traffic carts and runaway wagons are judged on their own progress (target +∞). The golem's runner is never watched.</item>
 /// </list>
 /// </summary>
-/// <summary>Where the watchdog frees a stuck party cart to (<see cref="CartWatchdog.PartyFreeTo"/>).</summary>
-public enum FreeTo : byte { NextStop, GapLip, ObstacleFace }
+/// <summary>Where the watchdog frees a stuck party cart to (<see cref="CartWatchdog.PartyFreeTo(in CartState, float, float, float, float, float, out CartState)"/>).</summary>
+public enum FreeTo : byte { NextStop, GapLip, ObstacleFace, BackPoints, BreakLip }
 
 public static class CartWatchdog
 {
@@ -49,21 +49,39 @@ public static class CartWatchdog
     /// gap or through an obstacle.
     /// </summary>
     public static FreeTo PartyFreeTo(in CartState cart, float nextStop, float gapLip, float obstacleFace, out CartState freed)
+        => PartyFreeTo(cart, nextStop, gapLip, obstacleFace, float.NaN, float.NaN, out freed);
+
+    /// <summary>
+    /// As <see cref="PartyFreeTo(in CartState, float, float, float, out CartState)"/>, with the broken bridge (plan 11) too, the cart's centre S
+    /// again for each: <paramref name="backPoints"/> with its front at the points of a live switch back it has not taken (NaN: none, or the
+    /// cart is not across with its return open) and <paramref name="breakLip"/> with its front at the gap, given only while the train would be
+    /// across there (NaN otherwise). The nearest ahead of the cart and short of the stop wins (the face, then the jump's lip, on a tie): at a
+    /// back's points the cart rolls on at its speed with its front <see cref="LipNudge"/> past them, so the back is taken that tick as its lever
+    /// stands; at the gap it stands with its front <see cref="LipNudge"/> over it and the caller drops the train (a fall). The watchdog never
+    /// carries a train across the slag line's gap, nor past a live back it has not taken.
+    /// </summary>
+    public static FreeTo PartyFreeTo(in CartState cart, float nextStop, float gapLip, float obstacleFace, float backPoints, float breakLip, out CartState freed)
     {
-        var lip = !float.IsNaN(gapLip) && gapLip > cart.S && gapLip < nextStop;
-        var face = !float.IsNaN(obstacleFace) && obstacleFace > cart.S && obstacleFace < nextStop;
-        if (face && (!lip || obstacleFace <= gapLip))
+        float s = cart.S, at = nextStop;
+        var to = FreeTo.NextStop;
+        void Nearer(FreeTo kind, float x)
         {
-            freed = new CartState(obstacleFace, 0f, CartMode.Rolling, cart.Plating);
-            return FreeTo.ObstacleFace;
+            if (float.IsNaN(x) || x <= s || x >= nextStop || x >= at) return;
+            to = kind;
+            at = x;
         }
-        if (lip)
+        Nearer(FreeTo.ObstacleFace, obstacleFace);
+        Nearer(FreeTo.GapLip, gapLip);
+        Nearer(FreeTo.BackPoints, backPoints);
+        Nearer(FreeTo.BreakLip, breakLip);
+        freed = to switch
         {
-            freed = new CartState(gapLip + LipNudge, SetPieceRules.JumpSpeed, CartMode.Rolling, cart.Plating);
-            return FreeTo.GapLip;
-        }
-        freed = new CartState(nextStop, 0f, CartMode.Held, cart.Plating);
-        return FreeTo.NextStop;
+            FreeTo.ObstacleFace => new CartState(at, 0f, CartMode.Rolling, cart.Plating),
+            FreeTo.GapLip => new CartState(at + LipNudge, SetPieceRules.JumpSpeed, CartMode.Rolling, cart.Plating),
+            FreeTo.BackPoints or FreeTo.BreakLip => new CartState(at + LipNudge, cart.V, CartMode.Rolling, cart.Plating),
+            _ => new CartState(nextStop, 0f, CartMode.Held, cart.Plating),
+        };
+        return to;
     }
 
     /// <summary>

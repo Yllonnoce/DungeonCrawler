@@ -15,7 +15,8 @@ namespace DungeonCrawler.Core;
 // the line reads LineShape, and the kiln's pieces are "r{LastRide}_*" (r5_* on the shipped floor). Section 1 rides the line:
 // ride 1's lone cinder run over and the beam passed, the slag traffic (a hero on the enemy lane at stop 1 warned, then mangled;
 // one in a pocket untouched), ride 2's three slag carts (a brake shoe broken by a debug hit derails one, a hound leaps), ride
-// 3's switch thrown by a hit that a second hit leaves thrown (the slag cart ahead rammed, the cart back on its own lane), the
+// 3's switch thrown by a hit that a second hit leaves thrown (the slag cart ahead rammed; its live switch back missed by a hit, which
+// leaves it straight, and thrown from the seat by the lead through the dispatch E uses; the cart back on its own lane), the
 // rides after it up to the kiln's stop ridden for real (RideOnTo), then the kiln: its golem out of the wall as the cart
 // reaches the golem's At (never short of it by more than 1 m), diverted at the spur by a lever debug-thrown ahead on ride 2
 // (every arrival before the kiln leaves it thrown) that the seated lead sets back and throws again from the seat as the
@@ -104,6 +105,8 @@ public partial class DebugTools
     private string _chProbeBy = "";
     // ride 3
     private bool _chThrown, _chAcross, _chBack;
+    /// <summary>The seated lead threw ride 3's live switch back this ride.</summary>
+    private bool _chBackThrown;
     private int _chRams0, _chRamsSeen;
     // the kiln's ride
     private bool _chDiverted, _chOnSpur, _chJumped, _chBuffer;
@@ -380,8 +383,9 @@ public partial class DebugTools
                     if (!thrown1 || !sw.Thrown || second.Hit) { Fail("a hit must throw the lever and a second hit must not set it back"); return; }
                 }
                 if (!ChaseHeldAt(rc, 3, Fail)) break;
-                GD.Print($"[chase] 3 ride 3 done, held at stop 3: thrown={_chThrown} across={_chAcross} rams={enc.Rams - _chRams0} back on the party lane={_chBack}; plating={rc.State.Plating:0}");
+                GD.Print($"[chase] 3 ride 3 done, held at stop 3: thrown={_chThrown} across={_chAcross} rams={enc.Rams - _chRams0} the live back thrown from the seat={_chBackThrown} back on the party lane={_chBack}; plating={rc.State.Plating:0}");
                 if (!_chThrown || !_chAcross) { Fail("the cart did not take the switch onto the enemy lane"); return; }
+                if (!_chBackThrown) { Fail("the seated lead never threw ride 3's live switch back from the seat"); return; }
                 if (enc.Rams - _chRams0 < 1) { Fail("the cart did not ram the slag cart ahead"); return; }
                 if (!_chBack) { Fail("the cart did not cross back to its own lane"); return; }
                 if (enc.SetPieceNode(Kiln(rc, "spur")) is not SpurSwitch { Lever.Thrown: true }) { Fail($"arriving at stop 3 set back ride {Shape(rc).LastRide}'s spur lever, thrown ahead"); return; }
@@ -940,7 +944,8 @@ public partial class DebugTools
             case CartEventKind.Halted: _chHalted = true; break;
             case CartEventKind.Resumed: _chResumed = true; break;
             case CartEventKind.Departed:
-                _chJumped = false; _chPumpers = -1; _chJumpV = 0f; _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = false;
+                _chJumped = false; _chPumpers = -1; _chJumpV = 0f; _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = _chBackThrown = false;
+                _chWarn.Remove("barricade"); // a call pending from a ride before (cut, never hit) must not pair with this ride's smash
                 if (!_chSection2) _chSeatSpur = 0;
                 break;
             case CartEventKind.Wrecked: _chFail ??= $"the cart was wrecked at S={rc.State.S:0.0} (plating {rc.State.Plating:0})"; break;
@@ -1117,6 +1122,21 @@ public partial class DebugTools
             if (!_chAcross && rc.FrontOnEnemyLane) { _chAcross = true; GD.Print($"[chase] 3 the cart is across on the enemy lane at S={rc.State.S:0.0} (blend {rc.LaneBlend:0.00})"); }
             if (enc.Rams > _chRamsSeen) { _chRamsSeen = enc.Rams; GD.Print($"[chase] 3 the cart rams a slag cart at S={rc.State.S:0.0} on the enemy lane={rc.FrontOnEnemyLane}: plating {rc.State.Plating:0}"); }
             if (_chAcross && !_chBack && rc.Crossing && rc.LaneBlend <= 0.001f) { _chBack = true; GD.Print($"[chase] 3 the cart is back on its own lane at S={rc.State.S:0.0}"); }
+            // across with its return open, the live switch back: a hit on it is a miss that leaves it straight (only a human's E moves it), then
+            // the seated lead throws it as its window offers it, through the dispatch E uses
+            if (!_chBackThrown && rc.Crossing && float.IsNaN(rc.CrossBackS) && enc.SetPieceNode("r3_switch_back") is TrackSwitch { Deadly: true, Thrown: false, Taken: false } back
+                && party.Local is { } lead && lead.Cart == rc.Cart && party.LookingAt == back)
+            {
+                var hit = back.ReceiveAttack(lead.State.Stats, new Combat.AttackProfile { MinDamage = 1, MaxDamage = 2 }, new Combat.HitContext(), party.Rng, lead.State.Name);
+                var afterHit = (back.Thrown, back.LastToggledBy);
+                var prompt = back.Prompt;
+                party.VrUse(true);
+                party.VrUse(false);
+                _chBackThrown = true;
+                GD.Print($"[chase] 3 ride 3's live switch_back offered from the seat (\"{prompt}\", {back.LeverS - rc.Party.FrontS:0.0} m before the lever): a hit on it (hit={hit.Hit}) leaves it thrown={afterHit.Thrown} (by {afterHit.LastToggledBy ?? "nobody"}); the seated lead's press throws it={back.Thrown} by {back.LastToggledBy}, still seated={lead.Cart == rc.Cart}");
+                if (hit.Hit || afterHit.Thrown || afterHit.LastToggledBy != null) _chFail ??= "a hit on ride 3's live switch_back moved it";
+                else if (prompt != "Throw the switch" || !back.Thrown || back.LastToggledBy != lead.State.Name || lead.Cart != rc.Cart) _chFail ??= "the seated press did not throw ride 3's live switch_back, or got the lead out";
+            }
         }
         if (Shape(rc).IsLastRide(enc.ArmedRide) && !_chOnSpur && enc.SetPieceNode(Kiln(rc, "spur")) is SpurSwitch spur && enc.GolemRun is { } run && run.Track == spur.Sampler)
         {

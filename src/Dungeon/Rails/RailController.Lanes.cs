@@ -73,13 +73,6 @@ public partial class RailController
     /// <summary>The party S the cart crosses back at (NaN: it stays across until the ride ends), every role.</summary>
     public float CrossBackS => _crossBack;
 
-    /// <summary>Server test hook: while <see cref="Crossing"/>, the cart stays across on the slag line (its return is undone).</summary>
-    internal void DebugStayAcross()
-    {
-        if (NetSession.IsClient || !Crossing) return;
-        Cross(_crossOut, float.NaN);
-    }
-
     private static float Smooth(float x)
     {
         x = Mathf.Clamp(x, 0f, 1f);

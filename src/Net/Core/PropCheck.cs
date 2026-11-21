@@ -44,7 +44,10 @@ public sealed class PropStateDto
 public sealed class RailPropsDto
 {
     public List<int> GatesUp { get; set; } = new();
-    /// <summary>Track switches (switch_out and the always-thrown switch_back) whose lever is thrown.</summary>
+    /// <summary>
+    /// Track switches whose lever is thrown: a switch_out, a live switch_back (plan 11: a player's lever, thrown or straight as it was left), and
+    /// a fixed switch_back (always thrown).
+    /// </summary>
     public List<int> ThrownSwitches { get; set; } = new();
     /// <summary>Levers (switches and spurs) whose points are behind the cart this ride.</summary>
     public List<int> TakenSwitches { get; set; } = new();

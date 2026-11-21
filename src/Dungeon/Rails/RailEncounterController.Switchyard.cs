@@ -10,7 +10,10 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// Ride 3's pieces. A "switch_out" lever stands between the lanes <see cref="LeverLead"/> metres short of its points: thrown
 /// when the cart's front reaches the points, the cart crosses onto the enemy lane (<see cref="RailController.Cross"/>) and a
-/// "switch_back" (always thrown, untouchable) brings it home. On the enemy lane a slag cart ahead cannot outrun the party's
+/// "switch_back" (always thrown, untouchable) brings it home. A switch back with the broken bridge 12-40 m past it is live
+/// (<see cref="SwitchBackRules.LiveBack"/>, plan 11): a player's lever (<see cref="TrackSwitch.Deadly"/>), offered from the seat only
+/// while the cart is across with no return set, called twice by a companion, and taken at its points as it stands (<see cref="TakeBack"/>);
+/// left straight, the train runs on to the gap. On the enemy lane a slag cart ahead cannot outrun the party's
 /// (<see cref="RamCloseIn"/>) and is rammed when the front reaches its back end: it derails, the plating takes
 /// <see cref="RamDent"/>. A "heap" blocks the party lane (<see cref="RailController.BlockLine"/>) until it is cleared; its
 /// lantern and a companion's call warn first. "buckets" tip cinders onto the line: a cart through a live patch loses
@@ -55,7 +58,8 @@ public partial class RailEncounterController
         var frame = party.Frame(leverS);
         var x = frame.Basis.X.Normalized();
         var side = (_enemy.Point(Lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
-        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back, NetRef = Net.NetRefs.Switch(piece.Index) };
+        piece.Live = back && piece.Plan.Ride == BreakRide && SwitchBackRules.LiveBack(piece.S, BreakGapS); // every role alike, from the layout
+        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back && !piece.Live, Deadly = piece.Live, NetRef = Net.NetRefs.Switch(piece.Index) };
         root.AddChild(sw);
         sw.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * LeverOut));
         piece.Switch = sw;
@@ -76,9 +80,41 @@ public partial class RailEncounterController
         crossover.Build(points, _steel ??= DungeonBuilder.RailSteel(),
             _sleeper ??= DungeonBuilder.RailSleeper());
         points.Add(sw.GlobalPosition); // and nothing stands in the lever's way
+        if (piece.Live) points.Add(BuildSignal(root, piece));
         ClearTimber(root, points);
-        GD.Print($"[rails] switch {piece.Plan.Id} points at party S={piece.S:0.0}, lever at S={leverS:0.0} side {side:+0;-0} ({(back ? "fixed, thrown" : "straight")})");
+        var how = !back ? "straight" : piece.Live ? $"live: the broken bridge {BreakGapS - piece.S:0.0} m past" : "fixed, thrown";
+        GD.Print($"[rails] switch {piece.Plan.Id} points at party S={piece.S:0.0}, lever at S={leverS:0.0} side {side:+0;-0} ({how})");
         return sw;
+    }
+
+    /// <summary>A live back's signal lamp stands this far from the slag line's middle, on its outer side (clear of a cart's 0.75 m half width).</summary>
+    private const float SignalOut = 1.5f;
+    private const float SignalHeight = 1.6f;
+    public const float SignalRange = 5f, SignalEnergy = 1.6f;
+
+    /// <summary>
+    /// A live switch back's warning by sight (Ruling 18): a steady red signal lamp on its own post <see cref="SwitchBackRules.SignalPast"/> past
+    /// its points, on the slag line's outer side (an <see cref="OmniLight3D"/>, <see cref="SignalRange"/> m, energy <see cref="SignalEnergy"/>,
+    /// no shadow). Dressing only, every role alike. Returns where it stands (timber there is taken down).
+    /// </summary>
+    private Vector3 BuildSignal(Node3D root, Piece piece)
+    {
+        var enemyS = Lanes.EnemyS(piece.S + SwitchBackRules.SignalPast);
+        var frame = _enemy.Frame(enemyS).Orthonormalized();
+        var outer = -InnerSideAt(enemyS);
+        var post = new Node3D { Name = $"Signal_{piece.Plan.Id}" };
+        root.AddChild(post);
+        post.GlobalTransform = new Transform3D(frame.Basis, frame.Origin + frame.Basis.X * (outer * SignalOut));
+        var iron = new StandardMaterial3D { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.7f, Roughness = 0.5f };
+        var red = new Color(1f, 0.08f, 0.04f);
+        post.AddChild(new MeshInstance3D { Name = "Post", Mesh = new BoxMesh { Size = new Vector3(0.12f, SignalHeight, 0.12f) }, MaterialOverride = iron, Position = Vector3.Up * (SignalHeight / 2f) });
+        post.AddChild(new MeshInstance3D
+        {
+            Name = "Lamp", Mesh = new SphereMesh { Radius = 0.12f, Height = 0.24f, RadialSegments = 12, Rings = 6 }, Position = Vector3.Up * (SignalHeight + 0.1f),
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = red, EmissionEnabled = true, Emission = red, EmissionEnergyMultiplier = 3f, Roughness = 0.4f },
+        });
+        post.AddChild(new OmniLight3D { Name = "SignalLight", LightColor = red, LightEnergy = SignalEnergy, OmniRange = SignalRange, ShadowEnabled = false, Position = Vector3.Up * (SignalHeight + 0.2f) });
+        return post.GlobalPosition;
     }
 
     private StandardMaterial3D? _steel, _sleeper;
@@ -144,7 +180,7 @@ public partial class RailEncounterController
         foreach (var p in _pieces)
         {
             if (p.Plan.Ride != ride) continue;
-            p.Barked = false;
+            p.Barked = p.BarkedLast = false;
             if (p.Switch != null) p.Switch.Taken = false; // told ("free") when it was still taken, so a client's lever offers itself again
             if (p.Heap is { } heap)
             {
@@ -188,18 +224,65 @@ public partial class RailEncounterController
 
     // ---- ticking ---------------------------------------------------------------------------------
 
-    /// <summary>The front reached the points: a thrown lever sends the cart across (and the next switch_back of the ride brings it home).</summary>
+    /// <summary>
+    /// The front reached the points: a thrown lever sends the cart across, and the next switch_back of the ride brings it home: a fixed one from
+    /// its points, set now; a live one as its lever stands when the front reaches it (<see cref="TakeBack"/>), so the return is left open.
+    /// </summary>
     private void TakeSwitch(Piece piece)
     {
         piece.Fired = true;
         if (piece.Switch != null) piece.Switch.Taken = true; // its points are behind the cart: nothing left to pull this ride
         if (piece.Switch is not { Thrown: true }) { GD.Print($"[rails] switch {piece.Plan.Id} passed straight at S={_rails.State.S:0.0}"); return; }
-        var backS = float.NaN;
+        Piece? back = null;
         foreach (var p in _pieces)
-            if (p.Plan.Ride == piece.Plan.Ride && p.Plan.Kind == "switch_back" && p.S > piece.S && (float.IsNaN(backS) || p.S < backS)) backS = p.S;
+            if (p.Plan.Ride == piece.Plan.Ride && p.Plan.Kind == "switch_back" && p.S > piece.S && (back == null || p.S < back.S)) back = p;
+        var backS = back == null ? float.NaN : SwitchBackRules.BackAtSwitchOut(back.Live, back.S);
         _rails.Cross(piece.S, backS);
         EventBus.Instance.Log("The cart takes the switch onto the slag line."); // the clunk is the cart's sound's (its Cross edge, on every peer)
-        GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, back from {backS:0.0}");
+        GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, {(back is { Live: true } ? $"the return open: {back.Plan.Id}'s lever decides at S={back.S:0.0}" : $"back from {backS:0.0}")}");
+    }
+
+    /// <summary>
+    /// The front reached a switch back's points: its lever is behind the cart this ride. A live one is taken as it stands (Ruling 14): with the
+    /// cart across and its return still open, thrown, it crosses home from here; straight, the cart stays on the slag line, toward the gap.
+    /// </summary>
+    private void TakeBack(Piece piece)
+    {
+        piece.Fired = true;
+        if (piece.Switch != null) piece.Switch.Taken = true;
+        var across = _rails.Crossing;
+        if (piece.Live && across && float.IsNaN(_rails.CrossBackS))
+        {
+            var back = SwitchBackRules.BackAtPoints(piece.Switch is { Thrown: true }, piece.S);
+            if (!float.IsNaN(back))
+            {
+                _rails.Cross(_rails.CrossOutS, back);
+                EventBus.Instance.Log("The cart takes the switch back onto the party line.");
+            }
+        }
+        var home = across && !float.IsNaN(_rails.CrossBackS);
+        GD.Print(!across ? $"[rails] switch {piece.Plan.Id} passed at S={_rails.State.S:0.0}: the cart on its own lane"
+            : home ? $"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: back from {_rails.CrossBackS:0.0}"
+            : $"[rails] switch {piece.Plan.Id} passed straight at S={_rails.State.S:0.0}: the cart stays on the slag line");
+    }
+
+    /// <summary>
+    /// A live switch back's calls (Ruling 17, server): a seated hero calls it early, <see cref="SwitchBackRules.CallEarly"/> before the lever
+    /// (or at once on crossing nearer), and at the last moment, <see cref="SwitchBackRules.CallLast"/> before the points, while the cart is
+    /// across with its return open and the lever straight (<see cref="SwitchBackRules.Call"/>). Each once an arming.
+    /// </summary>
+    private void TickBackCalls(Piece piece, PartyController party)
+    {
+        if (!piece.Live || piece.Fired || piece.Switch is not { } sw || _rails.State.Mode != CartMode.Rolling) return;
+        var front = _rails.Party.FrontS;
+        var call = SwitchBackRules.Call(_rails.Crossing, !float.IsNaN(_rails.CrossBackS), sw.Thrown, front, sw.LeverS, piece.S, piece.Barked, piece.BarkedLast);
+        if (call == BackCall.None) return;
+        piece.Barked = true; // the last call stands for the early one too
+        if (call == BackCall.Last) piece.BarkedLast = true;
+        var by = call == BackCall.Early
+            ? RailCalls.Say(party, _rails.Cart, BarkTrigger.SwitchBack, "The slag line's out past the bridge — switch back!")
+            : RailCalls.Say(party, _rails.Cart, BarkTrigger.SwitchBackNow, "Switch back — now!");
+        GD.Print($"[rails] switch {piece.Plan.Id} called {(call == BackCall.Early ? "early" : "last")} at front S={front:0.0} ({piece.S - front:0.0} m to the points); bark={by ?? "none"}");
     }
 
     /// <summary>
@@ -262,8 +345,9 @@ public partial class RailEncounterController
 
     /// <summary>
     /// The armed ride's lever offered to <paramref name="hero"/> from the seat (the nearer of two), or null: seated in the party's cart,
-    /// up, the cart rolling, the front in the lever's window (<see cref="SeatedSwitchRules.Nearest"/>). Every peer: a client's pieces,
-    /// <see cref="ArmedRide"/>, the levers' Taken and the cart's state are the server's, as told.
+    /// up, the cart rolling, the front in the lever's window (<see cref="SeatedSwitchRules.Nearest"/>); a live switch back only while the
+    /// cart is across with no return set (<see cref="SwitchBackRules.Offered"/>). Every peer: a client's pieces, <see cref="ArmedRide"/>,
+    /// the levers' Taken and the cart's state (its crossing too) are the server's, as told.
     /// </summary>
     public TrackSwitch? SeatedLeverFor(Adventurer hero)
     {
@@ -273,7 +357,7 @@ public partial class RailEncounterController
         for (var i = 0; i < _pieces.Count; i++)
         {
             var p = _pieces[i];
-            if (p.Plan.Ride != ArmedRide || p.Switch is not { } sw) continue;
+            if (p.Plan.Ride != ArmedRide || p.Switch is not { } sw || !BackOffered(p)) continue;
             _seatedViews.Add(sw.SeatedView);
             _seatedSwitches.Add(sw);
         }
@@ -289,10 +373,13 @@ public partial class RailEncounterController
         {
             var p = _pieces[i];
             if (p.Plan.Ride != ArmedRide || p.Switch != lever) continue;
-            return SeatedSwitchRules.InWindow(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
+            return BackOffered(p) && SeatedSwitchRules.InWindow(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
         }
         return false;
     }
+
+    /// <summary>A piece's lever may be offered from the seat: any but a live switch back, which only while the cart is across with no return set (Ruling 16).</summary>
+    private bool BackOffered(Piece p) => !p.Live || SwitchBackRules.Offered(_rails.Crossing, !float.IsNaN(_rails.CrossBackS));
 
     /// <summary>The buckets tip; a live patch the cart's body is over dents the plating and burns each seated hero, once per patch.</summary>
     private void TickBuckets(Piece piece, float dt)
