@@ -421,6 +421,30 @@ scripts/package.sh               # installable archives under dist/, each with a
 godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered screenshot (--open-map for the full map)
 ```
 
+### Running flows side by side
+
+`scripts/flows.sh` runs several headless flows at once, each in its own `user://`:
+
+```bash
+scripts/flows.sh -j 6 "--test-ride" "--test-split=after" "--test-runaway=tail" "--test-crew --quit-after=570"
+```
+
+Each argument is one flow's game flags (what follows `godot --headless --path . --`). It runs `dotnet build
+DungeonCrawler.csproj` once (and stops if that fails), then up to `-j N` flows at a time (default: min(6, the number of flows)),
+each under `timeout` (its last `--quit-after=S` plus max(120, S/2) seconds, else `FLOWS_TIMEOUT`, default 1200). It ends with one
+line per flow: PASS/FAIL, the flags, the flow's own `[tag] RESULT` line (the early `[builtin] RESULT ok` of the floor-12 flows does
+not count), its ERROR-line count, its wall time and its log; it exits non-zero if any flow lacks a `RESULT ok`. Logs stay in
+`FLOWS_LOG_DIR` (default `/tmp/flows-<date>-<time>`).
+
+Isolation: two flows sharing `user://` clash (one run hit an ERROR on a `profile.json.bak` written by another). Godot on Linux
+puts `user://` under `$XDG_DATA_HOME/godot/app_userdata/DungeonCrawler`, so each flow gets `XDG_DATA_HOME=$(mktemp -d)`,
+removed at the end (`KEEP_TMP=1` keeps them). A flow starts from an empty `user://`: default settings (lethality 3, as the flows
+force anyway), no keys, an empty profile, the shipped campaign from `res://`; the headless flows need nothing more and never
+read your real `user://`. The API-key variables are removed from each flow's environment.
+
+The RIDE pass (`RIDE=1 scripts/net_test.sh`) is never run through `flows.sh` or beside it: its set-piece clocks and party pairs
+fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses `--test-net-*` flows (they share a port).
+
 ### Known gaps
 
 - **Godot's exit count.** Godot's "resources still in use at exit" (and its leaked ObjectDB instances) were audio streams and their
