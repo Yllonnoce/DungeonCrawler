@@ -451,7 +451,7 @@ public partial class RailEncounterController : Node
         }
         if (_traffic != null && IsInstanceValid(_traffic) && !_traffic.Derailed) PoseAndHear(_traffic.Run, _traffic.Sound, frac, 1);
         if (_runaway != null && IsInstanceValid(_runaway.Body)) PoseAndHear(_runaway.Run, _runaway.Body.Sound, frac, 0);
-        if (_rideRunaway != null && IsInstanceValid(_rideRunaway.Body)) PoseAndHear(_rideRunaway.Run, _rideRunaway.Body.Sound, frac, 0);
+        if (_rideRunaway != null && IsInstanceValid(_rideRunaway.Body)) PoseAndHear(_rideRunaway.Run, _rideRunaway.Body.Sound, frac, _rideRunaway.OnSpur ? SpurTrackNumber(_split) : (byte)0); // the split's points: its track change
     }
 
     /// <summary>A cart of the ride posed for this frame and its sound fed from its run (server and single player).</summary>

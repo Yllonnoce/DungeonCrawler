@@ -18,6 +18,8 @@ public enum BarkTrigger
     SwitchBack, SwitchBackNow,
     // ride 4's runaway ore wagon breaking loose behind the train (plan 12; stock only: RideBarks)
     Runaway,
+    // ride 4's split: wait to pass it, not yet (thrown short of it: the spur), now (passed: throw it behind us) (plan 12; stock only: RideBarks)
+    SplitWait, SplitNotYet, SplitNow,
 }
 
 public sealed class VoicedCharacter

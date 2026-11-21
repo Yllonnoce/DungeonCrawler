@@ -16,23 +16,23 @@ public partial class RailEncounterController
     /// <summary>The next cart id of this floor build (server).</summary>
     private int NextCartId() => _nextCartId < CartIds.WagonBase - 1 ? _nextCartId++ : _nextCartId;
 
-    /// <summary>The k-th spur's track (the spurs in set-piece order, the same on every peer), or null.</summary>
+    /// <summary>The k-th spur's track (the pieces with a spur or a split, in set-piece order, the same on every peer: Ruling 4), or null.</summary>
     internal TrackSampler? SpurTrack(int k)
     {
         if (k < 0) return null;
         foreach (var p in _pieces)
-            if (p.Spur != null && k-- == 0) return p.Spur.Sampler;
+            if ((p.Spur != null || p.Split != null) && k-- == 0) return p.Spur?.Sampler ?? p.Split!.Sampler;
         return null;
     }
 
-    /// <summary>The wire's track number of the spur <paramref name="spur"/> (2+k), or 1 (the enemy line) when it is none of this floor's.</summary>
-    private byte SpurTrackNumber(SpurSwitch? spur)
+    /// <summary>The wire's track number of the spur or split <paramref name="spur"/> (2+k), or 1 (the enemy line) when it is none of this floor's.</summary>
+    private byte SpurTrackNumber(Node3D? spur)
     {
         var k = 0;
         foreach (var p in _pieces)
         {
-            if (p.Spur == null) continue;
-            if (p.Spur == spur) return (byte)(2 + k);
+            if (p.Spur == null && p.Split == null) continue;
+            if (spur != null && (p.Spur == spur || p.Split == spur)) return (byte)(2 + k);
             k++;
         }
         return 1;
@@ -137,7 +137,7 @@ public partial class RailEncounterController
         if (_runaway is { } w && IsInstanceValid(w.Body) && !w.Body.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(w.Body.CartId, CartKind.Runaway, 0, w.Run, w.Body, 0f, null, null, null));
         if (_rideRunaway is { } r && IsInstanceValid(r.Body) && !r.Body.IsQueuedForDeletion())
-            into.Add(new RailNet.LiveCart(r.Body.CartId, CartKind.Runaway, 0, r.Run, r.Body, 0f, null, null, null)); // ride 4's, behind the train
+            into.Add(new RailNet.LiveCart(r.Body.CartId, CartKind.Runaway, r.OnSpur ? SpurTrackNumber(_split) : (byte)0, r.Run, r.Body, 0f, null, null, null)); // ride 4's, behind the train (or down the split's spur)
         if (_golem is { Done: false } g && IsInstanceValid(g.Runner) && !g.Runner.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(g.CartId, CartKind.Golem, GolemTrack(g), g.Run, g.Runner, 0f, g.EncounterId,
                 null, IsInstanceValid(g.Body) && g.Body.Carried ? g.Body : null));

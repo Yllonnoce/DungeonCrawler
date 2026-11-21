@@ -19,8 +19,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// a restore (a wipe's rise or a load), a chaser or relief cart on the line, a new departure and the controller leaving free it at once. It smashes
 /// timber on its line and runs over bodies on it as the traffic runaway does; a stall frees it (<see cref="OwnProgressStuck"/>). Companions never pump
 /// for it (Ruling 11): the train's pumping rules are untouched. Server and single player; a client builds its copy from the cart state (RailNet).
-/// <para>Until Task 6 builds the split itself, the "split" piece is a marker (<see cref="BuildSplitMarker"/>) that reads <see cref="SplitRules.Live"/>
-/// from the layout's <see cref="Generation.RailLine.Split"/>; the runaway's test for a live split is <see cref="SplitLiveOn"/>.</para>
+/// <para>It is sent only with the ride's split built live (<see cref="SplitLiveOn"/>). As its front reaches the split's points it takes the
+/// lever as it stands (Ruling 8, <see cref="TakeSplitPoints"/>): thrown, it goes down the spur and off its end into the crevasse, quietly; straight,
+/// it stays behind the train.</para>
 /// </summary>
 public partial class RailEncounterController
 {
@@ -38,6 +39,8 @@ public partial class RailEncounterController
         /// <summary>The S it never runs past while the train rolls (the ride's next stop).</summary>
         public float EndS;
         public CartWatchdog.Window Watch;
+        /// <summary>Its front reached the split's points (the lever taken as it stood), and it goes (or went) onto the spur's own track.</summary>
+        public bool PastSplit, ToSpur, OnSpur;
     }
 
     private RideRunaway? _rideRunaway;
@@ -48,65 +51,15 @@ public partial class RailEncounterController
     /// <summary>The ride's runaway wagon on the party line now (running or halted), or null.</summary>
     public RunawayWagon? RideRunawayCart => _rideRunaway is { } w && IsInstanceValid(w.Body) ? w.Body : null;
     /// <summary>The ride's runaway runs (not halted, not freed) and its front is short of the split's points.</summary>
-    public bool RunawayComing => _rideRunaway is { Halted: < 0f } w && IsInstanceValid(w.Body) && SplitRide == w.Ride && w.Run.FrontS < SplitPointsS;
+    public bool RunawayComing => _rideRunaway is { Halted: < 0f, PastSplit: false } w && IsInstanceValid(w.Body) && SplitRide == w.Ride && w.Run.FrontS < SplitPointsS;
     /// <summary>Rams this floor build (tests read it).</summary>
     public int RunawayRams { get; private set; }
     /// <summary>The ride runaway's bell rings this floor build (tests read it).</summary>
     internal int RunawayBells { get; private set; }
     /// <summary>The ride runaway's run (tests read where it is and whether it halted), or null.</summary>
     internal CartRun? RideRunawayRun => _rideRunaway is { } w && IsInstanceValid(w.Body) ? w.Run : null;
-    /// <summary>The split piece is live (tests read it).</summary>
-    internal bool SplitIsLive => _splitLive;
-
-    // ---- the split's marker (Task 6 replaces it with the split itself) ----------------------------
-
-    /// <summary>The split's points on the party line (the layout's points cell centre), or NaN without a split piece.</summary>
-    public float SplitPointsS { get; private set; } = float.NaN;
-    /// <summary>The split piece's ride, or −1.</summary>
-    public int SplitRide { get; private set; } = -1;
-    /// <summary>The split piece stands at the layout's points and its spur's end lies over the crevasse (Ruling 3).</summary>
-    private bool _splitLive;
-
-    /// <summary>
-    /// The "split" piece until Task 6 (every role): a marker at the layout's points (<see cref="Generation.RailSplit.Points"/>, measured on the
-    /// party track), live when the piece's At lies within <see cref="SplitRules.AtSlack"/> of them and the spur's end over the crevasse
-    /// (<see cref="SplitRules.Live"/>); otherwise it is dead and logged why (no runaway then, Ruling 10).
-    /// </summary>
-    private Node3D? BuildSplitMarker(Node3D root, Piece piece)
-    {
-        if (_layout.Rail is not { } rail || !IsInstanceValid(_rails.Party.Track.Track)) return null;
-        var track = _rails.Party.Track;
-        var half = DungeonBuilder.CellSize / 2f;
-        float points = float.NaN, from = float.NaN, to = float.NaN;
-        string? dead = null;
-        if (rail.Split is not { } split || rail.SplitWhy != "ok") dead = $"the layout has no split (split={rail.SplitWhy ?? "not asked"})";
-        else if (split.Ride != piece.Plan.Ride) dead = $"the layout's split is on ride {split.Ride}";
-        else if (split.Points < 0 || split.Crevasse.From < 0 || split.Crevasse.To >= rail.Party.Count) dead = "the layout's split lies off the line";
-        else
-        {
-            points = track.ClosestS(_builder.Surface(rail.Party[split.Points]));
-            from = track.ClosestS(_builder.Surface(rail.Party[split.Crevasse.From])) - half;
-            to = track.ClosestS(_builder.Surface(rail.Party[split.Crevasse.To])) + half;
-            if (Mathf.Abs(piece.S - points) > SplitRules.AtSlack) dead = $"its At (S={piece.S:0.0}) lies {Mathf.Abs(piece.S - points):0.0} m from the points, over {SplitRules.AtSlack:0} m";
-            else if (!SplitRules.Live(points, from, to)) dead = $"the spur's end S={points + SplitRules.SpurLength:0.0} is not over the crevasse";
-        }
-        SplitRide = piece.Plan.Ride;
-        SplitPointsS = points;
-        _splitLive = dead == null;
-        GD.Print($"[rails] split {piece.Plan.Id} on ride {piece.Plan.Ride}: points at party S={points:0.0}, crevasse S={from:0.0}..{to:0.0}, spur end S={points + SplitRules.SpurLength:0.0} ({(dead == null ? "live" : $"dead: {dead}")})");
-        var marker = new Node3D { Name = $"Split_{piece.Plan.Id}" };
-        root.AddChild(marker);
-        marker.GlobalPosition = track.Point(float.IsNaN(points) ? piece.S : points);
-        return marker;
-    }
-
-    /// <summary>Ride <paramref name="ride"/> has a live split (Task 6 tightens it to its built switch).</summary>
-    private bool SplitLiveOn(int ride) => _splitLive && SplitRide == ride && !float.IsNaN(SplitPointsS);
-
-    /// <summary>Where the split's seated window opens: 12 m before its points (Ruling 5; Task 6 takes it from its lever), or NaN.</summary>
-    private float SplitWindowStartS => SplitPointsS - (SeatedSwitchRules.WindowAhead - SplitLeverPast);
-    /// <summary>The split's lever stands this far past its points (Ruling 5's LeverPast, Task 6's).</summary>
-    private const float SplitLeverPast = 3f;
+    /// <summary>The ride runaway runs on the split's spur now (tests read it).</summary>
+    internal bool RideRunawayOnSpur => _rideRunaway is { OnSpur: true } w && IsInstanceValid(w.Body);
 
     /// <summary>The runaway piece's marker on the party line at its trigger (every role).</summary>
     private Node3D BuildRunawayMarker(Node3D root, Piece piece)
@@ -217,6 +170,7 @@ public partial class RailEncounterController
         if (!IsInstanceValid(w.Body)) { _rideRunaway = null; _warnedRideRunaway.Clear(); return; }
         if (_rails.State.Mode == CartMode.Wrecked || _rails.Wrecks != w.Wrecks) { FreeRideRunaway("the train is wrecked"); return; } // before the event's flush
         if (_rails.Chaser != null) { FreeRideRunaway("a chaser on the party line"); return; }
+        if (w.OnSpur) { TickRunawayOnSpur(w, dt, party); return; }
         if (w.Halted >= 0f)
         {
             if ((w.Halted += dt) >= RunawayLinger) FreeRideRunaway("its halt behind the held train");
@@ -230,6 +184,7 @@ public partial class RailEncounterController
         run.Step(new CartInput(run.SlopeAhead, false, 0, wagons, run.Limit, RunawayRules.Target(wagons)), dt);
         run.Sync();
         run.PoseAt(run.State.S);
+        if (TakeSplitPoints(w)) return; // thrown at its points: onto the spur, behind the train no more
         if (RunawayRules.Rams(rolling, run.FrontS, rear)) { Ram(w, rear, party); return; }
         SmashAhead(run, w.Body, enemyTrack: false, riders: null); // timber on the party line ahead of it (ride 4 has none, Ruling 18)
         Warn(run, w.Body, _warnedRideRunaway, true, party); // the call before any hit

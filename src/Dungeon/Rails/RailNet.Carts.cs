@@ -251,6 +251,7 @@ public partial class RailNet
                 if (IsInstanceValid(rider) && rider.Carrier == slag && !rider.IsQueuedForDeletion()) rider.QueueFree();
             slag.Aboard.Clear();
         }
+        else if (cc.Kind == CartKind.Runaway && derailed && RailEncounterController.Instance is { } split && IsInstanceValid(split) && split.SplitPlungedAt(cc.Track, goneS)) ShowSplitPlunge(cc, goneS);
         else if (RunawayRules.ShowsRam(cc.Kind == CartKind.Runaway, cc.Track, derailed)) ShowRam(cc, goneS);
         else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.Drop(golem.GlobalPosition);
         else if (cc.Chaser is { } chaser && chaser.Riders.Count > 0)
@@ -275,6 +276,25 @@ public partial class RailNet
         Props.Tremor.ShakeOnly(0.04f, 0.4f);
         RideAudio.At("timber_smash", cc.Body.GlobalPosition);
         GD.Print(FormattableString.Invariant($"[net] ride: the runaway rammed the train here (it went at S={goneS:0.0}; our copy at S={cc.Run.State.S:0.0}, our train's rear S={OwnTrainRearS():0.0})"));
+    }
+
+    /// <summary>
+    /// Client: the server sent ride 4's runaway gone from the split's spur with its Derailed flag at the spur's end (<see cref="SplitRules.PlungedOffSpur"/>,
+    /// Ruling 19): it went into the crevasse, quietly (a thud and the crash where our copy is; the log line is the server's).
+    /// </summary>
+    private void ShowSplitPlunge(ClientCart cc, float goneS)
+    {
+        if (GetParent() is Node3D root) Audio.Synth.PlayAt(root, Audio.Synth.Thud(), cc.Body.GlobalPosition, -1f);
+        RideAudio.At("cart_crash", cc.Body.GlobalPosition);
+        GD.Print(FormattableString.Invariant($"[net] ride: the runaway took the spur here and plunged (it went at spur S={goneS:0.0}; our copy at S={cc.Run.State.S:0.0})"));
+    }
+
+    /// <summary>Client: a ride's runaway copy runs on the party line with its front short of party S <paramref name="pointsS"/> (the split's lever is offered while one comes).</summary>
+    internal bool ClientRunawayShortOf(float pointsS)
+    {
+        foreach (var cc in _carts.Values)
+            if (cc.Kind == CartKind.Runaway && cc.Track == 0 && IsInstanceValid(cc.Body) && cc.Follow.HasState && cc.Follow.Mode == CartMode.Rolling && cc.Follow.S + cc.Run.Dir * CartRules.HalfLength < pointsS) return true;
+        return false;
     }
 
     /// <summary>Client: our own train's last body's back S, as this screen shows it.</summary>

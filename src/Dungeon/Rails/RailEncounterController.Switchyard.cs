@@ -282,7 +282,8 @@ public partial class RailEncounterController
     /// <summary>
     /// Server: a press on <paramref name="lever"/> after its moment (final review M4, Ruling 21): a deadly lever of the armed ride that is taken,
     /// or with the cart's front at or past its points (the seated window's end), is too late while straight (refused out loud) and already thrown
-    /// when thrown (ignored quietly). <see cref="LatePress.None"/> otherwise (<see cref="SwitchBackRules.Late"/>).
+    /// when thrown (ignored quietly). <see cref="LatePress.None"/> otherwise (<see cref="SwitchBackRules.Late"/>). The split's window ends only when
+    /// it is taken (its <see cref="TrackSwitch.WindowEndS"/> is +∞): its "points" here are its Taken, and a press past its points is in time.
     /// </summary>
     public LatePress LateFor(TrackSwitch lever)
     {
@@ -388,7 +389,7 @@ public partial class RailEncounterController
         for (var i = 0; i < _pieces.Count; i++)
         {
             var p = _pieces[i];
-            if (p.Plan.Ride != ArmedRide || p.Switch is not { } sw || !BackOffered(p)) continue;
+            if (p.Plan.Ride != ArmedRide || p.Switch is not { } sw || !LeverOffered(p)) continue;
             _seatedViews.Add(sw.SeatedView);
             _seatedSwitches.Add(sw);
         }
@@ -407,13 +408,16 @@ public partial class RailEncounterController
         {
             var p = _pieces[i];
             if (p.Plan.Ride != ArmedRide || p.Switch != lever) continue;
-            return BackOffered(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
+            return LeverOffered(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
         }
         return false;
     }
 
     /// <summary>A piece's lever may be offered from the seat: any but a live switch back, which only while the cart is across with no return set (Ruling 16).</summary>
     private bool BackOffered(Piece p) => !p.Live || SwitchBackRules.Offered(_rails.Crossing, !float.IsNaN(_rails.CrossBackS));
+
+    /// <summary>A piece's lever may be offered from the seat now: the split's only while its runaway is coming (<see cref="SplitOffered"/>), a live back by <see cref="BackOffered"/>.</summary>
+    private bool LeverOffered(Piece p) => p.Split != null ? SplitOffered(p) : BackOffered(p);
 
     /// <summary>The buckets tip; a live patch the cart's body is over dents the plating and burns each seated hero, once per patch.</summary>
     private void TickBuckets(Piece piece, float dt)

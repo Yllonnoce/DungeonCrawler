@@ -44,6 +44,8 @@ public partial class RailEncounterController
         public Trestle? Trestle;
         public RailGap? Gap;
         public SpurSwitch? Spur;
+        /// <summary>Ride 4's split (plan 12): its spur and its deadly lever (also <see cref="Switch"/>).</summary>
+        public SplitSwitch? Split;
         public BufferStop? Buffer;
         public Barricade? Barricade;
         /// <summary>The trestle's seconds left before it falls, or −1 before the cart's front is on it.</summary>
@@ -89,6 +91,7 @@ public partial class RailEncounterController
         }
         for (var i = 0; i < _pieces.Count; i++) if (_pieces[i].Plan.Ride == ride) _pieces[i].Fired = false;
         ArmSwitchyard(ride);
+        ArmSplit(ride);
         ArmKiln(ride);
         ArmBarricades(ride);
     }
@@ -239,7 +242,7 @@ public partial class RailEncounterController
                     node = BuildRunawayMarker(root, piece); // the wagon breaks loose as the front reaches it (ArmRunaway)
                     break;
                 case "split":
-                    node = BuildSplitMarker(root, piece); // until Task 6: the layout's points, live or dead
+                    node = BuildSplit(root, piece); // the layout's points: the spur and its lever, or a dead marker
                     break;
             }
             if (node == null) continue;
@@ -326,6 +329,9 @@ public partial class RailEncounterController
                     break;
                 case "runaway":
                     if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) { piece.Fired = true; ArmRunaway(piece.Plan.Ride); }
+                    break;
+                case "split":
+                    TickSplit(piece, party, rolling);
                     break;
             }
         }

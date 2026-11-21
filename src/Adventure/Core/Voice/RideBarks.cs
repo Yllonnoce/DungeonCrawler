@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,11 +11,12 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, and the runaway behind.</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, and the split's three calls.</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
         BarkTrigger.Crevasse, BarkTrigger.Barricade, BarkTrigger.SwitchBack, BarkTrigger.SwitchBackNow, BarkTrigger.Runaway,
+        BarkTrigger.SplitWait, BarkTrigger.SplitNotYet, BarkTrigger.SplitNow,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -185,5 +186,38 @@ public static class RideBarks
             Ranger: new[] { "Wagon behind. Pump.", "Runaway. Faster." },
             Mage: new[] { "A runaway behind us! Pump!", "It gains on us! Faster!" },
             Generic: new[] { "Runaway on the line behind us — pump!", "Wagon loose behind us!", "Pump, it's gaining!" }),
+
+        [BarkTrigger.SplitWait] = new Bank(
+            Brand: new[] { "Let us pass the split first! Then throw it!", "Not the lever yet! Past the points, then pull!", "Hold it! Wait till we're by the split!" },
+            Sable: new[] { "Patience, darling! Pass the split, then throw it!", "Not yet, loves! Let us by first!", "Let us pass the points, then pull!" },
+            Wren: new[] { "Pass it first.", "Wait. Then throw.", "After the points." },
+            Ilex: new[] { "We pass the split first, then throw it behind us!", "Wait! The spur is ours if you pull it now!", "Let the points go by, then pull the lever!" },
+            Warrior: new[] { "Pass the split, then throw it!", "Wait till we're by!" },
+            Rogue: new[] { "Let us by first! Then pull!", "Not yet! After the points!" },
+            Ranger: new[] { "Pass it first.", "Wait. Then throw." },
+            Mage: new[] { "Pass the split, then throw it!", "Wait until we're past the points!" },
+            Generic: new[] { "Let us pass the split, then throw it!", "Wait till we pass it!", "Past the points first!" }),
+
+        [BarkTrigger.SplitNotYet] = new Bank(
+            Brand: new[] { "Not yet! Set it back, that's the spur!", "Back! You'll put us in the drop!", "Set it back! That's our death!" },
+            Sable: new[] { "Not yet, darling! Set it back, that's the spur!", "Back, love! That way's the drop!", "Set it back! We're not flying today!" },
+            Wren: new[] { "Not yet. Set it back.", "Back. That's the spur.", "Set it back." },
+            Ilex: new[] { "Not yet! Set it back, that's the spur!", "Reverse it! That track ends in the chasm!", "Back, back! You'll send us into the drop!" },
+            Warrior: new[] { "Not yet! Set it back!", "That's the spur! Back!" },
+            Rogue: new[] { "Not yet! Back, back!", "That's the spur! Set it back!" },
+            Ranger: new[] { "Not yet. Back.", "Spur. Set it back." },
+            Mage: new[] { "Not yet! Set it back!", "That's the spur! Reverse it!" },
+            Generic: new[] { "Not yet — set it back, that's the spur!", "Set it back!", "That's the spur!" }),
+
+        [BarkTrigger.SplitNow] = new Bank(
+            Brand: new[] { "Now! Throw the split behind us!", "We're past! Pull it now!", "Now! Send it down the spur!" },
+            Sable: new[] { "Now, darling! Throw the split!", "We're by, love! Pull it now!", "Now! Let it have the drop!" },
+            Wren: new[] { "Now. Throw it.", "Past. Pull.", "Now." },
+            Ilex: new[] { "Now! Throw the split behind us!", "We are past the points! Pull it now!", "Now, and the wagon takes the spur!" },
+            Warrior: new[] { "Now! Throw it!", "Past! Pull it now!" },
+            Rogue: new[] { "Now! Throw it behind us!", "We're past! Pull!" },
+            Ranger: new[] { "Now. Throw it.", "Past. Pull." },
+            Mage: new[] { "Now! Throw the split!", "We're past! Pull it!" },
+            Generic: new[] { "Now — throw the split!", "Throw it behind us!", "Pull it now!" }),
     };
 }

@@ -577,7 +577,8 @@ public partial class ServerWorld : Node
                 var lever = node as Dungeon.Rails.TrackSwitch;
                 var window = lever != null && Dungeon.Rails.RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.InSeatedWindow(body, lever);
                 if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: {dist:0.0} m (reach {reach}) body={body.GlobalPosition:0.0} node={node.GlobalPosition:0.0}{(lever != null ? $" seated window {(window ? "yes" : "no")}" : "")}");
-                if (window && Dungeon.Rails.SeatedSwitchRules.RefuseSetBack(lever!.Thrown, NetSession.Instance.Now, lever.LastToggledAt, lever.LastToggledBy, body.State.Name))
+                // ride 4's split: a set-back short of its points is never refused (plan 12, Ruling 7; the guard applies past them)
+                if (window && Dungeon.Rails.RailEncounterController.Instance?.GuardsSetBack(lever!) != false && Dungeon.Rails.SeatedSwitchRules.RefuseSetBack(lever!.Thrown, NetSession.Instance.Now, lever.LastToggledAt, lever.LastToggledBy, body.State.Name))
                 {
                     GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: seated window: set back {NetSession.Instance.Now - lever.LastToggledAt:0.00} s after {lever.LastToggledBy} threw it, ignored");
                     break;

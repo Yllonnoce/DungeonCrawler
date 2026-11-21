@@ -156,10 +156,10 @@ public partial class RailNet : Node
                 flags |= CartFlags.Derailed; // a managed field: readable though the node is freed
                 goneS = derailed.Run.State.S; // where it went: a client tells a plunge through the broken bridge's gap from a derail by it (SwitchBackRules.PlungedAt)
             }
-            else if (k.Body is RunawayWagon { Rammed: true } rammed)
+            else if (k.Body is RunawayWagon gone && (gone.Rammed || gone.Plunged))
             {
-                flags |= CartFlags.Derailed; // ride 4's runaway rammed the train: a client shows the ram (RunawayRules.ShowsRam); a halt's free carries no flag
-                goneS = rammed.GoneS;
+                flags |= CartFlags.Derailed; // ride 4's runaway rammed the train (RunawayRules.ShowsRam), or went off the split's spur (its track; SplitRules.PlungedOffSpur); a halt's free carries no flag
+                goneS = gone.GoneS;
             }
             (changed ??= new()).Add(new CartStateDto { Cart = k.Id, Kind = (byte)k.Kind, Track = k.Track, Flags = (byte)flags, S = goneS, ServerTime = now });
         }

@@ -12,6 +12,9 @@ public static class PropPromptRules
     public static string SwitchPrompt(bool isFixed, bool taken, bool thrown)
         => isFixed || taken ? "" : thrown ? "Set the switch back" : "Throw the switch";
 
+    /// <summary>Ride 4's split lever (plan 12, Ruling 5): nothing once the runaway has taken its points; else which way a throw sends, or its set-back (<see cref="SplitRules.Prompt"/>).</summary>
+    public static string SplitPrompt(bool taken, bool past, bool thrown) => taken ? "" : SplitRules.Prompt(past, thrown);
+
     /// <summary>A stop's winch: offered while its gate is down (a holder still near refuses it on the server, with a log line).</summary>
     public static string WinchPrompt(bool gateUp) => gateUp ? "" : "Crank the winch";
 

@@ -12,7 +12,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// seated window with the lever straight, is set at the window's start (the calls and the offer run as they would); inside the window
 /// and short of the last call, at the last call's mark (6 m before the points: "Switch back — now!" still comes, final review M1); past
 /// that, or with the lever thrown, or short of a fixed back, at the back's points (taken as its lever stands); past every back, at the
-/// gap, where it falls as it would have. Server and solo; the window counts elapsed time, so any physics rate gives the same 10 s, from the cart's last half-metre. No allocation.
+/// gap, where it falls as it would have. Nor onto ride 4's split (plan 12): a train stuck short of its points with the lever thrown has it set
+/// back first (<see cref="RailEncounterController.WatchdogSplit"/>). Server and solo; the window counts elapsed time, so any physics rate gives the same 10 s, from the cart's last half-metre. No allocation.
 /// </summary>
 public partial class RailController
 {
@@ -48,6 +49,7 @@ public partial class RailController
         var lip = GapSet && !_jumpJudged && next > _gapFrom ? _gapFrom - CartRules.HalfLength : float.NaN;
         var face = LineBlocked && !OnEnemyLane(BlockedAt) ? BlockedAt - CartRules.HalfLength : float.NaN;
         var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) && e.GetParent() == GetParent() ? e : null;
+        enc?.WatchdogSplit(); // short of the split's points with it thrown: set back first, so the grind never takes the spur (plan 12, Ruling 15)
         var (backWindow, backPoints, gap) = enc?.WatchdogBreak() ?? (float.NaN, float.NaN, float.NaN); // front S, NaN unless across toward the broken bridge
         var to = CartWatchdog.PartyFreeTo(State, next, lip, face, backWindow - CartRules.HalfLength, backPoints - CartRules.HalfLength, gap - CartRules.HalfLength, out var freed);
         Party.Reset(freed);

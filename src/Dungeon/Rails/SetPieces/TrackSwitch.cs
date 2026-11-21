@@ -16,7 +16,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// (<see cref="SwitchBackRules.MayToggle"/>): a companion's arrow or blade, or a hero bot, never decides it. Built by
 /// the <see cref="RailEncounterController"/>, which reads <see cref="Thrown"/> as the cart's front reaches the points. The server
 /// judges it and tells every change (<see cref="NetRef"/>: "thrown", "straight", "taken", "free", "reset"); a client's copy only shows
-/// what it is told (<see cref="ShowThrown"/>, <see cref="ShowTaken"/>, <see cref="ShowReset"/>).
+/// what it is told (<see cref="ShowThrown"/>, <see cref="ShowTaken"/>, <see cref="ShowReset"/>). Ride 4's split lever (plan 12, <see cref="SplitSwitch"/>)
+/// is deadly too, its seated window from <see cref="WindowStartS"/> to its taking (<see cref="WindowEndS"/>), its prompt the split's, and a throw
+/// just short of its points held to them (<see cref="HoldThrow"/>).
 /// </summary>
 public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, ISoundPoint
 {
@@ -32,8 +34,28 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     public float PointsS { get; init; }
     /// <summary>The party line's S at the lever, set by its builder on every peer (the seated window opens from it: <see cref="SeatedSwitchRules"/>).</summary>
     public float LeverS { get; init; }
-    /// <summary>What the seated window reads of this lever (<see cref="SeatedSwitchRules.InWindow"/>).</summary>
-    public SeatedLever SeatedView => new(LeverS, PointsS, Fixed, Taken);
+    /// <summary>
+    /// What the seated window reads of this lever (<see cref="SeatedSwitchRules.InWindow"/>): it opens <see cref="SeatedSwitchRules.WindowAhead"/>
+    /// before <see cref="LeverS"/>, or at <see cref="WindowStartS"/> when set, and ends at <see cref="PointsS"/>, or <see cref="WindowEndS"/> when set.
+    /// </summary>
+    public SeatedLever SeatedView => new(float.IsNaN(WindowStartS) ? LeverS : WindowStartS + SeatedSwitchRules.WindowAhead,
+        float.IsNaN(WindowEndS) ? PointsS : WindowEndS, Fixed, Taken);
+    /// <summary>
+    /// Where the seated window ends instead of the points (NaN: at the points). Ride 4's split sets +∞ (plan 12, Ruling 5): its window runs on
+    /// past the points until it is <see cref="Taken"/> (the runaway reached them), and a press is late only once taken.
+    /// </summary>
+    public float WindowEndS { get; init; } = float.NaN;
+    /// <summary>Where the seated window opens instead of <see cref="SeatedSwitchRules.WindowAhead"/> before the lever (NaN: there). The split's opens at its points less the straight before them (ruling R-bend).</summary>
+    public float WindowStartS { get; init; } = float.NaN;
+    /// <summary>
+    /// A throw (straight to thrown) by this actor now is held, not applied (the split's, Ruling 7: pressed just short of its points). It is
+    /// recorded (<see cref="HeldBy"/>) and applied by its builder after the cart's branch is decided (<see cref="ThrowHeld"/>). Server and solo.
+    /// </summary>
+    public Func<Adventurer, bool>? HoldThrow { get; init; }
+    /// <summary>Who pressed the throw being held to the points (<see cref="HoldThrow"/>), or null.</summary>
+    public string? HeldBy { get; private set; }
+    /// <summary>Ride 4's split (plan 12): the cart's front is past its points now. Set, the prompt is the split's (<see cref="PropPromptRules.SplitPrompt"/>).</summary>
+    public Func<bool>? SplitPast { get; init; }
     /// <summary>Server and solo: when it was last toggled by a use or a hit (<c>NetSession.Instance.Now</c>; never: −∞), and by whom (a hero's or attacker's name), for the seated set-back guard (<see cref="SeatedSwitchRules.RefuseSetBack"/>).</summary>
     public double LastToggledAt { get; private set; } = double.NegativeInfinity;
     /// <inheritdoc cref="LastToggledAt"/>
@@ -109,7 +131,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     }
 
     /// <summary>The same rule on every peer: a client's copy reads the Fixed, Taken and Thrown the server told it.</summary>
-    public string Prompt => Withheld ? "" : PropPromptRules.SwitchPrompt(Fixed, Taken, Thrown);
+    public string Prompt => Withheld ? "" : SplitPast is { } past ? PropPromptRules.SplitPrompt(Taken, past(), Thrown) : PropPromptRules.SwitchPrompt(Fixed, Taken, Thrown);
 
     /// <summary>
     /// E on the lever: the server's (or solo) use by any hero up on their feet, a remote player's through its InteractIntent (the server checked the
@@ -118,8 +140,25 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     public void Interact(PartyController party, Adventurer actor)
     {
         if (actor.Downed || !SwitchBackRules.MayToggle(Deadly, actor.Control) || Withheld) return;
+        if (!Thrown && HoldThrow?.Invoke(actor) == true)
+        {
+            if (NetSession.IsClient || Fixed || Taken) return;
+            HeldBy = actor.State.Name; // applied after the cart's branch is decided (ThrowHeld): a press just short of the points never sends it down the spur
+            GD.Print($"[rails] {GetParent()?.Name}/{Name}: {actor.State.Name}'s throw held to the points");
+            return;
+        }
         Toggle(actor.State.Name);
     }
+
+    /// <summary>Server and solo: the held throw (<see cref="HeldBy"/>) applied as an ordinary toggle by <paramref name="by"/>. True when it threw the lever.</summary>
+    public bool ThrowHeld(string by)
+    {
+        HeldBy = null;
+        return !Thrown && Toggle(by);
+    }
+
+    /// <summary>Server and solo: a held throw is dropped unapplied (the watchdog set the lever back, or the ride ended).</summary>
+    public void DropHeld() => HeldBy = null;
 
     public string DisplayName => "switch";
     public bool IsAlive => true;
@@ -151,10 +190,22 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     {
         var changed = _taken || (Thrown && !Fixed);
         _taken = false;
+        HeldBy = null;
         if (!Fixed) SetThrown(false);
         LastToggledAt = double.NegativeInfinity;
         LastToggledBy = null;
         if (changed) Tell("reset");
+    }
+
+    /// <summary>Server and solo: set straight without a hand on it (the watchdog's, plan 12 Ruling 15), any held throw dropped. True when it was thrown.</summary>
+    public bool SetBack()
+    {
+        HeldBy = null;
+        if (NetSession.IsClient || Fixed || !Thrown) return false;
+        SetThrown(false);
+        RideAudio.At("switch_clunk", SoundPoint);
+        Tell("straight");
+        return true;
     }
 
     /// <summary>Server test hook: throw it.</summary>

@@ -19,7 +19,9 @@ public partial class RunawayWagon : MineCart
     public override Net.CartKind Kind => Net.CartKind.Runaway;
     /// <summary>Ride 4's runaway rammed the train (server): the cart sender tells clients it went with the Derailed flag, at <see cref="GoneS"/>. Managed: readable though the node is freed.</summary>
     public bool Rammed { get; set; }
-    /// <summary>Its centre S as it rammed.</summary>
+    /// <summary>Ride 4's runaway went off the split's spur into the crevasse (server): told to clients with the Derailed flag on the spur's track, at <see cref="GoneS"/>. Managed.</summary>
+    public bool Plunged { get; set; }
+    /// <summary>Its centre S as it rammed (the party line's), or as it went off the spur (the spur's).</summary>
     public float GoneS { get; set; }
     /// <summary>An ore wagon, not a seated cart: it wears the mine pack's tall tub over its box tub's size.</summary>
     protected override string? TubModel => "Cart_1";
