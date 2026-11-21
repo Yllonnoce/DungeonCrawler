@@ -94,17 +94,18 @@ public partial class RailEncounterController
         _warnedTraffic.Clear();
     }
 
-    private void SpawnTraffic()
+    /// <summary>A riderless slag cart enters the enemy line at <paramref name="s"/> (its start, but for a test's), at <paramref name="v"/>.</summary>
+    private void SpawnTraffic(float s = 0f, float v = 0f)
     {
         if (GetParent() is not Node3D root) return;
-        var cart = new SlagCart { Name = "SlagCart_traffic", EncounterId = "traffic", InnerSide = InnerSideAt(0f), CartId = NextCartId() };
-        cart.Setup(_enemy, new CartState(0f, 0f, CartMode.Rolling, CartRules.MaxPlating), 0f);
+        var cart = new SlagCart { Name = "SlagCart_traffic", EncounterId = "traffic", InnerSide = InnerSideAt(s), CartId = NextCartId() };
+        cart.Setup(_enemy, new CartState(s, v, CartMode.Rolling, CartRules.MaxPlating), 0f);
         root.AddChild(cart);
-        cart.Run.PoseAt(0f);
+        cart.Run.PoseAt(s);
         cart.Run.Sync();
         _traffic = cart;
         if (cart.Sound != null) cart.Sound.AnnounceOnStart = true; // it rings as it enters the line
-        GD.Print($"[rails] t={_now:0.00} traffic slag cart enters the enemy line (party cart S={_rails.State.S:0.0})");
+        GD.Print($"[rails] t={_now:0.00} traffic slag cart enters the enemy line{(s > 0f ? $" at S={s:0.0}" : "")} (party cart S={_rails.State.S:0.0})");
     }
 
     private void SpawnRunaway()
@@ -136,6 +137,7 @@ public partial class RailEncounterController
         run.Sync();
         run.PoseAt(run.State.S);
         SmashAhead(run, cart, enemyTrack: true, cart.Aboard); // riderless: only the timber and its speed pay
+        if (DropsThrough(cart)) { _traffic = null; _warnedTraffic.Clear(); return; } // the broken bridge's gap
         RunOver(run, cart.HitAt, TrafficSource, SlagCart.HazardIndex, _setAside);
         Warn(run, cart, _warnedTraffic, false, party);
         if (run.State.S >= _enemy.Length - LineEnd || run.State.Mode != CartMode.Rolling || OwnProgressStuck(ref cart.Watch, run, dt, cart))

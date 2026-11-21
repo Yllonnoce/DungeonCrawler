@@ -68,6 +68,18 @@ public partial class RailController
     /// <summary>The cart has taken a switch this ride: it is posed across the lanes by S.</summary>
     public bool Crossing => !float.IsNaN(_crossOut);
 
+    /// <summary>The party S the cart crossed out at (NaN on its own lane), every role: a client's is the server's (<see cref="ApplyLaneNet"/>).</summary>
+    public float CrossOutS => _crossOut;
+    /// <summary>The party S the cart crosses back at (NaN: it stays across until the ride ends), every role.</summary>
+    public float CrossBackS => _crossBack;
+
+    /// <summary>Server test hook: while <see cref="Crossing"/>, the cart stays across on the slag line (its return is undone).</summary>
+    internal void DebugStayAcross()
+    {
+        if (NetSession.IsClient || !Crossing) return;
+        Cross(_crossOut, float.NaN);
+    }
+
     private static float Smooth(float x)
     {
         x = Mathf.Clamp(x, 0f, 1f);

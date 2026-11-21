@@ -41,6 +41,7 @@ namespace DungeonCrawler.Core;
 ///                       =trestle  the train falls with the trestle under it instead of at the jump, then the same rise
 ///                       =survivor the human is on foot when the train falls: nobody wipes, a spare waits, the fallen come back when the human steps onto its stop's platform; a save and load keep the lost wagon and its dead crew below the lip, and a hero fallen again comes back on the floor change to 13
 ///   --test-barricade    floor 12, lethality 3: a spell cuts ride 1's barricade on foot; on ride 1 the call comes 30-35 m out, the human brakes and the seated lead's blade cuts it in three hits (no smash, no dent); on ride 2 the cart smashes its barricade (plating -25, 15% of max HP to each seated hero, never below 1, an NPC on the bench unhurt, 80% of the speed kept); a restore stands it again at its ride's next arming
+///   --test-switch-back=wrong  floor 12, lethality 3: the broken bridge as built (the gap bare of footing and track, the deck and the party lane beside it whole); a traffic cart drops through the gap; the train kept on the slag line past ride 3's switch back (a test hook for now) falls at the gap and the wipe rises at stop 2
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
@@ -325,6 +326,12 @@ public partial class DebugTools : Node
                 var v = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant() : "fall";
                 if (v is not ("fall" or "trestle" or "survivor")) { GD.PrintErr($"[crevasse] --test-crevasse={v}: the variant is trestle or survivor (none: the fall); running the fall"); v = "fall"; }
                 _testCrevasse = true; _crvVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
+            }
+            else if (arg.StartsWith("--test-switch-back="))
+            {
+                var v = arg[(arg.IndexOf('=') + 1)..].Trim().ToLowerInvariant();
+                if (v != "wrong") { GD.PrintErr($"[switchback] --test-switch-back={v}: the variant built so far is wrong; running it"); v = "wrong"; }
+                _testSwitchBack = true; _sbVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
             }
             else if (arg == "--test-barricade") { _testBarricade = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
@@ -901,6 +908,7 @@ public partial class DebugTools : Node
         if (_testCartWatchdog && !ScriptStalled("watchdog", _wdStep)) RunCartWatchdogTest();
         if (_testCrevasse && !ScriptStalled("crevasse", _crvStep)) RunCrevasseTest();
         if (_testBarricade && !ScriptStalled("barricade", _brStep)) RunBarricadeTest();
+        if (_testSwitchBack && !ScriptStalled("switchback", _sbStep)) RunSwitchBackTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;
@@ -1051,7 +1059,7 @@ public partial class DebugTools : Node
             }
             else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[kill-barks] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
         }
-        if (_screenshotPath != null && !_testHorde && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
+        if (_screenshotPath != null && !_testHorde && !_testSwitchBack && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
         {
             if (_faceNode != null && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } shot) GD.Print($"[face-node] at the screenshot: {shot.State.Name} {shot.ModelDebug}; lead at {Main.Instance.Party.Local?.GlobalPosition:0.0} facing {-Main.Instance.Party.Local?.GlobalTransform.Basis.Z:0.00}");
             _done = true;

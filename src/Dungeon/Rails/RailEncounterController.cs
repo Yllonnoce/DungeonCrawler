@@ -279,6 +279,7 @@ public partial class RailEncounterController : Node
         if (NetSession.IsClient || !Current) return;
         var dt = (float)delta;
         StartReached();
+        TickBreak(); // the train still on the slag line at the broken bridge falls
         TickSetPieces(Main.Instance.Party, dt);
         TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
@@ -297,6 +298,7 @@ public partial class RailEncounterController : Node
             if (Ram(cart)) { _carts.RemoveAt(i); continue; } // before it moves or sweeps: a rammed cart does nothing more
             Pace(cart, dt);
             SmashAhead(cart.Run, cart, enemyTrack: true, cart.Aboard); // timber on the slag line ahead of it
+            if (DropsThrough(cart)) { _carts.RemoveAt(i); continue; } // the broken bridge's gap: down with its riders
             RunOver(cart);
             Warn(cart, party);
             if (cart.Run.State.S >= _enemy.Length - LineEnd || cart.Run.State.Mode != CartMode.Rolling || PacingStuck(cart, dt)) { Free(cart); _carts.RemoveAt(i); }
