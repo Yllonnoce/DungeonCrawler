@@ -46,6 +46,12 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     /// </summary>
     public bool Deadly { get => _deadly && !Fixed; init => _deadly = value; }
     private readonly bool _deadly;
+    /// <summary>
+    /// A deadly lever is offered only while this holds (its builder's: the cart across with its return open, <see cref="SwitchBackRules.Offered"/>),
+    /// on every peer: otherwise it has no prompt (neither the seated window nor the look ray offers it) and E does nothing.
+    /// </summary>
+    public Func<bool>? OfferedNow { get; init; }
+    private bool Withheld => Deadly && OfferedNow?.Invoke() == false;
     public bool Thrown { get; private set; }
     /// <summary>
     /// The cart's front has passed its points this ride: the lever offers nothing until the ride is over. Taking it is told ("taken"),
@@ -103,15 +109,15 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     }
 
     /// <summary>The same rule on every peer: a client's copy reads the Fixed, Taken and Thrown the server told it.</summary>
-    public string Prompt => PropPromptRules.SwitchPrompt(Fixed, Taken, Thrown);
+    public string Prompt => Withheld ? "" : PropPromptRules.SwitchPrompt(Fixed, Taken, Thrown);
 
     /// <summary>
     /// E on the lever: the server's (or solo) use by any hero up on their feet, a remote player's through its InteractIntent (the server checked the
-    /// reach). A deadly lever does nothing for a companion's or a parked body's use.
+    /// reach). A deadly lever does nothing for a companion's or a parked body's use, nor while it is not offered (<see cref="OfferedNow"/>).
     /// </summary>
     public void Interact(PartyController party, Adventurer actor)
     {
-        if (actor.Downed || !SwitchBackRules.MayToggle(Deadly, actor.Control)) return;
+        if (actor.Downed || !SwitchBackRules.MayToggle(Deadly, actor.Control) || Withheld) return;
         Toggle(actor.State.Name);
     }
 

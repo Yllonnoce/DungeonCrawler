@@ -17,7 +17,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 public partial class RailController
 {
     /// <summary>A switch eases the cart across between the lanes over this many metres.</summary>
-    public const float SwitchStretch = 6f;
+    public const float SwitchStretch = SwitchBackRules.HomeStretch;
 
     private TrackSampler? _enemyLane;
     private LaneMap? _lanes;

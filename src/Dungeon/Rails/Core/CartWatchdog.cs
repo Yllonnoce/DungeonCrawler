@@ -14,7 +14,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// </list>
 /// </summary>
 /// <summary>Where the watchdog frees a stuck party cart to (<see cref="CartWatchdog.PartyFreeTo(in CartState, float, float, float, float, float, out CartState)"/>).</summary>
-public enum FreeTo : byte { NextStop, GapLip, ObstacleFace, BackPoints, BreakLip }
+public enum FreeTo : byte { NextStop, GapLip, ObstacleFace, BackPoints, BreakLip, BackWindow }
 
 public static class CartWatchdog
 {
@@ -61,6 +61,15 @@ public static class CartWatchdog
     /// carries a train across the slag line's gap, nor past a live back it has not taken.
     /// </summary>
     public static FreeTo PartyFreeTo(in CartState cart, float nextStop, float gapLip, float obstacleFace, float backPoints, float breakLip, out CartState freed)
+        => PartyFreeTo(cart, nextStop, gapLip, obstacleFace, float.NaN, backPoints, breakLip, out freed);
+
+    /// <summary>
+    /// As the six-argument overload, with <paramref name="backWindow"/> too: the centre S with the front at a live back's seated window's start,
+    /// given only while its lever is straight and the cart short of that window (<see cref="SwitchBackRules.GrindBackTo"/>; NaN otherwise). It is
+    /// nearer than the back's points, so a stall short of the window frees the cart there, rolling at its speed: the calls and the offer then
+    /// run as they would. The watchdog never carries a train past a window its player was not shown.
+    /// </summary>
+    public static FreeTo PartyFreeTo(in CartState cart, float nextStop, float gapLip, float obstacleFace, float backWindow, float backPoints, float breakLip, out CartState freed)
     {
         float s = cart.S, at = nextStop;
         var to = FreeTo.NextStop;
@@ -72,13 +81,14 @@ public static class CartWatchdog
         }
         Nearer(FreeTo.ObstacleFace, obstacleFace);
         Nearer(FreeTo.GapLip, gapLip);
+        Nearer(FreeTo.BackWindow, backWindow);
         Nearer(FreeTo.BackPoints, backPoints);
         Nearer(FreeTo.BreakLip, breakLip);
         freed = to switch
         {
             FreeTo.ObstacleFace => new CartState(at, 0f, CartMode.Rolling, cart.Plating),
             FreeTo.GapLip => new CartState(at + LipNudge, SetPieceRules.JumpSpeed, CartMode.Rolling, cart.Plating),
-            FreeTo.BackPoints or FreeTo.BreakLip => new CartState(at + LipNudge, cart.V, CartMode.Rolling, cart.Plating),
+            FreeTo.BackWindow or FreeTo.BackPoints or FreeTo.BreakLip => new CartState(at + LipNudge, cart.V, CartMode.Rolling, cart.Plating),
             _ => new CartState(nextStop, 0f, CartMode.Held, cart.Plating),
         };
         return to;

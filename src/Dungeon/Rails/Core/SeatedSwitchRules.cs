@@ -30,6 +30,21 @@ public static class SeatedSwitchRules
         => seatedInPartyCart && riderUp && rolling && !lever.Fixed && !lever.Taken
            && frontS >= lever.LeverS - WindowAhead && frontS < lever.PointsS;
 
+    /// <summary>
+    /// The server accepts a seated press this far before its own window opens (Task 7 fix round): a co-op client's cart can run a few metres
+    /// ahead of the server's (it extrapolates; a loaded server steps late), so a press on the client's first window frame can reach the
+    /// server short of its window. The offer itself (<see cref="InWindow"/>) still opens at <see cref="WindowAhead"/>.
+    /// </summary>
+    public const float AcceptLead = 3f;
+
+    /// <summary>
+    /// The server's acceptance of a seated press on <paramref name="lever"/>: as <see cref="InWindow"/>, the window's start moved
+    /// <see cref="AcceptLead"/> earlier; never at or past the points (the cart has taken the lever as it stood).
+    /// </summary>
+    public static bool Accepts(bool seatedInPartyCart, bool riderUp, bool rolling, float frontS, SeatedLever lever)
+        => seatedInPartyCart && riderUp && rolling && !lever.Fixed && !lever.Taken
+           && frontS >= lever.LeverS - WindowAhead - AcceptLead && frontS < lever.PointsS;
+
     /// <summary>The in-window lever nearest the front by S (the first on a tie), or −1. Runs every physics frame: it does not allocate.</summary>
     public static int Nearest(bool seatedInPartyCart, bool riderUp, bool rolling, float frontS, IReadOnlyList<SeatedLever> levers)
     {

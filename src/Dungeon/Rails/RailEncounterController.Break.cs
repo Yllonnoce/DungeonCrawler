@@ -131,18 +131,21 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// The watchdog's view of the broken bridge (server, <see cref="RailController"/>'s grind): with the break's ride armed, its fall armed and the
-    /// train across at the gap as it stands (<see cref="RailController.LaneBlendAt"/> ≥ 0.5 there), the gap's party S and the points of the
-    /// nearest live switch back of that ride the front has not reached (NaN: none); else both NaN.
+    /// The watchdog's view of the broken bridge (server, <see cref="RailController"/>'s grind), all front S: with the break's ride armed, its fall
+    /// armed and the train across at the gap as it stands (<see cref="RailController.LaneBlendAt"/> ≥ 0.5 there), the gap; for the nearest live
+    /// switch back of that ride the front has not reached, its points, and its seated window's start while its lever is straight and the front
+    /// short of it (<see cref="SwitchBackRules.GrindBackTo"/>). NaN for what is not there.
     /// </summary>
-    internal (float BackPoints, float Gap) WatchdogBreak()
+    internal (float BackWindow, float BackPoints, float Gap) WatchdogBreak()
     {
-        if (float.IsNaN(BreakGapS) || !BreakArmed || ArmedRide != BreakRide || _rails.LaneBlendAt(BreakGapS) < 0.5f) return (float.NaN, float.NaN);
+        if (float.IsNaN(BreakGapS) || !BreakArmed || ArmedRide != BreakRide || _rails.LaneBlendAt(BreakGapS) < 0.5f) return (float.NaN, float.NaN, float.NaN);
         var front = _rails.Party.FrontS;
-        var back = float.NaN;
+        Piece? back = null;
         foreach (var p in _pieces)
-            if (p.Live && p.Plan.Ride == BreakRide && !p.Fired && p.S > front && p.S < BreakGapS && (float.IsNaN(back) || p.S < back)) back = p.S;
-        return (back, BreakGapS);
+            if (p.Live && p.Plan.Ride == BreakRide && !p.Fired && p.S > front && p.S < BreakGapS && (back == null || p.S < back.S)) back = p;
+        if (back?.Switch is not { } sw) return (float.NaN, back?.S ?? float.NaN, BreakGapS);
+        var to = SwitchBackRules.GrindBackTo(front, sw.LeverS, back.S, sw.Thrown);
+        return (to < back.S ? to : float.NaN, back.S, BreakGapS);
     }
 
     /// <summary>

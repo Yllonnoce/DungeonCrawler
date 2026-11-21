@@ -24,8 +24,8 @@ public static class SwitchBackRules
     /// <summary>The early call comes with the front this far before the lever; the last this far before the points (Ruling 17).</summary>
     public const float CallEarly = 30f, CallLast = 6f;
     /// <summary>
-    /// A return switch's points at least this far short of the gap bring the cart wholly home before it (the crossover's length, the
-    /// game's <c>RailController.SwitchStretch</c>).
+    /// A return switch's points at least this far short of the gap bring the cart wholly home before it: the crossover's length (the game's
+    /// <c>RailController.SwitchStretch</c> is defined as this one).
     /// </summary>
     public const float HomeStretch = 6f;
 
@@ -98,6 +98,18 @@ public static class SwitchBackRules
         if (!crossing || backSet || thrown || lastDone || !(front < pointsS)) return BackCall.None; // NaN compares false
         if (front >= pointsS - CallLast) return BackCall.Last;
         return !earlyDone && front >= leverS - CallEarly ? BackCall.Early : BackCall.None;
+    }
+
+    /// <summary>
+    /// Where the watchdog frees a train stuck across on the slag line short of a live back it has not taken (front S): with the lever straight
+    /// and the front short of the back's seated window, the window's start (<paramref name="leverS"/> − <see cref="SeatedSwitchRules.WindowAhead"/>),
+    /// so the calls and the offer run as they would; inside the window, or thrown, the points (taken there as it stands). Never past a window
+    /// the player was not shown.
+    /// </summary>
+    public static float GrindBackTo(float front, float leverS, float pointsS, bool thrown)
+    {
+        var window = leverS - SeatedSwitchRules.WindowAhead;
+        return !thrown && front < window ? window : pointsS;
     }
 
     /// <summary>

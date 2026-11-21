@@ -59,7 +59,7 @@ public partial class RailEncounterController
         var x = frame.Basis.X.Normalized();
         var side = (_enemy.Point(Lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
         piece.Live = back && piece.Plan.Ride == BreakRide && SwitchBackRules.LiveBack(piece.S, BreakGapS); // every role alike, from the layout
-        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back && !piece.Live, Deadly = piece.Live, NetRef = Net.NetRefs.Switch(piece.Index) };
+        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back && !piece.Live, Deadly = piece.Live, NetRef = Net.NetRefs.Switch(piece.Index), OfferedNow = () => BackOffered(piece) };
         root.AddChild(sw);
         sw.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * LeverOut));
         piece.Switch = sw;
@@ -365,7 +365,10 @@ public partial class RailEncounterController
         return k < 0 ? null : _seatedSwitches[k];
     }
 
-    /// <summary><paramref name="lever"/>, a piece of the armed ride, is in <paramref name="hero"/>'s seated window (not only the nearest): the server's acceptance of a use out of reach.</summary>
+    /// <summary>
+    /// <paramref name="lever"/>, a piece of the armed ride, is in <paramref name="hero"/>'s seated window (not only the nearest), up to
+    /// <see cref="SeatedSwitchRules.AcceptLead"/> before it opens here (<see cref="SeatedSwitchRules.Accepts"/>): the server's acceptance of a use out of reach.
+    /// </summary>
     public bool InSeatedWindow(Adventurer hero, TrackSwitch lever)
     {
         if (!Current) return false;
@@ -373,7 +376,7 @@ public partial class RailEncounterController
         {
             var p = _pieces[i];
             if (p.Plan.Ride != ArmedRide || p.Switch != lever) continue;
-            return BackOffered(p) && SeatedSwitchRules.InWindow(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
+            return BackOffered(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
         }
         return false;
     }

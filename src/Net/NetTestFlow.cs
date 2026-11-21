@@ -953,8 +953,7 @@ public partial class NetTestFlow : Node
                 }
                 if (!me.Seated || rc.StopIndex != 2 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || _rideThrowAsked || Main.Instance.Party.LookingAt != lever) return false;
                 var dist = me.GlobalPosition.DistanceTo(lever.GlobalPosition);
-                var ahead = lever.LeverS - rc.Party.FrontS;
-                if (ahead > RideWindowPress) return false; // into the window: our cart can lead the server's by a few metres, and a press it gets short of its own window is refused
+                var ahead = lever.LeverS - rc.Party.FrontS; // pressed on the window's first frame here: the server accepts it up to SeatedSwitchRules.AcceptLead before its own
                 var prompt = lever.Prompt;
                 if (prompt != "Throw the switch") return RideFail(net, $"the seated window offers ride 3's lever as \"{prompt}\" (want Throw the switch)");
                 if (dist <= Dungeon.Rails.PropPromptRules.InteractReach + Dungeon.Rails.PropPromptRules.SeatedLagCap) return RideFail(net, FormattableString.Invariant($"the seated window first offered ride 3's lever {dist:0.00} m off, inside the plain reach"));
@@ -977,8 +976,7 @@ public partial class NetTestFlow : Node
                 }
                 if (back.Taken && !_rideBackAsked) return RideFail(net, "ride 3's switch_back was taken before its seated window offered it here");
                 if (!me.Seated || rc.StopIndex != 2 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || _rideBackAsked || Main.Instance.Party.LookingAt != back) return false;
-                var ahead = back.LeverS - rc.Party.FrontS;
-                if (ahead > RideWindowPress) return false; // as the switch_out's: into the window
+                var ahead = back.LeverS - rc.Party.FrontS; // the window's first frame here, as the switch_out's
                 var prompt = back.Prompt;
                 if (prompt != "Throw the switch") return RideFail(net, $"the seated window offers ride 3's switch_back as \"{prompt}\" (want Throw the switch)");
                 if (!back.Deadly || !rc.Crossing || !float.IsNaN(rc.CrossBackS)) return RideFail(net, FormattableString.Invariant($"ride 3's switch_back offered here while not a live lever across with its return open (deadly {back.Deadly}, crossing {rc.Crossing}, back {rc.CrossBackS:0.0})"));
@@ -994,12 +992,6 @@ public partial class NetTestFlow : Node
     }
 
     private int _rideSwitchHere = -1, _rideBackHere = -1;
-    /// <summary>
-    /// The RIDE pass presses a seated-window lever once its front is this far before the lever (5 m into the window): our cart can lead the
-    /// server's by 1-3 m (more the longer the ride runs), so a press on the window's first frame here can reach the server short of the
-    /// window there, and be refused.
-    /// </summary>
-    private const float RideWindowPress = Dungeon.Rails.SeatedSwitchRules.WindowAhead - 5f;
     private bool _rideBackAsked;
 
     /// <summary>The stops whose prisoners this client left behind through the intent (once per stop).</summary>
