@@ -17,6 +17,7 @@ public sealed class NetClock
     private int _next;
     private double _offset;
     private bool _seeded;
+    private double _ignoreBefore = double.NegativeInfinity;
 
     /// <summary>Whether the clock has anything to go on: a seed or one real sample.</summary>
     public bool Ready => _seeded || _count > 0;
@@ -38,11 +39,21 @@ public sealed class NetClock
         _seeded = true;
     }
 
+    /// <summary>
+    /// Pongs for pings sent before <paramref name="clientTime"/> are not samples (review I1): they waited through a floor build, the server's
+    /// (it answers no ping while it builds) and then ours (we read them only after it), so their round trips are lopsided by hundreds of ms,
+    /// and with few samples two such carry the median. Called when a build here ends; it only ever moves later.
+    /// </summary>
+    public void IgnoreBefore(double clientTime)
+    {
+        if (double.IsFinite(clientTime) && clientTime > _ignoreBefore) _ignoreBefore = clientTime;
+    }
+
     /// <summary>A pong arrived at <paramref name="clientNow"/> for the ping sent at <paramref name="clientSentAt"/>; the server stamped it <paramref name="serverTime"/>.</summary>
     public void OnPong(double clientSentAt, double clientNow, double serverTime)
     {
         var rtt = clientNow - clientSentAt;
-        if (!double.IsFinite(rtt) || rtt < 0 || !double.IsFinite(serverTime)) return;
+        if (!double.IsFinite(rtt) || rtt < 0 || !double.IsFinite(serverTime) || clientSentAt < _ignoreBefore) return;
         _offsets[_next] = serverTime - (clientSentAt + clientNow) / 2;
         _rtts[_next] = rtt;
         _next = (_next + 1) % Window;

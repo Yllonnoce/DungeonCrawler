@@ -88,6 +88,7 @@ public partial class ClientWorld : Node
                     GD.PushError($"[net] the Welcome's floor would not build: {e}");
                     Main.Instance.OnClientLeft("The server's floor would not build here; try joining again.");
                 }
+                finally { AfterBuild(); }
             }
             return;
         }
@@ -287,6 +288,17 @@ public partial class ClientWorld : Node
 
     private int _floorPairsSeen;
 
+    /// <summary>
+    /// A floor build here has ended (the Welcome's or a FloorChange's, built inside the handler for a second or two): the pongs of pings sent
+    /// before now waited through it, and the server's own build, so they are not samples (<see cref="NetClock.IgnoreBefore"/>, review I1); a
+    /// fresh ping goes out on the next tick.
+    /// </summary>
+    private void AfterBuild()
+    {
+        Clock.IgnoreBefore(NetSession.Instance.Now);
+        _pingSoon = true;
+    }
+
     /// <summary>The floor build this client holds (the server's count, from the Welcome and each FloorChange; 0 unknown).</summary>
     private int _epoch;
     /// <summary>Watches a floor change from its FloorChangeBegin to its build (<see cref="FloorWatchdog"/>).</summary>
@@ -318,6 +330,7 @@ public partial class ClientWorld : Node
             Trace.Add("floor-failed");
             return;
         }
+        finally { AfterBuild(); }
         _floorWatch.Done();
         _epoch = fc.Epoch;
         _enemySpawnedAt.Clear();
@@ -790,7 +803,12 @@ public partial class ClientWorld : Node
             }
         }
         // every second (it was every two): more samples for the server clock (NetClock) to settle on
-        if (_pingCadence.Advance(delta) > 0) _t.Send(NetPeers.Server, NetCodec.Encode(new Ping(tick, now, Rtt)));
+        if (_pingCadence.Advance(delta) > 0 || _pingSoon)
+        {
+            if (_pingSoon) _pingCadence.Reset(); // the next one a second after this
+            _pingSoon = false;
+            _t.Send(NetPeers.Server, NetCodec.Encode(new Ping(tick, now, Rtt)));
+        }
     }
 
     private Cadence _poseCadence = new(1.0 / Protocol.PoseHz);
@@ -798,4 +816,6 @@ public partial class ClientWorld : Node
     private Cadence _heartbeatCadence = new(0.5);
     private bool _heartbeatDue;
     private Cadence _pingCadence = new(1.0);
+    /// <summary>A ping goes out on the next tick (a build here just ended: <see cref="AfterBuild"/>).</summary>
+    private bool _pingSoon;
 }
