@@ -582,6 +582,14 @@ public partial class ServerWorld : Node
                     GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: seated window: set back {NetSession.Instance.Now - lever.LastToggledAt:0.00} s after {lever.LastToggledBy} threw it, ignored");
                     break;
                 }
+                // a press on a deadly lever (a live switch back) after the cart took it as it stood, or at its points: refused out loud, so the
+                // presser does not believe it thrown (final review M4; the client's cart may run behind the server's near the points)
+                if (lever is { Deadly: true } && Dungeon.Rails.RailEncounterController.Instance is { } lateEnc && GodotObject.IsInstanceValid(lateEnc) && lateEnc.TooLateToThrow(lever))
+                {
+                    Tell(slot, Dungeon.Rails.SwitchBackRules.TooLateLine);
+                    GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: too late to throw the live switch back (taken {lever.Taken}): told them");
+                    break;
+                }
                 if (dist > reach && !window) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
                 // recovery: the altar is paid and its card still waits for a pick, but this player's screen lost it: hand it back
                 if (node is Dungeon.Props.Shrine && FortuneDirector.Instance?.PendingShrine is { } pendingCard) { SendTo(slot.PeerId, pendingCard); Trace.Add("shrine-resent"); break; }

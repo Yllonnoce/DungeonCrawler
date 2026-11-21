@@ -65,9 +65,10 @@ public static class CartWatchdog
 
     /// <summary>
     /// As the six-argument overload, with <paramref name="backWindow"/> too: the centre S with the front at a live back's seated window's start,
-    /// given only while its lever is straight and the cart short of that window (<see cref="SwitchBackRules.GrindBackTo"/>; NaN otherwise). It is
-    /// nearer than the back's points, so a stall short of the window frees the cart there, rolling at its speed: the calls and the offer then
-    /// run as they would. The watchdog never carries a train past a window its player was not shown.
+    /// or at its last call's mark inside the window, given only while its lever is straight and the cart short of that mark
+    /// (<see cref="SwitchBackRules.GrindBackTo"/>; NaN otherwise). It is nearer than the back's points, so such a stall frees the cart there,
+    /// rolling at its speed: the calls and the offer then run as they would. The watchdog never carries a train past a window its player was
+    /// not shown, nor past the last call unheard.
     /// </summary>
     public static FreeTo PartyFreeTo(in CartState cart, float nextStop, float gapLip, float obstacleFace, float backWindow, float backPoints, float breakLip, out CartState freed)
     {

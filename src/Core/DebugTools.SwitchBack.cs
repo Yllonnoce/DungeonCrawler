@@ -7,7 +7,7 @@ using Godot;
 
 namespace DungeonCrawler.Core;
 
-// ---- --test-switch-back[=wrong|stall] ----------------------------------------------------------------------
+// ---- --test-switch-back[=wrong|stall|lone] ----------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo. Every enemy is culled as it appears. The build: ride 3 has the broken bridge,
 // its gap on the slag line (a chasm, no footing: a ray down finds nothing) between deck cells (a ray down finds their footing), the enemy
 // track's rails and sleepers cut bare over the gap and no timber frame over it, the party lane beside it and at r3_buckets solid floor
@@ -29,10 +29,14 @@ namespace DungeonCrawler.Core;
 // the seat on the slag line is saved as the front reaches the back's lever (the thrown branch: PATH; the wrong branch: PATH_lever), and
 // in the wrong branch as the front comes within 12 m of the gap (PATH) and 4 m (PATH_near). On both wrong branches the seated window
 // must have offered the back to the lead before its points (nobody pressed). =stall is the wrong branch with the cart caught
-// (RailController.DebugStall) three times: 25 m before the lever (short of the window), where the watchdog sets it at the window's start
-// (the offer and the calls to come); 3 m short of the back's points, where it sets it at the points (the back taken as it stands:
-// straight); and 5 m past them, where it grinds it into the gap, where it falls. It never carries it across. Prints [switchback] lines and
-// a RESULT.
+// (RailController.DebugStall) four times: 25 m before the lever (short of the window), where the watchdog sets it at the window's start
+// (the offer and the calls to come); 8 m before the lever (inside the window, short of the last call), where it sets it at the last
+// call's mark, 6 m before the points, and the last call is heard after it (final review M1); 3 m short of the back's points, where it
+// sets it at the points (the back taken as it stands: straight); and 5 m past them, where it grinds it into the gap, where it falls. It
+// never carries it across. =lone (ruling R-lone): nobody presses, and the lead, the only human, is downed in the seat just before the
+// window (held down until the back is taken; possession off, so no companion becomes the human); at the points the cart takes the safe
+// line with the lever straight ("No one could reach the switch — the cart takes the safe line."), comes home and arrives at stop 3 with
+// no fall. Prints [switchback] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testSwitchBack;
@@ -45,7 +49,10 @@ public partial class DebugTools
     private int _sbFallsBefore;
     /// <summary>=stall: the cart caught so far (0, 1 short of the back's points, 2 past them), and the watchdog's grinds as the train fell.</summary>
     private int _sbStalls, _sbGroundAtWreck = -1, _sbGroundBefore;
-    private bool WrongBranch => _sbVariant != "thrown";
+    private bool WrongBranch => _sbVariant is "wrong" or "stall";
+    private bool LoneBranch => _sbVariant == "lone";
+    /// <summary>=lone: the lead downed in the seat, and the safe-line line heard.</summary>
+    private bool _sbLoneDowned, _sbLoneLogged;
     private int _sbStep;
     private float _sbClock;
     private bool _sbListening, _sbFallLogged, _sbWiped;
@@ -77,6 +84,7 @@ public partial class DebugTools
             if (text == "The slag line ends at the broken bridge!") _sbFallLogged = true;
             if (text == "The slag cart derails!") _sbDerailLogs++;
             if (text == "The slag cart plunges through the broken bridge.") _sbPlungeLogs++;
+            if (text == SwitchBackRules.SafeLineLog) _sbLoneLogged = true;
         };
         // Morg's derail taunts, as the campaign has them (said and clean): any of them said is a derail heard
         _sbDerailLines = (Game.Instance.Adventure.Campaign?.Taunts ?? new List<Adventure.TauntPlan>())
@@ -260,7 +268,7 @@ public partial class DebugTools
                 GD.Print($"[switchback] B the cart took the switch at S={rc.CrossOutS:0.0}: its return {(float.IsNaN(rc.CrossBackS) ? "open (no back set)" : $"set at {rc.CrossBackS:0.0}")}; r3_switch_back deadly={back.Deadly} fixed={back.Fixed} thrown={back.Thrown}");
                 if (!float.IsNaN(rc.CrossBackS)) { Fail("B: with the live back the cart crossed with a return already set"); return; }
                 if (!back.Deadly || back.Fixed || back.Thrown) { Fail("B: r3_switch_back is not a straight live lever (deadly, not fixed)"); return; }
-                _sbStep = WrongBranch ? SbFall : SbHome; _sbClock = 0f;
+                _sbStep = LoneBranch ? SbLone : WrongBranch ? SbFall : SbHome; _sbClock = 0f;
                 break;
             }
             case SbHome:
@@ -300,10 +308,38 @@ public partial class DebugTools
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != 3) { if (_sbClock > 60f) Fail($"B: the cart did not arrive at stop 3 (mode {rc.State.Mode}, stop {rc.StopIndex}, front S={rc.Party.FrontS:0.0})"); break; }
                 if (!_sbHome || _sbSight != "clear") { Fail($"B: the cart reached stop 3 without the home check ({_sbHome}) or the sight from the lever ({_sbSight ?? "never cast"})"); return; }
                 GD.Print($"[switchback] B the cart arrived at stop 3 (S={rc.State.S:0.0}) with no fall: plating {rc.State.Plating:0}, riders [{string.Join(", ", _sbRiders.Select(a => $"{a.State.Name}{(a.State.Fallen ? " FALLEN" : "")}"))}]");
-                GD.Print($"[switchback] RESULT ok (thrown): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the live back called early {back.LeverS - _sbEarlyFront:0.0} m before its lever, straight with no hand on it until the lead threw it from the seat {_sbPressAhead:0.0} m before the lever, taken at its points (back from {back.PointsS:0.0}), home by the gap, no fall, arrived at stop 3; sight from the lever to the bridge's lamp clear; nobody fell");
+                if (LoneBranch)
+                    GD.Print($"[switchback] RESULT ok (lone): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the live back called early {back.LeverS - _sbEarlyFront:0.0} m before its lever, never thrown; the lead, the only human, downed in the seat before the window; at its points the cart took the safe line with the lever straight (\"{SwitchBackRules.SafeLineLog}\", back from {back.PointsS:0.0}), home by the gap, no fall, arrived at stop 3; sight from the lever to the bridge's lamp clear; nobody fell");
+                else
+                    GD.Print($"[switchback] RESULT ok (thrown): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the live back called early {back.LeverS - _sbEarlyFront:0.0} m before its lever, straight with no hand on it until the lead threw it from the seat {_sbPressAhead:0.0} m before the lever, taken at its points (back from {back.PointsS:0.0}), home by the gap, no fall, arrived at stop 3; sight from the lever to the bridge's lamp clear; nobody fell");
                 _done = true;
                 GetTree().Quit(0);
                 return;
+            }
+            case SbLone:
+            {
+                // =lone: nobody presses; the lead, the only human, is downed in the seat just before the window, so no human aboard can throw the back
+                if (enc.SetPieceNode("r3_switch_back") is not TrackSwitch back) { Fail("no r3_switch_back"); return; }
+                if (SwitchBackRide(main, rc, enc, back, me, Fail)) return;
+                if (rc.State.Mode == CartMode.Wrecked || rc.Falls != _sbFallsBefore) { Fail($"lone: the train was wrecked or fell (falls {rc.Falls - _sbFallsBefore}) with no human able to throw the back"); return; }
+                var windowStart = back.LeverS - SeatedSwitchRules.WindowAhead;
+                if (!_sbLoneDowned && rc.State.Mode == CartMode.Rolling && rc.Party.FrontS >= windowStart - 3f)
+                {
+                    party.AllowPossession = false; // else solo hands the lead to a seated companion, who would then be the human able to throw it
+                    me.State.Mangled = true;       // held down until the back is taken (calm auto-revive never stands a Mangled member up)
+                    me.State.Hp = 0;
+                    party.OnMemberDowned(me.Index);
+                    _sbLoneDowned = true;
+                    var able = _sbRiders.Count(a => SwitchBackRules.AbleToThrow(a.Control, a.Downed, a.Seated && a.Cart == rc.Cart));
+                    GD.Print($"[switchback] lone: the lead {me.State.Name} downed in the seat at front S={rc.Party.FrontS:0.0} ({windowStart - rc.Party.FrontS:0.0} m short of the window's start {windowStart:0.0}): downed={me.Downed} seated={me.Cart == rc.Cart}, {able} rider(s) able to throw the back");
+                    if (!me.Downed || me.Cart != rc.Cart || able != 0) { Fail("lone: the lead is not downed in the seat, or someone aboard could still throw the back"); return; }
+                }
+                if (!_sbBackTaken) { if (_sbClock > 90f) Fail($"lone: the cart never reached r3_switch_back's points (front S={rc.Party.FrontS:0.0}, mode {rc.State.Mode})"); break; }
+                if (!_sbLoneDowned) { Fail("lone: the back was taken before the lead was downed"); return; }
+                me.State.Mangled = false; // taken: calm auto-revive may stand the lead up again
+                party.AllowPossession = true;
+                _sbStep = SbHome + 1; _sbClock = 0f; // home on its own lane, then on to stop 3, as the thrown branch
+                break;
             }
             case SbFall:
             {
@@ -328,15 +364,32 @@ public partial class DebugTools
                         _sbStalls = 2;
                         GD.Print($"[switchback] stall: the watchdog freed the cart to front S={at:0.0}, the window's start ({windowStart:0.0}); the back untaken, straight");
                     }
-                    else if (_sbStalls == 2 && !wrongBack.Taken && at >= wrongBack.PointsS - 3f)
+                    else if (_sbStalls == 2 && at >= wrongBack.LeverS - 8f)
                     {
+                        // inside the window, short of the last call (final review M1)
+                        if (!float.IsNaN(_sbLastFront) || wrongBack.Taken) { Fail($"stall: the last call came (at {_sbLastFront:0.0}) or the back was taken before the cart reached front S={at:0.0}"); return; }
                         _sbStalls = 3;
                         rc.DebugStall = true;
-                        GD.Print($"[switchback] stall: the cart caught at front S={at:0.0}, {wrongBack.PointsS - at:0.0} m short of r3_switch_back's points (the lever {(wrongBack.Thrown ? "thrown" : "straight")}, untaken, the window seen {_sbWindowSeen})");
+                        GD.Print($"[switchback] stall: the cart caught at front S={at:0.0} inside r3_switch_back's window, {wrongBack.PointsS - at:0.0} m short of its points (the last call not yet heard)");
                     }
-                    else if (_sbStalls == 3 && wrongBack.Taken && at >= wrongBack.PointsS + 5f)
+                    else if (_sbStalls == 3 && rc.GroundFree - _sbGroundBefore >= 2)
                     {
+                        // freed to the last call's mark, never past it unheard
+                        var mark = wrongBack.PointsS - SwitchBackRules.CallLast;
+                        if (at < mark || at > mark + 0.5f || wrongBack.Taken) { Fail($"stall: the watchdog freed the cart inside the window to front S={at:0.0}, not the last call's mark {mark:0.0} (taken {wrongBack.Taken})"); return; }
                         _sbStalls = 4;
+                        GD.Print($"[switchback] stall: the watchdog freed the cart to front S={at:0.0}, the last call's mark ({mark:0.0}, {wrongBack.PointsS - at:0.0} m short of the points); the back untaken, straight");
+                    }
+                    else if (_sbStalls == 4 && !wrongBack.Taken && at >= wrongBack.PointsS - 3f)
+                    {
+                        if (float.IsNaN(_sbLastFront)) { Fail($"stall: freed to the last call's mark, the cart reached front S={at:0.0} with no last call heard"); return; }
+                        _sbStalls = 5;
+                        rc.DebugStall = true;
+                        GD.Print($"[switchback] stall: the cart caught at front S={at:0.0}, {wrongBack.PointsS - at:0.0} m short of r3_switch_back's points (the lever {(wrongBack.Thrown ? "thrown" : "straight")}, untaken, the window seen {_sbWindowSeen}, the last call heard at {wrongBack.PointsS - _sbLastFront:0.0} m)");
+                    }
+                    else if (_sbStalls == 5 && wrongBack.Taken && at >= wrongBack.PointsS + 5f)
+                    {
+                        _sbStalls = 6;
                         rc.DebugStall = true;
                         GD.Print($"[switchback] stall: the cart caught again at front S={at:0.0} across on the slag line, {enc.BreakGapS - at:0.0} m short of the gap (its return {(float.IsNaN(rc.CrossBackS) ? "open" : $"set at {rc.CrossBackS:0.0}")}; ground free {rc.GroundFree - _sbGroundBefore} time(s) so far)");
                     }
@@ -358,7 +411,7 @@ public partial class DebugTools
             }
             case SbFall + 1:
             {
-                if (_sbVariant == "stall" && (_sbStalls != 4 || _sbGroundAtWreck - _sbGroundBefore != 3)) { Fail($"stall: the train fell after {_sbStalls} step(s) and {_sbGroundAtWreck - _sbGroundBefore} grind(s) free, not 4 and 3 (the watchdog set it at the window's start, then at the back's points, then ground it into the gap)"); return; }
+                if (_sbVariant == "stall" && (_sbStalls != 6 || _sbGroundAtWreck - _sbGroundBefore != 4)) { Fail($"stall: the train fell after {_sbStalls} step(s) and {_sbGroundAtWreck - _sbGroundBefore} grind(s) free, not 6 and 4 (the watchdog set it at the window's start, then at the last call's mark, then at the back's points, then ground it into the gap)"); return; }
                 if (!_sbBackTaken || _sbSight != "clear") { Fail($"B: the train fell before the back's points were judged ({_sbBackTaken}) or the sight from the lever was cast ({_sbSight ?? "never"})"); return; }
                 var off = Mathf.Abs(_sbFallFront - enc.BreakGapS);
                 if (_sbFallsAtWreck < 1) { Fail("B: a wreck, not a fall"); return; }
@@ -392,7 +445,7 @@ public partial class DebugTools
                         problems.Add($"{a.State.Name} fallen={a.State.Fallen} downed={a.Downed} {a.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart at {DungeonBuilder.WorldToCell(a.GlobalPosition)}");
                 if (problems.Count > 0) { if (_sbClock > 10f) Fail($"B the rise: {string.Join("; ", problems)}"); break; } // judged as the rise sets them down (after Restore's deferred set-down): a companion may then walk on to its leader's side
                 GD.Print($"[switchback] B the rise at stop {rc.StopIndex} after {_sbClock:0.0} s: the cart {rc.State.Mode}, plating {rc.State.Plating:0}/{CartRules.MaxPlating:0}; heroes [{string.Join(", ", heroes)}]");
-                GD.Print($"[switchback] RESULT ok ({_sbVariant}): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the live back called early and last ({_sbLastFront - _sbEarlyFront:0.0} m apart), never thrown (no hook), passed straight{(_sbVariant == "stall" ? "; caught short of its window, short of its points and past them, the watchdog set the cart at the window's start, then at the points, then ground it into the gap" : "")}; the window offered it to the lead; the train kept on the slag line fell at the gap (front {_sbFallFront:0.0}, gap {enc.BreakGapS:0.0}) and the wipe rose at stop 2; sight from the lever to the bridge's lamp clear; nobody fell but the train's");
+                GD.Print($"[switchback] RESULT ok ({_sbVariant}): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the live back called early and last ({_sbLastFront - _sbEarlyFront:0.0} m apart), never thrown (no hook), passed straight{(_sbVariant == "stall" ? "; caught short of its window, inside it, short of its points and past them, the watchdog set the cart at the window's start, then at the last call's mark (the last call still heard), then at the points, then ground it into the gap" : "")}; the window offered it to the lead; the train kept on the slag line fell at the gap (front {_sbFallFront:0.0}, gap {enc.BreakGapS:0.0}) and the wipe rose at stop 2; sight from the lever to the bridge's lamp clear; nobody fell but the train's");
                 _done = true;
                 GetTree().Quit(0);
                 return;
@@ -404,6 +457,8 @@ public partial class DebugTools
     private const int SbFall = 10;
     /// <summary>The ride steps of B on the thrown branch: the back thrown from the seat and taken, then home and on to stop 3.</summary>
     private const int SbHome = 20;
+    /// <summary>The ride step of B on the lone branch: the lead downed before the window, the back taken home anyway; then <see cref="SbHome"/> + 1.</summary>
+    private const int SbLone = 30;
 
     /// <summary>
     /// Each rolling tick of B after the cross, both branches: no hand on the live back until the lead's press (a companion never moves it),
@@ -453,7 +508,13 @@ public partial class DebugTools
         if (float.IsNaN(_sbEarlyFront)) { fail("B: the early call was never heard before the back's points"); return true; }
         var home = !float.IsNaN(rc.CrossBackS);
         GD.Print($"[switchback] B the front at S={front:0.0} reached r3_switch_back's points ({back.PointsS:0.0}): the lever {(back.Thrown ? "thrown" : "straight")}, {(home ? $"taken: back from {rc.CrossBackS:0.0}" : "passed straight: the cart stays on the slag line")}; calls early at {back.LeverS - _sbEarlyFront:0.0} m before the lever, last {(float.IsNaN(_sbLastFront) ? "none" : $"at {back.PointsS - _sbLastFront:0.0} m before the points")}");
-        if (WrongBranch)
+        if (LoneBranch)
+        {
+            if (back.Thrown || !home) { fail($"lone: with no human aboard able to throw it, the back was thrown ({back.Thrown}) or the cart stayed across (home {home})"); return true; }
+            if (!(Mathf.Abs(rc.CrossBackS - back.PointsS) < 0.01f)) { fail($"lone: the cart's return is {rc.CrossBackS:0.0}, not the back's points {back.PointsS:0.0}"); return true; }
+            if (!_sbLoneLogged) { fail($"lone: \"{SwitchBackRules.SafeLineLog}\" was not logged at the take"); return true; }
+        }
+        else if (WrongBranch)
         {
             if (back.Thrown || home) { fail("B: nobody pressed, but the back was thrown or the cart crossed home"); return true; }
             if (!_sbWindowSeen) { fail("B: the seated window never offered r3_switch_back to the lead before its points"); return true; }

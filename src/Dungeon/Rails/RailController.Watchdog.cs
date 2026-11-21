@@ -9,9 +9,10 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// across the jump gap: a next stop past an unjudged gap sets the cart at the gap's near lip at <see cref="SetPieceRules.JumpSpeed"/>
 /// so the jump is judged as it would be, and never through an obstacle on the line: it is put at the obstacle's face and halts there.
 /// Nor across the broken bridge (plan 11): a train stuck across on the slag line with its return open, short of a live switch back's
-/// seated window with the lever straight, is set at the window's start (the calls and the offer run as they would); inside the window,
-/// or with the lever thrown, at the back's points (taken as its lever stands: a cart set there skips the last call, which only a stall
-/// inside the window can); past the back, at the gap, where it falls as it would have. Server and solo; the window counts elapsed time, so any physics rate gives the same 10 s, from the cart's last half-metre. No allocation.
+/// seated window with the lever straight, is set at the window's start (the calls and the offer run as they would); inside the window
+/// and short of the last call, at the last call's mark (6 m before the points: "Switch back — now!" still comes, final review M1); past
+/// that, or with the lever thrown, or short of a fixed back, at the back's points (taken as its lever stands); past every back, at the
+/// gap, where it falls as it would have. Server and solo; the window counts elapsed time, so any physics rate gives the same 10 s, from the cart's last half-metre. No allocation.
 /// </summary>
 public partial class RailController
 {
@@ -62,11 +63,14 @@ public partial class RailController
                 GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0}; set at the obstacle's face (S={freed.S:0.0})");
                 Halt();
                 break;
-            case FreeTo.BackWindow: // nor past a live back's window its player was not shown: at its start, rolling, the calls and the offer to come
-                GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0} across on the slag line, short of the live switch back's window (its lever straight); set with its front at the window's start (front S={freed.S + CartRules.HalfLength:0.0})");
+            case FreeTo.BackWindow: // nor past a live back's window, or its last call, unshown: there, rolling, the calls and the offer to come
+            {
+                var atWindow = backPoints - backWindow > SwitchBackRules.CallLast + 0.01f; // else the last call's mark, inside the window
+                GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0} across on the slag line, short of the live switch back's {(atWindow ? "window" : "last call")} (its lever straight); set with its front at {(atWindow ? "the window's start" : "the last call's mark")} (front S={freed.S + CartRules.HalfLength:0.0}, {backPoints - freed.S - CartRules.HalfLength:0.0} m short of its points)");
                 break;
-            case FreeTo.BackPoints: // nor past a live switch back it has not taken: the back is taken as its lever stands (the encounter's next tick)
-                GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0} across on the slag line; set with its front at the live switch back's points (front S={freed.S + CartRules.HalfLength:0.0}), taken as its lever stands");
+            }
+            case FreeTo.BackPoints: // nor past a switch back it has not taken: the back is taken as its lever stands (the encounter's next tick)
+                GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0} across on the slag line; set with its front at the switch back's points (front S={freed.S + CartRules.HalfLength:0.0}), taken as its lever stands");
                 break;
             case FreeTo.BreakLip: // nor across the broken bridge: still across there, it falls as it would have
                 GD.Print($"[rails] watchdog: the cart was stuck at S={from:0.0} across on the slag line, its return open; ground on to the broken bridge's gap (front S={freed.S + CartRules.HalfLength:0.0}): the train falls");

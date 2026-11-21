@@ -108,9 +108,10 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// The guard (every role, after the set pieces): on the break's ride, every switch_out short of the gap must have a first switch back after it
-    /// that brings the cart wholly home before the gap (<see cref="SwitchBackRules.FallArmed"/>): a fixed one, or a live one, which is home if it
-    /// is thrown. Otherwise a correct choice could fall, so the gap's fall is disarmed for that ride (an error in the log: the plan is wrong).
+    /// The guard (every role, after the set pieces): on the break's ride, every switch_out short of the gap must have a switch back after it short
+    /// of the gap, and every such back must bring the cart wholly home before the gap (<see cref="SwitchBackRules.FallArmed"/>): any of them may
+    /// take it home, a fixed one always, a live one if thrown. Otherwise a correct choice could fall, or a thrown return show what it cannot do,
+    /// so the gap's fall is disarmed for that ride (an error in the log: the plan is wrong).
     /// </summary>
     private void GuardBreak()
     {
@@ -127,14 +128,15 @@ public partial class RailEncounterController
         BreakArmed = SwitchBackRules.FallArmed(outs, backs, BreakGapS);
         var switches = $"switch_out at [{string.Join(", ", outs.Select(s => s.ToString("0.0")))}], switch_back at [{string.Join(", ", backs.Select(s => s.ToString("0.0")))}]";
         if (BreakArmed) GD.Print($"[rails] broken bridge on ride {BreakRide}: its fall armed ({switches}; every switch_out short of the gap at S={BreakGapS:0.0} has its switch back home before it)");
-        else GD.PushError($"[rails] ERROR: broken bridge on ride {BreakRide}: a switch_out short of the gap at S={BreakGapS:0.0} has no switch back home before it ({switches}): the gap's fall is disarmed on ride {BreakRide}, so a correct choice cannot fall");
+        else GD.PushError($"[rails] ERROR: broken bridge on ride {BreakRide}: a switch_out short of the gap at S={BreakGapS:0.0} has no switch back home before it, or one too near the gap ({switches}): the gap's fall is disarmed on ride {BreakRide}, so a correct choice cannot fall");
     }
 
     /// <summary>
     /// The watchdog's view of the broken bridge (server, <see cref="RailController"/>'s grind), all front S: with the break's ride armed, its fall
-    /// armed and the train across at the gap as it stands (<see cref="RailController.LaneBlendAt"/> ≥ 0.5 there), the gap; for the nearest live
-    /// switch back of that ride the front has not reached, its points, and its seated window's start while its lever is straight and the front
-    /// short of it (<see cref="SwitchBackRules.GrindBackTo"/>). NaN for what is not there.
+    /// armed and the train across at the gap as it stands (<see cref="RailController.LaneBlendAt"/> ≥ 0.5 there), the gap; for the nearest switch
+    /// back of that ride short of the gap the front has not reached, live or fixed (final review I1: a fixed one takes the cart home too), its
+    /// points, and, while a live one's lever is straight, where short of them it frees the cart (<see cref="SwitchBackRules.GrindBackTo"/>: the
+    /// seated window's start or the last call's mark). NaN for what is not there.
     /// </summary>
     internal (float BackWindow, float BackPoints, float Gap) WatchdogBreak()
     {
@@ -142,9 +144,9 @@ public partial class RailEncounterController
         var front = _rails.Party.FrontS;
         Piece? back = null;
         foreach (var p in _pieces)
-            if (p.Live && p.Plan.Ride == BreakRide && !p.Fired && p.S > front && p.S < BreakGapS && (back == null || p.S < back.S)) back = p;
+            if (p.Plan.Kind == "switch_back" && p.Plan.Ride == BreakRide && !p.Fired && p.S > front && p.S < BreakGapS && (back == null || p.S < back.S)) back = p;
         if (back?.Switch is not { } sw) return (float.NaN, back?.S ?? float.NaN, BreakGapS);
-        var to = SwitchBackRules.GrindBackTo(front, sw.LeverS, back.S, sw.Thrown);
+        var to = SwitchBackRules.GrindBackTo(front, sw.LeverS, back.S, sw.Fixed || sw.Thrown);
         return (to < back.S ? to : float.NaN, back.S, BreakGapS);
     }
 

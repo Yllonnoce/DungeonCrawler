@@ -243,27 +243,52 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// The front reached a switch back's points: its lever is behind the cart this ride. A live one is taken as it stands (Ruling 14): with the
-    /// cart across and its return still open, thrown, it crosses home from here; straight, the cart stays on the slag line, toward the gap.
+    /// The front reached a switch back's points: its lever is behind the cart this ride. With the cart across and its return still open, the
+    /// back is taken as it stands (Ruling 14, <see cref="SwitchBackRules.TakesHome"/>): any thrown lever (a fixed back always is, final review I1)
+    /// crosses it home from here; a live one left straight keeps the cart on the slag line, toward the gap, unless no human aboard could have
+    /// thrown it (ruling R-lone, <see cref="AbleHumanAboard"/>): then the cart takes the safe line.
     /// </summary>
     private void TakeBack(Piece piece)
     {
         piece.Fired = true;
         if (piece.Switch != null) piece.Switch.Taken = true;
         var across = _rails.Crossing;
-        if (piece.Live && across && float.IsNaN(_rails.CrossBackS))
+        var lone = false;
+        if (across && float.IsNaN(_rails.CrossBackS))
         {
-            var back = SwitchBackRules.BackAtPoints(piece.Switch is { Thrown: true }, piece.S);
+            var thrown = piece.Switch is not { } sw || sw.Fixed || sw.Thrown; // a back without its lever is taken as fixed
+            lone = !thrown && piece.Live && !AbleHumanAboard();
+            var back = SwitchBackRules.BackAtPoints(SwitchBackRules.TakesHome(thrown, piece.Live, ableHumanAboard: !lone), piece.S);
             if (!float.IsNaN(back))
             {
                 _rails.Cross(_rails.CrossOutS, back);
-                EventBus.Instance.Log("The cart takes the switch back onto the party line.");
+                EventBus.Instance.Log(lone ? SwitchBackRules.SafeLineLog : "The cart takes the switch back onto the party line.");
             }
         }
         var home = across && !float.IsNaN(_rails.CrossBackS);
         GD.Print(!across ? $"[rails] switch {piece.Plan.Id} passed at S={_rails.State.S:0.0}: the cart on its own lane"
-            : home ? $"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: back from {_rails.CrossBackS:0.0}"
+            : home ? $"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: back from {_rails.CrossBackS:0.0}{(lone ? " (no human aboard able to throw it: the safe line)" : "")}"
             : $"[rails] switch {piece.Plan.Id} passed straight at S={_rails.State.S:0.0}: the cart stays on the slag line");
+    }
+
+    /// <summary>A human rider able to throw a deadly lever sits in the party's cart (<see cref="SwitchBackRules.AbleToThrow"/>: up, connected, seated).</summary>
+    private bool AbleHumanAboard()
+    {
+        foreach (var rider in _rails.Cart.Riders.Values)
+            if (rider is Adventurer hero && IsInstanceValid(hero) && SwitchBackRules.AbleToThrow(hero.Control, hero.Downed, hero.Seated && hero.Cart == _rails.Cart)) return true;
+        return false;
+    }
+
+    /// <summary>
+    /// Server: a press on <paramref name="lever"/> comes too late to throw it, so the server refuses it out loud (final review M4): a deadly lever
+    /// of the armed ride that is taken, or with the cart's front at or past its points (<see cref="SwitchBackRules.TooLate"/>).
+    /// </summary>
+    public bool TooLateToThrow(TrackSwitch lever)
+    {
+        if (!Current || !lever.Deadly) return false;
+        foreach (var p in _pieces)
+            if (p.Switch == lever) return p.Plan.Ride == ArmedRide && SwitchBackRules.TooLate(lever.Taken, _rails.Party.FrontS, lever.PointsS);
+        return false;
     }
 
     /// <summary>

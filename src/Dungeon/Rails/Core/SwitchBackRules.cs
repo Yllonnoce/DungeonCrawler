@@ -82,6 +82,25 @@ public static class SwitchBackRules
     /// <summary>At a live back's points the cart takes the lever as it stands then: thrown, it crosses home from them; straight, it stays across (NaN).</summary>
     public static float BackAtPoints(bool thrown, float pointsS) => thrown ? pointsS : float.NaN;
 
+    /// <summary>
+    /// At a switch back's points, with the cart across and its return still open, the cart goes home from them (final review I1, ruling R-lone):
+    /// any back whose lever is thrown (a fixed one always is), or a live one left straight with no human aboard able to throw it
+    /// (<see cref="AbleToThrow"/>: nobody could have prevented the fall, so the cart takes the safe line). Otherwise it stays across.
+    /// </summary>
+    public static bool TakesHome(bool thrown, bool deadly, bool ableHumanAboard) => thrown || deadly && !ableHumanAboard;
+
+    /// <summary>The log line when a live back is taken home because no human aboard could throw it (subtitle only).</summary>
+    public const string SafeLineLog = "No one could reach the switch — the cart takes the safe line.";
+
+    /// <summary>A rider who could throw a deadly lever from the seat: a human (<see cref="MayToggle"/>: not a companion, a bot or a parked body), up (not downed or fallen) and seated in the party's cart.</summary>
+    public static bool AbleToThrow(ControlKind actor, bool downed, bool seatedInPartyCart) => MayToggle(true, actor) && !downed && seatedInPartyCart;
+
+    /// <summary>A press on a deadly lever comes too late (the server refuses it and says so): it is taken, or the front is at or past its points (a NaN front never is).</summary>
+    public static bool TooLate(bool taken, float front, float pointsS) => taken || front >= pointsS;
+
+    /// <summary>The line the server sends the presser of a deadly lever it refused as too late.</summary>
+    public const string TooLateLine = "Too late to throw it.";
+
     /// <summary>The seat offers a live back only while the cart is across with no return set (Ruling 16): never from its own lane, never twice.</summary>
     public static bool Offered(bool crossing, bool backSet) => crossing && !backSet;
 
@@ -103,20 +122,25 @@ public static class SwitchBackRules
     /// <summary>
     /// Where the watchdog frees a train stuck across on the slag line short of a live back it has not taken (front S): with the lever straight
     /// and the front short of the back's seated window, the window's start (<paramref name="leverS"/> − <see cref="SeatedSwitchRules.WindowAhead"/>),
-    /// so the calls and the offer run as they would; inside the window, or thrown, the points (taken there as it stands). Never past a window
-    /// the player was not shown.
+    /// so the calls and the offer run as they would; inside the window and short of the last call, the last call's mark (<paramref name="pointsS"/>
+    /// − <see cref="CallLast"/>), so "Switch back — now!" still comes and the offer stays up; past that, or thrown, the points (taken there as it
+    /// stands). Never past a window the player was not shown, nor past the last call unheard.
     /// </summary>
     public static float GrindBackTo(float front, float leverS, float pointsS, bool thrown)
     {
+        if (thrown) return pointsS;
         var window = leverS - SeatedSwitchRules.WindowAhead;
-        return !thrown && front < window ? window : pointsS;
+        if (front < window) return window;
+        var last = pointsS - CallLast;
+        return front < last ? last : pointsS;
     }
 
     /// <summary>
-    /// The broken bridge's fall is armed on its ride (carried guard): every switch_out whose points lie short of the gap (<paramref name="gapS"/>,
-    /// NaN: no break) has a first switch back after it whose points lie at least <see cref="HomeStretch"/> short of the gap, so a cart that
-    /// switched out and took its return (a fixed back, or a live one thrown) is wholly home before it. A ride where one does not would kill a
-    /// correct choice: its fall is disarmed instead. All S are the party line's.
+    /// The broken bridge's fall is armed on its ride (carried guard, final review I1): every switch_out whose points lie short of the gap
+    /// (<paramref name="gapS"/>, NaN: no break) has a switch back after it short of the gap, and every switch back between it and the gap has its
+    /// points at least <see cref="HomeStretch"/> short of the gap. A cart across with its return open is taken home by any thrown back it reaches
+    /// (a fixed back, or a live one thrown: <see cref="TakesHome"/>), so each of them must bring it wholly home before the gap. A ride where one
+    /// does not would kill a correct choice, or show a thrown return the cart cannot finish: its fall is disarmed instead. All S are the party line's.
     /// </summary>
     public static bool FallArmed(IReadOnlyList<float> switchOuts, IReadOnlyList<float> switchBacks, float gapS)
     {
@@ -124,10 +148,14 @@ public static class SwitchBackRules
         foreach (var outS in switchOuts)
         {
             if (!(outS < gapS)) continue; // past the gap: never across there
-            var first = float.NaN;
+            var any = false;
             foreach (var backS in switchBacks)
-                if (backS > outS && (float.IsNaN(first) || backS < first)) first = backS;
-            if (!(gapS - first >= HomeStretch)) return false; // none, or too near the gap or past it (NaN compares false)
+            {
+                if (!(backS > outS && backS < gapS)) continue; // behind the switch_out, or past the gap: never reached across short of it
+                if (!(gapS - backS >= HomeStretch)) return false; // too near the gap: still half across there
+                any = true;
+            }
+            if (!any) return false; // no back before the gap: across to it whatever the player does
         }
         return true;
     }
