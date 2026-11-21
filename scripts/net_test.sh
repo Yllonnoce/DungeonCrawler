@@ -103,7 +103,12 @@ if [ "${RIDE:-}" = 1 ]; then
   echo "--- server"; grep -E "\[net-server\] (ride[:]|RESULT|.* left while seated)|Unhandled|ERROR" "$TMP/server.log" | head -50
   echo "--- client"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/client.log" | head -50
   echo "--- joiner"; grep -E "\[net\] (ride[:]|RESULT|prop check)|Unhandled|ERROR" "$TMP/joiner.log" 2>/dev/null | head -60
-  if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass)"; exit 1; fi
+  # the wipe-rise watch (the server's copy of the joiner beside the cart every tick from the rebuild until it leaves): its line is past the
+  # server section's head -50, so it is printed here, and a watch that failed names itself in the ride pass's failure
+  RISE_WATCH=$(grep -m1 "\[net-server\] ride: wipe-rise watch: " "$TMP/server.log")
+  echo "--- wipe-rise watch: ${RISE_WATCH:-not printed}"
+  RISE_WHY=""; case "$RISE_WATCH" in *"(FAIL)") RISE_WHY="; $RISE_WATCH" ;; esac
+  if ! grep -q "\[net\] RESULT ok" "$TMP/client.log" || ! grep -q "\[net-server\] RESULT ok" "$TMP/server.log"; then echo "NET TEST: FAIL (ride pass$RISE_WHY)"; exit 1; fi
   # the ride heard where it happens (plan 6 task 5): each client heard the party cart's roll from the synced state, no rail cue came
   # relayed as a plain sfx, and the joiner (who watches the wreck with a spare at the end of the line) heard cart_wreck once: the
   # wreck 3 s later at stop 3 (on to stop 2's spare, for the heap) is shown to it but stands far out of a wreck's 30 m earshot

@@ -2,8 +2,9 @@ namespace DungeonCrawler.Net;
 
 /// <summary>
 /// Which of a remote player's poses the server drops after it moved that body itself. Engine-free. The unseat guard (seated poses after a
-/// set-down) lives in <c>ServerWorld.ApplyPose</c>; this is the shove's (a hazard pushing a body clear, a test putting it somewhere) and the
-/// map's (a pose off the floor the layout knows, <see cref="OffTheMap"/>).
+/// set-down) lives in <c>ServerWorld.ApplyPose</c>; this is the shove's (a hazard pushing a body clear, a test putting it somewhere, a
+/// floor-ready ForcePose that puts a body elsewhere than the spot its FloorChange told the client: <c>ServerWorld.OnFloorReady</c>), the
+/// crevasse return's and the map's (a pose off the floor the layout knows, <see cref="OffTheMap"/>).
 /// </summary>
 public static class PoseGuardRules
 {

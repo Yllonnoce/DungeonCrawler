@@ -187,7 +187,7 @@ public partial class ServerWorld : Node
         {
             var body = party.Adventurers[slot.MemberIndex];
             SendTo(slot.PeerId, new ForcePose(slot.MemberIndex, new PoseDto { X = body.GlobalPosition.X, Y = body.GlobalPosition.Y, Z = body.GlobalPosition.Z, Yaw = body.Rotation.Y }));
-            if (_spawnSent.Remove(slot.MemberIndex, out var told) && body.Control == ControlKind.Remote && told.DistanceTo(body.GlobalPosition) > 0.5f)
+            if (_spawnSent.Remove(slot.MemberIndex, out var told) && body.Control == ControlKind.Remote && told.DistanceTo(body.GlobalPosition) > 0.5f && !body.Seated)
                 NoteShoved(slot.MemberIndex, told, body.GlobalPosition); // its poses in flight from where the FloorChange put it would pull the body back there
         }
         SendSnapshotTo(slot.PeerId, full: true);
@@ -758,7 +758,7 @@ public partial class ServerWorld : Node
     /// <summary>Members the server set down from a seat whose poses still in flight say seated: dropped until one says otherwise.</summary>
     private readonly HashSet<int> _unseatedPending = new();
 
-    /// <summary>Members the server shoved (<c>Adventurer.Shove</c>): where from, where to and when, until a pose from the new spot arrives (<see cref="PoseGuardRules.DropAfterShove"/>).</summary>
+    /// <summary>Members the server moved itself, with where from, where to and when, until a pose from the new spot arrives (<see cref="PoseGuardRules.DropAfterShove"/>): a shove (<c>Adventurer.Shove</c>), a return from a crevasse, or a floor-ready ForcePose that puts a body somewhere other than the spot its FloorChange told it (<c>OnFloorReady</c>, from <see cref="_spawnSent"/>).</summary>
     private readonly Dictionary<int, (Vector3 From, Vector3 To, double At)> _shovedPending = new();
 
     /// <summary>Members the server returned from a crevasse (<c>Adventurer.ReturnFromCrevasse</c>) and when, until a pose off a drop arrives or the guard gives up (<see cref="PoseGuardRules.DropAfterReturn"/>).</summary>
@@ -769,10 +769,10 @@ public partial class ServerWorld : Node
     /// <summary>The server returned remote member <paramref name="member"/> from a crevasse: its poses over a drop still in flight are dropped.</summary>
     public void NoteReturned(int member) => _returnedPending[member] = NetSession.Instance.Now;
 
-    /// <summary>The server moved remote member <paramref name="member"/>'s body from <paramref name="from"/> to <paramref name="to"/> (its ForcePose is on its way): its poses still in flight are dropped.</summary>
+    /// <summary>The server moved remote member <paramref name="member"/>'s body from <paramref name="from"/> to <paramref name="to"/> (its ForcePose is on its way): its poses still in flight are dropped. Callers: <c>Adventurer.Shove</c> (a hazard, a test, a crevasse return) and <c>OnFloorReady</c> (from the spot the FloorChange told the client, to where the body stands).</summary>
     public void NoteShoved(int member, Vector3 from, Vector3 to) => _shovedPending[member] = (from, to, NetSession.Instance.Now);
 
-    /// <summary>Poses the shove guard dropped (tests read it).</summary>
+    /// <summary>Poses the shove guard dropped, after a shove and after a floor-ready ForcePose alike (tests read it; the RIDE pass's rise watch prints it).</summary>
     public int ShovedPosesDropped { get; private set; }
 
     /// <summary>
