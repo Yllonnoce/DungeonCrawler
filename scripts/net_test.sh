@@ -224,29 +224,32 @@ if [ "${RIDE:-}" = 1 ]; then
   if [ -z "$BACK_REF" ]; then echo "NET TEST: FAIL (the client never pressed ride 3's taken switch back once more from the seat)"; exit 1; fi
   if [ -z "$BACK_AT" ] || [ -z "$QUIET_AT" ] || [ "$QUIET_AT" -lt "$BACK_AT" ]; then echo "NET TEST: FAIL (the server did not ignore the mashed press on $BACK_REF quietly after its back from)"; exit 1; fi
   if grep -q "Too late to throw it\." "$TMP/client.log"; then echo "NET TEST: FAIL (the client was told \"Too late to throw it.\": $(grep -m1 "Too late to throw it\." "$TMP/client.log"))"; exit 1; fi
-  # the dark: each client's dark stretch (its start and the pocket lamps it put out) is the server's
+  # the dark: each client's dark stretch (its start and the pocket lamps it put out) is the server's, and every one of those lamps' lights is
+  # hidden in its own scene
   SRV_DARK=$(grep -o "\[rails\] dark r4_dark from party S=[0-9.]* to [0-9.]*: [0-9]* pocket lamp(s) out" "$TMP/server.log" | head -1 | sed 's/.*from party S=\([0-9.]*\) to [0-9.]*: \([0-9]*\) .*/\1 \2/')
   for f in client joiner; do
-    CLI_DARK=$(grep -o "\[net\] ride: dark stretch here from S=[0-9.]* lamps out [0-9]*" "$TMP/$f.log" 2>/dev/null | head -1 | sed 's/.*from S=\([0-9.]*\) lamps out \([0-9]*\)/\1 \2/')
-    if [ -z "$SRV_DARK" ] || [ "${SRV_DARK#* }" = 0 ] || [ "$CLI_DARK" != "$SRV_DARK" ]; then echo "NET TEST: FAIL (the $f's dark stretch (S and lamps out: ${CLI_DARK:-none}) is not the server's (${SRV_DARK:-none}))"; exit 1; fi
+    CLI_DARK=$(grep -o "\[net\] ride: dark stretch here from S=[0-9.]* lamps out [0-9]* ([0-9]* pocket light(s) hidden here)" "$TMP/$f.log" 2>/dev/null | head -1 | sed 's/.*from S=\([0-9.]*\) lamps out \([0-9]*\) (\([0-9]*\) pocket.*/\1 \2 \3/')
+    if [ -z "$SRV_DARK" ] || [ "${SRV_DARK#* }" = 0 ] || [ "${CLI_DARK% *}" != "$SRV_DARK" ]; then echo "NET TEST: FAIL (the $f's dark stretch (S and lamps out: ${CLI_DARK% *}) is not the server's (${SRV_DARK:-none}))"; exit 1; fi
+    if [ -z "$CLI_DARK" ] || [ "${CLI_DARK##* }" != "${SRV_DARK#* }" ]; then echo "NET TEST: FAIL (the $f hid ${CLI_DARK##* } of the dark's ${SRV_DARK#* } pocket lights in its scene)"; exit 1; fi
   done
   # ride 4's runaway: it breaks loose on the server, and both clients show its copy behind the train (the server's cart corrections); on the
   # shared grid every pair on the party line is within 2 m of the server's
   if ! grep -q "\[rails\] t=[0-9.]* runaway r4_runaway breaks loose at party S=" "$TMP/server.log"; then echo "NET TEST: FAIL (ride 4's runaway never broke loose on the server: $(grep -m1 "\[rails\] runaway r4_runaway" "$TMP/server.log"))"; exit 1; fi
   for f in client joiner; do
-    if ! grep -q "\[net\] ride: the runaway runs behind the train here" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f never showed ride 4's runaway behind the train: $(grep -m1 "\[net\] ride: the runaway " "$TMP/$f.log" 2>/dev/null))"; exit 1; fi
-    RUNP=$(awk '
+    RUN_CART=$(grep -o "\[net\] ride: the runaway runs behind the train here (cart [0-9]*, r4_runaway;" "$TMP/$f.log" 2>/dev/null | head -1 | sed 's/.*(cart \([0-9]*\),.*/\1/')
+    if [ -z "$RUN_CART" ]; then echo "NET TEST: FAIL (the $f never showed ride 4's runaway behind the train: $(grep -m1 "\[net\] ride: the runaway " "$TMP/$f.log" 2>/dev/null))"; exit 1; fi
+    RUNP=$(awk -v id="$RUN_CART" '
       FNR == 1 { file++ }
       function val(k,   i) { for (i = 1; i <= NF; i++) if (index($i, k "=") == 1) return substr($i, length(k) + 2); return "" }
-      file == 1 && /^\[net-server\] ride cart=/ && val("kind") == "Runaway" && val("armed") == "4" { srv[val("cart") "@" val("t")] = val("S") }
-      file == 2 && /^\[net\] ride cart=/ && val("kind") == "Runaway" { cli[val("cart") "@" val("t")] = val("S") }
+      file == 1 && /^\[net-server\] ride cart=/ && val("cart") == id && val("kind") == "Runaway" && val("armed") == "4" { srv[val("cart") "@" val("t")] = val("S") }
+      file == 2 && /^\[net\] ride cart=/ && val("cart") == id && val("kind") == "Runaway" { cli[val("cart") "@" val("t")] = val("S") }
       END {
         n = 0; worst = 0; over = 0
         for (k in cli) if ((k in srv) && srv[k] + 0 >= 100 && cli[k] + 0 >= 100) {
           d = cli[k] - srv[k]; if (d < 0) d = -d
           n++; if (d > worst) worst = d; if (d > 2) { over++; print "  runaway pair over 2 m: " k " server " srv[k] " here " cli[k] > "/dev/stderr" }
         }
-        printf "runaway pairs on the party line=%d max=%.3f over=%d\n", n, worst, over
+        printf "runaway (cart " id ") pairs on the party line=%d max=%.3f over=%d\n", n, worst, over
         exit !(n >= 8 && over == 0)
       }' "$TMP/server.log" "$TMP/$f.log")
     RUNP_RC=$?
@@ -258,7 +261,9 @@ if [ "${RIDE:-}" = 1 ]; then
   # points with its own front short of its window, passes them straight and throws it behind the train; the first client presses it on its
   # own first frame past the points (a throw, or the set-back the held throw now offers), and the server keeps it thrown; the party never
   # goes down the spur, and the runaway takes the spur and goes into the crevasse; both clients see the throw and the plunge, nobody a ram
-  WINDOW=$(grep -o "\[rails\] split r4_split: the straight before the points [0-9.]* m, the seated window from S=[0-9.]* ([0-9.]* m short)" "$TMP/server.log" | head -1 | sed 's/.*(\([0-9.]*\) m short)$/\1/')
+  SPLIT_BUILT=$(grep -o "\[rails\] split r4_split: the straight before the points [0-9.]* m, the seated window from S=[0-9.]* ([0-9.]* m short) until the runaway takes the points; throws held from [0-9.]* m short" "$TMP/server.log" | head -1)
+  WINDOW=$(echo "$SPLIT_BUILT" | sed -n 's/.*the seated window from S=[0-9.]* (\([0-9.]*\) m short).*/\1/p')
+  HOLD_REACH=$(echo "$SPLIT_BUILT" | sed -n 's/.*throws held from \([0-9.]*\) m short$/\1/p')
   EARLY_REF=$(grep -o "\[net\] ride: the joiner presses ride 4's split from the seat [0-9.]* m short of the points here, short of its window .*: switch:[0-9]*" "$TMP/joiner.log" 2>/dev/null | head -1 | grep -o "switch:[0-9]*$")
   SPLIT_LINE=$(grep -o "\[net\] ride: ride 4's split offers \"\(Throw the split behind us\|Set the split back\)\" in the seated window, .* through the intent from the seat ([0-9.]* m past the points here) as switch:[0-9]*" "$TMP/client.log" | head -1)
   SPLIT_REF=$(echo "$SPLIT_LINE" | grep -o "switch:[0-9]*$")
@@ -275,9 +280,12 @@ if [ "${RIDE:-}" = 1 ]; then
   HELD_SHORT=$(grep -o "\[net-server\] ride: ride 4's split held to the points for Joiner with the server's front [-0-9.]* m short of them" "$TMP/server.log" | head -1 | sed 's/.*front \([-0-9.]*\) m short.*/\1/')
   SPUR_AT=$(grep -n "\[rails\] split r4_split: the runaway takes the spur at S=" "$TMP/server.log" | head -1 | cut -d: -f1)
   PLUNGE_AT=$(grep -n "\[rails\] t=[0-9.]* runaway r4_runaway goes off the split's spur into the crevasse" "$TMP/server.log" | head -1 | cut -d: -f1)
+  SRV_GONE=$(grep -o "\[rails\] t=[0-9.]* runaway r4_runaway goes off the split's spur into the crevasse at spur S=[0-9.]*" "$TMP/server.log" | head -1 | sed 's/.*at spur S=//')
   if [ -z "$HOLD_AT" ] || [ -z "$PASS_AT" ] || [ -z "$HELD_AT" ] || [ "$PASS_AT" -lt "$HOLD_AT" ] || [ "$HELD_AT" -lt "$PASS_AT" ]; then echo "NET TEST: FAIL (the server did not hold the joiner's press to the points, pass them straight and then throw it behind the train: held $([ -n "$HOLD_AT" ] && echo yes || echo no), passed $([ -n "$PASS_AT" ] && echo yes || echo no), thrown behind $([ -n "$HELD_AT" ] && echo yes || echo no))"; exit 1; fi
-  if [ -z "$WINDOW" ] || ! awk -v s="$HELD_SHORT" -v w="$WINDOW" 'BEGIN { exit !(s != "" && s + 0 > w + 0 && s + 0 <= w + 5) }'; then echo "NET TEST: FAIL (the joiner's press did not land in the server's early lead: held with the server's front ${HELD_SHORT:-?} m short, the window ${WINDOW:-?} m and the lead 5 m before it)"; exit 1; fi
-  if grep -q "\[net-server\] Rider used $SPLIT_REF: now straight" "$TMP/server.log"; then echo "NET TEST: FAIL (the client's press past the points set the held split back: $(grep -m1 "Rider used $SPLIT_REF: now straight" "$TMP/server.log"))"; exit 1; fi
+  if [ -z "$WINDOW" ] || [ -z "$HOLD_REACH" ] || ! awk -v s="$HELD_SHORT" -v w="$WINDOW" -v h="$HOLD_REACH" 'BEGIN { exit !(s != "" && s + 0 > w + 0 && s + 0 <= h + 0) }'; then echo "NET TEST: FAIL (the joiner's press did not land in the server's early lead: held with the server's front ${HELD_SHORT:-?} m short, the window ${WINDOW:-?} m, throws held from ${HOLD_REACH:-?} m)"; exit 1; fi
+  # a held press leaves the lever straight ("now straight"), so only a "now straight" after the held throw went in is a set-back that went through
+  UNDONE=$(awk -v from="$HELD_AT" -v r="[net-server] Rider used $SPLIT_REF: now straight" 'NR > from && index($0, r) == 1 { print NR ": " $0; exit }' "$TMP/server.log")
+  if [ -n "$UNDONE" ]; then echo "NET TEST: FAIL (the client's press past the points set the thrown split back: $UNDONE)"; exit 1; fi
   if [ -z "$SPUR_AT" ] || [ "$SPUR_AT" -lt "$HELD_AT" ] || [ -z "$PLUNGE_AT" ] || [ "$PLUNGE_AT" -lt "$SPUR_AT" ]; then echo "NET TEST: FAIL (the runaway did not take the thrown split's spur into the crevasse on the server: $(grep -m1 "\[rails\] split r4_split: the runaway" "$TMP/server.log"))"; exit 1; fi
   RIDER_ON=$(grep -m1 "\[rails\] Split_r4_split/.*: Rider's \(throw held to the points (again)\|set-back .* after the held throw went in, ignored\)\|\[net-server\] interact $SPLIT_REF from Rider: \(seated window: set back .* ignored\|the deadly lever was thrown .*\)\|\[net-server\] Rider used $SPLIT_REF: now thrown" "$TMP/server.log")
   echo "--- the split: the joiner's press held ${HELD_SHORT} m short (the window ${WINDOW} m); the client's press past the points: $(echo "$SPLIT_LINE" | grep -o "offers \"[^\"]*\"") $(echo "$SPLIT_LINE" | grep -o "([0-9.]* m past the points here)"), on the server: ${RIDER_ON:-NOTHING}"
@@ -287,7 +295,10 @@ if [ "${RIDE:-}" = 1 ]; then
   done
   if grep -q "\[rails\] runaway rams the train" "$TMP/server.log"; then echo "NET TEST: FAIL (the runaway rammed the train: $(grep -m1 "\[rails\] runaway rams the train" "$TMP/server.log"))"; exit 1; fi
   for f in client joiner; do
-    if ! grep -q "\[net\] ride: the runaway took the spur here and plunged" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f never saw the runaway take the spur and plunge)"; exit 1; fi
+    PLUNGED=$(grep -o "\[net\] ride: the runaway took the spur here and plunged (it went at spur S=[0-9.]*; our copy at S=[-0-9.]*)" "$TMP/$f.log" 2>/dev/null | head -1)
+    if [ -z "$PLUNGED" ]; then echo "NET TEST: FAIL (the $f never saw the runaway take the spur and plunge)"; exit 1; fi
+    # the server's spur S where it went, and the client's copy on the spur within 2 m of it
+    if ! echo "$PLUNGED" | awk -v srv="$SRV_GONE" '{ g = $0; sub(/.*it went at spur S=/, "", g); sub(/;.*/, "", g); c = $0; sub(/.*our copy at S=/, "", c); sub(/\).*/, "", c); d = c - g; if (d < 0) d = -d; exit !(srv != "" && g == srv && d <= 2) }'; then echo "NET TEST: FAIL (the $f's plunge is not the server's (spur S=${SRV_GONE:-?}) or its copy on the spur was more than 2 m off: $PLUNGED)"; exit 1; fi
     if grep -q "\[net\] ride: the runaway rammed the train here" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f showed a ram the server never made: $(grep -m1 "\[net\] ride: the runaway rammed the train here" "$TMP/$f.log"))"; exit 1; fi
   done
   # the set pieces' clocks: the kiln's (ride 5's) first hammer enters its fall on both sides (server time; every client fall paired with the nearest

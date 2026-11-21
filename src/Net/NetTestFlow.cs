@@ -1518,13 +1518,13 @@ public partial class NetTestFlow : Node
     }
 
     /// <summary>
-    /// Each RIDE client, every tick on floor 12: the dark stretch as this peer built it (its start and the pocket lamps it put out, with the lamps'
+    /// Each RIDE client, every tick on a floor with its set pieces built: the dark stretch as this peer built it (its start and the pocket lamps it put out, with the lamps'
     /// lights hidden here), once; and on the split's ride, the split shown thrown here (its PropEvt), once, and the runaway's copy here (the
     /// server's cart corrections) on the party line behind our train, once. Its ram and its plunge are told by <see cref="Dungeon.Rails.RailNet"/> itself, from the Derailed flag and its last S.
     /// </summary>
     private void RideRunawayWatch(Main main)
     {
-        if (main.Rebuilding || main.Builder.CurrentFloor != 12 || main.Builder.FloorRoot is not { } root || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return;
+        if (main.Rebuilding || main.Builder.FloorRoot is not { } root || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc) || enc.GetParent() != root) return;
         if (!_rideDarkTold && !float.IsNaN(enc.DarkFromS))
         {
             _rideDarkTold = true;
@@ -1537,12 +1537,12 @@ public partial class NetTestFlow : Node
             _splitShownTold = true;
             GD.Print(FormattableString.Invariant($"[net] ride: ride {enc.SplitRide}'s split shows thrown here (its PropEvt) with our front at S={line.Party.FrontS:0.0} ({line.Party.FrontS - enc.SplitPointsS:0.0} m from the points), taken {shown.Taken}"));
         }
-        if (_rideRunawayTold || enc.SplitRide < 1 || Dungeon.Rails.RailNet.Instance is not { } rn || !IsInstanceValid(rn) || rn.ClientRunaway is not { } run
+        if (_rideRunawayTold || enc.SplitRide < 1 || Dungeon.Rails.RailNet.Instance is not { } rn || !IsInstanceValid(rn) || rn.ClientRideRunaway is not { } run
             || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || rc.StopIndex != enc.SplitRide - 1 || run.Track != 0) return;
         _rideRunawayTold = true;
-        var rear = rn.ClientTrainRearS;
+        var rear = rn.OwnTrainRearS();
         var gap = rear - (run.S + Dungeon.Rails.CartRules.HalfLength);
-        GD.Print(FormattableString.Invariant($"[net] ride: the runaway {(gap >= 0f ? "runs behind the train here" : "shows AHEAD of our train's rear here")} (its S={run.S:0.0}, our train's rear S={rear:0.0}, {gap:0.0} m between)"));
+        GD.Print(FormattableString.Invariant($"[net] ride: the runaway {(gap >= 0f ? "runs behind the train here" : "shows AHEAD of our train's rear here")} (cart {run.Id}, {run.Piece}; its S={run.S:0.0}, our train's rear S={rear:0.0}, {gap:0.0} m between)"));
     }
 
     // the joiner (plan 5 task 8): the RIDE pass's second client joins during ride 2

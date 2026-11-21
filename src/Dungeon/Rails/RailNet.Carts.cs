@@ -16,6 +16,8 @@ public partial class RailNet
         public int Id;
         public CartKind Kind;
         public byte Track;
+        /// <summary>The server's encounter id: a ride's runaway carries its set piece's (the traffic runaway none).</summary>
+        public string? EncounterId;
         public Node3D Body = null!;
         public CartRun Run = null!;
         public CartFollower Follow = null!;
@@ -134,7 +136,7 @@ public partial class RailNet
         if (GetParent() is not Node3D root || _rails.TrackOf(d.Track) is not { Valid: true } track) return null;
         var kind = (CartKind)d.Kind;
         var state = new CartState(d.S, d.V, CartMode.Rolling, d.Plating);
-        var cc = new ClientCart { Id = d.Cart, Kind = kind, Track = d.Track, Follow = new CartFollower(_rails) };
+        var cc = new ClientCart { Id = d.Cart, Kind = kind, Track = d.Track, EncounterId = d.EncounterId, Follow = new CartFollower(_rails) };
         switch (kind)
         {
             case CartKind.Slag:
@@ -297,22 +299,19 @@ public partial class RailNet
         return false;
     }
 
-    /// <summary>Client: a runaway copy here, its follower's S and its track (the RIDE pass reads it), or null.</summary>
-    internal (float S, byte Track)? ClientRunaway
+    /// <summary>Client: a ride's runaway copy here (one named by its set piece, never the traffic runaway): its cart id, piece id, follower's S and track (the RIDE pass reads it), or null.</summary>
+    internal (int Id, string Piece, float S, byte Track)? ClientRideRunaway
     {
         get
         {
             foreach (var cc in _carts.Values)
-                if (cc.Kind == CartKind.Runaway && IsInstanceValid(cc.Body) && !cc.Body.IsQueuedForDeletion() && cc.Follow.HasState) return (cc.Follow.S, cc.Track);
+                if (cc.Kind == CartKind.Runaway && cc.EncounterId is { } piece && IsInstanceValid(cc.Body) && !cc.Body.IsQueuedForDeletion() && cc.Follow.HasState) return (cc.Id, piece, cc.Follow.S, cc.Track);
             return null;
         }
     }
 
-    /// <summary>Client: our own train's last body's back S, as this screen shows it (the RIDE pass reads it).</summary>
-    internal float ClientTrainRearS => OwnTrainRearS();
-
-    /// <summary>Client: our own train's last body's back S, as this screen shows it.</summary>
-    private float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
+    /// <summary>Client: our own train's last body's back S, as this screen shows it (the RIDE pass reads it too).</summary>
+    internal float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
 
     /// <summary>Client: a runaway on the party line rings behind our train by the server's rule (<see cref="RunawayRules.Rings"/>), from its own place: positional.</summary>
     private void RingBehind(ClientCart cc, float s, float dt)

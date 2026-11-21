@@ -11,7 +11,7 @@ namespace DungeonCrawler.Core;
 // ---- --test-runaway[=tail|ram], --test-split[=after|early|hold|stall|lone] -------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears. The build: r4_runaway is a marker at its
 // trigger and r4_split a live split at the layout's points on ride 4. The cart is restored at stop 3 (rc.Restore(3)), everyone boards
-// and the cart departs on ride 4; nobody presses anything. =tail (the default): the lead pumps throughout; the runaway breaks loose with
+// and the cart departs on ride 4; nobody presses anything (a bare --test-runaway runs the split's =after). =tail: the lead pumps throughout; the runaway breaks loose with
 // its front 14-16 m behind the train's last body and its call is heard (RailCalls, BarkTrigger.Runaway); until stop 4 the gap never
 // shrinks below 3 m; the train arrives at stop 4 and the runaway halts with its front 2.5-4 m behind the last body and is gone within 2 s
 // of its halt; nobody is run over. =ram: the crew wagons of stops 1-3 coupled before the restore, the pumpers capped at 0 (nobody

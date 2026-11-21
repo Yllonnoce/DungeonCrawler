@@ -137,7 +137,7 @@ public partial class RailEncounterController
         if (_runaway is { } w && IsInstanceValid(w.Body) && !w.Body.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(w.Body.CartId, CartKind.Runaway, 0, w.Run, w.Body, 0f, null, null, null));
         if (_rideRunaway is { } r && IsInstanceValid(r.Body) && !r.Body.IsQueuedForDeletion())
-            into.Add(new RailNet.LiveCart(r.Body.CartId, CartKind.Runaway, r.OnSpur ? SpurTrackNumber(_split) : (byte)0, r.Run, r.Body, 0f, null, null, null)); // ride 4's, behind the train (or down the split's spur)
+            into.Add(new RailNet.LiveCart(r.Body.CartId, CartKind.Runaway, r.OnSpur ? SpurTrackNumber(_split) : (byte)0, r.Run, r.Body, 0f, r.Id, null, null)); // ride 4's, behind the train (or down the split's spur), named by its piece (the traffic runaway goes unnamed)
         if (_golem is { Done: false } g && IsInstanceValid(g.Runner) && !g.Runner.IsQueuedForDeletion())
             into.Add(new RailNet.LiveCart(g.CartId, CartKind.Golem, GolemTrack(g), g.Run, g.Runner, 0f, g.EncounterId,
                 null, IsInstanceValid(g.Body) && g.Body.Carried ? g.Body : null));
