@@ -920,6 +920,8 @@ public partial class DebugTools : Node
             {
                 var rides = cart.StopS.Skip(1).Zip(cart.StopS, (b, a) => b - a).ToList();
                 GD.Print($"[map] rail StopS=[{string.Join(",", cart.StopS.Select(x => x.ToString("F1")))}] rides=[{string.Join(",", rides.Select(x => x.ToString("F0")))}] m total={cart.StopS[^1] - cart.StopS[0]:F0} m");
+                if (mapLayout.Rail is { Break: { } brk } brkRail)
+                    GD.Print($"[map] rail break: ride {brk.Ride} gap at party S={cart.Party.Track.ClosestS(Dungeon.DungeonBuilder.CellToWorld(brkRail.Party[brk.Gap])) - Dungeon.DungeonBuilder.CellSize / 2f:0.0}");
             }
             GD.Print(mapLayout.ToAscii());
             GetTree().Quit();

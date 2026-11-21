@@ -534,7 +534,8 @@
         "RailCount": 4,
         "RailLoop": true,
         "RailBand": 14,
-        "Crevasses": true
+        "Crevasses": true,
+        "BrokenBridgeRide": 3
       }
     },
     {
