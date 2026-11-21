@@ -30,6 +30,12 @@ namespace DungeonCrawler.Core;
 // short (RailController.DebugStall) and the watchdog sets the split back and grinds on to stop 4: no fall. =lone: the hook throws it and the
 // only human (possession off) is downed in the seat: at the points the safe line, the lever left thrown, the runaway takes the spur. Every
 // split variant: nobody falls but the train's riders. Prints [split] lines and a RESULT.
+// The legibility gate (Ruling 23), every variant, headless too: at the build every RailLamp{i} inside the dark is hidden with its lantern dark
+// (and some lamp outside it lit); layer-1 rays from the seated lead's eye with the front 8 m short of the points to the split's amber and red
+// lamps, and 3 s after the runaway breaks loose to its lamp ("[runaway] sight: ..."): a blocked ray fails the flow. =after also checks the light
+// is all back at stop 4, then (pass 2, the runaway held) rides into the dark's middle and leaves for floor 13 from there, and checks it again
+// before its RESULT. Windowed =after with --screenshot=PATH saves the seat's views as PATH_lit, _dark (HUD hidden), _behind (the rearmost view,
+// turned back), _behind_seat (the lead's eye turned 180°, shown only), _split, _window and _lever, and judges them (ShotsStep).
 // Ruling 22's hold for the other flows is here too (HoldTheRunaway).
 public partial class DebugTools
 {
@@ -114,6 +120,7 @@ public partial class DebugTools
 
     private void RunRunawayTest()
     {
+        if (_rwStep == LeftFloorStep) { LightAfterLeaving(); return; } // =after's pass 2 left floor 12 from the dark
         var main = Main.Instance;
         if (main?.Builder.Layout is not { } layout || main.Builder.FloorRoot is not { } root || !main.InGame || Game.Instance.CurrentFloor != 12) return;
         _rwClock += (float)GetProcessDeltaTime();
@@ -129,6 +136,7 @@ public partial class DebugTools
         if (party.Active.FirstOrDefault(a => a.State.Fallen && !_spMayFall.Contains(a.State.Name)) is { } fell) { Fail($"{fell.State.Name} fell at step {_rwStep} (cell {DungeonBuilder.WorldToCell(fell.GlobalPosition)}): nobody falls{(SplitBranch ? " but the train's" : "")}"); return; }
         var rear = RunawayRules.TrainRearS(rc.Party.BackS, rc.Train.Count, RailController.WagonSpacing);
         var run = enc.RideRunawayRun;
+        if (_rwStep >= 4 && _rwPass == 1 && Legibility(rc, enc, me, run, Fail)) return;
 
         switch (_rwStep)
         {
@@ -137,6 +145,7 @@ public partial class DebugTools
                 if (enc.SetPieceNode("r4_runaway") is null || enc.SetPieceNode("r4_split") is null) { Fail("floor 12 lacks r4_runaway or r4_split"); return; }
                 if (enc.SplitRide != 4 || float.IsNaN(enc.SplitPointsS) || !enc.SplitIsLive) { Fail($"ride 4's split is not live (ride {enc.SplitRide}, points S={enc.SplitPointsS:0.0}, live {enc.SplitIsLive})"); return; }
                 GD.Print($"[runaway] floor 12 ({_rwVariant}): r4_split live at party S={enc.SplitPointsS:0.0}; stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}, party damage scale {TierRules.PartyDamageScale:0.00}");
+                if (DarkLampsOut(root, enc) is { } lit) { Fail(lit); return; }
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
                 if (RamBranch)
                 {
@@ -373,6 +382,7 @@ public partial class DebugTools
         _spTime += (float)GetProcessDeltaTime();
         var v = _rwVariant;
         var pump = new Vector2(0, -1);
+        if (_rwPass == 2 && v == "after") { LeaveFromTheDark(rc, enc, party, me, Fail); return; }
         if (enc.SplitSwitchNode is not { } split)
         {
             if (_rwStep == 4 && _rwPass == 1) Fail("ride 4's split is not built live");
@@ -592,8 +602,17 @@ public partial class DebugTools
                     {
                         case "after":
                             if (!_spPressedAfter || float.IsNaN(_spPlungeAt) || rams != 0) { Fail($"after: pressed {_spPressedAfter}, the runaway plunged {!float.IsNaN(_spPlungeAt)}, rams {rams}"); return; }
-                            GD.Print($"[split] RESULT ok (after): the runaway broke loose behind; the seat offered the split from S={split.WindowStartS:0.0} (the straight before the points, {split.WindowAhead:0.0} m) with \"Let us pass the split\" called at S={_spWaitFront:0.0}; the train passed the points straight (S={points:0.0}), \"Now\" called at S={_spNowFront:0.0}, the lead threw it from the seat {_spThrownAtFront - points:0.0} m past the points; no cross; the runaway took the spur and went off it into the crevasse {_spPlungeAt - _spOnSpurAt:0.00} s later; no ram; arrived at stop 4; nobody fell");
-                            break;
+                            if (Shooting && !_lgShotsJudged) { Fail($"the legibility shots were not all taken ({string.Join(", ", _lgStats.Keys)})"); return; }
+                            if (LightBack(enc, "after the span") is { } dim) { Fail(dim); return; }
+                            _spResult = $"[split] RESULT ok (after): the runaway broke loose behind; the seat offered the split from S={split.WindowStartS:0.0} (the straight before the points, {split.WindowAhead:0.0} m) with \"Let us pass the split\" called at S={_spWaitFront:0.0}; the train passed the points straight (S={points:0.0}), \"Now\" called at S={_spNowFront:0.0}, the lead threw it from the seat {_spThrownAtFront - points:0.0} m past the points; no cross; the runaway took the spur and went off it into the crevasse {_spPlungeAt - _spOnSpurAt:0.00} s later; no ram; arrived at stop 4; nobody fell; the light back after the dark and after leaving floor 12 from its middle";
+                            // pass 2: the light comes back when the party leaves floor 12 from the dark's middle (the runaway held)
+                            enc.DebugHoldRunaway(4);
+                            _rwPass = 2;
+                            _rwLoose = false;
+                            rc.Restore(3);
+                            GD.Print($"[split] after: pass 2: restored at stop {rc.StopIndex} with ride 4's runaway held, to leave floor 12 from the dark's middle");
+                            _rwStep = 1; _rwClock = 0f;
+                            return;
                         case "hold":
                             if (float.IsNaN(_spPlungeAt)) { Fail("hold: the runaway did not take the spur"); return; }
                             GD.Print($"[split] RESULT ok (hold): thrown 9 m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), set back from the seat at once (no refusal) in the window, thrown again from the seat short of the points and held to them (\"{SplitRules.HeldLog}\" shown); the train passed straight, the held throw thrown just after, a second press just past the points ignored; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
@@ -657,5 +676,364 @@ public partial class DebugTools
                 break;
             }
         }
+    }
+
+    // ---- Task 7: seen in the dark (Ruling 23, the legibility gate) -------------------------------------------------
+
+    /// <summary>The step =after's pass 2 waits in once it left floor 12 from the dark's middle (the flow's floor-12 guard skipped).</summary>
+    private const int LeftFloorStep = 20;
+    /// <summary>The scene area a shot's luminance is judged on, as shares of the image: the HUD cropped out (the floor and objective lines top
+    /// left, the minimap top right, and the log, the subtitles and the portraits below the middle).</summary>
+    private const float CropX0 = 0.2f, CropX1 = 0.8f, CropY0 = 0.16f, CropY1 = 0.53f;
+    /// <summary>A lamp's pixels are counted within this share of the image's height either way of where the lamp projects.</summary>
+    private const float LampWindow = 1f / 18f;
+    /// <summary>Every shot the windowed =after run takes, in the order of the line; the gate is judged once all are in.</summary>
+    private static readonly string[] LgShotNames = { "lit", "behind", "behind_seat", "dark", "split", "window", "lever" };
+    private bool _lgSplitSight, _lgRunawaySight, _lgBaseTaken, _lgShotsJudged;
+    private float _lgTime, _lgLooseAt = float.NaN, _lgOnFloorAt = float.NaN;
+    private float _lgBaseAmbient = float.NaN;
+    private readonly Dictionary<Adventurer, float> _lgTorchBase = new();
+    /// <summary>=after's RESULT line, printed once the light is back after leaving floor 12 (pass 2).</summary>
+    private string? _spResult;
+    private readonly HashSet<string> _lgQueued = new();
+    private readonly Queue<LgShot> _lgShots = new();
+    private LgShot? _lgShot;
+    private readonly Dictionary<string, (float Luma, int Px)> _lgStats = new();
+
+    private sealed class LgShot
+    {
+        public string Name = "";
+        /// <summary>Sets the view up and returns the camera that draws it.</summary>
+        public Func<Camera3D> Pose = null!;
+        /// <summary>The lamp whose pixels are counted (null: none), and its colour test (red, else orange).</summary>
+        public Func<Vector3?>? Lamp;
+        public bool Red;
+        /// <summary>Gives the view back after the shot (handed the shot's camera).</summary>
+        public Action<Camera3D>? Done;
+        public Camera3D? Camera;
+        public int Frames;
+    }
+
+    /// <summary>This peer draws (a windowed run): the dark darkens its view and torches.</summary>
+    private static bool Drawn => !DisplayServer.GetName().Equals("headless", StringComparison.OrdinalIgnoreCase);
+    /// <summary>The windowed =after run with --screenshot=PATH saves the seat's shots and judges them.</summary>
+    private bool Shooting => _screenshotPath != null && _rwVariant == "after" && Drawn;
+    private static Godot.Environment? Env() => Main.Instance?.GetNodeOrNull<WorldEnvironment>("World/Env")?.Environment;
+    /// <summary>One of Main's private light values (the view's darkness, the floor's base ambient and fog emission), read for the check; NaN if it is gone.</summary>
+    private static float MainFloat(string field) =>
+        typeof(Main).GetField(field, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)?.GetValue(Main.Instance) is float f ? f : float.NaN;
+
+    /// <summary>
+    /// The dark's pocket lamps are out in the built scene (Ruling 16), not just counted: every RailLamp{i} inside the span (the darkness at it
+    /// 1) is hidden and its RailLantern{i} has no emissive material left; some lamp outside the dark is still lit. Null, or why not.
+    /// </summary>
+    private static string? DarkLampsOut(Node3D root, RailEncounterController enc)
+    {
+        if (root.GetNodeOrNull<Node3D>("Rails") is not { } rails) return "floor 12 has no Rails node";
+        int inside = 0, ramps = 0, outsideLit = 0;
+        var lit = new List<string>();
+        var names = new List<string>();
+        foreach (var light in rails.GetChildren().OfType<Light3D>())
+        {
+            var name = light.Name.ToString();
+            if (!name.StartsWith("RailLamp")) continue;
+            var d = enc.DarknessAt(light.GlobalPosition);
+            var glows = rails.GetNodeOrNull<Node>("RailLantern" + name["RailLamp".Length..]) is { } lantern && Emissive(lantern);
+            if (d >= 1f)
+            {
+                inside++;
+                names.Add(name);
+                if (light.Visible || glows) lit.Add($"{name} (light visible {light.Visible}, lantern glowing {glows})");
+            }
+            else if (d > 0f) ramps++;
+            else if (light.Visible) outsideLit++;
+        }
+        GD.Print($"[runaway] dark lamps in the built scene: {inside} RailLamp(s) inside the span (darkness 1 at the lamp: {string.Join(", ", names)}), {inside - lit.Count} hidden with their lanterns dark; {ramps} in the ramps; {outsideLit} lit outside the dark");
+        if (inside == 0) return "no RailLamp lies inside the dark span";
+        if (lit.Count > 0) return $"lamps inside the dark are lit: {string.Join(", ", lit)}";
+        if (outsideLit == 0) return "no RailLamp outside the dark is lit";
+        return null;
+    }
+
+    /// <summary>Some mesh under <paramref name="node"/> draws with an emissive material.</summary>
+    private static bool Emissive(Node node)
+    {
+        if (node is MeshInstance3D { Mesh: { } mesh } mi)
+            for (var s = 0; s < mesh.GetSurfaceCount(); s++)
+                if (mi.GetActiveMaterial(s) is BaseMaterial3D { EmissionEnabled: true }) return true;
+        foreach (var child in node.GetChildren()) if (Emissive(child)) return true;
+        return false;
+    }
+
+    /// <summary>A layer-1 ray from <paramref name="eye"/> to <paramref name="to"/>: "clear", or "blocked by" the first collider and how far along.</summary>
+    private static string Sight(Node3D from, Vector3 eye, Vector3 to)
+    {
+        var hit = from.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(eye, to, 1));
+        return hit.Count == 0 ? "clear" : $"blocked by {(hit["collider"].AsGodotObject() as Node)?.Name} at {hit["position"].AsVector3().DistanceTo(eye):0.0} m";
+    }
+
+    /// <summary>
+    /// Ride 4's legibility (Ruling 23), pass 1 from the departure at stop 3: the light before the dark; layer-1 rays from the seated lead's eye
+    /// to the split's two lamps with the front 8 m short of the points and to the runaway's lamp 3 s after it breaks loose (every variant,
+    /// headless too: a blocked ray fails the flow); and, windowed =after with --screenshot, the seat's shots and their checks. True when it failed.
+    /// </summary>
+    private bool Legibility(RailController rc, RailEncounterController enc, Adventurer me, CartRun? run, Action<string> fail)
+    {
+        _lgTime += (float)GetProcessDeltaTime();
+        var front = rc.Party.FrontS;
+        var rolling = rc.State.Mode == CartMode.Rolling;
+        if (!_lgBaseTaken)
+        {
+            _lgBaseTaken = true;
+            _lgBaseAmbient = Env()?.AmbientLightEnergy ?? float.NaN;
+            _lgTorchBase.Clear();
+            foreach (var a in Main.Instance.Party.Adventurers) if (IsInstanceValid(a)) _lgTorchBase[a] = a.Torch.LightEnergy;
+            GD.Print($"[runaway] light before the dark (front S={front:0.0}, the dark from S={enc.DarkFromS:0.0}): ambient {_lgBaseAmbient:0.000}, torches [{string.Join(", ", _lgTorchBase.Select(t => $"{t.Key.State.Name} {t.Value:0.00}"))}]; this peer {(Drawn ? "draws" : "is headless (no darkness drawn)")}");
+        }
+        if (!_lgSplitSight && rolling && enc.SplitSwitchNode is { } split && front >= enc.SplitPointsS - 8f)
+        {
+            _lgSplitSight = true;
+            var eye = me.Camera.GlobalPosition;
+            var lever = Sight(me, eye, split.AmberLampPoint);
+            var spur = Sight(me, eye, split.RedLampPoint);
+            GD.Print($"[runaway] sight: lever {lever}, spur end {spur}");
+            GD.Print($"[runaway] sight from the seated lead's eye with the front at S={front:0.0} ({enc.SplitPointsS - front:0.0} m short of the points): the lever's amber lamp {eye.DistanceTo(split.AmberLampPoint):0.0} m off, the spur's red lamp {eye.DistanceTo(split.RedLampPoint):0.0} m off");
+            if (lever != "clear" || spur != "clear") { fail($"the split's lamps are not in sight from the seat 8 m short of the points (lever {lever}, spur end {spur})"); return true; }
+        }
+        if (run != null && float.IsNaN(_lgLooseAt)) _lgLooseAt = _lgTime;
+        if (!_lgRunawaySight && !float.IsNaN(_lgLooseAt) && _lgTime - _lgLooseAt >= 3f)
+        {
+            _lgRunawaySight = true;
+            if (enc.RideRunawayCart?.GetNodeOrNull<Node3D>("LampLens") is not { } lens) { fail("3 s after it broke loose the runaway (or its lamp) is gone"); return true; }
+            var eye = me.Camera.GlobalPosition;
+            var sight = Sight(me, eye, lens.GlobalPosition);
+            GD.Print($"[runaway] sight: runaway lamp {sight} at {eye.DistanceTo(lens.GlobalPosition):0.0} m");
+            if (sight != "clear") { fail($"the runaway's lamp is not in sight from the seat 3 s after it broke loose: {sight}"); return true; }
+            if (Shooting) QueueBehindShots(rc, enc, me);
+        }
+        return Shooting && ShotsStep(rc, enc, me, front, rolling, fail);
+    }
+
+    /// <summary>Queue a shot once by its name.</summary>
+    private void QueueShot(string name, Func<Camera3D> pose, Func<Vector3?>? lamp = null, bool red = false, Action<Camera3D>? done = null)
+    {
+        if (_lgQueued.Add(name)) _lgShots.Enqueue(new LgShot { Name = name, Pose = pose, Lamp = lamp, Red = red, Done = done });
+    }
+
+    /// <summary>The seated lead faces ahead along the seat, level.</summary>
+    private static Func<Camera3D> Ahead(RailController rc, Adventurer me) => () =>
+    {
+        var forward = -rc.Cart.SeatTransform(me.Seat).Basis.Z;
+        forward.Y = 0f;
+        me.AimAt(me.Camera.GlobalPosition + forward.Normalized() * 20f);
+        return me.Camera;
+    };
+
+    /// <summary>A luminance shot is of the scene alone: the HUD is hidden while it is drawn (a level-up banner or a subtitle in the crop would light it).</summary>
+    private static Func<Camera3D> Bare(Func<Camera3D> pose) => () =>
+    {
+        Main.Instance.Hud.Visible = false;
+        return pose();
+    };
+
+    private static void HudBack(Camera3D _) => Main.Instance.Hud.Visible = true;
+
+    /// <summary>A camera that draws as <paramref name="like"/> does, for a view the seat cannot turn to.</summary>
+    private static Camera3D TempCamera(Camera3D like) => new()
+    {
+        Name = "LegibilityCamera", Fov = like.Fov, Near = like.Near, Far = like.Far, CullMask = like.CullMask, Environment = like.Environment,
+        Attributes = like.Attributes, KeepAspect = like.KeepAspect,
+    };
+
+    /// <summary>
+    /// The runaway behind, 3 s after it broke loose: "behind" (judged) is the rearmost view, the seated eye's height at the party cart's back,
+    /// turned to look back down the line (a seat turns 150° at most, and from the front row the riders behind fill a view turned right round);
+    /// "behind_seat" (shown only) is the seated lead's own eye turned 180°.
+    /// </summary>
+    private void QueueBehindShots(RailController rc, RailEncounterController enc, Adventurer me)
+    {
+        Vector3? Lamp() => enc.RideRunawayCart?.GetNodeOrNull<Node3D>("LampLens")?.GlobalPosition;
+        void Back(Camera3D cam) { me.Camera.MakeCurrent(); cam.QueueFree(); }
+        QueueShot("behind", () =>
+        {
+            var cam = TempCamera(me.Camera);
+            rc.Cart.AddChild(cam);
+            var eyeY = rc.Cart.ToLocal(rc.Cart.SeatTransform(me.Seat).Origin).Y + Adventurer.SeatedEyeHeight;
+            cam.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi), new Vector3(0f, eyeY, CartRules.HalfLength + 0.05f));
+            cam.MakeCurrent();
+            return cam;
+        }, Lamp, false, Back);
+        QueueShot("behind_seat", () =>
+        {
+            var cam = TempCamera(me.Camera);
+            me.Camera.AddChild(cam);
+            cam.Transform = new Transform3D(new Basis(Vector3.Up, Mathf.Pi), Vector3.Zero);
+            cam.MakeCurrent();
+            return cam;
+        }, Lamp, false, Back);
+    }
+
+    /// <summary>
+    /// The windowed =after run's shots from the seat (each saved as PATH_name.png): "lit" with the front 10 m before the dark and "dark" in its
+    /// middle (both facing ahead, level, the HUD hidden), "split" 8 m short of the points facing ahead, "window" at the window's start and "lever" at the lever's S
+    /// looking at the spur's end and its red lamp, and the two behind (<see cref="QueueBehindShots"/>). Each is posed, drawn for three frames and
+    /// saved; then the gate: the dark's luminance over the lit's on the scene crop at most 0.6, at least 20 red pixels about the split's red lamp
+    /// and 20 orange about the runaway's. True when it failed.
+    /// </summary>
+    private bool ShotsStep(RailController rc, RailEncounterController enc, Adventurer me, float front, bool rolling, Action<string> fail)
+    {
+        if (rolling && enc.SplitSwitchNode is { } split)
+        {
+            var spurEnd = split.SpurEnd;
+            var red = split.RedLampPoint;
+            Vector3? Red() => red;
+            if (front >= enc.DarkFromS - 10f) QueueShot("lit", Bare(Ahead(rc, me)), done: HudBack);
+            if (front >= enc.DarkFromS + DarkRules.Length / 2f) QueueShot("dark", Bare(Ahead(rc, me)), done: HudBack);
+            if (front >= enc.SplitPointsS - 8f) QueueShot("split", Ahead(rc, me), Red, true);
+            if (front >= split.WindowStartS) QueueShot("window", () => { me.AimAt((spurEnd + red) / 2f); return me.Camera; }, Red, true);
+            if (front >= split.LeverS) QueueShot("lever", () => { me.AimAt(spurEnd); return me.Camera; }, Red, true, _ => Ahead(rc, me)());
+        }
+        if (_lgShot == null && _lgShots.TryDequeue(out var next))
+        {
+            _lgShot = next;
+            next.Camera = next.Pose();
+            next.Frames = 3;
+        }
+        else if (_lgShot is { } shot && --shot.Frames <= 0)
+        {
+            _lgShot = null;
+            var img = GetViewport().GetTexture().GetImage();
+            var path = System.IO.Path.ChangeExtension(_screenshotPath!, null) + "_" + shot.Name + ".png";
+            var err = img.SavePng(path);
+            Vector2? at = null;
+            if (shot.Lamp?.Invoke() is { } lamp && shot.Camera is { } cam && IsInstanceValid(cam) && !cam.IsPositionBehind(lamp))
+                at = cam.UnprojectPosition(lamp) * (img.GetWidth() / GetViewport().GetVisibleRect().Size.X);
+            var (luma, px) = ShotStats(img, at, shot.Red);
+            _lgStats[shot.Name] = (luma, px);
+            var counted = shot.Lamp == null ? "" : $"; {(shot.Red ? "red" : "orange")} px {px} within {(int)(img.GetHeight() * LampWindow)} px of the lamp {(at is { } a ? $"at ({a.X:0},{a.Y:0})" : "(off the view)")}";
+            GD.Print($"[runaway] shot {shot.Name} ({err}) {path}: the front at S={front:0.0}, {img.GetWidth()}x{img.GetHeight()}; the scene's mean luminance {luma:0.000}{counted}");
+            if (shot.Camera is { } used) shot.Done?.Invoke(used);
+            if (shot.Name == "dark" && DarkHere(enc, me) is { } light) { fail(light); return true; }
+        }
+        if (!_lgShotsJudged && LgShotNames.All(_lgStats.ContainsKey))
+        {
+            _lgShotsJudged = true;
+            var r = _lgStats["dark"].Luma / _lgStats["lit"].Luma;
+            int n = _lgStats["split"].Px, m = _lgStats["behind"].Px;
+            GD.Print($"[runaway] shots: dark/lit luminance {r:0.00}; split red px {n}; behind orange px {m}");
+            GD.Print($"[runaway] shots judged on the scene crop x {CropX0:P0}-{CropX1:P0}, y {CropY0:P0}-{CropY1:P0} of the image (the HUD hidden and cropped out; lit {_lgStats["lit"].Luma:0.000} and dark {_lgStats["dark"].Luma:0.000} both from the seat facing ahead, level; Rec. 709 luma of the image's values); lamp pixels counted about where each lamp projects (window {_lgStats["window"].Px} red, lever {_lgStats["lever"].Px} red, behind_seat {_lgStats["behind_seat"].Px} orange: shown, not judged)");
+            if (r > 0.6f || n < 20 || m < 20) { fail($"the dark does not read: dark/lit luminance {r:0.00} (want <= 0.6), split red px {n} (want >= 20), behind orange px {m} (want >= 20)"); return true; }
+        }
+        return false;
+    }
+
+    /// <summary>A shot's mean luminance over the scene crop, and the red (or orange) pixels within <see cref="LampWindow"/> of <paramref name="lamp"/> (none without one).</summary>
+    private static (float Luma, int Px) ShotStats(Image shot, Vector2? lamp, bool red)
+    {
+        var img = (Image)shot.Duplicate();
+        if (img.GetFormat() != Image.Format.Rgba8) img.Convert(Image.Format.Rgba8);
+        int w = img.GetWidth(), h = img.GetHeight();
+        var data = img.GetData();
+        int x0 = (int)(w * CropX0), x1 = (int)(w * CropX1), y0 = (int)(h * CropY0), y1 = (int)(h * CropY1);
+        double sum = 0;
+        for (var y = y0; y < y1; y++)
+            for (var x = x0; x < x1; x++)
+            {
+                var i = (y * w + x) * 4;
+                sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+            }
+        var luma = (float)(sum / 255.0 / ((x1 - x0) * (y1 - y0)));
+        var px = 0;
+        if (lamp is { } c)
+        {
+            var r = (int)(h * LampWindow);
+            for (var y = Math.Max(0, (int)c.Y - r); y < Math.Min(h, (int)c.Y + r); y++)
+                for (var x = Math.Max(0, (int)c.X - r); x < Math.Min(w, (int)c.X + r); x++)
+                {
+                    var i = (y * w + x) * 4;
+                    float cr = data[i] / 255f, cg = data[i + 1] / 255f, cb = data[i + 2] / 255f;
+                    if (red ? cr > 0.6f && cg < 0.3f && cb < 0.3f : cr > 0.7f && cg > 0.3f && cg < 0.65f && cb < 0.35f) px++;
+                }
+        }
+        return (luma, px);
+    }
+
+    /// <summary>The control at the dark shot: in the dark's middle the view is wholly dark, the ambient at its share and the lead's torch at its. Null, or why not.</summary>
+    private string? DarkHere(RailEncounterController enc, Adventurer me)
+    {
+        var d = MainFloat("_darkness");
+        var ambient = Env()?.AmbientLightEnergy ?? float.NaN;
+        var torch = me.Torch.LightEnergy;
+        var torchBase = _lgTorchBase.TryGetValue(me, out var t) ? t : float.NaN;
+        GD.Print($"[runaway] light in the dark's middle: the view's darkness {d:0.00} (at the lead {enc.DarknessAt(me.GlobalPosition):0.00}); ambient {ambient:0.000} = x{ambient / _lgBaseAmbient:0.00} of before (want x{DarkRules.AmbientKept:0.00}); the lead's torch {torch:0.00} = x{torch / torchBase:0.00} (want x{DarkRules.TorchKept:0.00})");
+        if (!(d >= 0.99f) || !(Mathf.Abs(ambient / _lgBaseAmbient - DarkRules.AmbientKept) <= 0.01f) || !(Mathf.Abs(torch / torchBase - DarkRules.TorchKept) <= 0.01f))
+            return "the dark's middle is not dark: the view, the ambient or the lead's torch is not at its share";
+        return null;
+    }
+
+    /// <summary>
+    /// The light is all back <paramref name="when"/>: the view's darkness 0 (and none at the camera), the ambient energy and the volumetric fog's
+    /// emission at the floor's base (Main's), each hero's torch at its energy before the dark, and on floor 12 (<paramref name="sameFloor"/>) the
+    /// ambient as it was before the dark. Null, or why not.
+    /// </summary>
+    private string? LightBack(RailEncounterController? enc, string when, bool sameFloor = true)
+    {
+        var env = Env();
+        var d = MainFloat("_darkness");
+        float baseAmbient = MainFloat("_baseAmbientEnergy"), baseFog = MainFloat("_baseFogEmission");
+        float ambient = env?.AmbientLightEnergy ?? float.NaN, fog = env?.VolumetricFogEmissionEnergy ?? float.NaN;
+        var here = enc != null && IsInstanceValid(enc) && GetViewport().GetCamera3D() is { } cam ? enc.DarknessAt(cam.GlobalPosition) : 0f;
+        var bad = new List<string>();
+        var torches = new List<string>();
+        foreach (var (a, e) in _lgTorchBase)
+        {
+            if (!IsInstanceValid(a)) continue;
+            torches.Add($"{a.State.Name} {a.Torch.LightEnergy:0.00}/{e:0.00}");
+            if (!Mathf.IsEqualApprox(a.Torch.LightEnergy, e)) bad.Add($"{a.State.Name}'s torch {a.Torch.LightEnergy:0.00}, not {e:0.00}");
+        }
+        if (d != 0f || here != 0f) bad.Add($"the view's darkness {d:0.00} (at the camera {here:0.00})");
+        if (!Mathf.IsEqualApprox(ambient, baseAmbient)) bad.Add($"ambient {ambient:0.000}, not the floor's {baseAmbient:0.000}");
+        if (sameFloor && !Mathf.IsEqualApprox(ambient, _lgBaseAmbient)) bad.Add($"ambient {ambient:0.000}, not {_lgBaseAmbient:0.000} as before the dark");
+        if (env is { VolumetricFogEnabled: true } && !Mathf.IsEqualApprox(fog, baseFog)) bad.Add($"fog emission {fog:0.000}, not the floor's {baseFog:0.000}");
+        GD.Print($"[runaway] light {when} (floor {Game.Instance.CurrentFloor}): the view's darkness {d:0.00} (at the camera {here:0.00}); ambient {ambient:0.000} (the floor's base {baseAmbient:0.000}{(sameFloor ? $", before the dark {_lgBaseAmbient:0.000}" : "")}); fog emission {fog:0.000} (base {baseFog:0.000}, volumetric {env?.VolumetricFogEnabled}); torches now/before [{string.Join(", ", torches)}]: {(bad.Count == 0 ? "all back" : "NOT back")}");
+        return bad.Count == 0 ? null : $"the light {when} is not back: {string.Join("; ", bad)}";
+    }
+
+    /// <summary>=after's pass 2 (the runaway held): pump to the dark's middle, see the view dark there (when drawn), and leave floor 12 for floor 13 from it.</summary>
+    private void LeaveFromTheDark(RailController rc, RailEncounterController enc, PartyController party, Adventurer me, Action<string> fail)
+    {
+        party.ForcedMoveInput = new Vector2(0, -1);
+        if (rc.State.Mode == CartMode.Wrecked || rc.StopIndex != 3) { fail($"pass 2 left ride 4 another way (mode {rc.State.Mode}, stop {rc.StopIndex})"); return; }
+        var front = rc.Party.FrontS;
+        if (front < enc.DarkFromS + DarkRules.Length / 2f) { if (_rwClock > 60f) fail($"pass 2 did not reach the dark's middle in 60 s (front S={front:0.0})"); return; }
+        party.ForcedMoveInput = null;
+        var d = MainFloat("_darkness");
+        var torch = me.Torch.LightEnergy;
+        var torchBase = _lgTorchBase.TryGetValue(me, out var t) ? t : float.NaN;
+        GD.Print($"[runaway] pass 2 in the dark's middle (front S={front:0.0}): the view's darkness {d:0.00}, ambient {Env()?.AmbientLightEnergy:0.000}, the lead's torch {torch:0.00} (before {torchBase:0.00}); leaving floor 12 for floor 13 from here");
+        if (Drawn && (!(d >= 0.99f) || !(torch < torchBase))) { fail("pass 2: the view or the lead's torch is not dark in the dark's middle, so leaving from it proves nothing"); return; }
+        _rwStep = LeftFloorStep; _rwClock = 0f;
+        Game.Instance.ChangeFloor(+1);
+    }
+
+    /// <summary>=after once it left floor 12 from the dark: a second after floor 13 is built, the light is all back (<see cref="LightBack"/>); then the RESULT.</summary>
+    private void LightAfterLeaving()
+    {
+        _rwClock += (float)GetProcessDeltaTime();
+        void Fail(string why) { GD.Print($"[split] RESULT FAIL (after): {why}"); _done = true; GetTree().Quit(1); }
+        var main = Main.Instance;
+        if (Game.Instance.CurrentFloor != 13 || main == null || !main.InGame || main.Rebuilding || main.Builder.CurrentFloor != 13 || main.Builder.FloorRoot == null)
+        {
+            _lgOnFloorAt = float.NaN;
+            if (_rwClock > 30f) Fail($"floor 13 was not built within 30 s of leaving floor 12 (floor {Game.Instance.CurrentFloor}, built {main?.Builder.CurrentFloor})");
+            return;
+        }
+        if (float.IsNaN(_lgOnFloorAt)) _lgOnFloorAt = _rwClock;
+        if (_rwClock - _lgOnFloorAt < 1f) return;
+        var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) ? e : null;
+        if (LightBack(enc, "after leaving floor 12 from the dark's middle", sameFloor: false) is { } dim) { Fail(dim); return; }
+        GD.Print(_spResult);
+        _done = true;
+        GetTree().Quit(0);
     }
 }

@@ -12,7 +12,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// human's E only, no hits) stands <see cref="SplitRules.LeverPast"/> past the points on the party lane's side away from the slag line, clear of
 /// the spur, with a steady amber lamp on its post; a red lamp stands on a post at the lip beyond the slag line by the spur's end. Both lamps are
 /// <see cref="OmniLight3D"/>s at <see cref="RailEncounterController.SignalRange"/> / <see cref="RailEncounterController.SignalEnergy"/> with no
-/// shadow, lit through the dark (Ruling 16). The seated window opens at the points less the straight run before them, measured here on the track
+/// shadow, lit through the dark (Ruling 16). Under the spur's end the embers glow up out of the drop (an ember <see cref="OmniLight3D"/> as the
+/// <see cref="BrokenBridge"/>'s gap glow, Ruling 23's dressing), so the drop reads from the seat. The seated window opens at the points less the straight run before them, measured here on the track
 /// (ruling R-bend, <see cref="WindowAhead"/>), and ends only when the lever is taken (<see cref="TrackSwitch.WindowEndS"/> +∞). Dressing plus the
 /// lever, built the same on every role; the <see cref="RailEncounterController"/> judges it on the server. The node stays at the origin.
 /// </summary>
@@ -121,6 +122,14 @@ public partial class SplitSwitch : Node3D
         var lip = enemy.Point(endE) + Outward(party, enemy, lanes, endE) * LipOut;
         var red = new Color(1f, 0.08f, 0.04f);
         RedLampPoint = LampPost("SpurLamp", lip, red, LampPostHeight);
+        // the embers' glow up out of the drop under the spur's end, as the broken bridge's gap glows (Ruling 23's dressing: from the seat
+        // the crevasse is seen edge on, and its own ember light lies far down the shaft): no shadow, so it lights the bent rail ends from below
+        var glow = new OmniLight3D
+        {
+            Name = "DropGlow", LightColor = new Color(1f, 0.45f, 0.15f), LightEnergy = BrokenBridge.GlowEnergy, OmniRange = BrokenBridge.GlowRange, ShadowEnabled = false,
+        };
+        AddChild(glow);
+        glow.GlobalPosition = SpurEnd + Vector3.Down * BrokenBridge.GlowDepth;
 
         // the lever: past the points on the party lane's side away from the slag line, clear of the spur
         Lever = PlaceLever(party, enemy, lanes, path);
