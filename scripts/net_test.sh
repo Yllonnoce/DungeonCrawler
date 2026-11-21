@@ -229,7 +229,7 @@ if [ "${RIDE:-}" = 1 ]; then
   SRV_DARK=$(grep -o "\[rails\] dark r4_dark from party S=[0-9.]* to [0-9.]*: [0-9]* pocket lamp(s) out" "$TMP/server.log" | head -1 | sed 's/.*from party S=\([0-9.]*\) to [0-9.]*: \([0-9]*\) .*/\1 \2/')
   for f in client joiner; do
     CLI_DARK=$(grep -o "\[net\] ride: dark stretch here from S=[0-9.]* lamps out [0-9]* ([0-9]* pocket light(s) hidden here)" "$TMP/$f.log" 2>/dev/null | head -1 | sed 's/.*from S=\([0-9.]*\) lamps out \([0-9]*\) (\([0-9]*\) pocket.*/\1 \2 \3/')
-    if [ -z "$SRV_DARK" ] || [ "${SRV_DARK#* }" = 0 ] || [ "${CLI_DARK% *}" != "$SRV_DARK" ]; then echo "NET TEST: FAIL (the $f's dark stretch (S and lamps out: ${CLI_DARK% *}) is not the server's (${SRV_DARK:-none}))"; exit 1; fi
+    if [ -z "$SRV_DARK" ] || [ "${SRV_DARK#* }" = 0 ] || [ "${CLI_DARK% *}" != "$SRV_DARK" ]; then echo "NET TEST: FAIL (the $f's dark stretch (S and lamps out: $([ -n "$CLI_DARK" ] && echo "${CLI_DARK% *}" || echo none)) is not the server's (${SRV_DARK:-none}))"; exit 1; fi
     if [ -z "$CLI_DARK" ] || [ "${CLI_DARK##* }" != "${SRV_DARK#* }" ]; then echo "NET TEST: FAIL (the $f hid ${CLI_DARK##* } of the dark's ${SRV_DARK#* } pocket lights in its scene)"; exit 1; fi
   done
   # ride 4's runaway: it breaks loose on the server, and both clients show its copy behind the train (the server's cart corrections); on the
@@ -275,7 +275,8 @@ if [ "${RIDE:-}" = 1 ]; then
   if grep -q "\[rails\] split r4_split: the train takes the spur\|The cart takes the spur" "$TMP/server.log"; then echo "NET TEST: FAIL (the party went down the split's spur: $(grep -m1 "the train takes the spur\|The cart takes the spur" "$TMP/server.log"))"; exit 1; fi
   HOLD_AT=$(grep -n "\[rails\] Split_r4_split/.*: Joiner's throw held to the points$" "$TMP/server.log" | head -1 | cut -d: -f1)
   PASS_AT=$(grep -n "\[rails\] split r4_split: the train passes straight" "$TMP/server.log" | head -1 | cut -d: -f1)
-  HELD=$(grep -n "\[rails\] split r4_split: Joiner's throw held to the points ([0-9.]* m short): thrown behind the train" "$TMP/server.log" | head -1)
+  # the held throw goes in under its last presser's name (a client ahead re-holds it), short of the points or pressed past them before the branch
+  HELD=$(grep -n "\[rails\] split r4_split: [A-Za-z]*'s throw held to the points (\([0-9.]* m short\|pressed -\?[0-9.]* m past them, the branch not yet decided\)): thrown behind the train" "$TMP/server.log" | head -1)
   HELD_AT=$(echo "$HELD" | cut -d: -f1)
   HELD_SHORT=$(grep -o "\[net-server\] ride: ride 4's split held to the points for Joiner with the server's front [-0-9.]* m short of them" "$TMP/server.log" | head -1 | sed 's/.*front \([-0-9.]*\) m short.*/\1/')
   SPUR_AT=$(grep -n "\[rails\] split r4_split: the runaway takes the spur at S=" "$TMP/server.log" | head -1 | cut -d: -f1)
