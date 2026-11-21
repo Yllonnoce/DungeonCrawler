@@ -2,7 +2,7 @@
   "SchemaVersion": 1,
   "Floor": 12,
   "Source": "builtin",
-  "LayoutHash": 13217384152900609974,
+  "LayoutHash": 16995108853750381062,
   "Title": "The Casting Hall",
   "IntroLine": {
     "Text": "Kiln brick and cages. The orc keeps his longest prisoners here: Grisel Thorn\u0027s crew, taken first in the spring and turned the furthest.",
@@ -626,7 +626,7 @@
           "Elite": null
         }
       ],
-      "At": 0.3,
+      "At": 0.262,
       "Offset": -4,
       "Line": null
     },
@@ -766,6 +766,24 @@
       "Ride": 5,
       "Kind": "barricade",
       "At": 0.88
+    },
+    {
+      "Id": "r4_dark",
+      "Ride": 4,
+      "Kind": "dark",
+      "At": 0.093
+    },
+    {
+      "Id": "r4_runaway",
+      "Ride": 4,
+      "Kind": "runaway",
+      "At": 0.172
+    },
+    {
+      "Id": "r4_split",
+      "Ride": 4,
+      "Kind": "split",
+      "At": 0.371
     }
   ],
   "Crew": [

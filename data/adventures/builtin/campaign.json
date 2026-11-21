@@ -535,7 +535,8 @@
         "RailLoop": true,
         "RailBand": 14,
         "Crevasses": true,
-        "BrokenBridgeRide": 3
+        "BrokenBridgeRide": 3,
+        "SplitRide": 4
       }
     },
     {
