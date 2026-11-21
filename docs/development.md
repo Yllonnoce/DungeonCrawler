@@ -423,27 +423,37 @@ godot --path . -- --face-enemy --screenshot=/tmp/shot.png --after=2   # rendered
 
 ### Running flows side by side
 
-`scripts/flows.sh` runs several headless flows at once, each in its own `user://`:
+`scripts/flows.sh` runs several headless flows at once, each in its own `user://` (bash 5.1 or later):
 
 ```bash
-scripts/flows.sh -j 6 "--test-ride" "--test-split=after" "--test-runaway=tail" "--test-crew --quit-after=570"
+scripts/flows.sh -j 6 "--test-crew --quit-after=570" "--test-ride" "--test-split=after" "--test-runaway=tail"
 ```
 
-Each argument is one flow's game flags (what follows `godot --headless --path . --`). It runs `dotnet build
-DungeonCrawler.csproj` once (and stops if that fails), then up to `-j N` flows at a time (default: min(6, the number of flows)),
-each under `timeout` (its last `--quit-after=S` plus max(120, S/2) seconds, else `FLOWS_TIMEOUT`, default 1200). It ends with one
-line per flow: PASS/FAIL, the flags, the flow's own `[tag] RESULT` line (the early `[builtin] RESULT ok` of the floor-12 flows does
-not count), its ERROR-line count, its wall time and its log; it exits non-zero if any flow lacks a `RESULT ok`. Logs stay in
-`FLOWS_LOG_DIR` (default `/tmp/flows-<date>-<time>`).
+Each argument is one flow's game flags (what follows `godot --headless --path . --`), split on whitespace only, so a flag value
+cannot hold a space. List the longest flow (e.g. --test-crew) first: flows start in the order given, and the batch can end no
+sooner than the longest one. It runs `dotnet build DungeonCrawler.csproj` once (and stops if that fails), then up to `-j N`
+flows at a time (default: min(6, the number of flows, half the cores)), each under `timeout`: its `--quit-after=S` plus
+max(120, S/2) seconds, else `FLOWS_TIMEOUT` (default 1200). Put `--quit-after=` after the test flag; a `--test-*` flag sets its
+own budget and overrides an earlier one, and the runner reads it the same way. `GODOT=path` picks another binary.
+
+It ends with one line per flow: PASS/FAIL, the flags, the flow's own `[tag] RESULT` line, its exit status, its ERROR-line count
+(marked `!` when not 0), its wall time and its log. A flow passes only if it exited 0 and printed its own `RESULT ok` with no
+failing RESULT line: a timeout, or a crash after the RESULT line, is a FAIL. Every flow on the built-in campaign also prints
+`[builtin] RESULT ok` 2.5 s in; that line never counts for a `--test-*` spec, and for a spec with no `--test-` flag (e.g.
+`--builtin --floor=N ...`) it counts only with exit 0. Exit status: 0 all PASS, 1 any FAIL, 2 usage, refusal, temp dir or
+build failure, 130 interrupted. Logs stay in `FLOWS_LOG_DIR` (default a fresh `/tmp/flows-<date>-<time>-XXXX`).
 
 Isolation: two flows sharing `user://` clash (one run hit an ERROR on a `profile.json.bak` written by another). Godot on Linux
-puts `user://` under `$XDG_DATA_HOME/godot/app_userdata/DungeonCrawler`, so each flow gets `XDG_DATA_HOME=$(mktemp -d)`,
-removed at the end (`KEEP_TMP=1` keeps them). A flow starts from an empty `user://`: default settings (lethality 3, as the flows
-force anyway), no keys, an empty profile, the shipped campaign from `res://`; the headless flows need nothing more and never
-read your real `user://`. The API-key variables are removed from each flow's environment.
+puts `user://` under `$XDG_DATA_HOME/godot/app_userdata/DungeonCrawler`, so each flow gets `XDG_DATA_HOME=$(mktemp -d)`. All
+of them are made, absolute, before any flow starts, and the run aborts if one cannot be (an empty or relative `XDG_DATA_HOME`
+makes Godot fall back to the real `~/.local/share`). They are removed once the flows have stopped (`KEEP_TMP=1` keeps them).
+A flow starts from an empty `user://`: default settings (lethality 3 unless the flow forces another), no keys, an empty
+profile, the shipped campaign from `res://`; the headless flows need nothing more and never read your real `user://`. The
+API-key variables are removed from each flow's environment.
 
 The RIDE pass (`RIDE=1 scripts/net_test.sh`) is never run through `flows.sh` or beside it: its set-piece clocks and party pairs
-fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses `--test-net-*` flows (they share a port).
+fail on a loaded machine, so it needs the machine alone. `flows.sh` refuses network flows (`--test-net-*`, `--server`,
+`--join=`: they share a port) and empty specs.
 
 ### Known gaps
 
