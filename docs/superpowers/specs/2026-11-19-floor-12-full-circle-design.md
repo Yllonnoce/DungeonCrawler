@@ -1,5 +1,10 @@
 # Floor 12: full circle — the longer, deadlier ride (design)
 
+> **Owner decision, 2026-11-21: the loop-the-loop is dropped.** "A loop that completes a loop" meant a contiguous
+> track when you choose correctly: the full ring (plan 9) and switches whose right choice keeps the line whole and
+> whose wrong choice kills (plans 11 and 12). Plan 15 is not built. Every loop-the-loop item below is withdrawn; the
+> cavern plan (13) keeps the collapsing bridge and the spiral.
+
 Approved by the owner on 2026-11-19. After their solo play test they asked for:
 - barricades;
 - a dead switch made live;
@@ -251,4 +256,4 @@ dropped without touching the rest.
   4. the dark and the runaway;
   5. the cavern: collapsing bridge and spiral (free 3D track);
   6. the leap to the enemy cart;
-  7. the loop-the-loop.
+  7. ~~the loop-the-loop~~ (dropped by the owner 2026-11-21).
