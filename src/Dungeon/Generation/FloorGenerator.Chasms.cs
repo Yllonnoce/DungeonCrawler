@@ -14,8 +14,9 @@ public static partial class FloorGenerator
     /// Cut the crevasses into a laid line's rock; a no-op unless <see cref="FloorSpec.Crevasses"/> and the floor has a line.
     /// The cavern (when the line kept one): every cell of its reach (<see cref="CavernReach"/>) that is rock or a pocket
     /// becomes a chasm, and both lanes over the span become <see cref="BridgeKind.Deck"/> bridges. Then the broken bridge
-    /// when <see cref="FloorSpec.BrokenBridgeRide"/> asks for one (<see cref="CarveBreak"/>), the strips (<see cref="CarveStrips"/>,
-    /// none on the break's ride once it is cut) and the planks (<see cref="CarveWalkways"/>). Pockets cut away leave
+    /// when <see cref="FloorSpec.BrokenBridgeRide"/> asks for one (<see cref="CarveBreak"/>), the split's crevasse when
+    /// <see cref="FloorSpec.SplitRide"/> asks for one (<see cref="CarveSplit"/>), the strips (<see cref="CarveStrips"/>, none on
+    /// the break's or the split's ride once it is cut) and the planks (<see cref="CarveWalkways"/>). Pockets cut away leave
     /// <see cref="RailLine.Pockets"/>, the rock beside the drops is walled and <see cref="FloorLayout.ChasmCount"/> set.
     /// </summary>
     internal static void CarveChasms(FloorSpec spec, FloorLayout layout)
@@ -51,11 +52,20 @@ public static partial class FloorGenerator
             (broken, why) = CarveBreak(layout, rail, spec.BrokenBridgeRide, sign, pockets, dropped);
             pockets.ExceptWith(dropped);
         }
-        var (strips, gorge) = CarveStrips(layout, rail, sign, pockets, dropped, broken?.Ride ?? 0);
+        RailSplit? split = null;
+        string? splitWhy = null;
+        if (spec.SplitRide > 0)
+        {
+            (split, splitWhy) = CarveSplit(layout, rail, spec.SplitRide, spec.BrokenBridgeRide, sign, pockets, dropped);
+            pockets.ExceptWith(dropped);
+        }
+        var (strips, gorge) = CarveStrips(layout, rail, sign, pockets, dropped, broken?.Ride ?? 0, split?.Ride ?? 0);
         if (broken != null) strips = strips.Append(broken.Run).OrderBy(s => s.From).ToList(); // the break is its ride's strip
+        if (split != null) strips = strips.Append(split.Crevasse).OrderBy(s => s.From).ToList(); // and the split's crevasse its ride's
         layout.Rail = rail with
         {
             Pockets = rail.Pockets.Where(p => !dropped.Contains(p)).ToList(), Strips = strips, Gorge = gorge, Break = broken, BreakWhy = why,
+            Split = split, SplitWhy = splitWhy,
         };
         CarveWalkways(layout);
         RaiseWalls(layout);
@@ -70,10 +80,10 @@ public static partial class FloorGenerator
     /// the last ride takes every run of two or more cells within <see cref="RailRules.GorgeFrom"/> to
     /// <see cref="RailRules.GorgeTo"/> of it, platform middle to platform middle, each run on its own side (inward where that
     /// is free, else outward): the gorge. Returns the strips in line order
-    /// and the gorge's; the pockets cut away are added to <paramref name="dropped"/>. Ride <paramref name="skipRide"/> (1-based;
-    /// 0 for none) is left alone: the broken bridge is its strip.
+    /// and the gorge's; the pockets cut away are added to <paramref name="dropped"/>. Rides <paramref name="skipRide"/> and
+    /// <paramref name="skipSplit"/> (1-based; 0 for none) are left alone: the broken bridge, and the split's crevasse, is its strip.
     /// </summary>
-    private static (List<RailSpan> Strips, List<RailSpan> Gorge) CarveStrips(FloorLayout layout, RailLine rail, int sign, HashSet<GridPos> pockets, HashSet<GridPos> dropped, int skipRide)
+    private static (List<RailSpan> Strips, List<RailSpan> Gorge) CarveStrips(FloorLayout layout, RailLine rail, int sign, HashSet<GridPos> pockets, HashSet<GridPos> dropped, int skipRide, int skipSplit)
     {
         var strips = new List<RailSpan>();
         var gorge = new List<RailSpan>();
@@ -84,7 +94,7 @@ public static partial class FloorGenerator
         var last = rail.Stops.Count - 2;
         for (var k = 0; k <= last; k++)
         {
-            if (k + 1 == skipRide) continue; // the broken bridge's ride
+            if (k + 1 == skipRide || k + 1 == skipSplit) continue; // the broken bridge's ride, the split's
             var from = index[rail.Stops[k].Platform[^1]] + RailRules.StripPlatformGap;
             var to = index[rail.Stops[k + 1].Platform[0]] - RailRules.StripPlatformGap;
             if (rail.Cavern is { } cavern && cavern.From >= from && cavern.From <= to) continue; // the cavern's ride
@@ -230,6 +240,63 @@ public static partial class FloorGenerator
             layout.SetLevel(twin, level);
         }
         return (new RailBreak(ride, span, gap), "ok");
+
+        GridPos Twin(int i) => rail.Party[i] + RailSide(rail.Party[i + 1] - rail.Party[i], sign);
+    }
+
+    /// <summary>
+    /// The split's crevasse on 1-based ride <paramref name="ride"/> (<see cref="FloorSpec.SplitRide"/>), and why: "refused" on
+    /// the broken bridge's ride (<paramref name="breakRide"/>, the one asked for), the last ride or a ride the line does not have;
+    /// "none" when the ride has no fitting run; else "ok". The run is the longest outward straight run a strip can lie beside
+    /// (<see cref="StripCells"/> with way +1, its enemy twins taken by nothing) of at least <see cref="RailRules.SplitMinCells"/>
+    /// cells, on the ride's party-lane cells <see cref="RailRules.StripPlatformGap"/> in from each platform and within
+    /// <see cref="RailRules.SplitFrom"/> to <see cref="RailRules.SplitTo"/> of it, platform middle to platform middle, and on the
+    /// cavern's ride ending <see cref="RailRules.SplitCavernGap"/> cells or more before the cavern span; ties go to the later run.
+    /// The run's last <see cref="RailRules.SplitCells"/> cells have their outward cells at t = 2, 3 cut to chasm at the lane's
+    /// level: the crevasse. Both lanes stay solid floor with no deck, and the points are the run cell before the cut. The pockets
+    /// cut away are added to <paramref name="dropped"/>.
+    /// </summary>
+    private static (RailSplit? Split, string Why) CarveSplit(FloorLayout layout, RailLine rail, int ride, int breakRide, int sign, HashSet<GridPos> pockets, HashSet<GridPos> dropped)
+    {
+        var k = ride - 1;
+        if (ride == breakRide || k >= rail.Stops.Count - 2) return (null, "refused"); // the broken bridge's ride, the last ride, or past it
+        var index = new Dictionary<GridPos, int>();
+        for (var i = 0; i < rail.Party.Count; i++) index[rail.Party[i]] = i;
+        var after = index[rail.Stops[k].Platform[^1]];
+        var before = index[rail.Stops[k + 1].Platform[0]];
+        var a = index[rail.Stops[k].Platform[0]] + rail.Stops[k].Platform.Count / 2;
+        var b = before + rail.Stops[k + 1].Platform.Count / 2;
+        var from = Math.Max(after + RailRules.StripPlatformGap, a + (int)Math.Ceiling(RailRules.SplitFrom * (b - a)));
+        var to = Math.Min(before - RailRules.StripPlatformGap, a + (int)Math.Floor(RailRules.SplitTo * (b - a)));
+        if (rail.Cavern is { } cavern && cavern.From > after && cavern.From < before) to = Math.Min(to, cavern.From - RailRules.SplitCavernGap); // short of the cavern
+        var enemy = rail.Enemy.ToHashSet();
+        var taken = TakenCells(layout);
+        List<(int I, GridPos[] Cells)>? best = null, run = null;
+        for (var i = from; i <= to + 1; i++)
+        {
+            var cells = i <= to ? StripCells(layout, rail, enemy, pockets, taken, sign, i, 1) : null;
+            if (cells != null && !taken.Contains(Twin(i)))
+            {
+                (run ??= new()).Add((i, cells));
+                continue;
+            }
+            if (run != null && run.Count >= RailRules.SplitMinCells && (best == null || run.Count >= best.Count)) best = run; // ties: the later
+            run = null;
+        }
+        if (best == null) return (null, "none");
+        var cut = best.Skip(best.Count - RailRules.SplitCells).ToList();
+        foreach (var (i, cells) in cut)
+        {
+            var level = layout.LevelOf(rail.Party[i]);
+            foreach (var c in cells)
+            {
+                if (pockets.Contains(c)) dropped.Add(c);
+                layout[c] = Cell.Chasm;
+                layout.SetLevel(c, level); // the drop's lip is the lane's floor beside it
+            }
+        }
+        var crevasse = new RailSpan(cut[0].I, cut[^1].I);
+        return (new RailSplit(ride, crevasse, crevasse.From - 1), "ok");
 
         GridPos Twin(int i) => rail.Party[i] + RailSide(rail.Party[i + 1] - rail.Party[i], sign);
     }

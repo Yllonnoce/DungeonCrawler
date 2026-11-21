@@ -48,6 +48,14 @@ public static class RailRules
     public const float BreakFrom = 0.55f, BreakTo = 0.90f;
     /// <summary>The shortest outward straight run the broken bridge is laid along (a longer one is clipped to its middle <see cref="StripMaxCells"/>).</summary>
     public const int BreakMinCells = 5;
+    /// <summary>The split's window on its ride (<see cref="FloorSpec.SplitRide"/>), as fractions of the ride from platform middle to platform middle.</summary>
+    public const float SplitFrom = 0.25f, SplitTo = 0.55f;
+    /// <summary>The shortest outward straight run the split is laid along: its points, the cells before them, and its crevasse.</summary>
+    public const int SplitMinCells = 6;
+    /// <summary>The split's crevasse: the last this many cells of its run, cut outward of the slag line.</summary>
+    public const int SplitCells = 4;
+    /// <summary>On the cavern's ride, the fewest party-lane cells between the split's run and the cavern span.</summary>
+    public const int SplitCavernGap = 3;
 }
 
 /// <summary>A stop on the line: a room the cart halts in, and the party-lane cells inside it, in line order.</summary>
@@ -62,6 +70,13 @@ public sealed record RailSpan(int From, int To);
 /// twin of party index <paramref name="Gap"/> (the run's middle), which is a <see cref="Cell.Chasm"/>: the 4 m gap.
 /// </summary>
 public sealed record RailBreak(int Ride, RailSpan Run, int Gap);
+
+/// <summary>
+/// The split (<see cref="FloorSpec.SplitRide"/>): on 1-based ride <paramref name="Ride"/>, a crevasse cut outward of the slag
+/// line beside party-lane indices <paramref name="Crevasse"/>, both lanes left solid floor with no deck; <paramref name="Points"/>
+/// is the party-lane index of the split's points, the cell before the cut (<c>Crevasse.From - 1</c>).
+/// </summary>
+public sealed record RailSplit(int Ride, RailSpan Crevasse, int Points);
 
 /// <summary>
 /// The mine-cart line round a ring floor: two parallel ordered, 4-connected lanes from the start room to the exit room.
@@ -85,7 +100,8 @@ public sealed record RailLine(IReadOnlyList<GridPos> Party, IReadOnlyList<GridPo
 
     /// <summary>
     /// The edge strips cut beside the line (<see cref="FloorSpec.Crevasses"/>), as party-lane index spans in line order:
-    /// one per ride but the cavern's and the last, and the last ride's gorge (<see cref="Gorge"/>). Not part of the content hash.
+    /// one per ride but the cavern's and the last, and the last ride's gorge (<see cref="Gorge"/>); the broken bridge's run and
+    /// the split's crevasse (<see cref="Split"/>, the cavern's ride too) are their rides' strips. Not part of the content hash.
     /// </summary>
     public IReadOnlyList<RailSpan> Strips { get; init; } = Array.Empty<RailSpan>();
 
@@ -103,4 +119,13 @@ public sealed record RailLine(IReadOnlyList<GridPos> Party, IReadOnlyList<GridPo
     /// "none" (the ride had no fitting run) or "refused" (the cavern's ride, the last ride, or no such ride). Not part of the content hash.
     /// </summary>
     public string? BreakWhy { get; init; }
+
+    /// <summary>The split's crevasse cut on <see cref="FloorSpec.SplitRide"/>'s ride (also in <see cref="Strips"/>), or null. Not part of the content hash.</summary>
+    public RailSplit? Split { get; init; }
+
+    /// <summary>
+    /// Null when no split was asked for (<see cref="FloorSpec.SplitRide"/> 0, or no crevasses); otherwise "ok" (cut),
+    /// "none" (the ride had no fitting run) or "refused" (the broken bridge's ride, the last ride, or no such ride). Not part of the content hash.
+    /// </summary>
+    public string? SplitWhy { get; init; }
 }

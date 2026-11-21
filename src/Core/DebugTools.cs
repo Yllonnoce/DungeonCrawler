@@ -933,6 +933,12 @@ public partial class DebugTools : Node
                 GD.Print($"[map] rail StopS=[{string.Join(",", cart.StopS.Select(x => x.ToString("F1")))}] rides=[{string.Join(",", rides.Select(x => x.ToString("F0")))}] m total={cart.StopS[^1] - cart.StopS[0]:F0} m");
                 if (mapLayout.Rail is { Break: { } brk } brkRail)
                     GD.Print($"[map] rail break: ride {brk.Ride} gap at party S={cart.Party.Track.ClosestS(Dungeon.DungeonBuilder.CellToWorld(brkRail.Party[brk.Gap])) - Dungeon.DungeonBuilder.CellSize / 2f:0.0}");
+                if (mapLayout.Rail is { Split: { } spl } splRail)
+                {
+                    float S(int i) => cart.Party.Track.ClosestS(Dungeon.DungeonBuilder.CellToWorld(splRail.Party[i]));
+                    var half = Dungeon.DungeonBuilder.CellSize / 2f;
+                    GD.Print($"[map] rail split: ride {spl.Ride} points at party S={S(spl.Points):0.0}, crevasse S={S(spl.Crevasse.From) - half:0.0}..{S(spl.Crevasse.To) + half:0.0}");
+                }
             }
             GD.Print(mapLayout.ToAscii());
             GetTree().Quit();

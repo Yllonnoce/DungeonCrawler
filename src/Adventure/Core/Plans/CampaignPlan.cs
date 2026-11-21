@@ -75,9 +75,11 @@ public sealed class SpecOverrides
     [AiIgnore] public bool? Crevasses { get; set; }
     [AiDescription("The ride (1-based) whose slag line ends at a broken bridge over a crevasse, 0 for none; needs Crevasses.")]
     [AiIgnore] public int? BrokenBridgeRide { get; set; }
+    [AiDescription("The ride (1-based) with the split's crevasse cut outward of the slag line, 0 for none; needs Crevasses.")]
+    [AiIgnore] public int? SplitRide { get; set; }
 
     public bool IsEmpty => EnemyCount == null && ChestCount == null && LockedChestCount == null && TrapCount == null && VaultCount == null
-                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null && Crevasses == null && BrokenBridgeRide == null;
+                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null && Crevasses == null && BrokenBridgeRide == null && SplitRide == null;
 
     public FloorSpec Apply(FloorSpec spec) => spec with
     {
@@ -99,6 +101,7 @@ public sealed class SpecOverrides
         RailBand = Math.Clamp(RailBand ?? spec.RailBand, RailRules.Band, 16),
         Crevasses = Crevasses ?? spec.Crevasses,
         BrokenBridgeRide = Math.Clamp(BrokenBridgeRide ?? spec.BrokenBridgeRide, 0, 6),
+        SplitRide = Math.Clamp(SplitRide ?? spec.SplitRide, 0, 6),
     };
 }
 

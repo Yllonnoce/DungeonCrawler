@@ -51,6 +51,8 @@ public sealed record FloorSpec
     public bool Crevasses { get; init; }
     /// <summary>The ride (1-based) whose slag line ends at a broken bridge over a crevasse (<see cref="RailLine.Break"/>); 0 for none. Acts only with <see cref="Crevasses"/>.</summary>
     public int BrokenBridgeRide { get; init; }
+    /// <summary>The ride (1-based) whose party line passes the split's points, with a crevasse cut outward of the slag line past them (<see cref="RailLine.Split"/>); 0 for none. Acts only with <see cref="Crevasses"/>.</summary>
+    public int SplitRide { get; init; }
     /// <summary>Tier-final floor: a large arena room is placed and the down stairs live inside it.</summary>
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;
