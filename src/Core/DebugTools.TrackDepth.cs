@@ -15,10 +15,11 @@ namespace DungeonCrawler.Core;
 // floor: only the Structure GridMap and the Chasms/Footings body count, any other collider is excluded and the ray cast again.
 // A probe with more than CM cm of floor over it is buried. Point queries at each rail's middle and each sleeper top find the probe
 // inside a GridMap item (a plinth, a wall cube, a ramp box). Findings merge into runs per track; the ramps on both lanes, the set
-// pieces' S and the cavern's span follow, and the verdict is the last line. A probe whose ray finds no drawn floor is counted
-// nofloorDrop over a chasm or pit cell (a legitimate drop) and nofloorOff anywhere else (a track deeper or higher than the ray's
-// window, or a probe inside a wall cube); a ray that spent its MaxCasts on other colliders is counted budget, never a drop: the pass
-// is buried=0 inside=0 nofloorOff=0 budget=0. Every track is sampled at each Step and at its own Length. Each per-track line and the
+// pieces' S and the cavern's span follow, then the count of lane cells whose buckle roll was laid flat (spared), and the verdict is
+// the last line. A probe whose ray finds no drawn floor is counted nofloorDrop over a chasm or pit cell (a legitimate drop) and
+// nofloorOff anywhere else (a track deeper or higher than the ray's window, or a probe inside a wall cube); a ray that spent its
+// MaxCasts on other colliders is counted budget, never a drop: the pass is buried=0 inside=0 nofloorOff=0 budget=0. Every track
+// is sampled at each Step and at its own Length. Each per-track line and the
 // verdict carry the worst float (the curve over the highest floor under its probes); with --track-depth-float each sample standing
 // more than CM cm over it is listed (floats are not counted as failures). The ramp lines' sag and crest S are the curve's nearest
 // point to the ramp's end edge in XZ (the track's height there does not matter). The physics queries run on the physics tick after
@@ -189,6 +190,9 @@ public partial class DebugTools
             else DepthLine($"cavern none");
         }
 
+        var spared = builder.SparedRailBuckles;
+        var enemyLane = layout.Rail is { } line ? new HashSet<GridPos>(line.Enemy) : new HashSet<GridPos>();
+        DepthLine($"spared {spared.Count} rail buckle(s): party {spared.Count(layout.IsPartyRail)}, enemy {spared.Count(enemyLane.Contains)}");
         var buckledLane = builder.BuckledCells.Keys.Count(layout.IsRail);
         GD.Print("[track-depth] " + TrackDepthRules.Verdict(totalBuried, totalInside, totalOff, totalBudget, totalRuns, totalWorst, totalFloat, buckledLane, ramps));
     }

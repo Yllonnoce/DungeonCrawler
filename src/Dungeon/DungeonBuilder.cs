@@ -29,9 +29,9 @@ public partial class DungeonBuilder : Node3D
     private const int ItemVaultBase = 20; // 20..22: vaulted ceiling pieces, see VaultPiece (barrel along X, barrel along Z, groin)
     private const int ItemVaultBrokenBase = 23; // 23..25: the same pieces with the crown fallen in (a ruin's collapse)
     private const int ItemRampVaultBase = 26; // 26..33: the ceiling over a ramp, a vault that climbs with it, 4 directions x {low half, high half}
-    private const int BuckledVariants = 4;
     /// <summary>Floor cells whose slab is tilted or heaved this floor; picked from the seed before the grid is built.</summary>
     private readonly Dictionary<GridPos, int> _buckled = new();
+    private List<GridPos> _sparedRailBuckles = new();
     private int _dynamicSerial;
     private readonly HashSet<int> _spawnedPlanned = new();
     /// <summary>
@@ -43,6 +43,8 @@ public partial class DungeonBuilder : Node3D
     /// <summary>Game seed of the floor being built (for per-actor seeds placed by the builder).</summary>
     public ulong GameSeed { get; private set; }
     public IReadOnlyDictionary<GridPos, int> BuckledCells => _buckled;
+    /// <summary>The rail lane cells this floor's buckle roll picked and laid flat instead (the track lies on a flat slab); empty before a build.</summary>
+    public IReadOnlyList<GridPos> SparedRailBuckles => _sparedRailBuckles;
     public const float LevelHeight = 4f;
     private static readonly GridPos[] RampDirs = { new(1, 0), new(-1, 0), new(0, 1), new(0, -1) };
 
@@ -702,28 +704,13 @@ public partial class DungeonBuilder : Node3D
     /// <summary>The yaw that lays a box's X axis along <paramref name="along"/> (RotateY sends +X to (cos t, 0, -sin t)).</summary>
     public static float Yaw(Vector3 along) => Mathf.Atan2(-along.Z, along.X);
 
-    /// <summary>
-    /// Which floor slabs are buckled: nearly half of a ruined room, most cells beside a rubble mound, and one in
-    /// twenty elsewhere. Never stairs, doors, ramps, ledges, water or the under layer.
-    /// </summary>
+    /// <summary>Which floor slabs are buckled (<see cref="BuckleRules.Pick"/>): never a rail lane cell, whose roll is kept in <see cref="_sparedRailBuckles"/>.</summary>
     private void PickBuckled(FloorLayout layout)
     {
+        var (buckled, spared) = BuckleRules.Pick(layout);
         _buckled.Clear();
-        var rng = new Random(layout.Seed ^ 0xB0C1);
-        for (var y = 0; y < layout.Height; y++)
-            for (var x = 0; x < layout.Width; x++)
-            {
-                var p = new GridPos(x, y);
-                if (layout[p] != Cell.Floor || layout.IsWater(p) || layout.IsUnder(p) || p == layout.UpStairs || p == layout.DownStairs) continue;
-                if (layout.Ledges.Any(l => l.Cells.Contains(p) || l.RampBottom == p || l.RampTop == p)) continue;
-                if (layout.Vaults.Any(v => v.Door == p || v.Key == p || v.Lever == p)) continue;
-                if (layout.Structures.Any(s => s.Kind == StructureKind.Camp && (s.Cells.Contains(p) || s.Anchor == p))) continue;
-                var room = layout.RoomAt(p);
-                var chance = room != null && layout.StructureAt(room)?.Kind == StructureKind.Ruin ? 0.42
-                    : layout.Rubble.Any(r => r.ManhattanDistance(p) == 1) ? 0.55
-                    : layout.Rubble.Contains(p) ? 0.0 : 0.05;
-                if (rng.NextDouble() < chance) _buckled[p] = rng.Next(BuckledVariants);
-            }
+        foreach (var (p, variant) in buckled) _buckled[p] = variant;
+        _sparedRailBuckles = spared;
     }
 
     /// <summary>Height of the water in a pond or stream cell (the floor top, less the drop).</summary>
@@ -913,7 +900,7 @@ public partial class DungeonBuilder : Node3D
 
         // buckled floors: the slab's top heaved into a ridge or a dome that settles back to floor level at the cell's
         // edge, so it is a bump underfoot and never a step (a step taller than a hand blocks a capsule)
-        for (var v = 0; v < BuckledVariants; v++)
+        for (var v = 0; v < BuckleRules.Variants; v++)
         {
             var id = ItemBuckledBase + v;
             var st = new SurfaceTool();
