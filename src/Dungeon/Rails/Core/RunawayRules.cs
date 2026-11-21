@@ -77,9 +77,6 @@ public static class RunawayRules
     public static float RamDamage(float maxHp, float hp, float partyDamageScale)
         => Math.Min(maxHp * RamHpFraction * partyDamageScale / TierRules.DefaultLethality, Math.Max(0f, hp - 1f));
 
-    /// <summary>A client's read of a runaway gone from the party line: its front went within 1.5 m of its own train's last body (the ram).</summary>
-    public static bool RammedAt(float goneFrontS, float trainRearS) => Math.Abs(goneFrontS - trainRearS) <= 1.5f;
-
     /// <summary>Its bell rings (every <see cref="BellEvery"/>): rolling, behind the train's last body and within <see cref="BellNear"/> of it.</summary>
     public static bool Rings(bool rolling, float front, float trainRearS)
     {

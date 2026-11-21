@@ -148,9 +148,9 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     public void Interact(PartyController party, Adventurer actor)
     {
         if (actor.Downed || !SwitchBackRules.MayToggle(Deadly, actor.Control) || PressWithheld) return;
-        if (!Thrown && HoldThrow?.Invoke(actor) == true)
+        if (!Thrown && !NetSession.IsClient && HoldThrow?.Invoke(actor) == true) // the hold is the server's: a client's copy never asks it (it would write the hold's state there)
         {
-            if (NetSession.IsClient || Fixed || Taken) return;
+            if (Fixed || Taken) return;
             var again = HeldBy != null;
             HeldBy = actor.State.Name; // applied after the cart's branch is decided (ThrowHeld): a press just short of the points never sends it down the spur
             if (!again) EventBus.Instance.Log(SplitRules.HeldLog); // the hold is seen: the lever stands straight until the train passes the points

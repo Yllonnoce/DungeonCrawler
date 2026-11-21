@@ -138,8 +138,8 @@ public partial class RailEncounterController
         run.PoseAt(run.State.S);
         SmashAhead(run, cart, enemyTrack: true, cart.Aboard); // riderless: only the timber and its speed pay
         if (DropsThrough(cart)) { _traffic = null; _warnedTraffic.Clear(); return; } // the broken bridge's gap
+        Warn(run, cart, _warnedTraffic, false, party); // the call before any hit
         RunOver(run, cart.HitAt, TrafficSource, SlagCart.HazardIndex, _setAside);
-        Warn(run, cart, _warnedTraffic, false, party);
         if (run.State.S >= _enemy.Length - LineEnd || run.State.Mode != CartMode.Rolling || OwnProgressStuck(ref cart.Watch, run, dt, cart))
         {
             GD.Print($"[rails] t={_now:0.00} traffic slag cart leaves the enemy line");
@@ -170,8 +170,8 @@ public partial class RailEncounterController
             run.Sync();
             run.PoseAt(run.State.S);
             SmashAhead(run, w.Body, enemyTrack: false, riders: null); // timber on the party line ahead of it
+            Warn(run, w.Body, _warnedRunaway, true, party); // the call before any hit
             RunOver(run, w.Body.HitAt, RunawayWagon.SourceName, RunawayWagon.HazardIndex, _setAsideParty);
-            Warn(run, w.Body, _warnedRunaway, true, party);
             if (run.State.Mode != CartMode.Rolling)
             {
                 w.Halted = 0f;

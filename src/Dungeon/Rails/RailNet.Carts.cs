@@ -291,11 +291,11 @@ public partial class RailNet
         GD.Print(FormattableString.Invariant($"[net] ride: the runaway took the spur here and plunged (it went at spur S={goneS:0.0}; our copy at S={cc.Run.State.S:0.0})"));
     }
 
-    /// <summary>Client: a ride's runaway copy runs on the party line with its front short of party S <paramref name="pointsS"/> (the split's lever is offered while one comes).</summary>
+    /// <summary>Client: a ride's runaway copy (one named by its set piece, never the traffic runaway) runs on the party line with its front short of party S <paramref name="pointsS"/> (the split's lever is offered while one comes).</summary>
     internal bool ClientRunawayShortOf(float pointsS)
     {
         foreach (var cc in _carts.Values)
-            if (cc.Kind == CartKind.Runaway && cc.Track == 0 && IsInstanceValid(cc.Body) && cc.Follow.HasState && cc.Follow.Mode == CartMode.Rolling && cc.Follow.S + cc.Run.Dir * CartRules.HalfLength < pointsS) return true;
+            if (cc.Kind == CartKind.Runaway && cc.EncounterId != null && cc.Track == 0 && IsInstanceValid(cc.Body) && cc.Follow.HasState && cc.Follow.Mode == CartMode.Rolling && cc.Follow.S + cc.Run.Dir * CartRules.HalfLength < pointsS) return true;
         return false;
     }
 

@@ -274,10 +274,11 @@ public partial class RailEncounterController
         w.Run.PoseAt(w.Run.State.S);
         w.Run.Sync();
         w.OnSpur = true;
+        w.Watch.Reset(); // the stall watch starts again on the spur's own S
         return true;
     }
 
-    /// <summary>The runaway on the spur: it coasts off its end, running over nothing it could not before, and goes into the crevasse there.</summary>
+    /// <summary>The runaway on the spur: it coasts off its end, running over nothing it could not before, and goes into the crevasse there; a stop or a stall short of the end frees it (<see cref="OwnProgressStuck"/>).</summary>
     private void TickRunawayOnSpur(RideRunaway w, float dt, PartyController party)
     {
         if (_split is not { } split) { FreeRideRunaway("the split is gone"); return; }
@@ -287,7 +288,9 @@ public partial class RailEncounterController
         run.PoseAt(run.State.S);
         Warn(run, w.Body, _warnedRideRunaway, true, party);
         RunOver(run, w.Body.HitAt, RunawayWagon.SourceName, RunawayWagon.HazardIndex, _setAsideParty);
-        if (SplitRules.PlungedOffSpur(run.State.S, split.Sampler.Length)) PlungeOffSpur(w);
+        if (SplitRules.PlungedOffSpur(run.State.S, split.Sampler.Length)) { PlungeOffSpur(w); return; }
+        if (run.State.Mode != CartMode.Rolling) { FreeRideRunaway("it stopped on the spur"); return; } // it coasts off the end: a stop there is a fault, never left standing
+        if (OwnProgressStuck(ref w.Watch, run, dt, w.Body)) FreeRideRunaway("stuck on the spur");
     }
 
     /// <summary>
