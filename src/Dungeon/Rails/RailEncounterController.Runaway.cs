@@ -160,6 +160,11 @@ public partial class RailEncounterController
             return;
         }
         var v = RunawayRules.Target(wagons);
+        if (BodyOnTheLineAt(start, v) is { } body)
+        {
+            GD.Print($"[rails] runaway {id}: none (a body on the line behind the train: {body.Name})");
+            return;
+        }
         var centre = start - CartRules.HalfLength; // its front at the start
         var wagon = new RunawayWagon { Name = $"RunawayWagon_{id}", CartId = NextCartId() };
         var end = _rails.StopS[Math.Min(ride, _rails.StopS.Length - 1)];
@@ -173,6 +178,30 @@ public partial class RailEncounterController
         EventBus.Instance.Log("A runaway ore wagon breaks loose behind us!");
         RailCalls.Say(Main.Instance.Party, _rails.Cart, BarkTrigger.Runaway, "Runaway on the line behind us — pump!");
         GD.Print($"[rails] t={_now:0.00} runaway {id} breaks loose at party S={start:0.0}, {rear - start:0.0} m behind the train ({wagons} wagon(s)), target {v:0.0} m/s");
+    }
+
+    /// <summary>
+    /// A body on foot (a hero, an NPC, a creature: <see cref="GatherBodies"/>; anyone riding a cart is carried, never run over) on the party line
+    /// where a runaway breaking loose with its front at <paramref name="startFrontS"/> at <paramref name="v"/> would be on it or hit it before its warning
+    /// (<see cref="RunawayRules.SpawnBlocked"/>), or null.
+    /// </summary>
+    private Node3D? BodyOnTheLineAt(float startFrontS, float v)
+    {
+        GatherBodies(Main.Instance.Party);
+        var track = _rails.Party.Track;
+        var ahead = Mathf.Max(v, RunOverRules.WarnMinSpeed) * RunawayRules.WarnSeconds;
+        float from = startFrontS - 2f * CartRules.HalfLength - 2f, to = startFrontS + ahead + CartRules.HalfLength + 2f;
+        var mid = track.Point((from + to) / 2f);
+        var reach = (to - from) / 2f + 4f;
+        foreach (var body in _bodies)
+        {
+            if (!IsInstanceValid(body) || body is ICartRider { Cart: not null }) continue;
+            var pos = body.GlobalPosition;
+            if (pos.DistanceSquaredTo(mid) > reach * reach) continue;
+            if (!track.Measure(pos, (from + to) / 2f, (to - from) / 2f, out var b)) continue;
+            if (RunawayRules.SpawnBlocked(startFrontS, v, b with { Radius = ReliefRules.BodyRadius })) return body;
+        }
+        return null;
     }
 
     // ---- the run ---------------------------------------------------------------------------------
@@ -203,8 +232,8 @@ public partial class RailEncounterController
         run.PoseAt(run.State.S);
         if (RunawayRules.Rams(rolling, run.FrontS, rear)) { Ram(w, rear, party); return; }
         SmashAhead(run, w.Body, enemyTrack: false, riders: null); // timber on the party line ahead of it (ride 4 has none, Ruling 18)
+        Warn(run, w.Body, _warnedRideRunaway, true, party); // the call before any hit
         RunOver(run, w.Body.HitAt, RunawayWagon.SourceName, RunawayWagon.HazardIndex, _setAsideParty);
-        Warn(run, w.Body, _warnedRideRunaway, true, party);
         if (RunawayRules.Rings(run.State.Mode == CartMode.Rolling, run.FrontS, rear) && (w.BellClock += dt) >= RunawayRules.BellEvery)
         {
             w.BellClock = 0f;
@@ -248,6 +277,8 @@ public partial class RailEncounterController
             }
             _smashedHeroes.Clear();
         }
+        w.Body.Rammed = true; // the cart sender tells clients with the Derailed flag
+        w.Body.GoneS = w.Run.State.S;
         GD.Print($"[rails] runaway rams the train at S={rear:0.0}: plating {before:0}->{(wrecked ? "0 (wrecked)" : _rails.State.Plating.ToString("0"))}; heroes hit {hit}");
         FreeRideRunaway("it rammed the train and derailed");
     }

@@ -17,6 +17,10 @@ public partial class RunawayWagon : MineCart
     public Dictionary<ulong, double> HitAt { get; } = new();
 
     public override Net.CartKind Kind => Net.CartKind.Runaway;
+    /// <summary>Ride 4's runaway rammed the train (server): the cart sender tells clients it went with the Derailed flag, at <see cref="GoneS"/>. Managed: readable though the node is freed.</summary>
+    public bool Rammed { get; set; }
+    /// <summary>Its centre S as it rammed.</summary>
+    public float GoneS { get; set; }
     /// <summary>An ore wagon, not a seated cart: it wears the mine pack's tall tub over its box tub's size.</summary>
     protected override string? TubModel => "Cart_1";
     /// <summary>A loose enemy wagon: its lamp burns orange.</summary>

@@ -33,8 +33,28 @@ public static class RunawayRules
     /// <summary>Its target speed: the train's own with nobody pumping, for its <paramref name="crewWagons"/>, + <see cref="Boost"/>.</summary>
     public static float Target(int crewWagons) => CartPhysics.TargetSpeed(0, crewWagons) * (1 + Boost);
 
-    /// <summary>The S of the train's last body's back: the cart's back, <paramref name="wagons"/> times <paramref name="wagonSpacing"/> further back (<c>CartTrain.WagonSpacing</c>).</summary>
-    public static float TrainRearS(float partyBackS, int wagons, float wagonSpacing) => partyBackS - wagons * wagonSpacing;
+    /// <summary>The S of the train's last body's back: the cart's back, <paramref name="wagons"/> times <paramref name="wagonSpacing"/> further back (<c>CartTrain.WagonSpacing</c>); the chaser's <see cref="SpareRules.TrainBackS"/> is half a cart behind it.</summary>
+    public static float TrainRearS(float partyBackS, int wagons, float wagonSpacing) => SpareRules.TrainBackS(partyBackS, wagons, wagonSpacing) + CartRules.HalfLength;
+
+    /// <summary>A body is warned of it this many seconds ahead (the controller's warning look-ahead).</summary>
+    public const float WarnSeconds = 3f;
+
+    /// <summary>
+    /// A body <paramref name="b"/> on the party line keeps it from breaking loose with its front at <paramref name="startFrontS"/> at
+    /// <paramref name="v"/>: on the rails, from <see cref="ReliefRules.BodyRadius"/> + <see cref="ReliefRules.SpawnClear"/> behind its back (the relief
+    /// cart's clearance) to as far ahead as a warning looks (<see cref="RunOverRules.InWarning"/> over <see cref="WarnSeconds"/>) and that clearance more,
+    /// so nobody is under it or hit before its bell and call.
+    /// </summary>
+    public static bool SpawnBlocked(float startFrontS, float v, in TrackBody b)
+    {
+        var clear = ReliefRules.BodyRadius + ReliefRules.SpawnClear;
+        var from = startFrontS - 2f * CartRules.HalfLength - clear;
+        var to = startFrontS + Math.Max(v, RunOverRules.WarnMinSpeed) * WarnSeconds + CartRules.HalfLength + clear;
+        return RunOverRules.OnRails(b) && b.S >= from && b.S <= to;
+    }
+
+    /// <summary>A client shows a ram only for a runaway the server sent gone from the party line (track 0) with its Derailed flag: it is set only by a ram.</summary>
+    public static bool ShowsRam(bool runaway, byte track, bool derailed) => runaway && track == 0 && derailed;
 
     /// <summary>Where its front starts: <see cref="Behind"/> short of the train's last body; NaN when that is short of the ride's stop + <see cref="MinRoom"/>.</summary>
     public static float StartS(float trainRearS, float rideStartS)

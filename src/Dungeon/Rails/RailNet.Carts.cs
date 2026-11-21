@@ -87,7 +87,6 @@ public partial class RailNet
     {
         if (!NetSession.IsClient || !Current || NetSession.Instance.Client is not { } client) return;
         var now = client.ServerNow;
-        _rearBefore = OwnTrainRearS(); // a ram that wrecks the train comes with the spare's cart state first: the ram is read against the train as it was
         _listed.Clear();
         foreach (var d in carts)
         {
@@ -252,7 +251,7 @@ public partial class RailNet
                 if (IsInstanceValid(rider) && rider.Carrier == slag && !rider.IsQueuedForDeletion()) rider.QueueFree();
             slag.Aboard.Clear();
         }
-        else if (cc.Kind == CartKind.Runaway && cc.Track == 0 && !derailed) ReadRam(cc);
+        else if (RunawayRules.ShowsRam(cc.Kind == CartKind.Runaway, cc.Track, derailed)) ShowRam(cc, goneS);
         else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.Drop(golem.GlobalPosition);
         else if (cc.Chaser is { } chaser && chaser.Riders.Count > 0)
         {
@@ -267,25 +266,19 @@ public partial class RailNet
     }
 
     /// <summary>
-    /// Client: a runaway gone from the party line where our own train's last body is (<see cref="RunawayRules.RammedAt"/>, from our copy's last
-    /// place: the server frees it in the tick of its ram, Ruling 19) rammed it: the jolt and the smash, once. The seat shake is the server's
-    /// (relayed); the HP and the plating come as their own messages.
+    /// Client: the server sent ride 4's runaway gone from the party line with its Derailed flag, which only its ram sets (<see cref="RunawayRules.ShowsRam"/>,
+    /// Ruling 19: an existing bit of the existing message): the jolt and the smash, once, at our copy. The seat shake is the server's (relayed);
+    /// the HP and the plating come as their own messages. A wrecking ram is shown too (the wreck has its own cues besides).
     /// </summary>
-    private void ReadRam(ClientCart cc)
+    private void ShowRam(ClientCart cc, float goneS)
     {
-        var front = cc.Run.State.S + cc.Run.Dir * CartRules.HalfLength;
-        var rear = _rearBefore;
-        if (!RunawayRules.RammedAt(front, rear)) return;
         Props.Tremor.ShakeOnly(0.04f, 0.4f);
         RideAudio.At("timber_smash", cc.Body.GlobalPosition);
-        GD.Print(FormattableString.Invariant($"[net] ride: the runaway rammed the train here (its front S={front:0.0}, our train's rear S={rear:0.0})"));
+        GD.Print(FormattableString.Invariant($"[net] ride: the runaway rammed the train here (it went at S={goneS:0.0}; our copy at S={cc.Run.State.S:0.0}, our train's rear S={OwnTrainRearS():0.0})"));
     }
 
     /// <summary>Client: our own train's last body's back S, as this screen shows it.</summary>
     private float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
-
-    /// <summary>Client: <see cref="OwnTrainRearS"/> as the cart message being applied found it.</summary>
-    private float _rearBefore = float.NaN;
 
     /// <summary>Client: a runaway on the party line rings behind our train by the server's rule (<see cref="RunawayRules.Rings"/>), from its own place: positional.</summary>
     private void RingBehind(ClientCart cc, float s, float dt)
