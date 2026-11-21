@@ -91,7 +91,7 @@ public partial class RailEncounterController
             built = new SplitSwitch
             {
                 Name = $"Split_{piece.Plan.Id}", PointsS = points, LeverRef = NetRefs.Switch(piece.Index),
-                Offered = () => SplitOffered(piece), Hold = SplitHolds, Past = () => _rails.Party.FrontS >= SplitPointsS, Stands = LeverStands,
+                Offered = () => SplitOffered(piece), Accepts = () => SplitAccepts(piece), Hold = SplitHolds, Past = () => _rails.Party.FrontS >= SplitPointsS, Stands = LeverStands,
             };
             root.AddChild(built);
             path = built.Build(track, _enemy, Lanes, _steel ??= DungeonBuilder.RailSteel(), _sleeper ??= DungeonBuilder.RailSleeper());
@@ -146,17 +146,32 @@ public partial class RailEncounterController
     private bool SplitOffered(Piece p)
     {
         if (_split is not { } split) return false;
-        var armed = ArmedRide == p.Plan.Ride && SplitLiveOn(p.Plan.Ride);
-        var coming = NetSession.IsClient ? RailNet.Instance is { } net && IsInstanceValid(net) && net.ClientRunawayShortOf(SplitPointsS) : RunawayComing;
-        return SplitRules.Offered(armed, coming, _rails.Party.FrontS, SplitPointsS, split.Lever.Taken, split.WindowAhead);
+        return SplitRules.Offered(SplitArmed(p), SplitRunawayComing, _rails.Party.FrontS, SplitPointsS, split.Lever.Taken, split.WindowAhead);
     }
 
-    /// <summary>Server and solo: a throw pressed now is held to the points (<see cref="SplitRules.HoldPress"/>); how far short is kept for the log.</summary>
+    /// <summary>Server and solo: a press on the split's lever is taken now (<see cref="SplitRules.Accepts"/>: the offer, and the early lead before it, held).</summary>
+    private bool SplitAccepts(Piece p)
+    {
+        if (_split is not { } split) return false;
+        return SplitRules.Accepts(SplitArmed(p), SplitRunawayComing, _rails.Party.FrontS, SplitPointsS, split.Lever.Taken, split.WindowAhead);
+    }
+
+    private bool SplitArmed(Piece p) => ArmedRide == p.Plan.Ride && SplitLiveOn(p.Plan.Ride);
+
+    /// <summary>The ride's runaway is coming to the split's points (a client: a runaway copy on the party line short of them, as the server sends it).</summary>
+    private bool SplitRunawayComing => NetSession.IsClient ? RailNet.Instance is { } net && IsInstanceValid(net) && net.ClientRunawayShortOf(SplitPointsS) : RunawayComing;
+
+    /// <summary>
+    /// Server and solo: a throw pressed now is held to the points: in the hold zone short of them (<see cref="SplitRules.HoldPress"/>), and at or past
+    /// them while the party's branch is still undecided (review M1: whatever order a press and the decision come in, it is never taken before the
+    /// branch). How far short is kept for the log.
+    /// </summary>
     private bool SplitHolds(Adventurer actor)
     {
         if (_split is not { } split) return false;
         var front = _rails.Party.FrontS;
-        if (!SplitRules.HoldPress(true, front, SplitPointsS, split.WindowAhead)) return false;
+        var undecided = _splitPiece is { Fired: false } && ArmedRide == SplitRide;
+        if (!SplitRules.HoldPress(true, front, SplitPointsS, split.WindowAhead) && !(undecided && front >= SplitPointsS)) return false;
         _splitHeldShort = SplitPointsS - front;
         return true;
     }
@@ -166,6 +181,7 @@ public partial class RailEncounterController
     {
         if (ride != SplitRide) return;
         _partyOnSpur = false;
+        _splitResetWaits = false;
         _splitWaitCalled = _splitNotYetCalled = _splitNowCalled = false;
         _splitHeldShort = float.NaN;
         _split?.Lever.DropHeld();
@@ -250,6 +266,7 @@ public partial class RailEncounterController
             split.Lever.DropHeld();
             split.Lever.Taken = true; // told ("taken"): the window ends on every peer
             GD.Print($"[rails] split {_splitPiece?.Plan.Id}: the runaway {(w.ToSpur ? "takes the spur" : "passes straight")} at S={run.FrontS:0.0}");
+            ResetSplitIfWaiting("the runaway took its points"); // its route is decided: the arrival's reset may go in now
         }
         if (!w.ToSpur || w.OnSpur || run.State.S < SplitPointsS) return w.OnSpur;
         var st = run.State;
@@ -294,6 +311,34 @@ public partial class RailEncounterController
 
     /// <summary>Client: a runaway the server took off the spur's track <paramref name="track"/> at spur S <paramref name="goneS"/> went into the crevasse (<see cref="SplitRules.PlungedOffSpur"/>).</summary>
     internal bool SplitPlungedAt(byte track, float goneS) => _split is { } split && track == SpurTrackNumber(split) && SplitRules.PlungedOffSpur(goneS, split.Sampler.Length);
+
+    // ---- the arrival's reset (review M2) ---------------------------------------------------------
+
+    /// <summary>The arrival's reset of the split's lever waits for the runaway (<see cref="SplitResetWaits"/>).</summary>
+    private bool _splitResetWaits;
+
+    /// <summary>
+    /// An arrival resets the finished rides' levers (<see cref="ResetSwitchyard"/>); the split's waits while the ride's runaway is live and has
+    /// not reached its points, so a correct throw behind the train still sends it down the spur. It is reset when the runaway takes the points
+    /// or is freed. True when it waits.
+    /// </summary>
+    private bool SplitResetWaits(Piece p)
+    {
+        if (p.Split == null || _rideRunaway is not { PastSplit: false } w || !IsInstanceValid(w.Body) || w.Ride != SplitRide) return false;
+        _splitResetWaits = true;
+        GD.Print($"[rails] split {p.Plan.Id}: the arrival's reset waits for the runaway (its front at S={w.Run.FrontS:0.0}, short of the points; the lever thrown={p.Switch?.Thrown})");
+        return true;
+    }
+
+    /// <summary>The split's lever is reset now if an arrival left its reset waiting (<see cref="SplitResetWaits"/>).</summary>
+    private void ResetSplitIfWaiting(string why)
+    {
+        if (!_splitResetWaits) return;
+        _splitResetWaits = false;
+        if (_split?.Lever is not { } lever || !IsInstanceValid(lever)) return;
+        lever.Reset();
+        GD.Print($"[rails] split {_splitPiece?.Plan.Id}: the arrival's reset done ({why})");
+    }
 
     // ---- the watchdog and the server's guard -----------------------------------------------------
 

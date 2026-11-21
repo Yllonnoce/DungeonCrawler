@@ -296,6 +296,7 @@ public partial class DebugTools
 
     private readonly HashSet<string> _spMayFall = new();
     private readonly List<Adventurer> _spRiders = new();
+    private int _spHeldLogs;
     private bool _spListening, _spWiped, _spTakesSpurLog, _spFallLog, _spLoneLog, _spPlungeLog;
     private RailController? _spHooked, _spWipeRc;
     private float _spTime, _spWaitFront = float.NaN, _spNotYetFront = float.NaN, _spNowFront = float.NaN;
@@ -328,6 +329,7 @@ public partial class DebugTools
                 if (text == "The cart runs off the spur into the crevasse!") _spFallLog = true;
                 if (text == SplitRules.SafeLineLog) _spLoneLog = true;
                 if (text == "The runaway goes off the spur into the crevasse!") _spPlungeLog = true;
+                if (text == SplitRules.HeldLog) _spHeldLogs++;
             };
             EventBus.Instance.PartyWiped += () =>
             {
@@ -479,12 +481,14 @@ public partial class DebugTools
                     if (_spSetBackDone && !_spHeldPressed && _spTime - _spSetBackAt >= SeatedSwitchRules.RepressGuardSeconds + 0.05 && offered && party.LookingAt == lever && front < points)
                     {
                         var prompt = lever.Prompt;
-                        if (prompt != "Throw the split — we take the spur!") { Fail($"short of the points the seat offers \"{prompt}\""); return; }
+                        if (prompt != "Throw the split — it throws as we pass") { Fail($"short of the points the seat offers \"{prompt}\""); return; }
+                        var heldLogs = _spHeldLogs;
                         party.VrUse(true);
                         party.VrUse(false);
                         _spHeldPressed = true;
                         GD.Print($"[split] hold: the lead throws the split from the seat at front S={front:0.0} ({points - front:0.0} m short; prompt \"{prompt}\"): thrown={lever.Thrown}, held by {lever.HeldBy ?? "nobody"}");
                         if (lever.Thrown || lever.HeldBy != me.State.Name) { Fail("the throw short of the points was not held to them"); return; }
+                        if (_spHeldLogs != heldLogs + 1) { Fail($"the held throw was not shown (\"{SplitRules.HeldLog}\" logged {_spHeldLogs - heldLogs} time(s))"); return; }
                     }
                     if (front >= points && rolling && !_spHeldPressed && !_spPointsPassed) { Fail($"the set-back and the held throw did not both come short of the points (set back {_spSetBackDone})"); return; }
                 }
@@ -528,6 +532,14 @@ public partial class DebugTools
                             return;
                         case "hold":
                             if (rc.Crossing || !lever.Thrown || lever.LastToggledBy != me.State.Name || lever.HeldBy != null) { Fail("the held throw was not applied just after the train passed straight"); return; }
+                            {
+                                // a second press just past the points finds it thrown by the hold: it must not undo it (fix round 1 (b))
+                                var offeredNow = enc.SeatedLeverFor(me) == lever && party.LookingAt == lever;
+                                party.VrUse(true);
+                                party.VrUse(false);
+                                GD.Print($"[split] hold: the lead presses again just past the points (front S={front:0.0}, offered {offeredNow}, prompt \"{lever.Prompt}\"): thrown={lever.Thrown}");
+                                if (!offeredNow || !lever.Thrown) { Fail("a second press just past the points undid the held throw (or was not offered)"); return; }
+                            }
                             break;
                         case "lone":
                             if (rc.Crossing || !lever.Thrown || !_spLoneLog) { Fail($"lone: crossing={rc.Crossing}, the split thrown={lever.Thrown}, \"{SplitRules.SafeLineLog}\" logged={_spLoneLog}"); return; }
@@ -568,7 +580,7 @@ public partial class DebugTools
                             break;
                         case "hold":
                             if (float.IsNaN(_spPlungeAt)) { Fail("hold: the runaway did not take the spur"); return; }
-                            GD.Print($"[split] RESULT ok (hold): thrown 9 m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), set back from the seat at once (no refusal) in the window, thrown again from the seat short of the points and held to them; the train passed straight, the held throw thrown just after; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
+                            GD.Print($"[split] RESULT ok (hold): thrown 9 m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), set back from the seat at once (no refusal) in the window, thrown again from the seat short of the points and held to them (\"{SplitRules.HeldLog}\" shown); the train passed straight, the held throw thrown just after, a second press just past the points ignored; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
                             break;
                         case "lone":
                             if (float.IsNaN(_spPlungeAt)) { Fail("lone: the runaway did not take the spur"); return; }

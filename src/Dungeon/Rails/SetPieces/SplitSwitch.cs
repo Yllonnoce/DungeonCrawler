@@ -40,6 +40,8 @@ public partial class SplitSwitch : Node3D
     public string LeverRef { get; init; } = "";
     /// <summary>The lever is offered now (its builder's <see cref="SplitRules.Offered"/>), on every peer.</summary>
     public Func<bool>? Offered { get; init; }
+    /// <summary>A press on the lever is taken now (its builder's <see cref="SplitRules.Accepts"/>: the offer and the server's early lead before it). Server and solo.</summary>
+    public Func<bool>? Accepts { get; init; }
     /// <summary>A throw by this actor now is held to the points (its builder's <see cref="SplitRules.HoldPress"/>). Server and solo.</summary>
     public Func<Adventurer, bool>? Hold { get; init; }
     /// <summary>The cart's front is past the points now (the lever's prompt reads it).</summary>
@@ -56,7 +58,7 @@ public partial class SplitSwitch : Node3D
     public float WindowAhead => SplitRules.WindowReach(StraightBefore);
     /// <summary>The party line's S where the seated window opens.</summary>
     public float WindowStartS => PointsS - WindowAhead;
-    /// <summary>A throw is held to the points from this far short of them (<see cref="SplitRules.HoldReach"/>: never less than the window).</summary>
+    /// <summary>A throw is held to the points from this far short of them (<see cref="SplitRules.HoldReach"/>: the window and the server's early lead before it).</summary>
     public float HoldReach => SplitRules.HoldReach(WindowAhead);
     /// <summary>The spur's end in the world (over the crevasse when live).</summary>
     public Vector3 SpurEnd { get; private set; }
@@ -169,7 +171,7 @@ public partial class SplitSwitch : Node3D
         LeverOutUsed = chosenOut;
         var lever = new TrackSwitch
         {
-            Name = "Lever", PointsS = PointsS, LeverS = chosenS, Deadly = true, NetRef = LeverRef, OfferedNow = Offered, HoldThrow = Hold, SplitPast = Past,
+            Name = "Lever", PointsS = PointsS, LeverS = chosenS, Deadly = true, NetRef = LeverRef, OfferedNow = Offered, AcceptsNow = Accepts, HoldThrow = Hold, SplitPast = Past,
             WindowStartS = WindowStartS, WindowEndS = float.PositiveInfinity,
         };
         AddChild(lever);

@@ -50,8 +50,17 @@ public static class SplitRules
     /// <summary>Ruling R-bend: how far before the points the window opens, the straight run before them (<see cref="StraightBefore"/>) up to <see cref="WindowAhead"/>. NaN or less than none: none.</summary>
     public static float WindowReach(float straightBefore) => straightBefore > 0f ? Math.Min(WindowAhead, straightBefore) : 0f; // NaN compares false
 
-    /// <summary>How far short of the points a throw is held to them: <see cref="HoldLead"/>, or the whole window before them when that is longer (the controller's ruling: never less than the window).</summary>
-    public static float HoldReach(float windowAhead) => Math.Max(HoldLead, windowAhead);
+    /// <summary>
+    /// How far short of the points the server takes a press on the lever (<see cref="Accepts"/>): the window and <see cref="SeatedSwitchRules.AcceptLead"/>
+    /// before it, as it takes any seated press a co-op client's lead sends a little early.
+    /// </summary>
+    public static float PressReach(float windowAhead) => Math.Max(0f, windowAhead) + SeatedSwitchRules.AcceptLead;
+
+    /// <summary>
+    /// How far short of the points a throw is held to them: every press the server takes short of them (<see cref="PressReach"/>), and never less than
+    /// <see cref="HoldLead"/> (the controller's ruling: the hold covers the whole window, and the early lead before it, by construction).
+    /// </summary>
+    public static float HoldReach(float windowAhead) => Math.Max(HoldLead, PressReach(windowAhead));
 
     /// <summary>
     /// The party's branch, decided as its front reaches the points (Ruling 6): the spur only with the lever thrown and a human aboard able to
@@ -79,10 +88,26 @@ public static class SplitRules
         => armed && runawayComing && !taken && front >= pointsS - windowAhead;
 
     /// <summary>
+    /// A press on the lever is taken now (server and solo): as <see cref="Offered"/>, from <see cref="PressReach"/> before the points, so a co-op
+    /// client's press on its first window frame is held to the points (<see cref="HoldPress"/>), not dropped. The offer itself opens at the window.
+    /// </summary>
+    public static bool Accepts(bool armed, bool runawayComing, float front, float pointsS, bool taken, float windowAhead)
+        => armed && runawayComing && !taken && front >= pointsS - PressReach(windowAhead);
+
+    /// <summary>After a held throw is applied behind the train, a set-back is ignored this long (a second press on the lever just past the points never undoes it).</summary>
+    public const double HeldGuardSeconds = 1.0;
+
+    /// <summary>A press on the <paramref name="thrown"/> lever now (<paramref name="now"/>) is ignored: within <see cref="HeldGuardSeconds"/> of a held throw applied at <paramref name="heldAppliedAt"/> (−∞: none).</summary>
+    public static bool HeldGuards(bool thrown, double now, double heldAppliedAt) => thrown && now >= heldAppliedAt && now - heldAppliedAt < HeldGuardSeconds;
+
+    /// <summary>The log line as a throw is held to the points (every peer reads it as a subtitle).</summary>
+    public const string HeldLog = "The split will throw as we pass.";
+
+    /// <summary>
     /// The call due now (Ruling 9), each once an arming, only while the runaway is coming:
     /// <list type="bullet">
-    /// <item>Not yet: the lever thrown with the front short of the hold zone (<see cref="HoldReach"/>) and within <see cref="WindowAhead"/> of the
-    /// points. A throw from the window is always held, so only a lever thrown some other way meets it.</item>
+    /// <item>Not yet: the lever thrown with the front short of the window (and of <see cref="HoldLead"/>) and within <see cref="WindowAhead"/> of the
+    /// points. A throw the server takes is always held, so only a lever thrown some other way meets it.</item>
     /// <item>Wait: the lever straight, the front in the window (<paramref name="windowAhead"/> before the points) and short of the points.</item>
     /// <item>Now: the lever straight, the front <see cref="NowPast"/> or more past the points.</item>
     /// </list>
@@ -91,14 +116,14 @@ public static class SplitRules
     {
         if (!runawayComing || float.IsNaN(front)) return SplitCall.None;
         if (thrown)
-            return !notYetDone && front >= pointsS - WindowAhead && front < pointsS - HoldReach(windowAhead) ? SplitCall.NotYet : SplitCall.None;
+            return !notYetDone && front >= pointsS - WindowAhead && front < pointsS - Math.Max(HoldLead, windowAhead) ? SplitCall.NotYet : SplitCall.None;
         if (!waitDone && front >= pointsS - windowAhead && front < pointsS) return SplitCall.Wait;
         return !nowDone && front >= pointsS + NowPast ? SplitCall.Now : SplitCall.None;
     }
 
-    /// <summary>The lever's prompt (Ruling 5): which way a throw sends, short of the points and past them; thrown, its set-back.</summary>
+    /// <summary>The lever's prompt (Ruling 5): short of the points a throw is held until the train passes them; past them it is thrown behind it; thrown, its set-back.</summary>
     public static string Prompt(bool past, bool thrown)
-        => thrown ? "Set the split back" : past ? "Throw the split behind us" : "Throw the split — we take the spur!";
+        => thrown ? "Set the split back" : past ? "Throw the split behind us" : "Throw the split — it throws as we pass";
 
     /// <summary>A runaway gone from the spur at spur S <paramref name="s"/> (its middle) went off its end into the crevasse (its last step's reach): every peer reads it so.</summary>
     public static bool PlungedOffSpur(float s, float spurLength) => s >= spurLength - SwitchBackRules.PlungeReach; // NaN compares false

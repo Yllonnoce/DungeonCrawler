@@ -188,12 +188,12 @@ public static class RideBarks
             Generic: new[] { "Runaway on the line behind us — pump!", "Wagon loose behind us!", "Pump, it's gaining!" }),
 
         [BarkTrigger.SplitWait] = new Bank(
-            Brand: new[] { "Let us pass the split first! Then throw it!", "Not the lever yet! Past the points, then pull!", "Hold it! Wait till we're by the split!" },
-            Sable: new[] { "Patience, darling! Pass the split, then throw it!", "Not yet, loves! Let us by first!", "Let us pass the points, then pull!" },
+            Brand: new[] { "Let us pass the split first! Then throw it!", "Past the points, then throw it behind us!", "Wait till we're by the split, then pull!" },
+            Sable: new[] { "Patience, darling! Pass the split, then throw it!", "Let us by first, loves, then pull!", "Let us pass the points, then pull!" },
             Wren: new[] { "Pass it first.", "Wait. Then throw.", "After the points." },
-            Ilex: new[] { "We pass the split first, then throw it behind us!", "Wait! The spur is ours if you pull it now!", "Let the points go by, then pull the lever!" },
+            Ilex: new[] { "We pass the split first, then throw it behind us!", "Let us clear the points, then pull it for the wagon!", "Let the points go by, then pull the lever!" },
             Warrior: new[] { "Pass the split, then throw it!", "Wait till we're by!" },
-            Rogue: new[] { "Let us by first! Then pull!", "Not yet! After the points!" },
+            Rogue: new[] { "Let us by first! Then pull!", "After the points! Then throw it!" },
             Ranger: new[] { "Pass it first.", "Wait. Then throw." },
             Mage: new[] { "Pass the split, then throw it!", "Wait until we're past the points!" },
             Generic: new[] { "Let us pass the split, then throw it!", "Wait till we pass it!", "Past the points first!" }),

@@ -209,9 +209,14 @@ public partial class RailEncounterController
     /// </summary>
     private void ResetSwitchyard(bool undone, int upToRide = int.MaxValue)
     {
+        if (undone)
+        {
+            _partyOnSpur = false; // a wreck (the fall too) or a load: the split's spur run is over (review M5)
+            _splitResetWaits = false;
+        }
         foreach (var p in _pieces)
         {
-            if (p.Plan.Ride <= upToRide) p.Switch?.Reset();
+            if (p.Plan.Ride <= upToRide && (undone || !SplitResetWaits(p))) p.Switch?.Reset(); // an arrival's split waits for the runaway behind (review M2)
             if (undone && (p.Heap != null || p.Barricade != null)) p.Rebuild = true; // the heap and the barricades stand again at the ride's next arming
         }
     }

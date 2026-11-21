@@ -185,7 +185,7 @@ public partial class RailEncounterController
         run.Sync();
         run.PoseAt(run.State.S);
         if (TakeSplitPoints(w)) return; // thrown at its points: onto the spur, behind the train no more
-        if (RunawayRules.Rams(rolling, run.FrontS, rear)) { Ram(w, rear, party); return; }
+        if (!w.ToSpur && RunawayRules.Rams(rolling, run.FrontS, rear)) { Ram(w, rear, party); return; } // committed to the spur: it never rams (review M3)
         SmashAhead(run, w.Body, enemyTrack: false, riders: null); // timber on the party line ahead of it (ride 4 has none, Ruling 18)
         Warn(run, w.Body, _warnedRideRunaway, true, party); // the call before any hit
         RunOver(run, w.Body.HitAt, RunawayWagon.SourceName, RunawayWagon.HazardIndex, _setAsideParty);
@@ -251,5 +251,6 @@ public partial class RailEncounterController
             w.Body.QueueFree();
         }
         GD.Print($"[rails] t={_now:0.00} runaway {w.Id} freed ({why})");
+        ResetSplitIfWaiting("the runaway is gone"); // an arrival's reset of the split waited for it (review M2)
     }
 }

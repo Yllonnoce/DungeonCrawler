@@ -54,6 +54,8 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     public Func<Adventurer, bool>? HoldThrow { get; init; }
     /// <summary>Who pressed the throw being held to the points (<see cref="HoldThrow"/>), or null.</summary>
     public string? HeldBy { get; private set; }
+    /// <summary>When a held throw was last applied (<c>NetSession.Instance.Now</c>; −∞ never): a set-back is ignored for <see cref="SplitRules.HeldGuardSeconds"/> after.</summary>
+    public double HeldAppliedAt { get; private set; } = double.NegativeInfinity;
     /// <summary>Ride 4's split (plan 12): the cart's front is past its points now. Set, the prompt is the split's (<see cref="PropPromptRules.SplitPrompt"/>).</summary>
     public Func<bool>? SplitPast { get; init; }
     /// <summary>Server and solo: when it was last toggled by a use or a hit (<c>NetSession.Instance.Now</c>; never: −∞), and by whom (a hero's or attacker's name), for the seated set-back guard (<see cref="SeatedSwitchRules.RefuseSetBack"/>).</summary>
@@ -74,6 +76,12 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     /// </summary>
     public Func<bool>? OfferedNow { get; init; }
     private bool Withheld => Deadly && OfferedNow?.Invoke() == false;
+    /// <summary>
+    /// A press is taken now, a little wider than the offer (the split's <see cref="SplitRules.Accepts"/>: a co-op client's press up to
+    /// <see cref="SeatedSwitchRules.AcceptLead"/> before the server's window opens is held, not dropped). Null: as <see cref="OfferedNow"/>.
+    /// </summary>
+    public Func<bool>? AcceptsNow { get; init; }
+    private bool PressWithheld => Deadly && (AcceptsNow ?? OfferedNow)?.Invoke() == false;
     public bool Thrown { get; private set; }
     /// <summary>
     /// The cart's front has passed its points this ride: the lever offers nothing until the ride is over. Taking it is told ("taken"),
@@ -139,12 +147,19 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     /// </summary>
     public void Interact(PartyController party, Adventurer actor)
     {
-        if (actor.Downed || !SwitchBackRules.MayToggle(Deadly, actor.Control) || Withheld) return;
+        if (actor.Downed || !SwitchBackRules.MayToggle(Deadly, actor.Control) || PressWithheld) return;
         if (!Thrown && HoldThrow?.Invoke(actor) == true)
         {
             if (NetSession.IsClient || Fixed || Taken) return;
+            var again = HeldBy != null;
             HeldBy = actor.State.Name; // applied after the cart's branch is decided (ThrowHeld): a press just short of the points never sends it down the spur
-            GD.Print($"[rails] {GetParent()?.Name}/{Name}: {actor.State.Name}'s throw held to the points");
+            if (!again) EventBus.Instance.Log(SplitRules.HeldLog); // the hold is seen: the lever stands straight until the train passes the points
+            GD.Print($"[rails] {GetParent()?.Name}/{Name}: {actor.State.Name}'s throw held to the points{(again ? " (again)" : "")}");
+            return;
+        }
+        if (SplitRules.HeldGuards(Thrown, NetSession.Instance?.Now ?? 0, HeldAppliedAt))
+        {
+            GD.Print($"[rails] {GetParent()?.Name}/{Name}: {actor.State.Name}'s set-back {(NetSession.Instance?.Now ?? 0) - HeldAppliedAt:0.00} s after the held throw went in, ignored");
             return;
         }
         Toggle(actor.State.Name);
@@ -154,7 +169,9 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
     public bool ThrowHeld(string by)
     {
         HeldBy = null;
-        return !Thrown && Toggle(by);
+        if (Thrown || !Toggle(by)) return false;
+        HeldAppliedAt = NetSession.Instance?.Now ?? 0;
+        return true;
     }
 
     /// <summary>Server and solo: a held throw is dropped unapplied (the watchdog set the lever back, or the ride ended).</summary>
@@ -180,7 +197,8 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
         LastToggledAt = NetSession.Instance?.Now ?? 0;
         LastToggledBy = who;
         RideAudio.At("switch_clunk", SoundPoint); // a client's comes from its "thrown" or "straight" (RideAudio.OnProp), at the same point
-        EventBus.Instance.Log(Thrown ? $"{who} throws the switch." : $"{who} sets the switch back.");
+        var what = SplitPast != null ? "split" : "switch";
+        EventBus.Instance.Log(Thrown ? $"{who} throws the {what}." : $"{who} sets the {what} back.");
         Tell(Thrown ? "thrown" : "straight");
         return true;
     }
@@ -191,6 +209,7 @@ public partial class TrackSwitch : StaticBody3D, IInteractable, ICombatTarget, I
         var changed = _taken || (Thrown && !Fixed);
         _taken = false;
         HeldBy = null;
+        HeldAppliedAt = double.NegativeInfinity;
         if (!Fixed) SetThrown(false);
         LastToggledAt = double.NegativeInfinity;
         LastToggledBy = null;
