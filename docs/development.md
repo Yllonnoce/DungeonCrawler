@@ -355,7 +355,7 @@ godot --headless --path . -- --test-cart-watchdog   # floor 12, no enemies: a ca
 godot --headless --path . -- --test-relief[=beside|rails|refuse|ahead]   # floor 12 solo, lethality 1: the relief cart for a player who jumped from the cart (beside the line, on the rails, refused twice with a save and a load), and none while ahead of the train or behind the cart that met them; prints [relief] RESULT
 godot --headless --path . -- --test-crevasse[=trestle|survivor]   # floor 12 solo, lethality 3: walk the deck and a plank with companions (nobody falls), a companion, an enemy, a crew member and Grisel over a chasm (fallen, swallowed, lost, caught at the lip), the fallen back at stop 1, then the train falls at the jump (=trestle: with the trestle) and the wipe rises beside a fresh cart at the stop it left (=survivor: the human on foot, nobody wipes, the fallen come back on the platform, a save and load, the floor change to 13); see Rails, "Crevasses"; prints [crevasse] RESULT
 godot --headless --path . -- --test-barricade       # floor 12 solo, lethality 3: the lanterns in sight from the seat; A a spell cuts ride 1's barricade on foot; B on ride 1 the call 30-35 m out, the human brakes and the seated lead's blade cuts it in three hits (no smash, no dent); E r2_slag1 smashes the slag-line barricade while the party passes on its own lane; C the cart smashes ride 2's (plating -25, 15% of max HP to each seated hero, never below 1 HP, Grisel on the bench unhurt, V x0.8); D a restore stands both of ride 2's again at its next arming; prints [barricade] RESULT
-godot --headless --path . -- --test-switch-back[=wrong|stall]   # floor 12 solo, lethality 3: the broken bridge as built, traffic dropping through it quietly and starting past it; ride 3 across: the live switch back called early, untouched by companions, its bridge lamp in sight, thrown from the seat, home to stop 3 (=wrong: nobody throws it, both calls, the train falls at the gap, the wipe rises at stop 2; =stall: the watchdog sets a stuck train at the back's points, then grinds it into the gap); prints [switchback] RESULT ok (thrown|wrong|stall)
+godot --headless --path . -- --test-switch-back[=wrong|stall|lone]   # floor 12 solo, lethality 3: the broken bridge as built, traffic dropping through it quietly and starting past it; ride 3 across: the live switch back called early, untouched by companions, its bridge lamp in sight, thrown from the seat, home to stop 3 (=wrong: nobody throws it, both calls, the train falls at the gap, the wipe rises at stop 2; =stall: the watchdog sets a stuck train at the window's start, the last call's mark and the back's points, then grinds it into the gap; =lone: the only human downed in the seat, the cart takes the safe line home); prints [switchback] RESULT ok (thrown|wrong|stall|lone)
 RIDE=1 scripts/net_test.sh                           # floor 12 in co-op: a server, a client and a joiner ride the whole line (see Rails, "Riding together"); run it alone, about 5 minutes
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
 godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
@@ -1509,7 +1509,8 @@ the party line at the piece's S, and `slag_barricade` on the enemy track at the 
   prints `[rails] barricade {id} smashed at S=…: plating {a} -> {b}, N hero(es) hit`.
 - **Every cart on its line** (Ruling 4, `SmashAhead`). A ride's slag cart and the traffic cart on the enemy track, and a runaway
   wagon on the party's, smash a standing barricade on their own line too: the cart keeps 80% of its speed and each living rider
-  takes 15% of its own max HP (`SmashHpFraction`, not scaled by lethality, so an enemy may die of it): `[rails] {cart} smashes the
+  takes a hit of 15% of its own max HP, before armour (`SmashHpFraction`, dealt through `ReceiveAttack(Trap.TrapStats, …)`, so armour
+  can shave it; not scaled by lethality, so an enemy may die of it): `[rails] {cart} smashes the
   barricade {id} at S=…: N rider(s) hit`. Chasers, the relief cart and spares are not judged: they follow a train that already
   took the line. The party's cart judges a party-line barricade only while the face is not across on the enemy lane, and a
   slag-line one only while its own front is across (`OnItsLane`, `RailController.FrontOnEnemyLane`), so it passes
@@ -1575,7 +1576,8 @@ the lever is in that rider's window as it recomputes it (`RailEncounterControlle
 extrapolates; a loaded server steps late), and the RIDE pass measured client leads of 1.5–2.8 m, so a press on the client's first
 window frame could reach the server short of its own window. The offer itself still opens at 15 m, and the server never accepts a
 press at or past the points or on a taken lever (the cart has taken the lever as it stood), which keeps the larger lead safe. A
-refused press gives the client no feedback (see "Known gaps"). The server refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
+refused press gives the client no feedback (see "Known gaps"), except on a live switch back: a press there taken too late (the lever
+taken, or the front at or past its points) is told "Too late to throw it." (`RailEncounterController.TooLateToThrow`). The server refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
 time and hero name are kept on the server's `TrackSwitch`), so two riders cued by the same call do not undo each other into
 the heap (`[net-server] interact … seated window: set back … ignored`).
 
@@ -1586,11 +1588,18 @@ decides this the same way at build, and the build line says `[rails] switch {id}
 or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.0, 20.1 m before the gap.
 - **The late return** (Ruling 14). With a live back, `switch_out` crosses with the return unset (`BackAtSwitchOut`: NaN; the take line
   says `the return open: {back}'s lever decides at S=…`). At the back's points the cart takes the lever as it stands then
-  (`TakeBack`, `BackAtPoints`): thrown, it calls `Cross(CrossOutS, points)` and comes home ("The cart takes the switch back onto the
-  party line.", `[rails] switch {id} taken at S=…: back from {points}`); straight, it stays across (`… passed straight: the cart
-  stays on the slag line`) and runs on to the gap. Clients learn the late return from `CartStateDto.CrossBack`, already on the wire,
-  so the protocol stays 17. A lever thrown, then set back, or thrown and set back by a walker earlier counts only as it stands at
-  the points.
+  (`TakeBack`, `BackAtPoints`, `TakesHome`): thrown, it calls `Cross(CrossOutS, points)` and comes home ("The cart takes the switch back
+  onto the party line.", `[rails] switch {id} taken at S=…: back from {points}`); straight, it stays across (`… passed straight: the cart
+  stays on the slag line`) and runs on to the gap. Any later switch back the cart reaches across with its return still open takes it
+  home the same way when its lever is thrown, a fixed one always (final review I1), so a fixed back after a live one is never shown
+  thrown in vain. Clients learn the late return from `CartStateDto.CrossBack`, already on the wire, so the protocol stays 17. A lever
+  thrown, then set back, or thrown and set back by a walker earlier counts only as it stands at the points.
+- **Nobody able to throw it** (ruling R-lone; the spec's anti-goal: no death the player could not have prevented). When the front
+  reaches a live back's points with its lever straight and no able human aboard (`SwitchBackRules.AbleToThrow`: a `LocalHuman` or
+  `Remote` hero, not downed or fallen, not parked, seated in the party's cart), the back is taken as if thrown: the lever stays straight,
+  the log says "No one could reach the switch — the cart takes the safe line." (subtitle only) and the take line ends `(no human aboard
+  able to throw it: the safe line)`. With an able human aboard the switch stays theirs, and left straight the train falls. Solo, a
+  downed player's control passes to a companion, who is then the human.
 - **Only a player's** (Ruling 15, `TrackSwitch.Deadly`). A live back's collision layers are 1|8, not 4, so no hit decides it
   (`ReceiveAttack` is a `Miss`: a companion's stray arrow or blade never throws it), and it moves only for a human's E
   (`SwitchBackRules.MayToggle`: `ControlKind.LocalHuman` or `Remote`); a companion's or a hero bot's `Interact` does nothing.
@@ -1613,8 +1622,9 @@ or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.0, 20
 - **The fall** (Ruling 12). The party's train falls (`RailController.Fall("The slag line ends at the broken bridge!")`, see
   "Crevasses") when its front reaches the gap's near edge still across there (`SwitchBackRules.Falls`: `LaneBlendAt(gapS)` ≥ 0.5);
   the server prints `[rails] the cart runs off the broken bridge at S=…`. A guard (`SwitchBackRules.FallArmed`) keeps a correct
-  choice alive: if any `switch_out` short of the gap has no first switch back after it whose points stand at least `HomeStretch` (6 m)
-  short of the gap, the gap's fall is disarmed on that ride and an ERROR line says so. The watchdog never carries a train across the
+  choice alive: if any `switch_out` short of the gap has no switch back after it short of the gap, or any switch back between it and
+  the gap stands less than `HomeStretch` (6 m) short of the gap (every back is judged, not only the first: any thrown one takes the
+  cart home), the gap's fall is disarmed on that ride and an ERROR line says so. The watchdog never carries a train across the
   gap either (see "The watchdog").
 - **Other carts at the gap.** A ride's slag cart or the traffic cart whose front reaches the gap on the enemy track drops through it,
   its riders lost to the crevasse (`CrevasseWatch.Take`). It goes quietly (`SlagCart.PlungeThrough`): no derail line, no taunt, no
@@ -1623,7 +1633,7 @@ or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.0, 20
   party's cart is held past the gap starts `TrafficPastGap` (2 m) past its far edge (`TrafficStartS`), so the stops beyond keep their
   traffic.
 
-`--test-switch-back[=wrong|stall]` (`DebugTools.SwitchBack.cs`, quits after 300 s) plays floor 12 at lethality 3 and prints
+`--test-switch-back[=wrong|stall|lone]` (`DebugTools.SwitchBack.cs`, quits after 300 s) plays floor 12 at lethality 3 and prints
 `[switchback]` lines and a `[switchback] RESULT`. A: the broken bridge as built (the gap bare of footing and track, the deck and the
 party lane beside it whole), a traffic cart with a rider dropping through the gap quietly (told only with a hero within 40 m), and,
 with the cart at stop 4, traffic starting past the gap. B (thrown, the default): ride 3 across the slag line with no hook; the early
@@ -1633,8 +1643,11 @@ the lane blend is ≤ 0.01 by the points + 6 + 1.1 + 1 m; there is no fall and t
 seated lead's eye at the lever's S to the bridge's lamp is clear (`RESULT ok (thrown)`). `=wrong`: nobody presses; both calls are
 heard (the last 5–6.5 m before the points), the lever is never thrown, the take line says `passed straight`, the train falls at the
 gap (every rider fallen, nobody but the train), and the wipe rises at stop 2 (`RESULT ok (wrong)`). `=stall`: as `=wrong`, with the
-cart caught short of the back's points and again past them: the watchdog sets it at the points, then grinds it into the gap (a
-fall), never across.
+cart caught short of the back's window, inside it short of the last call, short of the points and past them: the watchdog sets it at
+the window's start, then at the last call's mark (the last call is heard after it), then at the points, then grinds it into the gap
+(a fall), never across. `=lone` (ruling R-lone): nobody presses, and the lead, the only human (possession off), is downed in the seat
+3 m before the window and held down until the back is taken; at the points the cart takes the safe line with the lever straight, the
+line is logged, and the cart comes home and arrives at stop 3 with no fall (`RESULT ok (lone)`).
 
 The heap. An `OreHeap` blocks the party lane (`RailController.BlockLine`). Its lantern blinks while a cart bears down on
 it. A seated companion calls "Line's blocked — switch!" once, as the seated window opens (the front 15 m before the lever)
@@ -2296,8 +2309,9 @@ The callers send the floor clock's pair just before it, and `OnFloorReady` also 
   - **The broken bridge** (plan 11, `RailEncounterController.WatchdogBreak`, `SwitchBackRules.GrindBackTo`). A train stuck across on the
     slag line with its return open, short of a live switch back it has not taken, is never carried past a window its player was
     not shown: with the lever straight and the front short of the back's seated window, it is set with its front at the window's
-    start (`lever − 15 m`, still rolling: the calls and the offer run as they would); inside the window, or with the lever thrown,
-    at the back's points, where the back is taken as its lever stands. Stuck past the back with its return open, it is ground on
+    start (`lever − 15 m`, still rolling: the calls and the offer run as they would); inside the window and short of the last call,
+    at the last call's mark (`points − 6 m`, so "Switch back — now!" still comes and the offer stays up; final review M1); past that,
+    with the lever thrown, or short of a fixed back, at the back's points, where the back is taken as its lever stands. Stuck past the back with its return open, it is ground on
     to the gap, where it falls as it would have (`FallNow`). Each prints its own `[rails] watchdog:` line.
   - Otherwise the cart arrives at the next stop, Held there.
 
@@ -2394,7 +2408,11 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 - Every stop and ride the pass names for the kiln or the end of the line reads `LineShape` (`NetTestFlow.Line`): the kiln is ride
   `LastRide` (5) from stop `LastRideStop` (4), the end of the line stop `Rides` (5). The script's strings name them as numbers.
 
-**Run it alone.** Its set-piece clock checks fail on a loaded machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it. The barricade and switch-back checks (plan 11) run before the clock checks, so a slow server's clocks do not hide them. Since plan 11's broken bridge the clock check fails even run alone: the server's physics runs late during ride 3 (its bucket pours 3.25–3.57 s apart instead of 3.0, the client's on time), the same at 8356ffd; it is to be profiled (see "Known gaps").
+**Run it alone, on an unclamped CPU.** Its set-piece clock and party-pairs checks fail on a loaded or clamped machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it. The barricade and switch-back checks (plan 11) run before the clock checks, so a slow server's clocks do not hide them.
+- **The low-power profile invalidates a run** (measured 2026-11-21, not a code change). On the dev laptop the ACPI `platform_profile` (`/sys/firmware/acpi/platform_profile`) read `low-power`. With three godots running, the firmware clamps every core to about 600 MHz (550–700), against 2.6–3.9 GHz with two.
+- The onset is in ride 2, when the third godot (the joiner) starts as the cart leaves stop 1. The server then needs 15–20 ms a physics tick instead of about 3.4 ms, runs 40–56 of its 60 steps a second, and its bucket pours come 3.25–4.7 s apart instead of 3.0. The lag ends when the first client leaves.
+- Every code section slowed 3.6–5.5× at the same instant, and node, physics-pair and GC counts stayed flat. The first plan-11 commit, a890483, which passed before, lags the same way under the same profile. So the failures were the machine, not plan 11's code.
+- The remedy is to switch to `balanced` or `performance` (Fn+Q on the Legion, or `echo balanced | sudo tee /sys/firmware/acpi/platform_profile`) and run it alone. The script warns before a RIDE run when the profile reads `low-power`. A run with three godots at about 600 MHz (`grep MHz /proc/cpuinfo`) is invalid.
 
 **Timeouts.**
 - The server runs with `--quit-after=600` (a test server quits after 120 s unless told) and ends anyway once empty. Its own RESULT fails at 560 s.
@@ -2461,11 +2479,11 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing;
 - plan 11 on a client: the train's fall at the broken bridge (the pass takes the live back; the fall is proven solo by `--test-switch-back=wrong`), a slag or traffic cart plunging through the gap (and a ride's slag cart reaching it with a living rider, end to end), a barricade cut on foot or with a spell over the wire, a slag-line barricade's smash watched on a client, and a barricade smashed while its ride is not armed standing again at its arming (rule-tested only);
-- a refused seated press: the server refuses a seated `InteractIntent` it does not accept (out of its window and the 5 m lead, past the points, taken, or a set-back inside the guard) with only its own log line; the client gets no feedback, so on a live switch back a refused press leaves the player believing the lever thrown until the lamp and the calls say otherwise.
+- a refused seated press: the server refuses a seated `InteractIntent` it does not accept (out of its window and the 5 m lead, past the points, taken, or a set-back inside the guard) with its own log line. On a live switch back a press refused as too late (taken, or the server's front at or past the points) tells that player "Too late to throw it." (`SwitchBackRules.TooLate`, a `LogMsg` to the one peer); any other refusal still gives the client no feedback. Neither is run over the wire (the measured client leads all had the client ahead).
 
 **Known differences, accepted for now:**
 - A partly knocked heap shows whole on clients, and so does a barricade with one or two hits in it (only "cut", "smashed" and "standing" go on the wire).
-- **The RIDE pass's set-piece clocks** (plan 11): the server's physics runs late during ride 3, so its bucket pours drift from the client's (3.25–3.57 s apart against 3.0) and the clock check fails; an A/B against 8356ffd fails the same way. Earlier plan 11 runs (up to db7ba58's tree) passed it, so a slowdown may have come with the broken bridge's build (Tasks 5–6); the final review profiles it. The check is not loosened.
+- **The RIDE pass's set-piece clocks and party pairs need an unclamped CPU.** Under the laptop's ACPI `low-power` profile the cores clamp to about 600 MHz once the third godot starts (ride 2), the server's physics falls behind its clock, and the clock and pairs checks fail. That was measured, not a code change: a890483 lags the same way, and every code section slows at once (see "The RIDE net test"). Run it on `balanced` or `performance`. The check is not loosened.
 - A thrown remote body lands still, where a solo one slides at 0.3·V.
 - A slag cart first seen through a correction on a bend may put its brake shoe on the other side.
 - A boarder freed silently at a ride's end stands as a ghost for up to about 4 s.

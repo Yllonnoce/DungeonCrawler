@@ -63,6 +63,13 @@ if [ "${RIDE:-}" = 1 ]; then
   # wall clock). One server on the built-in campaign, one client; floor 12 after the client is ready. A test server quits after
   # 120 s unless told (the pass rides the five rides to the end of the line), and ends anyway once empty. A scripted server deals
   # no objective unless one is named: --objective=jailbreak gives floor 12 the campaign's own (the crew in their cage wagons)
+  # preflight: under the ACPI low-power profile the cores clamp to about 600 MHz once the third godot starts (ride 2), and the
+  # server's physics falls behind its clock: the clock and pairs checks then fail for the machine, not the code (warn only)
+  PROFILE_FILE=/sys/firmware/acpi/platform_profile
+  if [ -r "$PROFILE_FILE" ] && [ "$(cat "$PROFILE_FILE" 2>/dev/null)" = low-power ]; then
+    echo "WARNING: $PROFILE_FILE reads low-power: the RIDE timing checks (set-piece clocks, party pairs) are unreliable in low-power."
+    echo "WARNING: switch to balanced or performance first (Fn+Q, or: echo balanced | sudo tee $PROFILE_FILE), and run this alone."
+  fi
   XDG_DATA_HOME="$TMP/server" run_server --test-net-server --net-test-ride --port=$PORT --bind=127.0.0.1 --campaign=builtin --objective=jailbreak --seed=4242 --lethality=1 --quit-when-empty --quit-after=600 > "$TMP/server.log" 2>&1 &
   SERVER=$!
   for i in $(seq 1 240); do (exec 3<>/dev/tcp/127.0.0.1/$PORT) 2>/dev/null && break; sleep 0.5; done
