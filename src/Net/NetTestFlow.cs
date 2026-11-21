@@ -834,10 +834,12 @@ public partial class NetTestFlow : Node
                         main.Party.ForcedMoveInput = new Vector2(0, -1);
                         GD.Print(FormattableString.Invariant($"[net] ride: brake let go at V={rc.State.V:0.00} m/s; pumping again"));
                     }
+                    if (_rideBrakeReleased && RideBarricadeCut(net, client, main, rc, me)) return true;
                 }
                 if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 1 && me.Seated)
                 {
                     main.Party.ForcedMoveInput = null;
+                    if (RideBarricadeHash(net, client)) return true;
                     if (rc.GateAt(1) is { } downGate) GD.Print($"[net] ride: at stop 1 its gate is {(downGate.Up ? "up" : "down")} here and the winch offers \"{downGate.Winch?.Prompt}\"");
                     var prompt = rc.Cart.Prompt;
                     // cage 1 is locked: the cage holds the cart (CartFlags.CageHeld) and the seat offers the hold; a tap still gets out
@@ -1084,6 +1086,7 @@ public partial class NetTestFlow : Node
     /// </summary>
     private void RideClientTick(NetSession net, ClientWorld client, Main main)
     {
+        RideWireWatch(net, client, main);
         FightBoarders(main);
         RideSoundSample(client);
         switch (_step)
@@ -1201,6 +1204,7 @@ public partial class NetTestFlow : Node
     private void FightBoarders(Main main)
     {
         if (main.Party?.Local is not { Seated: true, Downed: false } me || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || me.Cart != rc.Cart) return;
+        if (_r1Step is >= 2 and < 4) return; // the barricade is ours to hack from the seat: no swing turns away to a hound
         var now = Time.GetTicksMsec() / 1000.0;
         if (now - _fightAt < 0.5) return;
         Enemies.Enemy? target = null;
@@ -1218,6 +1222,210 @@ public partial class NetTestFlow : Node
         me.AimAt(target.GlobalPosition + Vector3.Up * 0.4f);
         me.Attack();
         if (_fightSwings++ % 10 == 0) GD.Print(FormattableString.Invariant($"[net] ride: fighting from the seat: swing {_fightSwings} at {target.DisplayName} on {target.Carrier?.Name} {best:0.00} m away; our hp {me.State.Hp:0}"));
+    }
+
+    // ---- the co-op proof (plan 11 task 8): ride 1's barricade cut from the seat over the wire, ride 2's smash shown, the late switch back on both screens ----
+
+    /// <summary>Ride 1's barricade here: 0 bearing down, 1 braking from 12 m out, 2 creeping up to its face, 3 hacking from the seat, 4 cut (rolling on).</summary>
+    private int _r1Step;
+    private Dungeon.Rails.Barricade? _r1Bar;
+    private string? _r1Ref, _r2Ref, _r1Call;
+    private int _r1Swings, _r1AsksAtCut, _r1MatchedAtCut;
+    private double _r1SwingAt = double.NegativeInfinity, _r1StepAt;
+    /// <summary>Ride 1's barricade's PropEvts, as they arrive (before they are shown).</summary>
+    private bool _r1CutHere, _r1Smashed, _r1HashTold;
+    private ClientWorld? _wireClient;
+    private bool _wireLogHooked, _wireJoiner;
+    /// <summary>Ride 2's smash: the party cart's plating in the last cart state before r2_barricade's "smashed" and in the first after it.</summary>
+    private float _r2Last = float.NaN, _r2Before = float.NaN, _r2After = float.NaN;
+    private bool _r2Seen, _r2Told;
+    /// <summary>The late return: the controller watched (a resync builds another), its last CrossBack, and what was told when it turned.</summary>
+    private Dungeon.Rails.RailController? _cbRc;
+    private float _cbPrev = float.NaN, _cbAt = float.NaN, _cbFront, _cbPoints;
+    private bool _cbTold, _cbDone;
+
+    /// <summary>Every tick of a RIDE client (the first and the joiner): the wire hooked once, the barricades' refs found, ride 2's smash told, the late return watched.</summary>
+    private void RideWireWatch(NetSession net, ClientWorld client, Main main)
+    {
+        if (_wireClient == null) { _wireClient = client; _wireJoiner = net.TestRideJoin; client.MessageReceived += OnRideWire; }
+        if (!_wireLogHooked && EventBus.Instance is { } bus) { _wireLogHooked = true; bus.Message += OnRideLog; }
+        if (!main.Rebuilding && main.Builder.CurrentFloor == 12 && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc))
+        {
+            if (_r1Ref == null && enc.SetPieceNode("r1_barricade") is Dungeon.Rails.Barricade b1) { _r1Bar = b1; _r1Ref = b1.NetRef; }
+            if (_r2Ref == null && enc.SetPieceNode("r2_barricade") is Dungeon.Rails.Barricade b2) _r2Ref = b2.NetRef;
+        }
+        if (!_r2Told && _r2Seen && !float.IsNaN(_r2After))
+        {
+            _r2Told = true;
+            GD.Print(FormattableString.Invariant($"[net] ride: barricade r2_barricade smashed here (PropEvt), plating {_r2Before:0} -> {_r2After:0}"));
+        }
+        RideCrossBackWatch(main);
+    }
+
+    /// <summary>The wire as it arrives (before each message is applied here): ride 1's barricade's PropEvts, ride 2's smash between two cart states, a barricade call's BarkMsg.</summary>
+    private void OnRideWire(NetMessage m)
+    {
+        if (_wireJoiner) return; // the barricades are the first client's
+        switch (m)
+        {
+            case PropEvt pe when _r1Ref != null && pe.Ref == _r1Ref:
+                if (pe.What == "cut") _r1CutHere = true;
+                else if (pe.What == "smashed") _r1Smashed = true;
+                break;
+            case PropEvt pe when _r2Ref != null && pe.Ref == _r2Ref && pe.What == "smashed" && !_r2Seen:
+                _r2Seen = true;
+                _r2Before = _r2Last;
+                break;
+            case CartStateMsg cs:
+                foreach (var c in cs.Carts)
+                {
+                    if (c.Kind != (byte)CartKind.Party) continue;
+                    if (!_r2Seen) _r2Last = c.Plating;
+                    else if (float.IsNaN(_r2After)) _r2After = c.Plating;
+                    break;
+                }
+                break;
+            case BarkMsg bark when IsBarricadeCall(bark.Text):
+                NoteBarricadeCall(bark.Text, "BarkMsg");
+                break;
+        }
+    }
+
+    /// <summary>A line in the log here (the server's batch relayed): the barricade call's plain words when nobody was there to say it.</summary>
+    private void OnRideLog(string text)
+    {
+        if (!_wireJoiner && IsBarricadeCall(text)) NoteBarricadeCall(text, "log");
+    }
+
+    private static readonly string[] BarkNames = { "brand", "sable", "wren", "ilex" };
+    private static readonly string[] BarkClasses = { "class.warrior", "class.rogue", "class.ranger", "class.mage", "" };
+
+    /// <summary>One of the barricade call's lines: any speaker's bank (RideBarks), or the log's plain words.</summary>
+    private static bool IsBarricadeCall(string text)
+    {
+        if (text == "Timber across the line — cut it!") return true;
+        foreach (var n in BarkNames) if (Adventure.Voice.RideBarks.For(BarkTrigger.Barricade, n, "").Contains(text)) return true;
+        foreach (var c in BarkClasses) if (Adventure.Voice.RideBarks.For(BarkTrigger.Barricade, "", c).Contains(text)) return true;
+        return false;
+    }
+
+    /// <summary>Ride 1's barricade call heard here, once: on ride 1, rolling, the barricade still standing.</summary>
+    private void NoteBarricadeCall(string text, string how)
+    {
+        if (_r1Call != null || _r1Bar is not { IsStanding: true } bar || !IsInstanceValid(bar) || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc)
+            || rc.StopIndex != 0 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling) return;
+        _r1Call = text;
+        GD.Print(FormattableString.Invariant($"[net] ride: barricade r1_barricade called here ({how} \"{text}\") with our front {bar.FaceS - rc.Party.FrontS:0.0} m from its face"));
+    }
+
+    private void R1Next(int step)
+    {
+        _r1Step = step;
+        _r1StepAt = _clock;
+    }
+
+    /// <summary>
+    /// Ride 1 with us aboard, after the early brake: the barricade call heard here; from 12 m out the brake (our RideIntent) until the cart
+    /// state shows V &lt; 0.5, then up to its face with the brake feathered (a stop 12 m out leaves the blade metres short), held there while
+    /// our hero aims at r1_barricade and swings from the seat every 0.5 s until its "cut" PropEvt arrives; then the brake is let go and
+    /// we pump on to stop 1. True when it failed.
+    /// </summary>
+    private bool RideBarricadeCut(NetSession net, ClientWorld client, Main main, Dungeon.Rails.RailController rc, Party.Adventurer me)
+    {
+        if (_r1Step >= 4) return false;
+        if (_r1Bar is not { } bar || !IsInstanceValid(bar)) return RideFail(net, "ride 1's barricade (r1_barricade) is not built here");
+        if (_r1Smashed) return RideFail(net, $"r1_barricade was smashed (its PropEvt) before our blade cut it (step {_r1Step}, {_r1Swings} swing(s))");
+        var party = main.Party;
+        var gap = bar.FaceS - rc.Party.FrontS;
+        switch (_r1Step)
+        {
+            case 0: // bearing down, pumping
+                if (gap > 12f) return false;
+                if (_r1Call == null) return RideFail(net, FormattableString.Invariant($"the barricade call never reached us by {gap:0.0} m from r1_barricade's face (no BarkMsg or log line of it)"));
+                party.ForcedMoveInput = new Vector2(0, 1); // the stick back: brake
+                GD.Print(FormattableString.Invariant($"[net] ride: barricade r1_barricade {gap:0.0} m ahead here at V={rc.State.V:0.00} m/s: braking (stick back) until the cart state shows V < 0.5"));
+                R1Next(1);
+                return false;
+            case 1:
+                party.ForcedMoveInput = new Vector2(0, 1);
+                if (rc.State.V >= 0.5f) return _clock - _r1StepAt > 10 ? RideFail(net, FormattableString.Invariant($"braking for r1_barricade, the cart state still shows V={rc.State.V:0.00} after 10 s")) : false;
+                GD.Print(FormattableString.Invariant($"[net] ride: braked to V={rc.State.V:0.00} m/s {gap:0.0} m short of r1_barricade's face; creeping up with the brake feathered"));
+                R1Next(2);
+                return false;
+            case 2: // creep up: the front within half a metre of the face, the front seat's blade in reach
+            {
+                var cap = gap > 3f ? 2f : 0.8f;
+                if (gap <= 0.5f || rc.State.V > cap) party.ForcedMoveInput = new Vector2(0, 1);
+                else if (rc.State.V < cap * 0.5f) party.ForcedMoveInput = null;
+                if (gap <= 0.5f && rc.State.V < 0.05f)
+                {
+                    GD.Print(FormattableString.Invariant($"[net] ride: stopped {gap:0.00} m short of r1_barricade's face (V={rc.State.V:0.00}) in seat {me.Seat}; held on the brake, hacking from the seat"));
+                    R1Next(3);
+                    return false;
+                }
+                return _clock - _r1StepAt > 40 ? RideFail(net, FormattableString.Invariant($"the creep up to r1_barricade did not stop within half a metre of its face in 40 s (gap {gap:0.00}, V={rc.State.V:0.00})")) : false;
+            }
+            case 3:
+                party.ForcedMoveInput = new Vector2(0, 1); // held on the brake while we hack
+                if (_r1CutHere)
+                {
+                    GD.Print(FormattableString.Invariant($"[net] ride: barricade r1_barricade cut here by our blade from the seat ({_r1Swings} swings, V={rc.State.V:0.0})"));
+                    _r1AsksAtCut = client.Trace.Count(t => t == "prop-check");
+                    _r1MatchedAtCut = client.PropChecksMatched;
+                    party.ForcedMoveInput = new Vector2(0, -1); // the brake let go: pumping on to stop 1
+                    R1Next(4);
+                    return false;
+                }
+                if (_clock - _r1SwingAt < 0.5) return false;
+                if (_r1Swings >= 16) return RideFail(net, FormattableString.Invariant($"{_r1Swings} swings from seat {me.Seat}, {gap:0.00} m short of the face, never cut r1_barricade (no \"cut\" PropEvt)"));
+                _r1SwingAt = _clock;
+                me.AimAt(bar.GlobalPosition + Vector3.Up * 0.75f);
+                me.Attack();
+                _r1Swings++;
+                return false;
+        }
+        return false;
+    }
+
+    /// <summary>At stop 1, once: ride 1's barricade was cut here, and since the cut the props' hash has matched the server's (a check came, none asked again). True when it failed.</summary>
+    private bool RideBarricadeHash(NetSession net, ClientWorld client)
+    {
+        if (_r1HashTold) return false;
+        _r1HashTold = true;
+        if (_r1Step < 4) return RideFail(net, $"the cart reached stop 1 with ride 1's barricade not cut here (step {_r1Step}, {_r1Swings} swing(s), call {(_r1Call != null ? "heard" : "NOT heard")})");
+        var asks = client.Trace.Count(t => t == "prop-check") - _r1AsksAtCut;
+        var matched = client.PropChecksMatched - _r1MatchedAtCut;
+        GD.Print($"[net] ride: prop hash still matches the server's after the cut: {matched} check(s) matched since, {asks} prop-check ask(s)");
+        return asks > 0 || matched < 1 ? RideFail(net, $"after ride 1's barricade was cut the props' hash {(asks > 0 ? $"differed ({asks} prop-check ask(s))" : "was never checked")}") : false;
+    }
+
+    /// <summary>
+    /// Each RIDE client, every tick: the first time the party cart's CrossBack turns from NaN to a number on ride 3 (a resync's fresh controller
+    /// starts at NaN), print it with our front and the live switch back's points; <see cref="Dungeon.Rails.RailController.SwitchStretch"/> + 2 m on
+    /// (from the later of that front and the return), the cart's lane blend: home on its own lane.
+    /// </summary>
+    private void RideCrossBackWatch(Main main)
+    {
+        if (_cbDone || main.Rebuilding || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc)) return;
+        if (!_cbTold)
+        {
+            if (rc != _cbRc) { _cbRc = rc; _cbPrev = float.NaN; }
+            var cb = rc.CrossBackS;
+            var turned = float.IsNaN(_cbPrev) && !float.IsNaN(cb);
+            _cbPrev = cb;
+            if (!turned || rc.StopIndex != 2 || !rc.Crossing) return;
+            _cbTold = true;
+            _cbAt = cb;
+            _cbFront = rc.Party.FrontS;
+            _cbPoints = Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && main.Builder.FloorRoot is { } root
+                && NetRefResolver.Resolve(root, NetRefs.Switch(enc.PieceIndexOf("switch_back", 3))) is Dungeon.Rails.TrackSwitch back ? back.PointsS : float.NaN;
+            return;
+        }
+        var readAt = MathF.Max(_cbFront, _cbAt) + Dungeon.Rails.RailController.SwitchStretch + 2f;
+        if (rc.StopIndex == 2 && rc.Party.FrontS < readAt) return;
+        _cbDone = true;
+        var blend = rc.StopIndex == 2 ? rc.LaneBlend : float.NaN; // past the ride, unread
+        GD.Print(FormattableString.Invariant($"[net] ride: crossed back here: CrossBack {_cbAt:0.0} told at front S={_cbFront:0.0} (the back's points {_cbPoints:0.0}), blend {blend:0.00} at S={rc.State.S:0.0}"));
     }
 
     // the joiner (plan 5 task 8): the RIDE pass's second client joins during ride 2
@@ -1286,7 +1494,12 @@ public partial class NetTestFlow : Node
     private void OnPlayedAt(string cue, Vector3 at, bool ambient) { if (cue == "cart_wreck") _soundWrecks++; }
 
     /// <summary>The static test hook (AudioManager.PlayedAt) is taken off as this node leaves the tree: no static event holds it past exit.</summary>
-    public override void _ExitTree() => Audio.AudioManager.PlayedAt -= OnPlayedAt;
+    public override void _ExitTree()
+    {
+        Audio.AudioManager.PlayedAt -= OnPlayedAt;
+        if (_wireClient != null) _wireClient.MessageReceived -= OnRideWire;
+        if (_wireLogHooked && EventBus.Instance is { } bus) bus.Message -= OnRideLog;
+    }
 
     /// <summary>Each physics tick of a RIDE client: while the server's cart rolls here, a <c>[net] ride sound</c> line every 2 s (and at once the first time the roll reaches RollPitch(5)).</summary>
     private void RideSoundSample(ClientWorld client)

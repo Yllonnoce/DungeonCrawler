@@ -354,6 +354,8 @@ godot --headless --path . -- --test-tick-rate --physics-hz=90   # floor 1: the d
 godot --headless --path . -- --test-cart-watchdog   # floor 12, no enemies: a caught cart braked 15 s is not freed; let go it grinds free to stop 1 10 s later; caught short of ride 5's gap (the kiln's, from rc.Restore(LastRideStop)) it is set at the lip and leaps it; prints [watchdog] RESULT
 godot --headless --path . -- --test-relief[=beside|rails|refuse|ahead]   # floor 12 solo, lethality 1: the relief cart for a player who jumped from the cart (beside the line, on the rails, refused twice with a save and a load), and none while ahead of the train or behind the cart that met them; prints [relief] RESULT
 godot --headless --path . -- --test-crevasse[=trestle|survivor]   # floor 12 solo, lethality 3: walk the deck and a plank with companions (nobody falls), a companion, an enemy, a crew member and Grisel over a chasm (fallen, swallowed, lost, caught at the lip), the fallen back at stop 1, then the train falls at the jump (=trestle: with the trestle) and the wipe rises beside a fresh cart at the stop it left (=survivor: the human on foot, nobody wipes, the fallen come back on the platform, a save and load, the floor change to 13); see Rails, "Crevasses"; prints [crevasse] RESULT
+godot --headless --path . -- --test-barricade       # floor 12 solo, lethality 3: the lanterns in sight from the seat; A a spell cuts ride 1's barricade on foot; B on ride 1 the call 30-35 m out, the human brakes and the seated lead's blade cuts it in three hits (no smash, no dent); E r2_slag1 smashes the slag-line barricade while the party passes on its own lane; C the cart smashes ride 2's (plating -25, 15% of max HP to each seated hero, never below 1 HP, Grisel on the bench unhurt, V x0.8); D a restore stands both of ride 2's again at its next arming; prints [barricade] RESULT
+godot --headless --path . -- --test-switch-back[=wrong|stall]   # floor 12 solo, lethality 3: the broken bridge as built, traffic dropping through it quietly and starting past it; ride 3 across: the live switch back called early, untouched by companions, its bridge lamp in sight, thrown from the seat, home to stop 3 (=wrong: nobody throws it, both calls, the train falls at the gap, the wipe rises at stop 2; =stall: the watchdog sets a stuck train at the back's points, then grinds it into the gap); prints [switchback] RESULT ok (thrown|wrong|stall)
 RIDE=1 scripts/net_test.sh                           # floor 12 in co-op: a server, a client and a joiner ride the whole line (see Rails, "Riding together"); run it alone, about 5 minutes
 godot --headless --path . -- --test-jailer --builtin --floor=2 --no-ai --no-ambush --no-portals --no-gathering --lethality=1  # a creature set beside a prisoner must unlock the jail, deliver, lock and post
 godot --headless --path . -- --builtin --floor=N --dump-enemies=40,70 --quit-after=72  # prints every creature's cell, state, facing and post and every NPC's place at those seconds (anomaly hunts)
@@ -1095,8 +1097,8 @@ Item level is the floor (`TierRules.ItemLevel`). Base damage and the Armor base 
 
 ## Rails
 
-Ring floors can carry a mine-cart line round their outside (the floor 12 chase). Four `FloorSpec` knobs drive it, each set
-by a campaign floor through `SpecOverrides` (`"RailCount"`, `"RailLoop"`, `"RailBand"`, `"Crevasses"`); they only apply to the ring layout,
+Ring floors can carry a mine-cart line round their outside (the floor 12 chase). Five `FloorSpec` knobs drive it, each set
+by a campaign floor through `SpecOverrides` (`"RailCount"`, `"RailLoop"`, `"RailBand"`, `"Crevasses"`, `"BrokenBridgeRide"`); they only apply to the ring layout,
 and with `RailCount` 0 (the default) nothing changes, byte for byte:
 - `RailCount` (0..6, clamped by `CampaignPlan`) is the number of stops past the start.
 - `RailLoop` puts the down stairs in the start room's nearer ring neighbour (by centre distance, ties to the lower index),
@@ -1108,6 +1110,9 @@ and with `RailCount` 0 (the default) nothing changes, byte for byte:
 - `Crevasses` (bool, default false) cuts chasms beside a laid line and plank crossings in the halls (see "Crevasses"
   below). It is its own knob, not keyed on `RailBand`, so with it false every floor's `ContentHash` is unchanged. Floor 12
   sets it in the built-in campaign's overrides (`SpecOverrides.Crevasses`, which is `[AiIgnore]`: the planner never sees it).
+- `BrokenBridgeRide` (int, default 0, clamped 0..6; `[AiIgnore]`) puts a broken bridge on that ride's slag line (plan 11; see
+  "Crevasses" below). It acts only with `Crevasses` on, so with it 0 (or `Crevasses` off) every floor's `ContentHash` is
+  unchanged. The generator never reads plans, so the ride is named here rather than inferred. Floor 12 sets it to 3.
 
 A band wider than 6 meanders the line (`FloorGenerator.Meander.cs`, no rng). After each stretch is routed, a ride
 (platform middle to platform middle) shorter than `RailRules.RideMinCells` (55 cells, 220 m) gets outward rectangular
@@ -1145,9 +1150,12 @@ line carries `rails=N`). `--print-map` draws the line: `=` party lane, `%` enemy
 prints `LayoutReport`: a `[map] room {i}: ({X},{Y}) {W}x{H} level={L} {hub|ring|side|secret}` line per room with its tags
 (`up`, `down`, `stop={k}`, `vault={index}`, `jail`, `safe`, `nest`, `camp`, `shrine`), then
 `[map] rail: stops=[rooms] rides~[m] total~{m} cavern={From}..{To}|none|breached chasm={cells} strips={n} gorge=[{From}..{To}@{fFrom}-{fTo},…] planks={n}`
+followed, with `BrokenBridgeRide` set, by ` break={Gap}@{f} run={From}..{To}` (the gap's and its run's party-lane indices, f the gap's
+fraction of its own ride), ` break=none` (no fitting run) or ` break=refused` (the cavern's ride, the last ride or a ride past it)
 (rides in cells x 4 m, platform middle to platform middle; `chasm` the floor's chasm cells, `strips` the edge strips, `gorge`
 each gorge span by party-lane index and as fractions of the last ride, `planks` the hall crossings), and the cart's measured
-`[map] rail StopS=[...] rides=[...] m total=... m`.
+`[map] rail StopS=[...] rides=[...] m total=... m`, then, with a break, `[map] rail break: ride {r} gap at party S={S}` (the party
+lane's S beside the gap's near edge, good to about 1 m; the switch back's build line prints the exact lead).
 `DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
 The centreline is straight 0.5 m pieces laid with no handles, so `TrackSampler.Frame` takes its heading from the chord ±0.25 m
@@ -1409,8 +1417,8 @@ Ride, Kind, At). Both are `[AiIgnore]` and hand-authored, like `Crew`, and reach
 `FloorContents.RailEncounters` and `FloorContents.RailSetPieces`. `At` is the fraction of the ride where an item stands or
 starts. `Offset` is a slag cart's place in metres ahead of (+) or behind (−) the party's cart. `Line` is a narration line
 (subtitles only) shown the first time the item appears. Encounter kinds are `slag_cart`, `lone`, `thrower` and `golem`. Set-piece
-kinds are `beam`, `switch_out`, `switch_back`, `heap`, `buckets`, `hammers`, `pour`, `trestle`, `jump`, `spur_switch` and
-`buffer`. `PlanValidator.ValidateRailPlans` drops both lists on a floor with no rails. It also drops an item with no id or a
+kinds are `beam`, `switch_out`, `switch_back`, `heap`, `buckets`, `hammers`, `pour`, `trestle`, `jump`, `spur_switch`,
+`buffer`, `barricade` (timber across the party line) and `slag_barricade` (the same across the slag line, beside the piece's party S). `PlanValidator.ValidateRailPlans` drops both lists on a floor with no rails. It also drops an item with no id or a
 duplicate id, an unknown kind, a ride outside 1..stops−1, no riders, an unknown enemy id or any boss rider ("no bosses").
 It clamps `At` to 0.05..0.95, trims a slag cart to 3 riders, and caps the lists at 12 encounters and 20 set pieces.
 
@@ -1433,11 +1441,15 @@ Floor 12's five rides (`data/adventures/builtin/floor_12.json`; the lengths are 
 
 | Ride | Stops | Encounters | Set pieces | Slots left for later plans |
 |---|---|---|---|---|
-| 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_beam` the low beam (0.6) | plan 11: `r1_barricade` ~0.25 |
-| 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | — | plan 11: `r2_barricade` ~0.6, defended |
-| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.55), `r3_buckets` (0.75) | plan 11: `switch_back` live and later, the broken bridge past the last return |
-| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.3, −4), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); the cavern under its deck (plan 10) | plan 12: the dark ~0.1-0.4, the runaway from ~0.1, the split ~0.45; plan 13: the cavern's collapsing bridge and spiral; plan 14: the leap beside `r4_slag`; plan 15: the loop |
-| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | plan 11: `r5_barricade` ~0.9 |
+| 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_barricade` (0.25, S 82.8), `r1_beam` the low beam (0.6) | — |
+| 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | `r2_slag_barricade` on the slag line (0.3, ahead of `r2_slag1`), `r2_barricade` (0.7, S 427.1, defended by `r2_slag2` alongside) | — |
+| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.731, live: its points at S 694.0, 20.1 m before the gap), `r3_buckets` (0.832, past the gap); the broken bridge on its slag line (the gap at party S 714.1, plan 11) | — |
+| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.3, −4), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); the cavern under its deck (plan 10) | plan 12: the dark ~0.1-0.4, the runaway from ~0.1, the split ~0.45; plan 13: the cavern's collapsing bridge and spiral; plan 14: the leap beside `r4_slag` (the loop-the-loop, once plan 15, is dropped) |
+| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_barricade` (0.88, S 1205.4), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | — |
+
+The barricades' `At` are the measured ones: `r2_barricade` went from the plan's 0.6 to 0.7 and `r5_barricade` from 0.9 to 0.88,
+because at the planned values each stood just past a tight bend and the 15 m sight ray from the seat hit the inner wall (0.7 is
+still beside `r2_slag2`; 0.88 is still between `r5_spur` and `r5_buffer`).
 
 Ride 1. The lone cinder stands on the party lane where the cart will come, and the cart runs it over. The thrower stands in
 the nearest party-side pocket and throws at the riders, with a hand glow of at least 1.5 s for its wind-up; it stays until a
@@ -1471,11 +1483,73 @@ ring the bell, warn a hero on their lane and run over whoever is on it. A pocket
 member or escort on foot on a warned lane walks to the nearest pocket of that lane within 12 m (else to a walkable cell off
 the rails within 3 cells) and holds there until the cart's front is 2 m past it.
 
+Barricades (plan 11; `Rails/SetPieces/Barricade.cs`, `RailEncounterController.Barricades.cs`, the numbers in
+`Rails/Core/BarricadeRules.cs`). A barricade is two posts and three crossed planks, 1.8 m wide and 1.2 m tall, on the
+`weathered_planks` texture, with a lantern on a stake in front of it on the cart's side. It is solid (layer 1) and something to
+hit (layer 4, an `ICombatTarget` like the heap). There are two set-piece kinds, not a lane field (Ruling 1): `barricade` stands on
+the party line at the piece's S, and `slag_barricade` on the enemy track at the enemy-lane S beside it
+(`[rails] barricade {id} on the {party|slag} line at S=…`).
+- **Cutting it** (Ruling 2). It takes `Toughness` 3. Any hit that is not a spell (a blade, an arrow, a shove, a thrown weapon, a heavy
+  blow included) knocks off 1 and takes a plank with it ("{name} hacks at the barricade."); any `AttackKind.Spell` hit clears it
+  at once (`HitWeight`). Cut, it falls in splinters (`TimberDebris.Burst`, `crate_break`), the log says "{name} cuts the barricade
+  down." and the server prints `[rails] barricade {id} cut by {name} at S=…`. A seated hero can hack one from the seat: brake to a
+  stop with the front within half a metre of its face and swing from the front seat.
+- **The warning** (Ruling 6). Companions and hero bots never attack a barricade (breaking it is the player's job; a companion's cleave
+  or arrow on layer 4 may still hit one by chance). A seated hero calls it once, `BarkTrigger.Barricade` (a Shout; subtitle-only
+  stock lines in `RideBarks`, and with nobody to speak the log gets "Timber across the line — cut it!"), when the cart's front comes
+  within `CallAhead` (35 m, about 6 s at cruise) of its face on its line: `[rails] barricade {id} called at front S=… (… m to its
+  face); bark=…`. Its lantern blinks by the heap's rule (`SetPieceRules.HeapAlarm`) while the cart bears down, and `cart_bell`
+  rings as the blinking starts.
+- **The smash** (Ruling 3). A cart whose front reaches the face (`FaceS`, `HalfDepth` 0.25 m short of its middle) while it stands,
+  on its own line, smashes through it (`Smashes`, read along the cart's own way of travel by `SmashesAlong`): it goes in timbers
+  (`timber_smash`). The party's cart loses `SmashDent` (25) plating through the cart's usual dent (0 wrecks it, as any dent does) and
+  keeps `SpeedKept` (80%) of its speed. Each seated hero who is up takes `SmashFraction` of max HP: 15% × `TierRules.PartyDamageScale`
+  / 3, so 15% at the default lethality of 3 and 5% at 1, never taking anyone below 1 HP (`SmashDamage`). NPCs on the bench and crew
+  in the wagons are only jolted (a quest NPC dies at 0 HP). The log says "The cart smashes through the barricade!" and the server
+  prints `[rails] barricade {id} smashed at S=…: plating {a} -> {b}, N hero(es) hit`.
+- **Every cart on its line** (Ruling 4, `SmashAhead`). A ride's slag cart and the traffic cart on the enemy track, and a runaway
+  wagon on the party's, smash a standing barricade on their own line too: the cart keeps 80% of its speed and each living rider
+  takes 15% of its own max HP (`SmashHpFraction`, not scaled by lethality, so an enemy may die of it): `[rails] {cart} smashes the
+  barricade {id} at S=…: N rider(s) hit`. Chasers, the relief cart and spares are not judged: they follow a train that already
+  took the line. The party's cart judges a party-line barricade only while the face is not across on the enemy lane, and a
+  slag-line one only while its own front is across (`OnItsLane`, `RailController.FrontOnEnemyLane`), so it passes
+  `r2_slag_barricade` on its own lane.
+- **Down until its ride is undone** (Ruling 5, the heap's rule). Cut or smashed, a barricade stays down. It stands whole again at its
+  ride's next arming after a wreck or a `Restore` (a wipe's rise, a load), or when it went down while its ride was not armed
+  (smashed by traffic or a runaway) (`StandsAgainAtArming`; the last case logs `[rails] barricade {id} stands again at ride N's
+  arming (it went down while its ride was not armed)`). A cut is the
+  party's work wherever it was made, so a barricade cut on foot before its ride stays down.
+- **Placement** (Rulings 7 and 8). "Defended" is placement, not a guard kind: `r2_barricade` stands where `r2_slag2` (a priest
+  thrower and a hound) runs alongside, and `r2_slag_barricade` stands on the slag line ahead of `r2_slag1`, whose carts smash it.
+  Ride 5's barricade stands before the buffer. Every barricade's lantern is in sight from the seat 15 m out (the barricade flow's
+  layer-1 ray from the seated lead's eye).
+- **On the wire.** Every role builds the barricades from the plan; the server judges them and tells `PropEvt`s on `barricade:{piece}`
+  (`NetRefs.Barricade`): "cut" and "smashed" (a client throws its own timbers, its cue from `RideAudio.OnProp`) and "standing".
+  `RailPropsDto.DownBarricades` (hashed as `D` in `PropCheck`) carries the ones down for a catch-up, and a client's lantern blinks by
+  the same rule (`RailEncounterController.Net.cs`). A partial hit is not mirrored: a client shows a knocked barricade whole until it
+  falls. The RIDE pass cuts ride 1's from a remote seat and watches ride 2's smash on a client (see "The RIDE net test").
+- **Test hooks** (internal): `DebugCutBarricades(ride)` (Ruling 24: a flow that is not about barricades may cut its ride's at the arming
+  and log `[<flow>] barricades on ride N cut by the test`; none needs it today, since the ride flows smash through and keep their
+  checks), `DebugRestandBarricades(ride)`, `Barricade.DebugCut(who)`, and the counters `BarricadesCut` and `BarricadesSmashed`.
+
+`--test-barricade` (`DebugTools.Barricade.cs`, quits after 240 s) plays floor 12 of the built-in campaign at lethality 3, solo, Grisel
+forgiven and on the bench, with every enemy culled as it appears (the flow owns the plating and the HP), and prints `[barricade]`
+lines and a `[barricade] RESULT`. First, the sight: from the seated lead's eye a layer-1 ray to each barricade's lantern is clear 15 m
+out. A: at stop 0, on foot, one `Spell` hit cuts `r1_barricade`, which is then stood up whole again. B: on ride 1 the call comes once
+with the front 30–35 m from the face; from 12 m out the human brakes to a crawl, creeps up with the brake feathered and stops short of
+the face; the seated lead's blade cuts it in three hits from the front seat (standing after hits 1 and 2); the brake is let go, no
+smash is logged and the plating is unchanged. E (on ride 2, before C): `r2_slag1` smashes `r2_slag_barricade` on the slag line, each
+cinder down 15% (±1) of its max HP or dead, while the party's cart passes it on its own lane with no smash and the plating unchanged.
+C: a companion held at 5% HP and Grisel on the bench; nobody brakes or hits; the cart smashes `r2_barricade`: the plating −25, each
+other seated hero −15% of max HP, the 5% companion up with 1 HP or more, Grisel unhurt, V × 0.8. D: arrived at stop 2,
+`rc.Restore(1)`: `r2_barricade` and `r2_slag_barricade` stay down until ride 2 arms again, then stand whole.
+
 Switches and the lane blend (ride 3). A `switch_out` lever (`TrackSwitch`) stands between the lanes, 5 m short of its
 points. E toggles it (thrown, or set back); any hit only throws it, so a stray friendly shot never sets a thrown lever back. A
 blade's sight ray ignores the lever's own collider. Once the cart's front has
 passed the points the lever's prompt is gone. Thrown as the front reaches the points, the cart crosses
-(`RailController.Cross`). The ride's next `switch_back` (always thrown, untouchable) brings it home. The pose eases across
+(`RailController.Cross`). The ride's next `switch_back` brings it home: a fixed one (always thrown, untouchable, `TrackSwitch.Fixed`)
+at its points, set as the cart crosses out; a live one (below) only if a player throws it. The pose eases across
 over 6 m after each switch (`LaneBlendAt`, read per S, so each coupled wagon crosses at its own S); crossover rails are
 laid as dressing, and timber posts in the way are taken down. While the front is half way across or more
 (`FrontOnEnemyLane`, the one test for spawning, pacing, ramming and the sweep), the run-over sweep and the warning judge
@@ -1488,7 +1562,7 @@ Throwing a switch from the seat (plan 8, `Rails/Core/SeatedSwitchRules.cs`). Nob
 cart, so a lever has a seated window. It opens with the cart's front 15 m before the lever (`TrackSwitch.LeverS`) and
 closes when the front reaches the points (or the lever is taken). It is offered to a seated, up rider of the party's cart
 while it rolls, only for the armed ride's throwable levers (never a fixed `switch_back`), the nearer of two by S
-(`RailEncounterController.SeatedLeverFor`). In the window the rider's `LookingAt` is that lever whatever the aim
+(`RailEncounterController.SeatedLeverFor`; a live switch back only while the cart is across, below). In the window the rider's `LookingAt` is that lever whatever the aim
 (`Adventurer.TickView`; the look ray still runs for the VR beam), so the HUD shows `[E] Throw the switch` (or "Set the switch
 back"), E or the grip toggles it through the usual interact dispatch, and "Get out" is not offered. A second window press on
 the same lever is ignored on the presser's machine until the lever changes there or 0.5 s passes (`SeatedPressGuard`), so a
@@ -1496,10 +1570,71 @@ client's double tap inside one round trip, or a solo mash, never sets back what 
 window closes, timed on the rider's own machine, a seated rider's E does nothing, so a press mashed past the points cannot
 throw them out at speed (`SeatedWindowClock`; a rider downed, or swapped out of the player's hands, mid-window owes no grace). A held cart never offers the lever, so E stays "Get out" (and the cage hold) at a stop or at the
 heap. On a co-op client the press is the lever's ordinary `InteractIntent`. The server accepts it by the usual reach or when
-the lever is in that rider's window as it recomputes it (`RailEncounterController.InSeatedWindow`; no lag allowance: the
-lever being taken ends it), and refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
+the lever is in that rider's window as it recomputes it (`RailEncounterController.InSeatedWindow`), with the window's start moved
+`SeatedSwitchRules.AcceptLead` (5 m) earlier (`SeatedSwitchRules.Accepts`): a client's cart runs a little ahead of the server's (it
+extrapolates; a loaded server steps late), and the RIDE pass measured client leads of 1.5–2.8 m, so a press on the client's first
+window frame could reach the server short of its own window. The offer itself still opens at 15 m, and the server never accepts a
+press at or past the points or on a taken lever (the cart has taken the lever as it stood), which keeps the larger lead safe. A
+refused press gives the client no feedback (see "Known gaps"). The server refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
 time and hero name are kept on the server's `TrackSwitch`), so two riders cued by the same call do not undo each other into
 the heap (`[net-server] interact … seated window: set back … ignored`).
+
+The live switch back and the broken bridge (plan 11; `Rails/Core/SwitchBackRules.cs`, `RailEncounterController.Switchyard.cs` and
+`.Break.cs`). A `switch_back` is live, not fixed, only when a broken bridge's gap (see "Crevasses") lies `LeadMin` to `LeadMax`
+(12–40 m) past its points on its own ride (`SwitchBackRules.LiveBack`, Ruling 13); otherwise it stays fixed as before. Every role
+decides this the same way at build, and the build line says `[rails] switch {id} points … (live: the broken bridge {lead} m past)`
+or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.0, 20.1 m before the gap.
+- **The late return** (Ruling 14). With a live back, `switch_out` crosses with the return unset (`BackAtSwitchOut`: NaN; the take line
+  says `the return open: {back}'s lever decides at S=…`). At the back's points the cart takes the lever as it stands then
+  (`TakeBack`, `BackAtPoints`): thrown, it calls `Cross(CrossOutS, points)` and comes home ("The cart takes the switch back onto the
+  party line.", `[rails] switch {id} taken at S=…: back from {points}`); straight, it stays across (`… passed straight: the cart
+  stays on the slag line`) and runs on to the gap. Clients learn the late return from `CartStateDto.CrossBack`, already on the wire,
+  so the protocol stays 17. A lever thrown, then set back, or thrown and set back by a walker earlier counts only as it stands at
+  the points.
+- **Only a player's** (Ruling 15, `TrackSwitch.Deadly`). A live back's collision layers are 1|8, not 4, so no hit decides it
+  (`ReceiveAttack` is a `Miss`: a companion's stray arrow or blade never throws it), and it moves only for a human's E
+  (`SwitchBackRules.MayToggle`: `ControlKind.LocalHuman` or `Remote`); a companion's or a hero bot's `Interact` does nothing.
+  `Fixed` and `Deadly` are never both true.
+- **Offered from the seat while across** (Ruling 16). The seated window offers a live back only while the cart is across with no return
+  set (`SwitchBackRules.Offered`: `Crossing && float.IsNaN(CrossBackS)`), on every peer, and the server's `InSeatedWindow` uses the
+  same gate. It offers nothing on foot either unless the cart is across with its return open, so it cannot be thrown ahead from the
+  platform. The window, the grace and the set-back guard are plan 8's.
+- **Two calls** (Ruling 17, `SwitchBackRules.Call`). Only a deadly lever gets them; `switch_out` keeps its one "Line's blocked" call.
+  The early call, "The slag line's out past the bridge — switch back!" (`BarkTrigger.SwitchBack`), comes once with the front
+  `CallEarly` (30 m) before the lever, or at once on crossing if the lever is nearer. The last, "Switch back — now!"
+  (`BarkTrigger.SwitchBackNow`), comes with the front `CallLast` (6 m) before the points while the lever is still straight; if both
+  are due, the last is said. Both are Shouts with subtitle-only stock lines in `RideBarks`, said through `RailCalls.Say`:
+  `[rails] switch {id} called {early|last} at front S=… (… m to the points); bark=…`. The flags reset at the ride's arming.
+- **The warning by sight** (Ruling 18). A live back has a steady red signal lamp on its own post, on the slag line's outer side,
+  `SignalPast` (3 m) past its points (an `OmniLight3D`, 5 m, energy 1.6). The gap is dressed so it reads from the lever, about 20 m
+  off (`BrokenBridge`): splintered plank ends hanging into the gap, the rails ending in stubs bent 30° down, a red lamp at the near
+  edge on the party lane's side and a second at the far edge on the outer side, an ember glow under the deck lighting the broken
+  ends and the rock, and a warm haze rising out of it. The enemy track's rails and sleepers are cut over the gap (`RailTrack.Cut`).
+- **The fall** (Ruling 12). The party's train falls (`RailController.Fall("The slag line ends at the broken bridge!")`, see
+  "Crevasses") when its front reaches the gap's near edge still across there (`SwitchBackRules.Falls`: `LaneBlendAt(gapS)` ≥ 0.5);
+  the server prints `[rails] the cart runs off the broken bridge at S=…`. A guard (`SwitchBackRules.FallArmed`) keeps a correct
+  choice alive: if any `switch_out` short of the gap has no first switch back after it whose points stand at least `HomeStretch` (6 m)
+  short of the gap, the gap's fall is disarmed on that ride and an ERROR line says so. The watchdog never carries a train across the
+  gap either (see "The watchdog").
+- **Other carts at the gap.** A ride's slag cart or the traffic cart whose front reaches the gap on the enemy track drops through it,
+  its riders lost to the crevasse (`CrevasseWatch.Take`). It goes quietly (`SlagCart.PlungeThrough`): no derail line, no taunt, no
+  tremor on any peer; "The slag cart plunges through the broken bridge." is logged only with a hero within `PlungeHeard` (40 m) of
+  the gap (`PlungeTold`), and a client reads the drop from the gone cart's last position (`PlungedAt`). Traffic started while the
+  party's cart is held past the gap starts `TrafficPastGap` (2 m) past its far edge (`TrafficStartS`), so the stops beyond keep their
+  traffic.
+
+`--test-switch-back[=wrong|stall]` (`DebugTools.SwitchBack.cs`, quits after 300 s) plays floor 12 at lethality 3 and prints
+`[switchback]` lines and a `[switchback] RESULT`. A: the broken bridge as built (the gap bare of footing and track, the deck and the
+party lane beside it whole), a traffic cart with a rider dropping through the gap quietly (told only with a hero within 40 m), and,
+with the cart at stop 4, traffic starting past the gap. B (thrown, the default): ride 3 across the slag line with no hook; the early
+call is heard 25–30 m before the lever; until the lead's press the lever stays straight with `LastToggledBy` null (no companion
+touched it); the seated window offers it ("Throw the switch") and the lead presses through `VrUse`; the take line says `back from`;
+the lane blend is ≤ 0.01 by the points + 6 + 1.1 + 1 m; there is no fall and the cart arrives at stop 3; and a layer-1 ray from the
+seated lead's eye at the lever's S to the bridge's lamp is clear (`RESULT ok (thrown)`). `=wrong`: nobody presses; both calls are
+heard (the last 5–6.5 m before the points), the lever is never thrown, the take line says `passed straight`, the train falls at the
+gap (every rider fallen, nobody but the train), and the wipe rises at stop 2 (`RESULT ok (wrong)`). `=stall`: as `=wrong`, with the
+cart caught short of the back's points and again past them: the watchdog sets it at the points, then grinds it into the gap (a
+fall), never across.
 
 The heap. An `OreHeap` blocks the party lane (`RailController.BlockLine`). Its lantern blinks while a cart bears down on
 it. A seated companion calls "Line's blocked — switch!" once, as the seated window opens (the front 15 m before the lever)
@@ -1627,10 +1762,21 @@ over a cellar, a tunnel or the under layer. It cuts four kinds of drop:
   one-cell halls at least `WalkwayRoomGap` (3) cells from any room, the rock `WalkwayReach` (2) cells deep either side cut
   to chasm, chosen farthest-point from the up stairs and then from each other, at least `WalkwaySpacing` (8) apart. They are
   planks only, never detours.
+- **The broken bridge** (plan 11, `FloorSpec.BrokenBridgeRide`, Rulings 10 and 11; `RailLine.Break`, a `RailBreak(Ride, Run, Gap)`).
+  On that ride the generator takes the longest outward strip-eligible straight run (`StripCells` with way +1) of at least
+  `RailRules.BreakMinCells` (5) cells inside fractions `BreakFrom` 0.55 to `BreakTo` 0.90 of the ride (platform middle to platform
+  middle, `StripPlatformGap` in from each platform; ties go to the later run, and a longer run is clipped to its middle
+  `StripMaxCells`, 8). Each run cell's outward t = 2 and 3 become chasm at the lane's level; the run's enemy-lane cells become `Deck`
+  bridges except its middle one (party index `From + Count / 2`), which becomes a `Cell.Chasm`: the 4 m gap. The gap stays in
+  `RailLine.Enemy` (code that walks the enemy lane must skip it), and the party lane stays solid floor. The break is that ride's
+  strip (it also appears in `RailLine.Strips`), so the ride gets no other. It is refused on the cavern's ride and on the last ride
+  (`RailLine.BreakWhy` = `refused`); with no fitting run it is `none`, and the `switch_back` stays fixed (Ruling 13). `--print-map`
+  reports it as `break=…` on the `[map] rail` line (see "Rails" above). Floor 12 sets `BrokenBridgeRide` 3:
+  `break=188@0.81 run=185..191`, the gap at party S 714.1 on ride 3.
 
 `FloorLayout.Bridges`, `IsBridge`, `IsChasm` and `ChasmCount` read them; `--print-map` reports them on the `[map] rail` line
-(see above). Floor 12 (the shipped layout): cavern 238..259 on ride 4, chasm=210, strips=7, four gorge spans on
-ride 5 and planks=3. The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
+(see above). Floor 12 (the shipped layout): cavern 238..259 on ride 4, chasm=209, strips=7 (ride 3's is the broken bridge),
+four gorge spans on ride 5, planks=3 and `break=188@0.81 run=185..191`. The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
 (At ± 2 m) inside a gorge span, since a trestle bridges a gorge from lip to lip, and `r5_jump` (0.65) has its whole gap
 (At ± 2.5 m) inside one span with half a cell to spare at each end; the order pour < trestle < jump < spur is kept, the golem
 going to 0.49. Building the kiln logs `[rails] r5_trestle over a crevasse: True` and `[rails] r5_jump over a crevasse: True`.
@@ -1641,7 +1787,7 @@ role, headless and the dedicated server included: a bridge cell has no stone flo
 The look is skipped headless: per 4-connected region of chasm-or-bridge cells, shaft walls (near-black at the rim, warming
 with depth), an ember floor and its light far below, two drifting smoke layers that fade as you near them (never a pale
 plane), the deck slabs on bents and the planks, on the existing `weathered_planks` texture. Every build prints
-`[chasm] regions= decks= planks=` (floor 12: 11, 44, 3). A level-1 bridge beside lower walkable ground would leave an
+`[chasm] regions= decks= planks=` (floor 12: 11, 50, 3; 44 decks before plan 11's broken bridge added its six). A level-1 bridge beside lower walkable ground would leave an
 open band under its deck; `FloorLayout.IsShutUnder` keeps a plinth there, so nobody walks in under a deck.
 
 **Who falls.** `CrevasseWatch` (`Dungeon/CrevasseWatch.cs`, a node on a crevasse floor) judges falls on the server and in
@@ -1653,7 +1799,10 @@ drops a pose off the map (`PoseGuardRules.OffTheMap`: rock, a wall, not the unde
 below that cell's floor (`DropPoseSlack`, 0.05 m, for a body just stepping off the lip; above it is walking on air), so a
 player who walks off an edge on their own screen is judged by the server like anyone else. A fallen body's poses are ignored
 (the server holds it under the lip), and its return shoves it out first so the poses still in flight from its client's held
-body are dropped (`PoseGuardRules.DropAfterShove`). Its fate (`CrevasseRules.FateOf`; an NPC's kind by `CrevasseRules.NpcBody`):
+body are dropped (`PoseGuardRules.DropAfterShove`). Its return out of the crevasse is guarded the same way (plan 11, Ruling 20):
+the server notes each returned member (`ServerWorld.NoteReturned`) and drops that member's poses over a drop cell
+(`PoseGuardRules.DropAfterReturn`) until one arrives off a drop, giving up after `ReturnHoldSeconds` (3 s) so a lost ForcePose
+cannot freeze a body; poses from the client's still-held body would otherwise send it straight back in. Its fate (`CrevasseRules.FateOf`; an NPC's kind by `CrevasseRules.NpcBody`):
 - **A hero** is `CharacterState.Fallen`: down at 0 HP, hidden, not solid and held 6 m under the lip (`HoldDepth`, above
   `Adventurer.FellOutY`, so it never trips the fell-out guard). Heal, Regenerate, Revive and a level-up's heal do nothing
   while fallen, and `Downed` counts it, so a party with every hero fallen or down wipes. `Fallen` is saved
@@ -1687,7 +1836,8 @@ when its cell may take a body and the ground to it from the lead's footing holds
 `OverReach` (2) cells (`CrevasseRules.OverCrevasse`). A seated hero calls the drop as the cart's front enters a trestle over a crevasse (`RailCalls`, `BarkTrigger.Crevasse`;
 `[rails] ... over the crevasse, called by ...`). A missed jump or a trestle collapse over such cells calls
 `RailController.Fall(why)` (`RailController.Fall.cs`), the entry later plans call; anywhere else it is the plain wreck.
-A fall is a wreck with no tumble: the riders, the hounds aboard, every coupled wagon and its crew go into the crevasse
+The broken bridge's gap is the third cause (plan 11): the party's train still across on the slag line as its front reaches the gap
+falls there (see "The live switch back and the broken bridge" under "The five rides"). A fall is a wreck with no tumble: the riders, the hounds aboard, every coupled wagon and its crew go into the crevasse
 (`TakeTheTrain` takes the riders over the nearest drop), the wagons are hidden and marked lost
 (`ObjectiveStateDto.LostCages`). A spare takes over only if a hero still stands (`CrevasseRules.SpareAfterFall`), so a fall
 that takes everyone spends no spare before the wipe. On the wire it is the usual Wrecked state plus `CartStateDto.Fell`
@@ -1742,7 +1892,9 @@ back on the floor change to 13.
 Tests: `tests/Dungeon/ChasmTests.cs` (the carving, the walkways, `IsShutUnder`), `tests/Dungeon/CrevasseRulesTests.cs` (the
 fates, `NpcBody`, the lip, the footing guard, the rejoin and return rules), `tests/Dungeon/Rails/FallenReturnTests.cs`,
 `tests/Save/RailArrivalTests.cs` (the merge), `tests/Adventure/RideBarksTests.cs` and `tests/Dungeon/RailLineTests.cs`
-(`DefaultKnobs_BuildTodaysFloors` pins every floor with `Crevasses` off; the strip, gorge and cavern sweeps).
+(`DefaultKnobs_BuildTodaysFloors` pins every floor with `Crevasses` off; the strip, gorge and cavern sweeps). The low-ground
+sweep allows a diagonal (corner) neighbour of a chasm to sit at most `CrevasseRules.CornerLipSlack` (1 m, the observed value) below
+its lip, not `FallDepth` (plan 11, Ruling 21), so a future layout that touches a lip diagonally by more fails it loudly.
 
 ### Lines, sound and music
 
@@ -2064,7 +2216,7 @@ What a prompt cannot know stays on the server, which refuses with its log line: 
 
 **Wire names.** Every rail prop has one (`NetRefs`; `NetRefResolver.RefOf` and `Resolve`):
 - by stop: `gate:{stop}`, `winch:{stop}`, `wagon:{stop}` and `spare:{stop}`;
-- by set piece: `switch:{piece}`, `spur:{piece}` (the spur's lever), `heap:{piece}`, `valve:{piece}`, `trestle:{piece}` and `buffer:{piece}`;
+- by set piece: `switch:{piece}`, `spur:{piece}` (the spur's lever), `heap:{piece}`, `valve:{piece}`, `trestle:{piece}`, `buffer:{piece}` and `barricade:{piece}` (plan 11);
 - `keyring:0` and `cart:0`.
 
 **PropEvt.** Each prop tells its own change on the server as a `PropEvt`:
@@ -2074,6 +2226,7 @@ What a prompt cannot know stays on the server, which refuses with its log line: 
 - the valve "broken" and "rebuilt";
 - a trestle "collapsed" and "rebuilt";
 - a buffer "smashed" and "restored";
+- a barricade "cut", "smashed" and "standing" (plan 11; the Rail part's `DownBarricades`);
 - a spare "used" and "restored";
 - a wagon "opened";
 - the keyring "taken".
@@ -2087,8 +2240,8 @@ A client's `Show*` methods apply them silently. A live event plays the cosmetic 
 
 **Using the props.** A remote player uses the switch, the winch, a cage wagon and the keyring through `InteractIntent`.
 - A downed actor does nothing.
-- **A lever thrown from the seat of a rolling cart** is judged with `PropPromptRules.LeverReach`: 3.5 m plus the cart's speed times half the member's round trip, at most 1.5 m more.
-- **Hits need nothing new.** Brake shoes, the heap, the valve and a lever thrown by a blow all go through `AttackIntent`, which runs the server's melee.
+- **A lever thrown from the seat of a rolling cart** is judged with `PropPromptRules.LeverReach`: 3.5 m plus the cart's speed times half the member's round trip, at most 1.5 m more; in the seated window by `InSeatedWindow`, accepted up to `SeatedSwitchRules.AcceptLead` (5 m) before the server's own window opens (see "Switches and the lane blend").
+- **Hits need nothing new.** Brake shoes, the heap, the valve, a barricade and a lever thrown by a blow all go through `AttackIntent`, which runs the server's melee (a live switch back takes no hits). A seated rider's blow at a barricade 0.5 m ahead of the cart's front lands from the front seat (the RIDE pass).
 - A test server traces each use as `prop:{ref}:{state}`.
 - Partial knocks on the heap are not synced, so a partly knocked heap shows whole on clients until it is cleared.
 
@@ -2140,6 +2293,12 @@ The callers send the floor clock's pair just before it, and `OnFloorReady` also 
   - **The heap face.** An obstacle on the party lane short of the next stop: the cart is set at its face and halted there, with no dent.
   - **The gap lip.** An unjudged jump gap short of the next stop: the cart is set with its front at the near lip plus `LipNudge` (0.01 m), at `SetPieceRules.JumpSpeed`, and the jump is judged on that same tick.
   - With both short of the stop, the nearer one along the line wins (a tie goes to the face).
+  - **The broken bridge** (plan 11, `RailEncounterController.WatchdogBreak`, `SwitchBackRules.GrindBackTo`). A train stuck across on the
+    slag line with its return open, short of a live switch back it has not taken, is never carried past a window its player was
+    not shown: with the lever straight and the front short of the back's seated window, it is set with its front at the window's
+    start (`lever − 15 m`, still rolling: the calls and the offer run as they would); inside the window, or with the lever thrown,
+    at the back's points, where the back is taken as its lever stands. Stuck past the back with its return open, it is ground on
+    to the gap, where it falls as it would have (`FallNow`). Each prints its own `[rails] watchdog:` line.
   - Otherwise the cart arrives at the next stop, Held there.
 
 **The other carts.**
@@ -2151,6 +2310,8 @@ The callers send the floor clock's pair just before it, and `OnFloorReady` also 
 1. A caught cart (`RailController.DebugStall`) held on the brake for 15 s is not freed.
 2. Let go, it grinds free to stop 1 about 10 s later.
 3. Restored at the kiln's stop (`rc.Restore(LineShape.LastRideStop)`, stop 4 on the shipped floor: the test's shortcut over the rides between) and caught short of the kiln's gap (ride 5's), it is set at the lip and leaps it.
+
+The broken bridge's cases are proven by `--test-switch-back=stall` (see "The live switch back and the broken bridge").
 
 #### The left-behind chaser
 
@@ -2233,7 +2394,7 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 - Every stop and ride the pass names for the kiln or the end of the line reads `LineShape` (`NetTestFlow.Line`): the kiln is ride
   `LastRide` (5) from stop `LastRideStop` (4), the end of the line stop `Rides` (5). The script's strings name them as numbers.
 
-**Run it alone.** Its set-piece clock checks fail on a loaded machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it.
+**Run it alone.** Its set-piece clock checks fail on a loaded machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it. The barricade and switch-back checks (plan 11) run before the clock checks, so a slow server's clocks do not hide them. Since plan 11's broken bridge the clock check fails even run alone: the server's physics runs late during ride 3 (its bucket pours 3.25–3.57 s apart instead of 3.0, the client's on time), the same at 8356ffd; it is to be profiled (see "Known gaps").
 
 **Timeouts.**
 - The server runs with `--quit-after=600` (a test server quits after 120 s unless told) and ends anyway once empty. Its own RESULT fails at 560 s.
@@ -2241,13 +2402,13 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 
 **The script, in order:**
 1. **Floor 12.** The party goes to floor 12. The server throws the kiln's (ride 5's) spur lever, and the client must show it. The client's set pieces stand and its props, rail part included, hash as the server's.
-2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping), brakes for 0.6 s (the server's V drops at least 1 m/s), and gets out at stop 1, within 0.5 m of the server's landing within 0.5 s. Cage 1 is locked there, so the client's seat must offer "Get out (hold to leave the prisoners behind)" (the server's `CartFlags.CageHeld`); the client still gets out with the plain tap.
+2. **Ride 1.** The client boards at the landing through its intent. It pumps out (the server's pumpers ≥ 1, and the client sees its own Pumping) and brakes for 0.6 s (the server's V drops at least 1 m/s). Then it cuts ride 1's barricade from the seat over the wire (plan 11): it hears the call (`[net] ride: barricade r1_barricade called here (BarkMsg …)`, or the log's plain words), from 12 m out sends the brake intent until its cart state shows V < 0.5, creeps up with the brake feathered until the front stops within 0.5 m of the face (a stop 12 m out leaves the blade metres short), and, held on the brake, aims at `r1_barricade` (`Adventurer.AimAt`, as `FightBoarders` does, which stands aside meanwhile) and swings every 0.5 s until the "cut" PropEvt arrives (`[net] ride: barricade r1_barricade cut here by our blade from the seat ({n} swings, V=…)`; the server prints `[rails] barricade r1_barricade cut by Rider`). It lets the brake go and pumps on; at stop 1 the props' hash must have matched since the cut, with no prop-check asked (`[net] ride: prop hash still matches the server's after the cut`). It gets out at stop 1, within 0.5 m of the server's landing within 0.5 s. Cage 1 is locked there, so the client's seat must offer "Get out (hold to leave the prisoners behind)" (the server's `CartFlags.CageHeld`); the client still gets out with the plain tap.
 3. **Stop 1's props.** The holders die by a hook (`DebugKillHolders`), and the gate rises on the client. The client takes the keys, opens cage 1, and revives a crewman the server downed there, each through its intent. The bleed label counts down on the client.
-4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
+4. **Ride 2.** The client boards again. The opened wagon couples on the client within 0.5 s of the departure, and the beam ducks its seated camera. Nobody cuts `r2_barricade`: the cart smashes it, and the client prints `[net] ride: barricade r2_barricade smashed here (PropEvt), plating {a} -> {b}` from the party cart's plating in the cart states just before and just after the PropEvt (the script wants a drop of 24.5–25.5). The joiner is ready mid-ride 2. Within 1 s it holds the cart, the seats, the train and the props as the server has them (`joined-mid-ride ok`).
 5. **Ride 3.** Stops 2 to 4 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's and stop 4's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat through the seated window (no aim, the
 first offer beyond the plain reach plus the seated lag allowance; the server logs `seated window yes`), and the cart crosses on
 both sides. As the throw shows on the joiner's screen, the joiner presses "Set the switch back" from its seat, and the server
-refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Ride 3's buckets pour on the server's schedule.
+refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Across, the live switch back is offered in the client's seated window only now (plan 11): the client presses it on the window's first frame through the intent (`[net] ride: ride 3's switch_back offers "Throw the switch" in the seated window … thrown through the intent from the seat`), the server traces `prop:switch:{back}:thrown` and takes it (`[rails] switch r3_switch_back taken at S=…: back from …`), and the cart comes home. Each client (the joiner, thrown and resynced, from its own screen) prints the first time its cart state's `CrossBack` turns from NaN to a number on ride 3, with the lane blend read `SwitchStretch` + 2 m on: `[net] ride: crossed back here: CrossBack {cb} told at front S={f} (the back's points {p}), blend {b} at S={s}`; the script wants `|cb − p|` ≤ 0.5 and the blend ≤ 0.01 on both, and no `[rails] the cart runs off the broken bridge` anywhere in the server's log. Ride 3's buckets pour on the server's schedule.
 6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
 7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; it boards again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way.
 8. **The kiln and the chase.** Held at stop 4, the kiln's, the joiner gets out with a tap (the cage hold's seat still lets it out). On foot beside the spare, it is offered nothing while the train is held there. The train leaves on ride 5 with the client pumping. The joiner takes `spare:4`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
@@ -2255,7 +2416,7 @@ refuses it within 1 s of the first client's toggle (`seated window: set back …
 10. **The wrecks.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 to 3 unused, and spare 3 takes over (`SpareRules.Pick`: the nearest unused stop). The heap stands on ride 3, so 3 s later the server wrecks it again and spare 2 takes over, Held at stop 2 (`wreck-spare`): on a line of any length it wrecks every 3 s until the spare of the stop the heap's ride leaves stands (`NetTestFlow.HeapStop`). The joiner sees each Wrecked state (two) and the takeover at stop 2, and must hear `cart_wreck` once: the end's wreck stands beside it, the second far out of a wreck's 30 m earshot (`RideAudio.At`).
 11. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
 12. **The last wreck.** The joiner gets out. 3 s later the server wrecks the cart (`DebugWreck`) until no spare is left, so it stands wrecked and hidden (`wreck-last`). The joiner hears that wreck live (`cart_wreck` at least once). 7 s later it asks for the floor again. Its rebuilt cart's first state carries Wrecked, and that catch-up must play nothing: no wreck shown (`NetWrecksSeen` 0), no `cart_wreck`, no tumble (`last-wreck-resync ok`).
-13. **The walk-off and the wipe's rise** (plan 10). First the joiner's own client puts its hero on the lip of the chasm nearest it (a cell a body may be set down on, level with the chasm, off the lanes when one is: `NetTestFlow.WalkOffEdge`) and, a second later, walks it off on its own input (`ForcedMoveInput`), printing `[net] ride: walk-off: the joiner steps onto the lip at …`. The server keeps its poses into the drop, the crevasse watch judges the server's copy (`[crevasse] Joiner fell at …: Dead`), and the joiner waits for its sheet to say Fallen (`[net] ride: walk-off: the sheet shows the joiner Fallen here …`). Then the joiner says it is ready (a chat line, `ride: ready for the wipe`); the server prints whether the joiner is already Fallen (`[net-server] ride: walk-off: Joiner is Fallen here before the wipe`, part of its RESULT) and gives every other hero not parked to the crevasse where it stands (`CrevasseWatch.Take`), so the party wipes; the wipe rises at the last stop reached beside a fresh cart (`RailController.RiseBesideCart`), and the server prints `[net-server] ride: wipe-rise: N hero(es) beside the cart at stop K` (its RESULT needs every hero not parked, the joiner among them, up within 10 m of the cart). The joiner waits for the rebuilt floor 12 and for a ForcePose after it (the `OnFloorReady` answer to its Ready), then half a second, and prints `[net] ride: rose beside the cart at stop K (d=… m)`, its own hero's distance from the party's cart. The joiner then prints `[net] ride: walk-off: back from the fall here: up …` (not fallen, not down, shown) or fails. The script fails with "the wipe did not set the remote player down beside the cart" unless the server's line is there and d ≤ 6.0, and with a "walk-off: …" reason unless the joiner stepped onto a lip, the server's `[crevasse] Joiner fell` line comes before the wipe's ask, the server saw the joiner Fallen, its sheet showed Fallen and it came back up. This is the proof that a remote player's own fall is judged by the server, and that the server places a remote hero before its client is ready again.
+13. **The walk-off and the wipe's rise** (plan 10). As the last wreck stands the server prints `[net-server] ride: walk-off: armed (the last wreck stands)` (plan 11 Task 1): the script's `FELL_AT` is the first `[crevasse] Joiner fell` line after that marker, and a missing marker fails it. First the joiner's own client puts its hero on the lip of the chasm nearest it (a cell a body may be set down on, level with the chasm, off the lanes when one is: `NetTestFlow.WalkOffEdge`) and, a second later, walks it off on its own input (`ForcedMoveInput`), printing `[net] ride: walk-off: the joiner steps onto the lip at …`. The server keeps its poses into the drop, the crevasse watch judges the server's copy (`[crevasse] Joiner fell at …: Dead`), and the joiner waits for its sheet to say Fallen (`[net] ride: walk-off: the sheet shows the joiner Fallen here …`). Then the joiner says it is ready (a chat line, `ride: ready for the wipe`); the server prints whether the joiner is already Fallen (`[net-server] ride: walk-off: Joiner is Fallen here before the wipe`, part of its RESULT) and gives every other hero not parked to the crevasse where it stands (`CrevasseWatch.Take`), so the party wipes; the wipe rises at the last stop reached beside a fresh cart (`RailController.RiseBesideCart`), and the server prints `[net-server] ride: wipe-rise: N hero(es) beside the cart at stop K` (its RESULT needs every hero not parked, the joiner among them, up within 10 m of the cart). The joiner waits for the rebuilt floor 12 and for a ForcePose after it (the `OnFloorReady` answer to its Ready), then half a second, and prints `[net] ride: rose beside the cart at stop K (d=… m)`, its own hero's distance from the party's cart. The joiner then prints `[net] ride: walk-off: back from the fall here: up …` (not fallen, not down, shown) or fails. The script fails with "the wipe did not set the remote player down beside the cart" unless the server's line is there and d ≤ 6.0, and with a "walk-off: …" reason unless the joiner stepped onto a lip, the server's `[crevasse] Joiner fell` line comes before the wipe's ask, the server saw the joiner Fallen, its sheet showed Fallen and it came back up. This is the proof that a remote player's own fall is judged by the server, and that the server places a remote hero before its client is ready again.
 
 The kiln's first hammer (`HammerIndexOf(LastRide)`) is paired all through the pass.
 
@@ -2298,10 +2459,13 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - a wipe's reload mid-ride. The pass's wipe (step 13) comes with the cart wrecked and held, and the resync runs the same `OnFloorReady` catch-up;
 - a fall on a client: the plunge (`CartStateDto.Fell`), the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire. A remote player's own fall is proven over the wire (step 13's walk-off): a walk off a lip on the joiner's own input, judged by the server, shown Fallen on the joiner's sheet and brought back by the wipe's rise. A return at a stop arrival or a platform step for a remote player, and a jump across a chasm (its airborne poses above the lip are dropped until it lands), are not;
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
-- a thrown remote player's run-over damage. The pass checks only its landing.
+- a thrown remote player's run-over damage. The pass checks only its landing;
+- plan 11 on a client: the train's fall at the broken bridge (the pass takes the live back; the fall is proven solo by `--test-switch-back=wrong`), a slag or traffic cart plunging through the gap (and a ride's slag cart reaching it with a living rider, end to end), a barricade cut on foot or with a spell over the wire, a slag-line barricade's smash watched on a client, and a barricade smashed while its ride is not armed standing again at its arming (rule-tested only);
+- a refused seated press: the server refuses a seated `InteractIntent` it does not accept (out of its window and the 5 m lead, past the points, taken, or a set-back inside the guard) with only its own log line; the client gets no feedback, so on a live switch back a refused press leaves the player believing the lever thrown until the lamp and the calls say otherwise.
 
 **Known differences, accepted for now:**
-- A partly knocked heap shows whole on clients.
+- A partly knocked heap shows whole on clients, and so does a barricade with one or two hits in it (only "cut", "smashed" and "standing" go on the wire).
+- **The RIDE pass's set-piece clocks** (plan 11): the server's physics runs late during ride 3, so its bucket pours drift from the client's (3.25–3.57 s apart against 3.0) and the clock check fails; an A/B against 8356ffd fails the same way. Earlier plan 11 runs (up to db7ba58's tree) passed it, so a slowdown may have come with the broken bridge's build (Tasks 5–6); the final review profiles it. The check is not loosened.
 - A thrown remote body lands still, where a solo one slides at 0.3·V.
 - A slag cart first seen through a correction on a bend may put its brake shoe on the other side.
 - A boarder freed silently at a ride's end stands as a ghost for up to about 4 s.

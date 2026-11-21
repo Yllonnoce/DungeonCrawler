@@ -7,12 +7,15 @@
 #        RIDE=1 scripts/net_test.sh  (the built-in campaign: the server takes the client to floor 12, where the rides' set
 #                                     pieces must stand on the client and its props must hash as the server's; the client
 #                                     boards the cart at the landing through its intent, pumps out of it (the server shows
-#                                     the pump), brakes on the way and gets out at stop 1 at the server's landing; stop 1's
+#                                     the pump), brakes on the way, brakes again for ride 1's barricade and cuts it with
+#                                     its blade from the seat, and gets out at stop 1 at the server's landing; stop 1's
 #                                     holders die by the test's hand and its gate rises on the client; the client takes the
 #                                     orc's keys, opens cage 1 and revives a crewman the server downed in it, each through its
 #                                     intent; it boards again, rides on (every departure a real one) and throws ride 3's switch
 #                                     from the seat through the seated window (beyond plain reach, no aim; the joiner's quick
-#                                     set-back is refused), and the cart crosses on both; the client's carts must keep within 1.5 m (2 m
+#                                     set-back is refused), and the cart crosses on both; ride 2's barricade is smashed (the client sees
+#                                     the plating drop 25); across, the client throws ride 3's live switch back from the seat and both
+#                                     clients see the late CrossBack bring the cart home (nothing runs off the broken bridge); the client's carts must keep within 1.5 m (2 m
 #                                     for ride 3's slag cart) of the server's on a shared server-time grid; the crew sit in their
 #                                     wagons on the client as on the server; at the end of the line the client leaves the game seated, and the
 #                                     server unseats it quietly beside the lane with its parked pose there; the crew, the gates and the
@@ -179,6 +182,25 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: the cage wagon coupled here .* after the cart left stop 1" "$TMP/client.log"; then echo "NET TEST: FAIL (the coupled wagon never showed on the client at stop 1's departure)"; exit 1; fi
   if ! grep -q "\[net\] ride: .*'s label counts down here" "$TMP/client.log"; then echo "NET TEST: FAIL (the downed crewman's label did not count down on the client)"; exit 1; fi
   if ! grep -q "\[net\] ride: the beam .* our seated camera ducks" "$TMP/client.log"; then echo "NET TEST: FAIL (the beam never ducked the client's seated camera)"; exit 1; fi
+  # barricades and the live switch back over the wire (plan 11 task 8), before the clock checks below so a slow server's clocks do not
+  # hide them: ride 1's barricade is cut by the client's blade from the seat (its line and the server's, with no smash logged before
+  # the cut); ride 2's smash shows on the client as a 25 drop in the plating between the cart states either side of its PropEvt; the
+  # client throws ride 3's live switch back from the seat and the server takes it (back from); on both clients the CrossBack, told
+  # when it turns from NaN, is the back's points within 0.5 m and the cart is home on its own lane (blend <= 0.01) SwitchStretch + 2 m on;
+  # and nothing ever runs off the broken bridge
+  echo "--- barricades and the switch back"; grep -h "\[net\] ride: barricade \|\[net\] ride: crossed back here\|\[rails\] barricade r[0-9]_barricade \(cut\|smashed\)\|\[rails\] switch r3_switch_back taken" "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null
+  CUT_AT=$(grep -n "\[rails\] barricade r1_barricade cut by Rider" "$TMP/server.log" | head -1 | cut -d: -f1)
+  SMASH_AT=$(grep -n "smashes through the barricade" "$TMP/server.log" | head -1 | cut -d: -f1)
+  if [ -z "$CUT_AT" ] || ! grep -q "\[net\] ride: barricade r1_barricade cut here by our blade from the seat (" "$TMP/client.log"; then echo "NET TEST: FAIL (ride 1's barricade was not cut by the client's blade from the seat: no server cut by Rider or no client cut line)"; exit 1; fi
+  if [ -n "$SMASH_AT" ] && [ "$SMASH_AT" -lt "$CUT_AT" ]; then echo "NET TEST: FAIL (a barricade was smashed before ride 1's was cut: $(sed -n "${SMASH_AT}p" "$TMP/server.log"))"; exit 1; fi
+  SMASH2=$(grep -o "\[net\] ride: barricade r2_barricade smashed here (PropEvt), plating [-0-9.]* -> [-0-9.]*" "$TMP/client.log" | head -1)
+  if [ -z "$SMASH2" ] || ! echo "$SMASH2" | awk '{ a = $(NF-2); b = $NF; d = a - b; exit !(a != "" && d >= 24.5 && d <= 25.5) }'; then echo "NET TEST: FAIL (ride 2's smash did not show on the client as a 25 drop in the plating: ${SMASH2:-no line})"; exit 1; fi
+  if ! grep -q "\[net\] ride: ride 3's switch_back offers \"Throw the switch\" in the seated window .* thrown through the intent from the seat" "$TMP/client.log" || ! grep -q "\[rails\] switch r3_switch_back taken at S=.*: back from" "$TMP/server.log"; then echo "NET TEST: FAIL (the client's seated throw of ride 3's live switch back, or the server's back from, is missing)"; exit 1; fi
+  for f in client joiner; do
+    CB=$(grep -o "\[net\] ride: crossed back here: .*" "$TMP/$f.log" 2>/dev/null | head -1)
+    if [ -z "$CB" ] || ! echo "$CB" | awk '{ for (i = 1; i <= NF; i++) { if ($i == "CrossBack") cb = $(i+1); if ($i == "points") { p = $(i+1); sub(/\),?$/, "", p) } if ($i == "blend") b = $(i+1) } d = cb - p; if (d < 0) d = -d; exit !(cb != "" && p != "" && cb != "NaN" && p != "NaN" && b != "NaN" && d <= 0.5 && b + 0 <= 0.01) }'; then echo "NET TEST: FAIL (the $f did not show the late switch back: ${CB:-no crossed back line})"; exit 1; fi
+  done
+  if grep -q "\[rails\] the cart runs off the broken bridge" "$TMP/server.log"; then echo "NET TEST: FAIL (the cart ran off the broken bridge: $(grep -m1 "\[rails\] the cart runs off the broken bridge" "$TMP/server.log"))"; exit 1; fi
   # the set pieces' clocks: the kiln's (ride 5's) first hammer enters its fall on both sides (server time; every client fall paired with the nearest
   # server fall within 1 s, all within 50 ms, at least 10); ride 3's buckets pour on both sides from the ride's arm time (by bucket, within 0.1 s)
   CLOCKS=$(awk '

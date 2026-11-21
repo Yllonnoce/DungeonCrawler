@@ -33,9 +33,10 @@ public static class SeatedSwitchRules
     /// <summary>
     /// The server accepts a seated press this far before its own window opens (Task 7 fix round): a co-op client's cart can run a few metres
     /// ahead of the server's (it extrapolates; a loaded server steps late), so a press on the client's first window frame can reach the
-    /// server short of its window. The offer itself (<see cref="InWindow"/>) still opens at <see cref="WindowAhead"/>.
+    /// server short of its window. The offer itself (<see cref="InWindow"/>) still opens at <see cref="WindowAhead"/>. 5 m (plan 11 Task 8):
+    /// the measured client leads were 1.5–2.8 m, and the points and Taken guards keep a larger lead safe.
     /// </summary>
-    public const float AcceptLead = 3f;
+    public const float AcceptLead = 5f;
 
     /// <summary>
     /// The server's acceptance of a seated press on <paramref name="lever"/>: as <see cref="InWindow"/>, the window's start moved
