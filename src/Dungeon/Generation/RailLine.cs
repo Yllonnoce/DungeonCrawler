@@ -54,7 +54,7 @@ public static class RailRules
     public const int SplitMinCells = 6;
     /// <summary>The split's crevasse: the last this many cells of its run, cut outward of the slag line.</summary>
     public const int SplitCells = 4;
-    /// <summary>On the cavern's ride, the fewest party-lane cells between the split's run and the cavern span.</summary>
+    /// <summary>On the cavern's ride, the split's run ends at least this many cells before the cavern's first cell (its last index is at most <c>Cavern.From - SplitCavernGap</c>).</summary>
     public const int SplitCavernGap = 3;
 }
 

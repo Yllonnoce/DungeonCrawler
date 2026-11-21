@@ -197,51 +197,22 @@ public static partial class FloorGenerator
     {
         var k = ride - 1;
         if (k >= rail.Stops.Count - 2) return (null, "refused"); // the last ride, or past it
-        var index = new Dictionary<GridPos, int>();
-        for (var i = 0; i < rail.Party.Count; i++) index[rail.Party[i]] = i;
-        var after = index[rail.Stops[k].Platform[^1]];
-        var before = index[rail.Stops[k + 1].Platform[0]];
-        if (rail.Cavern is { } cavern && cavern.From > after && cavern.From < before) return (null, "refused"); // the cavern's ride
-        var a = index[rail.Stops[k].Platform[0]] + rail.Stops[k].Platform.Count / 2;
-        var b = before + rail.Stops[k + 1].Platform.Count / 2;
-        var from = Math.Max(after + RailRules.StripPlatformGap, a + (int)Math.Ceiling(RailRules.BreakFrom * (b - a)));
-        var to = Math.Min(before - RailRules.StripPlatformGap, a + (int)Math.Floor(RailRules.BreakTo * (b - a)));
-        var enemy = rail.Enemy.ToHashSet();
-        var taken = TakenCells(layout);
-        List<(int I, GridPos[] Cells)>? best = null, run = null;
-        for (var i = from; i <= to + 1; i++)
-        {
-            var cells = i <= to ? StripCells(layout, rail, enemy, pockets, taken, sign, i, 1) : null;
-            if (cells != null && !taken.Contains(Twin(i)))
-            {
-                (run ??= new()).Add((i, cells));
-                continue;
-            }
-            if (run != null && run.Count >= RailRules.BreakMinCells && (best == null || run.Count >= best.Count)) best = run; // ties: the later
-            run = null;
-        }
-        if (best == null) return (null, "none");
+        var w = RideWindow(rail, k, RailRules.BreakFrom, RailRules.BreakTo);
+        if (rail.Cavern is { } cavern && cavern.From > w.After && cavern.From < w.Before) return (null, "refused"); // the cavern's ride
+        if (LongestOutwardRun(layout, rail, sign, pockets, w.From, w.To, RailRules.BreakMinCells) is not { } best) return (null, "none");
         var cut = Math.Max(0, best.Count - RailRules.StripMaxCells);
         best = best.Skip(cut / 2).Take(RailRules.StripMaxCells).ToList();
         var span = new RailSpan(best[0].I, best[^1].I);
         var gap = span.From + best.Count / 2;
-        foreach (var (i, cells) in best)
+        CutOutward(layout, rail, best, pockets, dropped);
+        foreach (var (i, _) in best)
         {
-            var level = layout.LevelOf(rail.Party[i]);
-            foreach (var c in cells)
-            {
-                if (pockets.Contains(c)) dropped.Add(c);
-                layout[c] = Cell.Chasm;
-                layout.SetLevel(c, level); // the drop's lip is the lane's floor beside it
-            }
-            var twin = Twin(i);
+            var twin = SlagTwin(rail, i, sign);
             if (i != gap) { layout.Bridges[twin] = BridgeKind.Deck; continue; }
             layout[twin] = Cell.Chasm; // the gap: the slag line's 4 m with no deck
-            layout.SetLevel(twin, level);
+            layout.SetLevel(twin, layout.LevelOf(rail.Party[i]));
         }
         return (new RailBreak(ride, span, gap), "ok");
-
-        GridPos Twin(int i) => rail.Party[i] + RailSide(rail.Party[i + 1] - rail.Party[i], sign);
     }
 
     /// <summary>
@@ -260,46 +231,90 @@ public static partial class FloorGenerator
     {
         var k = ride - 1;
         if (ride == breakRide || k >= rail.Stops.Count - 2) return (null, "refused"); // the broken bridge's ride, the last ride, or past it
+        var (from, to) = SplitWindow(rail, k);
+        if (LongestOutwardRun(layout, rail, sign, pockets, from, to, RailRules.SplitMinCells) is not { } best) return (null, "none");
+        var cut = best.Skip(best.Count - RailRules.SplitCells).ToList();
+        CutOutward(layout, rail, cut, pockets, dropped);
+        var crevasse = new RailSpan(cut[0].I, cut[^1].I);
+        return (new RailSplit(ride, crevasse, crevasse.From - 1), "ok");
+    }
+
+    /// <summary>
+    /// The party-lane index window on 0-based ride <paramref name="k"/> (from stop k to stop k + 1): <c>After</c> and
+    /// <c>Before</c> the last and first platform cells either side, and <c>From</c>..<c>To</c> the cells
+    /// <see cref="RailRules.StripPlatformGap"/> in from each platform and within <paramref name="fromFraction"/> to
+    /// <paramref name="toFraction"/> of the ride, platform middle to platform middle. Empty when From &gt; To.
+    /// </summary>
+    internal static (int After, int Before, int From, int To) RideWindow(RailLine rail, int k, float fromFraction, float toFraction)
+    {
         var index = new Dictionary<GridPos, int>();
         for (var i = 0; i < rail.Party.Count; i++) index[rail.Party[i]] = i;
         var after = index[rail.Stops[k].Platform[^1]];
         var before = index[rail.Stops[k + 1].Platform[0]];
         var a = index[rail.Stops[k].Platform[0]] + rail.Stops[k].Platform.Count / 2;
         var b = before + rail.Stops[k + 1].Platform.Count / 2;
-        var from = Math.Max(after + RailRules.StripPlatformGap, a + (int)Math.Ceiling(RailRules.SplitFrom * (b - a)));
-        var to = Math.Min(before - RailRules.StripPlatformGap, a + (int)Math.Floor(RailRules.SplitTo * (b - a)));
-        if (rail.Cavern is { } cavern && cavern.From > after && cavern.From < before) to = Math.Min(to, cavern.From - RailRules.SplitCavernGap); // short of the cavern
+        var from = Math.Max(after + RailRules.StripPlatformGap, a + (int)Math.Ceiling(fromFraction * (b - a)));
+        var to = Math.Min(before - RailRules.StripPlatformGap, a + (int)Math.Floor(toFraction * (b - a)));
+        return (after, before, from, to);
+    }
+
+    /// <summary>
+    /// The split's window on 0-based ride <paramref name="k"/>: <see cref="RideWindow"/> over <see cref="RailRules.SplitFrom"/>
+    /// to <see cref="RailRules.SplitTo"/>, its end clamped on the cavern's ride to <see cref="RailRules.SplitCavernGap"/> cells
+    /// before the cavern's first cell. Empty when From &gt; To.
+    /// </summary>
+    internal static (int From, int To) SplitWindow(RailLine rail, int k)
+    {
+        var w = RideWindow(rail, k, RailRules.SplitFrom, RailRules.SplitTo);
+        var to = w.To;
+        if (rail.Cavern is { } cavern && cavern.From > w.After && cavern.From < w.Before) to = Math.Min(to, cavern.From - RailRules.SplitCavernGap); // short of the cavern
+        return (w.From, to);
+    }
+
+    /// <summary>
+    /// The longest run of consecutive party-lane cells in <paramref name="from"/>..<paramref name="to"/> an outward strip can lie
+    /// beside (<see cref="StripCells"/> with way +1) whose enemy twins nothing takes (<see cref="TakenCells"/>), of at least
+    /// <paramref name="minCells"/>, with each cell's two outward cells; ties go to the later run. Null when there is none.
+    /// </summary>
+    private static List<(int I, GridPos[] Cells)>? LongestOutwardRun(FloorLayout layout, RailLine rail, int sign, HashSet<GridPos> pockets, int from, int to, int minCells)
+    {
         var enemy = rail.Enemy.ToHashSet();
         var taken = TakenCells(layout);
         List<(int I, GridPos[] Cells)>? best = null, run = null;
         for (var i = from; i <= to + 1; i++)
         {
             var cells = i <= to ? StripCells(layout, rail, enemy, pockets, taken, sign, i, 1) : null;
-            if (cells != null && !taken.Contains(Twin(i)))
+            if (cells != null && !taken.Contains(SlagTwin(rail, i, sign)))
             {
                 (run ??= new()).Add((i, cells));
                 continue;
             }
-            if (run != null && run.Count >= RailRules.SplitMinCells && (best == null || run.Count >= best.Count)) best = run; // ties: the later
+            if (run != null && run.Count >= minCells && (best == null || run.Count >= best.Count)) best = run; // ties: the later
             run = null;
         }
-        if (best == null) return (null, "none");
-        var cut = best.Skip(best.Count - RailRules.SplitCells).ToList();
-        foreach (var (i, cells) in cut)
+        return best;
+    }
+
+    /// <summary>
+    /// Cut each run cell's outward cells (t = 2, 3, from <see cref="LongestOutwardRun"/>) to chasm at the party lane's level,
+    /// so the drop's lip is the lane's floor beside it; the pockets cut away are added to <paramref name="dropped"/>.
+    /// </summary>
+    private static void CutOutward(FloorLayout layout, RailLine rail, IEnumerable<(int I, GridPos[] Cells)> run, HashSet<GridPos> pockets, HashSet<GridPos> dropped)
+    {
+        foreach (var (i, cells) in run)
         {
             var level = layout.LevelOf(rail.Party[i]);
             foreach (var c in cells)
             {
                 if (pockets.Contains(c)) dropped.Add(c);
                 layout[c] = Cell.Chasm;
-                layout.SetLevel(c, level); // the drop's lip is the lane's floor beside it
+                layout.SetLevel(c, level);
             }
         }
-        var crevasse = new RailSpan(cut[0].I, cut[^1].I);
-        return (new RailSplit(ride, crevasse, crevasse.From - 1), "ok");
-
-        GridPos Twin(int i) => rail.Party[i] + RailSide(rail.Party[i + 1] - rail.Party[i], sign);
     }
+
+    /// <summary>The enemy (slag) lane's twin of party-lane cell <paramref name="i"/>: one step to <see cref="RailSide"/> of its heading.</summary>
+    private static GridPos SlagTwin(RailLine rail, int i, int sign) => rail.Party[i] + RailSide(rail.Party[i + 1] - rail.Party[i], sign);
 
     /// <summary>
     /// The two cells a strip cuts beside party-lane cell <paramref name="i"/> (inward of the party lane at t = -1, -2 for
