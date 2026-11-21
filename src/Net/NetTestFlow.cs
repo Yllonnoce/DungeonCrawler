@@ -220,6 +220,7 @@ public partial class NetTestFlow : Node
             }
             _rideHeldAtStop = heldAtStop;
             RideProps(world, rc, hero);
+            RideSplitServer(rc);
             RideJoinerServer(world, rc, party);
         }
         if (_rideSeated && !_rideSetDown && _rideMember >= 0 && Main.Instance?.Party is { } p2 && _rideMember < p2.Adventurers.Length && !p2.Adventurers[_rideMember].Seated)
@@ -687,6 +688,20 @@ public partial class NetTestFlow : Node
         }
     }
 
+    private bool _splitHeldTold;
+
+    /// <summary>
+    /// The server, every tick: the first throw it holds to ride 4's split's points (a remote seat's press), with its own front's place as it
+    /// took it (within a tick of the press): short of its window is the early lead, where fix round 2's server once dropped a press.
+    /// </summary>
+    private void RideSplitServer(Dungeon.Rails.RailController rc)
+    {
+        if (_splitHeldTold || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc) || enc.SplitSwitchNode is not { } split || split.Lever.HeldBy is not { } by) return;
+        _splitHeldTold = true;
+        var shortBy = enc.SplitPointsS - rc.Party.FrontS;
+        GD.Print(FormattableString.Invariant($"[net-server] ride: ride {enc.SplitRide}'s split held to the points for {by} with the server's front {shortBy:0.0} m short of them ({(shortBy > split.WindowAhead ? "in the early lead, short of" : "inside")} its {split.WindowAhead:0.0} m window; held from {split.HoldReach:0.0} m)"));
+    }
+
     private static Vector3 Flat(Vector3 v)
     {
         v.Y = 0f;
@@ -988,13 +1003,23 @@ public partial class NetTestFlow : Node
                 GD.Print(FormattableString.Invariant($"[net] ride: ride 3's switch_back offers \"{prompt}\" in the seated window {ahead:0.0} m before the lever; thrown through the intent from the seat ({NetRefs.Switch(_rideBackHere)})"));
                 return false;
             }
+            case 10: // home with the back taken thrown (the server's CrossBack here): a mashed press on it once more, the intent sent from the seat as a
+                     // second press in flight would be; the server ignores it quietly (plan 12 Ruling 21: AlreadyThrown, never "Too late")
+            {
+                if (_rideBackMashed || !me.Seated || rc.StopIndex != 2) return false;
+                if (NetRefResolver.Resolve(root, NetRefs.Switch(_rideBackHere)) is not Dungeon.Rails.TrackSwitch back) return RideFail(net, $"ride 3's switch_back ({NetRefs.Switch(_rideBackHere)}) does not resolve here");
+                _rideBackMashed = true;
+                net.Send(new InteractIntent(NetRefs.Switch(_rideBackHere)));
+                GD.Print(FormattableString.Invariant($"[net] ride: ride 3's switch_back pressed once more from the seat after the cart took it (a mashed press, {NetRefs.Switch(_rideBackHere)}); it shows {(back.Thrown ? "thrown" : "straight")} here, taken {back.Taken}, CrossBack {rc.CrossBackS:0.0}"));
+                return false;
+            }
             default:
                 return false;
         }
     }
 
     private int _rideSwitchHere = -1, _rideBackHere = -1;
-    private bool _rideBackAsked;
+    private bool _rideBackAsked, _rideBackMashed;
 
     /// <summary>The stops whose prisoners this client left behind through the intent (once per stop).</summary>
     private readonly HashSet<int> _rideLeftAt = new();
@@ -1162,6 +1187,7 @@ public partial class NetTestFlow : Node
                 var line = Line(rc);
                 if (!me.Seated || me.Cart != rc.Cart) { Finish("[net]", false, $"ride: our hero is not in the cart at stop {rc.StopIndex} (seated {me.Seated})"); net.Disconnect("test finished"); return; }
                 RideLeaveCrew(net, rc, me, "the rider"); // each cage from stop 3 on is left behind: the train leaves when the stop's gate lifts
+                if (RideSplitPress(net, main, rc, me)) return;
                 if (rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == line.LastRideStop)
                 {
                     if (!_rideFourTold) { _rideFourTold = true; GD.Print($"[net] ride: the train leaves stop {line.LastRideStop} on ride {line.LastRide} with us aboard; pumping (stick forward)"); }
@@ -1260,6 +1286,7 @@ public partial class NetTestFlow : Node
             GD.Print(FormattableString.Invariant($"[net] ride: barricade r2_barricade smashed here (PropEvt), plating {_r2Before:0} -> {_r2After:0}"));
         }
         RideCrossBackWatch(main);
+        RideRunawayWatch(main);
     }
 
     /// <summary>The wire as it arrives (before each message is applied here): ride 1's barricade's PropEvts, ride 2's smash between two cart states, a barricade call's BarkMsg.</summary>
@@ -1426,6 +1453,96 @@ public partial class NetTestFlow : Node
         _cbDone = true;
         var blend = rc.StopIndex == 2 ? rc.LaneBlend : float.NaN; // past the ride, unread
         GD.Print(FormattableString.Invariant($"[net] ride: crossed back here: CrossBack {_cbAt:0.0} told at front S={_cbFront:0.0} (the back's points {_cbPoints:0.0}), blend {blend:0.00} at S={rc.State.S:0.0}"));
+    }
+
+    // ride 4's split, the runaway and the dark over the wire (plan 12 task 8)
+    private bool _splitAsked, _splitEarlySent, _splitShownTold, _rideDarkTold, _rideRunawayTold;
+    private int _splitHere = -1;
+
+    /// <summary>Ride <c>SplitRide</c>'s split lever here by its wire name, its piece's index kept, or null.</summary>
+    private Dungeon.Rails.TrackSwitch? SplitLeverHere(Main main, Dungeon.Rails.RailEncounterController enc)
+    {
+        if (main.Builder.FloorRoot is not { } root || enc.SplitRide < 1) return null;
+        if (_splitHere < 0) _splitHere = enc.PieceIndexOf("split", enc.SplitRide);
+        return NetRefResolver.Resolve(root, NetRefs.Switch(_splitHere)) as Dungeon.Rails.TrackSwitch;
+    }
+
+    /// <summary>
+    /// The joiner in step 75, on the split's ride: the press a seat whose cart runs ahead of the server's sends on its first window frame, sent from
+    /// our seat (the lever's ordinary <see cref="InteractIntent"/>) with our front half the server's 5 m lead short of the window's start, so it
+    /// lands in the server's early lead (short of its window, within <see cref="Dungeon.Rails.SplitRules.PressReach"/>): the server must take it
+    /// and hold it to the points (fix round 2: never drop it), and throw it as the train passes. Once. True when it failed.
+    /// </summary>
+    private bool RideSplitEarly(NetSession net, Main main, Dungeon.Rails.RailController rc, Party.Adventurer me)
+    {
+        if (_splitEarlySent || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc) || enc.SplitRide < 1) return false;
+        if (rc.StopIndex != enc.SplitRide - 1 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || !me.Seated || me.Cart != rc.Cart) return false;
+        if (SplitLeverHere(main, enc) is not { } lever || enc.SplitSwitchNode is not { } split) return RideFail(net, $"ride {enc.SplitRide}'s split lever ({NetRefs.Switch(_splitHere)}) does not resolve here");
+        var shortBy = enc.SplitPointsS - rc.Party.FrontS;
+        var at = split.WindowAhead + Dungeon.Rails.SeatedSwitchRules.AcceptLead / 2f;
+        if (!(shortBy <= at)) return false;
+        if (lever.Thrown || lever.Taken || shortBy < split.WindowAhead) return RideFail(net, FormattableString.Invariant($"the joiner reached {shortBy:0.0} m short of ride {enc.SplitRide}'s split (the window {split.WindowAhead:0.0} m) with it {(lever.Thrown ? "thrown" : "straight")} (taken {lever.Taken}) before its early press"));
+        _splitEarlySent = true;
+        net.Send(new InteractIntent(NetRefs.Switch(_splitHere)));
+        GD.Print(FormattableString.Invariant($"[net] ride: the joiner presses ride {enc.SplitRide}'s split from the seat {shortBy:0.0} m short of the points here, short of its window ({split.WindowAhead:0.0} m; the seat offers it from S={split.WindowStartS:0.0}), as a cart running ahead would on its first window frame: {NetRefs.Switch(_splitHere)}"));
+        return false;
+    }
+
+    /// <summary>
+    /// The first client in step 53, on the split's ride: on our own first frame with the front past the split's points we press it from the seat
+    /// through the intent, as E does, whatever it offers: "Throw the split behind us", or "Set the split back" once the joiner's held throw shows
+    /// here. The server keeps it thrown either way (a throw on a held or thrown lever does nothing; a set-back within a second of the throw going in
+    /// is ignored), and the runaway behind takes the spur. True when it failed.
+    /// </summary>
+    private bool RideSplitPress(NetSession net, Main main, Dungeon.Rails.RailController rc, Party.Adventurer me)
+    {
+        if (_splitAsked || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc) || enc.SplitRide < 1) return false;
+        if (rc.StopIndex != enc.SplitRide - 1 || rc.State.Mode != Dungeon.Rails.CartMode.Rolling || !me.Seated || me.Cart != rc.Cart) return false;
+        if (SplitLeverHere(main, enc) is not { } lever) return RideFail(net, $"ride {enc.SplitRide}'s split lever ({NetRefs.Switch(_splitHere)}) does not resolve here");
+        var past = rc.Party.FrontS - enc.SplitPointsS;
+        if (!(past >= 0f)) return false;
+        if (lever.Taken) return RideFail(net, FormattableString.Invariant($"ride {enc.SplitRide}'s split was taken here {past:0.0} m past its points before we pressed it"));
+        var prompt = lever.Prompt;
+        if (Main.Instance.Party.LookingAt != lever || prompt is not ("Throw the split behind us" or "Set the split back"))
+        {
+            var coming = Dungeon.Rails.RailNet.Instance is { } rn && IsInstanceValid(rn) && rn.ClientRunawayShortOf(enc.SplitPointsS);
+            return past > Dungeon.Rails.SplitRules.LeverPast
+                && RideFail(net, FormattableString.Invariant($"ride {enc.SplitRide}'s split was not offered here {past:0.0} m past its points (prompt \"{prompt}\", looking at {(Main.Instance.Party.LookingAt as Node)?.Name ?? "nothing"}, the runaway coming here {Yes(coming)})"));
+        }
+        var dist = me.GlobalPosition.DistanceTo(lever.GlobalPosition);
+        _splitAsked = true;
+        Main.Instance.Party.VrUse(true); // the dispatch E uses: our TryInteract sends the lever's intent
+        Main.Instance.Party.VrUse(false);
+        GD.Print(FormattableString.Invariant($"[net] ride: ride {enc.SplitRide}'s split offers \"{prompt}\" in the seated window, {dist:0.00} m from our seat at V={rc.State.V:0.00} m/s; {(lever.Thrown ? "pressed again (the joiner's held throw shows here)" : "thrown")} through the intent from the seat ({past:0.0} m past the points here) as {NetRefs.Switch(_splitHere)}"));
+        return false;
+    }
+
+    /// <summary>
+    /// Each RIDE client, every tick on floor 12: the dark stretch as this peer built it (its start and the pocket lamps it put out, with the lamps'
+    /// lights hidden here), once; and on the split's ride, the split shown thrown here (its PropEvt), once, and the runaway's copy here (the
+    /// server's cart corrections) on the party line behind our train, once. Its ram and its plunge are told by <see cref="Dungeon.Rails.RailNet"/> itself, from the Derailed flag and its last S.
+    /// </summary>
+    private void RideRunawayWatch(Main main)
+    {
+        if (main.Rebuilding || main.Builder.CurrentFloor != 12 || main.Builder.FloorRoot is not { } root || Dungeon.Rails.RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return;
+        if (!_rideDarkTold && !float.IsNaN(enc.DarkFromS))
+        {
+            _rideDarkTold = true;
+            var hidden = root.GetNodeOrNull<Node3D>("Rails")?.GetChildren().OfType<Light3D>().Count(l => l.Name.ToString().StartsWith("RailLamp") && !l.Visible) ?? 0;
+            GD.Print(FormattableString.Invariant($"[net] ride: dark stretch here from S={enc.DarkFromS:0.0} lamps out {enc.DarkLampsOut} ({hidden} pocket light(s) hidden here)"));
+        }
+        if (!_splitShownTold && enc.SplitRide >= 1 && Dungeon.Rails.RailController.Instance is { } line && IsInstanceValid(line) && line.StopIndex == enc.SplitRide - 1
+            && SplitLeverHere(main, enc) is { Thrown: true } shown)
+        {
+            _splitShownTold = true;
+            GD.Print(FormattableString.Invariant($"[net] ride: ride {enc.SplitRide}'s split shows thrown here (its PropEvt) with our front at S={line.Party.FrontS:0.0} ({line.Party.FrontS - enc.SplitPointsS:0.0} m from the points), taken {shown.Taken}"));
+        }
+        if (_rideRunawayTold || enc.SplitRide < 1 || Dungeon.Rails.RailNet.Instance is not { } rn || !IsInstanceValid(rn) || rn.ClientRunaway is not { } run
+            || Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || rc.StopIndex != enc.SplitRide - 1 || run.Track != 0) return;
+        _rideRunawayTold = true;
+        var rear = rn.ClientTrainRearS;
+        var gap = rear - (run.S + Dungeon.Rails.CartRules.HalfLength);
+        GD.Print(FormattableString.Invariant($"[net] ride: the runaway {(gap >= 0f ? "runs behind the train here" : "shows AHEAD of our train's rear here")} (its S={run.S:0.0}, our train's rear S={rear:0.0}, {gap:0.0} m between)"));
     }
 
     // the joiner (plan 5 task 8): the RIDE pass's second client joins during ride 2
@@ -1715,6 +1832,7 @@ public partial class NetTestFlow : Node
                 var heldHere = rc.State.Mode == Dungeon.Rails.CartMode.Held && !rc.Halted;
                 if (me.Seated && me.Cart == rc.Cart)
                 {
+                    if (RideSplitEarly(net, main, rc, me)) return;
                     if (_joinOnSeatedAt != rc.StopIndex && rc.StopIndex < line.LastRideStop)
                     {
                         _joinOnSeatedAt = rc.StopIndex;

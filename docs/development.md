@@ -1151,11 +1151,14 @@ prints `LayoutReport`: a `[map] room {i}: ({X},{Y}) {W}x{H} level={L} {hub|ring|
 (`up`, `down`, `stop={k}`, `vault={index}`, `jail`, `safe`, `nest`, `camp`, `shrine`), then
 `[map] rail: stops=[rooms] rides~[m] total~{m} cavern={From}..{To}|none|breached chasm={cells} strips={n} gorge=[{From}..{To}@{fFrom}-{fTo},…] planks={n}`
 followed, with `BrokenBridgeRide` set, by ` break={Gap}@{f} run={From}..{To}` (the gap's and its run's party-lane indices, f the gap's
-fraction of its own ride), ` break=none` (no fitting run) or ` break=refused` (the cavern's ride, the last ride or a ride past it)
+fraction of its own ride), ` break=none` (no fitting run) or ` break=refused` (the cavern's ride, the last ride or a ride past it),
+and, with `SplitRide` set (plan 12), by ` split={Points}@{f} crevasse={From}..{To}` (the points' and the crevasse's party-lane indices,
+f the points' fraction of their own ride), ` split=none` or ` split=refused` (the last ride or the broken bridge's ride; see "Crevasses")
 (rides in cells x 4 m, platform middle to platform middle; `chasm` the floor's chasm cells, `strips` the edge strips, `gorge`
 each gorge span by party-lane index and as fractions of the last ride, `planks` the hall crossings), and the cart's measured
 `[map] rail StopS=[...] rides=[...] m total=... m`, then, with a break, `[map] rail break: ride {r} gap at party S={S}` (the party
-lane's S beside the gap's near edge, good to about 1 m; the switch back's build line prints the exact lead).
+lane's S beside the gap's near edge, good to about 1 m; the switch back's build line prints the exact lead), and with a split
+`[map] rail split: ride {r} points at party S={S}, crevasse S={from}..{to}`.
 `DungeonBuilder.PlaceRails` dresses it (rails, sleepers, timbering, pocket lanterns) under `RailTrack` nodes named
 `PartyTrack` and `EnemyTrack`, with a `RailStop0..N` marker at each stop (`--face-node=RailStop1:3` for a screenshot).
 The centreline is straight 0.5 m pieces laid with no handles, so `TrackSampler.Frame` takes its heading from the chord ±0.25 m
@@ -1444,7 +1447,7 @@ Floor 12's five rides (`data/adventures/builtin/floor_12.json`; the lengths are 
 | 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_barricade` (0.25, S 82.8), `r1_beam` the low beam (0.6) | — |
 | 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | `r2_slag_barricade` on the slag line (0.3, ahead of `r2_slag1`), `r2_barricade` (0.7, S 427.1, defended by `r2_slag2` alongside) | — |
 | 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.731, live: its points at S 694.0, 20.1 m before the gap), `r3_buckets` (0.832, past the gap); the broken bridge on its slag line (the gap at party S 714.1, plan 11) | — |
-| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.3, −4), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); the cavern under its deck (plan 10) | plan 12: the dark ~0.1-0.4, the runaway from ~0.1, the split ~0.45; plan 13: the cavern's collapsing bridge and spiral; plan 14: the leap beside `r4_slag` (the loop-the-loop, once plan 15, is dropped) |
+| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.262, −4: S 835.5, the dark's middle), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); `r4_dark` (0.093, S 793–878), `r4_runaway` (0.172, S 813), `r4_split` (0.371, its points at S 863.0, plan 12); the cavern under its deck (plan 10) | plan 13: the cavern's collapsing bridge and spiral; plan 14: the leap beside `r4_slag` (the loop-the-loop, once plan 15, is dropped) |
 | 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_barricade` (0.88, S 1205.4), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | — |
 
 The barricades' `At` are the measured ones: `r2_barricade` went from the plan's 0.6 to 0.7 and `r5_barricade` from 0.9 to 0.88,
@@ -1576,8 +1579,12 @@ the lever is in that rider's window as it recomputes it (`RailEncounterControlle
 extrapolates; a loaded server steps late), and the RIDE pass measured client leads of 1.5–2.8 m, so a press on the client's first
 window frame could reach the server short of its own window. The offer itself still opens at 15 m, and the server never accepts a
 press at or past the points or on a taken lever (the cart has taken the lever as it stood), which keeps the larger lead safe. A
-refused press gives the client no feedback (see "Known gaps"), except on a live switch back: a press there taken too late (the lever
-taken, or the front at or past its points) is told "Too late to throw it." (`RailEncounterController.TooLateToThrow`). The server refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
+refused press gives the client no feedback (see "Known gaps"), except on a deadly lever (a live switch back, ride 4's split): a press after its
+moment (the lever taken, or the front at or past a live back's points) is judged by `RailEncounterController.LateFor`
+(`SwitchBackRules.Late`, plan 12 Ruling 21, returning `None`, `TooLate` or `AlreadyThrown`). With the lever straight it is too late and the
+server tells that rider "Too late to throw it." (`SwitchBackRules.TooLateLine`); with the lever thrown it is already thrown and is
+ignored quietly (`[net-server] interact … the deadly lever was thrown (taken …): ignored quietly`): a mashed second press is never
+told "Too late" and never un-throws it. The server refuses a set-back from inside the rider's window, in reach or not, within 1 s of another rider's toggle (the last toggle's
 time and hero name are kept on the server's `TrackSwitch`), so two riders cued by the same call do not undo each other into
 the heap (`[net-server] interact … seated window: set back … ignored`).
 
@@ -1633,7 +1640,7 @@ or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.0, 20
   party's cart is held past the gap starts `TrafficPastGap` (2 m) past its far edge (`TrafficStartS`), so the stops beyond keep their
   traffic.
 
-`--test-switch-back[=wrong|stall|lone]` (`DebugTools.SwitchBack.cs`, quits after 300 s) plays floor 12 at lethality 3 and prints
+`--test-switch-back[=wrong|stall|lone|fixedafter]` (`DebugTools.SwitchBack.cs`, quits after 300 s) plays floor 12 at lethality 3 and prints
 `[switchback]` lines and a `[switchback] RESULT`. A: the broken bridge as built (the gap bare of footing and track, the deck and the
 party lane beside it whole), a traffic cart with a rider dropping through the gap quietly (told only with a hero within 40 m), and,
 with the cart at stop 4, traffic starting past the gap. B (thrown, the default): ride 3 across the slag line with no hook; the early
@@ -1647,7 +1654,12 @@ cart caught short of the back's window, inside it short of the last call, short 
 the window's start, then at the last call's mark (the last call is heard after it), then at the points, then grinds it into the gap
 (a fall), never across. `=lone` (ruling R-lone): nobody presses, and the lead, the only human (possession off), is downed in the seat
 3 m before the window and held down until the back is taken; at the points the cart takes the safe line with the lever straight, the
-line is logged, and the cart comes home and arrives at stop 3 with no fall (`RESULT ok (lone)`).
+line is logged, and the cart comes home and arrives at stop 3 with no fall (`RESULT ok (lone)`). `=fixedafter` (plan 12 Ruling 20, plan 11's
+first residual): a test hook (`RailEncounterController.DebugFixedBackBeforeGap` = 8) adds a fixed switch back `r3_switch_back2` 8 m before
+the gap (built after the break with the next free piece index); nobody presses the live back, which is passed straight; the cart is caught
+3 m past its points, and the watchdog (`WatchdogBreak`) grinds it to the fixed back's points, where `TakeBack` takes it home: no fall, home
+with the front 1 m short of the gap, arrived at stop 3 (`RESULT ok (fixedafter)`). Every variant holds ride 4's runaway (plan 12 Ruling 22,
+`[switchback] the runaway on ride 4 held by the test`).
 
 The heap. An `OreHeap` blocks the party lane (`RailController.BlockLine`). Its lantern blinks while a cart bears down on
 it. A seated companion calls "Line's blocked — switch!" once, as the seated window opens (the front 15 m before the lever)
@@ -1657,6 +1669,160 @@ until the heap is cleared by three hits from anyone on foot. Then the cart board
 (a `Resumed` event, not a `Departed` one: the ride stays armed). The heap stands again after a wreck or a load. Ore buckets
 on a cable over the line tip one at a time every 3 s, after a 1.5 s creak and glow. Each pours a cinder patch that burns
 for 4 s. A cart through a live patch loses 5 plating, and each seated hero takes one lick of the floor's cinder fire.
+
+Ride 4: the dark, the runaway and the split (plan 12; `RailEncounterController.Dark.cs`, `.Runaway.cs` and `.Split.cs`,
+`Rails/SetPieces/SplitSwitch.cs`, `RideDarkness.cs`; the numbers in `Rails/Core/DarkRules.cs`, `RunawayRules.cs` and `SplitRules.cs`).
+Three set-piece kinds, appended at the end of `RailSetPieces` so the older pieces keep their indices and wire names: `dark`, `runaway` and
+`split`. Floor 12's are placed from the shipped seed's measured layout (Ruling 17): `r4_dark` At 0.093 (party S 793–878, starting 70 m
+before the points), `r4_runaway` 0.172 (S 813, 50 m before them), `r4_split` 0.371 (S 863, the points), and `r4_hounds` moved from 0.3 to
+0.262 (S 835.5, the dark's middle; at 0.3 it stood under 15 m short of the split's window). `r4_beam` stays. Ride 4 has no barricade (Ruling 18).
+- **The dark** (Ruling 16). Its At is its start and it runs `DarkRules.Length` (85 m). Every role, the headless server included, puts out
+  the pocket lamps whose pocket lies within `LampReach` (6 m, flat, on its level) of either lane over the span: each `RailLamp{i}` light is
+  hidden and its `RailLantern{i}` gets copies of its materials with the emission off (the shared materials stay lit elsewhere). The count
+  comes from the layout, so every peer prints the same line: `[rails] dark r4_dark from party S=792.9 to 877.9: 10 pocket lamp(s) out`
+  (8 of those lamps have a light in the scene; 104 stay lit outside the span). A peer that draws adds a `RideDarkness`. It darkens that
+  peer's view by where its camera is in the span (`DarknessAt`, within 8 m of either lane; `DarkRules.Factor` ramps over 6 m at each end):
+  ambient × 0.12, fog light × 0.25, volumetric emission × 0. Each hero's torch dims to × 0.1 by its own place in the span. Cart lamps,
+  slag carts' lamps, wheel sparks, set pieces' warning lamps (the split's two) and the chasm's ember glow stay lit, and no new light is added.
+  Nothing goes on the wire: every peer reads the dark from the plan. A floor has one dark; a second logs an ERROR and is not built.
+- **The runaway** (Rulings 10–14). As the party's front first reaches its At, one `RunawayWagon` (the traffic runaway's body, with its orange
+  lamp and bell) breaks loose on the party line `RunawayRules.Behind` (15 m) behind the train's last body (the cart and its coupled wagons). It
+  rolls at `RunawayRules.Target`: the train's own unpumped speed for its load × 1.15 (`Boost`), so one pumper holds it off and no pumper lets
+  it close. The log says "A runaway ore wagon breaks loose behind us!", a seated companion calls "Runaway on the line behind us — pump!"
+  (`BarkTrigger.Runaway`), and the server prints `[rails] t=… runaway {id} breaks loose at party S=…, … m behind the train (N wagon(s)),
+  target … m/s`. Its bell rings every 2 s while it is within 40 m behind the train. It is not sent (`[rails] runaway {id}: none (…)`) when:
+  - its ride has no live split;
+  - a chaser or the relief cart is on the party line;
+  - the split's window opens under `MinLead` (10 m) past the trigger;
+  - its start would lie under `MinRoom` (2 m) past the ride's stop;
+  - a body on foot is on the line where it would break loose, or where it would hit before its warning (`RunawayRules.SpawnBlocked`, the
+    relief cart's clearance rule: `none (a body on the line behind the train: …)`).
+
+  Each tick it warns first and then runs over (`Warn`, then `RunOver`), smashes timber on its own line (`SmashAhead`) and runs over a body
+  on the line as the traffic runaway does. Companions never pump for it (Ruling 11): pumping to stay ahead is the players' job.
+  - **The ram** (Ruling 12). It comes with the train rolling and the runaway's front within `RamReach` (0.25 m) of the last body. The
+    plating loses `RamDent` (40, `RailController.Smash(40, speedKept: 1)`, which wrecks at 0 like any dent; a wrecking ram applies the
+    ordinary wreck toll, which has no 1 HP floor). Each seated hero who is up loses `RamHpFraction` (20%) of max HP × `PartyDamageScale`
+    / 3, never below 1 HP. NPCs on the bench and in the wagons are only jolted, and nobody leaves a seat ("riders are thrown" means
+    shaken in their seats: a rider thrown out at speed would land on the line in front of the runaway). There is one ram per runaway: it
+    derails and is freed (`[rails] runaway rams the train at S=…: plating {a}->{b}; heroes hit {n}`). A train stuck in Rolling at V≈0 can
+    be rammed; the watchdog frees it within seconds.
+  - **A held train is never rammed** (Ruling 13). With the party's cart held at a stop or halted on the line, the runaway brakes to halt
+    `HaltShort` (3 m) behind the last body (`[rails] t=… runaway {id} halts at party S=…, its front … m behind the held train`) and is
+    freed a second later. A ram while the train is still braking into the stop stands.
+  - **Freed at once** (Ruling 14) by a wreck (a fall too), a restore (a wipe's rise or a load), a chaser or the relief cart on the line, a
+    new departure, the party on foot and the controller leaving; also by its own stall (`OwnProgressStuck`) and at the end of its line
+    (`[rails] t=… runaway {id} freed (…)`). An arrival lets it halt first. A re-armed ride sends a fresh one.
+  - **On a client** it is a copy built from `CartStateDto` (kind `Runaway`: track 0, then the spur's track), corrected five times a second
+    like every cart, and ringing by the server's rule (`RunawayRules.Rings`). A client shows a ram only from the server's
+    `CartFlags.Derailed` on the gone runaway on track 0 (`RunawayRules.ShowsRam`): the jolt and `timber_smash` at its copy, and
+    `[net] ride: the runaway rammed the train here (…)`. A halt's free carries no flag, so a client never shows a ram the server did not make.
+- **The split's points and spur** (Rulings 3 and 4). The `split` piece is built from the layout's points (`RailSplit.Points`, see
+  "Crevasses"), measured on the party track, as a `SplitSwitch`. It is live only when:
+  - the piece's At lies within `SplitRules.AtSlack` (8 m) of the points;
+  - the spur's end lies over the crevasse a metre inside each edge (`SplitRules.Live`), and the built end's cell is a drop;
+  - the slag line beside the fall's place borders the drop;
+  - the lever has a walkable place clear of the spur.
+
+  Otherwise it is dead: a marker only, with no spur, no lever and no runaway. The build line says which:
+  `[rails] split {id}: points at party S=…, lever at S=…, spur … m, its end over the crevasse S=…..… (live | dead: …)`. The spur is a
+  party-line spur track numbered like the ride-5 spur (`CartStateDto.Track` 2 + k; k counts the pieces with a spur or a split in piece order,
+  so `r5_spur` stays track 2). From the points it follows the path `Cross` blends along (smoothstep over `SwitchStretch`, 6 m, onto the
+  slag line), then bends `SpurOut` (3.5 m) further out over the next 5 m (`SpurLength` 11 m), ending over the crevasse with its rail ends
+  bent down; timber in its way is taken down. Its post carries two warning lamps (amber and red), and a `DropGlow` ember light sits under the
+  spur's end (Task 7's dressing fix, Ruling 23). On floor 12 the points are at S 863.0, the lever at S 866.0 on cell (59,10) (walkable, no
+  drop, 1.4 m or more from the spur), and the spur's arc is 13.6 m long, ending over the chasm at (61,12); the crevasse is S 865–881.
+- **The lever** (Ruling 5, ruling R-bend). It is deadly (`TrackSwitch.Deadly`: layers 1|8, so no hit moves it, and only a human's E does)
+  and stands `LeverPast` (3 m) past the points, on the party lane's side away from the slag line. Its seated window opens at the points
+  less the straight run before them, at most `SplitRules.WindowAhead` (12 m) (`WindowReach(StraightBefore)`: no corner lies inside the
+  window, so a press is never made round a blind bend), and it stays open until the runaway's front takes the points. It is offered only
+  while the ride's runaway is coming (`SplitRules.Offered`; on a client, while a runaway copy runs on the party line short of the points)
+  and never on foot (`Withheld`). On floor 12 the straight before the points is 5.0 m (the bend at S 853.2–858.1), so the window opens at
+  S 858.0. The prompt (`SplitRules.Prompt`, through `PropPromptRules.SplitPrompt`) is "Throw the split — it throws as we pass" short of the
+  points, "Throw the split behind us" past them, and "Set the split back" when thrown.
+- **The party's branch** (Ruling 6) is decided as its front reaches the points (`SplitRules.PartyRoute`):
+  - thrown, with an able human aboard (`SwitchBackRules.AbleToThrow`): the spur. The cart calls `Cross(points, NaN)`, the log says "The cart
+    takes the spur!" (`[rails] split {id}: the train takes the spur at S=…`), and the train falls
+    (`Fall("The cart runs off the spur into the crevasse!")`, see "Crevasses") with its front at the points + `FallPast` (7 m), wholly on
+    the slag line beside the drop;
+  - thrown, with no able human aboard (ruling R-lone): the main line, "No one could set the split back — the cart keeps the main line."
+    (`SplitRules.SafeLineLog`), the lever left thrown for the runaway;
+  - straight: the main line, the whole train following the cart (`[rails] split {id}: the train passes straight at S=… (front …)`).
+- **The hold** (Ruling 7 and the controller's rulings). A throw pressed with the front short of the points by at most
+  `SplitRules.HoldReach` is held (`TrackSwitch.HoldThrow`; "The split will throw as we pass.", `SplitRules.HeldLog`, shown on every peer;
+  `[rails] Split_{id}/…: {name}'s throw held to the points`) and applied the instant after the party's branch is decided straight
+  (`[rails] split {id}: {name}'s throw held to the points (… m short): thrown behind the train at front S=…`). `HoldReach` is every press
+  the server takes short of the points (`PressReach`: the window and `SeatedSwitchRules.AcceptLead`, 5 m, before it) and never under
+  `HoldLead` (5 m): 10 m on floor 12. So a press before the points never sends the party down the spur, and on floor 12, whose whole
+  pre-points window lies in the hold zone, no press can put the party on the spur at all; there the wrong choice is not throwing it (the
+  ram). A press at or past the points while the party's branch is still undecided is held too. For `HeldGuardSeconds` (1 s) after a held
+  throw goes in, a set-back is ignored (`SplitRules.HeldGuards`), so a second press just past the points never undoes it. A set-back is
+  never held and never refused short of the points: plan 8's set-back guard applies to the split only past them (`GuardsSetBack`). The
+  server takes a remote seat's press from its early lead (`InSeatedWindow` through `SplitAccepts`, `PressReach` short of the points) and
+  holds it, not drops it.
+- **The runaway's branch** (Ruling 8). As its own front reaches the points it takes the lever as it stands, and the lever is `Taken` (told:
+  the window ends on every peer; `[rails] split {id}: the runaway takes the spur | passes straight at S=…`). Thrown, it goes onto the spur's
+  track once its middle is at the points, coasts off its end and goes into the crevasse quietly: a thud and `cart_crash` where it goes,
+  "The runaway goes off the spur into the crevasse!" only with a hero within `PlungeHeard` (40 m), and
+  `[rails] t=… runaway {id} goes off the split's spur into the crevasse at spur S=… of …`. A runaway committed to the spur never rams.
+  Straight, it stays behind the train. A client reads the plunge from the gone runaway's `Derailed` flag on the spur's track with its last
+  S at the spur's end (`SplitRules.PlungedOffSpur`): `[net] ride: the runaway took the spur here and plunged (…)`.
+- **The calls** (Ruling 9). Each comes once an arming, only while the runaway is coming, through `RailCalls.Say` as a Shout with
+  subtitle-only stock lines in `RideBarks` (`BarkTrigger.SplitWait`, `SplitNotYet` and `SplitNow`, appended after `SwitchBackNow`, as
+  `Runaway` is):
+  - "Let us pass the split, then throw it!" at the window's start with the lever straight;
+  - "Not yet — set it back, that's the spur!" with the lever thrown and the front short of the hold zone, within 12 m of the points (every
+    press there is held, so only a lever thrown some other way meets it);
+  - "Now — throw the split!" with the front `NowPast` (1 m) past the points and the lever straight.
+
+  Each prints `[rails] split {id} called wait | not yet | now at front S=…; bark=…`. Companions and hero bots never throw it.
+- **The arrival's reset.** An arrival sets the split's lever back with the other finished levers, except while the ride's runaway is live
+  short of the points: then the reset waits (`[rails] split {id}: the arrival's reset waits for the runaway …`), so a correct throw
+  behind the train still sends it down the spur, and goes in when the runaway takes the points or is freed.
+- **The wire** (Ruling 19). Nothing new goes on it and the protocol stays 17. The lever's thrown and taken states go by `PropEvt` and
+  `ThrownSwitches` as `switch:{piece}`, the runaway by `CartStateDto`, the party's spur by `CrossOut` and `Fell`, and the dark comes from
+  the plan. The held press is the server's alone.
+
+`--test-runaway[=tail|ram]` and `--test-split[=after|early|hold|stall|lone]` (`--test-runaway=` with a split variant runs it too;
+`DebugTools.Runaway.cs`, `_quitAfter` 300) play floor 12 at lethality 3, solo, every enemy culled as it appears. The cart is restored at
+stop 3, everyone boards and it departs on ride 4. They print `[runaway]` lines and a `[runaway] RESULT` (tail, ram), or `[split]` lines
+and a `[split] RESULT` (the split's five).
+- `=tail` (the default): the lead pumps; the runaway breaks loose with its front 14–16 m behind the train's last body and its call is
+  heard; the gap never shrinks under 3 m; at stop 4 it halts 2.5–4 m behind the last body (measured: the least gap 14.9 m, the halt 3.00 m)
+  and is gone within 2 s; nobody is run over (`[runaway] RESULT ok (tail)`).
+- `=ram`: the crew wagons of stops 1–3 coupled, nobody pumping; one ram: the plating 100 → 60, each seated hero up −20% (±1) and none
+  under 1 HP, the seated NPCs unhurt, nobody unseated, `RunawayRams` 1 to stop 4; then restored at stop 3 with the plating set to 30, the
+  ram wrecks the cart, the runaway is gone by the wreck's event and a spare takes over (`[runaway] RESULT ok (ram)`).
+- `=after`: the seat offers the split from the window's start with the wait call there, the now call 1 m past the points, and the lead
+  throws it from the seat 1–3 m past them: no cross, the runaway takes the spur and goes into the crevasse within 3 s (measured: thrown
+  1.1 m past the points, the runaway at the points at S 863.1 and into the crevasse 1.75 s later), no ram, stop 4. It then checks the light
+  is all back at stop 4 and, in a second pass with the runaway held, after leaving floor 12 for floor 13 from the dark's middle.
+- `=early`: a press from the seat 9 m short throws nothing (the seat does not offer it there), while a remote seat's press taken as the
+  server takes an `InteractIntent` (`InSeatedWindow`, then `LateFor`, then `Interact`) is not taken 10.5 m short and is held to the points 9 m short; the test's hook
+  (`DebugThrow`) then throws it, "not yet" is called, the train takes the spur and falls with its front within 1 m of the points + 7, every rider fallen within 1 s; the wipe rises
+  at stop 3 and the next departure sends a runaway again.
+- `=hold`: thrown 9 m short by the hook, set back from the seat at the window's start (taken at once), then thrown from the seat short of
+  the points: held, thrown just after the train passes straight, a second press just past the points ignored; the runaway takes the spur.
+- `=stall`: thrown by the hook, the train caught 7 m short of the points (`RailController.DebugStall`); the watchdog sets the split back
+  and grinds on to stop 4, never onto the spur.
+- `=lone`: thrown by the hook, the only human (possession off) downed in the seat: at the points the safe line, the lever left thrown, and
+  the runaway takes the spur.
+
+Every variant checks that nobody falls but the train's riders. The flows that are not about the runaway (`--test-crew`, `--test-chase`,
+`--test-ride`, `--test-switch-back`, `--test-barricade`, `--test-crevasse`) hold it (Ruling 22, `RailEncounterController.DebugHoldRunaway(4)`)
+and log `[<flow>] the runaway on ride 4 held by the test`; the RIDE pass keeps it real.
+
+**The legibility gate** (Ruling 23, in every variant above, headless too). At the build every `RailLamp{i}` inside the dark is hidden with
+its lantern dark, and some lamp outside it is lit. Layer-1 rays from the seated lead's eye, with the front 8 m short of the points to the
+split's two lamps and 3 s after the runaway breaks loose to its lamp (`[runaway] sight: …`), must be clear, and a ray that never ran fails
+the variant. Windowed `=after` with `--screenshot=PATH` saves the seat's views as `PATH_lit`, `_dark` (both facing ahead, level, the HUD
+hidden), `_split`, `_window`, `_lever`, `_behind` (the rearmost view turned back down the line), `_behind_nolamp` (the same with the
+runaway's lamp, glow and lens hidden) and `_behind_seat` (the lead's eye turned 180°, shown only), and judges them on the scene crop (x 20–80%,
+y 16–53%, the HUD out): the dark's mean luminance at most 0.6 of the lit shot's, at least 20 red pixels about the split's red lamp, and at
+least 20 orange pixels about the runaway's lamp that go when its light is hidden (an A/B, so the rail's own glints are not counted).
+Measured (Task 7): lit 0.095, dark 0.050 (0.52; 0.58 after the A/B fix moved the dark shot to S 838.8), the split's lamp 80 red pixels,
+the runaway's 37 orange with its light and 0 without, the rays clear (the lever, the spur's end, the split's lamps at 11.1 and 20.5 m, the
+runaway's lamp at 17–22 m), 8 lamps hidden in the dark and 104 lit outside, and the light back at stop 4 and on floor 13.
 
 The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.49) on that ride, an elite forge golem, "Kilnheart the Hulking",
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and
@@ -1786,10 +1952,28 @@ over a cellar, a tunnel or the under layer. It cuts four kinds of drop:
   (`RailLine.BreakWhy` = `refused`); with no fitting run it is `none`, and the `switch_back` stays fixed (Ruling 13). `--print-map`
   reports it as `break=…` on the `[map] rail` line (see "Rails" above). Floor 12 sets `BrokenBridgeRide` 3:
   `break=188@0.81 run=185..191`, the gap at party S 714.1 on ride 3.
+- **The split's crevasse** (plan 12, `FloorSpec.SplitRide`, Rulings 1 and 2; `RailLine.Split`, a `RailSplit(Ride, Crevasse, Points)`).
+  `SplitRide` is an int, default 0, clamped 0..6, `[AiIgnore]` in `SpecOverrides`, and acts only with `Crevasses`; the generator never
+  reads plans. On that ride `CarveSplit` takes the longest outward strip-eligible straight run (`StripCells` with way +1, its enemy twins
+  taken by nothing) of at least `RailRules.SplitMinCells` (6) cells inside fractions `SplitFrom` 0.25 to `SplitTo` 0.55 of the ride
+  (platform middle to platform middle); on the cavern's ride the run must end `SplitCavernGap` (3) cells or more before the cavern span,
+  and ties go to the later run. The run's last `SplitCells` (4) cells have their outward t = 2 and 3 cut to chasm at the lane's level;
+  the enemy lane beside them stays solid floor, with no deck. The points are the cell before the cut (`Crevasse.From − 1`). The split is
+  that ride's strip (it appears in `RailLine.Strips`), so the ride gets no other. It is refused on the last ride and on the broken
+  bridge's ride (`RailLine.SplitWhy` = `refused`); with no fitting run it is `none`, and the split piece is then dead (no runaway). The
+  outward side is the only one: on floor 12's ride 4 the rock between the meander's legs is one cell, so an inward drop would open onto
+  the other leg's pockets. `--print-map` reports it on the `[map] rail` line as `split={points}@{fraction} crevasse={from}..{to}` (or
+  `split=refused` / `split=none`; nothing when no split was asked for). With `SplitRide` 0 every floor hashes as before
+  (`ChasmTests.SplitRideZero_HashesAsTheFloorWithoutIt`, and `RailLineTests.DefaultKnobs_BuildTodaysFloors`). Over the generator sweep the split fits on 30 of 116 rows (26%), and on 30 of
+  the 56 (54%) where the cavern leaves it room: the cavern on the second-to-last ride takes the window on most seeds, and a misfit split
+  is dead with no runaway (Ruling 3). Floor 12 sets `SplitRide` 4: `split=227@0.38 crevasse=228..231`, the points at party S 863.0 and the
+  crevasse S 865–881 (`floor_12.json`'s `LayoutHash` moved to 16995108853750381062). The party's train falls there only off the split's
+  spur (see "The five rides", ride 4).
 
 `FloorLayout.Bridges`, `IsBridge`, `IsChasm` and `ChasmCount` read them; `--print-map` reports them on the `[map] rail` line
-(see above). Floor 12 (the shipped layout): cavern 238..259 on ride 4, chasm=209, strips=7 (ride 3's is the broken bridge),
-four gorge spans on ride 5, planks=3 and `break=188@0.81 run=185..191`. The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
+(see above). Floor 12 (the shipped layout): cavern 238..259 on ride 4, chasm=217, strips=8 (ride 3's is the broken bridge, ride 4's
+the split's crevasse), four gorge spans on ride 5, planks=3, `break=188@0.81 run=185..191` and `split=227@0.38 crevasse=228..231`
+(`[map] rail split: ride 4 points at party S=863.0, crevasse S=865.0..881.0`). The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
 (At ± 2 m) inside a gorge span, since a trestle bridges a gorge from lip to lip, and `r5_jump` (0.65) has its whole gap
 (At ± 2.5 m) inside one span with half a cell to spare at each end; the order pour < trestle < jump < spur is kept, the golem
 going to 0.49. Building the kiln logs `[rails] r5_trestle over a crevasse: True` and `[rails] r5_jump over a crevasse: True`.
@@ -2220,7 +2404,7 @@ So its parked pose is that spot. A chaser's rider is handled the same way.
 
 **One rule per prompt.** The server, solo play and a client (with its synced copies) all call the same engine-free rule:
 - `RideInputRules.BoardPrompt(seatedHere, held, lastStop, heroSeatFree, inReach)`: "Get out" when seated, "Board the cart" otherwise;
-- `PropPromptRules.SwitchPrompt(fixed, taken, thrown)`, `WinchPrompt(gateUp)`, `CagePrompt(open, orcKeys, griselOpens, canLetOut, downedAboard)` and `KeyringPrompt(orcKeys)`;
+- `PropPromptRules.SwitchPrompt(fixed, taken, thrown)`, `SplitPrompt(taken, past, thrown)` (ride 4's split, `SplitRules.Prompt`), `WinchPrompt(gateUp)`, `CagePrompt(open, orcKeys, griselOpens, canLetOut, downedAboard)` and `KeyringPrompt(orcKeys)`;
 - `SpareRules.Prompt(onFootPlayer, mayChase)` and `SpareRules.ChaserPrompt(seatedHere, held, downed, boardingLeft)`.
 
 What a prompt cannot know stays on the server, which refuses with its log line: a key or a pick in the bag, a holder still near the winch.
@@ -2229,7 +2413,7 @@ What a prompt cannot know stays on the server, which refuses with its log line: 
 
 **Wire names.** Every rail prop has one (`NetRefs`; `NetRefResolver.RefOf` and `Resolve`):
 - by stop: `gate:{stop}`, `winch:{stop}`, `wagon:{stop}` and `spare:{stop}`;
-- by set piece: `switch:{piece}`, `spur:{piece}` (the spur's lever), `heap:{piece}`, `valve:{piece}`, `trestle:{piece}`, `buffer:{piece}` and `barricade:{piece}` (plan 11);
+- by set piece: `switch:{piece}` (ride 4's split's lever too, plan 12: its `SplitSwitch.LeverRef`), `spur:{piece}` (the spur's lever), `heap:{piece}`, `valve:{piece}`, `trestle:{piece}`, `buffer:{piece}` and `barricade:{piece}` (plan 11);
 - `keyring:0` and `cart:0`.
 
 **PropEvt.** Each prop tells its own change on the server as a `PropEvt`:
@@ -2254,7 +2438,9 @@ A client's `Show*` methods apply them silently. A live event plays the cosmetic 
 **Using the props.** A remote player uses the switch, the winch, a cage wagon and the keyring through `InteractIntent`.
 - A downed actor does nothing.
 - **A lever thrown from the seat of a rolling cart** is judged with `PropPromptRules.LeverReach`: 3.5 m plus the cart's speed times half the member's round trip, at most 1.5 m more; in the seated window by `InSeatedWindow`, accepted up to `SeatedSwitchRules.AcceptLead` (5 m) before the server's own window opens (see "Switches and the lane blend").
-- **Hits need nothing new.** Brake shoes, the heap, the valve, a barricade and a lever thrown by a blow all go through `AttackIntent`, which runs the server's melee (a live switch back takes no hits). A seated rider's blow at a barricade 0.5 m ahead of the cart's front lands from the front seat (the RIDE pass).
+- **Ride 4's split** (plan 12) is a deadly lever like a live switch back. Its seated window and its early lead are the server's (`InSeatedWindow` through `SplitAccepts`): a remote press that lands short of the server's points, in its early lead, is held to them and thrown as the train passes (`[rails] split {id}: {name}'s throw held to the points …`), never dropped and never sending the party down the spur; one past them, with the party's branch decided, is thrown at once. A press after the runaway has taken it is too late while straight and ignored quietly while thrown (`LateFor`). The RIDE pass throws it from the first client's seat on its first frame past the points (step 7).
+- **The runaway on the wire** (plan 12). A client's copy comes from `CartStateDto` (kind `Runaway`, `RailNet.Carts.cs`), corrected with every cart; when it goes, the server sets `CartFlags.Derailed` only for a ram (on track 0) or a plunge off the split's spur (on the spur's track, `S` its last spur S), so a client shows a ram (`RunawayRules.ShowsRam`) or a plunge (`SplitRules.PlungedOffSpur`) only when the server made one, and a halt's free shows neither.
+- **Hits need nothing new.** Brake shoes, the heap, the valve, a barricade and a lever thrown by a blow all go through `AttackIntent`, which runs the server's melee (a live switch back and the split take no hits). A seated rider's blow at a barricade 0.5 m ahead of the cart's front lands from the front seat (the RIDE pass).
 - A test server traces each use as `prop:{ref}:{state}`.
 - Partial knocks on the heap are not synced, so a partly knocked heap shows whole on clients until it is cleared.
 
@@ -2313,11 +2499,15 @@ The callers send the floor clock's pair just before it, and `OnFloorReady` also 
     at the last call's mark (`points − 6 m`, so "Switch back — now!" still comes and the offer stays up; final review M1); past that,
     with the lever thrown, or short of a fixed back, at the back's points, where the back is taken as its lever stands. Stuck past the back with its return open, it is ground on
     to the gap, where it falls as it would have (`FallNow`). Each prints its own `[rails] watchdog:` line.
+  - **Ride 4's split** (plan 12, Ruling 15, `RailEncounterController.WatchdogSplit`). A train stuck with its front short of the split's points
+    and the lever thrown (or a throw held to the points) has the lever set straight first, a held throw dropped, logged
+    `[rails] watchdog: the split set back (front S=…, … m short of its points[, a held throw dropped])`, and is then freed as ever: the
+    watchdog never carries a train onto the spur (`--test-split=stall`).
   - Otherwise the cart arrives at the next stop, Held there.
 
 **The other carts.**
 - A ride's pacing slag cart is watched only while the party's cart rolls and is not halted. It is judged against its pace point and freed with its riders.
-- Traffic carts and runaway wagons are judged on their own progress.
+- Traffic carts and runaway wagons are judged on their own progress; ride 4's runaway is freed by its own stall (`OwnProgressStuck`, `[rails] t=… runaway {id} freed (stuck)`).
 - The golem's runner is never watched.
 
 **In single player.** The watchdog runs in single player too. `--test-cart-watchdog` (floor 12, no enemies) proves three things:
@@ -2325,7 +2515,7 @@ The callers send the floor clock's pair just before it, and `OnFloorReady` also 
 2. Let go, it grinds free to stop 1 about 10 s later.
 3. Restored at the kiln's stop (`rc.Restore(LineShape.LastRideStop)`, stop 4 on the shipped floor: the test's shortcut over the rides between) and caught short of the kiln's gap (ride 5's), it is set at the lip and leaps it.
 
-The broken bridge's cases are proven by `--test-switch-back=stall` (see "The live switch back and the broken bridge").
+The broken bridge's cases are proven by `--test-switch-back=stall` and `=fixedafter` (see "The live switch back and the broken bridge"), the split's by `--test-split=stall` (see "The five rides", ride 4).
 
 #### The left-behind chaser
 
@@ -2408,7 +2598,7 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 - Every stop and ride the pass names for the kiln or the end of the line reads `LineShape` (`NetTestFlow.Line`): the kiln is ride
   `LastRide` (5) from stop `LastRideStop` (4), the end of the line stop `Rides` (5). The script's strings name them as numbers.
 
-**Run it alone, on an unclamped CPU.** Its set-piece clock and party-pairs checks fail on a loaded or clamped machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it. The barricade and switch-back checks (plan 11) run before the clock checks, so a slow server's clocks do not hide them.
+**Run it alone, on an unclamped CPU: the RIDE gate needs a platform profile other than `low-power`.** Its set-piece clock and party-pairs checks fail on a loaded or clamped machine: a slowed server's floor clock falls behind its own wall clock. An xUnit suite running at the same time is enough to do it. The barricade and switch-back checks (plan 11) run before the clock checks, so a slow server's clocks do not hide them.
 - **The low-power profile invalidates a run** (measured 2026-11-21, not a code change). On the dev laptop the ACPI `platform_profile` (`/sys/firmware/acpi/platform_profile`) read `low-power`. With three godots running, the firmware clamps every core to about 600 MHz (550–700), against 2.6–3.9 GHz with two.
 - The onset is in ride 2, when the third godot (the joiner) starts as the cart leaves stop 1. The server then needs 15–20 ms a physics tick instead of about 3.4 ms, runs 40–56 of its 60 steps a second, and its bucket pours come 3.25–4.7 s apart instead of 3.0. The lag ends when the first client leaves.
 - Every code section slowed 3.6–5.5× at the same instant, and node, physics-pair and GC counts stayed flat. The first plan-11 commit, a890483, which passed before, lags the same way under the same profile. So the failures were the machine, not plan 11's code.
@@ -2426,9 +2616,14 @@ Tests: `ComfortRulesTests` and `SnapTurnTests`.
 5. **Ride 3.** Stops 2 to 4 are left with their cages locked: a client seated in the held cart sends the held intent (`hold:cart:0`) the moment the hold shows (`RideLeaveCrew`), so the departures keep their timing. The script checks that a client left stop 2's prisoners through the intent and the server logged it (`[rails] the prisoners at stop 2 are left behind (`), and that the server left stop 3's and stop 4's for the first client (`(Rider)`). The joiner boards at stop 2. On ride 3 the client throws switch 1 from its seat through the seated window (no aim, the
 first offer beyond the plain reach plus the seated lag allowance; the server logs `seated window yes`), and the cart crosses on
 both sides. As the throw shows on the joiner's screen, the joiner presses "Set the switch back" from its seat, and the server
-refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Across, the live switch back is offered in the client's seated window only now (plan 11): the client presses it on the window's first frame through the intent (`[net] ride: ride 3's switch_back offers "Throw the switch" in the seated window … thrown through the intent from the seat`), the server traces `prop:switch:{back}:thrown` and takes it (`[rails] switch r3_switch_back taken at S=…: back from …`), and the cart comes home. Each client (the joiner, thrown and resynced, from its own screen) prints the first time its cart state's `CrossBack` turns from NaN to a number on ride 3, with the lane blend read `SwitchStretch` + 2 m on: `[net] ride: crossed back here: CrossBack {cb} told at front S={f} (the back's points {p}), blend {b} at S={s}`; the script wants `|cb − p|` ≤ 0.5 and the blend ≤ 0.01 on both, and no `[rails] the cart runs off the broken bridge` anywhere in the server's log. Ride 3's buckets pour on the server's schedule.
+refuses it within 1 s of the first client's toggle (`seated window: set back … ignored`); the joiner's get-out waits for that press. Across, the live switch back is offered in the client's seated window only now (plan 11): the client presses it on the window's first frame through the intent (`[net] ride: ride 3's switch_back offers "Throw the switch" in the seated window … thrown through the intent from the seat`), the server traces `prop:switch:{back}:thrown` and takes it (`[rails] switch r3_switch_back taken at S=…: back from …`), and the cart comes home. Each client (the joiner, thrown and resynced, from its own screen) prints the first time its cart state's `CrossBack` turns from NaN to a number on ride 3, with the lane blend read `SwitchStretch` + 2 m on: `[net] ride: crossed back here: CrossBack {cb} told at front S={f} (the back's points {p}), blend {b} at S={s}`; the script wants `|cb − p|` ≤ 0.5 and the blend ≤ 0.01 on both, and no `[rails] the cart runs off the broken bridge` anywhere in the server's log. Home with the back taken (its `CrossBack` here), the client presses it once more from the seat, the intent a mashed second press would send (`[net] ride: ride 3's switch_back pressed once more from the seat after the cart took it (a mashed press, switch:{back}) …`, plan 12 Ruling 21): after the server's `back from` it must print `[net-server] interact switch:{back} from Rider: the deadly lever was thrown (taken …): ignored quietly`, and `Too late to throw it.` must never appear in the client's log. Ride 3's buckets pour on the server's schedule.
 6. **The throw and the resync.** 2 s into ride 3, at speed, the joiner gets out and is thrown onto the line behind the cart, at the server's landing. It then asks for the floor again (`ClientWorld.TestAskFloorAgain`). Rebuilt mid-ride 3, it holds the ride again within 1 s (`resynced-mid-ride ok`).
-7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; it boards again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way.
+7. **Ride 4, both aboard.** At stop 3 the server puts the thrown joiner beside the cart; it boards again through its intent, and only then do stop 3's holders die, so the cart leaves for real with both clients aboard (`the cart departs stop 3 with 2 player(s) aboard`). On a longer line every stop up to the one before the kiln's goes the same way. Ride 4's dark, runaway and split (plan 12) are real in the pass (no hold), and the script checks them before the clock checks:
+   - **The dark.** Each client prints `[net] ride: dark stretch here from S={from} lamps out {n} ({k} pocket light(s) hidden here)` from its own build, and its start and count must be the server's `[rails] dark r4_dark from party S={from} to …: {n} pocket lamp(s) out` (n > 0).
+   - **The runaway.** The server prints `[rails] t=… runaway r4_runaway breaks loose …`, and each client, from the server's cart corrections, `[net] ride: the runaway runs behind the train here (its S=…, our train's rear S=…, … m between)`. On the grid (`ride cart=… kind=Runaway`, the server's at `armed=4`) each client needs at least 8 pairs on the party line (S ≥ 100: the spur's own S is short), each within 2 m.
+   - **The split from the remote seats.** The joiner sends its seat's press (the lever's `InteractIntent`) with its front 2.5 m short of the window's start, as a cart running ahead of the server's would on its first window frame (`[net] ride: the joiner presses ride 4's split from the seat … m short of the points here, short of its window …`). The server must take it (`seated window yes`), hold it with its own front in its early lead, short of its window and within 5 m before it (`[net-server] ride: ride 4's split held to the points for Joiner with the server's front {d} m short of them …`, read within a tick of the press; the window from the split's build line), pass the points straight (`[rails] split r4_split: the train passes straight`) and then throw it behind the train (`[rails] split r4_split: Joiner's throw held to the points (… m short): thrown behind the train`). The first client presses it on its own first frame with its front past the points, through `VrUse` (`[net] ride: ride 4's split offers "Throw the split behind us" | "Set the split back" in the seated window, … through the intent from the seat ({past} m past the points here) as switch:{split}`: which it offers depends on whether the held throw shows there yet). The server must take that press too and keep the lever thrown (a throw on a held lever is held again; a set-back is refused by plan 8's guard or the held throw's 1 s guard), and never print `Rider used switch:{split}: now straight`. The party must never take the spur (no `the train takes the spur` or `The cart takes the spur`). Then the runaway takes the spur and goes into the crevasse (`[rails] split r4_split: the runaway takes the spur at S=…`, then `[rails] t=… runaway r4_runaway goes off the split's spur into the crevasse …`, in that order after the throw).
+   - **On both screens.** Each client prints `[net] ride: ride 4's split shows thrown here (its PropEvt) …` and `[net] ride: the runaway took the spur here and plunged (…)` (`RailNet` itself, from the gone runaway's Derailed flag and its last S on the spur's track). Nobody shows a ram: no `[rails] runaway rams the train` on the server and no `[net] ride: the runaway rammed the train here` on either client.
+   - **Measured** (plan 12 Task 8, `performance` profile, four runs): the dark 10 lamps out from S 792.9 on every peer (10 lights hidden on each client); the runaway loose at S 793.1, 15.0 m behind with one wagon at 6.6 m/s, 14.9–15.0 m behind on both clients, 21–22 pairs within 0.15 m; the joiner's press held with the server's front 7.3–7.4 m short (the window 5.0 m), the train straight at front 863.0 and the held throw in at once; the first client's cart ran a little behind the server's there, so by its first frame past the points (0.1 m) the throw already showed and it pressed "Set the split back", refused by plan 8's guard 0.02 s after the joiner's throw; the runaway at the points at S 863.1 and off the spur's end (spur S 12.1 of 13.6) about 12.6 s after it broke loose. Before the joiner's early press was added, the first client's press 0.1 m past the points reached a server already past them and was thrown at once.
 8. **The kiln and the chase.** Held at stop 4, the kiln's, the joiner gets out with a tap (the cage hold's seat still lets it out). On foot beside the spare, it is offered nothing while the train is held there. The train leaves on ride 5 with the client pumping. The joiner takes `spare:4`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
 9. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
 10. **The wrecks.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 to 3 unused, and spare 3 takes over (`SpareRules.Pick`: the nearest unused stop). The heap stands on ride 3, so 3 s later the server wrecks it again and spare 2 takes over, Held at stop 2 (`wreck-spare`): on a line of any length it wrecks every 3 s until the spare of the stop the heap's ride leaves stands (`NetTestFlow.HeapStop`). The joiner sees each Wrecked state (two) and the takeover at stop 2, and must hear `cart_wreck` once: the end's wreck stands beside it, the second far out of a wreck's 30 m earshot (`RideAudio.At`).
@@ -2479,7 +2674,8 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing;
 - plan 11 on a client: the train's fall at the broken bridge (the pass takes the live back; the fall is proven solo by `--test-switch-back=wrong`), a slag or traffic cart plunging through the gap (and a ride's slag cart reaching it with a living rider, end to end), a barricade cut on foot or with a spell over the wire, a slag-line barricade's smash watched on a client, and a barricade smashed while its ride is not armed standing again at its arming (rule-tested only);
-- a refused seated press: the server refuses a seated `InteractIntent` it does not accept (out of its window and the 5 m lead, past the points, taken, or a set-back inside the guard) with its own log line. On a live switch back a press refused as too late (taken, or the server's front at or past the points) tells that player "Too late to throw it." (`SwitchBackRules.TooLate`, a `LogMsg` to the one peer); any other refusal still gives the client no feedback. Neither is run over the wire (the measured client leads all had the client ahead).
+- plan 12 on a client: the party's train down the split's spur and its fall (on floor 12 no press can put it there; proven solo by `--test-split=early` through the test's hook), the runaway's ram (the pass's runaway takes the spur; the server's ram is `--test-runaway=ram`'s, a client's showing it rule-tested by `RunawayRules.ShowsRam`), the runaway halting behind a held train, its bell, the "Not yet" call (only a lever thrown short of the hold zone meets it, and no press can do that), the arrival's reset waiting for the runaway, and the dark as a client draws it (the pass's clients are headless: they compare the lamps put out, not the view; the view is Task 7's windowed `--test-split=after --screenshot`);
+- a refused seated press: the server refuses a seated `InteractIntent` it does not accept (out of its window and the 5 m lead, past the points, taken, or a set-back inside the guard) with its own log line. On a deadly lever a press refused as too late (taken, or the server's front at or past a live back's points, with the lever straight) tells that player "Too late to throw it." (`SwitchBackRules.Late` returning `TooLate`, `SwitchBackRules.TooLateLine`, a `LogMsg` to the one peer); any other refusal still gives the client no feedback. Neither is run over the wire (plan 8's measured client leads all had the client ahead; at ride 4's split in plan 12's runs the client ran behind). The quiet case, a press on a thrown deadly lever after its moment (`AlreadyThrown`), is run: the RIDE pass's mashed press on ride 3's taken back (step 5).
 
 **Known differences, accepted for now:**
 - A partly knocked heap shows whole on clients, and so does a barricade with one or two hits in it (only "cut", "smashed" and "standing" go on the wire).

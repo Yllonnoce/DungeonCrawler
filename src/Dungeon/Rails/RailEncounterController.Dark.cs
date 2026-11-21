@@ -18,6 +18,8 @@ public partial class RailEncounterController
 
     /// <summary>The party S where the floor's dark stretch starts, or NaN without one.</summary>
     public float DarkFromS { get; private set; } = float.NaN;
+    /// <summary>The pocket lamps the dark put out at the build (the RIDE pass compares every peer's with the server's).</summary>
+    public int DarkLampsOut { get; private set; }
 
     /// <summary>The span's lanes sampled every <see cref="DarkSampleStep"/> m: each point with its party S, the enemy lane's beside the party lane's.</summary>
     private Vector3[] _darkParty = System.Array.Empty<Vector3>(), _darkEnemy = System.Array.Empty<Vector3>();
@@ -53,6 +55,7 @@ public partial class RailEncounterController
             if (lamps?.GetNodeOrNull<Light3D>($"RailLamp{i}") is { } light) light.Visible = false;
             if (lamps?.GetNodeOrNull<Node>($"RailLantern{i}") is { } lantern) DimLantern(lantern, dimmed);
         }
+        DarkLampsOut = n;
         GD.Print($"[rails] dark {piece.Plan.Id} from party S={from:0.0} to {to:0.0}: {n} pocket lamp(s) out");
 
         var marker = new Node3D { Name = $"Dark_{piece.Plan.Id}" };

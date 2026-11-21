@@ -297,6 +297,20 @@ public partial class RailNet
         return false;
     }
 
+    /// <summary>Client: a runaway copy here, its follower's S and its track (the RIDE pass reads it), or null.</summary>
+    internal (float S, byte Track)? ClientRunaway
+    {
+        get
+        {
+            foreach (var cc in _carts.Values)
+                if (cc.Kind == CartKind.Runaway && IsInstanceValid(cc.Body) && !cc.Body.IsQueuedForDeletion() && cc.Follow.HasState) return (cc.Follow.S, cc.Track);
+            return null;
+        }
+    }
+
+    /// <summary>Client: our own train's last body's back S, as this screen shows it (the RIDE pass reads it).</summary>
+    internal float ClientTrainRearS => OwnTrainRearS();
+
     /// <summary>Client: our own train's last body's back S, as this screen shows it.</summary>
     private float OwnTrainRearS() => RunawayRules.TrainRearS(_rails.Party.BackS, _rails.Train.Count, RailController.WagonSpacing);
 
