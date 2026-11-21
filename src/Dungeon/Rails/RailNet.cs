@@ -150,8 +150,13 @@ public partial class RailNet : Node
             var k = _known[id];
             _known.Remove(id);
             var flags = CartFlags.Hidden;
-            if (k.Body is SlagCart { Derailed: true }) flags |= CartFlags.Derailed; // a managed field: readable though the node is freed
-            (changed ??= new()).Add(new CartStateDto { Cart = k.Id, Kind = (byte)k.Kind, Track = k.Track, Flags = (byte)flags, ServerTime = now });
+            var goneS = 0f;
+            if (k.Body is SlagCart { Derailed: true } derailed)
+            {
+                flags |= CartFlags.Derailed; // a managed field: readable though the node is freed
+                goneS = derailed.Run.State.S; // where it went: a client tells a plunge through the broken bridge's gap from a derail by it (SwitchBackRules.PlungedAt)
+            }
+            (changed ??= new()).Add(new CartStateDto { Cart = k.Id, Kind = (byte)k.Kind, Track = k.Track, Flags = (byte)flags, S = goneS, ServerTime = now });
         }
         if (changed != null) world.Broadcast(new CartStateMsg(floor, epoch, changed));
 

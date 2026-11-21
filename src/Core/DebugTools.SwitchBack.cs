@@ -11,15 +11,18 @@ namespace DungeonCrawler.Core;
 // The built-in campaign's floor 12 at lethality 3, solo. Every enemy is culled as it appears. The build: ride 3 has the broken bridge,
 // its gap on the slag line (a chasm, no footing: a ray down finds nothing) between deck cells (a ray down finds their footing), the enemy
 // track's rails and sleepers cut bare over the gap and no timber frame over it, the party lane beside it and at r3_buckets solid floor
-// with its rails whole. A, traffic: with the cart held at stop 2 and nobody aboard (rc.Restore(2)), a traffic cart is started 30 m short
-// of the gap on the enemy line with a rider aboard; within 8 s it drops through the gap and is gone, its rider dead and hidden below the
-// gap's lip. B, the wrong branch (by the test's hook for now: the switch back is still fixed): everyone boards at stop 2 and the cart
-// departs; the seated lead throws r3_switch_out from the seat (the seated window, through the dispatch E uses); once the cart takes it,
-// rc.DebugStayAcross() leaves it across on the slag line; the train falls with its front within 0.6 m of the gap and "The slag line ends
-// at the broken bridge!" logged; every rider is fallen within 1 s; the wipe follows and rises at stop 2, every hero up within 10 m of a
-// whole cart. After every step nobody fell but the train's riders (from its fall to the rise). With --screenshot=PATH (windowed) the view
-// from the seat on the slag line is saved as the front comes within 12 m of the gap, and again (PATH_near) at 4 m. Prints [switchback]
-// lines and a RESULT.
+// with its rails whole. A, traffic, with the cart held at stop 2 and nobody aboard (rc.Restore(2)): A1 with the party far off (stop 0)
+// and A2 with it on its own lane 5 cells short of the gap, a traffic cart is started 30 m short of the gap with a rider aboard; within 8
+// s it drops through and is gone, its rider dead and hidden below the gap's lip, quietly: no "The slag cart derails!" and no derail
+// taunt, and "The slag cart plunges through the broken bridge." only in A2 (a hero within 40 m of the gap). A3: the cart restored at stop
+// 4 (past the gap) and the traffic clock run out, the next traffic cart starts just past the gap's far edge. B, the wrong branch (by the
+// test's hook for now: the switch back is still fixed): the cart restored at stop 2, everyone boards and the cart departs; the seated
+// lead throws r3_switch_out from the seat (the seated window, through the dispatch E uses); once the cart takes it, rc.DebugStayAcross()
+// leaves it across on the slag line; the train falls with its front within 0.6 m of the gap and "The slag line ends at the broken
+// bridge!" logged; every rider is fallen within 1 s; the wipe follows and rises at stop 2, every hero up within 10 m of a whole cart.
+// After every step nobody fell but the train's riders (from its fall to the rise). With --screenshot=PATH (windowed) the view from the
+// seat on the slag line is saved as the front comes within 12 m of the gap, and again (PATH_near) at 4 m. Prints [switchback] lines and a
+// RESULT.
 public partial class DebugTools
 {
     private bool _testSwitchBack;
@@ -33,6 +36,11 @@ public partial class DebugTools
     /// <summary>A's rider on the traffic cart: lost with it at the gap.</summary>
     private Enemies.Enemy? _sbRider;
     private int _sbDropsBefore;
+    /// <summary>The gap's middle on its floor (the plunge's 40 m are measured from it).</summary>
+    private Vector3 _sbGapAt;
+    /// <summary>Heard since the flow began: the derail line, a derail taunt, the plunge line; and their counts before A's drop.</summary>
+    private int _sbDerailLogs, _sbDerailTaunts, _sbPlungeLogs, _sbDerailsBefore, _sbTauntsBefore, _sbPlungesBefore;
+    private string[] _sbDerailLines = Array.Empty<string>();
     /// <summary>The fall as the train's Wrecked event found it: the front's S, or NaN before it.</summary>
     private float _sbFallFront = float.NaN;
     private int _sbFallsAtWreck, _sbFallenAtWreck;
@@ -46,7 +54,18 @@ public partial class DebugTools
         _sbListening = true;
         EventBus.Instance.Message += text =>
         {
-            if (!_done && _testSwitchBack && text == "The slag line ends at the broken bridge!") _sbFallLogged = true;
+            if (_done || !_testSwitchBack) return;
+            if (text == "The slag line ends at the broken bridge!") _sbFallLogged = true;
+            if (text == "The slag cart derails!") _sbDerailLogs++;
+            if (text == "The slag cart plunges through the broken bridge.") _sbPlungeLogs++;
+        };
+        // Morg's derail taunts, as the campaign has them (said and clean): any of them said is a derail heard
+        _sbDerailLines = (Game.Instance.Adventure.Campaign?.Taunts ?? new List<Adventure.TauntPlan>())
+            .Where(t => t.Trigger == Adventure.Objectives.TauntTriggers.Id(Adventure.Objectives.TauntTrigger.SlagDerailed))
+            .SelectMany(t => new[] { t.Line.Text, t.CleanLine?.Text }).Where(l => !string.IsNullOrWhiteSpace(l)).Select(l => l!).ToArray();
+        EventBus.Instance.Narration += (text, _) =>
+        {
+            if (!_done && _testSwitchBack && _sbDerailLines.Any(text.Contains)) _sbDerailTaunts++;
         };
         EventBus.Instance.PartyWiped += () =>
         {
@@ -98,26 +117,37 @@ public partial class DebugTools
                 break;
             }
             case 1 when _sbClock >= 1f:
+            case 3 when _sbClock >= 1f:
             {
-                // A: traffic on the slag line runs into the gap
+                // A1 (the party far off, at stop 0) and A2 (the party on its lane 5 cells short of the gap): traffic on the slag line runs into the gap
+                var near = _sbStep == 3;
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != 2 || rc.Cart.Riders.Count > 0) { Fail($"A: the cart is {rc.State.Mode} at stop {rc.StopIndex} with {rc.Cart.Riders.Count} aboard, not held empty at stop 2"); return; }
+                if (near)
+                {
+                    var stand = rail.Party[rail.Break!.Run.From - 2];
+                    party.Teleport(main.Builder.Surface(stand) + Vector3.Up * 0.3f, _sbGapAt);
+                    GD.Print($"[switchback] A2 the party set down on its own lane at {stand}, {main.Builder.Surface(stand).DistanceTo(_sbGapAt):0.0} m from the gap");
+                }
                 _sbDropsBefore = enc.BreakDrops;
-                var from = enc.BreakGapEnemyS - 30f;
-                enc.DebugSpawnTrafficAt(from);
+                (_sbDerailsBefore, _sbTauntsBefore, _sbPlungesBefore) = (_sbDerailLogs, _sbDerailTaunts, _sbPlungeLogs);
+                enc.DebugSpawnTrafficAt(enc.BreakGapEnemyS - 30f);
                 _sbTraffic = enc.TrafficCart;
                 if (_sbTraffic == null) { Fail("A: no traffic cart started"); return; }
                 // a rider aboard it, as a ride's slag cart carries them: lost to the crevasse with the cart
                 _sbRider = main.Builder.SpawnEnemy(main.Builder.RegularEnemies(main.Builder.CurrentFloor)[0], _sbTraffic.RiderSpot(0).Origin, main.Builder.CurrentFloor);
                 if (_sbRider == null || !_sbTraffic.Board(_sbRider)) { Fail("A: no rider boarded the traffic cart"); return; }
                 _sbRider.IsReinforcement = true;
-                GD.Print($"[switchback] A the cart held empty at stop 2 (S={rc.State.S:0.0}); a traffic cart starts on the enemy line at S={_sbTraffic.Run.State.S:0.0}, 30 m short of the gap, at v {_sbTraffic.Run.State.V:0.0}, {_sbRider.DisplayName} aboard");
+                GD.Print($"[switchback] A{(near ? 2 : 1)} the cart held empty at stop 2 (S={rc.State.S:0.0}); a traffic cart starts on the enemy line at S={_sbTraffic.Run.State.S:0.0}, 30 m short of the gap, at v {_sbTraffic.Run.State.V:0.0}, {_sbRider.DisplayName} aboard");
                 _sbStep++; _sbClock = 0f;
                 break;
             }
             case 2:
+            case 4:
             {
+                var near = _sbStep == 4;
                 var gone = !IsInstanceValid(_sbTraffic) && enc.TrafficCart == null;
                 if (enc.BreakDrops <= _sbDropsBefore || !gone) { if (_sbClock > 8f) Fail($"A: the traffic cart did not drop through within 8 s (drops {enc.BreakDrops - _sbDropsBefore}, gone={gone}, at S={(IsInstanceValid(_sbTraffic) ? _sbTraffic!.Run.State.S : float.NaN):0.0})"); break; }
+                if (_sbClock < 0.5f) break; // a moment for any line or taunt it would raise
                 var fallen = party.Active.Count(a => a.State.Fallen);
                 // its rider: dead, carried by nothing, hidden in the dark under the gap (nothing left on the line or hanging over the drop)
                 string rider;
@@ -130,19 +160,46 @@ public partial class DebugTools
                     rider = $"{r.DisplayName} alive={r.IsAlive} carried={r.Carried} visible={r.Visible} at {cell} (a drop {CrevasseRules.IsDrop(layout, cell)}) y {r.GlobalPosition.Y:0.0}, lip {lip:0.0}";
                     if (r.IsAlive || r.Carried || r.Visible || !CrevasseRules.Fell(layout, cell, r.GlobalPosition.Y, lip)) { Fail($"A: the traffic cart's rider was not lost into the drop: {rider}"); return; }
                 }
-                GD.Print($"[switchback] A ok: the traffic cart dropped through the broken bridge after {_sbClock:0.0} s and is gone (freed); its rider lost ({rider}); {fallen} hero(es) fallen");
+                // quiet: no derail line and no derail taunt; the plunge told in the log only with a hero within 40 m of the gap
+                var nearest = party.Active.Where(a => !a.Parked).Select(a => a.GlobalPosition.DistanceTo(_sbGapAt)).DefaultIfEmpty(float.PositiveInfinity).Min();
+                int derails = _sbDerailLogs - _sbDerailsBefore, taunts = _sbDerailTaunts - _sbTauntsBefore, plunges = _sbPlungeLogs - _sbPlungesBefore;
+                var heard = $"\"The slag cart derails!\" {derails}x, derail taunts {taunts}x, \"The slag cart plunges through the broken bridge.\" {plunges}x, the nearest hero {nearest:0.0} m from the gap";
+                if (derails > 0 || taunts > 0) { Fail($"A: the drop was not quiet: {heard}"); return; }
+                if (near != (nearest <= SwitchBackRules.PlungeHeard)) { Fail($"A{(near ? 2 : 1)}: the party is not {(near ? "within" : "beyond")} {SwitchBackRules.PlungeHeard:0} m of the gap ({nearest:0.0} m)"); return; }
+                if (plunges != (near ? 1 : 0)) { Fail($"A{(near ? 2 : 1)}: the plunge was {(near ? "not told with a hero near" : "told with every hero far off")}: {heard}"); return; }
+                GD.Print($"[switchback] A{(near ? 2 : 1)} ok: the traffic cart dropped through the broken bridge after {_sbClock:0.0} s and is gone (freed); its rider lost ({rider}); quiet: {heard}; {fallen} hero(es) fallen");
                 _sbRider = null;
                 _sbStep++; _sbClock = 0f;
                 break;
             }
-            case 3 when _sbClock >= 0.5f:
+            case 5 when _sbClock >= 0.5f:
+            {
+                // A3: the cart held at stop 4, past the gap: the next traffic cart starts past the gap's far edge (stops 4 and 5 keep their traffic)
+                rc.Restore(4);
+                enc.TrafficClock = SetPieceRules.SlagTrafficEvery; // due at once
+                GD.Print($"[switchback] A3 the cart restored at stop 4 (S={rc.State.S:0.0}, past the gap at {enc.BreakGapS:0.0}); the traffic clock run out");
+                _sbStep++; _sbClock = 0f;
+                break;
+            }
+            case 6:
+            {
+                if (enc.TrafficCart is not { } t) { if (_sbClock > 3f) Fail($"A3: no traffic cart started at stop 4 (clock {enc.TrafficClock:0.0}, armed {enc.ArmedRide}, mode {rc.State.Mode})"); break; }
+                var want = SwitchBackRules.TrafficStartS(rc.State.S, enc.BreakGapS, enc.BreakGapFarEnemyS);
+                var s = t.Run.State.S;
+                GD.Print($"[switchback] A3 ok: with the cart held at stop {rc.StopIndex}, a traffic cart starts on the enemy line at S={s:0.0} ({s - enc.BreakGapFarEnemyS:0.0} m past the gap's far edge at {enc.BreakGapFarEnemyS:0.0}; the rule's {want:0.0})");
+                if (s < enc.BreakGapFarEnemyS + CartRules.HalfLength || Mathf.Abs(s - want) > 1f) { Fail("A3: the traffic cart did not start just past the gap"); return; }
+                rc.Restore(2);
+                _sbStep++; _sbClock = 0f;
+                break;
+            }
+            case 7 when _sbClock >= 1f:
             {
                 // B: everyone boards at stop 2
                 if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
                 _sbStep++; _sbClock = 0f;
                 break;
             }
-            case 4:
+            case 8:
             {
                 if (rc.State.Mode != CartMode.Rolling || enc.ArmedRide != 3) { if (_sbClock > 20f) Fail($"B: ride 3 did not depart (mode {rc.State.Mode}, stop {rc.StopIndex}, armed {enc.ArmedRide})"); break; }
                 _sbRiders.Clear();
@@ -152,7 +209,7 @@ public partial class DebugTools
                 _sbStep++; _sbClock = 0f;
                 break;
             }
-            case 5:
+            case 9:
             {
                 if (enc.SetPieceNode("r3_switch_out") is not TrackSwitch r3) { Fail("no r3_switch_out"); return; }
                 if (r3 is { Taken: true, Thrown: false }) { Fail("B: ride 3's switch_out lever was never offered to the seated lead before its points"); return; }
@@ -225,7 +282,7 @@ public partial class DebugTools
                         problems.Add($"{a.State.Name} fallen={a.State.Fallen} downed={a.Downed} {a.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart at {DungeonBuilder.WorldToCell(a.GlobalPosition)}");
                 if (problems.Count > 0) { if (_sbClock > 10f) Fail($"B the rise: {string.Join("; ", problems)}"); break; } // judged as the rise sets them down (after Restore's deferred set-down): a companion may then walk on to its leader's side
                 GD.Print($"[switchback] B the rise at stop {rc.StopIndex} after {_sbClock:0.0} s: the cart {rc.State.Mode}, plating {rc.State.Plating:0}/{CartRules.MaxPlating:0}; heroes [{string.Join(", ", heroes)}]");
-                GD.Print($"[switchback] RESULT ok ({_sbVariant}): A traffic dropped through the broken bridge; B the train kept on the slag line past the switch back fell at the gap (front {_sbFallFront:0.0}, gap {enc.BreakGapS:0.0}) and the wipe rose at stop 2; nobody fell but the train's");
+                GD.Print($"[switchback] RESULT ok ({_sbVariant}): A traffic dropped through the broken bridge quietly (told only with a hero near) and started past it from stop 4; B the train kept on the slag line past the switch back fell at the gap (front {_sbFallFront:0.0}, gap {enc.BreakGapS:0.0}) and the wipe rose at stop 2; nobody fell but the train's");
                 _done = true;
                 GetTree().Quit(0);
                 return;
@@ -234,7 +291,7 @@ public partial class DebugTools
     }
 
     /// <summary>The ride step of B: the train rolls across from the switch until it falls.</summary>
-    private const int SbFall = 6;
+    private const int SbFall = 10;
 
     /// <summary>
     /// The broken bridge as built: the gap a chasm with no footing under a ray, its deck cells with one; the enemy track's rails and
@@ -261,7 +318,7 @@ public partial class DebugTools
             var foot = Footing(t);
             var partyFoot = Footing(p);
             lines.Add($"{i}:{(isGap ? "GAP" : layout.IsBridge(t) ? layout.Bridges[t].ToString() : layout[t].ToString())}{(foot ? "+" : "-")}");
-            if (isGap) { gap = t; if (!layout.IsChasm(t) || layout.IsBridge(t) || foot) return $"the gap {t} is not a chasm with no footing (chasm {layout.IsChasm(t)}, bridge {layout.IsBridge(t)}, footing {foot})"; }
+            if (isGap) { gap = t; _sbGapAt = main.Builder.Surface(t); if (!layout.IsChasm(t) || layout.IsBridge(t) || foot) return $"the gap {t} is not a chasm with no footing (chasm {layout.IsChasm(t)}, bridge {layout.IsBridge(t)}, footing {foot})"; }
             else if (!layout.IsBridge(t) || layout.Bridges[t] != BridgeKind.Deck || !foot) return $"slag-line cell {t} beside lane {i} is not a deck with its footing (bridge {layout.IsBridge(t)}, footing {foot})";
             if (!CrevasseRules.SetDownOk(layout, p) || !partyFoot) return $"party lane {i} {p} beside the break is not solid floor (set-down {CrevasseRules.SetDownOk(layout, p)}, footing {partyFoot})";
         }

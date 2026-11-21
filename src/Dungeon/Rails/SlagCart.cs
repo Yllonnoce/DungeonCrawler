@@ -228,6 +228,46 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         QueueFree();
     }
 
+    /// <summary>
+    /// Server: the cart ran off the broken bridge's gap (<see cref="RailEncounterController"/> judges it and has given its living riders to the
+    /// crevasse). Quiet, for it happens unseen as often as not: no log line, no taunt and no tremor, only the crash at the gap. Every rider still
+    /// carried is laid hidden at <paramref name="under"/> (in the dark under the gap), the tub tumbles into the drop and the cart is freed.
+    /// <see cref="Derailed"/> is set, so clients hear it gone with the tumble; they read the plunge from where it went (<see cref="SwitchBackRules.PlungedAt"/>).
+    /// </summary>
+    public void PlungeThrough(Vector3 under)
+    {
+        if (Derailed || NetSession.IsClient || IsQueuedForDeletion() || !IsInsideTree() || GetParent() is not Node3D root) return;
+        Plunge(root, under);
+    }
+
+    /// <summary>Client: the server's cart went through the broken bridge's gap. The same crash and tumble, no tremor; its riders are laid hidden at <paramref name="under"/>.</summary>
+    public void ShowPlunged(Vector3 under)
+    {
+        if (Derailed || IsQueuedForDeletion() || !IsInsideTree() || GetParent() is not Node3D root) return;
+        Plunge(root, under);
+    }
+
+    private void Plunge(Node3D root, Vector3 under)
+    {
+        Derailed = true;
+        var at = GlobalPosition;
+        Audio.Synth.PlayAt(root, Audio.Synth.Thud(), at, -1f);
+        RideAudio.At("cart_crash", at); // positional: heard only near the gap
+        foreach (var rider in Aboard)
+        {
+            if (!IsInstanceValid(rider)) continue;
+            if (rider.Carrier == this) rider.Drop(under);
+            rider.Visible = false; // gone into the dark: nothing is left on the line or over the drop
+        }
+        Aboard.Clear();
+        Array.Clear(_bySpot);
+        Tumble(root);
+        Visible = false;
+        CollisionLayer = 0;
+        Shoe.Break();
+        QueueFree();
+    }
+
     /// <summary>A one-shot burst of orange sparks.</summary>
     private void Sparks(Node3D root, Vector3 at)
     {

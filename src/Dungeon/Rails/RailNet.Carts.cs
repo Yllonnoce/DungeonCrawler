@@ -103,7 +103,7 @@ public partial class RailNet
         _carts.TryGetValue(d.Cart, out var cc);
         if (d.Has(CartFlags.Hidden) || d.Has(CartFlags.Derailed))
         {
-            if (cc != null) Free(cc, d.Has(CartFlags.Derailed));
+            if (cc != null) Free(cc, d.Has(CartFlags.Derailed), d.S);
             return;
         }
         if (cc == null && (cc = Build(d)) == null) return;
@@ -232,13 +232,18 @@ public partial class RailNet
             if (Array.IndexOf(cc.Wanted, e.NetId) >= 0) Bind(cc);
     }
 
-    /// <summary>A copy goes: derailed (its tumble, its riders set down) or freed (its riders go with it, as the server frees them; the golem is set down).</summary>
-    private void Free(ClientCart cc, bool derailed)
+    /// <summary>
+    /// A copy goes: derailed (its tumble, its riders set down), or through the broken bridge's gap when the server's cart went at enemy S
+    /// <paramref name="goneS"/> there (<see cref="SwitchBackRules.PlungedAt"/>: quiet, its riders laid in the dark under the gap), or freed (its
+    /// riders go with it, as the server frees them; the golem is set down).
+    /// </summary>
+    private void Free(ClientCart cc, bool derailed, float goneS = float.NaN)
     {
         _carts.Remove(cc.Id);
         if (!IsInstanceValid(cc.Body)) return;
         if (cc.Slag is { } slag)
         {
+            if (derailed && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.PlungedAt(goneS)) { slag.ShowPlunged(enc.UnderTheGap()); return; }
             if (derailed) { slag.ShowDerailed(); return; }
             foreach (var rider in slag.Aboard)
                 if (IsInstanceValid(rider) && rider.Carrier == slag && !rider.IsQueuedForDeletion()) rider.QueueFree();

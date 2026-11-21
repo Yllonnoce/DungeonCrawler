@@ -1,3 +1,4 @@
+using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Net;
 using Godot;
@@ -9,7 +10,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// deck, but for one 4 m gap. Every role builds the same from the layout before the set pieces: the enemy track is cut bare over the gap
 /// and the <see cref="BrokenBridge"/> dressing stands at its near edge. The server judges it: the party's train still across on the slag line
 /// as its front reaches the gap falls (<see cref="RailController.Fall"/>); a ride's slag cart or the traffic cart whose front reaches it on
-/// the enemy track drops through, its riders lost to the crevasse (<see cref="CrevasseWatch.Take"/>), and is derailed and freed.
+/// the enemy track drops through, its riders lost to the crevasse (<see cref="CrevasseWatch.Take"/>), quietly (<see cref="SlagCart.PlungeThrough"/>:
+/// a line in the log only with a hero near, <see cref="SwitchBackRules.PlungeTold"/>). Traffic started with the party's cart past the gap starts
+/// past its far edge (<see cref="SwitchBackRules.TrafficStartS"/>), so the stops beyond keep their traffic.
 /// </summary>
 public partial class RailEncounterController
 {
@@ -17,6 +20,8 @@ public partial class RailEncounterController
     public float BreakGapS { get; private set; } = float.NaN;
     /// <summary>The enemy track's S of the gap's near edge (where a cart on the slag line drops), or NaN.</summary>
     internal float BreakGapEnemyS { get; private set; } = float.NaN;
+    /// <summary>The enemy track's S of the gap's far edge, or NaN.</summary>
+    internal float BreakGapFarEnemyS { get; private set; } = float.NaN;
     /// <summary>The broken bridge's ride (1-based), or −1 without one.</summary>
     public int BreakRide { get; private set; } = -1;
     /// <summary>Carts (slag and traffic) that dropped through the gap on this floor build (tests read it).</summary>
@@ -43,6 +48,7 @@ public partial class RailEncounterController
         BreakRide = brk.Ride;
         BreakGapS = partyS;
         BreakGapEnemyS = near;
+        BreakGapFarEnemyS = far;
         _enemy.Track.Cut(new[] { (near, far) }); // the slag line's rails, sleepers and gravel end at the gap's lip and start again past it
         var dressing = new BrokenBridge { Name = $"BrokenBridge_r{brk.Ride}", GapLength = far - near, InnerSide = InnerSideAt(near) };
         root.AddChild(dressing);
@@ -98,9 +104,10 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// A slag or traffic cart after its step: its front reached the gap on the enemy track this step (it runs toward higher S). Its riders
-    /// are lost to the crevasse and laid in the dark under the gap (nothing is left on the line or over the drop), then it derails and is
-    /// freed. True when it dropped: the caller forgets it.
+    /// A slag or traffic cart after its step: its front reached the gap on the enemy track this step (it runs toward higher S). Its living
+    /// riders are lost to the crevasse, then it plunges through quietly (<see cref="SlagCart.PlungeThrough"/>: every rider laid hidden in the
+    /// dark under the gap, nothing left on the line or over the drop; no derail line, taunt or tremor). A hero within
+    /// <see cref="SwitchBackRules.PlungeHeard"/> of the gap reads it in the log. True when it dropped: the caller forgets it.
     /// </summary>
     private bool DropsThrough(SlagCart cart)
     {
@@ -110,25 +117,41 @@ public partial class RailEncounterController
         if (!SwitchBackRules.Falls(BarricadeRules.FrontOf(run.Dir, run.PrevS), run.FrontS, BreakGapEnemyS, 1f)) return false; // on its own track: always on the slag line
         var watch = CrevasseWatch.Instance;
         var lost = 0;
-        var gapCell = DungeonBuilder.WorldToCell(_enemy.Point(BreakGapEnemyS + DungeonBuilder.CellSize / 2f));
-        var dark = _builder.Surface(gapCell) + Vector3.Down * CrevasseRules.HoldDepth; // under the gap, out of sight below its lip
         foreach (var rider in cart.Aboard)
         {
-            if (!IsInstanceValid(rider) || rider.IsQueuedForDeletion()) continue;
-            if (rider.IsAlive)
-            {
-                if (watch != null && IsInstanceValid(watch)) watch.Take(rider, rider.GlobalPosition);
-                else rider.KillByEnvironment("The crevasse", HazardDamage.Fall); // a broken bridge is cut only on a crevasse floor: never without a watch
-                lost++;
-            }
-            if (rider.Carrier == cart) rider.Drop(dark); // the derail sets down only those it still carries
-            rider.Visible = false;
+            if (!IsInstanceValid(rider) || rider.IsQueuedForDeletion() || !rider.IsAlive) continue;
+            if (watch != null && IsInstanceValid(watch)) watch.Take(rider, rider.GlobalPosition);
+            else rider.KillByEnvironment("The crevasse", HazardDamage.Fall); // a broken bridge is cut only on a crevasse floor: never without a watch
+            lost++;
         }
-        GD.Print($"[rails] {cart.Name} drops through the broken bridge at enemy S={run.FrontS:0.0}: {lost} rider(s) lost");
+        var nearest = NearestHeroTo(_enemy.Point(BreakGapEnemyS + DungeonBuilder.CellSize / 2f));
+        var told = SwitchBackRules.PlungeTold(nearest);
+        if (told) EventBus.Instance.Log("The slag cart plunges through the broken bridge.");
+        GD.Print($"[rails] {cart.Name} drops through the broken bridge at enemy S={run.FrontS:0.0}: {lost} rider(s) lost; nearest hero {nearest:0.0} m{(told ? ", told" : ", unseen")}");
         BreakDrops++;
-        cart.Derail();
-        if (IsInstanceValid(cart) && !cart.IsQueuedForDeletion()) cart.QueueFree(); // a derail refused (it was not in the tree): freed all the same
+        cart.PlungeThrough(UnderTheGap());
+        if (IsInstanceValid(cart) && !cart.IsQueuedForDeletion()) cart.QueueFree(); // a plunge refused (it was not in the tree): freed all the same
         return true;
+    }
+
+    /// <summary>Where the broken bridge's dead lie: the middle of its gap cell, <see cref="CrevasseRules.HoldDepth"/> below the lip, out of sight (every role reads the same).</summary>
+    internal Vector3 UnderTheGap()
+    {
+        var gapCell = DungeonBuilder.WorldToCell(_enemy.Point(BreakGapEnemyS + DungeonBuilder.CellSize / 2f));
+        return _builder.Surface(gapCell) + Vector3.Down * CrevasseRules.HoldDepth;
+    }
+
+    /// <summary>Client: a slag or traffic cart the server took off the line at enemy S <paramref name="cartS"/> went through this floor's gap (<see cref="SwitchBackRules.PlungedAt"/>).</summary>
+    internal bool PlungedAt(float cartS) => SwitchBackRules.PlungedAt(cartS, BreakGapEnemyS);
+
+    /// <summary>The straight distance from <paramref name="at"/> to the nearest hero in the world (a remote player's body too), or +∞.</summary>
+    private static float NearestHeroTo(Vector3 at)
+    {
+        var best = float.PositiveInfinity;
+        if (Main.Instance?.Party is not { } party) return best;
+        foreach (var hero in party.Adventurers)
+            if (IsInstanceValid(hero) && !hero.Parked) best = Mathf.Min(best, hero.GlobalPosition.DistanceTo(at));
+        return best;
     }
 
     /// <summary>Server test hook: a traffic cart starts on the enemy line at <paramref name="enemyS"/>, at cruise (one already there goes first).</summary>
