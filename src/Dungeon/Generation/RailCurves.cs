@@ -33,11 +33,21 @@ public static class RailCurves
     /// <summary>The longest straight piece <see cref="CentrelineOver"/> takes a height across: finer than the bed's 1 m eases.</summary>
     private const float BedPiece = 0.125f;
 
+    /// <summary>A bed vertex is kept where its pitch turns by more than this (rise over run): the eases turn 0.0625 per 0.125 m piece.</summary>
+    private const float BedTurn = 1e-3f;
+
+    /// <summary>A resample point this near a kept bed vertex is left out: closer than the laying's 0.05 m merge, never a sliver chord.</summary>
+    private const float KeptGap = BedPiece / 2f;
+
     /// <summary>
     /// The lane's centreline laid on a bed: the same 2D path as <see cref="Centreline"/> (straights between cell centres, a quarter
     /// circle at each turn), the straight pieces cut to at most <see cref="BedPiece"/>, each point's height
-    /// <paramref name="surfaceAt"/> of its world XZ, then the same resample every <paramref name="step"/> metres of path length.
-    /// A point function, so a ramp's rise stays on the ramp, and an arc onto one is exact.
+    /// <paramref name="surfaceAt"/> of its world XZ, then the same resample every <paramref name="step"/> metres of path length,
+    /// except where the bed turns: every bed vertex whose pitch changes (inside a ramp's eases) is kept as it is, and the
+    /// resample points between two kept vertices, or within <see cref="KeptGap"/> of one, are left out. So an ease is laid as its
+    /// 0.125 m pieces, not two or three 0.5 m chords, and the seat's vertical speed turns in small steps; on flat ground and along a
+    /// ramp's even slope nothing turns, and the line is the plain resample. A point function, so a ramp's rise stays on the ramp,
+    /// and an arc onto one is exact.
     /// </summary>
     public static IReadOnlyList<Vector3> CentrelineOver(IReadOnlyList<GridPos> lane, Func<Vector2, float> surfaceAt,
         float cell = 4f, float cornerRadius = 3f, float step = 0.5f)
@@ -52,10 +62,25 @@ public static class RailCurves
         for (int i = 1; i < path.Count; i++)
         {
             Vector2 a = path[i - 1].P, b = path[i].P;
+            if (Vector2.Distance(a, b) < 1e-6f) continue; // two arcs that meet: no piece between them, nor a turn read off one
             int pieces = Math.Max(1, (int)MathF.Ceiling(Vector2.Distance(a, b) / BedPiece));
             for (int k = 1; k <= pieces; k++) poly.Add(On(k == pieces ? b : Vector2.Lerp(a, b, k / (float)pieces)));
         }
-        return Resample(poly, step);
+        return Resample(poly, step, BedTurns(poly));
+    }
+
+    /// <summary>Which of the bed's vertices to keep: the inner ones where the pitch (rise over flat run) turns by more than <see cref="BedTurn"/>.</summary>
+    private static bool[] BedTurns(List<Vector3> poly)
+    {
+        var keep = new bool[poly.Count];
+        static float Pitch(Vector3 a, Vector3 b)
+        {
+            var run = MathF.Sqrt((b.X - a.X) * (b.X - a.X) + (b.Z - a.Z) * (b.Z - a.Z));
+            return run < 1e-6f ? 0f : (b.Y - a.Y) / run;
+        }
+        for (int i = 1; i + 1 < poly.Count; i++)
+            keep[i] = MathF.Abs(Pitch(poly[i], poly[i + 1]) - Pitch(poly[i - 1], poly[i])) > BedTurn;
+        return keep;
     }
 
     private static void Check(IReadOnlyList<GridPos> lane, float cell, float cornerRadius, float step)
@@ -112,21 +137,29 @@ public static class RailCurves
         return path;
     }
 
-    /// <summary>Points every <paramref name="step"/> metres along the 3D polyline from its first point, and its last point.</summary>
-    private static IReadOnlyList<Vector3> Resample(List<Vector3> poly, float step)
+    /// <summary>
+    /// Points every <paramref name="step"/> metres along the 3D polyline from its first point, and its last point. With
+    /// <paramref name="keep"/>, each polyline vertex it marks is a point too, and the step's points on a piece between two marked
+    /// vertices, or within <see cref="KeptGap"/> of one, are left out (the step's count along the path is unchanged).
+    /// </summary>
+    private static IReadOnlyList<Vector3> Resample(List<Vector3> poly, float step, bool[]? keep = null)
     {
         var result = new List<Vector3> { poly[0] };
         float nextAt = step, walked = 0f;
         for (int i = 1; i < poly.Count; i++)
         {
             float seg = Vector3.Distance(poly[i - 1], poly[i]);
+            bool keepA = keep?[i - 1] == true, keepB = keep?[i] == true;
             while (seg > 0f && walked + seg >= nextAt - 1e-4f)
             {
                 float f = Math.Clamp((nextAt - walked) / seg, 0f, 1f);
-                result.Add(Vector3.Lerp(poly[i - 1], poly[i], f));
+                float d = f * seg;
+                if (!(keepA && keepB) && !(keepA && d < KeptGap) && !(keepB && seg - d < KeptGap))
+                    result.Add(Vector3.Lerp(poly[i - 1], poly[i], f));
                 nextAt += step;
             }
             walked += seg;
+            if (keepB) result.Add(poly[i]);
         }
         if (Vector3.Distance(result[^1], poly[^1]) > 1e-3f) result.Add(poly[^1]);
         else result[^1] = poly[^1];
