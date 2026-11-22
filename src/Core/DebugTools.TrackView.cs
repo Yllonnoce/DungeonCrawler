@@ -9,14 +9,16 @@ namespace DungeonCrawler.Core;
 // ---- --test-track-view --------------------------------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears and the runaway on ride 4 is held.
 // The exposed-track fix's view from the seat: the rails over the line's first party ramp (RailBed.RampsOn(layout, rail.Party)[0])
-// and over a lane cell whose buckle roll was laid flat (DungeonBuilder.SparedRailBuckles: one on the ramp's ride k, else the first
-// on any ride k2, which takes a second pass). Each pass kills the enemies, raises the gates, holds the runaway, restores the cart at
+// and over a lane cell whose buckle roll was laid flat (DungeonBuilder.SparedRailBuckles): one the cart approaches on the cell's own
+// level (no ramp and no other level from the cart's length short of the sighting point to the cell), on the ramp's ride k first, else
+// on any ride k2, which takes a second pass; with none such, the first spared cell on ride k, else the first of all. Each pass kills the enemies, raises the gates, holds the runaway, restores the cart at
 // the stop before the ride (rc.Restore(k - 1)), boards, departs and pumps with the lead; a heap on the ride is cleared by the test.
 // As the front reaches each target's S less SightLead in travel order, the seated eye is aimed (me.AimAt) at the target's rail mid
 // point and a layer-1 ray is cast from me.Camera to each rail top (the track frame's ±RailHalf across and +RailTop up), stopped 0.05 m
 // short. The targets: the ramp's crest edge, the crest ± 1 m, its sag edge, and the spared cell's centre. Every ray must be clear
-// ("[trackview] sight {name} S=... railL ... railR ..."). The control, at the crest's moment: a ray from the same eye to 0.10 m under
-// the drawn floor at the crest edge (RailBed.DrawnAt) must be blocked, or the check is vacuous. Windowed with --screenshot=PATH it
+// ("[trackview] sight {name} S=... railL ... railR ..."). The controls must be blocked by the drawn floor within ControlNear of their
+// end, or the check is vacuous: at the crest's moment a ray from the same eye to 0.10 m under the drawn floor at the crest edge
+// (RailBed.DrawnAt), and at a level-approached spared cell (seen from over its rail tops) a ray to 3 cm under the bed at each rail. Windowed with --screenshot=PATH it
 // saves the HUD-hidden views PATH_crest.png, PATH_sag.png and PATH_heave.png at those moments. Prints [trackview] lines and a RESULT.
 public partial class DebugTools
 {
@@ -38,6 +40,12 @@ public partial class DebugTools
     private const float SightLead = 6f;
     /// <summary>The control ray ends this far under the drawn floor at the crest edge.</summary>
     private const float ControlUnder = 0.10f;
+    /// <summary>A control ray must be stopped by the drawn floor within this of its end.</summary>
+    private const float ControlNear = 1f;
+    /// <summary>The spared cell's controls end this far under the track's bed at each rail.</summary>
+    private const float HeaveUnder = 0.03f;
+    /// <summary>The heave cell was chosen approached on its own level (else the fallback), and its controls were blocked.</summary>
+    private bool _tkvHeaveLevel, _tkvHeaveControlBlocked;
     /// <summary>A sight ray stops this far short of the rail top it aims at.</summary>
     private const float SightShort = 0.05f;
 
@@ -129,7 +137,8 @@ public partial class DebugTools
                 if (_tkvPass == 0 && _tkvTargets[1].Count > 0) { _tkvPass = 1; _tkvStep = 1; _tkvClock = 0f; break; }
                 var shots = Shooting3D ? $", shots saved ({string.Join(", ", _tkvShotsSaved)})" : "";
                 if (Shooting3D && _tkvShotsSaved.Count != _tkvShotsWanted) { Fail($"{_tkvShotsSaved.Count} of {_tkvShotsWanted} shots saved"); return; }
-                GD.Print($"[trackview] RESULT ok: crest S={_tkvCrestS:0.0} sag S={_tkvSagS:0.0} ({(_tkvClimb ? "climb" : "descent")}, ride {_tkvRide}), heave cell {_tkvHeaveCell} S={_tkvHeaveS:0.0} (ride {_tkvHeaveRide}), {_tkvRays} rays clear, control blocked{shots}");
+                if (!_tkvControlBlocked || _tkvHeaveLevel && !_tkvHeaveControlBlocked) { Fail("a control never ran"); return; }
+                GD.Print($"[trackview] RESULT ok: crest S={_tkvCrestS:0.0} sag S={_tkvSagS:0.0} ({(_tkvClimb ? "climb" : "descent")}, ride {_tkvRide}), heave cell {_tkvHeaveCell} S={_tkvHeaveS:0.0} (ride {_tkvHeaveRide}), {_tkvRays} rays clear, control blocked{(_tkvHeaveLevel ? ", the spared cell's controls blocked" : "")}{shots}");
                 _done = true;
                 GetTree().Quit(0);
                 return;
@@ -160,8 +169,29 @@ public partial class DebugTools
         var spared = main.Builder.SparedRailBuckles.Where(layout.IsPartyRail).Select(c => (Cell: c, S: ClosestSInXz(track, main.Builder.Surface(c)))).ToList();
         GD.Print($"[trackview] spared party-lane cells: {string.Join(", ", spared.Select(c => $"{c.Cell} S={c.S:0.0} ride {RideAt(c.S)}"))}");
         if (spared.Count == 0) return "no spared lane cell";
-        var onRide = spared.FindIndex(c => RideAt(c.S) == _tkvRide);
-        var heave = spared[onRide >= 0 ? onRide : 0];
+        // the cell is sighted from its own level: a spared cell whose approach, from the whole cart's length short of the sighting point
+        // (target - SightLead) to the cell, lies on cells of the cell's own level with no ramp; on the ramp's ride first, else on any ride.
+        // With none such, the brief's rule: the first spared cell on the ramp's ride, else the first of all
+        bool LevelApproach((GridPos Cell, float S) c)
+        {
+            var level = layout.LevelOf(c.Cell);
+            for (var s = c.S - SightLead - 2f * CartRules.HalfLength; s <= c.S; s += 0.5f)
+            {
+                var g = DungeonBuilder.WorldToCell(TrackPoint(track, s));
+                if (layout.Ramps.ContainsKey(g) || layout.LevelOf(g) != level) return false;
+            }
+            return true;
+        }
+        var level = spared.Where(LevelApproach).ToList();
+        GD.Print($"[trackview] spared cells approached on their own level: {(level.Count == 0 ? "none" : string.Join(", ", level.Select(c => $"{c.Cell} S={c.S:0.0} ride {RideAt(c.S)}")))}");
+        var onRide = level.FindIndex(c => RideAt(c.S) == _tkvRide);
+        (GridPos Cell, float S) heave;
+        if (level.Count > 0) { heave = level[onRide >= 0 ? onRide : 0]; _tkvHeaveLevel = true; }
+        else
+        {
+            var any = spared.FindIndex(c => RideAt(c.S) == _tkvRide);
+            heave = spared[any >= 0 ? any : 0];
+        }
         (_tkvHeaveCell, _tkvHeaveS, _tkvHeaveRide) = (heave.Cell, heave.S, RideAt(heave.S));
 
         var dir = rc.Party.Dir;
@@ -169,7 +199,7 @@ public partial class DebugTools
         _tkvTargets[_tkvHeaveRide == _tkvRide ? 0 : 1].Add(("heave", _tkvHeaveS));
         foreach (var t in _tkvTargets) t.Sort((a, b) => (dir * a.S).CompareTo(dir * b.S));
         _tkvShotsWanted = Shooting3D ? 3 : 0;
-        GD.Print($"[trackview] heave cell {_tkvHeaveCell} at S={_tkvHeaveS:0.0} on ride {_tkvHeaveRide}{(_tkvHeaveRide == _tkvRide ? "" : " (a second pass)")}; sighted from the seat {SightLead:0} m short of each target in travel order");
+        GD.Print($"[trackview] heave cell {_tkvHeaveCell} at S={_tkvHeaveS:0.0} on ride {_tkvHeaveRide} ({(_tkvHeaveLevel ? "approached on its own level" : "the fallback: no spared cell is approached on its own level")}){(_tkvHeaveRide == _tkvRide ? "" : " (a second pass)")}; sighted from the seat {SightLead:0} m short of each target in travel order");
         return null;
     }
 
@@ -191,15 +221,29 @@ public partial class DebugTools
         GD.Print($"[trackview] sight {name} S={s:0.0} railL {left} railR {right} (front S={front:0.0}, the eye {eye.DistanceTo(mid):0.0} m off, {eye.Y - mid.Y:+0.00;-0.00} m over the rail tops)");
         if (left != "clear" || right != "clear") return $"the rails at {name} (S={s:0.0}) are not in sight from the seat: railL {left}, railR {right}";
         _tkvRays += 2;
+        // a control must hit the drawn floor near its target, or the sight check is vacuous
+        string? Control(string what, Vector3 under)
+        {
+            var hit = me.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(eye, under, 1));
+            var at = hit.Count == 0 ? (Vector3?)null : hit["position"].AsVector3();
+            var near = at is { } h && h.DistanceTo(under) <= ControlNear;
+            GD.Print($"[trackview] control {what}: a ray to {under.Y:0.000} m {(at is { } a ? $"blocked by {(hit["collider"].AsGodotObject() as Node)?.Name} at {a.DistanceTo(eye):0.00} m, {a.DistanceTo(under):0.00} m from its end" : "clear")}");
+            return near ? null : $"the sight check is vacuous: the control {what} is {(at == null ? "clear" : $"blocked {at.Value.DistanceTo(under):0.00} m from its end, not within {ControlNear:0.0} m")}";
+        }
         if (name == "crest")
         {
             var edge = RailBed.CrestEdge(RailBed.RampsOn(layout, layout.Rail!.Party)[0], DungeonBuilder.CellSize);
             var drawn = DungeonBuilder.FloorTop + RailBed.DrawnAt(layout, edge, DungeonBuilder.CellSize);
-            var under = new Vector3(edge.X, drawn - ControlUnder, edge.Y);
-            var control = Sight(me, eye, under);
-            _tkvControlBlocked = control != "clear";
-            GD.Print($"[trackview] control: a ray to {ControlUnder:0.00} m under the drawn floor at the crest edge (y {drawn:0.000}) {control}");
-            if (!_tkvControlBlocked) return "the sight check is vacuous: a ray under the drawn floor at the crest edge is clear";
+            if (Control($"{ControlUnder:0.00} m under the drawn floor at the crest edge", new Vector3(edge.X, drawn - ControlUnder, edge.Y)) is { } vacuous) return vacuous;
+            _tkvControlBlocked = true;
+        }
+        if (name == "heave" && _tkvHeaveLevel)
+        {
+            // from its own level the eye looks down on the cell; the rails lowered under the bed must be hidden by its slab
+            if (eye.Y <= mid.Y) return $"the spared cell is sighted from under its rail tops (the eye {eye.Y - mid.Y:+0.00;-0.00} m over them)";
+            foreach (var side in new[] { -1f, 1f })
+                if (Control($"{HeaveUnder * 100f:0} cm under the bed at rail {(side < 0 ? "L" : "R")} over the spared cell", f.Origin + x * (side * TrackDepthRules.RailHalf) - y * HeaveUnder) is { } vacuous) return vacuous;
+            _tkvHeaveControlBlocked = true;
         }
         if (Shooting3D && name is "crest" or "sag" or "heave")
         {

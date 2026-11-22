@@ -371,7 +371,7 @@ godot --headless --path . -- --replay-plans=DIR     # answer planning calls from
 godot --headless --path . -- --test-floors --seed=N # walk-off detector: steps from every surface of floors 1-6 (secrets opened) and reports any step onto nothing; --builtin for the shipped campaign
 godot --headless --path . -- --builtin --floor=N --inspect=X,Y   # print a cell's 7x7 neighbourhood: cell type, level, grid items, ray hits
 godot --headless --path . -- --builtin --no-ai --floor=12 --print-map --track-depth=3 --track-depth-float   # --track-depth[=CM] (implies --print-map; 3 cm by default) probes every rail track against the drawn floor every 0.5 m (rail tops, sleepers, walls) and lists the line's ramps, set pieces and cavern S, then the verdict ([track-depth] total buried=N inside=N nofloorOff=N budget=N ...; the pass is buried=0 inside=0 nofloorOff=0 budget=0); --track-depth-float also lists each sample standing more than CM over the floor
-godot --headless --path . -- --test-track-view    # floor 12 solo, lethality 3: ride 3 from stop 2 over the line's first party ramp and a spared lane cell; layer-1 rays from the seated eye to each rail top at the sag, the crest and the crest ± 1 m and over the spared cell, all clear, and a control ray under the drawn floor at the crest that must be blocked; windowed with --screenshot=PATH it saves PATH_crest/_sag/_heave.png (HUD hidden); prints [trackview] RESULT
+godot --headless --path . -- --test-track-view    # floor 12 solo, lethality 3: ride 3 from stop 2 on the party lane (r3_switch_out left straight, r3_heap cleared by the test) over the line's first party ramp and a spared lane cell approached on its own level ((21,23) on floor 12); layer-1 rays from the seated eye to each rail top at the sag, the crest and the crest ± 1 m and over the spared cell, all clear, and control rays under the drawn floor at the crest and 3 cm under the bed over the spared cell that must be blocked near their ends; windowed with --screenshot=PATH it saves PATH_crest/_sag/_heave.png (HUD hidden); prints [trackview] RESULT
 godot --headless --path . -- --test-structures                    # picks a seed whose floors 1-4 hold a gate, a camp, a pond and a stream; checks braziers, hut walls, bandits at the fire, water beds, 45° corners, wading
 godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   # stand N cells back from a node (Gate_, Camp_, Water_, Barrel0, Enemy...) and look at it; --face-cell=X,Y:N for a grid cell; --face-node=chamfer:N for the first cut corner, --face-node=buckled for a heaved tile, --face-node=bridge for a stream's bridge, --face-node=vault / groin for the ceiling (add --vault=pointed etc. to force a profile)
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back; the VR comfort level round-trips through Save/Load
@@ -1888,13 +1888,15 @@ Measured (Task 7): lit 0.095, dark 0.050 (0.52; 0.58 after the A/B fix moved the
 the runaway's 37 orange with its light and 0 without, the rays clear (the lever, the spur's end, the split's lamps at 11.1 and 20.5 m, the
 runaway's lamp at 17–22 m), the 8 lamps where the dark is full hidden with their lanterns dark (of the 10 out; the flow does not judge
 the 3 that stand in its ramps) and 104 lit outside, and the light back at stop 4 and on floor 13. Since the exposed-track fix (its Task 5)
-the gate's two places are held and aimed: the cart is held still (V = 0) with the front 10 m before the dark and again at the dark's
-middle until both of that place's shots are saved, the seated eye is aimed along the party track's tangent, level, and each place is
+the gate's two places are held and aimed: the cart is held still (V = 0, its S pinned with the front exactly there) 10 m before the dark and again
+at the dark's middle until both of that place's shots are saved (the runaway behind is pinned too, so a long hold cannot let it close
+in and ram), the seated eye is aimed along the party track's tangent, level, and each place is
 shot twice, with the party cart's own head lamp (`Lamp`, `LampGlow`, `LampLens`) hidden and lit, each drawn 30 frames so the
 volumetric fog settles. The gate judges the world's light, not the party's lamp: only the lamp-hidden ratio is held to 0.6; the ratio
-with the lamp lit is logged. Measured over two windowed runs: lamp hidden 0.469 and 0.485 (lit 0.0695, dark 0.0326–0.0337), lamp lit
-0.84 and 0.88, the straight before the points 5.0 m and 10 lamps out (8 judged). Before the hold a shot's S followed the shot queue,
-and the ratio moved between 0.52 and 0.76 with shot order alone.
+with the lamp lit is logged. Measured over two windowed runs: lamp hidden 0.422 and 0.422 (lit 0.0706–0.0709, dark 0.0298–0.0299),
+lamp lit 0.74 and 0.75, the straight before the points 5.0 m and 10 lamps out (8 judged). Before the hold a shot's S followed the shot queue: with
+the lamp lit the ratio read 0.59 a few metres past the middle and 0.76 at it, and with the lamp hidden (but unheld) 0.52 or 0.61 with
+shot order alone.
 
 The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.49) on that ride, an elite forge golem, "Kilnheart the Hulking",
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and

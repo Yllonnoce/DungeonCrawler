@@ -707,6 +707,12 @@ public partial class DebugTools
     private const int HeldFrames = 30;
     /// <summary>A held place's two twins must be taken within this much S of each other (the hold).</summary>
     private const float HeldSlack = 0.05f;
+    /// <summary>The held places' twins, lamp lit and lamp hidden: the lit place's, then the dark's.</summary>
+    private static readonly (string On, string Off)[] HeldPairs = { ("lit", "lit_nolamp"), ("dark", "dark_nolamp") };
+    private static bool IsHeldShot(string name) => HeldPairs.Any(p => p.On == name || p.Off == name);
+    /// <summary>The S the runaway is pinned at while a held place's twins are taken (NaN: not held), and the shot posed last.</summary>
+    private float _lgHeldRunawayS = float.NaN;
+    private string? _lgLastPosed;
     /// <summary>Where each gate shot was taken (the front's S as it was saved).</summary>
     private readonly Dictionary<string, float> _lgShotS = new();
     /// <summary>Every shot the windowed =after run takes, in the order of the line; the gate is judged once all are in.</summary>
@@ -950,9 +956,20 @@ public partial class DebugTools
         var darkAt = enc.DarkFromS + DarkRules.Length / 2f;
         // the gate's places are held and aimed (the coordinator's rulings): the cart is held still (V = 0) from the front reaching the
         // place until both of its twins are saved, so the lamp is the only difference between them and the shot order changes nothing
-        if (front >= litAt && !(_lgStats.ContainsKey("lit") && _lgStats.ContainsKey("lit_nolamp"))
-            || front >= darkAt && !(_lgStats.ContainsKey("dark") && _lgStats.ContainsKey("dark_nolamp")))
-            rc.Party.State = rc.State with { V = 0f };
+        bool Pending((string On, string Off) pair) => !(_lgStats.ContainsKey(pair.On) && _lgStats.ContainsKey(pair.Off));
+        var holdAt = front >= darkAt && Pending(HeldPairs[1]) ? darkAt : front >= litAt && Pending(HeldPairs[0]) ? litAt : float.NaN;
+        if (!float.IsNaN(holdAt))
+        {
+            // pinned, V and S both, with the front exactly at the place (a long frame's overshoot taken back), so the twins are taken at
+            // one S; the runaway behind is pinned too, or a long hold on a slow display lets it close in and ram the held train
+            rc.Party.State = rc.State with { S = holdAt - rc.Party.Dir * CartRules.HalfLength, V = 0f };
+            if (enc.RideRunawayRun is { } chaser)
+            {
+                if (float.IsNaN(_lgHeldRunawayS)) _lgHeldRunawayS = chaser.State.S;
+                chaser.State = chaser.State with { S = _lgHeldRunawayS, V = 0f };
+            }
+        }
+        else _lgHeldRunawayS = float.NaN;
         if (rolling && enc.SplitSwitchNode is { } split)
         {
             var spurEnd = split.SpurEnd;
@@ -977,7 +994,8 @@ public partial class DebugTools
         {
             _lgShot = next;
             next.Camera = next.Pose();
-            next.Frames = next.Name is "lit" or "lit_nolamp" or "dark" or "dark_nolamp" ? HeldFrames : 3;
+            next.Frames = IsHeldShot(next.Name) ? HeldFrames : 3;
+            _lgLastPosed = next.Name;
         }
         else if (_lgShot is { } shot && --shot.Frames <= 0)
         {
@@ -996,7 +1014,7 @@ public partial class DebugTools
                 : shot.Name is "lit" or "lit_nolamp" ? $" (held {LitShotBefore:0} m before the dark, S={litAt:0.0}, {front - litAt:+0.00;-0.00} m)" : "";
             GD.Print($"[runaway] shot {shot.Name} ({err}) {path}: the front at S={front:0.00}{place}, {img.GetWidth()}x{img.GetHeight()}; the scene's mean luminance {luma:0.000}{counted}");
             if (shot.Camera is { } used) shot.Done?.Invoke(used);
-            foreach (var (on, off) in new[] { ("lit", "lit_nolamp"), ("dark", "dark_nolamp") })
+            foreach (var (on, off) in HeldPairs)
                 if (_lgShotS.TryGetValue(on, out var sa) && _lgShotS.TryGetValue(off, out var sb) && (shot.Name == on || shot.Name == off) && Mathf.Abs(sa - sb) > HeldSlack)
                 { fail($"the {on} twins were not taken at one S ({sa:0.00} and {sb:0.00}): the hold slipped"); return true; }
             if (shot.Name == "dark" && DarkHere(enc, me) is { } light) { fail(light); return true; }
@@ -1015,10 +1033,13 @@ public partial class DebugTools
         return false;
     }
 
-    /// <summary>The next shot to pose: a held place's twins first when queued (the cart waits for them), else the queue's head.</summary>
+    /// <summary>
+    /// The next shot to pose: a held place's twins first when queued (the cart waits for them), else the queue's head; but never between
+    /// the runaway's A/B ("behind" then "behind_nolamp" at once after it).
+    /// </summary>
     private LgShot? NextShot()
     {
-        if (_lgShots.FirstOrDefault(q => q.Name is "lit_nolamp" or "lit" or "dark_nolamp" or "dark") is { } held)
+        if (_lgLastPosed != "behind" && _lgShots.FirstOrDefault(q => IsHeldShot(q.Name)) is { } held)
         {
             var rest = _lgShots.Where(q => q != held).ToList();
             _lgShots.Clear();
