@@ -22,7 +22,7 @@ namespace DungeonCrawler.Core;
 // The split's variants (--test-split, or --test-runaway with one; the default is after) ride the same way with the lead pumping and judge
 // r4_split (RunSplitRide): =after, the seat offers it from the window's start (ruling R-bend) with the wait call there, the now call 1 m past
 // the points, and the lead throws it from the seat 1-3 m past them: no cross, the runaway takes the spur and goes off it into the crevasse
-// within 3 s, no ram, stop 4. =early: a press 9 m short throws nothing (the seat does not offer it there); the test's hook throws it, "not
+// within 3 s, no ram, stop 4. =early: a press 9 m short (a metre inside the server's early lead, SplitRules.PressReach) throws nothing (the seat does not offer it there); the test's hook throws it, "not
 // yet" is called, the train takes the spur and falls with its front within 1 m of the points + 7, every rider fallen within 1 s, the wipe
 // rises at stop 3 with every hero up within 10 m of the whole cart, and the next departure sends a runaway again. =hold: the hook throws it 9 m
 // short ("not yet"), the lead sets it back from the seat at the window's start (taken at once), then throws it from the seat short of the
@@ -375,7 +375,7 @@ public partial class DebugTools
 
     /// <summary>
     /// Ride 4 with the split live, from the departure at stop 3 (steps 4 on). =after: the lead throws it from the seat 1-3 m past the points;
-    /// =early: a thrown split (a test hook, 9 m short: the seat never offers it there) takes the train down the spur into the crevasse, the wipe
+    /// =early: a thrown split (a test hook, a metre inside the early lead, 9 m short on floor 12: the seat never offers it there) takes the train down the spur into the crevasse, the wipe
     /// rises at stop 3 and the next departure sends a runaway again; =hold: thrown by the hook, set back from the seat, a throw from the seat
     /// short of the points held to them; =stall: thrown by the hook, the train stuck short, the watchdog sets it back and grinds on; =lone: thrown
     /// by the hook, the only human downed in the seat, the safe line. Nobody falls but the train's riders.
@@ -394,6 +394,10 @@ public partial class DebugTools
         }
         var lever = split.Lever;
         var points = enc.SplitPointsS;
+        // the early marks, from the server's early lead (SplitRules.PressReach of the window: 10 m on floor 12): =early's check of the lead
+        // half a metre short of it, and the press (the hook's throw on every variant but =after) a metre inside it, still short of the window
+        var reach = SplitRules.PressReach(split.WindowAhead);
+        float leadCheckShort = reach + 0.5f, pressShort = reach - 1f;
         var front = rc.Party.FrontS;
         var rolling = rc.State.Mode == CartMode.Rolling;
 
@@ -412,7 +416,7 @@ public partial class DebugTools
             if (!_rwLoose) { if (_rwClock > 60f) Fail($"after the rise the runaway did not break loose again (front S={front:0.0}, mode {rc.State.Mode})"); return; }
             party.ForcedMoveInput = null;
             if (SightsMissing() is { } unseen) { Fail(unseen); return; }
-            GD.Print($"[split] RESULT ok (early): a split thrown 9 m short (not by the seat: it was not offered there; \"Not yet\" called at front S={_spNotYetFront:0.0}) took the train down the spur (\"The cart takes the spur!\") and it fell with its front at S={_spFallFront:0.0} (the points + {_spFallFront - points:0.0} m), every rider fallen, the wipe rose at stop 3; boarded and departed again, the runaway broke loose again; nobody fell but the train's");
+            GD.Print($"[split] RESULT ok (early): a split thrown {pressShort:0.0} m short (not by the seat: it was not offered there; \"Not yet\" called at front S={_spNotYetFront:0.0}) took the train down the spur (\"The cart takes the spur!\") and it fell with its front at S={_spFallFront:0.0} (the points + {_spFallFront - points:0.0} m), every rider fallen, the wipe rose at stop 3; boarded and departed again, the runaway broke loose again; nobody fell but the train's");
             _done = true;
             GetTree().Quit(0);
             return;
@@ -459,32 +463,33 @@ public partial class DebugTools
                         if (!_spPressedAfter && front > points + 3f && rolling) { Fail($"no press 1-3 m past the points (front S={front:0.0}, offered {offered})"); return; }
                         break;
                     default:
-                        if (v == "early" && !_spLeadChecked && rolling && front >= points - 10.5f)
+                        if (pressShort <= split.WindowAhead) { Fail($"the early lead ({reach:0.0} m) leaves no press short of the window ({split.WindowAhead:0.0} m)"); return; }
+                        if (v == "early" && !_spLeadChecked && rolling && front >= points - leadCheckShort)
                         {
-                            // short of the server's early lead (the window less 5 m) a remote press is not taken
+                            // short of the server's early lead (the window less AcceptLead) a remote press is not taken
                             _spLeadChecked = true;
-                            var from = points - SplitRules.PressReach(split.WindowAhead);
+                            var from = points - reach;
                             var window = front < from && enc.InSeatedWindow(me, lever);
                             GD.Print($"[split] early: short of the early lead (front S={front:0.0}, the lead from S={from:0.0}): the server's seated window {(front < from ? (window ? "yes" : "no") : "not checked (the front already in the lead)")}");
                             if (window) { Fail("the server takes a press short of its early lead"); return; }
                         }
-                        if (!_spThrown9 && rolling && front >= points - 9f)
+                        if (!_spThrown9 && rolling && front >= points - pressShort)
                         {
-                            if (front > points - 8f) { Fail($"the front passed 9 m short unseen (S={front:0.0})"); return; }
+                            if (front > points - pressShort + 1f) { Fail($"the front passed {pressShort:0.0} m short unseen (S={front:0.0})"); return; }
                             if (v == "early")
                             {
-                                // a press 9 m short is never thrown: the seat does not offer it there; a remote seat's press, judged as the server judges
+                                // a press there (inside the early lead, short of the window) is never thrown: the seat does not offer it there; a remote seat's press, judged as the server judges
                                 // an InteractIntent (ServerWorld: InSeatedWindow, the late check, then Interact), is taken in the early lead and held
                                 party.VrUse(true);
                                 party.VrUse(false);
-                                if (lever.Thrown || lever.HeldBy != null) { Fail("the seat's press 9 m short threw or held the split (the window is not open there)"); return; }
+                                if (lever.Thrown || lever.HeldBy != null) { Fail($"the seat's press {pressShort:0.0} m short threw or held the split (the window is not open there)"); return; }
                                 var window = enc.InSeatedWindow(me, lever);
                                 var late = enc.LateFor(lever);
-                                GD.Print($"[split] early: a remote seat's press as the server takes it, 9 m short (front S={front:0.0}; the seat offers {(offered ? "it" : "nothing")}, the prompt \"{lever.Prompt}\"): seated window {(window ? "yes" : "no")} (from S={points - SplitRules.PressReach(split.WindowAhead):0.0}), late {late}");
-                                if (!window || late != LatePress.None) { Fail("the server would drop a remote press 9 m short, in its early lead"); return; }
+                                GD.Print($"[split] early: a remote seat's press as the server takes it, {pressShort:0.0} m short (front S={front:0.0}; the seat offers {(offered ? "it" : "nothing")}, the prompt \"{lever.Prompt}\"): seated window {(window ? "yes" : "no")} (from S={points - reach:0.0}), late {late}");
+                                if (!window || late != LatePress.None) { Fail($"the server would drop a remote press {pressShort:0.0} m short, in its early lead"); return; }
                                 lever.Interact(party, me); // ServerWorld's next step for a press in the window
                                 GD.Print($"[split] early: the press taken: thrown={lever.Thrown}, held by {lever.HeldBy ?? "nobody"}");
-                                if (lever.Thrown || lever.HeldBy != me.State.Name) { Fail("the server's press 9 m short was not held to the points"); return; }
+                                if (lever.Thrown || lever.HeldBy != me.State.Name) { Fail($"the server's press {pressShort:0.0} m short was not held to the points"); return; }
                             }
                             lever.DebugThrow(); // the test's hook: a lever thrown short of its window (no press can do it)
                             _spThrown9 = true;
@@ -537,7 +542,7 @@ public partial class DebugTools
                         if (lever.Thrown) { Fail("the watchdog freed the train with the split still thrown"); return; }
                     }
                 }
-                if (v == "lone" && _spThrown9 && !_spLoneDowned && rolling && front >= points - 8f)
+                if (v == "lone" && _spThrown9 && !_spLoneDowned && rolling && front >= points - pressShort + 1f)
                 {
                     party.AllowPossession = false; // else solo hands the lead to a seated companion, who would then be the human able to set it back
                     me.State.Mangled = true;       // held down until the points (calm auto-revive never stands a Mangled member up)
@@ -620,15 +625,15 @@ public partial class DebugTools
                             return;
                         case "hold":
                             if (float.IsNaN(_spPlungeAt)) { Fail("hold: the runaway did not take the spur"); return; }
-                            GD.Print($"[split] RESULT ok (hold): thrown 9 m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), set back from the seat at once (no refusal) in the window, thrown again from the seat short of the points and held to them (\"{SplitRules.HeldLog}\" shown); the train passed straight, the held throw thrown just after, a second press just past the points ignored; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
+                            GD.Print($"[split] RESULT ok (hold): thrown {pressShort:0.0} m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), set back from the seat at once (no refusal) in the window, thrown again from the seat short of the points and held to them (\"{SplitRules.HeldLog}\" shown); the train passed straight, the held throw thrown just after, a second press just past the points ignored; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
                             break;
                         case "lone":
                             if (float.IsNaN(_spPlungeAt)) { Fail("lone: the runaway did not take the spur"); return; }
-                            GD.Print($"[split] RESULT ok (lone): thrown 9 m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), the only human downed in the seat; at the points \"{SplitRules.SafeLineLog}\", the main line, the split left thrown; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
+                            GD.Print($"[split] RESULT ok (lone): thrown {pressShort:0.0} m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), the only human downed in the seat; at the points \"{SplitRules.SafeLineLog}\", the main line, the split left thrown; the runaway took the spur and went into the crevasse; arrived at stop 4; nobody fell");
                             break;
                         case "stall":
                             if (!_spSetBackSeen || rc.GroundFree <= _spGroundBefore || lever.Thrown) { Fail($"stall: the watchdog's set-back seen {_spSetBackSeen}, grinds {rc.GroundFree - _spGroundBefore}"); return; }
-                            GD.Print($"[split] RESULT ok (stall): thrown 9 m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), the train caught 7 m short of the points; the watchdog set the split back and ground the train on to stop 4, never onto the spur; no fall; rams {rams}; nobody fell");
+                            GD.Print($"[split] RESULT ok (stall): thrown {pressShort:0.0} m short by the test's hook (\"Not yet\" at S={_spNotYetFront:0.0}), the train caught 7 m short of the points; the watchdog set the split back and ground the train on to stop 4, never onto the spur; no fall; rams {rams}; nobody fell");
                             break;
                         default:
                             Fail($"{v}: arrived at stop 4");
