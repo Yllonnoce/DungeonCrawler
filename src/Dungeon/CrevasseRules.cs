@@ -222,13 +222,32 @@ public static class CrevasseRules
     }
 
     /// <summary>
-    /// Can a steered body's centre stand at <paramref name="at"/>? Not over a chasm cell; on a plank's cell only within its boards
-    /// less <see cref="FootingMargin"/> of its line; anywhere else (floor, a deck, rock the walls keep it out of) yes.
+    /// The cavern's lane decks, the cells that can give way (<c>ChasmDressing.SetGone</c>): the <see cref="BridgeKind.Deck"/>
+    /// party-lane cells of <see cref="RailLine.Cavern"/> in line order, then each one's deck twin on the enemy lane (its
+    /// 4-neighbour there) in the same order. Empty on a floor with no cavern.
+    /// </summary>
+    public static List<GridPos> CavernDecks(FloorLayout l)
+    {
+        var decks = new List<GridPos>();
+        if (l.Rail is not { Cavern: { } span } rail) return decks;
+        for (var i = Math.Max(0, span.From); i <= span.To && i < rail.Party.Count; i++)
+            if (l.Bridges.TryGetValue(rail.Party[i], out var kind) && kind == BridgeKind.Deck) decks.Add(rail.Party[i]);
+        var party = decks.Count;
+        for (var k = 0; k < party; k++)
+            foreach (var n in decks[k].Neighbours4())
+                if (l.IsRail(n) && !l.IsPartyRail(n) && l.Bridges.TryGetValue(n, out var kind) && kind == BridgeKind.Deck) { decks.Add(n); break; }
+        return decks;
+    }
+
+    /// <summary>
+    /// Can a steered body's centre stand at <paramref name="at"/>? Not over a chasm cell, nor over a bridge cell that gave way
+    /// (<see cref="FloorLayout.GoneBridges"/>); on a plank's cell only within its boards less <see cref="FootingMargin"/> of its
+    /// line; anywhere else (floor, a deck, rock the walls keep it out of) yes.
     /// </summary>
     public static bool Footing(FloorLayout l, Vector2 at, float cellSize)
     {
         var c = CellOf(at, cellSize);
-        if (l.IsChasm(c)) return false;
+        if (l.IsChasm(c) || (l.GoneBridges.Count > 0 && l.GoneBridges.Contains(c))) return false;
         if (!l.Bridges.TryGetValue(c, out var kind) || kind != BridgeKind.Plank) return true;
         var off = PlankRunsAlongX(l, c) ? at.Y - (c.Y + 0.5f) * cellSize : at.X - (c.X + 0.5f) * cellSize;
         return MathF.Abs(off) <= PlankWidth / 2f - FootingMargin;

@@ -8,7 +8,8 @@ namespace DungeonCrawler.Dungeon;
 /// role, headless included: a bridge cell has no stone floor, so a deck's or a plank's box is the only thing a walker stands on there.
 /// The look (<see cref="BuildLook"/>) is skipped headless: for each 4-connected region of chasm-or-bridge cells, shaft
 /// walls (near-black at the rim, warming with depth) from the rim down <see cref="DrawDepth"/>, an ember floor and its light at the bottom, two drifting mist layers below
-/// the lip; the deck slabs with a trestle bent under each, and the planks.
+/// the lip; the deck slabs with a trestle bent under each, and the planks. The cavern's lane decks (<see cref="CrevasseRules.CavernDecks"/>)
+/// can give way at runtime (<see cref="SetGone"/>), so each is drawn as its own look (<c>DeckLook_{x}_{y}</c>), the rest of the wood as one mesh.
 /// </summary>
 public partial class ChasmDressing : Node3D
 {
@@ -28,6 +29,15 @@ public partial class ChasmDressing : Node3D
     public int Regions { get; private set; }
     public int Decks { get; private set; }
     public int Planks { get; private set; }
+    /// <summary>The cavern's lane decks (<see cref="CrevasseRules.CavernDecks"/>), each drawn and given way alone.</summary>
+    public int Cavern => _cavern.Count;
+
+    /// <summary>The floor's dressing while it is in the tree (one floor at a time), else null.</summary>
+    public static ChasmDressing? Instance { get; private set; }
+
+    private readonly HashSet<GridPos> _cavern = new();
+    private readonly Dictionary<GridPos, CollisionShape3D> _deckShapes = new();
+    private readonly Dictionary<GridPos, MeshInstance3D> _deckLooks = new();
 
     private readonly List<StandardMaterial3D> _mists = new();
     private float _time;
@@ -42,10 +52,37 @@ public partial class ChasmDressing : Node3D
         node.Regions = regions.Count;
         node.Decks = layout.Bridges.Values.Count(k => k == BridgeKind.Deck);
         node.Planks = layout.Bridges.Values.Count(k => k == BridgeKind.Plank);
-        node.AddChild(BuildFootings(layout, surface, cellSize));
+        node._cavern.UnionWith(CrevasseRules.CavernDecks(layout));
+        node.AddChild(node.BuildFootings(layout, surface, cellSize));
         if (DrawsLook) node.BuildLook(layout, regions, surface, cellSize, plank);
-        GD.Print($"[chasm] regions={node.Regions} decks={node.Decks} planks={node.Planks}");
+        GD.Print($"[chasm] regions={node.Regions} decks={node.Decks} planks={node.Planks} cavern={node.Cavern}");
         return node;
+    }
+
+    public override void _EnterTree() => Instance = this;
+
+    public override void _ExitTree()
+    {
+        if (Instance == this) Instance = null;
+    }
+
+    /// <summary>
+    /// A cavern deck <paramref name="cell"/> gives way (<paramref name="gone"/>) or stands again: its footing box is disabled or
+    /// enabled, its look hidden or shown, and the cell added to or removed from <paramref name="layout"/>'s
+    /// <see cref="FloorLayout.GoneBridges"/>, which the companions' footing reads. Every role, headless included (no look there).
+    /// A cell that is no cavern deck is an error, and nothing changes.
+    /// </summary>
+    public void SetGone(FloorLayout layout, GridPos cell, bool gone)
+    {
+        if (!_cavern.Contains(cell))
+        {
+            GD.PushError($"[chasm] ERROR: SetGone on {cell}, not a cavern deck");
+            return;
+        }
+        if (_deckShapes.TryGetValue(cell, out var shape) && IsInstanceValid(shape)) shape.Disabled = gone;
+        if (_deckLooks.TryGetValue(cell, out var look) && IsInstanceValid(look)) look.Visible = !gone;
+        if (gone) layout.GoneBridges.Add(cell);
+        else layout.GoneBridges.Remove(cell);
     }
 
     /// <summary>Each 4-connected region of chasm-or-bridge cells, scanned in (Y, X) order.</summary>
@@ -94,19 +131,21 @@ public partial class ChasmDressing : Node3D
     /// One static body on layer 1 with a box per bridge cell, its top the cell's floor. Built on every role. A deck on a ramp
     /// cell gets none: the ramp's own slope (and the slab under it) is its floor.
     /// </summary>
-    private static StaticBody3D BuildFootings(FloorLayout layout, Func<GridPos, Vector3> surface, float cellSize)
+    private StaticBody3D BuildFootings(FloorLayout layout, Func<GridPos, Vector3> surface, float cellSize)
     {
         var body = new StaticBody3D { Name = "Footings", CollisionLayer = 1, CollisionMask = 0 };
         foreach (var (cell, kind) in layout.Bridges.OrderBy(b => b.Key.Y).ThenBy(b => b.Key.X))
         {
             if (layout[cell] == Cell.Ramp) continue;
             var (centre, along, across) = Frame(layout, cell, kind, surface);
-            body.AddChild(new CollisionShape3D
+            var shape = new CollisionShape3D
             {
                 Name = $"{kind}_{cell.X}_{cell.Y}",
                 Shape = new BoxShape3D { Size = SlabSize(kind, cellSize) },
                 Transform = new Transform3D(new Basis(across, Vector3.Up, along), centre + Vector3.Down * (SlabThick / 2f)),
-            });
+            };
+            body.AddChild(shape);
+            if (_cavern.Contains(cell)) _deckShapes[cell] = shape;
         }
         return body;
     }
@@ -182,29 +221,41 @@ public partial class ChasmDressing : Node3D
             }
         }
 
-        // the bridges' wood in one mesh: a deck slab with a trestle bent under it, a plank across a hall
+        // the bridges' wood in one mesh: a deck slab with a trestle bent under it, a plank across a hall; a cavern deck, which can
+        // give way, is its own look (in line order, the party lane's first)
         var wood = new SurfaceTool();
         wood.Begin(Mesh.PrimitiveType.Triangles);
         foreach (var (cell, kind) in layout.Bridges.OrderBy(b => b.Key.Y).ThenBy(b => b.Key.X))
-        {
-            var (centre, along, across) = Frame(layout, cell, kind, surface);
-            var basis = new Basis(across, Vector3.Up, along);
-            var ramp = layout[cell] == Cell.Ramp; // the ramp's slope is the deck: only the bent goes under its slab
-            if (!ramp) Box(wood, SlabSize(kind, cellSize), centre + Vector3.Down * (SlabThick / 2f), basis);
-            if (kind != BridgeKind.Deck) continue;
-            var under = ramp ? layout.LevelOf(cell) * DungeonBuilder.LevelHeight : centre.Y - SlabThick;
-            var postAt = cellSize / 2f - 0.35f;
-            foreach (var sgn in new[] { -1f, 1f })
-                Box(wood, new Vector3(0.3f, TrestleDepth, 0.3f), (centre + across * (sgn * postAt)) with { Y = under - TrestleDepth / 2f }, basis);
-            Box(wood, new Vector3(cellSize - 0.2f, 0.3f, 0.3f), centre with { Y = under - 0.15f }, basis);            // the cap under the deck
-            Box(wood, new Vector3(cellSize - 0.4f, 0.25f, 0.25f), centre with { Y = under - TrestleDepth / 2f }, basis); // a tie halfway down
-            // one diagonal brace from the cap at one post to the tie at the other
-            var from = (centre + across * postAt) with { Y = under - 0.3f };
-            var to = (centre - across * postAt) with { Y = under - TrestleDepth / 2f };
-            var x = (to - from).Normalized();
-            Box(wood, new Vector3(from.DistanceTo(to), 0.2f, 0.2f), (from + to) / 2f, new Basis(x, along.Cross(x), along));
-        }
+            if (!_cavern.Contains(cell)) BridgeWood(wood, layout, cell, kind, surface, cellSize);
         AddMesh(wood, plank, "Bridges", shadows: true);
+        foreach (var cell in CrevasseRules.CavernDecks(layout))
+        {
+            var look = new SurfaceTool();
+            look.Begin(Mesh.PrimitiveType.Triangles);
+            BridgeWood(look, layout, cell, BridgeKind.Deck, surface, cellSize);
+            _deckLooks[cell] = AddMesh(look, plank, $"DeckLook_{cell.X}_{cell.Y}", shadows: true);
+        }
+    }
+
+    /// <summary>One bridge cell's wood: its slab (none on a ramp, whose slope is the deck) and, under a deck, a trestle bent.</summary>
+    private static void BridgeWood(SurfaceTool wood, FloorLayout layout, GridPos cell, BridgeKind kind, Func<GridPos, Vector3> surface, float cellSize)
+    {
+        var (centre, along, across) = Frame(layout, cell, kind, surface);
+        var basis = new Basis(across, Vector3.Up, along);
+        var ramp = layout[cell] == Cell.Ramp; // the ramp's slope is the deck: only the bent goes under its slab
+        if (!ramp) Box(wood, SlabSize(kind, cellSize), centre + Vector3.Down * (SlabThick / 2f), basis);
+        if (kind != BridgeKind.Deck) return;
+        var under = ramp ? layout.LevelOf(cell) * DungeonBuilder.LevelHeight : centre.Y - SlabThick;
+        var postAt = cellSize / 2f - 0.35f;
+        foreach (var sgn in new[] { -1f, 1f })
+            Box(wood, new Vector3(0.3f, TrestleDepth, 0.3f), (centre + across * (sgn * postAt)) with { Y = under - TrestleDepth / 2f }, basis);
+        Box(wood, new Vector3(cellSize - 0.2f, 0.3f, 0.3f), centre with { Y = under - 0.15f }, basis);            // the cap under the deck
+        Box(wood, new Vector3(cellSize - 0.4f, 0.25f, 0.25f), centre with { Y = under - TrestleDepth / 2f }, basis); // a tie halfway down
+        // one diagonal brace from the cap at one post to the tie at the other
+        var from = (centre + across * postAt) with { Y = under - 0.3f };
+        var to = (centre - across * postAt) with { Y = under - TrestleDepth / 2f };
+        var x = (to - from).Normalized();
+        Box(wood, new Vector3(from.DistanceTo(to), 0.2f, 0.2f), (from + to) / 2f, new Basis(x, along.Cross(x), along));
     }
 
     /// <summary>Only the drawn look drifts its mist: a headless dressing (no mist) does not process at all.</summary>
@@ -236,12 +287,16 @@ public partial class ChasmDressing : Node3D
         ColorRamp = new Gradient { Offsets = offsets, Colors = colors },
     };
 
-    private void AddMesh(SurfaceTool st, Material material, string name, bool shadows)
-        => AddChild(new MeshInstance3D
+    private MeshInstance3D AddMesh(SurfaceTool st, Material material, string name, bool shadows)
+    {
+        var mesh = new MeshInstance3D
         {
             Name = name, Mesh = st.Commit(), MaterialOverride = material,
             CastShadow = shadows ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
-        });
+        };
+        AddChild(mesh);
+        return mesh;
+    }
 
     /// <summary>A flat quad over a cell at <paramref name="y"/>, facing up, UVs in world metres times <paramref name="uvPerMetre"/>.</summary>
     private static void CellQuad(SurfaceTool st, GridPos c, float y, float cellSize, float uvPerMetre)

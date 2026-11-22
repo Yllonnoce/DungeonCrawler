@@ -54,6 +54,11 @@ public sealed class FloorLayout
     /// <summary>Floor cells that cross a drop (a chasm or a pit). Not part of the content hash.</summary>
     public Dictionary<GridPos, BridgeKind> Bridges { get; } = new();
     public bool IsBridge(GridPos p) => Bridges.ContainsKey(p);
+    /// <summary>
+    /// Bridge cells that gave way on this build of the floor (a collapsing deck: <c>ChasmDressing.SetGone</c>): runtime state, not
+    /// layout. Not part of any hash, never saved, empty at generation. <see cref="CrevasseRules.Footing"/> gives no footing there.
+    /// </summary>
+    public HashSet<GridPos> GoneBridges { get; } = new();
     public bool IsChasm(GridPos p) => this[p] == Cell.Chasm;
     /// <summary>
     /// An upper bridge with walkable ground beside it (not another bridge) lower than its deck where they meet: the band between

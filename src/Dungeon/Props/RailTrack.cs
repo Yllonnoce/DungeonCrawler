@@ -25,9 +25,16 @@ public partial class RailTrack : Node3D
     public float Length { get; private set; }
 
     private Material? _steel, _sleeper, _ballast;
+    private readonly List<(float from, float to)> _gaps = new();
 
     /// <summary>
-    /// Lay the track along the points; a second call replaces the first (the old path and meshes are freed). Each of
+    /// The stretches (S from, S to) this track is bare over: those it was built with and every one cut since (<see cref="Cut"/>),
+    /// in the order they came. A gap once cut stays bare whatever the order of the calls.
+    /// </summary>
+    public IReadOnlyList<(float from, float to)> Gaps => _gaps;
+
+    /// <summary>
+    /// Lay the track along the points; a second call replaces the first (the old path, meshes and gaps are freed). Each of
     /// <paramref name="gaps"/> (S from, S to) is left bare: no rail, no sleeper and no gravel over it (a jump's gap). The curve runs on through them.
     /// With <paramref name="ballast"/> a <see cref="BallastWidth"/> gravel ribbon lies along the same frames, <see cref="BallastLift"/> above the floor.
     /// </summary>
@@ -41,17 +48,99 @@ public partial class RailTrack : Node3D
         _steel = steel;
         _sleeper = sleeper;
         _ballast = ballast;
+        _gaps.Clear();
+        AddGaps(gaps);
         if (points.Count < 2 || Length < 0.1f) return;
-        BuildMeshes(gaps);
+        BuildMeshes(_gaps);
     }
 
-    /// <summary>Lay the rails and sleepers again on the same curve, bare over <paramref name="gaps"/>: the path (and every S along it) is unchanged.</summary>
+    /// <summary>
+    /// Leave <paramref name="gaps"/> bare as well as every gap the track already keeps (<see cref="Gaps"/>), and lay the rails,
+    /// sleepers and gravel again on the same curve: the path (and every S along it) is unchanged.
+    /// </summary>
     public void Cut(IReadOnlyList<(float from, float to)> gaps)
     {
+        AddGaps(gaps);
         if (_steel == null || _sleeper == null || Length < 0.1f) return;
         foreach (var name in new[] { "Rails", "Sleepers", "Ballast" })
             if (GetNodeOrNull(name) is { } old) { RemoveChild(old); old.QueueFree(); }
-        BuildMeshes(gaps);
+        BuildMeshes(_gaps);
+    }
+
+    /// <summary><see cref="Cut"/> by another name: a live piece's span cut after the floor's own gaps, which stay bare.</summary>
+    public void CutMore(IReadOnlyList<(float from, float to)> gaps) => Cut(gaps);
+
+    private void AddGaps(IReadOnlyList<(float from, float to)>? gaps)
+    {
+        if (gaps == null) return;
+        foreach (var g in gaps) if (!_gaps.Contains(g)) _gaps.Add(g);
+    }
+
+    /// <summary>
+    /// The rails and sleepers of S [<paramref name="from"/>, <paramref name="to"/>] alone, from this track's own baked frames
+    /// (the same <see cref="Curve"/>, so they lie where the lane's own rails would), with its <see cref="Gauge"/>, rail and
+    /// sleeper sizes, and its sleeper phase (<see cref="SleeperEvery"/>/2 + k·<see cref="SleeperEvery"/> along the whole
+    /// track): one rail mesh (<c>{name}_Rails</c>) and one sleeper mesh (<c>{name}_Sleepers</c>) under <paramref name="into"/>,
+    /// shadowless, no gravel. A live piece lays a cell of its span with it over a stretch the track was cut bare at. Not called
+    /// headless. With both nodes in the tree the meshes are placed in <paramref name="into"/>'s frame; else the two are taken
+    /// to share one.
+    /// </summary>
+    public void LaySpan(Node3D into, float from, float to, string name)
+    {
+        if (_steel == null || _sleeper == null || Length < 0.1f) return;
+        from = Mathf.Clamp(from, 0f, Length);
+        to = Mathf.Clamp(to, 0f, Length);
+        if (to - from < 1e-3f) return;
+        var toInto = into.IsInsideTree() && IsInsideTree() ? into.GlobalTransform.AffineInverse() * GlobalTransform : Transform3D.Identity;
+        Transform3D Frame(float s) => toInto * Curve.SampleBakedWithRotation(s, true, true);
+
+        // the rails: the span's ends and the track's own sample S between them, so a span laid beside its neighbour meets it
+        var samples = new List<Transform3D> { Frame(from) };
+        for (var k = (int)MathF.Floor(from / Sample) + 1; k * Sample < to - 1e-4f; k++)
+            if (k * Sample > from + 1e-4f) samples.Add(Frame(k * Sample));
+        samples.Add(Frame(to));
+        var railSt = new SurfaceTool();
+        railSt.Begin(Mesh.PrimitiveType.Triangles);
+        foreach (var side in new[] { -1f, 1f })
+        {
+            Vector3[]? prev = null;
+            foreach (var t in samples)
+            {
+                var ring = RailRing(t, side);
+                if (prev != null)
+                    for (var i = 0; i < 4; i++) Quad(railSt, prev[i], prev[(i + 1) % 4], ring[(i + 1) % 4], ring[i]);
+                prev = ring;
+            }
+        }
+        railSt.GenerateNormals();
+        into.AddChild(new MeshInstance3D { Name = $"{name}_Rails", Mesh = railSt.Commit(), MaterialOverride = _steel, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+
+        // the sleepers the track would lay inside the span (the bare stretch's own: strictly inside, as a gap leaves them out)
+        var sleeperSt = new SurfaceTool();
+        sleeperSt.Begin(Mesh.PrimitiveType.Triangles);
+        var any = false;
+        for (var k = Math.Max(0, (int)MathF.Floor((from - SleeperEvery / 2f) / SleeperEvery)); ; k++)
+        {
+            var s = SleeperEvery / 2f + k * SleeperEvery;
+            if (s >= to || s >= Length) break;
+            if (s <= from) continue;
+            var t = Frame(s);
+            var b = t.Basis.Orthonormalized();
+            AddBox(sleeperSt, b, t.Origin + b.Y * (SleeperSize.Y / 2f), SleeperSize);
+            any = true;
+        }
+        if (!any) return;
+        sleeperSt.GenerateNormals();
+        into.AddChild(new MeshInstance3D { Name = $"{name}_Sleepers", Mesh = sleeperSt.Commit(), MaterialOverride = _sleeper, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+    }
+
+    /// <summary>One rail's cross-section at frame <paramref name="t"/>, on side <paramref name="side"/> (−1 or 1) of the centreline, on top of the sleepers.</summary>
+    private static Vector3[] RailRing(Transform3D t, float side)
+    {
+        var c = t.Origin + t.Basis.X.Normalized() * (side * Gauge / 2f) + t.Basis.Y.Normalized() * (SleeperSize.Y + RailSize.Y / 2f);
+        var x = t.Basis.X.Normalized() * (RailSize.X / 2f);
+        var y = t.Basis.Y.Normalized() * (RailSize.Y / 2f);
+        return new[] { c - x - y, c + x - y, c + x + y, c - x + y };
     }
 
     private static bool InGap(float s, IReadOnlyList<(float from, float to)>? gaps)
@@ -85,10 +174,7 @@ public partial class RailTrack : Node3D
             {
                 var t = samples[k];
                 if (InGap(k * Sample, gaps)) { prev = null; continue; } // a bare stretch: the rail ends at its lip and starts again past it
-                var c = t.Origin + t.Basis.X.Normalized() * (side * Gauge / 2f) + t.Basis.Y.Normalized() * (SleeperSize.Y + RailSize.Y / 2f);
-                var x = t.Basis.X.Normalized() * (RailSize.X / 2f);
-                var y = t.Basis.Y.Normalized() * (RailSize.Y / 2f);
-                var ring = new[] { c - x - y, c + x - y, c + x + y, c - x + y };
+                var ring = RailRing(t, side);
                 if (prev != null)
                     for (var i = 0; i < 4; i++)
                     {
@@ -100,9 +186,10 @@ public partial class RailTrack : Node3D
             }
         }
 
-        // Sleepers: each whole in the chunk of its S.
-        for (var s = SleeperEvery / 2f; s < Length; s += SleeperEvery)
+        // Sleepers: each whole in the chunk of its S, at SleeperEvery/2 + k·SleeperEvery (the phase LaySpan keeps).
+        for (var k = 0; SleeperEvery / 2f + k * SleeperEvery < Length; k++)
         {
+            var s = SleeperEvery / 2f + k * SleeperEvery;
             if (InGap(s, gaps)) continue;
             var t = Curve.SampleBakedWithRotation(s, true, true);
             var b = t.Basis.Orthonormalized();
