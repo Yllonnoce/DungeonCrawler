@@ -1887,11 +1887,14 @@ least 20 orange pixels about the runaway's lamp that go when its light is hidden
 Measured (Task 7): lit 0.095, dark 0.050 (0.52; 0.58 after the A/B fix moved the dark shot to S 838.8), the split's lamp 80 red pixels,
 the runaway's 37 orange with its light and 0 without, the rays clear (the lever, the spur's end, the split's lamps at 11.1 and 20.5 m, the
 runaway's lamp at 17–22 m), the 8 lamps where the dark is full hidden with their lanterns dark (of the 10 out; the flow does not judge
-the 3 that stand in its ramps) and 104 lit outside, and the light back at stop 4 and on floor 13. Re-measured after the exposed-track
-fix (its Task 5): lit 0.093, dark 0.055 with the shot at S 839.1 (0.59; the straight before the points still 5.0 m, 10 lamps out, 8
-judged), the split's lamp 79 red, the runaway's 50 orange and 0 without. The dark shot's S follows the shot queue (the behind shots go
-first): taken at the dark's middle (S 836.3) the ratio reads 0.76, the cart lamp lighting the end wall ahead, so the 0.6 gate holds
-only for a shot a few metres past the middle.
+the 3 that stand in its ramps) and 104 lit outside, and the light back at stop 4 and on floor 13. Since the exposed-track fix (its Task 5)
+the gate's two places are held and aimed: the cart is held still (V = 0) with the front 10 m before the dark and again at the dark's
+middle until both of that place's shots are saved, the seated eye is aimed along the party track's tangent, level, and each place is
+shot twice, with the party cart's own head lamp (`Lamp`, `LampGlow`, `LampLens`) hidden and lit, each drawn 30 frames so the
+volumetric fog settles. The gate judges the world's light, not the party's lamp: only the lamp-hidden ratio is held to 0.6; the ratio
+with the lamp lit is logged. Measured over two windowed runs: lamp hidden 0.469 and 0.485 (lit 0.0695, dark 0.0326–0.0337), lamp lit
+0.84 and 0.88, the straight before the points 5.0 m and 10 lamps out (8 judged). Before the hold a shot's S followed the shot queue,
+and the ratio moved between 0.52 and 0.76 with shot order alone.
 
 The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.49) on that ride, an elite forge golem, "Kilnheart the Hulking",
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and

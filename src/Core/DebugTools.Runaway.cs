@@ -34,7 +34,9 @@ namespace DungeonCrawler.Core;
 // (and some lamp outside it lit); layer-1 rays from the seated lead's eye with the front 8 m short of the points to the split's amber and red
 // lamps, and 3 s after the runaway breaks loose to its lamp ("[runaway] sight: ..."): a blocked ray fails the flow. =after also checks the light
 // is all back at stop 4, then (pass 2, the runaway held) rides into the dark's middle and leaves for floor 13 from there, and checks it again
-// before its RESULT. Windowed =after with --screenshot=PATH saves the seat's views as PATH_lit, _dark (HUD hidden), _behind (the rearmost view,
+// before its RESULT. Windowed =after with --screenshot=PATH saves the seat's views as PATH_lit, _dark (HUD hidden; the cart held still at each, 10 m before the dark and at
+// its middle, the eye aimed along the track) and _lit_nolamp, _dark_nolamp (the same with the party cart's head lamp hidden: their ratio is
+// judged, <= 0.6), _behind (the rearmost view,
 // turned back), _behind_nolamp (the same with the runaway's light hidden: the orange must drop by 20), _behind_seat (the lead's eye turned
 // 180°, shown only), _split, _window and _lever, and judges them (ShotsStep). A sight check that never ran fails the variant.
 // Ruling 22's hold for the other flows is here too (HoldTheRunaway).
@@ -699,8 +701,16 @@ public partial class DebugTools
     private const float LampWindow = 1f / 18f;
     /// <summary>The orange about the runaway's lamp must drop by this much when its light is hidden (behind against behind_nolamp).</summary>
     private const int RunawayLightDrop = 20;
+    /// <summary>The lit shots are held with the front this far before the dark.</summary>
+    private const float LitShotBefore = 10f;
+    /// <summary>A held twin is drawn this many frames before it is saved: the volumetric fog's temporal blend settles after the lamp is hidden or shown.</summary>
+    private const int HeldFrames = 30;
+    /// <summary>A held place's two twins must be taken within this much S of each other (the hold).</summary>
+    private const float HeldSlack = 0.05f;
+    /// <summary>Where each gate shot was taken (the front's S as it was saved).</summary>
+    private readonly Dictionary<string, float> _lgShotS = new();
     /// <summary>Every shot the windowed =after run takes, in the order of the line; the gate is judged once all are in.</summary>
-    private static readonly string[] LgShotNames = { "lit", "behind", "behind_nolamp", "behind_seat", "dark", "split", "window", "lever" };
+    private static readonly string[] LgShotNames = { "lit", "lit_nolamp", "behind", "behind_nolamp", "behind_seat", "dark", "dark_nolamp", "split", "window", "lever" };
     private bool _lgSplitSight, _lgRunawaySight, _lgBaseTaken, _lgShotsJudged;
     /// <summary>=after's pass 2 saw this peer's view dark (darkness over 0.5) in the dark's middle: only then does its RESULT claim the light came back.</summary>
     private bool _lgDarkSeen;
@@ -860,6 +870,18 @@ public partial class DebugTools
         return me.Camera;
     };
 
+    /// <summary>
+    /// The gate's aim at a held place: the seated eye along the party track's tangent at the cart's S (toward travel), level, so the view
+    /// depends on the place alone, not on the seat's yaw.
+    /// </summary>
+    private static Func<Camera3D> HeldAim(RailController rc, Adventurer me) => () =>
+    {
+        var forward = -rc.Party.Track.Frame(rc.State.S).Basis.Z * rc.Party.Dir;
+        forward.Y = 0f;
+        me.AimAt(me.Camera.GlobalPosition + forward.Normalized() * 20f);
+        return me.Camera;
+    };
+
     /// <summary>A luminance shot is of the scene alone: the HUD is hidden while it is drawn (a level-up banner or a subtitle in the crop would light it).</summary>
     private static Func<Camera3D> Bare(Func<Camera3D> pose) => () =>
     {
@@ -915,30 +937,47 @@ public partial class DebugTools
     }
 
     /// <summary>
-    /// The windowed =after run's shots from the seat (each saved as PATH_name.png): "lit" with the front 10 m before the dark and "dark" in its
-    /// middle (both facing ahead, level, the HUD hidden), "split" 8 m short of the points facing ahead, "window" at the window's start and "lever" at the lever's S
+    /// The windowed =after run's shots from the seat (each saved as PATH_name.png): "lit" with the front 10 m before the dark and "dark" at its
+    /// middle (each place held: the cart stopped there until both its twins are saved, aimed along the track, level, the HUD hidden), "split" 8 m short of the points facing ahead, "window" at the window's start and "lever" at the lever's S
     /// looking at the spur's end and its red lamp, and the two behind (<see cref="QueueBehindShots"/>). Each is posed, drawn for three frames and
-    /// saved; then the gate: the dark's luminance over the lit's on the scene crop at most 0.6, at least 20 red pixels about the split's red lamp,
+    /// saved ("lit_nolamp" and "dark_nolamp" are the same held views with the party cart's head lamp hidden); then the gate: the
+    /// dark's luminance over the lit's on the scene crop, both with the party's lamp hidden (the world's light), at most 0.6 (the ratio with it lit is logged), at least 20 red pixels about the split's red lamp,
     /// and at least 20 orange pixels about the runaway's lamp that go when its light is hidden. True when it failed.
     /// </summary>
     private bool ShotsStep(RailController rc, RailEncounterController enc, Adventurer me, float front, bool rolling, Action<string> fail)
     {
+        var litAt = enc.DarkFromS - LitShotBefore;
+        var darkAt = enc.DarkFromS + DarkRules.Length / 2f;
+        // the gate's places are held and aimed (the coordinator's rulings): the cart is held still (V = 0) from the front reaching the
+        // place until both of its twins are saved, so the lamp is the only difference between them and the shot order changes nothing
+        if (front >= litAt && !(_lgStats.ContainsKey("lit") && _lgStats.ContainsKey("lit_nolamp"))
+            || front >= darkAt && !(_lgStats.ContainsKey("dark") && _lgStats.ContainsKey("dark_nolamp")))
+            rc.Party.State = rc.State with { V = 0f };
         if (rolling && enc.SplitSwitchNode is { } split)
         {
             var spurEnd = split.SpurEnd;
             var red = split.RedLampPoint;
             Vector3? Red() => red;
-            if (front >= enc.DarkFromS - 10f) QueueShot("lit", Bare(Ahead(rc, me)), done: HudBack);
-            if (front >= enc.DarkFromS + DarkRules.Length / 2f) QueueShot("dark", Bare(Ahead(rc, me)), done: HudBack);
+            // the gate judges the world's light, not the party's own head lamp: at each place the view is taken with the party cart's Lamp,
+            // LampGlow and LampLens hidden (the judged pair) and with them lit (for the record), both aimed along the track (HeldAim)
+            void PartyLamp(bool on)
+            {
+                foreach (var name in new[] { "Lamp", "LampGlow", "LampLens" })
+                    if (rc.Cart.GetNodeOrNull<Node3D>(name) is { } part) part.Visible = on;
+            }
+            Func<Camera3D> NoLamp() => Bare(() => { PartyLamp(false); return HeldAim(rc, me)(); });
+            void LampBack(Camera3D cam) { PartyLamp(true); HudBack(cam); }
+            if (front >= litAt) { QueueShot("lit_nolamp", NoLamp(), done: LampBack); QueueShot("lit", Bare(HeldAim(rc, me)), done: HudBack); }
+            if (front >= darkAt) { QueueShot("dark_nolamp", NoLamp(), done: LampBack); QueueShot("dark", Bare(HeldAim(rc, me)), done: HudBack); }
             if (front >= enc.SplitPointsS - 8f) QueueShot("split", Ahead(rc, me), Red, true);
             if (front >= split.WindowStartS) QueueShot("window", () => { me.AimAt((spurEnd + red) / 2f); return me.Camera; }, Red, true);
             if (front >= split.LeverS) QueueShot("lever", () => { me.AimAt(spurEnd); return me.Camera; }, Red, true, _ => Ahead(rc, me)());
         }
-        if (_lgShot == null && _lgShots.TryDequeue(out var next))
+        if (_lgShot == null && NextShot() is { } next)
         {
             _lgShot = next;
             next.Camera = next.Pose();
-            next.Frames = 3;
+            next.Frames = next.Name is "lit" or "lit_nolamp" or "dark" or "dark_nolamp" ? HeldFrames : 3;
         }
         else if (_lgShot is { } shot && --shot.Frames <= 0)
         {
@@ -951,21 +990,42 @@ public partial class DebugTools
                 at = cam.UnprojectPosition(lamp) * (img.GetWidth() / GetViewport().GetVisibleRect().Size.X);
             var (luma, px) = ShotStats(img, at, shot.Red);
             _lgStats[shot.Name] = (luma, px);
+            _lgShotS[shot.Name] = front;
             var counted = shot.Lamp == null ? "" : $"; {(shot.Red ? "red" : "orange")} px {px} within {(int)(img.GetHeight() * LampWindow)} px of the lamp {(at is { } a ? $"at ({a.X:0},{a.Y:0})" : "(off the view)")}";
-            GD.Print($"[runaway] shot {shot.Name} ({err}) {path}: the front at S={front:0.0}, {img.GetWidth()}x{img.GetHeight()}; the scene's mean luminance {luma:0.000}{counted}");
+            var place = shot.Name is "dark" or "dark_nolamp" ? $" (held at the dark's middle S={darkAt:0.0}, {front - darkAt:+0.00;-0.00} m)"
+                : shot.Name is "lit" or "lit_nolamp" ? $" (held {LitShotBefore:0} m before the dark, S={litAt:0.0}, {front - litAt:+0.00;-0.00} m)" : "";
+            GD.Print($"[runaway] shot {shot.Name} ({err}) {path}: the front at S={front:0.00}{place}, {img.GetWidth()}x{img.GetHeight()}; the scene's mean luminance {luma:0.000}{counted}");
             if (shot.Camera is { } used) shot.Done?.Invoke(used);
+            foreach (var (on, off) in new[] { ("lit", "lit_nolamp"), ("dark", "dark_nolamp") })
+                if (_lgShotS.TryGetValue(on, out var sa) && _lgShotS.TryGetValue(off, out var sb) && (shot.Name == on || shot.Name == off) && Mathf.Abs(sa - sb) > HeldSlack)
+                { fail($"the {on} twins were not taken at one S ({sa:0.00} and {sb:0.00}): the hold slipped"); return true; }
             if (shot.Name == "dark" && DarkHere(enc, me) is { } light) { fail(light); return true; }
         }
         if (!_lgShotsJudged && LgShotNames.All(_lgStats.ContainsKey))
         {
             _lgShotsJudged = true;
-            var r = _lgStats["dark"].Luma / _lgStats["lit"].Luma;
+            var withLamp = _lgStats["dark"].Luma / _lgStats["lit"].Luma;
+            GD.Print($"[runaway] shots held and aimed along the track: lit at S={_lgShotS["lit"]:0.00}/{_lgShotS["lit_nolamp"]:0.00} (lamp on/hidden), dark at S={_lgShotS["dark"]:0.00}/{_lgShotS["dark_nolamp"]:0.00}; the lamp's own share: lit {_lgStats["lit"].Luma - _lgStats["lit_nolamp"].Luma:+0.000;-0.000}, dark {_lgStats["dark"].Luma - _lgStats["dark_nolamp"].Luma:+0.000;-0.000}");
+            var r = _lgStats["dark_nolamp"].Luma / _lgStats["lit_nolamp"].Luma;
             int n = _lgStats["split"].Px, lampOn = _lgStats["behind"].Px, lampOff = _lgStats["behind_nolamp"].Px, m = lampOn - lampOff;
-            GD.Print($"[runaway] shots: dark/lit luminance {r:0.00}; split red px {n}; behind orange px {m} (the runaway's light: {lampOn} with it, {lampOff} with its Lamp, LampGlow and LampLens hidden)");
-            GD.Print($"[runaway] shots judged on the scene crop x {CropX0:P0}-{CropX1:P0}, y {CropY0:P0}-{CropY1:P0} of the image (the HUD hidden and cropped out; lit {_lgStats["lit"].Luma:0.000} and dark {_lgStats["dark"].Luma:0.000} both from the seat facing ahead, level; Rec. 709 luma of the image's values); lamp pixels counted about where each lamp projects (window {_lgStats["window"].Px} red, lever {_lgStats["lever"].Px} red, behind_seat {_lgStats["behind_seat"].Px} orange: shown, not judged)");
-            if (r > 0.6f || n < 20 || m < RunawayLightDrop) { fail($"the dark does not read: dark/lit luminance {r:0.00} (want <= 0.6), split red px {n} (want >= 20), behind orange px {m} from the runaway's light (want >= {RunawayLightDrop})"); return true; }
+            GD.Print($"[runaway] shots: dark/lit luminance {r:0.000} with the party cart's lamp hidden (judged; lit {_lgStats["lit_nolamp"].Luma:0.0000}, dark {_lgStats["dark_nolamp"].Luma:0.0000}), {withLamp:0.000} with it lit (shown, not judged); split red px {n}; behind orange px {m} (the runaway's light: {lampOn} with it, {lampOff} with its Lamp, LampGlow and LampLens hidden)");
+            GD.Print($"[runaway] shots judged on the scene crop x {CropX0:P0}-{CropX1:P0}, y {CropY0:P0}-{CropY1:P0} of the image (the HUD hidden and cropped out; lit {_lgStats["lit"].Luma:0.000} and dark {_lgStats["dark"].Luma:0.000} with the lamp, both held and aimed along the track, level; Rec. 709 luma of the image's values); lamp pixels counted about where each lamp projects (window {_lgStats["window"].Px} red, lever {_lgStats["lever"].Px} red, behind_seat {_lgStats["behind_seat"].Px} orange: shown, not judged)");
+            if (r > 0.6f || n < 20 || m < RunawayLightDrop) { fail($"the dark does not read: dark/lit luminance {r:0.00} with the party cart's lamp hidden (want <= 0.6; {withLamp:0.00} with it lit), split red px {n} (want >= 20), behind orange px {m} from the runaway's light (want >= {RunawayLightDrop})"); return true; }
         }
         return false;
+    }
+
+    /// <summary>The next shot to pose: a held place's twins first when queued (the cart waits for them), else the queue's head.</summary>
+    private LgShot? NextShot()
+    {
+        if (_lgShots.FirstOrDefault(q => q.Name is "lit_nolamp" or "lit" or "dark_nolamp" or "dark") is { } held)
+        {
+            var rest = _lgShots.Where(q => q != held).ToList();
+            _lgShots.Clear();
+            foreach (var q in rest) _lgShots.Enqueue(q);
+            return held;
+        }
+        return _lgShots.TryDequeue(out var next) ? next : null;
     }
 
     /// <summary>A shot's mean luminance over the scene crop, and the red (or orange) pixels within <see cref="LampWindow"/> of <paramref name="lamp"/> (none without one).</summary>
