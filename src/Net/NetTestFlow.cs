@@ -768,7 +768,8 @@ public partial class NetTestFlow : Node
     /// The server on the cavern's ride with both clients aboard (the controller's ruling (a)): the joiner holds its brake from its rear's coming
     /// onto the bridge across the bridge's call and past the reaction time (<see cref="Dungeon.Rails.BridgeRules.ReactionTime"/>); a press made
     /// before the call never counts, so the train is held short and never taken. Told once the brake is let go after the call. Then the arrival
-    /// at stop 4: both players' heroes in the party's cart, two leaps each way, the slag cart over the drop with nobody fallen or hauled, no take.
+    /// at stop 4: the joiner in the party's cart, the first client (who stayed on the deck and fell with the slag cart) back from the crevasse
+    /// beside it, two leaps across and one back, one hero fallen with the slag cart over the drop, none hauled, no take.
     /// </summary>
     private void RideCavernServer(ServerWorld world, Dungeon.Rails.RailController rc, Party.Adventurer rider, Party.PartyController party)
     {
@@ -797,15 +798,28 @@ public partial class NetTestFlow : Node
                     : FormattableString.Invariant($"[net-server] ride: bridge: NOBODY held the brake at the call (braked last {now - _cavLastBrakeAt:0.00} s ago); the train taken {enc.BridgeTakes} time(s) (FAIL)"));
             }
         }
+        // the arrival (the final review's I1): the first client stayed on the deck through the drop and fell with r4_slag, so it comes back out
+        // of the crevasse at this arrival beside the cart (a tick or so after it; judged once it is back, or 3 s on), while the joiner, who
+        // leapt back on its last offered frames, sits in the cart; a return outside board reach is shoved within it, as the take's boarding is
         if (!_cavArriveTold && rc.StopIndex == stop + 1 && rc.State.Mode == Dungeon.Rails.CartMode.Held)
         {
+            if (_cavSrvArrivedAt < 0) { _cavSrvArrivedAt = _elapsed; _cavJoinerInAtArrival = joiner != null && joiner.Cart == rc.Cart; }
+            if (rider.State.Fallen && _elapsed - _cavSrvArrivedAt < 3.0) return;
             _cavArriveTold = true;
-            var riderIn = rider.Cart == rc.Cart;
-            var joinerIn = joiner != null && joiner.Cart == rc.Cart;
-            var ok = riderIn && joinerIn && enc.Leaps == 2 && enc.LeapsBack == 2 && enc.LeapDrops >= 1 && enc.LeapDropFalls == 0 && enc.LeapHauls == 0 && enc.BridgeTakes == 0;
-            GD.Print($"[net-server] ride: cavern: the train arrives at stop {rc.StopIndex} with {rider.State.Name} in the party's cart {Yes(riderIn)} and {RideJoinerName} {Yes(joinerIn)}; leaps across {enc.Leaps}, back {enc.LeapsBack}; slag carts over the drop {enc.LeapDrops} ({enc.LeapDropFalls} hero(es) fell, {enc.LeapHauls} hauled back); the bridge {enc.BridgeGone}/{enc.BridgeCells} gone, trains taken {enc.BridgeTakes} ({(ok ? "ok" : "FAIL")})");
+            var riderUp = !rider.State.Fallen && !rider.Parked;
+            var riderOff = rider.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition);
+            var ok = _cavJoinerInAtArrival && riderUp && rider.Cart != rc.Cart && riderOff <= 10f && enc.Leaps == 2 && enc.LeapsBack == 1 && enc.LeapDrops >= 1 && enc.LeapDropFalls == 1 && enc.LeapHauls == 0 && enc.BridgeTakes == 0;
+            GD.Print(FormattableString.Invariant($"[net-server] ride: cavern: the train arrives at stop {rc.StopIndex} with {RideJoinerName} in the party's cart {Yes(_cavJoinerInAtArrival)} and {rider.State.Name} back from the crevasse {Yes(riderUp)} {riderOff:0.0} m from the cart ({_elapsed - _cavSrvArrivedAt:0.00} s after the arrival); leaps across {enc.Leaps}, back {enc.LeapsBack}; slag carts over the drop {enc.LeapDrops} ({enc.LeapDropFalls} hero(es) fell, {enc.LeapHauls} hauled back); the bridge {enc.BridgeGone}/{enc.BridgeCells} gone, trains taken {enc.BridgeTakes} ({(ok ? "ok" : "FAIL")})"));
+            if (riderUp && (riderOff > 2.5f || !Dungeon.Rails.RideInputRules.InBoardReach(rc.Cart.TubDistance(rider)))) // the client asks to board from within 3 m of the cart's middle
+            {
+                var beside = WithinReach(rc);
+                rider.Shove(beside);
+                GD.Print(FormattableString.Invariant($"[net-server] ride: cavern: {rider.State.Name}'s return lies {riderOff:0.0} m from the cart (outside the client's 3 m or board reach): put beside the cart at stop {rc.StopIndex}, {beside.DistanceTo(rc.Cart.GlobalPosition):0.00} m from it"));
+            }
         }
     }
+    private double _cavSrvArrivedAt = -1;
+    private bool _cavJoinerInAtArrival;
 
     /// <summary>The floor's bridge and leap pieces' ids (r4_bridge, r4_leap on floor 12), for the lines.</summary>
     private static string PieceId(string kind) => Main.Instance?.Builder.Contents?.RailSetPieces.FirstOrDefault(p => p.Kind == kind)?.Id ?? kind;
@@ -1363,9 +1377,11 @@ public partial class NetTestFlow : Node
                 // jump wants speed); at the end of the line the joiner's chaser runs up behind the train and goes, and we leave the game seated
                 if (Dungeon.Rails.RailController.Instance is not { } rc || !IsInstanceValid(rc) || main.Party.Local is not { } me) return;
                 var line = Line(rc);
-                // on ride 4 (the cavern's) our hero may sit on the slag cart's deck between its leaps (RideCavernLeaps)
+                // on ride 4 (the cavern's) our hero may sit on the slag cart's deck between its leaps (RideCavernLeaps); it stays on it through
+                // the drop and falls with it (the final review's I1), and is out of the cart from then until it has boarded again at the next stop
                 var onDeck = me.Cart is Dungeon.Rails.SlagCart && Dungeon.Rails.RailEncounterController.Instance is { } cavern && IsInstanceValid(cavern) && rc.StopIndex == CavernStop(rc, cavern);
-                if (!me.Seated || me.Cart != rc.Cart && !onDeck) { Finish("[net]", false, $"ride: our hero is not in the cart at stop {rc.StopIndex} (seated {me.Seated})"); net.Disconnect("test finished"); return; }
+                if (RideBackFromFall(net, rc, me)) return;
+                if (!_rideFallOut && (!me.Seated || me.Cart != rc.Cart && !onDeck)) { Finish("[net]", false, $"ride: our hero is not in the cart at stop {rc.StopIndex} (seated {me.Seated})"); net.Disconnect("test finished"); return; }
                 RideCavernLeaps(net, main, rc, me, joiner: false);
                 RideLeaveCrew(net, rc, me, "the rider"); // each cage from stop 3 on is left behind: the train leaves when the stop's gate lifts
                 if (RideSplitPress(net, main, rc, me)) return;
@@ -1401,6 +1417,48 @@ public partial class NetTestFlow : Node
                 RideJoinerClient(net, client, main);
                 return;
         }
+    }
+
+    // the first client's fall with r4_slag (the final review's I1): out of the cart from the stay (RideCavernLeaps step 4) until it has boarded
+    // again at stop 4; back from the crevasse at that arrival beside the cart (the server shoves it within reach), it boards through the intent
+    private bool _rideFallOut, _rideBackTold, _rideFallBoarded;
+    private double _rideFallArriveAt = -1;
+    /// <summary>The fallen first client must be back and seated this long (s) after the arrival at the stop after its fall.</summary>
+    private const double BackFromFallWithin = 25.0;
+
+    /// <summary>
+    /// Step 53, each tick: while the first client is out of the cart for its fall, wait for stop 4's arrival, see our hero back up and shown, and
+    /// board again. True when the step should wait (a failure was reported).
+    /// </summary>
+    private bool RideBackFromFall(NetSession net, Dungeon.Rails.RailController rc, Party.Adventurer me)
+    {
+        if (!_rideFallOut && _lpStep == 4) _rideFallOut = true; // it stays on the deck: from here until it boards again
+        if (!_rideFallOut || _rideFallBoarded) return false;
+        if (me.Cart == rc.Cart && me.Seated && _rideBackTold)
+        {
+            _rideFallBoarded = true;
+            _rideFallOut = false;
+            GD.Print(FormattableString.Invariant($"[net] ride: at stop {rc.StopIndex} our hero boarded again after its fall through the intent in seat {me.Seat}, {_clock - _rideFallArriveAt:0.0} s after the arrival"));
+            return false;
+        }
+        var stop = Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? CavernStop(rc, enc) : -1;
+        if (stop < 0 || rc.StopIndex != stop + 1 || rc.State.Mode != Dungeon.Rails.CartMode.Held) return false;
+        if (_rideFallArriveAt < 0) _rideFallArriveAt = _clock;
+        if (_clock - _rideFallArriveAt > BackFromFallWithin)
+        {
+            Finish("[net]", false, FormattableString.Invariant($"ride: at stop {rc.StopIndex} our hero was not back from the crevasse and seated {BackFromFallWithin:0} s after the arrival (fallen {Yes(me.State.Fallen)}, shown {Yes(me.Visible)}, seated {Yes(me.Seated)}, {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart, the cart offers \"{rc.Cart.Prompt}\")"));
+            net.Disconnect("test finished");
+            return true;
+        }
+        if (me.State.Fallen || !me.Visible) return false;
+        if (!_rideBackTold)
+        {
+            _rideBackTold = true;
+            _rideAskedAt = -1; // TryBoard's 2 s between asks runs on this step's clock
+            GD.Print(FormattableString.Invariant($"[net] ride: cavern: at stop {rc.StopIndex} our hero is back from the crevasse beside the cart, up ({me.State.Hp:0}/{me.State.Stats[Characters.Stat.MaxHp]:0} hp, {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart, {_clock - _rideFallArriveAt:0.0} s after the arrival)"));
+        }
+        TryBoard(net, rc, me, $"stop {rc.StopIndex} after our fall");
+        return false;
     }
 
     // fighting back (the fix wave): seated in the party's cart, the RIDE pass's riders swing at the hounds on its rim and, from the seat,
@@ -1765,6 +1823,15 @@ public partial class NetTestFlow : Node
     private readonly Dictionary<int, Dungeon.Rails.SlagCart> _cavRode = new();
     private readonly List<int> _cavRodeGone = new();
     private readonly List<string> _cavOffSlag = new(), _cavOnWhenGone = new();
+    /// <summary>
+    /// Ruling (d)'s case (the final review's I1): each hero on its slag copy as it went here, by member, and when it went; until its Fallen sheet
+    /// (or a seat) it must never be shown, at the deck's height or anywhere (<see cref="_cavHeldShown"/>); how each such hold ended.
+    /// </summary>
+    private readonly Dictionary<int, double> _cavHeldSince = new();
+    private readonly List<string> _cavHeldEnds = new();
+    private string? _cavHeldShown;
+    /// <summary>Three seconds after the arrival at stop 4: every hero not parked shown and not Fallen here (told once).</summary>
+    private bool _cavUpTold;
 
     /// <summary>
     /// Each RIDE client, every tick from ride 4's departure (the live bridge's ride) to 15 s past its arrival at stop 4: every hero seen on a slag
@@ -1796,6 +1863,16 @@ public partial class NetTestFlow : Node
                 continue;
             }
             if (a.Cart is Dungeon.Rails.SlagCart freed) { _cavOnFreed ??= $"{name} still seated on slag cart {freed.CartId}'s freed copy"; continue; }
+            if (_cavHeldSince.TryGetValue(a.Index, out var wentAt)) // on its copy as it went: hidden until its Fallen sheet (or a seat), never shown before it
+            {
+                var since = _elapsed - wentAt;
+                if (a.State.Fallen || a.Seated)
+                {
+                    _cavHeldSince.Remove(a.Index);
+                    _cavHeldEnds.Add(FormattableString.Invariant($"{name} {(a.State.Fallen ? "fallen" : "seated")} {since:0.00} s after its copy went, never shown before it"));
+                }
+                else if (a.Visible) _cavHeldShown ??= FormattableString.Invariant($"{name} SHOWN at {Dungeon.DungeonBuilder.WorldToCell(a.GlobalPosition)} (y {a.GlobalPosition.Y:0.0}) {since:0.00} s after its copy went, before its Fallen sheet");
+            }
             // the opposite fault (re-review N4): a hero on foot, not fallen, kept hidden past the hold's fallback
             if (a.Cart == null && !a.State.Fallen && !a.Visible)
             {
@@ -1810,9 +1887,15 @@ public partial class NetTestFlow : Node
             if (was == null) continue;
             _cavOnSlag.Remove(a.Index);
             var copyGone = !IsInstanceValid(was) || was.IsQueuedForDeletion() || was.Derailed;
-            if (copyGone && a.Cart != rc.Cart) _cavOnWhenGone.Add(name);
+            if (copyGone && a.Cart != rc.Cart && !a.IsLocal) // another player's hero: our own is never held (its ForcePose comes first; the final review's M4)
+            {
+                _cavOnWhenGone.Add(name);
+                if (!a.State.Fallen && !a.Seated) _cavHeldSince[a.Index] = _elapsed;
+                if (a.Visible && !a.State.Fallen && !a.Seated) _cavHeldShown ??= FormattableString.Invariant($"{name} SHOWN at {cell} (y {a.GlobalPosition.Y:0.0}) on the frame its copy went");
+            }
+            var under = a.GlobalPosition.Y < main.Builder.Surface(cell).Y - Dungeon.CrevasseRules.FallDepth; // the fall's pose: the crevasse's hold under the deck
             _cavOffSlag.Add(a.Cart == rc.Cart ? $"{name} into the party's cart (seat {a.Seat})"
-                : a.Cart == null ? $"{name} {(copyGone && !a.Visible ? "held hidden" : "set down")} here at {cell}{(copyGone ? " as its copy went" : "")}{(overGone ? ", OVER A GONE CELL" : "")}"
+                : a.Cart == null ? $"{name} {(copyGone && !a.Visible ? "held hidden" : under ? "taken under the deck (its fall's pose)" : "set down")} here at {cell}{(copyGone ? " as its copy went" : "")}{(overGone ? ", OVER A GONE CELL" : "")}"
                 : $"{name} into {(a.Cart as Node)?.Name}");
         }
         foreach (var (id, copy) in _cavRode)
@@ -1835,26 +1918,44 @@ public partial class NetTestFlow : Node
             _cavArrivedTold = true;
             _cavArrivedAt = _elapsed;
             var k = rc.StopIndex;
+            // the first client stayed on the slag deck through the drop and fell with it (the final review's I1): it comes back at this arrival
             GD.Print(me.Cart == rc.Cart ? $"[net] ride: cavern: at stop {k} our hero sits in the party's cart (seat {me.Seat}) here"
+                : !_wireJoiner && _lpFellAt >= 0 ? $"[net] ride: cavern: at stop {k} our hero, fallen with slag cart {_lpStayedOn} on ride {stop + 1}, is not in the party's cart here (fallen {Yes(me.State.Fallen)}): it comes back at this arrival"
                 : $"[net] ride: cavern: at stop {k} our hero is NOT in the party's cart here (it sits in {(me.Cart as Node)?.Name ?? "nothing"})");
-            // ruling (e) needs its case on each screen: the joiner on the deck through the call, the first client back in the party's cart after it
-            var roleFrames = _wireJoiner ? _cavCalledDeck : _cavCalledCart;
+            // ruling (e) needs its case on each screen: the joiner on the deck through the call and back in the party's cart after it, the
+            // first client on the deck through the call (it stays on it through the drop)
+            var roleOk = _wireJoiner ? _cavCalledDeck > 0 && _cavCalledCart > 0 : _cavCalledDeck > 0;
             GD.Print(_cavAcrossAfterCall == 0
-                ? $"[net] ride: cavern: after the slag line's call no \"Leap across\" offered here ({_cavCalledFrames} frame(s) from the call to stop {k}: {_cavCalledDeck} on the slag deck, {_cavCalledCart} in the party's cart) ({(_cavCalledFrames == 0 ? "FAIL: the call never showed here" : roleFrames == 0 ? $"FAIL: no frame {(_wireJoiner ? "on the slag deck" : "in the party's cart")} after the call" : "ok")})"
+                ? $"[net] ride: cavern: after the slag line's call no \"Leap across\" offered here ({_cavCalledFrames} frame(s) from the call to stop {k}: {_cavCalledDeck} on the slag deck, {_cavCalledCart} in the party's cart) ({(_cavCalledFrames == 0 ? "FAIL: the call never showed here" : !roleOk ? $"FAIL: no frame {(_wireJoiner ? "on the slag deck and in the party's cart" : "on the slag deck")} after the call" : "ok")})"
                 : $"[net] ride: cavern: after the slag line's call \"Leap across\" was offered here {_cavAcrossAfterCall} of {_cavCalledFrames} frame(s), {_cavAcrossFirst} (FAIL)");
             var off = _cavOffSlag.Count > 0 ? string.Join(", ", _cavOffSlag) : "nobody";
             var onGone = _cavOnWhenGone.Count > 0 ? string.Join(", ", _cavOnWhenGone) + $" (held here for the server's word: {(Dungeon.Rails.RailNet.Instance is { } held && IsInstanceValid(held) ? held.LeapersHeld : 0)} hero(es))" : "nobody";
-            // ruling (d)'s case is a leaper still on a copy as it goes; with none, the watch has nothing to judge, and says so (never "ok")
+            // ruling (d)'s case is a leaper still on a copy as it goes; with none, the watch has nothing to judge, and says so (never "ok");
+            // with one, it must have been hidden from its copy's going to its Fallen sheet (or a seat), and that end must have come by now
             var reached = _cavOnWhenGone.Count > 0;
-            GD.Print(_cavOverGone != null || _cavHidden != null
-                ? $"[net] ride: cavern: {_cavOverGone ?? _cavHidden} here; off a slag copy here: {off}; on its copy when it went: {onGone} (FAIL)"
-                : reached ? $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: {onGone} (ok)"
+            var heldOpen = _cavHeldSince.Count > 0 ? string.Join(", ", _cavHeldSince.Keys.Select(i => main.Party.Adventurers[i].State.Name)) : null;
+            var heldFail = _cavHeldShown ?? (heldOpen != null ? $"{heldOpen} still held here at the arrival, NEITHER fallen nor seated" : null);
+            var ends = _cavHeldEnds.Count > 0 ? $"; then {string.Join(", ", _cavHeldEnds)}" : "";
+            GD.Print(_cavOverGone != null || _cavHidden != null || heldFail != null
+                ? $"[net] ride: cavern: {_cavOverGone ?? _cavHidden ?? heldFail} here; off a slag copy here: {off}; on its copy when it went: {onGone}{ends} (FAIL)"
+                : reached ? $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: {onGone}{ends} (ok)"
                 : $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: nobody (ruling (d)'s case not reached here)");
             GD.Print(_cavRodeGone.Count == 0 ? $"[net] ride: cavern: NO slag copy a hero rode went here before stop {k} (FAIL)"
                 : _cavOnFreed == null ? $"[net] ride: cavern: after slag cart {string.Join(", ", _cavRodeGone)} went over the drop no hero sits on a freed copy here (ok)"
                 : $"[net] ride: cavern: after slag cart {string.Join(", ", _cavRodeGone)} went over the drop {_cavOnFreed} here (FAIL)");
         }
-        if (_cavArrivedTold && (_cavAllGoneAt >= 0 || _elapsed - _cavArrivedAt > 15))
+        if (_cavArrivedTold && !_cavUpTold && _elapsed - _cavArrivedAt >= 3.0)
+        {
+            // the (d) line is told at the arrival and cannot see the return: 3 s on, every hero is back in sight and up here (the fallen first
+            // client's return at this arrival over the wire, a first run of Known gaps' "a remote player's return at a stop arrival")
+            _cavUpTold = true;
+            var down = main.Party.Adventurers.Where(a => IsInstanceValid(a) && !a.Parked && (!a.Visible || a.State.Fallen)).Select(a => $"{a.State.Name} {(a.State.Fallen ? "FALLEN" : "HIDDEN")}").ToList();
+            var up = main.Party.Adventurers.Where(a => IsInstanceValid(a) && !a.Parked).Select(a => a.State.Name);
+            GD.Print(down.Count == 0
+                ? $"[net] ride: cavern: 3 s after our arrival at stop {stop + 1} every hero is shown and up here ({string.Join(", ", up)}) (ok)"
+                : $"[net] ride: cavern: 3 s after our arrival at stop {stop + 1} {string.Join(", ", down)} here (FAIL)");
+        }
+        if (_cavArrivedTold && _cavUpTold && (_cavAllGoneAt >= 0 || _elapsed - _cavArrivedAt > 15))
         {
             _cavDone = true;
             GD.Print(_cavAllGoneAt >= 0
@@ -1863,13 +1964,22 @@ public partial class NetTestFlow : Node
         }
     }
 
-    // the leaps over the wire: the first client leaps across on its first frame offered "Leap across" (deck seat 0) and back on its first frame
-    // after the slag line's call; the joiner brakes across the bridge's call (ruling (a)), then leaps across (deck seat 1) and back on its last
+    // the leaps over the wire: the first client leaps across on its first frame offered "Leap across" (deck seat 0), is offered "Leap back"
+    // on its first frame after the slag line's call and does not press it: it stays on the deck through the drop and falls with r4_slag (the
+    // final review's I1: ruling (d)'s case, held on the joiner's screen), back at stop 4's arrival; the joiner brakes across the bridge's call (ruling (a)), then leaps across (deck seat 1) and back on its last
     // offered frames (its slag copy within LastFrameWithin of the offer's close, LeapDropEnemyS − BackCloses). Each press is an intent: slag:{id}
     // across, cart:0 back. A press the server did not seat within 1 s is sent again while it is still offered (at most 3 times)
     private int _lpStep, _lpPresses;
     private double _lpAt = -1, _lpBrakeAt = -1, _lpCallAt = -1;
     private float _lpLastOffered = float.NaN;
+    /// <summary>
+    /// The first client stays on the slag deck through the drop (the final review's I1, so the joiner's screen holds a remote leaper as its copy
+    /// goes): when it fell here (Fallen, <c>_elapsed</c>), or −1; the slag cart it stayed on.
+    /// </summary>
+    private double _lpFellAt = -1;
+    private int _lpStayedOn = -1;
+    /// <summary>The first client stays on the deck: neither Fallen nor back this long (s) after the slag line's call is a failure.</summary>
+    private const double StayFallWithin = 8.0;
     /// <summary>The joiner's leap back goes in with its slag copy's front this close (m) to the offer's close, or closer.</summary>
     private const float LastFrameWithin = 0.4f;
     /// <summary>The joiner's brake held across the bridge's call is let go this long (s) past the reaction time after the call was seen here (the train stands braked meanwhile).</summary>
@@ -1938,7 +2048,13 @@ public partial class NetTestFlow : Node
             var close = enc.LeapDropEnemyS - Dungeon.Rails.LeapRules.BackCloses;
             var shortBy = close - on.Run.FrontS;
             if (offered) _lpLastOffered = shortBy;
-            var press = joiner ? offered && shortBy <= LastFrameWithin : offered;
+            if (!joiner && offered) // the first client: offered on its first frame after the call, and stays
+            {
+                _lpStep = 4; _lpStayedOn = on.CartId;
+                GD.Print(FormattableString.Invariant($"[net] ride: cavern: \"Leap back\" offered on our first frame after the slag line's call here ({_elapsed - _lpCallAt:0.00} s after it; our slag copy's front at enemy S={on.Run.FrontS:0.0}, {enc.LeapDropEnemyS - on.Run.FrontS:0.0} m short of the drop) and not pressed: the rider stays on slag cart {on.CartId}'s deck through the drop"));
+                return;
+            }
+            var press = joiner && offered && shortBy <= LastFrameWithin;
             if (!press)
             {
                 if (offered || shortBy > 0f) return; // not yet: the first frame after the call offered it, or (the joiner) the last offered ones
@@ -1950,8 +2066,19 @@ public partial class NetTestFlow : Node
             _lpStep = across + 3; _lpAt = _elapsed; _lpPresses = 1;
             GD.Print(!press
                 ? FormattableString.Invariant($"[net] ride: cavern: the offer of \"Leap back\" closed here before {who} pressed it (last offered {_lpLastOffered:0.00} m short of its close; our copy's front now {-shortBy:0.00} m past it): pressed late through the intent ({cartRef}) (FAIL)")
-                : joiner ? FormattableString.Invariant($"[net] ride: cavern: the joiner presses \"Leap back\" on its last offered frames: our slag copy's front at enemy S={on.Run.FrontS:0.00}, {shortBy:0.00} m short of the offer's close (the drop's edge {enc.LeapDropEnemyS:0.0} − {Dungeon.Rails.LeapRules.BackCloses:0} m), {_elapsed - _lpCallAt:0.00} s after the slag line's call here; through the intent ({cartRef})")
-                : FormattableString.Invariant($"[net] ride: cavern: \"Leap back\" pressed on our first frame after the slag line's call here ({_elapsed - _lpCallAt:0.00} s after it; our slag copy's front at enemy S={on.Run.FrontS:0.0}, {enc.LeapDropEnemyS - on.Run.FrontS:0.0} m short of the drop) through the intent ({cartRef})"));
+                : FormattableString.Invariant($"[net] ride: cavern: the joiner presses \"Leap back\" on its last offered frames: our slag copy's front at enemy S={on.Run.FrontS:0.00}, {shortBy:0.00} m short of the offer's close (the drop's edge {enc.LeapDropEnemyS:0.0} − {Dungeon.Rails.LeapRules.BackCloses:0} m), {_elapsed - _lpCallAt:0.00} s after the slag line's call here; through the intent ({cartRef})"));
+            return;
+        }
+        if (!joiner && _lpStep == 4) // the first client stays on the deck: it falls with the slag cart (its ForcePose, then its Fallen sheet)
+        {
+            if (me.State.Fallen)
+            {
+                _lpStep = 9; _lpFellAt = _elapsed;
+                GD.Print(FormattableString.Invariant($"[net] ride: cavern: the rider fell with slag cart {_lpStayedOn} here {_elapsed - _lpCallAt:0.00} s after the slag line's call (Fallen; at y {me.GlobalPosition.Y:0.0}, hidden {Yes(!me.Visible)}): back at the next stop's arrival"));
+                return;
+            }
+            if (me.Cart == rc.Cart) { LeapFail("the rider, staying on the deck, is back in the party's cart without pressing \"Leap back\""); return; }
+            if (_elapsed - _lpCallAt > StayFallWithin) LeapFail(FormattableString.Invariant($"the rider stayed on the deck and is neither fallen nor back {StayFallWithin:0} s after the slag line's call (in {(me.Cart as Node)?.Name ?? "nothing"}, at y {me.GlobalPosition.Y:0.0})"));
             return;
         }
         if (_lpStep == across + 3) // back: the server's SeatMsg seats us in the party's cart

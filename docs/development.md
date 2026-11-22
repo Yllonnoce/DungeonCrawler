@@ -1954,15 +1954,17 @@ has neither a live bridge nor a live leap (each logged `(dead: …)` and left a 
   `[rails] … held by the stall guard at S=…`). It takes the train only while it rolls and a seated player of the party's cart braked within
   `BrakeMemory` (2 s), with its front at the rear (`BridgeRules.Catches`).
 - **The brake's reaction window** (Task 3 review I1). A brake counts toward the take only when it was pressed `ReactionTime` (1.5 s) or more
-  after the call (`BridgeRules.Counts`, the press stamped by `RailController.BrakePressedAt`; a brake held on is one press, and a held remote
-  brake, resent every 0.25 s, is one press within `PressGap`, 0.3 s). A train braked onto the bridge before its warning is held short and
+  after the call (`BridgeRules.Counts`, the press stamped by `RailController.BrakePressedAt`; a brake held on is one press however long it
+  is held, through a pause or a frame hitch alike, `BridgeRules.NewPress`, and the braking flag is cleared whenever the cart leaves Rolling,
+  so a brake held into a stop is a fresh press on the next ride). A train braked onto the bridge before its warning is held short and
   never taken by that brake, however long it is held; a fresh press after the window takes it. A player braking with the front within
   `BrakeCallNear` (12 m) of the rear is told "Don't stop — it's going under us!" (`BarkTrigger.BridgeBrake`), once per arming. Companions
   never brake, so a solo player is never killed by a brake they could not know was theirs.
 - **The seen fall** (`BridgeRules.FallSeen`, 1.4 s; the legibility round). A take is `RailController.Fall(…, seen: true)`: the cells under
   the train go with it, the cart's look, the wagons' and each seated hero's (`Adventurer.FallLook`) drop through the gone cells on rigid
   bodies, each seated player's eye rides down with them (`FallEye`), and the wipe is held for it (`PartyController.HoldWipe`, read as
-  `WipeHeldUntil`); the crevasse takes the riders at once, as any fall. The eye lets go 50 ms before the held wipe is judged and hands the
+  `WipeHeldUntil`); the crevasse takes the riders at once, as any fall. A headset is not shown the fall (comfort: `FallEye` is skipped
+  while `Vr.Active`, so the rig keeps its view; the final review's M10). The eye lets go 50 ms before the held wipe is judged and hands the
   view back to the local hero's camera (on the rebuilt floor too: Task 6 review I1). A client shows the same fall from the cart state's
   Wrecked edge with `Fell` over the bridge's span; its own taken player, whose unseat pose (sent at the take) reaches it before that
   state and whose Fallen sheet comes after it, still rode the train when it sat in the cart at the last applied state or on a frame since
@@ -1970,8 +1972,11 @@ has neither a live bridge nor a live leap (each logged `(dead: …)` and left a 
   (The bridge goes out from under the train!): … seen for 1.4 s`.
 - **What ends it** (Ruling 5). After an arrival it runs on to its end (every cell gone a few seconds after stop 4). A wreck or a fall stops
   it where it stands. A `Restore` (a wipe's rise or a load), a spare's takeover or ride 4's next arming stands it whole again (`[rails] …
-  bridge r4_bridge stands whole again (…)`). While the train rolls on it at 1 m/s or more nobody gets out (`HoldsRiders`; "Get out" is
-  neither offered nor taken, remote seats included). The ride's runaway whose front reaches the gone span goes down with it, freed plainly
+  bridge r4_bridge stands whole again (…)`); after the bridge's own take with a hero still standing, the spare's takeover stands the bridge
+  and the drop `FallSeen` (1.4 s) later, once the train has been seen falling through the gone cells (the final review's M5). While the train rolls on it, at any speed, nobody gets out (`HoldsRiders`; "Get out" is
+  neither offered nor taken, remote seats included; the final review's I2 amends Ruling 6's 1 m/s: a train braked onto the bridge is held
+  short alive, and a rider let out there would stand in the one-cell pockets the collapse then islands). A wreck, a halt and a held cart are
+  not Rolling and are untouched; a stalled train is still freed by the watchdog. The ride's runaway whose front reaches the gone span goes down with it, freed plainly
   (neither rammed nor plunged; "The runaway goes down with the bridge!" only with a hero within 40 m; `[rails] … runaway r4_runaway goes
   down with the bridge at S=…`).
 - **The leap** (Rulings 9–15). The stretch runs from the cavern's start + `LeapIn` (10 m) to the drop's near edge (S 913.1..975.1; the piece's own S, 913.0 in the probe, is its At's 913.04 against the cavern's 903.06 + 10); the leap
@@ -1986,8 +1991,10 @@ has neither a live bridge nor a live leap (each logged `(dead: …)` and left a 
   "{name} leaps onto the slag cart!" / "{name} leaps back into the cart!", and `[rails] leap: {name} across onto slag cart {id} (r4_slag)
   seat {k} at party S=…` / `back into the cart seat {k} …`. A leaper is not aboard the party's cart: every party-cart judgement reads
   `Cart == _rails.Cart` (the departure, pumps and brakes, `AbleToThrow`, the fall's toll, the arrival's set-down, the rim spots). Its
-  shoe takes no hits while a hero rides it, and any way it goes but the drop (freed, rammed, a wreck, a restore, the line's end) sets its
-  leapers down quietly on `CrevasseRules.NearestSetDown`. The fight from the deck is the existing seated combat.
+  shoe takes no hits while a hero rides it. Freed any way but a wreck or a restore (the watchdog, an arrival's or a departure's clear, the
+  line's end), each leaper is first hauled back into a free party hero seat (`HaulLeapers` → `LeapBack`, counted in `LeapHauls`; the final
+  review's M6: Ruling 17's haul extended to Ruling 15's frees, so nobody is left in a pocket the collapse then islands); one with no seat,
+  and every leaper of a rammed, wrecked or restored cart, is set down quietly on `CrevasseRules.NearestSetDown`. The fight from the deck is the existing seated combat.
 - **The slag line's drop** (Rulings 16–18). The slag deck's 2 cells (`DropCells`) 2 short of the cavern's end (`DropFromEnd`), cut bare on
   the slag track and laid by `SlagDrop`. With the party's front `CallAhead` (25 m) short of it, once per arming, its cells give way
   (debris, `timber_collapse`), a red lamp with a halo lights at its near edge (stronger than the broken bridge's), the ride's slag carts
@@ -2001,7 +2008,7 @@ has neither a live bridge nor a live leap (each logged `(dead: …)` and left a 
 - **r4_slag** (Offset 0: side by side) starts at party S 848.0 (At 0.3086), 40 m ahead of its pace point round the hairpin, where no
   seated eye can see it (a sight-ray test from every seat; Task 6's legibility round), and the party comes up to it. An Offset-0 pacing
   cart behind its pace point catches up at up to `PaceRules.AlongsideCatchUp` (6 m/s; its catch-down unchanged), so "Leap across" is
-  offered 0.00–0.01 s into the stretch; one waiting ahead of its pace point is left alone by the slag watchdog (`CartWatchdog.WaitsAhead`).
+  offered 0.00–0.01 s into the stretch; one anywhere ahead of its pace point (inside the alongside radius too) is left alone by the slag watchdog (`CartWatchdog.WaitsAhead`).
 - **The holes read from the seat.** An ember glow rises out of each gone bridge cell and out of the drop, with a haze quad at deck level
   (`BrokenBridge.EmberGlow`, `EmberHaze`, shown while the cell is gone); the drop's cells keep the slag deck's gravel bed.
 - **The calls' copy** (Ruling 19). `BridgeGoing`, `BridgeBrake` and `SlagDrop` are appended after `SplitNow`, all Shouts, with
@@ -2013,11 +2020,12 @@ restored at stop 3 (`rc.Restore(3)`) and departs on ride 4, the runaway held but
 timing line (`[cavern] timing: bridge call t=…, earliest take t=…`, seconds since the rear came onto the bridge), and `[cavern] RESULT ok
 ({variant}): …`:
 - `=bridge` (the default): nobody presses; the call with the collapse 1.5 s or more after the rear came on, its front never within 2 m of
-  the rear (measured 9.18 m), no "Get out" at speed, every cell gone within 6 s of the arrival, a restore stands it whole.
-- `=brake`: the lead brakes 1.6 s after it starts: "Don't stop", the take 1.5 s or more after the call by a press 1.5 s or more after it
+  the rear (measured 9.18 m), no "Get out" while it rolls on it, every cell gone within 6 s of the arrival, a restore stands it whole.
+- `=brake`: the lead brakes 2.0 s after it starts (0.5 s past the reaction time): "Don't stop", the take 1.5 s or more after the call by a press 1.5 s or more after it
   (measured 4.53 s and 1.64 s), every rider fallen within 1 s, the wipe rises at stop 3 with the bridge whole and the next departure reaches
   stop 4; the camera after the rise is the local hero's.
-- `=early-brake`: braked from the groan through the call + 3 s: held short and alive, no take; let go 1 s, then a fresh brake (4.01 s
+- `=early-brake`: braked from the groan through the call + 3 s: held short and alive, no take; held there the lead's prompt is "" and a
+  "Get out" press is refused; let go 1 s, then a fresh brake (4.01 s
   after the call): taken only after it (4.55 s after the call), then as `=brake`.
 - `=stall`: caught on it (`rc.DebugStall`) nobody braking: held 2 m short (least gap 2.00 m), no take, the watchdog frees it to stop 4.
 - `=runaway`: the lead pumps, the split straight: the runaway goes down with the bridge within 8 m of its start, neither rammed nor
@@ -2579,12 +2587,15 @@ Slag and golem carts name their riders' net ids by spot (−1 for an empty spot;
   seat (0 or 1); a client resolves it from its slag copies (`RailNet.CartById`: a live copy, not freed and not derailed). The server hears
   `RiderChanged` on each slag cart's real seat book (`SlagCart`'s `Admit` and `Release`). An unseat whose rider sits in another cart at the
   flush is not sent (`LeapRules.SendsUnseat`): its seat in the new cart moves it on every client. A client never sets a leaper down where
-  its slag copy went (Task 7 ruling (d)): a hero still on a copy as it goes is taken out of the copy's book, hidden and held where it sat
-  (`RailNet.HoldLeapers`, `[net] ride: {name} was on slag cart {id}'s copy as it went here: held hidden …`) until the server's word
-  (`LeapRules.HeldLeaperNow`, each frame): a seat (a haul back) shows it; Fallen leaves it hidden to the crevasse's hold, whatever else;
-  the server placing it on real footing off the copy shows it (`LeapRules.EndsHoldAt`: more than `HoldMoveOff`, 0.5 m, from where it sat,
-  with `CrevasseRules.Footing` under it and not below a drop's lip: a remote hero's poses there, or once they have brought it to its
-  unseat's landing, which must name the copy that went; our own ForcePose). The fall's unseat lands at the crevasse hold under the deck,
+  its slag copy went (Task 7 ruling (d)): every rider still on a copy as it goes is taken out of the copy's book, and another player's
+  hero is hidden and held (`RailNet.HoldLeapers`, `[net] ride: {name} was on slag cart {id}'s copy as it went here: held hidden …`) until
+  the server's word (`LeapRules.HeldLeaperNow`, each frame): a seat (a haul back) shows it; Fallen leaves it hidden to the crevasse's hold,
+  whatever else; the server's set-down on real footing off the copy shows it once the body's poses have brought it within
+  `LeapRules.LandingReached` (1 m) of it (`RailNet.PlaceHeld`: its unseat's landing, which must name the copy that went, or a ForcePose,
+  each more than `HoldMoveOff`, 0.5 m, from where it sat and `CrevasseRules.StandsAt`: footing under it and not below a drop's lip). A
+  bare pose never ends a hold (the final review's M3: the body is eased 100 ms late, back along the standing deck). Our own hero is not
+  held (M4): its ForcePose for a fall or a set-down reaches us before the cart state that frees the copy, so it is out of the seat already.
+  The fall's unseat lands at the crevasse hold under the deck,
   which is no footing, so a leaper who fell stays hidden until its Fallen sheet. `HoldForServer` (2 s) is the last fallback, and a floor
   reset, a rebuild, a FloorChange, a leave or a rejoin ends every hold (`EndHolds`, also from `RailNet._ExitTree`; a disconnect frees the
   bodies with the world). Each end is logged with its reason and the time held (`[net] ride: {name}'s hold ended here after {t} s: …`).
@@ -2796,7 +2807,7 @@ The callers send the floor clock's pair just before it, and `OnFloorReady` also 
   off; a brake pressed before the bridge's call never counts toward the take (the reaction window), one pressed after it does.
 
 **The other carts.**
-- A ride's pacing slag cart is watched only while the party's cart rolls and is not halted. It is judged against its pace point and freed with its riders (a leaper on its deck set down first, plan 13). An Offset-0 pacing cart waiting ahead of its pace point for the party (r4_slag, which starts 40 m ahead round the hairpin) is not watched while the party is short of it (`CartWatchdog.WaitsAhead`, Task 6 review I2; `--test-cavern=creep`).
+- A ride's pacing slag cart is watched only while the party's cart rolls and is not halted. It is judged against its pace point and freed with its riders (a leaper on its deck set down first, plan 13). An Offset-0 pacing cart anywhere ahead of its pace point (r4_slag, which starts 40 m ahead round the hairpin, or stands a metre or two ahead of a creeping party) is not watched while it is ahead (`CartWatchdog.WaitsAhead`, Task 6 review I2 and the final review's M1; `--test-cavern=creep`); one that truly cannot move falls behind its pace point as the party passes and is watched from there.
 - Traffic carts and runaway wagons are judged on their own progress; ride 4's runaway is freed by its own stall (`OwnProgressStuck`, `[rails] t=… runaway {id} freed (stuck)`).
 - The golem's runner is never watched.
 
@@ -2928,20 +2939,35 @@ refuses it within 1 s of the first client's toggle (`seated window: set back …
      the deck (seat 1); both clients print `[net] ride: {name} rides slag cart {id} seat {k} here` for both (their SeatMsgs). The joiner
      presses "Leap back" on its last offered frames (`… the joiner presses "Leap back" on its last offered frames: … {d} m short of the
      offer's close`, d ≤ 0.5; its slag copy's front against `LeapDropEnemyS − BackCloses`), and the server's `interact cart:0 from Joiner:
-     leap accepted` and `leap: Joiner back into the cart seat` follow; the first client presses it on its first frame after the slag line's
-     call. Nobody falls with the slag cart, which goes over with `0 hero(es) fell, 0 hauled back`; both clients print `[net] ride: slag cart
-     {id} went over the drop here`. At stop 4 each client prints that its hero sits in the party's cart, that no "Leap across" was offered
-     after the call (ruling (e), from its `LeapCalled`), that no hero was shown standing over a gone cell, with who left a slag copy and how
-     (ruling (d)'s watch: a hero shown on foot at a gone cell's deck height fails it, and so does one on foot, not fallen, kept hidden past the hold's fallback + 0.5 s; its case, a leaper still on a copy as it goes, is not
-     produced by this pass, so the line says `on its copy when it went: nobody (ruling (d)'s case not reached here)`, never `(ok)`, and the
-     script prints a NOTE; the client's hold is pinned by `LeapRulesTests`), and that nobody sits on a freed copy; the server, `[net-server] ride: cavern: the
-     train arrives at stop 4 with Rider in the party's cart yes and Joiner yes; leaps across 2, back 2; … (ok)`. Each check fails the script
+     leap accepted` and `leap: Joiner back into the cart seat` follow. The first client is offered it on its first frame after the slag
+     line's call and does not press it (`… "Leap back" offered on our first frame after the slag line's call here … and not pressed: the
+     rider stays on slag cart {id}'s deck through the drop`; the final review's I1): it stays and falls with the slag cart, which goes over
+     with `1 hero(es) fell, 0 hauled back` (exactly one `[rails] leap: Rider falls with slag cart {id} (human, up)`, no `Rider back into the
+     cart`; on its screen `[net] ride: cavern: the rider fell with slag cart {id} here …`); both clients print `[net] ride: slag cart {id}
+     went over the drop here`. Ruling (d)'s case is the joiner's screen: the cart state frees the copy with the first client still in its
+     book, so `RailNet.HoldLeapers` holds it hidden (`[net] ride: Rider was on slag cart {id}'s copy as it went here: held hidden …`), its
+     unseat's landing (the crevasse hold under the deck) is no set-down, and its Fallen sheet ends the hold within 1 s (`Rider's hold ended
+     here after {t} s: fallen`, t ≤ 1.0); a hold ended by the fallback, a pose or a landing fails the script on either client. On the first
+     client's own screen its ForcePose comes before the cart state, so the case is not reached there (a NOTE). At stop 4 the joiner prints
+     that its hero sits in the party's cart and the first client that its hero, fallen with slag cart {id}, comes back at this arrival; each
+     prints that no "Leap across" was offered after the call (ruling (e), from its `LeapCalled`: deck and cart frames after the call on the
+     joiner, deck frames on the first client), that no hero was shown standing over a gone cell, with who left a slag copy and how (a hero
+     shown on foot at a gone cell's deck height fails it, so does one on foot, not fallen, kept hidden past the hold's fallback + 0.5 s, and
+     so does a held hero shown at all between its copy's going and its Fallen sheet; the joiner's line must end `on its copy when it went:
+     Rider (held here for the server's word: 1 hero(es)); then Rider fallen {t} s after its copy went, never shown before it (ok)`, the
+     first client's `nobody (ruling (d)'s case not reached here)`), that nobody sits on a freed copy, and 3 s on that every hero not parked
+     is shown and up there (the return over the wire). The server, `[net-server] ride: cavern: the train arrives at stop 4 with Joiner in the
+     party's cart yes and Rider back from the crevasse yes {d} m from the cart …; leaps across 2, back 1; … (1 hero(es) fell, 0 hauled back);
+     … (ok)`, judged once the first client is back (a tick or so after the arrival, or 3 s on); a return outside the client's 3 m or board
+     reach is shoved within it, and the first client boards again through its intent (`[net] ride: cavern: at stop 4 our hero is back from
+     the crevasse beside the cart, up …`, then `[net] ride: at stop 4 our hero boarded again after its fall …`, within 25 s of the arrival).
+     Each check fails the script
      with its own reason. `FightBoarders` and every party-cart read in the flow use `Cart == rc.Cart`, so a client on the slag deck never aims
      at the party cart's rim. Measured (a run at 1b69ef8, `performance` profile; eee9360's two runs alike): the brake pressed 1.37 s before the call and held 2.03 s past
      it; "Leap across" 0.1–0.2 m into the stretch (along −0.57 and −0.48 m); the joiner's leap back 0.33 m short of the offer's close; every
      cell gone 1.8 s before the arrival; 819–820 frames watched after the call.
    - **Measured** (plan 12 Task 8, `performance` profile, four runs): the dark 10 lamps out from S 792.9 on every peer (10 lights hidden on each client); the runaway loose at S 793.1, 15.0 m behind with one wagon at 6.6 m/s, 14.9–15.0 m behind on both clients, 21–22 pairs within 0.15 m; the joiner's press held with the server's front 7.3–7.4 m short (the window 5.0 m), the train straight at front 863.0 and the held throw in at once; the first client's cart ran a little behind the server's there, so by its first frame past the points (0.1 m) the throw already showed and it pressed "Set the split back", refused by plan 8's guard 0.02 s after the joiner's throw; the runaway at the points at S 863.1 and off the spur's end (spur S 12.1 of 13.6) about 12.6 s after it broke loose. Before the joiner's early press was added, the first client's press 0.1 m past the points reached a server already past them and was thrown at once.
-8. **The kiln and the chase.** Held at stop 4, the kiln's, the joiner gets out with a tap (the cage hold's seat still lets it out). On foot beside the spare, it is offered nothing while the train is held there. The train leaves on ride 5 with the client pumping. The joiner takes `spare:4`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
+8. **The kiln and the chase.** Held at stop 4, the kiln's, the first client, back from its fall with r4_slag, boards again through its intent, and the joiner gets out with a tap (the cage hold's seat still lets it out). On foot beside the spare, it is offered nothing while the train is held there. The train leaves on ride 5 with the client pumping. The joiner takes `spare:4`, and its chaser hops the gap and the fallen trestle and halts within 3 m of the train at the end of the line (`chase-done`). The server then prints how many relief carts it sent (`[net-server] ride: relief carts sent online: N`), and the script fails unless it is 0: a tripwire for the relief's single-player guard, not proof of it.
 9. **The quiet unseat.** The client leaves seated, and the server checks the quiet unseat.
 10. **The wrecks.** The server wrecks the cart at the end of the line (`RailController.DebugWreck`) with spares 1 to 3 unused, and spare 3 takes over (`SpareRules.Pick`: the nearest unused stop). The heap stands on ride 3, so 3 s later the server wrecks it again and spare 2 takes over, Held at stop 2 (`wreck-spare`): on a line of any length it wrecks every 3 s until the spare of the stop the heap's ride leaves stands (`NetTestFlow.HeapStop`). The joiner sees each Wrecked state (two) and the takeover at stop 2, and must hear `cart_wreck` once: the end's wreck stands beside it, the second far out of a wreck's 30 m earshot (`RideAudio.At`).
 11. **The heap.** The joiner boards that cart and rides ride 3 again with its switch straight, into the ore heap. Its rendered S must never pass the face (the follower's `BlockedS`) nor step back (`heap-halt`).
@@ -3008,13 +3034,13 @@ The server stops its grid lines before the wreck, because the jump to a spare's 
 - a downed rider's "Get out" intent and a seated pose's Dodge flag, both now refused on the server (code and rule tests only);
 - the rim-spot cap with one awake rider (the RIDE pass's hounds went to the crewed wagon), and a remote seated body's presentation (no run gait or footsteps; nothing checks animation or audio);
 - a wipe's reload mid-ride. The pass's wipe (step 13) comes with the cart wrecked and held, and the resync runs the same `OnFloorReady` catch-up;
-- a fall on a client: the plunge (`CartStateDto.Fell`), the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire. A remote player's own fall is proven over the wire (step 13's walk-off): a walk off a lip on the joiner's own input, judged by the server, shown Fallen on the joiner's sheet and brought back by the wipe's rise. A return at a stop arrival or a platform step for a remote player, and a jump across a chasm (its airborne poses above the lip are dropped until it lands), are not;
+- a fall on a client: the plunge (`CartStateDto.Fell`), the lost wagons (`LostCages`) and Grisel at the lip are proven in single player (`--test-crevasse`) and on the rules, not over the wire. A remote player's own fall is proven over the wire (step 13's walk-off): a walk off a lip on the joiner's own input, judged by the server, shown Fallen on the joiner's sheet and brought back by the wipe's rise. A return at a stop arrival for a remote player is proven too (the first client's fall with r4_slag, back at stop 4's arrival and boarded again). A return at a platform step for a remote player, and a jump across a chasm (its airborne poses above the lip are dropped until it lands), are not;
 - a wreck in motion. The live wreck is the test's, with the cart held at the end of the line;
 - a thrown remote player's run-over damage. The pass checks only its landing;
 - plan 11 on a client: the train's fall at the broken bridge (the pass takes the live back; the fall is proven solo by `--test-switch-back=wrong`), a slag or traffic cart plunging through the gap (and a ride's slag cart reaching it with a living rider, end to end), a barricade cut on foot or with a spell over the wire, a slag-line barricade's smash watched on a client, and a barricade smashed while its ride is not armed standing again at its arming (rule-tested only);
-- plan 13 on a client: a leaper still on a slag copy when it goes (the pass's leapers are both back first, so ruling (d) is watched in its
-  general form: nobody shown over a gone cell, nobody on a freed copy, every leave of a copy said; a stay or a downed leaper hauled back is
-  `--test-cavern=stay`'s and `=lone`'s, solo), a joiner arriving mid-leap, a leaper leaving the game on the deck (its set-down, and the
+- plan 13 on a client: a leaper the server sets down or hauls back as its copy goes, seen from another screen (`RailNet.PlaceHeld`'s
+  on-footing branch and `LeapRules.LandingReached`; the pass's case is a fall: the first client stays on the deck and falls with r4_slag,
+  held on the joiner's screen until its Fallen sheet; a downed leaper hauled back is `--test-cavern=lone`'s, solo), a joiner arriving mid-leap, a leaper leaving the game on the deck (its set-down, and the
   cavern's set-down niche at x=60 islanded once the bridge goes), a chaser over gone cells, a wreck with cells gone, the slag line's
   warning at pumped speed or with another player pumping, and the first client in the bridge's take (it has left by then: the take, its
   seen fall and the camera after the rise are the joiner's alone); a client shows the collapse's front only as its cells (`CollapseS` is the
