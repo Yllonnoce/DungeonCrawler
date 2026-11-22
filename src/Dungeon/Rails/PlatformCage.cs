@@ -9,42 +9,42 @@ using Godot;
 namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
-/// A cage wagon on a railed jailbreak floor: a flat bed on four wheels, the size of the party's cart, with an iron-bar
-/// cage on it, a barred door and a padlock on the side that faces the platform, and room for two crew standing inside.
-/// A dumb prop like <see cref="MineCart"/>: the crew controller answers the interact key through <see cref="PromptFor"/>
-/// and <see cref="OnUse"/> (a client's prompt reads its synced copies; a client's use goes to the server as an InteractIntent
-/// for "cage:{stop}"); it stands on its siding at its stop and never couples (plan 14: the party's train is its own wagons, the
-/// <see cref="TrainWagon"/>s). Its origin sits on the siding's floor; forward is −Z. Only NPC riders: its seat book has no hero
-/// seats in use, and the two bench seats (4, 5) are the crew's.
+/// A prisoners' cage on a railed jailbreak floor (plan 14): an iron-bar cage the size of the party's cart standing on a plank floor on
+/// the siding cell beside its stop's platform, with a barred door and a padlock on the side that faces the platform, and room for two
+/// crew standing inside. It never moves: the party's train is its own wagons (<see cref="TrainWagon"/>), and an opened cage's crew get
+/// out at its door and run to the train's first empty seats. A dumb prop like <see cref="MineCart"/>: the crew controller answers the
+/// interact key through <see cref="PromptFor"/> and <see cref="OnUse"/> (a client's prompt reads its synced copies; a client's use goes
+/// to the server as an InteractIntent for "cage:{stop}"). Its origin sits on the siding's floor; forward is −Z, along the line beside it.
+/// Only NPC riders: its seat book has no hero seats in use, and the two bench seats (4, 5) are the crew's.
 /// </summary>
-public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
+public partial class PlatformCage : AnimatableBody3D, IInteractable, ICartBody
 {
-    public const float BedBottom = MineCart.TubBottom;
-    public const float BedThickness = 0.12f;
-    /// <summary>The bed's top: a rider's feet (and body origin) rest here.</summary>
-    public const float BedTop = BedBottom + BedThickness;
+    /// <summary>The plank floor's thickness: a rider's feet (and body origin) rest on its top.</summary>
+    public const float FloorThickness = 0.08f;
+    /// <summary>The floor's top: a rider's feet (and body origin) rest here.</summary>
+    public const float FloorTop = FloorThickness;
     public const float Width = MineCart.TubWidth;
     public const float Length = MineCart.TubLength;
-    /// <summary>The bars stand this tall above the bed: the crew stand inside (a 1.8 m body), so the roof clears their heads.</summary>
+    /// <summary>The bars stand this tall above the floor: the crew stand inside (a 1.8 m body), so the roof clears their heads.</summary>
     public const float CageHeight = 1.95f;
     const float Bar = 0.04f;
     const float BarEvery = 0.18f;
     const float Post = 0.08f;
-    const float WheelRadius = 0.15f;
-    const float RailTop = 0.24f; // RailTrack: sleeper 0.12 + rail 0.12
+    /// <summary>A crew member let out stands this far outside the door, from the cage's middle (m), off the bars.</summary>
+    const float DoorStep = 0.55f;
 
-    /// <summary>The two crew spots in the wagon's space (x, z).</summary>
+    /// <summary>The two crew spots in the cage's space (x, z).</summary>
     static readonly Vector2[] SeatSpots = { new(0f, -0.6f), new(0f, 0.6f) };
 
     private readonly StandardMaterial3D _iron = new() { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.8f, Roughness = 0.5f };
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.24f, 0.16f, 0.1f), Roughness = 0.85f };
     private readonly StandardMaterial3D _brass = new() { AlbedoColor = new Color(0.55f, 0.42f, 0.18f), Metallic = 0.9f, Roughness = 0.35f };
 
-    /// <summary>The intermediate stop this wagon stands at (1-based, as the RailController's stop index).</summary>
+    /// <summary>The intermediate stop this cage stands at (1-based, as the RailController's stop index).</summary>
     public int Stop { get; init; }
-    /// <summary>The wagon's side (+1 its local +X, −1 its −X) that faces the platform: the door and padlock are there, and the crew look out that way.</summary>
+    /// <summary>The cage's side (+1 its local +X, −1 its −X) that faces the platform: the door and padlock are there, and the crew look out that way.</summary>
     public int PlatformSide { get; init; } = 1;
-    /// <summary>The cell of its siding.</summary>
+    /// <summary>The cell it stands on (its siding).</summary>
     public Dungeon.Generation.GridPos Cell { get; init; }
 
     /// <summary>The cage is unlocked: its door stands open, the padlock gone.</summary>
@@ -55,23 +55,24 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     public CartSeats Seats { get; } = new();
     public Dictionary<int, ICartRider> Riders { get; } = new();
     public event Action<ICartRider, bool>? RiderChanged;
-    public float Speed { get; set; }
-    public float Curvature { get; set; }
-    public Vector3 Velocity => -GlobalTransform.Basis.Z * Speed;
+    /// <summary>A cage stands still: always 0 (an <see cref="ICartBody"/> carries a speed).</summary>
+    public float Speed { get => 0f; set { } }
+    public float Curvature { get => 0f; set { } }
+    public Vector3 Velocity => Vector3.Zero;
 
-    /// <summary>The prompt for the hero looking at the wagon; null or "" offers nothing. Set by the crew controller.</summary>
+    /// <summary>The prompt for the hero looking at the cage; null or "" offers nothing. Set by the crew controller.</summary>
     public Func<Adventurer, string>? PromptFor { get; set; }
-    /// <summary>A hero pressed interact on the wagon. Set by the crew controller.</summary>
+    /// <summary>A hero pressed interact on the cage. Set by the crew controller.</summary>
     public Action<Adventurer>? OnUse { get; set; }
 
     private readonly Marker3D[] _seats = new Marker3D[CartSeats.BenchSeats];
     private Node3D? _door, _padlock;
     private bool _built;
 
-    public CageWagon()
+    public PlatformCage()
     {
         SyncToPhysics = false;
-        CollisionLayer = 1 | 8; // solid on its siding, and a thing to use (the interact ray sees layer 8), as the cart
+        CollisionLayer = 1 | 8; // solid on its cell, and a thing to use (the interact ray sees layer 8)
         CollisionMask = 0;
     }
 
@@ -91,7 +92,7 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     }
 
     /// <summary>
-    /// Where crew rider <paramref name="seat"/> stands, in world space: on the bed, looking out through the platform side.
+    /// Where crew rider <paramref name="seat"/> stands, in world space: on the floor, looking out through the platform side.
     /// Takes the seat book's bench seats (4, 5) or a plain 0..1.
     /// </summary>
     public Transform3D SeatTransform(int seat)
@@ -102,7 +103,17 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     }
 
     /// <summary>
-    /// The rider (its seat booked, its own SitIn under way) rides here now. A crew member's name is raised by the bench seat it stands at
+    /// Where the crew member of bench place <paramref name="index"/> (0, 1) stands once let out, in world space: on the platform just
+    /// outside the door, the two a step apart along the cage.
+    /// </summary>
+    public Vector3 DoorSpot(int index)
+    {
+        var z = index % 2 == 0 ? -0.4f : 0.4f;
+        return GlobalTransform * new Vector3(PlatformSide * (Width / 2f + DoorStep), 0f, z);
+    }
+
+    /// <summary>
+    /// The rider (its seat booked, its own SitIn under way) stands here now. A crew member's name is raised by the bench seat it stands at
     /// (<see cref="CrewRules.LabelLift"/>; <see cref="Npc.SitIn(ICartBody, int)"/> set its Seat first), so the two names over a cage stand apart.
     /// </summary>
     public void Admit(ICartRider rider)
@@ -126,49 +137,26 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     {
         if (_built) return;
         _built = true;
-        float halfW = Width / 2f, halfL = Length / 2f, top = BedTop + CageHeight;
+        float halfW = Width / 2f, halfL = Length / 2f, top = FloorTop + CageHeight;
 
         AddChild(new CollisionShape3D
         {
             Name = "Collision",
-            Shape = new BoxShape3D { Size = new Vector3(Width, top - BedBottom, Length) },
-            Position = new Vector3(0, (BedBottom + top) / 2f, 0),
+            Shape = new BoxShape3D { Size = new Vector3(Width, top, Length) },
+            Position = new Vector3(0, top / 2f, 0),
         });
 
         var body = new Node3D { Name = "Body" };
         AddChild(body);
-        // the bed: planks on two iron-shod beams, and a wooden buffer at either end
-        Box(body, "Bed", new Vector3(Width, BedThickness, Length), new Vector3(0, BedBottom + BedThickness / 2f, 0), _wood);
-        Box(body, "BedRimL", new Vector3(0.06f, 0.08f, Length), new Vector3(-halfW + 0.03f, BedTop + 0.04f, 0), _iron);
-        Box(body, "BedRimR", new Vector3(0.06f, 0.08f, Length), new Vector3(halfW - 0.03f, BedTop + 0.04f, 0), _iron);
-        foreach (var z in new[] { -halfL - 0.05f, halfL + 0.05f })
-            Box(body, "Buffer", new Vector3(Width + 0.1f, 0.25f, 0.08f), new Vector3(0, BedBottom + 0.05f, z), _wood);
-        foreach (var x in new[] { -RailTrack.Gauge / 2f + 0.12f, RailTrack.Gauge / 2f - 0.12f })
-            Box(body, "Beam", new Vector3(0.12f, 0.1f, Length - 0.1f), new Vector3(x, BedBottom - 0.05f, 0), _wood);
-        // four wheels on two axles, as the cart's
-        var axleY = RailTop + WheelRadius;
-        foreach (var z in new[] { -halfL + 0.35f, halfL - 0.35f })
-        {
-            body.AddChild(new MeshInstance3D
-            {
-                Name = "Axle",
-                Mesh = new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.035f, Height = RailTrack.Gauge + 0.1f, RadialSegments = 8, Rings = 1 },
-                MaterialOverride = _iron,
-                Transform = new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), new Vector3(0, axleY, z)),
-            });
-            foreach (var x in new[] { -RailTrack.Gauge / 2f, RailTrack.Gauge / 2f })
-                body.AddChild(new MeshInstance3D
-                {
-                    Name = "Wheel",
-                    Mesh = new CylinderMesh { TopRadius = WheelRadius, BottomRadius = WheelRadius, Height = 0.07f, RadialSegments = 14, Rings = 1 },
-                    MaterialOverride = _iron,
-                    Transform = new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), new Vector3(x, axleY, z)),
-                });
-        }
+        // the floor: planks across, on the siding's ground, with an iron sill along each side
+        for (var z = -halfL + 0.11f; z < halfL; z += 0.22f)
+            Box(body, "Plank", new Vector3(Width, FloorThickness, 0.2f), new Vector3(0, FloorThickness / 2f, z), _wood);
+        Box(body, "SillL", new Vector3(0.06f, 0.06f, Length), new Vector3(-halfW + 0.03f, FloorTop + 0.03f, 0), _iron);
+        Box(body, "SillR", new Vector3(0.06f, 0.06f, Length), new Vector3(halfW - 0.03f, FloorTop + 0.03f, 0), _iron);
 
         // the cage: corner posts, a top frame, vertical bars every BarEvery on the ends and the far side, a barred roof
         var barH = CageHeight;
-        var barY = BedTop + barH / 2f;
+        var barY = FloorTop + barH / 2f;
         foreach (var x in new[] { -halfW + Post / 2f, halfW - Post / 2f })
             foreach (var z in new[] { -halfL + Post / 2f, halfL - Post / 2f })
                 Box(body, "Post", new Vector3(Post, barH, Post), new Vector3(x, barY, z), _iron);
@@ -178,18 +166,18 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
         Box(body, "FrameF", new Vector3(Width, 0.06f, 0.06f), new Vector3(0, frameY, -halfL + 0.03f), _iron);
         Box(body, "FrameB", new Vector3(Width, 0.06f, 0.06f), new Vector3(0, frameY, halfL - 0.03f), _iron);
         // a middle rail round the cage, where the bars are riveted
-        var midY = BedTop + barH * 0.5f;
+        var midY = FloorTop + barH * 0.5f;
         Box(body, "BandF", new Vector3(Width, 0.04f, 0.05f), new Vector3(0, midY, -halfL + 0.03f), _iron);
         Box(body, "BandB", new Vector3(Width, 0.04f, 0.05f), new Vector3(0, midY, halfL - 0.03f), _iron);
         var far = -PlatformSide * (halfW - 0.03f);
         Box(body, "BandFar", new Vector3(0.05f, 0.04f, Length), new Vector3(far, midY, 0), _iron);
-        // the ends' bars, across the wagon
+        // the ends' bars, across the cage
         for (var x = -halfW + BarEvery; x < halfW - BarEvery / 2f; x += BarEvery)
         {
             Box(body, "Bar", new Vector3(Bar, barH, Bar), new Vector3(x, barY, -halfL + 0.03f), _iron);
             Box(body, "Bar", new Vector3(Bar, barH, Bar), new Vector3(x, barY, halfL - 0.03f), _iron);
         }
-        // the far side's bars, along the wagon
+        // the far side's bars, along the cage
         for (var z = -halfL + BarEvery; z < halfL - BarEvery / 2f; z += BarEvery)
             Box(body, "Bar", new Vector3(Bar, barH, Bar), new Vector3(far, barY, z), _iron);
         // the roof: bars across, on the top frame
@@ -208,7 +196,7 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
             Box(_door, "DoorBar", new Vector3(Bar, barH - 0.1f, Bar), new Vector3(0, barY, z), _iron);
         Box(_door, "DoorTop", new Vector3(0.05f, 0.05f, doorHalf * 2f), new Vector3(0, top - 0.1f, doorHalf), _iron);
         Box(_door, "DoorMid", new Vector3(0.05f, 0.05f, doorHalf * 2f), new Vector3(0, midY, doorHalf), _iron);
-        Box(_door, "DoorFoot", new Vector3(0.05f, 0.05f, doorHalf * 2f), new Vector3(0, BedTop + 0.08f, doorHalf), _iron);
+        Box(_door, "DoorFoot", new Vector3(0.05f, 0.05f, doorHalf * 2f), new Vector3(0, FloorTop + 0.08f, doorHalf), _iron);
         // the padlock: a brass block and its iron shackle on the door's free edge, outside the bars
         _padlock = new Node3D { Name = "Padlock", Position = new Vector3(near + PlatformSide * 0.06f, midY, doorHalf - 0.02f) };
         body.AddChild(_padlock);
@@ -216,11 +204,11 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
         Box(_padlock, "Shackle", new Vector3(0.02f, 0.08f, 0.08f), new Vector3(0, 0.03f, 0), _iron);
         SetOpen(Open);
 
-        // the crew's spots: on the bed, facing out through the platform side
+        // the crew's spots: on the floor, facing out through the platform side
         var yaw = -PlatformSide * Mathf.Pi / 2f;
         for (var i = 0; i < _seats.Length; i++)
         {
-            _seats[i] = new Marker3D { Name = $"Seat{i}", Position = new Vector3(SeatSpots[i].X, BedTop, SeatSpots[i].Y), Basis = new Basis(Vector3.Up, yaw) };
+            _seats[i] = new Marker3D { Name = $"Seat{i}", Position = new Vector3(SeatSpots[i].X, FloorTop, SeatSpots[i].Y), Basis = new Basis(Vector3.Up, yaw) };
             AddChild(_seats[i]);
         }
     }

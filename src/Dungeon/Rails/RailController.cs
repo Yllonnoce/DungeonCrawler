@@ -43,10 +43,17 @@ public partial class RailController : Node
     /// <summary>The cart's status line, or null when it is not shown.</summary>
     public string? HudText { get; private set; }
     public Boarding Boarding { get; } = new();
+    /// <summary>Seconds since the stop's countdown started, any hold included (<see cref="Boarding.Elapsed"/>); 0 when no countdown runs.</summary>
+    public float BoardingElapsed => Boarding.Running ? Boarding.Elapsed : 0f;
+    /// <summary>
+    /// The crew controller's hold on the departure from <paramref name="stop"/> (plan 14, Ruling 6: crew on the way to their seats, under
+    /// <see cref="TrainRules.BoardMax"/>): passed as <see cref="Boarding.Tick"/>'s hold. Set by the crew controller; null holds nothing.
+    /// </summary>
+    public Func<int, bool>? CrewBoardingHolds { get; set; }
 
     // ---- the cage hold (plan 7) ------------------------------------------------------------------
 
-    /// <summary>The stop's cage wagon is locked with living crew (<see cref="CageHoldRules.Holds"/>). Set by the crew controller; null holds nothing.</summary>
+    /// <summary>The stop's platform cage is locked with living crew (<see cref="CageHoldRules.Holds"/>). Set by the crew controller; null holds nothing.</summary>
     public Func<int, bool>? CageHolds { get; set; }
     /// <summary>
     /// The stops whose prisoners a player left behind (held interact in the seat). Not saved: a load holds the cart again at the stop
@@ -59,7 +66,7 @@ public partial class RailController : Node
     private bool? _heldStartCall;
 
     /// <summary>
-    /// The cart stands at a stop whose cage wagon is locked with living crew and nobody has left them behind: no countdown
+    /// The cart stands at a stop whose platform cage is locked with living crew and nobody has left them behind: no countdown
     /// (<see cref="CageHoldRules.Held"/>). It does not depend on the gate (the HUD shows a gate down first). A client reads the server's flag.
     /// </summary>
     public bool CageHeld => NetSession.IsClient ? (_netFlags & (byte)CartFlags.CageHeld) != 0
@@ -137,7 +144,7 @@ public partial class RailController : Node
     public void ReserveSiding(GridPos cell) => _train.ReserveSiding(cell);
 
     /// <summary>
-    /// The crew controller's offer on a coupled wagon to <paramref name="hero"/> (Task 2: "Revive {name}"), or null for none; the wagon's prompt
+    /// The crew controller's offer on a coupled wagon to <paramref name="hero"/> ("Revive {name}" for a downed crew member seated in it), or "" or null for none; the wagon's prompt
     /// (<see cref="WagonPrompt"/>) is the rail controller's and asks it. Set by the crew controller.
     /// </summary>
     public Func<TrainWagon, Adventurer, string>? WagonCrewPrompt { get; set; }
@@ -950,7 +957,7 @@ public partial class RailController : Node
                     Boarding.Cancel();
                 }
             }
-            else if (Boarding.Tick(dt, seated, living) && StopIndex < StopS.Length - 1)
+            else if (Boarding.Tick(dt, seated, living, hold: CrewBoardingHolds?.Invoke(StopIndex) == true) && StopIndex < StopS.Length - 1)
             {
                 Party.Limit = StopS[StopIndex + 1]; // the next stop is ahead of S before the cart rolls
                 Party.State = State with { Mode = CartMode.Rolling };

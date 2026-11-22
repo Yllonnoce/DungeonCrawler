@@ -14,8 +14,8 @@ public static class RailArrival
     /// the crew (<paramref name="crewIds"/>) as they were at the arrival, and each escort (<paramref name="escortIds"/>: Grisel) as she was
     /// then too, unless the wipe found her dead or fled: a fall never kills an escort (she is caught at the lip), so that came from a fight
     /// or her betrayal, whose quest state lives in the run and stands. An entry the live capture lacks is added. Only on a floor that runs
-    /// the crew trial (<paramref name="crewTrial"/>) does the objective come from the arrival too: its open cages, its lost wagons, its
-    /// home, lost and freed crew, and its completion (the crew come back with the train, so a win since the arrival goes too). Everything
+    /// the crew trial (<paramref name="crewTrial"/>) does the objective come from the arrival too: its open cages, its lost wagons, the
+    /// crew seated in its train, its home, lost and freed crew, and its completion (the crew come back with the train, so a win since the arrival goes too). Everything
     /// else is the wipe's: the dead stay dead, the spares, the gates and the orc's keys stand as they were, and another objective's
     /// progress (a ritual, the gas, a walk-in jailbreak) is untouched.
     /// </summary>
@@ -41,6 +41,7 @@ public static class RailArrival
             o.LostCrew = a.LostCrew;
             o.FreedNpcs = a.FreedNpcs;
             o.LostWagons = a.LostWagons;
+            o.AboardCrew = a.AboardCrew;
             o.Completed = a.Completed;
         }
         return merged;

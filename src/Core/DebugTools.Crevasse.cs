@@ -21,7 +21,7 @@ namespace DungeonCrawler.Core;
 // gorge and falls; every rider fallen, W1..W4 uncoupled and hidden (Train.Count 0), the seated crew dead, the capture naming LostWagons
 // [1,2,3,4], Grisel down at the lip, no spare spent. C, the rise (Task 8): the wipe that follows rises at the stop the train
 // left (its arrival snapshot), within 10 s: the cart there Held, whole and seen, W1..W4 coupled fresh, every crew member then alive
-// alive again (seen, moving, not in the dark), Grisel up and escorting, every hero up beside the cart (each on its own cell by the lane,
+// alive again (seen, moving, not in the dark), the train's seated crew back in the coupled wagon (AboardCrew), Grisel up and escorting, every hero up beside the cart (each on its own cell by the lane,
 // two cells off at most: CrvBeside) at full HP (no return from the crevasse on top), no spare spent, a fifth of the gold gone, the Scar
 // on, and the crew trial (its flag, the stairs) as at the arrival. =trestle: as B, but the human brakes on the trestle and it falls with
 // the train on it, then C. =survivor: as B, but the human gets out at the stop as the cart departs; after the fall nobody wipes, a spare
@@ -49,7 +49,7 @@ public partial class DebugTools
     private Vector3 _crvLast;
     // ---- A4, B and the variants (Task 7)
     /// <summary>B's cage: the stop whose crew the test seats in the train (stop 1's).</summary>
-    private CageWagon? _crvWagon;
+    private PlatformCage? _crvWagon;
     private readonly List<Npc> _crvWagonCrew = new();
     private readonly List<Adventurer> _crvRiders = new();
     private int _crvSparesBefore;
@@ -331,8 +331,8 @@ public partial class DebugTools
             {
                 // B: a cage's crew seated in the train (stop 1's, in the first empty seats), the cart restored at the kiln's stop
                 if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller"); return; }
-                bool Manned(CageWagon w) => ctrl.Crew.Any(c => !c.Dead && c.Ride == w);
-                _crvWagon = ctrl.Wagons.FirstOrDefault(w => w.Stop == 1 && Manned(w)) ?? ctrl.Wagons.OrderBy(w => w.Stop).FirstOrDefault(Manned);
+                bool Manned(PlatformCage w) => ctrl.Crew.Any(c => !c.Dead && c.Ride == w);
+                _crvWagon = ctrl.Cages.FirstOrDefault(w => w.Stop == 1 && Manned(w)) ?? ctrl.Cages.OrderBy(w => w.Stop).FirstOrDefault(Manned);
                 var seated = _crvWagon == null ? null : ctrl.DebugSeatCrew(_crvWagon.Stop);
                 if (_crvWagon == null || seated is not { Count: > 0 }) { Fail($"no cage with crew in it to seat in the train ({_crvWagon?.Stop})"); return; }
                 _crvWagonCrew.Clear();
@@ -462,8 +462,8 @@ public partial class DebugTools
                 if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller after the load"); return; }
                 var trainNow = string.Join(",", rc.Train.Select(w => w.Number));
                 var riders = rc.Wagons.Sum(w => w.Riders.Count);
-                if (trainNow != string.Join(",", Enumerable.Range(1, ctrl.Wagons.Count)) || rc.Wagons.Any(w => !w.Coupled || !w.Visible) || riders != 0)
-                { Fail($"after the load the train is [{trainNow}] ({rc.Wagons.Count(w => w.Visible)} shown, {riders} rider(s)), not W1..W{ctrl.Wagons.Count} coupled and empty"); return; }
+                if (trainNow != string.Join(",", Enumerable.Range(1, ctrl.Cages.Count)) || rc.Wagons.Any(w => !w.Coupled || !w.Visible) || riders != 0)
+                { Fail($"after the load the train is [{trainNow}] ({rc.Wagons.Count(w => w.Visible)} shown, {riders} rider(s)), not W1..W{ctrl.Cages.Count} coupled and empty"); return; }
                 var npcs = root.GetChildren().OfType<Npc>().ToDictionary(n => n.Id);
                 var again = Save.FloorStateCapture.Capture(root, layout, main.Builder.Contents, main.Exploration!);
                 var saved = again.NpcStates.ToDictionary(n => n.Id);
@@ -594,10 +594,10 @@ public partial class DebugTools
         foreach (var d in arrival.NpcStates.Where(d => !d.Dead && ctrl.CrewIds.Contains(d.Id)))
         {
             if (!npcs.TryGetValue(d.Id, out var n)) { problems.Add($"no {d.Id} on the rebuilt floor"); continue; }
-            var rode = _crvWagonCrew.Any(c => c.Id == d.Id); // the train's seated crew: seated again (in their open cage: seats are not saved until Task 2's AboardCrew)
-            crewLines.Add($"{n.NpcName}{(n.Seated ? $" in {n.Ride?.Name}" : "")}");
+            var rode = _crvWagonCrew.Any(c => c.Id == d.Id); // the train's seated crew: seated again in the coupled wagon (AboardCrew, from the arrival)
+            crewLines.Add($"{n.NpcName}{(n.Seated ? $" in {n.Ride?.Name}{(n.Cart is TrainWagon tw ? $" seat {n.Seat}{(tw.Coupled ? "" : " (uncoupled)")}" : "")}" : "")}");
             if (n.Dead || !n.Visible || !n.IsPhysicsProcessing() || n.InTheDark()) problems.Add($"{n.NpcName} alive at the arrival: dead={n.Dead} visible={n.Visible} physics={n.IsPhysicsProcessing()} in the dark={n.InTheDark()}");
-            if (rode && !n.Seated) problems.Add($"{n.NpcName} of the train's crew is not seated after the rise");
+            if (rode && n.Cart is not TrainWagon { Coupled: true }) problems.Add($"{n.NpcName} of the train's crew is not seated in the coupled wagon after the rise ({(n.Seated ? $"in {n.Ride?.Name}" : "on foot")})");
         }
         if (crewLines.Count == 0) problems.Add("nobody of the crew was alive at the arrival");
         var g = GriselNpc(root);

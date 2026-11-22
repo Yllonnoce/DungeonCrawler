@@ -19,16 +19,18 @@ public static class PropPromptRules
     public static string WinchPrompt(bool gateUp) => gateUp ? "" : "Crank the winch";
 
     /// <summary>
-    /// A cage wagon. Locked: the orc's keys open it, else Grisel's voice (<paramref name="griselOpens"/>: alive, up and near), else a
-    /// key or a pick. Open: its crew are let out when the wagon cannot ride (<paramref name="canLetOut"/>), else a downed crew member
-    /// aboard (<paramref name="downedAboard"/>, a name; null or empty: none) is revived; else nothing.
+    /// A platform cage. Locked: the orc's keys open it, else Grisel's voice (<paramref name="griselOpens"/>: alive, up and near), else a
+    /// key or a pick. Open: a downed crew member still in it (<paramref name="downedAboard"/>, a name; null or empty: none) is revived;
+    /// else nothing (an opened cage always lets its crew out: they run to the train, plan 14).
     /// </summary>
-    public static string CagePrompt(bool open, bool orcKeys, bool griselOpens, bool canLetOut, string? downedAboard)
+    public static string CagePrompt(bool open, bool orcKeys, bool griselOpens, string? downedAboard)
     {
         if (!open) return orcKeys ? "Open the cage (the orc's keys)" : griselOpens ? "Open the cage (Grisel)" : "Unlock the cage";
-        if (canLetOut) return "Let them out";
-        return string.IsNullOrEmpty(downedAboard) ? "" : Revive(downedAboard);
+        return WagonPrompt(downedAboard);
     }
+
+    /// <summary>A coupled wagon of the party's train: a downed crew member seated in it (a name; null or empty: none) is revived; else nothing.</summary>
+    public static string WagonPrompt(string? downedAboard) => string.IsNullOrEmpty(downedAboard) ? "" : Revive(downedAboard);
 
     /// <summary>The last revive prompt built: a prompt is asked for every frame the wagon is looked at, so the same name's text is kept, not built again.</summary>
     private sealed record Built(string Name, string Text);

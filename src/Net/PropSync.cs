@@ -80,7 +80,7 @@ public static class PropSync
         EncountersOf(root)?.CaptureProps(r);
         if (CrewOf(root) is { } crew)
         {
-            foreach (var wagon in crew.Wagons) if (GodotObject.IsInstanceValid(wagon) && wagon.Open) r.OpenCages.Add(wagon.Stop);
+            foreach (var cage in crew.Cages) if (GodotObject.IsInstanceValid(cage) && cage.Open) r.OpenCages.Add(cage.Stop);
             r.KeysTaken = crew.OrcKeys;
         }
         foreach (var list in new[] { r.GatesUp, r.ThrownSwitches, r.TakenSwitches, r.ThrownSpurs, r.ClearedHeaps, r.BrokenValves, r.CollapsedTrestles, r.SmashedBuffers, r.SparesUsed, r.OpenCages })

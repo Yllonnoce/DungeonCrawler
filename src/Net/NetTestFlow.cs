@@ -234,7 +234,7 @@ public partial class NetTestFlow : Node
         if (!_rideCrewTold && _rideReadyAt >= 0 && Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.CrewRescueController crew)
         {
             _rideCrewTold = true;
-            GD.Print($"[net-server] ride: crew seated in wagons: {crew.Wagons.Sum(w => w.Riders.Count)} in {crew.Wagons.Count} wagon(s)");
+            GD.Print($"[net-server] ride: crew seated in wagons: {crew.Cages.Sum(w => w.Riders.Count)} in {crew.Cages.Count} wagon(s)");
         }
         RideWreckServer(world);
         RideWipeServer(world);
@@ -663,7 +663,7 @@ public partial class NetTestFlow : Node
     {
         if (!_rideSetDown || Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || Main.Instance is not { } main) return;
         if (_rideSwitch < 0 && Dungeon.Rails.RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) { _rideSwitch = enc.PieceIndexOf("switch_out", 3); _rideBack = enc.PieceIndexOf("switch_back", 3); }
-        var wagon = crew.Wagons.FirstOrDefault(w => w.Stop == 1);
+        var wagon = crew.Cages.FirstOrDefault(w => w.Stop == 1);
         if (!_rideHoldersKilled && rc.StopIndex == 1)
         {
             _rideHoldersKilled = true;
@@ -952,13 +952,13 @@ public partial class NetTestFlow : Node
     {
         if (!_rideCrewOk && Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.CrewRescueController crew && main.Builder.FloorRoot is { } root)
         {
-            var seated = root.GetChildren().OfType<Npc>().Count(n => n.Crew && n.Cart is Dungeon.Rails.CageWagon);
-            var inWagons = crew.Wagons.Sum(w => w.Riders.Count);
+            var seated = root.GetChildren().OfType<Npc>().Count(n => n.Crew && n.Cart is Dungeon.Rails.PlatformCage);
+            var inWagons = crew.Cages.Sum(w => w.Riders.Count);
             if (seated > 0 && seated == inWagons)
             {
                 _rideCrewOk = true;
                 _rideCrewSeated = seated;
-                GD.Print($"[net] ride: crew seated in their wagons here: {seated} in {crew.Wagons.Count} wagon(s)");
+                GD.Print($"[net] ride: crew seated in their wagons here: {seated} in {crew.Cages.Count} wagon(s)");
             }
         }
         if (main.Party.Local is not { } me) return;
@@ -1101,7 +1101,7 @@ public partial class NetTestFlow : Node
     private bool RideProps(NetSession net, Main main, Dungeon.Rails.RailController rc, Party.Adventurer me)
     {
         if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || main.Builder.FloorRoot is not { } root) return false;
-        var wagon = crew.Wagons.FirstOrDefault(w => w.Stop == 1);
+        var wagon = crew.Cages.FirstOrDefault(w => w.Stop == 1);
         if (wagon == null) return RideFail(net, "no cage wagon at stop 1 here");
         if (_ridePhase >= 7) RideLeaveCrew(net, rc, me, "the rider"); // seated again from stop 1 on: stop 2's cage is left behind
         if (_ridePhase is >= 3 and <= 7 && _clock - _ridePhaseAt > 60) return RideFail(net, $"stuck at the props' phase {_ridePhase} (gate 1 up {rc.GateAt(1)?.Up}, keys {crew.OrcKeys}, cage open {wagon.Open}, wagon prompt \"{wagon.Prompt}\", seated {me.Seated})");
@@ -2262,7 +2262,7 @@ public partial class NetTestFlow : Node
                 if (_joinSeatsAt < 0 && main.Party.Adventurers.Any(a => IsInstanceValid(a) && a != me && a.Cart == rc.Cart)) _joinSeatsAt = client.ServerNow;
                 if (client.ServerNow - _joinReadyAt < 1.0) return;
                 var crew = Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController;
-                var inWagons = crew?.Wagons.Sum(w => w.Riders.Count) ?? 0;
+                var inWagons = crew?.Cages.Sum(w => w.Riders.Count) ?? 0;
                 var others = main.Party.Adventurers.Count(a => IsInstanceValid(a) && a != me && a.Cart == rc.Cart);
                 var midRide = rc.Following && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 1;
                 var why = new List<string>();
@@ -2376,7 +2376,7 @@ public partial class NetTestFlow : Node
                 if (_joinSeatsAt < 0 && main.Party.Adventurers.Any(a => IsInstanceValid(a) && a != me && a.Cart == rc.Cart)) _joinSeatsAt = client.ServerNow;
                 if (client.ServerNow - _joinResyncAt < 1.0) return;
                 var crew = Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController;
-                var inWagons = crew?.Wagons.Sum(w => w.Riders.Count) ?? 0;
+                var inWagons = crew?.Cages.Sum(w => w.Riders.Count) ?? 0;
                 var others = main.Party.Adventurers.Count(a => IsInstanceValid(a) && a != me && a.Cart == rc.Cart);
                 var midRide = rc.Following && rc.State.Mode == Dungeon.Rails.CartMode.Rolling && rc.StopIndex == 2;
                 var why = new List<string>();

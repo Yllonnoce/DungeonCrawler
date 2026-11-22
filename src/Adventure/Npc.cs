@@ -135,6 +135,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         var model = Models[(int)((Rng.StableHash(Id) + (ulong)Floor) % (ulong)Models.Length)]; // stable per run and peer
         _model = AnimatedModel.Attach(this, ModelPath ?? $"res://assets/models/quaternius_rpg/{model}.gltf", 1.8f, tint, ModelPath != null ? 0f : 0.1f);
         if (_model != null) { _body.Visible = false; _head.Visible = false; }
+        ApplySeatPosture(); // seated before its model was built (a crew member spawned straight into a seat)
         _label.Text = NpcName;
         AddToGroup("npcs");
     }
@@ -466,7 +467,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
 
     // ---- riding ----------------------------------------------------------------------------------
 
-    /// <summary>What this NPC rides (a cart, a cage wagon), null on foot.</summary>
+    /// <summary>What this NPC rides (a cart, a train wagon) or stands in (a platform cage), null on foot.</summary>
     public Node3D? Ride { get; private set; }
     public bool Seated => Ride != null;
     /// <summary>A follower stuck this far (flat) from a lead who rides the cart is set down beside the cart; nearer, it holds where it is.</summary>
@@ -517,7 +518,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     }
 
     /// <summary>
-    /// Raise the name label <paramref name="metres"/> above its place in the scene (0: back in place): a cage wagon stands its two crew's
+    /// Raise the name label <paramref name="metres"/> above its place in the scene (0: back in place): a cage (or a wagon) stands its two crew's
     /// names one above the other (<see cref="Objectives.CrewRules.LabelLift"/>).
     /// </summary>
     public void SetLabelLift(float metres)
@@ -533,7 +534,40 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         Cart = cart;
         Seat = seat;
         SitIn((Node3D)cart, () => cart.SeatTransform(seat));
+        ApplySeatPosture();
         cart.Admit(this); // last: whoever hears of it sees the body seated
+    }
+
+    /// <summary>The body's height standing (the model is built to it).</summary>
+    public const float StandHeight = 1.8f;
+    /// <summary>A body sitting in a cart's or a wagon's seat is folded to this share of its height, as a seated hero's (<c>Adventurer.ApplyPosture</c>).</summary>
+    public const float SitScale = 0.7f;
+    /// <summary>
+    /// Sitting: seated in a cart's or a wagon's seat (the bench, plan 14 Task 2), never standing in a cage (<see cref="Dungeon.Rails.PlatformCage"/>),
+    /// whose crew stand behind the bars.
+    /// </summary>
+    public bool Sitting => Cart != null && Cart is not Dungeon.Rails.PlatformCage;
+    /// <summary>The top of the head above the body's origin: <see cref="StandHeight"/>, folded by <see cref="SitScale"/> while <see cref="Sitting"/>.</summary>
+    public float HeadHeight => Sitting ? StandHeight * SitScale : StandHeight;
+
+    private float _modelScaleY = float.NaN, _modelPosY;
+
+    /// <summary>The model (or the stand-in body and head) folded to <see cref="SitScale"/> while <see cref="Sitting"/>, else at its full height.</summary>
+    private void ApplySeatPosture()
+    {
+        var k = Sitting ? SitScale : 1f;
+        if (_model != null && IsInstanceValid(_model.Root))
+        {
+            if (float.IsNaN(_modelScaleY)) { _modelScaleY = _model.Root.Scale.Y; _modelPosY = _model.Root.Position.Y; }
+            _model.Root.Scale = _model.Root.Scale with { Y = _modelScaleY * k };
+            _model.Root.Position = _model.Root.Position with { Y = _modelPosY * k };
+        }
+        else if (_body != null && IsInstanceValid(_body) && _head != null && IsInstanceValid(_head))
+        {
+            _body.Scale = new Vector3(1f, k, 1f);
+            _body.Position = new Vector3(0f, 0.8f * k, 0f);
+            _head.Position = new Vector3(0f, 1.72f * k, 0f);
+        }
     }
 
     /// <summary>Upright at the seat, facing its heading turned by <see cref="SeatYaw"/>.</summary>
@@ -569,6 +603,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         _seatAt = null;
         _riderId = -1;
         _seatYaw = 0f;
+        if (wasSeated) ApplySeatPosture();
         if (wasSeated) CollisionLayer = Dead ? 0u : _layerOnFoot;
         if (new Vector2(forward.X, forward.Z).LengthSquared() > 1e-6f) GlobalBasis = new Basis(Vector3.Up, Mathf.Atan2(-forward.X, -forward.Z));
     }

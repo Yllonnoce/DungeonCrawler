@@ -29,7 +29,7 @@ public static class NetRefResolver
         SlagCart slag => slag.NetRef, // "slag:{cartId}": ride 4's leap across (plan 13)
         RailGate.WinchPost w => NetRefs.Winch(w.Gate.Stop),
         TrainWagon w => w.NetRef, // "wagon:{number}": a wagon of the party's train
-        CageWagon w => w.NetRef, // "cage:{stop}"
+        PlatformCage c => c.NetRef, // "cage:{stop}"
         Adventure.Objectives.OrcKeyring => NetRefs.Keyring,
         _ => null,
     };
@@ -83,7 +83,7 @@ public static class NetRefResolver
             case NetRefs.CageKind or NetRefs.KeyringKind:
                 if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || !GodotObject.IsInstanceValid(crew) || crew.GetParent() != root) return null;
                 if (kind == NetRefs.KeyringKind) return index == 0 ? crew.Keyring : null;
-                foreach (var cage in crew.Wagons) if (cage.Stop == index && GodotObject.IsInstanceValid(cage)) return cage;
+                foreach (var cage in crew.Cages) if (cage.Stop == index && GodotObject.IsInstanceValid(cage)) return cage;
                 return null;
             default: return null;
         }

@@ -342,6 +342,7 @@ public static class PlanValidator
             c.Sex = string.Equals(c.Sex, "woman", StringComparison.OrdinalIgnoreCase) ? "woman" : "man";
             return false;
         });
+        // two per cage, a cage at each intermediate stop (and a wagon seat for each in the train: plan 14)
         var cap = layout.Rail is { } rail ? Objectives.CrewRules.PerWagon * Math.Max(0, rail.Stops.Count - 2) : 6;
         if (plan.Crew.Count > cap) { report.Repairs.Add($"crew: dropped {plan.Crew.Count - cap} over the cap of {cap}"); plan.Crew.RemoveRange(cap, plan.Crew.Count - cap); }
     }

@@ -49,7 +49,7 @@ public partial class RailNet
     {
         var wagons = _rails.Wagons;
         var crew = ObjectiveController.Instance as CrewRescueController;
-        var cages = crew?.Wagons;
+        var cages = crew?.Cages;
         if (wagons.Count + (cages?.Count ?? 0) == _wagonsHeard.Count) return;
         foreach (var wagon in wagons)
             if (IsInstanceValid(wagon)) Hear(wagon, CartIds.Wagon(wagon.Number));
@@ -118,7 +118,7 @@ public partial class RailNet
         foreach (var wagon in _rails.Wagons)
             if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Number));
         if (ObjectiveController.Instance is CrewRescueController crew)
-            foreach (var cage in crew.Wagons)
+            foreach (var cage in crew.Cages)
                 if (IsInstanceValid(cage)) SendSeated(world, peer, cage, CartIds.Cage(cage.Stop));
         foreach (var slag in SlagCart.Live) // the leapers on a ride's slag carts' decks (plan 13), after the cart state that lists them
             if (IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.Riders.Count > 0) SendSeated(world, peer, slag, slag.CartId);
@@ -187,10 +187,10 @@ public partial class RailNet
         return null;
     }
 
-    private static CageWagon? CageAt(int stop)
+    private static PlatformCage? CageAt(int stop)
     {
         if (ObjectiveController.Instance is not CrewRescueController crew) return null;
-        foreach (var wagon in crew.Wagons) if (IsInstanceValid(wagon) && wagon.Stop == stop) return wagon;
+        foreach (var cage in crew.Cages) if (IsInstanceValid(cage) && cage.Stop == stop) return cage;
         return null;
     }
 

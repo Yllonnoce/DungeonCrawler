@@ -253,7 +253,7 @@ public partial class RailNet : Node
         foreach (var wagon in _rails.Wagons.Where(w => IsInstanceValid(w)))
             BookSeats(b, "W" + wagon.Number.ToString(CultureInfo.InvariantCulture), wagon);
         if (ObjectiveController.Instance is CrewRescueController crew)
-            foreach (var cage in crew.Wagons.Where(w => IsInstanceValid(w)).OrderBy(w => w.Stop))
+            foreach (var cage in crew.Cages.Where(c => IsInstanceValid(c)).OrderBy(c => c.Stop))
                 BookSeats(b, "K" + cage.Stop.ToString(CultureInfo.InvariantCulture), cage);
         b.Append(" train=").Append(_rails.Train.Count == 0 ? "-" : string.Join(",", _rails.Train.Select(w => w.Number)));
         b.Append(" props=").Append(GetParent() is Node3D root ? PropCheck.Hash(PropSync.Capture(root)).ToString("X8", CultureInfo.InvariantCulture) : "-");

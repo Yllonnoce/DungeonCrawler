@@ -317,8 +317,6 @@ public partial class DebugTools
     private float _spBeamMin = float.MaxValue;
     private int _spBeamHeads;
     private bool _spBeamDone;
-    /// <summary>A standing NPC's eye above its feet (a 1.8 m body less LowBeam.HeadAboveEye): a crew member on a wagon's bench stands upright.</summary>
-    private const float SpNpcEye = 1.8f - LowBeam.HeadAboveEye;
     private bool _spOfferedSeen, _spPressedAfter, _spThrown9, _spSetBackDone, _spHeldPressed, _spStalled, _spSetBackSeen, _spLoneDowned, _spPointsPassed;
 
     /// <summary>The split's calls, its log lines, the wipe and the train's fall, heard once per run (the cart's events per floor build).</summary>
@@ -407,7 +405,7 @@ public partial class DebugTools
             {
                 if (r is not Node3D n || !IsInstanceValid(n) || r.Cart != body) continue;
                 if (r is Adventurer) Measure(body.SeatTransform(r.Seat).Origin, Adventurer.SeatedEyeHeight);
-                else Measure(n.GlobalPosition, SpNpcEye);
+                else Measure(n.GlobalPosition, (r is Npc npc ? npc.HeadHeight : Npc.StandHeight) - LowBeam.HeadAboveEye); // an NPC sits folded (plan 14)
             }
         }
         Heads(rc.Cart);

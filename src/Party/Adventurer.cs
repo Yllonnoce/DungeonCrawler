@@ -573,11 +573,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 _switchWindow.Offered();
             }
             else if (_switchWindow.NotOffered(Seated, Time.GetTicksMsec() / 1000.0)) LookingAt = null;
-            else
-            {
-                LookingAt = _interactRay.IsColliding() ? _interactRay.GetCollider() as IInteractable : null;
-                if (LookingAt is { Prompt: "" }) LookingAt = null;
-            }
+            else LookingAt = FirstOffered();
         }
         else
         {
@@ -587,6 +583,39 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         }
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
     }
+
+    /// <summary>The most things offering nothing the interact ray looks through before it gives up (a train of wagons and the cart).</summary>
+    private const int LookThrough = 6;
+
+    /// <summary>
+    /// What the interact ray offers: the first thing it hits whose prompt is not empty. A thing to use that offers nothing now (a coupled
+    /// wagon of the train with nobody to revive, layer 8) is looked through to the next hit, so it never hides a cage's, a spare's or a
+    /// lever's prompt behind it (plan 14). Anything else the ray hits first ends the look. The ray's exceptions are cleared again.
+    /// </summary>
+    private IInteractable? FirstOffered()
+    {
+        IInteractable? found = null;
+        var passed = 0;
+        GodotObject? first = null;
+        while (_interactRay.IsColliding())
+        {
+            var hit = _interactRay.GetCollider();
+            if (hit is not IInteractable thing) break;
+            if (thing.Prompt != "") { found = thing; break; }
+            if (hit is not CollisionObject3D body || ++passed > LookThrough) break;
+            first ??= hit;
+            _interactRay.AddException(body);
+            _interactRay.ForceRaycastUpdate();
+        }
+        LookedThrough = passed;
+        LookedThroughFirst = first;
+        if (passed > 0) _interactRay.ClearExceptions();
+        return found;
+    }
+
+    /// <summary>How many things offering nothing the last look passed through to reach what it offers, and the first of them (test hooks: --test-crew's look through a wagon).</summary>
+    internal int LookedThrough { get; private set; }
+    internal GodotObject? LookedThroughFirst { get; private set; }
 
     /// <summary>
     /// A tick in a cart seat: no walking, gravity, jumping, crouching or dodging, and no MoveAndSlide; the RailController

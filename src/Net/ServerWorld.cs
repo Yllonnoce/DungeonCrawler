@@ -500,7 +500,7 @@ public partial class ServerWorld : Node
     {
         Dungeon.Rails.TrackSwitch sw => sw.Thrown ? "thrown" : "straight",
         Dungeon.Rails.RailGate.WinchPost w => w.Gate.Up ? "up" : "down",
-        Dungeon.Rails.CageWagon w => w.Open ? "open" : "locked",
+        Dungeon.Rails.PlatformCage c => c.Open ? "open" : "locked",
         Adventure.Objectives.OrcKeyring => Adventure.Objectives.ObjectiveController.Instance is Adventure.Objectives.CrewRescueController { OrcKeys: true } ? "taken" : "left",
         _ => null,
     };

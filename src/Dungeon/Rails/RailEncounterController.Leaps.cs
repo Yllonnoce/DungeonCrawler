@@ -12,7 +12,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// Ember hounds on a slag cart leap across to the party's side. A carried hound that is alongside and within
 /// <see cref="SetPieceRules.LeapRange"/> of the party cart (or any coupled wagon of its train, crewed or not) crouches for
 /// <see cref="SetPieceRules.LeapWindup"/> with a glow and a "Hound!" bark, then leaps on a <see cref="LeapSeconds"/> arc onto a
-/// boarder spot (two on the cart's rim, one on a wagon's), reserved when the leap starts. With no spot free it
+/// boarder spot (two on the cart's rim, one on a wagon's), reserved when the leap starts: a crewed wagon's first (the most crew, the
+/// nearer on a tie), else the cart's, else an empty wagon's (<see cref="TrainRules.BoardingOrder"/>). With no spot free it
 /// leaps and misses: it lands beside the party lane as a normal creature. A boarder is carried by what it boarded, bites with
 /// its normal melee (a wagon boarder: the crew inside, else nobody in particular) and, on the party cart, dents the plating. It falls
 /// off, beside the lane, when it dies. Server only.
@@ -65,6 +66,17 @@ public partial class RailEncounterController
         if (i - 1 >= train.Count) return null;
         var wagon = train[i - 1];
         return IsInstanceValid(wagon) && wagon.Coupled ? wagon : null;
+    }
+
+    private readonly List<(int Crew, float Distance)> _boardBodies = new();
+
+    /// <summary>The living crew seated in <paramref name="wagon"/>.</summary>
+    private static int CrewIn(TrainWagon wagon)
+    {
+        var n = 0;
+        foreach (var rider in wagon.Riders.Values)
+            if (rider is Npc { Crew: true, Dead: false } npc && IsInstanceValid(npc)) n++;
+        return n;
     }
 
     private static float Flat(Vector3 a, Vector3 b) { var dx = a.X - b.X; var dz = a.Z - b.Z; return Mathf.Sqrt(dx * dx + dz * dz); }
@@ -165,27 +177,21 @@ public partial class RailEncounterController
     private void StartLeap(Leap l)
     {
         var h = l.Hound;
-        // the nearest of the cart and the wagons that has a spot free; none: it leaps and misses
-        var tried = 0;
+        // the crewed wagons first (the most crew, the nearer on a tie), then the cart, then an empty wagon, the first with a spot free
+        // (Task 1 review, I1: a hound goes for the prisoners); none: it leaps and misses beside the nearest
+        _boardBodies.Clear();
+        for (var i = 0; i <= _rails.Train.Count; i++)
+            _boardBodies.Add(Candidate(i) is { } body ? (i == 0 ? 0 : CrewIn((TrainWagon)body), Flat(h.GlobalPosition, body.GlobalPosition)) : (0, float.MaxValue));
         Node3D? dest = null;
         var spot = -1;
         var nearest = (Node3D?)null;
         var nearestD = float.MaxValue;
-        for (var n = 0; n <= _rails.Train.Count && n < 31; n++)
+        for (var i = 0; i < _boardBodies.Count; i++)
+            if (_boardBodies[i].Distance < nearestD && Candidate(i) is { } body) { nearestD = _boardBodies[i].Distance; nearest = body; }
+        foreach (var i in TrainRules.BoardingOrder(_boardBodies))
         {
-            Node3D? best = null;
-            var bestD = float.MaxValue;
-            var bestI = -1;
-            for (var i = 0; i <= _rails.Train.Count && i < 31; i++)
-            {
-                if ((tried & (1 << i)) != 0 || Candidate(i) is not { } body) continue;
-                var d = Flat(h.GlobalPosition, body.GlobalPosition);
-                if (d < bestD) { bestD = d; best = body; bestI = i; }
-            }
-            if (best == null) break;
-            tried |= 1 << bestI;
-            if (nearest == null) { nearest = best; nearestD = bestD; }
-            if (Reserve(best, h, out spot)) { dest = best; break; }
+            if (Candidate(i) is not { } body) continue;
+            if (Reserve(body, h, out spot)) { dest = body; break; }
         }
         l.Source.Aboard.Remove(h);
         l.FromLocal = l.Source.GlobalTransform.AffineInverse() * h.GlobalPosition;

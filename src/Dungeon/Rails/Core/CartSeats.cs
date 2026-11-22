@@ -70,7 +70,11 @@ public sealed class CartSeats
     }
 }
 
-/// <summary>The countdown at a stop: the cart leaves when time is up, or once every living hero is aboard and the short minimum wait has passed.</summary>
+/// <summary>
+/// The countdown at a stop: the cart leaves when time is up, or once every living hero is aboard and the short minimum wait has passed.
+/// While crew run to their seats (<see cref="TrainRules.HoldsDeparture"/>) a departure that comes due is held: the countdown keeps running
+/// at nought left until the hold ends.
+/// </summary>
 public sealed class Boarding
 {
     public const float Countdown = 5f;
@@ -79,19 +83,26 @@ public sealed class Boarding
 
     public bool Running { get; private set; }
     public float Left { get; private set; }
+    /// <summary>Seconds since <see cref="Start"/>, any hold included (nought before the first).</summary>
+    public float Elapsed { get; private set; }
 
-    public void Start() { Running = true; Left = Countdown; }
+    public void Start() { Running = true; Left = Countdown; Elapsed = 0f; }
 
     /// <summary>Stop the countdown without departing.</summary>
     public void Cancel() => Running = false;
 
-    /// <summary>Returns true once per Start, when the cart should depart.</summary>
-    public bool Tick(float dt, int seatedHeroes, int livingHeroes)
+    /// <summary>
+    /// Returns true once per Start, when the cart should depart. A departure due while <paramref name="hold"/> is set waits: the
+    /// countdown stays running at <see cref="Left"/> 0 and this returns false.
+    /// </summary>
+    public bool Tick(float dt, int seatedHeroes, int livingHeroes, bool hold = false)
     {
         if (!Running) return false;
+        Elapsed += dt;
         Left = Math.Max(0f, Left - dt);
         bool allAboard = seatedHeroes >= 1 && seatedHeroes == livingHeroes && Countdown - Left >= MinWait - 1e-4f;
-        if (Left <= 0f || allAboard) { Running = false; return true; }
-        return false;
+        if (!(Left <= 0f || allAboard) || hold) return false;
+        Running = false;
+        return true;
     }
 }

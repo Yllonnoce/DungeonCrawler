@@ -284,7 +284,7 @@ public sealed class ObjectiveStateDto
     public int LeverParity { get; set; }
     /// <summary>Railed jailbreak: the intermediate stops whose rail gate stands lifted.</summary>
     public List<int>? GatesUp { get; set; }
-    /// <summary>Railed jailbreak: the stops (1-based) whose cage wagon stands open.</summary>
+    /// <summary>Railed jailbreak: the stops (1-based) whose platform cage stands open.</summary>
     public List<int>? OpenCages { get; set; }
     /// <summary>Retired (plan 14): never written, ignored on load. It held the stops whose cage wagon was coupled behind the cart.</summary>
     public List<int>? CoupledCages { get; set; }
@@ -299,10 +299,23 @@ public sealed class ObjectiveStateDto
     /// only: every load restores the cart whole, which couples every wagon fresh.
     /// </summary>
     public List<int>? LostWagons { get; set; }
+    /// <summary>
+    /// Railed jailbreak (plan 14): the crew seated in the party's train, each with its wagon and seat, by wagon then seat; null when nobody
+    /// is. A load seats each one there again (<c>TrainRules.Reseat</c>: the first empty seat when that one is taken).
+    /// </summary>
+    public List<CrewSeatDto>? AboardCrew { get; set; }
     /// <summary>Railed jailbreak: the party carries the orc's keys, which open every cage.</summary>
     public bool? OrcKeys { get; set; }
     /// <summary>Railed jailbreak, a server's broadcast: the seconds each downed crew member (by id) has left to bleed; null when none is down. Clients count their labels down from it.</summary>
     public Dictionary<string, float>? CrewDownedLeft { get; set; }
+}
+
+/// <summary>A crew member seated in the party's train: its id, its wagon's number (1 nearest the cart) and its seat there (the bench's 4 or 5).</summary>
+public sealed class CrewSeatDto
+{
+    public string Id { get; set; } = "";
+    public int Wagon { get; set; }
+    public int Seat { get; set; }
 }
 
 public sealed class NpcDto

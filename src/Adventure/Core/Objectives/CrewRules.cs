@@ -9,7 +9,7 @@ public static class CrewRules
     public const float BleedOutSeconds = 60f;
     /// <summary>Share of max health a revived crew member gets back.</summary>
     public const float ReviveHpFraction = 0.35f;
-    /// <summary>Crew carried by one cage wagon.</summary>
+    /// <summary>Crew caged in one platform cage (two per cage; plan 14: the train has a wagon per cage, two crew seats in each).</summary>
     public const int PerWagon = 2;
     /// <summary>The dead Grisel's NPC id on the condemned branch: no crew member may take it.</summary>
     public const string GriselBodyId = "grisel_body";
@@ -60,8 +60,8 @@ public static class CrewRules
     public static float LoadFactorWagons(int coupledWagons) => coupledWagons;
 
     /// <summary>
-    /// How far a cage wagon's crew member's name rises above its usual place (m), by the bench seat it stands at (0 the first,
-    /// 1 the second: the seat book's seat less <c>CartSeats.HeroSeats</c>): the two names over one cage stand apart.
+    /// How far a caged (or seated) crew member's name rises above its usual place (m), by the bench seat it holds (0 the first,
+    /// 1 the second: the seat book's seat less <c>CartSeats.HeroSeats</c>): the two names over one cage or wagon stand apart.
     /// </summary>
     public static float LabelLift(int benchIndex) => benchIndex * 0.32f;
 }
