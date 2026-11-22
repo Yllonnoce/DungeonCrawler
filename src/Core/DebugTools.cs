@@ -53,6 +53,7 @@ namespace DungeonCrawler.Core;
 ///   --test-runaway[=tail|ram|<a split variant>]  (no variant: after, the split's) floor 12, lethality 3: ride 4's runaway ore wagon from stop 3 (rc.Restore(3)), nobody pressing; =tail: the lead pumps, it breaks loose 14-16 m behind the last body with its call, never closes within 3 m, halts 2.5-4 m behind the train held at stop 4 and is gone within 2 s, nobody run over; =ram: three crew wagons, nobody pumping: one ram (plating -40, each seated hero -20% of max HP, never below 1, seated NPCs unhurt, nobody unseated), none more; then with the plating at 30 the ram wrecks the cart, the runaway gone by the wreck and a spare taking over; every variant: the dark's lamps hidden and layer-1 rays from the seat to the split's lamps and the runaway's ([runaway] sight: ...); =after: the light back after the dark and after leaving floor 12 from its middle, and windowed with --screenshot=PATH the seat's shots PATH_lit/_dark/_behind/_split/... judged ([runaway] shots: ...)
 ///                       =wrong  nobody throws it: the last call comes 5-6.5 m before its points, the cart passes it straight, the train falls at the gap and the wipe rises at stop 2
 ///                       =stall  as wrong, the cart caught short of the back's points and again past them: the watchdog sets it at the points, then grinds it into the gap (a fall), never across
+///   --test-track-view  floor 12, lethality 3, solo: the line's first party ramp and a spared lane cell ridden from the seat: layer-1 rays from the seated eye to each rail top at the sag, the crest and the crest ± 1 m, and over the spared cell, each clear, with a control ray under the drawn floor at the crest that must be blocked; windowed with --screenshot=PATH the views PATH_crest/_sag/_heave.png (HUD hidden); prints [trackview] RESULT
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
@@ -352,6 +353,7 @@ public partial class DebugTools : Node
                 _testRunaway = true; _rwVariant = v; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 300;
             }
             else if (arg == "--test-barricade") { _testBarricade = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
+            else if (arg == "--test-track-view") { _testTrackView = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 240; }
             else if (arg == "--test-cart-watchdog") { _testCartWatchdog = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 120; }
             else if (arg == "--test-ride") { _testRide = true; _builtin = true; _startFloor = 12; _floorGiven = true; ForcedLethality ??= 3f; NoAmbush = true; NoPortals = true; NoGathering = true; TraceAi = false; _quitAfter = 150; }
             else if (arg == "--test-gas-wipe") { _testGasWipe = true; ForcedObjective = "toxic"; ForcedLayout ??= "standard"; ForcedLethality ??= 3f; _quitAfter = 75; }
@@ -930,6 +932,7 @@ public partial class DebugTools : Node
         if (_testBarricade && !ScriptStalled("barricade", _brStep)) RunBarricadeTest();
         if (_testSwitchBack && !ScriptStalled("switchback", _sbStep)) RunSwitchBackTest();
         if (_testRunaway && !ScriptStalled("runaway", _rwStep)) RunRunawayTest();
+        if (_testTrackView && !ScriptStalled("trackview", _tkvStep)) RunTrackViewTest();
         if (_printMap && !_printedMap && _elapsed >= 1.5 && Main.Instance?.Builder.Layout is { } mapLayout && Main.Instance.Builder.CurrentFloor == TargetFloor)
         {
             _printedMap = true;
@@ -1090,7 +1093,7 @@ public partial class DebugTools : Node
             }
             else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[kill-barks] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
         }
-        if (_screenshotPath != null && !_testHorde && !_testSwitchBack && !_testRunaway && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
+        if (_screenshotPath != null && !_testHorde && !_testSwitchBack && !_testRunaway && !_testTrackView && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
         {
             if (_faceNode != null && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } shot) GD.Print($"[face-node] at the screenshot: {shot.State.Name} {shot.ModelDebug}; lead at {Main.Instance.Party.Local?.GlobalPosition:0.0} facing {-Main.Instance.Party.Local?.GlobalTransform.Basis.Z:0.00}");
             _done = true;

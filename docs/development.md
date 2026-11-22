@@ -371,6 +371,7 @@ godot --headless --path . -- --replay-plans=DIR     # answer planning calls from
 godot --headless --path . -- --test-floors --seed=N # walk-off detector: steps from every surface of floors 1-6 (secrets opened) and reports any step onto nothing; --builtin for the shipped campaign
 godot --headless --path . -- --builtin --floor=N --inspect=X,Y   # print a cell's 7x7 neighbourhood: cell type, level, grid items, ray hits
 godot --headless --path . -- --builtin --no-ai --floor=12 --print-map --track-depth=3 --track-depth-float   # --track-depth[=CM] (implies --print-map; 3 cm by default) probes every rail track against the drawn floor every 0.5 m (rail tops, sleepers, walls) and lists the line's ramps, set pieces and cavern S, then the verdict ([track-depth] total buried=N inside=N nofloorOff=N budget=N ...; the pass is buried=0 inside=0 nofloorOff=0 budget=0); --track-depth-float also lists each sample standing more than CM over the floor
+godot --headless --path . -- --test-track-view    # floor 12 solo, lethality 3: ride 3 from stop 2 over the line's first party ramp and a spared lane cell; layer-1 rays from the seated eye to each rail top at the sag, the crest and the crest ± 1 m and over the spared cell, all clear, and a control ray under the drawn floor at the crest that must be blocked; windowed with --screenshot=PATH it saves PATH_crest/_sag/_heave.png (HUD hidden); prints [trackview] RESULT
 godot --headless --path . -- --test-structures                    # picks a seed whose floors 1-4 hold a gate, a camp, a pond and a stream; checks braziers, hut walls, bandits at the fire, water beds, 45° corners, wading
 godot --path . -- --seed=2 --floor=2 --face-node=Camp_:3 --screenshot=out.png   # stand N cells back from a node (Gate_, Camp_, Water_, Barrel0, Enemy...) and look at it; --face-cell=X,Y:N for a grid cell; --face-node=chamfer:N for the first cut corner, --face-node=buckled for a heaved tile, --face-node=bridge for a stream's bridge, --face-node=vault / groin for the ceiling (add --vault=pointed etc. to force a profile)
 godot --headless --path . -- --test-keys                          # a key rebind survives a settings reload without pressing Back; the VR comfort level round-trips through Save/Load
@@ -1208,15 +1209,20 @@ RampSlope·u` (u along its `Dir` from the cell's low edge; `RampSlabRise` 0.0118
 so the ballast clears the slope instead of z-fighting it). `SurfaceAt` is that, eased over `EaseLength` (1 m) at every ramp end
 with a parabola tangent to the flat and to the ramp (`RailBed.Ease`; the lines meet 0.0236 m outside a ramp's low edge and inside
 its high edge). The ease costs a crest dip of at most about 7 cm under the upper floor's edge (6.25 cm from the ease plus the slab
-rise's step) and a sag float of at most about 7 cm (the probe reads 6 cm on floor 12); the sleeper tops stay proud. Before this
+rise's step) and a sag float of at most about 7 cm at the laid line's joints; between its 0.5 m joints the straight chords miss
+the eased curve by up to 1.6 cm more, so the laid line dips or floats about 8.5 cm between joints (the probe reads 6 cm on floor
+12); the sleeper tops stay proud. Before this
 the heights were taken only at the path's vertices, so a ramp's 4 m rise was spread over the whole straight between two corners
 (a slope of 0.13 over about 30 m): the track ran up to 2.4 m inside the upper level and floated up to 2 m over the lower one. Now
 the cart climbs the drawn 26.6° ramp itself (the haul rope holds 3.06 m/s up it, the descent peaks at 7.55 m/s, `RampRideTests`),
 and each ramp lengthens its lane by about 0.64 m (the 8.94 m slope against the old smeared rise; each `ramp` line's span on
 floor 12 grew from 8.1 to 8.9 m): every S past a ramp moves up by that much per ramp, and a set piece on a ramp's ride (a fraction
 of its ride) by its fraction of it. A lane cell is never heaved (`BuckleRules.Pick` spares every `IsRail` cell, keeping both rng
-draws), so the track lies on a flat slab wherever the floor is not a ramp. `--track-depth` (below) is the proof: floor 12 reads
-`buried=0 inside=0 nofloorOff=0 budget=0` (the kiln spur bends in short of the wall at (48,62): see the spur in "The five rides").
+draws), so the track lies on a flat slab wherever the floor is not a ramp. `--track-depth` (the command list in "Build, test,
+run") is the proof: floor 12 reads `buried=0 inside=0 nofloorOff=0 budget=0`. A kiln spur bends the largest bend, from 1.8 m down to
+1.1 m in 0.05 m steps, that passes the rock, sleeper-gap and beam checks (`SetPieceRules.PickSpurBend`): 1.50 m on floor 12, in short
+of the wall at (48,62) (see the spur in "The five rides"). `--test-track-view` (the same command list) rides floor
+12's first ramp and a spared lane cell and sights the rails from the seat, with a control ray that must be blocked.
 `TrackSampler.Curvature` (the lean's input: the heading's change over the next 2 m) reads the same chord headings
 (`ChordHeading.Curvature`), so the lean's target no longer steps by a join's worth as the span takes in four joins or five.
 Each track's rails, sleepers and ballast are one shadowless mesh per 20 m of S (`RailTrack.ChunkLength`: `Rails0..N` under
@@ -1499,11 +1505,13 @@ Floor 12's five rides (`data/adventures/builtin/floor_12.json`; the lengths are 
 |---|---|---|---|---|
 | 1 The Ore Run (≈267 m) | landing → S1 | `r1_lone` a lone cinder on the rails (0.45), `r1_thrower` a forge priest thrower in a pocket (0.8) | `r1_barricade` (0.25, S 82.8), `r1_beam` the low beam (0.6) | — |
 | 2 Side by Side (≈206 m) | S1 → S2 | `r2_slag1..3`: 2 cinders (0.15, −6), a priest and a hound (0.45, −4), a hound and 2 cinders (0.75, −3) | `r2_slag_barricade` on the slag line (0.3, ahead of `r2_slag1`), `r2_barricade` (0.7, S 427.1, defended by `r2_slag2` alongside) | — |
-| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.731, live: its points at S 694.0, 20.1 m before the gap), `r3_buckets` (0.832, past the gap); the broken bridge on its slag line (the gap at party S 714.1, plan 11) | — |
-| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.262, −4: S 835.5, the dark's middle), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); `r4_dark` (0.093, S 793–878), `r4_runaway` (0.172, S 813), `r4_split` (0.371, its points at S 863.0, plan 12); the cavern under its deck (plan 10) | plan 13: the collapsing bridge and the leap (beside `r4_slag`; plans 13 and 14 merged, the spiral removed, the loop-the-loop dropped) |
-| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_barricade` (0.88, S 1205.4), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | — |
+| 3 The Switchyard (≈281 m) | S2 → S3 | `r3_slag` a cinder brute (0.3, +8) | `r3_switch_out` (0.2), `r3_heap` (0.35), `r3_switch_back` (0.731, live: its points at S 694.4, 20.2 m before the gap), `r3_buckets` (0.832, past the gap); the broken bridge on its slag line (the gap at party S 714.7, plan 11) | — |
+| 4 The Dark and the Throat (≈252 m) | S3 → S4 | `r4_hounds` 2 ember hounds (0.262, −4: S 836.2, the dark's middle), `r4_slag` a cinder and a priest (0.7, −3) | `r4_beam` (0.15); `r4_dark` (0.093, S 793.6–878.6), `r4_runaway` (0.172, S 813.5), `r4_split` (0.371, its points at S 863.6, plan 12); the cavern under its deck (plan 10) | plan 13: the collapsing bridge and the leap (beside `r4_slag`; plans 13 and 14 merged, the spiral removed, the loop-the-loop dropped) |
+| 5 The Pour (≈209 m) | S4 → exit | `r5_golem` the forge golem (0.49) | `r5_hammers` (0.2), `r5_pour` (0.4), `r5_trestle` (0.565), `r5_jump` (0.65), `r5_spur` (0.85), `r5_barricade` (0.88, S 1206.6), `r5_buffer` (0.95); the trestle and the jump stand over the gorge (plan 10) | — |
 
-The barricades' `At` are the measured ones: `r2_barricade` went from the plan's 0.6 to 0.7 and `r5_barricade` from 0.9 to 0.88,
+The S values here are the exposed-track fix's re-measure (`--track-depth`'s `piece` lines; each of floor 12's two ramps, on rides 3
+and 5, lengthens its lane by about 0.64 m, so every S past ride 3's ramp moved up by about 0.6 m and past ride 5's by about 1.3 m,
+and a piece on a ramp's ride by its fraction of it; no `At` changed and every placement rule still holds). The barricades' `At` are the measured ones: `r2_barricade` went from the plan's 0.6 to 0.7 and `r5_barricade` from 0.9 to 0.88,
 because at the planned values each stood just past a tight bend and the 15 m sight ray from the seat hit the inner wall (0.7 is
 still beside `r2_slag2`; 0.88 is still between `r5_spur` and `r5_buffer`).
 
@@ -1645,7 +1653,7 @@ The live switch back and the broken bridge (plan 11; `Rails/Core/SwitchBackRules
 `.Break.cs`). A `switch_back` is live, not fixed, only when a broken bridge's gap (see "Crevasses") lies `LeadMin` to `LeadMax`
 (12–40 m) past its points on its own ride (`SwitchBackRules.LiveBack`, Ruling 13); otherwise it stays fixed as before. Every role
 decides this the same way at build, and the build line says `[rails] switch {id} points … (live: the broken bridge {lead} m past)`
-or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.0, 20.1 m before the gap.
+or `(fixed, thrown)`. On floor 12 `r3_switch_back`'s points stand at S 694.4, 20.2 m before the gap.
 - **The late return** (Ruling 14). With a live back, `switch_out` crosses with the return unset (`BackAtSwitchOut`: NaN; the take line
   says `the return open: {back}'s lever decides at S=…`). At the back's points the cart takes the lever as it stands then
   (`TakeBack`, `BackAtPoints`, `TakesHome`): thrown, it calls `Cross(CrossOutS, points)` and comes home ("The cart takes the switch back
@@ -1726,13 +1734,13 @@ for 4 s. A cart through a live patch loses 5 plating, and each seated hero takes
 Ride 4: the dark, the runaway and the split (plan 12; `RailEncounterController.Dark.cs`, `.Runaway.cs` and `.Split.cs`,
 `Rails/SetPieces/SplitSwitch.cs`, `RideDarkness.cs`; the numbers in `Rails/Core/DarkRules.cs`, `RunawayRules.cs` and `SplitRules.cs`).
 Three set-piece kinds, appended at the end of `RailSetPieces` so the older pieces keep their indices and wire names: `dark`, `runaway` and
-`split`. Floor 12's are placed from the shipped seed's measured layout (Ruling 17): `r4_dark` At 0.093 (party S 793–878, starting 70 m
-before the points), `r4_runaway` 0.172 (S 813, 50 m before them), `r4_split` 0.371 (S 863, the points), and `r4_hounds` moved from 0.3 to
-0.262 (S 835.5, the dark's middle; at 0.3 it stood under 15 m short of the split's window). `r4_beam` stays. Ride 4 has no barricade (Ruling 18).
+`split`. Floor 12's are placed from the shipped seed's measured layout (Ruling 17): `r4_dark` At 0.093 (party S 793.6–878.6, starting 70 m
+before the points), `r4_runaway` 0.172 (S 813.5, 50 m before them), `r4_split` 0.371 (S 863.7, the points at 863.6), and `r4_hounds` moved from 0.3 to
+0.262 (S 836.2, the dark's middle; at 0.3 it stood under 15 m short of the split's window). `r4_beam` stays. Ride 4 has no barricade (Ruling 18).
 - **The dark** (Ruling 16). Its At is its start and it runs `DarkRules.Length` (85 m). Every role, the headless server included, puts out
   the pocket lamps whose pocket lies within `LampReach` (6 m, flat, on its level) of either lane over the span: each `RailLamp{i}` light is
   hidden and its `RailLantern{i}` gets copies of its materials with the emission off (the shared materials stay lit elsewhere). The count
-  comes from the layout, so every peer prints the same line: `[rails] dark r4_dark from party S=792.9 to 877.9: 10 pocket lamp(s) out`
+  comes from the layout, so every peer prints the same line: `[rails] dark r4_dark from party S=793.6 to 878.6: 10 pocket lamp(s) out`
   (every lit pocket has a `RailLamp{i}` light, so all 10 lights are hidden; 104 stay lit outside the span). A peer that draws adds a `RideDarkness`. It darkens that
   peer's view by where its camera is in the span (`DarknessAt`, within 8 m of either lane; `DarkRules.Factor` ramps over 6 m at each end):
   ambient × 0.12, fog light × 0.25, volumetric emission × 0. Each hero's torch dims to × 0.1 by its own place in the span. Cart lamps,
@@ -1783,15 +1791,15 @@ before the points), `r4_runaway` 0.172 (S 813, 50 m before them), `r4_split` 0.3
   so `r5_spur` stays track 2). From the points it follows the path `Cross` blends along (smoothstep over `SwitchStretch`, 6 m, onto the
   slag line), then bends `SpurOut` (3.5 m) further out over the next 5 m (`SpurLength` 11 m), ending over the crevasse with its rail ends
   bent down; timber in its way is taken down. Its post carries two warning lamps (amber and red), and a `DropGlow` ember light sits under the
-  spur's end (Task 7's dressing fix, Ruling 23). On floor 12 the points are at S 863.0, the lever at S 866.0 on cell (59,10) (walkable, no
-  drop, 1.4 m or more from the spur), and the spur's arc is 13.6 m long, ending over the chasm at (61,12); the crevasse is S 865–881.
+  spur's end (Task 7's dressing fix, Ruling 23). On floor 12 the points are at S 863.6, the lever at S 866.6 on cell (59,10) (walkable, no
+  drop, 1.4 m or more from the spur), and the spur's arc is 13.6 m long, ending over the chasm at (61,12); the crevasse is S 865.6–881.6.
 - **The lever** (Ruling 5, ruling R-bend). It is deadly (`TrackSwitch.Deadly`: layers 1|8, so no hit moves it, and only a human's E does)
   and stands `LeverPast` (3 m) past the points, on the party lane's side away from the slag line. Its seated window opens at the points
   less the straight run before them, at most `SplitRules.WindowAhead` (12 m) (`WindowReach(StraightBefore)`: no corner lies inside the
   window, so a press is never made round a blind bend), and it stays open until the runaway's front takes the points. It is offered only
   while the ride's runaway is coming (`SplitRules.Offered`; on a client, while a runaway copy runs on the party line short of the points)
-  and never on foot (`Withheld`). On floor 12 the straight before the points is 5.0 m (the bend at S 853.2–858.1), so the window opens at
-  S 858.0. The prompt (`SplitRules.Prompt`, through `PropPromptRules.SplitPrompt`) is "Throw the split — it throws as we pass" short of the
+  and never on foot (`Withheld`). On floor 12 the straight before the points is 5.0 m (the bend at S 853.8–858.7, ride 4's old bend moved up with the
+  ride's +0.64 m), so the window opens at S 858.6. The prompt (`SplitRules.Prompt`, through `PropPromptRules.SplitPrompt`) is "Throw the split — it throws as we pass" short of the
   points, "Throw the split behind us" past them, and "Set the split back" when thrown.
 - **The party's branch** (Ruling 6) is decided as its front reaches the points (`SplitRules.PartyRoute`):
   - thrown, with an able human aboard (`SwitchBackRules.AbleToThrow`): the spur. The cart calls `Cross(points, NaN)`, the log says "The cart
@@ -1850,10 +1858,11 @@ and a `[split] RESULT` (the split's five). With no variant, `--test-runaway` and
   ram wrecks the cart, the runaway is gone by the wreck's event and a spare takes over (`[runaway] RESULT ok (ram)`).
 - `=after`: the seat offers the split from the window's start with the wait call there, the now call 1 m past the points, and the lead
   throws it from the seat 1–3 m past them: no cross, the runaway takes the spur and goes into the crevasse within 3 s (measured: thrown
-  1.1 m past the points, the runaway at the points at S 863.1 and into the crevasse 1.75 s later), no ram, stop 4. It then checks the light
+  1.1 m past the points, the runaway at the points at S 863.7 and into the crevasse 1.75 s later), no ram, stop 4. It then checks the light
   is all back at stop 4 and, in a second pass with the runaway held, after leaving floor 12 for floor 13 from the dark's middle.
 - `=early`: a press from the seat 9 m short throws nothing (the seat does not offer it there), while a remote seat's press taken as the
-  server takes an `InteractIntent` (`InSeatedWindow`, then `LateFor`, then `Interact`) is not taken 10.5 m short and is held to the points 9 m short; the test's hook
+  server takes an `InteractIntent` (`InSeatedWindow`, then `LateFor`, then `Interact`) is not taken 10.5 m short (half a metre short of the server's early lead, `SplitRules.PressReach` of the window: 10 m) and is held
+  to the points 9 m short (a metre inside it, still short of the window; the flow derives both from `PressReach`); the test's hook
   (`DebugThrow`) then throws it, "not yet" is called, the train takes the spur and falls with its front within 1 m of the points + 7, every rider fallen within 1 s; the wipe rises
   at stop 3 and the next departure sends a runaway again.
 - `=hold`: thrown 9 m short by the hook, set back from the seat at the window's start (taken at once), then thrown from the seat short of
@@ -1878,7 +1887,11 @@ least 20 orange pixels about the runaway's lamp that go when its light is hidden
 Measured (Task 7): lit 0.095, dark 0.050 (0.52; 0.58 after the A/B fix moved the dark shot to S 838.8), the split's lamp 80 red pixels,
 the runaway's 37 orange with its light and 0 without, the rays clear (the lever, the spur's end, the split's lamps at 11.1 and 20.5 m, the
 runaway's lamp at 17–22 m), the 8 lamps where the dark is full hidden with their lanterns dark (of the 10 out; the flow does not judge
-the 3 that stand in its ramps) and 104 lit outside, and the light back at stop 4 and on floor 13.
+the 3 that stand in its ramps) and 104 lit outside, and the light back at stop 4 and on floor 13. Re-measured after the exposed-track
+fix (its Task 5): lit 0.093, dark 0.055 with the shot at S 839.1 (0.59; the straight before the points still 5.0 m, 10 lamps out, 8
+judged), the split's lamp 79 red, the runaway's 50 orange and 0 without. The dark shot's S follows the shot queue (the behind shots go
+first): taken at the dark's middle (S 836.3) the ratio reads 0.76, the cart lamp lighting the end wall ahead, so the 0.6 gate holds
+only for a shot a few metres past the middle.
 
 The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart reaches the golem's `At` (0.49) on that ride, an elite forge golem, "Kilnheart the Hulking",
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and
@@ -2021,7 +2034,7 @@ over a cellar, a tunnel or the under layer. It cuts four kinds of drop:
   strip (it also appears in `RailLine.Strips`), so the ride gets no other. It is refused on the cavern's ride and on the last ride
   (`RailLine.BreakWhy` = `refused`); with no fitting run it is `none`, and the `switch_back` stays fixed (Ruling 13). `--print-map`
   reports it as `break=…` on the `[map] rail` line (see "Rails" above). Floor 12 sets `BrokenBridgeRide` 3:
-  `break=188@0.81 run=185..191`, the gap at party S 714.1 on ride 3.
+  `break=188@0.81 run=185..191`, the gap at party S 714.7 on ride 3.
 - **The split's crevasse** (plan 12, `FloorSpec.SplitRide`, Rulings 1 and 2; `RailLine.Split`, a `RailSplit(Ride, Crevasse, Points)`).
   `SplitRide` is an int, default 0, clamped 0..6, `[AiIgnore]` in `SpecOverrides`, and acts only with `Crevasses`; the generator never
   reads plans. On that ride `CarveSplit` takes the longest outward strip-eligible straight run (`StripCells` with way +1, its enemy twins
@@ -2036,14 +2049,14 @@ over a cellar, a tunnel or the under layer. It cuts four kinds of drop:
   `split=refused` / `split=none`; nothing when no split was asked for). With `SplitRide` 0 every floor hashes as before
   (`ChasmTests.SplitRideZero_HashesAsTheFloorWithoutIt`, and `RailLineTests.DefaultKnobs_BuildTodaysFloors`). Over the generator sweep the split fits on 30 of 116 rows (26%), and on 30 of
   the 56 (54%) where the cavern leaves it room: the cavern on the second-to-last ride takes the window on most seeds, and a misfit split
-  is dead with no runaway (Ruling 3). Floor 12 sets `SplitRide` 4: `split=227@0.38 crevasse=228..231`, the points at party S 863.0 and the
-  crevasse S 865–881 (`floor_12.json`'s `LayoutHash` moved to 16995108853750381062). The party's train falls there only off the split's
+  is dead with no runaway (Ruling 3). Floor 12 sets `SplitRide` 4: `split=227@0.38 crevasse=228..231`, the points at party S 863.6 and the
+  crevasse S 865.6–881.6 (`floor_12.json`'s `LayoutHash` moved to 16995108853750381062). The party's train falls there only off the split's
   spur (see "The five rides", ride 4).
 
 `FloorLayout.Bridges`, `IsBridge`, `IsChasm` and `ChasmCount` read them; `--print-map` reports them on the `[map] rail` line
 (see above). Floor 12 (the shipped layout): cavern 238..259 on ride 4, chasm=217, strips=8 (ride 3's is the broken bridge, ride 4's
 the split's crevasse), four gorge spans on ride 5, planks=3, `break=188@0.81 run=185..191` and `split=227@0.38 crevasse=228..231`
-(`[map] rail split: ride 4 points at party S=863.0, crevasse S=865.0..881.0`). The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
+(`[map] rail split: ride 4 points at party S=863.6, crevasse S=865.6..881.6`). The ride-5 set pieces were moved into the measured gorge: `r5_trestle` (0.565) needs only its middle
 (At ± 2 m) inside a gorge span, since a trestle bridges a gorge from lip to lip, and `r5_jump` (0.65) has its whole gap
 (At ± 2.5 m) inside one span with half a cell to spare at each end; the order pour < trestle < jump < spur is kept, the golem
 going to 0.49. Building the kiln logs `[rails] r5_trestle over a crevasse: True` and `[rails] r5_jump over a crevasse: True`.
