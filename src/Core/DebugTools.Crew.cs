@@ -18,7 +18,7 @@ namespace DungeonCrawler.Core;
 // seats of the train (TrainRules.SeatOrder): each must sit in before the departure, which comes after the last of them sits and at most
 // BoardMax + 0.5 s after the countdown started. Ride 1 passes r1_beam with every seated head (Grisel's on the bench when forgiven) clear
 // by 0.05 m. A save and a load between stops 2 and 3 bring every AboardCrew entry back seat for seat; one crew member taken out of W2
-// goes down and bleeds out (lost). At stop 3 one freed crew member is held 30 m off while the countdown runs: its booking ends, it is on
+// goes down, a save and a load find it lying where it lay (not back in its cage), and it bleeds out (lost). At stop 3 one freed crew member is held 30 m off while the countdown runs: its booking ends, it is on
 // foot and following at the departure, it is held there through ride 4 (the collapsing bridge is no place to walk) and let go at stop
 // 4's arrival, where it is beside the train again and boards. Every stop from 3 on to the last crew stop is ridden to and its cage
 // opened the same way, and the end of the line brings the rest home and opens the stairs. Then the floor is built again: the cart is held
@@ -79,6 +79,9 @@ public partial class DebugTools
     private readonly BeamHeads _crewBeam = new();
     /// <summary>Section 2: stop 2's crew (ids), freed by the test's hook after the load there.</summary>
     private readonly HashSet<string> _crewWreckCage2 = new();
+    /// <summary>Section 1, step 6: where the downed crew member lay at its save (null before it), and whether the load was judged.</summary>
+    private Vector3? _crewDownSavedAt;
+    private bool _crewDownLoaded;
 
     /// <summary>Hear Grisel on the real path (Npc.Said) and on the narration channel, once.</summary>
     private void CrewListen()
@@ -357,6 +360,24 @@ public partial class DebugTools
             case 11 when _crewClock >= 0.5f:
             {
                 var lost = ctrl.Crew.First(c => c.Id == _crewLostId);
+                if (_crewDownSavedAt == null)
+                {
+                    // a save and a load while it lies down on foot, away from its cage: it must come back lying where the save had it
+                    _crewDownSavedAt = lost.GlobalPosition;
+                    GD.Print($"[crew] 6 saved while {lost.NpcName} lies down on foot at {DungeonBuilder.WorldToCell(lost.GlobalPosition)}, {Flat(lost.GlobalPosition, ctrl.Cages.First(c => c.Stop == 2).GlobalPosition):0.0} m from cage 2 (escorting={lost.Escorting})");
+                    main.SaveGame(CrewSlot);
+                    if (!main.LoadGame(CrewSlot)) { Fail("the save with a crew member down on foot would not load"); return; }
+                    _crewClock = 0f;
+                    break;
+                }
+                if (!_crewDownLoaded)
+                {
+                    if (_crewClock < 1f) break;
+                    _crewDownLoaded = true;
+                    var off = Flat(lost.GlobalPosition, _crewDownSavedAt.Value);
+                    GD.Print($"[crew] 6 after the load {lost.NpcName} lies down on foot at {DungeonBuilder.WorldToCell(lost.GlobalPosition)}, {off:0.00} m from where the save had it: downed={lost.Downed} seated={lost.Seated}{(lost.Seated ? $" in {lost.Ride?.Name}" : "")} escorting={lost.Escorting} state={ctrl.StateOf(lost)} (not back in cage 2)");
+                    if (!lost.Downed || lost.Seated || lost.Cart is PlatformCage || off > 1f) { Fail($"after the load {lost.NpcName}, down on foot at the save, is {(lost.Seated ? $"seated in {lost.Ride?.Name}" : $"on foot {off:0.00} m from where it lay")} (downed={lost.Downed})"); return; }
+                }
                 if (ctrl.StateOf(lost) != CrewState.Downed) { Fail($"{lost.NpcName} down on foot counts as {ctrl.StateOf(lost)}, not Downed"); return; }
                 if (ctrl.BookingOf(lost) is { } booked) { Fail($"{lost.NpcName}, down on foot, books W{booked.Wagon} seat {booked.Seat}"); return; }
                 var before = lost.DownedSeconds;

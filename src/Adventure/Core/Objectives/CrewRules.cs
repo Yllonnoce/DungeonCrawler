@@ -54,6 +54,12 @@ public static class CrewRules
         return text + ".";
     }
 
+    /// <summary>
+    /// A load (plan 14 Task 2): an open cage's crew member not seated in the train stays standing in its cage only when it went down in
+    /// there, never let out to follow (<paramref name="escorting"/> false); one downed on foot keeps following and lies where the save had it.
+    /// </summary>
+    public static bool StaysInOpenCage(bool downed, bool escorting) => downed && !escorting;
+
     public static bool StopCleared(int aliveInStopCollective) => aliveInStopCollective <= 0;
 
     /// <summary>The CartInput.CrewWagons value: one coupled wagon is one load step.</summary>

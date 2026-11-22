@@ -843,7 +843,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
                 continue;
             }
             if (aboard.TryGetValue(npc.Id, out var saved) && ReseatInTrain(npc, saved)) continue;
-            if (npc.Seated && !(cage != null && npc.Cart == cage && npc.Downed)) npc.GetOut(npc.GlobalPosition); // on foot where the save had them (a downed one stays in its open cage; up, it gets out by TickBoarding)
+            // on foot where the save had them (Build stood every caged crew member in its cage, and the NPC states only moved it): only one
+            // that went down inside its open cage, never let out to follow, stays in it (up, it gets out by TickBoarding)
+            if (npc.Seated && !(cage != null && npc.Cart == cage && CrewRules.StaysInOpenCage(npc.Downed, npc.Escorting))) npc.GetOut(npc.GlobalPosition);
         }
         _state.Clear();
         foreach (var npc in _crew) _state[npc] = npc.Dead ? CrewState.Lost : CageOf(npc) is { Open: false } ? CrewState.Caged : _home.Contains(npc.Id) ? CrewState.Home : CrewState.Freed;
