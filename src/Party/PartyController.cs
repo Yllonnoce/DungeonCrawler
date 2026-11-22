@@ -532,7 +532,7 @@ public partial class PartyController : Node3D
             if (wasAlive && !m.IsAlive) { EventBus.Instance.Log($"{m.Name} falls!"); body.CallDeferred(nameof(Adventurer.Revive)); m.Hp = 0; OnMemberDowned(i); }
             if (m.Effects.Version != _effectVersions[i]) { _effectVersions[i] = m.Effects.Version; m.Recalculate(); }
         }
-        if (Active.Any() && MangledRules.IsWipe(Active.Select(a => (a.Downed, a.State.Mangled)).ToList()) && Main.Instance?.Builder.Layout != null) { OnPartyWiped(); return; }
+        if (Time.GetTicksMsec() >= _wipeHeldUntil && Active.Any() && MangledRules.IsWipe(Active.Select(a => (a.Downed, a.State.Mangled)).ToList()) && Main.Instance?.Builder.Layout != null) { OnPartyWiped(); return; }
         AutoRevive(dt);
         TickRescues(dt);
     }
@@ -621,6 +621,14 @@ public partial class PartyController : Node3D
     }
 
     private bool _wipeJudged;
+    /// <summary>The wipe is not judged before this (<see cref="Time.GetTicksMsec"/>, ms): a fall being seen (<see cref="HoldWipe"/>).</summary>
+    private ulong _wipeHeldUntil;
+
+    /// <summary>
+    /// Hold the wipe's judgement for <paramref name="seconds"/> (server and solo): a train the cavern's bridge takes is seen to fall
+    /// (<see cref="Dungeon.Rails.BridgeRules.FallSeen"/>) before the dungeon shifts. Nothing else waits on it.
+    /// </summary>
+    public void HoldWipe(float seconds) => _wipeHeldUntil = Math.Max(_wipeHeldUntil, Time.GetTicksMsec() + (ulong)(seconds * 1000f));
     private void OnPartyWiped()
     {
         if (_wipeJudged) return; // under the Death Clause the bodies stay down

@@ -30,6 +30,11 @@ public static class BridgeRules
     public const float AtSlack = 8f;
     /// <summary>The collapse's cue plays once every this many cells.</summary>
     public const int CueEveryCells = 2;
+    /// <summary>
+    /// A train the bridge takes is seen to fall for this long (seconds): its look and its riders' drop through the gone cells, each seated
+    /// player's eye riding down with them, before the wipe is judged (the crevasse takes the riders at once, as any fall; the legibility fix round).
+    /// </summary>
+    public const float FallSeen = 1.4f;
 
     /// <summary>The front's speed: <see cref="PaceShare"/> of the train's unpumped cruise with <paramref name="crewWagons"/> coupled.</summary>
     public static float Pace(int crewWagons) => CartPhysics.TargetSpeed(0, crewWagons) * PaceShare;

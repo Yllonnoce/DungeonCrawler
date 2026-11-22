@@ -32,14 +32,18 @@ public partial class RailController
     /// is logged, then the wreck as a fall (<see cref="Wreck"/>). Lethality changes none of it. Its events are told before this returns
     /// (a trestle's fall is judged in the encounter controller's tick): the fall is heard before anything that follows it in the frame.
     /// </summary>
-    public void Fall(string why)
+    public void Fall(string why, bool seen = false)
     {
-        FallNow(why);
+        FallNow(why, seen);
         Flush();
     }
 
-    /// <summary>The fall itself (<see cref="Fall"/>); this controller's own tick calls it and tells the events at its end.</summary>
-    private void FallNow(string why)
+    /// <summary>
+    /// The fall itself (<see cref="Fall"/>); this controller's own tick calls it and tells the events at its end. <paramref name="seen"/>
+    /// (the cavern bridge's take): the train's look drops through the gone cells with its riders' (<see cref="SeenFall"/>) and the wipe
+    /// waits <see cref="BridgeRules.FallSeen"/> for it; the toll is the same.
+    /// </summary>
+    private void FallNow(string why, bool seen = false)
     {
         if (NetSession.IsClient || State.Mode == CartMode.Wrecked) return;
         if (CrevasseWatch.Instance is not { } watch || !IsInstanceValid(watch))
@@ -53,8 +57,9 @@ public partial class RailController
         Falls++;
         FellAt = Cart.GlobalPosition;
         Props.Tremor.ShakeOnly(0.05f, 0.8f);
-        Wreck(fall: true);
-        GD.Print($"[rails] the train falls at S={s:0.0} ({why}): {_fellRiders} rider(s), {_fellWagons} wagon(s)");
+        if (seen) Main.Instance?.Party?.HoldWipe(BridgeRules.FallSeen); // before the toll: the riders fall now, the dungeon shifts after the fall is seen
+        Wreck(fall: true, seen);
+        GD.Print($"[rails] the train falls at S={s:0.0} ({why}): {_fellRiders} rider(s), {_fellWagons} wagon(s){(seen ? $", seen for {BridgeRules.FallSeen:0.0} s" : "")}");
     }
 
     /// <summary>
@@ -132,6 +137,81 @@ public partial class RailController
         foreach (var wagon in wagons)
             if (IsInstanceValid(wagon) && wagon.GetNodeOrNull<Node3D>("Body") is { } wagonBody)
                 PlungeBody(root, "WagonPlunge", wagonBody, wagon.GlobalTransform, wagon.Velocity, TowardTheDrop(wagon.GlobalPosition));
+    }
+
+    /// <summary>
+    /// The cavern bridge's take seen (every peer; the server's fall, a client's Wrecked edge with Fell over the bridge's span): the cart's body
+    /// (with <paramref name="cart"/>), each of <paramref name="wagons"/>' and the look of each hero still seated in the cart (<see cref="Adventurer.FallLook"/>)
+    /// copied onto rigid bodies that nothing holds (layer 0, mask 0), dropping straight down through the gone cells with a little of the
+    /// train's way on them, freed after <see cref="PlungeSeconds"/>; and this peer's player, if they rode it (<paramref name="localRode"/>), sees it from their seat as it
+    /// goes (<see cref="FallEye"/>) for <see cref="BridgeRules.FallSeen"/>. Call it before the riders are taken. Cosmetic and silent.
+    /// </summary>
+    private void SeenFall(IReadOnlyList<CageWagon> wagons, bool cart, bool localRode)
+    {
+        if (!IsInsideTree() || GetParent() is not Node3D root) return;
+        RigidBody3D? carFall = null;
+        if (cart && Cart.GetNodeOrNull<Node3D>("Body") is { } body) carFall = DropBody(root, "CartDrop", body, Cart.GlobalTransform, Cart.Velocity);
+        foreach (var wagon in wagons)
+            if (IsInstanceValid(wagon) && wagon.GetNodeOrNull<Node3D>("Body") is { } wagonBody)
+                DropBody(root, "WagonDrop", wagonBody, wagon.GlobalTransform, wagon.Velocity);
+        if (carFall == null) return;
+        foreach (var rider in Aboard())
+            if (rider is Adventurer hero && IsInstanceValid(hero))
+            {
+                var look = hero.FallLook();
+                var at = look.Transform;
+                carFall.AddChild(look);
+                look.GlobalTransform = at;
+            }
+        if (localRode && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera);
+    }
+
+    /// <summary>
+    /// <paramref name="eye"/>'s view rides down with <paramref name="falling"/> for <see cref="BridgeRules.FallSeen"/>: a camera like it, at its
+    /// place, a child of the falling body, kept current each frame (a downed player's control passes on as the riders fall), then the party's
+    /// local camera is current again and it is freed.
+    /// </summary>
+    private void FallEye(RigidBody3D falling, Camera3D eye)
+    {
+        var cam = new Camera3D
+        {
+            Name = "FallEye", Fov = eye.Fov, Near = eye.Near, Far = eye.Far, CullMask = eye.CullMask, Environment = eye.Environment,
+            Attributes = eye.Attributes, KeepAspect = eye.KeepAspect,
+        };
+        var at = eye.GlobalTransform;
+        falling.AddChild(cam);
+        cam.GlobalTransform = at;
+        cam.MakeCurrent();
+        var until = Time.GetTicksMsec() + (ulong)(BridgeRules.FallSeen * 1000f);
+        var tree = GetTree();
+        Action? hold = null; // one delegate, so the same one is let go
+        hold = () =>
+        {
+            if (IsInstanceValid(cam) && Time.GetTicksMsec() < until)
+            {
+                if (!cam.Current) cam.MakeCurrent();
+                return;
+            }
+            tree.ProcessFrame -= hold;
+            if (!IsInstanceValid(cam)) return;
+            var wasCurrent = cam.Current;
+            cam.QueueFree();
+            if (wasCurrent && Main.Instance?.Party?.Local is { } now && IsInstanceValid(now)) now.Camera.MakeCurrent();
+        };
+        tree.ProcessFrame += hold;
+    }
+
+    /// <summary>One look of the seen fall: <paramref name="body"/> copied onto a rigid body at <paramref name="at"/>, dropping with a third of <paramref name="velocity"/>.</summary>
+    private RigidBody3D DropBody(Node3D root, string name, Node3D body, Transform3D at, Vector3 velocity)
+    {
+        var falling = new RigidBody3D { Name = name, CollisionLayer = 0, CollisionMask = 0, Mass = 300f };
+        falling.AddChild(body.Duplicate());
+        root.AddChild(falling);
+        falling.GlobalTransform = at;
+        falling.LinearVelocity = velocity * 0.35f + Vector3.Down * 0.5f;
+        falling.AngularVelocity = at.Basis.X * 0.6f; // the nose dips as the deck goes from under it
+        GetTree().CreateTimer(PlungeSeconds).Timeout += () => { if (IsInstanceValid(falling)) falling.QueueFree(); };
+        return falling;
     }
 
     private void PlungeBody(Node3D root, string name, Node3D body, Transform3D at, Vector3 velocity, Vector3 toward)

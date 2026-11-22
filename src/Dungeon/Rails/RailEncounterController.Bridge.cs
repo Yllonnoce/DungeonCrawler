@@ -227,7 +227,7 @@ public partial class RailEncounterController
         var under = 0; // the cells under the train go with it (up to the cart's front)
         while (under < bridge.Count && bridge.Cells[under].FromS < _rails.Party.FrontS) under++;
         bridge.GiveWay(under, GetParent() as Node3D);
-        _rails.Fall("The bridge goes out from under the train!"); // its Wrecked event stops the collapse here
+        _rails.Fall("The bridge goes out from under the train!", seen: true); // seen dropping through the gone cells (BridgeRules.FallSeen); its Wrecked event stops the collapse here
     }
 
     /// <summary>

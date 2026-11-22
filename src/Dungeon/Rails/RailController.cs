@@ -979,7 +979,7 @@ public partial class RailController : Node
     /// aboard taken by the crevasse (<see cref="CrevasseWatch.Take"/>), the wagons hidden and lost off an uncoupled train, and a spare takes
     /// over only while a hero still stands (<see cref="CrevasseRules.SpareAfterFall"/>): a fall that takes everyone spends none.
     /// </summary>
-    private void Wreck(bool fall = false)
+    private void Wreck(bool fall = false, bool seen = false)
     {
         EndChase(atOnce: true); // a chase ends with the train's wreck: its riders step out beside the chaser
         Wrecks++;
@@ -989,7 +989,8 @@ public partial class RailController : Node
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
-        if (lost != null) Plunge(lost, cart: true); // before the speed is zeroed: the train goes over the way it was going
+        if (lost != null && seen) SeenFall(lost, cart: true, localRode: Main.Instance?.Party?.Local is { } me && IsInstanceValid(me) && me.Cart == Cart); // the bridge's take: the train drops through the gone cells, its riders with it
+        else if (lost != null) Plunge(lost, cart: true); // before the speed is zeroed: the train goes over the way it was going
         else Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
         RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here (at the lip, for a fall): the cart's sound sees no wreck (a spare takes over in this call)
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed

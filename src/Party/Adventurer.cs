@@ -1979,6 +1979,24 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         HoldInCrevasse();
     }
 
+    /// <summary>
+    /// A copy of this hero's look (its model, else its plain body and head) as it stands now, in a new node at its global place, not in the
+    /// tree: the cavern bridge's seen fall drops it with the cart (cosmetic). The local player's own look stays hidden, as it is to its camera.
+    /// </summary>
+    internal Node3D FallLook()
+    {
+        var look = new Node3D { Name = $"{State.Name}FallLook", Transform = GlobalTransform };
+        if (_model?.Root is { } root && root.Duplicate() is Node3D copy)
+        {
+            copy.Transform = GlobalTransform.AffineInverse() * root.GlobalTransform;
+            look.AddChild(copy);
+        }
+        else
+            foreach (var part in new[] { _body, _head })
+                if (part.Duplicate() is Node3D c) { c.Transform = part.Transform; look.AddChild(c); }
+        return look;
+    }
+
     /// <summary>A fallen body out of the world: unseen, not solid, still.</summary>
     private void HoldInCrevasse()
     {
