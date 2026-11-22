@@ -82,7 +82,9 @@ public partial class RailTrack : Node3D
     /// (the same <see cref="Curve"/>, so they lie where the lane's own rails would), with its <see cref="Gauge"/>, rail and
     /// sleeper sizes, and its sleeper phase (<see cref="SleeperEvery"/>/2 + k·<see cref="SleeperEvery"/> along the whole
     /// track): one rail mesh (<c>{name}_Rails</c>) and one sleeper mesh (<c>{name}_Sleepers</c>) under <paramref name="into"/>,
-    /// shadowless, no gravel. A live piece lays a cell of its span with it over a stretch the track was cut bare at.
+    /// shadowless; with <paramref name="ballast"/> (and a track built with gravel) its gravel bed too (<c>{name}_Ballast</c>, as the track's
+    /// own: <see cref="BallastWidth"/> wide, <see cref="BallastLift"/> up, on the same stations), else no gravel. A live piece lays a cell of
+    /// its span with it over a stretch the track was cut bare at.
     /// <para>
     /// The join: the rails ring at the span's exact <paramref name="from"/> and <paramref name="to"/> and on the track's own
     /// <see cref="Sample"/> lattice between (<see cref="TrackStations.Span"/>), and the track itself rings at a gap's exact ends
@@ -94,7 +96,7 @@ public partial class RailTrack : Node3D
     /// Not called headless. Both <paramref name="into"/> and this track must be in the tree (the meshes are placed in
     /// <paramref name="into"/>'s frame): add and place the node, then lay; otherwise it is an error and nothing is laid.
     /// </summary>
-    public void LaySpan(Node3D into, float from, float to, string name)
+    public void LaySpan(Node3D into, float from, float to, string name, bool ballast = false)
     {
         if (_steel == null || _sleeper == null || Length < 0.1f) return;
         if (!into.IsInsideTree() || !IsInsideTree())
@@ -131,6 +133,25 @@ public partial class RailTrack : Node3D
             }
         }
         into.AddChild(new MeshInstance3D { Name = $"{name}_Rails", Mesh = CommitKept(railSt, keep, name), MaterialOverride = _steel, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+
+        if (ballast && _ballast != null)
+        {
+            // the gravel strip over [from, to] on the span's own stations (no padding: a flat strip needs no normals from past its ends)
+            var gravelSt = new SurfaceTool();
+            gravelSt.Begin(Mesh.PrimitiveType.Triangles);
+            Vector3[]? edge = null;
+            foreach (var st in TrackStations.Span(from, to, Sample))
+            {
+                var t = Frame(st);
+                var c = t.Origin + t.Basis.Y.Normalized() * BallastLift;
+                var x = t.Basis.X.Normalized() * (BallastWidth / 2f);
+                var next = new[] { c - x, c + x };
+                if (edge != null) Quad(gravelSt, edge[0], next[0], next[1], edge[1]); // its face up (+Y)
+                edge = next;
+            }
+            gravelSt.GenerateNormals();
+            into.AddChild(new MeshInstance3D { Name = $"{name}_Ballast", Mesh = gravelSt.Commit(), MaterialOverride = _ballast, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        }
 
         var sleepers = TrackStations.SpanSleepers(from, to, SleeperEvery, Length);
         if (sleepers.Count == 0) return;

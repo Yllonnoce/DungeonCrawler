@@ -47,6 +47,10 @@ public partial class CavernBridge : Node3D, ISoundPoint
     private readonly List<Transform3D> _middles = new();
     /// <summary>Each cell's rails and sleepers (null headless).</summary>
     private readonly List<Node3D?> _looks = new();
+    /// <summary>Each cell's embers under it, shown once it is gone (null headless): the glow light and the haze rising out of the hole.</summary>
+    private readonly List<(OmniLight3D Glow, MeshInstance3D Haze)?> _embers = new();
+    /// <summary>The newest this many gone cells cast their embers' light (the rest keep their haze): the hole behind the train reads, few lights burn.</summary>
+    public const int GlowCells = 3;
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.3f, 0.2f, 0.11f), Roughness = 0.95f };
     private readonly StandardMaterial3D _dark = new() { AlbedoColor = new Color(0.17f, 0.11f, 0.06f), Roughness = 1f };
 
@@ -57,7 +61,7 @@ public partial class CavernBridge : Node3D, ISoundPoint
     /// </summary>
     public void Build(TrackSampler track, IReadOnlyList<(GridPos Cell, float FromS, float ToS)> cells)
     {
-        _cells.Clear(); _far.Clear(); _middles.Clear(); _looks.Clear();
+        _cells.Clear(); _far.Clear(); _middles.Clear(); _looks.Clear(); _embers.Clear();
         Gone = 0;
         if (cells.Count == 0) return;
         From = cells[0].FromS;
@@ -77,6 +81,7 @@ public partial class CavernBridge : Node3D, ISoundPoint
                 track.Track.LaySpan(look, c.FromS, c.ToS, "Deck");
             }
             _looks.Add(look);
+            _embers.Add(ChasmDressing.DrawsLook ? Embers(c.Cell, _middles[^1]) : null);
         }
     }
 
@@ -101,6 +106,7 @@ public partial class CavernBridge : Node3D, ISoundPoint
             if (k % BridgeRules.CueEveryCells == 0) RideAudio.At("timber_collapse", _middles[k].Origin);
         }
         Gone = upTo;
+        ShowEmbers();
         Tell($"gone {Gone}");
     }
 
@@ -115,6 +121,7 @@ public partial class CavernBridge : Node3D, ISoundPoint
             if (k < was || Layout.GoneBridges.Contains(_cells[k].Cell)) dressing?.SetGone(Layout, _cells[k].Cell, false);
         }
         Gone = 0;
+        ShowEmbers();
         if (was > 0) Tell("stands");
     }
 
@@ -129,6 +136,35 @@ public partial class CavernBridge : Node3D, ISoundPoint
             return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// A cell's embers (the legibility fix round, as the broken bridge's gap glows: <see cref="BrokenBridge.EmberGlow"/>,
+    /// <see cref="BrokenBridge.EmberHaze"/>): the glow <see cref="BrokenBridge.GlowDepth"/> under the deck's middle and the haze on its level,
+    /// both hidden until the cell goes, so the hole it leaves reads from the seat as a warm glow up out of the dark.
+    /// </summary>
+    private (OmniLight3D, MeshInstance3D) Embers(GridPos cell, Transform3D middle)
+    {
+        var glow = BrokenBridge.EmberGlow($"GoneGlow_{cell.X}_{cell.Y}");
+        glow.Visible = false;
+        AddChild(glow);
+        glow.GlobalPosition = middle.Origin + Vector3.Down * BrokenBridge.GlowDepth;
+        var haze = BrokenBridge.EmberHaze($"GoneHaze_{cell.X}_{cell.Y}", BrokenBridge.HazeSize);
+        haze.Visible = false;
+        AddChild(haze);
+        haze.GlobalPosition = middle.Origin;
+        return (glow, haze);
+    }
+
+    /// <summary>Every gone cell's haze shown, the newest <see cref="GlowCells"/>' light too; a standing cell's hidden.</summary>
+    private void ShowEmbers()
+    {
+        for (var k = 0; k < _embers.Count; k++)
+        {
+            if (_embers[k] is not { } e || !IsInstanceValid(e.Glow) || !IsInstanceValid(e.Haze)) continue;
+            e.Haze.Visible = k < Gone;
+            e.Glow.Visible = k < Gone && k >= Gone - GlowCells;
+        }
     }
 
     /// <summary>A live give-way tumbles timbers and cues for at most this many cells of one step.</summary>

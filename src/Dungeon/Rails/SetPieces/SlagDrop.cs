@@ -12,7 +12,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// cell's are laid here by <see cref="RailTrack.LaySpan"/> of that same track, so they lie where the lane's own would and meet the track at both
 /// lips. The deck itself is the cavern's (<see cref="ChasmDressing"/>): <see cref="GiveWay"/> hides the cells' rails, sends both decks and their
 /// footing (<see cref="ChasmDressing.SetGone"/>), tumbles a few timbers, lights the red lamp on its stub post at the near edge (the party lane's
-/// side, as the broken bridge's: <see cref="BrokenBridge.LampEnergy"/>, <see cref="BrokenBridge.LampRange"/>; dark until then) and plays
+/// side, stronger than the broken bridge's (<see cref="LampEnergy"/>, <see cref="LampRange"/>, with a halo); dark until then), lights the embers under its cells and plays
 /// <c>timber_collapse</c>; <see cref="Stand"/> puts it all back. Headless no rail mesh is built, but the cells are kept (the footing goes on
 /// every role). The <see cref="RailEncounterController"/> calls it on the server and in single player; it tells "drops" and "stands"
 /// (<see cref="NetRef"/>), which a client's copy shows. The node stays at the origin.
@@ -43,7 +43,9 @@ public partial class SlagDrop : Node3D, ISoundPoint
     private readonly List<Transform3D> _middles = new();
     /// <summary>Each cell's rails and sleepers (null headless).</summary>
     private readonly List<Node3D?> _looks = new();
-    private MeshInstance3D? _lamp;
+    private MeshInstance3D? _lamp, _halo;
+    /// <summary>Each cell's embers under it, shown while the drop is down (null headless): the glow light and the haze rising out of the hole.</summary>
+    private readonly List<(OmniLight3D Glow, MeshInstance3D Haze)?> _embers = new();
     private OmniLight3D? _lampLight;
     private StandardMaterial3D? _lit, _unlit;
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.3f, 0.2f, 0.11f), Roughness = 0.95f };
@@ -51,6 +53,12 @@ public partial class SlagDrop : Node3D, ISoundPoint
 
     /// <summary>The lamp's post stands this far from the slag line's middle, toward the party lane (as the broken bridge's).</summary>
     const float PostOut = 1.6f;
+    /// <summary>
+    /// The drop's red lamp is stronger than the broken bridge's (<see cref="BrokenBridge.LampEnergy"/>, <see cref="BrokenBridge.LampRange"/>): it
+    /// is first seen from the slag deck <see cref="LeapRules.CallAhead"/> off, and its halo (<see cref="HaloSize"/> across, additive) keeps it more
+    /// than a point there (the legibility fix round).
+    /// </summary>
+    public const float LampEnergy = 6f, LampRange = 12f, HaloSize = 1.1f;
     const float PostHeight = 1.3f;
 
     /// <summary>
@@ -62,7 +70,7 @@ public partial class SlagDrop : Node3D, ISoundPoint
     /// </summary>
     public void Build(TrackSampler enemy, float nearS, float farS, int innerSide)
     {
-        _spans.Clear(); _middles.Clear(); _looks.Clear();
+        _spans.Clear(); _middles.Clear(); _looks.Clear(); _embers.Clear();
         Dropped = false;
         From = nearS;
         To = farS;
@@ -80,9 +88,10 @@ public partial class SlagDrop : Node3D, ISoundPoint
                 var cell = Twins[k];
                 look = new Node3D { Name = $"SlagDropCell_{cell.X}_{cell.Y}" };
                 AddChild(look);
-                enemy.Track.LaySpan(look, from, to, "Deck");
+                enemy.Track.LaySpan(look, from, to, "Deck", ballast: true); // the slag deck's own gravel bed: the drop's cells look like the rest of it
             }
             _looks.Add(look);
+            _embers.Add(ChasmDressing.DrawsLook ? Embers(Twins[k], _middles[^1]) : null);
         }
         BuildLamp(enemy.Frame(nearS).Orthonormalized(), innerSide);
     }
@@ -158,15 +167,49 @@ public partial class SlagDrop : Node3D, ISoundPoint
         AddChild(_lamp);
         _lampLight = new OmniLight3D
         {
-            Name = "DropLampLight", LightColor = red, LightEnergy = BrokenBridge.LampEnergy, OmniRange = BrokenBridge.LampRange, ShadowEnabled = false, Visible = false,
+            Name = "DropLampLight", LightColor = red, LightEnergy = LampEnergy, OmniRange = LampRange, ShadowEnabled = false, Visible = false,
             Transform = frame * new Transform3D(Basis.Identity, post + Vector3.Up * (PostHeight + 0.2f)),
         };
         AddChild(_lampLight);
+        // the lamp's halo: a soft red glow round it, additive, turned to the eye, not lost in the haze; shown while it is lit
+        var halo = new GradientTexture2D
+        {
+            Width = 64, Height = 64, Fill = GradientTexture2D.FillEnum.Radial, FillFrom = new Vector2(0.5f, 0.5f), FillTo = new Vector2(0.5f, 0f),
+            Gradient = new Gradient { Offsets = new[] { 0f, 0.35f, 1f }, Colors = new[] { new Color(1f, 0.12f, 0.06f, 0.9f), new Color(1f, 0.08f, 0.04f, 0.35f), new Color(1f, 0.05f, 0.02f, 0f) } },
+        };
+        _halo = new MeshInstance3D
+        {
+            Name = "DropLampHalo", Mesh = new QuadMesh { Size = new Vector2(HaloSize, HaloSize) }, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off, Visible = false,
+            Transform = frame * new Transform3D(Basis.Identity, post + Vector3.Up * (PostHeight + 0.12f)),
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add,
+                BillboardMode = BaseMaterial3D.BillboardModeEnum.Enabled, CullMode = BaseMaterial3D.CullModeEnum.Disabled, DisableFog = true, AlbedoTexture = halo,
+            },
+        };
+        AddChild(_halo);
     }
 
-    /// <summary>The red lamp lit (the drop is down) or dark.</summary>
+    /// <summary>A drop cell's embers (as the broken bridge's gap glows): the glow under the deck's middle and the haze on its level, hidden while the drop stands.</summary>
+    private (OmniLight3D, MeshInstance3D) Embers(GridPos cell, Transform3D middle)
+    {
+        var glow = BrokenBridge.EmberGlow($"DropGlow_{cell.X}_{cell.Y}");
+        glow.Visible = false;
+        AddChild(glow);
+        glow.GlobalPosition = middle.Origin + Vector3.Down * BrokenBridge.GlowDepth;
+        var haze = BrokenBridge.EmberHaze($"DropHaze_{cell.X}_{cell.Y}", BrokenBridge.HazeSize);
+        haze.Visible = false;
+        AddChild(haze);
+        haze.GlobalPosition = middle.Origin;
+        return (glow, haze);
+    }
+
+    /// <summary>The red lamp lit (the drop is down) or dark, its halo and the cells' embers with it.</summary>
     private void Light(bool on)
     {
+        if (_halo is { } halo && IsInstanceValid(halo)) halo.Visible = on;
+        foreach (var e in _embers)
+            if (e is { } pair && IsInstanceValid(pair.Glow) && IsInstanceValid(pair.Haze)) { pair.Glow.Visible = on; pair.Haze.Visible = on; }
         if (_lampLight is { } light && IsInstanceValid(light)) light.Visible = on;
         if (_lamp is { } lamp && IsInstanceValid(lamp)) lamp.MaterialOverride = on ? _lit : _unlit;
     }

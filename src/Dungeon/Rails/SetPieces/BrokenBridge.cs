@@ -65,13 +65,28 @@ public partial class BrokenBridge : Node3D
         Lamp(wood, "", new Vector3(InnerSide * PostOut, 0f, 0.3f));
         Lamp(wood, "Far", new Vector3(-InnerSide * PostOut, 0f, -GapLength - 0.3f));
         // the embers' glow up through the gap, from under the deck: no shadow, so it reaches the boards' undersides and the broken faces
-        AddChild(new OmniLight3D
-        {
-            Name = "GapGlow", LightColor = new Color(1f, 0.45f, 0.15f), LightEnergy = GlowEnergy, OmniRange = GlowRange, ShadowEnabled = false,
-            Position = new Vector3(0f, -GlowDepth, -GapLength / 2f),
-        });
+        var glow = EmberGlow("GapGlow");
+        glow.Position = new Vector3(0f, -GlowDepth, -GapLength / 2f);
+        AddChild(glow);
         // and the embers' warm haze rising out of it: brightest at the deck's level, fading to nothing at its rim (additive, turned to the eye
         // about the vertical, not lost in the floor's haze; the decks hide its lower half from afar)
+        var haze = EmberHaze("GapHaze", HazeSize);
+        haze.Position = new Vector3(0f, 0f, -GapLength / 2f);
+        AddChild(haze);
+    }
+
+    /// <summary>The embers' glow up out of a drop (<see cref="GlowRange"/>, <see cref="GlowEnergy"/>, no shadow); the cavern's gone decks and the slag line's drop glow as this gap does.</summary>
+    internal static OmniLight3D EmberGlow(string name) => new()
+    {
+        Name = name, LightColor = new Color(1f, 0.45f, 0.15f), LightEnergy = GlowEnergy, OmniRange = GlowRange, ShadowEnabled = false,
+    };
+
+    /// <summary>
+    /// The embers' warm haze rising out of a drop, <paramref name="size"/> across: a round additive glow, brightest at its middle, turned to the
+    /// eye about the vertical, not lost in the floor's haze. Centre it on the deck's level (its lower half is down in the drop).
+    /// </summary>
+    internal static MeshInstance3D EmberHaze(string name, float size)
+    {
         var haze = new GradientTexture2D
         {
             Width = 64, Height = 64, Fill = GradientTexture2D.FillEnum.Radial, FillFrom = new Vector2(0.5f, 0.5f), FillTo = new Vector2(0.5f, 0f),
@@ -81,16 +96,16 @@ public partial class BrokenBridge : Node3D
                 Colors = new[] { new Color(1f, 0.5f, 0.16f, 0.75f), new Color(1f, 0.32f, 0.07f, 0.28f), new Color(1f, 0.25f, 0.05f, 0f) },
             },
         };
-        AddChild(new MeshInstance3D
+        return new MeshInstance3D
         {
-            Name = "GapHaze", Mesh = new QuadMesh { Size = new Vector2(HazeSize, HazeSize) }, Position = new Vector3(0f, 0f, -GapLength / 2f),
+            Name = name, Mesh = new QuadMesh { Size = new Vector2(size, size) },
             CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
             MaterialOverride = new StandardMaterial3D
             {
                 ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded, Transparency = BaseMaterial3D.TransparencyEnum.Alpha, BlendMode = BaseMaterial3D.BlendModeEnum.Add,
                 BillboardMode = BaseMaterial3D.BillboardModeEnum.FixedY, CullMode = BaseMaterial3D.CullModeEnum.Disabled, DisableFog = true, AlbedoTexture = haze,
             },
-        });
+        };
     }
 
     /// <summary>A red lamp on a stub post standing at <paramref name="post"/> (its foot, on the deck): the post, the emissive lamp and its light.</summary>
