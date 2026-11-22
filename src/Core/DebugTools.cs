@@ -967,6 +967,8 @@ public partial class DebugTools : Node
                     var half = Dungeon.DungeonBuilder.CellSize / 2f;
                     GD.Print($"[map] rail split: ride {spl.Ride} points at party S={S(spl.Points):0.0}, crevasse S={S(spl.Crevasse.From) - half:0.0}..{S(spl.Crevasse.To) + half:0.0}");
                 }
+                if (mapLayout.Rail is { Cavern: { } cav } cavRail && Main.Instance.Builder is { PartyTrack: { } partyTrack, EnemyTrack: { } enemyTrack } cavBuilder)
+                    GD.Print($"[map] {CavernLine(mapLayout, cavRail, cav, cart.StopS, cavBuilder, partyTrack, enemyTrack)}");
             }
             if (_trackDepth) _trackDepthDue = true; // the probe's physics queries run on the next physics tick, which prints the map and quits
             else
@@ -4006,6 +4008,37 @@ public partial class DebugTools : Node
             }
         }
     }
+
+    /// <summary>
+    /// --print-map's cavern line (plan 13, Task 2): the cavern's ride and party S from the near edge of its first cell to the far
+    /// edge of its last (as --track-depth's <c>cavern party S=</c>), whether it is flat (every span cell of both lanes at one level and
+    /// none a ramp, nor either lane's cell just before or after the span: the bed eases into a flat neighbour), the drop
+    /// (<see cref="Dungeon.Rails.LeapRules.DropSpan"/>) at its near edge's party S and its slag twins' outer edges on the enemy track,
+    /// the leap stretch (the cavern's start + <see cref="Dungeon.Rails.LeapRules.LeapIn"/> to the drop) and the next stop past it.
+    /// </summary>
+    private static string CavernLine(FloorLayout layout, RailLine rail, RailSpan cav, float[] stops, DungeonBuilder builder, RailTrack partyTrack, RailTrack enemyTrack)
+    {
+        var half = DungeonBuilder.CellSize / 2f;
+        float S(RailTrack t, GridPos c) => t.Curve.GetClosestOffset(t.ToLocal(builder.Surface(c)));
+        // the slag twin: the enemy lane's 4-neighbour of a span cell, one step to the side (the span is straight)
+        var twin = rail.Party[cav.From].Neighbours4().First(n => layout.IsRail(n) && !layout.IsPartyRail(n));
+        var side = twin - rail.Party[cav.From];
+        bool Ramp(GridPos c) => layout.Ramps.ContainsKey(c) || layout[c] == Cell.Ramp;
+        var span = Enumerable.Range(cav.From, cav.To - cav.From + 1).SelectMany(i => new[] { rail.Party[i], rail.Party[i] + side }).ToList();
+        var ends = new[] { cav.From - 1, cav.To + 1 }.Where(i => i >= 0 && i < rail.Party.Count).SelectMany(i => new[] { rail.Party[i], rail.Party[i] + side });
+        var flat = span.Select(layout.LevelOf).Distinct().Count() == 1 && !span.Any(Ramp) && !ends.Any(Ramp);
+        var from = S(partyTrack, rail.Party[cav.From]) - half;
+        var to = S(partyTrack, rail.Party[cav.To]) + half;
+        var r = 1;
+        while (r < stops.Length - 1 && from >= stops[r]) r++;
+        var drop = Dungeon.Rails.LeapRules.DropSpan(cav)!;
+        var dp = S(partyTrack, rail.Party[drop.From]) - half;
+        var e0 = S(enemyTrack, rail.Party[drop.From] + side) - half;
+        var e1 = S(enemyTrack, rail.Party[drop.To] + side) + half;
+        var len = dp - (from + Dungeon.Rails.LeapRules.LeapIn);
+        return $"rail cavern: ride {r} party S={from:0.0}..{to:0.0} ({cav.To - cav.From + 1} cells, flat {flat}), drop {drop.From}..{drop.To} at party S={dp:0.0} (enemy S={e0:0.0}..{e1:0.0}), stretch {len:0.0} m, stop {r} at S={stops[r]:0.0} ({stops[r] - to:0.0} m past)";
+    }
+
     // ---- --rehash-plans=DIR --------------------------------------------------------------------------------
     private string? _rehashDir;
     private bool _rehashed;

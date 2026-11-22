@@ -646,8 +646,8 @@
           "Elite": null
         }
       ],
-      "At": 0.7,
-      "Offset": -3,
+      "At": 0.4872,
+      "Offset": 0,
       "Line": null
     },
     {
@@ -784,6 +784,18 @@
       "Ride": 4,
       "Kind": "split",
       "At": 0.371
+    },
+    {
+      "Id": "r4_bridge",
+      "Ride": 4,
+      "Kind": "bridge",
+      "At": 0.5268
+    },
+    {
+      "Id": "r4_leap",
+      "Ride": 4,
+      "Kind": "leap",
+      "At": 0.5664
     }
   ],
   "Crew": [
