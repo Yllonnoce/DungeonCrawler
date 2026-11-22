@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,12 +11,13 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, and the split's three calls.</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, and the cavern's three (the bridge going, a brake on it, the slag line's drop).</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
         BarkTrigger.Crevasse, BarkTrigger.Barricade, BarkTrigger.SwitchBack, BarkTrigger.SwitchBackNow, BarkTrigger.Runaway,
         BarkTrigger.SplitWait, BarkTrigger.SplitNotYet, BarkTrigger.SplitNow,
+        BarkTrigger.BridgeGoing, BarkTrigger.BridgeBrake, BarkTrigger.SlagDrop,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -219,5 +220,38 @@ public static class RideBarks
             Ranger: new[] { "Now. Throw it.", "Past. Pull." },
             Mage: new[] { "Now! Throw the split!", "We're past! Pull it!" },
             Generic: new[] { "Now — throw the split!", "Throw it behind us!", "Pull it now!" }),
+
+        [BarkTrigger.BridgeGoing] = new Bank(
+            Brand: new[] { "The bridge is going behind us! Keep rolling!", "It's falling in behind! Don't you stop!", "Bridge is coming down! Keep her moving!" },
+            Sable: new[] { "The bridge is going, darling! Keep rolling!", "It's falling in behind us, love! Don't stop!", "Keep her moving, loves, the bridge is going!" },
+            Wren: new[] { "Bridge going. Keep rolling.", "Behind us. Don't stop.", "It's falling. Keep moving." },
+            Ilex: new[] { "The bridge collapses behind us! Keep rolling!", "It falls in at our backs! Do not stop!", "The timbers give way! Keep the cart moving!" },
+            Warrior: new[] { "Bridge is going! Keep rolling!", "Don't stop, it's falling!" },
+            Rogue: new[] { "Bridge is going behind us! Keep moving!", "It's falling in! Don't stop!" },
+            Ranger: new[] { "Bridge going. Keep rolling.", "Don't stop." },
+            Mage: new[] { "The bridge is collapsing! Keep rolling!", "It falls behind us! Don't stop!" },
+            Generic: new[] { "The bridge is going behind us — keep her rolling!", "The bridge is falling in!", "Keep rolling, don't stop!" }),
+
+        [BarkTrigger.BridgeBrake] = new Bank(
+            Brand: new[] { "Off the brake! It's going under us!", "Don't stop here! Let her run!", "No brakes! The bridge is going!" },
+            Sable: new[] { "Off the brake, darling, it's under us!", "Don't stop now, love! Let her run!", "No brakes, loves! The bridge is going!" },
+            Wren: new[] { "Off the brake.", "Don't stop. Run.", "No brakes. Go." },
+            Ilex: new[] { "Release the brake! It falls beneath us!", "Do not stop on this bridge!", "Off the brake, or we go down with it!" },
+            Warrior: new[] { "Off the brake! It's going!", "Don't stop here!" },
+            Rogue: new[] { "Off the brake! Run for it!", "Don't stop, it's under us!" },
+            Ranger: new[] { "Off the brake.", "Don't stop." },
+            Mage: new[] { "Release the brake! It's falling!", "Don't stop on the bridge!" },
+            Generic: new[] { "Don't stop — it's going under us!", "Off the brake!", "Keep going, don't stop!" }),
+
+        [BarkTrigger.SlagDrop] = new Bank(
+            Brand: new[] { "The slag line's going! Leap back!", "Get off that cart! Jump back to us!", "Their deck's falling! Back here, now!" },
+            Sable: new[] { "Their line's going, darling! Leap back!", "Off that cart, love! Jump back to us!", "Back here, loves, their deck is falling!" },
+            Wren: new[] { "Slag line's going. Leap back.", "Jump back. Now.", "Their deck's falling. Back." },
+            Ilex: new[] { "The slag line gives way! Leap back to us!", "Abandon that cart! Leap back across!", "Their deck falls! Back to our cart!" },
+            Warrior: new[] { "Slag line's going! Leap back!", "Jump back to us!" },
+            Rogue: new[] { "Their line's going! Leap back!", "Get off that cart! Jump!" },
+            Ranger: new[] { "Leap back.", "Their deck's falling. Jump." },
+            Mage: new[] { "The slag line falls! Leap back!", "Jump back across, now!" },
+            Generic: new[] { "The slag line's going — leap back!", "Leap back to the cart!", "Jump back, now!" }),
     };
 }

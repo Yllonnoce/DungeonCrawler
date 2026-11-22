@@ -35,14 +35,18 @@ public static class RideInputRules
     public const float BoardReach = 3.5f;
 
     /// <summary>
-    /// "Get out" when seated in this cart; "Board the cart" when it is Held short of the end of the line with a hero seat free and the
-    /// hero within <see cref="BoardReach"/> of the tub; else nothing.
+    /// "Get out" when seated in this cart, unless <paramref name="holdOn"/> (the train rolls on ride 4's collapsing bridge:
+    /// <see cref="BridgeRules.HoldsRiders"/>), when nothing is offered; "Board the cart" when it is Held short of the end of the line with a
+    /// hero seat free and the hero within <see cref="BoardReach"/> of the tub; else nothing.
     /// </summary>
-    public static string BoardPrompt(bool seatedHere, bool held, bool lastStop, bool heroSeatFree, bool inReach)
-        => seatedHere ? "Get out" : held && !lastStop && heroSeatFree && inReach ? "Board the cart" : "";
+    public static string BoardPrompt(bool seatedHere, bool held, bool lastStop, bool heroSeatFree, bool inReach, bool holdOn = false)
+        => seatedHere ? (holdOn ? "" : "Get out") : held && !lastStop && heroSeatFree && inReach ? "Board the cart" : "";
 
-    /// <summary>A rider may get out of the cart it sits in only while up: a downed rider stays slumped in the seat (the server's check of a "Get out" intent).</summary>
-    public static bool MayGetOut(bool seatedHere, bool downed) => seatedHere && !downed;
+    /// <summary>
+    /// A rider may get out of the cart it sits in only while up: a downed rider stays slumped in the seat; and not while <paramref name="holdOn"/>
+    /// (on the collapsing bridge at speed: <see cref="BridgeRules.HoldsRiders"/>). The server's check of a "Get out" intent.
+    /// </summary>
+    public static bool MayGetOut(bool seatedHere, bool downed, bool holdOn = false) => seatedHere && !downed && !holdOn;
 
     /// <summary>
     /// How far a point in the cart's own frame (<paramref name="x"/> across, <paramref name="y"/> up, <paramref name="z"/> along) lies

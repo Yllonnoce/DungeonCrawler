@@ -621,6 +621,8 @@ public partial class ServerWorld : Node
                 var seatedBefore = body.Seated;
                 target.Interact(party, body);
                 if (node is Dungeon.Rails.MineCart && !seatedBefore && body.Seated) Trace.Add($"aboard:{slot.Name}");
+                if (NetSession.Instance.TestServer && node is Dungeon.Rails.MineCart && seatedBefore && body.Seated && Dungeon.Rails.RailEncounterController.Instance?.HoldsRiders() == true)
+                    GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: get out refused (the train rolls on the collapsing bridge)"); // the refusal is RailController.UseCart's
                 if (NetSession.Instance.TestServer && RailPropState(node) is { } propState) { Trace.Add($"prop:{i.Ref}:{propState}"); GD.Print($"[net-server] {slot.Name} used {i.Ref}: now {propState}"); } // test servers only: a lever can be used without end
                 if (node is Items.LootDrop) { _bagDirty = true; Trace.Add("pickup"); }
                 if (node is Dungeon.Props.Chest) Trace.Add("chest");

@@ -48,6 +48,8 @@ public partial class RailEncounterController
         public SplitSwitch? Split;
         public BufferStop? Buffer;
         public Barricade? Barricade;
+        /// <summary>Ride 4's collapsing bridge (plan 13), when built live.</summary>
+        public CavernBridge? Bridge;
         /// <summary>The trestle's seconds left before it falls, or −1 before the cart's front is on it.</summary>
         public float Timer = -1f;
         /// <summary>The pour's phase last tick (a <see cref="PourPhase"/>).</summary>
@@ -97,6 +99,7 @@ public partial class RailEncounterController
         ArmSplit(ride);
         ArmKiln(ride);
         ArmBarricades(ride);
+        ArmBridge(ride);
     }
 
     private void SpawnStander(int index, RailEncounterPlan enc)
@@ -247,6 +250,9 @@ public partial class RailEncounterController
                 case "split":
                     node = BuildSplit(root, piece); // the layout's points: the spur and its lever, or a dead marker
                     break;
+                case "bridge":
+                    node = BuildBridge(root, piece); // the cavern's party deck: its span cut bare and laid cell by cell, or a dead marker
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;
@@ -291,6 +297,7 @@ public partial class RailEncounterController
             {
                 if (piece.Plan.Kind == "hammers") TickHammers(piece, judgeCart: false);
                 else if (piece.Plan.Kind == "pour") TickPour(piece, dt, judgeCart: false);
+                else if (piece.Plan.Kind == "bridge") TickBridge(piece, party, dt); // a collapse under way runs on to the bridge's end after the arrival (Ruling 5)
                 continue;
             }
             switch (piece.Plan.Kind)
@@ -336,6 +343,9 @@ public partial class RailEncounterController
                 case "split":
                     TickSplit(piece, party, rolling);
                     break;
+                case "bridge":
+                    TickBridge(piece, party, dt);
+                    break;
             }
         }
     }
@@ -378,7 +388,7 @@ public partial class RailEncounterController
         return -1;
     }
 
-    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer, barricade), or null.</summary>
+    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer, barricade, bridge), or null.</summary>
     internal Node3D? NetNode(string kind, int index)
     {
         foreach (var p in _pieces)
@@ -393,6 +403,7 @@ public partial class RailEncounterController
                 Net.NetRefs.TrestleKind => p.Trestle,
                 Net.NetRefs.BufferKind => p.Buffer,
                 Net.NetRefs.BarricadeKind => p.Barricade,
+                Net.NetRefs.BridgeKind => p.Bridge,
                 _ => null,
             };
         }
@@ -414,6 +425,7 @@ public partial class RailEncounterController
             if (p.Trestle is { Collapsed: true }) r.CollapsedTrestles.Add(p.Index);
             if (p.Buffer is { Smashed: true }) r.SmashedBuffers.Add(p.Index);
             if (p.Barricade is { IsStanding: false }) r.DownBarricades.Add(p.Index);
+            if (p.Bridge is { } bridge && IsInstanceValid(bridge)) r.BridgeGone = Math.Max(r.BridgeGone, bridge.Gone);
         }
     }
 
@@ -454,6 +466,12 @@ public partial class RailEncounterController
             {
                 if (barricade.IsStanding) barricade.ShowSmashed(at, debris: false); else barricade.ShowStanding();
                 changed.Add($"barricade {i} {(barricade.IsStanding ? "standing" : "down")}");
+            }
+            if (p.Bridge is { } bridge && IsInstanceValid(bridge) && r.BridgeGone != bridge.Gone)
+            {
+                if (r.BridgeGone < bridge.Gone) bridge.Stand();
+                bridge.GiveWay(r.BridgeGone, null); // quietly: no timbers, no cue
+                changed.Add($"bridge {i} {(bridge.Gone == 0 ? "standing" : $"gone {bridge.Gone}")}");
             }
         }
     }

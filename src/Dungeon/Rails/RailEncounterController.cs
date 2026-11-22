@@ -138,6 +138,7 @@ public partial class RailEncounterController : Node
                 ClearRide(wrecked: true);
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
+                BridgeOnWreck(); // the collapse stops where it stands; a spare's takeover stands it again
                 break;
             case CartEventKind.Restored:
                 FreeRideRunaway("the cart is restored"); // a wipe's rise or a load
@@ -145,6 +146,7 @@ public partial class RailEncounterController : Node
                 ClearThrowers();
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
+                BridgeOnRestore();
                 break;
             case CartEventKind.Arrived:
                 ClearRide(); // the ride's runaway is not cleared: it halts behind the held train first (Ruling 13)
@@ -414,7 +416,7 @@ public partial class RailEncounterController : Node
         Warn(run, carrier, warned, true, party, carrier);
     }
 
-    /// <summary>The party line's holes a chaser hops (it judges no set piece, but never floats over a pit): every jump's gap and every fallen trestle, From..To. <paramref name="into"/> is cleared first; no allocation.</summary>
+    /// <summary>The party line's holes a chaser hops (it judges no set piece, but never floats over a pit): every jump's gap, every fallen trestle and the collapsing bridge's gone cells, From..To. <paramref name="into"/> is cleared first; no allocation.</summary>
     internal void CollectPartyLaneHoles(List<(float From, float To)> into)
     {
         into.Clear();
@@ -422,6 +424,7 @@ public partial class RailEncounterController : Node
         {
             if (p.Gap is { } gap && IsInstanceValid(gap)) into.Add((gap.From, gap.To));
             if (p.Trestle is { Collapsed: true } trestle && IsInstanceValid(trestle)) into.Add((trestle.From, trestle.To));
+            if (p.Bridge is { Gone: > 0 } bridge && IsInstanceValid(bridge)) into.Add((bridge.From, bridge.GoneToS)); // so a relief's seat target never lies in it either
         }
     }
 

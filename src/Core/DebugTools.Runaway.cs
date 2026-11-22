@@ -14,7 +14,7 @@ namespace DungeonCrawler.Core;
 // and the cart departs on ride 4; nobody presses anything (a bare --test-runaway runs the split's =after). =tail: the lead pumps throughout; the runaway breaks loose with
 // its front 14-16 m behind the train's last body and its call is heard (RailCalls, BarkTrigger.Runaway); until stop 4 the gap never
 // shrinks below 3 m; the train arrives at stop 4 and the runaway halts with its front 2.5-4 m behind the last body and is gone within 2 s
-// of its halt; nobody is run over. =ram: the crew wagons of stops 1-3 coupled before the restore, the pumpers capped at 0 (nobody
+// of its halt; nobody is run over; ride 4's collapsing bridge is held (enc.DebugHoldBridge(4)), or it would take the runaway. =ram: the crew wagons of stops 1-3 coupled before the restore, the pumpers capped at 0 (nobody
 // pumps); the runaway breaks loose 14-16 m behind and rams the rolling train once: the plating drops by 40 (+-0.5), each seated hero who
 // is up loses 20% (+-1) of max HP and none goes below 1 HP, the NPCs seated in the train are unhurt, nobody leaves a seat, RunawayRams is
 // 1 and stays 1 to stop 4; then the cart is restored at stop 3 again and departs with its plating set to 30: the ram wrecks it, the
@@ -150,6 +150,7 @@ public partial class DebugTools
                 GD.Print($"[runaway] floor 12 ({_rwVariant}): r4_split live at party S={enc.SplitPointsS:0.0}; stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}, party damage scale {TierRules.PartyDamageScale:0.00}");
                 if (DarkLampsOut(root, enc) is { } lit) { Fail(lit); return; }
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
+                if (_rwVariant == "tail") enc.DebugHoldBridge(4); // Ruling 21: the runaway halts behind the train held at stop 4, so the bridge must not take it (--test-cavern=runaway proves the plunge)
                 if (RamBranch)
                 {
                     if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller"); return; }

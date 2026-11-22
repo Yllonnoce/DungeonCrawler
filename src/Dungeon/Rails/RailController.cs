@@ -519,8 +519,11 @@ public partial class RailController : Node
         if (HoldFor(hero)) return CageHoldRules.SeatedPrompt; // a tap still gets out; a held press leaves the prisoners behind
         var seatedHere = hero.Cart == Cart;
         var inReach = seatedHere || RideInputRules.InBoardReach(Cart.TubDistance(hero)); // the server's intent check measures the same
-        return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach);
+        return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach, holdOn: HoldsRiders);
     }
+
+    /// <summary>The train rolls on ride 4's collapsing bridge (plan 13, Ruling 6): "Get out" is neither offered nor taken, on every role.</summary>
+    private static bool HoldsRiders => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.HoldsRiders();
 
     /// <summary>A hero seat (0-3) of the cart's book is free. No allocation.</summary>
     private bool HeroSeatFree()
@@ -574,7 +577,7 @@ public partial class RailController : Node
         if (NetSession.IsClient || !Current) return;
         if (actor.Cart == Cart)
         {
-            if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed)) GetOutWithParty(actor); // a downed rider stays slumped in the seat
+            if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed, holdOn: HoldsRiders)) GetOutWithParty(actor); // a downed rider stays slumped in the seat; nobody gets out on the collapsing bridge at speed (solo and a remote seat's press alike)
             return;
         }
         if (actor.Seated || actor.Downed || actor.Parked || State.Mode != CartMode.Held) return;
@@ -1059,6 +1062,11 @@ public partial class RailController : Node
         if (!GateUp(pick)) EventBus.Instance.Log("The gate is down. Clear the stop.");
     }
 
+    /// <summary>When a seated player in the party's cart last braked (<c>NetSession.Instance.Now</c>; server and solo), or NaN: ride 4's bridge reads it (<see cref="BridgeRules.Braked"/>).</summary>
+    public double LastBrakeAt { get; private set; } = double.NaN;
+    /// <summary>A seated player holds the brake of the rolling cart now (server and solo).</summary>
+    internal bool Braking => _anyBrake && State.Mode == CartMode.Rolling;
+
     /// <summary>
     /// Each seated player brakes (back) or pumps (forward): the one played here from its stick, another player's (on the server) from
     /// its last <see cref="RideIntent"/>. Seated companions pump on a climb, when slow or before a jump. <see cref="RideInputRules.Inputs"/>
@@ -1083,6 +1091,7 @@ public partial class RailController : Node
         var most = DebugTools.Instance?.PumperCap ?? RideInputRules.MaxPumpers; // a test's cap (--test-chase's one-pumper jump); the game's is two
         var (pumpers, brakeOn) = RideInputRules.Inputs(playersPumping, anyBrake, companionsWant, companions, most);
         _anyBrake = anyBrake; // the watchdog: a rider holding the brake stops the cart on purpose
+        if (anyBrake) LastBrakeAt = NetSession.Instance?.Now ?? double.NaN; // ride 4's bridge goes under a train braked within BridgeRules.BrakeMemory
         _playersPumping = brakeOn ? 0 : playersPumping; // the cart sender's dirty test: a player's pump or brake goes out at once
         var companionPumps = pumpers - (brakeOn ? 0 : playersPumping);
         foreach (var hero in party.Adventurers)

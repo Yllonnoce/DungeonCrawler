@@ -62,6 +62,7 @@ public partial class RailEncounterController
             {
                 "beam" => front > p.S + 0.5f,
                 "trestle" => p.Trestle is { } t && front >= t.From,
+                "bridge" => p.Bridge is { } b && front >= b.From,
                 _ => false,
             };
             if (p.Buckets is { } buckets) { if (armed) buckets.Arm(); else buckets.Clear(); }
@@ -74,7 +75,7 @@ public partial class RailEncounterController
     /// Client, each rendered frame (after the cart is posed): the armed ride's presentation under the server's own rules, from this screen's
     /// cart (the follower's S, speed, lane and mode): the beam ducks our seated desktop camera as the front passes it, the heap's and the barricades' lanterns
     /// blink while the cart bears down on them (no bark: a companion's call comes from the server), the buckets run the server's schedule
-    /// from its arm time, and the trestle groans as the front comes onto it. Nothing is judged here. No allocation.
+    /// from its arm time, and the trestle and the cavern's bridge groan as the front comes onto them. Nothing is judged here. No allocation.
     /// </summary>
     private void ClientPresent(float dt)
     {
@@ -108,8 +109,22 @@ public partial class RailEncounterController
                     // the server's rule from our own cart: it groans once as the front first comes onto it, while it stands
                     if (rolling && !piece.Fired && piece.Trestle is { Collapsed: false } trestle && front >= trestle.From) { piece.Fired = true; RideAudio.At("trestle_creak", trestle.Entry); }
                     break;
+                case "bridge":
+                    // as the trestle: the bridge groans once as our front first comes onto it
+                    if (rolling && !piece.Fired && piece.Bridge is { } bridge && front >= bridge.From && front < bridge.To) { piece.Fired = true; RideAudio.At("trestle_creak", bridge.Entry); }
+                    break;
             }
         }
+    }
+
+    /// <summary>
+    /// Client: the server told ride 4's bridge <paramref name="bridge"/> "gone {n}" (its cells given way up to n, the timbers tumbling under
+    /// <paramref name="root"/>) or "stands" (every cell back). True when it was one of those.
+    /// </summary>
+    internal bool ApplyBridgeTold(CavernBridge bridge, string what, Node3D root)
+    {
+        if (!NetSession.IsClient || !IsInstanceValid(bridge)) return false;
+        return bridge.ShowTold(what, root);
     }
 
     /// <summary>Client: our cart's front passed the beam: our hero, seated in it at a desktop, ducks (never in a headset).</summary>

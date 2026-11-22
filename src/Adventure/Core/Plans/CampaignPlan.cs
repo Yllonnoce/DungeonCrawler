@@ -20,6 +20,8 @@ public enum BarkTrigger
     Runaway,
     // ride 4's split: wait to pass it, not yet (thrown short of it: the spur), now (passed: throw it behind us) (plan 12; stock only: RideBarks)
     SplitWait, SplitNotYet, SplitNow,
+    // ride 4's cavern: the bridge going behind the train, a brake on it, the slag line's drop (plan 13; stock only: RideBarks)
+    BridgeGoing, BridgeBrake, SlagDrop,
 }
 
 public sealed class VoicedCharacter

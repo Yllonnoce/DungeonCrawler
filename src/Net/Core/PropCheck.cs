@@ -62,6 +62,8 @@ public sealed class RailPropsDto
     public List<int> SparesUsed { get; set; } = new();
     public List<int> OpenCages { get; set; } = new();
     public bool KeysTaken { get; set; }
+    /// <summary>The party-lane cells of ride 4's collapsing bridge gone now (plan 13; 0 while it stands or with none).</summary>
+    public int BridgeGone { get; set; }
 }
 
 /// <summary>
@@ -107,6 +109,7 @@ public static class PropCheck
             List('H', r.ClearedHeaps); List('V', r.BrokenValves); List('E', r.CollapsedTrestles); List('B', r.SmashedBuffers); List('D', r.DownBarricades);
             List('C', r.SparesUsed); List('W', r.OpenCages);
             sb.Append(r.KeysTaken ? 'K' : '-');
+            sb.Append("|N").Append(r.BridgeGone.ToString(CultureInfo.InvariantCulture));
         }
         return sb.ToString();
     }
@@ -142,6 +145,7 @@ public static class PropCheck
             Compare("barricades down", a.DownBarricades, b.DownBarricades);
             Compare("spares used", a.SparesUsed, b.SparesUsed); Compare("cages open", a.OpenCages, b.OpenCages);
             if (a.KeysTaken != b.KeysTaken) diffs.Add($"orc's keys {(b.KeysTaken ? "taken" : "at the belt")} on the server");
+            if (a.BridgeGone != b.BridgeGone) diffs.Add($"bridge cells gone {a.BridgeGone} -> {b.BridgeGone} on the server");
         }
         return diffs;
     }

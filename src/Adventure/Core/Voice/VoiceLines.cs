@@ -157,6 +157,9 @@ public static class Voices
         BarkTrigger.SplitWait => Delivery.Shout,
         BarkTrigger.SplitNotYet => Delivery.Shout,
         BarkTrigger.SplitNow => Delivery.Shout,
+        BarkTrigger.BridgeGoing => Delivery.Shout,
+        BarkTrigger.BridgeBrake => Delivery.Shout,
+        BarkTrigger.SlagDrop => Delivery.Shout,
         _ => Delivery.Calm,
     };
     public static readonly Dictionary<string, string> Classes = new()

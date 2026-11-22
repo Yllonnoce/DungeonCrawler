@@ -171,6 +171,7 @@ public partial class RailEncounterController
         if (_rails.State.Mode == CartMode.Wrecked || _rails.Wrecks != w.Wrecks) { FreeRideRunaway("the train is wrecked"); return; } // before the event's flush
         if (_rails.Chaser != null) { FreeRideRunaway("a chaser on the party line"); return; }
         if (w.OnSpur) { TickRunawayOnSpur(w, dt, party); return; }
+        if (BridgeTakesRunaway(w)) return; // its front on the collapsing bridge's gone span: down with it (plan 13, Ruling 8)
         if (w.Halted >= 0f)
         {
             if ((w.Halted += dt) >= RunawayLinger) FreeRideRunaway("its halt behind the held train");
