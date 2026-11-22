@@ -1,3 +1,4 @@
+using DungeonCrawler.Adventure;
 using DungeonCrawler.Core;
 using DungeonCrawler.Dungeon.Generation;
 using DungeonCrawler.Net;
@@ -15,6 +16,12 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// takes a press with <see cref="LeapRules.AcceptSlack"/> more (<see cref="LeapAccepts"/>). A leaper is not aboard the party's cart (Ruling 14).
 /// A slag cart that goes any way but the drop (freed, rammed) sets its leapers down first, quietly, on <see cref="CrevasseRules.NearestSetDown"/>
 /// (<see cref="SetDownLeapers"/>). The piece is dead (a marker, logged <c>(dead: …)</c>) with no cavern or by <see cref="LeapRules.Dead"/>.
+/// <para>The drop (Task 5, Rulings 16-18): live, the slag track is cut bare over the drop's twins and a <see cref="SlagDrop"/> lays their rails.
+/// With the party's front <see cref="LeapRules.CallAhead"/> short of the drop (<see cref="TickHeroLeap"/>, once per arming) its cells give way,
+/// the ride's slag carts ring their bells and a seated companion calls it; no leap across is offered after it (<see cref="LeapCalled"/>, a
+/// client's from the drop's tell). A slag cart whose front reaches the drop goes over (<see cref="DropsOverTheLeap"/>): its creatures and any
+/// able human still on its deck fall (<see cref="LeapRules.FallsWithIt"/>), any other hero is hauled back into the party's cart. The drop stands
+/// again at ride 4's arming, a restore and a spare's takeover.</para>
 /// </summary>
 public partial class RailEncounterController
 {
@@ -24,11 +31,20 @@ public partial class RailEncounterController
     /// <summary>The drop's slag twins on the enemy track: the near edge of the first and the far edge of the last (enemy S); NaN with no live leap.</summary>
     internal float LeapDropEnemyS { get; private set; } = float.NaN;
     internal float LeapDropFarEnemyS { get; private set; } = float.NaN;
-    /// <summary>The slag line's going has been called this arming: no leap across is offered after it (Ruling 16; Task 5 calls it).</summary>
+    /// <summary>
+    /// The slag line's going has been called this arming: no leap across is offered after it (Ruling 16). The server's and single player's
+    /// is set at the call (<see cref="TickHeroLeap"/>); a client's is its drop's state, told with the drop (<see cref="ApplyDropTold"/>, the props' catch-up).
+    /// </summary>
     public bool LeapCalled { get; private set; }
     /// <summary>Leaps across and back made on this floor build (tests read them).</summary>
     internal int Leaps { get; private set; }
     internal int LeapsBack { get; private set; }
+    /// <summary>Slag carts gone over the drop, heroes who fell with one, and heroes hauled back at it, on this floor build (tests read them).</summary>
+    internal int LeapDrops { get; private set; }
+    internal int LeapDropFalls { get; private set; }
+    internal int LeapHauls { get; private set; }
+    /// <summary>The live leap's slag-line drop, or null (tests read it).</summary>
+    internal SlagDrop? Drop => _leapPiece?.Drop is { } d && IsInstanceValid(d) ? d : null;
 
     private Piece? _leapPiece;
     private readonly List<Adventurer> _leapersOff = new();
@@ -45,6 +61,7 @@ public partial class RailEncounterController
         var half = DungeonBuilder.CellSize / 2f;
         float drop = float.NaN, near = float.NaN, far = float.NaN;
         var over = false;
+        var twins = new List<GridPos>();
         string? dead;
         if (_layout.Rail is not { Cavern: { } cav } rail || !track.Valid || !_enemy.Valid) dead = "no cavern on this floor";
         else
@@ -59,6 +76,7 @@ public partial class RailEncounterController
                 near = _enemy.ClosestS(_builder.Surface(t0)) - half;
                 far = _enemy.ClosestS(_builder.Surface(t1)) + half;
                 over = CrevasseRules.OverCrevasse(_layout, t0) && CrevasseRules.OverCrevasse(_layout, t1);
+                for (var i = d.From; i <= d.To; i++) twins.Add(rail.Party[i] + step);
             }
             dead = LeapRules.Dead(piece.S, drop, cavFrom, LeapRules.Flat(_layout, cav), hasDrop: span != null && side != null);
         }
@@ -72,7 +90,148 @@ public partial class RailEncounterController
         LeapDropS = drop;
         LeapDropEnemyS = near;
         LeapDropFarEnemyS = far;
+        _enemy.Track.CutMore(new[] { (near, far) }); // the piece's one cut: the slag line laid again once, bare over the drop (the ride-3 gap kept)
+        var slagDrop = new SlagDrop { Name = $"SlagDrop_{id}", NetRef = NetRefs.Leap(piece.Index), Layout = _layout, Twins = twins };
+        root.AddChild(slagDrop); // in the tree first: LaySpan places in its frame
+        slagDrop.Build(_enemy, near, far, InnerSideAt(near));
+        piece.Drop = slagDrop;
         return marker;
+    }
+
+    // ---- the drop (server and single player; a client shows what is told) -------------------------------------------
+
+    /// <summary>
+    /// Server and single player, each tick while the leap's ride is armed and the drop not yet called: with the party's front
+    /// <see cref="LeapRules.CallAhead"/> short of the drop (<see cref="LeapRules.Calls"/>), once per arming, the drop's cells give way, no leap
+    /// across is offered after it, each live slag cart of the ride rings its bell and a seated companion calls it (Ruling 16).
+    /// </summary>
+    private void TickHeroLeap(Piece piece, PartyController party)
+    {
+        if (NetSession.IsClient || piece != _leapPiece || LeapCalled || ArmedRide != piece.Plan.Ride || piece.Drop is not { } drop || !IsInstanceValid(drop)) return;
+        if (_rails.State.Mode == CartMode.Wrecked || !LeapRules.Calls(_rails.Party.FrontS, LeapDropS)) return;
+        LeapCalled = true;
+        drop.GiveWay(GetParent() as Node3D);
+        var aboard = 0;
+        foreach (var cart in _carts)
+        {
+            if (!IsInstanceValid(cart) || cart.Derailed || cart.IsQueuedForDeletion()) continue;
+            if (cart.Sound is { } bell && IsInstanceValid(bell)) bell.RingNow(); // cart_bell
+            aboard += cart.Leapers;
+        }
+        var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.SlagDrop, "The slag line's going — leap back!");
+        GD.Print($"[rails] t={_now:0.00} leap {piece.Plan.Id}: the slag line drops at enemy S={LeapDropEnemyS:0.0}..{LeapDropFarEnemyS:0.0}; called by {by ?? "none (logged)"}; {aboard} hero(es) on a slag deck");
+    }
+
+    /// <summary>
+    /// A slag (or traffic) cart after its step, with the drop called: its front on the drop (at or past its near edge, its back short of the far
+    /// edge) goes over (Rulings 16-17). Each hero on its deck: an able human (<see cref="LeapRules.FallsWithIt"/>) falls with it
+    /// (<see cref="CrevasseWatch.Take"/>), any other is hauled back into a free hero seat of the party's cart by the first seated companion
+    /// (<see cref="LeapBack"/>; with no seat, set down); each creature aboard falls; then it plunges quietly (<see cref="SlagCart.PlungeThrough"/>:
+    /// gone with <c>Derailed</c> on the wire, read as the plunge by every client). True when it went: the caller forgets it.
+    /// </summary>
+    private bool DropsOverTheLeap(SlagCart cart)
+    {
+        if (!LeapCalled || float.IsNaN(LeapDropEnemyS) || !IsInstanceValid(cart) || cart.Derailed || cart.IsQueuedForDeletion()) return false;
+        var run = cart.Run;
+        if (run.Dir < 0 || run.FrontS < LeapDropEnemyS || run.BackS >= LeapDropFarEnemyS) return false; // on the drop: never one wholly past it
+        var watch = CrevasseWatch.Instance is { } w && IsInstanceValid(w) ? w : null;
+        var over = _enemy.Point((LeapDropEnemyS + LeapDropFarEnemyS) / 2f); // they go down into the drop itself (the cart's middle is still over the deck short of it)
+        int fell = 0, hauled = 0, riders = 0;
+        if (cart.Riders.Count > 0)
+        {
+            string? hauler = null;
+            foreach (var mate in Main.Instance.Party.Adventurers)
+                if (IsInstanceValid(mate) && mate.Cart == _rails.Cart && mate.Control == ControlKind.Companion && !mate.Downed && !mate.Parked) { hauler = mate.State.Name; break; }
+            _leapersOff.Clear();
+            foreach (var rider in cart.Riders.Values)
+                if (rider is Adventurer hero && IsInstanceValid(hero)) _leapersOff.Add(hero);
+            foreach (var hero in _leapersOff)
+            {
+                var human = hero.Control is ControlKind.LocalHuman or ControlKind.Remote;
+                var up = !hero.Downed && !hero.Parked;
+                if (LeapRules.FallsWithIt(human, up) && watch != null)
+                {
+                    GD.Print($"[rails] leap: {hero.State.Name} falls with slag cart {cart.CartId} (human, up)");
+                    watch.Take(hero, over); // out of the deck seat, into the crevasse: back when the party next reaches a stop
+                    fell++;
+                    continue;
+                }
+                if (LeapBack(hero, hauledBy: hauler ?? "")) { hauled++; continue; } // logged per Ruling 17: "{companion} hauls {name} back across!"
+                SetDown(hero, cart, "no seat to haul them into"); // never stranded on a cart going over
+            }
+            _leapersOff.Clear();
+        }
+        foreach (var rider in cart.Aboard)
+        {
+            if (!IsInstanceValid(rider) || rider.IsQueuedForDeletion() || !rider.IsAlive) continue;
+            if (watch != null) watch.Take(rider, over);
+            else rider.KillByEnvironment("The crevasse", HazardDamage.Fall);
+            riders++;
+        }
+        var ride = cart.Kind == CartKind.Slag;
+        var told = ride || SwitchBackRules.PlungeTold(NearestHeroTo(over)); // a ride's goes over beside the party; traffic is told only near
+        if (told) EventBus.Instance.Log("The slag cart goes over into the crevasse!");
+        GD.Print($"[rails] t={_now:0.00} slag cart {cart.CartId} ({cart.EncounterId}) goes over the drop at enemy S={run.FrontS:0.0}: {riders} rider(s), {fell} hero(es) fell, {hauled} hauled back");
+        LeapDrops++;
+        LeapDropFalls += fell;
+        LeapHauls += hauled;
+        cart.PlungeThrough(UnderTheDrop());
+        if (IsInstanceValid(cart) && !cart.IsQueuedForDeletion()) cart.QueueFree(); // a plunge refused (it was not in the tree): freed all the same
+        return true;
+    }
+
+    /// <summary>Where the drop's dead lie: the middle of the drop, <see cref="CrevasseRules.HoldDepth"/> below the deck, out of sight (every role reads the same).</summary>
+    internal Vector3 UnderTheDrop()
+    {
+        var cell = DungeonBuilder.WorldToCell(_enemy.Point((LeapDropEnemyS + LeapDropFarEnemyS) / 2f));
+        return _builder.Surface(cell) + Vector3.Down * CrevasseRules.HoldDepth;
+    }
+
+    /// <summary>Client: a slag or traffic cart the server took off the line at enemy S <paramref name="cartS"/> went over the slag line's drop (<see cref="SwitchBackRules.PlungedAt"/> on its near edge).</summary>
+    internal bool DropPlungedAt(float cartS) => !float.IsNaN(LeapDropEnemyS) && SwitchBackRules.PlungedAt(cartS, LeapDropEnemyS);
+
+    /// <summary>Ride <paramref name="ride"/> arms: its drop stands again and may be called again (Ruling 18).</summary>
+    private void ArmLeap(int ride)
+    {
+        if (_leapPiece is { } p && p.Plan.Ride == ride) StandDrop(p, "the ride arms");
+    }
+
+    /// <summary>The party cart's Wrecked event (a fall too): with a spare already taken over, the drop stands again; a plain wreck leaves it as it is.</summary>
+    private void LeapOnWreck()
+    {
+        if (_leapPiece is { } p && _rails.State.Mode != CartMode.Wrecked) StandDrop(p, "a spare takes over");
+    }
+
+    /// <summary>The cart is restored (a wipe's rise or a load): the drop stands again.</summary>
+    private void LeapOnRestore()
+    {
+        if (_leapPiece is { } p) StandDrop(p, "the cart is restored");
+    }
+
+    /// <summary>The drop stands again and its call is undone (server and single player).</summary>
+    private void StandDrop(Piece p, string why)
+    {
+        LeapCalled = false;
+        if (p.Drop is not { } drop || !IsInstanceValid(drop)) return;
+        var was = drop.Dropped;
+        drop.Stand();
+        if (was) GD.Print($"[rails] t={_now:0.00} leap {p.Plan.Id}: the slag line's drop stands again ({why})");
+    }
+
+    /// <summary>
+    /// Client: the server told the drop <paramref name="drop"/> "drops" (its cells given way, the timbers tumbling under <paramref name="root"/>,
+    /// this screen's slag copies ringing their bells) or "stands". <see cref="LeapCalled"/> follows it: no "Leap across" after the call. True when it was one of those.
+    /// </summary>
+    internal bool ApplyDropTold(SlagDrop drop, string what, Node3D root)
+    {
+        if (!NetSession.IsClient || !IsInstanceValid(drop)) return false;
+        var was = drop.Dropped;
+        if (!drop.ShowTold(what, root)) return false;
+        LeapCalled = drop.Dropped;
+        if (!was && drop.Dropped)
+            foreach (var slag in SlagCart.Live)
+                if (IsInstanceValid(slag) && !slag.Derailed && slag.Kind == CartKind.Slag && slag.GetParent() == root && slag.Sound is { } bell && IsInstanceValid(bell)) bell.RingNow();
+        return true;
     }
 
     // ---- the offer (every role) ------------------------------------------------------------------
@@ -215,7 +374,7 @@ public partial class RailEncounterController
     /// <paramref name="cart"/> goes any way but the drop (Ruling 15: freed or rammed): each hero on its deck is set down first, quietly (as
     /// <see cref="RailController.UnseatQuietly"/>: no throw, no run-over, no log), on <see cref="CrevasseRules.NearestSetDown"/>'s cell, never into a drop.
     /// </summary>
-    private void SetDownLeapers(SlagCart cart, string why)
+    internal void SetDownLeapers(SlagCart cart, string why)
     {
         if (cart.Riders.Count == 0) return;
         _leapersOff.Clear();

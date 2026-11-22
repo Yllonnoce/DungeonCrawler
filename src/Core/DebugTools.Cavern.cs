@@ -29,9 +29,16 @@ namespace DungeonCrawler.Core;
 // S 913.1..975.1); "Leap across" is offered to the lead within 2 s of the stretch's start with r4_slag's along offset 1.2 m or less (printed),
 // and never to a companion over the whole stretch, none of whom ever boards it; the lead presses it (LookingAt.Interact): seated on the slag
 // cart's deck seat 0, out of the party cart's book, and its stick pumps and brakes nothing of the train; a seated blow from the deck lowers a
-// rider's HP; 3 s after the leap "Leap back" is pressed and the lead sits in a party hero seat; stop 4 with Leaps == LeapsBack == 1. =wreck:
+// rider's HP; "Leap back" is pressed (Task 5: on the slag line's call) and the lead sits in a party hero seat; stop 4 with Leaps == LeapsBack == 1. =wreck:
 // the lead leaps across, then the train is wrecked (rc.DebugWreck) once the collapse has started: the lead is set down off the freed slag
-// cart up, not fallen, not seated, on a cell where SetDownOk holds, and the collapse's front has not moved 1 s later. Prints [cavern] lines, the timing line
+// cart up, not fallen, not seated, on a cell where SetDownOk holds, and the collapse's front has not moved 1 s later. =leap goes on (Task 5): the
+// lead leaps back on its first frame offered after the slag line's call (not 3 s after the leap); the call is heard 1.5 s or more before r4_slag
+// goes over the drop with 0 heroes fallen and its riders dead; the drop's Deck_ shapes disabled, GoneBridges holding both twins, its lamp lit;
+// stop 4. =stay: the lead leaps across and stays: the call heard 1.5 s or more before the drop, the lead falls with it (Fallen), nothing of the
+// train falls (rc.Falls unchanged), stop 4, and the lead is back within 1 s of the arrival at 25 % HP (FallenReturn). =lone: possession off, the
+// lead leaps across and is downed on the deck (Mangled, HP 0) before the call; at the drop the lead is hauled back into a party hero seat, not
+// fallen, "{companion} hauls {lead} back across!" logged; stop 4. The drop's timing line: "[cavern] timing: drop call t=..., drop t=..." (s
+// since the stretch's start). Prints [cavern] lines, the timing line
 // ("[cavern] timing: bridge call t=..., earliest take t=...", seconds since the rear came onto the bridge; the earliest take is the call
 // + the reaction time: no brake pressed before it counts) and a RESULT.
 public partial class DebugTools
@@ -55,8 +62,15 @@ public partial class DebugTools
     private int _cvEbPhase;
     private float _cvEbAt = float.NaN, _cvFreshT = float.NaN;
     private bool BrakeBranch => _cvVariant is "brake" or "early-brake";
-    /// <summary>=leap and =wreck: r4_slag's riders are spared (harmless and targetable) and the lead leaps across.</summary>
-    private bool LeapBranch => _cvVariant is "leap" or "wreck";
+    /// <summary>=leap, =wreck, =stay and =lone: r4_slag's riders are spared (harmless and targetable) and the lead leaps across.</summary>
+    private bool LeapBranch => _cvVariant is "leap" or "wreck" or "stay" or "lone";
+    /// <summary>The drop (Task 5): the call heard, the drop's call seen, r4_slag gone over, the arrival; the lead (party.Local changes on a fall); r4_slag's riders at the call; the haul's log line.</summary>
+    private float _cvDropHeardT = float.NaN, _cvDropCallT = float.NaN, _cvDropT = float.NaN, _cvLeapArriveT = float.NaN;
+    private Adventurer? _cvLead;
+    private readonly List<Enemies.Enemy> _cvSlagRiders = new();
+    private string? _cvDropCalledBy;
+    private bool _cvHaulLog, _cvGoesOverLog, _cvFellChecked;
+    private float _cvBackHp = float.NaN;
     /// <summary>The leap flows: the phase, the stretch's start, the leap's, the slag cart leapt onto, the blow's target and its HP, the wreck's front.</summary>
     private int _cvLeapPhase;
     private float _cvStretchT = float.NaN, _cvAcrossT = float.NaN, _cvPhaseT = float.NaN, _cvWreckFront = float.NaN, _cvBlowHpBefore;
@@ -77,11 +91,25 @@ public partial class DebugTools
                 if (_done || !_testCavern || RailController.Instance is not { } r) return;
                 if (t == BarkTrigger.BridgeGoing && float.IsNaN(_cvCallT)) _cvCallT = _cvTime;
                 else if (t == BarkTrigger.BridgeBrake && float.IsNaN(_cvBrakeCallT)) _cvBrakeCallT = _cvTime;
+                else if (t == BarkTrigger.SlagDrop && float.IsNaN(_cvDropHeardT))
+                {
+                    _cvDropHeardT = _cvTime;
+                    _cvDropCalledBy = by;
+                    GD.Print($"[cavern] heard the slag line's call (by {by ?? "the log"}) at front S={r.Party.FrontS:0.0}");
+                    return;
+                }
                 else return;
                 GD.Print($"[cavern] heard the {(t == BarkTrigger.BridgeGoing ? "bridge's" : "brake's")} call (by {by ?? "the log"}) at front S={r.Party.FrontS:0.0}, t={_cvTime - _cvRearOnT:0.00} s after the rear came on");
             };
             RailCalls.Called += called;
             _staticUnhooks.Add(() => RailCalls.Called -= called);
+            EventBus.Instance.Message += text =>
+            {
+                if (_done || !_testCavern || _cvLead is not { } lead) return;
+                if (text.EndsWith($" hauls {lead.State.Name} back across!", StringComparison.Ordinal)) { _cvHaulLog = true; GD.Print($"[cavern] logged: \"{text}\""); }
+                if (text == "The slag cart goes over into the crevasse!") _cvGoesOverLog = true;
+                if (text == $"{lead.State.Name} climbs back out of the dark.") _cvBackHp = lead.State.Hp; // ReturnFromCrevasse logs right after it sets the HP
+            };
             EventBus.Instance.PartyWiped += () =>
             {
                 if (_done || !_testCavern) return;
@@ -522,8 +550,16 @@ public partial class DebugTools
             EventBus.Instance.EnemyHurt += hurt;
             _staticUnhooks.Add(() => EventBus.Instance.EnemyHurt -= hurt);
         }
-        if (_cvLeapPhase == 0) { _cvStretchT = _cvAcrossT = _cvPhaseT = _cvWreckFront = float.NaN; _cvSlag = null; _cvBlowTarget = null; _cvBlowHit = _cvWreckDone = false; _cvSwings = 0; _cvLeapPhase = 1; }
+        if (_cvLeapPhase == 0)
+        {
+            _cvStretchT = _cvAcrossT = _cvPhaseT = _cvWreckFront = _cvDropHeardT = _cvDropCallT = _cvDropT = _cvLeapArriveT = float.NaN;
+            _cvSlag = null; _cvBlowTarget = null; _cvBlowHit = _cvWreckDone = _cvHaulLog = _cvGoesOverLog = _cvFellChecked = false; _cvSwings = 0; _cvLeapPhase = 1;
+            _cvLead = me; // party.Local passes on when the lead falls (=stay): the lead is this hero throughout
+            _cvSlagRiders.Clear();
+        }
+        me = _cvLead!;
         var s = rc.State.S;
+        if (v != "wreck" && CavernDropWatch(layout, rc, enc, Fail) == false) return;
         var inStretch = s >= enc.LeapFromS && s < enc.LeapDropS;
         if (inStretch && float.IsNaN(_cvStretchT)) { _cvStretchT = _cvTime; GD.Print($"[cavern] {v}: the party's cart reaches the stretch at S={s:0.0} (v {rc.State.V:0.00}); slag carts on the line {enc.SlagCarts.Count}"); }
         if (inStretch || _cvLeapPhase < 6)
@@ -533,7 +569,7 @@ public partial class DebugTools
                 if (inStretch && enc.LeapOfferFor(mate) != null) { Fail($"companion {mate.State.Name} was offered a leap at S={s:0.0}"); return; }
                 if (mate.Cart is SlagCart) { Fail($"companion {mate.State.Name} boarded a slag cart"); return; }
             }
-        if (rc.Falls != _cvFallsBefore && v == "leap") { Fail("the train fell"); return; }
+        if (rc.Falls != _cvFallsBefore && v != "wreck") { Fail("the train fell"); return; }
         if (enc.BridgeTakes > 0) { Fail($"the bridge took the train ({enc.BridgeTakes})"); return; }
         switch (_cvLeapPhase)
         {
@@ -565,7 +601,17 @@ public partial class DebugTools
                 _cvAcrossT = _cvPhaseT = _cvTime;
                 GD.Print($"[cavern] {v}: the lead leapt across at S={s:0.0}: on {slag.EncounterId}'s deck seat {me.Seat}, out of the party cart's book ({rc.Cart.Riders.Count} rider(s) there)");
                 if (v == "wreck") party.ForcedMoveInput = null;
-                _cvLeapPhase = v == "wreck" ? 10 : 2;
+                _cvLeapPhase = v switch { "wreck" => 10, "stay" => 20, "lone" => 30, _ => 2 };
+                if (v == "stay") _cvMayFall.Add(me.State.Name); // the lead stays on the deck and goes over with it
+                if (v == "lone")
+                {
+                    party.AllowPossession = false; // else solo hands the lead to a seated companion: the downed lead stays the human, judged at the drop
+                    me.State.Mangled = true;       // held down until the drop (calm auto-revive never stands a Mangled member up)
+                    me.State.Hp = 0;
+                    party.OnMemberDowned(me.Index);
+                    GD.Print($"[cavern] lone: the lead {me.State.Name} downed on the deck at S={s:0.0}: downed={me.Downed} on the slag cart={me.Cart == slag} control={me.Control}");
+                    if (!me.Downed || me.Cart != slag) { Fail("the lead is not downed on the slag cart's deck"); return; }
+                }
                 return;
             }
             case 2: // the leaper's stick pumps nothing, then brakes nothing
@@ -604,34 +650,78 @@ public partial class DebugTools
                 _cvPhaseT = _cvTime;
                 return;
             }
-            case 4: // 3 s after the leap across: "Leap back"
+            case 4: // the slag line's call: "Leap back" on its first frame offered after it
             {
-                if (_cvTime - _cvAcrossT < 3f) return;
+                if (float.IsNaN(_cvDropCallT))
+                {
+                    if (_cvTime - _cvAcrossT > 15f) Fail($"the slag line's drop was not called within 15 s of the leap (party front S={rc.Party.FrontS:0.0}, the drop's party S {enc.LeapDropS:0.0})");
+                    return;
+                }
                 if (enc.LeapOfferFor(me) != rc.Cart || me.LookingAt != rc.Cart)
                 {
-                    if (_cvTime - _cvAcrossT > 4.5f) Fail($"\"Leap back\" not offered 4.5 s after the leap (offer {(enc.LeapOfferFor(me) as Node)?.Name ?? "none"}, looking at {me.LookingAt?.GetType().Name ?? "nothing"}, slag front S={_cvSlag?.Run.FrontS:0.0}, drop {enc.LeapDropEnemyS:0.0})");
+                    if (_cvTime - _cvDropCallT > 0.5f) Fail($"\"Leap back\" not offered 0.5 s after the slag line's call (offer {(enc.LeapOfferFor(me) as Node)?.Name ?? "none"}, looking at {me.LookingAt?.GetType().Name ?? "nothing"}, slag front S={_cvSlag?.Run.FrontS:0.0}, drop {enc.LeapDropEnemyS:0.0})");
                     return;
                 }
                 var prompt = rc.Cart.Prompt;
                 var front = _cvSlag!.Run.FrontS;
                 me.LookingAt.Interact(party, me);
                 var seat = rc.Cart.Seats.SeatOf(me.RiderId);
-                GD.Print($"[cavern] {v}: \"{prompt}\" pressed {_cvTime - _cvAcrossT:0.00} s after the leap at S={s:0.0} (the slag cart's front at enemy S={front:0.0}, {enc.LeapDropEnemyS - front:0.0} m short of the drop): the lead in the party cart's seat {seat?.ToString() ?? "none"}");
+                GD.Print($"[cavern] {v}: \"{prompt}\" pressed {_cvTime - _cvAcrossT:0.00} s after the leap, {_cvTime - _cvDropCallT:0.00} s after the slag line's call, at S={s:0.0} (the slag cart's front at enemy S={front:0.0}, {enc.LeapDropEnemyS - front:0.0} m short of the drop): the lead in the party cart's seat {seat?.ToString() ?? "none"}");
                 if (prompt != LeapRules.BackPrompt || me.Cart != rc.Cart || seat is not (>= 0 and < CartSeats.HeroSeats) || _cvSlag.Riders.ContainsKey(me.RiderId) || enc.LeapsBack != 1) { Fail($"the leap back: prompt \"{prompt}\", in the party cart {me.Cart == rc.Cart}, seat {seat}, still on the deck {_cvSlag.Riders.ContainsKey(me.RiderId)}, LeapsBack {enc.LeapsBack}"); return; }
-                _cvLeapSummary = $"\"Leap across\" offered {_cvAcrossT - _cvStretchT:0.00} s into the stretch and taken; a seated blow from the deck in {_cvSwings} swing(s); \"Leap back\" 3 s later into seat {seat}";
+                _cvLeapSummary = $"\"Leap across\" offered {_cvAcrossT - _cvStretchT:0.00} s into the stretch and taken; a seated blow from the deck in {_cvSwings} swing(s); \"Leap back\" {_cvTime - _cvDropCallT:0.00} s after the slag line's call into seat {seat}";
                 _cvLeapPhase = 5;
                 return;
             }
-            case 5: // on to stop 4
-                if (rc.State.Mode == CartMode.Held && !rc.Halted && rc.StopIndex == 4)
+            case 5: // r4_slag goes over the drop with nobody aboard, then on to stop 4
+            {
+                if (inStretch && enc.LeapOfferFor(me) != null) { Fail($"after the call the lead, back in the party cart, was offered {(enc.LeapOfferFor(me) as Node)?.Name} at S={s:0.0}"); return; } // no "Leap across" after the call
+                if (float.IsNaN(_cvDropT)) return; // CavernDropWatch judges the drop
+                if (enc.LeapDropFalls != 0 || me.State.Fallen || me.Cart != rc.Cart) { Fail($"after the drop: {enc.LeapDropFalls} hero(es) fell, the lead fallen={me.State.Fallen}, in the party cart {me.Cart == rc.Cart}"); return; }
+                if (!CavernArrived(rc, enc, s, Fail)) return;
+                GD.Print($"[cavern] {v}: arrived at stop 4: Leaps {enc.Leaps}, LeapsBack {enc.LeapsBack}, the lead seated in the party cart {me.Cart == rc.Cart}");
+                if (enc.Leaps != 1 || enc.LeapsBack != 1) { Fail($"Leaps {enc.Leaps}, LeapsBack {enc.LeapsBack}"); return; }
+                Pass($"{_cvLeapSummary}; the call heard {_cvDropT - _cvDropHeardT:0.00} s before r4_slag went over the drop with 0 heroes fallen and its {_cvSlagRiders.Count} rider(s) dead; the drop's decks gone, its lamp lit; no companion offered; stop 4 with one leap each way");
+                return;
+            }
+            case 20: // =stay: the lead stays on the deck: over the drop with it, then back at stop 4
+            {
+                if (float.IsNaN(_cvDropT)) return;
+                if (!_cvFellChecked)
                 {
-                    GD.Print($"[cavern] {v}: arrived at stop 4: Leaps {enc.Leaps}, LeapsBack {enc.LeapsBack}, the lead seated in the party cart {me.Cart == rc.Cart}");
-                    if (enc.Leaps != 1 || enc.LeapsBack != 1) { Fail($"Leaps {enc.Leaps}, LeapsBack {enc.LeapsBack}"); return; }
-                    Pass($"{_cvLeapSummary}; no companion offered; stop 4 with one leap each way");
-                    return;
+                    _cvFellChecked = true; // the frame of the drop: the lead fell with it
+                    GD.Print($"[cavern] stay: at the drop the lead {me.State.Name} fallen={me.State.Fallen} ({enc.LeapDropFalls} hero(es) fell with it), seated in {(me.Cart as Node)?.Name ?? "nothing"}; falls {rc.Falls - _cvFallsBefore}; the local hero now {party.Local?.State.Name}");
+                    if (!me.State.Fallen || enc.LeapDropFalls != 1 || me.Seated) { Fail("stay: the lead did not fall with the slag cart"); return; }
                 }
-                if (rc.State.Mode == CartMode.Wrecked || rc.StopIndex != 3) Fail($"the train left ride 4 another way (mode {rc.State.Mode}, stop {rc.StopIndex})");
-                else if (_cvClock > 120f) Fail($"ride 4 did not reach stop 4 in 120 s (S={s:0.0})");
+                if (float.IsNaN(_cvLeapArriveT))
+                {
+                    if (!CavernArrived(rc, enc, s, Fail)) return;
+                    _cvLeapArriveT = _cvTime;
+                    GD.Print($"[cavern] stay: arrived at stop 4 {_cvTime - _cvDropT:0.00} s after the drop: falls {rc.Falls - _cvFallsBefore}, the lead fallen={me.State.Fallen}");
+                    if (rc.Falls != _cvFallsBefore) { Fail($"the train fell ({rc.Falls - _cvFallsBefore})"); return; }
+                }
+                if (me.State.Fallen) { if (_cvTime - _cvLeapArriveT > 1f) Fail("stay: the lead not back within 1 s of the arrival at stop 4"); return; }
+                var want = MathF.Max(1f, me.State.Stats[Characters.Stat.MaxHp] * CrevasseRules.ReturnHpFraction);
+                GD.Print($"[cavern] stay: the lead {me.State.Name} back {_cvTime - _cvLeapArriveT:0.00} s after the arrival at HP {_cvBackHp:0.0} of {me.State.Stats[Characters.Stat.MaxHp]:0} as it climbed out (want {want:0.0}; {me.State.Hp:0.0} now), at cell {DungeonBuilder.WorldToCell(me.GlobalPosition)}");
+                if (!(Mathf.Abs(_cvBackHp - want) <= 1f) || me.Downed) { Fail($"stay: the lead came back at HP {_cvBackHp:0.0}, not {want:0.0} (downed {me.Downed})"); return; }
+                Pass($"the lead leapt across and stayed; the call heard {_cvDropT - _cvDropHeardT:0.00} s before the drop; the lead fell with the slag cart, nothing of the train fell; stop 4, the lead back {_cvTime - _cvLeapArriveT:0.00} s after the arrival at 25 % HP");
+                return;
+            }
+            case 30: // =lone: downed on the deck before the call, hauled back at the drop
+            {
+                if (float.IsNaN(_cvDropCallT)) { if (!me.Downed || me.Cart != _cvSlag) { Fail($"lone: before the call the lead downed={me.Downed}, on the slag cart={me.Cart == _cvSlag}"); return; } return; }
+                if (float.IsNaN(_cvDropT)) return;
+                var seat = rc.Cart.Seats.SeatOf(me.RiderId);
+                GD.Print($"[cavern] lone: at the drop the lead is in the party cart's seat {seat?.ToString() ?? "none"} (in its book {me.Cart == rc.Cart}), fallen={me.State.Fallen}, downed={me.Downed}; hauled {enc.LeapHauls}, fell {enc.LeapDropFalls}; the hauler's line logged {_cvHaulLog}");
+                if (me.Cart != rc.Cart || seat is not (>= 0 and < CartSeats.HeroSeats) || me.State.Fallen || enc.LeapHauls != 1 || enc.LeapDropFalls != 0 || !_cvHaulLog) { Fail("lone: the downed lead was not hauled back into a party hero seat"); return; }
+                me.State.Mangled = false; // past: calm auto-revive may stand the lead up again
+                party.AllowPossession = true;
+                _cvLeapPhase = 31;
+                return;
+            }
+            case 31:
+                if (!CavernArrived(rc, enc, s, Fail)) return;
+                if (me.Cart != rc.Cart || me.State.Fallen) { Fail($"lone: at stop 4 the lead in the party cart {me.Cart == rc.Cart}, fallen {me.State.Fallen}"); return; }
+                Pass($"possession off, the lead leapt across and was downed on the deck before the call; at the drop {(_cvHaulLog ? "a companion hauled" : "nobody hauled")} the lead back into a party hero seat, not fallen; r4_slag went over with its {_cvSlagRiders.Count} rider(s); stop 4");
                 return;
             case 10: // =wreck: once the collapse has started, the train is wrecked under the lead on the slag cart
                 if (float.IsNaN(enc.CollapseS) && _cvTime - _cvAcrossT < 6f) return;
@@ -668,5 +758,53 @@ public partial class DebugTools
                 return;
             }
         }
+    }
+
+    /// <summary>
+    /// The leap flows' drop, each frame (Task 5): the call seen (r4_slag's riders noted), then r4_slag gone over: the timing line (the call heard
+    /// 1.5 s or more before it), its riders dead, "The slag cart goes over into the crevasse!" logged, both twins in GoneBridges with their Deck_
+    /// shapes disabled and the drop's lamp lit. False when the flow failed.
+    /// </summary>
+    private bool CavernDropWatch(FloorLayout layout, RailController rc, RailEncounterController enc, Action<string> Fail)
+    {
+        if (float.IsNaN(_cvDropCallT) && enc.LeapCalled)
+        {
+            _cvDropCallT = _cvTime;
+            if (_cvSlag != null && IsInstanceValid(_cvSlag)) _cvSlagRiders.AddRange(_cvSlag.Aboard.Where(e => IsInstanceValid(e) && e.IsAlive));
+            GD.Print($"[cavern] {_cvVariant}: the slag line's drop called at party front S={rc.Party.FrontS:0.0} ({enc.LeapDropS - rc.Party.FrontS:0.0} m short of it), by {_cvDropCalledBy ?? "the log"}; r4_slag's front at enemy S={_cvSlag?.Run.FrontS:0.0}, {_cvSlagRiders.Count} rider(s) aboard; the drop down {enc.Drop?.Dropped}");
+            if (enc.Drop is not { Dropped: true }) { Fail("the drop was called but did not give way"); return false; }
+        }
+        if (float.IsNaN(_cvDropCallT) || !float.IsNaN(_cvDropT) || _cvSlag == null) return true;
+        if (IsInstanceValid(_cvSlag) && !_cvSlag.IsQueuedForDeletion() && !_cvSlag.Derailed)
+        {
+            if (_cvTime - _cvDropCallT > 15f) { Fail($"r4_slag did not go over the drop within 15 s of the call (its front at enemy S={_cvSlag.Run.FrontS:0.0})"); return false; }
+            return true;
+        }
+        _cvDropT = _cvTime;
+        GD.Print($"[cavern] timing: drop call t={_cvDropHeardT - _cvStretchT:0.00}, drop t={_cvDropT - _cvStretchT:0.00} (s since the stretch's start; the call heard {_cvDropT - _cvDropHeardT:0.00} s before r4_slag went over)");
+        var problems = new List<string>();
+        if (float.IsNaN(_cvDropHeardT) || _cvDropT - _cvDropHeardT < 1.5f) problems.Add($"the call heard {_cvDropT - _cvDropHeardT:0.00} s before the drop, under 1.5 s");
+        if (!_cvGoesOverLog) problems.Add("\"The slag cart goes over into the crevasse!\" not logged");
+        var alive = _cvSlagRiders.Count(e => IsInstanceValid(e) && e.IsAlive);
+        if (_cvSlagRiders.Count == 0 || alive > 0) problems.Add($"{alive} of r4_slag's {_cvSlagRiders.Count} rider(s) alive");
+        if (enc.Drop is not { } drop) problems.Add("no live drop");
+        else
+        {
+            var notGone = drop.Twins.Where(c => !layout.GoneBridges.Contains(c) || DeckShape(c) is not { Disabled: true }).Select(c => c.ToString()).ToList();
+            GD.Print($"[cavern] {_cvVariant}: the drop's twins [{string.Join(", ", drop.Twins)}]: GoneBridges {layout.GoneBridges.Count} (the bridge's {enc.BridgeGone}), not gone or with a live footing [{string.Join(", ", notGone)}]; its lamp lit {drop.LampLit}; drops {enc.LeapDrops}, fell {enc.LeapDropFalls}, hauled {enc.LeapHauls}");
+            if (drop.Twins.Count != LeapRules.DropCells || notGone.Count > 0) problems.Add($"the drop's cells not gone: [{string.Join(", ", notGone)}] of {drop.Twins.Count}");
+            if (!drop.LampLit) problems.Add("the drop's lamp is dark");
+        }
+        if (problems.Count > 0) { Fail($"at the drop: {string.Join("; ", problems)}"); return false; }
+        return true;
+    }
+
+    /// <summary>The leap flows' arrival: true once the party's cart is held at stop 4; fails if it left ride 4 another way or took 120 s.</summary>
+    private bool CavernArrived(RailController rc, RailEncounterController enc, float s, Action<string> Fail)
+    {
+        if (rc.State.Mode == CartMode.Held && !rc.Halted && rc.StopIndex == 4) return true;
+        if (rc.State.Mode == CartMode.Wrecked || rc.StopIndex != 3) Fail($"the train left ride 4 another way (mode {rc.State.Mode}, stop {rc.StopIndex})");
+        else if (_cvClock > 120f) Fail($"ride 4 did not reach stop 4 in 120 s (S={s:0.0})");
+        return false;
     }
 }

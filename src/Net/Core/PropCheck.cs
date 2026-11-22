@@ -64,6 +64,8 @@ public sealed class RailPropsDto
     public bool KeysTaken { get; set; }
     /// <summary>The party-lane cells of ride 4's collapsing bridge gone now (plan 13; 0 while it stands or with none).</summary>
     public int BridgeGone { get; set; }
+    /// <summary>Ride 4's slag-line drop has given way (plan 13; false while it stands or with none).</summary>
+    public bool SlagLineDropped { get; set; }
 }
 
 /// <summary>
@@ -110,6 +112,7 @@ public static class PropCheck
             List('C', r.SparesUsed); List('W', r.OpenCages);
             sb.Append(r.KeysTaken ? 'K' : '-');
             sb.Append("|N").Append(r.BridgeGone.ToString(CultureInfo.InvariantCulture));
+            sb.Append(r.SlagLineDropped ? 'L' : '-');
         }
         return sb.ToString();
     }
@@ -146,6 +149,7 @@ public static class PropCheck
             Compare("spares used", a.SparesUsed, b.SparesUsed); Compare("cages open", a.OpenCages, b.OpenCages);
             if (a.KeysTaken != b.KeysTaken) diffs.Add($"orc's keys {(b.KeysTaken ? "taken" : "at the belt")} on the server");
             if (a.BridgeGone != b.BridgeGone) diffs.Add($"bridge cells gone {a.BridgeGone} -> {b.BridgeGone} on the server");
+            if (a.SlagLineDropped != b.SlagLineDropped) diffs.Add($"slag line's drop {(b.SlagLineDropped ? "down" : "standing")} on the server");
         }
         return diffs;
     }

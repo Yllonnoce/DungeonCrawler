@@ -9,7 +9,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// Traffic on a railed floor. Every <see cref="SetPieceRules.SlagTrafficEvery"/> s with no ride's slag cart live, a riderless slag
 /// cart rolls the whole enemy line at cruise (at most one; from just past the broken bridge's gap once the party's cart is beyond it,
-/// <see cref="SwitchBackRules.TrafficStartS"/>); every <see cref="SetPieceRules.RunawayEvery"/> s with the party's cart held at a stop and
+/// <see cref="SwitchBackRules.TrafficStartS"/>, and past the slag line's drop while it is down with the cart beyond it, <see cref="LeapRules.TrafficStartS"/>); every <see cref="SetPieceRules.RunawayEvery"/> s with the party's cart held at a stop and
 /// nobody aboard, a <see cref="RunawayWagon"/> runs the party line from just past that stop to just short of the next (at most one), halts and is freed. Both ring the bell as they start and for a body ahead (their <see cref="CartSound"/>),
 /// warn a body on their lane (<see cref="RailEncounterController"/>'s Warn) and run over whoever is on it; a pocket is safe. An AI-controlled body on foot on a warned lane (a companion, a crew or
 /// escorting NPC) walks to the nearest pocket of that lane within <see cref="SeekRange"/> and holds until the cart has passed, else
@@ -78,7 +78,7 @@ public partial class RailEncounterController
     {
         if (!_enemy.Valid || _rails.StopS.Length < 2) return;
         if (_traffic != null || _carts.Count > 0 || ArmedRide >= 1 || _rails.State.Mode == CartMode.Rolling) _trafficClock = 0f; // never while a ride is armed or the party's cart rolls
-        else if ((_trafficClock += dt) >= SetPieceRules.SlagTrafficEvery) { _trafficClock = 0f; SpawnTraffic(SwitchBackRules.TrafficStartS(_rails.State.S, BreakGapS, BreakGapFarEnemyS)); } // past the broken bridge once the cart is
+        else if ((_trafficClock += dt) >= SetPieceRules.SlagTrafficEvery) { _trafficClock = 0f; SpawnTraffic(LeapRules.TrafficStartS(SwitchBackRules.TrafficStartS(_rails.State.S, BreakGapS, BreakGapFarEnemyS), _rails.State.S, LeapDropS, LeapDropFarEnemyS, Drop is { Dropped: true })); } // past the broken bridge once the cart is, and past the slag line's drop while it is down
 
         var held = _rails.State.Mode == CartMode.Held && !_rails.Halted && ArmedRide < 1 && _rails.Cart.Riders.Count == 0 && _rails.StopIndex < _rails.StopS.Length - 1 && _rails.GateUp(_rails.StopIndex);
         if (!held) _runawayClock = 0f;
@@ -138,6 +138,7 @@ public partial class RailEncounterController
         run.PoseAt(run.State.S);
         SmashAhead(run, cart, enemyTrack: true, cart.Aboard); // riderless: only the timber and its speed pay
         if (DropsThrough(cart)) { _traffic = null; _warnedTraffic.Clear(); return; } // the broken bridge's gap
+        if (DropsOverTheLeap(cart)) { _traffic = null; _warnedTraffic.Clear(); return; } // the slag line's drop, while it is down
         Warn(run, cart, _warnedTraffic, false, party); // the call before any hit
         RunOver(run, cart.HitAt, TrafficSource, SlagCart.HazardIndex, _setAside);
         if (run.State.S >= _enemy.Length - LineEnd || run.State.Mode != CartMode.Rolling || OwnProgressStuck(ref cart.Watch, run, dt, cart))

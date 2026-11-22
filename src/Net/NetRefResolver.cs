@@ -76,7 +76,7 @@ public static class NetRefResolver
                 foreach (var slag in SlagCart.Live) // by its wire id: the server's own carts (a client's copies carry the server's ids)
                     if (slag.CartId == index && GodotObject.IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.GetParent() == root) return slag;
                 return null;
-            case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind or NetRefs.BarricadeKind or NetRefs.BridgeKind:
+            case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind or NetRefs.BarricadeKind or NetRefs.BridgeKind or NetRefs.LeapKind:
                 return RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.GetParent() == root ? enc.NetNode(kind, index) : null;
             case NetRefs.WagonKind or NetRefs.KeyringKind:
                 if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || !GodotObject.IsInstanceValid(crew) || crew.GetParent() != root) return null;

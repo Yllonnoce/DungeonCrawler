@@ -237,8 +237,8 @@ public partial class RailNet
     }
 
     /// <summary>
-    /// A copy goes: derailed (its tumble, its riders set down), or through the broken bridge's gap when the server's cart went at enemy S
-    /// <paramref name="goneS"/> there (<see cref="SwitchBackRules.PlungedAt"/>: quiet, its riders laid in the dark under the gap), or freed (its
+    /// A copy goes: derailed (its tumble, its riders set down), or through the broken bridge's gap or over the slag line's drop when the server's
+    /// cart went at enemy S <paramref name="goneS"/> there (<see cref="SwitchBackRules.PlungedAt"/>: quiet, its riders laid in the dark under it), or freed (its
     /// riders go with it, as the server frees them; the golem is set down).
     /// </summary>
     private void Free(ClientCart cc, bool derailed, float goneS = float.NaN)
@@ -250,6 +250,12 @@ public partial class RailNet
             SetDownSeated(slag); // a leaper still on its deck here (its unseat still in flight, or the server's word lost) is set down where it stands
 
             if (derailed && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.PlungedAt(goneS)) { slag.ShowPlunged(enc.UnderTheGap()); return; }
+            if (derailed && RailEncounterController.Instance is { } leap && IsInstanceValid(leap) && leap.DropPlungedAt(goneS))
+            {
+                slag.ShowPlunged(leap.UnderTheDrop()); // quiet: the crash where it goes, its riders laid in the dark under the drop (the log line is the server's)
+                GD.Print(FormattableString.Invariant($"[net] ride: slag cart {cc.Id} went over the drop here (it went at enemy S={goneS:0.0}; the drop's edge at {leap.LeapDropEnemyS:0.0})"));
+                return;
+            }
             if (derailed) { slag.ShowDerailed(); return; }
             foreach (var rider in slag.Aboard)
                 if (IsInstanceValid(rider) && rider.Carrier == slag && !rider.IsQueuedForDeletion()) rider.QueueFree();

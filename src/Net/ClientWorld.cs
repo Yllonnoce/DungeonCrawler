@@ -571,6 +571,7 @@ public partial class ClientWorld : Node
             case (Dungeon.Rails.Barricade b, "smashed"): b.ShowSmashed(root); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.Barricade b, "standing"): b.ShowStanding(); break;
             case (Dungeon.Rails.CavernBridge cb, _): if (Dungeon.Rails.RailEncounterController.Instance?.ApplyBridgeTold(cb, pe.What, root) == true) Trace.Add("rail-prop"); break; // "gone {n}", "stands" (plan 13)
+            case (Dungeon.Rails.SlagDrop sd, _): if (Dungeon.Rails.RailEncounterController.Instance?.ApplyDropTold(sd, pe.What, root) == true) Trace.Add("rail-prop"); break; // "drops", "stands" (plan 13)
             case (Dungeon.Rails.MineCart spare, "used"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: true); Trace.Add("rail-prop"); break;
             case (Dungeon.Rails.MineCart spare, "restored"): Dungeon.Rails.RailController.Instance?.ShowSpare(spare, used: false); break;
             case (Dungeon.Rails.CageWagon w, "opened"): (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowCageOpen(w.Stop); Trace.Add("rail-prop"); break;

@@ -50,6 +50,8 @@ public partial class RailEncounterController
         public Barricade? Barricade;
         /// <summary>Ride 4's collapsing bridge (plan 13), when built live.</summary>
         public CavernBridge? Bridge;
+        /// <summary>Ride 4's slag-line drop at the leap's end (plan 13), when the leap is built live.</summary>
+        public SlagDrop? Drop;
         /// <summary>The trestle's seconds left before it falls, or −1 before the cart's front is on it.</summary>
         public float Timer = -1f;
         /// <summary>The pour's phase last tick (a <see cref="PourPhase"/>).</summary>
@@ -103,6 +105,7 @@ public partial class RailEncounterController
         ArmKiln(ride);
         ArmBarricades(ride);
         ArmBridge(ride);
+        ArmLeap(ride);
     }
 
     private void SpawnStander(int index, RailEncounterPlan enc)
@@ -352,6 +355,9 @@ public partial class RailEncounterController
                 case "bridge":
                     TickBridge(piece, party, dt);
                     break;
+                case "leap":
+                    TickHeroLeap(piece, party); // the drop's call, 25 m short of it
+                    break;
             }
         }
     }
@@ -410,6 +416,7 @@ public partial class RailEncounterController
                 Net.NetRefs.BufferKind => p.Buffer,
                 Net.NetRefs.BarricadeKind => p.Barricade,
                 Net.NetRefs.BridgeKind => p.Bridge,
+                Net.NetRefs.LeapKind => p.Drop,
                 _ => null,
             };
         }
@@ -432,6 +439,7 @@ public partial class RailEncounterController
             if (p.Buffer is { Smashed: true }) r.SmashedBuffers.Add(p.Index);
             if (p.Barricade is { IsStanding: false }) r.DownBarricades.Add(p.Index);
             if (p.Bridge is { } bridge && IsInstanceValid(bridge)) r.BridgeGone = Math.Max(r.BridgeGone, bridge.Gone);
+            if (p.Drop is { Dropped: true } drop && IsInstanceValid(drop)) r.SlagLineDropped = true;
         }
     }
 
@@ -478,6 +486,12 @@ public partial class RailEncounterController
                 if (r.BridgeGone < bridge.Gone) bridge.Stand();
                 bridge.GiveWay(r.BridgeGone, null); // quietly: no timbers, no cue
                 changed.Add($"bridge {i} {(bridge.Gone == 0 ? "standing" : $"gone {bridge.Gone}")}");
+            }
+            if (p.Drop is { } drop && IsInstanceValid(drop) && r.SlagLineDropped != drop.Dropped)
+            {
+                if (r.SlagLineDropped) drop.GiveWay(null); else drop.Stand(); // quietly: no timbers, no cue
+                LeapCalled = drop.Dropped; // the call and the drop are one moment on the server: no "Leap across" after it
+                changed.Add($"slag drop {i} {(drop.Dropped ? "down" : "standing")}");
             }
         }
     }

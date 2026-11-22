@@ -8,7 +8,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <see cref="MinStretch"/>; the drop (<see cref="DropSpan"/>) is the slag deck's <see cref="DropCells"/> cells, <see cref="DropFromEnd"/>
 /// short of the cavern's end. The offer (Task 4, Rulings 11-13 and 20): a seat change from the party's rolling cart onto a slag cart's deck
 /// alongside, "Leap across" (<see cref="AcrossOffered"/>) and back, "Leap back" (<see cref="BackOffered"/>, the server's <see cref="BackAccepted"/>),
-/// in reach by the rim gap and the decks' overlap (<see cref="InReach"/>). Engine-free.
+/// in reach by the rim gap and the decks' overlap (<see cref="InReach"/>). The drop (Task 5, Rulings 16-18): called <see cref="CallAhead"/> short
+/// (<see cref="Calls"/>); only an able human still aboard falls with the slag cart (<see cref="FallsWithIt"/>); traffic starts past it while it is
+/// down (<see cref="TrafficStartS"/>). Engine-free.
 /// </summary>
 public static class LeapRules
 {
@@ -121,4 +123,30 @@ public static class LeapRules
     /// (a leap's seat in the new cart moves it on every client).
     /// </summary>
     public static bool SendsUnseat(bool seated, bool seatedElsewhereNow) => seated || !seatedElsewhereNow;
+
+    // ---- the drop (Task 5, Rulings 16-18) ---------------------------------------------------------------------------
+
+    /// <summary>The slag line's going is called with the party's front this far short of the drop's near edge (party S; ≈5 s).</summary>
+    public const float CallAhead = 25f;
+
+    /// <summary>
+    /// The drop is called (Ruling 16): the party's front (<paramref name="partyFrontS"/>) at or past the drop's near edge
+    /// (<paramref name="dropS"/>, party S) − <see cref="CallAhead"/>. NaN (no live drop) never.
+    /// </summary>
+    public static bool Calls(float partyFrontS, float dropS) => partyFrontS >= dropS - CallAhead;
+
+    /// <summary>
+    /// A hero still on a slag cart's deck at the drop falls with it (Ruling 17) only human-controlled (<paramref name="human"/>) and
+    /// <paramref name="up"/>; any other (downed, or run by the AI after a possession) is hauled back into the party's cart.
+    /// </summary>
+    public static bool FallsWithIt(bool human, bool up) => human && up;
+
+    /// <summary>
+    /// Where a traffic cart starts on the enemy track (Ruling 18, on top of the ride-3 break's <paramref name="baseStartS"/>): with the slag
+    /// line's drop down (<paramref name="dropped"/>) and the party's cart past it (<paramref name="partyS"/> beyond <paramref name="dropS"/>),
+    /// just past its far edge (<paramref name="dropFarEnemyS"/> + <see cref="SwitchBackRules.TrafficPastGap"/>) unless the base starts later;
+    /// else the base. NaN edges (no live drop) give the base.
+    /// </summary>
+    public static float TrafficStartS(float baseStartS, float partyS, float dropS, float dropFarEnemyS, bool dropped)
+        => dropped && partyS > dropS && !float.IsNaN(dropFarEnemyS) ? MathF.Max(baseStartS, dropFarEnemyS + SwitchBackRules.TrafficPastGap) : baseStartS; // NaN compares false
 }

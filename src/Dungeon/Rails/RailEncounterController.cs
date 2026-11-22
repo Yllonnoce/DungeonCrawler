@@ -139,6 +139,7 @@ public partial class RailEncounterController : Node
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
                 BridgeOnWreck(); // the collapse stops where it stands; a spare's takeover stands it again
+                LeapOnWreck(); // a spare's takeover stands the slag line's drop again
                 break;
             case CartEventKind.Restored:
                 FreeRideRunaway("the cart is restored"); // a wipe's rise or a load
@@ -147,6 +148,7 @@ public partial class RailEncounterController : Node
                 ResetSwitchyard(undone: true);
                 ResetKiln(e.Kind);
                 BridgeOnRestore();
+                LeapOnRestore();
                 break;
             case CartEventKind.Arrived:
                 ClearRide(); // the ride's runaway is not cleared: it halts behind the held train first (Ruling 13)
@@ -312,6 +314,7 @@ public partial class RailEncounterController : Node
             Pace(cart, dt);
             SmashAhead(cart.Run, cart, enemyTrack: true, cart.Aboard); // timber on the slag line ahead of it
             if (DropsThrough(cart)) { _carts.RemoveAt(i); continue; } // the broken bridge's gap: down with its riders
+            if (DropsOverTheLeap(cart)) { _carts.RemoveAt(i); continue; } // the slag line's drop: over with its riders (an able human leaper too)
             RunOver(cart);
             Warn(cart, party);
             var gone = cart.Run.State.S >= _enemy.Length - LineEnd ? "the line's end" : cart.Run.State.Mode != CartMode.Rolling ? "it stopped" : PacingStuck(cart, dt) ? "its pace is stuck" : null;

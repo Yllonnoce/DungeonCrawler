@@ -233,6 +233,8 @@ public partial class SlagCart : AnimatableBody3D, ICartBody, Party.IInteractable
     public void Derail()
     {
         if (Derailed || NetSession.IsClient || IsQueuedForDeletion() || !IsInsideTree() || GetParent() is not Node3D root) return; // a derail queued on a cart already freed does nothing
+        // the shoe is judged at the hit and the derail runs deferred: a hero who leapt on in between is set down first, never left on a derailed deck (Ruling 15)
+        if (Leapers > 0 && RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) enc.SetDownLeapers(this, "its brake shoe broke");
         Derailed = true;
         var at = GlobalPosition;
         Sparks(root, at + Vector3.Up * 0.4f);
