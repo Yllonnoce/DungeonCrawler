@@ -193,10 +193,12 @@ public partial class RailController : ISlopeSource
             if (d.Fell)
             {
                 lost = new List<CageWagon>(_train.Wagons); // the last train told: it went over with the cart
-                // over the cavern bridge's span the bridge took it: seen dropping through the gone cells, this player's eye with it if they rode it
-                // (still seated here, or already told fallen); anywhere else plan 10's plunge
-                if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && Party.FrontS <= enc.BridgeToS + CartRules.HalfLength * 2f)
-                    SeenFall(lost, cart: Cart.Visible, localRode: Core.Main.Instance?.Party?.Local is { } me && IsInstanceValid(me) && (me.Cart == Cart || me.State.Fallen));
+                // the train over the cavern bridge's span (its front past the start, its rear short of the end, as BridgeRules.Catches reads it):
+                // the bridge took it, seen dropping through the gone cells, this player's eye with it if they rode it (still seated here, or already
+                // told fallen right here: not one who fell before, at the drop); anywhere else plan 10's plunge
+                if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing) <= enc.BridgeToS)
+                    SeenFall(lost, cart: Cart.Visible, localRode: Core.Main.Instance?.Party?.Local is { } me && IsInstanceValid(me)
+                        && (me.Cart == Cart || me.State.Fallen && new Vector2(me.GlobalPosition.X - Cart.GlobalPosition.X, me.GlobalPosition.Z - Cart.GlobalPosition.Z).Length() < DungeonBuilder.CellSize));
                 else Plunge(lost, cart: Cart.Visible); // where they stand now, before the state moves them
             }
             else if (Cart.Visible) Tumble(); // where it stands now, before the state moves it

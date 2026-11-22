@@ -166,10 +166,15 @@ public partial class RailController
         if (localRode && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera);
     }
 
+    /// <summary>The seen fall's eye lets go this long (ms) before the held wipe is judged, so the local camera is current when the floor goes.</summary>
+    private const ulong FallEyeLead = 50;
+
     /// <summary>
-    /// <paramref name="eye"/>'s view rides down with <paramref name="falling"/> for <see cref="BridgeRules.FallSeen"/>: a camera like it, at its
-    /// place, a child of the falling body, kept current each frame (a downed player's control passes on as the riders fall), then the party's
-    /// local camera is current again and it is freed.
+    /// <paramref name="eye"/>'s view rides down with <paramref name="falling"/>: a camera like it, at its place, a child of the falling body,
+    /// kept current each frame (a downed player's control passes on as the riders fall) until <see cref="FallEyeLead"/> before the held wipe
+    /// is judged (<see cref="PartyController.WipeHeldUntil"/>; a client, with no wipe of its own to hold, for <see cref="BridgeRules.FallSeen"/>).
+    /// Then the party's local camera is current again and the eye is freed; if the eye went first (freed with the floor the wipe rebuilt,
+    /// or a client's floor change), the local camera is handed back on the rebuilt floor (Task 6 review I1). Every role.
     /// </summary>
     private void FallEye(RigidBody3D falling, Camera3D eye)
     {
@@ -182,23 +187,31 @@ public partial class RailController
         falling.AddChild(cam);
         cam.GlobalTransform = at;
         cam.MakeCurrent();
-        var until = Time.GetTicksMsec() + (ulong)(BridgeRules.FallSeen * 1000f);
+        var now0 = Time.GetTicksMsec();
+        var held = Main.Instance?.Party?.WipeHeldUntil ?? 0UL;
+        var until = held > now0 ? held - Math.Min(FallEyeLead, held - now0) : now0 + (ulong)(BridgeRules.FallSeen * 1000f); // one clock with the wipe's
         var tree = GetTree();
         Action? hold = null; // one delegate, so the same one is let go
         hold = () =>
         {
-            if (IsInstanceValid(cam) && Time.GetTicksMsec() < until)
+            var live = IsInstanceValid(cam);
+            if (live && Time.GetTicksMsec() < until)
             {
                 if (!cam.Current) cam.MakeCurrent();
                 return;
             }
             tree.ProcessFrame -= hold;
-            if (!IsInstanceValid(cam)) return;
-            var wasCurrent = cam.Current;
-            cam.QueueFree();
-            if (wasCurrent && Main.Instance?.Party?.Local is { } now && IsInstanceValid(now)) now.Camera.MakeCurrent();
+            HandBackView(tree); // before the eye goes: the viewport never falls back on another hero's camera
+            if (live) cam.QueueFree();
         };
         tree.ProcessFrame += hold;
+    }
+
+    /// <summary>The party's local hero's camera is made current unless it already is (a headset's rig takes the view back each frame itself).</summary>
+    private static void HandBackView(SceneTree tree)
+    {
+        if (Main.Instance?.Party?.Local is not { } local || !IsInstanceValid(local) || !local.Camera.IsInsideTree()) return;
+        if (tree.Root.GetCamera3D() != local.Camera) local.Camera.MakeCurrent();
     }
 
     /// <summary>One look of the seen fall: <paramref name="body"/> copied onto a rigid body at <paramref name="at"/>, dropping with a third of <paramref name="velocity"/>.</summary>

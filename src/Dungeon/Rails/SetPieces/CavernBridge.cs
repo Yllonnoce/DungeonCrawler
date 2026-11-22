@@ -49,8 +49,10 @@ public partial class CavernBridge : Node3D, ISoundPoint
     private readonly List<Node3D?> _looks = new();
     /// <summary>Each cell's embers under it, shown once it is gone (null headless): the glow light and the haze rising out of the hole.</summary>
     private readonly List<(OmniLight3D Glow, MeshInstance3D Haze)?> _embers = new();
-    /// <summary>The newest this many gone cells cast their embers' light (the rest keep their haze): the hole behind the train reads, few lights burn.</summary>
+    /// <summary>The newest this many gone cells cast their embers' light (more keep their haze: <see cref="HazeCells"/>): the hole behind the train reads, few lights burn.</summary>
     public const int GlowCells = 3;
+    /// <summary>The newest this many gone cells keep their embers' haze (the hole near the train; Task 6 review Minor 10: no 22 billboards once the bridge is gone).</summary>
+    public const int HazeCells = 6;
     private readonly StandardMaterial3D _wood = new() { AlbedoColor = new Color(0.3f, 0.2f, 0.11f), Roughness = 0.95f };
     private readonly StandardMaterial3D _dark = new() { AlbedoColor = new Color(0.17f, 0.11f, 0.06f), Roughness = 1f };
 
@@ -156,13 +158,13 @@ public partial class CavernBridge : Node3D, ISoundPoint
         return (glow, haze);
     }
 
-    /// <summary>Every gone cell's haze shown, the newest <see cref="GlowCells"/>' light too; a standing cell's hidden.</summary>
+    /// <summary>The newest <see cref="HazeCells"/> gone cells' haze shown, the newest <see cref="GlowCells"/>' light too; a standing cell's hidden.</summary>
     private void ShowEmbers()
     {
         for (var k = 0; k < _embers.Count; k++)
         {
             if (_embers[k] is not { } e || !IsInstanceValid(e.Glow) || !IsInstanceValid(e.Haze)) continue;
-            e.Haze.Visible = k < Gone;
+            e.Haze.Visible = k < Gone && k >= Gone - HazeCells;
             e.Glow.Visible = k < Gone && k >= Gone - GlowCells;
         }
     }

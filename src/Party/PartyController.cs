@@ -532,7 +532,9 @@ public partial class PartyController : Node3D
             if (wasAlive && !m.IsAlive) { EventBus.Instance.Log($"{m.Name} falls!"); body.CallDeferred(nameof(Adventurer.Revive)); m.Hp = 0; OnMemberDowned(i); }
             if (m.Effects.Version != _effectVersions[i]) { _effectVersions[i] = m.Effects.Version; m.Recalculate(); }
         }
-        if (Time.GetTicksMsec() >= _wipeHeldUntil && Active.Any() && MangledRules.IsWipe(Active.Select(a => (a.Downed, a.State.Mangled)).ToList()) && Main.Instance?.Builder.Layout != null) { OnPartyWiped(); return; }
+        var wiped = Active.Any() && MangledRules.IsWipe(Active.Select(a => (a.Downed, a.State.Mangled)).ToList()) && Main.Instance?.Builder.Layout != null;
+        if (Time.GetTicksMsec() < _wipeHeldUntil) _wipeLatched |= wiped; // a seen fall: the wipe waits, latched (the spare was refused at the fall)
+        else if (wiped || _wipeLatched && Main.Instance?.Builder.Layout != null) { _wipeLatched = false; OnPartyWiped(); return; }
         AutoRevive(dt);
         TickRescues(dt);
     }
@@ -623,6 +625,10 @@ public partial class PartyController : Node3D
     private bool _wipeJudged;
     /// <summary>The wipe is not judged before this (<see cref="Time.GetTicksMsec"/>, ms): a fall being seen (<see cref="HoldWipe"/>).</summary>
     private ulong _wipeHeldUntil;
+    /// <summary>The party was wiped while the wipe was held: judged when the hold ends, even if a body stood in between (Task 6 review Minor 1).</summary>
+    private bool _wipeLatched;
+    /// <summary>When the held wipe is judged (<see cref="Time.GetTicksMsec"/>, ms; 0 or past: not held). The seen fall's eye lets go just before it.</summary>
+    public ulong WipeHeldUntil => _wipeHeldUntil;
 
     /// <summary>
     /// Hold the wipe's judgement for <paramref name="seconds"/> (server and solo): a train the cavern's bridge takes is seen to fall

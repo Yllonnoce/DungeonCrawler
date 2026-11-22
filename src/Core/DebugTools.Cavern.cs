@@ -50,7 +50,7 @@ namespace DungeonCrawler.Core;
 // are saved, 30 frames drawn before each, the HUD hidden) as PATH_{name}.png: behind/behind_standing (front at the bridge's start + 30 m,
 // once the collapse's front holds short), side/side_nocart (the first offer), drop/drop_standing (the slag line's call), and judges
 // "[cavern] shots: behind diff a px; side diff b px; drop diff c px, drop ember e px" (luma moved > 0.1 over x 20-80 %, y 16-80 %; a, b,
-// c >= 400, e >= 20); for viewing it also saves spawn_before/spawn_after (party S 899 and 901), the joins (bridge_lip_from, bridge_lip_to,
+// c >= 400, e >= 20); for viewing it also saves spawn_before/spawn_after (party S 847 and 849), the joins (bridge_lip_from, bridge_lip_to,
 // drop_lip_near, drop_joint, drop_lip_far, both pieces whole), deckseats/deckseats_marked (after the leap) and stop4/stop4_traffic (at stop
 // 4, looking back at traffic's start past the dropped drop). =brake windowed shoots its take as it is seen falling (take_seat, take_side,
 // take_seat_late).
@@ -76,7 +76,7 @@ public partial class DebugTools
     private float _cvEbAt = float.NaN, _cvFreshT = float.NaN;
     private bool BrakeBranch => _cvVariant is "brake" or "early-brake";
     /// <summary>=leap, =wreck, =stay and =lone: r4_slag's riders are spared (harmless and targetable) and the lead leaps across.</summary>
-    private bool LeapBranch => _cvVariant is "leap" or "wreck" or "stay" or "lone";
+    private bool LeapBranch => _cvVariant is "leap" or "wreck" or "stay" or "lone" or "creep";
     /// <summary>The drop (Task 5): the call heard, the drop's call seen, r4_slag gone over, the arrival; the lead (party.Local changes on a fall); r4_slag's riders at the call; the haul's log line.</summary>
     private float _cvDropHeardT = float.NaN, _cvDropCallT = float.NaN, _cvDropT = float.NaN, _cvLeapArriveT = float.NaN;
     private Adventurer? _cvLead;
@@ -272,7 +272,11 @@ public partial class DebugTools
                 foreach (var a in party.Active)
                     if (a.State.Fallen || a.Downed) problems.Add($"{a.State.Name} fallen={a.State.Fallen} downed={a.Downed}");
                 if (BridgeWhole(layout, enc) is { } broken) problems.Add(broken);
+                // Task 6 review I1: the seen fall's eye is gone and the view is the local hero's own (not another hero's camera the viewport fell back on)
+                var view = GetViewport().GetCamera3D();
+                if (party.Local is { } riser && view != riser.Camera) problems.Add($"the view's camera is {(view == null ? "none" : $"{view.Name} of {(view.GetParent() as Node)?.Name}")}, not the local hero {riser.State.Name}'s");
                 if (problems.Count > 0) { if (_cvClock > 10f) Fail($"the rise: {string.Join("; ", problems)}"); break; }
+                GD.Print($"[cavern] {_cvVariant}: the rise's view is the local hero {party.Local?.State.Name}'s camera");
                 GD.Print($"[cavern] {_cvVariant}: the rise at stop {rc.StopIndex} after {_cvClock:0.0} s with the bridge whole ({enc.BridgeCells} cells, none gone)");
                 _cvPass = 2;
                 _cvStep = 1; _cvClock = 0f; // board and depart again
@@ -594,6 +598,7 @@ public partial class DebugTools
             }
         if (rc.Falls != _cvFallsBefore && v != "wreck") { Fail("the train fell"); return; }
         if (enc.BridgeTakes > 0) { Fail($"the bridge took the train ({enc.BridgeTakes})"); return; }
+        if (v == "creep" && !CavernCreep(rc, enc, party, Fail)) return; // stop, creep and stand before the cavern, then as =leap
         if (CavernShooting && v == "leap")
         {
             CavernPlaces(rc, enc, me);
@@ -845,6 +850,61 @@ public partial class DebugTools
         return false;
     }
 
+    // ---- =creep (Task 6 review I2) ------------------------------------------------------------------------------------------
+
+    /// <summary>=creep stops the train once its S reaches this (after r4_slag's start at S 848, before the split and the cavern).</summary>
+    private const float CreepAt = 855f;
+    /// <summary>=creep's creep: the brake let go until the train has moved this far, then held again for <see cref="CreepStand"/> s.</summary>
+    private const float CreepMetres = 0.6f, CreepStand = 12f;
+    private int _cvCreep;
+    private float _cvCreepT, _cvCreepS;
+
+    /// <summary>
+    /// =creep: at S <see cref="CreepAt"/> the lead brakes the train to a stand, stands 2 s, lets go until it has crept <see cref="CreepMetres"/>,
+    /// brakes again and stands <see cref="CreepStand"/> s (long past the slag watchdog's 10 s window), then lets go: r4_slag, waiting ahead
+    /// of its pace point, must still be on the line (the watchdog does not free a side-by-side cart that waits ahead). True once done (the
+    /// flow then runs on as =leap), false while it holds the train.
+    /// </summary>
+    private bool CavernCreep(RailController rc, RailEncounterController enc, PartyController party, Action<string> Fail)
+    {
+        if (_cvCreep >= 5) return true;
+        var s = rc.State.S;
+        var r4 = enc.SlagCarts.FirstOrDefault(c => c.EncounterId == "r4_slag" && IsInstanceValid(c) && !c.Derailed);
+        switch (_cvCreep)
+        {
+            case 0:
+                if (s < CreepAt) return true;
+                if (r4 == null) { Fail($"creep: r4_slag is not on the line at S={s:0.0}"); return false; }
+                _cvCreep = 1; _cvCreepT = _cvTime;
+                GD.Print($"[cavern] creep: the lead brakes at S={s:0.0} (v {rc.State.V:0.00}); r4_slag at enemy S={r4.Run.State.S:0.0}, its pace point at {enc.Lanes.EnemyS(s):0.0}");
+                break;
+            case 1:
+                if (rc.State.V > 0.05f) { if (_cvTime - _cvCreepT > 6f) { Fail("creep: the train did not stop within 6 s of the brake"); return false; } break; }
+                _cvCreep = 2; _cvCreepT = _cvTime; _cvCreepS = s;
+                GD.Print($"[cavern] creep: stopped at S={s:0.0}");
+                break;
+            case 2:
+                if (_cvTime - _cvCreepT < 2f) break;
+                _cvCreep = 3; _cvCreepT = _cvTime;
+                break;
+            case 3:
+                if (s - _cvCreepS < CreepMetres) { party.ForcedMoveInput = null; if (_cvTime - _cvCreepT > 6f) { Fail("creep: the train did not creep"); return false; } return false; }
+                GD.Print($"[cavern] creep: crept {s - _cvCreepS:0.00} m in {_cvTime - _cvCreepT:0.0} s to S={s:0.0}; the brake again, standing {CreepStand:0} s");
+                _cvCreep = 4; _cvCreepT = _cvTime;
+                break;
+            case 4:
+                if (_cvTime - _cvCreepT < CreepStand + 1f || rc.State.V > 0.05f) break;
+                party.ForcedMoveInput = null;
+                _cvCreep = 5;
+                GD.Print($"[cavern] creep: let go at S={s:0.0} after standing {_cvTime - _cvCreepT:0.0} s; r4_slag {(r4 == null ? "GONE" : $"still on the line at enemy S={r4.Run.State.S:0.0} ({r4.Run.State.S - enc.Lanes.EnemyS(s):0.0} m ahead of its pace point)")}");
+                if (r4 == null) { Fail("creep: r4_slag was freed while it waited ahead of the stopped train"); return false; }
+                _cvClock = 0f; // the ride's 120 s budget from here
+                return true;
+        }
+        party.ForcedMoveInput = new Vector2(0, 1); // the brake
+        return false;
+    }
+
     // ---- Task 6: seen from the seat (Ruling 23, the legibility gate) -------------------------------------------------------
 
     /// <summary>A sight's control ends this far under the deck at its target.</summary>
@@ -859,8 +919,11 @@ public partial class DebugTools
     /// <summary>A pixel differs between twins when its luminance moves by more than this; a pair passes with <see cref="CvDiffMin"/> or more, the drop with <see cref="CvEmberMin"/> embers.</summary>
     private const float CvDiffLuma = 0.1f;
     private const int CvDiffMin = 400, CvEmberMin = 20;
-    /// <summary>The behind pair's bound: about half its measured diff (71014 px) once the gone cells' embers glow (the legibility fix round; a tightening of 400).</summary>
-    private const int CvBehindDiffMin = 35000;
+    /// <summary>
+    /// The behind pair's bound, as a share of the scene crop (so a window of any size is judged alike; Task 6 review Minor 6): about half its
+    /// measured diff once the gone cells' embers glow (71014 px of the 1280x720 crop's 353,894 = 0.20; the legibility fix round, a tightening of 400 px).
+    /// </summary>
+    private const float CvBehindDiffShare = 0.1f;
     /// <summary>The drop's rect on the drop shot reaches this far under the deck (the hole's walls and its embers' haze).</summary>
     private const float CvDropRectDepth = 2f;
     /// <summary>The drop's two cells' corners (the deck's level and <see cref="CvDropRectDepth"/> down), and their rect on the drop shot (image pixels).</summary>
@@ -914,27 +977,52 @@ public partial class DebugTools
         return null;
     }
 
+    /// <summary>A spawn ray stopped nearer the eye than this proves nothing (the seat's own rim, a companion's head): it fails the check.</summary>
+    private const float CvSpawnNear = 3f;
+    /// <summary>r4_slag must start at least this far (enemy S) past the split spur's end, clear of the spur and its crevasse.</summary>
+    private const float CvSpurClear = 2f;
+
     /// <summary>
-    /// r4_slag's spawn is seen by no seat (the legibility fix round): on the first frame it is on the line, a layer-1 ray from every seated
-    /// eye in the party's cart to its tub (0.8 m over its bed) and to its riders' heads (2.3 m) must be blocked. Null, or why not.
+    /// r4_slag's spawn is seen by no seat (the legibility fix round; Task 6 review Minors 4 and 7): on the first frame it is on the line, a
+    /// layer-1 ray from every seated eye in the party's cart to its tub (0.8 m over its bed), its riders' heads (2.3 m) and its two ends
+    /// (0.8 m up) must be blocked, and no farther short of the eye than <see cref="CvSpawnNear"/>; and its start lies
+    /// <see cref="CvSpurClear"/> or more past the split spur's end on the enemy line. Null, or why not.
     /// </summary>
     private string? CavernSpawnUnseen(RailController rc, SlagCart r4)
     {
         _cvSawSpawn = true;
         var eyes = Main.Instance.Party.Active.Where(a => a.Cart == rc.Cart).ToList();
-        var clear = new List<string>();
-        var nearest = float.PositiveInfinity;
+        var fwd = -r4.GlobalTransform.Basis.Z.Normalized();
+        var points = new (string Name, Vector3 At)[]
+        {
+            ("tub", r4.GlobalPosition + Vector3.Up * 0.8f), ("riders' heads", r4.GlobalPosition + Vector3.Up * 2.3f),
+            ("front", r4.GlobalPosition + Vector3.Up * 0.8f + fwd * CartRules.HalfLength), ("back", r4.GlobalPosition + Vector3.Up * 0.8f - fwd * CartRules.HalfLength),
+        };
+        var bad = new List<string>();
+        var blockers = new SortedSet<string>();
+        float nearest = float.PositiveInfinity, nearestBlock = float.PositiveInfinity;
         foreach (var hero in eyes)
-            foreach (var up in new[] { 0.8f, 2.3f })
+            foreach (var (name, at) in points)
             {
                 var eye = hero.Camera.GlobalPosition;
-                var at = r4.GlobalPosition + Vector3.Up * up;
                 nearest = Mathf.Min(nearest, eye.DistanceTo(at));
-                if (Sight(hero, eye, at) == "clear") clear.Add($"{hero.State.Name}'s eye to its {(up < 1f ? "tub" : "riders' heads")} ({eye.DistanceTo(at):0.0} m)");
+                var hit = hero.GetWorld3D().DirectSpaceState.IntersectRay(PhysicsRayQueryParameters3D.Create(eye, at, 1));
+                if (hit.Count == 0) { bad.Add($"{hero.State.Name}'s eye to its {name} is clear ({eye.DistanceTo(at):0.0} m)"); continue; }
+                var by = (hit["collider"].AsGodotObject() as Node)?.Name.ToString() ?? "?";
+                var d = hit["position"].AsVector3().DistanceTo(eye);
+                blockers.Add(by);
+                nearestBlock = Mathf.Min(nearestBlock, d);
+                if (d < CvSpawnNear) bad.Add($"{hero.State.Name}'s eye to its {name} is stopped by {by} only {d:0.0} m from the eye");
             }
-        GD.Print($"[cavern] sight: r4_slag's spawn {(clear.Count == 0 ? "blocked" : "SEEN")} from {eyes.Count} seated eye(s) at enemy S={r4.Run.State.S:0.0} (party S={rc.State.S:0.0}; the nearest eye {nearest:0.0} m off){(clear.Count == 0 ? "" : $": clear from {string.Join(", ", clear)}")}");
+        GD.Print($"[cavern] sight: r4_slag's spawn {(bad.Count == 0 ? "blocked" : "NOT PROVEN UNSEEN")} from {eyes.Count} seated eye(s) to its tub, heads and ends at enemy S={r4.Run.State.S:0.0} (party S={rc.State.S:0.0}; the nearest eye {nearest:0.0} m off; every ray blocked by [{string.Join(", ", blockers)}], the nearest {nearestBlock:0.0} m from its eye){(bad.Count == 0 ? "" : $": {string.Join("; ", bad)}")}");
         if (eyes.Count == 0) return "r4_slag spawned with nobody seated in the party's cart to see it";
-        if (clear.Count > 0) return $"r4_slag's spawn is in sight from the seat: {string.Join(", ", clear)}";
+        if (bad.Count > 0) return $"r4_slag's spawn is not proven out of sight: {string.Join("; ", bad)}";
+        if (RailEncounterController.Instance?.SplitSwitchNode is { } split && IsInstanceValid(split))
+        {
+            var spurS = r4.Run.Track.ClosestS(split.SpurEnd);
+            GD.Print($"[cavern] r4_slag starts at enemy S={r4.Run.State.S:0.0}, {r4.Run.State.S - spurS:0.0} m past the split spur's end (enemy S={spurS:0.0})");
+            if (r4.Run.State.S - spurS < CvSpurClear) return $"r4_slag starts {r4.Run.State.S - spurS:0.0} m past the split spur's end, under {CvSpurClear} m";
+        }
         _cvSeen.Add($"r4_slag's spawn blocked from {eyes.Count} seat(s)");
         return null;
     }
@@ -976,7 +1064,7 @@ public partial class DebugTools
         if (!_cvSawSpawn) missing.Add("r4_slag's spawn (from every seated eye)");
         if (!_cvSawBridge) missing.Add("the bridge front (1 s after the collapse started)");
         if (LeapBranch && !_cvSawSlag) missing.Add("the slag cart (the first frame \"Leap across\" was offered)");
-        if (_cvVariant is "leap" or "stay" && !_cvSawDrop) missing.Add("the drop (at the slag line's call, from the leaper's eye)");
+        if (_cvVariant is "leap" or "stay" or "creep" && !_cvSawDrop) missing.Add("the drop (at the slag line's call, from the leaper's eye)");
         return missing.Count == 0 ? null : $"the sight check never ran: {string.Join("; ", missing)}";
     }
 
@@ -1175,9 +1263,11 @@ public partial class DebugTools
             if (_cvDropRect is not { } rect) return "the drop's rect on the drop shot was not found (its corners are behind the camera)";
             var e = CvEmbers(_cvImages["drop"], rect);
             GD.Print($"[cavern] shots: behind diff {a} px; side diff {b} px; drop diff {c} px, drop ember {e} px");
-            GD.Print($"[cavern] shots: the bounds: behind >= {CvBehindDiffMin}, side and drop >= {CvDiffMin}, ember >= {CvEmberMin}; the drop's embers counted in its projected rect only ({rect.Position.X},{rect.Position.Y} {rect.Size.X}x{rect.Size.Y} px: the hole's two cells, the deck's level to {CvDropRectDepth:0} m down), never the slag cart's heap");
+            var bw = _cvImages["behind"].GetWidth(); var bh = _cvImages["behind"].GetHeight();
+            var behindMin = (int)(CvBehindDiffShare * (((int)(bw * CvCropX1) - (int)(bw * CvCropX0)) * ((int)(bh * CvCropY1) - (int)(bh * CvCropY0))));
+            GD.Print($"[cavern] shots: the bounds: behind >= {behindMin} ({CvBehindDiffShare:P0} of the crop; the diff is {a / (float)Math.Max(1, behindMin) * CvBehindDiffShare:P1}), side and drop >= {CvDiffMin}, ember >= {CvEmberMin}; the drop's embers counted in its projected rect only ({rect.Position.X},{rect.Position.Y} {rect.Size.X}x{rect.Size.Y} px: the hole's two cells, the deck's level to {CvDropRectDepth:0} m down), never the slag cart's heap");
             GD.Print($"[cavern] shots judged on the scene crop x {CvCropX0:P0}-{CvCropX1:P0}, y {CvCropY0:P0}-{CvCropY1:P0} (a pixel differs when its Rec. 709 luma moves by more than {CvDiffLuma}); the drop's embers r > 0.7, 0.3 < g < 0.65, b < 0.35 (shown, not judged: deckseats diff {CvDiffOf("deckseats", "deckseats_marked")} px, stop4 diff {CvDiffOf("stop4", "stop4_traffic")} px, spawn diff {CvDiffOf("spawn_before", "spawn_after")} px)");
-            if (a < CvBehindDiffMin || b < CvDiffMin || c < CvDiffMin || e < CvEmberMin) return $"the cavern does not read from the seat: behind diff {a} px (want >= {CvBehindDiffMin}), side diff {b} px, drop diff {c} px (want >= {CvDiffMin} each), drop ember {e} px in the drop's rect (want >= {CvEmberMin})";
+            if (a < behindMin || b < CvDiffMin || c < CvDiffMin || e < CvEmberMin) return $"the cavern does not read from the seat: behind diff {a} px (want >= {behindMin}, {CvBehindDiffShare:P0} of the crop), side diff {b} px, drop diff {c} px (want >= {CvDiffMin} each), drop ember {e} px in the drop's rect (want >= {CvEmberMin})";
         }
         return null;
     }
@@ -1239,7 +1329,7 @@ public partial class DebugTools
         var c = bridge.Cells;
         for (var k = 0; k < bridge.Gone; k++)
         {
-            if (bridge.GetNodeOrNull<Node3D>($"GoneHaze_{c[k].Cell.X}_{c[k].Cell.Y}") is { } haze) haze.Visible = !shown;
+            if (bridge.GetNodeOrNull<Node3D>($"GoneHaze_{c[k].Cell.X}_{c[k].Cell.Y}") is { } haze) haze.Visible = !shown && k >= bridge.Gone - CavernBridge.HazeCells;
             if (bridge.GetNodeOrNull<Node3D>($"GoneGlow_{c[k].Cell.X}_{c[k].Cell.Y}") is { } glow) glow.Visible = !shown && k >= bridge.Gone - CavernBridge.GlowCells;
         }
     }
@@ -1247,7 +1337,7 @@ public partial class DebugTools
     private static Node3D? CvDeckLook(GridPos cell) => ChasmDressing.Instance?.GetNodeOrNull<Node3D>($"DeckLook_{cell.X}_{cell.Y}");
 
     /// <summary>
-    /// =leap's places, each frame of ride 4 (windowed with --screenshot): r4_slag's spawn from the seat held at party S 899 and 901, looking
+    /// =leap's places, each frame of ride 4 (windowed with --screenshot): r4_slag's spawn from the seat held at party S 847 and 849, looking
     /// at its pace point on the slag lane (spawn_before, spawn_after); behind, with the front held at the bridge's start + 30 m once the
     /// collapse's front holds short of the rear: the lead's view turned 180° (behind; from the party cart's rearmost seated eye while the lead is on the slag deck) and its twin with the gone cells' looks shown again
     /// (behind_standing); and the drop at the S of the slag line's call: the leaper's view forward at the drop's near edge (drop) and its twin

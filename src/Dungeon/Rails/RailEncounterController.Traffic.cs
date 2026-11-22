@@ -186,13 +186,13 @@ public partial class RailEncounterController
 
     /// <summary>
     /// A ride's pacing slag cart, watched while the party's cart rolls (not halted at an obstacle: then the slag cart stands beside it
-    /// on purpose), judged against its pace point: stuck when the point ran on half a metre in 10 s and the cart did not. The caller
-    /// frees it (its riders with it).
+    /// on purpose; nor while a side-by-side cart waits ahead of its pace point, <see cref="CartWatchdog.WaitsAhead"/>), judged against its
+    /// pace point: stuck when the point ran on half a metre in 10 s and the cart did not. The caller frees it (its riders with it).
     /// </summary>
     private bool PacingStuck(SlagCart cart, float dt)
     {
-        var watched = CartWatchdog.SlagWatched(_rails.State.Mode == CartMode.Rolling, _rails.Halted);
         var target = PaceRules.TargetS(Lanes.EnemyS(_rails.State.S), cart.Offset);
+        var watched = CartWatchdog.SlagWatched(_rails.State.Mode == CartMode.Rolling, _rails.Halted) && !CartWatchdog.WaitsAhead(cart.Offset, cart.Run.State.S, target);
         if (!cart.Watch.Observe(dt, cart.Run.State.S, target, watched)) return false;
         GD.Print($"[rails] t={_now:0.00} watchdog: slag cart {cart.EncounterId} is stuck at S={cart.Run.State.S:0.0} (its pace point at {target:0.0}): freed");
         return true;
