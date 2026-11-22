@@ -24,6 +24,25 @@ public sealed record DepthRun(string Track, float FromS, float ToS, IReadOnlyLis
 /// </summary>
 public static class TrackDepthRules
 {
+    /// <summary>
+    /// Floor 12's pinned <c>nofloorDrop</c> counts (plan 13's probe gate): PartyTrack 0 and EnemyTrack 40 (ride 3's broken-bridge gap). The
+    /// verdict does not judge nofloorDrop (a probe over a drop is legitimate), so these expected values are what catches a cavern deck built
+    /// without its footing (a deck that gives way at runtime must still stand at the build). <c>--test-track-view</c> holds the probe to them.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<string, int> Floor12NoFloorDrop = new Dictionary<string, int> { ["PartyTrack"] = 0, ["EnemyTrack"] = 40 };
+
+    /// <summary>Null when every pinned track's measured nofloorDrop is its pin; else why not (a missing deck footing at the build, or the track not probed).</summary>
+    public static string? NoFloorDropPin(IReadOnlyDictionary<string, int> pins, IReadOnlyDictionary<string, int> measured)
+    {
+        var bad = new List<string>();
+        foreach (var (track, want) in pins)
+        {
+            if (!measured.TryGetValue(track, out var got)) bad.Add($"{track} not probed");
+            else if (got != want) bad.Add($"{track} nofloorDrop={got} (pinned {want})");
+        }
+        return bad.Count == 0 ? null : string.Join("; ", bad) + ": a deck footing missing at the build?";
+    }
+
     /// <summary>The probe samples every track every this many metres of S.</summary>
     public const float Step = 0.5f;
     /// <summary>A rail's centre lies this far either side of the centreline; its top this far above the curve.</summary>

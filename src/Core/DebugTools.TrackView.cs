@@ -8,6 +8,8 @@ namespace DungeonCrawler.Core;
 
 // ---- --test-track-view --------------------------------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears and the runaway on ride 4 is held.
+// First (plan 13 Task 7 review I2) the --track-depth probe runs at the build and its nofloorDrop counts must be floor 12's pins
+// (TrackDepthRules.Floor12NoFloorDrop: PartyTrack 0, EnemyTrack 40, ride 3's gap): "[trackview] nofloorDrop at the build: …".
 // The exposed-track fix's view from the seat: the rails over the line's first party ramp (RailBed.RampsOn(layout, rail.Party)[0])
 // and over a lane cell whose buckle roll was laid flat (DungeonBuilder.SparedRailBuckles): one the cart approaches on the cell's own
 // level (no ramp and no other level from the cart's length short of the sighting point to the cell), on the ramp's ride k first, else
@@ -83,6 +85,10 @@ public partial class DebugTools
         {
             case 0 when _tkvClock >= 1.5f:
             {
+                // plan 13's probe gate (Task 7 review I2): the probe's nofloorDrop at the build, pinned (a cavern deck built without its footing)
+                var drops = RunTrackDepth();
+                GD.Print($"[trackview] nofloorDrop at the build: {string.Join(", ", drops.Where(d => TrackDepthRules.Floor12NoFloorDrop.ContainsKey(d.Key)).Select(d => $"{d.Key} {d.Value}"))} (pinned {string.Join(", ", TrackDepthRules.Floor12NoFloorDrop.Select(d => $"{d.Key} {d.Value}"))})");
+                if (TrackDepthRules.NoFloorDropPin(TrackDepthRules.Floor12NoFloorDrop, drops) is { } pin) { Fail($"the probe's nofloorDrop: {pin}"); return; }
                 if (TrackViewTargets(main, layout, rail, rc) is { } why) { Fail(why); return; }
                 _tkvStep++; _tkvClock = 0f;
                 break;
@@ -145,7 +151,7 @@ public partial class DebugTools
                 if (!_tkvControlBlocked || _tkvHeaveLevel && !_tkvHeaveControlBlocked) { Fail("a control never ran"); return; }
                 var heaveControls = _tkvHeaveLevel ? ", the spared cell's controls stopped at the bed's height"
                     : ", the spared cell sighted WITHOUT its controls (the fallback: no spared cell is approached on its own level)";
-                GD.Print($"[trackview] RESULT ok: crest S={_tkvCrestS:0.0} sag S={_tkvSagS:0.0} ({(_tkvClimb ? "climb" : "descent")}, ride {_tkvRide}), heave cell {_tkvHeaveCell} S={_tkvHeaveS:0.0} (ride {_tkvHeaveRide}), {_tkvRays} rays clear, control blocked{heaveControls}{shots}");
+                GD.Print($"[trackview] RESULT ok: nofloorDrop pinned (PartyTrack 0, EnemyTrack 40); crest S={_tkvCrestS:0.0} sag S={_tkvSagS:0.0} ({(_tkvClimb ? "climb" : "descent")}, ride {_tkvRide}), heave cell {_tkvHeaveCell} S={_tkvHeaveS:0.0} (ride {_tkvHeaveRide}), {_tkvRays} rays clear, control blocked{heaveControls}{shots}");
                 _done = true;
                 GetTree().Quit(0);
                 return;

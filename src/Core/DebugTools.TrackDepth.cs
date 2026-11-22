@@ -39,9 +39,11 @@ public partial class DebugTools
 
     private static int Cm(float m) => (int)MathF.Round(m * 100f);
 
-    private void RunTrackDepth()
+    /// <summary>The probe (its lines as above); returns each track's nofloorDrop count by its label (empty with no floor).</summary>
+    private Dictionary<string, int> RunTrackDepth()
     {
-        if (Main.Instance?.Builder is not { Layout: { } layout, FloorRoot: { } root } builder) { GD.PrintErr("[track-depth] no floor"); return; }
+        var drops = new Dictionary<string, int>();
+        if (Main.Instance?.Builder is not { Layout: { } layout, FloorRoot: { } root } builder) { GD.PrintErr("[track-depth] no floor"); return drops; }
         var space = root.GetWorld3D().DirectSpaceState;
         var cm = _trackDepthCm;
         var tracks = new List<RailTrack>();
@@ -144,6 +146,7 @@ public partial class DebugTools
                 DepthLine($"float run {run.Track} S={run.FromS:0.0}..{run.ToS:0.0} cells=[{string.Join(",", run.Cells)}] samples={run.Samples} worst={Cm(run.Worst)}cm cause={CauseName(run.Cause, -1)}");
             var at = worst is { } ww ? $" at S={ww.S.ToString("0.0", CultureInfo.InvariantCulture)} cell={ww.Cell}" : "";
             var floatAt = Cm(worstFloat) > 0 ? $" at S={worstFloatS.ToString("0.0", CultureInfo.InvariantCulture)}" : "";
+            drops[label] = noFloorDrop;
             DepthLine($"{label} length={track.Length:0.0} samples={samples} buried={buriedS.Count} inside={insideS.Count} runs={runs.Count} worst={Cm(worst?.Under ?? 0f)}cm{at} float={Cm(worstFloat)}cm{floatAt} nofloorDrop={noFloorDrop} nofloorOff={noFloorOff} budget={budget} floating={floating}");
             totalBuried += buriedS.Count;
             totalInside += insideS.Count;
@@ -200,6 +203,7 @@ public partial class DebugTools
         var enemyLane = layout.Rail is { } line ? new HashSet<GridPos>(line.Enemy) : new HashSet<GridPos>();
         DepthLine($"spared {spared.Count} rail buckle(s): party {spared.Count(layout.IsPartyRail)}, enemy {spared.Count(enemyLane.Contains)}");
         GD.Print("[track-depth] " + TrackDepthRules.Verdict(totalBuried, totalInside, totalOff, totalBudget, totalFloating, totalRuns, totalWorst, totalFloat, BuckledLaneCells(root, layout), ramps));
+        return drops;
     }
 
     /// <summary>
