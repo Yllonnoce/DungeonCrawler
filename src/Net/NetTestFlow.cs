@@ -2024,7 +2024,7 @@ public partial class NetTestFlow : Node
     private bool _takeStarted, _takeBotSent, _takeRunSeen, _takeRunGoneTold, _takeEyeSeen;
     private int _takeBuilds, _takeWrecks, _takeRunId = -1, _takeRide = -1;
     private float _takeRunS = float.NaN;
-    private double _takeFirstGoneAt = double.NaN, _takeBrakeAt = -1, _takeSeenAt = -1;
+    private double _takeFirstGoneAt = double.NaN, _takeBrakeAt = -1, _takeSeenAt = -1, _takeOutAt = -1;
     private string? _takeBackWhose;
     /// <summary>With the runaway not yet gone down, the take's brake comes anyway once our rear is this far short of the bridge's end (it must catch us on the bridge).</summary>
     private const float TakeBrakeBy = 35f;
@@ -2610,11 +2610,18 @@ public partial class NetTestFlow : Node
                 {
                     riders.ForcedMoveInput = null;
                     _takeSeenAt = _elapsed;
-                    GD.Print(FormattableString.Invariant($"[net] ride: take: the train taken here with our front at S={rc.Party.FrontS:0.0} (the bridge S={enc84.BridgeFromS:0.0}..{enc84.BridgeToS:0.0}, {enc84.BridgeGone}/{enc84.BridgeCells} gone here), {(_takeBrakeAt >= 0 ? $"{_elapsed - _takeBrakeAt:0.00} s after our brake" : "WITHOUT our brake")}"));
+                    GD.Print(FormattableString.Invariant($"[net] ride: take: the train taken here with our front at S={rc.Party.FrontS:0.0} (the bridge S={enc84.BridgeFromS:0.0}..{enc84.BridgeToS:0.0}, {enc84.BridgeGone}/{enc84.BridgeCells} gone here), {(_takeBrakeAt >= 0 ? $"{_elapsed - _takeBrakeAt:0.00} s after our brake" : "WITHOUT our brake")}; {(_takeOutAt >= 0 ? $"our hero out of the cart {_elapsed - _takeOutAt:0.00} s before this state (the server's unseat pose first)" : "our hero in the cart at this state")}"));
                     _clock = 0; _step = 85;
                     return;
                 }
                 if (rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == stop84) { RideLeaveCrew(net, rc, me, "the joiner, for the bridge's take"); return; }
+                // the take's unseat pose reaches us before its Wrecked|Fell state (one ordered stream, BridgeRules.LocalRode), up to some
+                // frames apart (RIDE run 2): out of the cart on the bridge, rolling, we wait for that state a while before calling it a failure
+                if (me.Cart != rc.Cart && rc.StopIndex == stop84 && rc.Party.FrontS >= enc84.BridgeFromS && (_takeOutAt < 0 || _elapsed - _takeOutAt <= 3.0))
+                {
+                    if (_takeOutAt < 0) _takeOutAt = _elapsed;
+                    return;
+                }
                 if (rc.StopIndex != stop84 || me.Cart != rc.Cart)
                 {
                     riders.ForcedMoveInput = null;

@@ -169,8 +169,11 @@ public partial class RailController : ISlopeSource
     internal double NetTrainChangedAt { get; private set; } = -1;
     /// <summary>Client: how many wrecks this screen has shown (a Wrecked flag's rising edge), and the server's clock of the last one's state (the RIDE pass reads them).</summary>
     internal int NetWrecksSeen { get; private set; }
-    /// <summary>Client: when (ms, this process) our player's hero last sat in this cart on a posed frame, and its eye then (the seen fall's start), or 0.</summary>
-    private ulong _localInCartAt;
+    /// <summary>
+    /// Client: our player's hero sat in this cart when the last state was applied or on a posed frame since (<see cref="BridgeRules.LocalRode"/>),
+    /// and its eye the last time it sat there (the seen fall's start).
+    /// </summary>
+    private bool _localInCartSinceState;
     private Transform3D? _localEyeInCart;
     internal double NetWreckedAt { get; private set; } = -1;
 
@@ -199,15 +202,15 @@ public partial class RailController : ISlopeSource
                 // the train over the cavern bridge's span (its front past the start, its rear short of the end, as BridgeRules.Catches reads it):
                 // the bridge took it, seen dropping through the gone cells, this player's eye with it if they rode it (still seated here, or already
                 // told fallen right here: not one who fell before, at the drop); anywhere else plan 10's plunge
-                // (the taken player's own screen has its unseat pose before this state: its hero already stands at the hold point, out of the
-                // seat and not yet told fallen; it rode all the same, seen from where its eye last was in the seat, BridgeRules.LocalRode)
+                // (the taken player's own screen has its unseat pose before this state, on the same ordered stream: its hero already stands at
+                // the hold point, out of the seat and not yet told fallen; it sat there at the last state, so it rode all the same, seen from
+                // where its eye last was in the seat, BridgeRules.LocalRode)
                 if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing) <= enc.BridgeToS)
                 {
                     var me = Core.Main.Instance?.Party?.Local is { } local && IsInstanceValid(local) ? local : null;
                     var inCart = me != null && me.Cart == Cart;
-                    var since = _localInCartAt == 0 ? double.PositiveInfinity : (Time.GetTicksMsec() - _localInCartAt) / 1000.0;
                     var fallenNear = me != null && me.State.Fallen && new Vector2(me.GlobalPosition.X - Cart.GlobalPosition.X, me.GlobalPosition.Z - Cart.GlobalPosition.Z).Length() < DungeonBuilder.CellSize;
-                    var rode = me != null && BridgeRules.LocalRode(inCart, since, fallenNear);
+                    var rode = me != null && BridgeRules.LocalRode(inCart, _localInCartSinceState, fallenNear);
                     SeenFall(lost, cart: Cart.Visible, localRode: rode, eyeFrom: inCart ? null : _localEyeInCart);
                 }
                 else Plunge(lost, cart: Cart.Visible); // where they stand now, before the state moves them
@@ -240,6 +243,20 @@ public partial class RailController : ISlopeSource
         _netBoardingAt = d.ServerTime;
         if (mode != CartMode.Rolling) Cart.Speed = 0f;
         RefreshHud();
+        NoteLocalInCart(fromState: true);
+    }
+
+    /// <summary>
+    /// Client: our hero in this cart, noted for the seen fall: at each applied state (in the cart then, or not: a fresh window) and on each
+    /// posed frame (in the cart: still in the window), with its eye.
+    /// </summary>
+    private void NoteLocalInCart(bool fromState)
+    {
+        var local = Core.Main.Instance?.Party?.Local is { } l && IsInstanceValid(l) ? l : null;
+        var inCart = local != null && local.Cart == Cart;
+        if (fromState) _localInCartSinceState = inCart;
+        else if (inCart) _localInCartSinceState = true;
+        if (inCart && local!.Camera.IsInsideTree()) _localEyeInCart = local.Camera.GlobalTransform;
     }
 
     /// <summary>Client: couple and uncouple the cage wagons so the train is the server's (stops nearest first).</summary>
@@ -275,11 +292,7 @@ public partial class RailController : ISlopeSource
         _train.Pose(s);
         foreach (var rider in Cart.Riders.Values)
             if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
-        if (Core.Main.Instance?.Party?.Local is { } local && IsInstanceValid(local) && local.Cart == Cart && local.Camera.IsInsideTree())
-        {
-            _localInCartAt = Time.GetTicksMsec(); // the seen fall's: our player rode this cart this frame, its eye there
-            _localEyeInCart = local.Camera.GlobalTransform;
-        }
+        NoteLocalInCart(fromState: false); // the seen fall's: our player rode this cart this frame, its eye there
         _train.Follow();
         FeedPartySound(s);
         _hudTimer -= dt;
