@@ -34,11 +34,15 @@ public partial class RailEncounterController
     internal int BridgeTakes { get; private set; }
     /// <summary>The ride runaway the bridge took last: its flags as it went and its front's S (tests read it), or null.</summary>
     internal (bool Rammed, bool Plunged, float FrontS)? BridgeRunawayTaken { get; private set; }
+    /// <summary>When the first call was made this arming (<c>NetSession.Instance.Now</c>), or NaN (tests read it).</summary>
+    internal double BridgeCalledAt => _bridgeCalledAt;
     /// <summary>The stall guard held the front short of the train's rear this arming (tests read it).</summary>
     internal bool BridgeHeldByStall => _bridgeHeldLogged;
 
     private Piece? _bridgePiece;
     private double _bridgeRearOnAt = double.NaN;
+    /// <summary>When the first call was made (<c>NetSession.Instance.Now</c>, the brakes' clock), or NaN: a brake counts only when pressed a reaction time after it (<see cref="BridgeRules.Counts"/>).</summary>
+    private double _bridgeCalledAt = double.NaN;
     private float _bridgePace;
     /// <summary>A wreck or a fall stopped it where it stands, until it stands again.</summary>
     private bool _bridgeStopped;
@@ -64,7 +68,7 @@ public partial class RailEncounterController
         if (cells.Count == 0) dead = _layout.Rail?.Cavern == null ? "no cavern on this floor" : "no deck cell on the cavern's party lane";
         else if (!(Mathf.Abs(piece.S - from) <= BridgeRules.AtSlack)) dead = $"its At lies at S={piece.S:0.0}, {Mathf.Abs(piece.S - from):0.0} m from the span's start (over {BridgeRules.AtSlack:0} m)";
         else if (!LeapRules.Flat(_layout, _layout.Rail?.Cavern)) dead = "the cavern is not flat";
-        else if (!Ordered(cells)) dead = "its cells do not run along the line in order"; // (the floor's ChasmDressing may enter the tree after this: CavernBridge reads it as the cells go)
+        else if (!_cellsOrdered) dead = "its cells do not run along the line in order"; // (the floor's ChasmDressing may enter the tree after this: CavernBridge reads it as the cells go)
         GD.Print($"[rails] bridge {id}: party S={from:0.0}..{to:0.0}, {cells.Count} deck cell(s), over the crevasse {over} ({(dead == null ? "live" : $"dead: {dead}")})");
         if (dead != null)
         {
@@ -92,6 +96,8 @@ public partial class RailEncounterController
         var decks = CrevasseRules.CavernDecks(_layout).Where(_layout.IsPartyRail).ToList();
         if (decks.Count == 0 || !track.Valid) return cells;
         var mids = decks.Select(c => track.ClosestS(_builder.Surface(c))).ToList();
+        _cellsOrdered = true;
+        for (var k = 1; k < mids.Count; k++) if (!(mids[k] > mids[k - 1])) _cellsOrdered = false; // the centres ascend along the line (midpoint joins would hide a swap)
         var half = DungeonBuilder.CellSize / 2f;
         for (var k = 0; k < decks.Count; k++)
         {
@@ -102,11 +108,8 @@ public partial class RailEncounterController
         return cells;
     }
 
-    private static bool Ordered(List<(GridPos Cell, float FromS, float ToS)> cells)
-    {
-        foreach (var c in cells) if (!(c.ToS > c.FromS)) return false;
-        return true;
-    }
+    /// <summary>The last <see cref="PartyDeckCells"/> found the cells' centres ascending along the line.</summary>
+    private bool _cellsOrdered;
 
     // ---- arming and standing again ---------------------------------------------------------------
 
@@ -125,6 +128,7 @@ public partial class RailEncounterController
         bridge.Stand();
         CollapseS = float.NaN;
         _bridgeRearOnAt = double.NaN;
+        _bridgeCalledAt = double.NaN;
         _bridgeStopped = false;
         _bridgeGroaned = _bridgeHeldLogged = _bridgeBrakeCalled = false;
         _bridgeLogged = 0;
@@ -187,11 +191,13 @@ public partial class RailEncounterController
             if (!BridgeRules.Running(_bridgeRearOnAt, _now)) return;
             CollapseS = BridgeFromS;
             _bridgePace = BridgeRules.Pace(_rails.Train.Count);
+            _bridgeCalledAt = NetSession.Instance.Now;
             var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.BridgeGoing, "The bridge is going behind us — keep her rolling!");
             GD.Print($"[rails] t={_now:0.00} bridge {id} goes from S={BridgeFromS:0.0} at {_bridgePace:0.00} m/s ({_rails.Train.Count} wagon(s)); called by {by ?? "none (logged)"}");
             return;
         }
-        var braked = BridgeRules.Braked(_rails.LastBrakeAt, NetSession.Instance.Now);
+        // a brake counts only when pressed a reaction time after the call (Task 3 review I1): until then the front holds short whatever the brake
+        var braked = BridgeRules.Counts(_rails.BrakePressedAt, _rails.LastBrakeAt, _bridgeCalledAt, NetSession.Instance.Now);
         var free = Mathf.Min(BridgeToS, CollapseS + _bridgePace * dt);
         CollapseS = BridgeRules.Advance(CollapseS, BridgeToS, _bridgePace, dt, rear, braked);
         if (!_bridgeHeldLogged && CollapseS < free - 1e-4f)
@@ -217,7 +223,10 @@ public partial class RailEncounterController
         }
         if (!BridgeRules.Catches(rolling, braked, CollapseS, rear)) return;
         BridgeTakes++;
-        GD.Print($"[rails] t={_now:0.00} bridge {id} takes the train at S={rear:0.0} (braked {NetSession.Instance.Now - _rails.LastBrakeAt:0.0} s ago)");
+        GD.Print($"[rails] t={_now:0.00} bridge {id} takes the train at S={rear:0.0} (braked {NetSession.Instance.Now - _rails.LastBrakeAt:0.0} s ago, pressed {_rails.BrakePressedAt - _bridgeCalledAt:0.0} s after the call)");
+        var under = 0; // the cells under the train go with it (up to the cart's front)
+        while (under < bridge.Count && bridge.Cells[under].FromS < _rails.Party.FrontS) under++;
+        bridge.GiveWay(under, GetParent() as Node3D);
         _rails.Fall("The bridge goes out from under the train!"); // its Wrecked event stops the collapse here
     }
 

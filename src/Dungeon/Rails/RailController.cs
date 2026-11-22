@@ -1064,6 +1064,8 @@ public partial class RailController : Node
 
     /// <summary>When a seated player in the party's cart last braked (<c>NetSession.Instance.Now</c>; server and solo), or NaN: ride 4's bridge reads it (<see cref="BridgeRules.Braked"/>).</summary>
     public double LastBrakeAt { get; private set; } = double.NaN;
+    /// <summary>When the brake held last (or now) was pressed (<c>NetSession.Instance.Now</c>; <see cref="BridgeRules.NewPress"/>), or NaN: the bridge counts only a press made after its warning (<see cref="BridgeRules.Counts"/>).</summary>
+    public double BrakePressedAt { get; private set; } = double.NaN;
     /// <summary>A seated player holds the brake of the rolling cart now (server and solo).</summary>
     internal bool Braking => _anyBrake && State.Mode == CartMode.Rolling;
 
@@ -1090,8 +1092,13 @@ public partial class RailController : Node
         var companionsWant = input.Slope > CartRules.ClimbSlope || State.V < 0.7f * CartRules.Cruise || GapAhead(PumpForJump); // a jump ahead wants every arm on the lever
         var most = DebugTools.Instance?.PumperCap ?? RideInputRules.MaxPumpers; // a test's cap (--test-chase's one-pumper jump); the game's is two
         var (pumpers, brakeOn) = RideInputRules.Inputs(playersPumping, anyBrake, companionsWant, companions, most);
+        if (anyBrake && NetSession.Instance is { } session) // ride 4's bridge goes under a train braked within BridgeRules.BrakeMemory by a press made after its warning
+        {
+            var now = session.Now;
+            if (BridgeRules.NewPress(_anyBrake, LastBrakeAt, now)) BrakePressedAt = now;
+            LastBrakeAt = now;
+        }
         _anyBrake = anyBrake; // the watchdog: a rider holding the brake stops the cart on purpose
-        if (anyBrake) LastBrakeAt = NetSession.Instance?.Now ?? double.NaN; // ride 4's bridge goes under a train braked within BridgeRules.BrakeMemory
         _playersPumping = brakeOn ? 0 : playersPumping; // the cart sender's dirty test: a player's pump or brake goes out at once
         var companionPumps = pumpers - (brakeOn ? 0 : playersPumping);
         foreach (var hero in party.Adventurers)

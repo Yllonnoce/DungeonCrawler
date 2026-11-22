@@ -16,14 +16,17 @@ namespace DungeonCrawler.Core;
 // after the train's rear came onto it; its front never comes within 2 m of the rear; while the train is held on it (enc.HoldsRiders) the
 // seated lead's prompt is "" and a "Get out" press is refused; every party cell is gone within 6 s of the arrival at stop 4 (GoneBridges
 // holds them, their Deck_ shapes disabled; the flow says how long before or after the arrival the last went); a following rc.Restore(3)
-// stands it whole. =brake: the lead brakes from 1 s after the collapse starts: "Don't stop" is called before the take, the take comes 1.5 s
-// or more after the call, rc.Falls rises by 1 with every rider fallen within 1 s, the wipe rises at stop 3 with the bridge whole, and the
+// stands it whole. =brake: the lead brakes from 1.6 s after the collapse starts (past the reaction time, BridgeRules.ReactionTime): "Don't
+// stop" is called before the take, the take comes 1.5 s or more after the call by a press made 1.5 s or more after it, rc.Falls rises by 1 with every rider fallen within 1 s, the wipe rises at stop 3 with the bridge whole, and the
 // next departure, unbraked, reaches stop 4. =stall: the train is caught (rc.DebugStall) once the collapse has started (its rear 6 m or more on
 // the bridge), nobody braking: the bridge is held by the stall guard, never takes the train, and the watchdog frees it to stop 4. =runaway:
 // the runaway is real, the split left straight, the lead pumps: the runaway goes down with the bridge with its front within 8 m of the
-// bridge's start, its body neither rammed nor plunged as it went; no ram; stop 4. Prints [cavern] lines, the timing line
-// ("[cavern] timing: bridge call t=..., earliest take t=...", seconds since the rear came onto the bridge; the earliest take is a train
-// stopped dead at the call) and a RESULT.
+// bridge's start, its body neither rammed nor plunged as it went; no ram; stop 4. =early-brake (Task 3 review I1): the lead brakes as the
+// bridge groans and holds it through the call and 3 s past it: held short (the front never past the bridge's start or 2 m behind the
+// rear, whichever is further on), alive, no take; lets go
+// for 1 s (no take), then a fresh brake: the take comes only after that press (made past the reaction time), then as =brake. Prints [cavern] lines, the timing line
+// ("[cavern] timing: bridge call t=..., earliest take t=...", seconds since the rear came onto the bridge; the earliest take is the call
+// + the reaction time: no brake pressed before it counts) and a RESULT.
 public partial class DebugTools
 {
     private bool _testCavern;
@@ -41,6 +44,10 @@ public partial class DebugTools
     private float _cvFrontAtArrival = float.NaN;
     /// <summary>=brake: the first pass's take, said in the RESULT after the second pass.</summary>
     private string _cvTakeSummary = "";
+    /// <summary>=early-brake: 0 before the groan, 1 braking from it, 2 let go, 3 braking afresh; the fresh press's time.</summary>
+    private int _cvEbPhase;
+    private float _cvEbAt = float.NaN, _cvFreshT = float.NaN;
+    private bool BrakeBranch => _cvVariant is "brake" or "early-brake";
 
     /// <summary>The calls, the wipe and the train's fall, heard once per run (the cart's events per floor build).</summary>
     private void CavernListen(RailController rc)
@@ -137,6 +144,8 @@ public partial class DebugTools
                 _cvRearOnT = _cvCollapseT = _cvCallT = _cvBrakeCallT = _cvTakeT = _cvArriveT = _cvAllGoneT = _cvEarliestTakeT = _cvRunawayT = float.NaN;
                 _cvMinGap = float.PositiveInfinity;
                 _cvHoldChecked = _cvBraking = _cvStalled = false;
+                _cvEbPhase = 0;
+                _cvEbAt = _cvFreshT = float.NaN;
                 GD.Print($"[cavern] pass {_cvPass} departed stop 3 at S={rc.State.S:0.0}: {_cvRiders.Count} rider(s), {rc.Train.Count} wagon(s), the lead pumping={v == "runaway"}");
                 _cvStep++; _cvClock = 0f;
                 break;
@@ -169,14 +178,14 @@ public partial class DebugTools
                 if (_cvWiped && _cvFallenAtWreck < _cvRiders.Count) { Fail($"{_cvRiders.Count - _cvFallenAtWreck} of {_cvRiders.Count} riders not fallen at the take, and the party wiped"); return; }
                 var standing = _cvFallenAtWreck == _cvRiders.Count || _cvWiped ? new List<Adventurer>() : _cvRiders.Where(a => !a.State.Fallen).ToList();
                 if (standing.Count > 0) { if (_cvClock > 1f) Fail($"within 1 s of the take {string.Join(", ", standing.Select(a => a.State.Name))} not fallen"); break; }
-                GD.Print($"[cavern] brake: every rider fallen [{string.Join(", ", _cvRiders.Select(a => a.State.Name))}] ({_cvFallenAtWreck} of {_cvRiders.Count} at the take itself)");
+                GD.Print($"[cavern] {_cvVariant}: every rider fallen [{string.Join(", ", _cvRiders.Select(a => a.State.Name))}] ({_cvFallenAtWreck} of {_cvRiders.Count} at the take itself)");
                 party.ForcedMoveInput = null;
                 _cvStep = 7; _cvClock = 0f;
                 break;
             }
             case 7:
                 if (!_cvWiped) { if (_cvClock > 5f) Fail("the party did not wipe within 5 s of the take"); break; }
-                GD.Print("[cavern] brake: the party has fallen: the wipe");
+                GD.Print($"[cavern] {_cvVariant}: the party has fallen: the wipe");
                 _cvStep = 8; _cvClock = 0f;
                 break;
             case 8:
@@ -189,7 +198,7 @@ public partial class DebugTools
                     if (a.State.Fallen || a.Downed) problems.Add($"{a.State.Name} fallen={a.State.Fallen} downed={a.Downed}");
                 if (BridgeWhole(layout, enc) is { } broken) problems.Add(broken);
                 if (problems.Count > 0) { if (_cvClock > 10f) Fail($"the rise: {string.Join("; ", problems)}"); break; }
-                GD.Print($"[cavern] brake: the rise at stop {rc.StopIndex} after {_cvClock:0.0} s with the bridge whole ({enc.BridgeCells} cells, none gone)");
+                GD.Print($"[cavern] {_cvVariant}: the rise at stop {rc.StopIndex} after {_cvClock:0.0} s with the bridge whole ({enc.BridgeCells} cells, none gone)");
                 _cvPass = 2;
                 _cvStep = 1; _cvClock = 0f; // board and depart again
                 break;
@@ -210,7 +219,7 @@ public partial class DebugTools
         var jump = enc.SetPieceNode("r5_jump") is RailGap gap ? gap : null;
         if (jump == null || !gaps.Any(g => Mathf.Abs(g.from - jump.From) < 0.01f && Mathf.Abs(g.to - jump.To) < 0.01f)) return "the party track is not bare over r5_jump's gap";
         if (Main.Instance.Builder.EnemyTrack is { } enemy) GD.Print($"[cavern] enemy track bare over: {string.Join(", ", enemy.Gaps.OrderBy(g => g.from).Select(g => $"{g.from:0.0}..{g.to:0.0}"))}");
-        var (fromMm, toMm) = bridge.MeasureJoin(track);
+        var (fromMm, toMm) = MeasureJoin(bridge, track);
         GD.Print($"[cavern] join: the bridge's first rail ring against the track's at S={bridge.From:0.0}: {fromMm:0.000} mm; its last at S={bridge.To:0.0}: {toMm:0.000} mm");
         if (!(fromMm <= 1f) || !(toMm <= 1f)) return $"the bridge's rails do not meet the track's within 1 mm (from {fromMm:0.000}, to {toMm:0.000})";
         if (enc.BridgeGone != 0 || ChasmDressing.Instance is null) return $"the bridge is not whole at the build ({enc.BridgeGone} gone) or there is no chasm dressing";
@@ -227,7 +236,7 @@ public partial class DebugTools
         if (going && float.IsNaN(_cvCollapseT))
         {
             _cvCollapseT = _cvTime;
-            _cvEarliestTakeT = _cvTime + (rear - from) / BridgeRules.Pace(rc.Train.Count); // a train stopped dead at the call
+            _cvEarliestTakeT = _cvTime + BridgeRules.ReactionTime; // no brake pressed before the call + the reaction time counts
             var since = _cvTime - _cvRearOnT;
             GD.Print($"[cavern] timing: bridge call t={(_cvCallT - _cvRearOnT):0.00}, earliest take t={(_cvEarliestTakeT - _cvRearOnT):0.00} (s since the rear came on; the collapse started at t={since:0.00} with the rear at S={rear:0.0})");
             if (float.IsNaN(_cvCallT) || Mathf.Abs(_cvCallT - _cvCollapseT) > 0.1f) { Fail($"the bridge's call did not come with the collapse's start (call {_cvCallT - _cvRearOnT:0.00}, start {since:0.00})"); return; }
@@ -250,24 +259,56 @@ public partial class DebugTools
                 }
                 break;
             case "brake":
-                if (going && !_cvBraking && _cvTime - _cvCollapseT >= 1f && float.IsNaN(_cvTakeT))
+                if (going && !_cvBraking && _cvTime - _cvCollapseT >= BridgeRules.ReactionTime + 0.1f && float.IsNaN(_cvTakeT))
                 {
                     _cvBraking = true;
-                    GD.Print($"[cavern] brake: the lead brakes 1 s after the collapse started (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00})");
+                    GD.Print($"[cavern] brake: the lead brakes {_cvTime - _cvCollapseT:0.00} s after the collapse started (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00})");
                 }
                 if (_cvBraking && float.IsNaN(_cvTakeT)) party.ForcedMoveInput = new Vector2(0, 1);
                 if (!float.IsNaN(_cvTakeT))
                 {
-                    party.ForcedMoveInput = null;
-                    GD.Print($"[cavern] brake: the bridge took the train {_cvTakeT - _cvCallT:0.00} s after its call (t={_cvTakeT - _cvRearOnT:0.00}; earliest take t={_cvEarliestTakeT - _cvRearOnT:0.00}); \"Don't stop\" heard at t={_cvBrakeCallT - _cvRearOnT:0.00}; takes {enc.BridgeTakes}, falls {rc.Falls - _cvFallsBefore}");
-                    if (enc.BridgeTakes != 1) { Fail($"the bridge's takes are {enc.BridgeTakes}, not 1"); return; }
-                    if (float.IsNaN(_cvBrakeCallT) || _cvBrakeCallT > _cvTakeT) { Fail("\"Don't stop\" was not called before the take"); return; }
-                    if (_cvTakeT - _cvCallT < BridgeRules.Grace) { Fail($"the take came {_cvTakeT - _cvCallT:0.00} s after the call, under {BridgeRules.Grace} s"); return; }
-                    _cvTakeSummary = $"the lead braked 1 s after the collapse started (its call at t={_cvCallT - _cvRearOnT:0.00} s after the rear came on, \"Don't stop\" at t={_cvBrakeCallT - _cvRearOnT:0.00}); the bridge took the train {_cvTakeT - _cvCallT:0.00} s after its call";
+                    if (TakeJudged(rc, enc, party, Fail) is not { } said) return;
+                    _cvTakeSummary = $"the lead braked {BridgeRules.ReactionTime + 0.1f:0.0} s after the collapse started (its call at t={_cvCallT - _cvRearOnT:0.00} s after the rear came on, \"Don't stop\" at t={_cvBrakeCallT - _cvRearOnT:0.00}); {said}";
                     _cvStep = 6; _cvClock = 0f;
                     return;
                 }
                 break;
+            case "early-brake":
+            {
+                // held short: the front never past the bridge's start or HoldShort behind the rear, whichever is further on (it starts at the start)
+                var over = going && rc.State.Mode == CartMode.Rolling && rear <= enc.BridgeToS ? enc.CollapseS - Mathf.Max(from, rear - BridgeRules.HoldShort) : float.NegativeInfinity;
+                if (_cvEbPhase == 0 && rc.State.Mode == CartMode.Rolling && rc.Party.FrontS >= from)
+                {
+                    _cvEbPhase = 1;
+                    GD.Print($"[cavern] early-brake: the lead brakes as the bridge groans (front S={rc.Party.FrontS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00})");
+                }
+                if (_cvEbPhase is 1 or 2 && float.IsNaN(_cvTakeT) && over > 0.01f) { Fail($"braked before the window, the front ran {over:0.00} m past its hold (front S={enc.CollapseS:0.0}, rear S={rear:0.0})"); return; }
+                if (_cvEbPhase is 1 or 2 && !float.IsNaN(_cvTakeT)) { Fail($"the bridge took the train braked before its window (phase {_cvEbPhase}, {_cvTakeT - _cvCallT:0.00} s after the call)"); return; }
+                if (_cvEbPhase == 1 && !going && _cvClock > 40f) { Fail("the collapse never started under the braked train"); return; }
+                if (_cvEbPhase == 1 && going && _cvTime - _cvCallT >= BridgeRules.ReactionTime + 1.5f)
+                {
+                    _cvEbPhase = 2;
+                    _cvEbAt = _cvTime;
+                    GD.Print($"[cavern] early-brake: braked from the groan to {_cvTime - _cvCallT:0.00} s after the call: held short and alive (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, gap {rear - enc.CollapseS:0.00} m, v {rc.State.V:0.00}, takes {enc.BridgeTakes}, falls {rc.Falls - _cvFallsBefore}, \"Don't stop\" heard {!float.IsNaN(_cvBrakeCallT)}); the lead lets go");
+                }
+                if (_cvEbPhase == 2 && _cvTime - _cvEbAt >= 1f)
+                {
+                    _cvEbPhase = 3;
+                    _cvFreshT = _cvTime;
+                    GD.Print($"[cavern] early-brake: let go 1 s, no take (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00}); a fresh brake {_cvTime - _cvCallT:0.00} s after the call");
+                }
+                party.ForcedMoveInput = _cvEbPhase is 1 or 3 && float.IsNaN(_cvTakeT) ? new Vector2(0, 1) : null;
+                if (_cvEbPhase == 3 && !float.IsNaN(_cvTakeT))
+                {
+                    if (TakeJudged(rc, enc, party, Fail) is not { } said) return;
+                    if (_cvTakeT < _cvFreshT) { Fail("the take came before the fresh brake"); return; }
+                    _cvTakeSummary = $"braked from the groan through the call and 3 s past it, the train was held short and alive, no take; let go 1 s, no take; a fresh brake {_cvFreshT - _cvCallT:0.00} s after the call: {said}, {_cvTakeT - _cvFreshT:0.00} s after the fresh press";
+                    _cvStep = 6; _cvClock = 0f;
+                    return;
+                }
+                if (_cvEbPhase == 3 && _cvTime - _cvFreshT > 15f) { Fail("no take within 15 s of the fresh brake"); return; }
+                break;
+            }
             case "stall":
                 if (going && !_cvStalled && rear >= from + 6f)
                 {
@@ -287,8 +328,8 @@ public partial class DebugTools
                 }
                 break;
         }
-        if (enc.BridgeTakes > 0 && v != "brake") { Fail($"the bridge took the train ({enc.BridgeTakes})"); return; }
-        if (rc.Falls != _cvFallsBefore && v != "brake") { Fail("the train fell"); return; }
+        if (enc.BridgeTakes > 0 && !BrakeBranch) { Fail($"the bridge took the train ({enc.BridgeTakes})"); return; }
+        if (rc.Falls != _cvFallsBefore && !BrakeBranch) { Fail("the train fell"); return; }
         if (rc.State.Mode == CartMode.Held && !rc.Halted && rc.StopIndex == 4)
         {
             party.ForcedMoveInput = null;
@@ -307,6 +348,22 @@ public partial class DebugTools
         }
         if (rc.State.Mode == CartMode.Wrecked || rc.StopIndex != 3) { Fail($"the train left ride 4 another way (mode {rc.State.Mode}, stop {rc.StopIndex})"); return; }
         if (_cvClock > 120f) Fail($"ride 4 did not reach stop 4 in 120 s (S={rc.State.S:0.0}, front S={rc.Party.FrontS:0.0})");
+    }
+
+    /// <summary>
+    /// A brake variant's take, the frame after it: once, "Don't stop" called before it, at or after the call + the reaction time, by a press
+    /// made at or after the call + the reaction time. What to say of it, or null (failed).
+    /// </summary>
+    private string? TakeJudged(RailController rc, RailEncounterController enc, PartyController party, Action<string> Fail)
+    {
+        party.ForcedMoveInput = null;
+        var pressed = rc.BrakePressedAt - enc.BridgeCalledAt;
+        GD.Print($"[cavern] {_cvVariant}: the bridge took the train {_cvTakeT - _cvCallT:0.00} s after its call (t={_cvTakeT - _cvRearOnT:0.00}; earliest take t={_cvEarliestTakeT - _cvRearOnT:0.00}), the brake pressed {pressed:0.00} s after the call; \"Don't stop\" heard at t={_cvBrakeCallT - _cvRearOnT:0.00}; takes {enc.BridgeTakes}, falls {_cvFallsAtWreck - _cvFallsBefore}");
+        if (enc.BridgeTakes != 1) { Fail($"the bridge's takes are {enc.BridgeTakes}, not 1"); return null; }
+        if (float.IsNaN(_cvBrakeCallT) || _cvBrakeCallT > _cvTakeT) { Fail("\"Don't stop\" was not called before the take"); return null; }
+        if (_cvTakeT - _cvCallT < BridgeRules.ReactionTime) { Fail($"the take came {_cvTakeT - _cvCallT:0.00} s after the call, under {BridgeRules.ReactionTime} s"); return null; }
+        if (!(pressed >= BridgeRules.ReactionTime)) { Fail($"the taking brake was pressed {pressed:0.00} s after the call, under the reaction time {BridgeRules.ReactionTime} s"); return null; }
+        return $"the bridge took the train {_cvTakeT - _cvCallT:0.00} s after its call, the brake pressed {pressed:0.00} s after it";
     }
 
     /// <summary>After the arrival at stop 4: every party cell gone within 6 s, then (=bridge) a restore stands it whole.</summary>
@@ -341,6 +398,70 @@ public partial class DebugTools
         if (enc.SetPieceNode("r4_bridge") is not CavernBridge bridge) return "no live bridge";
         var bad = bridge.Cells.Where(c => layout.GoneBridges.Contains(c.Cell) || DeckShape(c.Cell) is not { Disabled: false }).Select(c => c.Cell.ToString()).ToList();
         return enc.BridgeGone == 0 && bad.Count == 0 ? null : $"the bridge not whole ({enc.BridgeGone} gone; cells [{string.Join(", ", bad)}])";
+    }
+
+    /// <summary>
+    /// The join at both lips, in the engine: the largest distance (mm) from a vertex of the bridge's first cell's first rail ring at its
+    /// <c>From</c>, and of its last cell's last ring at its <c>To</c>, to the nearest vertex of <paramref name="track"/>'s own rail meshes. Headless
+    /// (no laid cells) the two end cells are laid into a probe node with the real <see cref="RailTrack.LaySpan"/> and freed after; NaN when
+    /// nothing can be measured.
+    /// </summary>
+    private static (float FromMm, float ToMm) MeasureJoin(CavernBridge bridge, Dungeon.Props.RailTrack track)
+    {
+        if (bridge.Count == 0 || track.GetNodeOrNull<Node3D>("Rails") is not { } rails) return (float.NaN, float.NaN);
+        var probe = new Node3D { Name = "JoinProbe" };
+        bridge.AddChild(probe);
+        try
+        {
+            var first = SpanRails(bridge, track, probe, 0, "JoinFrom");
+            var last = SpanRails(bridge, track, probe, bridge.Count - 1, "JoinTo");
+            var trackVerts = new List<Vector3>();
+            foreach (var child in rails.GetChildren())
+                if (child is MeshInstance3D mi) trackVerts.AddRange(Vertices(mi));
+            return (RingGap(track, first, bridge.From, trackVerts), RingGap(track, last, bridge.To, trackVerts));
+        }
+        finally
+        {
+            bridge.RemoveChild(probe);
+            probe.Free();
+        }
+    }
+
+    /// <summary>Cell <paramref name="k"/>'s rail vertices in global space: its laid mesh, or one laid into <paramref name="probe"/> now.</summary>
+    private static List<Vector3> SpanRails(CavernBridge bridge, Dungeon.Props.RailTrack track, Node3D probe, int k, string name)
+    {
+        var mi = bridge.LookOf(k)?.GetNodeOrNull<MeshInstance3D>("Deck_Rails");
+        if (mi == null)
+        {
+            track.LaySpan(probe, bridge.Cells[k].FromS, bridge.Cells[k].ToS, name);
+            mi = probe.GetNodeOrNull<MeshInstance3D>($"{name}_Rails");
+        }
+        return mi == null ? new List<Vector3>() : Vertices(mi);
+    }
+
+    private static List<Vector3> Vertices(MeshInstance3D mi)
+    {
+        var verts = new List<Vector3>();
+        if (mi.Mesh is not { } mesh) return verts;
+        for (var surface = 0; surface < mesh.GetSurfaceCount(); surface++)
+            foreach (var v in mesh.SurfaceGetArrays(surface)[(int)Mesh.ArrayType.Vertex].AsVector3Array()) verts.Add(mi.GlobalTransform * v);
+        return verts;
+    }
+
+    /// <summary>The largest distance (mm) from a span vertex of the ring at <paramref name="s"/> (within 1 cm of its plane) to the nearest track vertex; NaN with none.</summary>
+    private static float RingGap(Dungeon.Props.RailTrack track, List<Vector3> span, float s, List<Vector3> trackVerts)
+    {
+        var toFrame = (track.GlobalTransform * track.Curve.SampleBakedWithRotation(s, true, true)).AffineInverse();
+        var worst = float.NaN;
+        foreach (var v in span)
+        {
+            if (Mathf.Abs((toFrame * v).Z) > 0.01f) continue; // not the ring at s
+            var best = float.MaxValue;
+            foreach (var t in trackVerts) best = Mathf.Min(best, t.DistanceSquaredTo(v));
+            var mm = Mathf.Sqrt(best) * 1000f;
+            worst = float.IsNaN(worst) ? mm : Mathf.Max(worst, mm);
+        }
+        return worst;
     }
 
     /// <summary>The footing box of cavern deck <paramref name="cell"/>, or null.</summary>

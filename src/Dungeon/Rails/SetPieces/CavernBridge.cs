@@ -83,18 +83,20 @@ public partial class CavernBridge : Node3D, ISoundPoint
     /// <summary>
     /// Cells [<see cref="Gone"/>, <paramref name="upTo"/>) give way: their rails hidden, their decks and footings gone
     /// (<see cref="ChasmDressing.SetGone"/>). With a <paramref name="debrisRoot"/> (the live collapse, not a catch-up) a few timbers of
-    /// each tumble under it and <c>timber_collapse</c> plays every <see cref="BridgeRules.CueEveryCells"/> cells. The server tells "gone {n}".
+    /// each tumble under it and <c>timber_collapse</c> plays every <see cref="BridgeRules.CueEveryCells"/> cells, for the step's last
+    /// <see cref="LiveCells"/> cells only (a client catching up on missed tells does not get every cell's at once). The server tells "gone {n}".
+    /// With no <see cref="ChasmDressing"/> the footing cannot go: an error.
     /// </summary>
     public void GiveWay(int upTo, Node3D? debrisRoot)
     {
         upTo = Math.Min(upTo, _cells.Count);
         if (upTo <= Gone) return;
-        var dressing = ChasmDressing.Instance;
+        var dressing = Dressing();
         for (var k = Gone; k < upTo; k++)
         {
             if (_looks[k] is { } look && IsInstanceValid(look)) look.Visible = false;
-            if (dressing != null && IsInstanceValid(dressing)) dressing.SetGone(Layout, _cells[k].Cell, true);
-            if (debrisRoot == null) continue;
+            dressing?.SetGone(Layout, _cells[k].Cell, true);
+            if (debrisRoot == null || k < upTo - LiveCells) continue;
             if (ChasmDressing.DrawsLook) Tumble(debrisRoot, k);
             if (k % BridgeRules.CueEveryCells == 0) RideAudio.At("timber_collapse", _middles[k].Origin);
         }
@@ -106,11 +108,11 @@ public partial class CavernBridge : Node3D, ISoundPoint
     public void Stand()
     {
         var was = Gone;
-        var dressing = ChasmDressing.Instance;
+        var dressing = was > 0 || _cells.Any(c => Layout.GoneBridges.Contains(c.Cell)) ? Dressing() : null;
         for (var k = 0; k < _cells.Count; k++)
         {
             if (_looks[k] is { } look && IsInstanceValid(look)) look.Visible = true;
-            if ((k < was || Layout.GoneBridges.Contains(_cells[k].Cell)) && dressing != null && IsInstanceValid(dressing)) dressing.SetGone(Layout, _cells[k].Cell, false);
+            if (k < was || Layout.GoneBridges.Contains(_cells[k].Cell)) dressing?.SetGone(Layout, _cells[k].Cell, false);
         }
         Gone = 0;
         if (was > 0) Tell("stands");
@@ -127,6 +129,17 @@ public partial class CavernBridge : Node3D, ISoundPoint
             return true;
         }
         return false;
+    }
+
+    /// <summary>A live give-way tumbles timbers and cues for at most this many cells of one step.</summary>
+    private const int LiveCells = 2;
+
+    /// <summary>The floor's chasm dressing (it carries the decks' footing), or null with an error: the cells' footing cannot go or stand without it.</summary>
+    private ChasmDressing? Dressing()
+    {
+        if (ChasmDressing.Instance is { } d && IsInstanceValid(d)) return d;
+        GD.PushError($"[rails] ERROR: bridge {Name}: no ChasmDressing, so its cells' footing cannot go or stand");
+        return null;
     }
 
     private void Tell(string what)
@@ -147,69 +160,6 @@ public partial class CavernBridge : Node3D, ISoundPoint
         TimberDebris.Tumble(root, _middles[k], parts, Vector3.Down * 4f, "BridgeTimber"); // down, not on ahead: the deck drops away
     }
 
-    /// <summary>
-    /// The join at both lips (test hook, every role): the largest distance (mm) from a vertex of the first cell's first rail ring at
-    /// <see cref="From"/>, and of the last cell's last ring at <see cref="To"/>, to the nearest vertex of <paramref name="track"/>'s own rail
-    /// meshes. Headless the end cells are laid into a probe node for the measurement and freed after; NaN when nothing can be measured.
-    /// </summary>
-    internal (float FromMm, float ToMm) MeasureJoin(RailTrack track)
-    {
-        if (_cells.Count == 0 || track.GetNodeOrNull<Node3D>("Rails") is not { } rails) return (float.NaN, float.NaN);
-        var probe = new Node3D { Name = "JoinProbe" };
-        AddChild(probe);
-        try
-        {
-            var first = SpanRails(track, probe, 0, "JoinFrom");
-            var last = SpanRails(track, probe, _cells.Count - 1, "JoinTo");
-            var trackVerts = new List<Vector3>();
-            foreach (var child in rails.GetChildren())
-                if (child is MeshInstance3D { Mesh: { } mesh } mi)
-                    for (var surface = 0; surface < mesh.GetSurfaceCount(); surface++)
-                        foreach (var v in mesh.SurfaceGetArrays(surface)[(int)Mesh.ArrayType.Vertex].AsVector3Array()) trackVerts.Add(mi.GlobalTransform * v);
-            return (RingGap(track, first, From, trackVerts), RingGap(track, last, To, trackVerts));
-        }
-        finally
-        {
-            RemoveChild(probe);
-            probe.Free();
-        }
-    }
-
-    /// <summary>Cell <paramref name="k"/>'s rail vertices in global space: its laid mesh, or one laid into <paramref name="probe"/> now.</summary>
-    private List<Vector3> SpanRails(RailTrack track, Node3D probe, int k, string name)
-    {
-        var holder = _looks[k];
-        MeshInstance3D? mi = holder?.GetNodeOrNull<MeshInstance3D>("Deck_Rails");
-        if (mi == null)
-        {
-            track.LaySpan(probe, _cells[k].FromS, _cells[k].ToS, name);
-            mi = probe.GetNodeOrNull<MeshInstance3D>($"{name}_Rails");
-        }
-        var verts = new List<Vector3>();
-        if (mi?.Mesh is not { } mesh) return verts;
-        for (var surface = 0; surface < mesh.GetSurfaceCount(); surface++)
-            foreach (var v in mesh.SurfaceGetArrays(surface)[(int)Mesh.ArrayType.Vertex].AsVector3Array()) verts.Add(mi.GlobalTransform * v);
-        return verts;
-    }
-
-    /// <summary>The largest distance (mm) from a span vertex of the ring at <paramref name="s"/> (within 1 cm of its plane) to the nearest track vertex; NaN with none.</summary>
-    private static float RingGap(RailTrack track, List<Vector3> span, float s, List<Vector3> trackVerts)
-    {
-        var frame = track.GlobalTransform * track.Curve.SampleBakedWithRotation(s, true, true);
-        var toFrame = frame.AffineInverse();
-        var worst = float.NaN;
-        foreach (var v in span)
-        {
-            if (Mathf.Abs((toFrame * v).Z) > 0.01f) continue; // not the ring at s
-            var best = float.MaxValue;
-            foreach (var t in trackVerts)
-            {
-                var d = t.DistanceSquaredTo(v);
-                if (d < best) best = d;
-            }
-            var mm = Mathf.Sqrt(best) * 1000f;
-            worst = float.IsNaN(worst) ? mm : Mathf.Max(worst, mm);
-        }
-        return worst;
-    }
+    /// <summary>Cell <paramref name="k"/>'s rails-and-sleepers node, or null (headless; tests read it).</summary>
+    internal Node3D? LookOf(int k) => k >= 0 && k < _looks.Count ? _looks[k] : null;
 }

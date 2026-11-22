@@ -6,7 +6,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// as it starts, and a cell goes as the front passes its far edge (<see cref="GoneCells"/>). It catches the train only while the
 /// train rolls and a seated player braked within <see cref="BrakeMemory"/> (<see cref="Catches"/>); otherwise its front holds
 /// <see cref="HoldShort"/> behind the train's rear (<see cref="Advance"/>), which covers a stall, the watchdog, a heavy load and the
-/// stop's own braking. A runaway behind the train whose front is on the gone span goes down with it (<see cref="TakesRunaway"/>).
+/// stop's own braking. A brake counts only when it was pressed <see cref="ReactionTime"/> or more after the first call (<see cref="Counts"/>,
+/// the controller's ruling on Task 3's review I1): a train already braked onto the bridge before the warning is held short, never taken by it. A runaway behind the train whose front is on the gone span goes down with it (<see cref="TakesRunaway"/>).
 /// While the train rolls on it at 1 m/s or more, "Get out" is neither offered nor taken (<see cref="HoldsRiders"/>). Engine-free.
 /// </summary>
 public static class BridgeRules
@@ -17,6 +18,10 @@ public static class BridgeRules
     public const float PaceShare = 0.8f;
     /// <summary>A seated player's brake counts for this long after it was last held (seconds).</summary>
     public const float BrakeMemory = 2f;
+    /// <summary>A brake counts toward the take only when pressed this long or more after the first call (the reaction time, seconds).</summary>
+    public const float ReactionTime = 1.5f;
+    /// <summary>A brake held again within this of the last braked tick is the same press (a remote player's held brake is resent every 0.25 s).</summary>
+    public const float PressGap = 0.3f;
     /// <summary>Unbraked, its front holds this far short of the train's rear.</summary>
     public const float HoldShort = 2f;
     /// <summary>A player braking with the front within this of the train's rear is told not to stop.</summary>
@@ -45,6 +50,18 @@ public static class BridgeRules
 
     /// <summary>A seated player braked within <see cref="BrakeMemory"/> (last at <paramref name="lastBrakeAt"/>, NaN: never).</summary>
     public static bool Braked(double lastBrakeAt, double now) => !double.IsNaN(lastBrakeAt) && now - lastBrakeAt <= BrakeMemory;
+
+    /// <summary>
+    /// The brake counts toward the take (Rulings 3-4 as amended): pressed at <paramref name="pressedAt"/>, at or after the first call
+    /// (<paramref name="calledAt"/>) + <see cref="ReactionTime"/>, and last held within <see cref="BrakeMemory"/> (<see cref="Braked"/>). A brake
+    /// pressed earlier counts not at all, however long it is held: the memory never carries it across the line. NaN (no call, no press): no.
+    /// </summary>
+    public static bool Counts(double pressedAt, double lastBrakeAt, double calledAt, double now)
+        => !double.IsNaN(calledAt) && !double.IsNaN(pressedAt) && pressedAt >= calledAt + ReactionTime && Braked(lastBrakeAt, now);
+
+    /// <summary>A braking tick starts a new press: the last tick did not brake, or the last brake is more than <see cref="PressGap"/> old (or never).</summary>
+    public static bool NewPress(bool wasBraking, double lastBrakeAt, double now)
+        => !wasBraking || double.IsNaN(lastBrakeAt) || now - lastBrakeAt > PressGap;
 
     /// <summary>The bridge takes the train: rolling, braked, and its front at the train's rear.</summary>
     public static bool Catches(bool rolling, bool braked, float frontS, float trainRearS) => rolling && braked && frontS >= trainRearS;
