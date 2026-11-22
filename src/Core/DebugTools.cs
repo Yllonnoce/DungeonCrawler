@@ -21,6 +21,8 @@ namespace DungeonCrawler.Core;
 /// On a multiplayer client only F6 works: the others would change this machine's world without the server.
 /// User args (after "--" on the command line):
 ///   --screenshot=PATH   save a PNG then quit      --after=SECONDS   delay before the screenshot / quit (default 2)
+///   --hide-hud          keep the HUD hidden in game (a clean view for --screenshot)
+///   --face-from=X,Y     with --face-cell / --face-node: stand on cell X,Y instead of N cells back from the target
 ///   --face-enemy        teleport next to the nearest enemy at start
 ///   --clear-enemies     every enemy dies as soon as its floor is built (quiet screenshots of the cast)
 ///   --bake-kill-barks=DIR  with --builtin --ai: render every member's and fighter's kill line into DIR (assets/voice/builtin for the shipped bank), then quit
@@ -34,7 +36,8 @@ namespace DungeonCrawler.Core;
 ///                       height between them, sleeper tops; rays and point queries) and list each probe buried more than CM cm (default 3)
 ///                       or inside a drawn item, with its cause (buckled{v}, ramp-crest, wall, plinth, other), the runs per track, the
 ///                       line's ramps with their sag and crest S, every set piece's S, the cavern's span and the verdict ([track-depth] total ...;
-///                       the pass is buried=0 inside=0 nofloorOff=0 budget=0, nofloorOff counting probes with no floor under them off a chasm or pit)
+///                       the pass is buried=0 inside=0 nofloorOff=0 budget=0 floating=0, nofloorOff counting probes with no floor under them off
+///                       a chasm or pit, floating the samples more than 9 cm over the floor; buckledLaneCells the lane cells drawn heaved)
 ///   --track-depth-float with --track-depth: also list each sample whose track stands more than CM cm over the floor (ramp-sag)
 ///   --smoke             scripted end-to-end run: get hit, kill an enemy, loot it, descend twice, ascend once, report
 ///   --test-ride         floor 12 of the built-in campaign: board, ride over an enemy to stop 1, save and load, jump out at speed, wreck the cart
@@ -53,7 +56,7 @@ namespace DungeonCrawler.Core;
 ///   --test-runaway[=tail|ram|<a split variant>]  (no variant: after, the split's) floor 12, lethality 3: ride 4's runaway ore wagon from stop 3 (rc.Restore(3)), nobody pressing; =tail: the lead pumps, it breaks loose 14-16 m behind the last body with its call, never closes within 3 m, halts 2.5-4 m behind the train held at stop 4 and is gone within 2 s, nobody run over; =ram: three crew wagons, nobody pumping: one ram (plating -40, each seated hero -20% of max HP, never below 1, seated NPCs unhurt, nobody unseated), none more; then with the plating at 30 the ram wrecks the cart, the runaway gone by the wreck and a spare taking over; every variant: the dark's lamps hidden and layer-1 rays from the seat to the split's lamps and the runaway's ([runaway] sight: ...); =after: the light back after the dark and after leaving floor 12 from its middle, and windowed with --screenshot=PATH the seat's shots PATH_lit/_dark/_behind/_split/... judged ([runaway] shots: ...)
 ///                       =wrong  nobody throws it: the last call comes 5-6.5 m before its points, the cart passes it straight, the train falls at the gap and the wipe rises at stop 2
 ///                       =stall  as wrong, the cart caught short of the back's points and again past them: the watchdog sets it at the points, then grinds it into the gap (a fall), never across
-///   --test-track-view  floor 12, lethality 3, solo: the line's first party ramp and a spared lane cell ridden from the seat: layer-1 rays from the seated eye to each rail top at the sag, the crest and the crest ± 1 m, and over the spared cell, each clear, with a control ray under the drawn floor at the crest that must be blocked; windowed with --screenshot=PATH the views PATH_crest/_sag/_heave.png (HUD hidden); prints [trackview] RESULT
+///   --test-track-view  floor 12, lethality 3, solo: the line's first party ramp and a spared lane cell ridden from the seat: layer-1 rays from the seated eye to each rail top at the sag, the crest and the crest ± 1 m, and over the spared cell, each clear, with three control rays: one under the drawn floor at the crest that must be blocked, and one 3 cm under the bed at each rail over the spared cell (approached on its own level) that the cell's slab must stop at the bed's height (a fallback cell, none being so approached, is sighted without them and the RESULT says so); windowed with --screenshot=PATH the views PATH_crest/_sag/_heave.png (HUD hidden); prints [trackview] RESULT
 ///   --test-cart-watchdog  floor 12: a caught cart braked 15 s is not freed; let go, it grinds free to stop 1; caught short of the last ride's gap (ride 5's on floor 12) it is set at the lip and leaps it
 ///   --test-tick-rate    floor 1: the hammer's beat and the periodic spike cycle on the floor clock take 4.5 s of wall time at any physics rate
 /// </summary>
@@ -212,6 +215,8 @@ public partial class DebugTools : Node
     private string? _faceNode;
     private int _faceBack = 1;
     private (int x, int y)? _faceCell;
+    private (int x, int y)? _faceFrom;
+    private bool _hideHud;
     private string[]? _dropIds;
     private string? _equipId;
     private bool _equipped;
@@ -366,6 +371,8 @@ public partial class DebugTools : Node
             else if (arg.StartsWith("--face-ramp")) { _faceRamp = arg.Contains('=') ? arg[(arg.IndexOf('=') + 1)..] : "bottom"; _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg == "--face-pit") _facePit = true;
             else if (arg.StartsWith("--face-node=")) { var spec = arg["--face-node=".Length..].Split(':'); _faceNode = spec[0]; if (spec.Length > 1) _faceBack = int.Parse(spec[1]); }
+            else if (arg == "--hide-hud") _hideHud = true;
+            else if (arg.StartsWith("--face-from=")) { var xy = arg["--face-from=".Length..].Split(','); _faceFrom = (int.Parse(xy[0]), int.Parse(xy[1])); }
             else if (arg.StartsWith("--face-cell=")) { var spec = arg["--face-cell=".Length..].Split(':'); var xy = spec[0].Split(','); _faceCell = (int.Parse(xy[0]), int.Parse(xy[1])); if (spec.Length > 1) _faceBack = int.Parse(spec[1]); _quitAfter = Math.Max(_quitAfter, 3); }
             else if (arg.StartsWith("--drop=")) _dropIds = arg["--drop=".Length..].Split(',');
             else if (arg.StartsWith("--equip=")) _equipId = arg["--equip=".Length..]; // a weapon in the lead's hands (first-person view checks)
@@ -542,7 +549,7 @@ public partial class DebugTools : Node
         {
             _facedNode = true;
             Vector3? look = null;
-            GridPos? stand = null;
+            GridPos? stand = _faceFrom is { } ff ? new GridPos(ff.x, ff.y) : null;
             if (_faceNode != null && Main.Instance.Party.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } member && member != Main.Instance.Party.Local)
             {
                 // a party member by name (with --possess=N to lead as someone else): stood in front of the camera, facing it
@@ -1093,6 +1100,7 @@ public partial class DebugTools : Node
             }
             else if (vr != null && (int)_elapsed % 15 == 0 && _elapsed - Math.Floor(_elapsed) < 0.02) GD.Print($"[kill-barks] {vr.Pending} pending, {vr.Rendered} done, {vr.Failed} failed");
         }
+        if (_hideHud && Main.Instance is { InGame: true, Hud.Visible: true } hudMain) hudMain.Hud.Visible = false;
         if (_screenshotPath != null && !_testHorde && !_testSwitchBack && !_testRunaway && !_testTrackView && _elapsed >= _after && (_menuOnly || Main.Instance?.InGame == true))
         {
             if (_faceNode != null && Main.Instance?.Party?.Adventurers.FirstOrDefault(a => a.State.Name == _faceNode) is { } shot) GD.Print($"[face-node] at the screenshot: {shot.State.Name} {shot.ModelDebug}; lead at {Main.Instance.Party.Local?.GlobalPosition:0.0} facing {-Main.Instance.Party.Local?.GlobalTransform.Basis.Z:0.00}");

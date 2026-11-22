@@ -38,6 +38,11 @@ public static class TrackDepthRules
     public const int MaxCasts = 5;
     /// <summary>The default threshold, in centimetres.</summary>
     public const int DefaultCm = 3;
+    /// <summary>
+    /// A sample whose curve stands more than this over the highest floor under its probes is floating, a failure: the eased bed's
+    /// worst float is about 8.5 cm (a 1 m ease's 6.25 cm and the slab rise, laid on straight pieces).
+    /// </summary>
+    public const float FloatBound = 0.09f;
 
     /// <summary>A probe with <paramref name="under"/> metres of floor over it is buried past a threshold of <paramref name="thresholdCm"/> cm.</summary>
     public static bool Buried(float under, int thresholdCm) => under > thresholdCm / 100f;
@@ -90,11 +95,13 @@ public static class TrackDepthRules
     /// The probe's last line: the totals over every track, the worst depth and the worst float in whole centimetres.
     /// <paramref name="noFloorOff"/> counts the probes with no drawn floor in the ray's window anywhere but over a drop (a chasm or
     /// a pit): a track too deep or too high for the ray. <paramref name="budget"/> counts the probes whose ray spent every cast on
-    /// other colliders (no answer at all). The pass is buried=0 inside=0 nofloorOff=0 budget=0.
+    /// other colliders (no answer at all). <paramref name="floating"/> counts the samples standing more than <see cref="FloatBound"/>
+    /// over the floor. <paramref name="buckledLaneCells"/> counts the lane cells the GridMap draws with a heaved slab. The pass is
+    /// buried=0 inside=0 nofloorOff=0 budget=0 floating=0.
     /// </summary>
-    public static string Verdict(int buried, int inside, int noFloorOff, int budget, int runs, float worstM, float worstFloatM, int buckledLaneCells, int ramps)
+    public static string Verdict(int buried, int inside, int noFloorOff, int budget, int floating, int runs, float worstM, float worstFloatM, int buckledLaneCells, int ramps)
         => string.Create(CultureInfo.InvariantCulture,
-            $"total buried={buried} inside={inside} nofloorOff={noFloorOff} budget={budget} runs={runs} worst={(int)MathF.Round(worstM * 100f)}cm float={(int)MathF.Round(worstFloatM * 100f)}cm buckledLaneCells={buckledLaneCells} rampsOnLine={ramps}");
+            $"total buried={buried} inside={inside} nofloorOff={noFloorOff} budget={budget} floating={floating} runs={runs} worst={(int)MathF.Round(worstM * 100f)}cm float={(int)MathF.Round(worstFloatM * 100f)}cm buckledLaneCells={buckledLaneCells} rampsOnLine={ramps}");
 
     /// <summary>A probe over a drop (a chasm, crevasse or cavern cell, or a pit) legitimately finds no drawn floor under it.</summary>
     public static bool OverDrop(Cell cell) => cell is Cell.Chasm or Cell.Pit;

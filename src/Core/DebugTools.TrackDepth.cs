@@ -18,10 +18,11 @@ namespace DungeonCrawler.Core;
 // pieces' S and the cavern's span follow, then the count of lane cells whose buckle roll was laid flat (spared), and the verdict is
 // the last line. A probe whose ray finds no drawn floor is counted nofloorDrop over a chasm or pit cell (a legitimate drop) and
 // nofloorOff anywhere else (a track deeper or higher than the ray's window, or a probe inside a wall cube); a ray that spent its
-// MaxCasts on other colliders is counted budget, never a drop: the pass is buried=0 inside=0 nofloorOff=0 budget=0. Every track
-// is sampled at each Step and at its own Length. Each per-track line and the
-// verdict carry the worst float (the curve over the highest floor under its probes); with --track-depth-float each sample standing
-// more than CM cm over it is listed (floats are not counted as failures). The ramp lines' sag and crest S are the curve's nearest
+// MaxCasts on other colliders is counted budget, never a drop; a sample whose curve stands more than TrackDepthRules.FloatBound (9 cm)
+// over the highest floor under its probes is counted floating: the pass is buried=0 inside=0 nofloorOff=0 budget=0 floating=0. Every
+// track is sampled at each Step and at its own Length. Each per-track line and the verdict carry the worst float; with
+// --track-depth-float each sample standing more than CM cm over the floor is listed (a float under FloatBound is no failure).
+// buckledLaneCells counts the lane cells whose drawn slab (the Structure GridMap's item at the cell's level) is a Buckled* item. The ramp lines' sag and crest S are the curve's nearest
 // point to the ramp's end edge in XZ (the track's height there does not matter). The physics queries run on the physics tick after
 // the --print-map block, which then prints the ASCII map and quits.
 // Blind spots: a track 3 m or more under the upper half of a ramp is silent (the ray starts inside or under the slope box and reads
@@ -48,7 +49,7 @@ public partial class DebugTools
         static string Label(RailTrack t) => t.Name.ToString() is "PartyTrack" or "EnemyTrack" ? t.Name.ToString() : $"{t.GetParent()?.Name}/{t.Name}";
         DepthLine($"threshold={cm}cm step={TrackDepthRules.Step}m tracks={string.Join(",", tracks.Select(Label))}");
 
-        int totalBuried = 0, totalInside = 0, totalRuns = 0, totalOff = 0, totalBudget = 0;
+        int totalBuried = 0, totalInside = 0, totalRuns = 0, totalOff = 0, totalBudget = 0, totalFloating = 0;
         float totalWorst = 0f, totalFloat = 0f;
         foreach (var track in tracks)
         {
@@ -57,7 +58,7 @@ public partial class DebugTools
             var floats = new List<DepthHit>();
             var buriedS = new HashSet<float>();
             var insideS = new HashSet<float>();
-            int samples = 0, noFloorDrop = 0, noFloorOff = 0, budget = 0;
+            int samples = 0, noFloorDrop = 0, noFloorOff = 0, budget = 0, floating = 0;
             DepthHit? worst = null;
             float worstFloat = 0f, worstFloatS = 0f;
             foreach (var s in SampleS(track.Length))
@@ -126,6 +127,7 @@ public partial class DebugTools
 
                 // the curve standing over the floor (a sag): the worst always, each sample on request
                 if (highest is { } over && bed.Y - over > worstFloat) { worstFloat = bed.Y - over; worstFloatS = s; }
+                if (highest is { } lift && bed.Y - lift > TrackDepthRules.FloatBound) floating++;
                 if (_trackDepthFloat && highest is { } top && TrackDepthRules.Buried(bed.Y - top, cm))
                 {
                     var buckled = builder.BuckledCells.TryGetValue(laneCell, out var variant);
@@ -142,12 +144,13 @@ public partial class DebugTools
                 DepthLine($"float run {run.Track} S={run.FromS:0.0}..{run.ToS:0.0} cells=[{string.Join(",", run.Cells)}] samples={run.Samples} worst={Cm(run.Worst)}cm cause={CauseName(run.Cause, -1)}");
             var at = worst is { } ww ? $" at S={ww.S.ToString("0.0", CultureInfo.InvariantCulture)} cell={ww.Cell}" : "";
             var floatAt = Cm(worstFloat) > 0 ? $" at S={worstFloatS.ToString("0.0", CultureInfo.InvariantCulture)}" : "";
-            DepthLine($"{label} length={track.Length:0.0} samples={samples} buried={buriedS.Count} inside={insideS.Count} runs={runs.Count} worst={Cm(worst?.Under ?? 0f)}cm{at} float={Cm(worstFloat)}cm{floatAt} nofloorDrop={noFloorDrop} nofloorOff={noFloorOff} budget={budget}");
+            DepthLine($"{label} length={track.Length:0.0} samples={samples} buried={buriedS.Count} inside={insideS.Count} runs={runs.Count} worst={Cm(worst?.Under ?? 0f)}cm{at} float={Cm(worstFloat)}cm{floatAt} nofloorDrop={noFloorDrop} nofloorOff={noFloorOff} budget={budget} floating={floating}");
             totalBuried += buriedS.Count;
             totalInside += insideS.Count;
             totalRuns += runs.Count;
             totalOff += noFloorOff;
             totalBudget += budget;
+            totalFloating += floating;
             totalFloat = MathF.Max(totalFloat, worstFloat);
             if (worst is { } tw) totalWorst = MathF.Max(totalWorst, tw.Under);
         }
@@ -193,8 +196,21 @@ public partial class DebugTools
         var spared = builder.SparedRailBuckles;
         var enemyLane = layout.Rail is { } line ? new HashSet<GridPos>(line.Enemy) : new HashSet<GridPos>();
         DepthLine($"spared {spared.Count} rail buckle(s): party {spared.Count(layout.IsPartyRail)}, enemy {spared.Count(enemyLane.Contains)}");
-        var buckledLane = builder.BuckledCells.Keys.Count(layout.IsRail);
-        GD.Print("[track-depth] " + TrackDepthRules.Verdict(totalBuried, totalInside, totalOff, totalBudget, totalRuns, totalWorst, totalFloat, buckledLane, ramps));
+        GD.Print("[track-depth] " + TrackDepthRules.Verdict(totalBuried, totalInside, totalOff, totalBudget, totalFloating, totalRuns, totalWorst, totalFloat, BuckledLaneCells(root, layout), ramps));
+    }
+
+    /// <summary>
+    /// The lane cells the Structure GridMap draws with a heaved slab: a Buckled* item at the cell's own level. What is drawn, not what
+    /// was picked, so a lane cell that the build heaved after all is counted; -1 with no grid.
+    /// </summary>
+    private static int BuckledLaneCells(Node root, FloorLayout layout)
+    {
+        if (root.GetNodeOrNull<GridMap>("Structure") is not { MeshLibrary: { } lib } grid || layout.Rail is not { } rail) return -1;
+        return rail.Party.Concat(rail.Enemy).Distinct().Count(c =>
+        {
+            var item = grid.GetCellItem(new Vector3I(c.X, layout.LevelOf(c), c.Y));
+            return item != GridMap.InvalidCellItem && lib.GetItemName(item).StartsWith("Buckled", StringComparison.Ordinal);
+        });
     }
 
     private static void CollectTracks(Node node, List<RailTrack> into)

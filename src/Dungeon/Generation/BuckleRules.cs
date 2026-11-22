@@ -2,7 +2,8 @@ namespace DungeonCrawler.Dungeon.Generation;
 
 /// <summary>
 /// Which floor slabs are buckled: nearly half of a ruined room, most cells beside a rubble mound, and one in twenty elsewhere.
-/// Never stairs, doors, ramps, ledges, water or the under layer, and never a rail lane cell: the track lies on a flat slab (a heave
+/// Never stairs, doors, ramps, ledges (their cells and ramp ends), water, the under layer, a vault's door, key or lever, or a camp's
+/// cells and anchor, and never a rail lane cell: the track lies on a flat slab (a heave
 /// would bury its rails and sleepers). A lane cell still makes both of its draws, so every other cell's pick is the one it always was.
 /// Engine-free: no Godot types.
 /// </summary>
