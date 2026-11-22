@@ -10,9 +10,21 @@ public static class PaceRules
     /// <summary>The S a slag cart aims for; a positive offset is ahead of the party cart.</summary>
     public static float TargetS(float partyEnemyS, float offset) => partyEnemyS + offset;
 
-    /// <summary>The commanded speed: the party's speed plus a capped correction toward the target, within [0, MaxSpeed].</summary>
-    public static float SpeedFor(float s, float v, float targetS, float partyV)
-        => Math.Clamp(partyV + Math.Clamp((targetS - s) * 0.8f, -3f, 3f), 0f, CartRules.MaxSpeed);
+    /// <summary>A pacing cart's correction toward its pace point is capped at this either way (m/s over the party's speed).</summary>
+    public const float CatchUp = 3f;
+    /// <summary>
+    /// A side-by-side cart (Offset 0: ride 4's leap cart) closes on its pace point from behind at up to this (m/s over the party's
+    /// speed): it starts ahead of it out of the seats' sight and a jog's pace-point jump must not leave it lagging into the leap's
+    /// stretch (plan 13, the legibility fix round). Its catch-down stays <see cref="CatchUp"/>.
+    /// </summary>
+    public const float AlongsideCatchUp = 6f;
+
+    /// <summary>
+    /// The commanded speed: the party's speed plus a correction toward the target, capped at <see cref="CatchUp"/> back and
+    /// <paramref name="catchUp"/> forward, within [0, MaxSpeed].
+    /// </summary>
+    public static float SpeedFor(float s, float v, float targetS, float partyV, float catchUp = CatchUp)
+        => Math.Clamp(partyV + Math.Clamp((targetS - s) * 0.8f, -CatchUp, catchUp), 0f, CartRules.MaxSpeed);
 
     public static bool Alongside(float s, float targetS) => Math.Abs(s - targetS) < AlongsideRadius;
 }

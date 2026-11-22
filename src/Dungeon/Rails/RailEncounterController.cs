@@ -25,6 +25,13 @@ public partial class RailEncounterController : Node
 {
     /// <summary>A slag cart starts this far behind the point it paces at, so it is seen rolling up rather than appearing beside the party.</summary>
     public const float SpawnBehind = 10f;
+    /// <summary>
+    /// A side-by-side slag cart (Offset 0: ride 4's leap cart) starts this far ahead of its pace point instead, at the party's speed: on
+    /// floor 12 its At (party S 848) has the party on the hairpin's far leg, so the start lies round the bend, out of every seat's sight
+    /// (--test-cavern checks it with a ray from each seated eye), and it slows (<see cref="PaceRules.CatchUp"/>) until the pace point
+    /// comes up beside it; it is seen ahead as the party comes round, never appearing beside it (plan 13, the legibility fix round).
+    /// </summary>
+    public const float AlongsideSpawnAhead = 40f;
     /// <summary>A slag cart this close to the end of the enemy line has run off it: freed.</summary>
     const float LineEnd = 1f;
     const float WarnSeconds = 3f;
@@ -249,15 +256,15 @@ public partial class RailEncounterController : Node
     /// <summary>
     /// A slag cart rolls up the enemy line <see cref="SpawnBehind"/> short of its pace point (the party cart's place on that
     /// lane plus the offset) at the party's speed, its riders carried on the heap and awake. One that paces side by side (Offset 0: ride 4's
-    /// leap cart, plan 13 Ruling 10 as amended) appears at its pace point at the party's own speed, alongside at once.
+    /// leap cart, plan 13 Ruling 10 as amended) starts <see cref="AlongsideSpawnAhead"/> ahead of it instead, out of the seats' sight, and the party comes up to it.
     /// </summary>
     private void SpawnSlagCart(int index, RailEncounterPlan enc)
     {
         if (GetParent() is not Node3D root || !_enemy.Valid) return;
         var partyS = _rails.State.S;
         var paceS = PaceRules.TargetS(Lanes.EnemyS(partyS), enc.Offset);
-        var alongside = enc.Offset == 0f; // side by side: no roll-up to catch (the 10 m and a jog's pace-point jump cost seconds of the leap's stretch)
-        var s = Mathf.Clamp(paceS - (alongside ? 0f : SpawnBehind), 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
+        var alongside = enc.Offset == 0f; // side by side: it starts ahead, out of sight, and the party comes up to it (AlongsideSpawnAhead)
+        var s = Mathf.Clamp(paceS + (alongside ? AlongsideSpawnAhead : -SpawnBehind), 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
         if (_rails.FrontOnEnemyLane) s = Mathf.Min(Mathf.Max(paceS, Lanes.EnemyS(_rails.Party.FrontS) + CartRules.HalfLength + SpawnClear), Mathf.Max(0f, _enemy.Length - LineEnd - 1f)); // the party's cart is on this lane: seen ahead of it, never in it
         var v = alongside ? _rails.State.V : _rails.State.V * Lanes.Stretch(partyS);
         var cart = new SlagCart { Name = $"SlagCart_{enc.Id}", EncounterId = enc.Id, InnerSide = InnerSideAt(s), CartId = NextCartId() };
@@ -329,17 +336,17 @@ public partial class RailEncounterController : Node
     /// <summary>Hold pace with the party's cart: aim at the pace point, at the party's speed carried over to this lane plus a capped correction.</summary>
     private void Pace(SlagCart cart, float dt)
     {
-        PaceRun(cart.Run, cart.Offset, dt);
+        PaceRun(cart.Run, cart.Offset, dt, cart.Offset == 0f ? PaceRules.AlongsideCatchUp : PaceRules.CatchUp);
         cart.FollowRiders();
     }
 
     /// <summary>Step <paramref name="run"/> on the enemy line toward its pace point <paramref name="offset"/> metres from the party's cart, and pose it for this tick's physics.</summary>
-    private void PaceRun(CartRun run, float offset, float dt)
+    private void PaceRun(CartRun run, float offset, float dt, float catchUp = PaceRules.CatchUp)
     {
         var partyS = _rails.State.S;
         var partyV = _rails.State.Mode == CartMode.Rolling ? _rails.State.V * Lanes.Stretch(partyS) : 0f;
         var target = PaceRules.TargetS(Lanes.EnemyS(partyS), offset);
-        var command = PaceRules.SpeedFor(run.State.S, run.State.V, target, partyV);
+        var command = PaceRules.SpeedFor(run.State.S, run.State.V, target, partyV, catchUp);
         if (_rails.FrontOnEnemyLane) // the party's cart took this lane: one ahead cannot outrun it, one behind never runs into it
             command = run.State.S > Lanes.EnemyS(partyS) ? Mathf.Min(command, Mathf.Max(0f, partyV - RamCloseIn)) : Mathf.Min(command, partyV);
         run.Step(new CartInput(run.SlopeAhead, false, 0, 0, run.Limit, command), dt);
