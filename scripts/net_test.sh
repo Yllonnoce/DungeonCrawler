@@ -21,7 +21,13 @@
 #                                     train (its pairs within 2 m of the server's), the joiner's seat press in the server's early lead is held
 #                                     to the points and thrown as the train passes them straight, the first client's press on its first
 #                                     frame past the points leaves it thrown, the runaway takes the spur into the crevasse on every peer and
-#                                     nobody shows a ram;
+#                                     nobody shows a ram; in ride 4's cavern (plan 13) the bridge goes behind the train and both clients
+#                                     show it all gone within 10 s of stop 4, the joiner's brake held across its call never counts (no
+#                                     take), the first client leaps onto r4_slag's deck on its first frame offered and back on its first
+#                                     frame after the slag line's call, the joiner leaps across too and back on its last offered frames
+#                                     (taken, never a fall), both see both seated on the deck, r4_slag goes over the drop with nobody on it,
+#                                     nobody is shown over a gone cell or seated on a freed copy, no "Leap across" shows after the call,
+#                                     and both heroes sit in the party's cart at stop 4;
 #                                     the client's carts must keep within 1.5 m (2 m
 #                                     for ride 3's slag cart) of the server's on a shared server-time grid; the crew sit in their
 #                                     wagons on the client as on the server; at the end of the line the client leaves the game seated, and the
@@ -50,7 +56,11 @@
 #                                     (no wreck shown, no cart_wreck, no tumble); then it walks its own hero off the lip of a
 #                                     chasm on its own input: the server judges the fall ([crevasse] Joiner fell) and the joiner's
 #                                     sheet shows Fallen; the rest of the party is given to the crevasse, and the wipe rises beside
-#                                     a fresh cart with the joiner up and set down there by the server's ForcePose; both clients' slag carts
+#                                     a fresh cart with the joiner up and set down there by the server's ForcePose, its props hashing as
+#                                     the server's with the bridge and the drop standing; then the joiner, alone, rides ride 4 again from
+#                                     stop 3 (a test restore), pumped with the split straight: the runaway goes down with the bridge, the
+#                                     joiner brakes past the call's reaction time, the bridge takes the train, seen falling, and after the
+#                                     rise the joiner's current camera is its own hero's; both clients' slag carts
 #                                     (and their riders) and boarding hounds must match the server's on the grid as well)
 set -u
 cd "$(dirname "$0")/.."
@@ -93,7 +103,7 @@ if [ "${RIDE:-}" = 1 ]; then
     sleep 0.5
   done
   if grep -q "\[net-server\] ride: the cart departs stop 1 with" "$TMP/server.log" 2>/dev/null; then
-    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=390 > "$TMP/joiner.log" 2>&1 &
+    XDG_DATA_HOME="$TMP/joiner" "$GODOT" --headless --path . -- --test-net-client --net-test-ride --net-test-ride-join --join="$URL" --name=Joiner --class=class.warrior --quit-after=480 > "$TMP/joiner.log" 2>&1 &
     JOINER=$!
   fi
   wait $CLIENT 2>/dev/null
@@ -118,7 +128,7 @@ if [ "${RIDE:-}" = 1 ]; then
   done
   if ! grep "\[net\] ride sound" "$TMP/joiner.log" | tail -1 | grep -q "wreck=1"; then echo "NET TEST: FAIL (the joiner did not hear the wreck with a spare beside it once)"; exit 1; fi
   # a joiner mid-ride (task 8): ready during ride 2 on the server; 1 s after its Ready it traced joined-mid-ride ok; it boarded at stop 2
-  if ! grep -q "\[net\] RESULT ok" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner's pass)"; exit 1; fi
+  if ! grep -q "\[net\] RESULT ok" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner's pass: $(grep -o "\[net\] RESULT FAIL: .*" "$TMP/joiner.log" 2>/dev/null | head -1 | cut -c1-400))"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner is ready at .*: mid-ride 2" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not ready during ride 2)"; exit 1; fi
   if ! grep -q "\[net\] ride: joined-mid-ride ok" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner never traced joined-mid-ride ok)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: Joiner boarded at stop 2 through the intent" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner never boarded at stop 2)"; exit 1; fi
@@ -307,6 +317,68 @@ if [ "${RIDE:-}" = 1 ]; then
     if ! echo "$PLUNGED" | awk -v srv="$SRV_GONE" '{ g = $0; sub(/.*it went at spur S=/, "", g); sub(/;.*/, "", g); c = $0; sub(/.*our copy at S=/, "", c); sub(/\).*/, "", c); d = c - g; if (d < 0) d = -d; exit !(srv != "" && g == srv && d <= 2) }'; then echo "NET TEST: FAIL (the $f's plunge is not the server's (spur S=${SRV_GONE:-?}) or its copy on the spur was more than 2 m off: $PLUNGED)"; exit 1; fi
     if grep -q "\[net\] ride: the runaway rammed the train here" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f showed a ram the server never made: $(grep -m1 "\[net\] ride: the runaway rammed the train here" "$TMP/$f.log"))"; exit 1; fi
   done
+  # ride 4's cavern over the wire (plan 13 task 7). The bridge: built live, it goes behind the train on the server and both clients show
+  # every cell gone within 10 s of their arrival at stop 4; the train never falls on the main pass. The joiner holds its brake from its
+  # rear's coming onto the bridge across the call and past the reaction time: that press never counts and the train is not taken (the
+  # controller's ruling (a)). The leaps: the first client leaps across onto r4_slag's deck seat 0 on its first frame offered it, the joiner
+  # onto seat 1; the joiner leaps back on its last offered frames (its copy within 0.5 m of the offer's close), the server takes it (leap
+  # accepted, back into the cart; never a fall), and the first client back on its first frame after the slag line's call; both clients see
+  # both on the deck (their SeatMsgs). The drop: r4_slag goes over with nobody fallen or hauled, shown on both; nobody seated on a freed copy,
+  # nobody shown standing over a gone cell (ruling (d)), no "Leap across" offered after the call (ruling (e)); both heroes in the party's cart
+  # at stop 4. After the wipe's rise the rebuilt bridge and drop stand, the joiner's props hashing as the server's. Lines after the server's
+  # first "ride: take:" belong to the bridge's take at the end of the pass (rulings (b), (c)), so the main pass's are read before it
+  echo "--- the cavern"; grep -h "\[rails\] bridge r4_bridge\|\[rails\] t=[0-9.]* bridge r4_bridge\|\[rails\] leap\|\[rails\] t=[0-9.]* leap r4_leap\|goes over the drop\|\[net-server\] ride: \(bridge\|cavern\|take\): \|\[net-server\] interact [a-z]*:[0-9]* from [A-Za-z]*: leap \|\[net\] ride: \(cavern\|take\): \|\[net\] ride: [A-Za-z]* rides slag cart \|\[net\] ride: slag cart [0-9]* went over the drop\|\[net\] ride: the bridge\('s call\| behind us\)\|\[net\] ride: after the wipe's rise\|\[net-server\] ride: wipe-rise: bridge\|runaway r4_runaway goes down with the bridge" "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | head -100
+  TAKE_AT=$(grep -n "\[net-server\] ride: take: " "$TMP/server.log" | head -1 | cut -d: -f1); TAKE_AT=${TAKE_AT:-999999999}
+  BRIDGE_N=$(grep -o "\[rails\] bridge r4_bridge: party S=[0-9.]*\.\.[0-9.]*, [0-9]* deck cell(s), over the crevasse [A-Za-z]* (live)" "$TMP/server.log" | head -1 | sed 's/.*, \([0-9]*\) deck cell(s).*/\1/')
+  if [ -z "$BRIDGE_N" ] || [ "$BRIDGE_N" = 0 ]; then echo "NET TEST: FAIL (the server never built ride 4's bridge live: $(grep -m1 "\[rails\] bridge r4_bridge:" "$TMP/server.log"))"; exit 1; fi
+  if [ -z "$(awk -v m="$TAKE_AT" 'NR < m && /\[rails\] t=[0-9.]* bridge r4_bridge goes from S=/ { print NR; exit }' "$TMP/server.log")" ]; then echo "NET TEST: FAIL (ride 4's bridge never went behind the train on the server)"; exit 1; fi
+  FELL=$(awk -v m="$TAKE_AT" 'NR < m && /\[rails\] the train falls/ { print; exit }' "$TMP/server.log")
+  if [ -n "$FELL" ]; then echo "NET TEST: FAIL (the train fell on the server's main pass: $FELL)"; exit 1; fi
+  for f in client joiner; do
+    BG=$(grep -o "\[net\] ride: the bridge behind us gone [0-9]*/[0-9]* cells here [-+0-9.]* s from our arrival at stop [0-9]*" "$TMP/$f.log" 2>/dev/null | head -1)
+    if [ -z "$BG" ] || ! echo "$BG" | awk -v n="$BRIDGE_N" '{ g = $0; sub(/.* gone /, "", g); sub(/ cells.*/, "", g); split(g, c, "/"); d = $0; sub(/.* cells here /, "", d); sub(/ s from.*/, "", d); exit !(c[1] == n && c[2] == n && d + 0 <= 10) }'; then echo "NET TEST: FAIL (the $f did not show ride 4's bridge all gone ($BRIDGE_N cells) within 10 s of its arrival at stop 4: ${BG:-$(grep -m1 "\[net\] ride: the bridge behind us gone" "$TMP/$f.log" 2>/dev/null)})"; exit 1; fi
+  done
+  BRAKE=$(grep -m1 "\[net-server\] ride: bridge: " "$TMP/server.log")
+  case "$BRAKE" in "[net-server] ride: bridge: Joiner held the brake across the call: "*"(ok)") ;; *) echo "NET TEST: FAIL (the joiner's brake held across the bridge's call was not held short of the reaction time, or counted, or the train was taken: ${BRAKE:-no line})"; exit 1 ;; esac
+  R_ACROSS=$(grep -o "\[net\] ride: cavern: \"Leap across\" offered to the rider here .* pressed on our first frame offered it through the intent (slag:[0-9]*)" "$TMP/client.log" | head -1)
+  SLAG_ID=$(echo "$R_ACROSS" | sed -n 's/.*(slag:\([0-9]*\))$/\1/p')
+  if [ -z "$SLAG_ID" ]; then echo "NET TEST: FAIL (the first client never pressed \"Leap across\" on its first frame offered it: $(grep -m1 "\[net\] ride: cavern: \(FAIL\|\"Leap across\"\)" "$TMP/client.log"))"; exit 1; fi
+  for who in Rider:0 Joiner:1; do
+    name=${who%:*}; seat=${who#*:}
+    if ! grep -q "\[rails\] leap: $name across onto slag cart $SLAG_ID (r4_slag) seat $seat " "$TMP/server.log"; then echo "NET TEST: FAIL (the server never took $name's leap across onto slag cart $SLAG_ID's deck seat $seat: $(grep -m1 "\[rails\] leap: $name \|interact slag:[0-9]* from $name" "$TMP/server.log"))"; exit 1; fi
+    for f in client joiner; do
+      if ! grep -q "\[net\] ride: $name rides slag cart $SLAG_ID seat $seat here" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f never showed $name on slag cart $SLAG_ID's deck seat $seat from the SeatMsg)"; exit 1; fi
+    done
+  done
+  if ! grep -q "\[net\] ride: cavern: \"Leap across\" offered to the joiner here .* (slag:$SLAG_ID)$" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner never pressed \"Leap across\" onto slag cart $SLAG_ID: $(grep -m1 "\[net\] ride: cavern: FAIL" "$TMP/joiner.log" 2>/dev/null))"; exit 1; fi
+  J_BACK=$(grep -o "\[net\] ride: cavern: the joiner presses \"Leap back\" on its last offered frames: .*, [-0-9.]* m short of the offer's close" "$TMP/joiner.log" 2>/dev/null | head -1)
+  J_SHORT=$(echo "$J_BACK" | sed -n "s/.*, \([-0-9.]*\) m short of the offer's close$/\1/p")
+  if [ -z "$J_SHORT" ] || ! awk -v d="$J_SHORT" 'BEGIN { exit !(d + 0 >= 0 && d + 0 <= 0.5) }'; then echo "NET TEST: FAIL (the joiner did not press \"Leap back\" with its slag copy within 0.5 m of the offer's close: ${J_BACK:-$(grep -m1 "\[net\] ride: cavern: \(FAIL\|the offer of\)" "$TMP/joiner.log" 2>/dev/null)})"; exit 1; fi
+  J_OK_AT=$(grep -n "\[net-server\] interact cart:0 from Joiner: leap accepted" "$TMP/server.log" | head -1 | cut -d: -f1)
+  J_IN_AT=$(grep -n "\[rails\] leap: Joiner back into the cart seat " "$TMP/server.log" | head -1 | cut -d: -f1)
+  if [ -z "$J_OK_AT" ] || [ -z "$J_IN_AT" ] || [ "$J_IN_AT" -lt "$J_OK_AT" ]; then echo "NET TEST: FAIL (the server did not take the joiner's last-frame \"Leap back\": accepted $([ -n "$J_OK_AT" ] && echo yes || echo no), back into the cart $([ -n "$J_IN_AT" ] && echo yes || echo no))"; exit 1; fi
+  if ! grep -q "\[net\] ride: cavern: \"Leap back\" pressed on our first frame after the slag line's call here" "$TMP/client.log" || ! grep -q "\[rails\] leap: Rider back into the cart seat " "$TMP/server.log"; then echo "NET TEST: FAIL (the first client's \"Leap back\" on its first frame after the slag line's call was not pressed or not taken)"; exit 1; fi
+  if grep -q "\[rails\] leap: [A-Za-z]* falls with slag cart" "$TMP/server.log"; then echo "NET TEST: FAIL (a hero fell with the slag cart: $(grep -m1 "\[rails\] leap: [A-Za-z]* falls with slag cart" "$TMP/server.log"))"; exit 1; fi
+  if [ -z "$(awk -v m="$TAKE_AT" -v id="$SLAG_ID" 'NR < m && index($0, " slag cart " id " (r4_slag) goes over the drop at enemy S=") && / 0 hero\(es\) fell, 0 hauled back$/ { print NR; exit }' "$TMP/server.log")" ]; then echo "NET TEST: FAIL (slag cart $SLAG_ID did not go over the drop with nobody fallen or hauled back: $(grep -m1 "goes over the drop" "$TMP/server.log"))"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: cavern: the train arrives at stop [0-9]* with Rider in the party's cart yes and Joiner yes; .* (ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the train did not arrive at stop 4 with both players' heroes in the party's cart after two leaps each way and the drop: $(grep -m1 "\[net-server\] ride: cavern: the train arrives" "$TMP/server.log"))"; exit 1; fi
+  for f in client joiner; do
+    if ! grep -q "\[net\] ride: slag cart $SLAG_ID went over the drop here" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f never showed slag cart $SLAG_ID go over the drop)"; exit 1; fi
+    for what in "at stop [0-9]* our hero sits in the party's cart (seat [0-9]*) here" "after the slag line's call no \"Leap across\" offered here .* (ok)" "no hero shown standing over a gone cell here .* (ok)" "after slag cart [0-9, ]* went over the drop no hero sits on a freed copy here (ok)"; do
+      if ! grep -q "\[net\] ride: cavern: $what" "$TMP/$f.log" 2>/dev/null; then echo "NET TEST: FAIL (the $f's cavern: $(grep "\[net\] ride: cavern: " "$TMP/$f.log" 2>/dev/null | grep "FAIL\|NOT\|NO " | head -1 | cut -c1-300))"; exit 1; fi
+    done
+  done
+  if ! grep -q "\[net-server\] ride: wipe-rise: bridge r4_bridge 0/[0-9]* gone, the slag line's drop (r4_leap) standing (ok)" "$TMP/server.log"; then echo "NET TEST: FAIL (after the wipe's rise the server's bridge or drop did not stand: $(grep -m1 "\[net-server\] ride: wipe-rise: bridge" "$TMP/server.log"))"; exit 1; fi
+  if ! grep -q "\[net\] ride: after the wipe's rise our props hash as the server's: .* BridgeGone 0, SlagLineDropped False (ok)" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (after the wipe's rise the joiner's props did not hash as the server's with the bridge and the drop standing: $(grep -m1 "\[net\] ride: after the wipe's rise" "$TMP/joiner.log" 2>/dev/null))"; exit 1; fi
+  # the bridge's take at the end of the pass (rulings (b), (c)): the joiner alone rides ride 4 again from stop 3, pumped, the split straight:
+  # the runaway follows it into the cavern and goes down with the bridge (neither rammed nor plunged; no client shows a ram: the checks
+  # above), then the joiner brakes past the call's reaction time and the bridge takes the train; risen, its current camera is its own hero's
+  echo "--- the bridge's take"; awk -v m="$TAKE_AT" 'NR >= m && (/\[net-server\] ride: take: / || /\[rails\] t=[0-9.]* bridge r4_bridge (goes|takes)/ || /runaway r4_runaway (goes down|breaks loose)/ || /\[rails\] the train falls/)' "$TMP/server.log" | head -20; grep -h "\[net\] ride: take: " "$TMP/joiner.log" 2>/dev/null
+  if [ "$TAKE_AT" = 999999999 ]; then echo "NET TEST: FAIL (the bridge's take never began on the server)"; exit 1; fi
+  if [ -z "$(awk -v m="$TAKE_AT" 'NR > m && /\[rails\] t=[0-9.]* bridge r4_bridge takes the train at S=/ { print NR; exit }' "$TMP/server.log")" ]; then echo "NET TEST: FAIL (the bridge never took the train at the end of the pass: $(grep -m1 "\[net\] ride: take: FAIL\|\[net\] RESULT FAIL" "$TMP/joiner.log" 2>/dev/null | cut -c1-300))"; exit 1; fi
+  TAKE_RUN=$(awk -v m="$TAKE_AT" 'NR > m && /\[net-server\] ride: take: the runaway went down with bridge / { print; exit }' "$TMP/server.log")
+  case "$TAKE_RUN" in *"rammed False, plunged False); rams this build 0 (ok)") ;; *) echo "NET TEST: FAIL (the runaway was not taken by the bridge plainly before the take: ${TAKE_RUN:-the bridge never took it})"; exit 1 ;; esac
+  if ! grep -q "\[net\] ride: take: the runaway's copy (cart [0-9]*) went here at S=" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner never saw the runaway's copy go at the bridge)"; exit 1; fi
+  if ! grep -q "\[net\] ride: take: after the bridge's take, risen at stop [0-9]* .* our current camera now our hero's (ok)" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (after the bridge's take the joiner's current camera was not its own hero's: $(grep -m1 "\[net\] ride: take: after the bridge's take" "$TMP/joiner.log" 2>/dev/null))"; exit 1; fi
   # the set pieces' clocks: the kiln's (ride 5's) first hammer enters its fall on both sides (server time; every client fall paired with the nearest
   # server fall within 1 s, all within 50 ms, at least 10); ride 3's buckets pour on both sides from the ride's arm time (by bucket, within 0.1 s)
   CLOCKS=$(awk '
