@@ -56,6 +56,7 @@ public partial class RailNet : Node
     public override void _ExitTree()
     {
         if (Instance == this) Instance = null;
+        if (NetSession.IsClient) EndHolds("the floor went"); // a rebuild, a FloorChange, a rejoin: no held leaper outlives this floor hidden (re-review N1)
         if (_rails != null && IsInstanceValid(_rails))
         {
             _rails.CartEvents -= OnCartEvent;

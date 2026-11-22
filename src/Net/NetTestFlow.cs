@@ -1757,7 +1757,8 @@ public partial class NetTestFlow : Node
     private bool _cavSawRide, _cavDone, _cavArrivedTold;
     private double _cavArrivedAt = -1, _cavAllGoneAt = -1, _cavFirstGoneAt = double.NaN;
     private int _cavCalledFrames, _cavCalledDeck, _cavCalledCart, _cavAcrossAfterCall, _cavWatchedFrames;
-    private string? _cavAcrossFirst, _cavOverGone, _cavOnFreed;
+    private string? _cavAcrossFirst, _cavOverGone, _cavOnFreed, _cavHidden;
+    private readonly Dictionary<int, double> _cavHiddenSince = new();
     private readonly HashSet<string> _cavSlagTold = new();
     /// <summary>Each hero on a slag copy here (by member), the copies any hero rode (by cart id) and those that went; who left a copy, and how.</summary>
     private readonly Dictionary<int, Dungeon.Rails.SlagCart> _cavOnSlag = new();
@@ -1795,6 +1796,13 @@ public partial class NetTestFlow : Node
                 continue;
             }
             if (a.Cart is Dungeon.Rails.SlagCart freed) { _cavOnFreed ??= $"{name} still seated on slag cart {freed.CartId}'s freed copy"; continue; }
+            // the opposite fault (re-review N4): a hero on foot, not fallen, kept hidden past the hold's fallback
+            if (a.Cart == null && !a.State.Fallen && !a.Visible)
+            {
+                if (!_cavHiddenSince.TryGetValue(a.Index, out var hidSince)) _cavHiddenSince[a.Index] = hidSince = _elapsed;
+                if (_elapsed - hidSince > Dungeon.Rails.LeapRules.HoldForServer + 0.5) _cavHidden ??= FormattableString.Invariant($"{name} on foot kept HIDDEN {_elapsed - hidSince:0.0} s (not fallen, not seated)");
+            }
+            else _cavHiddenSince.Remove(a.Index);
             var cell = Dungeon.DungeonBuilder.WorldToCell(a.GlobalPosition);
             // shown standing there: on foot, seen and not fallen, at the deck's height (a body held in the drop for its fall is not standing)
             var overGone = a.Cart == null && !a.State.Fallen && a.Visible && layout.GoneBridges.Contains(cell) && Mathf.Abs(a.GlobalPosition.Y - main.Builder.Surface(cell).Y) < 1.5f;
@@ -1838,8 +1846,8 @@ public partial class NetTestFlow : Node
             var onGone = _cavOnWhenGone.Count > 0 ? string.Join(", ", _cavOnWhenGone) + $" (held here for the server's word: {(Dungeon.Rails.RailNet.Instance is { } held && IsInstanceValid(held) ? held.LeapersHeld : 0)} hero(es))" : "nobody";
             // ruling (d)'s case is a leaper still on a copy as it goes; with none, the watch has nothing to judge, and says so (never "ok")
             var reached = _cavOnWhenGone.Count > 0;
-            GD.Print(_cavOverGone != null
-                ? $"[net] ride: cavern: {_cavOverGone} here; off a slag copy here: {off}; on its copy when it went: {onGone} (FAIL)"
+            GD.Print(_cavOverGone != null || _cavHidden != null
+                ? $"[net] ride: cavern: {_cavOverGone ?? _cavHidden} here; off a slag copy here: {off}; on its copy when it went: {onGone} (FAIL)"
                 : reached ? $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: {onGone} (ok)"
                 : $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: nobody (ruling (d)'s case not reached here)");
             GD.Print(_cavRodeGone.Count == 0 ? $"[net] ride: cavern: NO slag copy a hero rode went here before stop {k} (FAIL)"

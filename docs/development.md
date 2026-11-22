@@ -2578,12 +2578,14 @@ Slag and golem carts name their riders' net ids by spot (−1 for an empty spot;
 - **Slag cart ids** (plan 13). A leap is a `SeatMsg` naming the slag cart's own `CartId` (the id its `CartStateDto` carries) and the deck
   seat (0 or 1); a client resolves it from its slag copies (`RailNet.CartById`: a live copy, not freed and not derailed). The server hears
   `RiderChanged` on each slag cart's real seat book (`SlagCart`'s `Admit` and `Release`). An unseat whose rider sits in another cart at the
-  flush is not sent (`LeapRules.SendsUnseat`): its seat in the new cart moves it on every client. A client sets a rider down where it stands
-  never where its slag copy went (Task 7 ruling (d)): a hero still on a copy as it goes is taken out of the copy's book, hidden and held where
-  it sat (`RailNet.HoldLeapers`, `[net] ride: {name} was on slag cart {id}'s copy as it went here: held hidden …`) until the server's word
-  (`LeapRules.HeldLeaperNow`, each frame): a seat (a haul back) shows it there, Fallen leaves it to the crevasse's hold, and a set-down's
-  poses (or its own ForcePose, which comes before the cart's state) move it, shown once `LeapRules.HoldForServer` (2 s) has run out. An unseat
-  naming a copy already freed sets a rider still in it down at the server's landing.
+  flush is not sent (`LeapRules.SendsUnseat`): its seat in the new cart moves it on every client. A client never sets a leaper down where
+  its slag copy went (Task 7 ruling (d)): a hero still on a copy as it goes is taken out of the copy's book, hidden and held where it sat
+  (`RailNet.HoldLeapers`, `[net] ride: {name} was on slag cart {id}'s copy as it went here: held hidden …`) until the server's word
+  (`LeapRules.HeldLeaperNow`, each frame): a seat (a haul back) shows it; Fallen leaves it to the crevasse's hold; the server placing it
+  shows it at once (a remote hero's poses more than `HoldMoveOff`, 0.5 m, off the copy's place, its unseat's landing, our own
+  ForcePose); `HoldForServer` (2 s) is the last fallback; and a floor reset, a rebuild, a FloorChange, a disconnect, a leave or a rejoin
+  ends every hold (`EndHolds`, also from `RailNet._ExitTree`). Each end is logged with its reason and the time held (`[net] ride:
+  {name}'s hold ended here after {t} s: …`).
 
 **Pose v2.** The binary `Pose` is 45 bytes with the kind. It appends:
 - `SeatYaw`: where a seated body looks from its seat, all the way round for a companion;
@@ -2928,7 +2930,7 @@ refuses it within 1 s of the first client's toggle (`seated window: set back …
      call. Nobody falls with the slag cart, which goes over with `0 hero(es) fell, 0 hauled back`; both clients print `[net] ride: slag cart
      {id} went over the drop here`. At stop 4 each client prints that its hero sits in the party's cart, that no "Leap across" was offered
      after the call (ruling (e), from its `LeapCalled`), that no hero was shown standing over a gone cell, with who left a slag copy and how
-     (ruling (d)'s watch: a hero shown on foot at a gone cell's deck height fails it; its case, a leaper still on a copy as it goes, is not
+     (ruling (d)'s watch: a hero shown on foot at a gone cell's deck height fails it, and so does one on foot, not fallen, kept hidden past the hold's fallback + 0.5 s; its case, a leaper still on a copy as it goes, is not
      produced by this pass, so the line says `on its copy when it went: nobody (ruling (d)'s case not reached here)`, never `(ok)`, and the
      script prints a NOTE; the client's hold is pinned by `LeapRulesTests`), and that nobody sits on a freed copy; the server, `[net-server] ride: cavern: the
      train arrives at stop 4 with Rider in the party's cart yes and Joiner yes; leaps across 2, back 2; … (ok)`. Each check fails the script

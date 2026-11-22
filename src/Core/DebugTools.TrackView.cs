@@ -151,7 +151,7 @@ public partial class DebugTools
                 if (!_tkvControlBlocked || _tkvHeaveLevel && !_tkvHeaveControlBlocked) { Fail("a control never ran"); return; }
                 var heaveControls = _tkvHeaveLevel ? ", the spared cell's controls stopped at the bed's height"
                     : ", the spared cell sighted WITHOUT its controls (the fallback: no spared cell is approached on its own level)";
-                GD.Print($"[trackview] RESULT ok: nofloorDrop pinned (PartyTrack 0, EnemyTrack 40); crest S={_tkvCrestS:0.0} sag S={_tkvSagS:0.0} ({(_tkvClimb ? "climb" : "descent")}, ride {_tkvRide}), heave cell {_tkvHeaveCell} S={_tkvHeaveS:0.0} (ride {_tkvHeaveRide}), {_tkvRays} rays clear, control blocked{heaveControls}{shots}");
+                GD.Print($"[trackview] RESULT ok: nofloorDrop pinned ({string.Join(", ", TrackDepthRules.Floor12NoFloorDrop.Select(d => $"{d.Key} {d.Value}"))}); crest S={_tkvCrestS:0.0} sag S={_tkvSagS:0.0} ({(_tkvClimb ? "climb" : "descent")}, ride {_tkvRide}), heave cell {_tkvHeaveCell} S={_tkvHeaveS:0.0} (ride {_tkvHeaveRide}), {_tkvRays} rays clear, control blocked{heaveControls}{shots}");
                 _done = true;
                 GetTree().Quit(0);
                 return;

@@ -131,9 +131,20 @@ public static class LeapRules
     /// </summary>
     public const double HoldForServer = 2.0;
 
-    /// <summary>A held leaper this frame (ruling (d)): shown again once seated or the hold has run out; left to the crevasse's hold once fallen; else held.</summary>
-    public static HeldLeaper HeldLeaperNow(bool seated, bool fallen, double heldFor)
-        => seated ? HeldLeaper.Show : fallen ? HeldLeaper.Fallen : heldFor >= HoldForServer ? HeldLeaper.Show : HeldLeaper.Hold;
+    /// <summary>A held hero's body counts as moved off the copy's place (the server's pose, a ForcePose or an unseat's landing put it elsewhere) past this (m).</summary>
+    public const float HoldMoveOff = 0.5f;
+
+    /// <summary>
+    /// A held leaper this frame (ruling (d), re-review N1). <paramref name="ended"/>: the hold ends whatever else (a floor reset, a rebuild or a
+    /// FloorChange; a disconnect, a leave or a rejoin): shown and dropped. Else shown once seated (a haul back); left to the crevasse's hold once
+    /// fallen; shown once <paramref name="movedOff"/> (the server's word on where it stands: a remote hero's pose more than <see cref="HoldMoveOff"/>
+    /// off the copy's place or its unseat's landing, the local hero's ForcePose); else held until <see cref="HoldForServer"/>, the last fallback.
+    /// </summary>
+    public static HeldLeaper HeldLeaperNow(bool seated, bool fallen, double heldFor, bool movedOff = false, bool ended = false)
+        => ended || seated ? HeldLeaper.Show : fallen ? HeldLeaper.Fallen : movedOff || heldFor >= HoldForServer ? HeldLeaper.Show : HeldLeaper.Hold;
+
+    /// <summary>A held body stands <paramref name="distanceFromHold"/> m from where it sat on the copy: moved off past <see cref="HoldMoveOff"/> (NaN: no).</summary>
+    public static bool MovedOffHold(float distanceFromHold) => distanceFromHold > HoldMoveOff;
 
     // ---- the drop (Task 5, Rulings 16-18) ---------------------------------------------------------------------------
 

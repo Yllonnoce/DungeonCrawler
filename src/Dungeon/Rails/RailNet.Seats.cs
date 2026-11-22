@@ -143,6 +143,7 @@ public partial class RailNet
         if (!m.Seated)
         {
             if (m.RiderKind == SeatRiderKind.Hero && rider is Adventurer { IsLocal: true }) LastLocalLanding = (new Vector3(m.X, m.Y, m.Z), NetSession.Instance.Now);
+            if (rider is Adventurer held && PlaceHeld(held, new Vector3(m.X, m.Y, m.Z))) return; // a leaper held off a copy that went: the server's landing is its word (re-review N1)
             if (cart != null && rider.Cart == cart) rider.GetOut(new Vector3(m.X, m.Y, m.Z), Vector3.Zero);
             else if (cart == null && rider.Cart is { } ridden && (ridden is not Node n || !IsInstanceValid(n) || n.IsQueuedForDeletion())) rider.GetOut(new Vector3(m.X, m.Y, m.Z), Vector3.Zero);
             return;
