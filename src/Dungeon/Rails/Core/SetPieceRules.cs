@@ -185,26 +185,91 @@ public static class SetPieceRules
     /// </summary>
     public static float SpurBend(float roomBeyond) => MathF.Min(SpurBendMax, roomBeyond - SpurStopHalf - SpurWallMargin);
 
+    /// <summary>The kiln spur's bend is tried from <see cref="SpurBendMax"/> down in steps of this.</summary>
+    public const float SpurBendStep = 0.05f;
+    /// <summary>The stop beam's inner end is cut back to clear the main line's sleeper ends (and so its rails) by this.</summary>
+    public const float SpurMainClear = 0.05f;
+
     /// <summary>
-    /// The kiln spur's bend: <see cref="SpurBendMax"/> unless that layout's footprint (<see cref="SpurFootprint"/>) touches rock, then
-    /// <see cref="SpurBend"/>(<paramref name="roomAgainstRock"/>) (the lane cell's wall face, half a cell out). <paramref name="layAt"/> lays the
-    /// spur's path (X, Z) for a bend. <c>StillInRock</c>: the bent-in layout's footprint touches rock too (an error the builder logs).
+    /// The kiln spur's bend: the largest from <see cref="SpurBendMax"/> down to <see cref="SpurBend"/>(<paramref name="roomAgainstRock"/>)
+    /// (1.1 m: the lane cell's wall face, half a cell out), in steps of <see cref="SpurBendStep"/>, whose layout (1) keeps its whole
+    /// footprint (<see cref="SpurFootprint"/>) <see cref="SpurWallMargin"/> clear of rock, (2) has left the main line at its end
+    /// (<see cref="SpurSleeperGap"/> at least 0), and (3) keeps a stop beam that, cut back clear of the main line
+    /// (<see cref="SpurStopOf"/>), still spans both of its own rails. <paramref name="layAt"/> lays the spur's path (X, Z) for a bend;
+    /// <paramref name="main"/> is the main line's path beside it. No bend fits: <c>NoFit</c> (an error the builder logs), and the spur takes
+    /// the least bend with its full beam.
     /// </summary>
-    public static (float Bend, bool RockBeyond, bool StillInRock) SpurBendFor(Func<float, IReadOnlyList<Vector2>> layAt,
-        Func<Vector2, bool> rockAt, float roomAgainstRock, float stopBack, float stopDepth)
+    public static SpurBendPick PickSpurBend(Func<float, IReadOnlyList<Vector2>> layAt, IReadOnlyList<Vector2> main,
+        Func<Vector2, bool> rockAt, float roomAgainstRock, SpurStopShape shape)
     {
-        bool InRock(float bend) => SpurFootprint(layAt(bend), stopBack, stopDepth).Any(rockAt);
-        if (!InRock(SpurBendMax)) return (SpurBendMax, false, false);
-        var bent = SpurBend(roomAgainstRock);
-        return (bent, true, InRock(bent));
+        var least = SpurBend(roomAgainstRock);
+        for (var i = 0; SpurBendMax - i * SpurBendStep >= least - 1e-4f; i++)
+        {
+            var bend = MathF.Max(least, SpurBendMax - i * SpurBendStep);
+            var path = layAt(bend);
+            var stop = SpurStopOf(path, main, shape);
+            var gap = SpurSleeperGap(path, main, shape);
+            if (stop.Inner >= TrackDepthRules.RailHalf && gap >= 0f && SpurFootprint(path, stop, shape).All(p => ClearOfRock(p, rockAt)))
+                return new SpurBendPick(bend, i > 0, false, stop, gap);
+        }
+        var fallback = layAt(least);
+        return new SpurBendPick(least, true, true, SpurStopOf(fallback, main, shape) with { Inner = SpurStopHalf }, SpurSleeperGap(fallback, main, shape));
+    }
+
+    /// <summary>
+    /// The spur's stop beam on its <paramref name="path"/>: centred <see cref="SpurStopShape.Back"/> short of the end, square to it, its outer
+    /// end <see cref="SpurStopHalf"/> out, its inner end cut back (never past <see cref="SpurStopHalf"/>) so its inner corners stand
+    /// <see cref="TrackDepthRules.SleeperHalf"/> + <see cref="SpurMainClear"/> from the <paramref name="main"/> line, measured across it.
+    /// </summary>
+    public static SpurStop SpurStopOf(IReadOnlyList<Vector2> path, IReadOnlyList<Vector2> main, SpurStopShape shape)
+    {
+        var (centre, along) = AlongPath(path, MathF.Max(0f, PathLength(path) - shape.Back));
+        var side = SideOf(main, path[^1]);
+        var (d, o) = AcrossMain(main, centre, side);
+        var across = Across(along);
+        if (Vector2.Dot(across, o) < 0f) across = -across;
+        var reach = Vector2.Dot(across, o);
+        var need = TrackDepthRules.SleeperHalf + SpurMainClear + shape.Depth / 2f * MathF.Abs(Vector2.Dot(along, o));
+        if (reach <= 1e-3f) return new SpurStop(centre, across, along, SpurStopHalf, SpurStopHalf);
+        var inner = MathF.Min(SpurStopHalf, (d - need) / reach);
+        // the cut is taken square to the main line at the beam's middle; where the main line curves, cut on by what its corners still lack
+        for (var pass = 0; pass < 4; pass++)
+        {
+            var nearest = float.PositiveInfinity;
+            foreach (var z in new[] { -shape.Depth / 2f, shape.Depth / 2f })
+                nearest = MathF.Min(nearest, AcrossMain(main, centre - across * inner + along * z, side).D);
+            var lack = TrackDepthRules.SleeperHalf + SpurMainClear - nearest;
+            if (lack <= 1e-4f) break;
+            inner -= lack / reach;
+        }
+        return new SpurStop(centre, across, along, MathF.Min(SpurStopHalf, inner), SpurStopHalf);
+    }
+
+    /// <summary>
+    /// How far the spur's inner sleeper ends stand clear of the <paramref name="main"/> line's at its stop beam's station and at its last
+    /// point (the lesser, across the main line; below 0 they overlap). Only its end must have left the main line: nearer the points the
+    /// two share sleepers, as at any turnout (an 8 m spur is only 0.56 of its bend out 2 m short of its end).
+    /// </summary>
+    public static float SpurSleeperGap(IReadOnlyList<Vector2> path, IReadOnlyList<Vector2> main, SpurStopShape shape)
+    {
+        var side = SideOf(main, path[^1]);
+        float Gap(Vector2 at, Vector2 along)
+        {
+            var across = Across(along);
+            return MathF.Min(AcrossMain(main, at - across * TrackDepthRules.SleeperHalf, side).D,
+                AcrossMain(main, at + across * TrackDepthRules.SleeperHalf, side).D) - TrackDepthRules.SleeperHalf;
+        }
+        var (stopAt, stopAlong) = AlongPath(path, MathF.Max(0f, PathLength(path) - shape.Back));
+        return MathF.Min(Gap(stopAt, stopAlong), Gap(path[^1], path[^1] - path[^2]));
     }
 
     /// <summary>
     /// The spur's footprint in the plane (X, Z) of its polyline <paramref name="path"/>: both sleeper ends
-    /// (<see cref="TrackDepthRules.SleeperHalf"/> either side) at every point of it, and the four corners of its stop beam
-    /// (<see cref="SpurStopHalf"/> across, <paramref name="stopDepth"/> deep along it) centred <paramref name="stopBack"/> short of its end.
+    /// (<see cref="TrackDepthRules.SleeperHalf"/> either side) at every point of it, the four corners of its <paramref name="stop"/> beam
+    /// (<see cref="SpurStopShape.Depth"/> deep), and the feet of the stop's two braces (<see cref="SpurStopShape.BraceReach"/> on from the
+    /// beam, under its rails).
     /// </summary>
-    public static IEnumerable<Vector2> SpurFootprint(IReadOnlyList<Vector2> path, float stopBack, float stopDepth)
+    public static IEnumerable<Vector2> SpurFootprint(IReadOnlyList<Vector2> path, SpurStop stop, SpurStopShape shape)
     {
         if (path.Count < 2) yield break;
         for (var i = 0; i < path.Count; i++)
@@ -213,13 +278,54 @@ public static class SetPieceRules
             yield return path[i] - across * TrackDepthRules.SleeperHalf;
             yield return path[i] + across * TrackDepthRules.SleeperHalf;
         }
+        foreach (var a in new[] { -stop.Inner, stop.Outer })
+            foreach (var z in new[] { -shape.Depth / 2f, shape.Depth / 2f })
+                yield return stop.Centre + stop.Across * a + stop.Along * z;
+        foreach (var a in new[] { -TrackDepthRules.RailHalf, TrackDepthRules.RailHalf })
+            yield return stop.Centre + stop.Across * a + stop.Along * shape.BraceReach;
+    }
+
+    /// <summary>The point and every point <see cref="SpurWallMargin"/> around it (eight ways) lie out of rock.</summary>
+    public static bool ClearOfRock(Vector2 p, Func<Vector2, bool> rockAt)
+    {
+        if (rockAt(p)) return false;
+        for (var k = 0; k < 8; k++)
+            if (rockAt(p + new Vector2(MathF.Cos(k * MathF.PI / 4f), MathF.Sin(k * MathF.PI / 4f)) * SpurWallMargin)) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// <paramref name="p"/>'s distance across the <paramref name="main"/> polyline from its nearest point, positive on
+    /// <paramref name="side"/> (<see cref="SideOf"/>), and the main line's level unit normal there, pointing to that side.
+    /// </summary>
+    static (float D, Vector2 Normal) AcrossMain(IReadOnlyList<Vector2> main, Vector2 p, float side)
+    {
+        var best = float.PositiveInfinity;
+        var result = (D: 0f, Normal: Vector2.UnitY);
+        for (var i = 1; i < main.Count; i++)
+        {
+            var seg = main[i] - main[i - 1];
+            var len2 = seg.LengthSquared();
+            if (len2 < 1e-12f) continue;
+            var u = Math.Clamp(Vector2.Dot(p - main[i - 1], seg) / len2, 0f, 1f);
+            var at = main[i - 1] + seg * u;
+            var dist = Vector2.Distance(p, at);
+            if (dist >= best) continue;
+            best = dist;
+            var n = Vector2.Normalize(new Vector2(-seg.Y, seg.X)) * side;
+            result = (Vector2.Dot(p - at, n), n);
+        }
+        return result;
+    }
+
+    /// <summary>Which side of the <paramref name="main"/> polyline <paramref name="p"/> lies on, against its left normal: +1 or -1.</summary>
+    static float SideOf(IReadOnlyList<Vector2> main, Vector2 p) => AcrossMain(main, p, 1f).D >= 0f ? 1f : -1f;
+
+    static float PathLength(IReadOnlyList<Vector2> path)
+    {
         var length = 0f;
         for (var i = 1; i < path.Count; i++) length += Vector2.Distance(path[i - 1], path[i]);
-        var (at, along) = AlongPath(path, MathF.Max(0f, length - stopBack));
-        var side = Across(along);
-        foreach (var a in new[] { -SpurStopHalf, SpurStopHalf })
-            foreach (var z in new[] { -stopDepth / 2f, stopDepth / 2f })
-                yield return at + side * a + along * z;
+        return length;
     }
 
     /// <summary>The unit vector square to <paramref name="along"/> in the plane.</summary>
@@ -243,3 +349,15 @@ public static class SetPieceRules
         return (path[^1], Vector2.UnitY);
     }
 }
+
+/// <summary>The kiln spur's stop as the builder draws it: its beam's middle <see cref="Back"/> short of the spur's end and <see cref="Depth"/> deep
+/// along it; its braces' feet <see cref="BraceReach"/> on from the beam's middle.</summary>
+public readonly record struct SpurStopShape(float Back, float Depth, float BraceReach);
+
+/// <summary>The kiln spur's stop beam in the plane (X, Z): its middle, its unit vectors across (away from the main line) and along the spur, and
+/// how far it reaches across each way (<see cref="Inner"/> toward the main line, <see cref="Outer"/> away).</summary>
+public readonly record struct SpurStop(Vector2 Centre, Vector2 Across, Vector2 Along, float Inner, float Outer);
+
+/// <summary><see cref="SetPieceRules.PickSpurBend"/>'s answer: the bend, whether it is less than the full one, whether nothing fitted (an
+/// error), the stop beam and the spur's last stretch's sleeper gap from the main line's.</summary>
+public readonly record struct SpurBendPick(float Bend, bool BentIn, bool NoFit, SpurStop Stop, float SleeperGap);

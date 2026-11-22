@@ -148,7 +148,7 @@ public partial class RailEncounterController
         var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S, LeverRef = NetRefs.Spur(piece.Index) };
         root.AddChild(spur);
         var path = spur.Build(_rails.Party.Track, _enemy, Lanes, _steel ??= DungeonBuilder.RailSteel(),
-            _sleeper ??= DungeonBuilder.RailSleeper(), w => _layout[DungeonBuilder.WorldToCell(w)] == Cell.Wall);
+            _sleeper ??= DungeonBuilder.RailSleeper(), w => _layout[DungeonBuilder.WorldToCell(w)] is Cell.Wall or Cell.Secret);
         ClearTimber(root, path);
         piece.Spur = spur;
         piece.Switch = spur.Lever; // armed and reset with the other levers

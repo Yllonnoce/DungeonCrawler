@@ -19,6 +19,9 @@ public partial class SpurSwitch : Node3D
     public const float LeverLead = 2f;
     /// <summary>The stop beam's middle stands this far short of the spur's end, and it is this deep along the spur.</summary>
     const float StopBack = 0.25f, StopDepth = 0.3f;
+    /// <summary>Each brace's middle stands this far on from the beam, and it is this long, tilted this far (radians) down to its foot.</summary>
+    const float BraceBack = 0.4f, BraceLength = 1f, BraceTilt = 0.6f;
+    static readonly SpurStopShape StopShape = new(StopBack, StopDepth, BraceBack + BraceLength / 2f * MathF.Cos(BraceTilt));
 
     /// <summary>The party line's S beside the points.</summary>
     public float PointsS { get; init; }
@@ -37,9 +40,9 @@ public partial class SpurSwitch : Node3D
 
     /// <summary>
     /// Lay the spur and stand the lever (inside the tree). Returns the spur's path and the lever's place, for clearing timber out of the way.
-    /// <paramref name="rockAt"/> says whether a world point lies in rock: where the full bend's sleeper ends or stop beam would
-    /// (<see cref="SetPieceRules.SpurBendFor"/>), the spur bends only to its lane cell's wall face (<see cref="SetPieceRules.SpurBend"/>), so
-    /// its rails, sleepers and stop never run into the wall.
+    /// <paramref name="rockAt"/> says whether a world point lies in rock: the spur bends as far as it can (<see cref="SetPieceRules.PickSpurBend"/>)
+    /// with its sleepers, stop and braces clear of the rock and its end clear of the main line, and its stop beam cut back clear of the
+    /// main line's sleepers.
     /// </summary>
     public List<Vector3> Build(TrackSampler party, TrackSampler enemy, LaneMap lanes, Material steel, Material sleeper, Func<Vector3, bool> rockAt)
     {
@@ -52,8 +55,8 @@ public partial class SpurSwitch : Node3D
         AddChild(Lever);
         Lever.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * RailEncounterController.LeverOut));
 
-        // the spur: off the enemy line at the points, bending ever further out from the party's lane; only to the lane cell's wall
-        // face where the full bend's sleepers or stop would touch rock
+        // the spur: off the enemy line at the points, bending ever further out from the party's lane, as far as the rock and the main
+        // line let it (PickSpurBend)
         List<Vector3> Lay(float bend)
         {
             var path = new List<Vector3>();
@@ -65,11 +68,14 @@ public partial class SpurSwitch : Node3D
             }
             return path;
         }
-        var (bend, rock, stillInRock) = SetPieceRules.SpurBendFor(
-            b => Lay(b).Select(p => new System.Numerics.Vector2(p.X, p.Z)).ToList(),
-            p => rockAt(new Vector3(p.X, 0f, p.Y)), DungeonBuilder.CellSize / 2f, StopBack, StopDepth);
-        if (stillInRock)
-            GD.PushError($"[rails] ERROR: spur switch at party S={PointsS:0.0}: its {bend:0.0} m bend still runs into rock");
+        static System.Numerics.Vector2 Flat(Vector3 p) => new(p.X, p.Z);
+        var main = new List<System.Numerics.Vector2>();
+        for (var e = EnemyPointsS; e <= Mathf.Min(enemy.Length, EnemyPointsS + 2f * SpurLength); e += 0.1f) main.Add(Flat(enemy.Point(e))); // fine chords: a curve's 0.5 m chord sags 4 mm
+        var pick = SetPieceRules.PickSpurBend(b => Lay(b).Select(Flat).ToList(), main, p => rockAt(new Vector3(p.X, 0f, p.Y)),
+            DungeonBuilder.CellSize / 2f, StopShape);
+        var bend = pick.Bend;
+        if (pick.NoFit)
+            GD.PushError($"[rails] ERROR: spur switch at party S={PointsS:0.0}: no bend from {SetPieceRules.SpurBendMax:0.00} m down to {bend:0.00} m keeps clear of the rock and the main line; laid at {bend:0.00} m");
         var points = Lay(bend);
         var spur = new RailTrack { Name = "Spur" };
         AddChild(spur);
@@ -77,16 +83,20 @@ public partial class SpurSwitch : Node3D
         Sampler = new TrackSampler(spur);
 
         // the stop at the end: a beam on two iron posts across the spur, braced back
+        // (the beam reaches pick.Stop.Outer away from the main line and pick.Stop.Inner toward it: the footprint's numbers)
         var end = Sampler.Frame(Mathf.Max(0f, Sampler.Length - StopBack));
         var basis = end.Basis.Orthonormalized();
-        Box(new Vector3(SetPieceRules.SpurStopHalf * 2f, 0.34f, StopDepth), new Transform3D(basis, end.Origin + basis.Y * 0.62f), _wood);
+        var stop = pick.Stop;
+        var away = basis.X.X * stop.Across.X + basis.X.Z * stop.Across.Y >= 0f ? 1f : -1f;
+        Box(new Vector3(stop.Inner + stop.Outer, 0.34f, StopDepth),
+            new Transform3D(basis, end.Origin + basis.X * (away * (stop.Outer - stop.Inner) / 2f) + basis.Y * 0.62f), _wood);
         foreach (var s in new[] { -1f, 1f })
         {
             Box(new Vector3(0.14f, 0.85f, 0.14f), new Transform3D(basis, end.Origin + basis.X * (s * RailTrack.Gauge / 2f) + basis.Y * 0.42f), _iron);
-            Box(new Vector3(0.12f, 0.12f, 1f), new Transform3D(basis * new Basis(Vector3.Right, -0.6f), end.Origin + basis.X * (s * RailTrack.Gauge / 2f) + basis.Y * 0.35f - basis.Z * 0.4f), _wood);
+            Box(new Vector3(0.12f, 0.12f, BraceLength), new Transform3D(basis * new Basis(Vector3.Right, -BraceTilt), end.Origin + basis.X * (s * RailTrack.Gauge / 2f) + basis.Y * 0.35f - basis.Z * BraceBack), _wood);
         }
         points.Add(Lever.GlobalPosition);
-        GD.Print($"[rails] spur switch: points at party S={PointsS:0.0} (enemy S={EnemyPointsS:0.0}), lever at S={leverS:0.0} side {side:+0;-0}, spur {Sampler.Length:0.0} m, bend {bend:0.0} m{(rock ? " (rock beyond)" : "")}");
+        GD.Print($"[rails] spur switch: points at party S={PointsS:0.0} (enemy S={EnemyPointsS:0.0}), lever at S={leverS:0.0} side {side:+0;-0}, spur {Sampler.Length:0.0} m, bend {bend:0.00} m{(pick.BentIn ? " (rock beyond)" : "")}, stop -{stop.Inner:0.00}/+{stop.Outer:0.00} m, sleeper gap {pick.SleeperGap:0.00} m");
         return points;
     }
 

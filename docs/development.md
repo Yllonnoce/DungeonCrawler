@@ -1884,12 +1884,21 @@ The golem (the last ride, 5, `RailEncounterController.Kiln.cs`). As the cart rea
 bursts out of the kiln wall onto the enemy line (a thud, a shake, dust). It is never a boss: it has the slim elite bar and
 its death opens nothing. It is carried by an unseen runner paced beside the party's cart. While it is alongside (or within
 6.5 m) it slams the cart every 4 s after a 1.5 s hand glow, for 12 plating and a shake. The spur (`SpurSwitch`) is a dead-end
-8 m track off the enemy line into the wall. It bends 1.8 m out from the enemy lane (`SetPieceRules.SpurBendMax`), unless that
-layout's footprint (both sleeper ends at every point of its path and the stop beam's four corners, `SetPieceRules.SpurFootprint`)
-touches rock; then it bends only to its lane cell's wall face, `SpurBend(2 m)` = 1.1 m, so its stop beam ends 0.1 m short of the rock
-(`SpurWallMargin`). If even that touches rock the build logs an ERROR. The build line says which (`spur … m, bend 1.1 m (rock
-beyond)`). On floor 12 the full bend's stop ran 0.10 m into the wall cube at (48,62), on the curve where the outward runs
-diagonally; at 1.1 m its stop clears the wall face by 0.44 m and its sleepers by 0.52 m, and the spur is 8.7 m long. Its lever stands between the lanes 2 m short of the party line's points, past
+8 m track off the enemy line into the wall. It bends as far out from the enemy lane as it can (`SetPieceRules.PickSpurBend`): from 1.8 m
+(`SpurBendMax`) down in 0.05 m steps (`SpurBendStep`) to 1.1 m (`SpurBend(2 m)`, a lane cell's wall face), it takes the first
+bend that meets three tests:
+- its footprint (both sleeper ends at every point of its path, the stop beam's corners and the stop's two brace feet,
+  `SpurFootprint`) stays `SpurWallMargin` (0.1 m) clear of rock (`Cell.Wall` or `Cell.Secret`) every way;
+- its inner sleeper ends at the stop and at its end clear the main line's (`SpurSleeperGap` at least 0; nearer the points the two
+  share sleepers, as at any turnout);
+- its stop beam, its inner end cut back to stand `SpurMainClear` (0.05 m) off the main line's sleeper ends (`SpurStopOf`; the outer
+  end stays 0.8 m out), still spans both of the spur's rails.
+
+If no bend passes, the build logs an ERROR and lays 1.1 m with the full beam. The build line says which:
+`spur … m, bend 1.50 m (rock beyond), stop -0.62/+0.80 m, sleeper gap 0.02 m`. On floor 12 the full bend's stop ran 0.10 m into
+the wall cube at (48,62), on the curve where the outward runs diagonally, so the spur bends 1.50 m (8.9 m long): its footprint
+clears the wall by 0.13 m, its end's sleepers clear the main line's by 0.02 m, and its beam's cut-back inner end clears the main
+line's sleeper ends by 0.05 m. Its lever stands between the lanes 2 m short of the party line's points, past
 the jump's landing; a rider throws it from the seat through the seated window, as ride 3's switch. If the lever is thrown when the runner reaches the points,
 the golem goes down the spur into its stop: three big run-overs' worth of damage, then a creature on its own feet. If the
 ride ends with the lever thrown and the golem still alive short of the stop, it goes off the spur then, so a thrown lever
