@@ -135,16 +135,20 @@ public static class LeapRules
     public const float HoldMoveOff = 0.5f;
 
     /// <summary>
-    /// A held leaper this frame (ruling (d), re-review N1). <paramref name="ended"/>: the hold ends whatever else (a floor reset, a rebuild or a
-    /// FloorChange; a disconnect, a leave or a rejoin): shown and dropped. Else shown once seated (a haul back); left to the crevasse's hold once
-    /// fallen; shown once <paramref name="movedOff"/> (the server's word on where it stands: a remote hero's pose more than <see cref="HoldMoveOff"/>
-    /// off the copy's place or its unseat's landing, the local hero's ForcePose); else held until <see cref="HoldForServer"/>, the last fallback.
+    /// A held leaper this frame (ruling (d), re-reviews N1 and R1-R5): shown once seated (a haul back); left hidden to the crevasse's hold once
+    /// fallen, whatever else; shown when <paramref name="ended"/> (a floor reset, a rebuild or a FloorChange, a leave or a rejoin) or once
+    /// <paramref name="movedOff"/> (the server's word on where it stands, on footing: <see cref="EndsHoldAt"/>); else held until
+    /// <see cref="HoldForServer"/>, the last fallback.
     /// </summary>
     public static HeldLeaper HeldLeaperNow(bool seated, bool fallen, double heldFor, bool movedOff = false, bool ended = false)
-        => ended || seated ? HeldLeaper.Show : fallen ? HeldLeaper.Fallen : movedOff || heldFor >= HoldForServer ? HeldLeaper.Show : HeldLeaper.Hold;
+        => seated ? HeldLeaper.Show : fallen ? HeldLeaper.Fallen : ended || movedOff || heldFor >= HoldForServer ? HeldLeaper.Show : HeldLeaper.Hold;
 
-    /// <summary>A held body stands <paramref name="distanceFromHold"/> m from where it sat on the copy: moved off past <see cref="HoldMoveOff"/> (NaN: no).</summary>
-    public static bool MovedOffHold(float distanceFromHold) => distanceFromHold > HoldMoveOff;
+    /// <summary>
+    /// The server's word on a held body's place ends its hold (<c>movedOff</c>): a landing or pose more than <see cref="HoldMoveOff"/> from where it
+    /// sat on the copy, on real footing (re-review 2 R1-R3). A place in a drop below its lip, the crevasse hold under the deck or any spot with no
+    /// footing is the fall, not a set-down: the hold waits for the Fallen sheet. NaN distance: no.
+    /// </summary>
+    public static bool EndsHoldAt(float distanceFromHold, bool onFooting) => onFooting && distanceFromHold > HoldMoveOff;
 
     // ---- the drop (Task 5, Rulings 16-18) ---------------------------------------------------------------------------
 

@@ -2581,11 +2581,13 @@ Slag and golem carts name their riders' net ids by spot (−1 for an empty spot;
   flush is not sent (`LeapRules.SendsUnseat`): its seat in the new cart moves it on every client. A client never sets a leaper down where
   its slag copy went (Task 7 ruling (d)): a hero still on a copy as it goes is taken out of the copy's book, hidden and held where it sat
   (`RailNet.HoldLeapers`, `[net] ride: {name} was on slag cart {id}'s copy as it went here: held hidden …`) until the server's word
-  (`LeapRules.HeldLeaperNow`, each frame): a seat (a haul back) shows it; Fallen leaves it to the crevasse's hold; the server placing it
-  shows it at once (a remote hero's poses more than `HoldMoveOff`, 0.5 m, off the copy's place, its unseat's landing, our own
-  ForcePose); `HoldForServer` (2 s) is the last fallback; and a floor reset, a rebuild, a FloorChange, a disconnect, a leave or a rejoin
-  ends every hold (`EndHolds`, also from `RailNet._ExitTree`). Each end is logged with its reason and the time held (`[net] ride:
-  {name}'s hold ended here after {t} s: …`).
+  (`LeapRules.HeldLeaperNow`, each frame): a seat (a haul back) shows it; Fallen leaves it hidden to the crevasse's hold, whatever else;
+  the server placing it on real footing off the copy shows it (`LeapRules.EndsHoldAt`: more than `HoldMoveOff`, 0.5 m, from where it sat,
+  with `CrevasseRules.Footing` under it and not below a drop's lip: a remote hero's poses there, or once they have brought it to its
+  unseat's landing, which must name the copy that went; our own ForcePose). The fall's unseat lands at the crevasse hold under the deck,
+  which is no footing, so a leaper who fell stays hidden until its Fallen sheet. `HoldForServer` (2 s) is the last fallback, and a floor
+  reset, a rebuild, a FloorChange, a leave or a rejoin ends every hold (`EndHolds`, also from `RailNet._ExitTree`; a disconnect frees the
+  bodies with the world). Each end is logged with its reason and the time held (`[net] ride: {name}'s hold ended here after {t} s: …`).
 
 **Pose v2.** The binary `Pose` is 45 bytes with the kind. It appends:
 - `SeatYaw`: where a seated body looks from its seat, all the way round for a companion;

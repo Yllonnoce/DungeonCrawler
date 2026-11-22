@@ -219,7 +219,7 @@ public partial class ClientWorld : Node
         var at = new Vector3(fp.Pose.X, fp.Pose.Y, fp.Pose.Z);
         body.Teleport(at);
         body.Rotation = new Vector3(0, fp.Pose.Yaw, 0);
-        if (Dungeon.Rails.RailNet.Instance is { } rails && GodotObject.IsInstanceValid(rails)) rails.PlaceHeld(body, null); // a held leaper (ruling (d)): the server placed it (re-review N2)
+        if (Dungeon.Rails.RailNet.Instance is { } rails && GodotObject.IsInstanceValid(rails)) rails.PlaceHeld(body, at, cartId: -1); // a held leaper (ruling (d)): the server placed it, on footing (re-review N2, R1)
         if (fp.Member == MemberIndex) GetNodeOrNull<NetTestFlow>("../TestFlow")?.NotePlaced(at);
     }
 
