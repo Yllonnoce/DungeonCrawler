@@ -286,14 +286,19 @@ public sealed class ObjectiveStateDto
     public List<int>? GatesUp { get; set; }
     /// <summary>Railed jailbreak: the stops (1-based) whose cage wagon stands open.</summary>
     public List<int>? OpenCages { get; set; }
-    /// <summary>Railed jailbreak: the stops whose cage wagon is coupled behind the cart, in train order.</summary>
+    /// <summary>Retired (plan 14): never written, ignored on load. It held the stops whose cage wagon was coupled behind the cart.</summary>
     public List<int>? CoupledCages { get; set; }
     /// <summary>Railed jailbreak: the crew (ids) who have come home.</summary>
     public List<string>? HomeCrew { get; set; }
     /// <summary>Railed jailbreak: the crew (ids) who are lost.</summary>
     public List<string>? LostCrew { get; set; }
-    /// <summary>Railed jailbreak: the stops whose cage wagon went into a crevasse with the train (hidden for good); null when none did.</summary>
+    /// <summary>Retired (plan 14): never written, ignored on load. It held the stops whose cage wagon went into a crevasse with the train.</summary>
     public List<int>? LostCages { get; set; }
+    /// <summary>
+    /// Railed jailbreak (plan 14): the numbers of the train's wagons lost into a crevasse (uncoupled by a fall), null when none is. A record
+    /// only: every load restores the cart whole, which couples every wagon fresh.
+    /// </summary>
+    public List<int>? LostWagons { get; set; }
     /// <summary>Railed jailbreak: the party carries the orc's keys, which open every cage.</summary>
     public bool? OrcKeys { get; set; }
     /// <summary>Railed jailbreak, a server's broadcast: the seconds each downed crew member (by id) has left to bleed; null when none is down. Clients count their labels down from it.</summary>

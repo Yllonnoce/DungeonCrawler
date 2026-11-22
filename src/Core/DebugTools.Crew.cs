@@ -273,15 +273,15 @@ public partial class DebugTools
             case 10 when _crewClock >= 1f:
             {
                 var fails = new List<string>();
-                var train = string.Join(",", rc.Train.Select(w => w.Stop));
-                var inWagons = ctrl.Crew.Where(c => !c.Dead && c.Ride is CageWagon { Stop: 1 or 2, Coupled: true }).Select(c => c.NpcName).ToList();
+                var train = string.Join(",", rc.Train.Select(w => w.Number));
+                var inWagons = ctrl.Crew.Where(c => !c.Dead && c.Ride is TrainWagon { Coupled: true }).Select(c => c.NpcName).ToList();
                 var shape = Shape(rc);
                 var guarded = CrewGuardedStops(main, layout);
                 var gatesUp = string.Join(",", Enumerable.Range(1, shape.Intermediate).Select(k => rc.GateUp(k)));
                 GD.Print($"[crew] 5 after the load: mode={rc.State.Mode} stop={rc.StopIndex} train=[{train}] riding the train [{string.Join(", ", inWagons)}] orcKeys={ctrl.OrcKeys} (saved {_crewOrcKeys}) gates up {gatesUp} cages open [{string.Join(",", wagons.Where(w => w.Open).Select(w => w.Stop))}] {CrewStates(ctrl)}; Grisel {GriselWhere(root, layout, rc)}");
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != 2) fails.Add($"the cart came back {rc.State.Mode} at stop {rc.StopIndex}, not held at stop 2");
                 if (train != "1,2") fails.Add($"the train is [{train}], not wagons 1 and 2");
-                if (rc.Train.Any(w => !w.Coupled || !w.Open)) fails.Add("a train wagon is not coupled and open");
+                if (rc.Train.Any(w => !w.Coupled)) fails.Add("a train wagon is not coupled");
                 if (inWagons.Count != 4) fails.Add($"{inWagons.Count} crew ride the train, not 4");
                 if (ctrl.OrcKeys != _crewOrcKeys) fails.Add($"OrcKeys came back {ctrl.OrcKeys}, saved {_crewOrcKeys}");
                 if (!rc.GateUp(1) || !rc.GateUp(2) || Enumerable.Range(3, shape.Intermediate - 2).Any(k => rc.GateUp(k) == guarded.Contains(k))) fails.Add($"gates up {gatesUp}: stops 1 and 2 should be up, every later guarded stop down");
@@ -403,15 +403,14 @@ public partial class DebugTools
         return true;
     }
 
-    /// <summary>The cart leaves <paramref name="stop"/>: the open wagon there couples on behind and the train has <paramref name="stop"/> wagons.</summary>
+    /// <summary>The cart leaves <paramref name="stop"/> with its whole train, crew seated in it (Task 2 rewrites this flow for the crew's walk).</summary>
     private bool CrewDepart(RailController rc, CrewRescueController ctrl, int stop, Action<string> fail)
     {
         if (rc.State.Mode != CartMode.Rolling) { if (_crewClock > 8f) fail($"the cart did not leave stop {stop} (mode {rc.State.Mode}, boarding {rc.Boarding.Running})"); return false; }
-        var wagon = ctrl.Wagons.First(w => w.Stop == stop);
-        var aboard = ctrl.Crew.Where(c => c.Ride == wagon).Select(c => c.NpcName).ToList();
-        GD.Print($"[crew] 4 departed stop {stop} after {_crewClock:0.0} s: wagon {stop} coupled={wagon.Coupled} CrewWagons={rc.Train.Count} train=[{string.Join(",", rc.Train.Select(w => w.Stop))}] aboard it [{string.Join(", ", aboard)}]");
-        if (!wagon.Coupled || rc.Train.Count != stop || rc.Train[^1] != wagon) { fail($"wagon {stop} did not couple on at the departure (train {rc.Train.Count})"); return false; }
-        if (aboard.Count == 0) { fail($"wagon {stop} left with nobody in it"); return false; }
+        var aboard = ctrl.Crew.Where(c => c.Ride is TrainWagon { Coupled: true }).Select(c => c.NpcName).ToList();
+        GD.Print($"[crew] 4 departed stop {stop} after {_crewClock:0.0} s: CrewWagons={rc.Train.Count} train=[{string.Join(",", rc.Train.Select(w => w.Number))}] crew in it [{string.Join(", ", aboard)}]");
+        if (rc.Train.Count != rc.Wagons.Count) { fail($"the train left stop {stop} with {rc.Train.Count} of {rc.Wagons.Count} wagons"); return false; }
+        if (aboard.Count == 0) { fail($"the train left stop {stop} with no crew in it"); return false; }
         return true;
     }
 
@@ -564,13 +563,13 @@ public partial class DebugTools
                 var ctrl = (CrewRescueController)ObjectiveController.Instance!;
                 var wagon = ctrl.Wagons.First(w => w.Stop == 1);
                 var crew = ctrl.Crew.Where(c => c.Ride == wagon).ToList();
-                if (wagon.Coupled || wagon.Open) { fail($"wagon 1 left with the train (coupled {wagon.Coupled}, open {wagon.Open})"); return; }
+                if (wagon.Open) { fail("cage 1 is open"); return; }
                 if (!rc.CrewLeftAt.Contains(1)) { fail("CrewLeftAt does not list stop 1"); return; }
                 if (crew.Count != CrewRules.PerWagon || crew.Any(c => ctrl.StateOf(c) != CrewState.Lost)) { fail($"wagon 1's crew are not two lost: [{string.Join(", ", crew.Select(c => $"{c.NpcName}:{ctrl.StateOf(c)}"))}]"); return; }
                 var line = $"Crew freed 0/{ctrl.Crew.Count}, home 0, 2 lost.";
                 if (ctrl.HudText != line) { fail($"the crew line reads \"{ctrl.HudText}\", not \"{line}\" (a left cage's crew are lost, never freed)"); return; }
                 if (ctrl.Completed) { fail("the floor is complete with the cages from stop 2 on still locked"); return; }
-                GD.Print($"[crew] 8 departed stop 1 without its prisoners: wagon 1 coupled={wagon.Coupled}, its crew Lost (hud \"{ctrl.HudText}\")");
+                GD.Print($"[crew] 8 departed stop 1 without its prisoners: cage 1 locked, its crew Lost (hud \"{ctrl.HudText}\")");
                 _crewStep++;
                 _crewClock = 0f;
                 break;

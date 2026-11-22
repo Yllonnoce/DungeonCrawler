@@ -65,10 +65,10 @@ public partial class RailNet
 
     private Node3D? BodyById(int id) => CartById(id) as Node3D;
 
-    /// <summary>The boarder spot <paramref name="spot"/> of the party's cart or a cage wagon, in world space.</summary>
-    private static Transform3D SpotOf(Node3D dest, int spot) => dest is MineCart cart ? cart.BoarderSpotTransform(spot) : ((CageWagon)dest).BoarderSpotTransform(spot);
+    /// <summary>The boarder spot <paramref name="spot"/> of the party's cart or a train wagon (its rim spot), in world space.</summary>
+    private static Transform3D SpotOf(Node3D dest, int spot) => dest is MineCart cart ? cart.BoarderSpotTransform(spot) : ((TrainWagon)dest).BoarderSpotTransform(spot);
 
-    private static Enemy?[]? HeldOf(Node3D body) => body is MineCart cart ? cart.Boarders : body is CageWagon wagon ? wagon.Boarders : null;
+    private static Enemy?[]? HeldOf(Node3D body) => body is MineCart cart ? cart.Boarders : body is TrainWagon wagon ? wagon.Boarders : null;
 
     private static Enemy? HeldAt(Node3D body, int spot) => HeldOf(body) is { } held && spot >= 0 && spot < held.Length ? held[spot] : null;
 

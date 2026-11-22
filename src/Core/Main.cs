@@ -169,7 +169,7 @@ public partial class Main : Node
         if (live.Objective?.Completed == true && merged.Objective?.Completed == false) crew?.TakeBackWin();
         game.Floors[floor] = merged;
         _riseAtCart = true;
-        GD.Print($"[Main] the wipe rises at stop {merged.RailStop}: the train as it arrived (coupled [{string.Join(",", merged.Objective?.CoupledCages ?? new List<int>())}], objective completed {live.Objective?.Completed == true}->{merged.Objective?.Completed == true})");
+        GD.Print($"[Main] the wipe rises at stop {merged.RailStop}: the train as it arrived (cages open [{string.Join(",", merged.Objective?.OpenCages ?? new List<int>())}], wagons lost [{string.Join(",", merged.Objective?.LostWagons ?? new List<int>())}], objective completed {live.Objective?.Completed == true}->{merged.Objective?.Completed == true})");
     }
     private static readonly HashSet<string> NoTrainNpcs = new();
 

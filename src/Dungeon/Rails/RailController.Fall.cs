@@ -64,10 +64,10 @@ public partial class RailController
 
     /// <summary>
     /// The fall's toll (inside <see cref="Wreck"/>): every rider of the cart and of each coupled wagon, and every hound held at a boarder
-    /// spot on either, is taken by the crevasse over the drop nearest the cart or the wagon (<see cref="OverTheDrop"/>); then the train is uncoupled and each of its wagons
-    /// is lost (<see cref="CageWagon.SetLost"/>: hidden, not solid, saved in <c>ObjectiveStateDto.LostCages</c>).
+    /// spot on either, is taken by the crevasse over the drop nearest the cart or the wagon (<see cref="OverTheDrop"/>); then the train is uncoupled, so each of its wagons
+    /// is lost (<see cref="TrainWagon.SetCoupled"/> false: hidden, not solid; saved in <c>ObjectiveStateDto.LostWagons</c>) until the cart is restored whole.
     /// </summary>
-    private void TakeTheTrain(List<CageWagon> wagons)
+    private void TakeTheTrain(List<TrainWagon> wagons)
     {
         var watch = CrevasseWatch.Instance!;
         var at = OverTheDrop(Cart.GlobalPosition, Cart.GlobalPosition); // the cart is over a crevasse: a drop is always near it
@@ -96,9 +96,7 @@ public partial class RailController
             _fallRiders.Clear();
             TakeBoarders(watch, wagon.Boarders, wagon, wagonAt);
         }
-        _train.UncoupleAll();
-        foreach (var wagon in wagons)
-            if (IsInstanceValid(wagon)) wagon.SetLost(true);
+        _train.UncoupleAll(); // every wagon lost: hidden where it went over
     }
     private readonly List<ICartRider> _fallRiders = new();
 
@@ -129,7 +127,7 @@ public partial class RailController
     /// thrown along the way it was going, toward the nearest chasm cell and down, freed after <see cref="PlungeSeconds"/>. Cosmetic and
     /// silent (the wreck's cue plays beside it).
     /// </summary>
-    private void Plunge(IReadOnlyList<CageWagon> wagons, bool cart)
+    private void Plunge(IReadOnlyList<TrainWagon> wagons, bool cart)
     {
         if (!IsInsideTree() || GetParent() is not Node3D root) return;
         var toward = TowardTheDrop(Cart.GlobalPosition);
@@ -147,7 +145,7 @@ public partial class RailController
     /// goes (<see cref="FallEye"/>) for <see cref="BridgeRules.FallSeen"/>, from <paramref name="eyeFrom"/> when given (a client's taken player, already
     /// posed at the hold point by its unseat: where its eye last was in the seat). Call it before the riders are taken. Cosmetic and silent.
     /// </summary>
-    private void SeenFall(IReadOnlyList<CageWagon> wagons, bool cart, bool localRode, Transform3D? eyeFrom = null)
+    private void SeenFall(IReadOnlyList<TrainWagon> wagons, bool cart, bool localRode, Transform3D? eyeFrom = null)
     {
         if (!IsInsideTree() || GetParent() is not Node3D root) return;
         RigidBody3D? carFall = null;

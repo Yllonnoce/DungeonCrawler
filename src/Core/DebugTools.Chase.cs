@@ -27,15 +27,17 @@ namespace DungeonCrawler.Core;
 // the switch left straight (the heap halts the cart, a hero breaks it with real swings, the ride resumes), on to the kiln's
 // stop, then the kiln crawled under a hammer and the pour so each hits, the golem killed, the valve broken, a save and a load
 // mid-ride, a stunned cinder under a hammer hurt with no ride armed, and the kiln again from its stop (no golem, the valve
-// still broken) with every cage open, every wagon coupled and the pumpers capped at one: the jump is still made (JumpSpeed
-// with one pumper, the load counting three wagons at most, the lip's slope and all).
+// still broken) with every cage open, W1..W4 coupled from stop 0 and the pumpers capped at one: the jump is still made (JumpSpeed
+// with one pumper, the load counting three wagons at most, the lip's slope and all). Plan 14: the train's four open wagons are
+// coupled from the landing (the floor check reads W1..W4 coupled and empty at stop 0); each opened cage's crew are seated by the
+// test's hook (DebugSeatCrew, until Task 2 walks them) in the first empty seats, and each departure checks they still sit there.
 // Throughout: no boss on the floor, the
 // stairs stay sealed until the crew are home, every hazard's warning comes at least 1.5 s before its hit (physics
 // frames logged; a barricade the cart smashes, each one its own call), and the cart is mended to full plating at every stop. At stop 1, before ride 2, the party is levelled to
 // --party-level=N (default ChaseDefaultLevel = 12, the level a run of the shipped campaign has by floor 12), its points spent; on
 // ride 2 the lead sits idle, who kills each boarder is logged, and at that level or higher at most one companion may be
-// down by stop 2; a hound must board the cage wagon, a wagon boarder must be struck by a companion within 6 s (the reach from
-// each seat is printed), and no crewman may go down to a wagon boarder's bite. Ride 2 is ridden twice with those checks: in
+// down by stop 2; a hound must board a wagon, a wagon boarder struck by a companion within 6 s is reported (the check waits for
+// Task 4's answering rule; the reach from each seat is printed), and no crewman may go down to a wagon boarder's bite. Ride 2 is ridden twice with those checks: in
 // section 1 in the natural seating (the rear seats hold whoever hopped in there, often the ranged companions, who turn right
 // round to shoot), and in section 2, after the thrower's save, from a restored stop 1 with a blade swapped into a rear seat.
 // Prints [chase] lines and [chase] RESULT.
@@ -88,6 +90,7 @@ public partial class DebugTools
     private readonly HashSet<int> _chDownedRide2 = new();
     private readonly Dictionary<Enemies.Enemy, ulong> _chBoardedAt = new(); // a wagon boarder -> the physics frame it boarded
     private readonly Dictionary<Enemies.Enemy, (string Who, ulong Frame)> _chFirstMateHit = new(); // a wagon boarder -> the first companion to hit it
+    private readonly HashSet<Enemies.Enemy> _chAnswerWaits = new(); // wagon boarders unanswered past 6 s, reported once (the check waits for Task 4)
     private readonly List<string> _chCrewBitten = new(); // crew who went down on ride 2 to a wagon boarder's bite
     private readonly List<string> _chCrewDownOther = new(); // crew who went down on ride 2 to something else
     /// <summary>Which ride-2 boarder pass is on: 0 none, 1 section 1's (natural seating), 2 section 2's (a blade swapped into a rear seat).</summary>
@@ -202,7 +205,11 @@ public partial class DebugTools
             {
                 var keyring = root.GetNodeOrNull<OrcKeyring>("OrcKeyring");
                 GD.Print($"[chase] 0 floor 12: stops={rc.StopS.Length} StopS=[{string.Join(", ", rc.StopS.Select(s => s.ToString("0.0")))}] lethality={TierRules.Lethality} set pieces={enc.SetPieceCount} wagons={ctrl.Wagons.Count} caged={ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Caged)} stairs locked={stairs.Locked} keyring={(keyring == null ? "none" : $"\"{keyring.Prompt}\"")}");
-                if (rc.StopS.Length != Floor12Stops || ctrl.Wagons.Count != Shape(rc).Intermediate || keyring == null || !stairs.Locked) { Fail($"floor 12 is not the shipped line ({Floor12Stops} stops, {Floor12Stops - 2} wagons, the orc's keys, sealed stairs)"); return; }
+                if (rc.StopS.Length != Floor12Stops || ctrl.Wagons.Count != Shape(rc).Intermediate || keyring == null || !stairs.Locked) { Fail($"floor 12 is not the shipped line ({Floor12Stops} stops, {Floor12Stops - 2} cages, the orc's keys, sealed stairs)"); return; }
+                var trainAt0 = string.Join(",", rc.Train.Select(w => w.Number));
+                var riders0 = rc.Wagons.Sum(w => w.Riders.Count);
+                GD.Print($"[chase] 0 the train at stop {rc.StopIndex}: wagons {rc.Wagons.Count}, train=[{trainAt0}], {riders0} rider(s) in it, its rear {rc.State.S - TrainRules.Length(rc.Train.Count) + CartRules.HalfLength:0.0}");
+                if (rc.StopIndex != 0 || rc.Wagons.Count != Shape(rc).Intermediate || trainAt0 != string.Join(",", Enumerable.Range(1, Shape(rc).Intermediate)) || riders0 != 0) { Fail($"W1..W{Shape(rc).Intermediate} are not coupled and empty from stop 0 (stop {rc.StopIndex}, wagons {rc.Wagons.Count}, train [{trainAt0}], {riders0} rider(s))"); return; }
                 if (Mathf.Abs(TierRules.Lethality - 3f) > 0.01f) { Fail($"lethality {TierRules.Lethality}, not 3"); return; }
                 _chStep++;
                 _chClock = 0f;
@@ -416,7 +423,7 @@ public partial class DebugTools
                 var kilnStop = Shape(rc).LastRideStop;
                 if (!RideOnTo(main, rc, kilnStop, "chase", Fail)) break;
                 if (!ChaseHeldAt(rc, kilnStop, Fail)) break;
-                GD.Print($"[chase] 4 held at stop {kilnStop}, the kiln's stop: plating={rc.State.Plating:0}, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}]");
+                GD.Print($"[chase] 4 held at stop {kilnStop}, the kiln's stop: plating={rc.State.Plating:0}, train=[{string.Join(",", rc.Train.Select(w => w.Number))}]");
                 if (enc.SetPieceNode(Kiln(rc, "spur")) is not SpurSwitch { Lever.Thrown: true }) { Fail($"arriving at stop {kilnStop} set back ride {Shape(rc).LastRide}'s spur lever, thrown ahead"); return; }
                 if (!ChaseKillGuards(main, layout, rc, kilnStop, Fail)) return;
                 _chStep++;
@@ -692,8 +699,8 @@ public partial class DebugTools
             {
                 var shape = Shape(rc);
                 if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 8f) fail($"re-boarded at stop {shape.LastRideStop} after the load, but the cart did not depart (mode {rc.State.Mode})"); break; }
-                GD.Print($"[chase] 10 departed stop {shape.LastRideStop} for the one-pumper jump: train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], {party.Active.Count(a => a.Seated)} heroes seated, pumper cap {PumperCap}; cruise with one pumper and {rc.Train.Count} wagons {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00} m/s, unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, the jump wants {SetPieceRules.JumpSpeed:0.0}");
-                if (rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump wants every wagon coupled ({shape.Intermediate}), the train has {rc.Train.Count}"); return; }
+                GD.Print($"[chase] 10 departed stop {shape.LastRideStop} for the one-pumper jump: train=[{string.Join(",", rc.Train.Select(w => w.Number))}], {party.Active.Count(a => a.Seated)} heroes seated, pumper cap {PumperCap}; cruise with one pumper and {rc.Train.Count} wagons {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00} m/s, unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, the jump wants {SetPieceRules.JumpSpeed:0.0}");
+                if (rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump wants W1..W{shape.Intermediate} coupled, the train has {rc.Train.Count}"); return; }
                 _chStep++;
                 _chClock = 0f;
                 break;
@@ -719,7 +726,7 @@ public partial class DebugTools
                 var pour = enc.SetPieceNode(Kiln(rc, "pour")) as MoltenPour;
                 PumperCap = null;
                 GD.Print($"[chase] 8 ride {shape.LastRide} again, held at stop {shape.Rides}: no golem={enc.GolemBody == null && golems == 0}, pour hits={enc.PourHits} (valve broken={pour?.Quenched}), hammer hits={enc.HammerHits}, buffer smashed={buffer?.Smashed}");
-                GD.Print($"[chase] 10 the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s (want >= {SetPieceRules.JumpSpeed:0.0}) with {_chPumpers} pumping and {rc.Train.Count} wagons coupled [{string.Join(",", rc.Train.Select(w => w.Stop))}]");
+                GD.Print($"[chase] 10 the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s (want >= {SetPieceRules.JumpSpeed:0.0}) with {_chPumpers} pumping and {rc.Train.Count} wagons coupled [{string.Join(",", rc.Train.Select(w => w.Number))}]");
                 if (enc.GolemBody != null || golems > 0 || enc.PourHits > 0 || pour is not { Quenched: true }) { fail("after the load the golem came or the pour ran"); return; }
                 if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 1 || rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping and {rc.Train.Count} wagons (want made, >= {SetPieceRules.JumpSpeed}, 1, {shape.Intermediate})"); return; }
                 if (buffer is not { Smashed: true }) { fail("after the load the buffer went wrong"); return; }
@@ -789,8 +796,8 @@ public partial class DebugTools
                 _chClock = 0f;
                 break;
             }
-            // 2b. ride 2 again, with a blade swapped into a rear seat: the cart restored at stop 1, cage 1 opened so wagon 1
-            // couples on, and the same boarder checks as section 1's natural-seating pass
+            // 2b. ride 2 again, with a blade swapped into a rear seat: the cart restored at stop 1, cage 1 opened so its crew sit in the
+            // train, and the same boarder checks as section 1's natural-seating pass
             case 4 when _chClock >= 1f:
             {
                 ChaseMend(main, root);
@@ -835,9 +842,9 @@ public partial class DebugTools
     }
 
     /// <summary>
-    /// 10. Before the kiln's ride is ridden again: the orc's keys taken, every cage opened, every wagon but the kiln stop's coupled on by
-    /// the test's hand (that one couples at the departure), and the pumpers capped at one: the jump must still be made with one pumper
-    /// and every wagon (CartRules.MaxLoadWagons counts three of them at most).
+    /// 10. Before the kiln's ride is ridden again: the orc's keys taken, every cage opened (its crew seated in the train), W1..W4 coupled
+    /// from stop 0, and the pumpers capped at one: the jump must still be made with one pumper and every wagon (CartRules.MaxLoadWagons
+    /// counts three of them at most).
     /// </summary>
     private bool ChaseOnePumperSetUp(Main main, Node3D root, RailController rc, CrewRescueController ctrl, Action<string> fail)
     {
@@ -847,10 +854,8 @@ public partial class DebugTools
         var shape = Shape(rc);
         for (var stop = 1; stop <= shape.Intermediate; stop++)
             if (!ctrl.Wagons.First(w => w.Stop == stop).Open && !ChaseOpenCage(main, ctrl, stop, fail)) return false;
-        for (var stop = 1; stop < shape.LastRideStop; stop++)
-            if (ctrl.Wagons.First(w => w.Stop == stop) is { Coupled: false } wagon) rc.Couple(wagon);
         PumperCap = 1;
-        GD.Print($"[chase] 10 the one-pumper jump set up at stop {rc.StopIndex}: cages open [{string.Join(",", ctrl.Wagons.Where(w => w.Open).Select(w => w.Stop))}], train=[{string.Join(",", rc.Train.Select(w => w.Stop))}] (wagon {shape.LastRideStop} couples at the departure), pumpers capped at {PumperCap}");
+        GD.Print($"[chase] 10 the one-pumper jump set up at stop {rc.StopIndex}: cages open [{string.Join(",", ctrl.Wagons.Where(w => w.Open).Select(w => w.Stop))}], train=[{string.Join(",", rc.Train.Select(w => w.Number))}] (W1..W{rc.Wagons.Count} coupled from stop 0), pumpers capped at {PumperCap}");
         return true;
     }
 
@@ -906,7 +911,7 @@ public partial class DebugTools
             bus.NpcEvent += (id, kind) =>
             {
                 if (kind != NpcEventKind.Downed || _chBoarderPass == 0 || _chEnc == null || !IsInstanceValid(_chEnc) || _chEnc.ArmedRide != 2 || Main.Instance.Builder.FloorRoot is not { } floor) return;
-                var biter = floor.GetChildren().OfType<Enemies.Enemy>().FirstOrDefault(h => h.IsAlive && h.Carrier is CageWagon && h.BoardTarget is { } bitten && IsInstanceValid(bitten) && bitten.Id == id);
+                var biter = floor.GetChildren().OfType<Enemies.Enemy>().FirstOrDefault(h => h.IsAlive && h.Carrier is TrainWagon && h.BoardTarget is { } bitten && IsInstanceValid(bitten) && bitten.Id == id);
                 var npc = floor.GetChildren().OfType<Npc>().FirstOrDefault(n => n.Id == id);
                 if (npc is not { Crew: true }) return;
                 (biter != null ? _chCrewBitten : _chCrewDownOther).Add(npc.NpcName);
@@ -1196,27 +1201,43 @@ public partial class DebugTools
         return true;
     }
 
-    /// <summary>Cage <paramref name="stop"/> opens with the orc's keys.</summary>
-    private static bool ChaseOpenCage(Main main, CrewRescueController ctrl, int stop, Action<string> fail)
+    /// <summary>Who each cage's crew sat where (DebugSeatCrew, at the cage's opening), by stop: the departure checks they still sit there.</summary>
+    private readonly Dictionary<int, List<(Npc Npc, int Wagon, int Seat)>> _chSeated = new();
+
+    /// <summary>
+    /// Cage <paramref name="stop"/> opens with the orc's keys, and its living crew are seated at once (the test's hook until Task 2 walks
+    /// them) in the first empty seats of the train in <see cref="TrainRules.SeatOrder"/>.
+    /// </summary>
+    private bool ChaseOpenCage(Main main, CrewRescueController ctrl, int stop, Action<string> fail)
     {
         var wagon = ctrl.Wagons.First(w => w.Stop == stop);
         var prompt = wagon.Prompt;
         wagon.Interact(main.Party, main.Party.Local!);
         GD.Print($"[chase] . cage {stop} by \"{prompt}\": open={wagon.Open}");
-        if (wagon.Open) return true;
-        fail($"cage {stop} did not open by \"{prompt}\"");
-        return false;
+        if (!wagon.Open) { fail($"cage {stop} did not open by \"{prompt}\""); return false; }
+        if (RailController.Instance is not { } rc) { fail("no rail controller"); return false; }
+        var living = ctrl.Crew.Count(c => IsInstanceValid(c) && !c.Dead && c.Ride == wagon);
+        var want = TrainRules.SeatOrder(rc.Wagons.Count).Where(p => rc.WagonAt(p.Wagon) is { Coupled: true } w && w.Seats.OccupantOf(p.Seat) == null).Take(living).ToList();
+        var seated = ctrl.DebugSeatCrew(stop);
+        if (seated == null) { fail($"stop {stop}'s crew could not be seated"); return false; }
+        _chSeated[stop] = seated;
+        var got = seated.Select(c => (c.Wagon, c.Seat)).ToList();
+        GD.Print($"[chase] . stop {stop}'s crew sit in the first empty seats: [{string.Join(", ", seated.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}"))}] (want [{string.Join(", ", want.Select(p => $"W{p.Wagon} seat {p.Seat}"))}])");
+        if (got.Count != living || !got.SequenceEqual(want) || seated.Any(c => c.Npc.Cart != rc.WagonAt(c.Wagon) || c.Npc.Seat != c.Seat)) { fail($"stop {stop}'s {living} crew did not sit in the first empty seats"); return false; }
+        return true;
     }
 
-    /// <summary>The cart has left stop <paramref name="stop"/> with the stop's wagon coupled on behind.</summary>
+    /// <summary>The cart has left stop <paramref name="stop"/> with W1..Wn coupled, the stop's crew still in the seats they took.</summary>
     private bool ChaseDepart(RailController rc, RailEncounterController enc, CrewRescueController ctrl, int stop, Action<string> fail)
     {
         if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 10f) fail($"the cart did not leave stop {stop} (mode {rc.State.Mode}, boarding {rc.Boarding.Running})"); return false; }
-        var wagon = ctrl.Wagons.First(w => w.Stop == stop);
-        GD.Print($"[chase] . departed stop {stop}: ride {enc.ArmedRide} armed, wagon {stop} coupled={wagon.Coupled}, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], {Main.Instance.Party.Active.Count(a => a.Seated)} heroes seated");
-        if (wagon.Coupled && rc.Train.Count == ctrl.Wagons.Count(w => w.Open && w.Stop <= stop)) return true; // every cage opened so far rides behind (a left one does not)
-        fail($"wagon {stop} did not couple on at the departure (train {rc.Train.Count})");
-        return false;
+        var train = string.Join(",", rc.Train.Select(w => w.Number));
+        var seated = _chSeated.TryGetValue(stop, out var list) ? list : new List<(Npc Npc, int Wagon, int Seat)>();
+        var off = seated.Where(c => IsInstanceValid(c.Npc) && !c.Npc.Dead && (c.Npc.Cart != rc.WagonAt(c.Wagon) || c.Npc.Seat != c.Seat)).Select(c => c.Npc.NpcName).ToList();
+        GD.Print($"[chase] . departed stop {stop}: ride {enc.ArmedRide} armed, train=[{train}], stop {stop}'s crew sit in the first empty seats [{string.Join(", ", seated.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}{(c.Npc.Dead ? " (dead)" : "")}"))}], {Main.Instance.Party.Active.Count(a => a.Seated)} heroes seated");
+        if (train != string.Join(",", Enumerable.Range(1, rc.Wagons.Count)) || rc.Wagons.Count == 0) { fail($"the train left stop {stop} as [{train}], not W1..W{rc.Wagons.Count}"); return false; }
+        if (off.Count > 0) { fail($"stop {stop}'s crew [{string.Join(", ", off)}] left their seats before the departure"); return false; }
+        return true;
     }
 
     /// <summary>The kiln golem's plan (its ride and At) on this floor, or null.</summary>
@@ -1293,6 +1314,7 @@ public partial class DebugTools
         _chBoarders.Clear();
         _chBoardedAt.Clear();
         _chFirstMateHit.Clear();
+        _chAnswerWaits.Clear();
         _chKiller.Clear();
         _chLastHit.Clear();
         _chDiedNow = null;
@@ -1305,18 +1327,18 @@ public partial class DebugTools
     private bool ChaseTrackBoarders(PartyController party, Node3D root, RailController rc, Action<string> fail)
     {
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
-            if (e.IsAlive && e.Profile.Id == RailEncounterController.HoundId && e.Carrier is MineCart or CageWagon && !_chBoarders.ContainsKey(e))
+            if (e.IsAlive && e.Profile.Id == RailEncounterController.HoundId && e.Carrier is MineCart or TrainWagon && !_chBoarders.ContainsKey(e))
             {
                 _chBoarders[e] = e.Carrier!.Name;
-                GD.Print($"[chase] 2 {e.Name} boards {e.Carrier.Name} at S={rc.State.S:0.0} (hp {e.Hp:0}/{e.MaxHp:0}){(e.Carrier is CageWagon ? $", biting {e.BoardTarget?.NpcName ?? "nobody"}" : "")}");
-                if (e.Carrier is CageWagon) { _chBoardedAt[e] = Engine.GetPhysicsFrames(); ChaseReachReport(party, e); }
+                GD.Print($"[chase] 2 {e.Name} boards {e.Carrier.Name} at S={rc.State.S:0.0} (hp {e.Hp:0}/{e.MaxHp:0}){(e.Carrier is TrainWagon ? $", biting {e.BoardTarget?.NpcName ?? "nobody"}" : "")}");
+                if (e.Carrier is TrainWagon) { _chBoardedAt[e] = Engine.GetPhysicsFrames(); ChaseReachReport(party, e); }
             }
         foreach (var (e, at) in _chBoardedAt)
-            if (IsInstanceValid(e) && e.IsAlive && !_chFirstMateHit.ContainsKey(e) && ChaseSeconds(Engine.GetPhysicsFrames() - at) > ChaseBoarderAnswer)
+            if (IsInstanceValid(e) && e.IsAlive && !_chFirstMateHit.ContainsKey(e) && ChaseSeconds(Engine.GetPhysicsFrames() - at) > ChaseBoarderAnswer && _chAnswerWaits.Add(e))
             {
+                // Ruling 21: suspended from Task 1 (wagon boarders on any wagon, the crew no longer in the wagon behind the cart) until Task 4's answering rule
                 ChaseReachReport(party, e);
-                fail($"{e.Name} boarded {_chBoarders[e]} on ride 2 (boarder pass {_chBoarderPass}) and no companion struck it within {ChaseBoarderAnswer:0} s");
-                return false;
+                GD.Print($"[chase] 2 {e.Name} boarded {_chBoarders[e]} on ride 2 (boarder pass {_chBoarderPass}) and no companion struck it within {ChaseBoarderAnswer:0} s (the answer check waits for Task 4)");
             }
         return true;
     }
@@ -1335,7 +1357,7 @@ public partial class DebugTools
         GD.Print($"[chase] 2 boarder pass {pass}: wagon boarders on ride 2: {_chBoardedAt.Count}, struck by a companion within {ChaseBoarderAnswer:0} s: {_chFirstMateHit.Count(kv => _chBoardedAt.TryGetValue(kv.Key, out var b) && ChaseSeconds(kv.Value.Frame - b) <= ChaseBoarderAnswer)}; crew down to a wagon boarder's bite: {_chCrewBitten.Count} [{string.Join(", ", _chCrewBitten)}], to anything else: {_chCrewDownOther.Count} [{string.Join(", ", _chCrewDownOther)}]");
         _chBoarderPass = 0;
         if (_chCrewBitten.Count > 0) { fail($"crew went down to a wagon boarder on ride 2 (boarder pass {pass}): {string.Join(", ", _chCrewBitten)}"); return false; }
-        if (_chBoardedAt.Count == 0) { fail($"no hound boarded a cage wagon on ride 2 (boarder pass {pass}): the companions' answer to a wagon boarder is unproven"); return false; }
+        if (_chBoardedAt.Count == 0) { fail($"no hound boarded a wagon on ride 2 (boarder pass {pass}): the companions' answer to a wagon boarder is unproven"); return false; }
         return true;
     }
 

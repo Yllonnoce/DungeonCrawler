@@ -21,8 +21,8 @@ namespace DungeonCrawler.Core;
 // next departure, unbraked, reaches stop 4. =stall: the train is caught (rc.DebugStall) once the collapse has started (its rear 6 m or more on
 // the bridge), nobody braking: the bridge is held by the stall guard, never takes the train, and the watchdog frees it to stop 4. =runaway:
 // the runaway is real, the split left straight, the lead pumps: the runaway goes down with the bridge with its front within 8 m of the
-// bridge's start, its body neither rammed nor plunged as it went; no ram; stop 4. =early-brake (Task 3 review I1): the lead brakes as the
-// bridge groans and holds it through the call and 3 s past it: held short (the front never past the bridge's start or 2 m behind the
+// bridge's start, its body neither rammed nor plunged as it went; no ram; stop 4. =early-brake (Task 3 review I1): the lead brakes with the
+// train's rear a cart's length short of the bridge (as the cart alone groaned onto it: plan 14 re-pinned it for the 12.6 m train) and holds it through the call and 3 s past it: held short (the front never past the bridge's start or 2 m behind the
 // rear, whichever is further on), alive, no take; held there (enc.HoldsRiders, at any speed) the lead's prompt is "" and a "Get out" press
 // is refused (the final review's I2); lets go
 // for 1 s (no take), then a fresh brake: the take comes only after that press (made past the reaction time), then as =brake. =leap (Task 4):
@@ -189,7 +189,7 @@ public partial class DebugTools
                 if (CavernBuild(rc, enc) is { } bad) { Fail(bad); return; }
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
                 rc.Restore(3);
-                GD.Print($"[cavern] restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Stop))}]; the bridge's pace {BridgeRules.Pace(rc.Train.Count):0.00} m/s, the train's unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}");
+                GD.Print($"[cavern] restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Number))}]; the bridge's pace {BridgeRules.Pace(rc.Train.Count):0.00} m/s, the train's unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}");
                 _cvStep++; _cvClock = 0f;
                 break;
             }
@@ -364,10 +364,12 @@ public partial class DebugTools
             {
                 // held short: the front never past the bridge's start or HoldShort behind the rear, whichever is further on (it starts at the start)
                 var over = going && rc.State.Mode == CartMode.Rolling && rear <= enc.BridgeToS ? enc.CollapseS - Mathf.Max(from, rear - BridgeRules.HoldShort) : float.NegativeInfinity;
-                if (_cvEbPhase == 0 && rc.State.Mode == CartMode.Rolling && rc.Party.FrontS >= from)
+                // the brake goes on with the train's rear a cart's length short of the bridge's start: where it was when the cart alone groaned onto
+                // it (plan 14 re-pin: with W1..W4 from the landing a brake at the groan, the front at the start, stops the rear 10 m short and nothing starts)
+                if (_cvEbPhase == 0 && rc.State.Mode == CartMode.Rolling && rear >= from - 2f * CartRules.HalfLength)
                 {
                     _cvEbPhase = 1;
-                    GD.Print($"[cavern] early-brake: the lead brakes as the bridge groans (front S={rc.Party.FrontS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00})");
+                    GD.Print($"[cavern] early-brake: the lead brakes with the rear a cart's length short of the bridge (front S={rc.Party.FrontS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00}; the groan came with the front at S={from:0.0})");
                 }
                 if (_cvEbPhase is 1 or 2 && float.IsNaN(_cvTakeT) && over > 0.01f) { Fail($"braked before the window, the front ran {over:0.00} m past its hold (front S={enc.CollapseS:0.0}, rear S={rear:0.0})"); return; }
                 if (_cvEbPhase is 1 or 2 && !float.IsNaN(_cvTakeT)) { Fail($"the bridge took the train braked before its window (phase {_cvEbPhase}, {_cvTakeT - _cvCallT:0.00} s after the call)"); return; }
@@ -385,7 +387,7 @@ public partial class DebugTools
                     if (!_cvHoldChecked) { Fail("the braked train was never held on the bridge (HoldsRiders) before the let-go"); return; }
                     _cvEbPhase = 2;
                     _cvEbAt = _cvTime;
-                    GD.Print($"[cavern] early-brake: braked from the groan to {_cvTime - _cvCallT:0.00} s after the call: held short and alive (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, gap {rear - enc.CollapseS:0.00} m, v {rc.State.V:0.00}, takes {enc.BridgeTakes}, falls {rc.Falls - _cvFallsBefore}, \"Don't stop\" heard {!float.IsNaN(_cvBrakeCallT)}); the lead lets go");
+                    GD.Print($"[cavern] early-brake: braked from a cart's length short to {_cvTime - _cvCallT:0.00} s after the call: held short and alive (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, gap {rear - enc.CollapseS:0.00} m, v {rc.State.V:0.00}, takes {enc.BridgeTakes}, falls {rc.Falls - _cvFallsBefore}, \"Don't stop\" heard {!float.IsNaN(_cvBrakeCallT)}); the lead lets go");
                 }
                 if (_cvEbPhase == 2 && _cvTime - _cvEbAt >= 1f)
                 {
@@ -398,7 +400,7 @@ public partial class DebugTools
                 {
                     if (TakeJudged(rc, enc, party, Fail) is not { } said) return;
                     if (_cvTakeT < _cvFreshT) { Fail("the take came before the fresh brake"); return; }
-                    _cvTakeSummary = $"braked from the groan through the call and 3 s past it, the train was held short and alive, no take; let go 1 s, no take; a fresh brake {_cvFreshT - _cvCallT:0.00} s after the call: {said}, {_cvTakeT - _cvFreshT:0.00} s after the fresh press";
+                    _cvTakeSummary = $"braked from a cart's length short of the bridge through the call and 3 s past it, the train was held short and alive, no take; let go 1 s, no take; a fresh brake {_cvFreshT - _cvCallT:0.00} s after the call: {said}, {_cvTakeT - _cvFreshT:0.00} s after the fresh press";
                     _cvStep = 6; _cvClock = 0f;
                     return;
                 }

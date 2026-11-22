@@ -141,12 +141,25 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
     public Enemy?[] Boarders { get; } = new Enemy?[BoarderCount];
 
     /// <summary>The boarder spot <paramref name="i"/> in world space: on the rim, facing in across the tub.</summary>
-    public Transform3D BoarderSpotTransform(int i)
+    public Transform3D BoarderSpotTransform(int i) => GlobalTransform * BoarderSpot(i);
+
+    /// <summary>
+    /// The rim's boarder spot <paramref name="i"/> in a tub's own space (0 front-left, 1 back-right), <see cref="BoarderLift"/> above the rim,
+    /// facing in across the tub: the cart's, and a train wagon's (<see cref="TrainWagon"/>, spot 1).
+    /// </summary>
+    internal static Transform3D BoarderSpot(int i)
     {
         i = Math.Clamp(i, 0, BoarderCount - 1);
         var at = BoarderSpots[i];
         var yaw = i == 0 ? -Mathf.Pi / 2f : Mathf.Pi / 2f; // −Z (forward) turned to point at the other wall
-        return GlobalTransform * new Transform3D(new Basis(Vector3.Up, yaw), new Vector3(at.X, TubBottom + TubHeight + BoarderLift, at.Y));
+        return new Transform3D(new Basis(Vector3.Up, yaw), new Vector3(at.X, TubBottom + TubHeight + BoarderLift, at.Y));
+    }
+
+    /// <summary>Where a rider in <paramref name="seat"/> sits in a tub's own space (its feet on the floor, the bench's on its deck): the cart's, and a train wagon's.</summary>
+    internal static Vector3 SeatSpot(int seat)
+    {
+        var i = Math.Clamp(seat, 0, SeatSpots.Length - 1);
+        return new Vector3(SeatSpots[i].X, InsideFloor + (i >= CartSeats.HeroSeats ? BenchDeck : 0f), SeatSpots[i].Y);
     }
 
     /// <summary>
@@ -206,7 +219,7 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
     {
         if (_built) return;
         _built = true;
-        float halfW = TubWidth / 2f, halfL = TubLength / 2f, top = TubBottom + TubHeight;
+        const float halfL = TubLength / 2f;
         _iron = DungeonBuilder.Material("metal_plate_02", new Color(0.3f, 0.28f, 0.26f), 1f);
         _iron.Metallic = 0.8f;
         _wood = DungeonBuilder.Material("old_planks_02", new Color(0.45f, 0.33f, 0.22f), 1f);
@@ -222,68 +235,11 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
         AddChild(body);
         var tubModel = TubModel is { } tubName ? MinePack.Piece(tubName, new Vector3(TubWidth, TubHeight, TubLength), keepAspect: false) : null;
         var firstTubBox = body.GetChildCount();
-        // the tub: a floor and four iron walls
-        Box(body, "Floor", new Vector3(TubWidth, InsideFloor - TubBottom, TubLength), new Vector3(0, (TubBottom + InsideFloor) / 2f, 0), _iron);
-        var wallH = top - InsideFloor;
-        var wallY = (InsideFloor + top) / 2f;
-        Box(body, "WallL", new Vector3(Wall, wallH, TubLength), new Vector3(-halfW + Wall / 2f, wallY, 0), _iron);
-        Box(body, "WallR", new Vector3(Wall, wallH, TubLength), new Vector3(halfW - Wall / 2f, wallY, 0), _iron);
-        Box(body, "WallF", new Vector3(TubWidth, wallH, Wall), new Vector3(0, wallY, -halfL + Wall / 2f), _iron);
-        Box(body, "WallB", new Vector3(TubWidth, wallH, Wall), new Vector3(0, wallY, halfL - Wall / 2f), _iron);
-        // the rim: a thicker iron lip round the top
-        const float rim = 0.1f, rimH = 0.06f;
-        var rimY = top - rimH / 2f;
-        Box(body, "RimL", new Vector3(rim, rimH, TubLength + 0.04f), new Vector3(-halfW, rimY, 0), _iron);
-        Box(body, "RimR", new Vector3(rim, rimH, TubLength + 0.04f), new Vector3(halfW, rimY, 0), _iron);
-        Box(body, "RimF", new Vector3(TubWidth + 0.04f, rimH, rim), new Vector3(0, rimY, -halfL), _iron);
-        Box(body, "RimB", new Vector3(TubWidth + 0.04f, rimH, rim), new Vector3(0, rimY, halfL), _iron);
-        // iron bands down the sides
-        foreach (var z in new[] { -halfL * 0.5f, halfL * 0.5f })
-        {
-            Box(body, "BandL", new Vector3(0.03f, TubHeight, 0.08f), new Vector3(-halfW - 0.015f, TubBottom + TubHeight / 2f, z), _iron);
-            Box(body, "BandR", new Vector3(0.03f, TubHeight, 0.08f), new Vector3(halfW + 0.015f, TubBottom + TubHeight / 2f, z), _iron);
-        }
-        // the front board: a wooden buffer across the nose
-        Box(body, "FrontBoard", new Vector3(TubWidth + 0.1f, 0.3f, 0.08f), new Vector3(0, TubBottom + 0.25f, -halfL - 0.05f), _wood);
+        AddBoxTub(body, _iron, _wood);
         var tubBoxes = body.GetChildCount() - firstTubBox;
-        // the chassis: two wooden beams under the tub, and the axles
-        foreach (var x in new[] { -RailTrack.Gauge / 2f + 0.12f, RailTrack.Gauge / 2f - 0.12f })
-            Box(body, "Beam", new Vector3(0.12f, 0.1f, TubLength - 0.1f), new Vector3(x, TubBottom - 0.05f, 0), _wood);
-        var axleY = RailTop + WheelRadius;
-        foreach (var z in new[] { -halfL + 0.35f, halfL - 0.35f })
-        {
-            if (Axle(z < 0f) is { } model)
-            {
-                // the mine pack's axle, its two wheels on the rails, in place of the rod and the two wheel cylinders
-                body.AddChild(model);
-                model.Position = new Vector3(0, RailTop, z);
-                continue;
-            }
-            var axle = new MeshInstance3D
-            {
-                Name = "Axle",
-                Mesh = new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.035f, Height = RailTrack.Gauge + 0.1f, RadialSegments = 8, Rings = 1 },
-                MaterialOverride = _iron,
-                Transform = new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), new Vector3(0, axleY, z)),
-            };
-            body.AddChild(axle);
-            foreach (var x in new[] { -RailTrack.Gauge / 2f, RailTrack.Gauge / 2f })
-                body.AddChild(new MeshInstance3D
-                {
-                    Name = "Wheel",
-                    Mesh = new CylinderMesh { TopRadius = WheelRadius, BottomRadius = WheelRadius, Height = 0.07f, RadialSegments = 14, Rings = 1 },
-                    MaterialOverride = _iron,
-                    Transform = new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), new Vector3(x, axleY, z)),
-                });
-        }
-        // the seats: a plank per row, the rear bench on its raised deck
+        AddChassis(body, _iron, _wood);
         var firstSeat = body.GetChildCount();
-        var plank = new Vector3(TubWidth - Wall * 2f, 0.05f, 0.3f);
-        foreach (var row in new[] { 0, 2 })
-            Box(body, "Seat", plank, new Vector3(0, InsideFloor + SeatHeight - 0.025f, SeatSpots[row].Y + 0.12f), _wood);
-        var deckDepth = halfL - (SeatSpots[4].Y - 0.25f) - Wall;
-        Box(body, "BenchDeck", new Vector3(TubWidth - Wall * 2f, BenchDeck, deckDepth), new Vector3(0, InsideFloor + BenchDeck / 2f, halfL - Wall - deckDepth / 2f), _wood);
-        Box(body, "Bench", plank, new Vector3(0, InsideFloor + BenchDeck + SeatHeight - 0.025f, SeatSpots[4].Y + 0.12f), _wood);
+        AddSeats(body, _wood);
         if (tubModel != null)
         {
             // the model's tub stands in the box tub's place, over the same size: the boxes (walls, rim, bands, front board, seats) are hidden
@@ -298,12 +254,87 @@ public partial class MineCart : AnimatableBody3D, IHoldInteractable, ICartBody
 
         for (var i = 0; i < _seats.Length; i++)
         {
-            var y = InsideFloor + (i >= CartSeats.HeroSeats ? BenchDeck : 0f);
-            _seats[i] = new Marker3D { Name = $"Seat{i}", Position = new Vector3(SeatSpots[i].X, y, SeatSpots[i].Y) };
+            _seats[i] = new Marker3D { Name = $"Seat{i}", Position = SeatSpot(i) };
             AddChild(_seats[i]);
         }
         Sound = new CartSound();
         AddChild(Sound);
+    }
+
+    /// <summary>The box tub under <paramref name="body"/>: a floor and four iron walls, the rim, the bands and the front board (the cart's, and a train wagon's).</summary>
+    internal static void AddBoxTub(Node3D body, Material iron, Material wood)
+    {
+        float halfW = TubWidth / 2f, halfL = TubLength / 2f, top = TubBottom + TubHeight;
+        // the tub: a floor and four iron walls
+        Box(body, "Floor", new Vector3(TubWidth, InsideFloor - TubBottom, TubLength), new Vector3(0, (TubBottom + InsideFloor) / 2f, 0), iron);
+        var wallH = top - InsideFloor;
+        var wallY = (InsideFloor + top) / 2f;
+        Box(body, "WallL", new Vector3(Wall, wallH, TubLength), new Vector3(-halfW + Wall / 2f, wallY, 0), iron);
+        Box(body, "WallR", new Vector3(Wall, wallH, TubLength), new Vector3(halfW - Wall / 2f, wallY, 0), iron);
+        Box(body, "WallF", new Vector3(TubWidth, wallH, Wall), new Vector3(0, wallY, -halfL + Wall / 2f), iron);
+        Box(body, "WallB", new Vector3(TubWidth, wallH, Wall), new Vector3(0, wallY, halfL - Wall / 2f), iron);
+        // the rim: a thicker iron lip round the top
+        const float rim = 0.1f, rimH = 0.06f;
+        var rimY = top - rimH / 2f;
+        Box(body, "RimL", new Vector3(rim, rimH, TubLength + 0.04f), new Vector3(-halfW, rimY, 0), iron);
+        Box(body, "RimR", new Vector3(rim, rimH, TubLength + 0.04f), new Vector3(halfW, rimY, 0), iron);
+        Box(body, "RimF", new Vector3(TubWidth + 0.04f, rimH, rim), new Vector3(0, rimY, -halfL), iron);
+        Box(body, "RimB", new Vector3(TubWidth + 0.04f, rimH, rim), new Vector3(0, rimY, halfL), iron);
+        // iron bands down the sides
+        foreach (var z in new[] { -halfL * 0.5f, halfL * 0.5f })
+        {
+            Box(body, "BandL", new Vector3(0.03f, TubHeight, 0.08f), new Vector3(-halfW - 0.015f, TubBottom + TubHeight / 2f, z), iron);
+            Box(body, "BandR", new Vector3(0.03f, TubHeight, 0.08f), new Vector3(halfW + 0.015f, TubBottom + TubHeight / 2f, z), iron);
+        }
+        // the front board: a wooden buffer across the nose
+        Box(body, "FrontBoard", new Vector3(TubWidth + 0.1f, 0.3f, 0.08f), new Vector3(0, TubBottom + 0.25f, -halfL - 0.05f), wood);
+    }
+
+    /// <summary>The chassis under <paramref name="body"/>: two wooden beams under the tub and the two axles with their wheels (the mine pack's when it is there).</summary>
+    internal static void AddChassis(Node3D body, Material iron, Material wood)
+    {
+        var halfL = TubLength / 2f;
+        foreach (var x in new[] { -RailTrack.Gauge / 2f + 0.12f, RailTrack.Gauge / 2f - 0.12f })
+            Box(body, "Beam", new Vector3(0.12f, 0.1f, TubLength - 0.1f), new Vector3(x, TubBottom - 0.05f, 0), wood);
+        var axleY = RailTop + WheelRadius;
+        foreach (var z in new[] { -halfL + 0.35f, halfL - 0.35f })
+        {
+            if (Axle(z < 0f) is { } model)
+            {
+                // the mine pack's axle, its two wheels on the rails, in place of the rod and the two wheel cylinders
+                body.AddChild(model);
+                model.Position = new Vector3(0, RailTop, z);
+                continue;
+            }
+            var axle = new MeshInstance3D
+            {
+                Name = "Axle",
+                Mesh = new CylinderMesh { TopRadius = 0.035f, BottomRadius = 0.035f, Height = RailTrack.Gauge + 0.1f, RadialSegments = 8, Rings = 1 },
+                MaterialOverride = iron,
+                Transform = new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), new Vector3(0, axleY, z)),
+            };
+            body.AddChild(axle);
+            foreach (var x in new[] { -RailTrack.Gauge / 2f, RailTrack.Gauge / 2f })
+                body.AddChild(new MeshInstance3D
+                {
+                    Name = "Wheel",
+                    Mesh = new CylinderMesh { TopRadius = WheelRadius, BottomRadius = WheelRadius, Height = 0.07f, RadialSegments = 14, Rings = 1 },
+                    MaterialOverride = iron,
+                    Transform = new Transform3D(new Basis(Vector3.Back, Mathf.Pi / 2f), new Vector3(x, axleY, z)),
+                });
+        }
+    }
+
+    /// <summary>The seats under <paramref name="body"/>: a plank per row (<paramref name="rows"/>: the cart's two, a wagon's front one), the rear bench on its raised deck.</summary>
+    internal static void AddSeats(Node3D body, Material wood, int rows = 2)
+    {
+        var halfL = TubLength / 2f;
+        var plank = new Vector3(TubWidth - Wall * 2f, 0.05f, 0.3f);
+        for (var r = 0; r < rows; r++)
+            Box(body, "Seat", plank, new Vector3(0, InsideFloor + SeatHeight - 0.025f, SeatSpots[r * 2].Y + 0.12f), wood);
+        var deckDepth = halfL - (SeatSpots[4].Y - 0.25f) - Wall;
+        Box(body, "BenchDeck", new Vector3(TubWidth - Wall * 2f, BenchDeck, deckDepth), new Vector3(0, InsideFloor + BenchDeck / 2f, halfL - Wall - deckDepth / 2f), wood);
+        Box(body, "Bench", plank, new Vector3(0, InsideFloor + BenchDeck + SeatHeight - 0.025f, SeatSpots[4].Y + 0.12f), wood);
     }
 
     private static void Box(Node3D parent, string name, Vector3 size, Vector3 at, Material material)

@@ -28,7 +28,8 @@ public static class NetRefResolver
         TrackSwitch sw => sw.NetRef.Length > 0 ? sw.NetRef : null, // "switch:{piece}", or "spur:{piece}" for a spur's lever
         SlagCart slag => slag.NetRef, // "slag:{cartId}": ride 4's leap across (plan 13)
         RailGate.WinchPost w => NetRefs.Winch(w.Gate.Stop),
-        CageWagon w => NetRefs.Wagon(w.Stop),
+        TrainWagon w => w.NetRef, // "wagon:{number}": a wagon of the party's train
+        CageWagon w => w.NetRef, // "cage:{stop}"
         Adventure.Objectives.OrcKeyring => NetRefs.Keyring,
         _ => null,
     };
@@ -59,8 +60,8 @@ public static class NetRefResolver
 
     /// <summary>
     /// A railed floor's props, found through their owners (not the root's direct children): the stops' gates, winches and
-    /// spares through the <see cref="RailController"/>, the set pieces through the <see cref="RailEncounterController"/>, the
-    /// cage wagons and the keyring through the crew objective. Only the owners of this very floor root answer.
+    /// spares and the train's wagons through the <see cref="RailController"/>, the set pieces through the <see cref="RailEncounterController"/>,
+    /// the cages and the keyring through the crew objective. Only the owners of this very floor root answer.
     /// </summary>
     private static Node3D? ResolveRail(Node3D root, string kind, string id)
     {
@@ -72,16 +73,17 @@ public static class NetRefResolver
             case NetRefs.WinchKind: return rails?.GateAt(index)?.Winch;
             case NetRefs.SpareKind: return rails?.ChaserStop == index && rails.Chaser is { } chaser ? chaser : rails?.SpareAt(index); // a spare running after the train is its chaser
             case NetRefs.CartKind: return index == 0 && rails != null && GodotObject.IsInstanceValid(rails.Cart) ? rails.Cart : null;
+            case NetRefs.WagonKind: return rails?.WagonAt(index);
             case NetRefs.SlagKind:
                 foreach (var slag in SlagCart.Live) // by its wire id: the server's own carts (a client's copies carry the server's ids)
                     if (slag.CartId == index && GodotObject.IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.GetParent() == root) return slag;
                 return null;
             case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind or NetRefs.BarricadeKind or NetRefs.BridgeKind or NetRefs.LeapKind:
                 return RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.GetParent() == root ? enc.NetNode(kind, index) : null;
-            case NetRefs.WagonKind or NetRefs.KeyringKind:
+            case NetRefs.CageKind or NetRefs.KeyringKind:
                 if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || !GodotObject.IsInstanceValid(crew) || crew.GetParent() != root) return null;
                 if (kind == NetRefs.KeyringKind) return index == 0 ? crew.Keyring : null;
-                foreach (var wagon in crew.Wagons) if (wagon.Stop == index && GodotObject.IsInstanceValid(wagon)) return wagon;
+                foreach (var cage in crew.Wagons) if (cage.Stop == index && GodotObject.IsInstanceValid(cage)) return cage;
                 return null;
             default: return null;
         }

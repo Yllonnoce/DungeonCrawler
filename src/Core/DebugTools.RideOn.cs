@@ -44,7 +44,7 @@ public partial class DebugTools
         }
         if (rc.State.Mode == CartMode.Rolling)
         {
-            if (_rideOnPhase == 2) { GD.Print($"[{tag}] ride on: departed stop {_rideOnStop} for stop {_rideOnStop + 1} (ride {_rideOnStop + 1} armed: {RailEncounterController.Instance?.ArmedRide}), {main.Party.Active.Count(a => a.Seated)} heroes seated, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}]"); _rideOnPhase = 3; _rideOnClock = 0f; }
+            if (_rideOnPhase == 2) { GD.Print($"[{tag}] ride on: departed stop {_rideOnStop} for stop {_rideOnStop + 1} (ride {_rideOnStop + 1} armed: {RailEncounterController.Instance?.ArmedRide}), {main.Party.Active.Count(a => a.Seated)} heroes seated, train=[{string.Join(",", rc.Train.Select(w => w.Number))}]"); _rideOnPhase = 3; _rideOnClock = 0f; }
             if (_rideOnClock > RideOnRideSeconds) fail($"ride on to stop {stop}: the cart rolled {_rideOnClock:0} s from stop {rc.StopIndex} without being held at the next (S={rc.State.S:0.0})");
             return false;
         }

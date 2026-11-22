@@ -13,9 +13,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// cage on it, a barred door and a padlock on the side that faces the platform, and room for two crew standing inside.
 /// A dumb prop like <see cref="MineCart"/>: the crew controller answers the interact key through <see cref="PromptFor"/>
 /// and <see cref="OnUse"/> (a client's prompt reads its synced copies; a client's use goes to the server as an InteractIntent
-/// for "wagon:{stop}"); it stands on its siding at a stop until the RailController couples it behind the cart and
-/// poses it (<see cref="Pose"/>). Its origin sits on the track (or the siding's floor); forward is −Z. Only NPC riders:
-/// its seat book has no hero seats in use, and the two bench seats (4, 5) are the crew's.
+/// for "cage:{stop}"); it stands on its siding at its stop and never couples (plan 14: the party's train is its own wagons, the
+/// <see cref="TrainWagon"/>s). Its origin sits on the siding's floor; forward is −Z. Only NPC riders: its seat book has no hero
+/// seats in use, and the two bench seats (4, 5) are the crew's.
 /// </summary>
 public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
 {
@@ -44,15 +44,13 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
     public int Stop { get; init; }
     /// <summary>The wagon's side (+1 its local +X, −1 its −X) that faces the platform: the door and padlock are there, and the crew look out that way.</summary>
     public int PlatformSide { get; init; } = 1;
-    /// <summary>The cell of its siding (where it stood before it was coupled).</summary>
+    /// <summary>The cell of its siding.</summary>
     public Dungeon.Generation.GridPos Cell { get; init; }
 
     /// <summary>The cage is unlocked: its door stands open, the padlock gone.</summary>
     public bool Open { get; private set; }
-    /// <summary>Coupled behind the party's cart: the RailController poses it.</summary>
-    public bool Coupled { get; private set; }
-    /// <summary>Gone into a crevasse with the train (plan 10): hidden, not solid, offering nothing. Saved (<c>ObjectiveStateDto.LostCages</c>).</summary>
-    public bool Lost { get; private set; }
+    /// <summary>Its wire name: "cage:{stop}".</summary>
+    public string NetRef => Net.NetRefs.Cage(Stop);
 
     public CartSeats Seats { get; } = new();
     public Dictionary<int, ICartRider> Riders { get; } = new();
@@ -92,23 +90,6 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
         if (_padlock != null) _padlock.Visible = !open;
     }
 
-    /// <summary>On (true) the train behind the cart, or back on a siding. A coupled wagon is not solid: the party walks through the train rather than get caught in it.</summary>
-    public void SetCoupled(bool coupled)
-    {
-        Coupled = coupled;
-        CollisionLayer = Lost ? 0u : coupled ? 8u : 1u | 8u;
-        if (!coupled) Speed = 0f;
-    }
-
-    /// <summary>Lost (true) into a crevasse: hidden and not solid where it stands; false shows it again (the crew controller's coupling clears it).</summary>
-    public void SetLost(bool lost)
-    {
-        Lost = lost;
-        Visible = !lost;
-        CollisionLayer = lost ? 0u : Coupled ? 8u : 1u | 8u;
-        if (lost) Speed = 0f;
-    }
-
     /// <summary>
     /// Where crew rider <paramref name="seat"/> stands, in world space: on the bed, looking out through the platform side.
     /// Takes the seat book's bench seats (4, 5) or a plain 0..1.
@@ -140,30 +121,6 @@ public partial class CageWagon : AnimatableBody3D, IInteractable, ICartBody
         if (rider is Npc n) n.SetLabelLift(0f);
         RiderChanged?.Invoke(rider, false);
     }
-
-    public const float BoarderLift = 0.05f;
-    public const int BoarderCount = 1;
-    /// <summary>Who holds the boarder spot on the roof (reserved at a leap's start), null when free.</summary>
-    public Enemy?[] Boarders { get; } = new Enemy?[BoarderCount];
-
-    /// <summary>The roof's boarder spot in world space: on top of the cage, at its middle, facing forward.</summary>
-    public Transform3D BoarderSpotTransform(int i = 0)
-        => GlobalTransform * new Transform3D(Basis.Identity, new Vector3(0, BedTop + CageHeight + BoarderLift, 0));
-
-    /// <summary>Take the roof spot for <paramref name="who"/>: 0, or −1 when it is held (a holder that is gone or dead frees it).</summary>
-    public int ReserveBoarderSpot(Enemy who)
-    {
-        if (Boarders[0] == null || !GodotObject.IsInstanceValid(Boarders[0]) || Boarders[0]!.IsQueuedForDeletion() || !Boarders[0]!.IsAlive) { Boarders[0] = who; return 0; }
-        return -1;
-    }
-
-    public void FreeBoarderSpot(Enemy who)
-    {
-        for (var i = 0; i < Boarders.Length; i++) if (Boarders[i] == who) Boarders[i] = null;
-    }
-
-    /// <summary>Put the wagon on a curve sample (world space; −Z along the line, Y up from the track).</summary>
-    public void Pose(Transform3D trackFrame) => GlobalTransform = new Transform3D(trackFrame.Basis.Orthonormalized(), trackFrame.Origin);
 
     private void Build()
     {

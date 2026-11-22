@@ -16,7 +16,8 @@ public partial class RailNet
     private readonly record struct SeatChange(ICartRider Rider, int Cart, int Seat, bool Seated);
 
     private readonly List<SeatChange> _seats = new();
-    private readonly List<(CageWagon Wagon, Action<ICartRider, bool> Handler)> _wagonsHeard = new();
+    /// <summary>The train's wagons and the stops' cages whose books are heard, each with its handler (let go when this node goes).</summary>
+    private readonly List<(ICartBody Body, Action<ICartRider, bool> Handler)> _wagonsHeard = new();
     private readonly List<LeapMsg> _airLeaps = new();
 
     /// <summary>The party cart's book changed (any path): sent after this tick's cart state. The seat is read now, while the rider still holds it.</summary>
@@ -40,23 +41,29 @@ public partial class RailNet
         cart.RiderChanged += (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
     }
 
-    /// <summary>Listen to each cage wagon's book (the crew controller builds them after this node): once, the first tick they stand.</summary>
+    /// <summary>
+    /// Listen to each train wagon's book (under <see cref="CartIds.Wagon"/> by its number) and each cage's (under <see cref="CartIds.Cage"/> by its
+    /// stop): the crew controller builds them after this node, so once each, the first tick they stand.
+    /// </summary>
     private void HearWagons()
     {
-        if (ObjectiveController.Instance is not CrewRescueController crew || crew.Wagons.Count == _wagonsHeard.Count) return;
-        var wagons = crew.Wagons;
-        for (var k = 0; k < wagons.Count; k++)
-        {
-            var wagon = wagons[k];
-            if (!IsInstanceValid(wagon)) continue;
-            var heard = false;
-            foreach (var (w, _) in _wagonsHeard) if (w == wagon) { heard = true; break; }
-            if (heard) continue;
-            var id = CartIds.Wagon(wagon.Stop);
-            Action<ICartRider, bool> handler = (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
-            wagon.RiderChanged += handler;
-            _wagonsHeard.Add((wagon, handler));
-        }
+        var wagons = _rails.Wagons;
+        var crew = ObjectiveController.Instance as CrewRescueController;
+        var cages = crew?.Wagons;
+        if (wagons.Count + (cages?.Count ?? 0) == _wagonsHeard.Count) return;
+        foreach (var wagon in wagons)
+            if (IsInstanceValid(wagon)) Hear(wagon, CartIds.Wagon(wagon.Number));
+        if (cages != null)
+            foreach (var cage in cages)
+                if (IsInstanceValid(cage)) Hear(cage, CartIds.Cage(cage.Stop));
+    }
+
+    private void Hear(ICartBody body, int id)
+    {
+        foreach (var (b, _) in _wagonsHeard) if (b == body) return;
+        Action<ICartRider, bool> handler = (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
+        body.RiderChanged += handler;
+        _wagonsHeard.Add((body, handler));
     }
 
     private void FlushSeats(ServerWorld world)
@@ -91,7 +98,7 @@ public partial class RailNet
     /// <summary>
     /// Server: the rails as a joiner (or a client that rebuilt the floor: a floor change, a resync's rebuild, a wipe's reload) must hold
     /// them whatever it missed: one <see cref="CartStateMsg"/> with every live cart (the party's with its train, boarders and flags, and
-    /// the ride's others with their riders), a <see cref="SeatMsg"/> for every rider seated in the party's cart and the cage wagons, and
+    /// the ride's others with their riders), a <see cref="SeatMsg"/> for every rider seated in the party's cart, the train's wagons and the cages, and
     /// every leap still in the air (each from its own start time). The callers send the floor clock's pair just before, and the props
     /// (the rail part too) ride in the prop state.
     /// </summary>
@@ -108,9 +115,11 @@ public partial class RailNet
         world.SendTo(peer, new CartStateMsg(Game.Instance.CurrentFloor, world.FloorEpoch, carts)); // before the seats and leaps that name them
         SendSeated(world, peer, _rails.Cart, CartIds.Party);
         if (_rails.Chaser is { } chaser) SendSeated(world, peer, chaser, chaser.CartId);
+        foreach (var wagon in _rails.Wagons)
+            if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Number));
         if (ObjectiveController.Instance is CrewRescueController crew)
-            foreach (var wagon in crew.Wagons)
-                if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Stop));
+            foreach (var cage in crew.Wagons)
+                if (IsInstanceValid(cage)) SendSeated(world, peer, cage, CartIds.Cage(cage.Stop));
         foreach (var slag in SlagCart.Live) // the leapers on a ride's slag carts' decks (plan 13), after the cart state that lists them
             if (IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.Riders.Count > 0) SendSeated(world, peer, slag, slag.CartId);
         if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc))
@@ -167,17 +176,18 @@ public partial class RailNet
     /// <summary>Client: where the server last set this client's own hero down from a seat, and when (this process's clock); the RIDE pass reads it.</summary>
     internal (Vector3 At, double When)? LastLocalLanding { get; private set; }
 
-    /// <summary>A cart on the wire as a seat book here: the party's, a cage wagon by its stop, a chaser's copy (its riders, NPCs too, sit in it here), or a slag cart's copy (its deck's leapers).</summary>
+    /// <summary>A cart on the wire as a seat book here: the party's, a train wagon by its number, a cage by its stop, a chaser's copy (its riders, NPCs too, sit in it here), or a slag cart's copy (its deck's leapers).</summary>
     private ICartBody? CartById(int id)
     {
         if (id == CartIds.Party) return IsInstanceValid(_rails.Cart) ? _rails.Cart : null;
         if (_carts.TryGetValue(id, out var sc) && sc.Slag is { } slag && IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed) return slag;
-        if (id >= CartIds.WagonBase && id < CartIds.ChaserBase) return WagonAt(id - CartIds.WagonBase);
+        if (id >= CartIds.WagonBase && id < CartIds.CageBase) return _rails.WagonAt(id - CartIds.WagonBase);
+        if (id >= CartIds.CageBase && id < CartIds.ChaserBase) return CageAt(id - CartIds.CageBase);
         if (id >= CartIds.ChaserBase && _carts.TryGetValue(id, out var cc) && cc.Chaser is { } chaser && IsInstanceValid(chaser) && !chaser.IsQueuedForDeletion()) return chaser;
         return null;
     }
 
-    private static CageWagon? WagonAt(int stop)
+    private static CageWagon? CageAt(int stop)
     {
         if (ObjectiveController.Instance is not CrewRescueController crew) return null;
         foreach (var wagon in crew.Wagons) if (IsInstanceValid(wagon) && wagon.Stop == stop) return wagon;

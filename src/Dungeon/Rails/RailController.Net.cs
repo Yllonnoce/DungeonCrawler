@@ -1,4 +1,3 @@
-using DungeonCrawler.Adventure.Objectives;
 using DungeonCrawler.Net;
 using Godot;
 
@@ -48,7 +47,7 @@ public partial class RailController : ISlopeSource
     internal int NetSignature()
     {
         var train = _train.Count;
-        for (var i = 0; i < _train.Count; i++) train = train * 31 + _train.Wagons[i].Stop;
+        for (var i = 0; i < _train.Count; i++) train = train * 31 + _train.Wagons[i].Number;
         var line = HashCode.Combine(_crossOut, _crossBack, _gapFrom, _gapTo, _jumpV);
         var boarders = 17;
         for (var i = 0; i < Cart.Boarders.Length; i++) boarders = boarders * 31 + AboardId(Cart.Boarders[i], Cart);
@@ -68,7 +67,7 @@ public partial class RailController : ISlopeSource
     private static int AboardId(Enemies.Enemy? hound, Node3D body)
         => hound != null && IsInstanceValid(hound) && !hound.IsQueuedForDeletion() && hound.Carrier == body ? hound.NetId : -1;
 
-    /// <summary>The boarders aboard the cart by spot, and each coupled wagon's (train order), for the wire: null when none rides.</summary>
+    /// <summary>The boarders aboard the cart by spot, and each coupled wagon's rim (train order), for the wire: null when none rides.</summary>
     private void CaptureBoarders(out List<int>? cart, out List<int>? wagons)
     {
         cart = wagons = null;
@@ -97,7 +96,7 @@ public partial class RailController : ISlopeSource
         if (_train.Count > 0)
         {
             train = new List<int>(_train.Count);
-            foreach (var w in _train.Wagons) train.Add(w.Stop);
+            foreach (var w in _train.Wagons) train.Add(w.Number);
         }
         var enc = RailEncounterController.Instance is { } e && IsInstanceValid(e) ? e : null;
         return new CartStateDto
@@ -182,8 +181,8 @@ public partial class RailController : ISlopeSource
     /// this controller takes (a join, a floor's resend, a revisit) is a catch-up and primes the edges: its flags and mode are adopted,
     /// but a cart already wrecked plays no wreck (no cue, no tumble, not counted) and a cart already rolling records no departure.
     /// A wreck that was a fall (<see cref="CartStateDto.Fell"/>) plays the plunge for the cart and the wagons of the last train told here,
-    /// and hides those wagons as lost once the state's train (none: the server uncoupled it) is applied. A catch-up plays nothing: it
-    /// has been told no train yet, and the floor's objective state hides the lost wagons (<c>ObjectiveStateDto.LostCages</c>).
+    /// and those wagons are lost (hidden) once the state's train (none: the server uncoupled it) is applied. A catch-up plays nothing: its
+    /// train is the state's (a wagon not in it is hidden).
     /// </summary>
     internal void ApplyNet(CartStateDto d, double serverNow)
     {
@@ -191,14 +190,14 @@ public partial class RailController : ISlopeSource
         var firstState = _follow is not { HasState: true }; // before this state is applied: nothing seen yet, so nothing rises
         _follow ??= new CartFollower(this);
         (Cart.NetRun, Cart.NetFollow) = (Party, _follow); // a seated headset's comfort inputs read the server's ride
-        List<CageWagon>? lost = null;
+        List<TrainWagon>? lost = null;
         if (!firstState && CartSendRules.WreckedRose(_netFlags, d.Flags))
         {
             NetWrecksSeen++;
             NetWreckedAt = d.ServerTime;
             if (d.Fell)
             {
-                lost = new List<CageWagon>(_train.Wagons); // the last train told: it went over with the cart
+                lost = new List<TrainWagon>(_train.Wagons); // the last train told: it went over with the cart
                 // the train over the cavern bridge's span (its front past the start, its rear short of the end, as BridgeRules.Catches reads it):
                 // the bridge took it, seen dropping through the gone cells, this player's eye with it if they rode it (still seated here, or already
                 // told fallen right here: not one who fell before, at the drop); anywhere else plan 10's plunge
@@ -226,10 +225,7 @@ public partial class RailController : ISlopeSource
         Halted = d.Has(CartFlags.Halted);
         ApplyLaneNet(d.CrossOut, d.CrossBack);
         ApplyGapNet(d.GapFrom, d.GapTo, d.JumpV);
-        ApplyTrain(d.Train, d.ServerTime);
-        if (lost != null)
-            foreach (var wagon in lost)
-                if (IsInstanceValid(wagon) && !wagon.Coupled) wagon.SetLost(true); // after the train: its uncoupling shows every wagon it lets go
+        ApplyTrain(d.Train, d.ServerTime); // a wagon it no longer lists is lost: hidden
         Party.Dir = d.Dir >= 0 ? 1 : -1;
         Party.Limit = d.Limit;
         _follow.Apply(d, serverNow);
@@ -258,20 +254,23 @@ public partial class RailController : ISlopeSource
         if (inCart && local!.Camera.IsInsideTree()) _localEyeInCart = local.Camera.GlobalTransform;
     }
 
-    /// <summary>Client: couple and uncouple the cage wagons so the train is the server's (stops nearest first), as told by the state stamped <paramref name="serverTime"/>.</summary>
-    internal void ApplyTrain(List<int>? stops, double serverTime)
+    /// <summary>
+    /// Client: the train is the server's, as told by the state stamped <paramref name="serverTime"/>: the listed wagons (by number, nearest the
+    /// cart first) coupled in that order, every other one uncoupled (lost: hidden).
+    /// </summary>
+    internal void ApplyTrain(List<int>? numbers, double serverTime)
     {
-        var count = stops?.Count ?? 0;
+        var count = numbers?.Count ?? 0;
         var same = count == _train.Count;
-        for (var i = 0; same && i < count; i++) same = _train.Wagons[i].Stop == stops![i];
+        for (var i = 0; same && i < count; i++) same = _train.Wagons[i].Number == numbers![i];
         if (same) return;
         NetTrainChangedAt = serverTime;
-        _train.UncoupleAll();
-        if (count == 0 || ObjectiveController.Instance is not CrewRescueController crew) return;
-        foreach (var stop in stops!)
-            foreach (var wagon in crew.Wagons)
-                if (wagon.Stop == stop) { _train.Couple(wagon); break; }
+        _applyTrain.Clear();
+        for (var i = 0; i < count; i++)
+            if (WagonAt(numbers![i]) is { } wagon) _applyTrain.Add(wagon);
+        _train.CoupleAll(_applyTrain);
     }
+    private readonly List<TrainWagon> _applyTrain = new();
 
     /// <summary>Client, each rendered frame: the follower moves on and the cart, the train and the riders are posed at its S; speed and bend for the ride feel.</summary>
     private void ClientPose(float dt)

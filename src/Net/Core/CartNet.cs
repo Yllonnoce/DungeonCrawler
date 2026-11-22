@@ -5,16 +5,20 @@ public enum CartKind : byte { Party, Slag, Traffic, Runaway, Golem, Chaser }
 
 /// <summary>
 /// Every cart's id on the wire. The party's cart is 0; slag, traffic, runaway and golem carts count up from 1 per floor build
-/// (the server assigns them, below <see cref="WagonBase"/>); a cage wagon is <see cref="WagonBase"/> + its stop, a chaser
-/// <see cref="ChaserBase"/> + its stop.
+/// (the server assigns them, below <see cref="WagonBase"/>); a wagon of the party's train is <see cref="WagonBase"/> + its number, a stop's
+/// cage (its crew's seats) <see cref="CageBase"/> + its stop, a chaser <see cref="ChaserBase"/> + its stop.
 /// </summary>
 public static class CartIds
 {
     public const int Party = 0;
     public const int FirstDynamic = 1;
     public const int WagonBase = 1000;
+    public const int CageBase = 1500;
     public const int ChaserBase = 2000;
-    public static int Wagon(int stop) => WagonBase + stop;
+    /// <summary>A wagon of the party's train by its number (1-based, plan 14).</summary>
+    public static int Wagon(int number) => WagonBase + number;
+    /// <summary>A stop's cage, its crew's seat book (plan 14).</summary>
+    public static int Cage(int stop) => CageBase + stop;
     public static int Chaser(int stop) => ChaserBase + stop;
 }
 
@@ -66,6 +70,7 @@ public sealed class CartStateDto
     // the integrator's input
     public byte Pumpers { get; set; }
     public bool Brake { get; set; }
+    /// <summary>The wagons coupled behind the cart (their count: the drag's load).</summary>
     public byte CrewWagons { get; set; }
     /// <summary>The commanded speed (a slag cart's pace, a coasting runner), or negative for none.</summary>
     public float TargetOverride { get; set; } = -1f;
@@ -87,7 +92,7 @@ public sealed class CartStateDto
     public float BlockedAt { get; set; } = float.NaN;
     /// <summary>Seconds left on the boarding countdown, or −1 when none runs.</summary>
     public float BoardingLeft { get; set; } = -1f;
-    /// <summary>The coupled wagons' stops, nearest the cart first.</summary>
+    /// <summary>The coupled wagons' numbers (plan 14), nearest the cart first; null when none is coupled.</summary>
     public List<int>? Train { get; set; }
     /// <summary>The ride whose items wait for the cart (1-based), or −1 when none is armed (plan 5 task 7).</summary>
     public int ArmedRide { get; set; } = -1;
@@ -132,7 +137,7 @@ public static class SeatRiderKind
 }
 
 /// <summary>
-/// A rider took (<paramref name="Seated"/>) or left a seat in a cart (<see cref="CartIds"/>: the party's, a cage wagon, a chaser). Sent for every
+/// A rider took (<paramref name="Seated"/>) or left a seat in a cart (<see cref="CartIds"/>: the party's, a train wagon, a cage, a chaser). Sent for every
 /// seat and unseat on the server, after the tick's <see cref="CartStateMsg"/>; not transient (a joiner replays them, then the catch-up).
 /// <paramref name="X"/>, <paramref name="Y"/>, <paramref name="Z"/>: where an unseated rider landed (unused when seated).
 /// </summary>
@@ -140,7 +145,7 @@ public static class SeatRiderKind
 
 /// <summary>
 /// A hound left its slag cart (<paramref name="FromCart"/>) on a leap toward <paramref name="ToCart"/> (the party's cart, or
-/// <see cref="CartIds.WagonBase"/> + stop) and boarder spot <paramref name="Spot"/>, or toward the ground beside it (<paramref name="Miss"/>,
+/// <see cref="CartIds.WagonBase"/> + a wagon's number) and boarder spot <paramref name="Spot"/>, or toward the ground beside it (<paramref name="Miss"/>,
 /// spot −1), at the server's clock <paramref name="ServerTime"/>. A client flies the arc itself from there. Transient: the catch-up resends
 /// leaps still in the air.
 /// </summary>

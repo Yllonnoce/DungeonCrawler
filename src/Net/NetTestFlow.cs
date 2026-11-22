@@ -245,7 +245,7 @@ public partial class NetTestFlow : Node
             RideRiseWatchJudge(world);
             var keys = _rideKeyring ? new[] { $"prop:{NetRefs.Keyring}:taken" } : Array.Empty<string>();
             var want = new[] { "join:", "ready:", "floor:12", "aboard:" }.Concat(keys)
-                .Concat(new[] { $"prop:{NetRefs.Wagon(1)}:open", $"prop:{NetRefs.Switch(_rideSwitch)}:thrown", $"prop:{NetRefs.Switch(_rideBack)}:thrown", "chase:", "chase-done", "unseat-quiet:", "left:", "wreck-spare:", "heap-halt", "wreck-last" }).ToArray();
+                .Concat(new[] { $"prop:{NetRefs.Cage(1)}:open", $"prop:{NetRefs.Switch(_rideSwitch)}:thrown", $"prop:{NetRefs.Switch(_rideBack)}:thrown", "chase:", "chase-done", "unseat-quiet:", "left:", "wreck-spare:", "heap-halt", "wreck-last" }).ToArray();
             var missing = want.Where(w => !world.Trace.Any(t => t.StartsWith(w))).ToList();
             var ordered = true;
             var last = -1;
@@ -703,14 +703,14 @@ public partial class NetTestFlow : Node
             _rideCageOpen = true;
             _rideDowned = crew.Crew.FirstOrDefault(n => IsInstanceValid(n) && !n.Dead && !n.Downed && n.Ride == wagon);
             _rideDowned?.GoDown();
-            GD.Print($"[net-server] ride: cage 1 is open (traced {(world.Trace.Contains($"prop:{NetRefs.Wagon(1)}:open") ? "through the intent" : "NOT through the intent")}); {_rideDowned?.NpcName ?? "NOBODY"} aboard goes down by the test's hand");
+            GD.Print($"[net-server] ride: cage 1 is open (traced {(world.Trace.Contains($"prop:{NetRefs.Cage(1)}:open") ? "through the intent" : "NOT through the intent")}); {_rideDowned?.NpcName ?? "NOBODY"} aboard goes down by the test's hand");
             if (_rideDowned == null) return;
         }
         if (!_rideRevived)
         {
             if (_rideDowned == null || !IsInstanceValid(_rideDowned) || _rideDowned.Downed) return;
             _rideRevived = true;
-            GD.Print($"[net-server] ride: {_rideDowned.NpcName} is up again ({world.Trace.Count(t => t == $"prop:{NetRefs.Wagon(1)}:open")} use(s) of wagon:1 through the intent)");
+            GD.Print($"[net-server] ride: {_rideDowned.NpcName} is up again ({world.Trace.Count(t => t == $"prop:{NetRefs.Cage(1)}:open")} use(s) of wagon:1 through the intent)");
         }
         if (!_rideAtCart && rc.State.Mode == Dungeon.Rails.CartMode.Held && rc.StopIndex == 1 && !hero.Seated)
         {
@@ -1283,7 +1283,7 @@ public partial class NetTestFlow : Node
             return client.ServerNow - rc.NetDepartedAt > 2 ? "no wagon was coupled behind the cart here 2 s after it left stop 1" : null;
         _rideTrainTold = true;
         var after = rc.NetTrainChangedAt - rc.NetDepartedAt;
-        GD.Print(FormattableString.Invariant($"[net] ride: the cage wagon coupled here {after:0.000} s after the cart left stop 1 (Train [{string.Join(", ", rc.Train.Select(w => w.Stop))}])"));
+        GD.Print(FormattableString.Invariant($"[net] ride: the cage wagon coupled here {after:0.000} s after the cart left stop 1 (Train [{string.Join(", ", rc.Train.Select(w => w.Number))}])"));
         if (after < 0) return FormattableString.Invariant($"the wagon was coupled here {-after:0.000} s before the cart left stop 1 (the train must come with or after the departure)");
         return after <= 0.5 ? null : FormattableString.Invariant($"the wagon coupled here {after:0.000} s after the cart left stop 1 (over 0.5 s)");
     }
@@ -2270,7 +2270,7 @@ public partial class NetTestFlow : Node
                 if (others == 0) why.Add("nobody sits in the party's cart here");
                 if (inWagons == 0) why.Add("no crew sit in their wagons here");
                 if (rc.Train.Count == 0) why.Add("no wagon is coupled behind the cart here");
-                var line = FormattableString.Invariant($"the cart's state came {_joinStateAt - _joinReadyAt:0.000} s and the first client's seat {_joinSeatsAt - _joinReadyAt:0.000} s after Ready; {client.ServerNow - _joinReadyAt:0.00} s after Ready the cart is {rc.State.Mode} at stop {rc.StopIndex} (S={rc.State.S:0.0}), {others} hero(es) in it, {inWagons} crew in the wagons, train [{string.Join(", ", rc.Train.Select(w => w.Stop))}]");
+                var line = FormattableString.Invariant($"the cart's state came {_joinStateAt - _joinReadyAt:0.000} s and the first client's seat {_joinSeatsAt - _joinReadyAt:0.000} s after Ready; {client.ServerNow - _joinReadyAt:0.00} s after Ready the cart is {rc.State.Mode} at stop {rc.StopIndex} (S={rc.State.S:0.0}), {others} hero(es) in it, {inWagons} crew in the wagons, train [{string.Join(", ", rc.Train.Select(w => w.Number))}]");
                 if (why.Count > 0) { Finish("[net]", false, $"ride: the joiner: {line}: {string.Join("; ", why)}"); net.Disconnect("test finished"); return; }
                 client.Trace.Add("joined-mid-ride ok");
                 GD.Print($"[net] ride: joined-mid-ride ok: {line}");
@@ -2385,7 +2385,7 @@ public partial class NetTestFlow : Node
                 if (inWagons == 0) why.Add("no crew sit in their wagons here");
                 if (rc.Train.Count == 0) why.Add("no wagon is coupled behind the cart here");
                 if (me.Seated) why.Add("we sit in a cart here (we were thrown out of it)");
-                var line = FormattableString.Invariant($"the cart's state came {_joinStateAt - _joinResyncAt:0.000} s and the first client's seat {_joinSeatsAt - _joinResyncAt:0.000} s after the resync's Ready; {client.ServerNow - _joinResyncAt:0.00} s after it the cart is {rc.State.Mode} at stop {rc.StopIndex} (S={rc.State.S:0.0}), {others} hero(es) in it, {inWagons} crew in the wagons, train [{string.Join(", ", rc.Train.Select(w => w.Stop))}]");
+                var line = FormattableString.Invariant($"the cart's state came {_joinStateAt - _joinResyncAt:0.000} s and the first client's seat {_joinSeatsAt - _joinResyncAt:0.000} s after the resync's Ready; {client.ServerNow - _joinResyncAt:0.00} s after it the cart is {rc.State.Mode} at stop {rc.StopIndex} (S={rc.State.S:0.0}), {others} hero(es) in it, {inWagons} crew in the wagons, train [{string.Join(", ", rc.Train.Select(w => w.Number))}]");
                 if (why.Count > 0) { Finish("[net]", false, $"ride: the joiner after its resync: {line}: {string.Join("; ", why)}"); net.Disconnect("test finished"); return; }
                 client.Trace.Add("resynced-mid-ride ok");
                 GD.Print($"[net] ride: resynced-mid-ride ok: {line}");
@@ -2526,7 +2526,7 @@ public partial class NetTestFlow : Node
                 _joinWrecks = rc.NetWrecksSeen;
                 var fromStop = Mathf.Abs(rc.State.S - rc.StopS[k]);
                 client.Trace.Add("wreck-spare");
-                GD.Print(FormattableString.Invariant($"[net] ride: wreck-spare: after the Wrecked state, spare {k} took over here: the cart Held at stop {k} (S={rc.State.S:0.0}, {fromStop:0.00} m from the stop), spares used [{string.Join(",", rc.SparesUsed)}], train [{string.Join(", ", rc.Train.Select(w => w.Stop))}]"));
+                GD.Print(FormattableString.Invariant($"[net] ride: wreck-spare: after the Wrecked state, spare {k} took over here: the cart Held at stop {k} (S={rc.State.S:0.0}, {fromStop:0.00} m from the stop), spares used [{string.Join(",", rc.SparesUsed)}], train [{string.Join(", ", rc.Train.Select(w => w.Number))}]"));
                 if (fromStop > 0.1f) { Finish("[net]", false, FormattableString.Invariant($"ride: the spare's cart stands {fromStop:0.00} m from stop {k} here")); net.Disconnect("test finished"); return; }
                 _joinSpareStop = k;
                 _rideAskedAt = -1; // TryBoard's 2 s throttle reads _clock, which starts again with each step

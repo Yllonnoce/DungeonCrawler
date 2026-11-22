@@ -122,19 +122,91 @@ public partial class RailController : Node
     // ---- the train (CartTrain) -------------------------------------------------------------------
 
     private CartTrain _train = null!;
-    /// <summary>Cage wagons coupled behind the cart, nearest first: the RailController poses them on the line behind it.</summary>
-    public IReadOnlyList<CageWagon> Train => _train.Wagons;
-    /// <summary>From one body's middle to the next along the train (<see cref="CartTrain.WagonSpacing"/>).</summary>
+    private readonly List<TrainWagon> _wagons = new();
+    /// <summary>Every wagon of the party's train built on this floor (<see cref="BuildTrain"/>), by number: W1 first. Coupled or lost.</summary>
+    public IReadOnlyList<TrainWagon> Wagons => _wagons;
+    /// <summary>The wagons coupled behind the cart, nearest first (W1..Wn, or none after a fall): the RailController poses them on the line behind it.</summary>
+    public IReadOnlyList<TrainWagon> Train => _train.Wagons;
+    /// <summary>From one body's middle to the next along the train (<see cref="TrainRules.Spacing"/>).</summary>
     public const float WagonSpacing = CartTrain.WagonSpacing;
 
-    /// <summary>A cage wagon's siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
+    /// <summary>The train's wagon <paramref name="number"/> (1-based), coupled or lost, or null when there is none.</summary>
+    public TrainWagon? WagonAt(int number) => number >= 1 && number <= _wagons.Count && IsInstanceValid(_wagons[number - 1]) ? _wagons[number - 1] : null;
+
+    /// <summary>A cage's or a spare's siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
     public void ReserveSiding(GridPos cell) => _train.ReserveSiding(cell);
 
-    /// <summary>Couple <paramref name="wagon"/> on behind the last body of the train (server, at a departure or a load). It is posed behind the cart at once.</summary>
-    public void Couple(CageWagon wagon)
+    /// <summary>
+    /// The crew controller's offer on a coupled wagon to <paramref name="hero"/> (Task 2: "Revive {name}"), or null for none; the wagon's prompt
+    /// (<see cref="WagonPrompt"/>) is the rail controller's and asks it. Set by the crew controller.
+    /// </summary>
+    public Func<TrainWagon, Adventurer, string>? WagonCrewPrompt { get; set; }
+    /// <summary>The crew controller's use of a coupled wagon (what <see cref="WagonCrewPrompt"/> offered). Set by the crew controller.</summary>
+    public Action<TrainWagon, Adventurer>? WagonCrewUse { get; set; }
+
+    /// <summary>
+    /// The party's train (plan 14), on every role, once per build of the floor (the crew controller asks, one wagon per cage placed:
+    /// <see cref="TrainRules.WagonsFor"/>): Wagon1..Wagon{count} under the floor root, all coupled behind the cart where it stands. A floor
+    /// with no cage has no train.
+    /// </summary>
+    public void BuildTrain(int count)
     {
-        if (NetSession.IsClient) return; // the train is the server's
-        _train.Couple(wagon);
+        if (_wagons.Count > 0 || count <= 0 || GetParent() is not Node3D root) return;
+        for (var k = 1; k <= count; k++)
+        {
+            var wagon = new TrainWagon { Name = $"Wagon{k}", Number = k };
+            wagon.PromptFor = hero => WagonPrompt(wagon, hero);
+            wagon.OnUse = hero => UseWagon(wagon, hero);
+            root.AddChild(wagon);
+            _wagons.Add(wagon);
+        }
+        if (NetSession.IsClient) _train.CoupleAll(_wagons); // as the server builds it: the cart states keep it the server's from here
+        else CoupleFresh("the build");
+    }
+
+    /// <summary>
+    /// The cart restored whole (server and solo; the build, a <see cref="Restore"/>, a spare's takeover after a fall): every wagon not coupled
+    /// is emptied (a rider left in it is set down quietly beside the lane), shown and coupled again, the train W1..Wn in number order.
+    /// </summary>
+    public void CoupleFresh(string why)
+    {
+        if (NetSession.IsClient || _wagons.Count == 0) return;
+        foreach (var wagon in _wagons)
+            if (IsInstanceValid(wagon) && !wagon.Coupled) EmptyWagon(wagon);
+        _train.CoupleAll(_wagons);
+        GD.Print($"[rails] train: W1..W{_wagons.Count} coupled at stop {StopIndex} ({why})");
+    }
+
+    /// <summary>A lost wagon coupled fresh: anyone still in its book is set down beside the lane where they are (no throw, no log), its boarder spot free.</summary>
+    private void EmptyWagon(TrainWagon wagon)
+    {
+        _fallRiders.Clear();
+        _fallRiders.AddRange(wagon.Riders.Values);
+        foreach (var rider in _fallRiders)
+            if (rider is Node3D body && IsInstanceValid(body)) rider.GetOut(StandBesideLane(body.GlobalPosition), Vector3.Zero);
+        _fallRiders.Clear();
+        foreach (var occupant in wagon.Seats.Occupants) wagon.Seats.Leave(occupant);
+        wagon.Riders.Clear();
+        for (var i = 0; i < wagon.Boarders.Length; i++) wagon.Boarders[i] = null;
+    }
+
+    /// <summary>The car <paramref name="rider"/> sits in: 0 the party's cart, k the coupled wagon Wk, −1 none (on foot, or another cart).</summary>
+    public int CarOf(ICartRider rider)
+    {
+        if (rider.Cart == null) return -1;
+        if (rider.Cart == Cart) return 0;
+        return rider.Cart is TrainWagon { Coupled: true } wagon && WagonAt(wagon.Number) == wagon ? wagon.Number : -1;
+    }
+
+    /// <summary>A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one what the crew controller offers.</summary>
+    private string WagonPrompt(TrainWagon wagon, Adventurer hero) => wagon.Coupled ? WagonCrewPrompt?.Invoke(wagon, hero) ?? "" : "";
+
+    /// <summary>A hero pressed interact on a wagon: the crew controller's use (<see cref="WagonCrewUse"/>) of a coupled one.</summary>
+    private void UseWagon(TrainWagon wagon, Adventurer actor)
+    {
+        if (!wagon.Coupled) return;
+        WagonCrewUse?.Invoke(wagon, actor);
+        Flush();
     }
 
     // ---- spare carts (SpareYard) -----------------------------------------------------------------
@@ -373,6 +445,7 @@ public partial class RailController : Node
         Party.Sync();
         Party.PoseAt(State.S);
         Cart.Sound?.Prime(); // back from a save: the jump to the stop makes no sound
+        CoupleFresh("restored whole"); // the cart comes back whole, its train with it (wagons a fall took couple fresh, empty)
         Raise(new CartEvent(CartEventKind.Restored, Stop: StopIndex));
         ClearRiders();
         ReturnAllFallen();
@@ -404,7 +477,7 @@ public partial class RailController : Node
         ArrivalSnapshot = Save.FloorStateCapture.Capture(root, _layout, Main.Instance.Builder.Contents, exploration);
         var alive = 0;
         foreach (var npc in ArrivalSnapshot.NpcStates) if (!npc.Dead) alive++;
-        GD.Print($"[rails] arrival snapshot at stop {StopIndex}: train [{string.Join(",", _train.Wagons.Select(w => w.Stop))}] npcs alive {alive}");
+        GD.Print($"[rails] arrival snapshot at stop {StopIndex}: train [{string.Join(",", _train.Wagons.Select(w => w.Number))}] npcs alive {alive}");
     }
 
     /// <summary>
@@ -985,7 +1058,7 @@ public partial class RailController : Node
         Wrecks++;
         WreckedAt = Cart.GlobalPosition;
         LastWreckFell = fall;
-        var lost = fall ? new List<CageWagon>(_train.Wagons) : null;
+        var lost = fall ? new List<TrainWagon>(_train.Wagons) : null;
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
@@ -1045,7 +1118,7 @@ public partial class RailController : Node
     /// <summary>
     /// The nearest intermediate stop (by distance along the line, behind or at most the next stop ahead) with an unused spare provides a new cart:
     /// the spare disappears and the party's cart (same node and run) stands Held there with full plating, wagons still coupled
-    /// behind it. None left: the rest is on foot (an OnFoot event: the crew in coupled wagons get out and follow).
+    /// behind it (after a fall that took them, fresh empty ones: <see cref="CoupleFresh"/>). None left: the rest is on foot (an OnFoot event).
     /// </summary>
     private void SpareTakesOver()
     {
@@ -1068,6 +1141,7 @@ public partial class RailController : Node
         Party.Sync();
         Party.PoseAt(State.S);
         _train.Pose(State.S);
+        if (Train.Count < Wagons.Count) CoupleFresh("a spare takes over"); // a fall took the wagons: the spare brings fresh empty ones
         EventBus.Instance.Log($"A spare cart waits at stop {pick}.");
         Raise(new CartEvent(CartEventKind.Arrived, Stop: pick));
         if (!GateUp(pick)) EventBus.Instance.Log("The gate is down. Clear the stop.");

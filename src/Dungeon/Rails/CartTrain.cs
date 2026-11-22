@@ -4,54 +4,61 @@ using Godot;
 namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
-/// The cage wagons coupled behind a lead cart (the party's, owned by the RailController), nearest first: posed on the line
-/// behind it, told its speed and their bends, their riders seated where they stand. It also keeps the siding cells
-/// (wagons and spares stand there beside the platforms) that nobody getting out is set down on.
+/// The train's wagons (<see cref="TrainWagon"/>, plan 14) coupled behind a lead cart (the party's, owned by the RailController), nearest
+/// first: posed on the line behind it, told its speed and their bends, their riders seated where they stand. It also keeps the siding
+/// cells (cages and spares stand there beside the platforms) that nobody getting out is set down on.
 /// </summary>
 public sealed class CartTrain
 {
     /// <summary>From one body's middle to the next along the train: a cart's length and a coupling's gap.</summary>
-    public const float WagonSpacing = 2f * CartRules.HalfLength + 0.4f;
+    public const float WagonSpacing = TrainRules.Spacing;
 
     private readonly CartRun _lead;
-    private readonly List<CageWagon> _wagons = new();
+    private readonly List<TrainWagon> _wagons = new();
     private readonly List<ICartRider> _riders = new();
 
     public CartTrain(CartRun lead) => _lead = lead;
 
     /// <summary>The coupled wagons, nearest the lead first.</summary>
-    public IReadOnlyList<CageWagon> Wagons => _wagons;
+    public IReadOnlyList<TrainWagon> Wagons => _wagons;
     public int Count => _wagons.Count;
 
-    /// <summary>Cells a cage wagon or a spare cart stands on beside a platform: nobody getting out is set down there.</summary>
+    /// <summary>Cells a cage or a spare cart stands on beside a platform: nobody getting out is set down there.</summary>
     public HashSet<GridPos> Sidings { get; } = new();
 
     /// <summary>A siding cell: riders getting out (and enemies knocked aside) are never set down on it.</summary>
     public void ReserveSiding(GridPos cell) => Sidings.Add(cell);
 
     /// <summary>
-    /// Couple <paramref name="wagon"/> on behind the last body of the train: a wagon on the train is never lost (both peers' rule). It is
-    /// posed behind the lead at once. False when it is gone or already coupled.
+    /// The train is <paramref name="wagons"/>, in that order (nearest the lead first): each is coupled (shown) and posed behind the lead at
+    /// once; a wagon coupled before and not listed is uncoupled (lost: hidden). Both peers' (a client's from the server's cart state).
     /// </summary>
-    public bool Couple(CageWagon wagon)
+    public void CoupleAll(IReadOnlyList<TrainWagon> wagons)
     {
-        if (!GodotObject.IsInstanceValid(wagon) || _wagons.Contains(wagon)) return false;
-        wagon.SetLost(false);
-        _wagons.Add(wagon);
-        wagon.SetCoupled(true);
+        foreach (var wagon in _wagons)
+            if (GodotObject.IsInstanceValid(wagon) && !Contains(wagons, wagon)) wagon.SetCoupled(false);
+        _wagons.Clear();
+        foreach (var wagon in wagons)
+        {
+            if (!GodotObject.IsInstanceValid(wagon) || _wagons.Contains(wagon)) continue;
+            _wagons.Add(wagon);
+            wagon.SetCoupled(true);
+        }
         Pose(_lead.State.S);
         Sync();
-        return true;
     }
 
-    /// <summary>
-    /// Every wagon off the train, where it stands, shown: a client's (its train is coupled again from the server's cart state), and the
-    /// server's after a fall (which then hides each wagon as lost).
-    /// </summary>
+    private static bool Contains(IReadOnlyList<TrainWagon> list, TrainWagon wagon)
+    {
+        for (var i = 0; i < list.Count; i++) if (list[i] == wagon) return true;
+        return false;
+    }
+
+    /// <summary>Every wagon off the train, lost (hidden, not solid, standing where it was): a fall's, and a client told no train.</summary>
     public void UncoupleAll()
     {
         foreach (var wagon in _wagons)
-            if (GodotObject.IsInstanceValid(wagon)) { wagon.SetCoupled(false); wagon.Visible = true; }
+            if (GodotObject.IsInstanceValid(wagon)) wagon.SetCoupled(false);
         _wagons.Clear();
     }
 

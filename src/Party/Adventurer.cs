@@ -1506,8 +1506,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         if (!hitSomething && IsLocal) EventBus.Instance.Log($"{m.Name} swings at nothing.");
     }
 
-    /// <summary>A creature riding the roof of a cage wagon coupled behind the cart (a boarding hound).</summary>
-    private static bool OnWagonRoof(Enemy e) => e.Carrier is CageWagon wagon && IsInstanceValid(wagon) && wagon.Coupled;
+    /// <summary>A creature riding the rim of a train wagon coupled behind the cart (a boarding hound).</summary>
+    private static bool OnWagonRoof(Enemy e) => e.Carrier is TrainWagon wagon && IsInstanceValid(wagon) && wagon.Coupled;
 
     /// <summary>
     /// A player's melee blow that met nothing (server or solo): the nearest hound riding a coupled wagon's roof within

@@ -63,7 +63,7 @@ public partial class RailNet : Node
             _rails.ChaserPlaced -= OnChaserPlaced;
             if (IsInstanceValid(_rails.Cart)) _rails.Cart.RiderChanged -= OnPartyRider;
         }
-        foreach (var (wagon, handler) in _wagonsHeard) if (IsInstanceValid(wagon)) wagon.RiderChanged -= handler;
+        foreach (var (body, handler) in _wagonsHeard) if (body is GodotObject o && IsInstanceValid(o)) body.RiderChanged -= handler;
         _wagonsHeard.Clear();
     }
 
@@ -240,7 +240,8 @@ public partial class RailNet : Node
     }
 
     /// <summary>
-    /// The RIDE pass: who sits where (the party's cart and each cage wagon, seat by seat: a hero by index, an NPC by id), the train behind
+    /// The RIDE pass: who sits where (the party's cart, each train wagon W{k} by number and each cage K{stop}, seat by seat: a hero by index,
+    /// an NPC by id), the train behind
     /// the cart, and the props' hash, as one word on each side; the script compares a joiner's with the server's on the grid. Test only.
     /// </summary>
     private string RideBook()
@@ -249,10 +250,12 @@ public partial class RailNet : Node
         b.Append("seats=");
         BookSeats(b, "P", _rails.Cart);
         if (BookChaser() is { } chaser) BookSeats(b, "C" + (chaser.CartId - CartIds.ChaserBase).ToString(CultureInfo.InvariantCulture), chaser);
+        foreach (var wagon in _rails.Wagons.Where(w => IsInstanceValid(w)))
+            BookSeats(b, "W" + wagon.Number.ToString(CultureInfo.InvariantCulture), wagon);
         if (ObjectiveController.Instance is CrewRescueController crew)
-            foreach (var wagon in crew.Wagons.Where(w => IsInstanceValid(w)).OrderBy(w => w.Stop))
-                BookSeats(b, "W" + wagon.Stop.ToString(CultureInfo.InvariantCulture), wagon);
-        b.Append(" train=").Append(_rails.Train.Count == 0 ? "-" : string.Join(",", _rails.Train.Select(w => w.Stop)));
+            foreach (var cage in crew.Wagons.Where(w => IsInstanceValid(w)).OrderBy(w => w.Stop))
+                BookSeats(b, "K" + cage.Stop.ToString(CultureInfo.InvariantCulture), cage);
+        b.Append(" train=").Append(_rails.Train.Count == 0 ? "-" : string.Join(",", _rails.Train.Select(w => w.Number)));
         b.Append(" props=").Append(GetParent() is Node3D root ? PropCheck.Hash(PropSync.Capture(root)).ToString("X8", CultureInfo.InvariantCulture) : "-");
         BookCarts(b);
         BookBoarders(b);
@@ -283,7 +286,7 @@ public partial class RailNet : Node
         }
     }
 
-    /// <summary>The RIDE pass: the hounds riding the party's cart by spot and each coupled wagon's roof (living, carried there), as this side has them. Test only.</summary>
+    /// <summary>The RIDE pass: the hounds riding the party's cart by spot and each coupled wagon's rim (living, carried there), as this side has them. Test only.</summary>
     private void BookBoarders(System.Text.StringBuilder b)
     {
         b.Append(" boarders=P[");
@@ -294,9 +297,9 @@ public partial class RailNet : Node
         for (var k = 0; k < train.Count; k++)
         {
             if (!IsInstanceValid(train[k])) continue;
-            var roof = train[k].Boarders[0];
-            b.Append('W').Append(train[k].Stop.ToString(CultureInfo.InvariantCulture)).Append('[')
-                .Append(LiveId(roof is { } r && IsInstanceValid(r) && r.Carrier == train[k] ? r : null).ToString(CultureInfo.InvariantCulture)).Append(']');
+            var rim = train[k].Boarders[0];
+            b.Append('W').Append(train[k].Number.ToString(CultureInfo.InvariantCulture)).Append('[')
+                .Append(LiveId(rim is { } r && IsInstanceValid(r) && r.Carrier == train[k] ? r : null).ToString(CultureInfo.InvariantCulture)).Append(']');
         }
     }
 

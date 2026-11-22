@@ -10,12 +10,12 @@ namespace DungeonCrawler.Dungeon.Rails;
 
 /// <summary>
 /// Ember hounds on a slag cart leap across to the party's side. A carried hound that is alongside and within
-/// <see cref="SetPieceRules.LeapRange"/> of the party cart (or a coupled cage wagon with crew in it) crouches for
+/// <see cref="SetPieceRules.LeapRange"/> of the party cart (or any coupled wagon of its train, crewed or not) crouches for
 /// <see cref="SetPieceRules.LeapWindup"/> with a glow and a "Hound!" bark, then leaps on a <see cref="LeapSeconds"/> arc onto a
-/// boarder spot (two on the cart's rim, one on a wagon's roof), reserved when the leap starts. With no spot free it
+/// boarder spot (two on the cart's rim, one on a wagon's), reserved when the leap starts. With no spot free it
 /// leaps and misses: it lands beside the party lane as a normal creature. A boarder is carried by what it boarded, bites with
-/// its normal melee (a wagon boarder: the crew inside) and, on the party cart, dents the plating. It falls off, beside the lane,
-/// when it dies. Server only.
+/// its normal melee (a wagon boarder: the crew inside, else nobody in particular) and, on the party cart, dents the plating. It falls
+/// off, beside the lane, when it dies. Server only.
 /// </summary>
 public partial class RailEncounterController
 {
@@ -57,20 +57,14 @@ public partial class RailEncounterController
         return false;
     }
 
-    private static bool HasCrew(CageWagon wagon)
-    {
-        foreach (var rider in wagon.Riders.Values) if (rider is Npc { IsAlive: true }) return true;
-        return false;
-    }
-
-    /// <summary>The target body <paramref name="i"/> (0 the party cart, k the k-th coupled wagon) if it can be leapt to, else null.</summary>
+    /// <summary>The target body <paramref name="i"/> (0 the party cart, k the k-th coupled wagon, crewed or not) if it can be leapt to, else null.</summary>
     private Node3D? Candidate(int i)
     {
         if (i == 0) return IsInstanceValid(_rails.Cart) ? _rails.Cart : null;
         var train = _rails.Train;
         if (i - 1 >= train.Count) return null;
         var wagon = train[i - 1];
-        return IsInstanceValid(wagon) && wagon.Coupled && HasCrew(wagon) ? wagon : null;
+        return IsInstanceValid(wagon) && wagon.Coupled ? wagon : null;
     }
 
     private static float Flat(Vector3 a, Vector3 b) { var dx = a.X - b.X; var dz = a.Z - b.Z; return Mathf.Sqrt(dx * dx + dz * dz); }
@@ -78,17 +72,17 @@ public partial class RailEncounterController
     private bool Reserve(Node3D dest, Enemy hound, out int spot)
     {
         // the party cart opens one rim spot per awake hero seated in it (at most its two): a lone rider faces one hound at a time
-        spot = dest is MineCart cart ? cart.ReserveBoarderSpot(hound, SetPieceRules.RimSpotsOpen(cart.AwakeHeroesSeated())) : ((CageWagon)dest).ReserveBoarderSpot(hound);
+        spot = dest is MineCart cart ? cart.ReserveBoarderSpot(hound, SetPieceRules.RimSpotsOpen(cart.AwakeHeroesSeated())) : ((TrainWagon)dest).ReserveBoarderSpot(hound);
         return spot >= 0;
     }
 
     private static void FreeSpot(Node3D? dest, Enemy hound)
     {
         if (dest is MineCart cart) cart.FreeBoarderSpot(hound);
-        else if (dest is CageWagon wagon) wagon.FreeBoarderSpot(hound);
+        else if (dest is TrainWagon wagon) wagon.FreeBoarderSpot(hound);
     }
 
-    private static Transform3D SpotOf(Node3D dest, int spot) => dest is MineCart cart ? cart.BoarderSpotTransform(spot) : ((CageWagon)dest).BoarderSpotTransform(spot);
+    private static Transform3D SpotOf(Node3D dest, int spot) => dest is MineCart cart ? cart.BoarderSpotTransform(spot) : ((TrainWagon)dest).BoarderSpotTransform(spot);
 
     private void ReleaseLeap(Leap l) => FreeSpot(l.Dest, l.Hound);
 
@@ -211,7 +205,7 @@ public partial class RailEncounterController
         {
             l.Miss = true;
             var anchor = nearest ?? _rails.Cart;
-            var lead = anchor is MineCart cart ? cart.Velocity : anchor is CageWagon w ? w.Velocity : Vector3.Zero;
+            var lead = anchor is MineCart cart ? cart.Velocity : anchor is TrainWagon w ? w.Velocity : Vector3.Zero;
             l.To = Beside(anchor.GlobalPosition + lead * LeapSeconds); // the cart will have moved on by the time it lands
             l.Spot = -1;
             GD.Print($"[rails] {h.Name} leaps and misses: no boarder spot free ({nearestD:0.0} m to the nearest body), lands at {l.To}");
@@ -222,8 +216,8 @@ public partial class RailEncounterController
         if (NetSession.IsServer && NetSession.Instance?.Server is { } world) world.Broadcast(LeapOf(l));
     }
 
-    /// <summary>A body a hound leaps to, as the wire names it: the party's cart, or a cage wagon by its stop.</summary>
-    private static int WireId(Node3D body) => body is CageWagon wagon ? CartIds.Wagon(wagon.Stop) : CartIds.Party;
+    /// <summary>A body a hound leaps to, as the wire names it: the party's cart, or a train wagon by its number.</summary>
+    private static int WireId(Node3D body) => body is TrainWagon wagon ? CartIds.Wagon(wagon.Number) : CartIds.Party;
 
     private static LeapMsg LeapOf(Leap l)
         => new(l.Hound.NetId, IsInstanceValid(l.Source) ? l.Source.CartId : -1, l.ToCart, l.Miss ? -1 : l.Spot, l.Miss, l.SentAt);
@@ -263,16 +257,16 @@ public partial class RailEncounterController
         }
         var dest = l.Dest;
         var spot = l.Spot;
-        h.LandOn(dest, dest is MineCart cart ? () => cart.BoarderSpotTransform(spot) : () => ((CageWagon)dest).BoarderSpotTransform(spot));
+        h.LandOn(dest, dest is MineCart cart ? () => cart.BoarderSpotTransform(spot) : () => ((TrainWagon)dest).BoarderSpotTransform(spot));
         h.ForceAggro();
         l.Phase = LeapPhase.Aboard;
         l.Dent = 0f;
-        if (dest is CageWagon wagon) h.BoardTarget = NearestCrew(wagon, h.GlobalPosition);
-        EventBus.Instance.Log(dest is MineCart ? "An ember hound lands on the cart!" : "An ember hound lands on the cage wagon!");
+        if (dest is TrainWagon wagon) h.BoardTarget = NearestCrew(wagon, h.GlobalPosition); // the crew inside, else nobody in particular
+        EventBus.Instance.Log(dest is MineCart ? "An ember hound lands on the cart!" : "An ember hound lands on a wagon!");
         GD.Print($"[rails] {h.Name} boarded {dest.Name} spot {spot} at {h.GlobalPosition}");
     }
 
-    private static Npc? NearestCrew(CageWagon wagon, Vector3 from)
+    private static Npc? NearestCrew(TrainWagon wagon, Vector3 from)
     {
         Npc? best = null;
         var bestD = float.MaxValue;
@@ -289,7 +283,7 @@ public partial class RailEncounterController
     private bool TickBoarder(Leap l, float dt)
     {
         var h = l.Hound;
-        if (l.Dest == null || !IsInstanceValid(l.Dest) || h.Carrier != l.Dest || (l.Dest is CageWagon { Coupled: false }))
+        if (l.Dest == null || !IsInstanceValid(l.Dest) || h.Carrier != l.Dest || (l.Dest is TrainWagon { Coupled: false }))
         {
             if (h.Carried) h.Drop(Beside(h.GlobalPosition));
             h.BoardTarget = null;
@@ -298,7 +292,7 @@ public partial class RailEncounterController
             return false;
         }
         h.FollowCarrier();
-        if (l.Dest is CageWagon wagon)
+        if (l.Dest is TrainWagon wagon)
         {
             if (h.BoardTarget is not { IsAlive: true } || !IsInstanceValid(h.BoardTarget)) h.BoardTarget = NearestCrew(wagon, h.GlobalPosition); // the one it bit went down: the next
             return true;

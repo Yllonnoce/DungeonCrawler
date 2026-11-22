@@ -14,8 +14,8 @@ namespace DungeonCrawler.Core;
 // and the cart departs on ride 4; nobody presses anything (a bare --test-runaway runs the split's =after). =tail: the lead pumps throughout; the runaway breaks loose with
 // its front 14-16 m behind the train's last body and its call is heard (RailCalls, BarkTrigger.Runaway); until stop 4 the gap never
 // shrinks below 3 m; the train arrives at stop 4 and the runaway halts with its front 2.5-4 m behind the last body and is gone within 2 s
-// of its halt; nobody is run over; ride 4's collapsing bridge is held (enc.DebugHoldBridge(4)), or it would take the runaway. =ram: the crew wagons of stops 1-3 coupled before the restore, the pumpers capped at 0 (nobody
-// pumps); the runaway breaks loose 14-16 m behind and rams the rolling train once: the plating drops by 40 (+-0.5), each seated hero who
+// of its halt; nobody is run over; ride 4's collapsing bridge is held (enc.DebugHoldBridge(4)), or it would take the runaway. =ram: the train's four wagons (coupled from the
+// landing, plan 14), the pumpers capped at 0 (nobody pumps); the runaway breaks loose 14-16 m behind and rams the rolling train once: the plating drops by 40 (+-0.5), each seated hero who
 // is up loses 20% (+-1) of max HP and none goes below 1 HP, the NPCs seated in the train are unhurt, nobody leaves a seat, RunawayRams is
 // 1 and stays 1 to stop 4; then the cart is restored at stop 3 again and departs with its plating set to 30: the ram wrecks it, the
 // runaway is gone by the wreck's event, and a spare takes over as today. Every variant: nobody falls. Prints [runaway] lines and a RESULT.
@@ -27,7 +27,8 @@ namespace DungeonCrawler.Core;
 // rises at stop 3 with every hero up within 10 m of the whole cart, and the next departure sends a runaway again. =hold: the hook throws it 9 m
 // short ("not yet"), the lead sets it back from the seat at the window's start (taken at once), then throws it from the seat short of the
 // points: held, thrown just after the train passes straight; the runaway takes the spur. =stall: the hook throws it, the train is caught 7 m
-// short (RailController.DebugStall) and the watchdog sets the split back and grinds on to stop 4: no fall. =lone: the hook throws it and the
+// short (RailController.DebugStall) and the watchdog sets the split back and grinds on to stop 4: no fall. Every split variant: r4_beam
+// clears every seated head in the train (its eye + LowBeam.HeadAboveEye) by 0.05 m or more ([split] beam: ...). =lone: the hook throws it and the
 // only human (possession off) is downed in the seat: at the points the safe line, the lever left thrown, the runaway takes the spur. Every
 // split variant: nobody falls but the train's riders. Prints [split] lines and a RESULT.
 // The legibility gate (Ruling 23), every variant, headless too: at the build every RailLamp{i} inside the dark is hidden with its lantern dark
@@ -151,16 +152,10 @@ public partial class DebugTools
                 if (DarkLampsOut(root, enc) is { } lit) { Fail(lit); return; }
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
                 if (_rwVariant == "tail") enc.DebugHoldBridge(4); // Ruling 21: the runaway halts behind the train held at stop 4, so the bridge must not take it (--test-cavern=runaway proves the plunge)
-                if (RamBranch)
-                {
-                    if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller"); return; }
-                    for (var stop = 1; stop <= 3; stop++)
-                        if (!ctrl.DebugCouple(stop)) { Fail($"wagon {stop} could not be coupled"); return; }
-                    PumperCap = 0; // nobody pumps: the runaway closes
-                }
+                if (RamBranch) PumperCap = 0; // nobody pumps: the runaway closes (the train's four wagons are coupled from the landing)
                 rc.Restore(3);
-                GD.Print($"[runaway] restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Stop))}], pumpers capped at {PumperCap?.ToString() ?? "none"}; the runaway's target {RunawayRules.Target(rc.Train.Count):0.00} m/s, the train's own unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, one pumper {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00}");
-                if (RamBranch && rc.Train.Count != 3) { Fail($"the train has {rc.Train.Count} wagons, not 3"); return; }
+                GD.Print($"[runaway] restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Number))}], pumpers capped at {PumperCap?.ToString() ?? "none"}; the runaway's target {RunawayRules.Target(rc.Train.Count):0.00} m/s, the train's own unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, one pumper {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00}");
+                if (RamBranch && rc.Train.Count != 4) { Fail($"the train has {rc.Train.Count} wagons, not 4"); return; }
                 _rwStep++; _rwClock = 0f;
                 break;
             }
@@ -176,7 +171,7 @@ public partial class DebugTools
                 var seated = party.Active.Count(a => a.Cart == rc.Cart);
                 if ((!me.Seated || seated < heroes) && _rwClock < 3f) break;
                 if (!me.Seated || me.Cart != rc.Cart) { Fail("the lead did not take a seat"); return; }
-                GD.Print($"[runaway] pass {_rwPass} boarded at stop {rc.StopIndex}: {seated} of {heroes} heroes seated, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}]");
+                GD.Print($"[runaway] pass {_rwPass} boarded at stop {rc.StopIndex}: {seated} of {heroes} heroes seated, train=[{string.Join(",", rc.Train.Select(w => w.Number))}]");
                 _rwStep++; _rwClock = 0f;
                 break;
             }
@@ -253,7 +248,7 @@ public partial class DebugTools
                     _rwPass = 2;
                     _rwLoose = false;
                     rc.Restore(3);
-                    GD.Print($"[runaway] ram 1 ok; pass 2: restored at stop {rc.StopIndex}, train=[{string.Join(",", rc.Train.Select(w => w.Stop))}]");
+                    GD.Print($"[runaway] ram 1 ok; pass 2: restored at stop {rc.StopIndex}, train=[{string.Join(",", rc.Train.Select(w => w.Number))}]");
                     _rwStep = 1; _rwClock = 0f;
                     break;
                 }
@@ -318,6 +313,12 @@ public partial class DebugTools
     private float _spTime, _spWaitFront = float.NaN, _spNotYetFront = float.NaN, _spNowFront = float.NaN;
     private float _spFallFront = float.NaN, _spOnSpurAt = float.NaN, _spPlungeAt = float.NaN, _spSetBackAt = float.NaN, _spThrownAtFront = float.NaN;
     private int _spFallenAtWreck, _spFallsAtWreck, _spFallsBefore, _spGroundBefore, _spRamsBefore;
+    /// <summary>r4_beam's measure: the least clearance over a seated head in the train as it passed under (m), the heads sampled, and whether it was judged.</summary>
+    private float _spBeamMin = float.MaxValue;
+    private int _spBeamHeads;
+    private bool _spBeamDone;
+    /// <summary>A standing NPC's eye above its feet (a 1.8 m body less LowBeam.HeadAboveEye): a crew member on a wagon's bench stands upright.</summary>
+    private const float SpNpcEye = 1.8f - LowBeam.HeadAboveEye;
     private bool _spOfferedSeen, _spPressedAfter, _spThrown9, _spSetBackDone, _spHeldPressed, _spStalled, _spSetBackSeen, _spLoneDowned, _spPointsPassed;
 
     /// <summary>The split's calls, its log lines, the wipe and the train's fall, heard once per run (the cart's events per floor build).</summary>
@@ -383,6 +384,42 @@ public partial class DebugTools
     /// short of the points held to them; =stall: thrown by the hook, the train stuck short, the watchdog sets it back and grinds on; =lone: thrown
     /// by the hook, the only human downed in the seat, the safe line. Nobody falls but the train's riders.
     /// </summary>
+    /// <summary>
+    /// The first pass, every frame: each seated head in the train (the cart's heroes at their seat's eye, un-ducked; any rider of a coupled
+    /// wagon) measured against r4_beam's underside as it passes under it (in the beam's own frame, within a quarter metre of its plane); once
+    /// the train's rear is past, the least clearance is printed and must be 0.05 m or more. True when it failed.
+    /// </summary>
+    private bool SplitBeam(RailController rc, RailEncounterController enc, Action<string> Fail)
+    {
+        if (_spBeamDone || _rwPass != 1) return false;
+        if (enc.SetPieceNode("r4_beam") is not LowBeam beam) { Fail("floor 12 lacks r4_beam"); return true; }
+        var inv = beam.GlobalTransform.AffineInverse();
+        void Measure(Vector3 at, float eye)
+        {
+            var local = inv * at;
+            if (Mathf.Abs(local.Z) > 0.25f) return;
+            _spBeamMin = Mathf.Min(_spBeamMin, LowBeam.Underside - (local.Y + eye + LowBeam.HeadAboveEye));
+            _spBeamHeads++;
+        }
+        void Heads(ICartBody body)
+        {
+            foreach (var r in body.Riders.Values)
+            {
+                if (r is not Node3D n || !IsInstanceValid(n) || r.Cart != body) continue;
+                if (r is Adventurer) Measure(body.SeatTransform(r.Seat).Origin, Adventurer.SeatedEyeHeight);
+                else Measure(n.GlobalPosition, SpNpcEye);
+            }
+        }
+        Heads(rc.Cart);
+        foreach (var wagon in rc.Train) if (IsInstanceValid(wagon)) Heads(wagon);
+        if (RunawayRules.TrainRearS(rc.Party.BackS, rc.Train.Count, RailController.WagonSpacing) < beam.S + 0.5f) return false;
+        _spBeamDone = true;
+        GD.Print($"[split] beam: r4_beam clears every seated head in the train by {_spBeamMin:0.00} m ({_spBeamHeads} sample(s) under it at S={beam.S:0.0}; the train W1..W{rc.Train.Count}, {rc.Train.Sum(w => w.Riders.Count)} rider(s) in the wagons)");
+        if (_spBeamHeads == 0) { Fail("no seated head passed under r4_beam"); return true; }
+        if (_spBeamMin < 0.05f) { Fail($"r4_beam clears a seated head by {_spBeamMin:0.00} m, under 0.05"); return true; }
+        return false;
+    }
+
     private void RunSplitRide(Main main, FloorLayout layout, RailController rc, RailEncounterController enc, PartyController party, Adventurer me, float rear, CartRun? run, Action<string> Fail)
     {
         _spTime += (float)GetProcessDeltaTime();
@@ -403,6 +440,7 @@ public partial class DebugTools
         float leadCheckShort = reach + 0.5f, pressShort = reach - 1f;
         var front = rc.Party.FrontS;
         var rolling = rc.State.Mode == CartMode.Rolling;
+        if (SplitBeam(rc, enc, Fail)) return;
 
         if (_rwStep == 4 && run != null && !_rwLoose)
         {

@@ -9,7 +9,7 @@ public static class NetRefs
     /// <summary>A railed floor's props (plan 5). A stop's are named by its stop index; a set piece's by its plan's index in <c>FloorContents.RailSetPieces</c> (the same on every peer).</summary>
     public const string GateKind = "gate", WinchKind = "winch", WagonKind = "wagon", SpareKind = "spare", SwitchKind = "switch", SpurKind = "spur",
         HeapKind = "heap", ValveKind = "valve", TrestleKind = "trestle", BufferKind = "buffer", BarricadeKind = "barricade", KeyringKind = "keyring", CartKind = "cart",
-        BridgeKind = "bridge", SlagKind = "slag", LeapKind = "leap";
+        BridgeKind = "bridge", SlagKind = "slag", LeapKind = "leap", CageKind = "cage";
 
     public static string Chest(int index) => $"{ChestKind}:{index}";
     public static string Door(int vault) => $"{DoorKind}:{vault}";
@@ -24,7 +24,10 @@ public static class NetRefs
     public static string StairsUp => $"{StairsKind}:up";
     public static string Gate(int stop) => $"{GateKind}:{stop}";
     public static string Winch(int stop) => $"{WinchKind}:{stop}";
-    public static string Wagon(int stop) => $"{WagonKind}:{stop}";
+    /// <summary>A wagon of the party's train by its number (1-based, nearest the cart first; plan 14).</summary>
+    public static string Wagon(int number) => $"{WagonKind}:{number}";
+    /// <summary>A stop's prisoner cage, by its stop (plan 14).</summary>
+    public static string Cage(int stop) => $"{CageKind}:{stop}";
     public static string Spare(int stop) => $"{SpareKind}:{stop}";
     public static string Switch(int piece) => $"{SwitchKind}:{piece}";
     public static string Spur(int piece) => $"{SpurKind}:{piece}";
