@@ -165,7 +165,7 @@ public partial class RailController : ISlopeSource
     internal CartFollower? Follower => _follow;
     /// <summary>Client: the server's clock in the first state that showed the cart rolling from a stop (its departure), or −1 (the RIDE pass reads it).</summary>
     internal double NetDepartedAt { get; private set; } = -1;
-    /// <summary>Client: the server's clock as this screen reckons it when the train last changed here, or −1 (the RIDE pass reads it).</summary>
+    /// <summary>Client: the server's clock in the state that last changed the train here (its <c>ServerTime</c>, the departure's clock), or −1 (the RIDE pass reads it).</summary>
     internal double NetTrainChangedAt { get; private set; } = -1;
     /// <summary>Client: how many wrecks this screen has shown (a Wrecked flag's rising edge), and the server's clock of the last one's state (the RIDE pass reads them).</summary>
     internal int NetWrecksSeen { get; private set; }
@@ -226,7 +226,7 @@ public partial class RailController : ISlopeSource
         Halted = d.Has(CartFlags.Halted);
         ApplyLaneNet(d.CrossOut, d.CrossBack);
         ApplyGapNet(d.GapFrom, d.GapTo, d.JumpV);
-        ApplyTrain(d.Train);
+        ApplyTrain(d.Train, d.ServerTime);
         if (lost != null)
             foreach (var wagon in lost)
                 if (IsInstanceValid(wagon) && !wagon.Coupled) wagon.SetLost(true); // after the train: its uncoupling shows every wagon it lets go
@@ -259,14 +259,14 @@ public partial class RailController : ISlopeSource
         if (inCart && local!.Camera.IsInsideTree()) _localEyeInCart = local.Camera.GlobalTransform;
     }
 
-    /// <summary>Client: couple and uncouple the cage wagons so the train is the server's (stops nearest first).</summary>
-    internal void ApplyTrain(List<int>? stops)
+    /// <summary>Client: couple and uncouple the cage wagons so the train is the server's (stops nearest first), as told by the state stamped <paramref name="serverTime"/>.</summary>
+    internal void ApplyTrain(List<int>? stops, double serverTime)
     {
         var count = stops?.Count ?? 0;
         var same = count == _train.Count;
         for (var i = 0; same && i < count; i++) same = _train.Wagons[i].Stop == stops![i];
         if (same) return;
-        NetTrainChangedAt = NetSession.Instance?.Client?.ServerNow ?? -1;
+        NetTrainChangedAt = serverTime;
         _train.UncoupleAll();
         if (count == 0 || ObjectiveController.Instance is not CrewRescueController crew) return;
         foreach (var stop in stops!)
