@@ -247,7 +247,7 @@ public partial class RailNet
         if (!IsInstanceValid(cc.Body)) return;
         if (cc.Slag is { } slag)
         {
-            SetDownSeated(slag); // a leaper still on its deck here (its unseat still in flight, or the server's word lost) is set down where it stands
+            HoldLeapers(slag); // a leaper still on its deck here (its fate still in flight) is held hidden where it sat, never set down there (ruling (d))
 
             if (derailed && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.PlungedAt(goneS)) { slag.ShowPlunged(enc.UnderTheGap()); return; }
             if (derailed && RailEncounterController.Instance is { } leap && IsInstanceValid(leap) && leap.DropPlungedAt(goneS))
@@ -266,6 +266,66 @@ public partial class RailNet
         else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.Drop(golem.GlobalPosition);
         else if (cc.Chaser is { } chaser) SetDownSeated(chaser); // the server sets its riders down before it goes; one still seated here (an unseat still in flight) gets out where it sits
         cc.Body.QueueFree();
+    }
+
+    /// <summary>Heroes held off a slag copy that went (ruling (d)), each with where it sat and when the hold began (this process's clock, s).</summary>
+    private readonly List<(Party.Adventurer Hero, Vector3 At, double Since)> _held = new();
+    /// <summary>Heroes held off a slag copy as it went, on this floor build (the RIDE pass reads it).</summary>
+    internal int LeapersHeld { get; private set; }
+
+    /// <summary>
+    /// Client: every hero still seated on <paramref name="slag"/>'s copy as it goes (Task 7 ruling (d); its seat book freed with it): out of the
+    /// copy's book, hidden and held still where it sat, never set down there (over the drop's gone cells, or a gap), until the server's word
+    /// (<see cref="LeapRules.HeldLeaperNow"/>, judged each frame by <see cref="TickHeld"/>): a seat (a haul back) shows it there, Fallen leaves it
+    /// to the crevasse's hold, a set-down's ForcePose or poses move it and it is shown once <see cref="LeapRules.HoldForServer"/> has run out.
+    /// Any other rider (none sits a slag deck but a hero) gets out where it sits, as before.
+    /// </summary>
+    private void HoldLeapers(SlagCart slag)
+    {
+        if (slag.Riders.Count == 0) return;
+        _freeRiders.Clear();
+        foreach (var rider in slag.Riders.Values) _freeRiders.Add(rider);
+        var now = Time.GetTicksMsec() / 1000.0;
+        foreach (var rider in _freeRiders)
+        {
+            if (rider is not Node3D n || !IsInstanceValid(n) || rider.Cart != slag) continue;
+            var at = n.GlobalPosition;
+            rider.GetOut(at, Vector3.Zero); // out of the going copy's book (a client sends nothing for it)
+            if (rider is not Party.Adventurer hero) continue;
+            hero.Visible = false;
+            hero.Velocity = Vector3.Zero;
+            _held.Add((hero, at, now));
+            LeapersHeld++;
+            GD.Print(FormattableString.Invariant($"[net] ride: {hero.State.Name} was on slag cart {slag.CartId}'s copy as it went here: held hidden where it sat ({DungeonBuilder.WorldToCell(at)}) for the server's word"));
+        }
+        _freeRiders.Clear();
+    }
+
+    /// <summary>Client, each rendered frame: the held heroes (<see cref="HoldLeapers"/>) kept hidden and still until the server's word, then shown or left to the crevasse.</summary>
+    private void TickHeld()
+    {
+        if (_held.Count == 0) return;
+        var now = Time.GetTicksMsec() / 1000.0;
+        for (var i = _held.Count - 1; i >= 0; i--)
+        {
+            var (hero, at, since) = _held[i];
+            if (!IsInstanceValid(hero) || hero.Parked) { _held.RemoveAt(i); continue; }
+            var placed = hero.IsLocal && hero.GlobalPosition.DistanceTo(at) > 0.5f; // our own body kept still here, moved since: the server's ForcePose placed it
+            switch (placed ? HeldLeaper.Show : LeapRules.HeldLeaperNow(hero.Seated, hero.State.Fallen, now - since))
+            {
+                case HeldLeaper.Show:
+                    hero.Visible = true;
+                    _held.RemoveAt(i);
+                    break;
+                case HeldLeaper.Fallen:
+                    _held.RemoveAt(i); // the crevasse's hold keeps it hidden (Adventurer.HoldInCrevasse)
+                    break;
+                default:
+                    if (hero.Visible) hero.Visible = false;
+                    if (hero.IsLocal) { hero.GlobalPosition = at; hero.Velocity = Vector3.Zero; } // our own body is ours to keep still; a remote one follows the server's poses, hidden
+                    break;
+            }
+        }
     }
 
     /// <summary>Client: every rider still seated in <paramref name="cart"/>'s copy gets out where it sits (the copy is about to go).</summary>
@@ -339,6 +399,7 @@ public partial class RailNet
     {
         if (!NetSession.IsClient || !Current) return;
         var dt = (float)delta;
+        TickHeld();
         foreach (var cc in _carts.Values)
         {
             if (!IsInstanceValid(cc.Body)) continue;

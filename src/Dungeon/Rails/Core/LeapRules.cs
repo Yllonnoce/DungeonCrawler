@@ -124,6 +124,17 @@ public static class LeapRules
     /// </summary>
     public static bool SendsUnseat(bool seated, bool seatedElsewhereNow) => seated || !seatedElsewhereNow;
 
+    /// <summary>
+    /// A client holds a hero still on a slag copy as it goes (Task 7 ruling (d)) this long at most (seconds): hidden at the copy's last pose,
+    /// never set down there (over the drop's gone cells), until the server's word: a seat (a haul back), Fallen (it fell with it), or its
+    /// own set-down's poses, shown when the hold runs out.
+    /// </summary>
+    public const double HoldForServer = 2.0;
+
+    /// <summary>A held leaper this frame (ruling (d)): shown again once seated or the hold has run out; left to the crevasse's hold once fallen; else held.</summary>
+    public static HeldLeaper HeldLeaperNow(bool seated, bool fallen, double heldFor)
+        => seated ? HeldLeaper.Show : fallen ? HeldLeaper.Fallen : heldFor >= HoldForServer ? HeldLeaper.Show : HeldLeaper.Hold;
+
     // ---- the drop (Task 5, Rulings 16-18) ---------------------------------------------------------------------------
 
     /// <summary>The slag line's going is called with the party's front this far short of the drop's near edge (party S; ≈5 s).</summary>
@@ -150,3 +161,6 @@ public static class LeapRules
     public static float TrafficStartS(float baseStartS, float partyS, float dropS, float dropFarEnemyS, bool dropped)
         => dropped && partyS > dropS && !float.IsNaN(dropFarEnemyS) ? MathF.Max(baseStartS, dropFarEnemyS + SwitchBackRules.TrafficPastGap) : baseStartS; // NaN compares false
 }
+
+/// <summary>A client's hero held off a slag copy that went (<see cref="LeapRules.HeldLeaperNow"/>).</summary>
+public enum HeldLeaper { Hold, Show, Fallen }

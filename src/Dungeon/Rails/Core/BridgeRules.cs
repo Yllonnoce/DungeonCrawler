@@ -45,6 +45,13 @@ public static class BridgeRules
     public static bool LocalRode(bool inCartNow, bool inCartSinceLastState, bool fallenNearCart)
         => inCartNow || inCartSinceLastState || fallenNearCart;
 
+    /// <summary>
+    /// The <see cref="LocalRode"/> window's next value: an applied state sets it to whether our hero sits in the cart then; a posed frame only
+    /// opens it (in the cart). So a hero out of the cart on one frame between two states (a get-out a frame after a state) still reads as having
+    /// ridden until the next state, at most one correction (0.2 s); the take's pose always follows a state in the cart.
+    /// </summary>
+    public static bool LocalInCartNext(bool open, bool fromState, bool inCart) => fromState ? inCart : open || inCart;
+
     /// <summary>The front's speed: <see cref="PaceShare"/> of the train's unpumped cruise with <paramref name="crewWagons"/> coupled.</summary>
     public static float Pace(int crewWagons) => CartPhysics.TargetSpeed(0, crewWagons) * PaceShare;
 

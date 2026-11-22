@@ -1796,14 +1796,15 @@ public partial class NetTestFlow : Node
             }
             if (a.Cart is Dungeon.Rails.SlagCart freed) { _cavOnFreed ??= $"{name} still seated on slag cart {freed.CartId}'s freed copy"; continue; }
             var cell = Dungeon.DungeonBuilder.WorldToCell(a.GlobalPosition);
-            var overGone = a.Cart == null && !a.State.Fallen && layout.GoneBridges.Contains(cell);
+            // shown standing there: on foot, seen and not fallen, at the deck's height (a body held in the drop for its fall is not standing)
+            var overGone = a.Cart == null && !a.State.Fallen && a.Visible && layout.GoneBridges.Contains(cell) && Mathf.Abs(a.GlobalPosition.Y - main.Builder.Surface(cell).Y) < 1.5f;
             if (overGone) _cavOverGone ??= FormattableString.Invariant($"{name} on foot over the gone cell {cell} (our front S={rc.Party.FrontS:0.0})");
             if (was == null) continue;
             _cavOnSlag.Remove(a.Index);
             var copyGone = !IsInstanceValid(was) || was.IsQueuedForDeletion() || was.Derailed;
             if (copyGone && a.Cart != rc.Cart) _cavOnWhenGone.Add(name);
             _cavOffSlag.Add(a.Cart == rc.Cart ? $"{name} into the party's cart (seat {a.Seat})"
-                : a.Cart == null ? $"{name} set down here at {cell}{(copyGone ? " as its copy went" : "")}{(overGone ? ", OVER A GONE CELL" : "")}"
+                : a.Cart == null ? $"{name} {(copyGone && !a.Visible ? "held hidden" : "set down")} here at {cell}{(copyGone ? " as its copy went" : "")}{(overGone ? ", OVER A GONE CELL" : "")}"
                 : $"{name} into {(a.Cart as Node)?.Name}");
         }
         foreach (var (id, copy) in _cavRode)
@@ -1828,14 +1829,19 @@ public partial class NetTestFlow : Node
             var k = rc.StopIndex;
             GD.Print(me.Cart == rc.Cart ? $"[net] ride: cavern: at stop {k} our hero sits in the party's cart (seat {me.Seat}) here"
                 : $"[net] ride: cavern: at stop {k} our hero is NOT in the party's cart here (it sits in {(me.Cart as Node)?.Name ?? "nothing"})");
+            // ruling (e) needs its case on each screen: the joiner on the deck through the call, the first client back in the party's cart after it
+            var roleFrames = _wireJoiner ? _cavCalledDeck : _cavCalledCart;
             GD.Print(_cavAcrossAfterCall == 0
-                ? $"[net] ride: cavern: after the slag line's call no \"Leap across\" offered here ({_cavCalledFrames} frame(s) from the call to stop {k}: {_cavCalledDeck} on the slag deck, {_cavCalledCart} in the party's cart) ({(_cavCalledFrames > 0 ? "ok" : "FAIL: the call never showed here")})"
+                ? $"[net] ride: cavern: after the slag line's call no \"Leap across\" offered here ({_cavCalledFrames} frame(s) from the call to stop {k}: {_cavCalledDeck} on the slag deck, {_cavCalledCart} in the party's cart) ({(_cavCalledFrames == 0 ? "FAIL: the call never showed here" : roleFrames == 0 ? $"FAIL: no frame {(_wireJoiner ? "on the slag deck" : "in the party's cart")} after the call" : "ok")})"
                 : $"[net] ride: cavern: after the slag line's call \"Leap across\" was offered here {_cavAcrossAfterCall} of {_cavCalledFrames} frame(s), {_cavAcrossFirst} (FAIL)");
             var off = _cavOffSlag.Count > 0 ? string.Join(", ", _cavOffSlag) : "nobody";
-            var onGone = _cavOnWhenGone.Count > 0 ? string.Join(", ", _cavOnWhenGone) + " (set down from the server's pose only if not over a gone cell)" : "nobody";
-            GD.Print(_cavOverGone == null
-                ? $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: {onGone} (ok)"
-                : $"[net] ride: cavern: {_cavOverGone} here; off a slag copy here: {off}; on its copy when it went: {onGone} (FAIL)");
+            var onGone = _cavOnWhenGone.Count > 0 ? string.Join(", ", _cavOnWhenGone) + $" (held here for the server's word: {(Dungeon.Rails.RailNet.Instance is { } held && IsInstanceValid(held) ? held.LeapersHeld : 0)} hero(es))" : "nobody";
+            // ruling (d)'s case is a leaper still on a copy as it goes; with none, the watch has nothing to judge, and says so (never "ok")
+            var reached = _cavOnWhenGone.Count > 0;
+            GD.Print(_cavOverGone != null
+                ? $"[net] ride: cavern: {_cavOverGone} here; off a slag copy here: {off}; on its copy when it went: {onGone} (FAIL)"
+                : reached ? $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: {onGone} (ok)"
+                : $"[net] ride: cavern: no hero shown standing over a gone cell here ({_cavWatchedFrames} frame(s) from ride {stop + 1}'s departure to stop {k}); off a slag copy here: {off}; on its copy when it went: nobody (ruling (d)'s case not reached here)");
             GD.Print(_cavRodeGone.Count == 0 ? $"[net] ride: cavern: NO slag copy a hero rode went here before stop {k} (FAIL)"
                 : _cavOnFreed == null ? $"[net] ride: cavern: after slag cart {string.Join(", ", _cavRodeGone)} went over the drop no hero sits on a freed copy here (ok)"
                 : $"[net] ride: cavern: after slag cart {string.Join(", ", _cavRodeGone)} went over the drop {_cavOnFreed} here (FAIL)");
@@ -2633,7 +2639,7 @@ public partial class NetTestFlow : Node
                 else if (_takeRunSeen && !_takeRunGoneTold)
                 {
                     _takeRunGoneTold = true;
-                    GD.Print(FormattableString.Invariant($"[net] ride: take: the runaway's copy (cart {_takeRunId}) went here at S={_takeRunS:0.0}, the bridge's front here S={enc84.CollapseS:0.0} ({enc84.BridgeGone}/{enc84.BridgeCells} gone), our rear at S={rn84.OwnTrainRearS():0.0}"));
+                    GD.Print(FormattableString.Invariant($"[net] ride: take: the runaway's copy (cart {_takeRunId}) went here at S={_takeRunS:0.0}, the bridge {enc84.BridgeGone}/{enc84.BridgeCells} gone here, our rear at S={rn84.OwnTrainRearS():0.0}"));
                 }
                 if (enc84.BridgeGone >= 1 && double.IsNaN(_takeFirstGoneAt)) _takeFirstGoneAt = _elapsed;
                 var seen84 = CallSeenAt(_takeFirstGoneAt);
@@ -2649,7 +2655,7 @@ public partial class NetTestFlow : Node
                     }
                     else riders.ForcedMoveInput = new Vector2(0, -1); // pumping
                 }
-                if (_clock > 120) { riders.ForcedMoveInput = null; Finish("[net]", false, "ride: take: the bridge never took the train in 120 s"); net.Disconnect("test finished"); }
+                if (_clock > 60) { riders.ForcedMoveInput = null; Finish("[net]", false, "ride: take: the bridge never took the train in 60 s"); net.Disconnect("test finished"); }
                 return;
             }
             case 85: // the seen fall: its eye current here, then our hero's view again; then the wipe's rebuild and the server's ForcePose
