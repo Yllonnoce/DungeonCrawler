@@ -515,12 +515,16 @@ public partial class RailController : Node
     /// <summary>The cart's prompt for <paramref name="hero"/>, on every peer (a client's state is the server's: its mode, stop and seat book).</summary>
     private string PromptFor(Adventurer hero)
     {
+        if (LeapOffered(hero)) return LeapRules.BackPrompt; // first: from a slag cart's deck, whatever the aim (plan 13)
         if (hero.Seated && hero.Cart != Cart) return ""; // in another seat book
         if (HoldFor(hero)) return CageHoldRules.SeatedPrompt; // a tap still gets out; a held press leaves the prisoners behind
         var seatedHere = hero.Cart == Cart;
         var inReach = seatedHere || RideInputRules.InBoardReach(Cart.TubDistance(hero)); // the server's intent check measures the same
         return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach, holdOn: HoldsRiders);
     }
+
+    /// <summary>Ride 4's leap offers <paramref name="hero"/> this cart back from a slag cart's deck (plan 13), on every role.</summary>
+    private bool LeapOffered(Adventurer hero) => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.LeapOfferFor(hero) == Cart;
 
     /// <summary>The train rolls on ride 4's collapsing bridge (plan 13, Ruling 6): "Get out" is neither offered nor taken, on every role.</summary>
     private static bool HoldsRiders => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.HoldsRiders();
@@ -563,6 +567,12 @@ public partial class RailController : Node
 
     private void Use(Adventurer actor)
     {
+        if (actor.Cart is SlagCart) // "Leap back" (plan 13): the leap's rules judge it (LeapAccepts), the server's slack included; it is never a boarding
+        {
+            if (!NetSession.IsClient && RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) enc.LeapBack(actor);
+            Flush();
+            return;
+        }
         UseCart(actor);
         Flush();
     }
@@ -1066,6 +1076,8 @@ public partial class RailController : Node
     public double LastBrakeAt { get; private set; } = double.NaN;
     /// <summary>When the brake held last (or now) was pressed (<c>NetSession.Instance.Now</c>; <see cref="BridgeRules.NewPress"/>), or NaN: the bridge counts only a press made after its warning (<see cref="BridgeRules.Counts"/>).</summary>
     public double BrakePressedAt { get; private set; } = double.NaN;
+    /// <summary>Players in the party's cart pumping at the last input (no brake held): a leaper on a slag cart's deck is never one (tests read it).</summary>
+    internal int PlayersPumping => _playersPumping;
     /// <summary>A seated player holds the brake of the rolling cart now (server and solo).</summary>
     internal bool Braking => _anyBrake && State.Mode == CartMode.Rolling;
 

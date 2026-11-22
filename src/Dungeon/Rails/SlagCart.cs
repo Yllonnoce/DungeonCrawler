@@ -16,9 +16,15 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// derails it (<see cref="Derail"/>). Its origin sits on the track; forward is −Z. A client builds the same cart as dressing from
 /// the server's cart state (RailNet): posed by its follower, its riders bound by net id (<see cref="BoardAt"/>), its derail shown
 /// (<see cref="ShowDerailed"/>); it judges, paces and warns nothing, and its shoe never breaks to a client's hit.
+/// <para>Ride 4's leap (plan 13, Rulings 13 and 15): a hero may sit on its deck (<see cref="DeckSeat"/>, two seats on the party-side rim),
+/// a real seat book like the party cart's. "Leap across" is its prompt while offered (<see cref="RailEncounterController.LeapOfferFor"/>);
+/// with a hero aboard its shoe takes no hits (<see cref="Leapers"/>).</para>
 /// </summary>
-public partial class SlagCart : AnimatableBody3D, ICartBody
+public partial class SlagCart : AnimatableBody3D, ICartBody, Party.IInteractable
 {
+    private static readonly List<SlagCart> _live = new();
+    /// <summary>Every slag cart in the tree (every role: a client's copies too), in the order they entered it.</summary>
+    public static IReadOnlyList<SlagCart> Live => _live;
     /// <summary>A hero mangled by a slag cart carries this as MangledBy: no hazard has it, so it always counts as armed.</summary>
     public const int HazardIndex = 1001;
     public const string SourceName = RunOverRules.SlagCartSource;
@@ -65,16 +71,67 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
     public Dictionary<ulong, double> HitAt { get; } = new();
     public BrakeShoe Shoe { get; private set; } = null!;
 
-    // ICartBody: its riders are carried creatures, not ICartRiders, so the seat book stays empty
+    // ICartBody: its creatures are carried (Aboard), not ICartRiders; the seat book holds the heroes who leapt onto its deck (seats 0-1)
     public Dictionary<int, ICartRider> Riders { get; } = new();
     public CartSeats Seats { get; } = new();
     public event Action<ICartRider, bool>? RiderChanged;
     public float Speed { get; set; }
     public float Curvature { get; set; }
     public Vector3 Velocity => -GlobalTransform.Basis.Z * Speed;
-    public Transform3D SeatTransform(int seat) => RiderSpot(seat);
-    public void Admit(ICartRider rider) => RiderChanged?.Invoke(rider, true);
-    public void Release(ICartRider rider) { }
+    public Transform3D SeatTransform(int seat) => DeckSeat(seat);
+
+    /// <summary>The leaper (its deck seat booked, its own SitIn under way) rides here now.</summary>
+    public void Admit(ICartRider rider)
+    {
+        Riders[rider.RiderId] = rider;
+        RiderChanged?.Invoke(rider, true);
+    }
+
+    /// <summary>The leaper no longer rides here and its seat is free (a rider not the one aboard under its id changes nothing).</summary>
+    public void Release(ICartRider rider)
+    {
+        if (!Riders.TryGetValue(rider.RiderId, out var aboard) || aboard != rider) return;
+        Riders.Remove(rider.RiderId);
+        Seats.Leave(rider.RiderId);
+        RiderChanged?.Invoke(rider, false);
+    }
+
+    /// <summary>Its deck seats' local x share of <see cref="InnerSide"/>, and their z (Ruling 13).</summary>
+    const float DeckSeatX = 0.4f, DeckSeatZ = 0.5f;
+
+    /// <summary>
+    /// Where a leaper in deck seat <paramref name="seat"/> (0 front, 1 back) sits, in world space (−Z forward): on the party-side rim at heap
+    /// height (local x = <see cref="InnerSide"/> × 0.4, y = <see cref="StandOn"/>, z = −0.5 or +0.5).
+    /// </summary>
+    public Transform3D DeckSeat(int seat)
+        => GlobalTransform * new Transform3D(Basis.Identity, new Vector3(InnerSide * DeckSeatX, StandOn, Math.Clamp(seat, 0, LeapRules.MaxLeapers - 1) == 0 ? -DeckSeatZ : DeckSeatZ));
+
+    /// <summary>Heroes seated on its deck now. No allocation.</summary>
+    public int Leapers
+    {
+        get
+        {
+            var n = 0;
+            foreach (var rider in Riders.Values) if (rider is Party.Adventurer hero && IsInstanceValid(hero)) n++;
+            return n;
+        }
+    }
+
+    /// <summary>"Leap across" while the controller offers this cart to the hero this machine plays, else nothing.</summary>
+    public string Prompt => Main.Instance?.Party?.Local is { } me && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.LeapOfferFor(me) == this ? LeapRules.AcrossPrompt : "";
+
+    /// <summary>A hero pressed "Leap across" (server or solo; a remote player's through its slag:{id} intent, judged there).</summary>
+    public void Interact(Party.PartyController party, Party.Adventurer actor)
+    {
+        if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) enc.LeapAcross(actor, this);
+    }
+
+    /// <summary>Its wire name (a leap's press: <see cref="Net.NetRefs.Slag"/>).</summary>
+    public string NetRef => Net.NetRefs.Slag(CartId);
+
+    public override void _EnterTree() { if (!_live.Contains(this)) _live.Add(this); }
+
+    public override void _ExitTree() => _live.Remove(this);
 
     /// <summary>Its sound (a child once built): fed by its run on the server and in single player, by its follower on a client.</summary>
     public CartSound? Sound { get; private set; }
@@ -155,9 +212,12 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
         if (IsInstanceValid(e) && e.Carrier == this) e.Drop(e.GlobalPosition);
     }
 
-    /// <summary>Pose the riders at their spots (after the cart is posed); a corpse that has been freed leaves the list.</summary>
+    /// <summary>Pose the riders at their spots and the leapers on their deck seats (after the cart is posed); a corpse that has been freed leaves the list.</summary>
     public void FollowRiders()
     {
+        if (Riders.Count > 0)
+            foreach (var rider in Riders.Values)
+                if (rider is not GodotObject o || IsInstanceValid(o)) rider.FollowSeat();
         for (var i = Aboard.Count - 1; i >= 0; i--)
         {
             var e = Aboard[i];
@@ -411,7 +471,7 @@ public partial class SlagCart : AnimatableBody3D, ICartBody
 
 /// <summary>
 /// A slag cart's brake shoe: a small block glowing orange against the wheel, on layer 4 so a hero's blade, a shove of
-/// steel or an arrow finds it (a prop, not a creature). One hit breaks it and derails its cart.
+/// steel or an arrow finds it (a prop, not a creature). One hit breaks it and derails its cart, unless a hero rides its deck.
 /// </summary>
 public partial class BrakeShoe : AnimatableBody3D, ICombatTarget
 {
@@ -445,7 +505,7 @@ public partial class BrakeShoe : AnimatableBody3D, ICombatTarget
     /// <summary>Any hit breaks it: the cart derails (deferred: a hit can land inside a physics query).</summary>
     public DamageResult ReceiveAttack(Stats attackerStats, AttackProfile attack, HitContext ctx, Random rng, string attackerName)
     {
-        if (!IsAlive || NetSession.IsClient || _cart == null) return DamageResult.Miss(attack.Type);
+        if (!IsAlive || NetSession.IsClient || _cart == null || _cart.Leapers > 0) return DamageResult.Miss(attack.Type); // never derailed under a friend on its deck (Ruling 15)
         IsAlive = false;
         EventBus.Instance.Log($"{attackerName} breaks the slag cart's brake shoe!");
         Callable.From(_cart.Derail).CallDeferred();

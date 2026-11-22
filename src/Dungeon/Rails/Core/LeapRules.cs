@@ -6,7 +6,9 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// Ride 4's leap to the slag cart (plan 13, Rulings 1 and 9), its geometry: the stretch runs from the cavern's start
 /// (<see cref="RailLine.Cavern"/>'s near edge on the party track) + <see cref="LeapIn"/> to the drop's near edge, and is dead under
 /// <see cref="MinStretch"/>; the drop (<see cref="DropSpan"/>) is the slag deck's <see cref="DropCells"/> cells, <see cref="DropFromEnd"/>
-/// short of the cavern's end. Engine-free.
+/// short of the cavern's end. The offer (Task 4, Rulings 11-13 and 20): a seat change from the party's rolling cart onto a slag cart's deck
+/// alongside, "Leap across" (<see cref="AcrossOffered"/>) and back, "Leap back" (<see cref="BackOffered"/>, the server's <see cref="BackAccepted"/>),
+/// in reach by the rim gap and the decks' overlap (<see cref="InReach"/>). Engine-free.
 /// </summary>
 public static class LeapRules
 {
@@ -57,4 +59,66 @@ public static class LeapRules
             if (i >= 0 && i < rail.Party.Count && (Ramp(rail.Party[i]) || Ramp(rail.Party[i] + side))) return false;
         return true;
     }
+
+    // ---- the leap across and back (Task 4) --------------------------------------------------------------------------
+
+    /// <summary>The rim gap a leap spans at most (|lateral| − both carts' half widths, metres).</summary>
+    public const float Reach = 2.6f;
+    /// <summary>The cart centres lie at most this far apart along the party cart's line (metres).</summary>
+    public const float AlongReach = 1.2f;
+    /// <summary>The server takes a press with this much more on both (a client's copy may run behind the server's cart).</summary>
+    public const float AcceptSlack = 1f;
+    /// <summary>"Leap back" closes with the slag cart's front this far short of the drop's near edge (the server takes it to the edge).</summary>
+    public const float BackCloses = 3f;
+    /// <summary>A slag cart's deck seats: at most this many heroes on it.</summary>
+    public const int MaxLeapers = 2;
+    public const string AcrossPrompt = "Leap across";
+    public const string BackPrompt = "Leap back";
+
+    /// <summary>
+    /// The other cart is in reach (Ruling 11): measured between the cart centres in the party cart's frame, the rim gap
+    /// (|<paramref name="lateral"/>| − 2 × <see cref="CartRules.HalfWidth"/>) within <see cref="Reach"/> and |<paramref name="along"/>| within
+    /// <see cref="AlongReach"/>, each with <paramref name="slack"/> more (the server's <see cref="AcceptSlack"/>).
+    /// </summary>
+    public static bool InReach(float lateral, float along, float slack = 0f)
+        => MathF.Abs(lateral) - 2f * CartRules.HalfWidth <= Reach + slack && MathF.Abs(along) <= AlongReach + slack;
+
+    /// <summary>
+    /// "Leap across" (Ruling 12): a human-controlled hero, up, seated in the party's rolling cart, the stretch live and not yet called, a slag
+    /// cart in reach with fewer than <see cref="MaxLeapers"/> heroes on its deck.
+    /// </summary>
+    public static bool AcrossOffered(bool human, bool up, bool seatedInParty, bool rolling, bool stretchLive, bool called, bool inReach, int leapersAboard)
+        => human && up && seatedInParty && rolling && stretchLive && !called && inReach && leapersAboard < MaxLeapers;
+
+    /// <summary>
+    /// "Leap back" (Ruling 12): a hero up on that slag cart, the party's cart in reach with a hero seat free, and the slag cart's front at least
+    /// <see cref="BackCloses"/> short of the drop's near edge (<paramref name="dropS"/>, on the slag cart's own line; NaN: no live drop, never).
+    /// </summary>
+    public static bool BackOffered(bool up, bool onThatSlag, bool inReach, bool seatFree, float slagFrontS, float dropS)
+        => up && onThatSlag && inReach && seatFree && slagFrontS < dropS - BackCloses;
+
+    /// <summary>The server takes a leap back (with <see cref="AcceptSlack"/> on the reach) until the slag cart's front reaches the drop's edge.</summary>
+    public static bool BackAccepted(bool up, bool onThatSlag, bool inReachWithSlack, bool seatFree, float slagFrontS, float dropS)
+        => up && onThatSlag && inReachWithSlack && seatFree && slagFrontS < dropS;
+
+    /// <summary>
+    /// Why the leap is dead (Rulings 2 and 9; a dead leap offers nothing and leaves the slag line whole), or null: the cavern not
+    /// <see cref="Flat"/> (<paramref name="flat"/>; neither a live bridge nor a live leap), no <see cref="DropSpan"/> (<paramref name="hasDrop"/>),
+    /// the stretch (its start <paramref name="stretchFromS"/>, the piece's At) starting short of the cavern (<paramref name="cavernFromS"/>), or
+    /// shorter than <see cref="MinStretch"/> to the drop's near edge (<paramref name="dropS"/>). All party S.
+    /// </summary>
+    public static string? Dead(float stretchFromS, float dropS, float cavernFromS, bool flat = true, bool hasDrop = true)
+    {
+        if (!flat) return "the cavern is not flat";
+        if (!hasDrop || float.IsNaN(dropS)) return "the cavern has no drop";
+        if (!(stretchFromS >= cavernFromS)) return "the stretch starts short of the cavern";
+        if (!(dropS - stretchFromS >= MinStretch)) return "the stretch is shorter than 30 m";
+        return null;
+    }
+
+    /// <summary>
+    /// The server sends a rider's seat change (Ruling 20): always a seating; an unseat only when the rider sits in no other cart at the flush
+    /// (a leap's seat in the new cart moves it on every client).
+    /// </summary>
+    public static bool SendsUnseat(bool seated, bool seatedElsewhereNow) => seated || !seatedElsewhereNow;
 }

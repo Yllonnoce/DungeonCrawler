@@ -73,6 +73,9 @@ public partial class RailEncounterController
     /// <summary>Every built set piece in index order: its id, ride, kind and party S (--track-depth reads it).</summary>
     internal IEnumerable<(string Id, int Ride, string Kind, float S)> DebugPieces()
         => _pieces.OrderBy(p => p.Index).Select(p => (p.Plan.Id, p.Plan.Ride, p.Plan.Kind, p.S));
+    /// <summary>Every ride encounter in plan order: its id, ride, kind and the party S where it starts (--track-depth reads it).</summary>
+    internal IEnumerable<(string Id, int Ride, string Kind, float S)> DebugEncounters()
+        => _encounters.Where(e => e.Ride >= 1 && e.Ride < _rails.StopS.Length).Select(e => (e.Id, e.Ride, e.Kind, RideS(e.Ride, e.At)));
     /// <summary>Whether <paramref name="enemy"/> is one of the floor's trackside throwers (tests read it).</summary>
     internal bool IsThrower(Enemy enemy)
     {
@@ -252,6 +255,9 @@ public partial class RailEncounterController
                     break;
                 case "bridge":
                     node = BuildBridge(root, piece); // the cavern's party deck: its span cut bare and laid cell by cell, or a dead marker
+                    break;
+                case "leap":
+                    node = BuildLeap(root, piece); // the stretch and the drop's S from the layout's cavern: a marker, live or dead
                     break;
             }
             if (node == null) continue;

@@ -584,6 +584,16 @@ public partial class ServerWorld : Node
                 // any distance, as their screen offered it (SeatedSwitchRules); its taking at the points ends that. Another rider's set-back from
                 // inside their window right after a toggle is refused, in reach or not (no window press is aimed), so two riders cued by the same
                 // call do not undo each other into the heap
+                // ride 4's leap (plan 13, Ruling 20): a slag cart's "Leap across" (slag:{id}), or the party's cart's "Leap back" (cart:0) from a slag
+                // cart's deck, is taken from wherever the sender sits when the leap's rules take it (LeapAccepts: the offer with AcceptSlack); else refused
+                var leapPress = node is Dungeon.Rails.SlagCart || (node is Dungeon.Rails.MineCart && body.Cart is Dungeon.Rails.SlagCart);
+                var leapTaken = false;
+                if (leapPress)
+                {
+                    leapTaken = Dungeon.Rails.RailEncounterController.Instance is { } leapEnc && GodotObject.IsInstanceValid(leapEnc) && leapEnc.LeapAccepts(body, node);
+                    GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: leap {(leapTaken ? "accepted" : "refused")}");
+                    if (!leapTaken) break;
+                }
                 var lever = node as Dungeon.Rails.TrackSwitch;
                 var window = lever != null && Dungeon.Rails.RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.InSeatedWindow(body, lever);
                 if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: {dist:0.0} m (reach {reach}) body={body.GlobalPosition:0.0} node={node.GlobalPosition:0.0}{(lever != null ? $" seated window {(window ? "yes" : "no")}" : "")}");
@@ -607,7 +617,7 @@ public partial class ServerWorld : Node
                     else GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: the deadly lever was thrown (taken {lever.Taken}): ignored quietly");
                     break;
                 }
-                if (dist > reach && !window) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
+                if (dist > reach && !window && !leapTaken) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
                 // recovery: the altar is paid and its card still waits for a pick, but this player's screen lost it: hand it back
                 if (node is Dungeon.Props.Shrine && FortuneDirector.Instance?.PendingShrine is { } pendingCard) { SendTo(slot.PeerId, pendingCard); Trace.Add("shrine-resent"); break; }
                 // the bag filled here (a bot's pickup) before this player's copy showed it: tell them, not the whole party, and

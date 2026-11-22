@@ -29,6 +29,17 @@ public partial class RailNet
         chaser.RiderChanged += (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
     }
 
+    /// <summary>
+    /// A ride's slag cart was spawned (server): its book (the heroes who leapt onto its deck, plan 13) is heard under its wire id from now on.
+    /// Once per cart; the handler goes with the cart.
+    /// </summary>
+    internal void HearSlagCart(SlagCart cart)
+    {
+        if (!NetSession.IsServer || !IsInstanceValid(cart)) return;
+        var id = cart.CartId;
+        cart.RiderChanged += (rider, seated) => _seats.Add(new SeatChange(rider, id, rider.Seat, seated));
+    }
+
     /// <summary>Listen to each cage wagon's book (the crew controller builds them after this node): once, the first tick they stand.</summary>
     private void HearWagons()
     {
@@ -52,7 +63,11 @@ public partial class RailNet
     {
         if (_seats.Count == 0) return;
         foreach (var c in _seats)
+        {
+            // an unseat whose rider sits in another cart now is not sent: its seat there moves it on every client (a leap, Ruling 20)
+            if (!LeapRules.SendsUnseat(c.Seated, c.Rider is GodotObject o && IsInstanceValid(o) && c.Rider.Cart != null)) continue;
             if (SeatMsgOf(c.Rider, c.Cart, c.Seat, c.Seated) is { } m) world.Broadcast(m);
+        }
         _seats.Clear();
     }
 
@@ -96,6 +111,8 @@ public partial class RailNet
         if (ObjectiveController.Instance is CrewRescueController crew)
             foreach (var wagon in crew.Wagons)
                 if (IsInstanceValid(wagon)) SendSeated(world, peer, wagon, CartIds.Wagon(wagon.Stop));
+        foreach (var slag in SlagCart.Live) // the leapers on a ride's slag carts' decks (plan 13), after the cart state that lists them
+            if (IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.Riders.Count > 0) SendSeated(world, peer, slag, slag.CartId);
         if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc))
         {
             enc.CollectAirLeaps(_airLeaps);
@@ -115,7 +132,9 @@ public partial class RailNet
     /// <summary>
     /// Client: the server seated or unseated a rider. Seated: its seat index is booked in this client's copy of the cart (a different
     /// occupant there gets out where it sits first) and the rider takes it. Unseated: a rider still in that cart here gets out at the
-    /// server's landing. Idempotent: a rider already in that seat is only posed.
+    /// server's landing; so does one still riding a cart freed here when the cart the unseat names is gone (a slag cart's leaper, plan 13).
+    /// A leap (a seating in a slag cart, or back from one) plays its cues where the body left and lands. Idempotent: a rider already in that
+    /// seat is only posed.
     /// </summary>
     internal void OnSeat(SeatMsg m)
     {
@@ -125,10 +144,12 @@ public partial class RailNet
         {
             if (m.RiderKind == SeatRiderKind.Hero && rider is Adventurer { IsLocal: true }) LastLocalLanding = (new Vector3(m.X, m.Y, m.Z), NetSession.Instance.Now);
             if (cart != null && rider.Cart == cart) rider.GetOut(new Vector3(m.X, m.Y, m.Z), Vector3.Zero);
+            else if (cart == null && rider.Cart is { } ridden && (ridden is not Node n || !IsInstanceValid(n) || n.IsQueuedForDeletion())) rider.GetOut(new Vector3(m.X, m.Y, m.Z), Vector3.Zero);
             return;
         }
         if (cart == null) return;
         if (rider.Cart == cart && rider.Seat == m.Seat) { rider.FollowSeat(); return; }
+        var leapt = rider is Adventurer && (cart is SlagCart || rider.Cart is SlagCart) && rider is Node3D was ? was.GlobalPosition : (Vector3?)null;
         if (!cart.Seats.Put(rider.RiderId, m.Seat))
         {
             if (cart.Seats.OccupantOf(m.Seat) is int holder)
@@ -139,15 +160,17 @@ public partial class RailNet
             if (!cart.Seats.Put(rider.RiderId, m.Seat)) return;
         }
         rider.SitIn(cart, m.Seat);
+        if (leapt is { } from && rider is Adventurer leaper) RailEncounterController.LeapCue(leaper, from, leaper.GlobalPosition, shake: false); // the server tells our own screen's shake
     }
 
     /// <summary>Client: where the server last set this client's own hero down from a seat, and when (this process's clock); the RIDE pass reads it.</summary>
     internal (Vector3 At, double When)? LastLocalLanding { get; private set; }
 
-    /// <summary>A cart on the wire as a seat book here: the party's, a cage wagon by its stop, or a chaser's copy (its riders, NPCs too, sit in it here).</summary>
+    /// <summary>A cart on the wire as a seat book here: the party's, a cage wagon by its stop, a chaser's copy (its riders, NPCs too, sit in it here), or a slag cart's copy (its deck's leapers).</summary>
     private ICartBody? CartById(int id)
     {
         if (id == CartIds.Party) return IsInstanceValid(_rails.Cart) ? _rails.Cart : null;
+        if (_carts.TryGetValue(id, out var sc) && sc.Slag is { } slag && IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed) return slag;
         if (id >= CartIds.WagonBase && id < CartIds.ChaserBase) return WagonAt(id - CartIds.WagonBase);
         if (id >= CartIds.ChaserBase && _carts.TryGetValue(id, out var cc) && cc.Chaser is { } chaser && IsInstanceValid(chaser) && !chaser.IsQueuedForDeletion()) return chaser;
         return null;

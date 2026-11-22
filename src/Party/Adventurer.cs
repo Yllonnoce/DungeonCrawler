@@ -554,6 +554,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// What the body you play is looking at (the interact prompt), and a crushed client body's spectating. Seated in the party's rolling
     /// cart as a lever of the armed ride comes up, it is that lever whatever the aim (the seated window: E throws it and never gets out),
     /// and for <see cref="SeatedSwitchRules.GraceSeconds"/> after the window closes it is nothing (<see cref="SeatedSwitchRules.InGrace"/>).
+    /// Before the lever window, ride 4's leap offered from the seat is what it looks at, whatever the aim (<see cref="RailEncounterController.LeapOfferFor"/>).
     /// </summary>
     private void TickView()
     {
@@ -561,9 +562,12 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         {
             _fpWeapon.SetGuard(Guarding);
             _interactRay.ForceRaycastUpdate(); // the VR beam's length reads the ray, window or not
-            var lever = Seated && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? enc.SeatedLeverFor(this) : null;
+            var enc = Seated && RailEncounterController.Instance is { } live && IsInstanceValid(live) ? live : null;
+            var leap = enc?.LeapOfferFor(this); // ride 4's leap first, whatever the aim (plan 13): "Leap across" from the party's cart, "Leap back" from a slag cart's deck
+            var lever = leap == null ? enc?.SeatedLeverFor(this) : null;
             _lookingAtWindowLever = lever != null;
-            if (lever != null)
+            if (leap != null) LookingAt = leap;
+            else if (lever != null)
             {
                 LookingAt = lever;
                 _switchWindow.Offered();

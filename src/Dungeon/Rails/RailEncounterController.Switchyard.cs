@@ -467,6 +467,7 @@ public partial class RailEncounterController
         Rams++;
         GD.Print($"[rails] t={_now:0.00} the party's cart rams {cart.Name} (party S={_rails.State.S:0.0} front on the enemy lane {front:0.0}, slag back {cart.Run.BackS:0.0}, v {_rails.State.V:0.0} vs {cart.Run.State.V:0.0}); plating {_rails.State.Plating:0} -> {Mathf.Max(0f, _rails.State.Plating - RamDent):0}");
         EventBus.Instance.Log("The cart rams the slag cart!");
+        SetDownLeapers(cart, "rammed"); // a hero on its deck is set down first, never thrown under it (Ruling 15)
         cart.Derail();
         foreach (var rider in _rails.Cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) hero.Shake(0.09f, 0.5f);

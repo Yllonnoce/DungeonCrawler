@@ -247,6 +247,8 @@ public partial class RailNet
         if (!IsInstanceValid(cc.Body)) return;
         if (cc.Slag is { } slag)
         {
+            SetDownSeated(slag); // a leaper still on its deck here (its unseat still in flight, or the server's word lost) is set down where it stands
+
             if (derailed && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.PlungedAt(goneS)) { slag.ShowPlunged(enc.UnderTheGap()); return; }
             if (derailed) { slag.ShowDerailed(); return; }
             foreach (var rider in slag.Aboard)
@@ -256,16 +258,19 @@ public partial class RailNet
         else if (cc.Kind == CartKind.Runaway && derailed && RailEncounterController.Instance is { } split && IsInstanceValid(split) && split.SplitPlungedAt(cc.Track, goneS)) ShowSplitPlunge(cc, goneS);
         else if (RunawayRules.ShowsRam(cc.Kind == CartKind.Runaway, cc.Track, derailed)) ShowRam(cc, goneS);
         else if (cc.Rider is { } golem && IsInstanceValid(golem) && golem.Carrier == cc.Body) golem.Drop(golem.GlobalPosition);
-        else if (cc.Chaser is { } chaser && chaser.Riders.Count > 0)
-        {
-            // the server sets its riders down before it goes; one still seated here (an unseat still in flight) gets out where it sits
-            _freeRiders.Clear();
-            foreach (var rider in chaser.Riders.Values) _freeRiders.Add(rider);
-            foreach (var rider in _freeRiders)
-                if (rider is Node3D n && IsInstanceValid(n)) rider.GetOut(n.GlobalPosition, Vector3.Zero);
-            _freeRiders.Clear();
-        }
+        else if (cc.Chaser is { } chaser) SetDownSeated(chaser); // the server sets its riders down before it goes; one still seated here (an unseat still in flight) gets out where it sits
         cc.Body.QueueFree();
+    }
+
+    /// <summary>Client: every rider still seated in <paramref name="cart"/>'s copy gets out where it sits (the copy is about to go).</summary>
+    private void SetDownSeated(ICartBody cart)
+    {
+        if (cart.Riders.Count == 0) return;
+        _freeRiders.Clear();
+        foreach (var rider in cart.Riders.Values) _freeRiders.Add(rider);
+        foreach (var rider in _freeRiders)
+            if (rider is Node3D n && IsInstanceValid(n) && rider.Cart == cart) rider.GetOut(n.GlobalPosition, Vector3.Zero);
+        _freeRiders.Clear();
     }
 
     /// <summary>

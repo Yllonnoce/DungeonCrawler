@@ -183,14 +183,17 @@ public partial class RailEncounterController : Node
         ClearBarricades();
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
         ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
-        foreach (var cart in _carts) Free(cart);
+        var why = wrecked ? "the train is wrecked" : loaded ? "the cart is restored" : "the ride is over";
+        foreach (var cart in _carts) Free(cart, why);
         _carts.Clear();
         _warnedAt.Clear();
     }
 
-    private static void Free(SlagCart cart)
+    /// <summary>A slag cart goes, its riders with it (silently); any hero on its deck is set down first (<see cref="SetDownLeapers"/>, Ruling 15).</summary>
+    private void Free(SlagCart cart, string why = "it is freed")
     {
         if (!IsInstanceValid(cart)) return;
+        SetDownLeapers(cart, why);
         foreach (var rider in cart.Aboard)
             if (IsInstanceValid(rider) && !rider.IsQueuedForDeletion()) rider.QueueFree();
         cart.Aboard.Clear();
@@ -243,19 +246,22 @@ public partial class RailEncounterController : Node
 
     /// <summary>
     /// A slag cart rolls up the enemy line <see cref="SpawnBehind"/> short of its pace point (the party cart's place on that
-    /// lane plus the offset) at the party's speed, its riders carried on the heap and awake.
+    /// lane plus the offset) at the party's speed, its riders carried on the heap and awake. One that paces side by side (Offset 0: ride 4's
+    /// leap cart, plan 13 Ruling 10 as amended) appears at its pace point at the party's own speed, alongside at once.
     /// </summary>
     private void SpawnSlagCart(int index, RailEncounterPlan enc)
     {
         if (GetParent() is not Node3D root || !_enemy.Valid) return;
         var partyS = _rails.State.S;
         var paceS = PaceRules.TargetS(Lanes.EnemyS(partyS), enc.Offset);
-        var s = Mathf.Clamp(paceS - SpawnBehind, 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
+        var alongside = enc.Offset == 0f; // side by side: no roll-up to catch (the 10 m and a jog's pace-point jump cost seconds of the leap's stretch)
+        var s = Mathf.Clamp(paceS - (alongside ? 0f : SpawnBehind), 0f, Mathf.Max(0f, _enemy.Length - LineEnd - 1f));
         if (_rails.FrontOnEnemyLane) s = Mathf.Min(Mathf.Max(paceS, Lanes.EnemyS(_rails.Party.FrontS) + CartRules.HalfLength + SpawnClear), Mathf.Max(0f, _enemy.Length - LineEnd - 1f)); // the party's cart is on this lane: seen ahead of it, never in it
-        var v = _rails.State.V * Lanes.Stretch(partyS);
+        var v = alongside ? _rails.State.V : _rails.State.V * Lanes.Stretch(partyS);
         var cart = new SlagCart { Name = $"SlagCart_{enc.Id}", EncounterId = enc.Id, InnerSide = InnerSideAt(s), CartId = NextCartId() };
         cart.Setup(_enemy, new CartState(s, v, CartMode.Rolling, CartRules.MaxPlating), enc.Offset);
         root.AddChild(cart);
+        RailNet.Instance?.HearSlagCart(cart); // a leap onto its deck goes as a SeatMsg under its id (plan 13)
         cart.Run.PoseAt(s);
         cart.Run.Sync();
         foreach (var member in enc.Riders)
@@ -308,7 +314,8 @@ public partial class RailEncounterController : Node
             if (DropsThrough(cart)) { _carts.RemoveAt(i); continue; } // the broken bridge's gap: down with its riders
             RunOver(cart);
             Warn(cart, party);
-            if (cart.Run.State.S >= _enemy.Length - LineEnd || cart.Run.State.Mode != CartMode.Rolling || PacingStuck(cart, dt)) { Free(cart); _carts.RemoveAt(i); }
+            var gone = cart.Run.State.S >= _enemy.Length - LineEnd ? "the line's end" : cart.Run.State.Mode != CartMode.Rolling ? "it stopped" : PacingStuck(cart, dt) ? "its pace is stuck" : null;
+            if (gone != null) { Free(cart, gone); _carts.RemoveAt(i); }
         }
         TickTraffic(dt, party);
         TickRunaway(dt, party);

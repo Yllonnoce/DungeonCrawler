@@ -183,7 +183,10 @@ public partial class DebugTools
                 }
             }
             if (RailEncounterController.Instance is { } enc)
+            {
                 foreach (var (id, ride, kind, s) in enc.DebugPieces()) DepthLine($"piece {id} ride={ride} kind={kind} S={s:0.0}");
+                foreach (var (id, ride, kind, s) in enc.DebugEncounters()) DepthLine($"encounter {id} ride={ride} kind={kind} S={s:0.0}");
+            }
             if (rail.Cavern is { } cav && builder.PartyTrack is { } pt)
             {
                 float S(int i) => pt.Curve.GetClosestOffset(pt.ToLocal(builder.Surface(rail.Party[i])));
