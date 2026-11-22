@@ -70,7 +70,7 @@ public partial class ChasmDressing : Node3D
     /// A cavern deck <paramref name="cell"/> gives way (<paramref name="gone"/>) or stands again: its footing box is disabled or
     /// enabled, its look hidden or shown, and the cell added to or removed from <paramref name="layout"/>'s
     /// <see cref="FloorLayout.GoneBridges"/>, which the companions' footing reads. Every role, headless included (no look there).
-    /// A cell that is no cavern deck is an error, and nothing changes.
+    /// A cell that is no cavern deck, or one with no footing box (a deck on a ramp cell), is an error, and nothing changes.
     /// </summary>
     public void SetGone(FloorLayout layout, GridPos cell, bool gone)
     {
@@ -79,7 +79,14 @@ public partial class ChasmDressing : Node3D
             GD.PushError($"[chasm] ERROR: SetGone on {cell}, not a cavern deck");
             return;
         }
-        if (_deckShapes.TryGetValue(cell, out var shape) && IsInstanceValid(shape)) shape.Disabled = gone;
+        // a cavern deck on a ramp cell has no box (the ramp's floor carries a walker): going there would leave the footing
+        // gone and the floor standing
+        if (!_deckShapes.TryGetValue(cell, out var shape) || !IsInstanceValid(shape))
+        {
+            GD.PushError($"[chasm] ERROR: SetGone on {cell}, a cavern deck with no footing box (a ramp cell?)");
+            return;
+        }
+        shape.Disabled = gone;
         if (_deckLooks.TryGetValue(cell, out var look) && IsInstanceValid(look)) look.Visible = !gone;
         if (gone) layout.GoneBridges.Add(cell);
         else layout.GoneBridges.Remove(cell);

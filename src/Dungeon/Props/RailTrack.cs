@@ -1,3 +1,4 @@
+using DungeonCrawler.Dungeon.Rails;
 using Godot;
 
 namespace DungeonCrawler.Dungeon.Props;
@@ -15,7 +16,6 @@ public partial class RailTrack : Node3D
     public const float SleeperEvery = 0.6f;
     /// <summary>The S each mesh chunk covers: a whole-floor mesh is never out of view, nor out of the torch's shadow.</summary>
     public const float ChunkLength = 20f;
-    const int SamplesPerChunk = (int)(ChunkLength / Sample);
     static readonly Vector3 RailSize = new(0.07f, 0.12f, 0f);
     static readonly Vector3 SleeperSize = new(1.4f, 0.12f, 0.22f);
     /// <summary>The gravel bed under the sleepers: this wide, this far above the floor.</summary>
@@ -28,8 +28,9 @@ public partial class RailTrack : Node3D
     private readonly List<(float from, float to)> _gaps = new();
 
     /// <summary>
-    /// The stretches (S from, S to) this track is bare over: those it was built with and every one cut since (<see cref="Cut"/>),
-    /// in the order they came. A gap once cut stays bare whatever the order of the calls.
+    /// The stretches (S from, S to) this track is bare over: those it was last built with and every one cut since that
+    /// <see cref="Build"/> (<see cref="Cut"/>, <see cref="CutMore"/>), in the order they came. Since the last build, a gap once
+    /// cut stays bare whatever the order of the cuts; a build starts the list again from its own gaps.
     /// </summary>
     public IReadOnlyList<(float from, float to)> Gaps => _gaps;
 
@@ -81,57 +82,104 @@ public partial class RailTrack : Node3D
     /// (the same <see cref="Curve"/>, so they lie where the lane's own rails would), with its <see cref="Gauge"/>, rail and
     /// sleeper sizes, and its sleeper phase (<see cref="SleeperEvery"/>/2 + k·<see cref="SleeperEvery"/> along the whole
     /// track): one rail mesh (<c>{name}_Rails</c>) and one sleeper mesh (<c>{name}_Sleepers</c>) under <paramref name="into"/>,
-    /// shadowless, no gravel. A live piece lays a cell of its span with it over a stretch the track was cut bare at. Not called
-    /// headless. With both nodes in the tree the meshes are placed in <paramref name="into"/>'s frame; else the two are taken
-    /// to share one.
+    /// shadowless, no gravel. A live piece lays a cell of its span with it over a stretch the track was cut bare at.
+    /// <para>
+    /// The join: the rails ring at the span's exact <paramref name="from"/> and <paramref name="to"/> and on the track's own
+    /// <see cref="Sample"/> lattice between (<see cref="TrackStations.Span"/>), and the track itself rings at a gap's exact ends
+    /// (<see cref="TrackStations.Rail"/>), so a span laid over a gap [from, to] meets the track's rails at each lip with the
+    /// same frame, and a span laid beside another meets it at their shared S. Its normals are generated with a strip of the
+    /// lattice past each end, then those strips are dropped, so its end rings shade as the track's inner ones do. It lays the
+    /// sleepers of (from, to] (<see cref="TrackStations.SpanSleepers"/>): the gap's own, each once across spans that tile it.
+    /// </para>
+    /// Not called headless. Both <paramref name="into"/> and this track must be in the tree (the meshes are placed in
+    /// <paramref name="into"/>'s frame): add and place the node, then lay; otherwise it is an error and nothing is laid.
     /// </summary>
     public void LaySpan(Node3D into, float from, float to, string name)
     {
         if (_steel == null || _sleeper == null || Length < 0.1f) return;
+        if (!into.IsInsideTree() || !IsInsideTree())
+        {
+            GD.PushError($"[rails] ERROR: LaySpan {name} on {Name}: {(into.IsInsideTree() ? "the track" : into.Name.ToString())} is not in the tree; nothing laid");
+            return;
+        }
         from = Mathf.Clamp(from, 0f, Length);
         to = Mathf.Clamp(to, 0f, Length);
         if (to - from < 1e-3f) return;
-        var toInto = into.IsInsideTree() && IsInsideTree() ? into.GlobalTransform.AffineInverse() * GlobalTransform : Transform3D.Identity;
+        var toInto = into.GlobalTransform.AffineInverse() * GlobalTransform;
         Transform3D Frame(float s) => toInto * Curve.SampleBakedWithRotation(s, true, true);
 
-        // the rails: the span's ends and the track's own sample S between them, so a span laid beside its neighbour meets it
-        var samples = new List<Transform3D> { Frame(from) };
-        for (var k = (int)MathF.Floor(from / Sample) + 1; k * Sample < to - 1e-4f; k++)
-            if (k * Sample > from + 1e-4f) samples.Add(Frame(k * Sample));
-        samples.Add(Frame(to));
+        // the rails, with one lattice strip of padding past each end for the normals (dropped before the mesh is made)
+        var stations = TrackStations.Span(from, to, Sample);
+        var padFrom = from - Sample >= 0f ? 1 : 0;
+        var padTo = to + Sample <= Length ? 1 : 0;
+        if (padFrom == 1) stations.Insert(0, from - Sample);
+        if (padTo == 1) stations.Add(to + Sample);
+        var frames = stations.Select(Frame).ToList();
         var railSt = new SurfaceTool();
         railSt.Begin(Mesh.PrimitiveType.Triangles);
+        var keep = new List<bool>();
         foreach (var side in new[] { -1f, 1f })
         {
             Vector3[]? prev = null;
-            foreach (var t in samples)
+            for (var k = 0; k < frames.Count; k++)
             {
-                var ring = RailRing(t, side);
+                var ring = RailRing(frames[k], side);
+                var kept = k - 1 >= padFrom && k < frames.Count - padTo; // the strip from station k-1 to k lies in [from, to]
                 if (prev != null)
-                    for (var i = 0; i < 4; i++) Quad(railSt, prev[i], prev[(i + 1) % 4], ring[(i + 1) % 4], ring[i]);
+                    for (var i = 0; i < 4; i++) { Quad(railSt, prev[i], prev[(i + 1) % 4], ring[(i + 1) % 4], ring[i]); keep.Add(kept); }
                 prev = ring;
             }
         }
-        railSt.GenerateNormals();
-        into.AddChild(new MeshInstance3D { Name = $"{name}_Rails", Mesh = railSt.Commit(), MaterialOverride = _steel, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+        into.AddChild(new MeshInstance3D { Name = $"{name}_Rails", Mesh = CommitKept(railSt, keep, name), MaterialOverride = _steel, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
 
-        // the sleepers the track would lay inside the span (the bare stretch's own: strictly inside, as a gap leaves them out)
+        var sleepers = TrackStations.SpanSleepers(from, to, SleeperEvery, Length);
+        if (sleepers.Count == 0) return;
         var sleeperSt = new SurfaceTool();
         sleeperSt.Begin(Mesh.PrimitiveType.Triangles);
-        var any = false;
-        for (var k = Math.Max(0, (int)MathF.Floor((from - SleeperEvery / 2f) / SleeperEvery)); ; k++)
+        foreach (var s in sleepers)
         {
-            var s = SleeperEvery / 2f + k * SleeperEvery;
-            if (s >= to || s >= Length) break;
-            if (s <= from) continue;
             var t = Frame(s);
             var b = t.Basis.Orthonormalized();
             AddBox(sleeperSt, b, t.Origin + b.Y * (SleeperSize.Y / 2f), SleeperSize);
-            any = true;
         }
-        if (!any) return;
         sleeperSt.GenerateNormals();
         into.AddChild(new MeshInstance3D { Name = $"{name}_Sleepers", Mesh = sleeperSt.Commit(), MaterialOverride = _sleeper, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+    }
+
+    /// <summary>
+    /// The surface tool's quads with normals generated over all of them, as one mesh of only the quads <paramref name="keep"/>
+    /// marks (in the order they were added). When the arrays are not six plain vertices a quad, the whole of them, warned.
+    /// </summary>
+    private ArrayMesh CommitKept(SurfaceTool st, List<bool> keep, string name)
+    {
+        st.GenerateNormals();
+        var arrays = st.CommitToArrays();
+        var verts = arrays[(int)Mesh.ArrayType.Vertex].AsVector3Array();
+        var normals = arrays[(int)Mesh.ArrayType.Normal].AsVector3Array();
+        var mesh = new ArrayMesh();
+        if (verts.Length != keep.Count * 6 || normals.Length != verts.Length)
+        {
+            GD.PushWarning($"[rails] {Name}/{name}_Rails: {verts.Length} vertices, {normals.Length} normals for {keep.Count} quads; laid whole, padding included");
+            mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+            return mesh;
+        }
+        var kept = keep.Count(k => k) * 6;
+        var keptVerts = new Vector3[kept];
+        var keptNormals = new Vector3[kept];
+        var fill = 0;
+        for (var q = 0; q < keep.Count; q++)
+        {
+            if (!keep[q]) continue;
+            Array.Copy(verts, q * 6, keptVerts, fill, 6);
+            Array.Copy(normals, q * 6, keptNormals, fill, 6);
+            fill += 6;
+        }
+        var surface = new Godot.Collections.Array();
+        surface.Resize((int)Mesh.ArrayType.Max);
+        surface[(int)Mesh.ArrayType.Vertex] = keptVerts;
+        surface[(int)Mesh.ArrayType.Normal] = keptNormals;
+        mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, surface);
+        return mesh;
     }
 
     /// <summary>One rail's cross-section at frame <paramref name="t"/>, on side <paramref name="side"/> (−1 or 1) of the centreline, on top of the sleepers.</summary>
@@ -141,13 +189,6 @@ public partial class RailTrack : Node3D
         var x = t.Basis.X.Normalized() * (RailSize.X / 2f);
         var y = t.Basis.Y.Normalized() * (RailSize.Y / 2f);
         return new[] { c - x - y, c + x - y, c + x + y, c - x + y };
-    }
-
-    private static bool InGap(float s, IReadOnlyList<(float from, float to)>? gaps)
-    {
-        if (gaps == null) return false;
-        foreach (var (from, to) in gaps) if (s > from && s < to) return true;
-        return false;
     }
 
     private void BuildMeshes(IReadOnlyList<(float from, float to)>? gaps)
@@ -161,36 +202,36 @@ public partial class RailTrack : Node3D
         sleeperSt.Begin(Mesh.PrimitiveType.Triangles);
         var sleeperChunks = new List<int>();
 
-        var samples = new List<Transform3D>();
-        for (var s = 0f; s < Length; s += Sample) samples.Add(Curve.SampleBakedWithRotation(s, true, true));
-        samples.Add(Curve.SampleBakedWithRotation(Length, true, true));
+        // the ring stations: the Sample lattice, the length, and each gap's exact ends (TrackStations.Rail)
+        var stations = TrackStations.Rail(Length, Sample, gaps);
+        var samples = new List<Transform3D>(stations.Count);
+        foreach (var s in stations) samples.Add(Curve.SampleBakedWithRotation(s, true, true));
 
-        // Rails: a rectangular tube per side, quad strips between consecutive samples; the strip from sample k-1 to k is in
-        // chunk (k-1) / SamplesPerChunk.
+        // Rails: a rectangular tube per side, quad strips between consecutive stations; a strip is in the chunk of its near
+        // station's S. A bare station breaks the rail: it ends with a ring at a gap's exact from and starts again at its to.
         foreach (var side in new[] { -1f, 1f })
         {
             Vector3[]? prev = null;
             for (var k = 0; k < samples.Count; k++)
             {
-                var t = samples[k];
-                if (InGap(k * Sample, gaps)) { prev = null; continue; } // a bare stretch: the rail ends at its lip and starts again past it
-                var ring = RailRing(t, side);
+                if (TrackStations.Bare(stations[k], gaps)) { prev = null; continue; }
+                var ring = RailRing(samples[k], side);
                 if (prev != null)
                     for (var i = 0; i < 4; i++)
                     {
                         var j = (i + 1) % 4;
                         Quad(railSt, prev[i], prev[j], ring[j], ring[i]);
-                        railChunks.Add((k - 1) / SamplesPerChunk);
+                        railChunks.Add((int)(stations[k - 1] / ChunkLength));
                     }
                 prev = ring;
             }
         }
 
         // Sleepers: each whole in the chunk of its S, at SleeperEvery/2 + k·SleeperEvery (the phase LaySpan keeps).
-        for (var k = 0; SleeperEvery / 2f + k * SleeperEvery < Length; k++)
+        for (var k = 0; TrackStations.Sleeper(k, SleeperEvery) < Length; k++)
         {
-            var s = SleeperEvery / 2f + k * SleeperEvery;
-            if (InGap(s, gaps)) continue;
+            var s = TrackStations.Sleeper(k, SleeperEvery);
+            if (TrackStations.Bare(s, gaps)) continue;
             var t = Curve.SampleBakedWithRotation(s, true, true);
             var b = t.Basis.Orthonormalized();
             AddBox(sleeperSt, b, t.Origin + b.Y * (SleeperSize.Y / 2f), SleeperSize);
@@ -199,11 +240,11 @@ public partial class RailTrack : Node3D
 
         CommitChunks(railSt, railChunks, "Rails", steel);
         CommitChunks(sleeperSt, sleeperChunks, "Sleepers", sleeper);
-        if (_ballast != null) BuildBallast(samples, gaps, _ballast);
+        if (_ballast != null) BuildBallast(stations, samples, gaps, _ballast);
     }
 
-    /// <summary>The gravel ribbon: a flat strip across the samples' frames, broken where the rails are.</summary>
-    private void BuildBallast(List<Transform3D> samples, IReadOnlyList<(float from, float to)>? gaps, Material ballast)
+    /// <summary>The gravel ribbon: a flat strip across the stations' frames, broken where the rails are (at a gap's exact ends).</summary>
+    private void BuildBallast(List<float> stations, List<Transform3D> samples, IReadOnlyList<(float from, float to)>? gaps, Material ballast)
     {
         var st = new SurfaceTool();
         st.Begin(Mesh.PrimitiveType.Triangles);
@@ -211,7 +252,7 @@ public partial class RailTrack : Node3D
         Vector3[]? prev = null;
         for (var k = 0; k < samples.Count; k++)
         {
-            if (InGap(k * Sample, gaps)) { prev = null; continue; }
+            if (TrackStations.Bare(stations[k], gaps)) { prev = null; continue; }
             var t = samples[k];
             var c = t.Origin + t.Basis.Y.Normalized() * BallastLift;
             var x = t.Basis.X.Normalized() * (BallastWidth / 2f);
@@ -219,7 +260,7 @@ public partial class RailTrack : Node3D
             if (prev != null)
             {
                 Quad(st, prev[0], edge[0], edge[1], prev[1]); // its face up (+Y)
-                chunks.Add((k - 1) / SamplesPerChunk);
+                chunks.Add((int)(stations[k - 1] / ChunkLength));
             }
             prev = edge;
         }
