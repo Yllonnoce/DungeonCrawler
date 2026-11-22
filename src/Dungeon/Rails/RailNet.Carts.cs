@@ -247,7 +247,7 @@ public partial class RailNet
         if (!IsInstanceValid(cc.Body)) return;
         if (cc.Slag is { } slag)
         {
-            HoldLeapers(slag); // a leaper still on its deck here (its fate still in flight) is held hidden where it sat, never set down there (ruling (d))
+            HoldLeapers(slag); // another player's leaper still on its deck here (its fate still in flight) is held hidden, never set down there (ruling (d))
 
             if (derailed && RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.PlungedAt(goneS)) { slag.ShowPlunged(enc.UnderTheGap()); return; }
             if (derailed && RailEncounterController.Instance is { } leap && IsInstanceValid(leap) && leap.DropPlungedAt(goneS))
@@ -268,16 +268,14 @@ public partial class RailNet
         cc.Body.QueueFree();
     }
 
-    /// <summary>A hero held off a slag copy that went (ruling (d)): where it sat, when the hold began (this process's clock, s), and whether the server has since placed it (its ForcePose, its unseat's landing).</summary>
+    /// <summary>Another player's hero held off a slag copy that went (ruling (d)): where it sat, when the hold began (this process's clock, s), the copy's id, and the server's set-down on footing once it comes.</summary>
     private sealed class HeldHero
     {
         public required Party.Adventurer Hero;
         public required Vector3 At;
         public required double Since;
         public required int CartId;
-        /// <summary>Our own body's ForcePose put it on footing (the local hero).</summary>
-        public bool Placed;
-        /// <summary>A remote hero's unseat landing on footing: the hold ends once its body has come to it (no pull-back to the copy's place, re-review 2 R3).</summary>
+        /// <summary>The server's set-down on footing (its unseat's landing or a ForcePose): the hold ends once the body's poses have come to it (no pull-back to the copy's place, re-review 2 R3).</summary>
         public Vector3? Landing;
     }
     private readonly List<HeldHero> _held = new();
@@ -285,12 +283,14 @@ public partial class RailNet
     internal int LeapersHeld { get; private set; }
 
     /// <summary>
-    /// Client: every hero still seated on <paramref name="slag"/>'s copy as it goes (Task 7 ruling (d); its seat book freed with it): out of the
-    /// copy's book, hidden and held where it sat (our own body kept still there), never set down there (over the drop's gone cells, or a gap),
+    /// Client: every rider still seated on <paramref name="slag"/>'s copy as it goes (Task 7 ruling (d); its seat book freed with it) gets out of
+    /// the copy's book where it sits. Another player's hero is then hidden and held, never set down there (over the drop's gone cells, or a gap),
     /// until the server's word (<see cref="LeapRules.HeldLeaperNow"/>, judged each frame by <see cref="TickHeld"/>): a seat (a haul back) shows it;
-    /// Fallen leaves it to the crevasse's hold; the server placing it shows it at once (a remote hero's poses more than
-    /// <see cref="LeapRules.HoldMoveOff"/> off, its unseat's landing, our own ForcePose); <see cref="LeapRules.HoldForServer"/> is the last fallback;
-    /// a floor reset, a rebuild or a leave ends every hold (<see cref="EndHolds"/>; a disconnect frees the bodies). Any other rider gets out where it sits.
+    /// Fallen leaves it to the crevasse's hold; its body come to the server's set-down on footing (<see cref="PlaceHeld"/>) shows it;
+    /// <see cref="LeapRules.HoldForServer"/> is the last fallback; a floor reset, a rebuild or a leave ends every hold (<see cref="EndHolds"/>; a
+    /// disconnect frees the bodies). Our own hero is not held (the final review's M4): its ForcePose for a fall or a set-down comes before the
+    /// cart state that frees the copy, so a hold could only ever span the one frame between a state and a seat in the same batch: it stands
+    /// where it sat for that frame instead.
     /// </summary>
     private void HoldLeapers(SlagCart slag)
     {
@@ -303,7 +303,7 @@ public partial class RailNet
             if (rider is not Node3D n || !IsInstanceValid(n) || rider.Cart != slag) continue;
             var at = n.GlobalPosition;
             rider.GetOut(at, Vector3.Zero); // out of the going copy's book (a client sends nothing for it)
-            if (rider is not Party.Adventurer hero) continue;
+            if (rider is not Party.Adventurer hero || hero.IsLocal) continue; // our own hero stands where it sat (its ForcePose came first)
             hero.Visible = false;
             hero.Velocity = Vector3.Zero;
             _held.Add(new HeldHero { Hero = hero, At = at, Since = now, CartId = slag.CartId });
@@ -315,9 +315,9 @@ public partial class RailNet
 
     /// <summary>
     /// Client: the server placed a held hero at <paramref name="at"/>: its unseat's landing (<paramref name="cartId"/>: the cart the unseat names; it must
-    /// be the copy that went, re-review 2 R6) or our own ForcePose (<paramref name="cartId"/> −1). Only a place on real footing off the copy is a
+    /// be the copy that went, re-review 2 R6) or its ForcePose (<paramref name="cartId"/> −1, a shove). Only a place on real footing off the copy is a
     /// set-down (<see cref="OnFooting"/>, <see cref="LeapRules.EndsHoldAt"/>): the fall's landing, the crevasse hold under the deck, is not, and the hold
-    /// waits for the Fallen sheet (R1). A remote body is not moved: its hold ends once its poses have brought it to the landing. True when it was held.
+    /// waits for the Fallen sheet (R1). The body is not moved: its hold ends once its poses have brought it to the landing. True when it was held.
     /// </summary>
     internal bool PlaceHeld(Party.Adventurer hero, Vector3 at, int cartId)
     {
@@ -326,22 +326,20 @@ public partial class RailNet
             if (h.Hero != hero) continue;
             if (cartId >= 0 && cartId != h.CartId) return false; // an unseat from another cart: not this hold's
             if (!LeapRules.EndsHoldAt(at.DistanceTo(h.At), OnFooting(at))) return true; // the fall's landing, or still at the copy's place: held
-            if (hero.IsLocal) h.Placed = true;
-            else h.Landing = at;
+            h.Landing = at;
             return true;
         }
         return false;
     }
 
-    /// <summary>A place a body can stand: footing under it (<see cref="CrevasseRules.Footing"/>: no chasm, no gone deck) and not below a drop's lip.</summary>
+    /// <summary>A place a body can stand (<see cref="CrevasseRules.StandsAt"/>): footing under it (no chasm, no gone deck) and not below a drop's lip.</summary>
     private static bool OnFooting(Vector3 at)
     {
         if (Main.Instance?.Builder is not { Layout: { } layout } builder) return false;
-        var cell = DungeonBuilder.WorldToCell(at);
-        return CrevasseRules.Footing(layout, new System.Numerics.Vector2(at.X, at.Z), DungeonBuilder.CellSize) && !CrevasseRules.Fell(layout, cell, at.Y, builder.Surface(cell).Y);
+        return CrevasseRules.StandsAt(layout, new System.Numerics.Vector2(at.X, at.Z), at.Y, builder.Surface(DungeonBuilder.WorldToCell(at)).Y, DungeonBuilder.CellSize);
     }
 
-    /// <summary>Client, each rendered frame: the held heroes (<see cref="HoldLeapers"/>) kept hidden until the server's word, then shown or left to the crevasse.</summary>
+    /// <summary>Client, each rendered frame: the held heroes (<see cref="HoldLeapers"/>, other players' only) kept hidden until the server's word, then shown or left to the crevasse.</summary>
     private void TickHeld(bool ended, string why = "")
     {
         if (_held.Count == 0) return;
@@ -352,21 +350,19 @@ public partial class RailNet
             var hero = h.Hero;
             if (!IsInstanceValid(hero)) { _held.RemoveAt(i); continue; }
             var gone = ended || hero.Parked; // a floor reset, a disconnect, a leave
-            // a remote body follows the server's poses (hidden): off the copy's place, the server has set it down; our own body is ours to keep
-            // still, so only its ForcePose (Placed) moves it off
-            var movedOff = h.Placed || !hero.IsLocal && (h.Landing is { } landing && hero.GlobalPosition.DistanceTo(landing) < 1f
-                || LeapRules.EndsHoldAt(hero.GlobalPosition.DistanceTo(h.At), OnFooting(hero.GlobalPosition)));
+            // the body follows the server's poses (hidden), eased 100 ms late, so only the server's set-down on footing (PlaceHeld's landing),
+            // once the body has come to it, moves it off; a bare pose never does (the final review's M3: the eased body reads the stale deck)
+            var movedOff = h.Landing is { } landing && hero.GlobalPosition.DistanceTo(landing) < LeapRules.LandingReached;
             var held = now - h.Since;
             var verdict = LeapRules.HeldLeaperNow(hero.Seated, hero.State.Fallen, held, movedOff, gone);
             if (verdict == HeldLeaper.Hold)
             {
                 if (hero.Visible) hero.Visible = false;
-                if (hero.IsLocal) { hero.GlobalPosition = h.At; hero.Velocity = Vector3.Zero; }
                 continue;
             }
             _held.RemoveAt(i);
             if (verdict == HeldLeaper.Show) hero.Visible = !hero.Parked; // shown (a parked body stays hidden: its unpark shows it)
-            var reason = hero.Seated ? "seated" : verdict == HeldLeaper.Fallen ? "fallen" : gone ? (ended ? why : "its player left") : movedOff ? (h.Placed ? "placed on footing by our ForcePose" : h.Landing != null ? "at the server's landing" : "the server's pose moved it onto footing") : "the hold ran out";
+            var reason = hero.Seated ? "seated" : verdict == HeldLeaper.Fallen ? "fallen" : gone ? (ended ? why : "its player left") : movedOff ? "at the server's landing" : "the hold ran out";
             GD.Print(FormattableString.Invariant($"[net] ride: {hero.State.Name}'s hold ended here after {held:0.00} s: {reason}{(verdict == HeldLeaper.Fallen ? " (hidden in the crevasse's hold)" : "")}"));
         }
     }

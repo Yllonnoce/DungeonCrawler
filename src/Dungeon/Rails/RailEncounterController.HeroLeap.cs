@@ -78,7 +78,7 @@ public partial class RailEncounterController
                 over = CrevasseRules.OverCrevasse(_layout, t0) && CrevasseRules.OverCrevasse(_layout, t1);
                 for (var i = d.From; i <= d.To; i++) twins.Add(rail.Party[i] + step);
             }
-            dead = LeapRules.Dead(piece.S, drop, cavFrom, LeapRules.Flat(_layout, cav), hasDrop: span != null && side != null);
+            dead = LeapRules.Dead(piece.S, drop, cavFrom, flat: LeapRules.Flat(_layout, cav), hasDrop: span != null && side != null);
         }
         GD.Print($"[rails] leap {id}: stretch party S={piece.S:0.0}..{drop:0.0}, the slag line's drop at enemy S={near:0.0}..{far:0.0} over the crevasse {over} ({(dead == null ? "live" : $"dead: {dead}")})");
         var marker = new Node3D { Name = $"Leap_{id}" };
@@ -109,8 +109,9 @@ public partial class RailEncounterController
     {
         if (NetSession.IsClient || piece != _leapPiece || LeapCalled || ArmedRide != piece.Plan.Ride || piece.Drop is not { } drop || !IsInstanceValid(drop)) return;
         if (_rails.State.Mode == CartMode.Wrecked || !LeapRules.Calls(_rails.Party.FrontS, LeapDropS)) return;
-        LeapCalled = true;
         drop.GiveWay(GetParent() as Node3D);
+        LeapCalled = drop.Dropped; // the call is the drop's own going (T5 Minor 6): a drop that did not give way is never called
+        if (!LeapCalled) return;
         var aboard = 0;
         foreach (var cart in _carts)
         {
@@ -196,10 +197,13 @@ public partial class RailEncounterController
         if (_leapPiece is { } p && p.Plan.Ride == ride) StandDrop(p, "the ride arms");
     }
 
-    /// <summary>The party cart's Wrecked event (a fall too): with a spare already taken over, the drop stands again; a plain wreck leaves it as it is.</summary>
+    /// <summary>
+    /// The party cart's Wrecked event (a fall too): with a spare already taken over, the drop stands again (after the bridge's seen take, once the
+    /// fall is seen, with the bridge: <see cref="TickStandAfterSeen"/>); a plain wreck leaves it as it is.
+    /// </summary>
     private void LeapOnWreck()
     {
-        if (_leapPiece is { } p && _rails.State.Mode != CartMode.Wrecked) StandDrop(p, "a spare takes over");
+        if (_leapPiece is { } p && _rails.State.Mode != CartMode.Wrecked && !_bridgeTaking) StandDrop(p, "a spare takes over");
     }
 
     /// <summary>The cart is restored (a wipe's rise or a load): the drop stands again.</summary>
@@ -371,7 +375,7 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// <paramref name="cart"/> goes any way but the drop (Ruling 15: freed or rammed): each hero on its deck is set down first, quietly (as
+    /// <paramref name="cart"/> goes any way but the drop (Ruling 15: freed, after the haul's try, or rammed): each hero on its deck is set down first, quietly (as
     /// <see cref="RailController.UnseatQuietly"/>: no throw, no run-over, no log), on <see cref="CrevasseRules.NearestSetDown"/>'s cell, never into a drop.
     /// </summary>
     internal void SetDownLeapers(SlagCart cart, string why)
@@ -381,6 +385,26 @@ public partial class RailEncounterController
         foreach (var rider in cart.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero)) _leapersOff.Add(hero);
         foreach (var hero in _leapersOff) SetDown(hero, cart, why);
+        _leapersOff.Clear();
+    }
+
+    /// <summary>
+    /// <paramref name="cart"/> is freed (not wrecked, not restored; the final review's M6): each hero on its deck is hauled back into a party hero
+    /// seat (<see cref="LeapBack"/>, as the drop's haul; counted in <see cref="LeapHauls"/>); one with no seat to take is left for
+    /// <see cref="SetDownLeapers"/>.
+    /// </summary>
+    private void HaulLeapers(SlagCart cart, string why)
+    {
+        if (cart.Riders.Count == 0) return;
+        _leapersOff.Clear();
+        foreach (var rider in cart.Riders.Values)
+            if (rider is Adventurer hero && IsInstanceValid(hero)) _leapersOff.Add(hero);
+        foreach (var hero in _leapersOff)
+            if (LeapBack(hero, hauledBy: ""))
+            {
+                LeapHauls++;
+                GD.Print($"[rails] leap: {hero.State.Name} hauled back off slag cart {cart.CartId} as it is freed ({why})");
+            }
         _leapersOff.Clear();
     }
 

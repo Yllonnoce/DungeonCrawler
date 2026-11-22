@@ -143,7 +143,7 @@ public partial class RailController
     /// The cavern bridge's take seen (every peer; the server's fall, a client's Wrecked edge with Fell over the bridge's span): the cart's body
     /// (with <paramref name="cart"/>), each of <paramref name="wagons"/>' and the look of each hero still seated in the cart (<see cref="Adventurer.FallLook"/>)
     /// copied onto rigid bodies that nothing holds (layer 0, mask 0), dropping straight down through the gone cells with a little of the
-    /// train's way on them, freed after <see cref="PlungeSeconds"/>; and this peer's player, if they rode it (<paramref name="localRode"/>), sees it from their seat as it
+    /// train's way on them, freed after <see cref="PlungeSeconds"/>; and this peer's player, if they rode it (<paramref name="localRode"/>) and wear no headset, sees it from their seat as it
     /// goes (<see cref="FallEye"/>) for <see cref="BridgeRules.FallSeen"/>, from <paramref name="eyeFrom"/> when given (a client's taken player, already
     /// posed at the hold point by its unseat: where its eye last was in the seat). Call it before the riders are taken. Cosmetic and silent.
     /// </summary>
@@ -164,7 +164,8 @@ public partial class RailController
                 carFall.AddChild(look);
                 look.GlobalTransform = at;
             }
-        if (localRode && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera, eyeFrom);
+        // a headset is not shown the fall (comfort, the final review's M10): its rig keeps the view, so no eye is made to fight it each frame
+        if (localRode && !Vr.Active && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera, eyeFrom);
     }
 
     /// <summary>The seen fall's eye lets go this long (ms) before the held wipe is judged, so the local camera is current when the floor goes.</summary>

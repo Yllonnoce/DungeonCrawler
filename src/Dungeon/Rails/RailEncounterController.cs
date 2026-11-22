@@ -193,15 +193,20 @@ public partial class RailEncounterController : Node
         ClearLeaps(wrecked); // boarders first: they are not on a slag cart's list
         ClearKiln(payOff: !loaded); // the golem goes like a rider (its corpse stays); a thrown spur lever sends it off the spur first
         var why = wrecked ? "the train is wrecked" : loaded ? "the cart is restored" : "the ride is over";
-        foreach (var cart in _carts) Free(cart, why);
+        foreach (var cart in _carts) Free(cart, why, haul: !wrecked && !loaded);
         _carts.Clear();
         _warnedAt.Clear();
     }
 
-    /// <summary>A slag cart goes, its riders with it (silently); any hero on its deck is set down first (<see cref="SetDownLeapers"/>, Ruling 15).</summary>
-    private void Free(SlagCart cart, string why = "it is freed")
+    /// <summary>
+    /// A slag cart goes, its riders with it (silently); any hero on its deck is first hauled back into the party's cart (<paramref name="haul"/>:
+    /// any free but a wreck's or a restore's, the final review's M6, Ruling 17's haul extended to Ruling 15's frees, so a leaper is never left in
+    /// a pocket the bridge's collapse then islands), else set down (<see cref="SetDownLeapers"/>, Ruling 15).
+    /// </summary>
+    private void Free(SlagCart cart, string why = "it is freed", bool haul = true)
     {
         if (!IsInstanceValid(cart)) return;
+        if (haul) HaulLeapers(cart, why);
         SetDownLeapers(cart, why);
         foreach (var rider in cart.Aboard)
             if (IsInstanceValid(rider) && !rider.IsQueuedForDeletion()) rider.QueueFree();

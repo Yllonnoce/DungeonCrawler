@@ -299,6 +299,7 @@ public partial class RailEncounterController
     private void TickSetPieces(PartyController party, float dt)
     {
         if (_pieces.Count == 0) return;
+        TickStandAfterSeen(); // a seen fall's spare: the bridge and the drop stand again once the fall is seen
         var rolling = _rails.State.Mode == CartMode.Rolling;
         foreach (var piece in _pieces)
         {

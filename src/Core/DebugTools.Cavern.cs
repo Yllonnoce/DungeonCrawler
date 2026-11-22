@@ -16,14 +16,15 @@ namespace DungeonCrawler.Core;
 // after the train's rear came onto it; its front never comes within 2 m of the rear; while the train is held on it (enc.HoldsRiders) the
 // seated lead's prompt is "" and a "Get out" press is refused; every party cell is gone within 6 s of the arrival at stop 4 (GoneBridges
 // holds them, their Deck_ shapes disabled; the flow says how long before or after the arrival the last went); a following rc.Restore(3)
-// stands it whole. =brake: the lead brakes from 1.6 s after the collapse starts (past the reaction time, BridgeRules.ReactionTime): "Don't
+// stands it whole. =brake: the lead brakes from 2.0 s after the collapse starts (past the reaction time, BridgeRules.ReactionTime): "Don't
 // stop" is called before the take, the take comes 1.5 s or more after the call by a press made 1.5 s or more after it, rc.Falls rises by 1 with every rider fallen within 1 s, the wipe rises at stop 3 with the bridge whole, and the
 // next departure, unbraked, reaches stop 4. =stall: the train is caught (rc.DebugStall) once the collapse has started (its rear 6 m or more on
 // the bridge), nobody braking: the bridge is held by the stall guard, never takes the train, and the watchdog frees it to stop 4. =runaway:
 // the runaway is real, the split left straight, the lead pumps: the runaway goes down with the bridge with its front within 8 m of the
 // bridge's start, its body neither rammed nor plunged as it went; no ram; stop 4. =early-brake (Task 3 review I1): the lead brakes as the
 // bridge groans and holds it through the call and 3 s past it: held short (the front never past the bridge's start or 2 m behind the
-// rear, whichever is further on), alive, no take; lets go
+// rear, whichever is further on), alive, no take; held there (enc.HoldsRiders, at any speed) the lead's prompt is "" and a "Get out" press
+// is refused (the final review's I2); lets go
 // for 1 s (no take), then a fresh brake: the take comes only after that press (made past the reaction time), then as =brake. =leap (Task 4):
 // r4_slag's riders are spared (stunned and shielded: harmless, still targetable), the rest culled; the build has r4_leap live (stretch party
 // S 913.1..975.1); "Leap across" is offered to the lead within 2 s of the stretch's start with r4_slag's along offset 1.2 m or less (printed),
@@ -75,6 +76,9 @@ public partial class DebugTools
     private int _cvEbPhase;
     private float _cvEbAt = float.NaN, _cvFreshT = float.NaN;
     private bool BrakeBranch => _cvVariant is "brake" or "early-brake";
+    /// <summary>=brake: the lead brakes this long after the collapse starts, 0.5 s past the reaction time (the final review's M2: 0.1 s was too
+    /// little margin across the flow's clock and the session's).</summary>
+    private const float CvBrakeAfter = BridgeRules.ReactionTime + 0.5f;
     /// <summary>=leap, =wreck, =stay and =lone: r4_slag's riders are spared (harmless and targetable) and the lead leaps across.</summary>
     private bool LeapBranch => _cvVariant is "leap" or "wreck" or "stay" or "lone" or "creep";
     /// <summary>The drop (Task 5): the call heard, the drop's call seen, r4_slag gone over, the arrival; the lead (party.Local changes on a fall); r4_slag's riders at the call; the haul's log line.</summary>
@@ -337,11 +341,11 @@ public partial class DebugTools
                     var prompt = rc.Cart.Prompt;
                     rc.Cart.Interact(party, me); // a "Get out" press, as the key would
                     GD.Print($"[cavern] bridge: held on it at front S={rc.Party.FrontS:0.0} (v {rc.State.V:0.00}): the seated lead's prompt \"{prompt}\", a get-out press leaves them seated={me.Cart == rc.Cart}");
-                    if (prompt != "" || me.Cart != rc.Cart) { Fail("on the bridge at speed the lead was offered or let out"); return; }
+                    if (prompt != "" || me.Cart != rc.Cart) { Fail("on the bridge while it rolls the lead was offered or let out"); return; }
                 }
                 break;
             case "brake":
-                if (going && !_cvBraking && _cvTime - _cvCollapseT >= BridgeRules.ReactionTime + 0.1f && float.IsNaN(_cvTakeT))
+                if (going && !_cvBraking && _cvTime - _cvCollapseT >= CvBrakeAfter && float.IsNaN(_cvTakeT))
                 {
                     _cvBraking = true;
                     GD.Print($"[cavern] brake: the lead brakes {_cvTime - _cvCollapseT:0.00} s after the collapse started (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, v {rc.State.V:0.00})");
@@ -351,7 +355,7 @@ public partial class DebugTools
                 {
                     if (CavernShooting && _cvPass == 1 && !CvTakeShots(rc, enc)) return; // windowed: the take seen first, held (Task 6)
                     if (TakeJudged(rc, enc, party, Fail) is not { } said) return;
-                    _cvTakeSummary = $"the lead braked {BridgeRules.ReactionTime + 0.1f:0.0} s after the collapse started (its call at t={_cvCallT - _cvRearOnT:0.00} s after the rear came on, \"Don't stop\" at t={_cvBrakeCallT - _cvRearOnT:0.00}); {said}";
+                    _cvTakeSummary = $"the lead braked {CvBrakeAfter:0.0} s after the collapse started (its call at t={_cvCallT - _cvRearOnT:0.00} s after the rear came on, \"Don't stop\" at t={_cvBrakeCallT - _cvRearOnT:0.00}); {said}";
                     _cvStep = 6; _cvClock = 0f;
                     return;
                 }
@@ -368,8 +372,17 @@ public partial class DebugTools
                 if (_cvEbPhase is 1 or 2 && float.IsNaN(_cvTakeT) && over > 0.01f) { Fail($"braked before the window, the front ran {over:0.00} m past its hold (front S={enc.CollapseS:0.0}, rear S={rear:0.0})"); return; }
                 if (_cvEbPhase is 1 or 2 && !float.IsNaN(_cvTakeT)) { Fail($"the bridge took the train braked before its window (phase {_cvEbPhase}, {_cvTakeT - _cvCallT:0.00} s after the call)"); return; }
                 if (_cvEbPhase == 1 && !going && _cvClock > 40f) { Fail("the collapse never started under the braked train"); return; }
+                if (_cvEbPhase == 1 && going && !_cvHoldChecked && enc.HoldsRiders()) // the final review's I2: held short on the live bridge, slow or stood, still no Get out
+                {
+                    _cvHoldChecked = true;
+                    var prompt = rc.Cart.Prompt;
+                    rc.Cart.Interact(party, me); // a "Get out" press, as the key would
+                    GD.Print($"[cavern] early-brake: held short on the bridge at front S={rc.Party.FrontS:0.0} (v {rc.State.V:0.00}, braked): the seated lead's prompt \"{prompt}\", a get-out press leaves them seated={me.Cart == rc.Cart}");
+                    if (prompt != "" || me.Cart != rc.Cart) { Fail("held short on the bridge the lead was offered Get out or let out"); return; }
+                }
                 if (_cvEbPhase == 1 && going && _cvTime - _cvCallT >= BridgeRules.ReactionTime + 1.5f)
                 {
+                    if (!_cvHoldChecked) { Fail("the braked train was never held on the bridge (HoldsRiders) before the let-go"); return; }
                     _cvEbPhase = 2;
                     _cvEbAt = _cvTime;
                     GD.Print($"[cavern] early-brake: braked from the groan to {_cvTime - _cvCallT:0.00} s after the call: held short and alive (front S={enc.CollapseS:0.0}, rear S={rear:0.0}, gap {rear - enc.CollapseS:0.00} m, v {rc.State.V:0.00}, takes {enc.BridgeTakes}, falls {rc.Falls - _cvFallsBefore}, \"Don't stop\" heard {!float.IsNaN(_cvBrakeCallT)}); the lead lets go");
@@ -472,7 +485,7 @@ public partial class DebugTools
         rc.Restore(3);
         if (BridgeWhole(layout, enc) is { } broken) { Fail($"a restore after the collapse: {broken}"); return; }
         GD.Print($"[cavern] bridge: rc.Restore(3) stands it whole (GoneBridges {layout.GoneBridges.Count}, every Deck_ shape enabled)");
-        Pass($"the call came with the collapse's start {(_cvCollapseT - _cvRearOnT):0.00} s after the rear came on; its front never closer than {_cvMinGap:0.00} m to the rear; no Get out on it at speed; every cell gone {_cvAllGoneT - _cvArriveT:+0.00;-0.00} s from the arrival; a restore stands it whole");
+        Pass($"the call came with the collapse's start {(_cvCollapseT - _cvRearOnT):0.00} s after the rear came on; its front never closer than {_cvMinGap:0.00} m to the rear; no Get out on it while it rolls; every cell gone {_cvAllGoneT - _cvArriveT:+0.00;-0.00} s from the arrival; a restore stands it whole");
     }
 
     /// <summary>Null when the bridge stands whole (none gone, no cell in GoneBridges, every Deck_ shape enabled), else what is not.</summary>
@@ -1017,12 +1030,11 @@ public partial class DebugTools
         GD.Print($"[cavern] sight: r4_slag's spawn {(bad.Count == 0 ? "blocked" : "NOT PROVEN UNSEEN")} from {eyes.Count} seated eye(s) to its tub, heads and ends at enemy S={r4.Run.State.S:0.0} (party S={rc.State.S:0.0}; the nearest eye {nearest:0.0} m off; every ray blocked by [{string.Join(", ", blockers)}], the nearest {nearestBlock:0.0} m from its eye){(bad.Count == 0 ? "" : $": {string.Join("; ", bad)}")}");
         if (eyes.Count == 0) return "r4_slag spawned with nobody seated in the party's cart to see it";
         if (bad.Count > 0) return $"r4_slag's spawn is not proven out of sight: {string.Join("; ", bad)}";
-        if (RailEncounterController.Instance?.SplitSwitchNode is { } split && IsInstanceValid(split))
-        {
-            var spurS = r4.Run.Track.ClosestS(split.SpurEnd);
-            GD.Print($"[cavern] r4_slag starts at enemy S={r4.Run.State.S:0.0}, {r4.Run.State.S - spurS:0.0} m past the split spur's end (enemy S={spurS:0.0})");
-            if (r4.Run.State.S - spurS < CvSpurClear) return $"r4_slag starts {r4.Run.State.S - spurS:0.0} m past the split spur's end, under {CvSpurClear} m";
-        }
+        // the flow runs only on floor 12, where ride 4's split is live: a missing split is a failure, never a skipped bound (the final review's M9)
+        if (RailEncounterController.Instance?.SplitSwitchNode is not { } split || !IsInstanceValid(split)) return "floor 12 has no live split (r4_split): r4_slag's spur clearance cannot be judged";
+        var spurS = r4.Run.Track.ClosestS(split.SpurEnd);
+        GD.Print($"[cavern] r4_slag starts at enemy S={r4.Run.State.S:0.0}, {r4.Run.State.S - spurS:0.0} m past the split spur's end (enemy S={spurS:0.0})");
+        if (r4.Run.State.S - spurS < CvSpurClear) return $"r4_slag starts {r4.Run.State.S - spurS:0.0} m past the split spur's end, under {CvSpurClear} m";
         _cvSeen.Add($"r4_slag's spawn blocked from {eyes.Count} seat(s)");
         return null;
     }

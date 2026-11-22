@@ -44,7 +44,7 @@ public static class RideInputRules
 
     /// <summary>
     /// A rider may get out of the cart it sits in only while up: a downed rider stays slumped in the seat; and not while <paramref name="holdOn"/>
-    /// (on the collapsing bridge at speed: <see cref="BridgeRules.HoldsRiders"/>). The server's check of a "Get out" intent.
+    /// (while the train rolls on the collapsing bridge: <see cref="BridgeRules.HoldsRiders"/>). The server's check of a "Get out" intent.
     /// </summary>
     public static bool MayGetOut(bool seatedHere, bool downed, bool holdOn = false) => seatedHere && !downed && !holdOn;
 

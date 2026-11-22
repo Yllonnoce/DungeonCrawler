@@ -16,7 +16,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// seated hero; each cell goes as the front passes its far edge. Unbraked, the front holds <see cref="BridgeRules.HoldShort"/> behind the train's rear;
 /// with a seated player's brake in the last <see cref="BridgeRules.BrakeMemory"/> it runs on and takes the train (<see cref="RailController.Fall"/>),
 /// "Don't stop" called once as a brake comes with it near. A wreck or a fall stops it where it stands; an arrival does not (it runs on to the end);
-/// ride 4's next arming, a restore and a spare's takeover stand it whole again. While the train rolls on it at 1 m/s or more nobody gets out
+/// ride 4's next arming, a restore and a spare's takeover stand it whole again. While the train rolls on it, at any speed, nobody gets out
 /// (<see cref="HoldsRiders"/>). The ride's runaway whose front is on the gone span goes down with it, freed plainly (neither rammed nor plunged).
 /// </summary>
 public partial class RailEncounterController
@@ -48,6 +48,13 @@ public partial class RailEncounterController
     private bool _bridgeStopped;
     private bool _bridgeGroaned, _bridgeHeldLogged, _bridgeBrakeCalled;
     private int _bridgeLogged;
+    /// <summary>The bridge's own take is being told (its <see cref="RailController.Fall"/> call, whose events are told before it returns): the one seen fall.</summary>
+    private bool _bridgeTaking;
+    /// <summary>
+    /// A seen fall's spare took over (a hero still stood): the bridge and the drop stand again at this <c>_now</c>, once the fall has been seen
+    /// (<see cref="BridgeRules.FallSeen"/> later, the final review's M5), not in the Wrecked event; NaN: none due.
+    /// </summary>
+    private double _standAfterSeenAt = double.NaN;
     /// <summary>The ride whose bridge a test holds (<see cref="DebugHoldBridge"/>), or −1.</summary>
     private int _heldBridgeRide = -1;
 
@@ -135,14 +142,34 @@ public partial class RailEncounterController
         if (was > 0 || going) GD.Print($"[rails] t={_now:0.00} bridge {p.Plan.Id} stands whole again ({why}; {was} cell(s) were gone)");
     }
 
-    /// <summary>The party cart's Wrecked event (a fall too): the collapse stops where it stands, or, with a spare already taken over, the bridge stands again.</summary>
+    /// <summary>
+    /// The party cart's Wrecked event (a fall too): the collapse stops where it stands, or, with a spare already taken over, the bridge stands
+    /// again: at once after a plain wreck, <see cref="BridgeRules.FallSeen"/> later after the bridge's own take (the train is still seen falling
+    /// through the gone cells; <see cref="TickStandAfterSeen"/>).
+    /// </summary>
     private void BridgeOnWreck()
     {
         if (_bridgePiece is not { } p) return;
+        if (_rails.State.Mode != CartMode.Wrecked && _bridgeTaking) // a seen fall with a hero still standing: the deck stays gone while the train is seen going through it
+        {
+            _bridgeStopped = true;
+            _standAfterSeenAt = _now + BridgeRules.FallSeen;
+            GD.Print($"[rails] t={_now:0.00} bridge {p.Plan.Id}: a spare takes over after the take; it stands again in {BridgeRules.FallSeen:0.0} s, once the fall is seen");
+            return;
+        }
         if (_rails.State.Mode != CartMode.Wrecked) { StandBridge(p, "a spare takes over"); return; } // the spare moved the cart off it in the same call
         if (_bridgeStopped) return;
         _bridgeStopped = true;
         if (!float.IsNaN(CollapseS)) GD.Print($"[rails] t={_now:0.00} bridge {p.Plan.Id} stops where it stands (the train is wrecked): front S={CollapseS:0.0}, {BridgeGone}/{BridgeCells} gone");
+    }
+
+    /// <summary>Server and single player, each tick: a seen fall's deferred stand (<see cref="BridgeOnWreck"/>) is due: the bridge and the drop stand again.</summary>
+    private void TickStandAfterSeen()
+    {
+        if (double.IsNaN(_standAfterSeenAt) || _now < _standAfterSeenAt) return;
+        _standAfterSeenAt = double.NaN;
+        if (_bridgePiece is { } b) StandBridge(b, "a spare took over, the fall seen");
+        if (_leapPiece is { } d) StandDrop(d, "a spare took over, the fall seen");
     }
 
     /// <summary>The cart is restored (a wipe's rise or a load): the bridge stands whole again.</summary>
@@ -227,7 +254,9 @@ public partial class RailEncounterController
         var under = 0; // the cells under the train go with it (up to the cart's front)
         while (under < bridge.Count && bridge.Cells[under].FromS < _rails.Party.FrontS) under++;
         bridge.GiveWay(under, GetParent() as Node3D);
-        _rails.Fall("The bridge goes out from under the train!", seen: true); // seen dropping through the gone cells (BridgeRules.FallSeen); its Wrecked event stops the collapse here
+        _bridgeTaking = true;
+        try { _rails.Fall("The bridge goes out from under the train!", seen: true); } // seen dropping through the gone cells (BridgeRules.FallSeen); its Wrecked event stops the collapse here
+        finally { _bridgeTaking = false; }
     }
 
     /// <summary>
@@ -253,13 +282,13 @@ public partial class RailEncounterController
     }
 
     /// <summary>
-    /// Nobody gets out (Ruling 6): the party's train, its front past the live bridge's start and its rear short of its end, rolls at 1 m/s or
-    /// more. Every role, from this peer's own cart.
+    /// Nobody gets out (Ruling 6 as amended by the final review's I2): the party's train, its front past the live bridge's start and its rear
+    /// short of its end, is Rolling, at any speed. Every role, from this peer's own cart.
     /// </summary>
     public bool HoldsRiders()
     {
         if (float.IsNaN(BridgeFromS) || !IsInstanceValid(_rails)) return false;
         var on = _rails.State.Mode == CartMode.Rolling && _rails.Party.FrontS > BridgeFromS && TrainRearS < BridgeToS;
-        return BridgeRules.HoldsRiders(on, _rails.State.V);
+        return BridgeRules.HoldsRiders(on);
     }
 }

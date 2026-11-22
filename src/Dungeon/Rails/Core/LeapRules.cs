@@ -109,7 +109,7 @@ public static class LeapRules
     /// the stretch (its start <paramref name="stretchFromS"/>, the piece's At) starting short of the cavern (<paramref name="cavernFromS"/>), or
     /// shorter than <see cref="MinStretch"/> to the drop's near edge (<paramref name="dropS"/>). All party S.
     /// </summary>
-    public static string? Dead(float stretchFromS, float dropS, float cavernFromS, bool flat = true, bool hasDrop = true)
+    public static string? Dead(float stretchFromS, float dropS, float cavernFromS, bool flat, bool hasDrop)
     {
         if (!flat) return "the cavern is not flat";
         if (!hasDrop || float.IsNaN(dropS)) return "the cavern has no drop";
@@ -125,26 +125,29 @@ public static class LeapRules
     public static bool SendsUnseat(bool seated, bool seatedElsewhereNow) => seated || !seatedElsewhereNow;
 
     /// <summary>
-    /// A client holds a hero still on a slag copy as it goes (Task 7 ruling (d)) this long at most (seconds): hidden at the copy's last pose,
-    /// never set down there (over the drop's gone cells), until the server's word: a seat (a haul back), Fallen (it fell with it), or its
-    /// own set-down's poses, shown when the hold runs out.
+    /// A client holds another player's hero still on a slag copy as it goes (Task 7 ruling (d)) this long at most (seconds): hidden, never
+    /// set down there (over the drop's gone cells), until the server's word: a seat (a haul back), Fallen (it fell with it), or its set-down's
+    /// landing reached; shown when the hold runs out.
     /// </summary>
     public const double HoldForServer = 2.0;
 
-    /// <summary>A held hero's body counts as moved off the copy's place (the server's pose, a ForcePose or an unseat's landing put it elsewhere) past this (m).</summary>
+    /// <summary>A held hero's set-down (an unseat's landing or a ForcePose) counts as off the copy's place past this (m).</summary>
     public const float HoldMoveOff = 0.5f;
+
+    /// <summary>A remote held hero's buffered poses have brought its body to the server's landing within this (m): its hold ends there (re-review 2 R3).</summary>
+    public const float LandingReached = 1f;
 
     /// <summary>
     /// A held leaper this frame (ruling (d), re-reviews N1 and R1-R5): shown once seated (a haul back); left hidden to the crevasse's hold once
     /// fallen, whatever else; shown when <paramref name="ended"/> (a floor reset, a rebuild or a FloorChange, a leave or a rejoin) or once
-    /// <paramref name="movedOff"/> (the server's word on where it stands, on footing: <see cref="EndsHoldAt"/>); else held until
-    /// <see cref="HoldForServer"/>, the last fallback.
+    /// <paramref name="movedOff"/> (its body has come to the server's set-down on footing, an unseat's landing or a ForcePose:
+    /// <see cref="EndsHoldAt"/>, <see cref="LandingReached"/>); else held until <see cref="HoldForServer"/>, the last fallback.
     /// </summary>
     public static HeldLeaper HeldLeaperNow(bool seated, bool fallen, double heldFor, bool movedOff = false, bool ended = false)
         => seated ? HeldLeaper.Show : fallen ? HeldLeaper.Fallen : ended || movedOff || heldFor >= HoldForServer ? HeldLeaper.Show : HeldLeaper.Hold;
 
     /// <summary>
-    /// The server's word on a held body's place ends its hold (<c>movedOff</c>): a landing or pose more than <see cref="HoldMoveOff"/> from where it
+    /// The server's word on a held body's place ends its hold (<c>movedOff</c>): a landing or ForcePose more than <see cref="HoldMoveOff"/> from where it
     /// sat on the copy, on real footing (re-review 2 R1-R3). A place in a drop below its lip, the crevasse hold under the deck or any spot with no
     /// footing is the fall, not a set-down: the hold waits for the Fallen sheet. NaN distance: no.
     /// </summary>

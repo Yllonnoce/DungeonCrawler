@@ -591,7 +591,7 @@ public partial class ServerWorld : Node
                 if (leapPress)
                 {
                     leapTaken = Dungeon.Rails.RailEncounterController.Instance is { } leapEnc && GodotObject.IsInstanceValid(leapEnc) && leapEnc.LeapAccepts(body, node);
-                    GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: leap {(leapTaken ? "accepted" : "refused")}");
+                    if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: leap {(leapTaken ? "accepted" : "refused")}"); // a mashing client on a live server writes nothing (T4 Minor 10)
                     if (!leapTaken) break;
                 }
                 var lever = node as Dungeon.Rails.TrackSwitch;

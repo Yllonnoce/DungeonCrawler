@@ -587,7 +587,7 @@ public partial class RailController : Node
         if (NetSession.IsClient || !Current) return;
         if (actor.Cart == Cart)
         {
-            if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed, holdOn: HoldsRiders)) GetOutWithParty(actor); // a downed rider stays slumped in the seat; nobody gets out on the collapsing bridge at speed (solo and a remote seat's press alike)
+            if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed, holdOn: HoldsRiders)) GetOutWithParty(actor); // a downed rider stays slumped in the seat; nobody gets out on the collapsing bridge while it rolls (solo and a remote seat's press alike)
             return;
         }
         if (actor.Seated || actor.Downed || actor.Parked || State.Mode != CartMode.Held) return;
@@ -904,7 +904,7 @@ public partial class RailController : Node
             else if (State.Mode == CartMode.Held) { SetCartLayer(); Arrive(); }
             else { Warn(party); Watch(dt); }
         }
-        else _partyWatch.Reset();
+        else { _partyWatch.Reset(); _anyBrake = false; } // a brake held into a stop is a fresh press on the next ride's first rolling tick (BridgeRules.NewPress)
 
         Party.Sync();
         _train.Sync();
@@ -1108,7 +1108,7 @@ public partial class RailController : Node
         if (anyBrake && NetSession.Instance is { } session) // ride 4's bridge goes under a train braked within BridgeRules.BrakeMemory by a press made after its warning
         {
             var now = session.Now;
-            if (BridgeRules.NewPress(_anyBrake, LastBrakeAt, now)) BrakePressedAt = now;
+            if (BridgeRules.NewPress(_anyBrake)) BrakePressedAt = now;
             LastBrakeAt = now;
         }
         _anyBrake = anyBrake; // the watchdog: a rider holding the brake stops the cart on purpose

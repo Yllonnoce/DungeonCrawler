@@ -8,7 +8,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <see cref="HoldShort"/> behind the train's rear (<see cref="Advance"/>), which covers a stall, the watchdog, a heavy load and the
 /// stop's own braking. A brake counts only when it was pressed <see cref="ReactionTime"/> or more after the first call (<see cref="Counts"/>,
 /// the controller's ruling on Task 3's review I1): a train already braked onto the bridge before the warning is held short, never taken by it. A runaway behind the train whose front is on the gone span goes down with it (<see cref="TakesRunaway"/>).
-/// While the train rolls on it at 1 m/s or more, "Get out" is neither offered nor taken (<see cref="HoldsRiders"/>). Engine-free.
+/// While the train rolls on it, at any speed, "Get out" is neither offered nor taken (<see cref="HoldsRiders"/>). Engine-free.
 /// </summary>
 public static class BridgeRules
 {
@@ -20,8 +20,6 @@ public static class BridgeRules
     public const float BrakeMemory = 2f;
     /// <summary>A brake counts toward the take only when pressed this long or more after the first call (the reaction time, seconds).</summary>
     public const float ReactionTime = 1.5f;
-    /// <summary>A brake held again within this of the last braked tick is the same press (a remote player's held brake is resent every 0.25 s).</summary>
-    public const float PressGap = 0.3f;
     /// <summary>Unbraked, its front holds this far short of the train's rear.</summary>
     public const float HoldShort = 2f;
     /// <summary>A player braking with the front within this of the train's rear is told not to stop.</summary>
@@ -80,9 +78,12 @@ public static class BridgeRules
     public static bool Counts(double pressedAt, double lastBrakeAt, double calledAt, double now)
         => !double.IsNaN(calledAt) && !double.IsNaN(pressedAt) && pressedAt >= calledAt + ReactionTime && Braked(lastBrakeAt, now);
 
-    /// <summary>A braking tick starts a new press: the last tick did not brake, or the last brake is more than <see cref="PressGap"/> old (or never).</summary>
-    public static bool NewPress(bool wasBraking, double lastBrakeAt, double now)
-        => !wasBraking || double.IsNaN(lastBrakeAt) || now - lastBrakeAt > PressGap;
+    /// <summary>
+    /// A braking tick starts a new press when the last rolling tick did not brake. A brake held on is one press however long it is held,
+    /// through a pause or a frame hitch alike (no clock gap re-stamps it); the braking flag is cleared whenever the cart leaves Rolling, so a
+    /// brake held into a stop is a fresh press on the next ride's first rolling tick.
+    /// </summary>
+    public static bool NewPress(bool wasBraking) => !wasBraking;
 
     /// <summary>The bridge takes the train: rolling, braked, and its front at the train's rear.</summary>
     public static bool Catches(bool rolling, bool braked, float frontS, float trainRearS) => rolling && braked && frontS >= trainRearS;
@@ -99,8 +100,12 @@ public static class BridgeRules
     public static bool TakesRunaway(float runawayFrontS, float fromS, float frontS)
         => !float.IsNaN(frontS) && fromS <= runawayFrontS && runawayFrontS <= frontS;
 
-    /// <summary>Nobody gets out: the train is on a live bridge, rolling at 1 m/s or more.</summary>
-    public static bool HoldsRiders(bool trainOnBridge, float v) => trainOnBridge && v >= 1f;
+    /// <summary>
+    /// Nobody gets out: the train is on a live bridge (the caller requires it Rolling), at any speed (the final review's I2, amending
+    /// Ruling 6: a train braked onto the bridge is held short alive, and a "Get out" there would strand its riders in the pockets the collapse
+    /// then islands). A wreck, a halt and a held cart are not Rolling, so they are untouched; a stalled train is still freed by the watchdog.
+    /// </summary>
+    public static bool HoldsRiders(bool trainOnBridge) => trainOnBridge;
 
     /// <summary>A player brakes with the front within <see cref="BrakeCallNear"/> of the train's rear: "Don't stop".</summary>
     public static bool CallsBrake(bool braking, float frontS, float trainRearS) => braking && trainRearS - frontS <= BrakeCallNear;

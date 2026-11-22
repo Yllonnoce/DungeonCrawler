@@ -36,11 +36,13 @@ public static class CartWatchdog
     public static bool SlagWatched(bool partyRolling, bool partyHalted) => partyRolling && !partyHalted;
 
     /// <summary>
-    /// A side-by-side slag cart (Offset 0) more than <see cref="PaceRules.AlongsideRadius"/> ahead of its pace point is waiting for the
-    /// party to come up (it starts ahead, out of sight, and stands while the party is slower than its catch-down): not stuck, so not
-    /// watched for the stall free (plan 13, Task 6 review I2). Its other ends (a ram, the drop, the line's end) are unchanged.
+    /// A side-by-side slag cart (Offset 0) anywhere ahead of its pace point is waiting for the party to come up (it starts ahead, out of
+    /// sight, and stands while the party is slower than its catch-down, inside <see cref="PaceRules.AlongsideRadius"/> too: a creeping
+    /// party leaves it standing a metre or two ahead): not stuck, so not watched for the stall free (plan 13, Task 6 review I2 and the
+    /// final review's M1). A cart that truly cannot move falls behind its pace point as the party passes it and is watched from there;
+    /// any unwatched tick closes the stall window. Its other ends (a ram, the drop, the line's end) are unchanged.
     /// </summary>
-    public static bool WaitsAhead(float offset, float s, float paceS) => offset == 0f && s - paceS > PaceRules.AlongsideRadius;
+    public static bool WaitsAhead(float offset, float s, float paceS) => offset == 0f && s > paceS;
 
     /// <summary>A freed cart's front is set this far past the gap's lip, so float rounding cannot leave it a hair short (the next step's drag would judge a slower jump).</summary>
     public const float LipNudge = 0.01f;

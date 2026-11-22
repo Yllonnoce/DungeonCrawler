@@ -253,6 +253,14 @@ public static class CrevasseRules
         return MathF.Abs(off) <= PlankWidth / 2f - FootingMargin;
     }
 
+    /// <summary>
+    /// A body can stand at <paramref name="at"/> (x, z) and height <paramref name="y"/> over a cell whose own floor is <paramref name="floorY"/>:
+    /// <see cref="Footing"/> under it (no chasm, no gone deck) and not <see cref="Fell"/> (not below a drop's lip). A client's held leaper is
+    /// set down only at such a place (plan 13 ruling (d), the final review's T7 rr3 S2): the crevasse hold under a deck is not one.
+    /// </summary>
+    public static bool StandsAt(FloorLayout l, Vector2 at, float y, float floorY, float cellSize)
+        => Footing(l, at, cellSize) && !Fell(l, CellOf(at, cellSize), y, floorY);
+
     /// <summary>Footing all the way from <paramref name="a"/> to <paramref name="b"/>.</summary>
     public static bool FootingAlong(FloorLayout l, float cellSize, Vector2 a, Vector2 b) => SegmentHolds(l, cellSize, a, b, rockBlocks: false);
 
