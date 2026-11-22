@@ -378,6 +378,8 @@ if [ "${RIDE:-}" = 1 ]; then
   TAKE_RUN=$(awk -v m="$TAKE_AT" 'NR > m && /\[net-server\] ride: take: the runaway went down with bridge / { print; exit }' "$TMP/server.log")
   case "$TAKE_RUN" in *"rammed False, plunged False); rams this build 0 (ok)") ;; *) echo "NET TEST: FAIL (the runaway was not taken by the bridge plainly before the take: ${TAKE_RUN:-the bridge never took it})"; exit 1 ;; esac
   if ! grep -q "\[net\] ride: take: the runaway's copy (cart [0-9]*) went here at S=" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (the joiner never saw the runaway's copy go at the bridge)"; exit 1; fi
+  TAKE_EYE=$(grep -m1 "\[net\] ride: take: after the bridge's take" "$TMP/joiner.log" 2>/dev/null)
+  case "$TAKE_EYE" in *"the seen fall's eye shown here yes;"*) ;; *) echo "NET TEST: FAIL (the taken joiner never saw its own fall (the seen fall's eye was never current on its screen): ${TAKE_EYE:-no line})"; exit 1 ;; esac
   if ! grep -q "\[net\] ride: take: after the bridge's take, risen at stop [0-9]* .* our current camera now our hero's (ok)" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (after the bridge's take the joiner's current camera was not its own hero's: $(grep -m1 "\[net\] ride: take: after the bridge's take" "$TMP/joiner.log" 2>/dev/null))"; exit 1; fi
   # the set pieces' clocks: the kiln's (ride 5's) first hammer enters its fall on both sides (server time; every client fall paired with the nearest
   # server fall within 1 s, all within 50 ms, at least 10); ride 3's buckets pour on both sides from the ride's arm time (by bucket, within 0.1 s)

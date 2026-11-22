@@ -144,9 +144,10 @@ public partial class RailController
     /// (with <paramref name="cart"/>), each of <paramref name="wagons"/>' and the look of each hero still seated in the cart (<see cref="Adventurer.FallLook"/>)
     /// copied onto rigid bodies that nothing holds (layer 0, mask 0), dropping straight down through the gone cells with a little of the
     /// train's way on them, freed after <see cref="PlungeSeconds"/>; and this peer's player, if they rode it (<paramref name="localRode"/>), sees it from their seat as it
-    /// goes (<see cref="FallEye"/>) for <see cref="BridgeRules.FallSeen"/>. Call it before the riders are taken. Cosmetic and silent.
+    /// goes (<see cref="FallEye"/>) for <see cref="BridgeRules.FallSeen"/>, from <paramref name="eyeFrom"/> when given (a client's taken player, already
+    /// posed at the hold point by its unseat: where its eye last was in the seat). Call it before the riders are taken. Cosmetic and silent.
     /// </summary>
-    private void SeenFall(IReadOnlyList<CageWagon> wagons, bool cart, bool localRode)
+    private void SeenFall(IReadOnlyList<CageWagon> wagons, bool cart, bool localRode, Transform3D? eyeFrom = null)
     {
         if (!IsInsideTree() || GetParent() is not Node3D root) return;
         RigidBody3D? carFall = null;
@@ -163,7 +164,7 @@ public partial class RailController
                 carFall.AddChild(look);
                 look.GlobalTransform = at;
             }
-        if (localRode && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera);
+        if (localRode && Main.Instance?.Party?.Local is { } local && IsInstanceValid(local)) FallEye(carFall, local.Camera, eyeFrom);
     }
 
     /// <summary>The seen fall's eye lets go this long (ms) before the held wipe is judged, so the local camera is current when the floor goes.</summary>
@@ -176,14 +177,14 @@ public partial class RailController
     /// Then the party's local camera is current again and the eye is freed; if the eye went first (freed with the floor the wipe rebuilt,
     /// or a client's floor change), the local camera is handed back on the rebuilt floor (Task 6 review I1). Every role.
     /// </summary>
-    private void FallEye(RigidBody3D falling, Camera3D eye)
+    private void FallEye(RigidBody3D falling, Camera3D eye, Transform3D? from = null)
     {
         var cam = new Camera3D
         {
             Name = "FallEye", Fov = eye.Fov, Near = eye.Near, Far = eye.Far, CullMask = eye.CullMask, Environment = eye.Environment,
             Attributes = eye.Attributes, KeepAspect = eye.KeepAspect,
         };
-        var at = eye.GlobalTransform;
+        var at = from ?? eye.GlobalTransform; // a client's taken player: where its eye was in the seat (its body already at the hold point)
         falling.AddChild(cam);
         cam.GlobalTransform = at;
         cam.MakeCurrent();

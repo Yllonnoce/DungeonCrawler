@@ -35,6 +35,18 @@ public static class BridgeRules
     /// player's eye riding down with them, before the wipe is judged (the crevasse takes the riders at once, as any fall; the legibility fix round).
     /// </summary>
     public const float FallSeen = 1.4f;
+    /// <summary>
+    /// A client's player rode the taken train if their hero sat in the party's cart up to this long (seconds) before the Wrecked|Fell state
+    /// came: the server's unseat pose (sent at the take itself) reaches the taken player's screen before the cart's state, and its Fallen sheet after.
+    /// </summary>
+    public const float LocalRodeGrace = 0.5f;
+
+    /// <summary>
+    /// A client sees the take from its player's seat (<see cref="FallSeen"/>): its hero sits in the cart now, sat in it at most <see cref="LocalRodeGrace"/>
+    /// ago (<paramref name="secondsSinceInCart"/>; +∞ never), or is told fallen beside the cart.
+    /// </summary>
+    public static bool LocalRode(bool inCartNow, double secondsSinceInCart, bool fallenNearCart)
+        => inCartNow || secondsSinceInCart <= LocalRodeGrace || fallenNearCart;
 
     /// <summary>The front's speed: <see cref="PaceShare"/> of the train's unpumped cruise with <paramref name="crewWagons"/> coupled.</summary>
     public static float Pace(int crewWagons) => CartPhysics.TargetSpeed(0, crewWagons) * PaceShare;

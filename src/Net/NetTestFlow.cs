@@ -2665,7 +2665,7 @@ public partial class NetTestFlow : Node
                 if (_clock < 0.5 || rc == null || me == null || rc.Follower is not { HasState: true }) { if (_clock > 30) { Finish("[net]", false, "ride: take: the cart's state never came after the take's rebuild"); net.Disconnect("test finished"); } return; }
                 var cam = GetViewport().GetCamera3D();
                 var ours = cam != null && cam == me.Camera;
-                var ok = ours && _takeBackWhose is null or "ours";
+                var ok = ours && _takeEyeSeen && _takeBackWhose is null or "ours"; // the taken player sees its own fall (Task 6's seen fall, on a client)
                 var line86 = FormattableString.Invariant($"after the bridge's take, risen at stop {rc.StopIndex} {me.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart: the seen fall's eye shown here {Yes(_takeEyeSeen)}; the view after it {_takeBackWhose ?? "not judged (the floor rebuilt first)"}; our current camera now {(ours ? "our hero's" : $"{cam?.Name.ToString() ?? "none"}, NOT our hero's")}");
                 GD.Print($"[net] ride: take: {line86} ({(ok ? "ok" : "FAIL")})");
                 if (!ok) { Finish("[net]", false, $"ride: take: {line86}"); net.Disconnect("test finished"); return; }
