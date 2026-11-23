@@ -1337,12 +1337,15 @@ The train (plan 14; `Dungeon/Rails/TrainWagon.cs`, `CartTrain.cs`, the numbers i
 `TrainRules.Spacing` (2.6 m) apart, so the train is `TrainRules.Length` (12.6 m) long; held at stop 0 its rear is at S 4.5, on room 1's
 platform. Each wagon has one hero place (seat 0, at the cart's seat-0 spot), two crew seats (the bench's 4 and 5,
 `TrainRules.CrewSeats`) and one boarder spot on its rim at the cart's rim height. A coupled wagon is shown and on layer 8; it offers
-"Revive {name}" for a downed crew member seated in it and "Get out" to its own rider only as the move rules allow (its plain prompt,
+"Revive {name}" for a downed crew member seated in it whose revive would be taken (`Npc.ReviveTaken`, the one rule `TryRevive` refuses by:
+`RitualRules.ReviveTaken`, no living hostile within `ReviveClearRadius`, 6 m; plan 15 Task 0) and "Get out" to its own rider only as the move rules allow (its plain prompt,
 `RailController.WagonPlainPrompt`), and only when that offers nothing the move car to car to a hero in another car (see "Fighting along
 the train" under "The five rides"); else nothing. At speed the look reaches the revive (plan 14's final review I1): a seated hero's view
 asks the ray first and takes what it finds within reach that offers something other than a move, the hero's own wagon included (its
 revive, or its "Get out" under 1 m/s), and a car the seat's yaw offers a move to offers its revive in the move's place (a cart rider
-looking back at W1, whose rim the ray's 3 m does not meet from the front row). Seated crew are on no layer, so the ray finds their wagon,
+looking back at W1, whose rim the ray's 3 m does not meet from the front row) only within the server's reach of it (`InteractReach`,
+3.5 m to its tub: `RailController.PlainUseStands`); farther, it offers the move. A revive the game would refuse (a boarder beside the
+downed crew member) is no prompt at all, so it never masks the climb (plan 15 Task 0, the plan 14 final re-review's N1 and N2). Seated crew are on no layer, so the ray finds their wagon,
 not them. The interact ray passes through anything offering nothing to the next hit, up to six times (`Adventurer.FirstOffered`, a car of
 the train read by `RailController.PlainPromptOf`, without its move), so a wagon never blocks a prompt behind it (the cart, a lever, a
 downed NPC; a cage stands 4.18 m past a wagon's far side, out of the ray's 3 m). `RailController.CoupleFresh(why)`
@@ -1711,7 +1714,13 @@ Fighting along the train (plan 14; `RailController.Moves.cs`, `RailEncounterCont
     the ray first (plan 14's final review I1): what it finds within reach that offers something other than a move (the own wagon's "Revive
     {name}" or "Get out", a neighbouring car's revive) is offered instead, and the move only when it finds nothing; a target car with a
     downed crew member offers "Revive {name}" in the move's place, and its press is the revive (`IsMovePress` is false for a car whose plain
-    prompt, `PlainPromptOf`, offers the presser something), on the server and in solo alike. Measured by `--test-boarders=knock` at speed:
+    use stands, `PlainUseStands`: its plain prompt, `PlainPromptOf`, offers the presser something and the car is within the server's 3.5 m
+    reach), on the server and in solo alike. A revive is offered only when it would be taken (`Npc.ReviveTaken`): with a hound within 6 m
+    of the downed crew member the wagon offers no revive and the move stands (plan 15 Task 0, N1); a target car past a taken place beyond
+    the reach (W2 from the cart, 4.0–4.7 m) offers the move, not its revive (N2). A wagon press judged by the state it lands in that finds
+    no move, no revive taken and no get-out (a "Revive" pressed behind the server: the crew member got up, died, was thrown or an enemy
+    came near) is refused out loud (`[rails] a use of W{k} by {name} … refused`, `WagonUsesRefused`, and a downed one's "Not with enemies
+    this close."), never dropped; from another car of the rolling train it is judged as the move (`IsMoveAttempt`). Measured by `--test-boarders=knock` at speed:
     from the cart's seat 0, looking back at the seat's 150° (30° off W1, whose rim is 2.35 m off the eye and its bench 3.96 m, past the
     ray's 3 m), W1 offered "Revive {name}" as the yaw's car and the press revived; seated in W2, the ray found W2 itself (0.39 m to its rim)
     and offered its downed crew member's revive with a move to W3 offered by the yaw, and the press revived; nobody downed, every move as
@@ -1850,7 +1859,13 @@ fails. It prints `[boarders]` lines and `[boarders] RESULT ok ({variant}): …`.
   pump held, `PumperCap` 0). Pass 4: a killed W1 hound lies beside the lane. The final review's I1: before the first move a W1 crew member
   put down by the test is offered ("Revive {name}") and revived from the cart's seat 0 looking back, and after it stop 2's crew are seated in
   W2, the lead climbs there, one is put down and, seated in W2 at speed, the lead's ray finds W2 and its revive (a move offered by the yaw
-  all the while) and the press revives; the lead climbs forward to W1 again. M8: after the lever window the player takes a cart companion,
+  all the while) and the press revives; the lead climbs forward to W1 again. Plan 15 Task 0: N1, after the cart's revive, a hound held on
+  W1 beside a W1 crew member put down (1.25 m off): no revive offered, the cart rider looking back is offered "Climb back to wagon 1", the
+  press lands it in W1 and W1's throw clock (alone until then) is reset in the landing's tick, no throw; there a press on W1 from its own
+  seat at speed is refused out loud ("Not with enemies this close.", no move, no get-out). N2, after the climb forward to W1: the lead
+  climbs into the cart, a companion holds W1's place, a W2 crew member is put down (no enemy near) and from the cart seat 0 (W2 4.0 m off,
+  beyond the 3.5 m reach) the look offers "Climb back to wagon 2", not the revive; in W2 the ray offers the revive and the press takes
+  it. M8: after the lever window the player takes a cart companion,
   and the old lead goes back from W1 into the cart by itself.
 - `=throw` (from stop 1, ride 2; the default): stop 1's crew walk out of their cage to W3 as in play; nobody answers, fire held, the hound
   held above 1 HP, so the clock alone is measured: the call, the glows at 4.5 ± 0.1 and 8.5 ± 0.1 s, the throws at 6.0 ± 0.1 (seat 5) and
@@ -3019,8 +3034,8 @@ tub, `Adventurer.HoldDistance`), and calls `HoldInteract`. A tap still sends the
 **The move car to car** (plan 14). A client offers the move from its own book and seat yaw (`RailController.MoveOfferFor`) and
 presses it as the target car's `InteractIntent`: `wagon:{k}` (`NetRefs.Wagon`, `TrainWagon.NetRef`) or `cart:0`. The server reads a
 press from a rider of another car of the rolling train as a move whenever it asks for one (`IsMoveAsk`: the target is its `Target`
-that way, or the car's plain use offers that rider nothing; never when the car's plain prompt offers the rider something, a downed crew
-member's revive, which the client's look shows in the move's place: plan 14's final review I1) and judges it by `WhyMoveRefused` (`TrainMoveRules.Accepted`: the target
+that way, or the car's plain use does not stand for that rider; never when it stands, `PlainUseStands`: a downed crew member's revive
+that would be taken, within the 3.5 m reach, which the client's look shows in the move's place: plan 14's final review I1, plan 15 Task 0) and judges it by `WhyMoveRefused` (`TrainMoveRules.Accepted`: the target
 still `Target` on the server's book, `MoveCooldown` − `AcceptSlack` (0.75 s) since the last move it took for that hero, no hop under
 way, moves not refused). Accepted, it passes the reach check (`[net-server] interact {ref} from {name}: move accepted`); refused, it
 does nothing and says why (`… move refused (the place is booked)`; printed on test servers only, as the leap's line). The seat goes

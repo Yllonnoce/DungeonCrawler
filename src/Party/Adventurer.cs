@@ -588,7 +588,7 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             else if (rails?.MoveOfferFor(this) is IInteractable move)
             {
                 LookingAt = move;
-                _lookingAtMove = rails.PlainPromptOf(move, this) is ""; // the car the yaw points to with a revive of its own offers that, not the move
+                _lookingAtMove = !rails.PlainUseStands(move, this); // the car the yaw points to with a revive of its own within reach offers that, not the move
             }
             else LookingAt = null;
         }

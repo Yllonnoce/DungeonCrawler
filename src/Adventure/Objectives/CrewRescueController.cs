@@ -471,14 +471,29 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         return null;
     }
 
-    /// <summary>The rail controller's <see cref="RailController.WagonCrewPrompt"/>, on every peer: "Revive {name}" for a downed crew member seated in the wagon.</summary>
-    private string WagonCrewPrompt(TrainWagon wagon, Adventurer hero) => PropPromptRules.WagonPrompt(DownedIn(wagon)?.NpcName);
+    /// <summary>A downed living crew member seated in <paramref name="wagon"/> whose revive would be taken now (<see cref="Npc.ReviveTaken"/>), or null.</summary>
+    private Npc? RevivableIn(TrainWagon wagon)
+    {
+        foreach (var npc in _crew)
+            if (IsInstanceValid(npc) && npc.Cart == wagon && npc.ReviveTaken) return npc;
+        return null;
+    }
 
-    /// <summary>The rail controller's <see cref="RailController.WagonCrewUse"/> (server and solo): a downed crew member seated in the wagon is revived.</summary>
+    /// <summary>
+    /// The rail controller's <see cref="RailController.WagonCrewPrompt"/>, on every peer: "Revive {name}" for a downed crew member seated in the
+    /// wagon, only when the revive would be taken (<see cref="Npc.ReviveTaken"/>: no living hostile within the clear radius). One the game would
+    /// refuse offers nothing, so it never stands in a move's place (plan 15 Task 0, the plan 14 final re-review's N1).
+    /// </summary>
+    private string WagonCrewPrompt(TrainWagon wagon, Adventurer hero) => PropPromptRules.WagonPrompt(RevivableIn(wagon)?.NpcName);
+
+    /// <summary>
+    /// The rail controller's <see cref="RailController.WagonCrewUse"/> (server and solo): a downed crew member seated in the wagon is revived,
+    /// one whose revive is taken first; with none, a downed one's refusal is said ("Not with enemies this close.").
+    /// </summary>
     private void WagonCrewUse(TrainWagon wagon, Adventurer actor)
     {
         if (NetSession.IsClient || actor.Downed) return;
-        DownedIn(wagon)?.TryRevive();
+        (RevivableIn(wagon) ?? DownedIn(wagon))?.TryRevive();
     }
 
     /// <summary>The cage opens: its crew are free (XP, the walk-in jailbreak's flag each), and once every cage is open, all are. Its living, up crew get out at its door and follow.</summary>

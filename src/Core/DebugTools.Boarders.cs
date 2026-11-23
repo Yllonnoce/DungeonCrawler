@@ -187,6 +187,7 @@ public partial class DebugTools
         {
             if (_done || !_testBoarders) return;
             if (text.Contains(" is thrown from the wagon!", StringComparison.Ordinal) || text.StartsWith("It's at the prisoners", StringComparison.Ordinal)) _bdThrowSaid.Add(text);
+            else if (text.StartsWith("Not with enemies", StringComparison.Ordinal)) _bdSaid.Add(text); // a revive refused (=knock, plan 15 Task 0)
             else if (!text.Contains(" climbs ", StringComparison.Ordinal)) return;
             else { _bdSaid.Add(text); _bdClimbFrame = Engine.GetPhysicsFrames(); } // a landing's line, logged in the rail controller's tick
             GD.Print($"[boarders] logged: \"{text}\"");

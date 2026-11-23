@@ -207,15 +207,37 @@ public partial class RailController : Node
 
     /// <summary>
     /// A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one its plain prompt first
-    /// (<see cref="WagonPlainPrompt"/>: the crew's revive, its own rider's "Get out"), and only when that offers nothing the move offered to it
-    /// (<see cref="MoveOfferFor"/>: "Climb back to wagon N", "Climb forward to wagon N"). A press is the same: a use of a car whose plain prompt
-    /// offers something is that use, never a move (<see cref="IsMovePress"/>; the final review's I1).
+    /// (<see cref="WagonPlainPrompt"/>: the crew's revive, its own rider's "Get out") where that use stands (<see cref="PlainUseStands"/>: within
+    /// the server's reach of the wagon), and otherwise the move offered to it (<see cref="MoveOfferFor"/>: "Climb back to wagon N", "Climb forward
+    /// to wagon N"). A press is the same: a use of a car whose plain use stands is that use, never a move (<see cref="IsMovePress"/>; the final
+    /// review's I1). A revive the game would refuse is no plain prompt at all (the crew controller's, plan 15 Task 0, N1), and a car the yaw
+    /// points to beyond the reach offers its move, not a revive the server would drop (N2).
     /// </summary>
     private string WagonPrompt(TrainWagon wagon, Adventurer hero)
     {
         var plain = WagonPlainPrompt(wagon, hero);
-        return plain.Length > 0 ? plain : MovePromptFor(wagon, hero) ?? "";
+        return plain.Length > 0 && InUseReach(wagon, hero) ? plain : MovePromptFor(wagon, hero) ?? plain;
     }
+
+    /// <summary>
+    /// <paramref name="car"/> (the party's cart, a wagon) stands within the server's reach of a plain use by <paramref name="hero"/>: the nearer of
+    /// its body and eye within <see cref="PropPromptRules.InteractReach"/> of the tub (<see cref="TrainWagon.TubDistance(Adventurer)"/>), as
+    /// <c>ServerWorld</c> measures an InteractIntent on it. No allocation.
+    /// </summary>
+    private static bool InUseReach(object car, Adventurer hero) => car switch
+    {
+        TrainWagon wagon => wagon.TubDistance(hero) <= PropPromptRules.InteractReach,
+        MineCart cart => cart.TubDistance(hero) <= PropPromptRules.InteractReach,
+        _ => false,
+    };
+
+    /// <summary>
+    /// The plain use of <paramref name="thing"/> (a car of the train) stands for <paramref name="hero"/>, on every peer: its plain prompt offers
+    /// something (<see cref="PlainPromptOf"/>) and it is within the server's reach (<see cref="InUseReach"/>). Where it stands it wins over a
+    /// move to the car, in the look (<see cref="Adventurer"/>'s view), the prompt (<see cref="WagonPrompt"/>) and the press (<see cref="IsMovePress"/>)
+    /// alike (plan 15 Task 0, the plan 14 final re-review's N2).
+    /// </summary>
+    public bool PlainUseStands(object thing, Adventurer hero) => PlainPromptOf(thing, hero) is { Length: > 0 } && InUseReach(thing, hero);
 
     /// <summary>
     /// A wagon's prompt for <paramref name="hero"/> with no move in it, on every peer: a lost wagon offers nothing; a coupled one what the crew
@@ -243,22 +265,27 @@ public partial class RailController : Node
     }
 
     /// <summary>
-    /// A hero pressed interact on a wagon (server and solo; a remote player's through its InteractIntent): a move to it from another car of the
-    /// train (<see cref="IsMoveAsk"/>, judged by <see cref="Move"/>); else the crew controller's use (<see cref="WagonCrewUse"/>) of a coupled
-    /// one; else its own rider gets out, only as <see cref="WagonPrompt"/> offers it.
+    /// A hero pressed interact on a wagon (server and solo; a remote player's through its InteractIntent), judged by the state it lands in: a
+    /// move to it from another car of the train (<see cref="IsMoveAsk"/>, judged by <see cref="Move"/>); else the crew controller's revive
+    /// (<see cref="WagonCrewUse"/>) where it would be taken; else its own rider gets out, only as <see cref="WagonPrompt"/> offers it. A press
+    /// that finds none of these (a "Revive" pressed on a screen behind the server: the crew member got up, died or was thrown, or an enemy came
+    /// within the clear radius) is refused out loud (<see cref="WagonUsesRefused"/>, a downed one's refusal said), never dropped (plan 15 Task 0).
     /// </summary>
     private void UseWagon(TrainWagon wagon, Adventurer actor)
     {
         if (!wagon.Coupled) return;
         if (IsMoveAsk(actor, wagon)) Move(actor, wagon, "press"); // offered or not: a refusal is said, never turned into a plain use (fix round 1, I1)
-        else if (!NetSession.IsClient && actor.Cart == wagon && (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length == 0)
+        else if (!NetSession.IsClient)
         {
-            if (Current && WagonGetOutOk(actor)) { WagonPlainUses++; GetOutOfWagon(actor, wagon); }
-        }
-        else
-        {
-            if (!NetSession.IsClient) WagonPlainUses++;
-            WagonCrewUse?.Invoke(wagon, actor);
+            var revive = (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length > 0;
+            if (revive) { WagonPlainUses++; WagonCrewUse?.Invoke(wagon, actor); }
+            else if (actor.Cart == wagon && Current && WagonGetOutOk(actor)) { WagonPlainUses++; GetOutOfWagon(actor, wagon); }
+            else
+            {
+                WagonUsesRefused++;
+                GD.Print($"[rails] a use of W{wagon.Number} by {actor.State.Name} (car {CarOf(actor)}) offers nothing now (no revive taken, no get-out, no move): refused at S={State.S:0.0}");
+                WagonCrewUse?.Invoke(wagon, actor); // a downed crew member's revive refused says why ("Not with enemies this close.")
+            }
         }
         Flush();
     }

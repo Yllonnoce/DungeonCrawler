@@ -237,11 +237,27 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         _talking = speaking;
     }
 
-    /// <summary>Get a downed NPC up, if nothing hostile is close enough to make it pointless.</summary>
+    /// <summary>
+    /// A revive of this NPC would be taken now (<see cref="Objectives.RitualRules.ReviveTaken"/>: down, alive, no living hostile enemy within
+    /// the clear radius), on every peer from its copies: what <see cref="TryRevive"/> refuses by, and what a wagon's "Revive {name}" is offered by.
+    /// </summary>
+    public bool ReviveTaken => Objectives.RitualRules.ReviveTaken(Downed, Dead, NearestHostile());
+
+    /// <summary>The distance to the nearest living hostile enemy among this NPC's siblings (where the floor's enemies live), +∞ for none. No allocation.</summary>
+    private float NearestHostile()
+    {
+        var nearest = float.PositiveInfinity;
+        if (GetParent() is not { } parent) return nearest;
+        for (int i = 0, n = parent.GetChildCount(); i < n; i++)
+            if (parent.GetChild(i) is Enemy { IsHostile: true } e) nearest = MathF.Min(nearest, e.GlobalPosition.DistanceTo(GlobalPosition));
+        return nearest;
+    }
+
+    /// <summary>Get a downed NPC up, if nothing hostile is close enough to make it pointless (<see cref="ReviveTaken"/>).</summary>
     public bool TryRevive()
     {
         if (!Downed || Dead) return false;
-        if (GetParent() is { } parent && parent.GetChildren().OfType<Enemy>().Any(e => e.IsAlive && e.IsHostile && e.GlobalPosition.DistanceTo(GlobalPosition) < Objectives.RitualRules.ReviveClearRadius))
+        if (!ReviveTaken)
         {
             EventBus.Instance.Log(Crew || (Mode == NpcMode.Quest && Escorting) ? "Not with enemies this close." : $"Not with them at {NpcName}'s throat. Clear the shrine first.");
             return false;

@@ -17,6 +17,14 @@ public static class RitualRules
     public const float ReviveClearRadius = 6f;
     public const float ReviveHpFraction = 0.35f;
 
+    /// <summary>
+    /// A revive is taken (any downed NPC's: the ritualist, a fighter, an escort, a crew member): it is down and alive, and no living hostile
+    /// enemy stands nearer than <see cref="ReviveClearRadius"/> (<paramref name="nearestHostile"/>, in metres; +∞ or NaN for none). The one
+    /// rule <c>Npc.TryRevive</c> refuses by and a wagon's "Revive {name}" is offered by, so the prompt and the refusal never disagree (plan 15
+    /// Task 0, the plan 14 final re-review's N1).
+    /// </summary>
+    public static bool ReviveTaken(bool downed, bool dead, float nearestHostile) => downed && !dead && !(nearestHostile < ReviveClearRadius);
+
     public static float Duration(int floor) => Math.Clamp(90f + 3f * floor, MinDuration, MaxDuration);
 
     /// <summary>Seconds between waves at this point of the rite (0..1): from 16 down to 8.</summary>

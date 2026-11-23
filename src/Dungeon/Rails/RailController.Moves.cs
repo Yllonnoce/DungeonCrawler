@@ -138,25 +138,27 @@ public partial class RailController
 
     /// <summary>
     /// A use of <paramref name="target"/> by <paramref name="actor"/> is a move press: the actor rides another car of the train, moves are not
-    /// refused, <paramref name="target"/> is the place a move that way goes to on this peer's book, and the car's plain prompt offers the actor
-    /// nothing (<see cref="PlainPromptOf"/>: a downed crew member's revive wins over the move, the final review's I1). Anything else is the car's
-    /// plain use (a revive, from beside the wagon or from another car, a get-out).
+    /// refused, <paramref name="target"/> is the place a move that way goes to on this peer's book, and the car's plain use does not stand
+    /// (<see cref="PlainUseStands"/>: a downed crew member's revive within reach wins over the move, the final review's I1; one the game would
+    /// refuse is no plain use, and one beyond the server's reach does not stand, plan 15 Task 0, N1 and N2). Anything else is the car's plain use
+    /// (a revive, from beside the wagon or from another car, a get-out).
     /// </summary>
     public bool IsMovePress(Adventurer actor, object target)
     {
         if (!Current || !IsInstanceValid(actor)) return false;
         var from = CarOf(actor);
         var to = CarNumberOf(target);
-        if (from < 0 || to < 0 || from == to || MovesRefused || PlainPromptOf(target, actor) is { Length: > 0 }) return false;
+        if (from < 0 || to < 0 || from == to || MovesRefused || PlainUseStands(target, actor)) return false;
         return TrainMoveRules.Target(from, Math.Sign(to - from), PlacesFree()) == to;
     }
 
     /// <summary>
     /// A use of <paramref name="target"/> by <paramref name="actor"/> asks for a move even when no move to it is offered on this peer's book
-    /// (fix round 1, I1): the actor rides another car of the rolling train and the car's plain prompt offers it nothing (<see cref="PlainPromptOf"/>:
-    /// the cart's never does to a wagon's rider; a wagon's when it has no downed crew to revive). It is judged as a move and refused out loud
-    /// (<see cref="WhyMoveRefused"/>: the place booked by another press, a lever window, the live bridge), never taken as a plain use the
-    /// presser's screen did not offer. Held, the press stays the car's plain use (a revive from beside the wagon).
+    /// (fix round 1, I1): the actor rides another car of the rolling train and the car's plain use does not stand (<see cref="PlainUseStands"/>:
+    /// the cart's never does for a wagon's rider; a wagon's when it has no downed crew whose revive is taken, or stands beyond the reach). It is
+    /// judged as a move and refused out loud (<see cref="WhyMoveRefused"/>: the place booked by another press, a lever window, the live bridge),
+    /// never taken as a plain use the presser's screen did not offer, nor dropped. Held, the press stays the car's plain use (a revive from
+    /// beside the wagon, or a use refused out loud: <see cref="UseWagon"/>).
     /// </summary>
     public bool IsMoveAttempt(Adventurer actor, object target)
     {
@@ -164,7 +166,7 @@ public partial class RailController
         var from = CarOf(actor);
         var to = CarNumberOf(target);
         if (from < 0 || to < 0 || from == to) return false;
-        return PlainPromptOf(target, actor) is "";
+        return PlainPromptOf(target, actor) is not null && !PlainUseStands(target, actor);
     }
 
     /// <summary>A use that the move's rules judge (<see cref="Move"/> takes or refuses it): <see cref="IsMovePress"/> or <see cref="IsMoveAttempt"/>.</summary>
@@ -173,6 +175,8 @@ public partial class RailController
     /// <summary>Moves refused out loud here (test hook), and uses of a wagon taken as its plain use: the crew's revive or its rider's get-out.</summary>
     internal int MovesRefusedCount { get; private set; }
     internal int WagonPlainUses { get; private set; }
+    /// <summary>Uses of a wagon that found nothing to do in the state they landed in (no move, no revive taken, no get-out), refused out loud (test hook).</summary>
+    internal int WagonUsesRefused { get; private set; }
 
     /// <summary>
     /// Why the server (or single player) would refuse <paramref name="body"/>'s move to <paramref name="target"/> now, or null when it takes it.

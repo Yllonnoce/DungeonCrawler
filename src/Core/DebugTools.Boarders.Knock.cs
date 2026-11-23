@@ -28,12 +28,24 @@ namespace DungeonCrawler.Core;
 //    2's crew seated in W2 by the test's hook, the lead climbs back to W2, one of them is put down, and seated in W2 at speed, looking at them,
 //    the lead is offered "Revive {name}" by what its ray found (W2 itself; a move offered by its yaw all the while) and the press revives
 //    them; then it climbs forward to W1.
+//  - Plan 15 Task 0 (the plan 14 final re-review's N1, N2; a revive that would be refused never masks the climb): N1, after (b), a hound held
+//    alive on W1 (answers held: nobody else climbs) and a W1 crew member put down beside it: the revive is refused (the hound within the clear
+//    radius), so W1 offers no revive and the cart rider looking back is offered "Climb back to wagon 1"; the press lands the lead in W1 and
+//    W1's throw clock, running alone until then, is reset within a tick or two of the landing (no throw). There a press on W1 from its own seat
+//    at speed (a "Revive" sent from a screen behind) finds nothing to do: refused out loud ("Not with enemies this close."), no move, no get-out.
+//    The hound is killed and the crew member got up. N2, after (a) and the climb forward to W1: the lead climbs forward into the cart, a cart
+//    companion is seated in W1's place (answers held), a W2 crew member is put down (no enemy near: the revive would be taken), and the cart
+//    rider looking back, beyond the server's reach of W2 (printed), is offered "Climb back to wagon 2" (passing W1), not the revive; the press
+//    lands it in W2, where the revive, now within reach, is offered by the ray and taken (as (a)); the companion goes back to the cart and the
+//    lead climbs forward to W1 again.
 //  - The final review's M8: after the lever window, rolling, the player takes a cart companion (party.Possess); the old lead, left in W1, goes
 //    back into the cart's free hero seat by itself within the cooldown, the hop and 1 s.
 public partial class DebugTools
 {
     private Npc? _bdDowned;
     private Adventurer? _bdOldLead;
+    private bool _bdN2Done;
+    private ulong _bdPressedAt;
 
     /// <summary>
     /// I1's revive from a seat at speed: the lead looks at <see cref="_bdDowned"/> (aimed each frame) in <paramref name="car"/>'s wagon; true
@@ -129,8 +141,87 @@ public partial class DebugTools
             case 4:
                 if (!BdSeatRevive(rc, party, me, W(1), t, "(b) from the cart", byRay: false, Fail)) break;
                 me.SeatYaw = BdBack;
-                Next(1);
+                Next(60);
                 break;
+
+            // plan 15 Task 0, N1: a hound held alive on W1 beside a downed crew member; the refused revive never masks the climb
+            case 60:
+            {
+                if (t < 0.3f) break;
+                if (rc.MovesRefused || rc.State.Mode != CartMode.Rolling || BdRideLeft(rc) < 30f) { if (t > 60f) Fail("N1: no rolling stretch with moves allowed"); break; }
+                enc.DebugHoldAnswers = true; // nobody else climbs to W1's place
+                _bdHound = enc.DebugBoard(1, holdHp: true);
+                if (_bdHound == null) { Fail("N1: no hound could be put on W1"); return; }
+                _bdDowned = W(1).Riders.Values.OfType<Npc>().Where(n => n.Crew && !n.Dead).OrderBy(n => n.Seat).FirstOrDefault();
+                if (_bdDowned == null) { Fail("N1: no crew in W1"); return; }
+                if (!_bdDowned.Downed) _bdDowned.GoDown();
+                _bdThrowsBase = enc.Throws;
+                me.SeatYaw = BdBack;
+                GD.Print($"[boarders] N1: a hound held on W1, {_bdDowned.NpcName} (W1 seat {_bdDowned.Seat}) put down by the test {_bdDowned.GlobalPosition.DistanceTo(_bdHound.GlobalPosition):0.00} m from it (the clear radius {RitualRules.ReviveClearRadius} m); the lead in the cart seat {me.Seat}");
+                Next(61);
+                break;
+            }
+            case 61:
+            {
+                var npc = _bdDowned!;
+                var h = _bdHound!;
+                if (!IsInstanceValid(h) || !h.IsAlive || h.Carrier != W(1)) { Fail("N1: W1's hound is gone before the look"); return; }
+                if (!npc.Downed || npc.Dead) { Fail($"N1: {npc.NpcName} is no longer down (dead {npc.Dead})"); return; }
+                if (t < 0.3f) break;
+                var clock = enc.ThrowClockOf(1);
+                var offer = rc.MoveOfferFor(me);
+                var said = me.LookingAt?.Prompt ?? "";
+                var plain = rc.PlainPromptOf(W(1), me);
+                if (npc.ReviveTaken || offer != W(1) || !ReferenceEquals(me.LookingAt, W(1)) || !me.LookingAtMove || said != TrainMoveRules.Prompt(0, 1) || plain != "" || clock is not { Alone: true } || !(clock.Running > 0f))
+                {
+                    if (t > 1.6f) Fail($"N1: the revive taken {npc.ReviveTaken}, W1's plain prompt \"{plain}\"; looking at {(me.LookingAt as Node)?.Name ?? "nothing"} (the move's {me.LookingAtMove}) offered \"{said}\", not \"{TrainMoveRules.Prompt(0, 1)}\"; a move to W1 offered {offer == W(1)}; W1's clock alone {clock?.Alone} at {clock?.Running:0.00} s");
+                    break;
+                }
+                GD.Print($"[boarders] N1: from the cart (v {rc.State.V:0.00}, yaw {Mathf.RadToDeg(me.SeatYaw):0}), {npc.NpcName} down beside a living hound {npc.GlobalPosition.DistanceTo(h.GlobalPosition):0.00} m off: the revive taken {npc.ReviveTaken}, W1's plain prompt \"{plain}\"; the look offers \"{said}\" (the move's {me.LookingAtMove}); W1's clock alone at {clock.Running:0.00} s");
+                party.VrUse(true);
+                party.VrUse(false);
+                if (!rc.Hopping(me)) { Fail($"N1: the press took no move to W1 (refused: {rc.LastMoveRefused ?? "-"})"); return; }
+                _bdPressedAt = Engine.GetPhysicsFrames();
+                Next(62);
+                break;
+            }
+            case 62:
+            {
+                var npc = _bdDowned!;
+                var clock = enc.ThrowClockOf(1);
+                if (rc.Hopping(me))
+                {
+                    if (t > TrainMoveRules.HopSeconds + 0.5f) Fail("N1: the hop to W1 never landed");
+                    break;
+                }
+                if (rc.CarOf(me) != 1) { Fail($"N1: the lead landed in car {rc.CarOf(me)}, not W1"); return; }
+                if (_bdClimbFrame <= _bdPressedAt) { if (t > TrainMoveRules.HopSeconds + 0.5f) Fail("N1: the landing's line was not logged"); break; }
+                var since = (long)Engine.GetPhysicsFrames() - (long)_bdClimbFrame; // ticks since the landing's own tick
+                if (clock is null or { Alone: true }) { if (since > 2) Fail($"N1: W1's clock is still counting alone ({clock?.Running:0.00} s) {since} ticks after the lead landed"); break; }
+                GD.Print($"[boarders] N1: the lead landed in W1 seat {me.Seat} (hop {(_bdClimbFrame - _bdPressedAt) / BdTps:0.00} s); {since} tick(s) later W1's clock alone {clock.Alone} at {clock.Running:0.00} s; throws {enc.Throws - _bdThrowsBase}");
+                if (clock.Running != 0f || enc.Throws != _bdThrowsBase || !npc.Downed || npc.Dead) { Fail("N1: W1's clock was not reset on the landing (or a throw came)"); return; }
+                // the lag race: a "Revive" pressed on a screen behind lands now, from W1's own seat at speed, the revive still refused (the hound
+                // beside them): refused out loud, no move, no get-out, never dropped
+                int refusedBefore = rc.WagonUsesRefused, plainBefore = rc.WagonPlainUses, movesBefore = rc.MovesTaken, saidBefore = _bdSaid.Count(x => x.StartsWith("Not with enemies", StringComparison.Ordinal));
+                W(1).Interact(party, me);
+                var saidNow = _bdSaid.Count(x => x.StartsWith("Not with enemies", StringComparison.Ordinal));
+                GD.Print($"[boarders] N1: a stale press on W1 from its own seat at speed: refused out loud {rc.WagonUsesRefused - refusedBefore} (\"Not with enemies this close.\" said {saidNow - saidBefore}), plain uses {rc.WagonPlainUses - plainBefore}, moves taken {rc.MovesTaken - movesBefore}; the lead in car {rc.CarOf(me)}, {npc.NpcName} down {npc.Downed}");
+                if (rc.WagonUsesRefused != refusedBefore + 1 || saidNow != saidBefore + 1 || rc.WagonPlainUses != plainBefore || rc.MovesTaken != movesBefore || rc.CarOf(me) != 1 || rc.Hopping(me) || !npc.Downed) { Fail("N1: the stale press was not refused out loud (or it was taken as something)"); return; }
+                enc.DebugKill(_bdHound!);
+                Next(63);
+                break;
+            }
+            case 63:
+            {
+                var npc = _bdDowned!;
+                if (IsInstanceValid(_bdHound) && _bdHound!.IsAlive) { if (t > 1f) Fail("N1: W1's hound was not killed"); break; }
+                if (npc.Downed && !npc.TryRevive()) { if (t > 1f) Fail($"N1: {npc.NpcName} could not be got up with the hound dead"); break; }
+                GD.Print($"[boarders] N1: W1's hound killed and {npc.NpcName} got up by the test {t:0.00} s on; the answers run again");
+                _bdDowned = null;
+                enc.DebugHoldAnswers = false;
+                Next(2);
+                break;
+            }
             case 1:
             {
                 // into W1 by the grip's press, as =move does
@@ -203,7 +294,75 @@ public partial class DebugTools
                 if (rc.Hopping(me)) break;
                 if (rc.CarOf(me) != 1) { Fail($"the lead landed in car {rc.CarOf(me)}, not W1"); return; }
                 me.SeatYaw = BdForward; // the seat turns at most 150 degrees either way: W1's rim spot (back right) is reached turning right from forward
-                Next(10);
+                Next(_bdN2Done ? 10 : 90);
+                break;
+
+            // plan 15 Task 0, N2: from the cart, W1's place taken, a downed crew member in W2 beyond the server's reach: the climb to W2 is
+            // offered, not the revive
+            case 90:
+            {
+                // the lead in W1 climbs forward into the cart
+                if (t < TrainMoveRules.MoveCooldown + 0.1f) break;
+                if (rc.MovesRefused || rc.State.Mode != CartMode.Rolling || BdRideLeft(rc) < 30f) { if (t > 60f) Fail("N2: no rolling stretch with moves allowed"); break; }
+                if (rc.MoveOfferFor(me) != rc.Cart || !ReferenceEquals(me.LookingAt, rc.Cart) || rc.Cart.Prompt != TrainMoveRules.Prompt(1, 0)) { if (t > 3f) Fail($"N2: no \"{TrainMoveRules.Prompt(1, 0)}\" offered from W1 (prompt \"{rc.Cart.Prompt}\")"); break; }
+                party.VrUse(true);
+                party.VrUse(false);
+                if (!rc.Hopping(me)) { Fail($"N2: the press took no move into the cart (refused: {rc.LastMoveRefused ?? "-"})"); return; }
+                Next(91);
+                break;
+            }
+            case 91:
+            {
+                if (rc.Hopping(me) || t < TrainMoveRules.MoveCooldown + 0.1f) break;
+                if (rc.CarOf(me) != 0) { Fail($"N2: the lead landed in car {rc.CarOf(me)}, not the cart"); return; }
+                if (rc.MovesRefused || rc.State.Mode != CartMode.Rolling || BdRideLeft(rc) < 30f) { if (t > 60f) Fail("N2: no rolling stretch with moves allowed"); break; }
+                enc.DebugHoldAnswers = true; // W1's place-holder stays there (no stray goes back to the cart)
+                _bdMate = party.Adventurers.FirstOrDefault(a => IsInstanceValid(a) && a.Control == ControlKind.Companion && rc.CarOf(a) == 0 && !a.Downed && !rc.Hopping(a));
+                if (_bdMate == null || !rc.DebugSeat(_bdMate, 1)) { Fail($"N2: no cart companion could be seated in W1's place ({_bdMate?.State.Name ?? "none"})"); return; }
+                _bdDowned = W(2).Riders.Values.OfType<Npc>().Where(n => n.Crew && !n.Dead).OrderBy(n => n.Seat).FirstOrDefault();
+                if (_bdDowned == null) { Fail("N2: no crew in W2"); return; }
+                _bdDowned.GoDown();
+                me.SeatYaw = BdBack;
+                GD.Print($"[boarders] N2: {_bdMate.State.Name} holds W1's place; {_bdDowned.NpcName} (W2 seat {_bdDowned.Seat}) put down by the test; the lead in the cart seat {me.Seat}");
+                Next(92);
+                break;
+            }
+            case 92:
+            {
+                if (t < 0.3f) break;
+                var npc = _bdDowned!;
+                var want = TrainMoveRules.Prompt(0, 2);
+                var tub = W(2).TubDistance(me);
+                var plain = rc.PlainPromptOf(W(2), me);
+                var offer = rc.MoveOfferFor(me);
+                var said = me.LookingAt?.Prompt ?? "";
+                if (!npc.ReviveTaken || plain != $"Revive {npc.NpcName}" || offer != W(2) || !ReferenceEquals(me.LookingAt, W(2)) || !me.LookingAtMove || said != want || W(2).Prompt != want || tub <= PropPromptRules.InteractReach)
+                {
+                    if (t > 1.6f) Fail($"N2: the revive taken {npc.ReviveTaken}, W2's plain prompt \"{plain}\", W2 {tub:0.00} m from the lead (reach {PropPromptRules.InteractReach}); looking at {(me.LookingAt as Node)?.Name ?? "nothing"} (the move's {me.LookingAtMove}) offered \"{said}\", not \"{want}\"; the move offered to {(offer as Node)?.Name ?? "nothing"}");
+                    break;
+                }
+                GD.Print($"[boarders] N2: from the cart seat {me.Seat} (v {rc.State.V:0.00}, yaw {Mathf.RadToDeg(me.SeatYaw):0}), W1's place {_bdMate!.State.Name}'s: W2's plain prompt \"{plain}\" stands {W(2).TubDistance(me):0.00} m off (beyond the reach {PropPromptRules.InteractReach} m), so the look offers \"{said}\" (the move's {me.LookingAtMove})");
+                party.VrUse(true);
+                party.VrUse(false);
+                if (!rc.Hopping(me) || !npc.Downed) { Fail($"N2: the press took no move to W2 (refused: {rc.LastMoveRefused ?? "-"}), or it revived {npc.NpcName}"); return; }
+                Next(93);
+                break;
+            }
+            case 93:
+            {
+                if (rc.Hopping(me)) break;
+                if (rc.CarOf(me) != 2) { Fail($"N2: the lead landed in car {rc.CarOf(me)}, not W2"); return; }
+                if (!rc.DebugSeat(_bdMate!, 0)) { Fail($"N2: {_bdMate!.State.Name} could not go back to the cart"); return; }
+                enc.DebugHoldAnswers = false;
+                Next(94);
+                break;
+            }
+            case 94:
+                // seated in W2 the revive is within reach: offered by what the ray found, and taken (as (a))
+                if (!BdSeatRevive(rc, party, me, W(2), t, "N2 seated in W2", byRay: true, Fail)) break;
+                _bdN2Done = true;
+                me.SeatYaw = BdForward;
+                Next(9);
                 break;
 
             // pass 1: three melee blows of the lead's knock a W1 hound off: grip 1, 2, 3
@@ -511,7 +670,7 @@ public partial class DebugTools
                 break;
             }
             case 52:
-                GD.Print($"[boarders] RESULT ok ({_bdVariant}): three melee blows knocked a W1 hound off (grip 1, 2, 3), alive beside the lane; one spell knocked one off; W3 answered from a seat with a shot (no move), then with the shooters down {_bdMate?.State.Name} climbed to W3 one move per cooldown, ended its hound and moved back 5 s after; a killed hound dropped beside the lane; no Get out at speed; the lever window refused a move; at speed a downed crew member was offered and revived from the cart (W1) and from W2's own seat with a move offered all the while (the final review's I1); the lead possessed away from in W1 went back to the cart by itself (M8); knock-offs {enc.KnockOffs}");
+                GD.Print($"[boarders] RESULT ok ({_bdVariant}): three melee blows knocked a W1 hound off (grip 1, 2, 3), alive beside the lane; one spell knocked one off; W3 answered from a seat with a shot (no move), then with the shooters down {_bdMate?.State.Name} climbed to W3 one move per cooldown, ended its hound and moved back 5 s after; a killed hound dropped beside the lane; no Get out at speed; the lever window refused a move; at speed a downed crew member was offered and revived from the cart (W1) and from W2's own seat with a move offered all the while (the final review's I1); a revive refused (a hound beside them on W1) never masked the climb, whose landing reset W1's throw clock, and a stale press there was refused out loud (N1); with W1's place taken the cart rider was offered the climb to W2, not its revive beyond the reach (N2); the lead possessed away from in W1 went back to the cart by itself (M8); knock-offs {enc.KnockOffs}");
                 _done = true;
                 GetTree().Quit(0);
                 break;
