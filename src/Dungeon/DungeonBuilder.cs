@@ -1260,15 +1260,16 @@ public partial class DungeonBuilder : Node3D
         if (sides > 0) GD.Print($"[DungeonBuilder] floor {CurrentFloor}: walled {sides} ramp side(s) beside cellar tunnels");
     }
 
-    /// <summary>
-    /// The exit island's cave-ins (plan 15, Ruling 40): each face of a cave-in cell toward a walkable or chasm cell gets fallen stone, a
-    /// mound against it and a collapse at the ceiling over it, from a local <see cref="Random"/> seeded by the cell and the floor as
-    /// <see cref="SealMouth"/>'s is (no gameplay stream). Look only: the mound's colliders are taken off (the cave-in cell is wall already),
-    /// and nothing is built headless. The face count is printed on every role.
-    /// </summary>
     /// <summary>The exit island's cave-in faces dressed on this floor (<see cref="DressCaveIns"/>; 0 without an island). Tests read it.</summary>
     public int CaveInFaces { get; private set; }
 
+    /// <summary>
+    /// The exit island's cave-ins (plan 15, Ruling 40, as fix round 2 ruled): each face of a cave-in cell toward a walkable or chasm cell
+    /// gets a rockfall, the mine pack's rocks (<see cref="RockfallAt"/>) piled against it from wall to wall and up to near the ceiling, big
+    /// boulders at the base and smaller ones above, a broken post fallen across it, and a light on it. Each face's look comes from a local
+    /// <see cref="Random"/> seeded by the cell and the floor as <see cref="SealMouth"/>'s is (no gameplay stream), so every role draws the same.
+    /// Look only: no collision (the cave-in cell is wall already), nothing built headless. The face count is printed on every role.
+    /// </summary>
     private void DressCaveIns(Node3D root)
     {
         if (Layout?.Rail?.Island is not { } island) return;
@@ -1280,17 +1281,96 @@ public partial class DungeonBuilder : Node3D
         CaveInFaces = faces.Count;
         GD.Print($"[DungeonBuilder] floor {CurrentFloor}: {faces.Count} cave-in face(s)");
         if (!ChasmDressing.DrawsLook || faces.Count == 0) return;
-        var wallMat = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
+        var rock = Material("rock_boulder_dry", new Color(0.36f, 0.32f, 0.29f), 1.5f);
+        var wood = Material("weathered_planks", new Color(0.42f, 0.3f, 0.19f), 1.6f);
         var node = new Node3D { Name = "CaveIns" };
         root.AddChild(node);
-        foreach (var (cell, d) in faces)
+        var boulders = 0;
+        foreach (var (cell, d) in faces) boulders += RockfallAt(node, cell, d, rock, wood);
+        GD.Print($"[DungeonBuilder] floor {CurrentFloor}: the cave-ins' rockfalls: {boulders} boulder(s) on {faces.Count} face(s)");
+    }
+
+    /// <summary>
+    /// One cave-in face's rockfall (<see cref="DressCaveIns"/>), on cave-in cell <paramref name="cell"/>'s side toward <paramref name="d"/>.
+    /// Rows of the mine pack's rocks rise from the open cell's floor (a trench's from the lava) to near the ceiling, the face's full width,
+    /// the top following the vault (lower at the walls). Every boulder stays within a metre of the face (half that over a rail cell), its
+    /// back half in the wall, and inside the open cell's span across the face but where that side is rock, which may take a stone's far
+    /// half: none reaches a walkable cell beyond the open one, or the rails. A broken post
+    /// leans across the heap and a dim warm light stands off the face. Returns the boulders laid.
+    /// </summary>
+    /// <summary>A rock fitted to a <c>s</c> × <c>s</c> footprint reaches this times <c>s</c> from its middle, whatever its yaw and small tilt.</summary>
+    private const float Turned = 0.72f;
+
+    private int RockfallAt(Node3D parent, GridPos cell, GridPos d, Material rock, Material wood)
+    {
+        var layout = Layout!;
+        var rng = new Random(cell.X * 73856093 ^ cell.Y * 19349663 ^ CurrentFloor);
+        var open = cell + d;
+        var outward = new Vector3(d.X, 0, d.Y);
+        var across = new Vector3(-d.Y, 0, d.X);
+        var floorY = Surface(cell).Y;
+        var chasm = layout.IsChasm(open);
+        var baseY = chasm ? floorY - Rails.ExitBridgeRules.LavaDepth - 0.3f : floorY; // over a trench the heap rises out of the lava
+        var face = Surface(cell) with { Y = 0f } + outward * (CellSize / 2f);
+        var reach = layout.IsRail(open) ? 0.5f : 1.0f; // how far into the open cell any stone may come
+        var half = CellSize / 2f - 0.08f;                // the open cell's half width across the face
+        // a side wall (rock beside the open cell) may take a stone's far half: the heap then fills the passage wall to wall. Beside a
+        // walkable cell (a face onto a room) every stone stays inside the open cell's span.
+        bool Solid(GridPos c) => !layout.IsWalkable(c) && !layout.IsChasm(c);
+        bool wallLeft = Solid(open - new GridPos(-d.Y, d.X)), wallRight = Solid(open + new GridPos(-d.Y, d.X));
+        float sideTop = floorY + LevelHeight - 0.45f, midTop = floorY + Mathf.Max(LevelHeight, CeilingAboveAt(cell)) - 0.45f;
+        float TopAt(float x) => sideTop + (midTop - sideTop) * Mathf.Max(0f, 1f - x * x / (half * half));
+        var mound = new Node3D { Name = $"Rockfall_{cell.X}_{cell.Y}_{d.X}_{d.Y}" };
+        parent.AddChild(mound);
+        var laid = 0;
+        var y = baseY;
+        for (var row = 0; y < midTop - 0.2f && row < 12; row++)
         {
-            var rng = new Random(cell.X * 73856093 ^ cell.Y * 19349663 ^ CurrentFloor);
-            var face = Surface(cell) + new Vector3(d.X, 0, d.Y) * (CellSize / 2f);
-            var mound = Rubble.Mound(node, face, wallMat, rng, 1.1f);
-            foreach (var child in mound.GetChildren()) if (child is StaticBody3D body) { mound.RemoveChild(body); body.QueueFree(); } // look only
-            Rubble.Collapse(node, face, LevelHeight - 0.2f, wallMat, rng);
+            var t = Mathf.Clamp((y - floorY) / (midTop - floorY), 0f, 1f);
+            var size = Mathf.Lerp(1.6f, 0.6f, t) * (0.9f + 0.2f * (float)rng.NextDouble());
+            if (y < floorY) size = 1.6f; // the trench's courses, under the lip, are the biggest
+            var x = -half + (wallLeft ? 0.15f : size / 2f) * (0.85f + 0.3f * (float)rng.NextDouble());
+            while (x <= half - (wallRight ? 0.15f : size / 2f) + 0.01f)
+            {
+                var s = size * (0.85f + 0.3f * (float)rng.NextDouble());
+                var r = s * Turned; // its reach from its middle, turned any way on the ground
+                var cx = Mathf.Clamp(x + ((float)rng.NextDouble() - 0.5f) * 0.2f * s, wallLeft ? -half : -half + r, wallRight ? half : half - r);
+                var top = TopAt(cx);
+                if (y + s / 2f > top) s = Mathf.Max(0.35f, 2f * (top - y));
+                if (y + s * 0.3f <= top)
+                {
+                    // the back half in the wall; the front within reach of the face, less the higher it sits (the heap slopes back)
+                    var lean = Mathf.Lerp(0.55f, 0.15f, Mathf.Clamp((y - floorY) / (midTop - floorY), 0f, 1f));
+                    var depth = Mathf.Min(reach - r, s * lean);
+                    var at = face + across * cx + outward * depth + Vector3.Up * y;
+                    var piece = MinePack.Paint(MinePack.Piece($"Rocks_{1 + rng.Next(8)}", new Vector3(s, 0, s)), rock);
+                    Node3D boulder = piece ?? new MeshInstance3D { Mesh = new SphereMesh { Radius = s / 2f, Height = s * 0.8f, RadialSegments = 8, Rings = 5 }, MaterialOverride = rock };
+                    mound.AddChild(boulder);
+                    boulder.GlobalPosition = piece != null ? at : at + Vector3.Up * (s * 0.4f);
+                    boulder.Rotation = new Vector3(((float)rng.NextDouble() - 0.5f) * 0.6f, (float)rng.NextDouble() * Mathf.Tau, ((float)rng.NextDouble() - 0.5f) * 0.6f);
+                    laid++;
+                }
+                x += s * (0.5f + 0.15f * (float)rng.NextDouble());
+            }
+            y += size * (0.55f + 0.1f * (float)rng.NextDouble());
         }
+        // a broken post fallen across the heap, against the face
+        var post = MinePack.Paint(MinePack.Piece(rng.Next(2) == 0 ? "Post_Half_1" : "Post_Half_2", new Vector3(0, 1.6f, 0)), wood);
+        if (post != null)
+        {
+            mound.AddChild(post);
+            // its foot near one wall, its top leaning in toward the middle (about 1.4 m across) and back against the face
+            var side = rng.Next(2) == 0 ? -1f : 1f;
+            post.GlobalPosition = face + across * (side * (half - 0.45f)) + outward * Mathf.Min(0.35f, reach - 0.35f) + Vector3.Up * (Mathf.Max(baseY, floorY) + 0.9f);
+            post.Basis = new Basis(outward, -side * 1.1f) * new Basis(across, 0.25f);
+        }
+        // the face reads in the dark: a dim warm light standing off it at mid-height (over a trench the lava lights it too)
+        mound.AddChild(new OmniLight3D
+        {
+            Name = "FaceLight", LightColor = new Color(1f, 0.78f, 0.55f), LightEnergy = chasm ? 0.6f : 0.9f, OmniRange = 5.5f, OmniAttenuation = 1.2f, ShadowEnabled = false,
+            Position = face + outward * 1.8f + Vector3.Up * (floorY + 2.2f),
+        });
+        return laid;
     }
 
     public void SealMouth(Node3D root, GridPos mouth, bool silent)
