@@ -116,6 +116,29 @@ public partial class RailController
         return TrainMoveRules.Target(from, Math.Sign(to - from), PlacesFree()) == to;
     }
 
+    /// <summary>
+    /// A use of <paramref name="target"/> by <paramref name="actor"/> asks for a move even when no move to it is offered on this peer's book
+    /// (fix round 1, I1): the actor rides another car of the rolling train and the car's plain use offers it nothing (the cart's never does to a
+    /// wagon's rider; a wagon's when it has no downed crew to revive). It is judged as a move and refused out loud
+    /// (<see cref="WhyMoveRefused"/>: the place booked by another press, a lever window, the live bridge), never taken as a plain use the
+    /// presser's screen did not offer. Held, the press stays the car's plain use (a revive from beside the wagon).
+    /// </summary>
+    public bool IsMoveAttempt(Adventurer actor, object target)
+    {
+        if (!Current || !IsInstanceValid(actor) || State.Mode != CartMode.Rolling) return false;
+        var from = CarOf(actor);
+        var to = CarNumberOf(target);
+        if (from < 0 || to < 0 || from == to) return false;
+        return to == 0 || target is TrainWagon wagon && (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length == 0;
+    }
+
+    /// <summary>A use that the move's rules judge (<see cref="Move"/> takes or refuses it): <see cref="IsMovePress"/> or <see cref="IsMoveAttempt"/>.</summary>
+    public bool IsMoveAsk(Adventurer actor, object target) => IsMovePress(actor, target) || IsMoveAttempt(actor, target);
+
+    /// <summary>Moves refused out loud here (test hook), and uses of a wagon taken as its plain use: the crew's revive or its rider's get-out.</summary>
+    internal int MovesRefusedCount { get; private set; }
+    internal int WagonPlainUses { get; private set; }
+
     /// <summary>The server (and single player) takes <paramref name="body"/>'s move to <paramref name="target"/> (Ruling 10). False on a client.</summary>
     public bool MoveAccepts(Adventurer body, Node target) => WhyMoveRefused(body, target) == null;
 
@@ -156,6 +179,7 @@ public partial class RailController
         if (WhyMoveRefused(hero, target) is { } no)
         {
             LastMoveRefused = no;
+            MovesRefusedCount++;
             GD.Print($"[rails] move refused ({no}): {name} from car {from} to car {to} ({why}) at S={State.S:0.0}");
             return false;
         }

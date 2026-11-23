@@ -221,18 +221,22 @@ public partial class RailController : Node
 
     /// <summary>
     /// A hero pressed interact on a wagon (server and solo; a remote player's through its InteractIntent): a move to it from another car of the
-    /// train (<see cref="IsMovePress"/>, judged by <see cref="Move"/>); else the crew controller's use (<see cref="WagonCrewUse"/>) of a coupled
+    /// train (<see cref="IsMoveAsk"/>, judged by <see cref="Move"/>); else the crew controller's use (<see cref="WagonCrewUse"/>) of a coupled
     /// one; else its own rider gets out, only as <see cref="WagonPrompt"/> offers it.
     /// </summary>
     private void UseWagon(TrainWagon wagon, Adventurer actor)
     {
         if (!wagon.Coupled) return;
-        if (IsMovePress(actor, wagon)) Move(actor, wagon, "press");
+        if (IsMoveAsk(actor, wagon)) Move(actor, wagon, "press"); // offered or not: a refusal is said, never turned into a plain use (fix round 1, I1)
         else if (!NetSession.IsClient && actor.Cart == wagon && (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length == 0)
         {
-            if (Current && WagonGetOutOk(actor)) GetOutOfWagon(actor, wagon);
+            if (Current && WagonGetOutOk(actor)) { WagonPlainUses++; GetOutOfWagon(actor, wagon); }
         }
-        else WagonCrewUse?.Invoke(wagon, actor);
+        else
+        {
+            if (!NetSession.IsClient) WagonPlainUses++;
+            WagonCrewUse?.Invoke(wagon, actor);
+        }
         Flush();
     }
 
@@ -691,7 +695,7 @@ public partial class RailController : Node
             Flush();
             return;
         }
-        if (IsMovePress(actor, Cart)) // "Climb forward into the cart" from a wagon (plan 14): the move's rules judge it, never a boarding
+        if (IsMoveAsk(actor, Cart)) // "Climb forward into the cart" from a wagon (plan 14): the move's rules judge it (a refusal said), never a boarding
         {
             Move(actor, Cart, "press");
             Flush();

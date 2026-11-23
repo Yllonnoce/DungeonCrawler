@@ -1085,8 +1085,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     {
         if (action.Kind is not (ActionKind.Regroup or ActionKind.Follow)) return action;
         var rails = Dungeon.Rails.RailController.Instance;
-        if (rails != null && lead.Cart == rails.Cart && rails.TryHopIn(this)) return CompanionAction.Idle;
-        if (action.Kind == ActionKind.Regroup || rails == null || lead.Cart != rails.Cart || rails.State.Mode != Dungeon.Rails.CartMode.Held) return CompanionAction.HoldPosition;
+        if (rails != null && rails.CarOf(lead) >= 0 && rails.TryHopIn(this)) return CompanionAction.Idle; // the lead in the train: the cart or a wagon (plan 14, Ruling 12)
+        if (action.Kind == ActionKind.Regroup || rails == null || rails.CarOf(lead) < 0 || rails.State.Mode != Dungeon.Rails.CartMode.Held) return CompanionAction.HoldPosition;
         return action; // held at the end of the line: it may walk up to the cart
     }
 

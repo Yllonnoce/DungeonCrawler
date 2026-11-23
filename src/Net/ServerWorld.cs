@@ -597,9 +597,11 @@ public partial class ServerWorld : Node
                     if (!leapTaken) break;
                 }
                 // climbing car to car (plan 14, Ruling 10): a press on a wagon of the train, or on the party's cart from a wagon, that the move's rules
-                // read as a move (RailController.IsMovePress) is taken from wherever the sender sits when MoveAccepts takes it; else refused
+                // read as a move (RailController.IsMovePress), or that asks for one from another car of the rolling train on a car whose plain use offers
+                // the sender nothing (IsMoveAttempt: a place another press booked, a lever window, the live bridge), is judged as a move: taken from
+                // wherever the sender sits, or refused out loud (WhyMoveRefused) and never passed on to the car's plain use
                 var moveRails = Dungeon.Rails.RailController.Instance is { } mrc && GodotObject.IsInstanceValid(mrc) ? mrc : null;
-                var movePress = moveRails != null && (node is Dungeon.Rails.TrainWagon || node == moveRails.Cart) && moveRails.IsMovePress(body, node);
+                var movePress = moveRails != null && (node is Dungeon.Rails.TrainWagon || node == moveRails.Cart) && moveRails.IsMoveAsk(body, node);
                 var moveTaken = false;
                 if (movePress)
                 {
