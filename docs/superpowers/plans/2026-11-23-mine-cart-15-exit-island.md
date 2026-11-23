@@ -85,7 +85,7 @@ Line numbers drift, so find code by name.
 | `TrackDepthRules.Floor12NoFloorDrop` | Task 3 | the measured pair (expected PartyTrack 200, EnemyTrack 160); Task 4 checks that it holds |
 | `[chasm]` and `[map] rail` counts (`chasm=`, `planks=` 3→2, `regions=`) | Tasks 1, 3 | measured; `pit=282@0.25 island=room 9+12 sealed=2 bridge=311..314` appended |
 | ride 5's At values (`r5_hammers`, new `r5_switch_out`, `r5_pit`, `r5_switch_back`, `r5_parked`) | Tasks 4, 5 | computed to 4 decimals from the measured S |
-| `r5_hounds` | Task 4 | from plan 14's At 0.2749 (S 1080.0) to the first S in 1096.0..1105.0 passing two gates, At recomputed; STOP if none |
+| `r5_hounds` | Task 4 | from plan 14's At 0.2749 (S 1080.0) to the first S in 1096.0..1105.0 clear of the crossing, At recomputed; STOP if gate (b) fails there |
 | `TrackStationsTests`' (1156.0, 1161.0) | Task 4 | the pit's measured lip and far edge |
 | `RailEncounterPlanTests` (ride 5's list, its order, the barricades, 21 → 23 pieces) | Tasks 4, 5 | B.3's order |
 | `--test-cavern`'s bare-track check | Tasks 3, 4 | laid over every exit bridge cell (3), bare over the pit (4) |
@@ -114,7 +114,7 @@ Line numbers drift, so find code by name.
 12. A set-down never lands on a drop (Tasks 3, 6, 7)
 13. The pit switch reuses ride 3's machinery (Task 4)
 14. The placement numbers (Tasks 4, 5)
-15. `r5_hounds` moves from plan 14's S 1080.0 into S [1095.5, 1105.0], by a 1 m search under two gates (Task 4)
+15. `r5_hounds` moves from plan 14's S 1080.0 to the first S in [1095.5, 1105.0] (1 m steps up from 1096) clear of the crossing, then must land 1.5 s before the burst in the measured flows, else STOP (Task 4)
 16. The plan's indices stay (Tasks 4, 5)
 17. The pit is read and cut from the layout (Task 4)
 18. The watchdog's pit steps (Task 4)
@@ -707,17 +707,19 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - Cost: none.
 - **15. `r5_hounds`** (the controller's ruling).
   - **The start.** Plan 14's committed value (28f6ebb): At 0.2749 (S 1080.0), Offset −8. That pace point lies inside the re-laid crossing, so this task moves it. The Offset stays −8.
-  - **The search.** Move the pace point into S [1095.5, 1105.0], trying S 1096.0, 1097.0, … 1105.0 in order (upward, 1 m steps). Stop at the first S where both gates pass:
+  - **The gates:**
     - **gate (a):** on the hound cart's spawn tick, the train's rear is home (rear S ≥ `r5_switch_back`'s points + `SwitchStretch`), and the cart is never rammed nor freed by the crossing;
-    - **gate (b):** both hounds land at least 1.5 s before the golem's burst, both unpumped (`--test-boarders=groups`) and at the chase's speed (`--test-chase`). This is plan 14's margin, read from those flows' own lines.
-  - **For each S tried:**
+    - **gate (b):** both hounds land at least 1.5 s before the golem's burst in the measured flows, `--test-boarders=groups` and `--test-chase`, as they ride (no flow pumps before the golem).
+    - **Printed, not gated:** a pumped approach's margin as an estimate (the measured margin minus the extra distance the train covers at the pumped speed), printed beside each flow's margin.
+  - **The search.** Move the pace point into S [1095.5, 1105.0], trying S 1096.0, 1097.0, … 1105.0 in order (upward, 1 m steps). Take the first S that passes gate (a). For each S tried:
     - compute At = `(S − StopS[4]) / (StopS[5] − StopS[4])` to 4 decimals, on the re-laid ride 5's measured `StopS`;
     - write it into `floor_12.json`;
     - re-run the measurement command, whose static-gate encounter line must read `r5_hounds` at that S ± 0.1;
     - then run both flows.
-  - **Stop and report** if no S in the window passes both gates. The report gives, for each S tried, the spawn S, the rear S on the spawn tick, any ram or crossing free, and each hound's landing margin before the burst, unpumped and at chase speed. No other retune is allowed (no Offset, no other piece).
-  - Keep any mark plan 14's fix round put on the boarding groups' entries.
-  - Cost: a STOP in Task 4 waits for the controller's ruling.
+  - **At the first S passing gate (a),** check gate (b). If it fails, **stop and report** both flows' margins (and the printed estimate). Do not search further: (b) only gets worse upward.
+  - **Stop and report** too if no S in the window passes gate (a). That report gives, for each S tried, the spawn S, the rear S on the spawn tick, and any ram or crossing free.
+  - No other retune is allowed (no Offset, no other piece). Keep any mark plan 14's fix round put on the boarding groups' entries.
+  - Cost: a STOP in Task 4 waits for the controller's ruling; the pumped approach is unproven (an estimate only).
 - **16. The plan's indices stay.** `r5_jump` becomes `r5_pit` in its own entry, and `r5_switch_out` and `r5_switch_back` are appended after `r4_leap`. Cost: none (wire names are plan indices).
 - **17. The pit is read and cut from the layout** on every role (`ReadPit`, before the pieces), whether or not a `pit` piece names it.
   - The `r5_pit` piece is its plan entry: it gives the dressing and the order.
@@ -790,7 +792,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     | `r5_pit` (was `r5_jump`) | `pit` | the lip |
     | `r5_switch_back` | `switch_back` | `PitRules.BackPoints(far)` |
     | `r5_hammers` | `hammers` | middle at 1157.0 |
-    | `r5_hounds` (encounter) | `slag_cart` | the first S in 1096.0..1105.0 (1 m steps) passing Ruling 15's gates; Offset −8 |
+    | `r5_hounds` (encounter) | `slag_cart` | the first S in 1096.0..1105.0 (1 m steps) passing Ruling 15's gate (a), with gate (b) holding there; Offset −8 |
 
   - **`--test-pit`.** `rc.Restore(Shape(rc).LastRideStop)`, everyone boards, and ride 5 departs.
     - **The build** prints `[pit] floor 12: …` with the lip, far, out points, lever, back points, `(deadly …)`, `(fixed)` and `fall armed`. It fails unless:
@@ -825,7 +827,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - **`--test-chase`.** Ride 5's jump check becomes `[chase] 4 … the pit switch thrown at front S={f}, across from {points}, home by {home}, no fall`, with `RoundLog` logged and the hazard stamp `pit` from `PitSwitch`. Section 2's one-pumper jump becomes `PumperCap` 1 with W1..W4 and the pit thrown: no fall, arrival at stop 5.
     - **`--test-crevasse`.** B, C and `=survivor` leave the lever straight with the lead able. The train runs into the pit and falls (`FallLog`), with W1's crew seated (`ctrl.DebugSeatCrew` for stop 1). `=trestle` throws the pit and falls at the trestle as today.
     - **`--test-cavern`.** The party track is bare over `PitS`..`PitFarS`, in place of `r5_jump`'s gap.
-    - **`--test-boarders=groups`.** It rides through `RideOnTo` (the pit thrown) and gates `r5_hounds` by Ruling 15. `--test-chase` prints its landing margin at chase speed.
+    - **`--test-boarders=groups`.** It rides through `RideOnTo` (the pit thrown) and gates `r5_hounds` by Ruling 15. `--test-chase` prints its landing margin as it rides, and both print the pumped estimate beside it.
     - **`--test-island=bridge`, `=wreck`.** They throw the pit on the way, in place of the jump's pumping.
   - **The RIDE pass** (Ruling 22). On ride 5 the first client presses on the first frame its seat offers "Throw the switch" for `r5_switch_out`.
     - The server prints its `interact switch:{i} from Rider: … seated window yes` line and `switch r5_switch_out taken … across from …`.
@@ -907,7 +909,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - the early call falls outside 25–30 m;
     - the sight ray is blocked;
     - the guard disarms;
-    - no S in Ruling 15's window passes both gates (with each S's measured margins).
+    - Ruling 15's search stops (no S passes gate (a), or gate (b) fails at the first that does), with its report.
   - Every flow that rides ride 5 past the pit must print its `pit: thrown` line or be a fall test. List them in the report, from `grep -ln "RideOnTo\|LastRide\|LastRideStop\|shape.Rides" src/Core/DebugTools*.cs`.
 - [ ] **Step 4: Run them.** Run the filter, then the full suite: PASS. Then through `scripts/flows.sh`, longest first:
   - `--test-chase --quit-after=750`, `--test-crew --quit-after=570`;
@@ -976,7 +978,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   - Cost: none.
 - **25. The parked train's states.**
   - The states are `enum ParkedState { InTheWay, Gone, Lift }`, stepped by `ParkedRules.Next(state, smashedNow, liftDue, takenOver, chaseOnLine)`, in this order:
-    1. `takenOver` → Gone;
+    1. `takenOver` → Gone. `takenOver` is a latch: it sets at the takeover's press and holds until the party's train arrives at the last stop, or until a `Restore`. While it is set, `Next` returns Gone, overriding rule 2 (the lift standing once the train's rear passes the far edge);
     2. `liftDue && !chaseOnLine` → Lift;
     3. InTheWay and `smashedNow` → Gone;
     4. otherwise the state stays.
@@ -998,7 +1000,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - `float BackS(float bridgeFromS, int wagons)`: the rear face − `CartRules.HalfLength`, a centre S in `SpareRules.TrainBackS`'s sense;
     - `bool Smashes(float prevFront, float front, float rearFaceS)`, `bool CallDue(bool rolling, float front, float rearFaceS, bool called)`;
     - `bool LiftDue(float partyRearS, float bridgeToS, bool heldAtLast, bool liveCart, bool wreckedInside)`;
-    - `ParkedState Next(ParkedState state, bool smashedNow, bool liftDue, bool takenOver, bool chaseOnLine)` (Ruling 25);
+    - `ParkedState Next(ParkedState state, bool smashedNow, bool liftDue, bool takenOver, bool chaseOnLine)` (Ruling 25; `takenOver` is the caller's latch, and Gone wins while it is set);
     - `string Prompt(ParkedState state, bool chaseOnLine, bool onFootPlayer, bool inReach)`: "Board the cart" only in Lift with no chase on the line, for an on-foot player in reach; else "".
   - **`ParkedTrain : Node3D`** (Ruling 23; every role):
     - `MineCart Cart` and `IReadOnlyList<TrainWagon> Wagons`;
@@ -1047,6 +1049,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     Assert.Equal(ParkedState.Lift, ParkedRules.Next(ParkedState.Gone, false, liftDue: true, false, false));
     Assert.Equal(ParkedState.Gone, ParkedRules.Next(ParkedState.Gone, false, liftDue: true, false, chaseOnLine: true)); // a chaser on the line: not yet
     Assert.Equal(ParkedState.Gone, ParkedRules.Next(ParkedState.Lift, false, liftDue: false, takenOver: true, false));  // taken over: never over the party's new train
+    Assert.Equal(ParkedState.Gone, ParkedRules.Next(ParkedState.Gone, false, liftDue: true, takenOver: true, false));   // latched: the rear past the far edge still gives Gone
     Assert.Equal(ParkedState.Lift, ParkedRules.Next(ParkedState.InTheWay, false, liftDue: true, false, false));
 }
 
@@ -1136,7 +1139,10 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - **12.** Every set-down through `ExitCellNear` (the lift's and the chaser's included) passes `ExitBridgeRules.SafeExitCell`, so nothing lands on a drop. Cost: none here.
 - **22 (this task's part).** This task changes the chaser's halt, so it rewrites the RIDE pass's step 8 in the same task: no check is left that the code contradicts. The controller runs RIDE at Task 8. Cost: none.
 - **23.** The lift's tubs are `TrainWagon`s with `OfLift`, and every party-train reading is guarded (Task 5). Cost: none.
-- **25.** `ParkedRules.Next(state, smashedNow, liftDue, takenOver, chaseOnLine)`, with `takenOver` → Gone, and the lift never standing while a chaser or relief body is on the line. This task supplies the real `takenOver`. Cost: none.
+- **25.** `ParkedRules.Next(state, smashedNow, liftDue, takenOver, chaseOnLine)`, with `takenOver` → Gone, and the lift never standing while a chaser or relief body is on the line.
+  - `takenOver` is a latch: it sets at the takeover's press and holds until the party's train arrives at the last stop, or until a `Restore`. While it is set, `Next` returns Gone, overriding the lift standing once the train's rear passes the far edge.
+  - This task supplies the real latch (`RailEncounterController.TakenOver`, set by `TakeOverAt`, cleared on the last stop's `Arrived` and on `Restored`).
+  - Cost: none.
 - **26. The lift is a chase.** It is a `Chase` with `Lift = true`, so one chase runs at a time. Boarding (the prompt, `BoardLift` and a remote's intent) is refused while a chaser or relief body is on the line, and `BoardLift` returns false and seats nobody then. Cost: a player at the lift waits for a chaser's riders to step out.
 - **27. The takeover.**
   - It happens at the first board while `ParkedRules.TakesOver(partyLiveCart, wreckedInside)` (no live cart, and no wreck inside).
@@ -1199,6 +1205,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - `void TakeOverAt(float cartS, Adventurer presser)` (Ruling 27) prints `[rails] lift: the party's cart stands at S={s:0.0}, past stop {k}; no gate or cage holds it`.
     - `Vector3 SavePose(ICartRider r, Vector3 at)` (Ruling 31). `PartyController`'s and `FloorStateCapture`'s pose captures read it.
     - test hooks (server and solo): `internal bool DebugBoardLift(Adventurer a)` (a press as a remote's would be); `internal void DebugSpendSpares()` (every spare marked used, as a save with them spent loads); `internal void DebugPlaceChaser(int stop)` (that stop's chaser placed empty on the line as a take would, solo too) and `internal void DebugEndChase()` (`EndChase(atOnce: true)`, then hidden at once).
+  - **`bool RailEncounterController.TakenOver { get; private set; }`**: the latch of Ruling 25 (set by `TakeOverAt`, cleared on the last stop's `Arrived` and on `Restored`), passed to `ParkedRules.Next`.
   - **`RailEncounterController.ArmFrom(int ride, float s)`** prints `[rails] ride {r} armed from S={s:0.0}: {p} piece(s) and {e} encounter(s) short of it passed`. A passed `parked` piece does not stand.
   - **The chaser and the relief** read the four-argument `ChaseLimit`. The server's line at the parked place reads `chase-done: the chaser halted {d:0.0} m behind the parked train's place at S={s:0.0}, outside the island; it hopped {n} hole(s) in the line`.
   - **`--test-island=lift`.** The party rides to stop 5 (the pit thrown on the way). The lead and one companion are teleported beside the parked train, a second companion 40 m short of it, and one freed crew member is put on foot within 20 m of it (`ctrl.DebugPutOnFoot`). It fails unless:
@@ -1214,7 +1221,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - It fails unless:
       - **Refused while a chaser stands.** With `rc.DebugPlaceChaser(Shape(rc).LastRideStop)`, `DebugBoardLift(companion)` returns false, prints `lift: refused (a chaser is on the line)` and seats nobody; then `rc.DebugEndChase()`.
       - **The double press** (Review Focus 5). The lead's press and `DebugBoardLift(companion)` land in one tick. Exactly one takeover is printed, both sit in the party's cart, and nobody is seated in the lift.
-      - **The new cart.** The party's cart stands Held at the lift's cart S with W1..W4 coupled fresh, `StopIndex` = `LastRideStop` and `StandingPast` set. `ParkedNow` is Gone from the press to the arrival.
+      - **The new cart.** The party's cart stands Held at the lift's cart S with W1..W4 coupled fresh, `StopIndex` = `LastRideStop` and `StandingPast` set. `ParkedNow` is Gone from the press to the arrival at stop 5, through the train's rear passing the far edge (the latch holds), and `TakenOver` clears on the arrival.
       - **The countdown.** It starts within 1 s of the lead sitting, though stop 4's gate is down and its cage locked, and no stop is added to `CrewLeftAt`.
       - **The departure.** It prints `armed from S=…`, with the golem, the hounds and the pit passed.
       - **The arrival.** The train crosses the bridge and arrives at stop 5 as the party's train.
