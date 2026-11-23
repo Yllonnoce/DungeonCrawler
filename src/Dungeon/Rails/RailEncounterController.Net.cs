@@ -132,7 +132,7 @@ public partial class RailEncounterController
     {
         BeamPasses++;
         var me = Core.Main.Instance?.Party?.Local;
-        var ducks = me != null && IsInstanceValid(me) && me.Seated && me.Cart == _rails.Cart && !Core.Vr.Active;
+        var ducks = me != null && IsInstanceValid(me) && me.Seated && me.Cart == _rails.Cart && !Core.Vr.Active; // cart-only
         if (ducks) me!.Shake(DuckAmplitude, DuckSeconds);
         if (NetSession.Instance.TestRide) GD.Print(FormattableString.Invariant($"[net] ride: the beam {piece.Plan.Id} passed here at front S={front:0.0} (beam S={piece.S:0.0}); our seated camera {(ducks ? "ducks" : "does not duck")}"));
     }

@@ -375,7 +375,7 @@ public partial class RailEncounterController
         BeamPasses++;
         foreach (var hero in party.Adventurers)
         {
-            if (!IsInstanceValid(hero) || !hero.Seated || hero.Cart != _rails.Cart) continue;
+            if (!IsInstanceValid(hero) || !hero.Seated || hero.Cart != _rails.Cart) continue; // cart-only
             if (!Vr.Active && hero.Control != ControlKind.Remote) hero.Shake(DuckAmplitude, DuckSeconds);
         }
         var by = RailCalls.Say(party, _rails.Cart, BarkTrigger.Heads, "Heads!");

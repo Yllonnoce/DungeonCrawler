@@ -55,6 +55,16 @@ public partial class TrainWagon : AnimatableBody3D, IInteractable, ICartBody
 
     public string Prompt => Main.Instance?.Party?.Local is { } me ? PromptFor?.Invoke(me) ?? "" : "";
 
+    /// <summary>How far <paramref name="world"/> lies from the tub's box (0 inside), as <see cref="MineCart.TubDistance(Vector3)"/>: the wagon is the cart's tub.</summary>
+    public float TubDistance(Vector3 world)
+    {
+        var local = GlobalTransform.AffineInverse() * world;
+        return RideInputRules.TubDistance(local.X, local.Y, local.Z, MineCart.TubWidth / 2f, CartRules.HalfLength, MineCart.TubBottom, MineCart.TubBottom + MineCart.TubHeight);
+    }
+
+    /// <summary>The nearer of <paramref name="hero"/>'s body and eye to the tub: the server's reach for a use of the wagon (the look ray reaches its box).</summary>
+    public float TubDistance(Adventurer hero) => Mathf.Min(TubDistance(hero.GlobalPosition), TubDistance(hero.Camera.GlobalPosition));
+
     public void Interact(PartyController party, Adventurer actor) => OnUse?.Invoke(actor);
 
     /// <summary>

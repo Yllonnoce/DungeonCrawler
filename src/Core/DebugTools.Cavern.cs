@@ -14,7 +14,8 @@ namespace DungeonCrawler.Core;
 // boards and the cart departs on ride 4; ride 4's runaway is held (enc.DebugHoldRunaway(4)) except in =runaway. Every variant: nobody falls
 // but the train's riders. =bridge (the default): nobody presses anything; the bridge's call comes with the collapse's start, 1.5 s or more
 // after the train's rear came onto it; its front never comes within 2 m of the rear; while the train is held on it (enc.HoldsRiders) the
-// seated lead's prompt is "" and a "Get out" press is refused; every party cell is gone within 6 s of the arrival at stop 4 (GoneBridges
+// seated lead's prompt is "" and a "Get out" press is refused, and (plan 14, Task 3) no hero in the train is offered a move car to car
+// (rc.MoveOfferFor, the lead looking back 120 degrees; its control on the ride before the bridge is offered) and a forced rc.Move is refused; every party cell is gone within 6 s of the arrival at stop 4 (GoneBridges
 // holds them, their Deck_ shapes disabled; the flow says how long before or after the arrival the last went); a following rc.Restore(3)
 // stands it whole. =brake: the lead brakes from 2.0 s after the collapse starts (past the reaction time, BridgeRules.ReactionTime): "Don't
 // stop" is called before the take, the take comes 1.5 s or more after the call by a press made 1.5 s or more after it, rc.Falls rises by 1 with every rider fallen within 1 s, the wipe rises at stop 3 with the bridge whole, and the
@@ -61,7 +62,7 @@ public partial class DebugTools
     private string _cvVariant = "bridge";
     private int _cvStep, _cvPass = 1;
     private float _cvClock, _cvTime;
-    private bool _cvListening, _cvWiped, _cvHoldChecked, _cvBraking, _cvStalled;
+    private bool _cvListening, _cvWiped, _cvHoldChecked, _cvBraking, _cvStalled, _cvMoveControl;
     private RailController? _cvHooked, _cvWipeRc;
     private readonly List<Adventurer> _cvRiders = new();
     private readonly HashSet<string> _cvMayFall = new();
@@ -289,6 +290,19 @@ public partial class DebugTools
         }
     }
 
+    /// <summary>
+    /// The move car to car offered to <paramref name="hero"/> looking back over its shoulder (120 degrees; plan 14): "car N" or "none". The yaw is
+    /// put back at once, before any view tick reads it.
+    /// </summary>
+    private static string CavernMoveOffer(RailController rc, Adventurer hero)
+    {
+        var yaw = hero.SeatYaw;
+        hero.SeatYaw = Mathf.DegToRad(120f);
+        var offer = rc.MoveOfferFor(hero);
+        hero.SeatYaw = yaw;
+        return offer switch { null => "none", TrainWagon w => $"car {w.Number}", _ => "car 0" };
+    }
+
     /// <summary>The build (every variant): the live bridge, the party track's gaps and the join at both lips. Null, or why not.</summary>
     private string? CavernBuild(RailController rc, RailEncounterController enc)
     {
@@ -335,6 +349,14 @@ public partial class DebugTools
         {
             case "bridge":
                 if (going && _cvMinGap < BridgeRules.HoldShort - 0.01f) { Fail($"the bridge's front came {_cvMinGap:0.00} m from the train's rear, under {BridgeRules.HoldShort} m"); return; }
+                if (!_cvMoveControl && _cvPass == 1 && rc.State.Mode == CartMode.Rolling && rc.State.V > 1f && float.IsNaN(_cvRearOnT) && !enc.HoldsRiders() && !rc.MovesRefused)
+                {
+                    // plan 14, Task 3: the control: off the bridge, rolling, the lead looking back is offered a move (so the check on it means something)
+                    _cvMoveControl = true;
+                    var offer = CavernMoveOffer(rc, me);
+                    GD.Print($"[cavern] bridge: before it, rolling at S={rc.State.S:0.0}, the lead looking back is offered a move to {offer}");
+                    if (offer == "none") { Fail("rolling before the bridge, the lead looking back was offered no move (the control)"); return; }
+                }
                 if (enc.HoldsRiders() && !_cvHoldChecked)
                 {
                     _cvHoldChecked = true;
@@ -342,6 +364,12 @@ public partial class DebugTools
                     rc.Cart.Interact(party, me); // a "Get out" press, as the key would
                     GD.Print($"[cavern] bridge: held on it at front S={rc.Party.FrontS:0.0} (v {rc.State.V:0.00}): the seated lead's prompt \"{prompt}\", a get-out press leaves them seated={me.Cart == rc.Cart}");
                     if (prompt != "" || me.Cart != rc.Cart) { Fail("on the bridge while it rolls the lead was offered or let out"); return; }
+                    // plan 14, Task 3: no move car to car on the live bridge, offered to anyone in the train or forced
+                    if (!_cvMoveControl) { Fail("the move's control before the bridge never ran"); return; }
+                    var offered = party.Active.Where(a => rc.CarOf(a) >= 0).Select(a => (a.State.Name, Offer: CavernMoveOffer(rc, a))).ToList();
+                    var forced = rc.Train.Count > 0 && rc.Move(me, rc.Train[0], "test");
+                    GD.Print($"[cavern] bridge: moves on it: offered [{string.Join(", ", offered.Select(o => $"{o.Name}: {o.Offer}"))}], a forced move to wagon 1 taken={forced} (refused: {rc.LastMoveRefused ?? "-"}), the lead in car {rc.CarOf(me)}");
+                    if (rc.Train.Count == 0 || offered.Count == 0 || offered.Any(o => o.Offer != "none") || forced || rc.CarOf(me) != 0) { Fail("on the live bridge a move car to car was offered or taken"); return; }
                 }
                 break;
             case "brake":

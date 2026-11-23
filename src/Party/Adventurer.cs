@@ -127,6 +127,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     private readonly SeatedPressGuard _switchPress = new();
     /// <summary>This view tick's <see cref="LookingAt"/> is the seated window's lever, not the ray's.</summary>
     private bool _lookingAtWindowLever;
+    /// <summary>This view tick's <see cref="LookingAt"/> is the car a move along the train goes to (plan 14), not the ray's.</summary>
+    private bool _lookingAtMove;
     private MeshInstance3D _body = null!;
     private MeshInstance3D _head = null!;
     private Label3D _label = null!;
@@ -555,6 +557,9 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
     /// cart as a lever of the armed ride comes up, it is that lever whatever the aim (the seated window: E throws it and never gets out),
     /// and for <see cref="SeatedSwitchRules.GraceSeconds"/> after the window closes it is nothing (<see cref="SeatedSwitchRules.InGrace"/>).
     /// Before the lever window, ride 4's leap offered from the seat is what it looks at, whatever the aim (<see cref="RailEncounterController.LeapOfferFor"/>).
+    /// After both (and the window's grace), a move car to car along the rolling train (plan 14) is what it looks at, whatever the aim
+    /// (<see cref="RailController.MoveOfferFor"/>: the car the seat's yaw points to), and for <see cref="TrainMoveRules.MoveCooldown"/> after a move's
+    /// press it is nothing (<see cref="RailController.InMoveGrace"/>), so a mashed key never becomes a get-out at speed.
     /// </summary>
     private void TickView()
     {
@@ -563,9 +568,11 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             _fpWeapon.SetGuard(Guarding);
             _interactRay.ForceRaycastUpdate(); // the VR beam's length reads the ray, window or not
             var enc = Seated && RailEncounterController.Instance is { } live && IsInstanceValid(live) ? live : null;
+            var rails = Seated && RailController.Instance is { } line && IsInstanceValid(line) ? line : null;
             var leap = enc?.LeapOfferFor(this); // ride 4's leap first, whatever the aim (plan 13): "Leap across" from the party's cart, "Leap back" from a slag cart's deck
             var lever = leap == null ? enc?.SeatedLeverFor(this) : null;
             _lookingAtWindowLever = lever != null;
+            _lookingAtMove = false;
             if (leap != null) LookingAt = leap;
             else if (lever != null)
             {
@@ -573,12 +580,15 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
                 _switchWindow.Offered();
             }
             else if (_switchWindow.NotOffered(Seated, Time.GetTicksMsec() / 1000.0)) LookingAt = null;
+            else if (rails?.MoveOfferFor(this) is IInteractable move) { LookingAt = move; _lookingAtMove = true; }
+            else if (rails?.InMoveGrace(this) == true) LookingAt = null;
             else LookingAt = FirstOffered();
         }
         else
         {
             LookingAt = null;
             _lookingAtWindowLever = false;
+            _lookingAtMove = false;
             _switchWindow.NotPlayed(); // downed or not played mid-window: no grace starts when it is played and up again
         }
         if (IsLocal && Downed && State.Mangled && Net.NetSession.IsClient) Spectate(); else if (SpectateTarget != null) EndSpectate();
@@ -651,13 +661,18 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         TickView();
     }
 
-    /// <summary>Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in <see cref="ICartBody.Seats"/>; the body enters itself (<see cref="ICartBody.Admit"/>).</summary>
-    public void SitIn(ICartBody cart, int seat)
+    /// <summary>
+    /// Take <paramref name="seat"/> in <paramref name="cart"/>: the body sits, faces forward and rides from now on. The caller books the seat in
+    /// <see cref="ICartBody.Seats"/>; the body enters itself (<see cref="ICartBody.Admit"/>). With <paramref name="keepYaw"/> (a move car to car
+    /// along the train, plan 14) it goes on looking where it looked in its old seat.
+    /// </summary>
+    public void SitIn(ICartBody cart, int seat, bool keepYaw = false)
     {
+        var yaw = _seatYaw;
         if (Cart != null && Cart != cart) LeaveSeat(); // never in two carts' books at once
         Cart = cart;
         Seat = seat;
-        _seatYaw = 0f;
+        _seatYaw = keepYaw ? yaw : 0f;
         _lastSeatHeading = float.NaN;
         _comfortIn.Reset();
         Crouching = false;
@@ -673,6 +688,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
         FollowSeat();
         cart.Admit(this); // last: whoever hears of it sees the body seated
     }
+
+    void ICartRider.SitIn(ICartBody cart, int seat) => SitIn(cart, seat);
 
     /// <summary>The cart still exists (a cart is a node; it dies with its floor).</summary>
     private static bool CartAlive(ICartBody cart) => cart is GodotObject o && IsInstanceValid(o);
@@ -1349,6 +1366,8 @@ public partial class Adventurer : CharacterBody3D, IHazardVictim, IInteractable,
             _switchPress.Pressed(windowLever, windowLever.Thrown, now);
             return;
         }
+        // a move car to car (plan 14): E does nothing for the cooldown from here on this machine, whatever the server makes of the press
+        if (_lookingAtMove && ReferenceEquals(target, LookingAt) && RailController.Instance is { } rails && IsInstanceValid(rails)) rails.MovePressed(this);
         // talking is local (the choice goes over the wire); everything else the server does for us
         if (Net.NetSession.IsClient && target is not Npc)
         {

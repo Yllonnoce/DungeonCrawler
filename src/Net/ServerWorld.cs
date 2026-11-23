@@ -577,8 +577,10 @@ public partial class ServerWorld : Node
                 // the look ray reaches 3 m to the item's (or prop's) box; its centre can sit half a metre further. A lever (a switch, a spur's)
                 // thrown from the seat of a rolling cart was in reach a round trip ago: the cart's speed times that member's round trip is allowed too
                 var reach = node is Dungeon.Rails.TrackSwitch ? Dungeon.Rails.PropPromptRules.LeverReach(body.Seated, SeatSpeed(body), _rttOf.GetValueOrDefault(slot.MemberIndex)) : Dungeon.Rails.PropPromptRules.InteractReach;
-                // a cart is measured to its tub (2.2 m long), as its prompt measures it (RideInputRules.BoardReach): its end is in reach, not only its middle
+                // a cart, or a wagon of the party's train (plan 14: the same tub), is measured to its tub (2.2 m long), as the look ray reaches its box and
+                // the cart's prompt measures it (RideInputRules.BoardReach): its end is in reach, not only its middle
                 var dist = node is Dungeon.Rails.MineCart tub ? tub.TubDistance(body)
+                    : node is Dungeon.Rails.TrainWagon wagonTub ? wagonTub.TubDistance(body)
                     : Math.Min(node.GlobalPosition.DistanceTo(body.GlobalPosition), node.GlobalPosition.DistanceTo(body.Camera.GlobalPosition));
                 // a lever in the sender's seated window (seated in the party's rolling cart, the lever coming up on the armed ride) is taken from
                 // any distance, as their screen offered it (SeatedSwitchRules); its taking at the points ends that. Another rider's set-back from
@@ -593,6 +595,18 @@ public partial class ServerWorld : Node
                     leapTaken = Dungeon.Rails.RailEncounterController.Instance is { } leapEnc && GodotObject.IsInstanceValid(leapEnc) && leapEnc.LeapAccepts(body, node);
                     if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: leap {(leapTaken ? "accepted" : "refused")}"); // a mashing client on a live server writes nothing (T4 Minor 10)
                     if (!leapTaken) break;
+                }
+                // climbing car to car (plan 14, Ruling 10): a press on a wagon of the train, or on the party's cart from a wagon, that the move's rules
+                // read as a move (RailController.IsMovePress) is taken from wherever the sender sits when MoveAccepts takes it; else refused
+                var moveRails = Dungeon.Rails.RailController.Instance is { } mrc && GodotObject.IsInstanceValid(mrc) ? mrc : null;
+                var movePress = moveRails != null && (node is Dungeon.Rails.TrainWagon || node == moveRails.Cart) && moveRails.IsMovePress(body, node);
+                var moveTaken = false;
+                if (movePress)
+                {
+                    var no = moveRails!.WhyMoveRefused(body, node);
+                    moveTaken = no == null;
+                    if (NetSession.Instance.TestServer) GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: move {(moveTaken ? "accepted" : $"refused ({no})")}"); // a mashing client on a live server writes nothing, as the leap's
+                    if (!moveTaken) break;
                 }
                 var lever = node as Dungeon.Rails.TrackSwitch;
                 var window = lever != null && Dungeon.Rails.RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.InSeatedWindow(body, lever);
@@ -617,7 +631,7 @@ public partial class ServerWorld : Node
                     else GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: the deadly lever was thrown (taken {lever.Taken}): ignored quietly");
                     break;
                 }
-                if (dist > reach && !window && !leapTaken) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
+                if (dist > reach && !window && !leapTaken && !moveTaken) { if (node is Items.LootDrop) Tell(slot, "Too far away to reach."); break; }
                 // recovery: the altar is paid and its card still waits for a pick, but this player's screen lost it: hand it back
                 if (node is Dungeon.Props.Shrine && FortuneDirector.Instance?.PendingShrine is { } pendingCard) { SendTo(slot.PeerId, pendingCard); Trace.Add("shrine-resent"); break; }
                 // the bag filled here (a bot's pickup) before this player's copy showed it: tell them, not the whole party, and
@@ -631,6 +645,7 @@ public partial class ServerWorld : Node
                 var seatedBefore = body.Seated;
                 target.Interact(party, body);
                 if (node is Dungeon.Rails.MineCart && !seatedBefore && body.Seated) Trace.Add($"aboard:{slot.Name}");
+                if (moveTaken) Trace.Add($"move:{slot.Name}");
                 if (NetSession.Instance.TestServer && node is Dungeon.Rails.MineCart && seatedBefore && body.Seated && !leapTaken && Dungeon.Rails.RailEncounterController.Instance?.HoldsRiders() == true)
                     GD.Print($"[net-server] interact {i.Ref} from {slot.Name}: get out refused (the train rolls on the collapsing bridge)"); // the refusal is RailController.UseCart's
                 if (NetSession.Instance.TestServer && RailPropState(node) is { } propState) { Trace.Add($"prop:{i.Ref}:{propState}"); GD.Print($"[net-server] {slot.Name} used {i.Ref}: now {propState}"); } // test servers only: a lever can be used without end
@@ -765,7 +780,7 @@ public partial class ServerWorld : Node
 
     /// <summary>The speed of the cart <paramref name="body"/> sits in (the party's), 0 on foot or in anything else.</summary>
     private static float SeatSpeed(Adventurer body)
-        => body.Seated && Dungeon.Rails.RailController.Instance is { } rc && GodotObject.IsInstanceValid(rc) && body.Cart == rc.Cart && rc.State.Mode == Dungeon.Rails.CartMode.Rolling ? rc.State.V : 0f;
+        => body.Seated && Dungeon.Rails.RailController.Instance is { } rc && GodotObject.IsInstanceValid(rc) && body.Cart == rc.Cart /* cart-only */ && rc.State.Mode == Dungeon.Rails.CartMode.Rolling ? rc.State.V : 0f;
 
     /// <summary>Members the server set down from a seat whose poses still in flight say seated: dropped until one says otherwise.</summary>
     private readonly HashSet<int> _unseatedPending = new();

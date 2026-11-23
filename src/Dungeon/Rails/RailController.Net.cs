@@ -136,7 +136,7 @@ public partial class RailController : ISlopeSource
     private void SendRideIntent(double delta)
     {
         var me = Core.Main.Instance?.Party?.Local;
-        if (me == null || me.Cart != Cart || me.Downed)
+        if (me == null || me.Cart != Cart || me.Downed) // cart-only
         {
             _sentPump = _sentBrake = false;
             _rideResend.Reset();
@@ -207,7 +207,7 @@ public partial class RailController : ISlopeSource
                 if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && Party.FrontS >= enc.BridgeFromS && RunawayRules.TrainRearS(Party.BackS, _train.Count, WagonSpacing) <= enc.BridgeToS)
                 {
                     var me = Core.Main.Instance?.Party?.Local is { } local && IsInstanceValid(local) ? local : null;
-                    var inCart = me != null && me.Cart == Cart;
+                    var inCart = me != null && me.Cart == Cart; // cart-only
                     var fallenNear = me != null && me.State.Fallen && new Vector2(me.GlobalPosition.X - Cart.GlobalPosition.X, me.GlobalPosition.Z - Cart.GlobalPosition.Z).Length() < DungeonBuilder.CellSize;
                     var rode = me != null && BridgeRules.LocalRode(inCart, _localInCartSinceState, fallenNear);
                     SeenFall(lost, cart: Cart.Visible, localRode: rode, eyeFrom: !inCart && _localInCartSinceState ? _localEyeInCart : null); // the seat's eye only for one who rode by the window (review Minor 1b)
@@ -249,7 +249,7 @@ public partial class RailController : ISlopeSource
     private void NoteLocalInCart(bool fromState)
     {
         var local = Core.Main.Instance?.Party?.Local is { } l && IsInstanceValid(l) ? l : null;
-        var inCart = local != null && local.Cart == Cart;
+        var inCart = local != null && local.Cart == Cart; // cart-only
         _localInCartSinceState = BridgeRules.LocalInCartNext(_localInCartSinceState, fromState, inCart);
         if (inCart && local!.Camera.IsInsideTree()) _localEyeInCart = local.Camera.GlobalTransform;
     }

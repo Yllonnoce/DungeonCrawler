@@ -302,7 +302,7 @@ public partial class RailController
         seated = living = 0;
         foreach (var hero in party.Adventurers)
         {
-            if (!IsInstanceValid(hero) || hero.Parked || hero.Downed || hero.Cart == Cart) continue;
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Downed || CarOf(hero) >= 0) continue; // the train: a wagon's hero rides it too (Ruling 12)
             living++;
             if (hero.Cart == chaser) seated++;
         }

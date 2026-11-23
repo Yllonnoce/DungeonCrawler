@@ -66,7 +66,7 @@ public partial class RailController
         _playerOnRails = RunOverRules.OnRails(b with { Radius = RunOverSweep.BodyRadius });
         var lastBackS = TrainBackS + CartRules.HalfLength; // the train's last body's back
         var behind = ReliefRules.Behind(lastBackS, PlayerLineS);
-        _met = ReliefRules.Met(_met, State.Mode == CartMode.Rolling, me.Cart == Cart, behind);
+        _met = ReliefRules.Met(_met, State.Mode == CartMode.Rolling, CarOf(me) >= 0, behind); // the train met them: a wagon's seat too (Ruling 12)
         var live = ReliefRules.LineLive(StopS.Length, StopIndex, State.Mode, Halted, !Cart.Visible);
         LeftBehindNow = ReliefRules.LeftBehind(new ReliefView(true, live, !me.Downed && !me.Parked, me.Seated, State.Mode != CartMode.Rolling, _met, behind));
         var counting = _chase is null or { Ended: true } or { Relief: true, Phase: ReliefPhase.Leaving };

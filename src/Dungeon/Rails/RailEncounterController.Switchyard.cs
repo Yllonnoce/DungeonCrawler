@@ -280,7 +280,7 @@ public partial class RailEncounterController
     private bool AbleHumanAboard()
     {
         foreach (var rider in _rails.Cart.Riders.Values)
-            if (rider is Adventurer hero && IsInstanceValid(hero) && SwitchBackRules.AbleToThrow(hero.Control, hero.Downed, hero.Seated && hero.Cart == _rails.Cart)) return true;
+            if (rider is Adventurer hero && IsInstanceValid(hero) && SwitchBackRules.AbleToThrow(hero.Control, hero.Downed, hero.Seated && hero.Cart == _rails.Cart)) return true; // cart-only
         return false;
     }
 
@@ -389,6 +389,26 @@ public partial class RailEncounterController
     public TrackSwitch? SeatedLeverFor(Adventurer hero)
     {
         if (!Current) return null;
+        CollectSeatedLevers();
+        var k = SeatedSwitchRules.Nearest(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, _seatedViews); // cart-only
+        return k < 0 ? null : _seatedSwitches[k];
+    }
+
+    /// <summary>
+    /// A seated lever window of the armed ride holds the party's front now (<see cref="SeatedSwitchRules.Nearest"/> for a rider seated in the
+    /// cart and up): the window that offers a lever to a seated cart rider. Plan 14 (Ruling 11): nobody in the train moves car to car then.
+    /// Every role, as <see cref="SeatedLeverFor"/>.
+    /// </summary>
+    public bool AnyLeverWindow()
+    {
+        if (!Current) return false;
+        CollectSeatedLevers();
+        return SeatedSwitchRules.Nearest(seatedInPartyCart: true, riderUp: true, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, _seatedViews) >= 0;
+    }
+
+    /// <summary>The armed ride's levers offered from the seat now, into <see cref="_seatedViews"/> and <see cref="_seatedSwitches"/>. No allocation.</summary>
+    private void CollectSeatedLevers()
+    {
         _seatedViews.Clear();
         _seatedSwitches.Clear();
         for (var i = 0; i < _pieces.Count; i++)
@@ -398,8 +418,6 @@ public partial class RailEncounterController
             _seatedViews.Add(sw.SeatedView);
             _seatedSwitches.Add(sw);
         }
-        var k = SeatedSwitchRules.Nearest(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, _seatedViews);
-        return k < 0 ? null : _seatedSwitches[k];
     }
 
     /// <summary>
@@ -413,7 +431,7 @@ public partial class RailEncounterController
         {
             var p = _pieces[i];
             if (p.Plan.Ride != ArmedRide || p.Switch != lever) continue;
-            return LeverAccepted(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView);
+            return LeverAccepted(p) && SeatedSwitchRules.Accepts(hero.Seated && hero.Cart == _rails.Cart, !hero.Downed && !hero.Parked, _rails.State.Mode == CartMode.Rolling, _rails.Party.FrontS, lever.SeatedView); // cart-only
         }
         return false;
     }

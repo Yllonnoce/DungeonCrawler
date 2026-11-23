@@ -73,7 +73,7 @@ public partial class RailController : Node
         : CageHoldRules.Held(State.Mode, Halted, StopIndex, StopS.Length, _crewLeftAt.Contains(StopIndex), CageHolds?.Invoke(StopIndex) == true);
 
     /// <summary><paramref name="hero"/> may leave the prisoners behind now (seated in the held cart, on their feet): the prompt and the held interact ask it.</summary>
-    private bool HoldFor(Adventurer hero) => CageHoldRules.MayLeaveBehind(hero.Cart == Cart, hero.Downed, CageHeld);
+    private bool HoldFor(Adventurer hero) => CageHoldRules.MayLeaveBehind(hero.Cart == Cart, hero.Downed, CageHeld); // cart-only
 
     private void Hold(Adventurer actor)
     {
@@ -205,14 +205,34 @@ public partial class RailController : Node
         return rider.Cart is TrainWagon { Coupled: true } wagon && WagonAt(wagon.Number) == wagon ? wagon.Number : -1;
     }
 
-    /// <summary>A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one what the crew controller offers.</summary>
-    private string WagonPrompt(TrainWagon wagon, Adventurer hero) => wagon.Coupled ? WagonCrewPrompt?.Invoke(wagon, hero) ?? "" : "";
+    /// <summary>
+    /// A wagon's prompt for <paramref name="hero"/>, on every peer: a lost wagon offers nothing; a coupled one the move offered to it first
+    /// (<see cref="MoveOfferFor"/>: "Climb back to wagon N", "Climb forward to wagon N"), then what the crew controller offers, then, to its own
+    /// rider, "Get out" only held or under 1 m/s (Ruling 9: at speed a wagon offers only moves).
+    /// </summary>
+    private string WagonPrompt(TrainWagon wagon, Adventurer hero)
+    {
+        if (!wagon.Coupled) return "";
+        if (MovePromptFor(wagon, hero) is { } move) return move;
+        var crew = WagonCrewPrompt?.Invoke(wagon, hero) ?? "";
+        if (crew.Length > 0 || hero.Cart != wagon) return crew;
+        return WagonGetOutOk(hero) ? "Get out" : "";
+    }
 
-    /// <summary>A hero pressed interact on a wagon: the crew controller's use (<see cref="WagonCrewUse"/>) of a coupled one.</summary>
+    /// <summary>
+    /// A hero pressed interact on a wagon (server and solo; a remote player's through its InteractIntent): a move to it from another car of the
+    /// train (<see cref="IsMovePress"/>, judged by <see cref="Move"/>); else the crew controller's use (<see cref="WagonCrewUse"/>) of a coupled
+    /// one; else its own rider gets out, only as <see cref="WagonPrompt"/> offers it.
+    /// </summary>
     private void UseWagon(TrainWagon wagon, Adventurer actor)
     {
         if (!wagon.Coupled) return;
-        WagonCrewUse?.Invoke(wagon, actor);
+        if (IsMovePress(actor, wagon)) Move(actor, wagon, "press");
+        else if (!NetSession.IsClient && actor.Cart == wagon && (WagonCrewPrompt?.Invoke(wagon, actor) ?? "").Length == 0)
+        {
+            if (Current && WagonGetOutOk(actor)) GetOutOfWagon(actor, wagon);
+        }
+        else WagonCrewUse?.Invoke(wagon, actor);
         Flush();
     }
 
@@ -409,7 +429,7 @@ public partial class RailController : Node
         List<int>? riders = null;
         if (Main.Instance?.Party is { } party)
             foreach (var hero in party.Adventurers)
-                if (IsInstanceValid(hero) && hero.Seated && (hero.Cart == Cart || hero.Cart == Chaser)) (riders ??= new()).Add(hero.Index); // a chaser's riders too: the chase is not saved, a load sets them down
+                if (IsInstanceValid(hero) && hero.Seated && (CarOf(hero) >= 0 || hero.Cart == Chaser)) (riders ??= new()).Add(hero.Index); // the train's (a wagon's heroes too, Ruling 12) and a chaser's: the chase is not saved, a load sets them down
         return riders;
     }
 
@@ -442,6 +462,15 @@ public partial class RailController : Node
         _heldStartCall = null;
         _hitAt.Clear();
         _warnedAt.Clear();
+        DropHops(); // a move under way goes with the ride: nobody lands in a restored train
+        foreach (var wagon in _train.Wagons) // a wagon's heroes get up where they sit too (Ruling 12); its crew are the crew controller's to seat again
+        {
+            if (!IsInstanceValid(wagon)) continue;
+            _fallRiders.Clear();
+            foreach (var r in wagon.Riders.Values) if (r is Adventurer) _fallRiders.Add(r);
+            foreach (var r in _fallRiders) if (r is Adventurer hero && IsInstanceValid(hero)) hero.Teleport(hero.GlobalPosition);
+            _fallRiders.Clear();
+        }
         foreach (var rider in Aboard()) // everyone still in a seat gets up where they sit (as a teleport does); ClearRiders sets them down
         {
             if (rider is Adventurer hero) hero.Teleport(hero.GlobalPosition);
@@ -596,9 +625,10 @@ public partial class RailController : Node
     private string PromptFor(Adventurer hero)
     {
         if (LeapOffered(hero)) return LeapRules.BackPrompt; // first: from a slag cart's deck, whatever the aim (plan 13)
+        if (MovePromptFor(Cart, hero) is { } move) return move; // "Climb forward into the cart" from a wagon of the rolling train (plan 14)
         if (hero.Seated && hero.Cart != Cart) return ""; // in another seat book
         if (HoldFor(hero)) return CageHoldRules.SeatedPrompt; // a tap still gets out; a held press leaves the prisoners behind
-        var seatedHere = hero.Cart == Cart;
+        var seatedHere = hero.Cart == Cart; // cart-only
         var inReach = seatedHere || RideInputRules.InBoardReach(Cart.TubDistance(hero)); // the server's intent check measures the same
         return RideInputRules.BoardPrompt(seatedHere, State.Mode == CartMode.Held, StopIndex >= StopS.Length - 1, HeroSeatFree(), inReach, holdOn: HoldsRiders);
     }
@@ -637,10 +667,18 @@ public partial class RailController : Node
         return bot is { IsBot: true } && owner != null && string.Equals(bot.BotOwner, owner.Name, StringComparison.OrdinalIgnoreCase);
     }
 
-    /// <summary>A seated, awake player in this cart owns <paramref name="mate"/> (<see cref="OwnCompanion"/>). No allocation.</summary>
+    /// <summary>A seated, awake player in the train (the cart or a coupled wagon: Ruling 12) owns <paramref name="mate"/> (<see cref="OwnCompanion"/>). No allocation.</summary>
     private bool OwnerAboard(Adventurer mate)
     {
-        foreach (var rider in Cart.Riders.Values)
+        if (OwnerIn(Cart, mate)) return true;
+        foreach (var wagon in _train.Wagons)
+            if (IsInstanceValid(wagon) && OwnerIn(wagon, mate)) return true;
+        return false;
+    }
+
+    private static bool OwnerIn(ICartBody car, Adventurer mate)
+    {
+        foreach (var rider in car.Riders.Values)
             if (rider is Adventurer player && IsInstanceValid(player) && !player.Downed && !player.Parked && IsPlayer(player) && OwnCompanion(mate, player)) return true;
         return false;
     }
@@ -650,6 +688,12 @@ public partial class RailController : Node
         if (actor.Cart is SlagCart) // "Leap back" (plan 13): the leap's rules judge it (LeapAccepts), the server's slack included; it is never a boarding
         {
             if (!NetSession.IsClient && RailEncounterController.Instance is { } enc && IsInstanceValid(enc)) enc.LeapBack(actor);
+            Flush();
+            return;
+        }
+        if (IsMovePress(actor, Cart)) // "Climb forward into the cart" from a wagon (plan 14): the move's rules judge it, never a boarding
+        {
+            Move(actor, Cart, "press");
             Flush();
             return;
         }
@@ -665,7 +709,7 @@ public partial class RailController : Node
     private void UseCart(Adventurer actor)
     {
         if (NetSession.IsClient || !Current) return;
-        if (actor.Cart == Cart)
+        if (actor.Cart == Cart) // cart-only
         {
             if (RideInputRules.MayGetOut(seatedHere: true, actor.Downed, holdOn: HoldsRiders)) GetOutWithParty(actor); // a downed rider stays slumped in the seat; nobody gets out on the collapsing bridge while it rolls (solo and a remote seat's press alike)
             return;
@@ -710,10 +754,24 @@ public partial class RailController : Node
         return true;
     }
 
-    /// <summary>A player's hero (played here, or another player's on the server) sits in this cart, awake: the cart only leaves (and companions only board) with one aboard.</summary>
+    /// <summary>
+    /// A player's hero (played here, or another player's on the server) sits in the train, awake: in the cart or a coupled wagon (Ruling 12). The
+    /// train only leaves, companions only board, and an arrival only keeps its riders with one aboard. No allocation.
+    /// </summary>
     private bool PlayerAboard()
     {
-        foreach (var rider in Cart.Riders.Values)
+        if (PlayerIn(Cart)) return true;
+        foreach (var wagon in _train.Wagons)
+            if (IsInstanceValid(wagon) && PlayerIn(wagon)) return true;
+        return false;
+    }
+
+    /// <summary>A player's hero sits in the party's cart itself, awake (a getting out with the party reads the cart only: Ruling 12).</summary>
+    private bool PlayerInCart() => PlayerIn(Cart);
+
+    private static bool PlayerIn(ICartBody car)
+    {
+        foreach (var rider in car.Riders.Values)
             if (rider is Adventurer hero && IsInstanceValid(hero) && !hero.Downed && !hero.Parked && IsPlayer(hero)) return true;
         return false;
     }
@@ -728,6 +786,12 @@ public partial class RailController : Node
         if (hero.Cart != Cart)
         {
             if (hero.Cart == Chaser) { UnseatChaserQuietly(hero); RefreshHud(); Flush(); }
+            else if (CarOf(hero) > 0 && hero.Cart is TrainWagon wagon) // a wagon's hero (plan 14): beside the lane by its wagon, as quietly
+            {
+                hero.GetOut(_builder.Surface(ExitCellNear(wagon.GlobalPosition, atStop: true, useTaken: false)), Vector3.Zero);
+                RefreshHud();
+                Flush();
+            }
             return;
         }
         var at = _builder.Surface(ExitCellNear(Cart.GlobalPosition, atStop: true, useTaken: false));
@@ -736,12 +800,13 @@ public partial class RailController : Node
         Flush();
     }
 
-    /// <summary>Every rider steps out beside the lane at the stop (the cart is held there): nobody rides on without a player.</summary>
+    /// <summary>Every rider steps out beside the lane at the stop (the cart is held there), and every hero in a wagon by its wagon: nobody rides on without a player.</summary>
     private void SetDownRiders()
     {
-        if (Cart.Riders.Count == 0) return;
+        if (Cart.Riders.Count == 0 && !WagonHeroAboard()) return;
         _exitTaken.Clear();
         foreach (var rider in Aboard()) GetOut(rider);
+        SetDownWagonHeroes(wreckToll: false);
         RefreshHud();
     }
 
@@ -823,7 +888,7 @@ public partial class RailController : Node
         GetOut(actor);
         if (IsPlayer(actor) && slow)
         {
-            var noPlayer = !PlayerAboard();
+            var noPlayer = !PlayerInCart(); // the cart's own bench follows the cart's last player out (Ruling 12: not a wagon's)
             foreach (var rider in Aboard())
                 if (rider is Adventurer mate && OwnCompanion(mate, actor) || rider is Npc && noPlayer) GetOut(rider);
         }
@@ -988,6 +1053,7 @@ public partial class RailController : Node
 
         Party.Sync();
         _train.Sync();
+        TickMoves(); // the hops under way land (or are dropped) with the train where it stands now
         TickChase(party, dt); // after the train has moved: the chaser's limit is where its tail stands now
         TickRelief(party, dt); // solo: a player left behind gets a relief cart (plan 7)
         TickFallen(party); // after the arrival: the fallen come back at the stop the cart rolled into, or the platform a hero stepped onto
@@ -1069,7 +1135,7 @@ public partial class RailController : Node
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
         ResetLine(); // a wreck ends the ride: the cart (or its spare) stands on its own lane
-        if (lost != null && seen) SeenFall(lost, cart: true, localRode: Main.Instance?.Party?.Local is { } me && IsInstanceValid(me) && me.Cart == Cart); // the bridge's take: the train drops through the gone cells, its riders with it
+        if (lost != null && seen) SeenFall(lost, cart: true, localRode: Main.Instance?.Party?.Local is { } me && IsInstanceValid(me) && me.Cart == Cart); // cart-only: the bridge's take: the train drops through the gone cells, its riders with it
         else if (lost != null) Plunge(lost, cart: true); // before the speed is zeroed: the train goes over the way it was going
         else Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
         RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here (at the lip, for a fall): the cart's sound sees no wreck (a spare takes over in this call)
@@ -1079,12 +1145,15 @@ public partial class RailController : Node
         _exitTaken.Clear();
         if (lost != null) TakeTheTrain(lost);
         else
+        {
             foreach (var rider in Aboard())
             {
                 GetOut(rider); // V is 0: no thrown run-over
                 if (rider is IHazardVictim victim && !(rider is Adventurer { Downed: true }) && !(rider is Npc { Downed: true }))
                     victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
             }
+            SetDownWagonHeroes(wreckToll: true); // a wagon's heroes too, beside the lane by their wagon, with the same toll (Ruling 12); its crew stay seated
+        }
         Boarding.Cancel();
         if (lost == null || CrevasseRules.SpareAfterFall(StandingHeroes())) SpareTakesOver();
         else
@@ -1177,7 +1246,7 @@ public partial class RailController : Node
         var server = NetSession.IsServer ? NetSession.Instance.Server : null;
         foreach (var hero in party.Adventurers)
         {
-            if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart || hero.Downed) continue;
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart || hero.Downed) continue; // cart-only
             if (hero.Control == ControlKind.Companion) { companions++; continue; }
             var (pump, brake) = PlayerRide(hero, party, server);
             if (pump) playersPumping++;
@@ -1197,7 +1266,7 @@ public partial class RailController : Node
         var companionPumps = pumpers - (brakeOn ? 0 : playersPumping);
         foreach (var hero in party.Adventurers)
         {
-            if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart) continue;
+            if (!IsInstanceValid(hero) || hero.Parked || hero.Cart != Cart) continue; // cart-only
             var pumping = false;
             if (!hero.Downed && !brakeOn)
             {
@@ -1246,7 +1315,7 @@ public partial class RailController : Node
         {
             if (!IsInstanceValid(hero) || hero.Parked || hero.Downed) continue;
             living++;
-            if (hero.Cart == Cart) seated++;
+            if (CarOf(hero) >= 0) seated++; // the train: a wagon's hero is aboard (Ruling 12)
         }
     }
 
@@ -1284,7 +1353,7 @@ public partial class RailController : Node
         var chaserLeft = -1f;
         var relief = false;
         var inChaser = me != null && ChaserHud(me, out chaserMode, out chaserLeft, out relief);
-        var show = inChaser || me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange);
+        var show = inChaser || me != null && (me.Cart == Cart || me.GlobalPosition.DistanceTo(Cart.GlobalPosition) <= HudRange); // cart-only (W4's place is within HudRange)
         HudText = show ? RailHud.Text(HudState(inChaser, chaserMode, chaserLeft, relief)) : null;
         Main.Instance?.Hud?.SetCart(HudText != null && !inChaser ? State.Plating / CartRules.MaxPlating : null, HudText);
     }

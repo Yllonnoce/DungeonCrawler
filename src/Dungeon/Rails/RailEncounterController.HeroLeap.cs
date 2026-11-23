@@ -142,7 +142,7 @@ public partial class RailEncounterController
         {
             string? hauler = null;
             foreach (var mate in Main.Instance.Party.Adventurers)
-                if (IsInstanceValid(mate) && mate.Cart == _rails.Cart && mate.Control == ControlKind.Companion && !mate.Downed && !mate.Parked) { hauler = mate.State.Name; break; }
+                if (IsInstanceValid(mate) && mate.Cart == _rails.Cart && mate.Control == ControlKind.Companion && !mate.Downed && !mate.Parked) { hauler = mate.State.Name; break; } // cart-only
             _leapersOff.Clear();
             foreach (var rider in cart.Riders.Values)
                 if (rider is Adventurer hero && IsInstanceValid(hero)) _leapersOff.Add(hero);
@@ -249,7 +249,7 @@ public partial class RailEncounterController
     {
         if (_leapPiece == null || !Current || !IsInstanceValid(hero) || !IsInstanceValid(_rails.Cart)) return null;
         if (hero.Cart is SlagCart on) return IsInstanceValid(on) && BackOk(hero, on, 0f, accept: false) ? _rails.Cart : null;
-        if (hero.Cart != _rails.Cart) return null;
+        if (hero.Cart != _rails.Cart) return null; // cart-only
         SlagCart? best = null;
         var bestAlong = float.PositiveInfinity;
         foreach (var slag in SlagCart.Live)
@@ -297,7 +297,7 @@ public partial class RailEncounterController
 
     private bool AcrossOk(Adventurer hero, SlagCart slag, float lateral, float along, float slack)
         => LeapRules.AcrossOffered(human: hero.Control is ControlKind.LocalHuman or ControlKind.Remote, up: !hero.Downed && !hero.Parked,
-            seatedInParty: hero.Cart == _rails.Cart, rolling: _rails.State.Mode == CartMode.Rolling, stretchLive: StretchLive, called: LeapCalled,
+            seatedInParty: hero.Cart == _rails.Cart /* cart-only */, rolling: _rails.State.Mode == CartMode.Rolling, stretchLive: StretchLive, called: LeapCalled,
             inReach: LeapRules.InReach(lateral, along, slack), leapersAboard: slag.Leapers);
 
     private bool BackOk(Adventurer hero, SlagCart on, float slack, bool accept)
