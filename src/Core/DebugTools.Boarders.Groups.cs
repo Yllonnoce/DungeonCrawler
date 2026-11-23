@@ -9,12 +9,14 @@ namespace DungeonCrawler.Core;
 // (the test's hook); stop 4's cage stays shut and its hold is waived. Companions answer as in play. A group's hound cannot die before its leap
 // (Enemy.DebugHoldHp while it rides its slag cart: the gate is the leap, not the roll-up's crossfire); once it has leapt it is the game's. On
 // ride 3 both levers are thrown at the arming (the heap blocks the party lane; the live switch back left straight runs the train to the gap).
-// The pumps come back (the game's own two) once the cart is 1 m past r5_golem's S, for the trestle and the jump. Held at the last stop, it prints
+// The pumps come back (the game's own two) once the cart is 1 m past r5_golem's S, for the trestle. Ride 5's lava pit switch is thrown from the
+// seat on the way (RideOnTo's ThrowPitOnTheWay, plan 15 Task 4). Held at the last stop, it prints
 // one line per group hound:
 //   [boarders] group {id}: spawned at party S={s}, in reach at S={r}, alongside at S={a}, {hound} leapt at S={l} onto {W{k}|the cart|a miss} (...), its cart freed at S={f} ({why}; ...)
 // and fails unless every hound leapt, each landing on a body within TrainRules.LeapReach (8.6 m) (a miss: its length printed only, its
-// take-off within the reach of the nearest coupled car's body, the bound the crouch rule sets) and each r5_hounds hound landing 1.5 s or more before the
-// golem's burst (fix round 1); r1_hounds' leap came with the cart 5 m past r1_barricade or more and the front at r1_beam or short of it;
+// take-off within the reach of the nearest coupled car's body, the bound the crouch rule sets) and each r5_hounds hound landing BdGolemMargin s or more
+// before the golem's burst (fix round 1; plan 15 Ruling 15's gate (b), the pumped estimate printed beside it), r5_hounds spawned with the train's
+// rear home past the pit switch's back and its cart never rammed nor freed by the crossing (gate (a)); r1_hounds' leap came with the cart 5 m past r1_barricade or more and the front at r1_beam or short of it;
 // r3_hounds' cart was freed by Ruling 19 (its hounds gone, or the crossing) with the front at r3_switch_out's points - 2 m or short of it;
 // r5_hounds' cart was freed by Ruling 19 before the front reached r5_golem's S, or by the golem's burst, and never stood within 3 m of the
 // golem's runner; and every throw on the floor came after its wagon's call and glow (RailEncounterController.ThrowLog). Then the crossing pass
@@ -33,24 +35,29 @@ public partial class DebugTools
     // the crossing pass (fix round 1, (e))
     private int _bdXPass, _bdXStep, _bdXMark;
     private float _bdXClock;
-    /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d)).</summary>
-    private const float BdGolemMargin = 1.5f;
+    /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d); plan 15 Task 4, the coordinator's ruling: 1.5 → 0.5 s, measured 0.68 and 0.60 s with r5_hounds at S 1097.0).</summary>
+    private const float BdGolemMargin = 0.5f;
     // a miss's take-off (Task 8 fix round 1): each hound riding a slag cart with its flat distance to the nearest coupled car's body (the
     // party's cart or a coupled wagon), read every frame, so the frame before a miss starts gives its take-off distance
     private readonly Dictionary<string, float> _leapNearest = new();
     private readonly Dictionary<(string Who, double T), float> _missTakeOffs = new();
     private RailEncounterController? _leapLogOf;
     private int _leapLogMark;
+    // plan 15 Task 4, Ruling 15's gate (a): r5_hounds' carts as seen, and whether one was derailed (a ram) on this floor build
+    private readonly HashSet<SlagCart> _r5Carts = new();
+    private bool _r5Rammed;
 
     /// <summary>
-    /// Every frame of =groups and --test-chase: each miss newly in <see cref="RailEncounterController.SlagLog"/> takes its hound's nearest-body
+    /// Every frame of =groups and --test-chase: r5_hounds' carts are watched for a derail (a ram: Ruling 15's gate (a)), and each miss newly in <see cref="RailEncounterController.SlagLog"/> takes its hound's nearest-body
     /// distance from the frame before (the hound still crouched on its cart; NaN when it was not seen there), then every carried hound's
     /// distance is read again. A miss lands beside the party lane's cell nearest where that body will be 0.6 s on, so its own length is no
     /// bound; its take-off is what the crouch rule bounds (a body it would pick within <see cref="TrainRules.LeapReach"/>).
     /// </summary>
     private void WatchMissTakeOffs(Node3D root, RailController rc, RailEncounterController enc)
     {
-        if (_leapLogOf != enc) { _leapLogOf = enc; _leapLogMark = 0; _leapNearest.Clear(); }
+        if (_leapLogOf != enc) { _leapLogOf = enc; _leapLogMark = 0; _leapNearest.Clear(); _r5Carts.Clear(); _r5Rammed = false; }
+        foreach (var cart in enc.SlagCarts) if (IsInstanceValid(cart) && cart.EncounterId == "r5_hounds") _r5Carts.Add(cart);
+        foreach (var cart in _r5Carts) if (IsInstanceValid(cart) && cart.Derailed && !_r5Rammed) { _r5Rammed = true; GD.Print($"[boarders] r5_hounds' cart {cart.Name} derailed (a ram) at party S={rc.State.S:0.0}, front {rc.Party.FrontS:0.0}, the front on the enemy lane {rc.FrontOnEnemyLane}"); }
         for (; _leapLogMark < enc.SlagLog.Count; _leapLogMark++)
         {
             var x = enc.SlagLog[_leapLogMark];
@@ -129,8 +136,8 @@ public partial class DebugTools
         if (!_bdPumpsBack && enc.ArmedRide == 5 && rc.State.S >= golemS + 1f)
         {
             _bdPumpsBack = true;
-            PumperCap = null; // the trestle and the jump want the game's own pumping
-            GD.Print($"[boarders] groups: the cart 1 m past r5_golem's S ({golemS:0.0}) at S={rc.State.S:0.0}: the companions may pump again (the trestle and the jump)");
+            PumperCap = null; // the trestle wants the game's own pumping
+            GD.Print($"[boarders] groups: the cart 1 m past r5_golem's S ({golemS:0.0}) at S={rc.State.S:0.0}: the companions may pump again (the trestle)");
         }
 
         if (!RideOnTo(main, rc, Shape(rc).Rides, "boarders", Fail)) return;
@@ -191,7 +198,7 @@ public partial class DebugTools
             }
         }
         if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
-        _bdMainOk = $"every group's hounds leapt, each landing on a body within {TrainRules.LeapReach:0.0} m (a miss's take-off within it); r1_hounds between r1_barricade + 5 m and r1_beam; r3_hounds' cart freed short of r3_switch_out's points - 2 m; r5_hounds landed {BdGolemMargin:0.0} s or more before the golem's burst and its cart was freed short of the golem or by its burst, 3 m clear of its runner; {throws} throw(s), each after its call and glow";
+        _bdMainOk = $"every group's hounds leapt, each landing on a body within {TrainRules.LeapReach:0.0} m (a miss's take-off within it); r1_hounds between r1_barricade + 5 m and r1_beam; r3_hounds' cart freed short of r3_switch_out's points - 2 m; r5_hounds spawned with the train's rear home past the pit switch's back, never rammed nor freed by the crossing, landed {BdGolemMargin:0.0} s or more before the golem's burst and its cart was freed short of the golem or by its burst, 3 m clear of its runner; {throws} throw(s), each after its call and glow";
         GD.Print($"[boarders] groups: the main pass ok: {_bdMainOk}");
         _bdXPass = 1; // the crossing pass (fix round 1, (e))
         _bdXStep = 0;
@@ -269,22 +276,29 @@ public partial class DebugTools
     {
         var fails = new List<string>();
         var burst = enc.SlagLog.FirstOrDefault(x => x.What == "bursts out");
+        var r5Spawn = enc.SlagLog.FirstOrDefault(x => x.Encounter == "r5_hounds" && x.What == "spawned");
+        var rc = RailController.Instance;
+        var pumpedV = rc == null ? float.NaN : CartPhysics.TargetSpeed(RideInputRules.MaxPumpers, rc.Train.Count);
         foreach (var l in enc.SlagLog.Where(x => x.What.StartsWith("leapt ", StringComparison.Ordinal)))
         {
             var margin = burst.What != null && l.Encounter == "r5_hounds" && l.T <= burst.T ? burst.T - (l.T + RailEncounterController.LeapSeconds) : double.NaN;
+            // pre-flight F2: a pumped approach's margin, an estimate printed beside the measured one (never gated): the spawn-to-burst stretch at the
+            // pumped speed, less the measured spawn-to-landing seconds
+            var pumped = !double.IsNaN(margin) && r5Spawn.What != null ? (burst.PartyS - r5Spawn.PartyS) / pumpedV - (l.T + RailEncounterController.LeapSeconds - r5Spawn.T) : double.NaN;
+            var pumpedText = double.IsNaN(pumped) ? "" : $"; the pumped estimate {pumped:0.00} s ((burst S {burst.PartyS:0.0} - spawn S {r5Spawn.PartyS:0.0}) / {pumpedV:0.00} m/s - {l.T + RailEncounterController.LeapSeconds - r5Spawn.T:0.00} s spawn to landing; printed only)";
             // a landing on a body is gated at the reach; a miss lands beside the party lane's cell nearest where the body will be 0.6 s on,
             // so its length is printed only, and its take-off (the nearest body, the frame before it leapt) is gated at the reach, which is
             // what the crouch rule bounds (Task 8 fix round 1, the controller's ruling)
             if (l.What == "leapt a miss")
             {
                 var takeOff = _missTakeOffs.TryGetValue((l.Who, l.T), out var d) ? d : float.NaN;
-                GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m (a miss: printed only); its take-off {(float.IsNaN(takeOff) ? "not seen" : $"{takeOff:0.0} m")} from the nearest body (reach {TrainRules.LeapReach:0.0}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0})")}");
+                GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m (a miss: printed only); its take-off {(float.IsNaN(takeOff) ? "not seen" : $"{takeOff:0.0} m")} from the nearest body (reach {TrainRules.LeapReach:0.0}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0}){pumpedText}")}");
                 if (float.IsNaN(takeOff)) fails.Add($"{l.Encounter}'s {l.Who} missed with its take-off unmeasured (never seen riding its slag cart)");
                 else if (takeOff > TrainRules.LeapReach) fails.Add($"{l.Encounter}'s {l.Who} missed from {takeOff:0.0} m off the nearest body, past {TrainRules.LeapReach:0.0}");
             }
             else
             {
-                GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m (reach {TrainRules.LeapReach:0.0}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0})")}");
+                GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m (reach {TrainRules.LeapReach:0.0}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0}){pumpedText}")}");
                 if (l.Metres > TrainRules.LeapReach) fails.Add($"{l.Encounter}'s {l.Who} leapt {l.Metres:0.0} m, past {TrainRules.LeapReach:0.0}");
             }
             if (!double.IsNaN(margin) && margin < BdGolemMargin) fails.Add($"r5_hounds' {l.Who} landed {margin:0.00} s before the golem's burst, under {BdGolemMargin:0.0} s");
@@ -294,6 +308,18 @@ public partial class DebugTools
             var r5 = enc.SlagLog.Count(x => x.Encounter == "r5_hounds" && x.What.StartsWith("leapt ", StringComparison.Ordinal) && x.T <= burst.T);
             GD.Print($"[{tag}] leap: r5_hounds: {r5} hound(s) leapt before the golem's burst");
             if (r5 < 2) fails.Add($"only {r5} of r5_hounds' 2 hounds leapt before the golem's burst");
+        }
+        // plan 15 Task 4, Ruling 15's gate (a): on r5_hounds' spawn tick the train's rear is home past the pit switch's back (its points + the
+        // crossover), and its cart is never rammed nor freed by the crossing
+        if (r5Spawn.What != null && rc != null && enc.SetPieceNode(Kiln(rc, "switch_back")) is TrackSwitch back && enc.PitSwitch != null)
+        {
+            var home = back.PointsS + RailController.SwitchStretch;
+            var rear = RunawayRules.TrainRearS(r5Spawn.PartyS - CartRules.HalfLength, rc.Train.Count, RailController.WagonSpacing);
+            var crossFreed = enc.SlagLog.Any(x => x.Encounter == "r5_hounds" && x.What == "freed: the train crosses onto its lane");
+            GD.Print($"[{tag}] r5_hounds gate (a): spawned at party S={r5Spawn.PartyS:0.0} (front {r5Spawn.FrontS:0.0}, t={r5Spawn.T:0.00}); the train's rear on the spawn tick at S={rear:0.0} ({rc.Train.Count} wagon(s); home from {home:0.0}): {(rear >= home ? "home" : "NOT home")}; rammed {_r5Rammed}; freed by the crossing {crossFreed}");
+            if (rear < home) fails.Add($"r5_hounds spawned with the train's rear at S={rear:0.0}, short of home ({home:0.0}: {Kiln(rc, "switch_back")}'s points + {RailController.SwitchStretch:0} m)");
+            if (_r5Rammed) fails.Add("r5_hounds' cart was rammed");
+            if (crossFreed) fails.Add("r5_hounds' cart was freed by the crossing");
         }
         return fails;
     }

@@ -17,14 +17,15 @@ namespace DungeonCrawler.Core;
 // cell by the drop) and revivable. After every step to A4 nobody but the test's own victim is fallen. A4: the party boards at the
 // landing with A1's companion still fallen; on ride 1's arrival at stop 1 that companion is back within 1 s (up, a quarter of their
 // HP, beside the cart). B, the fall: stop 1's cage opened and its crew seated in the train (plan 14: DebugSeatCrew, W1's seats 4 and
-// 5), the cart restored at the kiln's stop, everyone boarded with Grisel on the bench, no pumping: the train misses the jump over the
-// gorge and falls; every rider fallen, W1..W4 uncoupled and hidden (Train.Count 0), the seated crew dead, the capture naming LostWagons
+// 5), the cart restored at the kiln's stop, everyone boarded with Grisel on the bench, no pumping, the lead able and the pit switch left
+// straight (plan 15 Task 4: LeavePitStraight): the train runs into the lava pit and falls ("The cart runs into the lava pit!"); every rider fallen, W1..W4 uncoupled and hidden (Train.Count 0), the seated crew dead, the capture naming LostWagons
 // [1,2,3,4], Grisel down at the lip, no spare spent. C, the rise (Task 8): the wipe that follows rises at the stop the train
 // left (its arrival snapshot), within 10 s: the cart there Held, whole and seen, W1..W4 coupled fresh, every crew member then alive
 // alive again (seen, moving, not in the dark), the train's seated crew back in the coupled wagon (AboardCrew), Grisel up and escorting, every hero up beside the cart (each on its own cell by the lane,
 // two cells off at most: CrvBeside) at full HP (no return from the crevasse on top), no spare spent, a fifth of the gold gone, the Scar
-// on, and the crew trial (its flag, the stairs) as at the arrival. =trestle: as B, but the human brakes on the trestle and it falls with
-// the train on it, then C. =survivor: as B, but the human gets out at the stop as the cart departs; after the fall nobody wipes, a spare
+// on, and the crew trial (its flag, the stairs) as at the arrival. =trestle: as B, but the lead throws the pit switch from the seat
+// (ThrowPitOnTheWay), then brakes on the trestle and it falls with the train on it, then C. =survivor: as B, but once the train has passed the
+// pit switch's points straight the human is set down at the stop it left; after the fall nobody wipes, a spare
 // waits with four fresh wagons (the capture names no lost wagon), and the human stepping onto that stop's platform brings the fallen
 // back beside them; a fresh capture names the lost crew, and after a save and a load W1..W4 stand coupled and empty. Prints [crevasse]
 // lines and a RESULT.
@@ -99,7 +100,7 @@ public partial class DebugTools
                 _crvReturnHp[back.State.Name] = back.State.Hp; // ReturnFromCrevasse logs right after it sets the HP
                 _crvClimbs++;
             }
-            if (text is "The cart drops into the crevasse!" or "The trestle gives way into the crevasse!") _crvFallWhy ??= text;
+            if (text is "The cart drops into the crevasse!" or "The trestle gives way into the crevasse!" or PitRules.FallLog) _crvFallWhy ??= text;
             if (text.StartsWith("A spare cart waits at stop ") && int.TryParse(text["A spare cart waits at stop ".Length..].TrimEnd('.'), out var n)) _crvSpareStop = n;
         };
         EventBus.Instance.PartyWiped += () =>
@@ -341,7 +342,8 @@ public partial class DebugTools
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate));
                 _crvSparesBefore = rc.SparesUsed.Count;
                 if (_crvVariant != "survivor") party.AddGold(100); // C: the wipe takes a fifth of something
-                PumperCap = 0; // nobody pumps: the cart comes to the jump too slow
+                PumperCap = 0; // nobody pumps
+                LeavePitStraight = _crvVariant != "trestle"; // plan 15 Ruling 21: B, C and =survivor leave the pit switch straight with the lead able; =trestle throws it
                 if (_crvVariant == "survivor") NoRelief = true; // the spare's way, not a relief's: the human stays on foot at the stop
                 GD.Print($"[crevasse] B stop {_crvWagon.Stop}'s crew seated in the train [{string.Join(", ", seated.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}"))}]; the cart restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Number))}], spares used {_crvSparesBefore}, pumpers capped at 0");
                 _crvStep++; _crvClock = 0f;
@@ -369,17 +371,21 @@ public partial class DebugTools
                 if (rc.State.Mode == CartMode.Wrecked || rc.Falls == 0 && rc.State.Mode == CartMode.Held && rc.SparesUsed.Count > _crvSparesBefore) { Fail("the cart was wrecked, not fallen"); return; }
                 if (rc.State.Mode == CartMode.Rolling)
                 {
+                    if (_crvVariant == "trestle") ThrowPitOnTheWay(main, rc, "crevasse"); // =trestle: round the pit, to fall with the trestle (plan 15 Ruling 21, F13)
                     if (_crvVariant == "trestle" && root.GetNodeOrNull<Trestle>($"Trestle_{Kiln(rc, "trestle")}") is { } trestle && rc.Party.FrontS >= trestle.From && party.ForcedMoveInput == null)
                     {
                         party.ForcedMoveInput = new Vector2(0, 1); // the stick back: the brake, until the trestle falls with the cart on it
                         GD.Print($"[crevasse] =trestle the human brakes at front S={rc.Party.FrontS:0.0} (the trestle {trestle.From:0.0}-{trestle.To:0.0}), v {rc.State.V:0.00}");
                     }
-                    if (_crvVariant == "survivor" && me.Cart == rc.Cart)
+                    // =survivor: the human, able in the seat, leaves the pit switch straight; once the train has passed its points straight (committed
+                    // to the pit) the human is set down at the stop it left and stays on foot (plan 15: with the human gone before the points the
+                    // train would take the safe line, R-lone)
+                    if (_crvVariant == "survivor" && me.Cart == rc.Cart && RailEncounterController.Instance is { PitSwitch: { Taken: true } } && !rc.Crossing)
                     {
-                        me.Teleport(rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[rc.StopIndex]))); // out at the stop as the cart departs (no throw)
+                        me.Teleport(rc.StandBesideLane(rc.Party.Track.Point(rc.StopS[rc.StopIndex]))); // out at the stop the cart left (no throw)
                         _crvRiders.Remove(me);
                         _crvMayFall.Remove(me.State.Name); // on foot: the human never falls
-                        GD.Print($"[crevasse] =survivor the human gets out at stop {rc.StopIndex} as the cart departs (S={rc.State.S:0.0}) and stays on foot at {DungeonBuilder.WorldToCell(me.GlobalPosition)}");
+                        GD.Print($"[crevasse] =survivor the human gets out, the train past the pit switch's points straight (front S={rc.Party.FrontS:0.0}), set down at stop {rc.StopIndex} and stays on foot at {DungeonBuilder.WorldToCell(me.GlobalPosition)}");
                     }
                 }
                 if (_crvClock > 120f) Fail($"the train did not fall within 120 s (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})");

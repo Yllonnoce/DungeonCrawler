@@ -24,6 +24,8 @@ public enum BarkTrigger
     BridgeGoing, BridgeBrake, SlagDrop,
     // a boarder alone in a wagon with the prisoners: the call before it throws them off (plan 14 Task 5; stock only: RideBarks)
     BoarderThrow,
+    // ride 5's lava pit: the deadly switch round it, called early and at the last moment (plan 15 Task 4; stock only: RideBarks)
+    PitSwitch, PitSwitchNow,
 }
 
 public sealed class VoicedCharacter

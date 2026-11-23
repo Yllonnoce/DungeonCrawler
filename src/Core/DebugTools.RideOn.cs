@@ -18,6 +18,34 @@ public partial class DebugTools
     private int _rideOnStop = -1, _rideOnPhase;
     private float _rideOnClock;
 
+    /// <summary>
+    /// The fall tests leave ride 5's pit switch straight (plan 15 Ruling 21: <c>--test-pit=wrong|stall|late</c> and <c>--test-crevasse</c> B, C and
+    /// <c>=survivor</c>): <see cref="ThrowPitOnTheWay"/> presses nothing while it is set.
+    /// </summary>
+    internal bool LeavePitStraight { get; set; }
+    /// <summary>The front's S at the last throw <see cref="ThrowPitOnTheWay"/> made, or NaN (the flows' reports read it).</summary>
+    private float _pitThrownFront = float.NaN;
+
+    /// <summary>
+    /// Every flow that rides the pit's ride past it (plan 15 Ruling 21), each rolling tick: once the pit's deadly out lever's seated window holds the
+    /// front and offers it to the seated lead (the lead looks at it), the lead presses it once, through the dispatch <c>--test-switch-back</c>'s thrown
+    /// branch uses (<see cref="PartyController.VrUse"/>). Nothing while <see cref="LeavePitStraight"/>, off the pit's ride, or once it is thrown or
+    /// taken. True on the press that threw it.
+    /// </summary>
+    private bool ThrowPitOnTheWay(Main main, RailController rc, string tag)
+    {
+        if (LeavePitStraight || rc.State.Mode != CartMode.Rolling || RailEncounterController.Instance is not { } enc || !IsInstanceValid(enc)) return false;
+        if (enc.ArmedRide != enc.PitRide || enc.PitSwitch is not { Thrown: false, Taken: false } lever) return false;
+        var party = main.Party;
+        if (party.Local is not { } me || me.Cart != rc.Cart || party.LookingAt != lever) return false;
+        var front = rc.Party.FrontS;
+        party.VrUse(true);
+        party.VrUse(false);
+        _pitThrownFront = front;
+        GD.Print($"[{tag}] pit: thrown from the seat at front S={front:0.0} ({lever.LeverS - front:0.0} m before the lever): thrown={lever.Thrown} by {lever.LastToggledBy ?? "nobody"}");
+        return lever.Thrown;
+    }
+
     /// <summary>The line the cart runs: its rides, its intermediate stops, the kiln's ride and the stop it leaves from.</summary>
     private static LineShape Shape(RailController rc) => new(rc.StopS.Length);
 
@@ -44,6 +72,7 @@ public partial class DebugTools
         }
         if (rc.State.Mode == CartMode.Rolling)
         {
+            ThrowPitOnTheWay(main, rc, tag); // ride 5's lava pit: thrown from the seat as its window offers it (plan 15 Ruling 21)
             if (_rideOnPhase == 2) { GD.Print($"[{tag}] ride on: departed stop {_rideOnStop} for stop {_rideOnStop + 1} (ride {_rideOnStop + 1} armed: {RailEncounterController.Instance?.ArmedRide}), {main.Party.Active.Count(a => a.Seated)} heroes seated, train=[{string.Join(",", rc.Train.Select(w => w.Number))}]"); _rideOnPhase = 3; _rideOnClock = 0f; }
             if (_rideOnClock > RideOnRideSeconds) fail($"ride on to stop {stop}: the cart rolled {_rideOnClock:0} s from stop {rc.StopIndex} without being held at the next (S={rc.State.S:0.0})");
             return false;

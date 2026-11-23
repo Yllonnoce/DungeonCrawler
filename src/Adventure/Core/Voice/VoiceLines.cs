@@ -161,6 +161,8 @@ public static class Voices
         BarkTrigger.BridgeBrake => Delivery.Shout,
         BarkTrigger.SlagDrop => Delivery.Shout,
         BarkTrigger.BoarderThrow => Delivery.Shout,
+        BarkTrigger.PitSwitch => Delivery.Shout,
+        BarkTrigger.PitSwitchNow => Delivery.Shout,
         _ => Delivery.Calm,
     };
     public static readonly Dictionary<string, string> Classes = new()

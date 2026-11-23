@@ -123,6 +123,19 @@ public partial class RailController : ISlopeSource
         Wreck();
     }
 
+    /// <summary>
+    /// Test hook (the RIDE pass, plan 15 Ruling 42): the cart restored whole and Held at <paramref name="stop"/> with the spares used so far kept
+    /// spent (<see cref="Restore"/>), so a wreck there carries the old spare checks. Not a rise: its line says so, and the wipe-rise watch reads
+    /// none of it.
+    /// </summary>
+    internal void DebugRestoreAt(int stop)
+    {
+        if (NetSession.IsClient || NetSession.IsNetworked && NetSession.Instance is not { TestServer: true, TestRide: true }) return; // the RIDE server's, or a single-player test flow's
+        var used = new List<int>(_spares.Used);
+        GD.Print($"[net-server] ride: test restore at stop {stop} (not a rise)");
+        Restore(stop, null, used);
+    }
+
     // ---- a client's side ---------------------------------------------------------------------
 
     private bool _sentPump, _sentBrake;

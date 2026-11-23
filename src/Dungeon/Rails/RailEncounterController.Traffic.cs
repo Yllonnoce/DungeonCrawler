@@ -19,8 +19,8 @@ public partial class RailEncounterController
 {
     /// <summary>A runaway wagon starts this far past the held cart's stop.</summary>
     public const float RunawayAhead = 6f;
-    /// <summary>It halts this far short of the next stop (its gate stands just past that stop).</summary>
-    public const float RunawayShort = 3f;
+    /// <summary>It halts this far short of the next stop (its gate stands just past that stop), or of the pit's lip before it (<see cref="SetPieceRules.RunawayEnd"/>).</summary>
+    public const float RunawayShort = SetPieceRules.RunawayShort;
     /// <summary>It is freed this long after it halts.</summary>
     public const float RunawayLinger = 1f;
     /// <summary>An AI body looks for a pocket this close.</summary>
@@ -112,7 +112,7 @@ public partial class RailEncounterController
     {
         if (GetParent() is not Node3D root) return;
         var from = _rails.StopS[_rails.StopIndex] + RunawayAhead;
-        var to = _rails.StopS[_rails.StopIndex + 1] - RunawayShort;
+        var to = SetPieceRules.RunawayEnd(_rails.StopS[_rails.StopIndex + 1], PitLipBefore(_rails.StopS[_rails.StopIndex], _rails.StopS[_rails.StopIndex + 1])); // short of the pit's lip when it lies before the next stop (B.3)
         if (to - from < 10f) return;
         var wagon = new RunawayWagon { CartId = NextCartId() };
         var run = new CartRun(_rails.Party.Track, wagon, new CartState(from, 0f, CartMode.Rolling, CartRules.MaxPlating), 1) { Limit = to };

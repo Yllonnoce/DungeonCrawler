@@ -63,13 +63,17 @@
 #                                     departure a real one; 6 m out of stop 3 both press "Climb back to wagon 1" at once: one is taken,
 #                                     the other refused (the place is booked), and the winner climbs back into the cart; both roll into
 #                                     the cavern with four wagons, their rear the front less TrainRules.Length); out at stop 4, the kiln's, on foot while the train leaves on ride 5 with the
-#                                     first client: stop 4's spare, which offered nothing while the train was held there, offers itself
+#                                     first client, who throws the lava pit's switch from the seat on the first frame its window offers it
+#                                     (the server takes it in the seated window; the train goes round the pit, both clients showing the
+#                                     server's CrossOut and CrossBack; nothing runs into the pit): stop 4's spare, which offered nothing while the train was held there, offers itself
 #                                     once it has gone; the joiner takes it through its intent (spare:4), and its chaser runs up behind
-#                                     the train (hopping ride 5's gap and the fallen
+#                                     the train (hopping ride 5's pit and the fallen
 #                                     trestle) and halts within 3 m of its last body (chase-done on both sides; no relief cart was sent online); the first client leaves
 #                                     seated once the chaser has gone; the server then wrecks the cart at the end of the line by a test
-#                                     hook, and the joiner sees the Wrecked state and then a spare's takeover (stop 3's; wrecked again
-#                                     3 s later, stop 2's, where ride 3 with the heap leaves; only the first is in earshot); it boards that cart
+#                                     hook: past the exit bridge's start no spare takes over and its riders are set down inside (the
+#                                     joiner sees Wrecked and no takeover); the test restores the cart at stop 4 (not a rise) and wrecks it
+#                                     there: the joiner sees a spare's takeover (stop 3's; wrecked again
+#                                     3 s later, stop 2's, where ride 3 with the heap leaves; only the end's wreck is in earshot); it boards that cart
 #                                     and rides ride 3 again with its switch straight, into the ore heap: its rendered S never passes
 #                                     the heap's face; out of it, the server wrecks the cart until no spare is
 #                                     left (the joiner hears that wreck live), and the joiner asks for the floor
@@ -163,6 +167,12 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "Joiner jumps from the moving cart" "$TMP/server.log" || ! grep -q "\[net-server\] ride: Joiner got out of the rolling cart on ride 3 .* on the line behind the cart" "$TMP/server.log"; then echo "NET TEST: FAIL (the joiner was not thrown from the rolling cart onto the line on ride 3)"; exit 1; fi
   if ! grep -q "\[net\] ride: thrown at speed: the joiner .* on the line behind the cart" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the thrown joiner did not stand at the server's landing on the line)"; exit 1; fi
   if ! grep -q "\[net\] floor 12 (build [0-9]*) rebuilt from the server's resend" "$TMP/joiner.log" || ! grep -q "\[net\] ride: resynced-mid-ride ok" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's resync mid-ride 3 did not rebuild the floor or did not show the ride as it is)"; exit 1; fi
+  # Ruling 42: the end-of-line wreck lies past the exit bridge's start (B.2): no spare took over and the riders were set down inside, the joiner
+  # seeing Wrecked and no takeover; then the test's restore at stop 4 (not a rise: the wipe-rise watch reads none of it) and the wreck there with
+  # a spare (stop 3's), from which the old steps run
+  if ! grep -q "\[net-server\] ride: wreck at the end of the line: past the exit bridge's start, no spare took over; [0-9]* hero(es) set down inside .*(ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: $(grep -m1 "\[net-server\] ride: wreck at the end of the line" "$TMP/server.log"))"; exit 1; fi
+  if ! grep -q "\[net\] ride: wreck at the end of the line: the cart showed Wrecked here and no spare took over" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner did not see the end-of-line wreck with no takeover)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: test restore at stop [0-9]* (not a rise)" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never restored the cart at the kiln's stop after the inside wreck)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: wreck: .* took over" "$TMP/server.log" || grep -q "\[net-server\] ride: wreck: .* did NOT take over" "$TMP/server.log" || ! grep -q "\[net\] ride: wreck: the cart showed Wrecked here" "$TMP/joiner.log" || ! grep -q "\[net\] ride: wreck-spare:" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the wreck at the end of the line: no spare took over, or the joiner did not see the Wrecked state and then the takeover)"; exit 1; fi
   # then the joiner rides the spare's cart into ride 3 again with its switch straight: the cart halts at the ore heap, and the joiner's
   # rendered S never passes the face (the follower's clamp at BlockedAt) nor steps back while it rolls
@@ -183,7 +193,24 @@ if [ "${RIDE:-}" = 1 ]; then
   if ! grep -q "\[net\] ride: our chaser halted .* behind the train's last body here (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s);" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's chaser never halted behind the train)"; exit 1; fi
   if ! grep -q "\[net\] ride: chaser hud \"Spare cart — after the train\"" "$TMP/joiner.log"; then echo "NET TEST: FAIL (the joiner's cart bar did not read the chaser's line while it rolled)"; exit 1; fi
   if ! grep -q "\[net\] ride: chase-done" "$TMP/joiner.log" || ! grep -q "\[net-server\] ride: chase-done: the chaser halted .* behind the train's last body (the train held at stop [0-9]*, S=[0-9.]*, 4 wagon(s))" "$TMP/server.log"; then echo "NET TEST: FAIL (no chase-done on the joiner and the server)"; exit 1; fi
-  if ! grep -q "\[net-server\] ride: chase-done: .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 5's gap)"; exit 1; fi
+  if ! grep -q "\[net-server\] ride: chase-done: .* it hopped [1-9] hole(s) in the line" "$TMP/server.log"; then echo "NET TEST: FAIL (the chaser never hopped ride 5's pit or the fallen trestle)"; exit 1; fi
+  # ride 5's lava pit (plan 15 Ruling 22): the first client throws its switch from the seat on the first frame the window offers it; the
+  # server takes the press in the seated window and the train goes round the pit; both clients show the crossing as the server's (CrossOut
+  # and CrossBack within 0.1 m); nothing runs into the pit, on any peer
+  PIT_LINE=$(grep -m1 "\[net-server\] ride: ride [0-9]*'s pit switch [a-z0-9_]* is switch:[0-9]*" "$TMP/server.log")
+  PIT_ID=$(echo "$PIT_LINE" | sed -E "s/.*pit switch ([a-z0-9_]+) is .*/\1/"); PIT_REF=$(echo "$PIT_LINE" | sed -E "s/.* is (switch:[0-9]+) .*/\1/")
+  echo "--- the pit (${PIT_ID:-none} = ${PIT_REF:-none})"; grep -h "pit switch\|round the pit\|runs into the pit\|interact ${PIT_REF:-none} from\|switch ${PIT_ID:-none} taken" "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | head -20
+  if [ -z "$PIT_LINE" ] || ! grep -q "\[net-server\] interact $PIT_REF from Rider: .* seated window yes" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never took the first client's seated press on the pit switch ${PIT_REF:-(none named)})"; exit 1; fi
+  if ! grep -q "\[net\] ride: the pit switch $PIT_ID offers \"Throw the switch\" in the seated window on its first frame here" "$TMP/client.log"; then echo "NET TEST: FAIL (the first client never pressed the pit switch on its window's first frame)"; exit 1; fi
+  PIT_TAKEN=$(grep -m1 "\[rails\] switch $PIT_ID taken at S=[0-9.]*: across from [0-9.]*, back from [0-9.]* round the pit" "$TMP/server.log")
+  if [ -z "$PIT_TAKEN" ] || ! grep -q "\[net-server\] ride: across round the pit .* (ok)$" "$TMP/server.log"; then echo "NET TEST: FAIL (the server's train did not take the pit switch round the pit: $(grep -m1 "\[net-server\] ride: across round the pit" "$TMP/server.log"))"; exit 1; fi
+  PIT_OUT=$(echo "$PIT_TAKEN" | sed -E "s/.*across from ([0-9.]+), back from ([0-9.]+).*/\1/"); PIT_BACK=$(echo "$PIT_TAKEN" | sed -E "s/.*across from ([0-9.]+), back from ([0-9.]+).*/\2/")
+  for f in client joiner; do
+    ACROSS=$(grep -m1 "\[net\] ride: across round the pit here (CrossOut [0-9.]*, CrossBack [0-9.]*)" "$TMP/$f.log" 2>/dev/null)
+    A=$(echo "$ACROSS" | sed -E "s/.*CrossOut ([0-9.]+), CrossBack ([0-9.]+).*/\1/"); B=$(echo "$ACROSS" | sed -E "s/.*CrossOut ([0-9.]+), CrossBack ([0-9.]+).*/\2/")
+    if [ -z "$ACROSS" ] || ! awk -v a="$A" -v b="$B" -v x="$PIT_OUT" -v y="$PIT_BACK" 'BEGIN { d1 = a - x; d2 = b - y; if (d1 < 0) d1 = -d1; if (d2 < 0) d2 = -d2; exit !(d1 <= 0.1 && d2 <= 0.1) }'; then echo "NET TEST: FAIL (the $f did not show the crossing round the pit as the server's (across from $PIT_OUT, back from $PIT_BACK): ${ACROSS:-no line})"; exit 1; fi
+  done
+  if grep -q "runs into the pit\|The cart runs into the lava pit" "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null; then echo "NET TEST: FAIL (a train ran into the pit: $(grep -h -m1 "runs into the pit\|The cart runs into the lava pit" "$TMP/server.log" "$TMP/client.log" "$TMP/joiner.log" 2>/dev/null | head -1))"; exit 1; fi
   grep -q "\[net-server\] ride: relief carts sent online: 0" "$TMP/server.log" || { echo "NET TEST: FAIL (a relief cart was sent online)"; exit 1; }
   if ! grep -q "\[net\] ride: .*the joiner's chaser came and went" "$TMP/client.log"; then echo "NET TEST: FAIL (the first client never saw the joiner's chaser come and go)"; exit 1; fi
   if ! grep -q "\[net-server\] ride: floor 12 built with" "$TMP/server.log"; then echo "NET TEST: FAIL (the server never built floor 12's rides)"; exit 1; fi

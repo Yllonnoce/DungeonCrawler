@@ -35,6 +35,8 @@ public partial class RailEncounterController
         public bool BarkedLast;
         /// <summary>A switch back with the broken bridge 12-40 m past it (<see cref="SwitchBackRules.LiveBack"/>): a player's deadly lever.</summary>
         public bool Live;
+        /// <summary>A switch_out with the ride's lava pit 7-40 m past its points (<see cref="PitRules.Deadly"/>, plan 15): a human's deadly lever, called twice, taken round the pit with no able human aboard.</summary>
+        public bool PitDeadly;
         /// <summary>A wreck or a load undid the ride: the heap or the barricade stands again at the next arming (a broken valve stays broken for the floor).</summary>
         public bool Rebuild;
         /// <summary>The barricade went down while its ride was armed (or was cut): it stays down until the ride is undone (Ruling 5).</summary>
@@ -200,6 +202,7 @@ public partial class RailEncounterController
         if (GetParent() is not Node3D root || _rails.StopS.Length < 2) return;
         BuildBreak(root); // first: a later piece (a live switch back) reads the gap
         BuildExitBridge(root); // before the pieces: the spur's lever reads the bridge (Ruling 43)
+        ReadPit(root); // before the pieces: a deadly switch_out reads the pit (plan 15 Task 4, Ruling 17)
         var gaps = new List<(float from, float to)>();
         for (var index = 0; index < _setPieces.Count; index++)
         {
@@ -263,6 +266,9 @@ public partial class RailEncounterController
                 case "leap":
                     node = BuildLeap(root, piece); // the stretch and the drop's S from the layout's cavern: a marker, live or dead
                     break;
+                case "pit":
+                    node = BuildPit(root, piece); // the layout's pit, read and cut before the pieces: its plan entry (the order and the dressing)
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;
@@ -271,6 +277,7 @@ public partial class RailEncounterController
         if (DebugFixedBackFor(root) is { } extra) _pieces.Add(extra);
         CutGaps(gaps);
         GuardBreak(); // last: it reads the ride's switches
+        GuardPit(); // and the pit's, after the break's
     }
 
     /// <summary>
@@ -317,6 +324,7 @@ public partial class RailEncounterController
                     if (SetPieceRules.BeamPasses(rolling, piece.Fired, _rails.Party.FrontS, piece.S)) { piece.Fired = true; DuckUnder(party, piece); }
                     break;
                 case "switch_out":
+                    TickPitCalls(piece, party); // the pit's deadly switch: called early and last while straight (plan 15 Task 4)
                     if (rolling && !piece.Fired) FreeAtTheCrossing(piece); // Ruling 19: no slag cart sits where the train crosses
                     if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) TakeSwitch(piece);
                     break;

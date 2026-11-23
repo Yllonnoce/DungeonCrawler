@@ -197,6 +197,7 @@ public partial class DebugTools
             }
         }
 
+        ThrowPitOnTheWay(main, rc, "crew"); // ride 5's lava pit: the seated lead throws its switch from the seat on the way (plan 15 Ruling 21)
         if (_crewSection2) { RunCrewWreck(main, layout, rc, Fail); return; }
         var cages = ctrl.Cages;
         var lead = party.Local;

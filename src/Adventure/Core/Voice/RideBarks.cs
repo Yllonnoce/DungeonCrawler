@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop, a boarder alone with the prisoners in a wagon) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop, a boarder alone with the prisoners in a wagon, the lava pit's switch early and at the last moment) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,7 +11,7 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, the cavern's three (the bridge going, a brake on it, the slag line's drop), and a boarder alone with the prisoners (plan 14: never naming the wagon, the log does).</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, the cavern's three (the bridge going, a brake on it, the slag line's drop), and a boarder alone with the prisoners (plan 14: never naming the wagon, the log does), and the lava pit's switch early and at the last moment (plan 15: never naming the switch's place).</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
@@ -19,6 +19,7 @@ public static class RideBarks
         BarkTrigger.SplitWait, BarkTrigger.SplitNotYet, BarkTrigger.SplitNow,
         BarkTrigger.BridgeGoing, BarkTrigger.BridgeBrake, BarkTrigger.SlagDrop,
         BarkTrigger.BoarderThrow,
+        BarkTrigger.PitSwitch, BarkTrigger.PitSwitchNow,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -265,5 +266,27 @@ public static class RideBarks
             Ranger: new[] { "Crew. Hound.", "Get back there." },
             Mage: new[] { "The hound is at the prisoners!", "Get back to the crew!" },
             Generic: new[] { "It's at the prisoners!", "Get back to the crew!", "It'll throw them off!" }),
+
+        [BarkTrigger.PitSwitch] = new Bank(
+            Brand: new[] { "Lava on our line! Throw the switch!", "The track ends in fire! Switch us over!", "Pit of lava! Pull that lever!" },
+            Sable: new[] { "Lava on the line, darling! The switch!", "That's a pit of fire, loves! Throw it!", "Switch us over, love, unless you like it hot!" },
+            Wren: new[] { "Lava. Throw the switch.", "Pit on our line. Lever.", "Fire ahead. Switch over." },
+            Ilex: new[] { "Molten rock on our line! Throw the switch!", "The rails end in lava! The lever, please!", "A pit of fire! Switch us round it!" },
+            Warrior: new[] { "Lava pit! Throw the switch!", "Pull the lever!" },
+            Rogue: new[] { "Lava on the line! Switch!", "Lever! Get us round it!" },
+            Ranger: new[] { "Lava. Switch.", "Lever. Now." },
+            Mage: new[] { "A lava pit! The lever!", "Switch us round the fire!" },
+            Generic: new[] { "Lava pit on the line — throw the switch!", "Lava on our line!", "Throw the switch!" }),
+
+        [BarkTrigger.PitSwitchNow] = new Bank(
+            Brand: new[] { "Throw it! Now!", "The lever, now!", "Pull it now, or we burn!" },
+            Sable: new[] { "Now, darling! Throw it!", "The lever, love, NOW!", "Pull it now, loves!" },
+            Wren: new[] { "Throw it. Now.", "Lever. Now.", "Now." },
+            Ilex: new[] { "Throw it this instant!", "The lever! Now, now!", "Now, or we are cinders!" },
+            Warrior: new[] { "Throw it! Now!", "Lever, now!" },
+            Rogue: new[] { "Now! Throw it!", "Pull it! Now!" },
+            Ranger: new[] { "Now.", "Throw it." },
+            Mage: new[] { "Now! The lever!", "Throw it, now!" },
+            Generic: new[] { "Throw it — now!", "Now! The lever!", "Pull it now!" }),
     };
 }

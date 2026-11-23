@@ -136,7 +136,7 @@ public partial class RailController
     }
 
     /// <summary>
-    /// Right after a step: the front reached the lip. Fast enough, the cart flies (the arc poses it); too slow, it drops in and
+    /// Right after a step: the front reached the lip on its own lane (<see cref="SetPieceRules.JudgesJump"/>: met across, it is passed). Fast enough, the cart flies (the arc poses it); too slow, it drops in and
     /// the plating goes (the caller drops it in: <see cref="DropIn"/>, a wreck or, over a crevasse, a fall). The landing shakes the riders. True when it dropped in. The cart's sound hears the leap and the landing (<see cref="Airborne"/>); a drop in ends in the wreck's cue.
     /// </summary>
     private bool JudgeJump()
@@ -154,6 +154,12 @@ public partial class RailController
             return false;
         }
         if (Party.FrontS < _gapFrom) return false;
+        if (!SetPieceRules.JudgesJump(GapSet, _jumpJudged, Party.FrontS, _gapFrom, LaneBlendAt(_gapFrom)))
+        {
+            _jumpJudged = true; // met across (plan 15, B.4's lane check): passed on the other lane, never judged, and never judged later at a lip behind the cart
+            GD.Print($"[rails] the cart passes the gap {_gapFrom:0.0}-{_gapTo:0.0} across on the other lane (blend {LaneBlendAt(_gapFrom):0.00} at its lip): not judged");
+            return false;
+        }
         _jumpJudged = true;
         if (SetPieceRules.JumpMade(State.V))
         {

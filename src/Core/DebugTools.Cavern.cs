@@ -9,7 +9,7 @@ namespace DungeonCrawler.Core;
 
 // ---- --test-cavern[=bridge|brake|stall|runaway] (plan 13, Task 3) ---------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears. The build: r4_bridge is live over the cavern's
-// party deck (party S 903.1..991.1, 22 cells), the party track bare over its span and r5_jump's gap ("[cavern] party track bare over: ..."),
+// party deck (party S 903.1..991.1, 22 cells), the party track bare over its span and ride 5's lava pit, PitS..PitFarS ("[cavern] party track bare over: ..."),
 // and its rails meet the track's at both lips within 1 mm ("[cavern] join: ..."). The cart is restored at stop 3 (rc.Restore(3)), everyone
 // boards and the cart departs on ride 4; ride 4's runaway is held (enc.DebugHoldRunaway(4)) except in =runaway. Every variant: nobody falls
 // but the train's riders. =bridge (the default): nobody presses anything; the bridge's call comes with the collapse's start, 1.5 s or more
@@ -338,8 +338,8 @@ public partial class DebugTools
         var gaps = track.Gaps.OrderBy(g => g.from).ToList();
         GD.Print($"[cavern] party track bare over: {string.Join(", ", gaps.Select(g => $"{g.from:0.0}..{g.to:0.0}"))}");
         if (!gaps.Any(g => g.from == enc.BridgeFromS && g.to == enc.BridgeToS)) return "the party track is not bare over the bridge's span";
-        var jump = enc.SetPieceNode("r5_jump") is RailGap gap ? gap : null;
-        if (jump == null || !gaps.Any(g => Mathf.Abs(g.from - jump.From) < 0.01f && Mathf.Abs(g.to - jump.To) < 0.01f)) return "the party track is not bare over r5_jump's gap";
+        // plan 15 Task 4 (B.10): bare over ride 5's lava pit, where r5_jump's gap was
+        if (float.IsNaN(enc.PitS) || !gaps.Any(g => Mathf.Abs(g.from - enc.PitS) < 0.01f && Mathf.Abs(g.to - enc.PitFarS) < 0.01f)) return $"the party track is not bare over the pit ({enc.PitS:0.0}..{enc.PitFarS:0.0})";
         // plan 15 (spec B.10): the exit bridge's track is laid (no gap over it) with no gravel
         if (float.IsNaN(enc.ExitFromS)) return "no exit bridge on floor 12";
         if (gaps.FirstOrDefault(g => g.from < enc.ExitToS && g.to > enc.ExitFromS) is var over && over != default) return $"a gap {over.from:0.0}..{over.to:0.0} overlaps the exit bridge {enc.ExitFromS:0.0}..{enc.ExitToS:0.0}";

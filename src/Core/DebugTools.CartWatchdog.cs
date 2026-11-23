@@ -9,16 +9,18 @@ namespace DungeonCrawler.Core;
 // ride 1 the cart is caught (a test hook: it rolls and goes nowhere) while the human holds the brake for 15 s, and nothing frees it;
 // the brake let go, it grinds free to stop 1 as an arrival 10 s later (the brake closed the window: a fresh one opens at the let-go).
 // The window re-anchors at each half-metre of progress: a caught cart is freed 10 s after it last moved. Then from the kiln's stop (the
-// test's shortcut, rc.Restore(LastRideStop): stop 4 on the shipped floor) on the kiln's ride it is caught short of the jump gap:
-// the watchdog sets it at the gap's near lip at the jump's speed, and the jump is judged (the cart leaps it), never carried across.
+// test's shortcut, rc.Restore(LastRideStop): stop 4 on the shipped floor) on the kiln's ride it is caught with its front 25 m before the
+// lava pit switch's lever (plan 15 Task 4): the watchdog sets it at the switch's seated window's start, still rolling, never carried past
+// the pit; the lead throws the switch from the seat (ThrowPitOnTheWay), and the train goes round the pit, comes home past its far edge
+// and arrives at the last stop with no fall.
 // Prints [watchdog] lines and a RESULT.
 public partial class DebugTools
 {
     private bool _testCartWatchdog;
     private int _wdStep;
     private float _wdClock;
-    private int _wdFreedBefore;
-    private bool _wdLeapt;
+    private int _wdFreedBefore, _wdFallsBefore;
+    private bool _wdAcross, _wdHome;
 
     /// <summary>The cart's brake is held this long while it is caught: a player who stops the cart on purpose is not stuck.</summary>
     const float WatchdogBrakeSeconds = 15f;
@@ -74,7 +76,7 @@ public partial class DebugTools
                 _wdStep++; _wdClock = 0f;
                 break;
             case 4 when _wdClock >= 1f:
-                // the kiln's ride: from its stop (the test's shortcut over the rides between), caught short of the jump gap
+                // the kiln's ride: from its stop (the test's shortcut over the rides between), caught short of the pit switch's window
                 if (party.Local is { } me && me.Seated) me.Teleport(me.GlobalPosition);
                 rc.Restore(Shape(rc).LastRideStop);
                 _wdStep++; _wdClock = 0f;
@@ -85,37 +87,55 @@ public partial class DebugTools
                 break;
             case 6:
             {
+                // the kiln's ride: caught with the front 25 m before the pit switch's lever (plan 15 Task 4, B.10)
                 var shape = Shape(rc);
-                if (rc.State.Mode == CartMode.Rolling && rc.StopIndex == shape.LastRideStop && rc.State.S >= rc.StopS[shape.LastRideStop] + 5f)
+                if (RailEncounterController.Instance is not { PitSwitch: { } lever } enc || enc.PitRide != shape.LastRide) { Fail($"ride {shape.LastRide} has no pit switch"); return; }
+                if (rc.State.Mode == CartMode.Rolling && rc.StopIndex == shape.LastRideStop && rc.Party.FrontS >= lever.LeverS - 25f)
                 {
-                    if (float.IsNaN(rc.GapFrom) || rc.GapFrom > rc.StopS[shape.Rides]) { Fail($"ride {shape.LastRide} has no gap before stop {shape.Rides} (gap from {rc.GapFrom:0.0})"); return; }
                     rc.DebugStall = true;
                     _wdFreedBefore = rc.GroundFree;
-                    GD.Print($"[watchdog] 4 caught on ride {shape.LastRide} at S={rc.State.S:0.0}, the gap's lip at {rc.GapFrom:0.0}, stop {shape.Rides} at {rc.StopS[shape.Rides]:0.0}");
+                    _wdFallsBefore = rc.Falls;
+                    GD.Print($"[watchdog] 4 caught on ride {shape.LastRide} at front S={rc.Party.FrontS:0.0}, {lever.LeverS - rc.Party.FrontS:0.0} m before the pit switch's lever ({lever.LeverS:0.0}; its window opens at {lever.LeverS - SeatedSwitchRules.WindowAhead:0.0}, the lip at {enc.PitS:0.0}), stop {shape.Rides} at {rc.StopS[shape.Rides]:0.0}");
                     _wdStep++; _wdClock = 0f;
                 }
                 else if (_wdClock > 20f) Fail($"the cart did not leave stop {shape.LastRideStop} (mode {rc.State.Mode}, stop {rc.StopIndex}, S={rc.State.S:0.0})");
                 break;
             }
             case 7:
+            {
                 if (rc.GroundFree == _wdFreedBefore)
                 {
                     if (_wdClock > CartWatchdog.WindowSeconds + 2f) Fail($"the caught cart was not freed on ride {Shape(rc).LastRide} after {_wdClock:0.0} s (mode {rc.State.Mode}, S={rc.State.S:0.0}, V={rc.State.V:0.00}, halted {rc.Halted}, stop {rc.StopIndex}, seated [{string.Join(", ", party.Adventurers.Where(a => IsInstanceValid(a) && a.Seated).Select(a => $"{a.State.Name}:{a.Control}"))}])");
                     break;
                 }
-                _wdLeapt = rc.Jumped;
-                GD.Print($"[watchdog] 5 ground free {_wdClock:0.0} s after it was caught: S={rc.State.S:0.0} (front {rc.Party.FrontS:0.0}, lip {rc.GapFrom:0.0}), {rc.State.Mode}, the jump judged: leapt={rc.Jumped} at {rc.JumpSpeed:0.00} m/s, stop {rc.StopIndex}");
-                if (!_wdLeapt || rc.State.Mode != CartMode.Rolling || rc.StopIndex != Shape(rc).LastRideStop) { Fail("the freed cart did not leap the gap from its lip"); return; }
-                if (rc.Party.FrontS < rc.GapFrom || rc.Party.FrontS > rc.GapFrom + 0.5f) { Fail("the freed cart was not set at the gap's near lip"); return; }
+                if (RailEncounterController.Instance is not { PitSwitch: { } lever }) { Fail("no pit switch"); return; }
+                var windowStart = lever.LeverS - SeatedSwitchRules.WindowAhead;
+                GD.Print($"[watchdog] 5 ground free {_wdClock:0.0} s after it was caught: front S={rc.Party.FrontS:0.0} (the pit switch's window starts at {windowStart:0.0}), {rc.State.Mode}, stop {rc.StopIndex}; the lever {(lever.Thrown ? "thrown" : "straight")}, taken {lever.Taken}");
+                if (rc.State.Mode != CartMode.Rolling || rc.StopIndex != Shape(rc).LastRideStop) { Fail("the freed train is not still rolling on the kiln's ride"); return; }
+                if (rc.Party.FrontS < windowStart - 0.05f || rc.Party.FrontS > windowStart + 0.5f || lever.Taken || lever.Thrown) { Fail($"the freed train was not set at the pit switch's window start {windowStart:0.0} with its lever straight"); return; }
                 _wdStep++; _wdClock = 0f;
                 break;
+            }
             case 8:
-                if (rc.State.Mode == CartMode.Wrecked) { Fail("the cart was wrecked after the watchdog's jump"); return; }
-                if (rc.State.S < rc.GapTo + CartRules.HalfLength) { if (_wdClock > 6f) Fail($"the cart did not clear the gap (S={rc.State.S:0.0}, far lip {rc.GapTo:0.0})"); break; }
-                GD.Print($"[watchdog] RESULT ok: braked 15 s while caught and nothing freed it; let go, it ground free to stop 1 as an arrival; caught on ride {Shape(rc).LastRide} it was set at the gap's lip at {SetPieceRules.JumpSpeed:0.0} m/s and leapt it (S={rc.State.S:0.0} past the far lip {rc.GapTo:0.0}); ground free {rc.GroundFree} time(s)");
+            {
+                if (RailEncounterController.Instance is not { PitSwitch: { } lever } enc || enc.SetPieceNode(Kiln(rc, "switch_back")) is not TrackSwitch back) { Fail("no pit switch"); return; }
+                ThrowPitOnTheWay(main, rc, "watchdog"); // the lead throws it from the seat as its window offers it
+                if (rc.State.Mode == CartMode.Wrecked || rc.Falls != _wdFallsBefore) { Fail($"the train was wrecked or fell after the watchdog set it at the window (falls {rc.Falls - _wdFallsBefore})"); return; }
+                if (rc.Crossing) _wdAcross = true;
+                if (rc.Crossing && !_wdHome && rc.Party.FrontS >= back.PointsS + RailController.SwitchStretch + CartRules.HalfLength + 1f)
+                {
+                    if (rc.LaneBlend > 0.01f) { Fail($"the train is not home on its own lane past the far edge (blend {rc.LaneBlend:0.000} at front S={rc.Party.FrontS:0.0})"); return; }
+                    _wdHome = true;
+                    GD.Print($"[watchdog] 6 home on its own lane at front S={rc.Party.FrontS:0.0}, past the pit's far edge {enc.PitFarS:0.0} (across from {rc.CrossOutS:0.0}, back from {rc.CrossBackS:0.0})");
+                }
+                var shape = Shape(rc);
+                if (rc.State.Mode != CartMode.Held || rc.StopIndex != shape.Rides) { if (_wdClock > 90f) Fail($"the train did not arrive at stop {shape.Rides} (mode {rc.State.Mode}, stop {rc.StopIndex}, front S={rc.Party.FrontS:0.0})"); break; }
+                if (!_wdAcross || !_wdHome || float.IsNaN(_pitThrownFront)) { Fail($"the train arrived without the lead's throw ({_pitThrownFront:0.0}), the crossing ({_wdAcross}) or the home check ({_wdHome})"); return; }
+                GD.Print($"[watchdog] RESULT ok: braked 15 s while caught and nothing freed it; let go, it ground free to stop 1 as an arrival; caught on ride {shape.LastRide} 25 m before the pit switch's lever it was set at the window's start still rolling, the lead threw the pit switch from the seat (front S={_pitThrownFront:0.0}), the train went round the pit and came home past its far edge ({enc.PitFarS:0.0}) with no fall and arrived at stop {shape.Rides}; ground free {rc.GroundFree} time(s)");
                 _done = true;
                 GetTree().Quit(0);
                 break;
+            }
         }
     }
 }

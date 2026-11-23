@@ -219,6 +219,24 @@ public static class SetPieceRules
 
     public static bool JumpMade(float v) => v >= JumpSpeed;
 
+    /// <summary>
+    /// A gap's jump is judged now (plan 15, spec B.4's lane check): a gap waits unjudged (<paramref name="gapSet"/>, not <paramref name="judged"/>),
+    /// the front reached its lip (<paramref name="gapFrom"/>) and the train meets it on its own lane there (<paramref name="blendAtLip"/> under 0.5).
+    /// A lip the train meets across is passed, never judged.
+    /// </summary>
+    public static bool JudgesJump(bool gapSet, bool judged, float front, float gapFrom, float blendAtLip)
+        => gapSet && !judged && front >= gapFrom && blendAtLip < 0.5f; // NaN compares false
+
+    /// <summary>The traffic runaway wagon halts this far short of the next stop, or of the pit's lip when the pit lies before it.</summary>
+    public const float RunawayShort = 3f;
+
+    /// <summary>
+    /// Where the traffic runaway wagon halts (party S): <see cref="RunawayShort"/> short of the next stop (<paramref name="nextStopS"/>), or of the
+    /// pit's lip (<paramref name="pitLipS"/>, NaN: no pit between the held stop and the next) when that comes first (spec B.3).
+    /// </summary>
+    public static float RunawayEnd(float nextStopS, float pitLipS)
+        => !float.IsNaN(pitLipS) && pitLipS < nextStopS ? pitLipS - RunawayShort : nextStopS - RunawayShort;
+
     /// <summary>A parabola over u in [0, gapLength], zero at both ends, apex 0.12 × gapLength × v / JumpSpeed.</summary>
     public static float ArcHeight(float u, float gapLength, float v)
     {

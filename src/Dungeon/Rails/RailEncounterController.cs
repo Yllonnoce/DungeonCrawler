@@ -350,6 +350,7 @@ public partial class RailEncounterController : Node
         var dt = (float)delta;
         StartReached();
         TickBreak(); // the train still on the slag line at the broken bridge falls
+        TickPit(); // the train on its own lane at the lava pit's lip falls (plan 15 Task 4)
         TickSetPieces(Main.Instance.Party, dt);
         TickGolem(dt);
         TickLeaps(dt); // boarders outlive the slag cart that threw them
@@ -485,10 +486,11 @@ public partial class RailEncounterController : Node
         Warn(run, carrier, warned, true, party, carrier);
     }
 
-    /// <summary>The party line's holes a chaser hops (it judges no set piece, but never floats over a pit): every jump's gap, every fallen trestle and the collapsing bridge's gone cells, From..To. <paramref name="into"/> is cleared first; no allocation.</summary>
+    /// <summary>The party line's holes a chaser hops (it judges no set piece, but never floats over a pit): every jump's gap, ride 5's lava pit, every fallen trestle and the collapsing bridge's gone cells, From..To. <paramref name="into"/> is cleared first; no allocation.</summary>
     internal void CollectPartyLaneHoles(List<(float From, float To)> into)
     {
         into.Clear();
+        if (!float.IsNaN(PitS)) into.Add((PitS, PitFarS)); // plan 15 Task 4: hopped as a hole (SpareRules.HopPast), as the jump was
         foreach (var p in _pieces)
         {
             if (p.Gap is { } gap && IsInstanceValid(gap)) into.Add((gap.From, gap.To));

@@ -710,7 +710,7 @@
           "Elite": null
         }
       ],
-      "At": 0.2749,
+      "At": 0.3561,
       "Offset": -8,
       "Line": null
     }
@@ -774,7 +774,7 @@
       "Id": "r5_hammers",
       "Ride": 5,
       "Kind": "hammers",
-      "At": 0.2
+      "At": 0.6429
     },
     {
       "Id": "r5_pour",
@@ -789,10 +789,10 @@
       "At": 0.565
     },
     {
-      "Id": "r5_jump",
+      "Id": "r5_pit",
       "Ride": 5,
-      "Kind": "jump",
-      "At": 0.65
+      "Kind": "pit",
+      "At": 0.2457
     },
     {
       "Id": "r5_spur",
@@ -841,6 +841,18 @@
       "Ride": 4,
       "Kind": "leap",
       "At": 0.5664
+    },
+    {
+      "Id": "r5_switch_out",
+      "Ride": 5,
+      "Kind": "switch_out",
+      "At": 0.2075
+    },
+    {
+      "Id": "r5_switch_back",
+      "Ride": 5,
+      "Kind": "switch_back",
+      "At": 0.2696
     }
   ],
   "Crew": [

@@ -10,7 +10,7 @@ namespace DungeonCrawler.Core;
 
 // ---- --test-island=bridge|wreck (plan 15, Task 3) -------------------------------------------------------------------------------------
 // =bridge: rc.Restore(Shape(rc).LastRideStop), everyone boards (a companion moved to W1 at the departure), and the last ride is ridden (the
-// jump made by the game's own pumping, until Task 4 cuts the pit). As the train rolls, a crew member (stop 1's cage's) is put on foot 40 m
+// lava pit's switch thrown from the seat on the way: ThrowPitOnTheWay, plan 15 Task 4). As the train rolls, a crew member (stop 1's cage's) is put on foot 40 m
 // behind the cart, following (ctrl.DebugPutOnFoot). Before the bridge, rolling, the lead looking back is offered a move (the control).
 // The hold: on every frame any car is over the exit bridge the lead's own cart prompt is "" (pre-flight F6: rc.Cart.Prompt, not the look,
 // which shows the spur's lever), MoveOfferFor is null for every hero; once, a forced Get out (cart and W1) does nothing and a forced Move is
@@ -23,7 +23,7 @@ namespace DungeonCrawler.Core;
 // (a companion in W1) and ridden: on every frame with the cart's back past the far edge and the last wagon's back short of it (judged from
 // the bodies) the train still holds, a round of presses is refused there, and the train arrives at the last stop.
 // =wreck (Review Focus 3): rc.Restore(Shape(rc).LastRideStop) with stop 1's crew in W1 and stop 2's in W2 (ctrl.DebugSeatCrew) and the spares
-// left; the cart is wrecked (rc.DebugWreck) as its front passes ExitFromS + 0.5. Within 1 s: no spare took over, the stop is the last,
+// left; the lava pit's switch thrown from the seat on the way (ThrowPitOnTheWay); the cart is wrecked (rc.DebugWreck) as its front passes ExitFromS + 0.5. Within 1 s: no spare took over, the stop is the last,
 // LastWreckInside, the cart and every party wagon hidden and not solid, every hero and crew member who rode on an island cell that may take
 // a body; 3 s later none fallen and still there. Then a save and a load give the cart Held at the last stop.
 public partial class DebugTools
@@ -46,6 +46,7 @@ public partial class DebugTools
     {
         var shape = Shape(rc);
         if (_isStep < 6 && rc.State.Mode == CartMode.Rolling) rc.DebugSetPlating(CartRules.MaxPlating); // the flow owns the plating: the kiln's hazards do not end the ride
+        ThrowPitOnTheWay(main, rc, "island"); // round the lava pit on both rides (plan 15 Ruling 21)
         if (party.Active.FirstOrDefault(a => a.State.Fallen) is { } fell) { Fail($"{fell.State.Name} fell at step {_isStep} at {DungeonBuilder.WorldToCell(fell.GlobalPosition)}"); return; }
         if (_isOnFoot is { } walker && IsInstanceValid(walker) && !walker.Seated && _isStep is >= 2 and < 6)
         {
@@ -247,6 +248,7 @@ public partial class DebugTools
     {
         var shape = Shape(rc);
         if (_isStep < 3 && rc.State.Mode == CartMode.Rolling) rc.DebugSetPlating(CartRules.MaxPlating);
+        ThrowPitOnTheWay(main, rc, "island"); // round the lava pit (plan 15 Ruling 21)
         if (party.Active.FirstOrDefault(a => a.State.Fallen) is { } fell) { Fail($"{fell.State.Name} fell at step {_isStep} at {DungeonBuilder.WorldToCell(fell.GlobalPosition)}"); return; }
         switch (_isStep)
         {

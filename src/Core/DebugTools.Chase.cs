@@ -21,14 +21,17 @@ namespace DungeonCrawler.Core;
 // reaches the golem's At (never short of it by more than 1 m), diverted at the spur by a lever debug-thrown ahead on ride 2
 // (every arrival before the kiln leaves it thrown) that the seated lead sets back and throws again from the seat as the
 // kiln's seated window offers it (no aim, two presses through the dispatch E uses, a mash between them ignored by the
-// re-press guard), the jump made with two pumping and the buffer smashed into the last stop; the crew home and the stairs
+// re-press guard), the lava pit's switch thrown from the seat as its window offers it (ThrowPitOnTheWay: the train goes round the pit,
+// "[chase] 4 … the pit switch thrown at front S=…, across from …, home by …, no fall", its warning the PitSwitch call, its hit the round
+// line) and the buffer smashed into the last stop; the crew home and the stairs
 // open. Section 2 builds the floor again: ride 1 departs (its thrower a full enemy, the floor's first), a save mid-ride 1
 // is loaded and ride 1 departs again (the thrower given back a reinforcement: the save keeps that it was sent); ride 3 with
 // the switch left straight (the heap halts the cart, a hero breaks it with real swings, the ride resumes), on to the kiln's
 // stop, then the kiln crawled under a hammer and the pour so each hits, the golem killed, the valve broken, a save and a load
 // mid-ride, a stunned cinder under a hammer hurt with no ride armed, and the kiln again from its stop (no golem, the valve
-// still broken) with every cage open, W1..W4 coupled from stop 0 and the pumpers capped at one: the jump is still made (JumpSpeed
-// with one pumper, the load counting three wagons at most, the lip's slope and all). Plan 14: the train's four open wagons are
+// still broken) with every cage open, W1..W4 coupled from stop 0 and the pumpers capped at one: the pit thrown, no fall, the last stop
+// (plan 15 Task 4: the jump is gone from floor 12). Both sections print r5_hounds' landing margins before the golem's burst as they ride,
+// with the pumped estimate beside them. Plan 14: the train's four open wagons are
 // coupled from the landing (the floor check reads W1..W4 coupled and empty at stop 0); the kiln stop's crew are seated at the landing
 // by the test's hook (DebugSeatCrew), so ride 1 runs with a crewed W1 and r1_beam must clear every seated head in the train by 0.05 m
 // ([chase] 1 beam); every other cage the party opens at its stop lets its crew out, they walk to the first empty seats and each
@@ -49,7 +52,7 @@ public partial class DebugTools
 {
     private bool _testChase;
     /// <summary>
-    /// The most companions that may pump the cart at once while --test-chase sets it (its one-pumper jump pass); null, always
+    /// The most companions that may pump the cart at once while a flow sets it (--test-chase's one-pumper kiln, the boarders' unpumped rides); null, always
     /// outside that pass, leaves the game's own rule (two). Debug only: nothing else sets it.
     /// </summary>
     public int? PumperCap { get; private set; }
@@ -107,7 +110,7 @@ public partial class DebugTools
     /// <summary>A hound that boards a wagon on ride 2 must be struck by a companion within this long.</summary>
     private const float ChaseBoarderAnswer = 6f;
     private bool _chSpurEarly;
-    // section 2: the thrower sent once, a save mid-ride 1 and the thrower given back by the load (9); the one-pumper jump (10)
+    // section 2: the thrower sent once, a save mid-ride 1 and the thrower given back by the load (9); the one-pumper kiln (10)
     private int _chThrowerPhase;
     private readonly List<(Enemies.Enemy Thrower, bool Reinforcement)> _chThrowersSeen = new();
     private int _chThrowersBefore;
@@ -121,7 +124,11 @@ public partial class DebugTools
     private bool _chBackThrown;
     private int _chRams0, _chRamsSeen;
     // the kiln's ride
-    private bool _chDiverted, _chOnSpur, _chJumped, _chBuffer;
+    private bool _chDiverted, _chOnSpur, _chBuffer;
+    /// <summary>The kiln's lava pit (plan 15 Task 4): the round line logged, where the train crossed out and came home (front S, NaN before), the falls at the departure.</summary>
+    private bool _chPitRound;
+    private float _chPitAcross = float.NaN, _chPitHome = float.NaN;
+    private int _chPitFalls;
     /// <summary>The party cart's S as the kiln's golem spawned (its burst), NaN before.</summary>
     private float _chGolemSpawnS = float.NaN;
     /// <summary>Section 1's seated presses on the kiln's spur lever (0: none, 1: set back, 2: thrown again), and the first mismatch they met.</summary>
@@ -129,8 +136,7 @@ public partial class DebugTools
     private string? _chSeatSpurFail;
     /// <summary>When (this machine's clock) the first seated press went: the second waits out the re-press guard (<see cref="SeatedSwitchRules.RepressGuardSeconds"/>).</summary>
     private double _chSeatSpurAt;
-    private int _chPumpers = -1, _chSlams;
-    private float _chJumpV;
+    private int _chSlams;
     // traffic
     private Adventurer? _chLaneHero, _chPocketHero;
     private Vector3 _chLaneAt, _chPocketAt;
@@ -148,7 +154,7 @@ public partial class DebugTools
     private readonly HashSet<int> _chGlowOpen = new();
     private bool _chPourOpen;
 
-    private static readonly string[] ChaseHazards = { "bell", "heap", "hammer", "pour", "golem", "jump", "barricade" };
+    private static readonly string[] ChaseHazards = { "bell", "heap", "hammer", "pour", "golem", "pit", "barricade" };
 
     private static ulong ChaseMinGap => (ulong)Mathf.CeilToInt(1.5f * Engine.PhysicsTicksPerSecond);
     private static double ChaseSeconds(ulong frames) => frames / (double)Engine.PhysicsTicksPerSecond;
@@ -205,6 +211,7 @@ public partial class DebugTools
             else if (!_chSection2 && !e.Untargetable && HoldsAStop(main, layout, e)) e.SetUntargetable(true);
         }
         ChaseTrackRides(rc, enc, party);
+        ChasePit(main, rc, enc);
         if (_chTrafficOn) ChaseHoldTraffic(enc);
 
         if (_chSection2) { RunChaseSection2(main, layout, root, rc, enc, ctrl, Fail); return; }
@@ -478,11 +485,11 @@ public partial class DebugTools
                 if (!ChaseHeldAt(rc, shape.Rides, Fail)) break;
                 var buffer = enc.SetPieceNode(Kiln(rc, "buffer")) as BufferStop;
                 var golem = enc.GolemBody;
-                GD.Print($"[chase] 4 ride {shape.LastRide} done, held at stop {shape.Rides} (the end of the line): golem took the spur={_chOnSpur} off the spur={_chDiverted} ({(golem == null ? "gone" : $"alive={golem.IsAlive} hp {golem.Hp:0}/{golem.MaxHp:0}")}), slams={_chSlams}; jump made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping; buffer smashed={buffer?.Smashed} (cue={_chBuffer}); plating={rc.State.Plating:0}");
+                GD.Print($"[chase] 4 ride {shape.LastRide} done, held at stop {shape.Rides} (the end of the line): golem took the spur={_chOnSpur} off the spur={_chDiverted} ({(golem == null ? "gone" : $"alive={golem.IsAlive} hp {golem.Hp:0}/{golem.MaxHp:0}")}), slams={_chSlams}; buffer smashed={buffer?.Smashed} (cue={_chBuffer}); plating={rc.State.Plating:0}");
+                if (ChasePitReport("4", rc, enc) is { } pitBad) { Fail(pitBad); return; }
                 if (_chSeatSpurFail != null) { Fail(_chSeatSpurFail); return; }
                 if (_chSeatSpur != 2) { Fail($"the seated window did not set ride {shape.LastRide}'s spur lever back and throw it again (presses {_chSeatSpur})"); return; }
                 if (!_chDiverted) { Fail("the golem was not diverted at the spur"); return; }
-                if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 2) { Fail($"the jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping (want made, >= {SetPieceRules.JumpSpeed}, 2)"); return; }
                 if (buffer is not { Smashed: true } || !_chBuffer) { Fail("the cart did not come through the buffer"); return; }
                 _chStep++;
                 _chClock = 0f;
@@ -717,8 +724,8 @@ public partial class DebugTools
             {
                 var shape = Shape(rc);
                 if (rc.State.Mode != CartMode.Rolling) { if (_chClock > 8f) fail($"re-boarded at stop {shape.LastRideStop} after the load, but the cart did not depart (mode {rc.State.Mode})"); break; }
-                GD.Print($"[chase] 10 departed stop {shape.LastRideStop} for the one-pumper jump: train=[{string.Join(",", rc.Train.Select(w => w.Number))}], {party.Active.Count(a => a.Seated)} heroes seated, pumper cap {PumperCap}; cruise with one pumper and {rc.Train.Count} wagons {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00} m/s, unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}, the jump wants {SetPieceRules.JumpSpeed:0.0}");
-                if (rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump wants W1..W{shape.Intermediate} coupled, the train has {rc.Train.Count}"); return; }
+                GD.Print($"[chase] 10 departed stop {shape.LastRideStop} for the one-pumper kiln: train=[{string.Join(",", rc.Train.Select(w => w.Number))}], {party.Active.Count(a => a.Seated)} heroes seated, pumper cap {PumperCap}; cruise with one pumper and {rc.Train.Count} wagons {CartPhysics.TargetSpeed(1, rc.Train.Count):0.00} m/s, unpumped {CartPhysics.TargetSpeed(0, rc.Train.Count):0.00}");
+                if (rc.Train.Count != shape.Intermediate) { fail($"the one-pumper kiln wants W1..W{shape.Intermediate} coupled, the train has {rc.Train.Count}"); return; }
                 _chStep++;
                 _chClock = 0f;
                 break;
@@ -744,9 +751,10 @@ public partial class DebugTools
                 var pour = enc.SetPieceNode(Kiln(rc, "pour")) as MoltenPour;
                 PumperCap = null;
                 GD.Print($"[chase] 8 ride {shape.LastRide} again, held at stop {shape.Rides}: no golem={enc.GolemBody == null && golems == 0}, pour hits={enc.PourHits} (valve broken={pour?.Quenched}), hammer hits={enc.HammerHits}, buffer smashed={buffer?.Smashed}");
-                GD.Print($"[chase] 10 the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s (want >= {SetPieceRules.JumpSpeed:0.0}) with {_chPumpers} pumping and {rc.Train.Count} wagons coupled [{string.Join(",", rc.Train.Select(w => w.Number))}]");
+                GD.Print($"[chase] 10 the one-pumper kiln: pumpers capped at 1, {rc.Train.Count} wagons coupled [{string.Join(",", rc.Train.Select(w => w.Number))}], arrived at stop {rc.StopIndex}");
+                if (ChasePitReport("10", rc, enc) is { } pitBad) { fail(pitBad); return; }
                 if (enc.GolemBody != null || golems > 0 || enc.PourHits > 0 || pour is not { Quenched: true }) { fail("after the load the golem came or the pour ran"); return; }
-                if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 1 || rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping and {rc.Train.Count} wagons (want made, >= {SetPieceRules.JumpSpeed}, 1, {shape.Intermediate})"); return; }
+                if (rc.Train.Count != shape.Intermediate) { fail($"the one-pumper kiln: {rc.Train.Count} wagons coupled, want {shape.Intermediate}"); return; }
                 if (buffer is not { Smashed: true }) { fail("after the load the buffer went wrong"); return; }
                 if (!ChaseTimings(fail)) return;
                 if (!ChaseLeapReport(enc, "section 2", fail)) return;
@@ -862,19 +870,19 @@ public partial class DebugTools
 
     /// <summary>
     /// 10. Before the kiln's ride is ridden again: the orc's keys taken, every cage opened (its crew seated in the train), W1..W4 coupled
-    /// from stop 0, and the pumpers capped at one: the jump must still be made with one pumper and every wagon (CartRules.MaxLoadWagons
-    /// counts three of them at most).
+    /// from stop 0, and the pumpers capped at one: the pit switch thrown from the seat, the train goes round the pit with every wagon and
+    /// arrives with no fall (plan 15 Task 4: the jump is gone from floor 12).
     /// </summary>
     private bool ChaseOnePumperSetUp(Main main, Node3D root, RailController rc, CrewRescueController ctrl, Action<string> fail)
     {
         var party = main.Party;
         if (!ctrl.OrcKeys && root.GetNodeOrNull<OrcKeyring>("OrcKeyring") is { } ring) ring.Interact(party, party.Local!);
-        if (!ctrl.OrcKeys) { fail("the orc's keys could not be taken for the one-pumper jump"); return false; }
+        if (!ctrl.OrcKeys) { fail("the orc's keys could not be taken for the one-pumper kiln"); return false; }
         var shape = Shape(rc);
         for (var stop = 1; stop <= shape.Intermediate; stop++)
             if (!ctrl.Cages.First(w => w.Stop == stop).Open && !ChaseOpenCage(main, ctrl, stop, fail, hook: true)) return false; // far from the kiln's stop: seated at once, no walk
         PumperCap = 1;
-        GD.Print($"[chase] 10 the one-pumper jump set up at stop {rc.StopIndex}: cages open [{string.Join(",", ctrl.Cages.Where(w => w.Open).Select(w => w.Stop))}], train=[{string.Join(",", rc.Train.Select(w => w.Number))}] (W1..W{rc.Wagons.Count} coupled from stop 0), pumpers capped at {PumperCap}");
+        GD.Print($"[chase] 10 the one-pumper kiln set up at stop {rc.StopIndex}: cages open [{string.Join(",", ctrl.Cages.Where(w => w.Open).Select(w => w.Stop))}], train=[{string.Join(",", rc.Train.Select(w => w.Number))}] (W1..W{rc.Wagons.Count} coupled from stop 0), pumpers capped at {PumperCap}");
         return true;
     }
 
@@ -969,7 +977,8 @@ public partial class DebugTools
             case CartEventKind.Halted: _chHalted = true; break;
             case CartEventKind.Resumed: _chResumed = true; break;
             case CartEventKind.Departed:
-                _chJumped = false; _chPumpers = -1; _chJumpV = 0f; _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = _chBackThrown = false;
+                _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = _chBackThrown = false;
+                _chPitRound = false; _chPitAcross = _chPitHome = _pitThrownFront = float.NaN; _chPitFalls = rc.Falls;
                 _chWarn.Remove("barricade"); // a call pending from a ride before (cut, never hit) must not pair with this ride's smash
                 if (!_chSection2) _chSeatSpur = 0;
                 break;
@@ -999,13 +1008,11 @@ public partial class DebugTools
         }
         else if (text == "Molten slag pours over the cart!") ChaseHit("pour", t, "the pour on the cart");
         else if (text == "The golem slams the cart!") { _chSlams++; ChaseHit("golem", t, "the golem's slam"); }
-        else if (text is "The cart leaps the gap!" or "The cart drops into the gap!")
+        else if (text == PitRules.RoundLog)
         {
             var rc = RailController.Instance;
-            _chJumped = text == "The cart leaps the gap!";
-            _chJumpV = rc?.JumpSpeed ?? 0f;
-            _chPumpers = rc == null ? -1 : Main.Instance.Party.Adventurers.Count(a => IsInstanceValid(a) && a.Cart == rc.Cart && a.Pumping); // set this tick, before the lip was judged
-            ChaseHit("jump", t, $"the lip at {(rc?.State.V ?? 0f):0.00} m/s, {_chPumpers} pumping");
+            _chPitRound = true;
+            ChaseHit("pit", t, $"round the pit at front S={(rc?.Party.FrontS ?? 0f):0.0}, {(rc == null ? -1 : Main.Instance.Party.Adventurers.Count(a => IsInstanceValid(a) && a.Cart == rc.Cart && a.Pumping))} pumping");
         }
         else if (text == "The trestle groans under the cart.") _chWarn["trestle"] = t;
         else if (text is "The trestle collapses behind the cart." or "The trestle gives way under the cart!") ChaseHit("trestle", t, text == "The trestle collapses behind the cart." ? "it falls behind the cart" : "it falls under the cart");
@@ -1015,7 +1022,7 @@ public partial class DebugTools
         else if (text == "The slag cart derails!") _chDerailed = true;
     }
 
-    /// <summary>The warnings are stamped as the heroes call them (said or only logged): the bell while the traffic runs, the heap, the jump, the barricade.</summary>
+    /// <summary>The warnings are stamped as the heroes call them (said or only logged): the bell while the traffic runs, the heap, the pit switch, the barricade.</summary>
     private void OnChaseCall(Adventure.BarkTrigger trigger, string? by)
     {
         if (_done || !_testChase) return;
@@ -1024,7 +1031,7 @@ public partial class DebugTools
         {
             case Adventure.BarkTrigger.CartComing: if (_chTrafficOn) _chWarn.TryAdd("bell", t); break;
             case Adventure.BarkTrigger.LineBlocked: _chWarn["heap"] = t; break;
-            case Adventure.BarkTrigger.JumpCall: _chWarn["jump"] = t; break;
+            case Adventure.BarkTrigger.PitSwitch: _chWarn["pit"] = t; break; // the lava pit's early call (plan 15 Task 4)
             case Adventure.BarkTrigger.Barricade: _chWarn["barricade"] = t; break;
         }
     }
@@ -1083,6 +1090,28 @@ public partial class DebugTools
     private static IEnumerable<DropHammer> ChaseHammers(RailEncounterController enc) =>
         RailController.Instance is { } rc && enc.SetPieceNode(Kiln(rc, "hammers")) is Node3D holder ? holder.GetChildren().OfType<DropHammer>() : Enumerable.Empty<DropHammer>();
 
+    /// <summary>
+    /// Every frame (plan 15 Task 4): on the pit's ride the seated lead throws the pit switch from the seat as its window offers it (ThrowPitOnTheWay),
+    /// and the crossing round the pit is watched: where the train crossed out, and the front S where it was home on its own lane again.
+    /// </summary>
+    private void ChasePit(Main main, RailController rc, RailEncounterController enc)
+    {
+        if (enc.ArmedRide != enc.PitRide || rc.State.Mode != CartMode.Rolling) return;
+        ThrowPitOnTheWay(main, rc, "chase");
+        if (rc.Crossing && float.IsNaN(_chPitAcross)) _chPitAcross = rc.CrossOutS;
+        if (rc.Crossing && float.IsNaN(_chPitHome) && !float.IsNaN(rc.CrossBackS) && rc.State.S > rc.CrossBackS && rc.LaneBlend <= 0.01f) _chPitHome = rc.Party.FrontS;
+    }
+
+    /// <summary>The kiln's pit, at the end of the line: thrown from the seat, across from its points, home past the far edge, round logged, no fall. Null, or what failed.</summary>
+    private string? ChasePitReport(string tag, RailController rc, RailEncounterController enc)
+    {
+        var lever = enc.PitSwitch;
+        GD.Print($"[chase] {tag} the pit switch thrown at front S={_pitThrownFront:0.0}, across from {_chPitAcross:0.0} (its points {lever?.PointsS ?? float.NaN:0.0}), home by {_chPitHome:0.0} (the far edge {enc.PitFarS:0.0}), {(rc.Falls == _chPitFalls ? "no fall" : $"{rc.Falls - _chPitFalls} fall(s)")}; \"{PitRules.RoundLog}\" logged={_chPitRound}");
+        if (lever == null || float.IsNaN(_pitThrownFront) || !(Mathf.Abs(_chPitAcross - lever.PointsS) < 0.01f) || !(_chPitHome > enc.PitFarS) || !_chPitRound || rc.Falls != _chPitFalls)
+            return $"the kiln's pit: thrown at {_pitThrownFront:0.0}, across from {_chPitAcross:0.0}, home by {_chPitHome:0.0}, round logged {_chPitRound}, falls {rc.Falls - _chPitFalls} (want thrown, across from the points, home past {enc.PitFarS:0.0}, logged, none)";
+        return null;
+    }
+
     /// <summary>A hazard hit: it must have warned at least 1.5 s before (the gap is printed, in physics frames' seconds).</summary>
     private void ChaseHit(string hazard, ulong t, string note)
     {
@@ -1096,7 +1125,7 @@ public partial class DebugTools
         _chHits.Add((hazard, w, t, note));
         GD.Print($"[chase] 5 {hazard}: warned at t={ChaseSeconds(w):0.000} s, hit at t={ChaseSeconds(t):0.000} s ({note}): {ChaseSeconds(gap):0.000} s{(gap < ChaseMinGap ? " UNDER 1.5 s" : "")}");
         if (gap < ChaseMinGap) _chFail ??= $"{hazard} hit {ChaseSeconds(gap):0.000} s after its warning ({note}), under 1.5 s";
-        if (hazard is "bell" or "heap" or "jump" or "trestle" or "barricade") _chWarn.Remove(hazard); // one warning, one hit
+        if (hazard is "bell" or "heap" or "pit" or "trestle" or "barricade") _chWarn.Remove(hazard); // one warning, one hit
     }
 
     /// <summary>The end: every hazard kind hit at least once, each a full 1.5 s after its warning (the table of first hits).</summary>

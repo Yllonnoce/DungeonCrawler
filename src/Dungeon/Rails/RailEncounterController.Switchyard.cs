@@ -59,7 +59,8 @@ public partial class RailEncounterController
         var x = frame.Basis.X.Normalized();
         var side = (_enemy.Point(Lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
         piece.Live = back && piece.Plan.Ride == BreakRide && SwitchBackRules.LiveBack(piece.S, BreakGapS); // every role alike, from the layout
-        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back && !piece.Live, Deadly = piece.Live, NetRef = Net.NetRefs.Switch(piece.Index), OfferedNow = () => BackOffered(piece) };
+        piece.PitDeadly = !back && piece.Plan.Ride == PitRide && PitRules.Deadly(piece.S, PitS); // the lava pit 7-40 m past its points (plan 15 Task 4, Ruling 13): every role alike
+        var sw = new TrackSwitch { Name = $"Switch_{piece.Plan.Id}", PointsS = piece.S, LeverS = leverS, Fixed = back && !piece.Live, Deadly = piece.Live || piece.PitDeadly, NetRef = Net.NetRefs.Switch(piece.Index), OfferedNow = () => BackOffered(piece) };
         root.AddChild(sw);
         sw.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * LeverOut));
         piece.Switch = sw;
@@ -81,8 +82,9 @@ public partial class RailEncounterController
             _sleeper ??= DungeonBuilder.RailSleeper());
         points.Add(sw.GlobalPosition); // and nothing stands in the lever's way
         if (piece.Live) points.Add(BuildSignal(root, piece));
+        if (piece.PitDeadly) BuildPitLamp(sw);
         ClearTimber(root, points);
-        var how = !back ? "straight" : piece.Live ? $"live: the broken bridge {BreakGapS - piece.S:0.0} m past" : "fixed, thrown";
+        var how = !back ? piece.PitDeadly ? $"deadly: the pit {PitS - piece.S:0.0} m past" : "straight" : piece.Live ? $"live: the broken bridge {BreakGapS - piece.S:0.0} m past" : "fixed, thrown";
         GD.Print($"[rails] switch {piece.Plan.Id} points at party S={piece.S:0.0}, lever at S={leverS:0.0} side {side:+0;-0} ({how})");
         return sw;
     }
@@ -115,6 +117,24 @@ public partial class RailEncounterController
         });
         post.AddChild(new OmniLight3D { Name = "SignalLight", LightColor = red, LightEnergy = SignalEnergy, OmniRange = SignalRange, ShadowEnabled = false, Position = Vector3.Up * (SignalHeight + 0.2f) });
         return post.GlobalPosition;
+    }
+
+    /// <summary>
+    /// The pit's deadly out lever's warning by sight (plan 15 Task 4, spec B.4): a steady red lamp on a bracket on the lever's own post, below its
+    /// thrown/straight lamp (an <see cref="OmniLight3D"/>, <see cref="SignalRange"/> m, energy <see cref="SignalEnergy"/>, no shadow). Dressing only.
+    /// </summary>
+    private static void BuildPitLamp(TrackSwitch sw)
+    {
+        var red = new Color(1f, 0.08f, 0.04f);
+        var lamp = new Node3D { Name = "PitLamp", Position = new Vector3(0f, TrackSwitch.PostHeight - 0.3f, 0f) };
+        sw.AddChild(lamp);
+        lamp.AddChild(new MeshInstance3D { Name = "Bracket", Mesh = new BoxMesh { Size = new Vector3(0.3f, 0.05f, 0.05f) }, Position = new Vector3(0.15f, 0f, 0f), MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color(0.16f, 0.15f, 0.14f), Metallic = 0.7f, Roughness = 0.5f } });
+        lamp.AddChild(new MeshInstance3D
+        {
+            Name = "Lamp", Mesh = new SphereMesh { Radius = 0.09f, Height = 0.18f, RadialSegments = 12, Rings = 6 }, Position = new Vector3(0.3f, 0f, 0f),
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = red, EmissionEnabled = true, Emission = red, EmissionEnergyMultiplier = 3f, Roughness = 0.4f },
+        });
+        lamp.AddChild(new OmniLight3D { Name = "PitLampLight", LightColor = red, LightEnergy = SignalEnergy, OmniRange = SignalRange, ShadowEnabled = false, Position = new Vector3(0.3f, 0.1f, 0f) });
     }
 
     private StandardMaterial3D? _steel, _sleeper;
@@ -256,14 +276,17 @@ public partial class RailEncounterController
     {
         piece.Fired = true;
         if (piece.Switch != null) piece.Switch.Taken = true; // its points are behind the cart: nothing left to pull this ride
-        if (piece.Switch is not { Thrown: true }) { GD.Print($"[rails] switch {piece.Plan.Id} passed straight at S={_rails.State.S:0.0}"); return; }
+        var thrown = piece.Switch is { Thrown: true };
+        // the pit's deadly switch left straight with no human aboard able to throw it: round the pit anyway (R-lone, plan 15 Ruling 13)
+        var lone = piece.PitDeadly && !thrown && PitRules.TakesRound(thrown, AbleHumanAboard());
+        if (!thrown && !lone) { GD.Print($"[rails] switch {piece.Plan.Id} passed straight at S={_rails.State.S:0.0}"); return; }
         Piece? back = null;
         foreach (var p in _pieces)
             if (p.Plan.Ride == piece.Plan.Ride && p.Plan.Kind == "switch_back" && p.S > piece.S && (back == null || p.S < back.S)) back = p;
         var backS = back == null ? float.NaN : SwitchBackRules.BackAtSwitchOut(back.Live, back.S);
         _rails.Cross(piece.S, backS);
-        EventBus.Instance.Log("The cart takes the switch onto the slag line."); // the clunk is the cart's sound's (its Cross edge, on every peer)
-        GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, {(back is { Live: true } ? $"the return open: {back.Plan.Id}'s lever decides at S={back.S:0.0}" : $"back from {backS:0.0}")}");
+        EventBus.Instance.Log(lone ? SwitchBackRules.SafeLineLog : piece.PitDeadly ? PitRules.RoundLog : "The cart takes the switch onto the slag line."); // the clunk is the cart's sound's (its Cross edge, on every peer)
+        GD.Print($"[rails] switch {piece.Plan.Id} taken at S={_rails.State.S:0.0}: across from {piece.S:0.0}, {(back is { Live: true } ? $"the return open: {back.Plan.Id}'s lever decides at S={back.S:0.0}" : $"back from {backS:0.0}")}{(piece.PitDeadly ? $" round the pit{(lone ? " (no human aboard able to throw it: the safe line)" : "")}" : "")}");
     }
 
     /// <summary>
