@@ -111,12 +111,18 @@ public static class SetPieceRules
     /// </summary>
     public static int RimSpotsOpen(int awakeHeroesSeated) => Math.Clamp(awakeHeroesSeated, 0, RimSpots);
 
+    /// <summary>A hounds-only cart rolls this long (seconds) from its spawn before its hounds may leap from reach: it is seen coming (fix round 1, I2).</summary>
+    public const float HoundRollUp = 2.5f;
+
     /// <summary>
-    /// A carried hound crouches for its leap (plan 14 Task 6, the coordinator's ruling): within <see cref="LeapRange"/> of a coupled car's body
-    /// (<paramref name="nearestBody"/>: the party's cart or a wagon) and, on a cart with other riders (r2_slag2, r2_slag3), its cart
-    /// <paramref name="alongside"/> its pace point too; a hounds-only cart's hounds leap as soon as one is in reach, rolling up or not.
+    /// A carried hound crouches for its leap (plan 14 Task 6; fix round 1): within <see cref="LeapRange"/> of a coupled car's body
+    /// (<paramref name="nearestBody"/>: the party's cart or a wagon), with a body it would pick within <see cref="TrainRules.LeapReach"/>
+    /// (<paramref name="pickInReach"/>: <see cref="TrainRules.BoardingOrder"/> capped at it, so it never leaps farther), and: on a hounds-only
+    /// cart, the cart rolled <see cref="HoundRollUp"/> since its spawn (<paramref name="rolledFor"/>; it leaps from reach, rolling up or not);
+    /// on a cart with other riders (r2_slag2, r2_slag3), its cart <paramref name="alongside"/> its pace point.
     /// </summary>
-    public static bool HoundCrouches(bool houndsOnly, bool alongside, float nearestBody) => (houndsOnly || alongside) && nearestBody <= LeapRange;
+    public static bool HoundCrouches(bool houndsOnly, bool alongside, float rolledFor, float nearestBody, bool pickInReach)
+        => (houndsOnly ? rolledFor >= HoundRollUp : alongside) && nearestBody <= LeapRange && pickInReach;
 
     // ---- a boarding group's emptied cart goes (plan 14 Task 6, Ruling 19) ----------------------------------------------
 

@@ -295,6 +295,7 @@ public partial class RailEncounterController
         GD.Print($"[rails] golem {enc.Id} ({golem.DisplayName}, {golem.Profile.Name}, boss={golem.IsBoss}, elite=[{string.Join(",", golem.Profile.Affixes ?? Array.Empty<EliteAffix>())}], hp {golem.Hp:0}/{golem.MaxHp:0}, scale {golem.Profile.Scale:0.00}) bursts onto the enemy line at S={s:0.0} (party S={partyS:0.0})");
         ShowLine(index, enc);
         AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.GolemEntrance, urgent: true); // held for the wall line (GolemHoldSeconds)
+        SlagLog.Add((enc.Id, "bursts out", golem.Name, partyS, _rails.Party.FrontS, 0f, _now));
         GolemClearsTheSlagLine(enc.Ride, runner.GlobalPosition);
     }
 

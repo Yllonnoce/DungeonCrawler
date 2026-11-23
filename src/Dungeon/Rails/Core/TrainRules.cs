@@ -74,25 +74,25 @@ public static class TrainRules
     }
 
     /// <summary>
-    /// A boarding hound goes for a crewed wagon only this near (metres, flat, from the hound to the wagon's middle): its leap's range and one
-    /// wagon's spacing (8.6 m; Task 2 review M2, carried to plan 14 Task 6). A crewed wagon farther off is skipped.
+    /// A boarding hound goes for a body only this near (metres, flat, from the hound to the body's middle, and its leap no longer): its leap's
+    /// range and one wagon's spacing (8.6 m; Task 2 review M2, carried to plan 14 Task 6; the cart and empty wagons too since its fix round 1).
     /// </summary>
     public const float LeapReach = SetPieceRules.LeapRange + Spacing;
 
     /// <summary>
     /// The order a boarding hound tries the train's bodies in (Task 1 review, I1): <paramref name="bodies"/> by index, 0 the party's cart (its
     /// crew count ignored) and k the coupled wagon Wk, each with the crew seated in it and its distance. Crewed wagons first, the most crew
-    /// first and the nearer on a tie; then the cart; then the empty wagons, nearest first. A crewed wagon farther than
-    /// <paramref name="crewedReach"/> (<see cref="LeapReach"/> in play) is skipped: neither a crewed pick nor an empty one.
+    /// first and the nearer on a tie; then the cart; then the empty wagons, nearest first. A body farther than <paramref name="reach"/>
+    /// (<see cref="LeapReach"/> in play) is left out, whatever it is: with none within it the order is empty (no crouch).
     /// </summary>
-    public static List<int> BoardingOrder(IReadOnlyList<(int Crew, float Distance)> bodies, float crewedReach = float.PositiveInfinity)
+    public static List<int> BoardingOrder(IReadOnlyList<(int Crew, float Distance)> bodies, float reach = float.PositiveInfinity)
     {
         var order = new List<int>(bodies.Count);
-        for (var i = 1; i < bodies.Count; i++) if (bodies[i].Crew > 0 && bodies[i].Distance <= crewedReach) order.Add(i);
+        for (var i = 1; i < bodies.Count; i++) if (bodies[i].Crew > 0 && bodies[i].Distance <= reach) order.Add(i);
         order.Sort((a, b) => bodies[a].Crew != bodies[b].Crew ? bodies[b].Crew.CompareTo(bodies[a].Crew) : bodies[a].Distance.CompareTo(bodies[b].Distance));
-        if (bodies.Count > 0) order.Add(0);
+        if (bodies.Count > 0 && bodies[0].Distance <= reach) order.Add(0);
         var empty = new List<int>();
-        for (var i = 1; i < bodies.Count; i++) if (bodies[i].Crew <= 0) empty.Add(i);
+        for (var i = 1; i < bodies.Count; i++) if (bodies[i].Crew <= 0 && bodies[i].Distance <= reach) empty.Add(i);
         empty.Sort((a, b) => bodies[a].Distance.CompareTo(bodies[b].Distance));
         order.AddRange(empty);
         return order;

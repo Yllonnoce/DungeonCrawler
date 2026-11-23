@@ -493,6 +493,7 @@ public partial class DebugTools
                 var home = ctrl.Crew.Count(c => ctrl.StateOf(c) == CrewState.Home);
                 GD.Print($"[chase] 5 the end of the line: completed={ctrl.Completed} home={home}/{ctrl.Crew.Count} stairs locked={stairs.Locked} (sealed until now) {CrewStates(ctrl)}");
                 if (stairs.Locked) { Fail("the crew are home but the stairs are still sealed"); return; }
+                if (!ChaseLeapReport(enc, "section 1", Fail)) return;
                 _chSection2 = true;
                 _chRails = rc;
                 _chStep = 0;
@@ -747,6 +748,7 @@ public partial class DebugTools
                 if (!_chJumped || _chJumpV < SetPieceRules.JumpSpeed || _chPumpers != 1 || rc.Train.Count != shape.Intermediate) { fail($"the one-pumper jump: made={_chJumped} at {_chJumpV:0.00} m/s with {_chPumpers} pumping and {rc.Train.Count} wagons (want made, >= {SetPieceRules.JumpSpeed}, 1, {shape.Intermediate})"); return; }
                 if (buffer is not { Smashed: true }) { fail("after the load the buffer went wrong"); return; }
                 if (!ChaseTimings(fail)) return;
+                if (!ChaseLeapReport(enc, "section 2", fail)) return;
                 GD.Print($"[chase] music: the pour {_chPourPitch ?? "never played"}; after it {_chAfterPour ?? "no track"}");
                 if (_chPourPitch == null) { fail("the pour track never played in the Chase mood"); return; }
                 if (_chAfterPour == null) { fail("no track played after the pour to check its pitch"); return; }
@@ -1479,6 +1481,26 @@ public partial class DebugTools
     }
 
     /// <summary>At the end of ride 4: the line, and the check that the lead never went down on it (the baseline before Task 4's answering).</summary>
+    /// <summary>
+    /// Plan 14 Task 6 fix round 1: every hound leap of this floor build within TrainRules.LeapReach, each printed with its length, and r5_hounds'
+    /// two landing 1.5 s or more before the golem's burst at the chase's speed (<see cref="BoardingLeapChecks"/>); r4_hounds' boarding S and its
+    /// roll-up (its spawn to its first leap) printed.
+    /// </summary>
+    private bool ChaseLeapReport(RailEncounterController enc, string section, Action<string> fail)
+    {
+        var fails = BoardingLeapChecks(enc, "chase");
+        var spawn = enc.SlagLog.LastOrDefault(x => x.Encounter == "r4_hounds" && x.What == "spawned");
+        if (spawn.What != null)
+        {
+            var leaps = enc.SlagLog.Where(x => x.Encounter == "r4_hounds" && x.What.StartsWith("leapt ", StringComparison.Ordinal) && x.T >= spawn.T).ToList();
+            GD.Print($"[chase] {section} r4_hounds: spawned at party S={spawn.PartyS:0.0} (t={spawn.T:0.00}); " + (leaps.Count == 0 ? "no hound leapt"
+                : $"boarded at party S=[{string.Join(", ", leaps.Select(l => $"{l.PartyS:0.0} {l.What["leapt ".Length..]}"))}], the first {leaps[0].T - spawn.T:0.00} s after its spawn (its roll-up; at least {SetPieceRules.HoundRollUp:0.0} s, then the crouch {SetPieceRules.LeapWindup:0.0} s)"));
+        }
+        if (fails.Count == 0) return true;
+        fail($"{section}: {string.Join("; ", fails)}");
+        return false;
+    }
+
     private bool ChaseRide4Report(Action<string> fail)
     {
         GD.Print($"[chase] 4 ride 4: heroes down [{string.Join(", ", _chR4Down)}]; companions away from the cart [{string.Join(", ", _chR4Away)}] (at most {_chR4AwayMost} at once); the lead {_chR4Lead ?? "?"}");

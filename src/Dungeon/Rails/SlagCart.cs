@@ -71,6 +71,8 @@ public partial class SlagCart : AnimatableBody3D, ICartBody, Party.IInteractable
     internal float SinceEmpty;
     /// <summary>A hound of its has come within <see cref="SetPieceRules.LeapRange"/> of a car's body (logged once, tests read it). Server.</summary>
     internal bool InReachLogged;
+    /// <summary>Seconds it has rolled since its spawn (a boarding group's hounds wait <see cref="SetPieceRules.HoundRollUp"/>). Server.</summary>
+    internal float SinceSpawn;
     /// <summary>Off the rails: it is being freed and its run is done.</summary>
     public bool Derailed { get; private set; }
     /// <summary>When each body was last run over (<see cref="RunOverSweep.Judge"/> keeps it).</summary>

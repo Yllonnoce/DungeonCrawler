@@ -12,10 +12,13 @@ namespace DungeonCrawler.Core;
 // The pumps come back (the game's own two) once the cart is 1 m past r5_golem's S, for the trestle and the jump. Held at the last stop, it prints
 // one line per group hound:
 //   [boarders] group {id}: spawned at party S={s}, in reach at S={r}, alongside at S={a}, {hound} leapt at S={l} onto {W{k}|the cart|a miss} (...), its cart freed at S={f} ({why}; ...)
-// and fails unless every hound leapt; r1_hounds' leap came with the cart 5 m past r1_barricade or more and the front at r1_beam or short of it;
+// and fails unless every hound leapt, each leap within TrainRules.LeapReach (8.6 m) and each r5_hounds hound landing 1.5 s or more before the
+// golem's burst (fix round 1); r1_hounds' leap came with the cart 5 m past r1_barricade or more and the front at r1_beam or short of it;
 // r3_hounds' cart was freed by Ruling 19 (its hounds gone, or the crossing) with the front at r3_switch_out's points - 2 m or short of it;
 // r5_hounds' cart was freed by Ruling 19 before the front reached r5_golem's S, or by the golem's burst, and never stood within 3 m of the
-// golem's runner; and every throw on the floor came after its wagon's call and glow (RailEncounterController.ThrowLog).
+// golem's runner; and every throw on the floor came after its wagon's call and glow (RailEncounterController.ThrowLog). Then the crossing pass
+// (fix round 1): restored at stop 2, ride 3 with every hound held aboard (RailEncounterController.DebugHoldCrouches), r3_hounds' cart must be freed
+// "the train crosses onto its lane" with the front within CrossFreeAhead of r3_switch_out's points.
 public partial class DebugTools
 {
     /// <summary>The boarding groups =groups measures (Ruling 18), in ride order.</summary>
@@ -26,6 +29,11 @@ public partial class DebugTools
     private readonly Dictionary<string, (float S, float Front)> _bdGoneOtherwise = new();
     private float _bdGolemNearest = float.PositiveInfinity;
     private bool _bdLeversThrown, _bdPumpsBack;
+    // the crossing pass (fix round 1, (e))
+    private int _bdXPass, _bdXStep, _bdXMark;
+    private float _bdXClock;
+    /// <summary>A hound lands at least this long before the golem's burst (fix round 1, (d)).</summary>
+    private const float BdGolemMargin = 1.5f;
 
     /// <summary>The hounds a group's slag cart carries are spared the cull (their spawn and the cull run in the same frame, the spare first).</summary>
     private void BdSpareGroups(RailEncounterController enc)
@@ -50,6 +58,7 @@ public partial class DebugTools
 
     private void BoardersGroups(Main main, RailController rc, RailEncounterController enc, Action<string> Fail)
     {
+        if (_bdXPass > 0) { BoardersGroupsCrossing(main, rc, enc, Fail); return; }
         var rolling = rc.State.Mode == CartMode.Rolling;
         // ride 3: both levers thrown as it arms (the cart crosses at r3_switch_out's points and comes home at r3_switch_back's)
         if (!_bdLeversThrown && enc.ArmedRide == 3 && rolling)
@@ -94,9 +103,9 @@ public partial class DebugTools
         if (!RideOnTo(main, rc, Shape(rc).Rides, "boarders", Fail)) return;
         PumperCap = null;
         GD.Print($"[boarders] groups: held at stop {rc.StopIndex}, the end of the line (S={rc.State.S:0.0}); train=[{string.Join(",", rc.Train.Select(w => w.Number))}], throws {enc.Throws}");
-        foreach (var x in enc.SlagLog) GD.Print($"[boarders] groups: log {x.Encounter} {x.What} ({x.Who}) at party S={x.PartyS:0.0}, front {x.FrontS:0.0}, {x.Metres:0.0}");
+        foreach (var x in enc.SlagLog) GD.Print($"[boarders] groups: log {x.Encounter} {x.What} ({x.Who}) at party S={x.PartyS:0.0}, front {x.FrontS:0.0}, {x.Metres:0.0} (t={x.T:0.00})");
 
-        var fails = new List<string>();
+        var fails = BoardingLeapChecks(enc, "boarders");
         float barricadeS = BdPlanS(main, rc, "r1_barricade"), beamS = BdPlanS(main, rc, "r1_beam"), pointsS = BdPlanS(main, rc, "r3_switch_out");
         foreach (var id in BdGroups)
         {
@@ -149,8 +158,96 @@ public partial class DebugTools
             }
         }
         if (fails.Count > 0) { Fail(string.Join("; ", fails)); return; }
-        GD.Print($"[boarders] RESULT ok ({_bdVariant}): every group's hounds leapt; r1_hounds between r1_barricade + 5 m and r1_beam; r3_hounds' cart freed short of r3_switch_out's points - 2 m; r5_hounds' cart freed short of the golem or by its burst, 3 m clear of its runner; {throws} throw(s), each after its call and glow");
-        _done = true;
-        GetTree().Quit(0);
+        _bdMainOk = $"every group's hounds leapt, each leap within {TrainRules.LeapReach:0.0} m; r1_hounds between r1_barricade + 5 m and r1_beam; r3_hounds' cart freed short of r3_switch_out's points - 2 m; r5_hounds landed {BdGolemMargin:0.0} s or more before the golem's burst and its cart was freed short of the golem or by its burst, 3 m clear of its runner; {throws} throw(s), each after its call and glow";
+        GD.Print($"[boarders] groups: the main pass ok: {_bdMainOk}");
+        _bdXPass = 1; // the crossing pass (fix round 1, (e))
+        _bdXStep = 0;
+        _bdXClock = 0f;
+    }
+
+    private string _bdMainOk = "";
+
+    /// <summary>
+    /// The crossing pass (Task 6 fix round 1, (e)): restored at stop 2, ride 3 ridden unpumped with both its levers thrown and every hound held
+    /// aboard its slag cart (<see cref="RailEncounterController.DebugHoldCrouches"/>), so r3_hounds' cart, never emptied, reaches the crossing:
+    /// it must be freed "the train crosses onto its lane" with the front within <see cref="SetPieceRules.CrossFreeAhead"/> of r3_switch_out's points.
+    /// </summary>
+    private void BoardersGroupsCrossing(Main main, RailController rc, RailEncounterController enc, Action<string> Fail)
+    {
+        _bdXClock += (float)GetProcessDeltaTime();
+        var pointsS = BdPlanS(main, rc, "r3_switch_out");
+        void Fail2(string why) { enc.DebugHoldCrouches = false; Fail("crossing pass: " + why); }
+        switch (_bdXStep)
+        {
+            case 0:
+                rc.Restore(2);
+                enc.DebugHoldCrouches = true;
+                PumperCap = 0;
+                _bdLeversThrown = false;
+                _bdXMark = enc.SlagLog.Count;
+                GD.Print($"[boarders] groups: crossing pass: restored at stop {rc.StopIndex} (S={rc.State.S:0.0}); every hound held aboard its slag cart (the test's hook); nobody pumping");
+                _bdXStep++; _bdXClock = 0f;
+                break;
+            case 1 when _bdXClock >= 1f:
+                RideWaiveCages(main, rc, "boarders");
+                if (main.Party.Local is { } me && me.Cart != rc.Cart && !RideBoard(main, main.Builder.Layout!, rc, out var why)) { Fail2(why); return; }
+                _bdXStep++; _bdXClock = 0f;
+                break;
+            case 2:
+                RideWaiveCages(main, rc, "boarders");
+                if (rc.State.Mode != CartMode.Rolling || enc.ArmedRide != 3) { if (_bdXClock > 20f) Fail2($"ride 3 did not depart (mode {rc.State.Mode}, armed {enc.ArmedRide})"); break; }
+                if (enc.SetPieceNode("r3_switch_out") is not TrackSwitch outSw || enc.SetPieceNode("r3_switch_back") is not TrackSwitch backSw) { Fail2("floor 12 lacks ride 3's switches"); return; }
+                outSw.DebugThrow();
+                backSw.DebugThrow();
+                GD.Print($"[boarders] groups: crossing pass: ride 3 departed at S={rc.State.S:0.0}; r3_switch_out thrown={outSw.Thrown}, r3_switch_back thrown={backSw.Thrown}");
+                _bdXStep++; _bdXClock = 0f;
+                break;
+            case 3:
+            {
+                for (var i = _bdXMark; i < enc.SlagLog.Count; i++)
+                    if (enc.SlagLog[i] is { Encounter: "r3_hounds" } x && x.What.StartsWith("freed: ", StringComparison.Ordinal))
+                    {
+                        var freedWhy = x.What["freed: ".Length..];
+                        var leaps = enc.SlagLog.Skip(_bdXMark).Count(y => y.Encounter == "r3_hounds" && y.What.StartsWith("leapt ", StringComparison.Ordinal));
+                        GD.Print($"[boarders] groups: crossing pass: r3_hounds' cart freed: {freedWhy} at party S={x.PartyS:0.0}, front {x.FrontS:0.0} (r3_switch_out's points {pointsS:0.0}, the window from {pointsS - SetPieceRules.CrossFreeAhead:0.0}); {leaps} leap(s)");
+                        if (freedWhy != "the train crosses onto its lane") { Fail2($"r3_hounds' cart was freed by \"{freedWhy}\", not the crossing"); return; }
+                        if (x.FrontS < pointsS - SetPieceRules.CrossFreeAhead || x.FrontS >= pointsS) { Fail2($"the crossing freed r3_hounds' cart with the front at {x.FrontS:0.0}, outside [{pointsS - SetPieceRules.CrossFreeAhead:0.0}, {pointsS:0.0})"); return; }
+                        if (leaps != 0) { Fail2("a hound leapt while held"); return; }
+                        enc.DebugHoldCrouches = false;
+                        PumperCap = null;
+                        GD.Print($"[boarders] RESULT ok ({_bdVariant}): {_bdMainOk}; the crossing pass: r3_hounds' cart freed as the train crosses onto its lane, the front at {x.FrontS:0.0}, within {SetPieceRules.CrossFreeAhead:0} m of r3_switch_out's points ({pointsS:0.0})");
+                        _done = true;
+                        GetTree().Quit(0);
+                        return;
+                    }
+                if (rc.Party.FrontS > pointsS + 5f || _bdXClock > 40f) Fail2($"r3_hounds' cart was not freed by the crossing (front {rc.Party.FrontS:0.0}, its cart live: {enc.SlagCarts.Any(c => c.EncounterId == "r3_hounds")})");
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The floor build's leaps (<see cref="RailEncounterController.SlagLog"/>): each printed with its length, which must be within
+    /// <see cref="TrainRules.LeapReach"/> (fix round 1, (a)); and with the golem out, each r5_hounds hound landing (its leap's start plus
+    /// <see cref="RailEncounterController.LeapSeconds"/>) at least <see cref="BdGolemMargin"/> before the golem's burst ((d)). The failures, or none.
+    /// </summary>
+    private static List<string> BoardingLeapChecks(RailEncounterController enc, string tag)
+    {
+        var fails = new List<string>();
+        var burst = enc.SlagLog.FirstOrDefault(x => x.What == "bursts out");
+        foreach (var l in enc.SlagLog.Where(x => x.What.StartsWith("leapt ", StringComparison.Ordinal)))
+        {
+            var margin = burst.What != null && l.Encounter == "r5_hounds" && l.T <= burst.T ? burst.T - (l.T + RailEncounterController.LeapSeconds) : double.NaN;
+            GD.Print($"[{tag}] leap: {l.Encounter}'s {l.Who} {l.What} at party S={l.PartyS:0.0} (t={l.T:0.00}): {l.Metres:0.0} m (reach {TrainRules.LeapReach:0.0}){(double.IsNaN(margin) ? "" : $"; lands {margin:0.00} s before the golem's burst (t={burst.T:0.00}, party S={burst.PartyS:0.0})")}");
+            if (l.Metres > TrainRules.LeapReach) fails.Add($"{l.Encounter}'s {l.Who} leapt {l.Metres:0.0} m, past {TrainRules.LeapReach:0.0}");
+            if (!double.IsNaN(margin) && margin < BdGolemMargin) fails.Add($"r5_hounds' {l.Who} landed {margin:0.00} s before the golem's burst, under {BdGolemMargin:0.0} s");
+        }
+        if (burst.What != null && enc.SlagLog.Any(x => x.Encounter == "r5_hounds" && x.What == "spawned" && x.T <= burst.T))
+        {
+            var r5 = enc.SlagLog.Count(x => x.Encounter == "r5_hounds" && x.What.StartsWith("leapt ", StringComparison.Ordinal) && x.T <= burst.T);
+            GD.Print($"[{tag}] leap: r5_hounds: {r5} hound(s) leapt before the golem's burst");
+            if (r5 < 2) fails.Add($"only {r5} of r5_hounds' 2 hounds leapt before the golem's burst");
+        }
+        return fails;
     }
 }

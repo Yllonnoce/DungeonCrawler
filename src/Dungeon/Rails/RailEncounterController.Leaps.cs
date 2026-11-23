@@ -11,7 +11,8 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// <summary>
 /// Ember hounds on a slag cart leap across to the party's side. A carried hound that is alongside and within
 /// <see cref="SetPieceRules.LeapRange"/> of the party cart (or any coupled wagon of its train, crewed or not; a hounds-only cart's hound
-/// needs only the reach, <see cref="SetPieceRules.HoundCrouches"/>) crouches for
+/// needs only the reach once its cart has rolled up, and every hound a body it would pick within <see cref="TrainRules.LeapReach"/>:
+/// <see cref="SetPieceRules.HoundCrouches"/>) crouches for
 /// <see cref="SetPieceRules.LeapWindup"/> with a glow and a "Hound!" bark, then leaps on a <see cref="LeapSeconds"/> arc onto a
 /// boarder spot (two on the cart's rim, one on a wagon's), reserved when the leap starts: a crewed wagon's first (the most crew, the
 /// nearer on a tie), else the cart's, else an empty wagon's (<see cref="TrainRules.BoardingOrder"/>). With no spot free it
@@ -151,7 +152,6 @@ public partial class RailEncounterController
         {
             if (!IsInstanceValid(cart) || cart.Derailed) continue;
             var alongside = PaceRules.Alongside(cart.Run.State.S, PaceRules.TargetS(Lanes.EnemyS(partyS), cart.Offset));
-            if (!alongside && !cart.HoundsOnly) continue; // a boarding group's hounds leap from reach, rolling up or not (Task 6)
             foreach (var rider in cart.Aboard)
             {
                 if (!IsInstanceValid(rider) || !rider.IsAlive || rider.Carrier != cart || rider.Profile.Id != HoundId || HasLeap(rider)) continue;
@@ -159,12 +159,30 @@ public partial class RailEncounterController
                 if (nearest <= SetPieceRules.LeapRange && !cart.InReachLogged)
                 {
                     cart.InReachLogged = true;
-                    SlagLog.Add((cart.EncounterId, "in reach", rider.Name, _rails.State.S, _rails.Party.FrontS, nearest));
+                    SlagLog.Add((cart.EncounterId, "in reach", rider.Name, _rails.State.S, _rails.Party.FrontS, nearest, _now));
                 }
-                if (!SetPieceRules.HoundCrouches(cart.HoundsOnly, alongside, nearest)) continue;
+                if (DebugHoldCrouches) continue; // a test holds the boarders aboard
+                // a boarding group leaps from reach once it has rolled up (fix round 1, I2); a mixed cart waits until it is alongside; either only
+                // with a body it would pick within TrainRules.LeapReach (I1)
+                if (!SetPieceRules.HoundCrouches(cart.HoundsOnly, alongside, cart.SinceSpawn, nearest, nearest <= SetPieceRules.LeapRange && BoardOrder(rider).Count > 0)) continue;
                 Crouch(cart, rider);
             }
         }
+    }
+
+    /// <summary>Test hook: no hound crouches while set (its boarders stay on their slag carts).</summary>
+    internal bool DebugHoldCrouches { get; set; }
+
+    /// <summary>
+    /// The bodies <paramref name="hound"/> would board, in the order it tries them (<see cref="TrainRules.BoardingOrder"/>, every one within
+    /// <see cref="TrainRules.LeapReach"/>), filling <see cref="_boardBodies"/> (index 0 the party's cart, k the wagon Wk).
+    /// </summary>
+    private List<int> BoardOrder(Enemy hound)
+    {
+        _boardBodies.Clear();
+        for (var i = 0; i <= _rails.Train.Count; i++)
+            _boardBodies.Add(Candidate(i) is { } body ? (i == 0 ? 0 : CrewIn((TrainWagon)body), Flat(hound.GlobalPosition, body.GlobalPosition)) : (0, float.MaxValue));
+        return TrainRules.BoardingOrder(_boardBodies, TrainRules.LeapReach);
     }
 
     private float NearestTargetDistance(Vector3 from)
@@ -190,21 +208,21 @@ public partial class RailEncounterController
     {
         var h = l.Hound;
         // the crewed wagons first (the most crew, the nearer on a tie), then the cart, then an empty wagon, the first with a spot free
-        // (Task 1 review, I1: a hound goes for the prisoners); a crewed wagon past TrainRules.LeapReach is skipped (Task 2 review M2);
-        // none: it leaps and misses beside the nearest
-        _boardBodies.Clear();
-        for (var i = 0; i <= _rails.Train.Count; i++)
-            _boardBodies.Add(Candidate(i) is { } body ? (i == 0 ? 0 : CrewIn((TrainWagon)body), Flat(h.GlobalPosition, body.GlobalPosition)) : (0, float.MaxValue));
+        // (Task 1 review, I1: a hound goes for the prisoners), each within TrainRules.LeapReach and its spot too (Task 2 review M2; Task 6
+        // fix round 1, I1); none: it leaps and misses beside the nearest
+        var order = BoardOrder(h);
         Node3D? dest = null;
         var spot = -1;
         var nearest = (Node3D?)null;
         var nearestD = float.MaxValue;
         for (var i = 0; i < _boardBodies.Count; i++)
             if (_boardBodies[i].Distance < nearestD && Candidate(i) is { } body) { nearestD = _boardBodies[i].Distance; nearest = body; }
-        foreach (var i in TrainRules.BoardingOrder(_boardBodies, TrainRules.LeapReach))
+        foreach (var i in order)
         {
-            if (Candidate(i) is not { } body) continue;
-            if (Reserve(body, h, out spot)) { dest = body; break; }
+            if (Candidate(i) is not { } body || !Reserve(body, h, out spot)) continue;
+            if (Flat(h.GlobalPosition, SpotOf(body, spot).Origin) <= TrainRules.LeapReach) { dest = body; break; }
+            FreeSpot(body, h); // its spot lies past the reach: the next
+            spot = -1;
         }
         l.Source.Aboard.Remove(h);
         l.FromLocal = l.Source.GlobalTransform.AffineInverse() * h.GlobalPosition;
@@ -219,7 +237,7 @@ public partial class RailEncounterController
             l.Spot = spot;
             l.To = SpotOf(dest, spot).Origin;
             GD.Print($"[rails] {h.Name} leaps from {l.FromWorld} to {dest.Name} spot {spot} ({l.To}), {Flat(l.FromWorld, l.To):0.0} m");
-            SlagLog.Add((l.Source.EncounterId, "leapt " + (dest is TrainWagon w ? $"W{w.Number}" : "the cart"), h.Name, _rails.State.S, _rails.Party.FrontS, Flat(l.FromWorld, l.To)));
+            SlagLog.Add((l.Source.EncounterId, "leapt " + (dest is TrainWagon w ? $"W{w.Number}" : "the cart"), h.Name, _rails.State.S, _rails.Party.FrontS, Flat(l.FromWorld, l.To), _now));
         }
         else
         {
@@ -229,7 +247,7 @@ public partial class RailEncounterController
             l.To = Beside(anchor.GlobalPosition + lead * LeapSeconds); // the cart will have moved on by the time it lands
             l.Spot = -1;
             GD.Print($"[rails] {h.Name} leaps and misses: no boarder spot free ({nearestD:0.0} m to the nearest body), lands at {l.To}");
-            SlagLog.Add((l.Source.EncounterId, "leapt a miss", h.Name, _rails.State.S, _rails.Party.FrontS, Flat(l.FromWorld, l.To)));
+            SlagLog.Add((l.Source.EncounterId, "leapt a miss", h.Name, _rails.State.S, _rails.Party.FrontS, Flat(l.FromWorld, l.To), _now));
         }
         // every client flies the arc itself from here (a LeapMsg); the boarder lists in the cart's state say who rides where once it lands
         l.ToCart = WireId(l.Dest ?? nearest ?? _rails.Cart);
