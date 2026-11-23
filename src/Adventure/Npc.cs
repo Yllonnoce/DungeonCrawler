@@ -427,7 +427,15 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         {
             var lead = party.Lead;
             var gap = new Vector2(lead.GlobalPosition.X - GlobalPosition.X, lead.GlobalPosition.Z - GlobalPosition.Z).Length() - FollowDistance;
-            var dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out var straight);
+            // held across the island's edge (fix round 1, M5): it looks for a way at most every HeldSearchSeconds, not every frame; a way found
+            // (or the lead come near) ends the hold (M6: the hold is told once, however long it lasts and whatever held it)
+            Vector3? dest = null;
+            var straight = false;
+            if (!_catchUpHeld || (_heldSearchIn -= dt) <= 0f)
+            {
+                dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out straight);
+                if (_catchUpHeld) { _heldSearchIn = HeldSearchSeconds; if (_mover.Unreachable <= 0f) _catchUpHeld = false; }
+            }
             // speed follows the gap: a trailing follower settles at a steady pace instead of lurching between full speed
             // and a dead stop every frame; well behind, it runs to catch up
             if (dest is { } d && gap > 0.25f)
@@ -437,7 +445,6 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             }
             else FaceToward(lead.GlobalPosition);
             var layout = Main.Instance?.Builder.Layout;
-            if (_catchUpHeld && layout?.Rail?.Island != null && InIsland(layout, GlobalPosition) == InIsland(layout, lead.GlobalPosition)) _catchUpHeld = false; // back on its lead's side: a new hold is told again
             if (_mover.Unreachable > 5f)
             {
                 if (!lead.Seated)
@@ -480,8 +487,14 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         }
     }
 
-    /// <summary>The catch-up was held across the island's edge and said so (<see cref="CatchUpAllowed"/>): told once each time it holds.</summary>
+    /// <summary>
+    /// The catch-up is held across the island's edge (<see cref="CatchUpAllowed"/>), told once: the hold lasts until a catch-up is allowed or the
+    /// follower finds a way to its lead again.
+    /// </summary>
     private bool _catchUpHeld;
+    /// <summary>While held, the follower looks for a way to its lead at most this often (fix round 1, M5; the unheld follower's trigger is unchanged).</summary>
+    private const float HeldSearchSeconds = 0.5f;
+    private float _heldSearchIn;
     /// <summary>The catch-up is held across the island's edge now (the flows read it).</summary>
     internal bool CatchUpHeld => _catchUpHeld;
 
@@ -490,13 +503,13 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     /// <summary>
     /// Plan 15 Ruling 35: on a floor with an exit island, the follower's catch-up to <paramref name="dest"/> runs only with the follower, its
     /// <paramref name="lead"/> and the spot all on one side of the island's edge (<see cref="Objectives.CrewRules.CatchUpAllowed"/>; a bridge cell is
-    /// outside); otherwise it holds where it is, printing so once each time it holds. Always true off an island floor.
+    /// outside); otherwise it holds where it is, printing so once per hold. Always true off an island floor.
     /// </summary>
     private bool CatchUpAllowed(FloorLayout? layout, Node3D lead, Vector3 dest)
     {
         if (layout?.Rail?.Island == null) return true;
         if (Objectives.CrewRules.CatchUpAllowed(true, InIsland(layout, GlobalPosition), InIsland(layout, lead.GlobalPosition), InIsland(layout, dest))) { _catchUpHeld = false; return true; }
-        if (!_catchUpHeld) GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)");
+        if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _heldSearchIn = HeldSearchSeconds; }
         _catchUpHeld = true;
         return false;
     }

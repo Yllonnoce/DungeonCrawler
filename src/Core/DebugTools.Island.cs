@@ -77,6 +77,7 @@ public partial class DebugTools
     private void IslandRelease(PartyController party)
     {
         party.ForcedMoveInput = null;
+        party.AllowPossession = true; // =stranded holds the downed lead the human
         PumperCap = null;
         foreach (var a in party.Adventurers) if (IsInstanceValid(a)) a.SeekSpot = null;
     }

@@ -140,7 +140,7 @@ public partial class DebugTools
                 // each pair beside the parked tub its wagon will stand at once the lift takes over (W1, W2): where it would step out, outside
                 var crew = IslandCrew().Where(n => _ihCrew.Contains(n.Id)).ToList();
                 for (var i = 0; i < crew.Count; i++)
-                    ctrl.DebugPutOnFoot(crew[i].Id, rc.StandBesideLane(train.Wagons[Math.Min(i / 2, train.Wagons.Count - 1)].GlobalPosition, inside: false));
+                    ctrl.DebugPutOnFoot(crew[i].Id, rc.StandBesideLane(train.Wagons[Math.Min(i / 2, train.Wagons.Count - 1)].GlobalPosition));
                 GD.Print($"[island] onfoot: the party beside the lift at {here} ({cart.TubDistance(me):0.0} m from its cart's tub), the crew at [{string.Join(", ", crew.Select(n => $"{n.NpcName} {At(n)}"))}]; stop {shape.LastRideStop}'s holders alive {Holders()}, its cage open {cage4?.Open}");
                 if (cart.Prompt != ParkedRules.BoardPrompt) { Fail($"the lead beside the lift is offered \"{cart.Prompt}\""); return; }
                 cart.Interact(party, me);
@@ -164,6 +164,7 @@ public partial class DebugTools
                     if (_isClock > 20f) Fail("the taken-over cart never departed");
                     break;
                 }
+                if (!_ihCountdownOk) { Fail($"the taken-over cart is {rc.State.Mode} with the countdown's check never made (fix round 1, M1)"); return; }
                 var crew = IslandCrew().Where(n => _ihCrew.Contains(n.Id)).ToList();
                 var seats = crew.Select(n => (n, w: n.Ride as TrainWagon)).ToList();
                 GD.Print($"[island] onfoot: departed {_isTime - _ihT:0.00} s after the press with the crew [{string.Join(", ", seats.Select(p => $"{p.n.NpcName} {(p.w == null ? "on foot" : $"W{p.w.Number}")}"))}]");
@@ -287,26 +288,53 @@ public partial class DebugTools
             {
                 if (!Inside(layout, me)) { Fail($"the lead teleported back stands outside at {At(me)}"); return; }
                 if (ctrl.StateOf(_ihB!) != CrewState.Lost) { if (_isClock > 1f) Fail($"with the lead back inside at {At(me)} {_ihB!.NpcName} is {ctrl.StateOf(_ihB)} 1 s on"); break; }
-                var bleed = _ihA!.DownedSeconds;
-                GD.Print($"[island] stranded: the lead back inside at {At(me)}: {_ihB!.NpcName} Lost {_isClock:0.00} s on; {_ihA.NpcName} revived with its bleed clock at {bleed:0.0} s (F11: under 50)");
-                if (bleed >= 50f || _ihA.Dead) { Fail($"{_ihA.NpcName}'s bleed clock reached {bleed:0.0} s (dead {_ihA.Dead})"); return; }
-                if (!_ihA.TryRevive()) { Fail($"{_ihA.NpcName}'s revive was refused"); return; }
+                GD.Print($"[island] stranded: the lead back inside at {At(me)}: {_ihB!.NpcName} Lost {_isClock:0.00} s on; the lead goes down there (nobody else outside, no human up)");
+                // fix round 1 (I2): the lead down inside, held down (no calm auto-revive, no possession of a companion): no human is up
+                party.AllowPossession = false;
+                me.State.Mangled = true;
+                me.State.Hp = 0;
+                party.OnMemberDowned(me.Index);
                 _isStep++; _isClock = 0f;
                 break;
             }
             case 7:
             {
-                if (IslandWon(ctrl, root) is { } notWon) { if (_isClock > 1f) Fail($"1 s after the revive: {notWon} ({IslandCrewStates(ctrl)})"); break; }
-                GD.Print($"[island] stranded: the win {_isClock:0.00} s after the revive ({IslandCrewStates(ctrl)}); the lead goes outside again");
-                me.Teleport(BesideLift(main, layout, rc, enc, enc.Parked!.Cart), enc.Parked.Cart.GlobalPosition);
+                if (!me.Downed) { Fail("the lead did not stay down"); return; }
+                if (ctrl.StateOf(_ihB!) == CrewState.Lost) { if (_isClock > 1f) Fail($"with no human up {_ihB!.NpcName} is still Lost 1 s on"); break; }
+                var bleed = _ihA!.DownedSeconds;
+                GD.Print($"[island] stranded: the lead down inside: {_ihB!.NpcName} {ctrl.StateOf(_ihB)} {_isClock:0.00} s on; {_ihA.NpcName} revived with its bleed clock at {bleed:0.0} s (F11: under 50)");
+                if (bleed >= 50f || _ihA.Dead) { Fail($"{_ihA.NpcName}'s bleed clock reached {bleed:0.0} s (dead {_ihA.Dead})"); return; }
+                if (!_ihA.TryRevive()) { Fail($"{_ihA.NpcName}'s revive was refused"); return; }
                 _isStep++; _isClock = 0f;
                 break;
             }
             case 8:
             {
+                // every other crew member home: a Lost here would win the floor
+                if (ctrl.Crew.FirstOrDefault(n => IsInstanceValid(n) && ctrl.StateOf(n) == CrewState.Lost) is { } lost) { Fail($"with the lead down and no human up {lost.NpcName} is Lost ({IslandCrewStates(ctrl)})"); return; }
+                if (ctrl.Completed) { Fail($"with the lead down and no human up the floor was won ({IslandCrewStates(ctrl)})"); return; }
+                if (_isClock < 2f) break;
+                GD.Print($"[island] stranded: 2 s with the lead down and {_ihA!.NpcName} up: no crew member Lost, no win ({IslandCrewStates(ctrl)}); the lead gets up");
+                me.State.Mangled = false;
+                me.Revive();
+                me.State.Hp = Math.Max(me.State.Hp, me.State.Stats[Characters.Stat.MaxHp] * 0.5f);
+                party.AllowPossession = true;
+                _isStep++; _isClock = 0f;
+                break;
+            }
+            case 9:
+            {
+                if (IslandWon(ctrl, root) is { } notWon) { if (_isClock > 1f) Fail($"1 s after the lead got up inside: {notWon} ({IslandCrewStates(ctrl)})"); break; }
+                GD.Print($"[island] stranded: the win {_isClock:0.00} s after the lead got up inside ({IslandCrewStates(ctrl)}); the lead goes outside again");
+                me.Teleport(BesideLift(main, layout, rc, enc, enc.Parked!.Cart), enc.Parked.Cart.GlobalPosition);
+                _isStep++; _isClock = 0f;
+                break;
+            }
+            case 10:
+            {
                 if (!ctrl.Completed) { Fail($"with the lead outside after the win the floor is no longer completed ({IslandCrewStates(ctrl)})"); return; }
                 if (_isClock < 2f) break;
-                Pass($"at the arrival {_ihB!.NpcName}, on foot outside, was Lost and stayed outside and Lost 12 s with its catch-up held, never teleported; the lead outside made it Freed, back inside Lost again; reviving {_ihA!.NpcName} (downed past the bridge, its bleed clock under 50 s) won the floor, and the lead outside afterwards left the win standing ({ctrl.StateOf(_ihB)})");
+                Pass($"at the arrival {_ihB!.NpcName}, on foot outside, was Lost and stayed outside and Lost 12 s with its catch-up held, never teleported; the lead outside made it Freed, back inside Lost again; the lead down inside (no human up): not Lost, and with {_ihA!.NpcName} revived (downed past the bridge, its bleed clock under 50 s) no crew member Lost and no win for 2 s; the downed lead up again won the floor, and the lead outside afterwards left the win standing ({ctrl.StateOf(_ihB)})");
                 return;
             }
         }
@@ -348,7 +376,7 @@ public partial class DebugTools
                 if (rc.State.Mode == CartMode.Wrecked) { Fail($"the last ride was wrecked at S={rc.State.S:0.0}"); return; }
                 var rear = IslandRearS(rc);
                 if (rc.State.Mode != CartMode.Rolling || !(rear > enc.ExitToS + 0.5f)) { if (_isClock > 120f) Fail($"the train's rear never passed the exit bridge (at S={rear:0.0})"); break; }
-                var spot = rc.StandBesideLane(rc.Party.Track.Point(1150f), inside: false);
+                var spot = rc.StandBesideLane(rc.Party.Track.Point(1150f));
                 var was = g.Seated ? $"seated in {(g.Ride as Node)?.Name}" : $"on foot at {At(g)}";
                 if (g.Seated) g.GetOut(spot);
                 else { g.GlobalPosition = spot; g.Velocity = Vector3.Zero; }
@@ -384,13 +412,17 @@ public partial class DebugTools
                 var stairs = root.GetNodeOrNull<Stairs>("DownStairs");
                 if (stairs == null) { Fail("no down stairs"); return; }
                 party.Teleport(stairs.GlobalTransform * new Vector3(0f, 0.3f, 1.2f), main.Builder.Surface(DungeonBuilder.WalkableNeighbor(layout, layout.DownStairs)));
+                _ihLast = g.GlobalPosition;
                 _isStep++; _isClock = 0f;
                 break;
             }
             case 4:
             {
+                // fix round 1 (M2): she walks there: never a jump of over 3 m in a frame (a catch-up)
+                if (g.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"Grisel was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(g)} on her way to the stairs"); return; }
+                _ihLast = g.GlobalPosition;
                 var q = Game.Instance.Adventure.Quests.Values.FirstOrDefault(x => x.Floor == 12 && x.GiverNpc == CrewRescueController.GriselId);
-                if (q?.Status != QuestStatus.Completed) { if (_isClock > 30f) Fail($"q_grisel_out is {q?.Status.ToString() ?? "missing"}: Grisel at {At(g)}"); break; }
+                if (q?.Status != QuestStatus.Completed) { if (_isClock > 30f) Fail($"q_grisel_out is {q?.Status.ToString() ?? "missing"}: Grisel at {At(g)} (escorting {g.Escorting}, her catch-up held {g.CatchUpHeld}; the lead at {At(me)})"); break; }
                 Pass($"Grisel, left outside on ride {shape.Rides}'s lane as the train passed the bridge, held there (never teleported, never inside, her catch-up held) until the arrival with the lead inside; brought in beside the train's last body within 1 s and \"{CrewRescueController.GriselInLine}\" logged; she walked with the party to the down stairs and {q.Id} completed {_isClock:0.0} s later");
                 return;
             }

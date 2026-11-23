@@ -319,6 +319,9 @@ public partial class DebugTools
                 {
                     foreach (var n in _isRode.OfType<Npc>()) if (IsInstanceValid(n) && crew.StateOf(n) != CrewState.Home) problems.Add($"{n.NpcName} set down inside is {crew.StateOf(n)}, not Home");
                     foreach (var cage in crew.Cages.Where(c => !c.Open)) if (!rc.CrewLeftAt.Contains(cage.Stop)) problems.Add($"the unopened cage at stop {cage.Stop} is not left behind");
+                    // fix round 1 (I3): resolved by ResolveUnopened through LastWreckInside (Wrecked: the train is not held at the end), not only left by the
+                    // restore's LeftOnLoad and the waiver at stop 4
+                    foreach (var stop in new[] { 3, shape.LastRideStop }) if (!crew.CagesResolved.Contains(stop)) problems.Add($"the unopened cage at stop {stop} was not resolved through LastWreckInside (resolved [{string.Join(",", crew.CagesResolved.OrderBy(x => x))}])");
                     if (crew.CagesBlockingNow != 0) problems.Add($"{crew.CagesBlockingNow} cage(s) still block the stairs");
                     if (IslandWon(crew, main.Builder.FloorRoot!) is { } notWon) problems.Add($"no win ({notWon})");
                     if (rc.ArrivalSnapshot?.RailStop != shape.Rides) problems.Add($"the arrival snapshot is at stop {rc.ArrivalSnapshot?.RailStop?.ToString() ?? "none"}, not {shape.Rides}");
@@ -329,7 +332,7 @@ public partial class DebugTools
                 {
                     GD.Print($"[island] wreck: {_isClock:0.00} s after it no spare took over (spares used {rc.SparesUsed.Count}), stop {rc.StopIndex}, LastWreckInside, the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}] hidden and not solid; on island cells: {string.Join(", ", _isRode.Select(b => $"{b.Name} {DungeonBuilder.WorldToCell(b.GlobalPosition)}"))}; the parked train {enc.ParkedNow} at S={enc.ParkedRearS:0.0}..{enc.ParkedFrontS:0.0} ({enc.ParkedSmashes} smash(es) on the way), no party body shown within it");
                     if (ObjectiveController.Instance is CrewRescueController won)
-                        GD.Print($"[island] wreck: the set-down crew Home [{string.Join(", ", _isRode.OfType<Npc>().Select(n => $"{n.NpcName}={won.StateOf(n)}"))}], the unopened cages [{string.Join(",", won.Cages.Where(c => !c.Open).Select(c => c.Stop))}] left behind (CrewLeftAt [{string.Join(",", rc.CrewLeftAt.OrderBy(x => x))}]), the win (reward chest {won.RewardChest != null}); the arrival snapshot at stop {rc.ArrivalSnapshot?.RailStop}");
+                        GD.Print($"[island] wreck: the set-down crew Home [{string.Join(", ", _isRode.OfType<Npc>().Select(n => $"{n.NpcName}={won.StateOf(n)}"))}], the unopened cages [{string.Join(",", won.Cages.Where(c => !c.Open).Select(c => c.Stop))}] left behind (CrewLeftAt [{string.Join(",", rc.CrewLeftAt.OrderBy(x => x))}], resolved through LastWreckInside [{string.Join(",", won.CagesResolved.OrderBy(x => x))}]), the win (reward chest {won.RewardChest != null}); the arrival snapshot at stop {rc.ArrivalSnapshot?.RailStop}");
                     _isStep++; _isClock = 0f;
                     break;
                 }

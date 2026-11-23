@@ -77,22 +77,26 @@ public static class CrewRules
 
     /// <summary>
     /// A crew member on foot outside the island (<paramref name="onFoot"/>, not <paramref name="inIsland"/>) with the train at the end of the line
-    /// or gone (<paramref name="trainAtEndOrNone"/>: wrecked and hidden) and no up player outside to fetch it (Ruling 34): it counts as lost
-    /// while that lasts.
+    /// or gone (<paramref name="trainAtEndOrNone"/>: wrecked and hidden), at least one human up (<paramref name="upPlayers"/>), and no player outside
+    /// to fetch it (<paramref name="playersOutside"/>: every human not parked or fallen, a downed one too, who may be revived there) (Ruling 34, fix
+    /// round 1): it counts as lost while that lasts.
     /// </summary>
-    public static bool Stranded(bool onFoot, bool inIsland, bool trainAtEndOrNone, int upPlayersOutside)
-        => onFoot && !inIsland && trainAtEndOrNone && upPlayersOutside <= 0;
+    public static bool Stranded(bool onFoot, bool inIsland, bool trainAtEndOrNone, int upPlayers, int playersOutside)
+        => onFoot && !inIsland && trainAtEndOrNone && upPlayers > 0 && playersOutside <= 0;
 
     /// <summary>
-    /// Ruling 33: the unopened cages are left behind once every up player (at least one) is in the island and the train is held at the last
-    /// stop or wrecked inside.
+    /// Ruling 33: the unopened cages are left behind once at least one human is up, no player is outside the island (<paramref name="playersOutside"/>,
+    /// a downed one counted), and the train is held at the last stop or wrecked inside.
     /// </summary>
-    public static bool UnopenedLeftBehind(int upPlayers, int upPlayersInside, bool trainAtEndOrWreckedInside)
-        => upPlayers > 0 && upPlayersInside >= upPlayers && trainAtEndOrWreckedInside;
+    public static bool UnopenedLeftBehind(int upPlayers, int playersOutside, bool trainAtEndOrWreckedInside)
+        => upPlayers > 0 && playersOutside <= 0 && trainAtEndOrWreckedInside;
 
-    /// <summary>Ruling 36: an escort (Grisel) left outside is brought in once no up player is outside, with the train at the end or wrecked inside.</summary>
-    public static bool BringEscortIn(bool escortOutside, int upPlayersOutside, bool trainAtEndOrWreckedInside)
-        => escortOutside && upPlayersOutside <= 0 && trainAtEndOrWreckedInside;
+    /// <summary>
+    /// Ruling 36: an escort (Grisel) left outside is brought in once at least one human is up and no player is outside (a downed one counted), with
+    /// the train at the end or wrecked inside.
+    /// </summary>
+    public static bool BringEscortIn(bool escortOutside, int upPlayers, int playersOutside, bool trainAtEndOrWreckedInside)
+        => escortOutside && upPlayers > 0 && playersOutside <= 0 && trainAtEndOrWreckedInside;
 
     /// <summary>
     /// Ruling 35: a follower's catch-up (its set-down beside its lead, or beside a seated lead's cart) never crosses the island's edge: off an
