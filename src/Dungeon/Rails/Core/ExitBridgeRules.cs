@@ -39,22 +39,33 @@ public static class ExitBridgeRules
     public static bool SetDownPastFarEdge(float bodyS, float toS) => bodyS <= toS;
 
     /// <summary>
-    /// Where a body steps out by party-lane index <paramref name="laneIndex"/> (Ruling 12): today's <see cref="CartSeats.ExitCell"/>
-    /// when that cell may take a body (<see cref="CrevasseRules.SetDownOk"/>); otherwise the at-stop exit cell of the nearest party index,
-    /// searched outward i+1, i−1, i+2, i−2, … (ties to the higher index), whose result holds a body. None anywhere: today's cell.
+    /// Where a body steps out by party-lane index <paramref name="laneIndex"/> (Ruling 12, as fix round 1 ruled): today's
+    /// <see cref="CartSeats.ExitCell"/> when that cell may take a body (<see cref="CrevasseRules.SetDownOk"/>); otherwise the at-stop exit cell
+    /// of the nearest party index, searched outward i+1, i−1, i+2, i−2, … (ties to the higher index), whose result holds a body. None
+    /// anywhere: today's cell. On an exit-island floor the body keeps its side (<paramref name="inside"/>: true inside the island, false
+    /// outside, null for no side): every cell it is offered, in the exit cell's own window and in the search, is on that side, so no set-down
+    /// ever carries a body across the lava.
     /// </summary>
-    public static GridPos SafeExitCell(FloorLayout l, IReadOnlyList<GridPos> lane, int laneIndex, Func<GridPos, bool> free, bool atStop)
+    public static GridPos SafeExitCell(FloorLayout l, IReadOnlyList<GridPos> lane, int laneIndex, Func<GridPos, bool> free, bool atStop, bool? inside = null)
     {
-        var cell = CartSeats.ExitCell(lane, laneIndex, free, atStop);
-        if (CrevasseRules.SetDownOk(l, cell) || lane.Count == 0) return cell;
+        if (lane.Count == 0) return default;
+        var sided = inside is { } side && l.Rail?.Island != null;
+        bool OnSide(GridPos c) => !sided || l.InIsland(c) == inside;
+        bool Holds(GridPos c) => CrevasseRules.SetDownOk(l, c) && OnSide(c);
+        Func<GridPos, bool> offered = sided ? c => free(c) && OnSide(c) : free;
+        var cell = CartSeats.ExitCell(lane, laneIndex, offered, atStop);
+        if (Holds(cell)) return cell;
         var at = Math.Clamp(laneIndex, 0, lane.Count - 1);
         for (var d = 1; d < lane.Count; d++)
             foreach (var j in new[] { at + d, at - d })
             {
                 if (j < 0 || j >= lane.Count) continue;
-                var c = CartSeats.ExitCell(lane, j, free, atStop: true);
-                if (CrevasseRules.SetDownOk(l, c)) return c;
+                var c = CartSeats.ExitCell(lane, j, offered, atStop: true);
+                if (Holds(c)) return c;
             }
         return cell;
     }
+
+    /// <summary>The side of the exit island a body at <paramref name="cell"/> stands on (true inside), or null on a floor without one.</summary>
+    public static bool? SideOf(FloorLayout l, GridPos cell) => l.Rail?.Island == null ? null : l.InIsland(cell);
 }

@@ -1010,6 +1010,13 @@ public partial class RailController : Node
     public Vector3 StandBesideCart() => _builder.Surface(ExitCellNear(Cart.GlobalPosition, true, false)) + Vector3.Up * 0.1f;
 
     /// <summary>
+    /// <see cref="StandBesideCart()"/> for a follower now at <paramref name="follower"/> (an escort's seated-lead catch-up): it keeps the
+    /// follower's side of the exit island (fix round 1 of plan 15 Task 3), so a body outside is never caught up across the lava.
+    /// </summary>
+    public Vector3 StandBesideCart(Vector3 follower)
+        => _builder.Surface(ExitCellNear(Cart.GlobalPosition, true, false, ExitBridgeRules.SideOf(_layout, DungeonBuilder.WorldToCell(follower)))) + Vector3.Up * 0.1f;
+
+    /// <summary>
     /// Where a big body a slag cart knocked aside lands: a walkable cell beside the enemy lane near <paramref name="at"/>, off
     /// the rails and the sidings (a pocket, the platform). No such cell near that stretch: beside the party lane instead.
     /// </summary>
@@ -1065,17 +1072,20 @@ public partial class RailController : Node
     /// <summary>
     /// The cell a body steps out onto by the party lane near <paramref name="at"/>: <see cref="CartSeats.ExitCell"/>'s, passed through
     /// <see cref="ExitBridgeRules.SafeExitCell"/> (plan 15, Ruling 12), so it is never a drop (a body by the exit bridge's span or the cavern's
-    /// decks stands at the nearer end instead).
+    /// decks stands at the nearer end instead), on the body's own side of the exit island: <paramref name="inside"/> when given, else the
+    /// side of <paramref name="at"/>'s cell (a bridge cell is outside).
     /// </summary>
-    private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
+    private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken, bool? inside = null)
     {
         bool Free(GridPos c) => CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c); // never a drop: a plank is walkable, not a place to put someone
         var lane = _layout.Rail!.Party;
-        var best = NearestOf(lane, DungeonBuilder.WorldToCell(at));
-        if (!useTaken) return ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, atStop);
-        var cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop);
+        var here = DungeonBuilder.WorldToCell(at);
+        var side = inside ?? ExitBridgeRules.SideOf(_layout, here);
+        var best = NearestOf(lane, here);
+        if (!useTaken) return ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, atStop, side);
+        var cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop, side);
         // every free cell nearby taken: share the first one rather than land on the track
-        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, true);
+        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, true, side);
         return cell;
     }
 
@@ -1293,7 +1303,7 @@ public partial class RailController : Node
             if (ExitBridgeRules.SetDownPastFarEdge(s, exit.ExitToS)) at = spots[spot++] + Vector3.Up * 0.1f;
             else
             {
-                var cell = ExitCellNear(((Node3D)rider).GlobalPosition, atStop: true, useTaken: true);
+                var cell = ExitCellNear(((Node3D)rider).GlobalPosition, atStop: true, useTaken: true, inside: true); // judged by its car's S: inside, wherever its seat hangs
                 _exitTaken.Add(cell);
                 at = _builder.Surface(cell) + Vector3.Up * 0.1f;
             }

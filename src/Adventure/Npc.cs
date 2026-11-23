@@ -450,7 +450,7 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                     GlobalPosition = behind;
                 }
                 // the lead rides: never into the tub or onto the line; far behind, beside the cart (as a rider gets out), else hold here
-                else if (gap + FollowDistance > SeatedLeadCatchUp && RailController.Instance is { } rails) GlobalPosition = rails.StandBesideCart();
+                else if (gap + FollowDistance > SeatedLeadCatchUp && RailController.Instance is { } rails) GlobalPosition = rails.StandBesideCart(GlobalPosition); // on its own side of the exit island
                 _mover.Reset();
             }
             if (Mode == NpcMode.Quest) CheckStairs();

@@ -18,8 +18,10 @@ namespace DungeonCrawler.Core;
 // brake (nobody pumps), and the crew member is put on foot again at the last ride's stop; for 8 s nobody can get out (the presses
 // again at 4 s and 8 s), and the crew member is never on a drop: out of reach of the seated lead it is caught up beside the cart (Ruling 12
 // lands it off the bridge) once at least (before the brake, never in a chasm: following the train it may walk the cavern's decks). The
-// save there and a load: the cart Held at the last ride's stop, every hero and crew member on a cell that may take a body. Let go: boarded
-// again and ridden, the train arrives at the last stop.
+// save there and a load: the cart Held at the last ride's stop, every hero and crew member on a cell that may take a body, the crewman put on
+// foot outside still outside (fix round 1: no catch-up crosses the lava; it is never inside the island at any frame). Let go: boarded again
+// (a companion in W1) and ridden: on every frame with the cart's back past the far edge and the last wagon's back short of it (judged from
+// the bodies) the train still holds, a round of presses is refused there, and the train arrives at the last stop.
 // =wreck (Review Focus 3): rc.Restore(Shape(rc).LastRideStop) with stop 1's crew in W1 and stop 2's in W2 (ctrl.DebugSeatCrew) and the spares
 // left; the cart is wrecked (rc.DebugWreck) as its front passes ExitFromS + 0.5. Within 1 s: no spare took over, the stop is the last,
 // LastWreckInside, the cart and every party wagon hidden and not solid, every hero and crew member who rode on an island cell that may take
@@ -29,6 +31,9 @@ public partial class DebugTools
     private const string IslandSlot = "islandtest";
     private RailController? _isRc;
     private Npc? _isOnFoot;
+    private string? _isOnFootId;
+    private int _isWagonsOnlyFrames;
+    private bool _isRide2Seated, _isRide2Pressed;
     private Adventurer? _isWagonRider;
     private bool _isHoldChecked, _isMoveControl, _isBraked;
     private int _isHoldFrames, _isPresses, _isCatchUps, _isSparesBefore;
@@ -51,6 +56,8 @@ public partial class DebugTools
             // beside the cart: Ruling 12) it is never on any drop
             var braked = _isStep == 4;
             if ((braked ? CrevasseRules.IsDrop(layout, cell) : layout.IsChasm(cell)) || walker.Dead) { Fail($"{walker.NpcName}, on foot, is on {(braked ? "a drop" : "a chasm")} at {cell} (dead={walker.Dead}, front S={rc.Party.FrontS:0.0})"); return; }
+            // fix round 1 (I1/I2): put on foot outside, it is never set down inside the island (its catch-up keeps its side)
+            if (layout.InIsland(cell)) { Fail($"{walker.NpcName}, put on foot outside, stands inside the island at {cell} (front S={rc.Party.FrontS:0.0}, {_isCatchUps} catch-up(s))"); return; }
         }
         var holds = enc.ExitBridgeHolds();
         switch (_isStep)
@@ -80,6 +87,7 @@ public partial class DebugTools
                 if (_isOnFoot == null) { Fail("no crew member in stop 1's cage to put on foot"); return; }
                 var behind = rc.StandBesideLane(rc.Party.Track.Point(rc.State.S - 40f));
                 ctrl.DebugPutOnFoot(_isOnFoot.Id, behind);
+                _isOnFootId = _isOnFoot.Id;
                 _isOnFootLast = default;
                 GD.Print($"[island] bridge: departed stop {rc.StopIndex} at S={rc.State.S:0.0}, {rc.Train.Count} wagon(s), {_isWagonRider.State.Name} in W1; {_isOnFoot.NpcName} on foot 40 m behind at {DungeonBuilder.WorldToCell(behind)}, following={_isOnFoot.Escorting}");
                 _isStep++; _isClock = 0f;
@@ -158,8 +166,13 @@ public partial class DebugTools
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != shape.LastRideStop) problems.Add($"the cart is {rc.State.Mode} at stop {rc.StopIndex}, not Held at stop {shape.LastRideStop}");
                 foreach (var a in party.Active) if (!StandsOk(layout, a) || a.State.Fallen) problems.Add($"{a.State.Name} at {DungeonBuilder.WorldToCell(a.GlobalPosition)} fallen={a.State.Fallen}");
                 foreach (var n in IslandCrew()) if (!StandsOk(layout, n)) problems.Add($"{n.NpcName} at {DungeonBuilder.WorldToCell(n.GlobalPosition)}");
+                // fix round 1 (I2): with the train Held at the last ride's stop, the crewman put on foot outside is still outside
+                var outsider = IslandCrew().FirstOrDefault(n => n.Id == _isOnFootId);
+                if (outsider == null) problems.Add($"the crewman put on foot ({_isOnFootId}) is gone after the load");
+                else if (layout.InIsland(DungeonBuilder.WorldToCell(outsider.GlobalPosition))) problems.Add($"{outsider.NpcName}, put on foot outside, is inside the island at {DungeonBuilder.WorldToCell(outsider.GlobalPosition)}");
                 if (problems.Count > 0) { if (_isClock > 5f) Fail($"after the load: {string.Join("; ", problems)}"); break; }
-                GD.Print($"[island] bridge: after the load the cart is Held at stop {rc.StopIndex} (S={rc.State.S:0.0}); every hero [{string.Join(", ", party.Active.Select(a => $"{a.State.Name} {DungeonBuilder.WorldToCell(a.GlobalPosition)}"))}] and {IslandCrew().Count()} crew on cells that may take a body");
+                GD.Print($"[island] bridge: after the load the cart is Held at stop {rc.StopIndex} (S={rc.State.S:0.0}); every hero [{string.Join(", ", party.Active.Select(a => $"{a.State.Name} {DungeonBuilder.WorldToCell(a.GlobalPosition)}"))}] and {IslandCrew().Count()} crew on cells that may take a body; {outsider!.NpcName}, put on foot outside, at {DungeonBuilder.WorldToCell(outsider.GlobalPosition)} (island {layout.InIsland(DungeonBuilder.WorldToCell(outsider.GlobalPosition))})");
+                _isWagonRider = null;
                 if (!RideBoard(main, layout, rc, out var why)) { Fail(why); return; }
                 _isStep++; _isClock = 0f;
                 break;
@@ -168,8 +181,33 @@ public partial class DebugTools
             {
                 if (rc.State.Mode == CartMode.Held && !rc.Halted && rc.StopIndex == shape.Rides)
                 {
-                    Pass($"no Get out and no move car to car while any car was over the exit bridge ({_isHoldFrames} frames, {_isPresses + 1} rounds of presses, the move refused \"the train is on the exit bridge\"), braked to a stop on it for 8 s too; {_isOnFoot?.NpcName} on foot never on a drop ({_isCatchUps} catch-up(s)); the save there loaded Held at stop {shape.LastRideStop} with everyone on footing; ridden again the train arrived at stop {shape.Rides}");
+                    if (_isWagonsOnlyFrames < 1 || !_isRide2Pressed) { Fail($"ridden again, the wagons-only hold was never seen ({_isWagonsOnlyFrames} frames, presses {_isRide2Pressed})"); return; }
+                    Pass($"the first ride: from the cart's front onto the exit bridge to its stop at the start + 6 m, and 8 s stopped there, no Get out (cart and W1) and no move car to car ({_isHoldFrames} held frames in all, {_isPresses + 1} rounds of presses, the move refused \"the train is on the exit bridge\"); the crewman on foot never on a drop and never inside the island ({_isCatchUps} catch-up(s) beside the cart, on its own side); the save there loaded Held at stop {shape.LastRideStop} with everyone on footing and the crewman outside; ridden again, {_isWagonsOnlyFrames} frames with the cart past the far edge and only wagons over it still held (a round of presses refused there); the train arrived at stop {shape.Rides}");
                     return;
+                }
+                if (rc.State.Mode == CartMode.Rolling)
+                {
+                    if (!_isRide2Seated)
+                    {
+                        _isRide2Seated = true;
+                        _isWagonRider = party.Active.LastOrDefault(a => a != me && a.Cart == rc.Cart && !a.Downed);
+                        if (_isWagonRider == null || rc.Train.Count == 0 || !rc.DebugSeat(_isWagonRider, 1)) { Fail("ridden again, no companion could be seated in W1"); return; }
+                    }
+                    // M2: the hold's other end, judged from the bodies: the cart's back past the far edge, the last wagon's back still short of it
+                    var last = rc.Train.Count > 0 ? rc.Train[^1] : null;
+                    var rearS = last == null ? float.NaN : rc.Party.Track.ClosestS(last.GlobalPosition) - CartRules.HalfLength;
+                    if (rc.Party.BackS > enc.ExitToS + 0.5f && rearS < enc.ExitToS - 0.5f)
+                    {
+                        if (!holds) { Fail($"only wagons over the exit bridge (the cart's back at S={rc.Party.BackS:0.0}, the last wagon's back at {rearS:0.0}) and it does not hold"); return; }
+                        if (IslandHoldBreaks(rc, enc, party, me) is { } broke) { Fail(broke); return; }
+                        _isWagonsOnlyFrames++;
+                        if (!_isRide2Pressed)
+                        {
+                            _isRide2Pressed = true;
+                            if (IslandPresses(rc, party, me, "only wagons over it") is { } pressed) { Fail(pressed); return; }
+                        }
+                    }
+                    else if (holds && IslandHoldBreaks(rc, enc, party, me) is { } broke2) { Fail(broke2); return; }
                 }
                 if (rc.State.Mode == CartMode.Wrecked || rc.StopIndex > shape.LastRideStop && rc.StopIndex != shape.Rides) { Fail($"ridden again the train is {rc.State.Mode} at stop {rc.StopIndex}"); return; }
                 rc.DebugSetPlating(CartRules.MaxPlating);
