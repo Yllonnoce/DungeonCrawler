@@ -1,0 +1,279 @@
+using DungeonCrawler.Adventure;
+using DungeonCrawler.Adventure.Objectives;
+using DungeonCrawler.Dungeon;
+using DungeonCrawler.Dungeon.Rails;
+using DungeonCrawler.Party;
+using Godot;
+
+namespace DungeonCrawler.Core;
+
+// ---- --test-boarders=move (plan 14, Task 3): see DebugTools.Boarders.cs for the flow as a whole -----------------------------------
+// =move (the default): the cart is restored at stop 0 (rc.Restore(0)), everyone boards and the train departs on ride 1. The lead's view is
+// turned by its seat yaw (SeatYaw) and every press is the VR grip's (party.VrUse, as E reaches LookingAt.Interact).
+//  - The first move: looking back 120 degrees the prompt is "Climb back to wagon 1"; the press leaves the lead in the cart for 0.6 s within one
+//    physics tick (counted in the rail controller's physics clock), then in W1 seat 0, and the log says "{lead} climbs back to wagon 1.".
+//  - The cooldown: a second press 0.3 s after the first does nothing (no move taken; still in W1 after the landing, not on foot). The next move
+//    is offered again at the cooldown (1 s after the first press, within the frames' slack), "Climb back to wagon 2", and taken.
+//  - Passing: a companion is seated in W3's place (rc.DebugSeat(mate, 3)), so the lead's next back move from W2 goes to W4: one move.
+//  - Forward: from W4, looking forward, "Climb forward to wagon 2", then "... wagon 1", then "Climb forward into the cart", each taken.
+//  - The beam: the lead climbs back to W2 (past W1) and rides there under r1_beam; every seated head in the train clears it by 0.05 m or more,
+//    the lead's in W2 among them.
+//  - The double press (Review Focus 1): from W2 the lead's press forward and a cart companion's forced rc.Move(mate, W1, "test") in one frame
+//    both ask for W1's free place: the press books it and lands; the forced move is refused (the place is booked).
+//  - The mid-hop down (Review Focus 2): from W1 the lead presses back toward W2 and is downed (Mangled) 0.2 s into the hop: the booking is
+//    dropped, the lead stays slumped in W1 seat 0, W2's place is free again, and it never lands; no move is offered while downed. Revived.
+//  - Never offered: at the arrival at stop 1 (held: W1's prompt is "Get out"), while downed (above), on foot (out of W1 at stop 1).
+//  - Fix round 1: at the restore, a point 4.1 m end-on from W1's middle reads 3.0 m from its tub (TrainWagon.TubDistance, the server's reach);
+//    in the double press a companion's real press on the booked W1 (W1.Interact) is refused out loud as a move, with no plain use of the wagon;
+//    at stop 1, with the lead in W1, a companion set on foot beside W3 (more than 3 m from the cart) hops in by its own brain.
+public partial class DebugTools
+{
+    /// <summary>=move's script on ride 1 (one phase at a time; each waits a little for the view tick to read a new yaw).</summary>
+    private void BoardersMove(RailController rc, RailEncounterController enc, PartyController party, Adventurer me, Action<string> Fail)
+    {
+        var t = _bdClock - _bdPhaseT; // since the phase began
+        var tick = 1f / Engine.PhysicsTicksPerSecond;
+        TrainWagon W(int k) => rc.WagonAt(k)!;
+        string Where(Adventurer a) => $"car {rc.CarOf(a)} seat {a.Seat}";
+        void Next(int phase) { _bdPhase = phase; _bdPhaseT = _bdClock; }
+        if (rc.State.Mode == CartMode.Wrecked) { Fail("the train was wrecked"); return; }
+        if (_bdPhase < 80 && rc.State.Mode == CartMode.Held) { Fail($"the train reached stop {rc.StopIndex} at phase {_bdPhase}, before the script was done"); return; }
+        BoardersBeam(rc, enc, me, Fail);
+        if (_done) return;
+
+        // a move from the lead's seat, offered on `to` with `prompt`, pressed with the grip: true once pressed (false while waiting, or failed)
+        bool Press(ICartBody to, string prompt)
+        {
+            if (t < 0.15f) return false;
+            var offer = rc.MoveOfferFor(me);
+            var said = to is TrainWagon w ? w.Prompt : rc.Cart.Prompt;
+            if (offer != to || !ReferenceEquals(me.LookingAt, to) || said != prompt)
+            {
+                if (t > 1.6f) Fail($"from {Where(me)} at yaw {Mathf.RadToDeg(me.SeatYaw):0}: offered {(offer is TrainWagon ow ? $"wagon {ow.Number}" : offer == null ? "nothing" : "the cart")}, looking at {me.LookingAt?.GetType().Name ?? "nothing"}, prompt \"{said}\" (wanted \"{prompt}\")");
+                return false;
+            }
+            _bdMovesBefore = rc.MovesTaken;
+            party.VrUse(true);
+            party.VrUse(false);
+            if (rc.MovesTaken != _bdMovesBefore + 1 || !rc.Hopping(me)) { Fail($"the press on \"{prompt}\" took no move (refused: {rc.LastMoveRefused ?? "-"})"); return false; }
+            GD.Print($"[boarders] {me.State.Name} pressed \"{prompt}\" from {Where(me)} at S={rc.State.S:0.0}");
+            return true;
+        }
+        // the hop under way, then its landing in car `car` seat `seat`: true once landed and judged
+        bool Landed(int fromCar, int car, string log)
+        {
+            if (rc.Hopping(me))
+            {
+                if (rc.CarOf(me) != fromCar) { Fail($"mid-hop the lead is in {Where(me)}, not still in car {fromCar}"); return false; }
+                if (t > 2f) Fail("the hop never landed");
+                return false;
+            }
+            var seat = car == 0 ? me.Seat : TrainRules.HeroPlace;
+            if (rc.CarOf(me) != car || me.Seat != seat || rc.LastMoveLanded is not { } l || l.Car != car) { Fail($"the hop landed the lead in {Where(me)}, not car {car}"); return false; }
+            if (Mathf.Abs((float)l.After - TrainMoveRules.HopSeconds) > tick + 1e-4f) { Fail($"the hop took {l.After:0.000} s, not {TrainMoveRules.HopSeconds} s within one tick ({tick:0.000})"); return false; }
+            if (_bdSaid.Count == 0 || _bdSaid[^1] != log) { Fail($"the landing logged \"{(_bdSaid.Count > 0 ? _bdSaid[^1] : "")}\", not \"{log}\""); return false; }
+            GD.Print($"[boarders] landed in {Where(me)} after {l.After:0.000} s (a tick {tick:0.000} s): \"{log}\"");
+            return true;
+        }
+
+        var name = me.State.Name;
+        switch (_bdPhase)
+        {
+            // the first move, cart -> W1
+            case 0: me.SeatYaw = BdBack; Next(1); break;
+            case 1: if (Press(W(1), "Climb back to wagon 1")) { _bdSecondPressed = false; Next(2); } break;
+            case 2:
+                if (!_bdSecondPressed && t >= 0.3f)
+                {
+                    _bdSecondPressed = true; // the cooldown: a second press 0.3 s after the first does nothing
+                    var before = rc.MovesTaken;
+                    var looking = me.LookingAt;
+                    party.VrUse(true);
+                    party.VrUse(false);
+                    GD.Print($"[boarders] a second press {t:0.00} s after the first: looking at {looking?.GetType().Name ?? "nothing"}, moves taken {rc.MovesTaken - before}, the lead in {Where(me)}");
+                    if (looking != null || rc.MovesTaken != before || !me.Seated) { Fail("a second press 0.3 s after the first did something"); return; }
+                }
+                if (!Landed(0, 1, $"{name} climbs back to wagon 1.")) break;
+                if (!_bdSecondPressed) { Fail("the hop landed before the second press at 0.3 s"); return; }
+                Next(3);
+                break;
+            case 3:
+            {
+                // the cooldown ends: offered again 1 s after the first press (the phase began 0.6 s in, at the landing)
+                var since = t + (float)(rc.LastMoveLanded?.After ?? 0);
+                if (rc.MoveOfferFor(me) == null) { if (since > 1.3f) Fail($"no move offered {since:0.00} s after the first press"); break; }
+                GD.Print($"[boarders] the cooldown: a move offered again {since:0.00} s after the first press, the lead still in {Where(me)}, seated {me.Seated}");
+                if (since < TrainMoveRules.MoveCooldown - 0.05f || rc.CarOf(me) != 1) { Fail($"offered {since:0.00} s after the press, under the {TrainMoveRules.MoveCooldown} s cooldown"); return; }
+                Next(4); _bdPhaseT -= 1f; // press at once
+                break;
+            }
+            case 4: if (Press(W(2), "Climb back to wagon 2")) Next(5); break;
+            case 5: if (Landed(1, 2, $"{name} climbs back to wagon 2.")) Next(6); break;
+
+            // passing: a companion in W3's place, the lead's back move from W2 lands in W4 in one move
+            case 6:
+            {
+                if (t < TrainMoveRules.MoveCooldown) break;
+                _bdMate3 = party.Active.FirstOrDefault(a => a != me && a.Cart == rc.Cart && !a.Downed);
+                _bdMate2 = party.Active.FirstOrDefault(a => a != me && a != _bdMate3 && a.Cart == rc.Cart && !a.Downed);
+                if (_bdMate3 == null || _bdMate2 == null) { Fail("two companions in the cart are needed"); return; }
+                if (!rc.DebugSeat(_bdMate3, 3)) { Fail($"{_bdMate3.State.Name} could not be seated in W3"); return; }
+                GD.Print($"[boarders] passing: {_bdMate3.State.Name} seated in {Where(_bdMate3)}");
+                Next(7);
+                break;
+            }
+            case 7: if (Press(W(4), "Climb back to wagon 4")) { _bdMovesBefore = rc.MovesTaken; Next(8); } break;
+            case 8:
+                if (!Landed(2, 4, $"{name} climbs back to wagon 4.")) break;
+                if (rc.MovesTaken != _bdMovesBefore) { Fail("passing took more than one move"); return; }
+                GD.Print($"[boarders] passing: from W2 past {_bdMate3!.State.Name} in W3 to W4 in one move");
+                Next(9);
+                break;
+
+            // forward: W4 -> W2 (past W3) -> W1 -> the cart
+            case 9: me.SeatYaw = BdForward; Next(10); break;
+            case 10: if (t >= TrainMoveRules.MoveCooldown - 0.6f && Press(W(2), "Climb forward to wagon 2")) Next(11); break;
+            case 11: if (Landed(4, 2, $"{name} climbs forward to wagon 2.")) Next(12); break;
+            case 12: if (t >= 0.4f && Press(W(1), "Climb forward to wagon 1")) Next(13); break;
+            case 13: if (Landed(2, 1, $"{name} climbs forward to wagon 1.")) Next(14); break;
+            case 14: if (t >= 0.4f && Press(rc.Cart, "Climb forward into the cart")) Next(15); break;
+            case 15: if (Landed(1, 0, $"{name} climbs forward into the cart.")) { me.SeatYaw = BdBack; Next(16); } break;
+
+            // the beam: back to W2 (W1, then W2), ridden under r1_beam
+            case 16: if (t >= 0.4f && Press(W(1), "Climb back to wagon 1")) Next(17); break;
+            case 17: if (Landed(0, 1, $"{name} climbs back to wagon 1.")) Next(18); break;
+            case 18: if (t >= 0.4f && Press(W(2), "Climb back to wagon 2")) Next(19); break;
+            case 19:
+                if (!Landed(1, 2, $"{name} climbs back to wagon 2.")) break;
+                if (enc.SetPieceNode("r1_beam") is LowBeam beam && rc.Party.FrontS >= beam.S - 1f) { Fail($"the lead reached W2 with the front at S={rc.Party.FrontS:0.0}, already at r1_beam (S={beam.S:0.0})"); return; }
+                GD.Print($"[boarders] the beam: the lead rides in {Where(me)} toward r1_beam, the front at S={rc.Party.FrontS:0.0}");
+                Next(20);
+                break;
+            case 20:
+                if (!_bdHeads.Done) { if (rc.CarOf(me) != 2) { Fail($"the lead left W2 before the beam ({Where(me)})"); return; } break; }
+                if (!_bdLeadUnderBeam) { Fail("the lead was never measured under r1_beam in W2"); return; }
+                me.SeatYaw = BdForward;
+                Next(21);
+                break;
+
+            // the double press: the lead's press forward to W1, then in the same frame a cart companion's press on W1 through the real use
+            // (fix round 1, I1: judged as a move and refused out loud, never the wagon's plain use) and its forced move to W1
+            case 21:
+            {
+                if (t < 0.15f) break;
+                if (rc.MoveOfferFor(me) != W(1)) { if (t > 1.6f) Fail("from W2 looking forward no move to W1 was offered"); break; }
+                var mate = _bdMate2!;
+                party.VrUse(true);
+                party.VrUse(false);
+                var pressed = rc.Hopping(me);
+                int refusedBefore = rc.MovesRefusedCount, plainBefore = rc.WagonPlainUses, takenBefore = rc.MovesTaken;
+                W(1).Interact(party, mate); // the companion's own press on W1, as a key or an intent reaches it (OnUse)
+                var pressRefused = rc.LastMoveRefused;
+                GD.Print($"[boarders] the double press: {mate.State.Name}'s press on W1 from {Where(mate)}: refused out loud {rc.MovesRefusedCount - refusedBefore} ({pressRefused ?? "-"}), plain uses {rc.WagonPlainUses - plainBefore}, moves taken {rc.MovesTaken - takenBefore}");
+                if (rc.MovesRefusedCount != refusedBefore + 1 || pressRefused != "the place is booked" || rc.WagonPlainUses != plainBefore || rc.MovesTaken != takenBefore || rc.CarOf(mate) != 0)
+                { Fail("the double press: the second press for the booked place was not refused out loud as a move (or fell into the wagon's plain use)"); return; }
+                var forced = rc.Move(mate, W(1), "test");
+                var refused = rc.LastMoveRefused;
+                GD.Print($"[boarders] the double press: the lead's press took {pressed}; {mate.State.Name}'s forced move from {Where(mate)} to W1 taken={forced} (refused: {refused ?? "-"})");
+                if (!pressed || forced || refused != "the place is booked") { Fail("the double press: the first did not book W1, or the second was not refused (the place is booked)"); return; }
+                Next(22);
+                break;
+            }
+            case 22:
+                if (!Landed(2, 1, $"{name} climbs forward to wagon 1.")) break;
+                if (_bdMate2!.Cart != rc.Cart) { Fail($"{_bdMate2.State.Name} left the cart"); return; }
+                me.SeatYaw = BdBack;
+                Next(23);
+                break;
+
+            // the mid-hop down: back toward W2, downed 0.2 s into the hop
+            case 23: if (t >= 0.4f && Press(W(2), "Climb back to wagon 2")) { _bdMovesBefore = rc.MovesDropped; Next(24); } break;
+            case 24:
+                if (t < 0.2f) { if (!rc.Hopping(me)) { Fail("the hop ended before the lead was downed"); return; } break; }
+                me.State.Mangled = true; // held down (calm auto-revive never stands a Mangled member up)
+                me.State.Hp = 0;
+                party.OnMemberDowned(me.Index);
+                GD.Print($"[boarders] the mid-hop down: {name} downed {t:0.00} s into the hop (downed {me.Downed}, in {Where(me)})");
+                Next(25);
+                break;
+            case 25:
+            {
+                if (rc.Hopping(me)) { if (t > 0.2f) Fail("the downed lead's hop was not dropped"); break; }
+                if (t < 0.8f) // past where it would have landed
+                {
+                    if (rc.CarOf(me) != 1 || me.Seat != TrainRules.HeroPlace || !W(2).HeroPlaceFree) { Fail($"mid-hop downed, the lead is in {Where(me)} and W2's place free {W(2).HeroPlaceFree}"); return; }
+                    break;
+                }
+                var offer = rc.MoveOfferFor(me);
+                GD.Print($"[boarders] the mid-hop down: the hop dropped ({rc.MovesDropped - _bdMovesBefore}), the lead slumped in {Where(me)}, W2's place free {W(2).HeroPlaceFree}, offered while downed: {(offer == null ? "nothing" : "a move")}");
+                if (rc.MovesDropped != _bdMovesBefore + 1 || offer != null || !me.Downed) { Fail("the mid-hop down: not dropped once, or a move offered while downed"); return; }
+                me.State.Mangled = false;
+                me.Revive();
+                me.State.Hp = Math.Max(me.State.Hp, me.State.Stats[Characters.Stat.MaxHp] * 0.5f);
+                party.AllowPossession = true;
+                Next(80);
+                break;
+            }
+
+            // never offered: the arrival at stop 1 (held), on foot
+            case 80:
+            {
+                if (rc.State.Mode != CartMode.Held || rc.Halted || rc.StopIndex != 1) { if (t > 60f) Fail($"no arrival at stop 1 within 60 s (S={rc.State.S:0.0})"); break; }
+                Next(81); // held: judged a little after the arrival
+                break;
+            }
+            case 81:
+            {
+                if (t < 0.3f) break;
+                var offer = rc.MoveOfferFor(me);
+                var prompt = W(1).Prompt;
+                GD.Print($"[boarders] the arrival at stop 1: the lead in {Where(me)} (yaw {Mathf.RadToDeg(me.SeatYaw):0}) offered {(offer == null ? "no move" : "a move")}, W1's prompt \"{prompt}\"; moves refused {rc.MovesRefused}");
+                if (offer != null || prompt != "Get out" || rc.CarOf(me) != 1) { Fail("at the arrival a move was offered, or W1 did not offer its rider \"Get out\""); return; }
+                // companions hopping in (fix round 1, I2; Ruling 12): with the lead in W1 of the held train, a companion on foot beside W3, out of the
+                // cart's own 3 m hop-in reach, hops in by its own brain (BesideTheCart, TryHopIn) before any departure
+                var hopper = _bdMate2!;
+                hopper.Stance = Characters.Stance.Defensive;
+                hopper.Teleport(rc.StandBesideLane(W(3).GlobalPosition) + Vector3.Up * 0.2f, rc.Cart.GlobalPosition);
+                _bdHopNearest = float.PositiveInfinity;
+                GD.Print($"[boarders] hop-in: {hopper.State.Name} on foot beside W3 at {Dungeon.DungeonBuilder.WorldToCell(hopper.GlobalPosition)}, {hopper.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition):0.0} m from the cart; the lead in {Where(me)}");
+                if (hopper.Seated) { Fail("the companion did not get out for the hop-in check"); return; }
+                Next(82);
+                break;
+            }
+            case 82:
+            {
+                var hopper = _bdMate2!;
+                if (!hopper.Seated)
+                {
+                    _bdHopNearest = Mathf.Min(_bdHopNearest, hopper.GlobalPosition.DistanceTo(rc.Cart.GlobalPosition));
+                    if (rc.State.Mode != CartMode.Held || rc.StopIndex != 1) { Fail($"the train left stop 1 before {hopper.State.Name} hopped in"); return; }
+                    if (t > 6f) Fail($"{hopper.State.Name} on foot did not hop in within 6 s with the lead in W1 (nearest the cart {_bdHopNearest:0.0} m, action {hopper.CurrentActionName})");
+                    break;
+                }
+                GD.Print($"[boarders] hop-in: {hopper.State.Name} hopped into {Where(hopper)} {t:0.00} s after being set down, never nearer the cart than {_bdHopNearest:0.0} m; the lead still in {Where(me)}");
+                if (rc.CarOf(hopper) < 0 || _bdHopNearest <= 3f || rc.CarOf(me) != 1) { Fail("the hop-in came by the cart's own 3 m reach, or not into the train"); return; }
+                W(1).Interact(party, me); // the get-out press, as the key would
+                if (me.Seated) { Fail("the lead did not get out of W1 at stop 1"); return; }
+                var onFoot = rc.MoveOfferFor(me);
+                GD.Print($"[boarders] on foot beside the lane at {Dungeon.DungeonBuilder.WorldToCell(me.GlobalPosition)}: offered {(onFoot == null ? "no move" : "a move")}");
+                if (onFoot != null) { Fail("a move was offered on foot"); return; }
+                GD.Print($"[boarders] RESULT ok ({_bdVariant}): moves taken {rc.MovesTaken}, landed {rc.MovesLanded}, dropped {rc.MovesDropped}; the hop {TrainMoveRules.HopSeconds} s within a tick, the cooldown held, W2 to W4 past a companion in one move, forward to the cart, r1_beam cleared by {_bdHeads.Min:0.00} m with the lead in W2, the double press refused (the place is booked) by the real press and the forced move, the mid-hop down dropped; a companion on foot hopped in with the lead in W1; W1 measured to its tub; never offered held, downed or on foot");
+                _done = true;
+                GetTree().Quit(0);
+                break;
+            }
+        }
+    }
+
+    /// <summary>r1_beam over every seated head in the train (<see cref="BeamHeads"/>), and whether the lead's in W2 was under it.</summary>
+    private void BoardersBeam(RailController rc, RailEncounterController enc, Adventurer me, Action<string> Fail)
+    {
+        if (_bdHeads.Done || enc.ArmedRide != 1) return;
+        if (enc.SetPieceNode("r1_beam") is not LowBeam beam) { Fail("floor 12 lacks r1_beam"); return; }
+        if (rc.WagonAt(2) is { } w2 && me.Cart == w2 && Mathf.Abs((beam.GlobalTransform.AffineInverse() * w2.SeatTransform(TrainRules.HeroPlace).Origin).Z) <= 0.25f) _bdLeadUnderBeam = true;
+        if (!_bdHeads.Sample(beam, rc)) return;
+        _bdHeads.Done = true;
+        GD.Print($"[boarders] the beam: r1_beam clears every seated head in the train by {_bdHeads.Min:0.00} m ({_bdHeads.Heads} sample(s) under it at S={beam.S:0.0}; the lead in W2 among them {_bdLeadUnderBeam})");
+        if (_bdHeads.Heads == 0 || _bdHeads.Min < 0.05f) Fail($"r1_beam clears a seated head by {_bdHeads.Min:0.00} m, under 0.05 (or measured none)");
+    }
+}
