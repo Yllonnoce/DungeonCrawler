@@ -10,6 +10,9 @@ namespace DungeonCrawler.Dungeon;
 /// walls (near-black at the rim, warming with depth) from the rim down <see cref="DrawDepth"/>, an ember floor and its light at the bottom, two drifting mist layers below
 /// the lip; the deck slabs with a trestle bent under each, and the planks. The cavern's lane decks (<see cref="CrevasseRules.CavernDecks"/>)
 /// can give way at runtime (<see cref="SetGone"/>), so each is drawn as its own look (<c>DeckLook_{x}_{y}</c>), the rest of the wood as one mesh.
+/// A region holding a cell the ride's pit or the exit island cut (<see cref="RailLine.Pit"/>, <see cref="RailIsland.Cut"/>) is lava (plan 15,
+/// Ruling 6): its shaft goes down <see cref="Rails.ExitBridgeRules.LavaDepth"/> to a molten surface lit as the rail gap's slag is
+/// (<see cref="Rails.RailGap.Molten"/>, <see cref="Rails.RailGap.Glow"/>), with the upper mist layer only, as its haze, and no ember floor.
 /// </summary>
 public partial class ChasmDressing : Node3D
 {
@@ -29,6 +32,8 @@ public partial class ChasmDressing : Node3D
     public int Regions { get; private set; }
     public int Decks { get; private set; }
     public int Planks { get; private set; }
+    /// <summary>The regions drawn as lava (each holds a cell the pit or the exit island cut).</summary>
+    public int Lava { get; private set; }
     /// <summary>The cavern's lane decks (<see cref="CrevasseRules.CavernDecks"/>), each drawn and given way alone.</summary>
     public int Cavern => _cavern.Count;
 
@@ -50,12 +55,15 @@ public partial class ChasmDressing : Node3D
         var node = new ChasmDressing { Name = "Chasms" };
         var regions = FindRegions(layout);
         node.Regions = regions.Count;
+        var cut = LavaCells(layout);
+        var lava = regions.Select(r => r.Any(cut.Contains)).ToList();
+        node.Lava = lava.Count(l => l);
         node.Decks = layout.Bridges.Values.Count(k => k == BridgeKind.Deck);
         node.Planks = layout.Bridges.Values.Count(k => k == BridgeKind.Plank);
         node._cavern.UnionWith(CrevasseRules.CavernDecks(layout));
         node.AddChild(node.BuildFootings(layout, surface, cellSize));
-        if (DrawsLook) node.BuildLook(layout, regions, surface, cellSize, plank);
-        GD.Print($"[chasm] regions={node.Regions} decks={node.Decks} planks={node.Planks} cavern={node.Cavern}");
+        if (DrawsLook) node.BuildLook(layout, regions, lava, surface, cellSize, plank);
+        GD.Print($"[chasm] regions={node.Regions} decks={node.Decks} planks={node.Planks} cavern={node.Cavern} lava={node.Lava}");
         return node;
     }
 
@@ -90,6 +98,16 @@ public partial class ChasmDressing : Node3D
         if (_deckLooks.TryGetValue(cell, out var look) && IsInstanceValid(look)) look.Visible = !gone;
         if (gone) layout.GoneBridges.Add(cell);
         else layout.GoneBridges.Remove(cell);
+    }
+
+    /// <summary>The cells the ride's pit and the exit island cut (empty on a floor without them): a region holding one is lava.</summary>
+    private static HashSet<GridPos> LavaCells(FloorLayout layout)
+    {
+        var cells = new HashSet<GridPos>();
+        if (layout.Rail is not { } rail) return cells;
+        if (rail.Pit is { } pit) cells.UnionWith(pit.Cut);
+        if (rail.Island is { } island) cells.UnionWith(island.Cut(rail));
+        return cells;
     }
 
     /// <summary>Each 4-connected region of chasm-or-bridge cells, scanned in (Y, X) order.</summary>
@@ -157,7 +175,7 @@ public partial class ChasmDressing : Node3D
         return body;
     }
 
-    private void BuildLook(FloorLayout layout, List<List<GridPos>> regions, Func<GridPos, Vector3> surface, float cellSize, Material plank)
+    private void BuildLook(FloorLayout layout, List<List<GridPos>> regions, List<bool> lava, Func<GridPos, Vector3> surface, float cellSize, Material plank)
     {
         // near-black rock that warms with depth, as if lit by the embers far below (unshaded: the glow is painted down the walls,
         // since the ember light reaches only the lowest part of the shaft and a player at the lip sees only its upper walls)
@@ -177,10 +195,12 @@ public partial class ChasmDressing : Node3D
                 ProximityFadeEnabled = true, ProximityFadeDistance = 2.5f, // no hard line where a layer meets the shaft or a post
             });
 
+        Material? molten = null;
         for (var r = 0; r < regions.Count; r++)
         {
             var region = regions[r];
             var cells = region.ToHashSet();
+            if (lava[r]) { LavaLook(region, cells, r, surface, cellSize, rock, molten ??= Rails.RailGap.Molten()); continue; }
             var bottom = region.Min(c => surface(c).Y) - DrawDepth;
 
             // the shaft: every edge to a cell outside the region, from that neighbour's floor down to the bottom
@@ -243,6 +263,52 @@ public partial class ChasmDressing : Node3D
             _deckLooks[cell] = AddMesh(look, plank, $"DeckLook_{cell.X}_{cell.Y}", shadows: true);
         }
     }
+
+    /// <summary>
+    /// A lava region's look: its shaft from each outside neighbour's floor down <see cref="Rails.ExitBridgeRules.LavaDepth"/> below the
+    /// region's lowest lip (dark at the rim, glowing toward the lava), the molten surface there with the slag's glow over its middle, and
+    /// the upper mist layer halfway down as its haze. No ember floor.
+    /// </summary>
+    private void LavaLook(List<GridPos> region, HashSet<GridPos> cells, int r, Func<GridPos, Vector3> surface, float cellSize, Material rock, Material molten)
+    {
+        var lip = region.Min(c => surface(c).Y);
+        var bottom = lip - Rails.ExitBridgeRules.LavaDepth;
+        var shaft = new SurfaceTool();
+        shaft.Begin(Mesh.PrimitiveType.Triangles);
+        foreach (var c in region)
+            foreach (var n in c.Neighbours4())
+            {
+                if (cells.Contains(n)) continue;
+                var d = new Vector3(n.X - c.X, 0, n.Y - c.Y);
+                var side = new Vector3(-d.Z, 0, d.X);
+                var mid = new Vector3((c.X + 0.5f) * cellSize, 0, (c.Y + 0.5f) * cellSize) + d * (cellSize / 2f - WallInset);
+                var top = surface(n).Y;
+                if (top <= bottom) continue;
+                var h = cellSize / 2f;
+                Quad(shaft, -d, (mid + side * h) with { Y = top }, (mid - side * h) with { Y = top }, (mid - side * h) with { Y = bottom }, (mid + side * h) with { Y = bottom },
+                    colour: p => LavaGlow((lip - p.Y) / Rails.ExitBridgeRules.LavaDepth));
+            }
+        AddMesh(shaft, rock, $"Shaft{r}", shadows: false);
+        var pool = new SurfaceTool();
+        pool.Begin(Mesh.PrimitiveType.Triangles);
+        foreach (var c in region) CellQuad(pool, c, bottom, cellSize, 1f / 4f);
+        AddMesh(pool, molten, $"Lava{r}", shadows: false);
+        var cx = region.Average(c => (float)c.X);
+        var cy = region.Average(c => (float)c.Y);
+        var heart = region.OrderBy(c => (c.X - cx) * (c.X - cx) + (c.Y - cy) * (c.Y - cy)).ThenBy(c => c.Y).ThenBy(c => c.X).First();
+        var reach = region.Max(c => MathF.Sqrt((c.X - heart.X) * (c.X - heart.X) + (c.Y - heart.Y) * (c.Y - heart.Y))) * cellSize;
+        var glow = Rails.RailGap.Glow($"LavaGlow{r}", Mathf.Clamp(reach + cellSize, Rails.RailGap.GlowRange, 18f));
+        glow.Position = new Vector3((heart.X + 0.5f) * cellSize, bottom + 0.8f, (heart.Y + 0.5f) * cellSize);
+        AddChild(glow);
+        var haze = new SurfaceTool();
+        haze.Begin(Mesh.PrimitiveType.Triangles);
+        foreach (var c in region) CellQuad(haze, c, surface(c).Y - Rails.ExitBridgeRules.LavaDepth / 2f, cellSize, 1f / 16f);
+        AddMesh(haze, _mists[0], $"Mist{r}_0", shadows: false);
+    }
+
+    /// <summary>A lava shaft's wall colour at <paramref name="t"/> of the way down (0 the rim, 1 the lava): near-black, then the molten glow.</summary>
+    private static Color LavaGlow(float t)
+        => new Color(0.04f, 0.03f, 0.025f).Lerp(new Color(0.75f, 0.24f, 0.05f), Mathf.Clamp(t, 0f, 1f) * Mathf.Clamp(t, 0f, 1f));
 
     /// <summary>One bridge cell's wood: its slab (none on a ramp, whose slope is the deck) and, under a deck, a trestle bent.</summary>
     private static void BridgeWood(SurfaceTool wood, FloorLayout layout, GridPos cell, BridgeKind kind, Func<GridPos, Vector3> surface, float cellSize)

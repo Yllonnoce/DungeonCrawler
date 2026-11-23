@@ -25,11 +25,15 @@ public sealed record DepthRun(string Track, float FromS, float ToS, IReadOnlyLis
 public static class TrackDepthRules
 {
     /// <summary>
-    /// Floor 12's pinned <c>nofloorDrop</c> counts (plan 13's probe gate): PartyTrack 0 and EnemyTrack 40 (ride 3's broken-bridge gap). The
-    /// verdict does not judge nofloorDrop (a probe over a drop is legitimate), so these expected values are what catches a cavern deck built
-    /// without its footing (a deck that gives way at runtime must still stand at the build). <c>--test-track-view</c> holds the probe to them.
+    /// Floor 12's pinned <c>nofloorDrop</c> counts (plan 13's probe gate, re-measured on the island floor by plan 15 Task 3; was PartyTrack 0 /
+    /// EnemyTrack 40). Each 4 m cell of drop under a track reads 40 (8 samples by 5 probes). PartyTrack 201: the pit (61,56) 40, the exit
+    /// bridge (51..54,60) 160, and 1 more from the S=1184.0 sample on the (55,60)|(54,60) join, whose left sleeper end lies over (54,60).
+    /// EnemyTrack 161: ride 3's broken-bridge gap (40,12) 40, the enemy bridge (51..53,61) 120, and 1 from the S=1220.0 sample on the
+    /// (54,61)|(53,61) join. The verdict does not judge nofloorDrop (a probe over a drop is legitimate), so these expected values are what
+    /// catches a cavern deck built without its footing (a deck that gives way at runtime must still stand at the build).
+    /// <c>--test-track-view</c> holds the probe to them.
     /// </summary>
-    public static readonly IReadOnlyDictionary<string, int> Floor12NoFloorDrop = new Dictionary<string, int> { ["PartyTrack"] = 0, ["EnemyTrack"] = 40 };
+    public static readonly IReadOnlyDictionary<string, int> Floor12NoFloorDrop = new Dictionary<string, int> { ["PartyTrack"] = 201, ["EnemyTrack"] = 161 };
 
     /// <summary>Null when every pinned track's measured nofloorDrop is its pin; else why not (a missing deck footing at the build, or the track not probed).</summary>
     public static string? NoFloorDropPin(IReadOnlyDictionary<string, int> pins, IReadOnlyDictionary<string, int> measured)

@@ -17,7 +17,7 @@ namespace DungeonCrawler.Dungeon.Rails;
 /// with a seated player's brake in the last <see cref="BridgeRules.BrakeMemory"/> it runs on and takes the train (<see cref="RailController.Fall"/>),
 /// "Don't stop" called once as a brake comes with it near. A wreck or a fall stops it where it stands; an arrival does not (it runs on to the end);
 /// ride 4's next arming, a restore and a spare's takeover stand it whole again. While the train rolls on it, at any speed, nobody gets out
-/// (<see cref="HoldsRiders"/>). The ride's runaway whose front is on the gone span goes down with it, freed plainly (neither rammed nor plunged).
+/// (<see cref="HoldsRiders"/>, which the exit bridge's hold joins). The ride's runaway whose front is on the gone span goes down with it, freed plainly (neither rammed nor plunged).
 /// </summary>
 public partial class RailEncounterController
 {
@@ -285,10 +285,21 @@ public partial class RailEncounterController
     /// Nobody gets out (Ruling 6 as amended by the final review's I2): the party's train, its front past the live bridge's start and its rear
     /// short of its end, is Rolling, at any speed. Every role, from this peer's own cart.
     /// </summary>
-    public bool HoldsRiders()
+    private bool CavernHoldsRiders()
     {
         if (float.IsNaN(BridgeFromS) || !IsInstanceValid(_rails)) return false;
         var on = _rails.State.Mode == CartMode.Rolling && _rails.Party.FrontS > BridgeFromS && TrainRearS < BridgeToS;
         return BridgeRules.HoldsRiders(on);
     }
+
+    /// <summary>
+    /// Nobody gets out and nobody moves car to car (plan 15 Ruling 10): the train rolls on ride 4's collapsing bridge (<see cref="CavernHoldsRiders"/>)
+    /// or with any car over the exit bridge (<see cref="ExitBridgeHolds"/>). "Get out" (cart and wagons), <see cref="RailController.MovesRefused"/>
+    /// and the throw clocks' pause read it. Every role, from this peer's own cart.
+    /// </summary>
+    public bool HoldsRiders() => CavernHoldsRiders() || ExitBridgeHolds();
+
+    /// <summary>Which bridge holds the riders now (<see cref="HoldsRiders"/>), as the refusals print it; null when none does.</summary>
+    public string? HoldReason()
+        => CavernHoldsRiders() ? "the train rolls on the collapsing bridge" : ExitBridgeHolds() ? "the train is on the exit bridge" : null;
 }

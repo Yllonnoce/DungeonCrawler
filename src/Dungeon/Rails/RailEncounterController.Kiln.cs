@@ -145,7 +145,7 @@ public partial class RailEncounterController
 
     private Node3D? BuildSpur(Node3D root, Piece piece)
     {
-        var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S, LeverRef = NetRefs.Spur(piece.Index) };
+        var spur = new SpurSwitch { Name = $"Spur_{piece.Plan.Id}", PointsS = piece.S, LeverRef = NetRefs.Spur(piece.Index), LeverPastPoints = OnExitBridge(piece.S - SpurSwitch.LeverLead) };
         root.AddChild(spur);
         var path = spur.Build(_rails.Party.Track, _enemy, Lanes, _steel ??= DungeonBuilder.RailSteel(),
             _sleeper ??= DungeonBuilder.RailSleeper(), w => _layout[DungeonBuilder.WorldToCell(w)] is Cell.Wall or Cell.Secret);
@@ -153,6 +153,15 @@ public partial class RailEncounterController
         piece.Spur = spur;
         piece.Switch = spur.Lever; // armed and reset with the other levers
         return spur;
+    }
+
+    /// <summary>The party line's S <paramref name="s"/> lies over an exit bridge cell (Ruling 43): the spur's lever cannot stand there.</summary>
+    private bool OnExitBridge(float s)
+    {
+        if (_layout.Rail is not { Island: { } island } rail || !_rails.Party.Track.Valid) return false;
+        var cell = DungeonBuilder.WorldToCell(_rails.Party.Track.Point(s));
+        for (var i = island.Bridge.From; i <= island.Bridge.To; i++) if (rail.Party[i] == cell) return true;
+        return false;
     }
 
     private Node3D? BuildBuffer(Node3D root, Piece piece)

@@ -25,6 +25,12 @@ public partial class SpurSwitch : Node3D
 
     /// <summary>The party line's S beside the points.</summary>
     public float PointsS { get; init; }
+    /// <summary>
+    /// The lever stands <see cref="SplitRules.LeverPast"/> past the points instead (plan 15, Ruling 43: <see cref="LeverLead"/> short of
+    /// them lies on the exit bridge, over the lava), and its seated window keeps its start, <see cref="LeverLead"/> +
+    /// <see cref="SeatedSwitchRules.WindowAhead"/> short of the points, ending at them.
+    /// </summary>
+    public bool LeverPastPoints { get; init; }
     /// <summary>The enemy line's S at the points (where the spur leaves it).</summary>
     public float EnemyPointsS { get; private set; }
     public TrackSwitch Lever { get; private set; } = null!;
@@ -47,11 +53,15 @@ public partial class SpurSwitch : Node3D
     public List<Vector3> Build(TrackSampler party, TrackSampler enemy, LaneMap lanes, Material steel, Material sleeper, Func<Vector3, bool> rockAt)
     {
         EnemyPointsS = lanes.EnemyS(PointsS);
-        var leverS = Mathf.Max(0f, PointsS - LeverLead);
+        var leverS = LeverPastPoints ? Mathf.Min(party.Length, PointsS + SplitRules.LeverPast) : Mathf.Max(0f, PointsS - LeverLead);
         var frame = party.Frame(leverS);
         var x = frame.Basis.X.Normalized();
         var side = (enemy.Point(lanes.EnemyS(leverS)) - frame.Origin).Dot(x) >= 0f ? 1f : -1f; // between the lanes
-        Lever = new TrackSwitch { Name = "Lever", PointsS = PointsS, LeverS = leverS, NetRef = LeverRef };
+        Lever = new TrackSwitch
+        {
+            Name = "Lever", PointsS = PointsS, LeverS = leverS, NetRef = LeverRef,
+            WindowStartS = LeverPastPoints ? PointsS - LeverLead - SeatedSwitchRules.WindowAhead : float.NaN,
+        };
         AddChild(Lever);
         Lever.GlobalTransform = new Transform3D(frame.Basis.Orthonormalized(), frame.Origin + x * (side * RailEncounterController.LeverOut));
 
@@ -96,7 +106,7 @@ public partial class SpurSwitch : Node3D
             Box(new Vector3(0.12f, 0.12f, BraceLength), new Transform3D(basis * new Basis(Vector3.Right, -BraceTilt), end.Origin + basis.X * (s * RailTrack.Gauge / 2f) + basis.Y * 0.35f - basis.Z * BraceBack), _wood);
         }
         points.Add(Lever.GlobalPosition);
-        GD.Print($"[rails] spur switch: points at party S={PointsS:0.0} (enemy S={EnemyPointsS:0.0}), lever at S={leverS:0.0} side {side:+0;-0}, spur {Sampler.Length:0.0} m, bend {bend:0.00} m{(pick.BentIn ? " (rock beyond)" : "")}, stop -{stop.Inner:0.00}/+{stop.Outer:0.00} m, sleeper gap {pick.SleeperGap:0.00} m");
+        GD.Print($"[rails] spur switch: points at party S={PointsS:0.0} (enemy S={EnemyPointsS:0.0}), lever at S={leverS:0.0}{(LeverPastPoints ? $" (past the points: the exit bridge; the seated window from S={Lever.WindowStartS:0.0})" : "")} side {side:+0;-0}, spur {Sampler.Length:0.0} m, bend {bend:0.00} m{(pick.BentIn ? " (rock beyond)" : "")}, stop -{stop.Inner:0.00}/+{stop.Outer:0.00} m, sleeper gap {pick.SleeperGap:0.00} m");
         return points;
     }
 

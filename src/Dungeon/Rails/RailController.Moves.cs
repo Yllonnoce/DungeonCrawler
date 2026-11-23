@@ -41,7 +41,7 @@ public partial class RailController
 
     /// <summary>
     /// Moves are refused for everyone (Ruling 11; every role, this peer's own cart): the train not rolling, a seated lever window of the armed ride
-    /// open (<see cref="RailEncounterController.AnyLeverWindow"/>), or the train on ride 4's live bridge (<see cref="HoldsRiders"/>).
+    /// open (<see cref="RailEncounterController.AnyLeverWindow"/>), or the train on ride 4's live bridge or the exit bridge (<see cref="HoldsRiders"/>).
     /// </summary>
     public bool MovesRefused => TrainMoveRules.Refused(State.Mode == CartMode.Rolling, LeverWindowOpen, HoldsRiders);
 
@@ -234,7 +234,7 @@ public partial class RailController
         if (!up) return "down";
         if (!inTrain) return "not in the train";
         if (from == to) return "already in that car";
-        if (refused) return State.Mode != CartMode.Rolling ? "the train is not rolling" : HoldsRiders ? "the train is on the live bridge" : "a lever window is open";
+        if (refused) return State.Mode != CartMode.Rolling ? "the train is not rolling" : HoldsRiders ? HoldReason ?? "the train is on the live bridge" : "a lever window is open";
         if (HopUnderWay(body)) return "a hop under way";
         if (since < TrainMoveRules.MoveCooldown - TrainMoveRules.AcceptSlack) return $"{since:0.00} s after the last";
         return PlacesFree(answerTo)[to] ? $"the nearest free place that way is car {serverTarget?.ToString() ?? "none"}" : "the place is booked";
@@ -350,7 +350,7 @@ public partial class RailController
 
     // ---- a wagon's own rider (Ruling 9) ----------------------------------------------------------
 
-    /// <summary>A wagon's own rider may get out now: up, held or rolling under <see cref="TrainMoveRules.GetOutBelow"/>, and not on the live bridge.</summary>
+    /// <summary>A wagon's own rider may get out now: up, held or rolling under <see cref="TrainMoveRules.GetOutBelow"/>, and not on the live bridge or the exit bridge.</summary>
     private bool WagonGetOutOk(Adventurer hero)
         => !hero.Downed && !hero.Parked && !HoldsRiders && TrainMoveRules.WagonGetOut(State.Mode == CartMode.Rolling, State.V);
 

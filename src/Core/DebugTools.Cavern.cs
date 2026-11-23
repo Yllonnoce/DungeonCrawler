@@ -340,6 +340,11 @@ public partial class DebugTools
         if (!gaps.Any(g => g.from == enc.BridgeFromS && g.to == enc.BridgeToS)) return "the party track is not bare over the bridge's span";
         var jump = enc.SetPieceNode("r5_jump") is RailGap gap ? gap : null;
         if (jump == null || !gaps.Any(g => Mathf.Abs(g.from - jump.From) < 0.01f && Mathf.Abs(g.to - jump.To) < 0.01f)) return "the party track is not bare over r5_jump's gap";
+        // plan 15 (spec B.10): the exit bridge's track is laid (no gap over it) with no gravel
+        if (float.IsNaN(enc.ExitFromS)) return "no exit bridge on floor 12";
+        if (gaps.FirstOrDefault(g => g.from < enc.ExitToS && g.to > enc.ExitFromS) is var over && over != default) return $"a gap {over.from:0.0}..{over.to:0.0} overlaps the exit bridge {enc.ExitFromS:0.0}..{enc.ExitToS:0.0}";
+        if (!track.BallastOmitted.Contains((enc.ExitFromS, enc.ExitToS))) return $"the exit bridge {enc.ExitFromS:0.0}..{enc.ExitToS:0.0} keeps its gravel";
+        GD.Print($"[cavern] exit bridge laid: party S={enc.ExitFromS:0.0}..{enc.ExitToS:0.0} not bare, no gravel");
         if (Main.Instance.Builder.EnemyTrack is { } enemy) GD.Print($"[cavern] enemy track bare over: {string.Join(", ", enemy.Gaps.OrderBy(g => g.from).Select(g => $"{g.from:0.0}..{g.to:0.0}"))}");
         var (fromMm, toMm) = MeasureJoin(bridge, track);
         GD.Print($"[cavern] join: the bridge's first rail ring against the track's at S={bridge.From:0.0}: {fromMm:0.000} mm; its last at S={bridge.To:0.0}: {toMm:0.000} mm");

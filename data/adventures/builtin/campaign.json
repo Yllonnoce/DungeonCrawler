@@ -536,7 +536,9 @@
         "RailBand": 14,
         "Crevasses": true,
         "BrokenBridgeRide": 3,
-        "SplitRide": 4
+        "SplitRide": 4,
+        "PitRide": 5,
+        "ExitIsland": true
       }
     },
     {

@@ -27,7 +27,8 @@ public sealed class PathMover
     }
 
     /// <summary>
-    /// The point to walk toward this frame, or null when within <paramref name="stopWithin"/> of the target.
+    /// The point to walk toward this frame, or null when within <paramref name="stopWithin"/> of the target, or when no path reaches it
+    /// and the straight way there crosses a drop (the body holds; <see cref="Unreachable"/> still grows).
     /// <paramref name="straight"/> is true when no path was needed (close and visible).
     /// </summary>
     public Vector3? Next(Node3D body, Vector3 target, float dt, float stopWithin, Func<Vector3, bool> clearLine, out bool straight)
@@ -58,7 +59,9 @@ public sealed class PathMover
         {
             Unreachable += 0.5f;
             straight = true;
-            return target;
+            // no way there: straight at it, but never over a drop (a lead riding over the exit bridge's lava is out of reach, and a
+            // follower held at the lip waits for its catch-up instead of walking in: plan 15)
+            return builder.DropAlong(pos, target) ? null : target;
         }
         Unreachable = 0f;
         if (_path.Count < 2) { straight = true; return target; }

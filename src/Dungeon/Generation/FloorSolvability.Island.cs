@@ -12,11 +12,13 @@ public static partial class FloorSolvability
     /// ride to the island).
     /// <list type="bullet">
     /// <item><b>On foot</b>: every intermediate stop's first platform cell (its cage's siding lies beside it) is reached from the up
-    /// stairs; with the rails open, so is each party cell of the parked train's place, and so is every room outside the island
-    /// that the up stairs would reach with the island's cut and cave-in cells read as open (Ruling 45).</item>
-    /// <item><b>Sealed</b>: no island cell is reached from the up stairs with every door open.</item>
+    /// stairs; with the rails open, so is each party cell of the parked train's place, every key outside the island (the loose keys,
+    /// the vaults' keys and the objective's spare keys), and every room outside the island that the up stairs would reach with the
+    /// island's cut and cave-in cells read as open (Ruling 45).</item>
+    /// <item><b>Sealed</b>: no island cell is reached from the up stairs with every door and every secret open.</item>
     /// <item><b>By rail</b>: from the parked train's place to the cell before the exit platform, each party-lane cell is walkable,
-    /// but the bridge's, which are chasm with their track kept.</item>
+    /// but the bridge's, which are chasm with their track kept. A parked place or an exit platform not on the party lane before it is
+    /// itself a problem, never a walk that checks nothing.</item>
     /// <item><b>Inside</b>: from the exit platform's first cell, a cell of every island room and the stairs down are reached.</item>
     /// <item><b>The pit</b> (<see cref="RailLine.Pit"/>): the party cells either side of it, and the enemy twins of it and of them,
     /// are walkable.</item>
@@ -32,8 +34,19 @@ public static partial class FloorSolvability
             if (rail.Stops[k].Platform[0] is var stop && !reach.Contains(stop)) problems.Add($"on foot, stop {k}'s platform at {stop} is out of reach");
         if (railsBlocked) return problems;
 
-        for (var i = island.Parked.From; i <= island.Parked.To; i++)
-            if (rail.Party[i] is var c && !reach.Contains(c)) problems.Add($"on foot, the parked train's place at {c} is out of reach");
+        var last = rail.Stops.Count - 1;
+        var platform = rail.Stops[last].Platform[0];
+        var end = rail.Party.ToList().IndexOf(platform);
+        var parkedOnLane = island.Parked.From >= 0 && island.Parked.From <= island.Parked.To && island.Parked.To < rail.Party.Count;
+        if (end < 0) problems.Add($"the exit platform's cell {platform} is not on the party lane");
+        if (!parkedOnLane || end >= 0 && island.Parked.From >= end)
+            problems.Add($"the parked train's place {island.Parked.From}..{island.Parked.To} does not lie on the party lane before the exit platform");
+        if (parkedOnLane)
+            for (var i = island.Parked.From; i <= island.Parked.To; i++)
+                if (rail.Party[i] is var c && !reach.Contains(c)) problems.Add($"on foot, the parked train's place at {c} is out of reach");
+        var keys = layout.KeySpawns.Concat(layout.Vaults.Where(v => v.Key != null).Select(v => v.Key!.Value)).Concat(layout.Objective?.ExtraKeyCells ?? new());
+        foreach (var k in keys)
+            if (!island.Cells.Contains(k) && !reach.Contains(k)) problems.Add($"on foot, the key at {k} is out of reach");
         var cuts = island.Cut(rail).Concat(island.CaveIns).ToHashSet();
         var uncut = layout.Reachable(layout.UpStairs, shut, cuts.Contains);
         for (var i = 0; i < layout.Rooms.Count; i++)
@@ -43,14 +56,11 @@ public static partial class FloorSolvability
             if (cells.Any(uncut.Contains) && !cells.Any(reach.Contains)) problems.Add($"on foot, room {i} is out of reach");
         }
 
-        var everyDoor = layout.Reachable(layout.UpStairs);
+        var everyDoor = layout.Reachable(layout.UpStairs, null, secretsOpen: true);
         if (island.Cells.Where(everyDoor.Contains).OrderBy(c => c.Y).ThenBy(c => c.X).Select(c => (GridPos?)c).FirstOrDefault() is { } leak)
             problems.Add($"the exit island leaks at {leak}");
 
-        var last = rail.Stops.Count - 1;
-        var platform = rail.Stops[last].Platform[0];
-        var end = rail.Party.ToList().IndexOf(platform);
-        for (var i = island.Parked.From; i < end; i++)
+        for (var i = parkedOnLane ? island.Parked.From : end; i < end; i++)
         {
             var c = rail.Party[i];
             var onBridge = i >= island.Bridge.From && i <= island.Bridge.To;

@@ -9,7 +9,7 @@ namespace DungeonCrawler.Core;
 // ---- --test-track-view --------------------------------------------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears and the runaway on ride 4 is held.
 // First (plan 13 Task 7 review I2) the --track-depth probe runs at the build and its nofloorDrop counts must be floor 12's pins
-// (TrackDepthRules.Floor12NoFloorDrop: PartyTrack 0, EnemyTrack 40, ride 3's gap): "[trackview] nofloorDrop at the build: …".
+// (TrackDepthRules.Floor12NoFloorDrop: PartyTrack 201, EnemyTrack 161 on the island floor: the pit, the exit bridge and ride 3's gap): "[trackview] nofloorDrop at the build: …".
 // The exposed-track fix's view from the seat: the rails over the line's first party ramp (RailBed.RampsOn(layout, rail.Party)[0])
 // and over a lane cell whose buckle roll was laid flat (DungeonBuilder.SparedRailBuckles): one the cart approaches on the cell's own
 // level (no ramp and no other level from the cart's length short of the sighting point to the cell), on the ramp's ride k first, else

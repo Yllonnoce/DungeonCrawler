@@ -517,6 +517,7 @@ public partial class RailController : Node
         FreeChaser();
         ResetRelief(); // a relief is not saved either: the clock starts clean and the standing cart has met nobody yet
         LastWreckFell = false;
+        LastWreckInside = false;
         _arrivedStop = -1;
         _spares.Restore(sparesUsed);
         _restoredRiders.Clear();
@@ -717,8 +718,10 @@ public partial class RailController : Node
     /// <summary>Ride 4's leap offers <paramref name="hero"/> this cart back from a slag cart's deck (plan 13), on every role.</summary>
     private bool LeapOffered(Adventurer hero) => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.LeapOfferFor(hero) == Cart;
 
-    /// <summary>The train rolls on ride 4's collapsing bridge (plan 13, Ruling 6): "Get out" is neither offered nor taken, on every role.</summary>
+    /// <summary>The train rolls on ride 4's collapsing bridge (plan 13, Ruling 6) or with any car over the exit bridge (plan 15, Ruling 10): "Get out" is neither offered nor taken, on every role.</summary>
     private static bool HoldsRiders => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) && enc.HoldsRiders();
+    /// <summary>Which bridge holds the riders now (<see cref="RailEncounterController.HoldReason"/>), or null.</summary>
+    private static string? HoldReason => RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? enc.HoldReason() : null;
 
     /// <summary>A hero seat (0-3) of the cart's book is free. No allocation.</summary>
     internal bool HeroSeatFree()
@@ -1059,15 +1062,20 @@ public partial class RailController : Node
         return best;
     }
 
+    /// <summary>
+    /// The cell a body steps out onto by the party lane near <paramref name="at"/>: <see cref="CartSeats.ExitCell"/>'s, passed through
+    /// <see cref="ExitBridgeRules.SafeExitCell"/> (plan 15, Ruling 12), so it is never a drop (a body by the exit bridge's span or the cavern's
+    /// decks stands at the nearer end instead).
+    /// </summary>
     private GridPos ExitCellNear(Vector3 at, bool atStop, bool useTaken)
     {
         bool Free(GridPos c) => CrevasseRules.SetDownOk(_layout, c) && !_layout.IsRail(c) && !_train.Sidings.Contains(c); // never a drop: a plank is walkable, not a place to put someone
         var lane = _layout.Rail!.Party;
         var best = NearestOf(lane, DungeonBuilder.WorldToCell(at));
-        if (!useTaken) return CartSeats.ExitCell(lane, best, Free, atStop);
-        var cell = CartSeats.ExitCell(lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop);
+        if (!useTaken) return ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, atStop);
+        var cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, c => Free(c) && !_exitTaken.Contains(c), atStop);
         // every free cell nearby taken: share the first one rather than land on the track
-        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = CartSeats.ExitCell(lane, best, Free, true);
+        if (atStop && lane.Contains(cell) && _exitTaken.Count > 0) cell = ExitBridgeRules.SafeExitCell(_layout, lane, best, Free, true);
         return cell;
     }
 
@@ -1213,6 +1221,10 @@ public partial class RailController : Node
         Wrecks++;
         WreckedAt = Cart.GlobalPosition;
         LastWreckFell = fall;
+        var exit = RailEncounterController.Instance is { } enc && IsInstanceValid(enc) ? enc : null;
+        var inside = !fall && exit != null && ExitBridgeRules.WreckInside(Party.FrontS, exit.ExitFromS); // Ruling 11: past the exit bridge's start
+        var insideFront = Party.FrontS;
+        LastWreckInside = inside;
         var lost = fall ? new List<TrainWagon>(_train.Wagons) : null;
         Party.State = State with { Mode = CartMode.Wrecked, V = 0f, Plating = 0f };
         SetCartLayer();
@@ -1223,9 +1235,15 @@ public partial class RailController : Node
         else Tumble(); // before the speed is zeroed: the tub is thrown the way the cart was going
         RideAudio.At("cart_wreck", Cart.GlobalPosition); // once, here (at the lip, for a fall): the cart's sound sees no wreck (a spare takes over in this call)
         Cart.Speed = 0f; // the riders climb out of a stopped cart, not one still carrying them at speed
-        if (lost == null) EventBus.Instance.Log("The cart is wrecked!"); // a fall has said why
+        if (lost == null) EventBus.Instance.Log(inside ? ExitBridgeRules.WreckLog : "The cart is wrecked!"); // a fall has said why
         Raise(new CartEvent(CartEventKind.Wrecked, Stop: StopIndex));
         _exitTaken.Clear();
+        if (inside)
+        {
+            WreckInside(exit!, insideFront);
+            RefreshHud();
+            return;
+        }
         if (lost != null) TakeTheTrain(lost);
         else
         {
@@ -1245,6 +1263,59 @@ public partial class RailController : Node
             EventBus.Instance.Log("The train is gone into the dark.");
         }
         RefreshHud();
+    }
+
+    /// <summary>
+    /// A plain wreck with the cart's front at or past the exit bridge's start (plan 15, Ruling 11), after the wreck's event: no spare takes over
+    /// and no OnFoot event is raised. Every rider of the cart and of each coupled wagon, crew included, is set down inside the island: on its
+    /// set-down spots (<see cref="RailEncounterController.IslandSetDown"/>) when the rider's car stands at or short of the bridge's far edge,
+    /// beside the lane where it is (<see cref="ExitCellNear"/>) when it is past it. Heroes take the plain wreck's toll, crew none (pre-flight F9);
+    /// crew set down follow the lead. Then the train is uncoupled (lost: hidden, not solid; a restore couples fresh), the cart hidden, and the
+    /// stop taken as the last.
+    /// </summary>
+    private void WreckInside(RailEncounterController exit, float front)
+    {
+        var riders = new List<(ICartRider Rider, float S)>();
+        foreach (var rider in Aboard()) riders.Add((rider, State.S));
+        for (var k = 0; k < _train.Wagons.Count; k++)
+        {
+            var wagon = _train.Wagons[k];
+            if (!IsInstanceValid(wagon)) continue;
+            var s = State.S - Party.Dir * WagonSpacing * (k + 1);
+            foreach (var rider in wagon.Riders.Values) riders.Add((rider, s));
+        }
+        var spots = exit.IslandSetDown(riders.Count(r => ExitBridgeRules.SetDownPastFarEdge(r.S, exit.ExitToS)));
+        int spot = 0, heroes = 0, crew = 0;
+        foreach (var (rider, s) in riders)
+        {
+            if (rider is GodotObject o && !IsInstanceValid(o)) continue;
+            Vector3 at;
+            if (ExitBridgeRules.SetDownPastFarEdge(s, exit.ExitToS)) at = spots[spot++] + Vector3.Up * 0.1f;
+            else
+            {
+                var cell = ExitCellNear(((Node3D)rider).GlobalPosition, atStop: true, useTaken: true);
+                _exitTaken.Add(cell);
+                at = _builder.Surface(cell) + Vector3.Up * 0.1f;
+            }
+            var downed = rider is Adventurer { Downed: true } || rider is Npc { Downed: true };
+            rider.GetOut(at, Vector3.Zero);
+            if (rider is Adventurer)
+            {
+                heroes++;
+                if (!downed && rider is IHazardVictim victim)
+                    victim.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, WreckHpFraction, 0f), SourceName, HazardIndex);
+            }
+            else if (rider is Npc npc)
+            {
+                crew++;
+                if (!npc.Escorting && !npc.Downed) npc.StartFollowing();
+            }
+        }
+        Boarding.Cancel();
+        _train.UncoupleAll();
+        HideWreck();
+        StopIndex = StopS.Length - 1;
+        GD.Print($"[rails] wreck past the exit bridge's start (front S={front:0.0}): no spare takes over; {heroes} hero(es) and {crew} crew set down inside; the train uncoupled; the stop is taken as {StopIndex}");
     }
 
     private const float TumbleSeconds = 6f;

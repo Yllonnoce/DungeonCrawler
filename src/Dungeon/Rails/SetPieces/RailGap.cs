@@ -17,7 +17,15 @@ public partial class RailGap : Node3D
     public float From => S - Length / 2f;
     public float To => S + Length / 2f;
 
-    private readonly StandardMaterial3D _molten = new() { AlbedoColor = new Color(1f, 0.4f, 0.06f), EmissionEnabled = true, Emission = new Color(1f, 0.38f, 0.05f), EmissionEnergyMultiplier = 3f, Roughness = 0.5f };
+    /// <summary>The glowing slag's material (a new one each call): the gap's channel, and the exit island's lava (<c>ChasmDressing</c>).</summary>
+    public static StandardMaterial3D Molten() => new() { AlbedoColor = new Color(1f, 0.4f, 0.06f), EmissionEnabled = true, Emission = new Color(1f, 0.38f, 0.05f), EmissionEnergyMultiplier = 3f, Roughness = 0.5f };
+    /// <summary>The slag's glow: its colour, energy and range (the gap's light, and the exit island's lava's).</summary>
+    public static readonly Color GlowColor = new(1f, 0.42f, 0.1f);
+    public const float GlowEnergy = 2f, GlowRange = 6f;
+    /// <summary>A glow light (shadowless) with <see cref="GlowColor"/> and <see cref="GlowEnergy"/>, reaching <paramref name="range"/>.</summary>
+    public static OmniLight3D Glow(string name, float range = GlowRange) => new() { Name = name, OmniRange = range, LightEnergy = GlowEnergy, LightColor = GlowColor, ShadowEnabled = false };
+
+    private readonly StandardMaterial3D _molten = Molten();
     private readonly StandardMaterial3D _crust = new() { AlbedoColor = new Color(0.12f, 0.08f, 0.06f), Roughness = 1f };
     private readonly StandardMaterial3D _steel = new() { AlbedoColor = new Color(0.18f, 0.18f, 0.2f), Metallic = 0.8f, Roughness = 0.45f };
     private OmniLight3D _light = null!;
@@ -45,7 +53,7 @@ public partial class RailGap : Node3D
             }
         }
         var mid = track.Frame(S);
-        _light = new OmniLight3D { Name = "Glow", OmniRange = 6f, LightEnergy = 2f, LightColor = new Color(1f, 0.42f, 0.1f), ShadowEnabled = false };
+        _light = Glow("Glow");
         AddChild(_light);
         _light.GlobalPosition = mid.Origin + Vector3.Up * 0.8f;
     }
@@ -61,6 +69,6 @@ public partial class RailGap : Node3D
     {
         if (_light == null) return;
         _t += (float)delta;
-        _light.LightEnergy = 2f + 0.4f * Mathf.Sin(_t * 3.1f) + 0.2f * Mathf.Sin(_t * 7.3f); // the slag breathes
+        _light.LightEnergy = GlowEnergy + 0.4f * Mathf.Sin(_t * 3.1f) + 0.2f * Mathf.Sin(_t * 7.3f); // the slag breathes
     }
 }

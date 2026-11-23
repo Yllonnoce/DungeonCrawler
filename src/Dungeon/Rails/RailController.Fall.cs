@@ -20,6 +20,12 @@ public partial class RailController
 
     /// <summary>The last wreck was a fall (<see cref="Fall"/>): true from it until the next wreck (a plain one clears it) or a <see cref="Restore"/>. Clients see it as <see cref="CartStateDto.Fell"/>.</summary>
     public bool LastWreckFell { get; private set; }
+    /// <summary>
+    /// The last wreck was a plain one with the cart's front at or past the exit bridge's start (plan 15, Ruling 11; <see cref="ExitBridgeRules.WreckInside"/>):
+    /// its riders were set down inside the island, no spare took over and the stop is taken as the last. True from it until the next wreck or a
+    /// <see cref="Restore"/>, as <see cref="LastWreckFell"/>.
+    /// </summary>
+    public bool LastWreckInside { get; private set; }
     /// <summary>Falls so far (the server's).</summary>
     public int Falls { get; private set; }
     /// <summary>Where the train last fell (the cart's body's place), or null before any fall.</summary>

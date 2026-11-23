@@ -26,6 +26,7 @@ public partial class RailTrack : Node3D
 
     private Material? _steel, _sleeper, _ballast;
     private readonly List<(float from, float to)> _gaps = new();
+    private readonly List<(float from, float to)> _noBallast = new();
 
     /// <summary>
     /// The stretches (S from, S to) this track is bare over: those it was last built with and every one cut since that
@@ -33,6 +34,9 @@ public partial class RailTrack : Node3D
     /// cut stays bare whatever the order of the cuts; a build starts the list again from its own gaps.
     /// </summary>
     public IReadOnlyList<(float from, float to)> Gaps => _gaps;
+
+    /// <summary>The stretches (S from, S to) laid with rails and sleepers but no gravel (<see cref="OmitBallast"/>) since the last <see cref="Build"/>.</summary>
+    public IReadOnlyList<(float from, float to)> BallastOmitted => _noBallast;
 
     /// <summary>
     /// Lay the track along the points; a second call replaces the first (the old path, meshes and gaps are freed). Each of
@@ -50,6 +54,7 @@ public partial class RailTrack : Node3D
         _sleeper = sleeper;
         _ballast = ballast;
         _gaps.Clear();
+        _noBallast.Clear();
         AddGaps(gaps);
         if (points.Count < 2 || Length < 0.1f) return;
         BuildMeshes(_gaps);
@@ -70,6 +75,20 @@ public partial class RailTrack : Node3D
 
     /// <summary><see cref="Cut"/> by another name: a live piece's span cut after the floor's own gaps, which stay bare.</summary>
     public void CutMore(IReadOnlyList<(float from, float to)> gaps) => Cut(gaps);
+
+    /// <summary>
+    /// Take the gravel off <paramref name="spans"/> (S from, S to) and lay the track again: the rails and sleepers stay, and so do the curve,
+    /// every S and <see cref="Gaps"/> (an open trestle's sleepers lie on its stringers, the lava showing between them). Kept through a later
+    /// <see cref="Cut"/>; a <see cref="Build"/> starts again with gravel everywhere.
+    /// </summary>
+    public void OmitBallast(IReadOnlyList<(float from, float to)> spans)
+    {
+        foreach (var span in spans) if (!_noBallast.Contains(span)) _noBallast.Add(span);
+        if (_steel == null || _sleeper == null || Length < 0.1f) return;
+        foreach (var name in new[] { "Rails", "Sleepers", "Ballast" })
+            if (GetNodeOrNull(name) is { } old) { RemoveChild(old); old.QueueFree(); }
+        BuildMeshes(_gaps);
+    }
 
     private void AddGaps(IReadOnlyList<(float from, float to)>? gaps)
     {
@@ -261,7 +280,15 @@ public partial class RailTrack : Node3D
 
         CommitChunks(railSt, railChunks, "Rails", steel);
         CommitChunks(sleeperSt, sleeperChunks, "Sleepers", sleeper);
-        if (_ballast != null) BuildBallast(stations, samples, gaps, _ballast);
+        if (_ballast == null) return;
+        if (_noBallast.Count == 0) { BuildBallast(stations, samples, gaps, _ballast); return; }
+        // the gravel breaks at the gaps and at each omitted span's exact ends too: its own stations, so the rails' are unchanged
+        var bare = new List<(float from, float to)>(gaps ?? Array.Empty<(float, float)>());
+        bare.AddRange(_noBallast);
+        var bedStations = TrackStations.Rail(Length, Sample, bare);
+        var bedSamples = new List<Transform3D>(bedStations.Count);
+        foreach (var s in bedStations) bedSamples.Add(Curve.SampleBakedWithRotation(s, true, true));
+        BuildBallast(bedStations, bedSamples, bare, _ballast);
     }
 
     /// <summary>The gravel ribbon: a flat strip across the stations' frames, broken where the rails are (at a gap's exact ends).</summary>

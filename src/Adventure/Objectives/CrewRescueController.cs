@@ -1060,6 +1060,23 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         return seated;
     }
 
+    /// <summary>
+    /// Test hook (server and solo; plan 15): crew member <paramref name="crewId"/> unseated if it sits anywhere, set down at <paramref name="at"/>
+    /// and following the party on foot (its seated-lead catch-up then sets it down beside the cart, never on a drop). Its cage is opened
+    /// first if it is locked (as a key would). Nothing on a client or for an unknown or dead one.
+    /// </summary>
+    internal void DebugPutOnFoot(string crewId, Vector3 at)
+    {
+        if (NetSession.IsClient || Main.Instance?.Party is not { } party) return;
+        if (_crew.FirstOrDefault(n => IsInstanceValid(n) && n.Id == crewId) is not { Dead: false } npc) return;
+        if (CageOf(npc) is { Open: false } cage) OpenCage(cage, party);
+        if (_bookings.Remove(npc, out var booked)) StopWalking(npc, booked);
+        npc.GetOut(at); // unseated if it sits
+        if (!npc.Escorting) npc.StartFollowing();
+        GD.Print($"[CrewRescue] test: {npc.NpcName} put on foot at {DungeonBuilder.WorldToCell(at)}, following");
+        RefreshHud();
+    }
+
     /// <summary>Open every cage and bring every living crew member to the exit room (tests).</summary>
     public override void Hurry()
     {

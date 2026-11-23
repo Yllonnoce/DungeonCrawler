@@ -352,6 +352,7 @@ public partial class DungeonBuilder : Node3D
         {
             _floorRoot.AddChild(ChasmDressing.Build(layout, cell => Surface(cell), CellSize, Material("weathered_planks", new Color(0.5f, 0.38f, 0.24f), 1.6f)));
             if (!Net.NetSession.IsClient) _floorRoot.AddChild(CrevasseWatch.Build(this, layout)); // falls are the server's (or single player's) to judge
+            if (layout.Rail?.Island != null) DressCaveIns(_floorRoot);
         }
         PlaceLightsAndDecor(layout, _floorRoot, tier, seed);
         if (layout.Kind == LayoutKind.Tavern) { DressTavern(layout, _floorRoot); PlaceTavernMerchant(layout, _floorRoot); }
@@ -370,6 +371,7 @@ public partial class DungeonBuilder : Node3D
     public void Clear()
     {
         JailDoorCell = null;
+        CaveInFaces = 0;
         PartyTrack = EnemyTrack = null;
         _closedDoors.Clear();
         _openSecrets.Clear();
@@ -1256,6 +1258,39 @@ public partial class DungeonBuilder : Node3D
                 }
             }
         if (sides > 0) GD.Print($"[DungeonBuilder] floor {CurrentFloor}: walled {sides} ramp side(s) beside cellar tunnels");
+    }
+
+    /// <summary>
+    /// The exit island's cave-ins (plan 15, Ruling 40): each face of a cave-in cell toward a walkable or chasm cell gets fallen stone, a
+    /// mound against it and a collapse at the ceiling over it, from a local <see cref="Random"/> seeded by the cell and the floor as
+    /// <see cref="SealMouth"/>'s is (no gameplay stream). Look only: the mound's colliders are taken off (the cave-in cell is wall already),
+    /// and nothing is built headless. The face count is printed on every role.
+    /// </summary>
+    /// <summary>The exit island's cave-in faces dressed on this floor (<see cref="DressCaveIns"/>; 0 without an island). Tests read it.</summary>
+    public int CaveInFaces { get; private set; }
+
+    private void DressCaveIns(Node3D root)
+    {
+        if (Layout?.Rail?.Island is not { } island) return;
+        var caveIns = island.CaveIns.ToHashSet();
+        var faces = new List<(GridPos Cell, GridPos Dir)>();
+        foreach (var cell in island.CaveIns)
+            foreach (var n in cell.Neighbours4())
+                if (!caveIns.Contains(n) && (Layout.IsWalkable(n) || Layout.IsChasm(n))) faces.Add((cell, n - cell));
+        CaveInFaces = faces.Count;
+        GD.Print($"[DungeonBuilder] floor {CurrentFloor}: {faces.Count} cave-in face(s)");
+        if (!ChasmDressing.DrawsLook || faces.Count == 0) return;
+        var wallMat = Material(CurrentTheme?.WallTexture ?? "", CurrentTheme?.WallColor ?? new Color(0.45f, 0.42f, 0.40f), CurrentTheme?.MetersPerTile ?? 2f);
+        var node = new Node3D { Name = "CaveIns" };
+        root.AddChild(node);
+        foreach (var (cell, d) in faces)
+        {
+            var rng = new Random(cell.X * 73856093 ^ cell.Y * 19349663 ^ CurrentFloor);
+            var face = Surface(cell) + new Vector3(d.X, 0, d.Y) * (CellSize / 2f);
+            var mound = Rubble.Mound(node, face, wallMat, rng, 1.1f);
+            foreach (var child in mound.GetChildren()) if (child is StaticBody3D body) { mound.RemoveChild(body); body.QueueFree(); } // look only
+            Rubble.Collapse(node, face, LevelHeight - 0.2f, wallMat, rng);
+        }
     }
 
     public void SealMouth(Node3D root, GridPos mouth, bool silent)

@@ -199,6 +199,7 @@ public partial class RailEncounterController
     {
         if (GetParent() is not Node3D root || _rails.StopS.Length < 2) return;
         BuildBreak(root); // first: a later piece (a live switch back) reads the gap
+        BuildExitBridge(root); // before the pieces: the spur's lever reads the bridge (Ruling 43)
         var gaps = new List<(float from, float to)>();
         for (var index = 0; index < _setPieces.Count; index++)
         {
