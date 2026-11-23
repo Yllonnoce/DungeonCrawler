@@ -65,6 +65,12 @@ public partial class SlagCart : AnimatableBody3D, ICartBody, Party.IInteractable
     public int InnerSide { get; init; } = 1;
     /// <summary>The creatures riding it, in spot order (a dead one rides on until its corpse is gone).</summary>
     public List<Enemy> Aboard { get; } = new();
+    /// <summary>Every rider it was spawned with is an ember hound (a boarding group): emptied, it goes (<see cref="SetPieceRules.HoundCartGoes"/>). Server.</summary>
+    public bool HoundsOnly { get; internal set; }
+    /// <summary>Seconds since the last living rider left it (leapt or died); 0 while one rides. Server.</summary>
+    internal float SinceEmpty;
+    /// <summary>A hound of its has come within <see cref="SetPieceRules.LeapRange"/> of a car's body (logged once, tests read it). Server.</summary>
+    internal bool InReachLogged;
     /// <summary>Off the rails: it is being freed and its run is done.</summary>
     public bool Derailed { get; private set; }
     /// <summary>When each body was last run over (<see cref="RunOverSweep.Judge"/> keeps it).</summary>

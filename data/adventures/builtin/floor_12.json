@@ -668,6 +668,51 @@
         "VoiceId": null,
         "Delivery": null
       }
+    },
+    {
+      "Id": "r1_hounds",
+      "Ride": 1,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.3331,
+      "Offset": -8,
+      "Line": null
+    },
+    {
+      "Id": "r3_hounds",
+      "Ride": 3,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 1,
+          "Elite": null
+        }
+      ],
+      "At": 0.05,
+      "Offset": -5,
+      "Line": null
+    },
+    {
+      "Id": "r5_hounds",
+      "Ride": 5,
+      "Kind": "slag_cart",
+      "Riders": [
+        {
+          "EnemyId": "enemy.ember_hound",
+          "Count": 2,
+          "Elite": null
+        }
+      ],
+      "At": 0.3705,
+      "Offset": -8,
+      "Line": null
     }
   ],
   "RailSetPieces": [

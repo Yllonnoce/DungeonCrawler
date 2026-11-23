@@ -27,6 +27,13 @@ public static class PaceRules
         => Math.Clamp(partyV + Math.Clamp((targetS - s) * 0.8f, -CatchUp, catchUp), 0f, CartRules.MaxSpeed);
 
     public static bool Alongside(float s, float targetS) => Math.Abs(s - targetS) < AlongsideRadius;
+
+    /// <summary>
+    /// A pacing cart's catch-up (its correction toward its pace point from behind): <see cref="AlongsideCatchUp"/> for a side-by-side cart
+    /// (Offset 0) and for a hounds-only cart (a boarding group, plan 14 Task 6: it must be in reach before its ride's next piece), else
+    /// <see cref="CatchUp"/>. The catch-down is <see cref="CatchUp"/> for every cart (<see cref="SpeedFor"/>).
+    /// </summary>
+    public static float CatchUpFor(float offset, bool houndsOnly) => offset == 0f || houndsOnly ? AlongsideCatchUp : CatchUp;
 }
 
 public enum HammerPhase { Up, Glow, Fall, Down, Rise }
@@ -103,6 +110,37 @@ public static class SetPieceRules
     /// lone rider faces one hound at a time (the next tries a wagon, or leaps and misses beside the lane). A party of two or more is unchanged.
     /// </summary>
     public static int RimSpotsOpen(int awakeHeroesSeated) => Math.Clamp(awakeHeroesSeated, 0, RimSpots);
+
+    /// <summary>
+    /// A carried hound crouches for its leap (plan 14 Task 6, the coordinator's ruling): within <see cref="LeapRange"/> of a coupled car's body
+    /// (<paramref name="nearestBody"/>: the party's cart or a wagon) and, on a cart with other riders (r2_slag2, r2_slag3), its cart
+    /// <paramref name="alongside"/> its pace point too; a hounds-only cart's hounds leap as soon as one is in reach, rolling up or not.
+    /// </summary>
+    public static bool HoundCrouches(bool houndsOnly, bool alongside, float nearestBody) => (houndsOnly || alongside) && nearestBody <= LeapRange;
+
+    // ---- a boarding group's emptied cart goes (plan 14 Task 6, Ruling 19) ----------------------------------------------
+
+    /// <summary>A hounds-only slag cart is freed this long (seconds) after its last rider left it, leapt or dead.</summary>
+    public const float HoundCartLinger = 3f;
+
+    /// <summary>
+    /// The linger (Ruling 19): a slag cart whose riders at spawn were all ember hounds (<paramref name="houndsOnly"/>) goes once none rides it,
+    /// none of its leaps is still in the air, no hero is on its deck, and <see cref="HoundCartLinger"/> has passed since it emptied.
+    /// A mixed cart (r2_slag2, its priest dead) keeps pacing.
+    /// </summary>
+    public static bool HoundCartGoes(bool houndsOnly, int livingRiders, int leapsInAir, int heroesOnDeck, float sinceEmpty)
+        => houndsOnly && livingRiders == 0 && leapsInAir == 0 && heroesOnDeck == 0 && sinceEmpty >= HoundCartLinger;
+
+    /// <summary>A live slag cart beside the train is freed with the party's front this far (metres) short of a thrown switch_out's points.</summary>
+    public const float CrossFreeAhead = 5f;
+
+    /// <summary>
+    /// The crossing (Ruling 19): with the switch_out's lever thrown and the party's front from <see cref="CrossFreeAhead"/> short of its points
+    /// (<paramref name="pointsS"/>) up to them, a slag cart whose party-equivalent S (<paramref name="cartPartyS"/>) is behind the front, with no hero
+    /// on its deck, is freed, so none sits where the train crosses. One ahead of the front (r3_slag) is left to the ram.
+    /// </summary>
+    public static bool CrossingFrees(bool leverThrown, float frontS, float pointsS, float cartPartyS, int heroesOnDeck)
+        => leverThrown && frontS >= pointsS - CrossFreeAhead && frontS < pointsS && cartPartyS < frontS && heroesOnDeck == 0;
 
     static long Mod(long a, int m) { var r = a % m; return r < 0 ? r + m : r; }
 

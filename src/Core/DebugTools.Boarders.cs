@@ -10,8 +10,9 @@ namespace DungeonCrawler.Core;
 // ---- --test-boarders[=move|reach|knock|throw|lone|pause|groups] (plan 14, Tasks 3-7) ------------------------------------------------------
 // The built-in campaign's floor 12 at lethality 3, solo; every enemy is culled as it appears but the hounds the flow puts on wagons
 // (RailEncounterController.DebugBoard), and the flow keeps the party's HP up. The variants are plan 14's (Ruling 22): =move (Task 3), =reach
-// and =knock (Task 4), =throw (the default), =lone and =pause (Task 5) are built, one partial file each (DebugTools.Boarders.{Variant}.cs);
-// groups is a later task's and, like an unknown name, prints an ERROR and fails.
+// and =knock (Task 4), =throw (the default), =lone and =pause (Task 5) and =groups (Task 6) are built, one partial file each
+// (DebugTools.Boarders.{Variant}.cs); an unknown name prints an ERROR and fails. =groups spares the three boarding groups' hounds too
+// (r1_hounds, r3_hounds, r5_hounds), and rides from the landing with stops 1-3's crew seated in W1..W3 by the test's hook.
 // =reach and =knock are restored at stop 1 with its cage opened by the test's hook (DebugSeatCrew: its crew sit in W1 at once); =throw and =lone
 // at stop 1 with its crew seated in W3 (=throw) or W4 (=lone); =pause at stop 2 with stop 2's crew seated in W1. Each rides the next ride.
 // Prints [boarders] lines and a RESULT.
@@ -58,10 +59,10 @@ public partial class DebugTools
 
     /// <summary>The variants plan 14 names for this flow (Ruling 22), and the ones built so far.</summary>
     private static readonly string[] BoardersVariants = { "move", "reach", "knock", "throw", "lone", "pause", "groups" };
-    private static readonly string[] BoardersBuilt = { "move", "reach", "knock", "throw", "lone", "pause" };
+    private static readonly string[] BoardersBuilt = { "move", "reach", "knock", "throw", "lone", "pause", "groups" };
 
     /// <summary>The stop a variant is restored at (it rides the ride after it), and the wagon its stop's crew are seated in (0: the first free seats).</summary>
-    private static (int Stop, int CrewWagon) BdStart(string v) => v switch { "move" => (0, 0), "throw" => (1, 3), "lone" => (1, 4), "pause" => (2, 1), _ => (1, 0) };
+    private static (int Stop, int CrewWagon) BdStart(string v) => v switch { "move" => (0, 0), "groups" => (0, 0), "throw" => (1, 3), "lone" => (1, 4), "pause" => (2, 1), _ => (1, 0) };
 
     private void RunBoardersTest()
     {
@@ -81,7 +82,8 @@ public partial class DebugTools
         if (RailController.Instance is not { } rc || RailEncounterController.Instance is not { } enc) { if (_bdClock > 3f) Fail("floor 12 has no line"); return; }
         BoardersListen();
         BdReadGrips(enc);
-        foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive && !enc.IsDebugBoarder(e)) e.Kill(); // the flow owns the plating and the HP
+        if (v == "groups") BdSpareGroups(enc); // the boarding groups' hounds, as their carts spawn
+        foreach (var e in root.GetChildren().OfType<Enemies.Enemy>()) if (e.IsAlive && !enc.IsDebugBoarder(e) && !_bdGroupHounds.Contains(e)) e.Kill(); // the flow owns the plating and the HP
         if (v != "move") foreach (var a in party.Adventurers) if (IsInstanceValid(a) && !a.Parked && !a.Downed) a.State.Hp = a.State.Stats[Characters.Stat.MaxHp]; // the hounds bite: nobody goes down
         enc.RunawayClock = 0f; // no traffic runaway on the party line
         if (party.Local is not { } me) { Fail("no human"); return; }
@@ -96,7 +98,18 @@ public partial class DebugTools
                 rc.Restore(startStop);
                 GD.Print($"[boarders] floor 12 ({v}): restored at stop {rc.StopIndex} (S={rc.State.S:0.0}), train=[{string.Join(",", rc.Train.Select(w => w.Number))}]; lethality {TierRules.Lethality}");
                 if (rc.Train.Count != 4) { Fail($"the train has {rc.Train.Count} wagons, not 4"); return; }
-                if (v == "throw")
+                if (v == "groups")
+                {
+                    // stops 1-3's cages opened by the test's hook, their crew seated at once in W1, W2 and W3; stop 4's cage stays shut (RideOnTo waives its hold)
+                    if (ObjectiveController.Instance is not CrewRescueController ctrl) { Fail("no crew controller"); return; }
+                    for (var k = 1; k <= 3; k++)
+                    {
+                        if (ctrl.DebugSeatCrew(k, k) is not { Count: 2 } crew || crew.Any(c => c.Wagon != k)) { Fail($"stop {k}'s crew are not the two seated in W{k}"); return; }
+                        GD.Print($"[boarders] stop {k}'s cage opened by the test's hook: [{string.Join(", ", crew.Select(c => $"{c.Npc.NpcName} W{c.Wagon} seat {c.Seat}"))}]");
+                    }
+                    PumperCap = 0; // nobody pumps: the train runs at its cruise (5.22 m/s with four wagons) where the groups were measured
+                }
+                else if (v == "throw")
                 {
                     // fix round 1 (I1): stop 1's crew walk out of the opened cage to their seats in W3, as in play (they stand on the ground first)
                     if (ObjectiveController.Instance is not CrewRescueController walk) { Fail("no crew controller"); return; }
@@ -153,6 +166,7 @@ public partial class DebugTools
                 else if (v == "throw") BoardersThrow(main, rc, enc, party, me, Fail);
                 else if (v == "lone") BoardersLone(rc, enc, party, me, Fail);
                 else if (v == "pause") BoardersPause(rc, enc, party, me, Fail);
+                else if (v == "groups") BoardersGroups(main, rc, enc, Fail);
                 else BoardersMove(rc, enc, party, me, Fail);
                 break;
         }

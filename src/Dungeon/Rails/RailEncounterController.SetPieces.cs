@@ -316,6 +316,7 @@ public partial class RailEncounterController
                     if (SetPieceRules.BeamPasses(rolling, piece.Fired, _rails.Party.FrontS, piece.S)) { piece.Fired = true; DuckUnder(party, piece); }
                     break;
                 case "switch_out":
+                    if (rolling && !piece.Fired) FreeAtTheCrossing(piece); // Ruling 19: no slag cart sits where the train crosses
                     if (rolling && !piece.Fired && _rails.Party.FrontS >= piece.S) TakeSwitch(piece);
                     break;
                 case "switch_back":

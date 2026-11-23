@@ -230,6 +230,25 @@ public partial class RailEncounterController
     // ---- ticking ---------------------------------------------------------------------------------
 
     /// <summary>
+    /// The crossing (plan 14 Task 6, Ruling 19, <see cref="SetPieceRules.CrossingFrees"/>): with <paramref name="piece"/>'s lever thrown and the
+    /// party's front within <see cref="SetPieceRules.CrossFreeAhead"/> of its points, every live slag cart of the ride behind the front (its
+    /// party-equivalent S), with no hero on its deck, is freed quietly, so none sits on the lane the train crosses onto. One ahead is the ram's.
+    /// </summary>
+    private void FreeAtTheCrossing(Piece piece)
+    {
+        if (piece.Switch is not { Thrown: true } || _carts.Count == 0) return;
+        var front = _rails.Party.FrontS;
+        for (var i = _carts.Count - 1; i >= 0; i--)
+        {
+            var cart = _carts[i];
+            if (!IsInstanceValid(cart) || cart.Derailed) continue;
+            if (!SetPieceRules.CrossingFrees(true, front, piece.S, Lanes.PartyS(cart.Run.State.S), cart.Leapers)) continue;
+            FreeQuietly(cart, "the train crosses onto its lane");
+            _carts.RemoveAt(i);
+        }
+    }
+
+    /// <summary>
     /// The front reached the points: a thrown lever sends the cart across, and the next switch_back of the ride brings it home: a fixed one from
     /// its points, set now; a live one as its lever stands when the front reaches it (<see cref="TakeBack"/>), so the return is left open.
     /// </summary>

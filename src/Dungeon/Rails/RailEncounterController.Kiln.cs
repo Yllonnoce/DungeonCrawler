@@ -295,6 +295,29 @@ public partial class RailEncounterController
         GD.Print($"[rails] golem {enc.Id} ({golem.DisplayName}, {golem.Profile.Name}, boss={golem.IsBoss}, elite=[{string.Join(",", golem.Profile.Affixes ?? Array.Empty<EliteAffix>())}], hp {golem.Hp:0}/{golem.MaxHp:0}, scale {golem.Profile.Scale:0.00}) bursts onto the enemy line at S={s:0.0} (party S={partyS:0.0})");
         ShowLine(index, enc);
         AdventureDirector.Instance?.RailTaunt(Adventure.Objectives.TauntTrigger.GolemEntrance, urgent: true); // held for the wall line (GolemHoldSeconds)
+        GolemClearsTheSlagLine(enc.Ride, runner.GlobalPosition);
+    }
+
+    /// <summary>
+    /// The golem's burst (plan 14 Task 6, Ruling 19): every other live slag cart of its ride is freed quietly (a hero on a deck is hauled back
+    /// first); its log gives the cart's distance from the golem's runner at <paramref name="runnerAt"/>.
+    /// </summary>
+    private void GolemClearsTheSlagLine(int ride, Vector3 runnerAt)
+    {
+        for (var i = _carts.Count - 1; i >= 0; i--)
+        {
+            var cart = _carts[i];
+            if (!IsInstanceValid(cart) || cart.Derailed || RideOf(cart) != ride) continue;
+            FreeQuietly(cart, "the golem bursts out", cart.GlobalPosition.DistanceTo(runnerAt));
+            _carts.RemoveAt(i);
+        }
+    }
+
+    /// <summary>The ride of the encounter <paramref name="cart"/> came from, or −1 (traffic).</summary>
+    private int RideOf(SlagCart cart)
+    {
+        foreach (var e in _encounters) if (e.Id == cart.EncounterId) return e.Ride;
+        return -1;
     }
 
     /// <summary>A one-shot dust burst (as a creature breaking cover).</summary>

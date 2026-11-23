@@ -220,6 +220,40 @@ public partial class RailEncounterController : Node
         cart.QueueFree();
     }
 
+    // ---- a boarding group's emptied cart goes (plan 14 Task 6, Ruling 19) ---------------------------------------------
+
+    /// <summary>
+    /// The slag carts' spawns and Ruling 19's frees on this floor build, and each leap's start (tests read them): the encounter, what happened
+    /// ("spawned", "in reach" (a hound of its first within LeapRange of a car's body), "leapt W{k}", "leapt the cart", "leapt a miss", "freed: {why}"), who (the leaper; the cart's wire id), the party cart's S and
+    /// its front's then, and metres (the spawn's enemy S, the leap's length, a golem free's distance to the golem's runner, else 0).
+    /// </summary>
+    internal readonly List<(string Encounter, string What, string Who, float PartyS, float FrontS, float Metres)> SlagLog = new();
+
+    /// <summary>
+    /// The linger (Ruling 19, <see cref="SetPieceRules.HoundCartGoes"/>): a hounds-only cart's empty clock steps (it restarts while a living rider
+    /// rides it), and true once it goes: no rider, none of its leaps in the air, no hero on its deck, the linger run.
+    /// </summary>
+    private bool HoundCartGone(SlagCart cart, float dt)
+    {
+        if (!cart.HoundsOnly) return false;
+        var living = 0;
+        foreach (var rider in cart.Aboard)
+            if (IsInstanceValid(rider) && rider.IsAlive) living++;
+        cart.SinceEmpty = living > 0 ? 0f : cart.SinceEmpty + dt;
+        var inAir = 0;
+        foreach (var l in _leaps)
+            if (l.Source == cart && l.Phase == LeapPhase.Air) inAir++;
+        return SetPieceRules.HoundCartGoes(cart.HoundsOnly, living, inAir, cart.Leapers, cart.SinceEmpty);
+    }
+
+    /// <summary>One of Ruling 19's frees: printed and logged, then the cart goes as any freed one (<see cref="Free"/>). The caller drops it from <see cref="_carts"/>.</summary>
+    private void FreeQuietly(SlagCart cart, string why, float metres = 0f)
+    {
+        GD.Print($"[rails] slag cart {cart.CartId} ({cart.EncounterId}) freed: {why}");
+        SlagLog.Add((cart.EncounterId, "freed: " + why, cart.CartId.ToString(), _rails.State.S, _rails.Party.FrontS, metres));
+        Free(cart, why);
+    }
+
     /// <summary>The party cart's S where ride <paramref name="ride"/>'s fraction <paramref name="at"/> lies.</summary>
     private float RideS(int ride, float at)
     {
@@ -293,7 +327,9 @@ public partial class RailEncounterController : Node
                 cart.Board(rider);
                 rider.ForceAggro(); // it has seen the cart it hunts
             }
+        cart.HoundsOnly = cart.Aboard.Count > 0 && cart.Aboard.All(r => r.Profile.Id == HoundId); // a boarding group: emptied, it goes (Ruling 19)
         _carts.Add(cart);
+        SlagLog.Add((enc.Id, "spawned", cart.CartId.ToString(), partyS, _rails.Party.FrontS, s));
         GD.Print($"[rails] slag cart {enc.Id} (ride {enc.Ride}) on the enemy line at S={s:0.0} (pace point {paceS:0.0}, party S={partyS:0.0}) riders=[{string.Join(", ", cart.Aboard.Select(r => r.Name + ":" + r.Profile.Name))}]");
         ShowLine(index, enc);
     }
@@ -337,6 +373,7 @@ public partial class RailEncounterController : Node
             if (DropsOverTheLeap(cart)) { _carts.RemoveAt(i); continue; } // the slag line's drop: over with its riders (an able human leaper too)
             RunOver(cart);
             Warn(cart, party);
+            if (HoundCartGone(cart, dt)) { FreeQuietly(cart, "its hounds are gone"); _carts.RemoveAt(i); continue; }
             var gone = cart.Run.State.S >= _enemy.Length - LineEnd ? "the line's end" : cart.Run.State.Mode != CartMode.Rolling ? "it stopped" : PacingStuck(cart, dt) ? "its pace is stuck" : null;
             if (gone != null) { Free(cart, gone); _carts.RemoveAt(i); }
         }
@@ -349,7 +386,7 @@ public partial class RailEncounterController : Node
     /// <summary>Hold pace with the party's cart: aim at the pace point, at the party's speed carried over to this lane plus a capped correction.</summary>
     private void Pace(SlagCart cart, float dt)
     {
-        PaceRun(cart.Run, cart.Offset, dt, cart.Offset == 0f ? PaceRules.AlongsideCatchUp : PaceRules.CatchUp);
+        PaceRun(cart.Run, cart.Offset, dt, PaceRules.CatchUpFor(cart.Offset, cart.HoundsOnly)); // a boarding group closes at 6 m/s (Task 6)
         cart.FollowRiders();
     }
 
