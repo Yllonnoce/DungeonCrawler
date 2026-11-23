@@ -17,14 +17,16 @@ public static partial class FloorGenerator
     /// straight enemy cell taken by nothing, both lanes at one level and no ramp on it or within a cell of it. The pit is the run's
     /// cell <see cref="RailRules.PitLeadCells"/> from its start: it becomes <see cref="Cell.Chasm"/>, and so do the rock or pocket
     /// cells inward of it (t = -1, then -2), at the lane's level. The enemy twin stays solid lane with no deck. The pockets cut
-    /// away are added to <paramref name="dropped"/>.
+    /// away are added to <paramref name="dropped"/>. A refusal's reason goes to <see cref="FloorLayout.GenLog"/> as <c>pit: refused (…)</c>.
     /// </summary>
     internal static (RailPit? Pit, string Why) CarvePit(FloorLayout layout, RailLine rail, int ride, int breakRide, int splitRide, int sign, HashSet<GridPos> pockets, HashSet<GridPos> dropped)
     {
         var k = ride - 1;
-        if (k > rail.Stops.Count - 2 || ride == breakRide || ride == splitRide) return (null, "refused"); // no such ride, the break's, the split's
+        if (k > rail.Stops.Count - 2) return Refused($"the line has no ride {ride}");
+        if (ride == breakRide) return Refused("the broken bridge's ride");
+        if (ride == splitRide) return Refused("the split's ride");
         var w = RideWindow(rail, k, RailRules.PitFrom, RailRules.PitTo);
-        if (rail.Cavern is { } cavern && cavern.From > w.After && cavern.From < w.Before) return (null, "refused"); // the cavern's ride
+        if (rail.Cavern is { } cavern && cavern.From > w.After && cavern.From < w.Before) return Refused("the cavern's ride");
         var enemy = rail.Enemy.ToHashSet();
         var taken = TakenCells(layout);
         int? start = null;
@@ -51,6 +53,13 @@ public static partial class FloorGenerator
             cut.Add(q);
         }
         return (new RailPit(ride, pit, cut), "ok");
+
+        // the reason is logged (not hashed); RailLine.PitWhy is "refused"
+        (RailPit?, string) Refused(string why)
+        {
+            layout.GenLog.Add($"pit: refused ({why})");
+            return (null, "refused");
+        }
 
         bool PitRunCell(int i)
         {
@@ -84,9 +93,11 @@ public static partial class FloorGenerator
     /// <see cref="RailRules.StripPlatformGap"/>).</item>
     /// <item><b>The proof</b>: the island's cells are those walkable from the down stairs once cut (the rails open, the secrets
     /// shut). It refuses when the up stairs reach one ("leaks at"), when a key, a vault lever, a prisoner or a jail cell lies in
-    /// it, or when the exit room is the start's.</item>
+    /// it, or when the exit room is the start's. Before any of that it refuses when the parked train's place
+    /// (<see cref="RailRules.ParkedCells"/> cells before the bridge) reaches the ride's first platform, or when the pit
+    /// (<c>rail.Pit</c>, cut first) lies on the bridge or in that place.</item>
     /// </list>
-    /// The pockets cut away are added to <paramref name="dropped"/> (only when it is cut).
+    /// The pockets cut away are added to <paramref name="dropped"/> (only when it is cut). A refusal is logged by the caller.
     /// </summary>
     internal static (RailIsland? Island, string Why) CarveIsland(FloorLayout layout, RailLine rail, int sign, HashSet<GridPos> pockets, HashSet<GridPos> dropped)
     {
@@ -112,6 +123,13 @@ public static partial class FloorGenerator
             from = null;
         }
         if (bridge == null) return (null, "none");
+        // the parked train's place and the bridge stay clear of the ride's start and of the pit
+        var parked = new RailSpan(bridge.From - RailRules.ParkedCells, bridge.From - 1);
+        if (parked.From <= after) return (null, $"refused (the parked train's place {parked.From}..{parked.To} reaches stop {k}'s platform)");
+        if (rail.Pit is { } pitCut && pitCut.Cell >= parked.From && pitCut.Cell <= bridge.To)
+            return (null, pitCut.Cell >= bridge.From
+                ? $"refused (the pit at cell {pitCut.Cell} is on the bridge {bridge.From}..{bridge.To})"
+                : $"refused (the pit at cell {pitCut.Cell} is in the parked train's place {parked.From}..{parked.To})");
 
         // the rooms: the exit room, and every room only it leads to with the rails blocked
         bool Blocked(GridPos p) => (layout.IsRail(p) || pockets.Contains(p)) && !(layout.IsPartyRail(p) && platform.Contains(p));
@@ -235,7 +253,7 @@ public static partial class FloorGenerator
 
         dropped.UnionWith(moatDropped);
         foreach (var (_, c) in trapsRemoved.OrderBy(t => t.Cell.Y).ThenBy(t => t.Cell.X)) layout.GenLog.Add($"island: trap at {c} sealed");
-        return (new RailIsland(rooms, bridge, new RailSpan(bridge.From - RailRules.ParkedCells, bridge.From - 1), ByYX(enemyBridge).ToList(),
+        return (new RailIsland(rooms, bridge, parked, ByYX(enemyBridge).ToList(),
             ByYX(trenches.Keys).ToList(), ByYX(caveIns).ToList(), ByYX(moat.Distinct()).ToList(), island), "ok");
 
         (RailIsland?, string) Refuse(string why)

@@ -163,6 +163,19 @@ public sealed class FloorLayout
     /// <summary>A cell of the exit island (<see cref="RailIsland.Cells"/>); false on a floor without one.</summary>
     public bool InIsland(GridPos p) => Rail?.Island?.Cells.Contains(p) == true;
 
+    /// <summary>
+    /// A cell of the exit island or one of its 8-neighbours: the passes that run after the island's proof (secret rooms, caches,
+    /// the bound chest, the shrine) place nothing here, so nothing opens a way in or out or hides a key inside. False on a floor without one.
+    /// </summary>
+    public bool NearIsland(GridPos p)
+    {
+        if (Rail?.Island is not { } island) return false;
+        for (var oy = -1; oy <= 1; oy++)
+            for (var ox = -1; ox <= 1; ox++)
+                if (island.Cells.Contains(new GridPos(p.X + ox, p.Y + oy))) return true;
+        return false;
+    }
+
     /// <summary>Index into <see cref="Rooms"/> of the floor's safe room, or -1 when the floor has none.</summary>
     public int SafeRoom { get; internal set; } = -1;
     /// <summary>The cell the safe room's door stands in (meaningless when <see cref="SafeRoom"/> is -1).</summary>

@@ -73,6 +73,7 @@ public static partial class FloorGenerator
         var picks = PickWalkways(layout);
         if (spec.PitRide > 0 || spec.ExitIsland)
         {
+            pockets.ExceptWith(dropped); // the pockets the strips cut are chasm now, never a pocket to cut again
             rail = layout.Rail;
             RailPit? pit = null;
             string? pitWhy = null;
@@ -85,8 +86,9 @@ public static partial class FloorGenerator
             string? islandWhy = null;
             if (spec.ExitIsland)
             {
-                (island, islandWhy) = CarveIsland(layout, rail, sign, pockets, dropped);
+                (island, islandWhy) = CarveIsland(layout, rail with { Pit = pit, PitWhy = pitWhy }, sign, pockets, dropped);
                 pockets.ExceptWith(dropped);
+                if (island == null && islandWhy.StartsWith("refused")) layout.GenLog.Add($"island: {islandWhy}");
             }
             // before the planks are cut, so CutWalkways sees the sealed halls
             layout.Rail = rail with { Pockets = rail.Pockets.Where(p => !dropped.Contains(p)).ToList(), Pit = pit, PitWhy = pitWhy, Island = island, IslandWhy = islandWhy };

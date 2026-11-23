@@ -101,10 +101,12 @@ public static partial class FloorGenerator
 
     /// <summary>
     /// A 3-5 cell room whose near edge touches the alcove from behind, cut into solid rock: no cell of it may be near any
-    /// walkable cell but the alcove, so the alcove stays its only way in. The alcove's chest moves to the room's centre.
+    /// walkable cell but the alcove, so the alcove stays its only way in. The alcove's chest moves to the room's centre. Neither
+    /// the alcove nor any cell of the room or its passage may lie in or beside the exit island (<see cref="FloorLayout.NearIsland"/>).
     /// </summary>
     internal static bool TryCarveSecretRoom(Random rng, FloorLayout layout, SecretAlcove s)
     {
+        if (layout.NearIsland(s.Alcove)) return false; // never a way into or out of the exit island
         var n = s.Alcove - s.Wall; // outward
         var side = n.Perp;
         // every size and doorway offset once, in a seeded order, flush against the alcove first and then up to MaxGap cells of
@@ -130,7 +132,7 @@ public static partial class FloorGenerator
             var ok = true;
             foreach (var c in room.Cells().Concat(passage))
             {
-                if (layout[c] is not (Cell.Void or Cell.Wall) || layout.IsUnder(c)) { ok = false; break; }
+                if (layout[c] is not (Cell.Void or Cell.Wall) || layout.IsUnder(c) || layout.NearIsland(c)) { ok = false; break; }
                 for (var oy = -1; oy <= 1 && ok; oy++)
                     for (var ox = -1; ox <= 1; ox++)
                     {
@@ -159,13 +161,13 @@ public static partial class FloorGenerator
 
     internal const int CacheAmbusherOneIn = 3, CacheLockedChestOneIn = 3;
 
-    /// <summary>Mine drifts end in something (fortune): one in three an ambusher waiting, else a locked chest one in three (the floor's keys serve) or a breakable crate. A drift whose end is taken holds nothing.</summary>
+    /// <summary>Mine drifts end in something (fortune): one in three an ambusher waiting, else a locked chest one in three (the floor's keys serve) or a breakable crate. A drift whose end is taken, or lies in or beside the exit island, holds nothing.</summary>
     internal static void PlaceCaches(FloorSpec spec, Random rng, FloorLayout layout)
     {
         foreach (var drift in layout.Drifts)
         {
             var cell = drift[^1];
-            if (layout.TrapSpawns.Contains(cell) || layout.ChestSpawns.Contains(cell) || layout.BreakableSpawns.Contains(cell) || layout.EnemySpawns.Contains(cell) || layout.IsReserved(cell) || layout.IsWater(cell)) continue;
+            if (layout.TrapSpawns.Contains(cell) || layout.ChestSpawns.Contains(cell) || layout.BreakableSpawns.Contains(cell) || layout.EnemySpawns.Contains(cell) || layout.IsReserved(cell) || layout.IsWater(cell) || layout.NearIsland(cell)) continue;
             if (rng.Next(CacheAmbusherOneIn) == 0) { layout.Caches.Add(new DriftCache(cell, CacheKind.Ambusher)); continue; }
             if (rng.Next(CacheLockedChestOneIn) == 0)
             {
@@ -181,14 +183,15 @@ public static partial class FloorGenerator
         }
     }
 
-    /// <summary>One ordinary chest per floor from <see cref="Adventure.Fortune.FortuneRules.BoundFromFloor"/> is bound; never one in the boss arena.</summary>
+    /// <summary>One ordinary chest per floor from <see cref="Adventure.Fortune.FortuneRules.BoundFromFloor"/> is bound; never one in the boss arena, or in or beside the exit island.</summary>
     internal static void PlaceBoundChest(FloorSpec spec, Random rng, FloorLayout layout)
     {
         layout.BoundChest = -1;
         if (spec.Floor < Adventure.Fortune.FortuneRules.BoundFromFloor) return;
         var candidates = new List<int>();
         for (var i = 0; i < layout.ChestSpawns.Count; i++)
-            if (Adventure.Fortune.ChestRules.KindOf(layout, i) == Adventure.Fortune.ChestKind.Ordinary && layout.BossArena?.Contains(layout.ChestSpawns[i]) != true) candidates.Add(i);
+            if (Adventure.Fortune.ChestRules.KindOf(layout, i) == Adventure.Fortune.ChestKind.Ordinary && layout.BossArena?.Contains(layout.ChestSpawns[i]) != true
+                && !layout.NearIsland(layout.ChestSpawns[i])) candidates.Add(i); // never in or beside the exit island
         if (candidates.Count > 0) layout.BoundChest = candidates[rng.Next(candidates.Count)];
     }
 

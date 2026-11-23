@@ -71,7 +71,7 @@ public static class ShrineRules
     /// The shrine's cell, or null when no room can hold one. Rooms other than the stairs', the arena, the safe room, the
     /// objective's jail and shrine, vaults, secret rooms and the mine-cart line's stops; dead ends first, then nearest the
     /// midpoint of the stairs route.
-    /// The cell: nearest the room's centre, plain floor at the room's level, nothing on it, a cell away from every entrance,
+    /// The cell: nearest the room's centre, plain floor at the room's level, nothing on it, not in or beside the exit island, a cell away from every entrance,
     /// and blocking it cuts nothing off.
     /// </summary>
     public static GridPos? Choose(FloorLayout layout)
@@ -111,7 +111,7 @@ public static class ShrineRules
 
     private static bool Free(FloorLayout layout, GridPos p, int level)
         => layout[p] == Cell.Floor && layout.LevelOf(p) == level && !layout.IsUnder(p) && !layout.IsChamfer(p, out _) && !layout.IsWater(p) && !layout.Ramps.ContainsKey(p)
-           && !layout.IsReserved(p) && p != layout.UpStairs && p != layout.DownStairs
+           && !layout.IsReserved(p) && !layout.NearIsland(p) && p != layout.UpStairs && p != layout.DownStairs
            && !layout.ChestSpawns.Contains(p) && !layout.EnemySpawns.Contains(p) && !layout.BreakableSpawns.Contains(p) && !layout.TrapSpawns.Contains(p) && !layout.KeySpawns.Contains(p)
            && !layout.LedgeSpawns.Contains(p) && !layout.CellarSpawns.Contains(p)
            && layout.Vaults.All(v => v.Key != p && v.Lever != p && v.Door != p)
