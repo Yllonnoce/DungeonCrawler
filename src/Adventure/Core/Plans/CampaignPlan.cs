@@ -85,9 +85,13 @@ public sealed class SpecOverrides
     [AiIgnore] public int? BrokenBridgeRide { get; set; }
     [AiDescription("The ride (1-based) with the split's crevasse cut outward of the slag line, 0 for none; needs Crevasses.")]
     [AiIgnore] public int? SplitRide { get; set; }
+    [AiDescription("The ride (1-based) whose party line has a lava pit with a deadly switch round it, 0 for none; needs Crevasses.")]
+    [AiIgnore] public int? PitRide { get; set; }
+    [AiDescription("True: the exit room and the rooms off it become an island reached only by a rail bridge over lava; needs Crevasses.")]
+    [AiIgnore] public bool? ExitIsland { get; set; }
 
     public bool IsEmpty => EnemyCount == null && ChestCount == null && LockedChestCount == null && TrapCount == null && VaultCount == null
-                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null && Crevasses == null && BrokenBridgeRide == null && SplitRide == null;
+                           && LedgeCount == null && PitCount == null && SecretCount == null && HighRoomChance == null && StructureCount == null && WaterCount == null && RubbleCount == null && NestCount == null && RailCount == null && RailLoop == null && RailBand == null && Crevasses == null && BrokenBridgeRide == null && SplitRide == null && PitRide == null && ExitIsland == null;
 
     public FloorSpec Apply(FloorSpec spec) => spec with
     {
@@ -110,6 +114,8 @@ public sealed class SpecOverrides
         Crevasses = Crevasses ?? spec.Crevasses,
         BrokenBridgeRide = Math.Clamp(BrokenBridgeRide ?? spec.BrokenBridgeRide, 0, 6),
         SplitRide = Math.Clamp(SplitRide ?? spec.SplitRide, 0, 6),
+        PitRide = Math.Clamp(PitRide ?? spec.PitRide, 0, 6),
+        ExitIsland = ExitIsland ?? spec.ExitIsland,
     };
 }
 

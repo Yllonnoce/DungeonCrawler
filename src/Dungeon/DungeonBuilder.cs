@@ -360,6 +360,7 @@ public partial class DungeonBuilder : Node3D
         _floorRoot.AddChild(tremor);
 
         GD.Print($"[DungeonBuilder] floor {floorIndex} ({tier?.DisplayName ?? "default"}{(CurrentTheme != null ? "/" + CurrentTheme.Id : "")}{(TierRules.IsBossFloor(floorIndex) ? ", boss" : "")}, {LayoutKinds.Id(layout.Kind)}) seed={seed} rooms={layout.Rooms.Count} fires={layout.Fires.Count} enemies={contents.EnemyCount} elites=[{string.Join("; ", _floorRoot.GetChildren().OfType<Enemy>().Where(e => e.IsElite && e.SpawnIndex >= 0).Select(e => e.DisplayName))}] plan={contents.Plan?.Source ?? "legacy"} groups={contents.Collectives.Count} vaults={layout.Vaults.Count} traps={layout.TrapSpawns.Count} ramps={layout.Ramps.Count} ledges={layout.Ledges.Count} cellars={layout.Cellars.Count} secrets={layout.Secrets.Count} structures=[{string.Join(",", layout.Structures.Select(s => s.Kind))}] water=[{string.Join(",", layout.Water.Select(w => w.Kind))}] nests={layout.Nests.Count} objective={FloorObjectives.Id(layout.Objective?.Kind ?? FloorObjectiveKind.None)} rails={layout.Rail?.Stops.Count ?? 0} hordes={contents.Hordes.Count} ambushes={AmbushSpawner.Instance?.Points.Count ?? 0} hash={layout.ContentHash():X16}");
+        foreach (var line in layout.GenLog) GD.Print($"[gen] {line}"); // what the generator changed that a plan cannot see
         return layout;
     }
 

@@ -53,6 +53,16 @@ public sealed record FloorSpec
     public int BrokenBridgeRide { get; init; }
     /// <summary>The ride (1-based) whose party line passes the split's points, with a crevasse cut outward of the slag line past them (<see cref="RailLine.Split"/>); 0 for none. Acts only with <see cref="Crevasses"/>.</summary>
     public int SplitRide { get; init; }
+    /// <summary>
+    /// The ride (1-based) whose party line has a lava pit (<see cref="RailLine.Pit"/>), with a deadly switch round it at runtime;
+    /// 0 for none. Acts only with <see cref="Crevasses"/>.
+    /// </summary>
+    public int PitRide { get; init; }
+    /// <summary>
+    /// The exit room and the rooms off it become an island (<see cref="RailLine.Island"/>): their halls sealed, reached only by a
+    /// rail bridge over lava. Acts only with <see cref="Crevasses"/>.
+    /// </summary>
+    public bool ExitIsland { get; init; }
     /// <summary>Tier-final floor: a large arena room is placed and the down stairs live inside it.</summary>
     public bool BossFloor { get; init; }
     public int BossArenaSize { get; init; } = 14;

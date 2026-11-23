@@ -16,7 +16,9 @@ public static partial class FloorGenerator
     /// becomes a chasm, and both lanes over the span become <see cref="BridgeKind.Deck"/> bridges. Then the broken bridge
     /// when <see cref="FloorSpec.BrokenBridgeRide"/> asks for one (<see cref="CarveBreak"/>), the split's crevasse when
     /// <see cref="FloorSpec.SplitRide"/> asks for one (<see cref="CarveSplit"/>), the strips (<see cref="CarveStrips"/>, none on
-    /// the break's or the split's ride once it is cut) and the planks (<see cref="CarveWalkways"/>). Pockets cut away leave
+    /// the break's or the split's ride once it is cut), then the planks picked (<see cref="PickWalkways"/>), the pit when
+    /// <see cref="FloorSpec.PitRide"/> asks for one (<see cref="CarvePit"/>), the exit island when <see cref="FloorSpec.ExitIsland"/>
+    /// does (<see cref="CarveIsland"/>), and the planks cut (<see cref="CutWalkways"/>). Pockets cut away leave
     /// <see cref="RailLine.Pockets"/>, the rock beside the drops is walled and <see cref="FloorLayout.ChasmCount"/> set.
     /// </summary>
     internal static void CarveChasms(FloorSpec spec, FloorLayout layout)
@@ -67,7 +69,29 @@ public static partial class FloorGenerator
             Pockets = rail.Pockets.Where(p => !dropped.Contains(p)).ToList(), Strips = strips, Gorge = gorge, Break = broken, BreakWhy = why,
             Split = split, SplitWhy = splitWhy,
         };
-        CarveWalkways(layout);
+        // the planks are picked on today's floor, with the line as the strips left it, so the pit and the island never move a pick
+        var picks = PickWalkways(layout);
+        if (spec.PitRide > 0 || spec.ExitIsland)
+        {
+            rail = layout.Rail;
+            RailPit? pit = null;
+            string? pitWhy = null;
+            if (spec.PitRide > 0)
+            {
+                (pit, pitWhy) = CarvePit(layout, rail, spec.PitRide, spec.BrokenBridgeRide, spec.SplitRide, sign, pockets, dropped);
+                pockets.ExceptWith(dropped);
+            }
+            RailIsland? island = null;
+            string? islandWhy = null;
+            if (spec.ExitIsland)
+            {
+                (island, islandWhy) = CarveIsland(layout, rail, sign, pockets, dropped);
+                pockets.ExceptWith(dropped);
+            }
+            // before the planks are cut, so CutWalkways sees the sealed halls
+            layout.Rail = rail with { Pockets = rail.Pockets.Where(p => !dropped.Contains(p)).ToList(), Pit = pit, PitWhy = pitWhy, Island = island, IslandWhy = islandWhy };
+        }
+        CutWalkways(layout, picks);
         RaiseWalls(layout);
         layout.ChasmCount = layout.Cells.Count(c => c == Cell.Chasm);
     }
@@ -374,41 +398,76 @@ public static partial class FloorGenerator
 
     /// <summary>
     /// Up to <see cref="RailRules.WalkwayCount"/> plank crossings: a level hall cell (<see cref="WalkwayCell"/>) whose rock
-    /// <see cref="RailRules.WalkwayReach"/> deep either side across the hall is cut to a chasm, so the hall crosses it on a
+    /// <see cref="RailRules.WalkwayReach"/> deep either side across the hall is to be cut to a chasm, so the hall crosses it on a
     /// <see cref="BridgeKind.Plank"/>. Chosen farthest-point (Manhattan) from the up stairs and then from those chosen, at
-    /// least <see cref="RailRules.WalkwaySpacing"/> apart, ties by (Y, X).
+    /// least <see cref="RailRules.WalkwaySpacing"/> apart, ties by (Y, X). Nothing is cut: each earlier pick's plank and cut cells
+    /// are read as cut (an overlay passed to <see cref="WalkwayCell"/>), which is all cutting it did to the later picks.
     /// </summary>
-    private static void CarveWalkways(FloorLayout layout)
+    internal static List<GridPos> PickWalkways(FloorLayout layout)
     {
         var taken = TakenCells(layout);
+        var picks = new List<GridPos>();
+        var cut = new HashSet<GridPos>();
         var candidates = new List<GridPos>();
         for (var y = 0; y < layout.Height; y++)
             for (var x = 0; x < layout.Width; x++)
-                if (WalkwayCell(layout, taken, new GridPos(x, y), out _)) candidates.Add(new GridPos(x, y));
-        while (layout.Walkways.Count < RailRules.WalkwayCount)
+                if (WalkwayCell(layout, taken, new GridPos(x, y), cut, out _)) candidates.Add(new GridPos(x, y));
+        while (picks.Count < RailRules.WalkwayCount)
         {
             GridPos? best = null;
             var bestScore = -1;
             foreach (var c in candidates)
             {
-                if (layout.Walkways.Any(w => w.ManhattanDistance(c) < RailRules.WalkwaySpacing)) continue;
-                var score = layout.Walkways.Select(w => w.ManhattanDistance(c)).Append(c.ManhattanDistance(layout.UpStairs)).Min();
-                if (score <= bestScore || !WalkwayCell(layout, taken, c, out _)) continue; // still a crossing after the planks before it
+                if (picks.Any(w => w.ManhattanDistance(c) < RailRules.WalkwaySpacing)) continue;
+                var score = picks.Select(w => w.ManhattanDistance(c)).Append(c.ManhattanDistance(layout.UpStairs)).Min();
+                if (score <= bestScore || !WalkwayCell(layout, taken, c, cut, out _)) continue; // still a crossing after the planks before it
                 best = c;
                 bestScore = score;
             }
             if (best is not { } plank) break;
-            WalkwayCell(layout, taken, plank, out var across);
-            for (var t = 1; t <= RailRules.WalkwayReach; t++)
+            WalkwayCell(layout, taken, plank, cut, out var across);
+            cut.Add(plank);
+            foreach (var q in WalkwayCuts(plank, across)) cut.Add(q);
+            picks.Add(plank);
+        }
+        return picks;
+    }
+
+    /// <summary>
+    /// Cut the planks <see cref="PickWalkways"/> chose, in their order: each pick not on a hall the exit island sealed
+    /// (<see cref="RailIsland.Trenches"/>, <see cref="RailIsland.CaveIns"/>) that is still a crossing (<see cref="WalkwayCell"/>) has its
+    /// cells across cut to chasm at level 0 and becomes a <see cref="BridgeKind.Plank"/> in <see cref="FloorLayout.Walkways"/>. A pick
+    /// that is no longer a crossing is dropped and logged (<see cref="FloorLayout.GenLog"/>). With no pit and no island, every pick is cut.
+    /// </summary>
+    internal static void CutWalkways(FloorLayout layout, IReadOnlyList<GridPos> picks)
+    {
+        var taken = TakenCells(layout);
+        var sealedHalls = layout.Rail?.Island is { } island ? island.Trenches.Concat(island.CaveIns).ToHashSet() : new HashSet<GridPos>();
+        foreach (var plank in picks)
+        {
+            if (sealedHalls.Contains(plank)) continue;
+            if (!WalkwayCell(layout, taken, plank, null, out var across))
             {
-                foreach (var q in new[] { plank + Times(across, t), plank - Times(across, t) })
-                {
-                    layout[q] = Cell.Chasm;
-                    layout.SetLevel(q, 0); // the drop's lip is the hall's floor
-                }
+                layout.GenLog.Add($"island: plank at {plank} dropped");
+                continue;
+            }
+            foreach (var q in WalkwayCuts(plank, across))
+            {
+                layout[q] = Cell.Chasm;
+                layout.SetLevel(q, 0); // the drop's lip is the hall's floor
             }
             layout.Bridges[plank] = BridgeKind.Plank;
             layout.Walkways.Add(plank);
+        }
+    }
+
+    /// <summary>The cells a plank at <paramref name="plank"/> cuts: <see cref="RailRules.WalkwayReach"/> each side along <paramref name="across"/>, nearest first.</summary>
+    private static IEnumerable<GridPos> WalkwayCuts(GridPos plank, GridPos across)
+    {
+        for (var t = 1; t <= RailRules.WalkwayReach; t++)
+        {
+            yield return plank + Times(across, t);
+            yield return plank - Times(across, t);
         }
     }
 
@@ -418,11 +477,12 @@ public static partial class FloorGenerator
     /// straight one-cell corridor: its walkable 4-neighbours are exactly two opposite ones, each plain level floor whose own
     /// walkable 4-neighbours are the plank and the cell beyond. The <see cref="RailRules.WalkwayReach"/> cells each side
     /// across the corridor (<paramref name="across"/>) are rock with nothing round them but rock and the corridor's three cells.
+    /// The cells in <paramref name="cut"/> (earlier picks' planks and drops, not yet carved) are read as cut: never rock, a plank a bridge.
     /// </summary>
-    private static bool WalkwayCell(FloorLayout layout, HashSet<GridPos> taken, GridPos c, out GridPos across)
+    private static bool WalkwayCell(FloorLayout layout, HashSet<GridPos> taken, GridPos c, HashSet<GridPos>? cut, out GridPos across)
     {
         across = default;
-        if (!Plain(c) || layout.IsWater(c) || layout.IsReserved(c) || taken.Contains(c) || layout.IsBridge(c)) return false;
+        if (!Plain(c) || layout.IsWater(c) || layout.IsReserved(c) || taken.Contains(c) || layout.IsBridge(c) || cut?.Contains(c) == true) return false;
         var open = c.Neighbours4().Where(layout.IsWalkable).ToList();
         if (open.Count != 2 || open[0] - c != c - open[1]) return false;
         var e = open[0] - c;
@@ -436,30 +496,31 @@ public static partial class FloorGenerator
                 if (layout.RoomAt(new GridPos(c.X + ox, c.Y + oy)) != null) return false;
         var p = e.Perp;
         var corridor = new HashSet<GridPos> { c, open[0], open[1] };
-        var cut = new HashSet<GridPos>();
-        for (var t = 1; t <= RailRules.WalkwayReach; t++) { cut.Add(c + Times(p, t)); cut.Add(c - Times(p, t)); }
-        foreach (var q in cut)
+        var drop = WalkwayCuts(c, p).ToHashSet();
+        foreach (var q in drop)
         {
-            if (!Rock(layout, q) || !InRailRange(layout, q) || layout.IsReserved(q) || taken.Contains(q)) return false;
+            if (!Solid(q) || !InRailRange(layout, q) || layout.IsReserved(q) || taken.Contains(q)) return false;
             foreach (var n in Around8(q))
-                if (!corridor.Contains(n) && !cut.Contains(n) && !Rock(layout, n)) return false;
+                if (!corridor.Contains(n) && !drop.Contains(n) && !Solid(n)) return false;
         }
         across = p;
         return true;
+
+        bool Solid(GridPos q) => Rock(layout, q) && cut?.Contains(q) != true;
 
         bool Plain(GridPos q) => layout[q] == Cell.Floor && layout.LevelOf(q) == 0 && !layout.IsUnder(q) && !layout.IsRail(q)
                                  && !layout.Ramps.ContainsKey(q) && layout.RoomAt(q) == null;
     }
 
-    /// <summary>The cells a crevasse may not cut or cross: every spawn, chest, key, trap and breakable, the hazards, the vaults' doors, levers and keys, the objective's cells, the stairs and the platforms.</summary>
-    private static HashSet<GridPos> TakenCells(FloorLayout layout)
+    /// <summary>The cells a crevasse may not cut or cross: every spawn, chest, key, trap (unless <paramref name="traps"/> is false) and breakable, the hazards, the vaults' doors, levers and keys, the objective's cells, the stairs and the platforms.</summary>
+    private static HashSet<GridPos> TakenCells(FloorLayout layout, bool traps = true)
     {
         var taken = new HashSet<GridPos>(layout.EnemySpawns);
         taken.UnionWith(layout.LedgeSpawns);
         taken.UnionWith(layout.CellarSpawns);
         taken.UnionWith(layout.ChestSpawns);
         taken.UnionWith(layout.KeySpawns);
-        taken.UnionWith(layout.TrapSpawns);
+        if (traps) taken.UnionWith(layout.TrapSpawns);
         taken.UnionWith(layout.BreakableSpawns);
         foreach (var h in layout.Hazards) taken.UnionWith(h.Cells);
         foreach (var v in layout.Vaults)

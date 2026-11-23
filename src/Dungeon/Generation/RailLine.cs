@@ -56,6 +56,20 @@ public static class RailRules
     public const int SplitCells = 4;
     /// <summary>On the cavern's ride, the split's run ends at least this many cells before the cavern's first cell (its last index is at most <c>Cavern.From - SplitCavernGap</c>).</summary>
     public const int SplitCavernGap = 3;
+    /// <summary>The shortest straight run of party lane the pit (<see cref="FloorSpec.PitRide"/>) is laid along: its lead, the pit and the cells after it.</summary>
+    public const int PitRunCells = 11;
+    /// <summary>The pit is this many cells into its run, so the run's first this many cells (28 m) are the straight before its lip.</summary>
+    public const int PitLeadCells = 7;
+    /// <summary>The pit's window on its ride, as fractions of the ride from platform middle to platform middle.</summary>
+    public const float PitFrom = 0.05f, PitTo = 0.60f;
+    /// <summary>The fewest party-lane cells the exit bridge (<see cref="FloorSpec.ExitIsland"/>) crosses.</summary>
+    public const int BridgeMinCells = 4;
+    /// <summary>The solid party-lane cells kept between the exit bridge's last cell and the exit platform's first.</summary>
+    public const int BridgeIslandCells = 4;
+    /// <summary>How many cells deep the exit bridge's moat is cut on each side of it.</summary>
+    public const int MoatDepth = 2;
+    /// <summary>The party-lane cells just before the exit bridge where the parked train stands (<see cref="RailIsland.Parked"/>).</summary>
+    public const int ParkedCells = 4;
 }
 
 /// <summary>A stop on the line: a room the cart halts in, and the party-lane cells inside it, in line order.</summary>
@@ -77,6 +91,35 @@ public sealed record RailBreak(int Ride, RailSpan Run, int Gap);
 /// is the party-lane index of the split's points, the cell before the cut (<c>Crevasse.From - 1</c>).
 /// </summary>
 public sealed record RailSplit(int Ride, RailSpan Crevasse, int Points);
+
+/// <summary>
+/// The pit (<see cref="FloorSpec.PitRide"/>): on 1-based ride <paramref name="Ride"/>, party-lane index <paramref name="Cell"/> is cut to
+/// <see cref="Cell.Chasm"/> at the lane's level, with the rock or pocket cells inward of it; its enemy twin stays solid lane with no
+/// deck. <paramref name="Cut"/> is the pit cell, then its inward cells that were cut.
+/// </summary>
+public sealed record RailPit(int Ride, int Cell, IReadOnlyList<GridPos> Cut);
+
+/// <summary>
+/// The exit island (<see cref="FloorSpec.ExitIsland"/>): the exit room and the rooms off it (<paramref name="Rooms"/>), their halls to
+/// the rest of the floor sealed, each with a lava trench at its mouth (<paramref name="Trenches"/>) and a cave-in behind it to its fork
+/// or room (<paramref name="CaveIns"/>, <see cref="Cell.Wall"/>). The last straight party-lane run before the exit platform,
+/// <paramref name="Bridge"/>, is cut to chasm with its track kept, and so are its straight enemy twins (<paramref name="EnemyBridge"/>);
+/// <paramref name="Moat"/> is the rock and pocket cells the moat cut beside it. <paramref name="Parked"/> is the
+/// <see cref="RailRules.ParkedCells"/> party-lane cells just before the bridge. <paramref name="Cells"/> is every cell walkable from the
+/// down stairs once cut (the rails open, the secrets shut). Every list is in (Y, X) order.
+/// </summary>
+public sealed record RailIsland(IReadOnlyList<int> Rooms, RailSpan Bridge, RailSpan Parked, IReadOnlyList<GridPos> EnemyBridge, IReadOnlyList<GridPos> Trenches,
+    IReadOnlyList<GridPos> CaveIns, IReadOnlyList<GridPos> Moat, IReadOnlySet<GridPos> Cells)
+{
+    /// <summary>Every cell the island cut to chasm: the party bridge cells, <see cref="EnemyBridge"/>, <see cref="Moat"/> and <see cref="Trenches"/>.</summary>
+    public IEnumerable<GridPos> Cut(RailLine rail)
+    {
+        for (var i = Bridge.From; i <= Bridge.To; i++) yield return rail.Party[i];
+        foreach (var c in EnemyBridge) yield return c;
+        foreach (var c in Moat) yield return c;
+        foreach (var c in Trenches) yield return c;
+    }
+}
 
 /// <summary>
 /// The mine-cart line round a ring floor: two parallel ordered, 4-connected lanes from the start room to the exit room.
@@ -128,4 +171,22 @@ public sealed record RailLine(IReadOnlyList<GridPos> Party, IReadOnlyList<GridPo
     /// "none" (the ride had no fitting run) or "refused" (the broken bridge's ride, the last ride, or no such ride). Not part of the content hash.
     /// </summary>
     public string? SplitWhy { get; init; }
+
+    /// <summary>The pit cut on <see cref="FloorSpec.PitRide"/>'s ride, or null. Not part of the content hash.</summary>
+    public RailPit? Pit { get; init; }
+
+    /// <summary>
+    /// Null when no pit was asked for (<see cref="FloorSpec.PitRide"/> 0, or no crevasses); otherwise "ok" (cut), "none" (the ride had
+    /// no fitting run) or "refused" (the broken bridge's, the split's or the cavern's ride, or no such ride). Not part of the content hash.
+    /// </summary>
+    public string? PitWhy { get; init; }
+
+    /// <summary>The exit island cut for <see cref="FloorSpec.ExitIsland"/>, or null. Not part of the content hash.</summary>
+    public RailIsland? Island { get; init; }
+
+    /// <summary>
+    /// Null when no island was asked for (<see cref="FloorSpec.ExitIsland"/> false, or no crevasses); otherwise "ok" (cut), "none" (the
+    /// last ride had no bridge run) or "refused (…)" with the reason (nothing was cut). Not part of the content hash.
+    /// </summary>
+    public string? IslandWhy { get; init; }
 }

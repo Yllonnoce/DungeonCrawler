@@ -75,6 +75,8 @@ public sealed class FloorLayout
     public int ChasmCount { get; internal set; }
     /// <summary>The plank crossings cut into the halls (<see cref="FloorSpec.Crevasses"/>), in the order they were chosen; each is also in <see cref="Bridges"/> as <see cref="BridgeKind.Plank"/>.</summary>
     public List<GridPos> Walkways { get; } = new();
+    /// <summary>What the generator changed or dropped that a plan cannot see, one line each (<c>DungeonBuilder</c> prints them as <c>[gen] …</c>). Not part of the content hash.</summary>
+    public List<string> GenLog { get; } = new();
     public List<Ledge> Ledges { get; } = new();
     public List<Cellar> Cellars { get; } = new();
     public List<SecretAlcove> Secrets { get; } = new();
@@ -157,6 +159,9 @@ public sealed class FloorLayout
     }
 
     public bool IsInVault(GridPos p) => Vaults.Any(v => v.Room.Contains(p));
+
+    /// <summary>A cell of the exit island (<see cref="RailIsland.Cells"/>); false on a floor without one.</summary>
+    public bool InIsland(GridPos p) => Rail?.Island?.Cells.Contains(p) == true;
 
     /// <summary>Index into <see cref="Rooms"/> of the floor's safe room, or -1 when the floor has none.</summary>
     public int SafeRoom { get; internal set; } = -1;

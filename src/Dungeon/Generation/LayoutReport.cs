@@ -37,7 +37,10 @@ public static class LayoutReport
     /// <c> break={Gap}@{f} run={From}..{To}</c>, f the gap's fraction of its own ride measured the same way, or
     /// <c> break=none</c> or <c> break=refused</c>. When a split was asked for (<see cref="RailLine.SplitWhy"/>), then
     /// <c> split={Points}@{f} crevasse={From}..{To}</c>, f the points' fraction of their own ride measured the same way, or
-    /// <c> split=none</c> or <c> split=refused</c>.
+    /// <c> split=none</c> or <c> split=refused</c>. When a pit was asked for (<see cref="RailLine.PitWhy"/>), then <c> pit={Cell}@{f}</c>,
+    /// f the pit's fraction of its own ride measured the same way, or <c> pit=none</c> or <c> pit=refused</c>. When an exit island was
+    /// asked for (<see cref="RailLine.IslandWhy"/>), then <c> island=room {a}+{b} sealed={trenches} bridge={From}..{To}</c>, or
+    /// <c> island=none</c> or <c> island=refused (…)</c>.
     /// </summary>
     public static string? Rail(FloorLayout l)
     {
@@ -60,6 +63,12 @@ public static class LayoutReport
             line += rail.Split is { } s
                 ? $" split={s.Points}@{Fraction(s.Points, mids[s.Ride - 1], mids[s.Ride])} crevasse={s.Crevasse.From}..{s.Crevasse.To}"
                 : $" split={rail.SplitWhy}";
+        if (rail.PitWhy != null)
+            line += rail.Pit is { } pit ? $" pit={pit.Cell}@{Fraction(pit.Cell, mids[pit.Ride - 1], mids[pit.Ride])}" : $" pit={rail.PitWhy}";
+        if (rail.IslandWhy != null)
+            line += rail.Island is { } island
+                ? $" island=room {string.Join("+", island.Rooms)} sealed={island.Trenches.Count} bridge={island.Bridge.From}..{island.Bridge.To}"
+                : $" island={rail.IslandWhy}";
         return line;
     }
 }
