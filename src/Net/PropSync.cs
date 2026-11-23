@@ -130,6 +130,8 @@ public static class PropSync
         var barrels = p.Barrels.ToHashSet();
         var placed = p.PlacedTraps.ToDictionary(t => t.Id);
         var placedShown = new HashSet<int>();
+        // the island's reward chest (plan 15 Ruling 37): the server's stands opened and ours is not built yet (its "stood" missed): build it, then open it below
+        if (opened.Contains(CrewRules.RewardChestIndex) && CrewOf(root)?.ShowRewardChest() == true) changed.Add("the reward chest stood");
 
         foreach (var child in root.GetChildren().ToList())
         {

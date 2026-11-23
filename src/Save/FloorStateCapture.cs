@@ -221,6 +221,8 @@ public static class FloorStateCapture
         {
             floorRoot.GetChildren().OfType<Adventure.Objectives.ObjectiveController>().FirstOrDefault()?.Restore(os);
             if (os.Completed && floorRoot.GetNodeOrNull<Stairs>("DownStairs") is { } sealedStairs) sealedStairs.Unlock();
+            foreach (var stood in floorRoot.GetChildren().OfType<Chest>()) // a chest the objective stood again (the island's reward chest, plan 15): opened as saved
+                if (!stood.Opened && opened.Contains(stood.SpawnIndex)) stood.MarkOpened();
         }
         if (floorRoot.GetNodeOrNull<CollectiveRegistry>("Collectives") is { } registry)
             foreach (var c in dto.Collectives)

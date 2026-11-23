@@ -308,6 +308,11 @@ public sealed class ObjectiveStateDto
     public bool? OrcKeys { get; set; }
     /// <summary>Railed jailbreak, a server's broadcast: the seconds each downed crew member (by id) has left to bleed; null when none is down. Clients count their labels down from it.</summary>
     public Dictionary<string, float>? CrewDownedLeft { get; set; }
+    /// <summary>
+    /// Railed jailbreak on an island floor (plan 15 Ruling 37): the win's reward chest stands by the stairs (true), else null. Its opened state
+    /// is in <see cref="FloorStateDto.OpenedChests"/> as any chest's.
+    /// </summary>
+    public bool? RewardChest { get; set; }
 }
 
 /// <summary>A crew member seated in the party's train: its id, its wagon's number (1 nearest the cart) and its seat there (the bench's 4 or 5).</summary>

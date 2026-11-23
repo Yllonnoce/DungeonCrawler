@@ -436,21 +436,25 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                 planar = PathMover.Planar(GlobalPosition, d) * Math.Clamp(gap * 2.5f, 1.2f, gap > 3f ? RunSpeed : WalkSpeed);
             }
             else FaceToward(lead.GlobalPosition);
+            var layout = Main.Instance?.Builder.Layout;
+            if (_catchUpHeld && layout?.Rail?.Island != null && InIsland(layout, GlobalPosition) == InIsland(layout, lead.GlobalPosition)) _catchUpHeld = false; // back on its lead's side: a new hold is told again
             if (_mover.Unreachable > 5f)
             {
                 if (!lead.Seated)
                 {
                     var behind = lead.GlobalPosition + lead.GlobalTransform.Basis * new Vector3(0, 0, 1.5f);
                     // on a crevasse floor never over a drop nor off a plank's boards: the spot when the ground to it holds, else the lead's footing
-                    if (Main.Instance?.Builder.Layout is { ChasmCount: > 0 } drops)
+                    if (layout is { ChasmCount: > 0 } drops)
                     {
                         var spot = CrevasseRules.SetDownNear(drops, DungeonBuilder.CellSize, new(lead.GlobalPosition.X, lead.GlobalPosition.Z), new(behind.X, behind.Z));
                         behind = new Vector3(spot.X, lead.GlobalPosition.Y, spot.Y);
                     }
-                    GlobalPosition = behind;
+                    if (CatchUpAllowed(layout, lead, behind)) GlobalPosition = behind;
                 }
-                // the lead rides: never into the tub or onto the line; far behind, beside the cart (as a rider gets out), else hold here
-                else if (gap + FollowDistance > SeatedLeadCatchUp && RailController.Instance is { } rails) GlobalPosition = rails.StandBesideCart(GlobalPosition); // on its own side of the exit island
+                // the lead rides: never into the tub or onto the line; far behind, beside the cart (as a rider gets out), else hold here. The spot is on
+                // the follower's own side of the exit island, passed explicitly (a bridge cell is outside: ExitBridgeRules.SideOf), never the nearer end's
+                else if (gap + FollowDistance > SeatedLeadCatchUp && RailController.Instance is { } rails && rails.StandBesideCart(GlobalPosition) is var beside
+                    && CatchUpAllowed(layout, lead, beside)) GlobalPosition = beside;
                 _mover.Reset();
             }
             if (Mode == NpcMode.Quest) CheckStairs();
@@ -474,6 +478,27 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
             if (_flash > 0f) { _flash -= dt; _model.Flash(Math.Max(0f, _flash * 2f)); }
             ShowGait(actual, dt);   // a blocked NPC stands instead of running on the spot
         }
+    }
+
+    /// <summary>The catch-up was held across the island's edge and said so (<see cref="CatchUpAllowed"/>): told once each time it holds.</summary>
+    private bool _catchUpHeld;
+    /// <summary>The catch-up is held across the island's edge now (the flows read it).</summary>
+    internal bool CatchUpHeld => _catchUpHeld;
+
+    private static bool InIsland(FloorLayout layout, Vector3 at) => layout.InIsland(DungeonBuilder.WorldToCell(at));
+
+    /// <summary>
+    /// Plan 15 Ruling 35: on a floor with an exit island, the follower's catch-up to <paramref name="dest"/> runs only with the follower, its
+    /// <paramref name="lead"/> and the spot all on one side of the island's edge (<see cref="Objectives.CrewRules.CatchUpAllowed"/>; a bridge cell is
+    /// outside); otherwise it holds where it is, printing so once each time it holds. Always true off an island floor.
+    /// </summary>
+    private bool CatchUpAllowed(FloorLayout? layout, Node3D lead, Vector3 dest)
+    {
+        if (layout?.Rail?.Island == null) return true;
+        if (Objectives.CrewRules.CatchUpAllowed(true, InIsland(layout, GlobalPosition), InIsland(layout, lead.GlobalPosition), InIsland(layout, dest))) { _catchUpHeld = false; return true; }
+        if (!_catchUpHeld) GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)");
+        _catchUpHeld = true;
+        return false;
     }
 
     /// <summary>Test hook (--test-crew): set a downed crew member's clock, to run the bleed-out on without waiting it out.</summary>

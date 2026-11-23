@@ -19,7 +19,9 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// member up, on foot and within <see cref="TrainRules.BoardReach"/> books the first empty seat, walks to it and sits in
 /// (<see cref="TickBoarding"/>; the countdown waits for them up to <see cref="TrainRules.BoardMax"/>). A crew member is home in the exit
 /// room (seated in the train once the cart is at the end of the line, or on foot there); a dead one is lost. Every cage open and
-/// every crew member home or lost opens the reward vault and the stairs. Server only for every change; a client reads the 2 s
+/// every crew member home or lost opens the reward vault and the stairs. On a floor with an exit island (plan 15, <c>.Island.cs</c>) home is the
+/// island, the unopened cages are left behind once every player is inside, crew stranded outside are lost while that lasts, Grisel is
+/// brought in, and the win stands a reward chest by the stairs. Server only for every change; a client reads the 2 s
 /// objective state for the HUD, shows the cages and the keys as the server tells them, and offers the cages' and the keyring's
 /// prompts from its copies (<see cref="PropPromptRules"/>; a use is an InteractIntent).
 /// </summary>
@@ -324,8 +326,10 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         if (main.RiseAtCartPending) return; // a wipe's rise is coming: the floor is built again from the arrival, and nothing won now may outlive it
         TickBoarding(dt);
+        if (IslandFloor) { ReadIsland(); BringEscortsIn(); } // Grisel is brought in, won or not (plan 15 Ruling 36)
         if (Completed) return;
         if (_cages.Count == 0 || (_crew.Count == 0 && ClosedCages == 0)) { Complete(); return; } // no cage could stand anywhere (Build warned), or nobody to bring home: waived
+        if (IslandFloor) ResolveUnopened();
         Evaluate();
         if (CrewRules.Completed(States(), CrewRules.CagesBlocking(CageStates()))) Win();
     }
@@ -366,6 +370,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     private void Evaluate()
     {
         var atEnd = _rails != null && IsInstanceValid(_rails) && _rails.State.Mode == CartMode.Held && _rails.StopIndex >= _rails.StopS.Length - 1;
+        if (IslandFloor) ReadIsland();
         foreach (var npc in _crew)
         {
             var was = StateOf(npc);
@@ -382,6 +387,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         if (!IsInstanceValid(npc) || npc.Dead) { _home.Remove(npc.Id); return CrewState.Lost; }
         if (CageOf(npc) is { Open: false } cage) return CrewRules.JudgeCaged(LeftBehind(cage)); // a cage left behind: its crew are lost
         var inTrain = PartyWagonOf(npc) is { Coupled: true }; // the party's own train (plan 15 Task 5, Ruling 23): a parked tub is never it
+        if (IslandFloor) return JudgeOnIsland(npc, inTrain && atEnd); // plan 15 Ruling 32: home is the island
         var inExit = (inTrain && atEnd) || (!npc.Seated && InExitRoom(npc));
         if (_home.Contains(npc.Id))
         {
@@ -409,7 +415,8 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         _setFreedAll = AdventureDirector.Instance is { } director && !director.HasFlag(FreedAllFlag);
         AdventureDirector.Instance?.SetFlag(FreedAllFlag, "the prisoners");
-        if (_rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(); EventBus.Instance.Log("Somewhere on this floor, a vault door swings wide for you."); }
+        if (_rewardDoor is { IsOpen: false }) { _rewardDoor.Reveal(); _rewardDoor.Open(); if (!IslandFloor) EventBus.Instance.Log("Somewhere on this floor, a vault door swings wide for you."); }
+        if (IslandFloor) StandRewardChestOnWin(); // plan 15 Ruling 37: a strongbox by the stairs, its line in the vault door's place
         Complete(); // its line is CompletedLine
     }
 
@@ -909,6 +916,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         dto.OrcKeys = OrcKeys;
         dto.GatesUp = _rails != null && IsInstanceValid(_rails) ? _rails.GatesUpList.ToList() : null;
         dto.CrewDownedLeft = NetSession.IsServer ? DownedLeft() : null; // the broadcast's (a client counts its labels down); a solo save stays as it was
+        dto.RewardChest = RewardChest != null ? true : null; // plan 15 Ruling 37
         return dto;
     }
 
@@ -960,6 +968,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         _bookings.Clear();
         var aboard = new Dictionary<string, CrewSeatDto>();
         foreach (var seat in dto.AboardCrew ?? new List<CrewSeatDto>()) aboard.TryAdd(seat.Id, seat); // the same id twice: its first seat
+        if (dto.RewardChest == true) StandRewardChest(); // before the home crew take the exit room's cells (FloorStateCapture.Apply opens it after, as saved)
         var exitCells = ExitCells();
         var nextExit = 0;
         foreach (var npc in _crew)
@@ -1019,6 +1028,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
             foreach (var cage in _cages)
                 if (IsInstanceValid(cage) && !cage.Open && open.Contains(cage.Stop)) cage.SetOpen(true);
         if (dto.OrcKeys == true && !OrcKeys) OrcKeys = true; // a client's setter takes the keyring off Grisel's belt and tells nothing
+        if (dto.RewardChest == true) ShowRewardChest(); // the win's chest (plan 15 Ruling 37), from the same cell rule
     }
 
     /// <summary>The exit room's free floor (no rail, nothing blocking), nearest the down stairs first.</summary>

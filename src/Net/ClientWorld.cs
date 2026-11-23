@@ -530,6 +530,11 @@ public partial class ClientWorld : Node
 
     private void OnProp(PropEvt pe)
     {
+        if (pe.What == "stood" && pe.Ref == NetRefs.Chest(Adventure.Objectives.CrewRules.RewardChestIndex)) // the island's reward chest (plan 15 Ruling 37): built here from the server's cell rule
+        {
+            (Adventure.Objectives.ObjectiveController.Instance as Adventure.Objectives.CrewRescueController)?.ShowRewardChest();
+            return;
+        }
         if (Root is not { } root || NetRefResolver.Resolve(root, pe.Ref) is not { } node) return;
         switch (node, pe.What)
         {

@@ -28,6 +28,8 @@ namespace DungeonCrawler.Core;
 // a body, and (plan 15 Task 5) the parked train, smashed on the way, standing as a lift with no party body shown within its span; 3 s later none fallen and still there.
 // Then (plan 15 Task 6) the lead, put outside beside the parked train, boards the lift: no takeover (the wreck was inside), it rides in and sets the lead
 // down on an island cell. Then a save and a load give the cart Held at the last stop.
+// Plan 15 Task 7 adds to =wreck (Review Focus 3): within 1 s the crew set down inside are Home, the unopened cages are left behind through
+// LastWreckInside (Ruling 33), the win fires (the reward chest stood), and the arrival snapshot is at the last stop (a wipe after it rises inside).
 public partial class DebugTools
 {
     private const string IslandSlot = "islandtest";
@@ -311,11 +313,23 @@ public partial class DebugTools
                 foreach (var body in _isWagons.Cast<Node3D>().Prepend(rc.Cart))
                     if (IsInstanceValid(body) && body.Visible && rc.Party.Track.ClosestS(body.GlobalPosition) is var bs && bs > enc.ParkedRearS - CartRules.HalfLength && bs < enc.ParkedFrontS + CartRules.HalfLength)
                         problems.Add($"the party's {body.Name} is shown within the parked train's span (S={bs:0.0})");
+                // plan 15 Task 7 (Review Focus 3): the set-down crew Home, the unopened cages resolved through LastWreckInside, the win, and the
+                // arrival snapshot taken at the last stop (a wipe now rises inside)
+                if (_isStep == 3 && ObjectiveController.Instance is CrewRescueController crew)
+                {
+                    foreach (var n in _isRode.OfType<Npc>()) if (IsInstanceValid(n) && crew.StateOf(n) != CrewState.Home) problems.Add($"{n.NpcName} set down inside is {crew.StateOf(n)}, not Home");
+                    foreach (var cage in crew.Cages.Where(c => !c.Open)) if (!rc.CrewLeftAt.Contains(cage.Stop)) problems.Add($"the unopened cage at stop {cage.Stop} is not left behind");
+                    if (crew.CagesBlockingNow != 0) problems.Add($"{crew.CagesBlockingNow} cage(s) still block the stairs");
+                    if (IslandWon(crew, main.Builder.FloorRoot!) is { } notWon) problems.Add($"no win ({notWon})");
+                    if (rc.ArrivalSnapshot?.RailStop != shape.Rides) problems.Add($"the arrival snapshot is at stop {rc.ArrivalSnapshot?.RailStop?.ToString() ?? "none"}, not {shape.Rides}");
+                }
                 var within = _isStep == 3 ? 1f : 3f;
                 if (problems.Count > 0) { if (_isClock > within) Fail($"{(_isStep == 3 ? "within 1 s of" : "3 s after")} the wreck: {string.Join("; ", problems)}"); break; }
                 if (_isStep == 3)
                 {
                     GD.Print($"[island] wreck: {_isClock:0.00} s after it no spare took over (spares used {rc.SparesUsed.Count}), stop {rc.StopIndex}, LastWreckInside, the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}] hidden and not solid; on island cells: {string.Join(", ", _isRode.Select(b => $"{b.Name} {DungeonBuilder.WorldToCell(b.GlobalPosition)}"))}; the parked train {enc.ParkedNow} at S={enc.ParkedRearS:0.0}..{enc.ParkedFrontS:0.0} ({enc.ParkedSmashes} smash(es) on the way), no party body shown within it");
+                    if (ObjectiveController.Instance is CrewRescueController won)
+                        GD.Print($"[island] wreck: the set-down crew Home [{string.Join(", ", _isRode.OfType<Npc>().Select(n => $"{n.NpcName}={won.StateOf(n)}"))}], the unopened cages [{string.Join(",", won.Cages.Where(c => !c.Open).Select(c => c.Stop))}] left behind (CrewLeftAt [{string.Join(",", rc.CrewLeftAt.OrderBy(x => x))}]), the win (reward chest {won.RewardChest != null}); the arrival snapshot at stop {rc.ArrivalSnapshot?.RailStop}");
                     _isStep++; _isClock = 0f;
                     break;
                 }

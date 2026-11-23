@@ -7,7 +7,7 @@ using Godot;
 
 namespace DungeonCrawler.Core;
 
-// ---- --test-island[=cavein|bridge|wreck|parked] (plan 15, Tasks 3 and 5) ---------------------------------------------------------------------------
+// ---- --test-island[=cavein|bridge|wreck|parked|lift|takeover|onfoot|stranded|grisel|chest] (plan 15, Tasks 3 and 5-7) ---------------------------
 // The built-in campaign's floor 12, the exit island's floor, at lethality 3, solo, gathering on; every enemy is culled as it appears, ride
 // 4's runaway held. Every stop, ride and piece id reads Shape(rc) (B.10: every check reads LineShape). Prints [island] lines and
 // "[island] RESULT ok ({variant}): ..." or "RESULT FAIL ({variant}): ..."; plan 13's stall watchdog fails a flow 10 s short of its budget.
@@ -17,6 +17,7 @@ namespace DungeonCrawler.Core;
 // braked on it too, a save there; and a wreck past its start that sets everyone down inside, spends no spare and takes the last stop.
 // =parked (DebugTools.Island.Parked.cs, Task 5): ride 5's parked train in the way, called, smashed through and standing again as a lift.
 // =lift and =takeover (DebugTools.Island.Lift.cs, Task 6): the lift carries the left-behind in; with no live cart it takes over as the party's train.
+// =onfoot, =stranded, =grisel and =chest (DebugTools.Island.Home.cs, Task 7): home and lost on the island floor, and the win's reward chest.
 public partial class DebugTools
 {
     private bool _testIsland;
@@ -43,7 +44,7 @@ public partial class DebugTools
             return;
         }
         foreach (var e in root.GetChildren().OfType<Enemies.Enemy>())
-            if (e.IsAlive && !(v == "takeover" && e.Group?.Id == "col_stop4")) e.Kill(); // the flow owns the fights (=takeover spares stop 4's holders: its gate stays down)
+            if (e.IsAlive && !(v is "takeover" or "onfoot" && e.Group?.Id == "col_stop4") && !IslandGathering(layout, e)) e.Kill(); // the flow owns the fights (=takeover and =onfoot spare stop 4's holders: its gate stays down; =chest's gathering step its own creatures)
         RideWaiveCages(main, rc, "island");
         HoldTheRunaway("island");
         enc.RunawayClock = 0f; // no traffic runaway on the party line
@@ -64,6 +65,10 @@ public partial class DebugTools
             case "parked": IslandParked(main, layout, island, rc, enc, party, me, root, Fail, Pass); break;
             case "lift": IslandLift(main, layout, rc, enc, party, me, Fail, Pass); break;
             case "takeover": IslandTakeover(main, layout, rc, enc, party, me, Fail, Pass); break;
+            case "onfoot": IslandOnFoot(main, layout, rc, enc, party, me, root, Fail, Pass); break;
+            case "stranded": IslandStranded(main, layout, rc, enc, party, me, Fail, Pass); break;
+            case "grisel": IslandGrisel(main, layout, rc, enc, party, me, root, Fail, Pass); break;
+            case "chest": IslandChest(main, layout, rc, enc, party, me, root, Fail, Pass); break;
             default: Fail($"no such variant {v}"); break;
         }
     }

@@ -15,7 +15,8 @@ public static class RailArrival
     /// then too, unless the wipe found her dead or fled: a fall never kills an escort (she is caught at the lip), so that came from a fight
     /// or her betrayal, whose quest state lives in the run and stands. An entry the live capture lacks is added. Only on a floor that runs
     /// the crew trial (<paramref name="crewTrial"/>) does the objective come from the arrival too: its open cages, its lost wagons, the
-    /// crew seated in its train, its home, lost and freed crew, and its completion (the crew come back with the train, so a win since the arrival goes too). Everything
+    /// crew seated in its train, its home, lost and freed crew, and its completion (the crew come back with the train, so a win since the arrival goes too, and the
+    /// reward chest with it: <see cref="ObjectiveStateDto.RewardChest"/> is kept only when both the live state and the arrival are won). Everything
     /// else is the wipe's: the dead stay dead, the spares, the gates and the orc's keys stand as they were, and another objective's
     /// progress (a ritual, the gas, a walk-in jailbreak) is untouched.
     /// </summary>
@@ -42,10 +43,17 @@ public static class RailArrival
             o.FreedNpcs = a.FreedNpcs;
             o.LostWagons = a.LostWagons;
             o.AboardCrew = a.AboardCrew;
+            o.RewardChest = a.Completed && o.Completed ? o.RewardChest : null; // the win's chest (plan 15 Ruling 37) stands only with the win, live and kept
             o.Completed = a.Completed;
         }
         return merged;
     }
+
+    /// <summary>
+    /// The arrival snapshot is taken after an arrival or a restore (<paramref name="arrivedOrRestored"/>), and after a wreck past the exit bridge's
+    /// start (<paramref name="wreckedInside"/>: it takes the last stop, so a wipe after it rises inside the island, not at the last ride's stop outside).
+    /// </summary>
+    public static bool TakesSnapshot(bool arrivedOrRestored, bool wreckedInside) => arrivedOrRestored || wreckedInside;
 
     private static FloorStateDto Copy(FloorStateDto dto)
         => JsonSerializer.Deserialize<FloorStateDto>(JsonSerializer.Serialize(dto, SaveFormat.Options), SaveFormat.Options)!;

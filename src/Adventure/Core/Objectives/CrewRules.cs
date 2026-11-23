@@ -70,4 +70,47 @@ public static class CrewRules
     /// 1 the second: the seat book's seat less <c>CartSeats.HeroSeats</c>): the two names over one cage or wagon stand apart.
     /// </summary>
     public static float LabelLift(int benchIndex) => benchIndex * 0.32f;
+    // ---- plan 15 Task 7: home and lost on an island floor (Rulings 32-37) ----------------------------------------------------------
+
+    /// <summary>The reward chest's <c>SpawnIndex</c> (Ruling 37): clear of every floor's own chests, cellars and extras.</summary>
+    public const int RewardChestIndex = 9000;
+
+    /// <summary>
+    /// A crew member on foot outside the island (<paramref name="onFoot"/>, not <paramref name="inIsland"/>) with the train at the end of the line
+    /// or gone (<paramref name="trainAtEndOrNone"/>: wrecked and hidden) and no up player outside to fetch it (Ruling 34): it counts as lost
+    /// while that lasts.
+    /// </summary>
+    public static bool Stranded(bool onFoot, bool inIsland, bool trainAtEndOrNone, int upPlayersOutside)
+        => onFoot && !inIsland && trainAtEndOrNone && upPlayersOutside <= 0;
+
+    /// <summary>
+    /// Ruling 33: the unopened cages are left behind once every up player (at least one) is in the island and the train is held at the last
+    /// stop or wrecked inside.
+    /// </summary>
+    public static bool UnopenedLeftBehind(int upPlayers, int upPlayersInside, bool trainAtEndOrWreckedInside)
+        => upPlayers > 0 && upPlayersInside >= upPlayers && trainAtEndOrWreckedInside;
+
+    /// <summary>Ruling 36: an escort (Grisel) left outside is brought in once no up player is outside, with the train at the end or wrecked inside.</summary>
+    public static bool BringEscortIn(bool escortOutside, int upPlayersOutside, bool trainAtEndOrWreckedInside)
+        => escortOutside && upPlayersOutside <= 0 && trainAtEndOrWreckedInside;
+
+    /// <summary>
+    /// Ruling 35: a follower's catch-up (its set-down beside its lead, or beside a seated lead's cart) never crosses the island's edge: off an
+    /// island floor always, on one only with the follower, its lead and the spot it would be set down on all on one side (a bridge cell is outside).
+    /// </summary>
+    public static bool CatchUpAllowed(bool islandFloor, bool selfInIsland, bool leadInIsland, bool destInIsland)
+        => !islandFloor || (selfInIsland == leadInIsland && leadInIsland == destInIsland);
+
+    /// <summary>
+    /// A crew member's state on an island floor (Rulings 32 and 34), once the caged and the dead are judged: Home when already home and up or
+    /// in the island; else Downed when down; else Home when in the island or seated in the party's wagon at the end; else Lost while
+    /// <paramref name="stranded"/>; else Freed.
+    /// </summary>
+    public static CrewState JudgeOnIsland(bool homeAlready, bool downed, bool inIsland, bool seatedAtEnd, bool stranded)
+    {
+        if (homeAlready && (!downed || inIsland)) return CrewState.Home;
+        if (downed) return CrewState.Downed;
+        if (inIsland || seatedAtEnd) return CrewState.Home;
+        return stranded ? CrewState.Lost : CrewState.Freed;
+    }
 }

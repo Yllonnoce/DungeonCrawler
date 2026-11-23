@@ -130,8 +130,11 @@ public partial class RailNet
             if (parkedEnc.ParkedCatchUpWord() is { } word && lift.NetRef.Length > 0) world.SendTo(peer, new PropEvt(lift.NetRef, word)); // its state by name (the Task 5 review's Minor 1)
         }
         if (ObjectiveController.Instance is CrewRescueController crew)
+        {
             foreach (var cage in crew.Cages)
                 if (IsInstanceValid(cage)) SendSeated(world, peer, cage, CartIds.Cage(cage.Stop));
+            if (crew.RewardChest != null) world.SendTo(peer, new PropEvt(NetRefs.Chest(CrewRules.RewardChestIndex), "stood")); // the island's reward chest, re-sent (plan 15 Ruling 37)
+        }
         foreach (var slag in SlagCart.Live) // the leapers on a ride's slag carts' decks (plan 13), after the cart state that lists them
             if (IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.Riders.Count > 0) SendSeated(world, peer, slag, slag.CartId);
         if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc))

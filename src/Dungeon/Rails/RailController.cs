@@ -62,6 +62,16 @@ public partial class RailController : Node
     private readonly HashSet<int> _crewLeftAt = new();
     /// <summary>The stops whose prisoners a player left behind (their crew count as lost).</summary>
     internal IReadOnlyCollection<int> CrewLeftAt => _crewLeftAt;
+
+    /// <summary>
+    /// The prisoners at <paramref name="stop"/> are left behind though the cart is not held there (server and solo; plan 15 Ruling 33, pre-flight F3): the
+    /// crew controller resolves the island floor's unopened cages once every up player is inside with the train at the end or wrecked inside.
+    /// </summary>
+    internal void LeaveCrewBehindAt(int stop)
+    {
+        if (NetSession.IsClient || !_crewLeftAt.Add(stop)) return;
+        RefreshHud();
+    }
     /// <summary>The call of the first countdown the cage held back (kept by ??=): it starts with that call once the hold ends. Null when none waits.</summary>
     private bool? _heldStartCall;
 
@@ -440,7 +450,7 @@ public partial class RailController : Node
                 _departureClaimed = false;
                 try { CartEvents?.Invoke(e); }
                 catch (Exception ex) { GD.PushError($"[rails] a CartEvents listener threw on {e.Kind} (stop {e.Stop}): {ex}"); }
-                if (e.Kind is CartEventKind.Arrived or CartEventKind.Restored) SnapshotSoon();
+                if (Save.RailArrival.TakesSnapshot(e.Kind is CartEventKind.Arrived or CartEventKind.Restored, e.Kind == CartEventKind.Wrecked && LastWreckInside)) SnapshotSoon(); // a wreck inside takes the last stop: a wipe after it rises inside
                 if (RideLines.TauntFor(e.Kind, e.Stop, StopS.Length) is { } taunt)
                 {
                     if (taunt == Adventure.Objectives.TauntTrigger.RideStart && _departureClaimed)
@@ -571,8 +581,9 @@ public partial class RailController : Node
     // ---- the wipe's rise (ruling 14, 15) -----------------------------------------------------------
 
     /// <summary>
-    /// The floor as it stood just after the cart last arrived at a stop or was restored there (server and solo; null on a client and before
-    /// the first): a wipe on this floor rises there with the train as it was then (<see cref="Save.RailArrival.Merge"/>).
+    /// The floor as it stood just after the cart last arrived at a stop or was restored there, or was wrecked past the exit bridge's start (the last
+    /// stop: plan 15; server and solo; null on a client and before the first): a wipe on this floor rises there with the train as it was then
+    /// (<see cref="Save.RailArrival.Merge"/>).
     /// </summary>
     public Save.FloorStateDto? ArrivalSnapshot { get; private set; }
     private bool _snapshotDue;
@@ -1036,6 +1047,12 @@ public partial class RailController : Node
 
     /// <summary>A walkable cell beside the PARTY lane near <paramref name="at"/>, off the rails and the sidings: where a hound that missed the cart lands.</summary>
     public Vector3 StandBesideLane(Vector3 at) => _builder.Surface(ExitCellNear(at, true, false)) + Vector3.Up * 0.1f;
+
+    /// <summary>
+    /// <see cref="StandBesideLane"/> on the side of the exit island given (<paramref name="inside"/>), never the nearer end's: where an escort is
+    /// brought in beside the held train's last body (plan 15 Ruling 36).
+    /// </summary>
+    internal Vector3 StandBesideLane(Vector3 at, bool inside) => _builder.Surface(ExitCellNear(at, true, false, inside)) + Vector3.Up * 0.1f;
 
     /// <summary>
     /// Something on the cart (a boarding hound) bites the plating for <paramref name="amount"/>: the HUD follows, and plating gone
