@@ -102,11 +102,12 @@ public static partial class FloorGenerator
     /// <summary>
     /// A 3-5 cell room whose near edge touches the alcove from behind, cut into solid rock: no cell of it may be near any
     /// walkable cell but the alcove, so the alcove stays its only way in. The alcove's chest moves to the room's centre. Neither
-    /// the alcove nor any cell of the room or its passage may lie in or beside the exit island (<see cref="FloorLayout.NearIsland"/>).
+    /// the alcove's secret wall nor any cell of the room or its passage may lie in or beside the exit island
+    /// (<see cref="FloorLayout.NearIsland"/>): the wall, not the alcove two cells out, so no room is dug behind an island room.
     /// </summary>
     internal static bool TryCarveSecretRoom(Random rng, FloorLayout layout, SecretAlcove s)
     {
-        if (layout.NearIsland(s.Alcove)) return false; // never a way into or out of the exit island
+        if (layout.NearIsland(s.Wall)) return false; // never a way into or out of the exit island
         var n = s.Alcove - s.Wall; // outward
         var side = n.Perp;
         // every size and doorway offset once, in a seeded order, flush against the alcove first and then up to MaxGap cells of

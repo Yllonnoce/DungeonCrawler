@@ -14,9 +14,11 @@ namespace DungeonCrawler.Dungeon.Generation;
 /// <item>Rising gas: the exit gate's lever reachable without passing that gate.</item>
 /// <item>Crevasses: with the rails blocked, nothing the party could walk to were the chasm floor (a room, a chest, a key, an
 /// objective cell, the stairs down) is cut off by it, and no chasm lies on a spawn, chest, key, objective or platform cell.</item>
+/// <item>The exit island (<see cref="RailLine.Island"/>): the rail proof in place of the on-foot stairs checks
+/// (<c>FloorSolvability.Island.cs</c>).</item>
 /// </list>
 /// </summary>
-public static class FloorSolvability
+public static partial class FloorSolvability
 {
     /// <summary>Every way the floor cannot be finished, in words; empty when it can.</summary>
     public static List<string> Problems(FloorLayout layout)
@@ -49,11 +51,15 @@ public static class FloorSolvability
     private static List<string> ChasmProblems(FloorLayout layout, Func<GridPos, bool>? rails)
     {
         var problems = new List<string>();
+        // the exit island is proven by rail (IslandProblems): its rooms, its stairs and what lies in it are no business of the chasms'
+        var island = layout.Rail?.Island;
+        bool InIsland(GridPos p) => island != null && island.Cells.Contains(p);
         var now = layout.Reachable(layout.UpStairs, rails);
         var open = layout.Reachable(layout.UpStairs, rails, layout.IsChasm);
-        bool Cut(GridPos p) => open.Contains(p) && !now.Contains(p);
+        bool Cut(GridPos p) => open.Contains(p) && !now.Contains(p) && !InIsland(p);
         for (var i = 0; i < layout.Rooms.Count; i++)
         {
+            if (island != null && island.Rooms.Contains(i)) continue;
             var cells = layout.Rooms[i].Cells().ToList();
             if (cells.Any(open.Contains) && !cells.Any(now.Contains)) problems.Add($"the chasm cuts off room {i}");
         }
@@ -62,7 +68,7 @@ public static class FloorSolvability
         foreach (var c in layout.ChestSpawns) if (Cut(c)) problems.Add($"the chasm cuts off the chest at {c}");
         foreach (var c in keys) if (Cut(c)) problems.Add($"the chasm cuts off the key at {c}");
         foreach (var c in objective) if (Cut(c)) problems.Add($"the chasm cuts off the objective cell at {c}");
-        if (Cut(layout.DownStairs)) problems.Add($"the chasm cuts off the stairs down at {layout.DownStairs}");
+        if (island == null && Cut(layout.DownStairs)) problems.Add($"the chasm cuts off the stairs down at {layout.DownStairs}");
 
         var spawns = layout.EnemySpawns.Concat(layout.LedgeSpawns).Concat(layout.CellarSpawns).Concat(layout.TrapSpawns).Concat(layout.BreakableSpawns).ToHashSet();
         var chests = layout.ChestSpawns.ToHashSet();
@@ -164,7 +170,8 @@ public static class FloorSolvability
         var solved = stairsDoorstep is { } step
             ? layout.Reachable(step, p => ShutDoor(p) || (gateCells.Contains(p) && !puzzle!.IsOpen(puzzle.Target, IndexOf(puzzle, p))))
             : layout.Reachable(layout.UpStairs, ShutDoor);
-        if (!solved.Contains(layout.DownStairs)) problems.Add($"the stairs down at {layout.DownStairs} are out of reach with every lock worked");
+        if (layout.Rail?.Island != null) problems.AddRange(IslandProblems(layout, ShutDoor, railsBlocked: extraBlocked != null)); // the rail proof, in place of the stairs
+        else if (!solved.Contains(layout.DownStairs)) problems.Add($"the stairs down at {layout.DownStairs} are out of reach with every lock worked");
 
         switch (objective?.Kind)
         {
