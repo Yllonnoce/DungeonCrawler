@@ -7,7 +7,7 @@ using Godot;
 
 namespace DungeonCrawler.Core;
 
-// ---- --test-island[=cavein|bridge|wreck] (plan 15, Task 3) ---------------------------------------------------------------------------
+// ---- --test-island[=cavein|bridge|wreck|parked] (plan 15, Tasks 3 and 5) ---------------------------------------------------------------------------
 // The built-in campaign's floor 12, the exit island's floor, at lethality 3, solo, gathering on; every enemy is culled as it appears, ride
 // 4's runaway held. Every stop, ride and piece id reads Shape(rc) (B.10: every check reads LineShape). Prints [island] lines and
 // "[island] RESULT ok ({variant}): ..." or "RESULT FAIL ({variant}): ..."; plan 13's stall watchdog fails a flow 10 s short of its budget.
@@ -15,6 +15,7 @@ namespace DungeonCrawler.Core;
 // sent for the down stairs finding no way, and two companions walked into the lava, back when the lead steps onto stop 0's platform.
 // =bridge and =wreck (DebugTools.Island.Bridge.cs): ride 5 ridden from its stop: no Get out and no move car to car over the exit bridge,
 // braked on it too, a save there; and a wreck past its start that sets everyone down inside, spends no spare and takes the last stop.
+// =parked (DebugTools.Island.Parked.cs, Task 5): ride 5's parked train in the way, called, smashed through and standing again as a lift.
 public partial class DebugTools
 {
     private bool _testIsland;
@@ -59,6 +60,7 @@ public partial class DebugTools
             case "cavein": IslandCavein(main, layout, island, party, me, Fail, Pass); break;
             case "bridge": IslandBridge(main, layout, island, rc, enc, party, me, Fail, Pass); break;
             case "wreck": IslandWreck(main, layout, island, rc, enc, party, Fail, Pass); break;
+            case "parked": IslandParked(main, layout, island, rc, enc, party, me, root, Fail, Pass); break;
             default: Fail($"no such variant {v}"); break;
         }
     }

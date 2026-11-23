@@ -26,6 +26,8 @@ public enum BarkTrigger
     BoarderThrow,
     // ride 5's lava pit: the deadly switch round it, called early and at the last moment (plan 15 Task 4; stock only: RideBarks)
     PitSwitch, PitSwitchNow,
+    // ride 5's parked train on the line before the exit bridge, called 35 m before it (plan 15 Task 5; stock only: RideBarks)
+    ParkedCart,
 }
 
 public sealed class VoicedCharacter

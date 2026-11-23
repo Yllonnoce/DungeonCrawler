@@ -160,6 +160,7 @@ public partial class RailEncounterController : Node
                 ResetKiln(e.Kind);
                 BridgeOnRestore();
                 LeapOnRestore();
+                ParkedOnRestore(); // the parked train stands in the way again (plan 15 Task 5, Ruling 25)
                 break;
             case CartEventKind.Arrived:
                 ClearRide(); // the ride's runaway is not cleared: it halts behind the held train first (Ruling 13)

@@ -66,6 +66,8 @@ public sealed class RailPropsDto
     public int BridgeGone { get; set; }
     /// <summary>Ride 4's slag-line drop has given way (plan 13; false while it stands or with none).</summary>
     public bool SlagLineDropped { get; set; }
+    /// <summary>Ride 5's parked train's state by name ("InTheWay", "Gone", "Lift"; plan 15 Task 5), or null on a floor without one.</summary>
+    public string? Parked { get; set; }
 }
 
 /// <summary>
@@ -113,6 +115,7 @@ public static class PropCheck
             sb.Append(r.KeysTaken ? 'K' : '-');
             sb.Append("|N").Append(r.BridgeGone.ToString(CultureInfo.InvariantCulture));
             sb.Append(r.SlagLineDropped ? 'L' : '-');
+            if (r.Parked != null) sb.Append("|Q").Append(r.Parked); // only with a parked train: every other railed floor's hash is as it was
         }
         return sb.ToString();
     }
@@ -150,6 +153,7 @@ public static class PropCheck
             if (a.KeysTaken != b.KeysTaken) diffs.Add($"orc's keys {(b.KeysTaken ? "taken" : "at the belt")} on the server");
             if (a.BridgeGone != b.BridgeGone) diffs.Add($"bridge cells gone {a.BridgeGone} -> {b.BridgeGone} on the server");
             if (a.SlagLineDropped != b.SlagLineDropped) diffs.Add($"slag line's drop {(b.SlagLineDropped ? "down" : "standing")} on the server");
+            if (a.Parked != b.Parked) diffs.Add($"parked train {a.Parked ?? "none"} -> {b.Parked ?? "none"} on the server");
         }
         return diffs;
     }

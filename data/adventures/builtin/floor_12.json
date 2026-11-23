@@ -807,10 +807,10 @@
       "At": 0.95
     },
     {
-      "Id": "r5_barricade",
+      "Id": "r5_parked",
       "Ride": 5,
-      "Kind": "barricade",
-      "At": 0.88
+      "Kind": "parked",
+      "At": 0.7084
     },
     {
       "Id": "r4_dark",

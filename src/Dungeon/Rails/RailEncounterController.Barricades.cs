@@ -132,24 +132,43 @@ public partial class RailEncounterController
         EventBus.Instance.Log("The cart smashes through the barricade!");
         barricade.Smash(root, _rails.Cart.Velocity);
         BarricadesSmashed++;
-        _rails.Smash(BarricadeRules.SmashDent, BarricadeRules.SpeedKept);
-        var hit = 0;
-        if (_rails.State.Mode != CartMode.Wrecked) // a wreck has its own toll
-        {
-            _smashedHeroes.Clear();
-            foreach (var rider in _rails.Cart.Riders.Values) // the book first: a hit must not change it under the loop
-                if (rider is Adventurer { Downed: false } hero && IsInstanceValid(hero)) _smashedHeroes.Add(hero);
-            var scale = TierRules.PartyDamageScale;
-            foreach (var hero in _smashedHeroes)
-            {
-                var maxHp = hero.State.Stats[Stat.MaxHp];
-                var damage = BarricadeRules.SmashDamage(maxHp, hero.State.Hp, scale);
-                if (damage <= 0f || maxHp <= 0f) continue;
-                hero.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, damage / maxHp, 0f), "The barricade", -1);
-                hit++;
-            }
-        }
+        var hit = SmashCost("The barricade", wholeTrain: false); // the cart's seats only, as plan 11 has it (pre-flight F4)
         GD.Print($"[rails] barricade {piece.Plan.Id} smashed at S={piece.S:0.0}: plating {before:0} -> {_rails.State.Plating:0}, {hit} hero(es) hit");
+    }
+
+    /// <summary>
+    /// The cost of the party's train smashing through something on its line (Ruling 24; one helper for <c>r1_barricade</c>, <c>r2_barricade</c>
+    /// and the parked train): <see cref="BarricadeRules.SmashDent"/> plating, <see cref="BarricadeRules.SpeedKept"/> of the speed kept, and
+    /// <see cref="BarricadeRules.SmashDamage"/> (15% × lethality/3 of max HP, never below 1 HP) to each seated hero who is up: in the cart only,
+    /// or anywhere in the train with <paramref name="wholeTrain"/> (pre-flight F4: the parked train's reach). Crew and escorts are only jolted.
+    /// A wreck the dent makes has its own toll: then nobody is hurt here. <paramref name="what"/> names the source. Returns the heroes hurt. Server.
+    /// </summary>
+    internal int SmashCost(string what, bool wholeTrain)
+    {
+        _rails.Smash(BarricadeRules.SmashDent, BarricadeRules.SpeedKept);
+        if (_rails.State.Mode == CartMode.Wrecked) return 0; // a wreck has its own toll
+        _smashedHeroes.Clear();
+        void Book(ICartBody car)
+        {
+            foreach (var rider in car.Riders.Values) // the book first: a hit must not change it under the loop
+                if (rider is Adventurer { Downed: false } hero && IsInstanceValid(hero) && !_smashedHeroes.Contains(hero)) _smashedHeroes.Add(hero);
+        }
+        Book(_rails.Cart);
+        if (wholeTrain)
+            foreach (var wagon in _rails.Train)
+                if (IsInstanceValid(wagon)) Book(wagon);
+        var hit = 0;
+        var scale = TierRules.PartyDamageScale;
+        foreach (var hero in _smashedHeroes)
+        {
+            var maxHp = hero.State.Stats[Stat.MaxHp];
+            var damage = BarricadeRules.SmashDamage(maxHp, hero.State.Hp, scale);
+            if (damage <= 0f || maxHp <= 0f) continue;
+            hero.ReceiveHazard(HazardDamage.RunOver, new HazardOutcome(false, damage / maxHp, 0f), what, -1);
+            hit++;
+        }
+        _smashedHeroes.Clear();
+        return hit;
     }
 
     // ---- the other carts on a barricade's line ----------------------------------------------------

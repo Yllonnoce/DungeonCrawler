@@ -181,8 +181,8 @@ public partial class RailNet
         }
     }
 
-    /// <summary>A body of the party's train here: its cart or one of its wagons.</summary>
-    private bool TrainBody(ICartBody body) => body == _rails.Cart || body is TrainWagon;
+    /// <summary>A body of the party's train here: its cart or one of its wagons (never a parked tub: plan 15 Task 5, Ruling 23).</summary>
+    private bool TrainBody(ICartBody body) => body == _rails.Cart || body is TrainWagon wagon && _rails.WagonAt(wagon.Number) == wagon;
 
     /// <summary>Client: where the server last set this client's own hero down from a seat, and when (this process's clock); the RIDE pass reads it.</summary>
     internal (Vector3 At, double When)? LastLocalLanding { get; private set; }

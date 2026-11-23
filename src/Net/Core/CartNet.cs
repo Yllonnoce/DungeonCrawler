@@ -6,7 +6,8 @@ public enum CartKind : byte { Party, Slag, Traffic, Runaway, Golem, Chaser }
 /// <summary>
 /// Every cart's id on the wire. The party's cart is 0; slag, traffic, runaway and golem carts count up from 1 per floor build
 /// (the server assigns them, below <see cref="WagonBase"/>); a wagon of the party's train is <see cref="WagonBase"/> + its number, a stop's
-/// cage (its crew's seats) <see cref="CageBase"/> + its stop, a chaser <see cref="ChaserBase"/> + its stop.
+/// cage (its crew's seats) <see cref="CageBase"/> + its stop, a chaser <see cref="ChaserBase"/> + its stop, ride 5's parked train (the lift)
+/// <see cref="Lift"/> and its wagons <see cref="LiftWagon"/> (plan 15).
 /// </summary>
 public static class CartIds
 {
@@ -15,11 +16,16 @@ public static class CartIds
     public const int WagonBase = 1000;
     public const int CageBase = 1500;
     public const int ChaserBase = 2000;
+    /// <summary>Ride 5's parked train (plan 15 Task 5, Ruling 30): its cart is <see cref="Lift"/>, its wagon k <see cref="LiftWagon"/>; a client resolves them before the chaser range (Task 6).</summary>
+    public const int LiftBase = 2100;
+    public const int Lift = LiftBase;
     /// <summary>A wagon of the party's train by its number (1-based, plan 14).</summary>
     public static int Wagon(int number) => WagonBase + number;
     /// <summary>A stop's cage, its crew's seat book (plan 14).</summary>
     public static int Cage(int stop) => CageBase + stop;
     public static int Chaser(int stop) => ChaserBase + stop;
+    /// <summary>The parked train's wagon <paramref name="k"/> (1-based).</summary>
+    public static int LiftWagon(int k) => LiftBase + k;
 }
 
 /// <summary>A cart's flags on the wire (<see cref="CartStateDto.Flags"/>).</summary>

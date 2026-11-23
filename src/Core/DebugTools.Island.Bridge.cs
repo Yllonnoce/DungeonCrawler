@@ -25,7 +25,7 @@ namespace DungeonCrawler.Core;
 // =wreck (Review Focus 3): rc.Restore(Shape(rc).LastRideStop) with stop 1's crew in W1 and stop 2's in W2 (ctrl.DebugSeatCrew) and the spares
 // left; the lava pit's switch thrown from the seat on the way (ThrowPitOnTheWay); the cart is wrecked (rc.DebugWreck) as its front passes ExitFromS + 0.5. Within 1 s: no spare took over, the stop is the last,
 // LastWreckInside, the cart and every party wagon hidden and not solid, every hero and crew member who rode on an island cell that may take
-// a body; 3 s later none fallen and still there. Then a save and a load give the cart Held at the last stop.
+// a body, and (plan 15 Task 5) the parked train, smashed on the way, standing as a lift with no party body shown within its span; 3 s later none fallen and still there. Then a save and a load give the cart Held at the last stop.
 public partial class DebugTools
 {
     private const string IslandSlot = "islandtest";
@@ -304,11 +304,16 @@ public partial class DebugTools
                     var gone = b is Adventurer f ? f.State.Fallen : b is Npc d && d.Dead;
                     if (seated || gone || !layout.InIsland(cell) || !CrevasseRules.SetDownOk(layout, cell)) problems.Add($"{b.Name} at {cell} seated={seated} fallen/dead={gone} island={layout.InIsland(cell)}");
                 }
+                // plan 15 Task 5: the parked train (smashed on the way) stands as a lift within 1 s, with no party body shown within its span
+                if (enc.ParkedNow != ParkedState.Lift) problems.Add($"the parked train is {enc.ParkedNow}, not a lift");
+                foreach (var body in _isWagons.Cast<Node3D>().Prepend(rc.Cart))
+                    if (IsInstanceValid(body) && body.Visible && rc.Party.Track.ClosestS(body.GlobalPosition) is var bs && bs > enc.ParkedRearS - CartRules.HalfLength && bs < enc.ParkedFrontS + CartRules.HalfLength)
+                        problems.Add($"the party's {body.Name} is shown within the parked train's span (S={bs:0.0})");
                 var within = _isStep == 3 ? 1f : 3f;
                 if (problems.Count > 0) { if (_isClock > within) Fail($"{(_isStep == 3 ? "within 1 s of" : "3 s after")} the wreck: {string.Join("; ", problems)}"); break; }
                 if (_isStep == 3)
                 {
-                    GD.Print($"[island] wreck: {_isClock:0.00} s after it no spare took over (spares used {rc.SparesUsed.Count}), stop {rc.StopIndex}, LastWreckInside, the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}] hidden and not solid; on island cells: {string.Join(", ", _isRode.Select(b => $"{b.Name} {DungeonBuilder.WorldToCell(b.GlobalPosition)}"))}");
+                    GD.Print($"[island] wreck: {_isClock:0.00} s after it no spare took over (spares used {rc.SparesUsed.Count}), stop {rc.StopIndex}, LastWreckInside, the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}] hidden and not solid; on island cells: {string.Join(", ", _isRode.Select(b => $"{b.Name} {DungeonBuilder.WorldToCell(b.GlobalPosition)}"))}; the parked train {enc.ParkedNow} at S={enc.ParkedRearS:0.0}..{enc.ParkedFrontS:0.0} ({enc.ParkedSmashes} smash(es) on the way), no party body shown within it");
                     _isStep++; _isClock = 0f;
                     break;
                 }
@@ -325,7 +330,7 @@ public partial class DebugTools
                 if (rc == _isRc) { if (_isClock > 10f) Fail("the floor was not built again within 10 s of the load"); break; }
                 if (_isClock < 1f) break;
                 if (rc.State.Mode != CartMode.Held || rc.StopIndex != shape.Rides || !rc.Cart.Visible) { Fail($"after the load the cart is {rc.State.Mode} at stop {rc.StopIndex} visible={rc.Cart.Visible}, not Held at stop {shape.Rides}"); return; }
-                Pass($"the wreck past the exit bridge's start (S {enc.ExitFromS:0.0} + 0.5) spent no spare, took stop {shape.Rides}, hid the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}], and set {_isRode.Count} riders (crew too) down inside within 1 s, none fallen 3 s on; the save and load gave the cart Held at stop {shape.Rides}");
+                Pass($"the wreck past the exit bridge's start (S {enc.ExitFromS:0.0} + 0.5) spent no spare, took stop {shape.Rides}, hid the cart and W[{string.Join(",", _isWagons.Select(w => w.Number))}], and set {_isRode.Count} riders (crew too) down inside within 1 s, none fallen 3 s on; within 1 s the parked train stood as a lift with no party body shown within its span; the save and load gave the cart Held at stop {shape.Rides}");
                 return;
             }
         }

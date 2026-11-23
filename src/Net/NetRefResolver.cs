@@ -23,12 +23,14 @@ public static class NetRefResolver
         Npc n => NetRefs.Npc(n.Id),
         Plaque pl => NetRefs.Plaque(pl.Index),
         Shrine => NetRefs.Shrine(0),
+        // ride 5's parked train's cart (the lift's, plan 15 Task 5) is parked:{piece}; its wagons are "liftwagon:{k}" (TrainWagon.WireRef, below)
+        MineCart c when c.GetParent() is ParkedTrain parked => parked.NetRef.Length > 0 ? parked.NetRef : null,
         // the party's cart is cart:0; a stop's spare is spare:{stop}, parked or running after the train (a chaser: its rider gets out by it); a runaway wagon has none
         MineCart c => NetRefs.CartRef(c.Kind, c == RailController.Instance?.Cart, c.Kind == CartKind.Chaser ? c.CartId - CartIds.ChaserBase : RailController.Instance?.SpareStopOf(c) ?? -1),
         TrackSwitch sw => sw.NetRef.Length > 0 ? sw.NetRef : null, // "switch:{piece}", or "spur:{piece}" for a spur's lever
         SlagCart slag => slag.NetRef, // "slag:{cartId}": ride 4's leap across (plan 13)
         RailGate.WinchPost w => NetRefs.Winch(w.Gate.Stop),
-        TrainWagon w => w.NetRef, // "wagon:{number}": a wagon of the party's train
+        TrainWagon w => w.NetRef, // "wagon:{number}": a wagon of the party's train; a parked tub's own "liftwagon:{k}" (plan 15 Task 5)
         PlatformCage c => c.NetRef, // "cage:{stop}"
         Adventure.Objectives.OrcKeyring => NetRefs.Keyring,
         _ => null,
@@ -78,8 +80,10 @@ public static class NetRefResolver
                 foreach (var slag in SlagCart.Live) // by its wire id: the server's own carts (a client's copies carry the server's ids)
                     if (slag.CartId == index && GodotObject.IsInstanceValid(slag) && !slag.IsQueuedForDeletion() && !slag.Derailed && slag.GetParent() == root) return slag;
                 return null;
-            case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind or NetRefs.BarricadeKind or NetRefs.BridgeKind or NetRefs.LeapKind:
+            case NetRefs.SwitchKind or NetRefs.SpurKind or NetRefs.HeapKind or NetRefs.ValveKind or NetRefs.TrestleKind or NetRefs.BufferKind or NetRefs.BarricadeKind or NetRefs.BridgeKind or NetRefs.LeapKind or NetRefs.ParkedKind:
                 return RailEncounterController.Instance is { } enc && GodotObject.IsInstanceValid(enc) && enc.GetParent() == root ? enc.NetNode(kind, index) : null;
+            case NetRefs.LiftWagonKind: // the parked train's wagons (plan 15 Task 5): never the party's
+                return RailEncounterController.Instance is { } lift && GodotObject.IsInstanceValid(lift) && lift.GetParent() == root ? lift.ParkedWagon(index) : null;
             case NetRefs.CageKind or NetRefs.KeyringKind:
                 if (Adventure.Objectives.ObjectiveController.Instance is not Adventure.Objectives.CrewRescueController crew || !GodotObject.IsInstanceValid(crew) || crew.GetParent() != root) return null;
                 if (kind == NetRefs.KeyringKind) return index == 0 ? crew.Keyring : null;

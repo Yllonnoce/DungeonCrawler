@@ -381,7 +381,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     {
         if (!IsInstanceValid(npc) || npc.Dead) { _home.Remove(npc.Id); return CrewState.Lost; }
         if (CageOf(npc) is { Open: false } cage) return CrewRules.JudgeCaged(LeftBehind(cage)); // a cage left behind: its crew are lost
-        var inTrain = npc.Ride is TrainWagon { Coupled: true };
+        var inTrain = PartyWagonOf(npc) is { Coupled: true }; // the party's own train (plan 15 Task 5, Ruling 23): a parked tub is never it
         var inExit = (inTrain && atEnd) || (!npc.Seated && InExitRoom(npc));
         if (_home.Contains(npc.Id))
         {
@@ -396,6 +396,9 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     }
 
     private bool InExitRoom(Npc npc) => _exitRoom != null && _exitRoom.Contains(DungeonBuilder.WorldToCell(npc.GlobalPosition));
+
+    /// <summary>The wagon of the party's train <paramref name="npc"/> rides in, or null (on foot, a cage, a cart, or one of the parked train's tubs: plan 15 Task 5, Ruling 23).</summary>
+    private TrainWagon? PartyWagonOf(Npc npc) => npc.Ride is TrainWagon wagon && _rails != null && IsInstanceValid(_rails) && _rails.WagonAt(wagon.Number) == wagon ? wagon : null;
 
     /// <summary>The flag every crew member home (or lost) sets for the run.</summary>
     public const string FreedAllFlag = "jailbreak_freed_all";
@@ -728,7 +731,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
         var taken = new HashSet<GridPos>();
         foreach (var npc in _crew)
         {
-            if (!IsInstanceValid(npc) || npc.Dead || npc.Ride is not TrainWagon wagon) continue;
+            if (!IsInstanceValid(npc) || npc.Dead || PartyWagonOf(npc) is not { } wagon) continue; // the party's train's crew (a parked tub's are the lift's: Task 6)
             var cells = FreeCellsNear(DungeonBuilder.WorldToCell(wagon.GlobalPosition), taken.Count + 1);
             var cell = cells.FirstOrDefault(c => !taken.Contains(c), cells[^1]);
             taken.Add(cell);
@@ -748,7 +751,7 @@ public partial class CrewRescueController : ObjectiveController, IPrisonerHost
     /// </summary>
     internal List<(string Name, int Wagon, GridPos Cell)> DebugLetOutOfTrain()
     {
-        var aboard = _crew.Where(n => IsInstanceValid(n) && !n.Dead && n.Ride is TrainWagon).Select(n => (Npc: n, Wagon: ((TrainWagon)n.Ride!).Number)).ToList();
+        var aboard = _crew.Where(n => IsInstanceValid(n) && !n.Dead && PartyWagonOf(n) != null).Select(n => (Npc: n, Wagon: PartyWagonOf(n)!.Number)).ToList();
         DebugLetOut = true;
         LetOutOfTrain();
         DebugLetOut = false;

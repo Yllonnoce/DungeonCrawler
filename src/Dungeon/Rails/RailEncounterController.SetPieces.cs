@@ -50,6 +50,8 @@ public partial class RailEncounterController
         public SplitSwitch? Split;
         public BufferStop? Buffer;
         public Barricade? Barricade;
+        /// <summary>Ride 5's parked train before the exit bridge (plan 15 Task 5), when built live.</summary>
+        public ParkedTrain? Parked;
         /// <summary>Ride 4's collapsing bridge (plan 13), when built live.</summary>
         public CavernBridge? Bridge;
         /// <summary>Ride 4's slag-line drop at the leap's end (plan 13), when the leap is built live.</summary>
@@ -106,6 +108,7 @@ public partial class RailEncounterController
         ArmSplit(ride);
         ArmKiln(ride);
         ArmBarricades(ride);
+        ArmParked(ride); // the parked train stands in the way again (plan 15 Task 5, Ruling 25)
         ArmBridge(ride);
         ArmLeap(ride);
     }
@@ -269,6 +272,9 @@ public partial class RailEncounterController
                 case "pit":
                     node = BuildPit(root, piece); // the layout's pit, read and cut before the pieces: its plan entry (the order and the dressing)
                     break;
+                case "parked":
+                    node = BuildParked(root, piece); // a cart and four wagons a metre short of the exit bridge (read before the pieces), or a dead marker (plan 15 Task 5)
+                    break;
             }
             if (node == null) continue;
             piece.Node = node;
@@ -309,6 +315,7 @@ public partial class RailEncounterController
         if (_pieces.Count == 0) return;
         TickStandAfterSeen(); // a seen fall's spare: the bridge and the drop stand again once the fall is seen
         var rolling = _rails.State.Mode == CartMode.Rolling;
+        TickParked(party, rolling); // every tick, armed or not: its state steps by ParkedRules.Next (plan 15 Task 5); judged on its ride only
         foreach (var piece in _pieces)
         {
             if (ArmedRide < 1 || piece.Plan.Ride != ArmedRide)
@@ -411,7 +418,7 @@ public partial class RailEncounterController
         return -1;
     }
 
-    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer, barricade, bridge), or null.</summary>
+    /// <summary>The node a set piece's wire name names (<see cref="Net.NetRefs"/> kinds switch, spur, heap, valve, trestle, buffer, barricade, bridge, leap, parked), or null.</summary>
     internal Node3D? NetNode(string kind, int index)
     {
         foreach (var p in _pieces)
@@ -428,6 +435,7 @@ public partial class RailEncounterController
                 Net.NetRefs.BarricadeKind => p.Barricade,
                 Net.NetRefs.BridgeKind => p.Bridge,
                 Net.NetRefs.LeapKind => p.Drop,
+                Net.NetRefs.ParkedKind => p.Parked?.Cart, // the parked train's cart (the lift's, plan 15 Task 5): its PropEvts and, in Task 6, its boarding
                 _ => null,
             };
         }
@@ -452,6 +460,7 @@ public partial class RailEncounterController
             if (p.Bridge is { } bridge && IsInstanceValid(bridge)) r.BridgeGone = Math.Max(r.BridgeGone, bridge.Gone);
             if (p.Drop is { Dropped: true } drop && IsInstanceValid(drop)) r.SlagLineDropped = true;
         }
+        CaptureParked(r);
     }
 
     /// <summary>Client: the set pieces moved to the server's rail part, silently and both ways (no debris, no steam). Adds what changed to <paramref name="changed"/>.</summary>
@@ -505,5 +514,6 @@ public partial class RailEncounterController
                 changed.Add($"slag drop {i} {(drop.Dropped ? "down" : "standing")}");
             }
         }
+        ApplyParkedProps(r, changed);
     }
 }

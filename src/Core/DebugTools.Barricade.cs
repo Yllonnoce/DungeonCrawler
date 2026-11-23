@@ -28,7 +28,7 @@ public partial class DebugTools
     private int _brStep;
     private float _brClock;
     private bool _brListening;
-    private Barricade? _brR1, _brR2, _brR5, _brSlag;
+    private Barricade? _brR1, _brR2, _brSlag; // r5_barricade is ride 5's parked train now (plan 15 Task 5)
     /// <summary>Step E: r2_slag1's riders and their HP the frame before the smash; the plating as ride 2 departed; E judged.</summary>
     private readonly Dictionary<Enemies.Enemy, (float Hp, float Max)> _brSlagRiders = new();
     private float _brPlatingRide2 = float.NaN;
@@ -96,12 +96,11 @@ public partial class DebugTools
             {
                 _brR1 = enc.SetPieceNode("r1_barricade") as Barricade;
                 _brR2 = enc.SetPieceNode("r2_barricade") as Barricade;
-                _brR5 = enc.SetPieceNode("r5_barricade") as Barricade;
                 _brSlag = enc.SetPieceNode("r2_slag_barricade") as Barricade;
-                if (_brR1 == null || _brR2 == null || _brR5 == null || _brSlag == null) { Fail($"floor 12 lacks a barricade (r1 {_brR1 != null}, r2 {_brR2 != null}, r5 {_brR5 != null}, r2 slag {_brSlag != null})"); return; }
-                if (_brR1.SlagLine || _brR2.SlagLine || _brR5.SlagLine) { Fail("a party-line barricade is on the slag line"); return; }
+                if (_brR1 == null || _brR2 == null || _brSlag == null) { Fail($"floor 12 lacks a barricade (r1 {_brR1 != null}, r2 {_brR2 != null}, r2 slag {_brSlag != null})"); return; }
+                if (_brR1.SlagLine || _brR2.SlagLine) { Fail("a party-line barricade is on the slag line"); return; }
                 if (!_brSlag.SlagLine) { Fail("r2_slag_barricade is not on the slag line"); return; }
-                GD.Print($"[barricade] floor 12: r1 S={_brR1.S:0.0}, r2 S={_brR2.S:0.0}, r5 S={_brR5.S:0.0}, r2 slag S={_brSlag.S:0.0} on the enemy line (party S={enc.Lanes.PartyS(_brSlag.S):0.0}); stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}, party damage scale {TierRules.PartyDamageScale:0.00}: a smash takes {BarricadeRules.SmashFraction(TierRules.PartyDamageScale):P1} of max HP");
+                GD.Print($"[barricade] floor 12: r1 S={_brR1.S:0.0}, r2 S={_brR2.S:0.0}, r2 slag S={_brSlag.S:0.0} on the enemy line (party S={enc.Lanes.PartyS(_brSlag.S):0.0}); stops [{string.Join(",", rc.StopS.Select(s => s.ToString("0.0")))}]; lethality {TierRules.Lethality}, party damage scale {TierRules.PartyDamageScale:0.00}: a smash takes {BarricadeRules.SmashFraction(TierRules.PartyDamageScale):P1} of max HP");
                 rc.RestoreGates(Enumerable.Range(1, Shape(rc).Intermediate)); // the test's shortcut: no holders to kill
                 _brGrisel = GriselNpc(root);
                 if (_brGrisel is not { Dead: false }) { Fail("no living Grisel on floor 12 (forgiven)"); return; }
@@ -390,7 +389,7 @@ public partial class DebugTools
         var here = track.Frame(rc.State.S);
         var eyeLocal = here.AffineInverse() * lead.Camera.GlobalPosition;
         var space = lead.GetWorld3D().DirectSpaceState;
-        foreach (var bar in new[] { _brR1!, _brR2!, _brSlag!, _brR5! })
+        foreach (var bar in new[] { _brR1!, _brR2!, _brSlag! })
         {
             var results = new List<string>();
             string? blocked15 = null;

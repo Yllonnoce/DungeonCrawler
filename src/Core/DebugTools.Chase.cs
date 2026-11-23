@@ -154,7 +154,7 @@ public partial class DebugTools
     private readonly HashSet<int> _chGlowOpen = new();
     private bool _chPourOpen;
 
-    private static readonly string[] ChaseHazards = { "bell", "heap", "hammer", "pour", "golem", "pit", "barricade" };
+    private static readonly string[] ChaseHazards = { "bell", "heap", "hammer", "pour", "golem", "pit", "barricade", "parked" };
 
     private static ulong ChaseMinGap => (ulong)Mathf.CeilToInt(1.5f * Engine.PhysicsTicksPerSecond);
     private static double ChaseSeconds(ulong frames) => frames / (double)Engine.PhysicsTicksPerSecond;
@@ -487,6 +487,8 @@ public partial class DebugTools
                 var golem = enc.GolemBody;
                 GD.Print($"[chase] 4 ride {shape.LastRide} done, held at stop {shape.Rides} (the end of the line): golem took the spur={_chOnSpur} off the spur={_chDiverted} ({(golem == null ? "gone" : $"alive={golem.IsAlive} hp {golem.Hp:0}/{golem.MaxHp:0}")}), slams={_chSlams}; buffer smashed={buffer?.Smashed} (cue={_chBuffer}); plating={rc.State.Plating:0}");
                 if (ChasePitReport("4", rc, enc) is { } pitBad) { Fail(pitBad); return; }
+                GD.Print($"[chase] 4 the parked train: smashed {enc.ParkedSmashes} time(s) on ride {shape.LastRide} (its call stamped \"parked\": {_chHits.Count(h => h.Hazard == "parked")} hit(s)), now {enc.ParkedNow}");
+                if (enc.ParkedSmashes != 1 || _chHits.Count(h => h.Hazard == "parked") != 1) { Fail($"ride {shape.LastRide}'s parked train was smashed {enc.ParkedSmashes} time(s) with {_chHits.Count(h => h.Hazard == "parked")} paired call(s), not once"); return; }
                 if (_chSeatSpurFail != null) { Fail(_chSeatSpurFail); return; }
                 if (_chSeatSpur != 2) { Fail($"the seated window did not set ride {shape.LastRide}'s spur lever back and throw it again (presses {_chSeatSpur})"); return; }
                 if (!_chDiverted) { Fail("the golem was not diverted at the spur"); return; }
@@ -980,6 +982,7 @@ public partial class DebugTools
                 _chOnSpur = _chDiverted = _chBuffer = false; _chAcross = _chBack = _chBackThrown = false;
                 _chPitRound = false; _chPitAcross = _chPitHome = _pitThrownFront = float.NaN; _chPitFalls = rc.Falls;
                 _chWarn.Remove("barricade"); // a call pending from a ride before (cut, never hit) must not pair with this ride's smash
+                _chWarn.Remove("parked");
                 if (!_chSection2) _chSeatSpur = 0;
                 break;
             case CartEventKind.Wrecked: _chFail ??= $"the cart was wrecked at S={rc.State.S:0.0} (plating {rc.State.Plating:0})"; break;
@@ -995,6 +998,7 @@ public partial class DebugTools
         var t = Engine.GetPhysicsFrames();
         if (text == "The cart crashes into the ore heap!") ChaseHit("heap", t, "the cart into the heap");
         else if (text == "The cart smashes through the barricade!") ChaseHit("barricade", t, $"the cart through the timber at S={(RailController.Instance?.State.S ?? 0f):0.0} on ride {_chEnc?.ArmedRide ?? -1}");
+        else if (text == ParkedRules.SmashLog) ChaseHit("parked", t, $"the cart through ride {_chEnc?.ArmedRide ?? -1}'s parked train at front S={(RailController.Instance?.Party.FrontS ?? 0f):0.0}"); // plan 15 Task 5: ride 5's smash
         else if (text == "A drop hammer slams into the cart!")
         {
             var rc = RailController.Instance;
@@ -1033,6 +1037,7 @@ public partial class DebugTools
             case Adventure.BarkTrigger.LineBlocked: _chWarn["heap"] = t; break;
             case Adventure.BarkTrigger.PitSwitch: _chWarn["pit"] = t; break; // the lava pit's early call (plan 15 Task 4)
             case Adventure.BarkTrigger.Barricade: _chWarn["barricade"] = t; break;
+            case Adventure.BarkTrigger.ParkedCart: _chWarn["parked"] = t; break; // the parked train's call (plan 15 Task 5)
         }
     }
 
@@ -1125,7 +1130,7 @@ public partial class DebugTools
         _chHits.Add((hazard, w, t, note));
         GD.Print($"[chase] 5 {hazard}: warned at t={ChaseSeconds(w):0.000} s, hit at t={ChaseSeconds(t):0.000} s ({note}): {ChaseSeconds(gap):0.000} s{(gap < ChaseMinGap ? " UNDER 1.5 s" : "")}");
         if (gap < ChaseMinGap) _chFail ??= $"{hazard} hit {ChaseSeconds(gap):0.000} s after its warning ({note}), under 1.5 s";
-        if (hazard is "bell" or "heap" or "pit" or "trestle" or "barricade") _chWarn.Remove(hazard); // one warning, one hit
+        if (hazard is "bell" or "heap" or "pit" or "trestle" or "barricade" or "parked") _chWarn.Remove(hazard); // one warning, one hit
     }
 
     /// <summary>The end: every hazard kind hit at least once, each a full 1.5 s after its warning (the table of first hits).</summary>

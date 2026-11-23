@@ -2,7 +2,7 @@ namespace DungeonCrawler.Adventure.Voice;
 
 /// <summary>
 /// What a hero calls on the rails: the cart warnings (a cart bearing down on someone on foot, a low beam, a hound about to
-/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop, a boarder alone with the prisoners in a wagon, the lava pit's switch early and at the last moment) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
+/// leap, a blocked line, a gap to jump, a barricade across the line, a live switch back early and at the last moment, a runaway wagon loose behind the train, the split behind it: wait, not yet, now; the cavern's bridge going behind the train, a brake on it, the slag line's drop, a boarder alone with the prisoners in a wagon, the lava pit's switch early and at the last moment, the parked train on the line before the exit bridge) and the boarding. Three own lines by roster name (Sable's a woman's), two per class,
 /// three generic; <see cref="TopUp"/> pours them into a campaign's bark set as <see cref="ReactiveBarks.TopUp"/> does, so
 /// every campaign speaks them in each hero's voice. Stock only: the planner is never asked for them. Lines are the
 /// deliverable and stay in this order. Engine-free.
@@ -11,7 +11,7 @@ public static class RideBarks
 {
     private sealed record Bank(string[] Brand, string[] Sable, string[] Wren, string[] Ilex, string[] Warrior, string[] Rogue, string[] Ranger, string[] Mage, string[] Generic);
 
-    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, the cavern's three (the bridge going, a brake on it, the slag line's drop), and a boarder alone with the prisoners (plan 14: never naming the wagon, the log does), and the lava pit's switch early and at the last moment (plan 15: never naming the switch's place).</summary>
+    /// <summary>The six ride calls, the warning at a crevasse's edge on foot, the call of a barricade across the line ahead, a live switch back's two calls, the runaway behind, the split's three calls, the cavern's three (the bridge going, a brake on it, the slag line's drop), and a boarder alone with the prisoners (plan 14: never naming the wagon, the log does), and the lava pit's switch early and at the last moment (plan 15: never naming the switch's place), and the parked train on the line (plan 15 Task 5: never naming its place).</summary>
     public static readonly BarkTrigger[] Triggers =
     {
         BarkTrigger.CartComing, BarkTrigger.AllAboard, BarkTrigger.Heads, BarkTrigger.HoundLeap, BarkTrigger.LineBlocked, BarkTrigger.JumpCall,
@@ -20,6 +20,7 @@ public static class RideBarks
         BarkTrigger.BridgeGoing, BarkTrigger.BridgeBrake, BarkTrigger.SlagDrop,
         BarkTrigger.BoarderThrow,
         BarkTrigger.PitSwitch, BarkTrigger.PitSwitchNow,
+        BarkTrigger.ParkedCart,
     };
 
     /// <summary>A set with fewer distinct lines than this for a ride trigger gets its whole tier from stock (a class-only member's two reach it too).</summary>
@@ -288,5 +289,16 @@ public static class RideBarks
             Ranger: new[] { "Now.", "Throw it." },
             Mage: new[] { "Now! The lever!", "Throw it, now!" },
             Generic: new[] { "Throw it — now!", "Now! The lever!", "Pull it now!" }),
+
+        [BarkTrigger.ParkedCart] = new Bank(
+            Brand: new[] { "A whole train on our line! Brace!", "Carts dead ahead! Hold on!", "We're hitting that train! Brace yourselves!" },
+            Sable: new[] { "Carts on the line, darling! Brace!", "Hold on, loves, we're going through!", "That train's in our way, love! Brace!" },
+            Wren: new[] { "Train ahead. Brace.", "Carts on the line. Hold on.", "We hit it. Brace." },
+            Ilex: new[] { "A train blocks our line! Brace yourselves!", "Carts dead ahead! Hold fast!", "We shall strike it! Brace!" },
+            Warrior: new[] { "Train on the line! Brace!", "Hold on, we're hitting it!" },
+            Rogue: new[] { "Carts ahead! Hold tight!", "Brace! We're going through!" },
+            Ranger: new[] { "Train ahead. Brace.", "Hold on." },
+            Mage: new[] { "Carts on our line! Brace!", "Hold fast, we strike it!" },
+            Generic: new[] { "Cart on the line — brace!", "Carts ahead! Hold on!", "Brace yourselves!" }),
     };
 }

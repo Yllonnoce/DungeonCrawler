@@ -21,6 +21,13 @@ public partial class TrainWagon : AnimatableBody3D, IInteractable, ICartBody
     public int Number { get; init; }
     /// <summary>Coupled behind the party's cart: the RailController poses it. Uncoupled it is lost (hidden, not solid).</summary>
     public bool Coupled { get; private set; }
+    /// <summary>
+    /// One of the parked train's tubs (plan 15 Task 5, Ruling 23: <see cref="ParkedTrain"/>), never the party's: it is never in
+    /// <see cref="RailController.Wagons"/>, and every reading of a wagon as the party's checks <c>RailController.WagonAt(w.Number) == w</c>.
+    /// </summary>
+    public bool OfLift { get; init; }
+    /// <summary>Its wire name when it is not the party's wagon (a parked tub's "liftwagon:{k}"), or null: <see cref="NetRef"/> reads it.</summary>
+    public string? WireRef { get; init; }
 
     public CartSeats Seats { get; } = new();
     public Dictionary<int, ICartRider> Riders { get; } = new();
@@ -35,8 +42,8 @@ public partial class TrainWagon : AnimatableBody3D, IInteractable, ICartBody
     public Func<Adventurer, string>? PromptFor { get; set; }
     /// <summary>A hero pressed interact on the wagon. Set by the RailController.</summary>
     public Action<Adventurer>? OnUse { get; set; }
-    /// <summary>Its wire name: "wagon:{number}".</summary>
-    public string NetRef => Net.NetRefs.Wagon(Number);
+    /// <summary>Its wire name: <see cref="WireRef"/> when set, else "wagon:{number}" (the party's train).</summary>
+    public string NetRef => WireRef ?? Net.NetRefs.Wagon(Number);
 
     /// <summary>The wagon's hero place is free.</summary>
     public bool HeroPlaceFree => Seats.OccupantOf(TrainRules.HeroPlace) == null;

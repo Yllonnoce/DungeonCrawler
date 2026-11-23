@@ -69,6 +69,7 @@ public partial class RailEncounterController
             if (!armed && p.Heap is { } heap) heap.Alarm = false;
             if (!armed && p.Barricade is { } barricade) barricade.Alarm = false;
         }
+        ApplyParkedArm(ride); // the parked train stands in the way as the server's arming stands it (plan 15 Task 5)
     }
 
     /// <summary>
@@ -112,6 +113,9 @@ public partial class RailEncounterController
                 case "bridge":
                     // as the trestle: the bridge groans once as our front first comes onto it
                     if (rolling && !piece.Fired && piece.Bridge is { } bridge && front >= bridge.From && front < bridge.To) { piece.Fired = true; RideAudio.At("trestle_creak", bridge.Entry); }
+                    break;
+                case "parked":
+                    PresentParked(rolling, front); // its lantern by the server's rule, from our own cart (plan 15 Task 5)
                     break;
             }
         }

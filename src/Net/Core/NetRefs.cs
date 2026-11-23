@@ -9,7 +9,7 @@ public static class NetRefs
     /// <summary>A railed floor's props (plan 5). A stop's are named by its stop index; a set piece's by its plan's index in <c>FloorContents.RailSetPieces</c> (the same on every peer).</summary>
     public const string GateKind = "gate", WinchKind = "winch", WagonKind = "wagon", SpareKind = "spare", SwitchKind = "switch", SpurKind = "spur",
         HeapKind = "heap", ValveKind = "valve", TrestleKind = "trestle", BufferKind = "buffer", BarricadeKind = "barricade", KeyringKind = "keyring", CartKind = "cart",
-        BridgeKind = "bridge", SlagKind = "slag", LeapKind = "leap", CageKind = "cage";
+        BridgeKind = "bridge", SlagKind = "slag", LeapKind = "leap", CageKind = "cage", ParkedKind = "parked", LiftWagonKind = "liftwagon";
 
     public static string Chest(int index) => $"{ChestKind}:{index}";
     public static string Door(int vault) => $"{DoorKind}:{vault}";
@@ -40,6 +40,10 @@ public static class NetRefs
     public static string Bridge(int piece) => $"{BridgeKind}:{piece}";
     /// <summary>Ride 4's leap (plan 13), named by its set piece: its slag-line drop tells "drops" and "stands".</summary>
     public static string Leap(int piece) => $"{LeapKind}:{piece}";
+    /// <summary>Ride 5's parked train (plan 15 Task 5), named by its set piece: its cart (the lift's), and its PropEvt "standing" (a lift), "smashed", "gone" and "inway".</summary>
+    public static string Parked(int piece) => $"{ParkedKind}:{piece}";
+    /// <summary>The parked train's wagon <paramref name="k"/> (1-based, nearest its cart first; plan 15 Task 5).</summary>
+    public static string LiftWagon(int k) => $"{LiftWagonKind}:{k}";
     /// <summary>A slag cart by its wire id (<c>CartId</c>): ride 4's leap across onto its deck (plan 13, Ruling 20).</summary>
     public static string Slag(int cartId) => $"{SlagKind}:{cartId}";
     /// <summary>The orc's keyring at dead Grisel's belt (there is one at most).</summary>
