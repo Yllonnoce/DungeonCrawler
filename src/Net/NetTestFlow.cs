@@ -232,6 +232,11 @@ public partial class NetTestFlow : Node
             var at = p2.Adventurers[_rideMember].GlobalPosition;
             GD.Print(FormattableString.Invariant($"[net-server] ride: set down at ({at.X:0.00}, {at.Y:0.00}, {at.Z:0.00}) at stop {Dungeon.Rails.RailController.Instance?.StopIndex}"));
         }
+        // the lift (plan 15 Task 6, fix round 1): keyed on the joiner's own slot, outside the first client's block above, since the first client
+        // leaves seated right after the chase is done, before the joiner rides the lift in; called once per tick, whoever is online
+        if (Dungeon.Rails.RailController.Instance is { } liftRc && IsInstanceValid(liftRc) && Main.Instance?.Party is { } liftParty
+            && world.Registry.Online.FirstOrDefault(sl => sl.BotOwner == null && sl.Name == RideJoinerName) is { } joinSlot && joinSlot.MemberIndex < liftParty.Adventurers.Length)
+            RideLiftServer(world, liftRc, liftParty.Adventurers[joinSlot.MemberIndex]);
         // the crew seated in the train's wagons are told when stop 1's crew sit in W1 (RideTrainServer), as each client tells its own
         RideFreesServer();
         RidePitServer(world);
@@ -688,12 +693,12 @@ public partial class NetTestFlow : Node
         }
         if (_joinOut && !_joinSpareHeldRefused && !_chaseDepartTold && rc.SpareAt(kiln) is { } held && rc.StopIndex == kiln && rc.State.Mode == Dungeon.Rails.CartMode.Held)
             _joinSpareHeldRefused = (held.PromptFor?.Invoke(hero) ?? "") == "" && held.TubDistance(hero) <= Dungeon.Rails.SpareRules.SpareReach;
-        RideLiftServer(world, rc, hero);
     }
 
     // the lift (plan 15 Task 6, Ruling 22's step 8): set down behind the parked train's place, the joiner is put in reach of the lift's cart once it
     // stands again (the chaser hidden); it boards through its intent (parked:{piece}), the lift carries it over the exit bridge and halts within 3 m
-    // of the held train's last body, inside, and sets it down there (traced lift-done)
+    // of the held train's last body, inside, and sets it down there (traced lift-done). Called each tick from the ride loop keyed on the joiner's slot,
+    // not from RideJoinerServer: the first client leaves seated while this runs (fix round 1)
     private bool _liftShoved, _liftBoarded, _liftDone, _liftOk;
     private float _liftGap = float.NaN;
     private int _liftsBefore = -1;
