@@ -16,7 +16,8 @@ public static class RailArrival
     /// or her betrayal, whose quest state lives in the run and stands. An entry the live capture lacks is added. Only on a floor that runs
     /// the crew trial (<paramref name="crewTrial"/>) does the objective come from the arrival too: its open cages, its lost wagons, the
     /// crew seated in its train, its home, lost and freed crew, and its completion (the crew come back with the train, so a win since the arrival goes too, while the
-    /// reward chest stays as the live state had it when that was won: <see cref="ObjectiveStateDto.RewardChest"/>, opened in <c>OpenedChests</c>). Everything
+    /// reward chest stays as the live state had it when that was won, or when the arrival had it already: <see cref="ObjectiveStateDto.RewardChest"/>,
+    /// opened in <c>OpenedChests</c>). Everything
     /// else is the wipe's: the dead stay dead, the spares, the gates and the orc's keys stand as they were, and another objective's
     /// progress (a ritual, the gas, a walk-in jailbreak) is untouched.
     /// </summary>
@@ -43,7 +44,7 @@ public static class RailArrival
             o.FreedNpcs = a.FreedNpcs;
             o.LostWagons = a.LostWagons;
             o.AboardCrew = a.AboardCrew;
-            o.RewardChest = o.Completed ? o.RewardChest : null; // the win's chest (plan 15 Ruling 37): from the live state only with its Completed (a chest opened since the arrival stays, opened)
+            o.RewardChest = o.Completed || a.RewardChest == true ? o.RewardChest : null; // the win's chest (plan 15 Ruling 37): from the live state with its Completed, or when the arrival had it already (a second wipe before the re-win); a chest opened since stays, opened
             o.Completed = a.Completed;
         }
         return merged;

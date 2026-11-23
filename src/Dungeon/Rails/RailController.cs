@@ -65,7 +65,8 @@ public partial class RailController : Node
 
     /// <summary>
     /// The prisoners at <paramref name="stop"/> are left behind though the cart is not held there (server and solo; plan 15 Ruling 33, pre-flight F3): the
-    /// crew controller resolves the island floor's unopened cages once every up player is inside with the train at the end or wrecked inside. True when
+    /// crew controller resolves the island floor's unopened cages once a human is up and no player is outside (a downed one counted) with the train at the
+    /// end or wrecked inside. True when
     /// the stop was added (it was not left already).
     /// </summary>
     internal bool LeaveCrewBehindAt(int stop)
@@ -1049,6 +1050,12 @@ public partial class RailController : Node
 
     /// <summary>A walkable cell beside the PARTY lane near <paramref name="at"/>, off the rails and the sidings: where a hound that missed the cart lands.</summary>
     public Vector3 StandBesideLane(Vector3 at) => _builder.Surface(ExitCellNear(at, true, false)) + Vector3.Up * 0.1f;
+
+    /// <summary>
+    /// <see cref="StandBesideLane(Vector3)"/> on the side of the exit island given (<paramref name="inside"/>), never the nearer end's: the fallback of an
+    /// escort's bring-in beside the held train (plan 15 Ruling 36).
+    /// </summary>
+    internal Vector3 StandBesideLane(Vector3 at, bool inside) => _builder.Surface(ExitCellNear(at, true, false, inside)) + Vector3.Up * 0.1f;
 
     /// <summary>
     /// Something on the cart (a boarding hound) bites the plating for <paramref name="amount"/>: the HUD follows, and plating gone

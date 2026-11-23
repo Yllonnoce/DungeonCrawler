@@ -427,15 +427,24 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
         {
             var lead = party.Lead;
             var gap = new Vector2(lead.GlobalPosition.X - GlobalPosition.X, lead.GlobalPosition.Z - GlobalPosition.Z).Length() - FollowDistance;
-            // held across the island's edge (fix round 1, M5): it looks for a way at most every HeldSearchSeconds, not every frame; a way found
-            // (or the lead come near) ends the hold (M6: the hold is told once, however long it lasts and whatever held it)
-            Vector3? dest = null;
-            var straight = false;
+            var layout = Main.Instance?.Builder.Layout;
+            // the side gate, read every frame (fix round 2): back on its lead's side (set down beside it, or the lead come across), the hold is over
+            if (_catchUpHeld && (layout?.Rail?.Island == null || InIsland(layout, GlobalPosition) == InIsland(layout, lead.GlobalPosition))) _catchUpHeld = false;
+            // held across the island's edge (fix round 1, M5): only the path search is throttled, to once every HeldSearchSeconds; between searches it
+            // keeps the last search's way (straight at its lead, or holding where it stands), so it never steps one frame in thirty
+            Vector3? dest;
+            var straight = true;
             if (!_catchUpHeld || (_heldSearchIn -= dt) <= 0f)
             {
                 dest = _mover.Next(this, lead.GlobalPosition, dt, FollowDistance, ClearLine, out straight);
-                if (_catchUpHeld) { _heldSearchIn = HeldSearchSeconds; if (_mover.Unreachable <= 0f) _catchUpHeld = false; }
+                if (_catchUpHeld)
+                {
+                    _heldSearchIn = HeldSearchSeconds;
+                    _heldGoesStraight = dest != null;
+                    if (_mover.Unreachable <= 0f && !straight) _catchUpHeld = false; // a way found across: the hold is over
+                }
             }
+            else dest = _heldGoesStraight ? lead.GlobalPosition : null;
             // speed follows the gap: a trailing follower settles at a steady pace instead of lurching between full speed
             // and a dead stop every frame; well behind, it runs to catch up
             if (dest is { } d && gap > 0.25f)
@@ -444,7 +453,6 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
                 planar = PathMover.Planar(GlobalPosition, d) * Math.Clamp(gap * 2.5f, 1.2f, gap > 3f ? RunSpeed : WalkSpeed);
             }
             else FaceToward(lead.GlobalPosition);
-            var layout = Main.Instance?.Builder.Layout;
             if (_mover.Unreachable > 5f)
             {
                 if (!lead.Seated)
@@ -488,13 +496,17 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     }
 
     /// <summary>
-    /// The catch-up is held across the island's edge (<see cref="CatchUpAllowed"/>), told once: the hold lasts until a catch-up is allowed or the
-    /// follower finds a way to its lead again.
+    /// The catch-up is held across the island's edge (<see cref="CatchUpAllowed"/>: the follower and its lead on two sides): the hold lasts until a
+    /// catch-up is allowed, the follower is back on its lead's side (read every frame), or it finds a way across.
     /// </summary>
     private bool _catchUpHeld;
     /// <summary>While held, the follower looks for a way to its lead at most this often (fix round 1, M5; the unheld follower's trigger is unchanged).</summary>
     private const float HeldSearchSeconds = 0.5f;
     private float _heldSearchIn;
+    /// <summary>The last held search went straight at the lead (no path, no drop on the way): kept between searches.</summary>
+    private bool _heldGoesStraight;
+    /// <summary>A refusal by the set-down spot's side alone (the follower and its lead on one side) has been told: once, until a catch-up runs (M6).</summary>
+    private bool _holdTold;
     /// <summary>The catch-up is held across the island's edge now (the flows read it).</summary>
     internal bool CatchUpHeld => _catchUpHeld;
 
@@ -508,9 +520,14 @@ public partial class Npc : CharacterBody3D, IInteractable, ICombatTarget, IHazar
     private bool CatchUpAllowed(FloorLayout? layout, Node3D lead, Vector3 dest)
     {
         if (layout?.Rail?.Island == null) return true;
-        if (Objectives.CrewRules.CatchUpAllowed(true, InIsland(layout, GlobalPosition), InIsland(layout, lead.GlobalPosition), InIsland(layout, dest))) { _catchUpHeld = false; return true; }
-        if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _heldSearchIn = HeldSearchSeconds; }
-        _catchUpHeld = true;
+        bool self = InIsland(layout, GlobalPosition), led = InIsland(layout, lead.GlobalPosition);
+        if (Objectives.CrewRules.CatchUpAllowed(true, self, led, InIsland(layout, dest))) { _catchUpHeld = false; _holdTold = false; return true; }
+        if (self != led)
+        {
+            // across the edge: a hold, told as it starts, its search throttled until it ends
+            if (!_catchUpHeld) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _catchUpHeld = true; _heldSearchIn = HeldSearchSeconds; _heldGoesStraight = false; }
+        }
+        else if (!_holdTold) { GD.Print($"[npc] {NpcName}: catch-up held (the lead is across the island's edge)"); _holdTold = true; } // refused by the spot's side alone: told once until a catch-up runs
         return false;
     }
 

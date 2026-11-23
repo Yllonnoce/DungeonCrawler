@@ -321,7 +321,10 @@ public partial class DebugTools
                     foreach (var cage in crew.Cages.Where(c => !c.Open)) if (!rc.CrewLeftAt.Contains(cage.Stop)) problems.Add($"the unopened cage at stop {cage.Stop} is not left behind");
                     // fix round 1 (I3): resolved by ResolveUnopened through LastWreckInside (Wrecked: the train is not held at the end), not only left by the
                     // restore's LeftOnLoad and the waiver at stop 4
-                    foreach (var stop in new[] { 3, shape.LastRideStop }) if (!crew.CagesResolved.Contains(stop)) problems.Add($"the unopened cage at stop {stop} was not resolved through LastWreckInside (resolved [{string.Join(",", crew.CagesResolved.OrderBy(x => x))}])");
+                    // the locked cages by the line's shape: the intermediate stops' cages still shut (3 and 4 on the shipped floor)
+                    var locked = Enumerable.Range(1, shape.Intermediate).Where(k => crew.Cages.Any(c => c.Stop == k && !c.Open)).ToList();
+                    if (locked.Count == 0) problems.Add("no cage was left locked to resolve");
+                    foreach (var stop in locked) if (!crew.CagesResolved.Contains(stop)) problems.Add($"the unopened cage at stop {stop} was not resolved through LastWreckInside (resolved [{string.Join(",", crew.CagesResolved.OrderBy(x => x))}])");
                     if (crew.CagesBlockingNow != 0) problems.Add($"{crew.CagesBlockingNow} cage(s) still block the stairs");
                     if (IslandWon(crew, main.Builder.FloorRoot!) is { } notWon) problems.Add($"no win ({notWon})");
                     if (rc.ArrivalSnapshot?.RailStop != shape.Rides) problems.Add($"the arrival snapshot is at stop {rc.ArrivalSnapshot?.RailStop?.ToString() ?? "none"}, not {shape.Rides}");

@@ -13,8 +13,8 @@ namespace DungeonCrawler.Adventure.Objectives;
 /// <summary>
 /// Home and lost on a floor with an exit island (plan 15 Task 7, Rulings 32-37; server and solo for every change, a client only stands the chest):
 /// home is anywhere in the island (<see cref="FloorLayout.InIsland"/> for the exit room), or seated in a coupled party wagon held at the last stop; once
-/// every up player is inside with the train at the end or wrecked inside, the unopened cages are left behind (<see cref="ResolveUnopened"/>); a crew
-/// member on foot outside with nobody outside to fetch it is lost while that lasts (<see cref="CrewRules.Stranded"/>, judged live until the win);
+/// a human is up and no player is outside (a downed one counted; a fallen or Mangled one is no player) with the train at the end or wrecked inside, the
+/// unopened cages are left behind (<see cref="ResolveUnopened"/>); a crew member on foot outside with nobody outside to fetch it is lost while that lasts (<see cref="CrewRules.Stranded"/>, judged live until the win);
 /// Grisel left outside is brought in beside the held train (<see cref="BringEscortsIn"/>); and the win stands a strongbox of the vault's table by the
 /// stairs (<see cref="StandRewardChest"/>), saved in <c>ObjectiveStateDto.RewardChest</c> and told to clients as <c>PropEvt chest:9000 "stood"</c>.
 /// </summary>
@@ -34,7 +34,7 @@ public partial class CrewRescueController
     private bool TrainAtEndOrWreckedInside => _trainAtEnd || _wreckedInside;
 
     /// <summary>
-    /// The players (every human's hero that is not parked or fallen): how many are up (not down), and how many stand outside the island, a downed
+    /// The players (every human's hero that is not parked, fallen or Mangled: <see cref="CrewRules.CountsAsPlayer"/>): how many are up (not down), and how many stand outside the island, a downed
     /// one too (it may be revived there: fix round 1, I2); and where the train is: held at the last stop, wrecked inside, or gone (wrecked and
     /// hidden). Read once a tick and at each judging. No allocation.
     /// </summary>
@@ -44,7 +44,7 @@ public partial class CrewRescueController
         if (Main.Instance?.Party is { } party && IsInstanceValid(party))
             foreach (var hero in party.Adventurers)
             {
-                if (!IsInstanceValid(hero) || hero.Parked || hero.State.Fallen || hero.Control is not (ControlKind.LocalHuman or ControlKind.Remote)) continue;
+                if (!IsInstanceValid(hero) || !CrewRules.CountsAsPlayer(hero.Control is ControlKind.LocalHuman or ControlKind.Remote, hero.Parked, hero.State.Fallen, hero.State.Mangled)) continue;
                 if (!hero.Downed) _upPlayers++;
                 if (!Layout.InIsland(DungeonBuilder.WorldToCell(hero.GlobalPosition))) _playersOutside++;
             }
@@ -125,8 +125,8 @@ public partial class CrewRescueController
         if (RailEncounterController.Instance is { } enc && IsInstanceValid(enc))
             foreach (var spot in enc.IslandSetDown(IslandSpotsLooked))
                 if (!Layout.IsRail(DungeonBuilder.WorldToCell(spot)) && Flat(spot, near) is var d && d < best) { best = d; at = spot; } // never the line, where the train stands
-        if (best == float.MaxValue) at = _rails.StandBesideLane(near);
-        at += Vector3.Up * 0.1f;
+        if (best == float.MaxValue) at = _rails.StandBesideLane(near, inside: true); // its fallback keeps the island's side (lifted already)
+        else at += Vector3.Up * 0.1f;
         g!.GlobalPosition = at;
         g.Velocity = Vector3.Zero;
         g.FaceToward(near);
@@ -182,11 +182,7 @@ public partial class CrewRescueController
     private Chest? StandRewardChest()
     {
         if (RewardChest != null || _exitRoom == null || _builder == null || _root == null) return null;
-        var front = DungeonBuilder.WalkableNeighbor(Layout, Layout.DownStairs); // the flight's own foot (StairsTransform faces it): never taken, or the stairs are walled off
-        var cells = ExitCells();
-        cells.Remove(front);
-        if (cells.Count == 0) { GD.PushWarning("[CrewRescue] the exit room has no free cell for the reward chest"); return null; }
-        var cell = cells[0];
+        if (RewardChestCell() is not { } cell) { GD.PushWarning("[CrewRescue] the exit room has no free cell for the reward chest"); return null; }
         var chest = GD.Load<PackedScene>(ChestScene).Instantiate<Chest>();
         chest.SpawnIndex = CrewRules.RewardChestIndex;
         chest.TableId = ChestRules.VaultTable;
@@ -204,6 +200,19 @@ public partial class CrewRescueController
     }
 
     /// <summary>
+    /// The reward chest's cell by Ruling 37's rule (build-time state only, the same on every peer): the exit room's first free cell nearest the stairs
+    /// (<see cref="ExitCells"/>), never the flight's foot (the cell <c>StairsTransform</c> faces, or the stairs are walled off). Null when there is none.
+    /// </summary>
+    internal GridPos? RewardChestCell()
+    {
+        if (_exitRoom == null || _builder == null) return null;
+        var front = DungeonBuilder.WalkableNeighbor(Layout, Layout.DownStairs);
+        var cells = ExitCells();
+        cells.Remove(front);
+        return cells.Count > 0 ? cells[0] : null;
+    }
+
+    /// <summary>
     /// Fix round 1 (M7), server and solo: every body on foot standing on the chest's <paramref name="cell"/> (a hero, an NPC, a creature) steps off to the
     /// nearest free cell round it, so the solid chest never stands on anyone. The cell itself stays the rule's (build-time state only), so every peer
     /// stands its chest on the same cell. Returns how many moved.
@@ -212,19 +221,19 @@ public partial class CrewRescueController
     {
         if (_root == null || _builder == null) return 0;
         var moved = 0;
-        Vector3 Off() => _builder.Surface(FreeCellsNear(cell, 1)[0]) + Vector3.Up * 0.1f;
+        var offs = FreeCellsNear(cell, 8); // each body its own cell round it, nearest first (shared once all are taken)
+        Vector3 Off() => _builder.Surface(offs[Math.Min(moved, offs.Count - 1)]) + Vector3.Up * 0.1f;
         if (Main.Instance?.Party is { } party && IsInstanceValid(party))
             foreach (var hero in party.Adventurers)
             {
                 if (!IsInstanceValid(hero) || hero.Parked || hero.Seated || DungeonBuilder.WorldToCell(hero.GlobalPosition) != cell) continue;
-                var at = Off();
-                hero.Teleport(at);
-                if (hero.Remote != null) { hero.Remote.Position = at; hero.Remote.Velocity = Vector3.Zero; }
+                hero.Shove(Off()); // fix round 2: a remote player's client is told (a ForcePose), or its next pose would put its hero back on the cell
                 moved++;
             }
         foreach (var child in _root.GetChildren())
         {
-            if (child is Npc { Seated: true } || child is not (Npc or Enemies.Enemy) || child is not CharacterBody3D body || DungeonBuilder.WorldToCell(body.GlobalPosition) != cell) continue;
+            if (child is Npc { Seated: true } or Npc { Dead: true } || child is Enemies.Enemy { IsAlive: false } || child is not (Npc or Enemies.Enemy) || child is not CharacterBody3D body
+                || DungeonBuilder.WorldToCell(body.GlobalPosition) != cell) continue;
             body.GlobalPosition = Off();
             body.Velocity = Vector3.Zero;
             moved++;

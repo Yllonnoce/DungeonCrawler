@@ -34,9 +34,10 @@ namespace DungeonCrawler.Core;
 public partial class DebugTools
 {
     private Npc? _ihA, _ihB;
+    private Adventurer? _ihOnChest;
     private Vector3 _ihLast;
     private float _ihT = float.NaN, _ihArriveT = float.NaN;
-    private bool _ihHeldSeen, _ihLetOut, _ihCountdownOk, _ihListening, _ihGriselLogged, _ihChestLogged, _ihSpareGather;
+    private bool _ihHeldSeen, _ihAHome, _ihLetOut, _ihCountdownOk, _ihListening, _ihGriselLogged, _ihChestLogged, _ihSpareGather;
     private int _ihLootBefore, _ihGatherBefore;
     private readonly List<string> _ihCrew = new();
 
@@ -310,10 +311,13 @@ public partial class DebugTools
             }
             case 8:
             {
+                // fix round 2 (item 7): the revived crewman is Home (seated in his wagon at the end) within 1 s of his revive
+                if (ctrl.StateOf(_ihA!) != CrewState.Home) { if (_isClock > 1f) { Fail($"{_ihA!.NpcName} is {ctrl.StateOf(_ihA)} 1 s after his revive"); return; } }
+                else if (!_ihAHome) { _ihAHome = true; GD.Print($"[island] stranded: {_ihA!.NpcName} Home {_isClock:0.00} s after his revive"); }
                 // every other crew member home: a Lost here would win the floor
                 if (ctrl.Crew.FirstOrDefault(n => IsInstanceValid(n) && ctrl.StateOf(n) == CrewState.Lost) is { } lost) { Fail($"with the lead down and no human up {lost.NpcName} is Lost ({IslandCrewStates(ctrl)})"); return; }
                 if (ctrl.Completed) { Fail($"with the lead down and no human up the floor was won ({IslandCrewStates(ctrl)})"); return; }
-                if (_isClock < 2f) break;
+                if (_isClock < 2f || !_ihAHome) break;
                 GD.Print($"[island] stranded: 2 s with the lead down and {_ihA!.NpcName} up: no crew member Lost, no win ({IslandCrewStates(ctrl)}); the lead gets up");
                 me.State.Mangled = false;
                 me.Revive();
@@ -418,6 +422,8 @@ public partial class DebugTools
             }
             case 4:
             {
+                // fix round 2 (item 3): set down on her lead's side she is no longer held (the side gate is read every frame)
+                if (g.CatchUpHeld && _isClock > 0.2f) { Fail($"Grisel, brought in beside the party, is still held {_isClock:0.0} s on"); return; }
                 // fix round 1 (M2): she walks there: never a jump of over 3 m in a frame (a catch-up)
                 if (g.GlobalPosition.DistanceTo(_ihLast) > 3f) { Fail($"Grisel was teleported from {DungeonBuilder.WorldToCell(_ihLast)} to {At(g)} on her way to the stairs"); return; }
                 _ihLast = g.GlobalPosition;
@@ -460,6 +466,14 @@ public partial class DebugTools
             case 2:
             {
                 if (rc.State.Mode == CartMode.Wrecked) { Fail($"the last ride was wrecked at S={rc.State.S:0.0}"); return; }
+                // fix round 2 (M7): with the train past the bridge, a companion is stood on the chest's cell before the win: the chest must not stand on it
+                if (!ctrl.Completed && _ihOnChest == null && rc.State.Mode == CartMode.Rolling && IslandRearS(rc) > enc.ExitToS + 0.5f && ctrl.RewardChestCell() is { } chestCell
+                    && party.Active.FirstOrDefault(a => a != me && a.Cart == rc.Cart && !a.Downed) is { } mate)
+                {
+                    _ihOnChest = mate;
+                    mate.Teleport(main.Builder.Surface(chestCell) + Vector3.Up * 0.3f);
+                    GD.Print($"[island] chest: {mate.State.Name} stood on the chest's cell {chestCell} before the win (at {At(mate)})");
+                }
                 if (!ctrl.Completed) { if (ctrl.RewardChest != null) { Fail("the reward chest stands before the win"); return; } if (_isClock > 150f) Fail($"no win (stop {rc.StopIndex}, {IslandCrewStates(ctrl)})"); break; }
                 if (_ihT is float.NaN) _ihT = _isTime;
                 var chest = ctrl.RewardChest;
@@ -474,8 +488,11 @@ public partial class DebugTools
                     if (chest.TableId != ChestRules.VaultTable || chest.SpawnIndex != CrewRules.RewardChestIndex || chest.IsMimic || chest.Locked || chest.Opened) problems.Add($"the chest: table {chest.TableId}, index {chest.SpawnIndex}, mimic {chest.IsMimic}, locked {chest.Locked}, opened {chest.Opened}");
                 }
                 if (!_ihChestLogged) problems.Add("its line not logged");
+                if (_ihOnChest == null) problems.Add("no companion was stood on the chest's cell");
+                else if (chest != null && DungeonBuilder.WorldToCell(_ihOnChest.GlobalPosition) == DungeonBuilder.WorldToCell(chest.GlobalPosition)) problems.Add($"{_ihOnChest.State.Name} still stands on the chest's cell");
                 if (door is not { Detected: true, IsOpen: true } || vault == null || layout.Rooms.IndexOf(vault.Room) != 10) problems.Add($"room 10's door: vault {vault?.Index} in room {(vault == null ? -1 : layout.Rooms.IndexOf(vault.Room))}, revealed {door?.Detected}, open {door?.IsOpen}");
                 if (problems.Count > 0) { if (_isTime - _ihT > 1f) Fail($"1 s after the win: {string.Join("; ", problems)}"); break; }
+                GD.Print($"[island] chest: {_ihOnChest!.State.Name} stepped off its cell to {At(_ihOnChest)}");
                 GD.Print($"[island] chest: {_isTime - _ihT:0.00} s after the win the reward chest stands in room 9 at {At(chest!)} ({chest!.GlobalPosition.DistanceTo(main.Builder.Surface(layout.DownStairs)):0.0} m from the stairs at {layout.DownStairs}), table {chest.TableId}, its line logged; room 10's door revealed and open");
                 if (me.Cart == rc.Cart) rc.Cart.Interact(party, me);
                 var here = DungeonBuilder.WorldToCell(chest.GlobalPosition);

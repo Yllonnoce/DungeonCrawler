@@ -76,6 +76,12 @@ public static class CrewRules
     public const int RewardChestIndex = 9000;
 
     /// <summary>
+    /// Who counts as a player for the island's rules (fix round 2): a human's hero, not parked, not fallen and not Mangled (neither can be revived
+    /// where it lies, so an unreachable body never holds the cages, the stranded judgement or Grisel). A downed one counts: outside, not up.
+    /// </summary>
+    public static bool CountsAsPlayer(bool human, bool parked, bool fallen, bool mangled) => human && !parked && !fallen && !mangled;
+
+    /// <summary>
     /// A crew member on foot outside the island (<paramref name="onFoot"/>, not <paramref name="inIsland"/>) with the train at the end of the line
     /// or gone (<paramref name="trainAtEndOrNone"/>: wrecked and hidden), at least one human up (<paramref name="upPlayers"/>), and no player outside
     /// to fetch it (<paramref name="playersOutside"/>: every human not parked or fallen, a downed one too, who may be revived there) (Ruling 34, fix
